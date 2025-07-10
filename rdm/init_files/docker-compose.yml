@@ -1,6 +1,11 @@
 version: "3.3"
 services:
   rdm:
-    build: .
+    build:
+      context: .
+      args:
+        # NOTE: replace "amd" with "arm" if compiling for arm (e.g., using a macOS M1)
+        # or run with cli arg: `PANDOC_ARCH=arm64 docker compose run rdm make TARGET`
+        PANDOC_ARCH: ${PANDOC_ARCH:-amd64}
     volumes:
       - .:/dhf
