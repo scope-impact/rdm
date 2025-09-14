@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rdm"
+version = "0.11.1"
+description = "Regulatory Documentation Manager"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Innolitics, LLC", email = "info@innolitics.com"}
+]
+keywords = ["regulatory", "documentation", "medical", "iec62304", "iec82304", "iso14971", "510k"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Healthcare Industry",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+]
+requires-python = ">=3.6"
+dependencies = [
+    "jinja2>=2.7",
+    "pyyaml",
+    "gitpython"
+]
+
+[project.optional-dependencies]
+github = ["pygithub"]
+dev = [
+    "pytest",
+    "flake8",
+    "check-manifest",
+    "sphinx",
+    "sphinx-autobuild",
+    "mock",
+    "docutils",
+    "coverage"
+]
+
+[project.scripts]
+rdm = "rdm.main:main"
+
+[project.urls]
+Homepage = "https://github.com/innolitics/rdm"
+
+[tool.setuptools]
+packages = ["rdm"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+rdm = [
+    "base/*",
+    "checklists/*",
+    "init_files/.gitignore",
+    "init_files/*",
+    "init_files/data/*",
+    "init_files/images/*",
+    "init_files/images/uimockups/*",
+    "init_files/documents/*",
+    "init_files/documents/510k/*",
+    "hook_files/*"
+]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["contrib*", "docs*", "tests*"]
+
+[tool.flake8]
+ignore = ["E226", "E731", "E741"]
+exclude = [".tox", "*.egg", "build", "data"]
+select = ["E", "W", "F"]
+max-line-length = 120
+
+[tool.bdist_wheel]
+universal = true

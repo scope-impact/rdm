@@ -12,3 +12,5 @@ dist
 *.swp
 .tool-versions
 .vscode
+
+var
