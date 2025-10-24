@@ -1,14 +1,16 @@
 import os
-import pkg_resources
-
+from importlib.resources import files, as_file
 from rdm.util import print_info, copy_directory, repo_root
 
 
 def install_hooks(dest=None):
-    hooks_source = pkg_resources.resource_filename(__name__, 'hook_files')
-    if dest is None:
-        root = repo_root()
-        dest = os.path.join(root, '.git/hooks')
-    print_info('Installing hooks into {}'.format(dest))
-    copy_directory(hooks_source, dest)
-    print_info('Successfully installed hooks')
+    hook_files_ref = files(__package__) / 'hook_files'
+
+    with as_file(hook_files_ref) as hooks_source:
+        if dest is None:
+            root = repo_root()
+            dest = os.path.join(root, '.git/hooks')
+
+        print_info('Installing hooks into {}'.format(dest))
+        copy_directory(str(hooks_source), dest)
+        print_info('Successfully installed hooks')
