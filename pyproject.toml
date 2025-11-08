@@ -51,8 +51,12 @@ rdm = "rdm.main:main"
 Homepage = "https://github.com/innolitics/rdm"
 
 [tool.setuptools]
-packages = ["rdm"]
 include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rdm*"]
+exclude = ["contrib*", "docs*", "tests*"]
 
 [tool.setuptools.package-data]
 rdm = [
@@ -67,9 +71,6 @@ rdm = [
     "init_files/documents/510k/*",
     "hook_files/*"
 ]
-
-[tool.setuptools.exclude-package-data]
-"*" = ["contrib*", "docs*", "tests*"]
 
 [tool.flake8]
 ignore = ["E226", "E731", "E741"]
