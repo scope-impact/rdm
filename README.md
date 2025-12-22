@@ -116,6 +116,15 @@ OR
 - Optional for Word and PDF generation: Pandoc 2.14 or newer
 - Also for PDF generation: pdflatex, (texlive-latex-extra and latexmk), or texlive-latex-full
 
+### For development:
+
+```sh
+git clone https://github.com/innolitics/rdm.git
+cd rdm
+uv sync --all-extras
+uv run pytest tests
+```
+
 ## Installation
 
 `pip install rdm`
