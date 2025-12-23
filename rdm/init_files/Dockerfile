@@ -9,12 +9,17 @@ FROM alpine:3.21 AS builder
 ARG PANDOC_VERSION=3.6.1
 ARG TYPST_VERSION=0.12.0
 
-# Install Pandoc
-RUN wget -qO- "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-amd64.tar.gz" \
+# Architecture detection (Docker provides TARGETARCH automatically)
+ARG TARGETARCH
+
+# Install Pandoc (supports amd64, arm64)
+RUN PANDOC_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") && \
+    wget -qO- "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-${PANDOC_ARCH}.tar.gz" \
     | tar xzf - --strip-components=1 -C /usr/local
 
-# Install Typst
-RUN wget -qO- "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
+# Install Typst (supports amd64, arm64)
+RUN TYPST_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64") && \
+    wget -qO- "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${TYPST_ARCH}-unknown-linux-musl.tar.xz" \
     | tar xJf - --strip-components=1 -C /usr/local/bin
 
 # ============================================================================
@@ -44,7 +49,14 @@ RUN mkdir -p /usr/share/fonts/inter && \
     unzip -q /tmp/inter.zip -d /tmp/inter && \
     mv /tmp/inter/Inter*.ttf /usr/share/fonts/inter/ 2>/dev/null || \
     mv /tmp/inter/InterVariable*.ttf /usr/share/fonts/inter/ 2>/dev/null || true && \
-    rm -rf /tmp/inter /tmp/inter.zip && \
+    rm -rf /tmp/inter /tmp/inter.zip
+
+# Install JetBrains Mono font (for code blocks)
+RUN mkdir -p /usr/share/fonts/jetbrains-mono && \
+    wget -qO /tmp/jbmono.zip "https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip" && \
+    unzip -q /tmp/jbmono.zip -d /tmp/jbmono && \
+    mv /tmp/jbmono/fonts/ttf/*.ttf /usr/share/fonts/jetbrains-mono/ && \
+    rm -rf /tmp/jbmono /tmp/jbmono.zip && \
     fc-cache -f
 
 # Verify installations
