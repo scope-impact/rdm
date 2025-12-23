@@ -2,7 +2,7 @@ import pytest
 
 from rdm.gaps import _find_keys_in_sources, \
     _read_raw_checklists, _split_out_include_files, _extract_keys_from_checklist, _find_failing_checklist_items, \
-    _next_number, _next_non_number, _components, SectionalAnalysis
+    _next_number, _next_non_number, _components, SectionalAnalysis, coverage_report
 
 
 @pytest.fixture
@@ -184,3 +184,52 @@ def test_sectional_analysis():
     assert alpha < beta
     assert beta < gamma
     assert alpha < gamma
+
+
+def test_coverage_report_single_checklist(tmp_path, capsys):
+    checklist = tmp_path / "iso_checklist.txt"
+    checklist.write_text("ISO-1 Requirement one\nISO-2 Requirement two\nISO-3 Requirement three\n")
+
+    source = tmp_path / "process.md"
+    source.write_text("Document covers [[ISO-1]] and [[ISO-3]].")
+
+    result = coverage_report([str(checklist)], [str(source)])
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert "| ISO | 3 | 1 | 2 | 66% |" in captured.out
+
+
+def test_coverage_report_all_covered(tmp_path, capsys):
+    checklist = tmp_path / "test_checklist.txt"
+    checklist.write_text("REF-A First\nREF-B Second\n")
+
+    source = tmp_path / "doc.md"
+    source.write_text("Has [[REF-A]] and [[REF-B]] both.")
+
+    result = coverage_report([str(checklist)], [str(source)])
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert "| 2 | 0 | 2 | 100% |" in captured.out
+
+
+def test_coverage_report_verbose_shows_missing(tmp_path, capsys):
+    checklist = tmp_path / "gdpr_checklist.txt"
+    checklist.write_text("GDPR-1 First\nGDPR-2 Second\nGDPR-3 Third\n")
+
+    source = tmp_path / "doc.md"
+    source.write_text("Only [[GDPR-1]] here.")
+
+    result = coverage_report([str(checklist)], [str(source)], verbose=True)
+    captured = capsys.readouterr()
+
+    assert result == 0
+    assert "## Missing Items" in captured.out
+    assert "GDPR-2" in captured.out
+    assert "GDPR-3" in captured.out
+
+
+def test_coverage_report_no_checklists():
+    result = coverage_report([], [])
+    assert result == 1

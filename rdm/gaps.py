@@ -2,7 +2,9 @@ import glob
 import os
 
 
-def audit_for_gaps(checklist_file, source_files):
+def audit_for_gaps(checklist_file, source_files, coverage=False, verbose=False):
+    if coverage:
+        return coverage_report(checklist_file, source_files, verbose)
     if checklist_file is None:
         print("WARNING: no check list!")
         return 1
@@ -18,6 +20,64 @@ def audit_for_gaps(checklist_file, source_files):
     else:
         _report_success()
         return 0
+
+
+def coverage_report(checklist_files, source_files, verbose=False):
+    """Generate coverage report for one or more checklists."""
+    if not checklist_files:
+        print("WARNING: no checklists specified!")
+        return 1
+
+    builtins = _builtin_checklist_dictionary()
+    results = []
+
+    # Handle single file or list
+    if isinstance(checklist_files, str):
+        checklist_files = [checklist_files]
+
+    for checklist_file in checklist_files:
+        full_path = os.path.realpath(_full_file_path(checklist_file, builtins))
+        if not os.path.exists(full_path):
+            continue
+        already_included = {full_path}
+        checklist = _read_checklists(_checklist_generator([full_path]), already_included, builtins)
+        total = len(checklist)
+        if total == 0:
+            continue
+        failing = list(_find_failing_checklist_items(_source_generator(source_files), checklist))
+        missing = len(failing)
+        covered = total - missing
+        pct = int(covered * 100 / total) if total else 0
+        name = os.path.basename(checklist_file).replace('_checklist.txt', '').upper()
+        results.append((name, total, missing, covered, pct, failing))
+
+    if not results:
+        print("No valid checklists found")
+        return 1
+
+    # Print table
+    print("| Standard | Total | Missing | Covered | Coverage |")
+    print("|----------|-------|---------|---------|----------|")
+    total_all, covered_all = 0, 0
+    for name, total, missing, covered, pct, _ in results:
+        print(f"| {name} | {total} | {missing} | {covered} | {pct}% |")
+        total_all += total
+        covered_all += covered
+    overall_pct = int(covered_all * 100 / total_all) if total_all else 0
+    print(f"| **Overall** | {total_all} | {total_all - covered_all} | {covered_all} | {overall_pct}% |")
+
+    if verbose:
+        print("\n## Missing Items\n")
+        for name, _, _, _, _, failing in results:
+            if failing:
+                print(f"### {name}\n")
+                for item in failing[:10]:
+                    print(f"- `{item['reference']}`")
+                if len(failing) > 10:
+                    print(f"- ... {len(failing) - 10} more")
+                print()
+
+    return 0
 
 
 def _print_sources(checklist, source_files):

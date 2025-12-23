@@ -46,8 +46,14 @@ def cli(raw_arguments):
         translate_test_results(args.format, args.input, args.output)
     elif args.command == 'gap' and args.list:
         list_default_checklists()
+    elif args.command == 'gap' and args.coverage:
+        # In coverage mode, checklist + files can all be checklists or source files
+        all_files = ([args.checklist] if args.checklist else []) + args.files
+        checklists = [f for f in all_files if f.endswith('.txt')]
+        sources = [f for f in all_files if not f.endswith('.txt')]
+        exit_code = audit_for_gaps(checklists, sources, True, args.verbose)
     elif args.command == 'gap':
-        exit_code = audit_for_gaps(args.checklist, args.files)
+        exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
     return exit_code
 
 
@@ -74,6 +80,8 @@ def parse_arguments(arguments):
     gap_help = 'use checklist to verify documents have expected references to particular standard(s)'
     gap_parser = subparsers.add_parser('gap', help=gap_help)
     gap_parser.add_argument('-l', '--list', action='store_true', help='List built-in checklists')
+    gap_parser.add_argument('-c', '--coverage', action='store_true', help='Show coverage report')
+    gap_parser.add_argument('-v', '--verbose', action='store_true', help='Show missing items')
     gap_parser.add_argument('checklist', nargs='?')
     gap_parser.add_argument('files', nargs='*')
 

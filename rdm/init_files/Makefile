@@ -1,4 +1,8 @@
-SHELL := /bin/bash -o pipefail -e
+# ============================================================================
+# Regulatory Documentation Build
+# ============================================================================
+
+SHELL := /bin/sh -e
 .SUFFIXES:
 .SECONDARY:
 .DELETE_ON_ERROR:
@@ -20,7 +24,7 @@ release/%.md: documents/%.md $(CONFIG) $(DATA_FILES)
 	@mkdir -p $(@D)
 	rdm render $< $(CONFIG) $(DATA_FILES) > $@
 
-release/%.pdf: release/%.md pandoc_pdf.yml template.tex
+release/%.pdf: release/%.md pandoc_pdf.yml template.typ
 	@mkdir -p $(@D)
 	pandoc --defaults=./pandoc_pdf.yml $< -o $@
 
@@ -29,14 +33,15 @@ release/%.docx: release/%.md pandoc_docx.yml
 	pandoc --defaults=./pandoc_docx.yml $< -o $@
 
 # useful for debugging
-release/%.tex: release/%.md pandoc_pdf.yml template.tex
+release/%.typ: release/%.md pandoc_pdf.yml template.typ
 	@mkdir -p $(@D)
-	pandoc --defaults=./pandoc_pdf.yml -t latex $< -o $@
+	pandoc --defaults=./pandoc_pdf.yml -t typst $< -o $@
 
 # Manually call recipe to pull down your development history
 data/history.yml:
 	rdm pull $< > $@
 
-.PHONY:
+.PHONY: all pdfs docs clean
+
 clean:
 	rm -rf tmp release

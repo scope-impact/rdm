@@ -1,17 +1,48 @@
-from: markdown+smart
-to: latex
+# ============================================================================
+# Pandoc Configuration for Typst PDF Generation
+# Usage: pandoc -d defaults.yml input.md -o output.pdf
+# ============================================================================
+
+from: markdown+smart+yaml_metadata_block+fenced_divs+bracketed_spans
+to: typst
+
 standalone: true
 table-of-contents: true
 toc-depth: 2
-pdf-engine: latexmk
-extract-media: ./tmp/downloads/
+
+pdf-engine: typst
+
+# Media handling
+extract-media: ./tmp/media/
 resource-path:
-- .
-- ./tmp/downloads/
-metadata-file:
-- ./data/device.yml
+  - .
+  - ./documents
+  - ./tmp/media/
+
+# Data files (Jinja-style variables)
+# metadata-files:
+#  - ./data/device.yml
+#  - ./data/workflow.yml
+
+# Template
+template: template.typ
+
+# Output settings
+number-sections: true
+shift-heading-level-by: -1
+
+# Typst-specific variables
 variables:
-  linkcolor: black
-  urlcolor: black
-  geometry: "margin=1.25in"
-template: "template.tex"
+  # Page setup (Typst syntax)
+  papersize: a4
+  margin:
+    top: 3cm
+    bottom: 2.5cm
+    left: 2.5cm
+    right: 2.5cm
+
+  # Typography
+  fontsize: 11pt
+  mainfont: "Inter Variable"
+  sansfont: "Inter Variable"
+  monofont: "JetBrains Mono"
