@@ -62,13 +62,10 @@ RUN mkdir -p /usr/share/fonts/jetbrains-mono && \
 # Verify installations
 RUN pandoc --version && typst --version
 
-# Install RDM from local source using uv
-COPY . /tmp/rdm
-RUN pip install --no-cache-dir --break-system-packages uv && \
-    uv build --wheel --out-dir /tmp/rdm/dist /tmp/rdm && \
-    pip install --no-cache-dir --break-system-packages /tmp/rdm/dist/*.whl && \
-    pip uninstall -y uv && \
-    rm -rf /tmp/rdm
+# Install RDM from pre-built wheel
+COPY dist/*.whl /tmp/
+RUN pip install --no-cache-dir --break-system-packages /tmp/*.whl && \
+    rm -f /tmp/*.whl
 
 WORKDIR /dhf
 

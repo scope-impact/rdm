@@ -20,6 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Build wheel
+        run: uv build --wheel --out-dir rdm/init_files/dist
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -42,7 +48,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./rdm/init_files
           file: ./rdm/init_files/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
