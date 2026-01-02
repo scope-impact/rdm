@@ -42,7 +42,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./rdm/init_files
+          context: .
           file: ./rdm/init_files/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
