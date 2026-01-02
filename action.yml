@@ -8,6 +8,9 @@ inputs:
   version:
     description: 'RDM image version'
     default: 'latest'
+  artifact_name:
+    description: 'Name for the uploaded artifact'
+    default: 'regulatory-documents'
 
 runs:
   using: 'composite'
@@ -17,7 +20,7 @@ runs:
       run: |
         docker run --rm \
           -v "${{ github.workspace }}:/project" \
-          -w /project/${{ inputs.dhf_path }} \
+          -w "/project/${{ inputs.dhf_path }}" \
           --entrypoint make \
           ghcr.io/scope-impact/rdm:${{ inputs.version }} \
           pdfs
@@ -25,5 +28,5 @@ runs:
     - name: Upload PDFs
       uses: actions/upload-artifact@v4
       with:
-        name: regulatory-documents
+        name: ${{ inputs.artifact_name }}
         path: ${{ inputs.dhf_path }}/release/*.pdf

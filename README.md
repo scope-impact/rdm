@@ -69,6 +69,7 @@ jobs:
 | --- | --- | --- |
 | `dhf_path` | Path to the DHF directory | `dhf` |
 | `version` | RDM Docker image version | `latest` |
+| `artifact_name` | Name for the uploaded artifact | `regulatory-documents` |
 
 ### Example with Custom Inputs
 
