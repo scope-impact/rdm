@@ -1,0 +1,13 @@
+name: Generate PDFs
+
+on:
+  push:
+    paths: ['dhf/**']
+  workflow_dispatch:
+
+jobs:
+  pdfs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: scope-impact/rdm@v1
