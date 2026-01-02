@@ -1,0 +1,29 @@
+name: 'RDM PDF Generator'
+description: 'Generate regulatory PDFs with RDM + Pandoc + Typst'
+
+inputs:
+  dhf_path:
+    description: 'Path to DHF directory'
+    default: 'dhf'
+  version:
+    description: 'RDM image version'
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate PDFs
+      shell: bash
+      run: |
+        docker run --rm \
+          -v "${{ github.workspace }}:/project" \
+          -w /project/${{ inputs.dhf_path }} \
+          --entrypoint make \
+          ghcr.io/scope-impact/rdm:${{ inputs.version }} \
+          pdfs
+
+    - name: Upload PDFs
+      uses: actions/upload-artifact@v4
+      with:
+        name: regulatory-documents
+        path: ${{ inputs.dhf_path }}/release/*.pdf

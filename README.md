@@ -42,6 +42,45 @@ docker compose run rdm make pdfs
 docker compose run rdm make docs
 ```
 
+## GitHub Action
+
+RDM is available as a reusable GitHub Action for CI/CD pipelines. Add the following workflow to your repository:
+
+```yaml
+# .github/workflows/pdfs.yml
+name: Generate PDFs
+
+on:
+  push:
+    paths: ['dhf/**']
+  workflow_dispatch:
+
+jobs:
+  pdfs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: scope-impact/rdm@v1
+```
+
+### Action Inputs
+
+| Input | Description | Default |
+| --- | --- | --- |
+| `dhf_path` | Path to the DHF directory | `dhf` |
+| `version` | RDM Docker image version | `latest` |
+
+### Example with Custom Inputs
+
+```yaml
+- uses: scope-impact/rdm@v1
+  with:
+    dhf_path: regulatory
+    version: v1.0.0
+```
+
+The action generates PDFs using the RDM Docker image (with Pandoc + Typst) and uploads them as artifacts named `regulatory-documents`.
+
 ## Professional Support
 
 RDM is developed by [Innolitics](https://innolitics.com). We provide engineering and regulatory consulting to medical device startups.
