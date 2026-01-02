@@ -17,5 +17,5 @@ jobs:
         run: uv sync --all-extras
       - name: Run tests
         run: |
-          uv run flake8 .
+          uv run ruff check .
           uv run pytest tests

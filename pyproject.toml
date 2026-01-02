@@ -35,7 +35,7 @@ dependencies = [
 github = ["pygithub"]
 dev = [
     "pytest",
-    "flake8",
+    "ruff",
     "check-manifest",
     "sphinx",
     "sphinx-autobuild",
@@ -72,11 +72,12 @@ rdm = [
     "hook_files/*"
 ]
 
-[tool.flake8]
-ignore = ["E226", "E731", "E741"]
-exclude = [".tox", "*.egg", "build", "data"]
+[tool.ruff]
+line-length = 120
+exclude = [".tox", "*.egg", "build", "data", ".venv"]
+
+[tool.ruff.lint]
 select = ["E", "W", "F"]
-max-line-length = 120
 
 [tool.bdist_wheel]
 universal = true
