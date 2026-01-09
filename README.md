@@ -22,7 +22,14 @@ RDM is especially well-suited for early-stage software-only medical devices that
 ## Quick Start
 
 ```sh
-pip install rdm[github]
+# Install using uv (recommended)
+uv tool install git+https://github.com/scope-impact/rdm
+
+# Or install a specific version
+uv tool install git+https://github.com/scope-impact/rdm@v1.0.0
+
+# Update to latest version
+uv tool upgrade rdm
 
 # Optional: Install git hooks
 rdm hooks
@@ -121,7 +128,7 @@ The best companies follow the regulations with a degree of faith that these regu
 
 RDM is designed to be used within a typical software development workflow.  When a new project is started, developers
 
-1. Install RDM using `pip install rdm`
+1. Install RDM using `uv tool install git+https://github.com/scope-impact/rdm`
     A) Optional: Install [RDM's git hooks](#git-hooks) using `rdm hooks` 
 2. Generate a set of markdown templates, which are stored in the git repository, using `rdm init`
 3. Edit configuration variables in the generated files
@@ -167,11 +174,23 @@ uv run pytest tests
 
 ## Installation
 
-`pip install rdm`
+Install using [uv](https://github.com/astral-sh/uv) (recommended):
 
-or, if you need GitHub support:
+```sh
+uv tool install git+https://github.com/scope-impact/rdm
+```
 
-`pip install rdm[github]`
+With GitHub support:
+
+```sh
+uv tool install "rdm[github] @ git+https://github.com/scope-impact/rdm"
+```
+
+Update to the latest version:
+
+```sh
+uv tool upgrade rdm
+```
 
 ## The Init Files
 
