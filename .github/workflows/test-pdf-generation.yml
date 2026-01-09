@@ -36,14 +36,10 @@ jobs:
       - name: Build wheel for Docker
         run: uv build --wheel --out-dir test-dhf/dist
 
-      - name: Build Docker image locally
-        run: |
-          docker build -t rdm-test:local -f rdm/init_files/Dockerfile test-dhf/
-
       - name: Generate PDFs
         run: |
           cd test-dhf
-          docker run --rm -v "$PWD:/dhf" rdm-test:local make pdfs
+          docker compose run --rm rdm make pdfs
 
       - name: Verify PDFs were created
         run: |
