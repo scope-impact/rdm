@@ -480,6 +480,25 @@ The [contrib folder](https://github.com/innolitics/rdm/tree/main/contrib) includ
 
 ## Changelog
 
+### v1.0.0
+
+**Installation & Distribution:**
+- New recommended installation via `uv tool install git+https://github.com/scope-impact/rdm`
+- Auto-update support via `uv tool upgrade rdm`
+- No PyPI required - install directly from GitHub
+
+**PDF Generation:**
+- Migrated from LaTeX to Typst for faster, simpler PDF generation
+- New lightweight Docker image based on Alpine with Pandoc 3.6 and Typst 0.12
+- Added GitHub Action for CI/CD PDF generation (`scope-impact/rdm@v1`)
+
+**CI/CD:**
+- Added Dependabot for automated dependency updates (Python, GitHub Actions, Docker)
+- Added PDF generation test workflow
+
+**Bug Fixes:**
+- Fixed broken cross-references in software_plan.md template
+
 ### v0.11.1
 
 - The default directory is now named "dhf", for [design history file](https://innolitics.com/articles/design-control-guidance-for-medical-device-manufacturers/#section-j-design-history-file-dhf), instead of "regulatory.
