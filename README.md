@@ -1,29 +1,16 @@
-<a href="https://github.com/innolitics/rdm/actions/workflows/tests.yml/">
-  <img src="https://github.com/innolitics/rdm/actions/workflows/tests.yml/badge.svg?branch=main">
+<a href="https://github.com/scope-impact/rdm/actions/workflows/tests.yml/">
+  <img src="https://github.com/scope-impact/rdm/actions/workflows/tests.yml/badge.svg?branch=main">
 </a>
 
 # Regulatory Documentation Manager
 
-## Introduction
+> **Fork Notice:** This is a maintained fork of [innolitics/rdm](https://github.com/innolitics/rdm). All credit for the original work goes to the [Innolitics](https://innolitics.com) team.
 
-RDM is an open-source documentation as code software tool that provides Markdown templates and Python scripts to manage medical device software documentation.
-
-The final output documents are word files or PDFs which would typically be uploaded to your document control system. We often use a CI pipeline to generate the documents. For example, this [GitHub action](https://github.com/innolitics/rdm/blob/main/.github/workflows/documents.yml) produces the [Word, PDF, and markdown files](https://github.com/innolitics/rdm/actions/workflows/documents.yml) from the default templates.
-
-RDM is especially well-suited for early-stage software-only medical devices that are being developed following IEC 62304.
-
-## Who Uses RDM?
-
-- We use it at [Innolitics](https://innolitics).
-- Several of our clients have used it and have successfully submitted 510(k)s using documents produced by it.
-- One client also passed an IEC 62304 [Intertek](https://www.intertek.com) Audit using the documents produced by RDM.
-- Another client uses RDM to manager their entire QMS.
+RDM is a documentation-as-code tool that provides Markdown templates and Python scripts to manage medical device software documentation. It's especially well-suited for software-only medical devices following IEC 62304.
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
-
-Docker includes all dependencies (Pandoc, Typst, fonts) - no additional setup required.
+### Docker (Recommended)
 
 ```sh
 # Install rdm CLI
@@ -33,39 +20,30 @@ uv tool install git+https://github.com/scope-impact/rdm
 rdm init
 cd dhf
 docker compose run rdm make pdfs
-docker compose run rdm make docs
 ```
 
-### Option 2: Native Installation
-
-If you prefer not to use Docker, install the dependencies manually:
+### Native Installation
 
 ```sh
 # Install rdm CLI
 uv tool install git+https://github.com/scope-impact/rdm
 
-# Install document processing dependencies (macOS)
+# Install dependencies (macOS)
 brew install pandoc typst
-
-# Or on Ubuntu/Debian
-# apt install pandoc && cargo install typst-cli
 
 # Scaffold project and build documents
 rdm init
 cd dhf
 make pdfs
-make docs
 ```
 
-### Update to Latest Version
+### Update
 
 ```sh
 uv tool upgrade rdm
 ```
 
 ## GitHub Action
-
-RDM is available as a reusable GitHub Action for CI/CD pipelines. Add the following workflow to your repository:
 
 ```yaml
 # .github/workflows/pdfs.yml
@@ -84,106 +62,28 @@ jobs:
       - uses: scope-impact/rdm@v1
 ```
 
-### Action Inputs
-
 | Input | Description | Default |
 | --- | --- | --- |
 | `dhf_path` | Path to the DHF directory | `dhf` |
 | `version` | RDM Docker image version | `latest` |
 | `artifact_name` | Name for the uploaded artifact | `regulatory-documents` |
 
-### Example with Custom Inputs
-
-```yaml
-- uses: scope-impact/rdm@v1
-  with:
-    dhf_path: regulatory
-    version: v1.0.0
-```
-
-The action generates PDFs using the RDM Docker image (with Pandoc + Typst) and uploads them as artifacts named `regulatory-documents`.
-
-## Professional Support
-
-RDM is developed by [Innolitics](https://innolitics.com). We provide engineering and regulatory consulting to medical device startups.
-
-If you need to comply with IEC 62304, we can help. We speak "software" and "regulatory", so we can bridge the gap between regulatory compliance and engineering productivity. Your engineers want to focus on building a high quality product, not learning the details of IEC 62304. We can help you become compliant with minimal distraction.
-
-Our process has three steps:
-
-1. Talk with your tech lead to understand your current, and desired software-development processes
-2. Identify gaps in your IEC-62304 compliance
-3. Work with your engineering team and RA/QA to iteratively fill the gaps
-
-RDM is often a part of how we fill the gaps, although each team's needs are different. We can help you adapt RDM to your unique needs, including developing custom integrations. We can also provide training using lingo and examples your software engineers will understand. Email us at [sales@innolitics.com](mailto:sales@innolitics.com) for pricing and to learn more.
-
-## Benefits of Using RDM
-
-- Encourages engineers to update documents early in the design process, when they add value, instead of back-filling them just before the next release when they won't add any value.
-- Let your engineers write documents using tools they like (i.e., markdown and YAML)
-- Update and review documentation in parallel to code changes (i.e., in GitHub pull requests)
-- Automatically generated records from data stored in GitHub or other backends
-- Automatically generate traceability matrices (e.g., as part of your CI server)
-- Easily customize and automate your documentation process using custom scripts or data files (see the [Contrib Section](#Contrib) for examples)
-
-## Our Philosophy on Regulations
-
-Engineering is about optimizing. To do it one must first know what is being optimized.
-
-Some students go to school because they need the degree to get a job.  These students optimize their actions to get the best grades for the least amount of work.
-
-The best students go to school to learn, and while they often try to get good grades, they optimize their actions so as to learn as much as they can.
-
-Likewise, some companies follow regulations to get certified to sell their products.  They optimize everything they do to get past the regulators for the lowest cost.
-
-The best companies follow the regulations with a degree of faith that these regulations will make their products better and safer.
-
-## Typical Workflow
-
-RDM is designed to be used within a typical software development workflow.  When a new project is started, developers
-
-1. Install RDM using `uv tool install git+https://github.com/scope-impact/rdm`
-    A) Optional: Install [RDM's git hooks](#git-hooks) using `rdm hooks` 
-2. Generate a set of markdown templates, which are stored in the git repository, using `rdm init`
-3. Edit configuration variables in the generated files
-4. Write _software requirements_ and store them in the git repository
-5. Generate a top-level architecture document, also stored in the repository, which may subdivide the project into smaller _software items_
-6. Tickets (e.g. GitHub Issues) are labeled with one or more requirement ids
-7. Each commit messages must include a reference to the ticket that is being worked on
-8. Pull requests must be reviewed, and certain standardized comments are placed in reviews to confirm validation
-9. Write new architecture documents as new _software items_ are implemented
-10. Once a new _release_ is cut, generate a set of IEC62304 documents using `rdm release`
-11. Run `rdm gap [some checklist] release/*.md` to check for missing items
-12. These markdown files can then be converted to PDFs (`make pdfs`) or Word documents (`make docs`)
-
-## Our Design Goals for RDM
-
-1. Provide a simple mechanism to migrate away from RDM to more complex tools.
-2. Provide a set of template regulatory documents that covers common use-cases.
-3. Focus on software developers ease-of-use; the plan documents are intended to read and used frequently by the software developers on the team.  Thus, wherever there was a tradeoff between making it easy to read for developers vs regulators/auditors, we optimized for developers.  For example, we re-order IEC62304 sections to follow a more logical order for developers at the cost of being less parallel to IEC62304's structure.
-4. Easy auditablility.  In order to make it easier for regulators/auditors to read the document, we include auditor comments and links back to IEC62304.  These links and notes are hidden by default, but there is a flag that enables turning them on.  This way, we can use the "official" version without comments during our day-to-day work, but we can give the auditors two copies—both the "official" version and the "auditor" version that has all these extra notes. The auditor notes make it easier to tweak the existing templates, since you will know whether a section of the template is required or not.
-5. Provide readable documents; e.g., other 62304 templates include many short deeply nested sub-sections.  We use a maximum of two levels of nesting.  We also provide flags (e.g., for different safety classes) that prune out irrelevant parts of the document, so that the documents only include what is necessary for the particular project.
-6. Provide beautiful documents.  We believe making beautiful looking documents will encourage people to read and update them.
-
 ## Dependencies
 
-### Using Docker (Recommended)
+**Docker (recommended):** Just Docker. The image includes Pandoc 3.6, Typst 0.12, and required fonts.
 
-- Docker
+**Native:**
+- Python 3.10+
+- [uv](https://github.com/astral-sh/uv)
+- [Pandoc](https://pandoc.org/) 2.14+
+- [Typst](https://typst.app/)
+- Make
 
-The Docker image includes all dependencies: Pandoc 3.6, Typst 0.12, fonts (Inter, JetBrains Mono, Noto), and rdm.
+## Documentation
 
-### Native Installation
+For detailed documentation on templating, data files, project management backends, and more, see the [original RDM documentation](https://github.com/innolitics/rdm#readme).
 
-| Dependency | Required For |
-|------------|--------------|
-| Python 3.10+ | rdm CLI |
-| [uv](https://github.com/astral-sh/uv) | Installing rdm |
-| Make | Build orchestration |
-| [Pandoc](https://pandoc.org/) 2.14+ | Markdown → PDF/DOCX conversion |
-| [Typst](https://typst.app/) | PDF typesetting (alternative to LaTeX) |
-
-### For Development
+## Development
 
 ```sh
 git clone https://github.com/scope-impact/rdm.git
@@ -192,315 +92,16 @@ uv sync --all-extras
 uv run pytest tests
 ```
 
-## Installation
-
-### rdm CLI
-
-```sh
-# Install
-uv tool install git+https://github.com/scope-impact/rdm
-
-# With GitHub integration
-uv tool install "rdm[github] @ git+https://github.com/scope-impact/rdm"
-
-# Pin to specific version
-uv tool install git+https://github.com/scope-impact/rdm@v1.0.0
-
-# Update
-uv tool upgrade rdm
-```
-
-### Document Processing (for PDF/DOCX generation)
-
-**macOS:**
-```sh
-brew install pandoc typst
-```
-
-**Ubuntu/Debian:**
-```sh
-apt install pandoc
-cargo install typst-cli
-```
-
-**Or use Docker** (no installation needed):
-```sh
-docker compose run rdm make pdfs
-```
-
-## The Init Files
-
-Run `rdm init` to generate a set of base documents for a project.  By default these documents are placed in the current working directory in a new directory named `regulatory` which includes a number of files. All of these are meant to be modified for your project.
-
-| File | Purpose |
-| --- | --- |
-| `Dockerfile` | A dockerfile that can be used to compile the documents |
-| `docker-compose.yml` | Configures the necessary volume mounting when running the dockerfile |
-| `Makefile` | Contains recipes for compiling the markdown templates and data files into the release documents |
-| `config.yml` | Settings that alter `rdm`s behaviour |
-| `pandoc_pdf.yml` | Pandoc settings that are used when compiling the release PDFs from the release markdown documents |
-| `template.tex` | Pandoc latex template that is used to create the release PDFs |
-| `pandoc_docx.yml` | Pandoc settings that are used when compiling the release Word Documents from the release markdown documents |
-| `documents/*.md` | Regulatory document templates, written using [Pandoc's flavor of markdown](https://pandoc.org/MANUAL.html#pandocs-markdown) |
-| `documents/software_plan.md` | Contains a set of IEC62304-compliant software development processes |
-| `documents/software_requirements_specification.md` | Describes the user groups, user needs, and requirements that the software must fulfill |
-| `documents/software_design_specification.md` | Describes how the software system meets the requirements |
-| `data/*.yml` | Data files that provide data that can be included in the release documents |
-| `data/device.yml` | Details about your device, e.g. the name of the project and legal manufacturer |
-| `data/predicate.yml` | If you're submitting a 510(k), includes details about your predicate device |
-| `data/history.yml` | Records from your project management backend (e.g., GitHub) which are pulled down using the `rdm pull` command |
-| `data/workflow.yml` | Variables that can be used to customize your development processes |
-| `data/soup.yml` | Details about software dependencies  |
-| `release/*.md` | The compiled release markdown files |
-| `release/*.pdf` | The compiled release PDF files (this is usually what you give to the regulatory bodies) |
-| `release/*.docx` | The compiled release DOCX files (these are useful when getting feedback from non-technical people) |
-| `tmp/*` | Temporary files |
-
-## Templating and Data Files
-
-The markdown files support basic templating using the [Jinja templating language](http://jinja.pocoo.org/docs/latest/templates/).
-
-### Data Files
-
-Any yaml files in the `data` directory are provided as context when rendering the templates. Variables are accessed using the name of the YAML file followed by the name of the variable in that YAML file. Thus the device name, which is stored in `data/device.yml`, can be accessed in the templates using `{{ device.name }}`.
-
-### First Pass Output
-
-We add `first_pass_output` to the rendering context, which is useful when you need to inspect the rendered document to generate, e.g., definition lists. This object has two useful properties:
-
-- `first_pass_output.source` contains the complete output of a first pass generation of the document.
-- `first_pass_output.lines` contains the same output as list of lines.
-
-### Jinja Filters
-
-The `rdm render` subcommand provides a few extra filters to the Jinja context:
-
- - invert_dependencies: Given a set of ids and dependency ids for an object, the two sets are switched making the original ids the dependent ids.
- - join_to: Given a set of ids for an object, and a list of the objects these ids refer to, select out the objects by joining using the specified primary key (which defaults to 'id').
- - md_indent: Processes a snippet of text and removes or adds header indents to match the indent pattern of surrounding text.
-
-### Extensions
-
-We also support [extensions](http://jinja.pocoo.org/docs/2.10/extensions/). Extensions are set using the `md_extensions` configuration parameter in `config.yml`. See the Markdown Extensions section for details about available markdown extensions.
-
-## YAML Front Matter
-
-The Markdown document format contains YAML front matter, which is used to generate the title page, headers, and footers in the associated PDFs.
-
-For example, your markdown YAML front matter may be:
-
-```
----
-id: PLAN-001
-revision: 1
-title: Software Plan
----
-```
-
-The required `title` value is used for the document title page and in the header.
-
-The required `id` value is the document id. This is show in the title page and in the header.
-
-The optional `revision` value is printed on the title page and in the header, if present. Revisions are not typically required for records.
-
-The manufacturer name, which must be specified in `system.yml` data document, is also show on the title page.
-
-## Images
-
-Both the markdown and PDFs support images. An image in a markdown document will look like:
-
-```
-![image label](./images/my-image.png)
-```
-
-Images are stretched to full page width and must be able to fit within a single page of a PDF document for the formatting to look normal. The path to the images must be relative to the Makefile (per the pandoc `resource-path` setting).
-
-Links to images are preserved in the markdown but are downloaded when compiling word documents or PDFs (using pandoc's `extract-media` setting).
-
-Note that markdown does not support having spaces in links, thus image names can not have spaces.
-
-Also note that the PDFs don't support SVG files. A Python script, in conjunction with some Makefile customizations, can be used to convert SVGs to PNGs if needed.
-
-## Project Management Backends
-
-The FDA, and other regulatory bodies, require records to prove that you are following your development process. Typically, the data needed to produce these records is captured in one more software development project management tools. We often use GitHub or Jira. When putting together a 510(k) or other regulatory documentation, it is helpful to have a mechanism for moving this data into an appropriate document format.
-
-RDM assists in this process by providing project management backends. These backends can be customized and configured in `config.yml`. Essentially, they pull data from a project management tool and dump it into a YAML file with a standardized format. The YAML file can then be used, like any other data file, to render templates.
-
-To pull down the most up-to-date release history, run `make data/history.yml`.
-
-### GitHub Pull Request Backend
-
-The `GitHubPullRequestBackend` assumes that change requests are stored in GitHub Issues. It is the default backend.
-
-Setting | Description
---- | ---
-`repository` | A string pointing to the GitHub repository (e.g., `innolitics/rdm`)
-`reviews_required` | A boolean indicating whether pull-request reviews are required. The backend will warn if they are required and there are none.
-
-If you have there is a `GH_API_TOKEN` environment variable set, that will be used for authentication. Otherwise, the user is prompted for their username and password.
-
-### GitLab Backend
-
-Planned
-
-### Jira Backend
-
-Planned
-
-## Markdown Extensions
-
-### Auditor Notes Extension
-
-We have added some features to make it more convenient to include regulatory auditor notes.  Auditor notes are references to ISO standards and regulations, which are convenient for auditors as well as people who are adapting templates for their own needs (the notes will tell you which parts of the template are required).
-
-Auditor notes are specified with double square brackets:
-
-```
-Some specification [[62304:6.2.4]].
-```
-
-Auditor notes can be removed using the `rdm.md_extensions.AuditNoteExclusionExtension` extension. The auditor notes plugin strips leading white before the audit note. Thus, the above example, when the extension is enabled, becomes:
-
-```
-Some specification.
-```
-
-### Section Numbers Extension
-
-The `SectionNumberExtension` will automatically add section numbering. This will convert section number markdown like
-
-```
-## Some Topic
-```
-
-to
-
-```
-## 2.1 Some Topic
-```
-
-### Vocabulary Extension
-
-The `VocabularyExtension` extends `first_pass_output` to include a dictionary of words found in the trial first pass. The set of words can then be accessed as a jinja variable using `{{ first_pass_output.words }}`. More convenient is testing whether a particular word is in the document:
-
-```
-{% if first_pass_output.has('foobot') %}
-*foobot*: Automated process that implements foo.
-{% endif %}
-```
-
-The above definition of the example word `foobot` would only be included if the full document actually uses the word. Case insensitive versions of `words` and `has` are available as `words_ignore_case` and `has_ignore_case`.
-
-## Audit Checklists
-
-We include several checklists for various standards.  These are used by the
-`rdm gap` command to check output documents for appropriate references to a
-given standard.
-
-Here is the contents of the provided `62304_2015_class_b` checklist:
-
-```
-# Audit checklist for IEC62304 version 2006 AMD1:2015 Class B products
-#
-# This checklist is not a substitute for reading, understanding, and
-# implementing the associated standard. The descriptive phrase following each
-# keyword reference is intended only as a helpful mnemonic for locating and
-# recalling the referenced section of the standard.
-#
-include 62304_2015_class_a
-include 62304_base_class_b
-62304:5.1.12.a Identification and avoidance of common software defects: identify
-62304:5.1.12.b Identification and avoidance of common software defects: document
-62304:5.6.2 Verify software integration
-62304:5.6.3 Software integration testing
-62304:5.6.4 Software integration testing content
-62304:5.6.5 Evaluate integration test procedures
-```
-
-The `rdm gap` command audits a set of text files:
-
-```
-rdm gap 62304_2015_class_b regulatory/release/*.md
-```
-
-If any checklist keywords (e.g., `62304.5.6.5`) are absent from the provided
-text files, the command will return with a non-zero exit code and list which
-items are missing. The checklist items are searched for anywhere within the
-text files. We recommend incorporating this check into a continuous integration
-server.
-
-You can print the expanded contents of a checklist using `rdm gap checklist`.
-
-You can list the builtin checklists with `rdm gap --list`.
-
-To provide a custom checklist, use a file path for the first argument.
-
-The checklist format is described in detail [here](./docs/checklist-format.md).
-
-## Git Hooks
-
-Most git hosting platforms, e.g., GitHub, GitLab, and Bitbucket, allow you to trace git commits back to their originating issues using specially formatted comments. For example, if a commit is related to issue #123 you might include the text "Issue #123" in the git commit message. Maintaining this traceability helps RDM auto generate certain regulatory documents, but these links to every commit becomes tedious.
-
-The `rdm hooks` command installs git hooks that will automatically add issue (or, in regulatory speak, "change request") numbers to your git commit messages, based on your branch name.
-
-> When using this feature, name your branches in the style of `${hyphen-separated-issue-numbers}-rest-of-branch-name`.
->
-> Example: `12-13-fixing-issues`
-
-Grabbing the issue number from the branch name works well since most of the time a branch will involve working on a particular issue. You can always edit the auto-generated messages on a per-commit basis if needed.
-
-If you manually edit one of the provided hooks and want to revert your changes or RDM has been updated and you want to make sure the newest hooks are used, you can re-run this command at any time.
-
-## Contrib
-
-The [contrib folder](https://github.com/innolitics/rdm/tree/main/contrib) includes several scripts and files which may be useful to you. Each is described in some detail in the [README](https://github.com/innolitics/rdm/tree/package-format-script/contrib#readme) within the folder.
-
-## RDM's Limitations
-
-- The default templates were written with small software teams in mind (e.g., 2 - 5 developers).
-- Only supports GitHub as your project manager (we plan on adding support for Gitlab, Jira, Trello, and Pivotal over time)
-- Assumes that the risk management process is stored elsewhere (we plan on adding support for ISO14971's risk management process soon)
-- Only supports a single _software system_
-- Only support using git as your version control system
-- Assumes the whole software system is in a single git repository
-- Default templates assume the whole software system has a single safety classification
-- To use RDM, one needs to know how to use Markdown and Git. For this reason, as projects and teams grow, and as people who are unfamiliar with these tools join the team, you may want to migrate some or all of the your documents to another format (e.g., Microsoft Word). RDM provides a simple mechanism for doing this when the time comes. Typically, documents which are only touched by developers will remain in RDM, but many other documents will be converted to Word Files and stored in a separate Document Management System.
-
-## Future Work
-
-- Add support for more project management backends, such as Gitlab, Jira, Trello, Pivotal, and others.
-- Add templates for the usability standard ISO62366
-- Provide templates for a basic quality management systems that fulfill ISO13485
-- Provide templates for 510(k) submissions
-- Continue to streamline the workflow
-- Provide more thorough examples
-
-**If you use RDM, please let us know.**
-
-## Changelog
+## Changes from Upstream
 
 ### v1.0.0
 
-**Installation & Distribution:**
-- New recommended installation via `uv tool install git+https://github.com/scope-impact/rdm`
-- Auto-update support via `uv tool upgrade rdm`
-- No PyPI required - install directly from GitHub
-
-**PDF Generation:**
-- Migrated from LaTeX to Typst for faster, simpler PDF generation
-- New lightweight Docker image based on Alpine with Pandoc 3.6 and Typst 0.12
-- Added GitHub Action for CI/CD PDF generation (`scope-impact/rdm@v1`)
-
-**CI/CD:**
-- Added Dependabot for automated dependency updates (Python, GitHub Actions, Docker)
-- Added PDF generation test workflow
-
-**Bug Fixes:**
+- Installation via `uv tool install` directly from GitHub
+- Migrated from LaTeX to Typst for PDF generation
+- New lightweight Docker image (Alpine + Pandoc 3.6 + Typst 0.12)
+- Added GitHub Action for CI/CD (`scope-impact/rdm@v1`)
 - Fixed broken cross-references in software_plan.md template
 
-### v0.11.1
+## License
 
-- The default directory is now named "dhf", for [design history file](https://innolitics.com/articles/design-control-guidance-for-medical-device-manufacturers/#section-j-design-history-file-dhf), instead of "regulatory.
-- Update the default set of templates to conform with the 2021 Draft Guidance titled ["Content of Premarket Submissions for Device Software Functions"](https://innolitics.com/articles/premarket-submissions-for-device-software-functions/)
-- Add a Dockerfile and docker-compose file to the default project set up. Installing Latex and pandoc is cumbersome, so using docker simplifies the process.
+[MIT](LICENSE.txt) - Original work by [Innolitics](https://innolitics.com)
