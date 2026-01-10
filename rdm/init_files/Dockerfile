@@ -3,7 +3,7 @@
 # Pandoc + Typst | Minimal & Fast
 # ============================================================================
 
-FROM alpine:3.21 AS builder
+FROM alpine:3.23 AS builder
 
 # Versions
 ARG PANDOC_VERSION=3.6.1
@@ -26,7 +26,7 @@ RUN TYPST_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64")
 # Final image
 # ============================================================================
 
-FROM alpine:3.21
+FROM alpine:3.23
 
 # Runtime dependencies
 RUN apk add --no-cache \
