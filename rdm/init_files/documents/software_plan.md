@@ -79,13 +79,13 @@ The **Documentation Level Evaluation** document is written by the project lead b
 
 The **Software Requirements Specification**, or **SRS**, describes what the software needs to accomplish. A first draft is written by the project lead during the [Initial Requirements Analysis activity](#project---initial-requirements-analysis), and is finalized by the project lead during the [Release Verification activity](#release---final-verification). Software engineers may clarify and extend the document during [Issue Implementation](#issue---requirements-analysis).
 
-The **Software Design Specification**, or **SDS**, describes how the software meets the requirements in the SRS. A first draft is written by the project lead during the [Initial Architectural Design activity](#project---initial-architectual-design). Software engineers extend and improve it during [Issue Implementation](#issue---design-specifications). It is reviewed for consistency by the project lead during the [Release Verification activity](#release---final-verification).
+The **Software Design Specification**, or **SDS**, describes how the software meets the requirements in the SRS. A first draft is written by the project lead during the [Initial Architectural Design activity](#project---initial-architectural-design). Software engineers extend and improve it during [Issue Implementation](#issue---design-specifications). It is reviewed for consistency by the project lead during the [Release Verification activity](#release---final-verification).
 
 The **Software Description** provides an overview of the operationally significant features of the software within {{device.name}}, using a format that is familiar to FDA reviewers. Since it is summarizes content in the SDS and SRS, it is written and reviewed for consistency by the project lead during the [Release Verification activity](#release---final-verification).
 
 The **System and Software Architecture Diagrams** document, which is requested in the FDA's 2021 "Content of Premarket Submissions for Device Software Functions" draft guidance, is included as a section in the SDS.
 
-The **Software Development and Maintenance Record** records a list of change requests and problem reports addressed within a particular release. It also records all of the implemented changes and their verification via code reviews in the release. Finally, it lists all known anomalies present in the release. This document is generated from records extracted from GitHub pull requests and issues that are created during several activities, but most especially the [Pull Request Review activity](#issue---pull-request-review). The document is reviewed by the project lead during the [Release Verification activity](#release---final-verification).
+The **Software Development and Maintenance Record** records a list of change requests and problem reports addressed within a particular release. It also records all of the implemented changes and their verification via code reviews in the release. Finally, it lists all known anomalies present in the release. This document is generated from records extracted from GitHub pull requests and issues that are created during several activities, but most especially the [Pull Request Review activity](#issue---reviewing-pull-requests). The document is reviewed by the project lead during the [Release Verification activity](#release---final-verification).
 
 The **Revision Level History** records the major changes made in each version of the software. This document should be written iteratively during [Issue Implementation](#issue---implementation) the The document is reviewed by the project lead during the [Release Verification activity](#release---final-verification).
 
@@ -211,7 +211,7 @@ Changes made after the first regulatory release are made following most of the s
 
     - [Definitions](#definitions)
     - [Roles and Responsibilities](#roles-and-responsibilities)
-    - [Development Life Cycle](#development-life-cycle-mode)
+    - [Development Life Cycle](#development-life-cycle-model)
     - [Development Standards](#development-standards)
     - [Development Methods](#development-tools)
     - [Testing Plan](#testing-plan)
@@ -804,7 +804,7 @@ Note that these tasks do not need to be performed in the order they're presented
 
 4. **Testing**
 
-    Perform the [Issue - Testing activity](#issue---testing) as appropriate.
+    Perform the [Issue - Writing Tests activity](#issue---writing-tests) as appropriate.
 
 5. **Construction**
 
@@ -827,7 +827,7 @@ Note that these tasks do not need to be performed in the order they're presented
 
 2. **Design Specifications**
 
-    Complete verification tasks in the [Issue - Design Specification activity](#issue---design-specification), as appropriate.
+    Complete verification tasks in the [Issue - Design Specifications activity](#issue---design-specifications), as appropriate.
 
 3. **Risk Analysis**
 
@@ -835,7 +835,7 @@ Note that these tasks do not need to be performed in the order they're presented
 
 4. **Testing**
 
-    Complete verification tasks in the [Issue - Testing activity](#issue---testing), as appropriate.
+    Complete verification tasks in the [Issue - Writing Tests activity](#issue---writing-tests), as appropriate.
 
 5. **Construction**
 
@@ -1117,7 +1117,7 @@ TODO: add a template document for the software risk management file
 
 2. **Update Architectural Diagram**
 
-    Incorporate the new SOUP item into the SDS Documentation as appropriate. The benefit to engineers, especially new engineers, should be balanced with the cost of maintaining the diagrams and the risks associated with outdated diagrams. See the [Project - Architectural Design](#project---architectural-design) for details.
+    Incorporate the new SOUP item into the SDS Documentation as appropriate. The benefit to engineers, especially new engineers, should be balanced with the cost of maintaining the diagrams and the risks associated with outdated diagrams. See the [Project - Initial Architectural Design](#project---initial-architectural-design) for details.
 
 3. **Update {{workflow.soup_location}}**
 
@@ -1180,7 +1180,7 @@ TODO: add a template document for the software risk management file
 
 2. Risk Assessment
 
-    Evaluate the problem's relevance to safety using the software [risk assessment activity](#risk-assessment) and record the result in the problem report [[62304:6.2.1.3, 62304:9.2.b, and 62304:9.2.c]].
+    Evaluate the problem's relevance to safety using the software [Issue - Risk Analysis activity](#issue---risk-analysis) and record the result in the problem report [[62304:6.2.1.3, 62304:9.2.b, and 62304:9.2.c]].
 
 3. Advise Relevant Parties
 
@@ -1231,7 +1231,7 @@ TODO: add a template document for the software risk management file
 
 2. **Unit and Integration Tests**
 
-    Although it's usually impossible to run the unit and integration tests in a production environment, the test environment should match the production environment as closely as possible. The test record should describe the test environment and should be detailed enough to allow another engineer to re-run the tests [[62304:5.6.7.b and 62304:5.7.5.b]]. In particular, it should include the git commit hash for the state of the code that was built and tested [[62304:9.8.c]]. Dirty working environments aren't allowed. Details about the SOUP versions should be completely recorded according to the [SOUP Configuration Management Plan](#soup-configuration-management-plan) [[62304:9.8.c]]. Any relevant environment variables should also be included. Any testing tools [[62304:9.8.e]] or hardware should also be recorded [[62304:9.8.d]].
+    Although it's usually impossible to run the unit and integration tests in a production environment, the test environment should match the production environment as closely as possible. The test record should describe the test environment and should be detailed enough to allow another engineer to re-run the tests [[62304:5.6.7.b and 62304:5.7.5.b]]. In particular, it should include the git commit hash for the state of the code that was built and tested [[62304:9.8.c]]. Dirty working environments aren't allowed. Details about the SOUP versions should be completely recorded according to the [Configuration Management Plan](#configuration-management-plan) [[62304:9.8.c]]. Any relevant environment variables should also be included. Any testing tools [[62304:9.8.e]] or hardware should also be recorded [[62304:9.8.d]].
 
     Run the unit and integration tests. Include the list of tests that were run and whether they passed or failed [[62304:5.6.7.a 62304:5.7.5.a]].
 
@@ -1245,7 +1245,7 @@ TODO: add a template document for the software risk management file
 
 4. **Reporting Test Failures**
 
-    Any test failures shall be recorded as problem reports [[62304:5.6.8 62304:5.7.4.d]]. See the [prepare problem report activity](#prepare-problem-report) for details [[62304:5.7.2]]. If any pull requests are implemented in response to these problem reports, the tests must be re-run [[62304:5.7.3.a 62304:5.7.3.b]]. If it is deemed unnecessary to re-run some of the tests, the justification as to why shall be included in the test record [[62304:5.7.3.c note that the risk management activities for (c) will be handled as part of the unit implementation and testing activity]].
+    Any test failures shall be recorded as problem reports [[62304:5.6.8 62304:5.7.4.d]]. See the [Issue - Problem Resolution activity](#issue---problem-resolution) for details [[62304:5.7.2]]. If any pull requests are implemented in response to these problem reports, the tests must be re-run [[62304:5.7.3.a 62304:5.7.3.b]]. If it is deemed unnecessary to re-run some of the tests, the justification as to why shall be included in the test record [[62304:5.7.3.c note that the risk management activities for (c) will be handled as part of the unit implementation and testing activity]].
 
 5. **Completing the Test Record**
 

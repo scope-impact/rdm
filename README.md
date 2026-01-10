@@ -21,25 +21,46 @@ RDM is especially well-suited for early-stage software-only medical devices that
 
 ## Quick Start
 
+### Option 1: Docker (Recommended)
+
+Docker includes all dependencies (Pandoc, Typst, fonts) - no additional setup required.
+
 ```sh
-pip install rdm[github]
+# Install rdm CLI
+uv tool install git+https://github.com/scope-impact/rdm
 
-# Optional: Install git hooks
-rdm hooks
-
-# Scaffold initial template files and run
+# Scaffold project and build documents
 rdm init
-cd regulatory
-make
-# regulatory documents stored in the "release" directory
-
-# if pandoc and latex are installed, you can also run
-make pdfs
-make docs
-
-# alternatively, if you use Docker
+cd dhf
 docker compose run rdm make pdfs
 docker compose run rdm make docs
+```
+
+### Option 2: Native Installation
+
+If you prefer not to use Docker, install the dependencies manually:
+
+```sh
+# Install rdm CLI
+uv tool install git+https://github.com/scope-impact/rdm
+
+# Install document processing dependencies (macOS)
+brew install pandoc typst
+
+# Or on Ubuntu/Debian
+# apt install pandoc && cargo install typst-cli
+
+# Scaffold project and build documents
+rdm init
+cd dhf
+make pdfs
+make docs
+```
+
+### Update to Latest Version
+
+```sh
+uv tool upgrade rdm
 ```
 
 ## GitHub Action
@@ -121,7 +142,7 @@ The best companies follow the regulations with a degree of faith that these regu
 
 RDM is designed to be used within a typical software development workflow.  When a new project is started, developers
 
-1. Install RDM using `pip install rdm`
+1. Install RDM using `uv tool install git+https://github.com/scope-impact/rdm`
     A) Optional: Install [RDM's git hooks](#git-hooks) using `rdm hooks` 
 2. Generate a set of markdown templates, which are stored in the git repository, using `rdm init`
 3. Edit configuration variables in the generated files
@@ -146,20 +167,26 @@ RDM is designed to be used within a typical software development workflow.  When
 
 ## Dependencies
 
+### Using Docker (Recommended)
+
 - Docker
 
-OR
+The Docker image includes all dependencies: Pandoc 3.6, Typst 0.12, fonts (Inter, JetBrains Mono, Noto), and rdm.
 
-- Python 3.5+
-- Make
-- rdm
-- Optional for Word and PDF generation: Pandoc 2.14 or newer
-- Also for PDF generation: pdflatex, (texlive-latex-extra and latexmk), or texlive-latex-full
+### Native Installation
 
-### For development:
+| Dependency | Required For |
+|------------|--------------|
+| Python 3.10+ | rdm CLI |
+| [uv](https://github.com/astral-sh/uv) | Installing rdm |
+| Make | Build orchestration |
+| [Pandoc](https://pandoc.org/) 2.14+ | Markdown → PDF/DOCX conversion |
+| [Typst](https://typst.app/) | PDF typesetting (alternative to LaTeX) |
+
+### For Development
 
 ```sh
-git clone https://github.com/innolitics/rdm.git
+git clone https://github.com/scope-impact/rdm.git
 cd rdm
 uv sync --all-extras
 uv run pytest tests
@@ -167,11 +194,39 @@ uv run pytest tests
 
 ## Installation
 
-`pip install rdm`
+### rdm CLI
 
-or, if you need GitHub support:
+```sh
+# Install
+uv tool install git+https://github.com/scope-impact/rdm
 
-`pip install rdm[github]`
+# With GitHub integration
+uv tool install "rdm[github] @ git+https://github.com/scope-impact/rdm"
+
+# Pin to specific version
+uv tool install git+https://github.com/scope-impact/rdm@v1.0.0
+
+# Update
+uv tool upgrade rdm
+```
+
+### Document Processing (for PDF/DOCX generation)
+
+**macOS:**
+```sh
+brew install pandoc typst
+```
+
+**Ubuntu/Debian:**
+```sh
+apt install pandoc
+cargo install typst-cli
+```
+
+**Or use Docker** (no installation needed):
+```sh
+docker compose run rdm make pdfs
+```
 
 ## The Init Files
 
@@ -424,6 +479,25 @@ The [contrib folder](https://github.com/innolitics/rdm/tree/main/contrib) includ
 **If you use RDM, please let us know.**
 
 ## Changelog
+
+### v1.0.0
+
+**Installation & Distribution:**
+- New recommended installation via `uv tool install git+https://github.com/scope-impact/rdm`
+- Auto-update support via `uv tool upgrade rdm`
+- No PyPI required - install directly from GitHub
+
+**PDF Generation:**
+- Migrated from LaTeX to Typst for faster, simpler PDF generation
+- New lightweight Docker image based on Alpine with Pandoc 3.6 and Typst 0.12
+- Added GitHub Action for CI/CD PDF generation (`scope-impact/rdm@v1`)
+
+**CI/CD:**
+- Added Dependabot for automated dependency updates (Python, GitHub Actions, Docker)
+- Added PDF generation test workflow
+
+**Bug Fixes:**
+- Fixed broken cross-references in software_plan.md template
 
 ### v0.11.1
 

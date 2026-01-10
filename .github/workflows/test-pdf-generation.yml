@@ -1,0 +1,63 @@
+name: Test PDF Generation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rdm/init_files/**'
+      - 'rdm/**/*.py'
+      - '.github/workflows/test-pdf-generation.yml'
+  pull_request:
+    paths:
+      - 'rdm/init_files/**'
+      - 'rdm/**/*.py'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  test-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install rdm CLI
+        run: uv tool install .
+
+      - name: Scaffold test project
+        run: |
+          rdm init -o test-dhf
+          ls -la test-dhf/
+
+      - name: Build wheel for Docker
+        run: uv build --wheel --out-dir test-dhf/dist
+
+      - name: Generate PDFs
+        run: |
+          cd test-dhf
+          docker compose run --rm rdm make pdfs
+
+      - name: Verify PDFs were created
+        run: |
+          echo "Generated files:"
+          find test-dhf/release -type f -name "*.pdf" | head -20
+
+          # Fail if no PDFs were generated
+          PDF_COUNT=$(find test-dhf/release -type f -name "*.pdf" | wc -l)
+          echo "Total PDFs generated: $PDF_COUNT"
+
+          if [ "$PDF_COUNT" -eq 0 ]; then
+            echo "ERROR: No PDFs were generated!"
+            exit 1
+          fi
+
+      - name: Upload PDFs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-pdfs
+          path: test-dhf/release/*.pdf
+          retention-days: 7

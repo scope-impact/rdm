@@ -48,7 +48,7 @@ dev = [
 rdm = "rdm.main:main"
 
 [project.urls]
-Homepage = "https://github.com/innolitics/rdm"
+Homepage = "https://github.com/scope-impact/rdm"
 
 [tool.setuptools]
 include-package-data = true
