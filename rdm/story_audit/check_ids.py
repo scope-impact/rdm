@@ -9,14 +9,11 @@ Exit code 0 = no duplicates, 1 = duplicates found
 
 from __future__ import annotations
 
-import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
-
-# Matches ID definitions like "id: US-001" or "id: FT-001"
-ID_PATTERN = re.compile(r"\bid:\s*((?:FT|US|EP|DC|GR)-\d{3})\b")
+from rdm.story_audit.schema import ID_DEFINITION_PATTERN
 
 
 def find_id_definitions(file_path: Path) -> list[tuple[str, int]]:
@@ -29,7 +26,7 @@ def find_id_definitions(file_path: Path) -> list[tuple[str, int]]:
     try:
         content = file_path.read_text(encoding="utf-8", errors="ignore")
         for i, line in enumerate(content.splitlines(), 1):
-            for match in ID_PATTERN.finditer(line):
+            for match in ID_DEFINITION_PATTERN.finditer(line):
                 definitions.append((match.group(1), i))
     except Exception as e:
         print(f"Warning: Could not read or parse {file_path}: {e}", file=sys.stderr)

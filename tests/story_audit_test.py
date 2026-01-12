@@ -111,20 +111,69 @@ class TestRequirementsIndex:
 # =============================================================================
 
 
-class TestAuditIdPattern:
-    """Tests for ID pattern regex matching."""
+class TestIdPatterns:
+    """Tests for ID pattern regex matching - single source of truth in schema.py."""
 
     def test_id_pattern_matches_all_valid_prefixes(self) -> None:
-        """ID_PATTERN matches FT, US, EP, DC, GR, ADR prefixes and rejects invalid."""
-        from rdm.story_audit.audit import ID_PATTERN
+        """ID_PATTERN matches all valid prefixes: FT, US, EP, RSK, RC, DC, GR, ADR."""
+        from rdm.story_audit.schema import ID_PATTERN
 
-        valid = ["FT-001", "US-123", "EP-001", "DC-001", "GR-001", "ADR-001"]
-        invalid = ["XX-001", "FT001", "ft-001", "US-1"]
+        valid = [
+            "FT-001", "FT-1", "FT-12345",  # Feature - any digit count
+            "US-001", "US-1", "US-999",     # User Story
+            "EP-001", "EP-42",              # Epic
+            "RSK-001", "RSK-1",             # Risk (was missing before)
+            "RC-001", "RC-99",              # Risk Control (was missing before)
+            "DC-001", "DC-1",               # Design Control
+            "GR-001", "GR-1",               # Guidance Reference
+            "ADR-001", "ADR-1",             # Architecture Decision Record
+        ]
+        invalid = ["XX-001", "FT001", "ft-001", "US-", "RSK-", "-001"]
 
         for text in valid:
             assert ID_PATTERN.search(text) is not None, f"Should match: {text}"
         for text in invalid:
             assert ID_PATTERN.search(text) is None, f"Should not match: {text}"
+
+    def test_id_definition_pattern_matches_yaml_definitions(self) -> None:
+        """ID_DEFINITION_PATTERN matches 'id: XX-NNN' format in YAML."""
+        from rdm.story_audit.schema import ID_DEFINITION_PATTERN
+
+        valid_lines = [
+            "id: FT-001",
+            "id: US-123",
+            "id: RSK-001",
+            "id: RC-42",
+            "  id: EP-1",  # indented
+        ]
+        invalid_lines = [
+            "epic_id: EP-001",  # Not a definition (different key)
+            "feature_id: FT-001",  # Not a definition (different key)
+            "idx: FT-001",  # Not 'id:' key
+        ]
+        # Note: "# id: FT-001" (commented) would still match the regex.
+        # Comment handling is done at file processing level, not in regex.
+
+        for line in valid_lines:
+            assert ID_DEFINITION_PATTERN.search(line) is not None, f"Should match: {line}"
+        for line in invalid_lines:
+            assert ID_DEFINITION_PATTERN.search(line) is None, f"Should not match: {line}"
+
+    def test_helper_functions(self) -> None:
+        """Test is_valid_id, get_id_prefix, get_id_type helper functions."""
+        from rdm.story_audit.schema import get_id_prefix, get_id_type, is_valid_id
+
+        assert is_valid_id("FT-001") is True
+        assert is_valid_id("RSK-42") is True
+        assert is_valid_id("INVALID") is False
+
+        assert get_id_prefix("FT-001") == "FT"
+        assert get_id_prefix("RSK-001") == "RSK"
+        assert get_id_prefix("INVALID") is None
+
+        assert get_id_type("FT-001") == "Feature"
+        assert get_id_type("RSK-001") == "Risk"
+        assert get_id_type("RC-001") == "Risk Control"
 
 
 class TestAuditFindIdsInFile:

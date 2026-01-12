@@ -15,6 +15,7 @@ When adding new fields to YAML:
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 from typing import Any
 
@@ -32,6 +33,66 @@ except ImportError:
 # =============================================================================
 
 SCHEMA_VERSION = "1.0.0"
+
+
+# =============================================================================
+# ID PATTERNS - SINGLE SOURCE OF TRUTH
+# =============================================================================
+# All ID validation across the module should use these constants.
+# Format: PREFIX-DIGITS where DIGITS is one or more digits (not fixed to 3).
+
+# Valid ID prefixes and their descriptions
+ID_PREFIXES = {
+    "FT": "Feature",
+    "US": "User Story",
+    "EP": "Epic",
+    "RSK": "Risk",
+    "RC": "Risk Control",
+    "DC": "Design Control",
+    "GR": "Guidance Reference",
+    "ADR": "Architecture Decision Record",
+}
+
+# All valid prefixes as a regex alternation
+_ALL_PREFIXES = "|".join(sorted(ID_PREFIXES.keys(), key=len, reverse=True))
+
+# Core pattern components
+ID_DIGITS_PATTERN = r"\d+"  # One or more digits (flexible)
+
+# Pattern for matching any story/requirement ID in text (word boundary)
+# Matches: FT-001, US-123, EP-1, RSK-001, RC-42, DC-001, GR-001, ADR-001
+ID_PATTERN = re.compile(rf"\b({_ALL_PREFIXES})-({ID_DIGITS_PATTERN})\b")
+
+# Pattern for matching ID definitions in YAML (id: XX-NNN)
+# Matches lines like "id: FT-001" or "- id: US-123"
+ID_DEFINITION_PATTERN = re.compile(
+    rf"\bid:\s*((?:{_ALL_PREFIXES})-{ID_DIGITS_PATTERN})\b"
+)
+
+# Individual prefix patterns for Pydantic field validation
+# These are strings (not compiled) for use in Field(pattern=...)
+FEATURE_ID_PATTERN = r"^FT-\d+$"
+USER_STORY_ID_PATTERN = r"^US-([A-Z]+-)?(\d+)$"  # Allows US-001 or US-PREFIX-001
+EPIC_ID_PATTERN = r"^EP-\d+$"
+RISK_ID_PATTERN = r"^RSK-\d+$"
+RISK_CONTROL_ID_PATTERN = r"^RC-\d+$"
+
+
+def is_valid_id(story_id: str) -> bool:
+    """Check if a string is a valid story/requirement ID."""
+    return ID_PATTERN.fullmatch(story_id) is not None
+
+
+def get_id_prefix(story_id: str) -> str | None:
+    """Extract the prefix from a story ID (e.g., 'FT' from 'FT-001')."""
+    match = ID_PATTERN.fullmatch(story_id)
+    return match.group(1) if match else None
+
+
+def get_id_type(story_id: str) -> str | None:
+    """Get the human-readable type of an ID (e.g., 'Feature' for 'FT-001')."""
+    prefix = get_id_prefix(story_id)
+    return ID_PREFIXES.get(prefix) if prefix else None
 
 
 # =============================================================================
@@ -76,7 +137,7 @@ class Status(str, Enum):
 class RiskControl(BaseModel):
     """A control that mitigates a risk."""
 
-    id: str = Field(..., pattern=r"^RC-\d+$", description="Risk Control ID (RC-XXX)")
+    id: str = Field(..., pattern=RISK_CONTROL_ID_PATTERN, description="Risk Control ID (RC-XXX)")
     description: str = Field(..., description="Control description")
     implemented_by: list[str] = Field(
         default_factory=list,
@@ -91,7 +152,7 @@ class RiskControl(BaseModel):
 class Risk(BaseModel):
     """A risk with controls."""
 
-    id: str = Field(..., pattern=r"^RSK-\d+$", description="Risk ID (RSK-XXX)")
+    id: str = Field(..., pattern=RISK_ID_PATTERN, description="Risk ID (RSK-XXX)")
     title: str = Field(..., description="Risk title")
     description: str = Field(default="", description="Risk description")
     category: str | None = Field(default=None, description="STRIDE category or custom")
@@ -134,7 +195,7 @@ class UserStory(BaseModel):
 
     id: str = Field(
         ...,
-        pattern=r"^US-([A-Z]+-)?(\d+)$",
+        pattern=USER_STORY_ID_PATTERN,
         description="User story ID (US-XXX or US-PREFIX-XXX)",
     )
     as_a: str = Field(default="", description="Role (As a...)")
@@ -199,10 +260,10 @@ class ExistingCode(BaseModel):
 class Feature(BaseModel):
     """A feature specification."""
 
-    id: str = Field(..., pattern=r"^FT-\d+$", description="Feature ID (FT-XXX)")
+    id: str = Field(..., pattern=FEATURE_ID_PATTERN, description="Feature ID (FT-XXX)")
     title: str = Field(..., description="Feature title")
     epic_id: str | None = Field(
-        default=None, pattern=r"^EP-\d+$", description="Parent epic ID"
+        default=None, pattern=EPIC_ID_PATTERN, description="Parent epic ID"
     )
     phase: str | None = Field(default=None, description="Implementation phase")
     priority: str = Field(default="medium", description="Feature priority")
@@ -286,7 +347,7 @@ class Phase(BaseModel):
 class Epic(BaseModel):
     """An epic grouping features."""
 
-    id: str = Field(..., pattern=r"^EP-\d+$", description="Epic ID (EP-XXX)")
+    id: str = Field(..., pattern=EPIC_ID_PATTERN, description="Epic ID (EP-XXX)")
     title: str
     status: str = "unknown"
     phases: list[str] = Field(default_factory=list)
@@ -299,7 +360,7 @@ class Epic(BaseModel):
 class FeatureRef(BaseModel):
     """Feature reference in index file (minimal info)."""
 
-    id: str = Field(..., pattern=r"^FT-\d+$")
+    id: str = Field(..., pattern=FEATURE_ID_PATTERN)
     title: str
     phase: str | None = None
     epic: str | None = None

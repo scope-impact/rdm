@@ -14,10 +14,8 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    pass  # Reserved for future type imports
+from rdm.story_audit.schema import ID_PATTERN
 
 
 # =============================================================================
@@ -59,10 +57,6 @@ class AuditResult:
 
 
 # =============================================================================
-# PATTERNS
-# =============================================================================
-
-# =============================================================================
 # CONSTANTS
 # =============================================================================
 
@@ -70,11 +64,8 @@ class AuditResult:
 MIN_SOURCE_FILE_LINES_FOR_ORPHAN_CHECK = 20
 
 # =============================================================================
-# PATTERNS
+# PATTERNS (ID_PATTERN imported from schema.py - single source of truth)
 # =============================================================================
-
-# Matches FT-001, US-001, EP-001, DC-001, GR-001, ADR-001
-ID_PATTERN = re.compile(r"\b(FT|US|EP|DC|GR|ADR)-(\d{3})\b")
 
 # Matches @allure.story("US-001") or @allure.feature("FT-001")
 ALLURE_PATTERN = re.compile(r'@allure\.(story|feature)\(["\']([^"\']+)["\']\)')
