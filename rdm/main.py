@@ -1,6 +1,7 @@
 import argparse
 import sys
 import traceback
+from pathlib import Path
 
 import yaml
 
@@ -54,7 +55,51 @@ def cli(raw_arguments):
         exit_code = audit_for_gaps(checklists, sources, True, args.verbose)
     elif args.command == 'gap':
         exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
+    elif args.command == 'story':
+        exit_code = handle_story_command(args)
     return exit_code
+
+
+def handle_story_command(args):
+    """Handle the story subcommand and its sub-subcommands."""
+    try:
+        if args.story_command == 'audit':
+            from rdm.story_audit.audit import story_audit_command
+            repo_path = Path(args.repo) if args.repo else None
+            return story_audit_command(repo_path)
+
+        elif args.story_command == 'validate':
+            from rdm.story_audit.validate import story_validate_command
+            return story_validate_command(
+                requirements_dir=Path(args.requirements) if args.requirements else None,
+                file_path=Path(args.file) if args.file else None,
+                strict=args.strict,
+                verbose=args.verbose,
+                quiet=args.quiet,
+            )
+
+        elif args.story_command == 'sync':
+            from rdm.story_audit.sync import story_sync_command
+            return story_sync_command(
+                requirements_dir=Path(args.requirements) if args.requirements else None,
+                output_path=Path(args.output) if args.output else None,
+                repo_name=args.repo,
+                validate_only=args.validate_only,
+            )
+
+        elif args.story_command == 'check-ids':
+            from rdm.story_audit.check_ids import story_check_ids_command
+            files = [Path(f) for f in args.files] if args.files else None
+            return story_check_ids_command(files)
+
+        else:
+            print("Unknown story subcommand. Use: audit, validate, sync, or check-ids")
+            return 1
+
+    except ImportError as e:
+        print(f"Error: Missing dependency for story_audit: {e}")
+        print("Install with: pip install rdm[story]")
+        return 1
 
 
 def parse_arguments(arguments):
@@ -98,6 +143,38 @@ def parse_arguments(arguments):
     translate_parser.add_argument('format', choices=XML_FORMATS)
     translate_parser.add_argument('input')
     translate_parser.add_argument('output')
+
+    # Story audit commands
+    story_help = 'requirements traceability and story audit tools'
+    story_parser = subparsers.add_parser('story', help=story_help)
+    story_subparsers = story_parser.add_subparsers(dest='story_command', metavar='<subcommand>')
+
+    # rdm story audit
+    story_audit_help = 'run traceability audit on repository'
+    story_audit_parser = story_subparsers.add_parser('audit', help=story_audit_help)
+    story_audit_parser.add_argument('repo', nargs='?', default='.', help='Repository path (default: .)')
+
+    # rdm story validate
+    story_validate_help = 'validate requirements YAML against schema'
+    story_validate_parser = story_subparsers.add_parser('validate', help=story_validate_help)
+    story_validate_parser.add_argument('-r', '--requirements', help='Path to requirements directory')
+    story_validate_parser.add_argument('-f', '--file', help='Validate single file')
+    story_validate_parser.add_argument('-s', '--strict', action='store_true', help='Fail on extra fields')
+    story_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
+    story_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
+
+    # rdm story sync
+    story_sync_help = 'sync requirements to DuckDB for analytics'
+    story_sync_parser = story_subparsers.add_parser('sync', help=story_sync_help)
+    story_sync_parser.add_argument('-r', '--requirements', help='Path to requirements directory')
+    story_sync_parser.add_argument('-o', '--output', help='Output database path')
+    story_sync_parser.add_argument('--repo', help='Repository name for cross-repo auditing')
+    story_sync_parser.add_argument('--validate-only', action='store_true', help='Only validate, no DB')
+
+    # rdm story check-ids
+    story_check_help = 'check for duplicate story IDs'
+    story_check_parser = story_subparsers.add_parser('check-ids', help=story_check_help)
+    story_check_parser.add_argument('files', nargs='*', help='Files to check (default: requirements/)')
 
     return parser.parse_args(arguments)
 
