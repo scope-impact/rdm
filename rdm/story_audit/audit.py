@@ -62,6 +62,17 @@ class AuditResult:
 # PATTERNS
 # =============================================================================
 
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
+# Minimum lines for a source file to be flagged as orphan (without traceability)
+MIN_SOURCE_FILE_LINES_FOR_ORPHAN_CHECK = 20
+
+# =============================================================================
+# PATTERNS
+# =============================================================================
+
 # Matches FT-001, US-001, EP-001, DC-001, GR-001, ADR-001
 ID_PATTERN = re.compile(r"\b(FT|US|EP|DC|GR|ADR)-(\d{3})\b")
 
@@ -94,8 +105,8 @@ def find_ids_in_file(file_path: Path, context: str) -> list[StoryReference]:
                         snippet=line.strip()[:80],
                     )
                 )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Warning: Could not read or parse {file_path}: {e}", file=sys.stderr)
     return refs
 
 
@@ -183,7 +194,7 @@ def scan_sources(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list
             # Check if file has any traceability
             if not file_refs and "@trace" not in content:
                 # Only flag substantial files
-                if len(content.splitlines()) > 20:
+                if len(content.splitlines()) > MIN_SOURCE_FILE_LINES_FOR_ORPHAN_CHECK:
                     orphans.append(str(py_file))
 
     return refs, orphans
@@ -223,10 +234,9 @@ def detect_conflicts(
         # Skip references like "- FT-001" or "epic_id: EP-001"
         defining_files = set()
         for ref in refs:
-            snippet_lower = ref.snippet.lower().strip()
-            # Only count as definition if it starts with "id:" followed by the story ID
-            # This excludes epic_id:, feature_id:, etc.
-            if snippet_lower.startswith("id:") or snippet_lower.startswith("- id:"):
+            # Use regex to confirm that the id: key is directly followed by this specific story_id
+            # This excludes epic_id:, feature_id:, and cases where id: defines a different ID
+            if re.match(r"(- )?id:\s*" + re.escape(story_id), ref.snippet, re.IGNORECASE):
                 defining_files.add(ref.file_path)
 
         if len(defining_files) > 1:

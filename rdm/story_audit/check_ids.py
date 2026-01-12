@@ -31,8 +31,8 @@ def find_id_definitions(file_path: Path) -> list[tuple[str, int]]:
         for i, line in enumerate(content.splitlines(), 1):
             for match in ID_PATTERN.finditer(line):
                 definitions.append((match.group(1), i))
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Warning: Could not read or parse {file_path}: {e}", file=sys.stderr)
     return definitions
 
 

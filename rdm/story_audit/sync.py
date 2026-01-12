@@ -356,21 +356,94 @@ def story_sync_command(
 
     conn = duckdb.connect(str(db_path))
 
-    # Create tables and insert data
+    # Create all tables and insert data
+    _create_and_populate_tables(conn, data)
+
+    conn.close()
+
+    print(f"\nDone! Database saved to: {db_path}")
+    return 0
+
+
+def _create_and_populate_tables(conn: object, data: dict[str, list[dict]]) -> None:
+    """Create all tables and populate with extracted data."""
+
+    # === PHASES TABLE ===
+    conn.execute("DROP TABLE IF EXISTS phases")
+    conn.execute("""
+        CREATE TABLE phases (
+            phase_id VARCHAR,
+            phase_name VARCHAR,
+            description VARCHAR,
+            sort_order INTEGER,
+            feature_count INTEGER
+        )
+    """)
+    for p in data["phases"]:
+        conn.execute(
+            "INSERT INTO phases VALUES (?, ?, ?, ?, ?)",
+            [p["phase_id"], p["phase_name"], p["description"], p["sort_order"], p["feature_count"]],
+        )
+
+    # === EPICS TABLE ===
+    conn.execute("DROP TABLE IF EXISTS epics")
+    conn.execute("""
+        CREATE TABLE epics (
+            epic_id VARCHAR,
+            title VARCHAR,
+            status VARCHAR,
+            phases VARCHAR[],
+            feature_ids VARCHAR[]
+        )
+    """)
+    for e in data["epics"]:
+        conn.execute(
+            "INSERT INTO epics VALUES (?, ?, ?, ?, ?)",
+            [e["epic_id"], e["title"], e["status"], e.get("phases", []), e.get("feature_ids", [])],
+        )
+
+    # === LABELS TABLE ===
+    conn.execute("DROP TABLE IF EXISTS labels")
+    conn.execute("""
+        CREATE TABLE labels (
+            label_id INTEGER,
+            label_name VARCHAR
+        )
+    """)
+    for lbl in data["labels"]:
+        conn.execute(
+            "INSERT INTO labels VALUES (?, ?)",
+            [lbl["label_id"], lbl["label_name"]],
+        )
+
+    # === FEATURES TABLE ===
     conn.execute("DROP TABLE IF EXISTS features")
     conn.execute("""
-        CREATE TABLE features AS SELECT * FROM (
-            VALUES (NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, 0, 0, 0, 0, 0, false, false, false, NULL, NULL)
-        ) AS t(
-            feature_id, repo_name, global_id, title, description, business_value,
-            epic_id, epic_title, phase_id, priority, status, labels,
-            user_story_count, dod_item_count, story_quality_core, story_quality_acceptable,
-            story_quality_weak, has_technical_spec, has_existing_code, has_business_value,
-            source_file, note
-        ) WHERE false
+        CREATE TABLE features (
+            feature_id VARCHAR,
+            repo_name VARCHAR,
+            global_id VARCHAR,
+            title VARCHAR,
+            description VARCHAR,
+            business_value VARCHAR,
+            epic_id VARCHAR,
+            epic_title VARCHAR,
+            phase_id VARCHAR,
+            priority VARCHAR,
+            status VARCHAR,
+            labels VARCHAR[],
+            user_story_count INTEGER,
+            dod_item_count INTEGER,
+            story_quality_core INTEGER,
+            story_quality_acceptable INTEGER,
+            story_quality_weak INTEGER,
+            has_technical_spec BOOLEAN,
+            has_existing_code BOOLEAN,
+            has_business_value BOOLEAN,
+            source_file VARCHAR,
+            note VARCHAR
+        )
     """)
-
     for f in data["features"]:
         conn.execute(
             "INSERT INTO features VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -385,10 +458,132 @@ def story_sync_command(
             ],
         )
 
-    conn.close()
+    # === USER STORIES TABLE ===
+    conn.execute("DROP TABLE IF EXISTS user_stories")
+    conn.execute("""
+        CREATE TABLE user_stories (
+            story_id VARCHAR,
+            repo_name VARCHAR,
+            global_id VARCHAR,
+            feature_id VARCHAR,
+            feature_title VARCHAR,
+            epic_id VARCHAR,
+            phase_id VARCHAR,
+            role VARCHAR,
+            goal VARCHAR,
+            benefit VARCHAR,
+            full_story VARCHAR,
+            priority VARCHAR,
+            story_quality VARCHAR,
+            status VARCHAR,
+            acceptance_criteria_count INTEGER,
+            note VARCHAR
+        )
+    """)
+    for s in data["user_stories"]:
+        conn.execute(
+            "INSERT INTO user_stories VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                s["story_id"], s["repo_name"], s["global_id"], s["feature_id"],
+                s["feature_title"], s["epic_id"], s["phase_id"], s["role"],
+                s["goal"], s["benefit"], s["full_story"], s["priority"],
+                s["story_quality"], s["status"], s["acceptance_criteria_count"],
+                s.get("note"),
+            ],
+        )
 
-    print(f"\nDone! Database saved to: {db_path}")
-    return 0
+    # === ACCEPTANCE CRITERIA TABLE ===
+    conn.execute("DROP TABLE IF EXISTS acceptance_criteria")
+    conn.execute("""
+        CREATE TABLE acceptance_criteria (
+            criteria_id INTEGER,
+            story_id VARCHAR,
+            feature_id VARCHAR,
+            criteria_text VARCHAR,
+            sort_order INTEGER,
+            story_role VARCHAR,
+            feature_title VARCHAR
+        )
+    """)
+    for ac in data["acceptance_criteria"]:
+        conn.execute(
+            "INSERT INTO acceptance_criteria VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                ac["criteria_id"], ac["story_id"], ac["feature_id"],
+                ac["criteria_text"], ac["sort_order"], ac["story_role"],
+                ac["feature_title"],
+            ],
+        )
+
+    # === DEFINITION OF DONE TABLE ===
+    conn.execute("DROP TABLE IF EXISTS definition_of_done")
+    conn.execute("""
+        CREATE TABLE definition_of_done (
+            dod_id INTEGER,
+            feature_id VARCHAR,
+            item_text VARCHAR,
+            sort_order INTEGER
+        )
+    """)
+    for dod in data["definition_of_done"]:
+        conn.execute(
+            "INSERT INTO definition_of_done VALUES (?, ?, ?, ?)",
+            [dod["dod_id"], dod["feature_id"], dod["item_text"], dod["sort_order"]],
+        )
+
+    # === RISKS TABLE ===
+    conn.execute("DROP TABLE IF EXISTS risks")
+    conn.execute("""
+        CREATE TABLE risks (
+            risk_id VARCHAR,
+            repo_name VARCHAR,
+            global_id VARCHAR,
+            title VARCHAR,
+            description VARCHAR,
+            category VARCHAR,
+            severity VARCHAR,
+            probability VARCHAR,
+            risk_level VARCHAR,
+            residual_risk VARCHAR,
+            status VARCHAR,
+            control_count INTEGER,
+            source_file VARCHAR
+        )
+    """)
+    for r in data["risks"]:
+        conn.execute(
+            "INSERT INTO risks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                r["risk_id"], r["repo_name"], r["global_id"], r["title"],
+                r["description"], r["category"], r["severity"], r["probability"],
+                r["risk_level"], r["residual_risk"], r["status"],
+                r["control_count"], r["source_file"],
+            ],
+        )
+
+    # === RISK CONTROLS TABLE ===
+    conn.execute("DROP TABLE IF EXISTS risk_controls")
+    conn.execute("""
+        CREATE TABLE risk_controls (
+            control_id VARCHAR,
+            repo_name VARCHAR,
+            global_id VARCHAR,
+            risk_id VARCHAR,
+            description VARCHAR,
+            implemented_by VARCHAR[],
+            verification VARCHAR,
+            status VARCHAR
+        )
+    """)
+    for rc in data["risk_controls"]:
+        conn.execute(
+            "INSERT INTO risk_controls VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                rc["control_id"], rc["repo_name"], rc["global_id"], rc["risk_id"],
+                rc["description"], rc.get("implemented_by", []), rc.get("verification"),
+                rc.get("status"),
+            ],
+        )
 
 
 def main() -> None:

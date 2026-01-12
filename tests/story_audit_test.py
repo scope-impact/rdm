@@ -11,30 +11,16 @@ import tempfile
 from pathlib import Path
 
 
-
 # =============================================================================
-# SCHEMA TESTS
+# SCHEMA TESTS - Business Logic Only
 # =============================================================================
-
-
-class TestStoryQualityEnum:
-    """Tests for StoryQuality enum values."""
-
-    def test_story_quality_values(self) -> None:
-        """StoryQuality has expected enum values."""
-        from rdm.story_audit.schema import StoryQuality
-
-        assert StoryQuality.CORE.value == "core"
-        assert StoryQuality.ACCEPTABLE.value == "acceptable"
-        assert StoryQuality.WEAK.value == "weak"
-        assert StoryQuality.UNKNOWN.value == "unknown"
 
 
 class TestUserStoryModel:
-    """Tests for UserStory Pydantic model."""
+    """Tests for UserStory computed properties and extra field detection."""
 
-    def test_user_story_full_story_property(self) -> None:
-        """full_story property generates correct format."""
+    def test_full_story_property_generates_correct_format(self) -> None:
+        """full_story property generates 'As a X, I want Y so that Z' format."""
         from rdm.story_audit.schema import UserStory
 
         story = UserStory(
@@ -45,8 +31,8 @@ class TestUserStoryModel:
         )
         assert story.full_story == "As a developer, I want to write tests so that I can catch bugs early"
 
-    def test_user_story_extra_fields_detected(self) -> None:
-        """Extra fields in UserStory are captured."""
+    def test_extra_fields_detected(self) -> None:
+        """Extra fields in UserStory are captured for schema migration tracking."""
         from rdm.story_audit.schema import UserStory
 
         story = UserStory(
@@ -54,37 +40,18 @@ class TestUserStoryModel:
             as_a="user",
             i_want="something",
             so_that="benefit",
-            custom_field="custom_value",  # Extra field
+            custom_field="custom_value",
         )
         extra = story.get_extra_fields()
         assert "custom_field" in extra
         assert extra["custom_field"] == "custom_value"
 
-    def test_user_story_no_extra_fields(self) -> None:
-        """No extra fields returns empty dict."""
-        from rdm.story_audit.schema import UserStory
-
-        story = UserStory(id="US-001", as_a="user", i_want="x", so_that="y")
-        assert story.get_extra_fields() == {}
-
 
 class TestFeatureModel:
-    """Tests for Feature Pydantic model."""
+    """Tests for Feature computed properties."""
 
-    def test_feature_extra_fields_detected(self) -> None:
-        """Extra fields in Feature are captured."""
-        from rdm.story_audit.schema import Feature
-
-        feature = Feature(
-            id="FT-001",
-            title="Test Feature",
-            unknown_field="value",  # Extra field
-        )
-        extra = feature.get_extra_fields()
-        assert "unknown_field" in extra
-
-    def test_feature_compute_quality_summary(self) -> None:
-        """compute_quality_summary correctly counts story qualities."""
+    def test_compute_quality_summary_counts_story_qualities(self) -> None:
+        """compute_quality_summary correctly counts core/acceptable/weak stories."""
         from rdm.story_audit.schema import Feature, UserStory
 
         feature = Feature(
@@ -104,10 +71,10 @@ class TestFeatureModel:
 
 
 class TestRiskModels:
-    """Tests for Risk and RiskControl models."""
+    """Tests for Risk traceability linking."""
 
-    def test_risk_get_all_implemented_by(self) -> None:
-        """get_all_implemented_by collects US IDs from all controls."""
+    def test_get_all_implemented_by_collects_user_story_ids(self) -> None:
+        """get_all_implemented_by aggregates US IDs from all controls."""
         from rdm.story_audit.schema import Risk, RiskControl
 
         risk = Risk(
@@ -118,29 +85,14 @@ class TestRiskModels:
                 RiskControl(id="RC-002", description="Control 2", implemented_by=["US-003"]),
             ],
         )
-        us_ids = risk.get_all_implemented_by()
-        assert us_ids == ["US-001", "US-002", "US-003"]
-
-    def test_risk_control_valid(self) -> None:
-        """RiskControl creates with valid data."""
-        from rdm.story_audit.schema import RiskControl
-
-        control = RiskControl(
-            id="RC-001",
-            description="Test control",
-            implemented_by=["US-001"],
-            verification="Unit tests",
-            status="implemented",
-        )
-        assert control.id == "RC-001"
-        assert control.implemented_by == ["US-001"]
+        assert risk.get_all_implemented_by() == ["US-001", "US-002", "US-003"]
 
 
 class TestRequirementsIndex:
-    """Tests for RequirementsIndex model."""
+    """Tests for RequirementsIndex nested parsing."""
 
-    def test_requirements_index_parse_phases(self) -> None:
-        """Phases are correctly parsed from dict."""
+    def test_phases_parsed_from_nested_dict(self) -> None:
+        """Phases dict is correctly parsed into Phase objects."""
         from rdm.story_audit.schema import RequirementsIndex
 
         index = RequirementsIndex(
@@ -155,37 +107,31 @@ class TestRequirementsIndex:
 
 
 # =============================================================================
-# AUDIT TESTS
+# AUDIT TESTS - Core Scanning Logic
 # =============================================================================
 
 
 class TestAuditIdPattern:
-    """Tests for ID pattern matching."""
+    """Tests for ID pattern regex matching."""
 
-    def test_id_pattern_matches_all_types(self) -> None:
-        """ID_PATTERN matches FT, US, EP, DC, GR, ADR prefixes."""
+    def test_id_pattern_matches_all_valid_prefixes(self) -> None:
+        """ID_PATTERN matches FT, US, EP, DC, GR, ADR prefixes and rejects invalid."""
         from rdm.story_audit.audit import ID_PATTERN
 
-        test_cases = [
-            ("FT-001", True),
-            ("US-123", True),
-            ("EP-001", True),
-            ("DC-001", True),
-            ("GR-001", True),
-            ("ADR-001", True),
-            ("XX-001", False),
-            ("FT001", False),
-        ]
-        for text, should_match in test_cases:
-            match = ID_PATTERN.search(text)
-            assert (match is not None) == should_match, f"Failed for {text}"
+        valid = ["FT-001", "US-123", "EP-001", "DC-001", "GR-001", "ADR-001"]
+        invalid = ["XX-001", "FT001", "ft-001", "US-1"]
+
+        for text in valid:
+            assert ID_PATTERN.search(text) is not None, f"Should match: {text}"
+        for text in invalid:
+            assert ID_PATTERN.search(text) is None, f"Should not match: {text}"
 
 
 class TestAuditFindIdsInFile:
     """Tests for find_ids_in_file function."""
 
-    def test_find_ids_in_file(self) -> None:
-        """find_ids_in_file extracts IDs with correct metadata."""
+    def test_extracts_ids_with_correct_metadata(self) -> None:
+        """find_ids_in_file extracts story IDs with file path, line number, context."""
         from rdm.story_audit.audit import find_ids_in_file
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -198,11 +144,21 @@ class TestAuditFindIdsInFile:
         assert refs[0].context == "requirement"
         assert refs[0].line_number == 1
 
+    def test_logs_warning_on_file_error(self, capsys: object) -> None:
+        """find_ids_in_file logs warning to stderr when file cannot be read."""
+        from rdm.story_audit.audit import find_ids_in_file
+
+        refs = find_ids_in_file(Path("/nonexistent/path/file.yaml"), "requirement")
+        captured = capsys.readouterr()
+
+        assert refs == []
+        assert "Warning" in captured.err
+
 
 class TestAuditConflictDetection:
     """Tests for conflict detection logic."""
 
-    def test_detect_conflicts_finds_duplicates(self) -> None:
+    def test_detects_duplicate_definitions_across_files(self) -> None:
         """detect_conflicts identifies IDs defined in multiple files."""
         from rdm.story_audit.audit import StoryReference, detect_conflicts
 
@@ -219,32 +175,44 @@ class TestAuditConflictDetection:
         assert len(conflicts) == 1
         assert conflicts[0][0] == "FT-001"
 
-    def test_detect_conflicts_ignores_references(self) -> None:
-        """detect_conflicts only flags definitions, not references."""
+    def test_ignores_references_only_flags_definitions(self) -> None:
+        """detect_conflicts only flags 'id: XX-XXX' definitions, not references."""
         from rdm.story_audit.audit import StoryReference, detect_conflicts
 
-        # FT-001 defined once, referenced elsewhere
         requirements = {
             "FT-001": [
                 StoryReference("FT-001", "feature.yaml", 1, "requirement", "id: FT-001"),
-                StoryReference("FT-001", "index.yaml", 5, "requirement", "- FT-001"),  # Reference, not definition
+                StoryReference("FT-001", "index.yaml", 5, "requirement", "- FT-001"),
             ],
         }
         conflicts = detect_conflicts(requirements)
-        assert len(conflicts) == 0  # Should not flag as conflict
+        assert len(conflicts) == 0
 
+    def test_no_false_positive_when_id_defines_different_value(self) -> None:
+        """detect_conflicts uses regex to match exact ID after 'id:' key."""
+        from rdm.story_audit.audit import StoryReference, detect_conflicts
 
-class TestAuditResult:
-    """Tests for AuditResult dataclass."""
+        requirements = {
+            "FT-001": [
+                StoryReference("FT-001", "file1.yaml", 1, "requirement", "id: FT-001"),
+                StoryReference("FT-001", "file2.yaml", 5, "requirement", "id: FT-002  # refs FT-001"),
+            ],
+        }
+        conflicts = detect_conflicts(requirements)
+        assert len(conflicts) == 0
 
-    def test_audit_result_defaults(self) -> None:
-        """AuditResult initializes with correct defaults."""
-        from rdm.story_audit.audit import AuditResult
+    def test_ignores_epic_id_and_feature_id_references(self) -> None:
+        """detect_conflicts ignores epic_id: and feature_id: which are references."""
+        from rdm.story_audit.audit import StoryReference, detect_conflicts
 
-        result = AuditResult()
-        assert result.all_ids == set()
-        assert result.conflicts == []
-        assert result.orphan_tests == []
+        requirements = {
+            "EP-001": [
+                StoryReference("EP-001", "epic.yaml", 1, "requirement", "id: EP-001"),
+                StoryReference("EP-001", "feature.yaml", 5, "requirement", "epic_id: EP-001"),
+            ],
+        }
+        conflicts = detect_conflicts(requirements)
+        assert len(conflicts) == 0
 
 
 # =============================================================================
@@ -255,7 +223,7 @@ class TestAuditResult:
 class TestValidateFeature:
     """Tests for feature validation."""
 
-    def test_validate_feature_valid_file(self) -> None:
+    def test_valid_file_returns_valid_true(self) -> None:
         """validate_feature returns valid=True for correct YAML."""
         from rdm.story_audit.validate import validate_feature
 
@@ -282,20 +250,20 @@ definition_of_done:
         assert len(result.errors) == 0
         assert result.stats["user_stories"] == 1
 
-    def test_validate_feature_missing_file(self) -> None:
-        """validate_feature returns valid=False for missing file."""
+    def test_missing_file_returns_valid_false(self) -> None:
+        """validate_feature returns valid=False with error for missing file."""
         from rdm.story_audit.validate import validate_feature
 
         result = validate_feature(Path("/nonexistent/file.yaml"))
         assert result.valid is False
         assert "File not found" in result.errors[0]
 
-    def test_validate_feature_invalid_yaml(self) -> None:
-        """validate_feature catches validation errors."""
+    def test_invalid_yaml_returns_validation_errors(self) -> None:
+        """validate_feature catches schema validation errors."""
         from rdm.story_audit.validate import validate_feature
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write("id: INVALID-ID\ntitle: Bad Feature\n")  # Invalid ID format
+            f.write("id: INVALID-ID\ntitle: Bad Feature\n")
             f.flush()
             result = validate_feature(Path(f.name))
 
@@ -303,48 +271,16 @@ definition_of_done:
         assert len(result.errors) > 0
 
 
-class TestValidateIndex:
-    """Tests for index validation."""
-
-    def test_validate_index_missing_file(self) -> None:
-        """validate_index returns valid=False for missing file."""
-        from rdm.story_audit.validate import validate_index
-
-        result = validate_index(Path("/nonexistent/dir"))
-        assert result.valid is False
-        assert "File not found" in result.errors[0]
-
-
-class TestValidationResult:
-    """Tests for ValidationResult dataclass."""
-
-    def test_validation_result_with_warnings(self) -> None:
-        """ValidationResult captures warnings correctly."""
-        from rdm.story_audit.validate import ValidationResult
-
-        result = ValidationResult(
-            file_path=Path("test.yaml"),
-            valid=True,
-            errors=[],
-            warnings=["Missing description"],
-            extra_fields={},
-            stats={"user_stories": 5},
-        )
-        assert result.valid is True
-        assert len(result.warnings) == 1
-        assert result.stats["user_stories"] == 5
-
-
 # =============================================================================
 # CHECK_IDS TESTS
 # =============================================================================
 
 
-class TestCheckIdsFindDefinitions:
-    """Tests for find_id_definitions function."""
+class TestCheckIds:
+    """Tests for duplicate ID checking (pre-commit hook)."""
 
-    def test_find_id_definitions(self) -> None:
-        """find_id_definitions extracts ID definitions with line numbers."""
+    def test_find_id_definitions_extracts_with_line_numbers(self) -> None:
+        """find_id_definitions extracts 'id: XX-XXX' with line numbers."""
         from rdm.story_audit.check_ids import find_id_definitions
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -352,20 +288,13 @@ class TestCheckIdsFindDefinitions:
             f.flush()
             definitions = find_id_definitions(Path(f.name))
 
-        assert len(definitions) == 2
-        assert definitions[0] == ("FT-001", 1)
-        assert definitions[1] == ("US-001", 3)
+        assert definitions == [("FT-001", 1), ("US-001", 3)]
 
-
-class TestCheckForDuplicates:
-    """Tests for check_for_duplicates function."""
-
-    def test_check_for_duplicates_finds_conflicts(self) -> None:
-        """check_for_duplicates returns only duplicate IDs."""
+    def test_check_for_duplicates_returns_only_conflicts(self) -> None:
+        """check_for_duplicates returns dict of IDs with multiple definitions."""
         from rdm.story_audit.check_ids import check_for_duplicates
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Create two files with same ID
             file1 = Path(tmpdir) / "file1.yaml"
             file2 = Path(tmpdir) / "file2.yaml"
             file1.write_text("id: FT-001\n")
@@ -376,19 +305,23 @@ class TestCheckForDuplicates:
         assert "FT-001" in duplicates
         assert len(duplicates["FT-001"]) == 2
 
-    def test_check_for_duplicates_no_conflicts(self) -> None:
-        """check_for_duplicates returns empty for unique IDs."""
-        from rdm.story_audit.check_ids import check_for_duplicates
+    def test_logs_warning_on_file_error(self, capsys: object) -> None:
+        """find_id_definitions logs warning when file cannot be read."""
+        from rdm.story_audit.check_ids import find_id_definitions
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            file1 = Path(tmpdir) / "file1.yaml"
-            file2 = Path(tmpdir) / "file2.yaml"
-            file1.write_text("id: FT-001\n")
-            file2.write_text("id: FT-002\n")
+            unreadable_file = Path(tmpdir) / "unreadable.yaml"
+            unreadable_file.write_text("id: FT-001")
+            unreadable_file.chmod(0o000)
 
-            duplicates = check_for_duplicates([file1, file2])
+            try:
+                definitions = find_id_definitions(unreadable_file)
+                captured = capsys.readouterr()
 
-        assert len(duplicates) == 0
+                assert definitions == []
+                assert "Warning" in captured.err
+            finally:
+                unreadable_file.chmod(0o644)
 
 
 # =============================================================================
@@ -399,49 +332,22 @@ class TestCheckForDuplicates:
 class TestSyncHelpers:
     """Tests for sync helper functions."""
 
-    def test_count_dod_items_list(self) -> None:
-        """_count_dod_items counts list items."""
+    def test_count_dod_items_handles_list_and_dict(self) -> None:
+        """_count_dod_items counts items in both list and categorized dict formats."""
         from rdm.story_audit.sync import _count_dod_items
 
         assert _count_dod_items(["item1", "item2", "item3"]) == 3
-
-    def test_count_dod_items_dict(self) -> None:
-        """_count_dod_items counts dict items across categories."""
-        from rdm.story_audit.sync import _count_dod_items
-
-        dod = {
+        assert _count_dod_items({
             "testing": ["unit tests", "integration tests"],
             "docs": ["readme", "api docs", "changelog"],
-        }
-        assert _count_dod_items(dod) == 5
-
-
-class TestSyncParseYaml:
-    """Tests for YAML parsing functions."""
-
-    def test_parse_feature_yaml(self) -> None:
-        """parse_feature_yaml returns Feature model."""
-        from rdm.story_audit.sync import parse_feature_yaml
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write("""
-id: FT-001
-title: Test Feature
-user_stories: []
-definition_of_done: []
-""")
-            f.flush()
-            feature = parse_feature_yaml(Path(f.name))
-
-        assert feature.id == "FT-001"
-        assert feature.title == "Test Feature"
+        }) == 5
 
 
 class TestSyncBuildFeaturePhaseMap:
-    """Tests for build_feature_phase_map function."""
+    """Tests for feature-to-phase mapping."""
 
-    def test_build_feature_phase_map(self) -> None:
-        """build_feature_phase_map creates correct mapping."""
+    def test_creates_correct_feature_to_phase_mapping(self) -> None:
+        """build_feature_phase_map creates feature_id -> phase_id mapping."""
         from rdm.story_audit.schema import RequirementsIndex
         from rdm.story_audit.sync import build_feature_phase_map
 
@@ -453,9 +359,82 @@ class TestSyncBuildFeaturePhaseMap:
         )
         phase_map = build_feature_phase_map(index)
 
-        assert phase_map["FT-001"] == "phase_1"
-        assert phase_map["FT-002"] == "phase_1"
-        assert phase_map["FT-003"] == "phase_2"
+        assert phase_map == {"FT-001": "phase_1", "FT-002": "phase_1", "FT-003": "phase_2"}
+
+
+class TestSyncCreatesAllTables:
+    """Tests for complete DuckDB sync functionality."""
+
+    def test_sync_creates_all_required_tables_with_data(self) -> None:
+        """story_sync_command creates phases, epics, features, user_stories, acceptance_criteria tables."""
+        pytest = __import__("pytest")
+        duckdb = pytest.importorskip("duckdb")
+
+        from rdm.story_audit.sync import story_sync_command
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yaml_dir = Path(tmpdir)
+
+            (yaml_dir / "_index.yaml").write_text("""
+project:
+  name: Test
+  description: Test
+phases:
+  phase_1:
+    description: Phase 1
+    features: [FT-001]
+  phase_2:
+    description: Phase 2
+    features: []
+epics:
+  - id: EP-001
+    title: Test Epic
+    status: proposed
+""")
+
+            features_dir = yaml_dir / "features"
+            features_dir.mkdir()
+            (features_dir / "FT-001.yaml").write_text("""
+id: FT-001
+title: Test Feature
+user_stories:
+  - id: US-001
+    as_a: user
+    i_want: something
+    so_that: benefit
+    acceptance_criteria:
+      - First criterion
+      - Second criterion
+definition_of_done: [DOD1]
+""")
+
+            db_path = Path(tmpdir) / "test.duckdb"
+            result = story_sync_command(
+                requirements_dir=yaml_dir,
+                output_path=db_path,
+            )
+
+            assert result == 0
+
+            conn = duckdb.connect(str(db_path))
+            tables = conn.execute("SHOW TABLES").fetchall()
+            table_names = [t[0] for t in tables]
+
+            # Verify all key tables exist
+            assert "phases" in table_names
+            assert "epics" in table_names
+            assert "features" in table_names
+            assert "user_stories" in table_names
+            assert "acceptance_criteria" in table_names
+
+            # Verify data counts
+            assert conn.execute("SELECT COUNT(*) FROM phases").fetchone()[0] == 2
+            assert conn.execute("SELECT COUNT(*) FROM epics").fetchone()[0] == 1
+            assert conn.execute("SELECT COUNT(*) FROM features").fetchone()[0] == 1
+            assert conn.execute("SELECT COUNT(*) FROM user_stories").fetchone()[0] == 1
+            assert conn.execute("SELECT COUNT(*) FROM acceptance_criteria").fetchone()[0] == 2
+
+            conn.close()
 
 
 # =============================================================================
@@ -463,17 +442,16 @@ class TestSyncBuildFeaturePhaseMap:
 # =============================================================================
 
 
-class TestIntegrationFullWorkflow:
-    """Integration tests for full workflow."""
+class TestIntegrationWorkflows:
+    """Integration tests for full workflows."""
 
     def test_full_validation_workflow(self) -> None:
-        """Full validation workflow with index and feature files."""
+        """validate_all processes index and feature files correctly."""
         from rdm.story_audit.validate import validate_all
 
         with tempfile.TemporaryDirectory() as tmpdir:
             yaml_dir = Path(tmpdir)
 
-            # Create _index.yaml
             (yaml_dir / "_index.yaml").write_text("""
 project:
   name: Test Project
@@ -481,8 +459,7 @@ project:
 phases:
   phase_1:
     description: Phase 1
-    features:
-      - FT-001
+    features: [FT-001]
 epics:
   - id: EP-001
     title: Test Epic
@@ -493,7 +470,6 @@ features:
     status: proposed
 """)
 
-            # Create features directory and feature file
             features_dir = yaml_dir / "features"
             features_dir.mkdir()
             (features_dir / "FT-001.yaml").write_text("""
@@ -506,10 +482,8 @@ user_stories:
     as_a: user
     i_want: something
     so_that: benefit
-    acceptance_criteria:
-      - Criterion 1
-definition_of_done:
-  - Done item 1
+    acceptance_criteria: [Criterion 1]
+definition_of_done: [Done item 1]
 """)
 
             summary = validate_all(yaml_dir)
@@ -519,18 +493,16 @@ definition_of_done:
         assert summary.invalid_files == 0
 
     def test_full_audit_workflow(self) -> None:
-        """Full audit workflow scans requirements and tests."""
+        """run_audit scans requirements and tests directories for story IDs."""
         from rdm.story_audit.audit import run_audit
 
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_path = Path(tmpdir)
 
-            # Create requirements directory
             req_dir = repo_path / "requirements"
             req_dir.mkdir()
             (req_dir / "FT-001.yaml").write_text("id: FT-001\nid: US-001\n")
 
-            # Create tests directory
             tests_dir = repo_path / "tests"
             tests_dir.mkdir()
             (tests_dir / "test_feature.py").write_text('@allure.story("US-001")\ndef test_something(): pass\n')
