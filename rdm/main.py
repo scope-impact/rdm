@@ -99,21 +99,8 @@ def handle_story_command(args):
             from rdm.story_audit.schema_docs import story_schema_command
             return story_schema_command(model=args.model)
 
-        elif args.story_command == 'init':
-            from rdm.story_audit.story_init import story_init_command
-            return story_init_command(
-                output=Path(args.output) if args.output else None,
-                template=args.template,
-                dry_run=args.dry_run,
-                force=args.force,
-            )
-
-        elif args.story_command == 'docs':
-            from rdm.story_audit.schema_docs import story_docs_command
-            return story_docs_command()
-
         else:
-            print("Unknown story subcommand. Use: audit, validate, sync, check-ids, schema, init, or docs")
+            print("Unknown story subcommand. Use: audit, validate, sync, check-ids, schema")
             return 1
 
     except ImportError as e:
@@ -203,27 +190,10 @@ def parse_arguments(arguments):
     story_schema_parser = story_subparsers.add_parser('schema', help=story_schema_help)
     story_schema_parser.add_argument(
         '--model', '-m',
-        choices=['Feature', 'Epic', 'UserStory', 'Risk', 'Index', 'Docs', 'All'],
+        choices=['Feature', 'Epic', 'UserStory', 'Risk', 'Index', 'All'],
         default='All',
         help='Model to show schema for (default: All)'
     )
-
-    # rdm story init
-    story_init_help = 'initialize requirements directory structure'
-    story_init_parser = story_subparsers.add_parser('init', help=story_init_help)
-    story_init_parser.add_argument('-o', '--output', help='Output directory (default: ./requirements)')
-    story_init_parser.add_argument(
-        '-t', '--template',
-        choices=['infrastructure', 'application'],
-        default='application',
-        help='Template type (default: application)'
-    )
-    story_init_parser.add_argument('--dry-run', action='store_true', help='Show what would be created')
-    story_init_parser.add_argument('-f', '--force', action='store_true', help='Overwrite existing files')
-
-    # rdm story docs
-    story_docs_help = 'show requirements architecture documentation'
-    story_subparsers.add_parser('docs', help=story_docs_help)
 
     return parser.parse_args(arguments)
 
