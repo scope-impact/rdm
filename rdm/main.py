@@ -57,6 +57,8 @@ def cli(raw_arguments):
         exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
     elif args.command == 'story':
         exit_code = handle_story_command(args)
+    elif args.command == 'pm':
+        exit_code = handle_pm_command(args)
     return exit_code
 
 
@@ -108,6 +110,28 @@ def handle_story_command(args):
     except ImportError as e:
         print(f"Error: Missing dependency for story_audit: {e}")
         print("Install with: pip install rdm[story-audit]")
+        return 1
+
+
+def handle_pm_command(args):
+    """Handle the pm (project management) subcommand."""
+    try:
+        if args.pm_command == 'sync':
+            from rdm.project_management.sync import pm_sync_command
+            return pm_sync_command(
+                repo=args.repo,
+                db_path=Path(args.db) if args.db else None,
+                pull=args.pull,
+                push=args.push,
+                status=args.status,
+            )
+        else:
+            print("Unknown pm subcommand. Use: sync")
+            return 1
+
+    except ImportError as e:
+        print(f"Error: Missing dependency: {e}")
+        print("Install with: pip install rdm[github] rdm[analytics]")
         return 1
 
 
@@ -192,6 +216,22 @@ def parse_arguments(arguments):
     backlog_validate_parser.add_argument('-s', '--strict', action='store_true', help='Treat warnings as errors')
     backlog_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
     backlog_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
+
+    # =========================================================================
+    # rdm pm (project management)
+    # =========================================================================
+    pm_help = 'project management commands (GitHub sync)'
+    pm_parser = subparsers.add_parser('pm', help=pm_help)
+    pm_subparsers = pm_parser.add_subparsers(dest='pm_command', metavar='<subcommand>')
+
+    # rdm pm sync
+    pm_sync_help = 'sync GitHub issues/PRs with DuckDB'
+    pm_sync_parser = pm_subparsers.add_parser('sync', help=pm_sync_help)
+    pm_sync_parser.add_argument('--repo', help='GitHub repo (owner/name)')
+    pm_sync_parser.add_argument('--db', help='DuckDB path (default: github_sync.duckdb)')
+    pm_sync_parser.add_argument('--pull', action='store_true', help='Pull from GitHub only')
+    pm_sync_parser.add_argument('--push', action='store_true', help='Push to GitHub only')
+    pm_sync_parser.add_argument('--status', action='store_true', help='Show sync status')
 
     return parser.parse_args(arguments)
 
