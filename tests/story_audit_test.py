@@ -385,51 +385,46 @@ definition_of_done:
 
 
 class TestCheckIds:
-    """Tests for duplicate ID checking (pre-commit hook)."""
+    """Tests for duplicate ID checking using sync."""
 
-    def test_find_id_definitions_extracts_with_line_numbers(self) -> None:
-        """find_id_definitions extracts 'id: XX-XXX' with line numbers."""
-        from rdm.story_audit.check_ids import find_id_definitions
+    def test_find_duplicates_detects_duplicate_ids(self) -> None:
+        """find_duplicates detects duplicate IDs across entity types."""
+        from rdm.story_audit.check_ids import _find_duplicates_python
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write("id: FT-001\nother: value\nid: US-001\n")
-            f.flush()
-            definitions = find_id_definitions(Path(f.name))
+        data = {
+            "features": [
+                {"feature_id": "FT-001", "source_file": "FT-001.yaml"},
+                {"feature_id": "FT-002", "source_file": "FT-002.yaml"},
+            ],
+            "user_stories": [
+                {"story_id": "US-001", "feature_id": "FT-001"},
+                {"story_id": "US-001", "feature_id": "FT-002"},  # duplicate
+            ],
+            "epics": [],
+            "risks": [],
+            "risk_controls": [],
+        }
 
-        assert definitions == [("FT-001", 1), ("US-001", 3)]
+        duplicates = _find_duplicates_python(data)
 
-    def test_check_for_duplicates_returns_only_conflicts(self) -> None:
-        """check_for_duplicates returns dict of IDs with multiple definitions."""
-        from rdm.story_audit.check_ids import check_for_duplicates
+        assert "US-001" in duplicates
+        assert len(duplicates["US-001"]) == 2
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            file1 = Path(tmpdir) / "file1.yaml"
-            file2 = Path(tmpdir) / "file2.yaml"
-            file1.write_text("id: FT-001\n")
-            file2.write_text("id: FT-001\n")
+    def test_find_duplicates_returns_empty_when_no_duplicates(self) -> None:
+        """find_duplicates returns empty dict when no duplicates exist."""
+        from rdm.story_audit.check_ids import _find_duplicates_python
 
-            duplicates = check_for_duplicates([file1, file2])
+        data = {
+            "features": [{"feature_id": "FT-001", "source_file": "FT-001.yaml"}],
+            "user_stories": [{"story_id": "US-001", "feature_id": "FT-001"}],
+            "epics": [{"epic_id": "EP-001"}],
+            "risks": [],
+            "risk_controls": [],
+        }
 
-        assert "FT-001" in duplicates
-        assert len(duplicates["FT-001"]) == 2
+        duplicates = _find_duplicates_python(data)
 
-    def test_logs_warning_on_file_error(self, capsys: object) -> None:
-        """find_id_definitions logs warning when file cannot be read."""
-        from rdm.story_audit.check_ids import find_id_definitions
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            unreadable_file = Path(tmpdir) / "unreadable.yaml"
-            unreadable_file.write_text("id: FT-001")
-            unreadable_file.chmod(0o000)
-
-            try:
-                definitions = find_id_definitions(unreadable_file)
-                captured = capsys.readouterr()
-
-                assert definitions == []
-                assert "Warning" in captured.err
-            finally:
-                unreadable_file.chmod(0o644)
+        assert duplicates == {}
 
 
 # =============================================================================

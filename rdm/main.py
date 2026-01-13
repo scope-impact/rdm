@@ -90,8 +90,10 @@ def handle_story_command(args):
 
         elif args.story_command == 'check-ids':
             from rdm.story_audit.check_ids import story_check_ids_command
-            files = [Path(f) for f in args.files] if args.files else None
-            return story_check_ids_command(files, explain=args.explain)
+            return story_check_ids_command(
+                requirements_dir=Path(args.requirements) if args.requirements else None,
+                explain=args.explain,
+            )
 
         elif args.story_command == 'schema':
             from rdm.story_audit.schema_docs import story_schema_command
@@ -193,8 +195,8 @@ def parse_arguments(arguments):
     # rdm story check-ids
     story_check_help = 'check for duplicate story IDs'
     story_check_parser = story_subparsers.add_parser('check-ids', help=story_check_help)
-    story_check_parser.add_argument('files', nargs='*', help='Files to check (default: requirements/)')
-    story_check_parser.add_argument('--explain', action='store_true', help='Show detailed context for each ID')
+    story_check_parser.add_argument('-r', '--requirements', help='Path to requirements directory')
+    story_check_parser.add_argument('--explain', action='store_true', help='Show fix guidance')
 
     # rdm story schema
     story_schema_help = 'show YAML schema documentation'
