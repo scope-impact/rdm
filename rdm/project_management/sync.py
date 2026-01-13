@@ -111,82 +111,115 @@ def pull_prs(gh_repo: object, conn: object) -> int:
 
 
 # =============================================================================
-# GITHUB PROJECTS
+# GITHUB PROJECTS (GraphQL API)
 # =============================================================================
 
 
-def get_or_create_project(gh: object, owner: str, repo: str, epic: dict) -> int | None:
-    """Get or create a GitHub Project for an epic. Returns project ID."""
-    # GraphQL to list projects
+def graphql(token: str, query: str, variables: dict = None) -> dict | None:
+    """Execute a GitHub GraphQL query."""
+    import urllib.request
+    import json
+
+    data = json.dumps({"query": query, "variables": variables or {}}).encode()
+    req = urllib.request.Request(
+        "https://api.github.com/graphql",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode())
+    except Exception as e:
+        print(f"  GraphQL error: {e}")
+        return None
+
+
+def get_or_create_project(token: str, owner: str, repo: str, epic: dict) -> str | None:
+    """Get or create a GitHub Project for an epic."""
+    epic_id = epic["epic_id"]
+    epic_title = epic.get("title", epic_id)
+
+    # List existing projects
     query = """
     query($owner: String!, $repo: String!) {
         repository(owner: $owner, name: $repo) {
-            projectsV2(first: 100) {
+            projectsV2(first: 50) {
                 nodes { id title }
             }
         }
     }
     """
-    try:
-        result = gh._Github__requester.requestJsonAndCheck(
-            "POST", "/graphql",
-            input={"query": query, "variables": {"owner": owner, "repo": repo}}
-        )
-        projects = result[1].get("data", {}).get("repository", {}).get("projectsV2", {}).get("nodes", [])
-
-        epic_id = epic["epic_id"]
-        for p in projects:
-            if p["title"] == epic_id:
-                return p["id"]
-
-        # Create new project
-        mutation = """
-        mutation($owner: ID!, $title: String!) {
-            createProjectV2(input: {ownerId: $owner, title: $title}) {
-                projectV2 { id }
-            }
-        }
-        """
-        # Get owner ID first
-        owner_query = """
-        query($owner: String!, $repo: String!) {
-            repository(owner: $owner, name: $repo) { owner { id } }
-        }
-        """
-        owner_result = gh._Github__requester.requestJsonAndCheck(
-            "POST", "/graphql",
-            input={"query": owner_query, "variables": {"owner": owner, "repo": repo}}
-        )
-        owner_id = owner_result[1]["data"]["repository"]["owner"]["id"]
-
-        create_result = gh._Github__requester.requestJsonAndCheck(
-            "POST", "/graphql",
-            input={"query": mutation, "variables": {"owner": owner_id, "title": epic_id}}
-        )
-        return create_result[1]["data"]["createProjectV2"]["projectV2"]["id"]
-
-    except Exception as e:
-        print(f"  Project API error: {e}")
+    result = graphql(token, query, {"owner": owner, "repo": repo})
+    if not result or "errors" in result:
         return None
 
+    projects = result.get("data", {}).get("repository", {}).get("projectsV2", {}).get("nodes", [])
+    for p in projects:
+        if p["title"] == epic_id:
+            return p["id"]
 
-def add_issue_to_project(gh: object, project_id: str, issue_node_id: str) -> bool:
-    """Add an issue to a GitHub Project."""
+    # Get owner node ID
+    owner_query = """
+    query($owner: String!, $repo: String!) {
+        repository(owner: $owner, name: $repo) {
+            owner { id }
+        }
+    }
+    """
+    owner_result = graphql(token, owner_query, {"owner": owner, "repo": repo})
+    if not owner_result:
+        return None
+    owner_node_id = owner_result["data"]["repository"]["owner"]["id"]
+
+    # Create project
+    create_mutation = """
+    mutation($ownerId: ID!, $title: String!) {
+        createProjectV2(input: {ownerId: $ownerId, title: $title}) {
+            projectV2 { id }
+        }
+    }
+    """
+    create_result = graphql(token, create_mutation, {"ownerId": owner_node_id, "title": epic_id})
+    if not create_result or "errors" in create_result:
+        print(f"  Could not create project: {create_result.get('errors', [])}")
+        return None
+
+    project_id = create_result["data"]["createProjectV2"]["projectV2"]["id"]
+    print(f"  Created project: {epic_id}")
+
+    # Update project description
+    update_mutation = """
+    mutation($projectId: ID!, $title: String!, $shortDescription: String) {
+        updateProjectV2(input: {projectId: $projectId, title: $title, shortDescription: $shortDescription}) {
+            projectV2 { id }
+        }
+    }
+    """
+    graphql(token, update_mutation, {
+        "projectId": project_id,
+        "title": epic_id,
+        "shortDescription": epic_title,
+    })
+
+    return project_id
+
+
+def add_issue_to_project(token: str, project_id: str, issue_node_id: str) -> str | None:
+    """Add an issue to a GitHub Project. Returns item ID."""
     mutation = """
-    mutation($project: ID!, $content: ID!) {
-        addProjectV2ItemByContentId(input: {projectId: $project, contentId: $content}) {
+    mutation($projectId: ID!, $contentId: ID!) {
+        addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
             item { id }
         }
     }
     """
-    try:
-        gh._Github__requester.requestJsonAndCheck(
-            "POST", "/graphql",
-            input={"query": mutation, "variables": {"project": project_id, "content": issue_node_id}}
-        )
-        return True
-    except Exception:
-        return False
+    result = graphql(token, mutation, {"projectId": project_id, "contentId": issue_node_id})
+    if result and "data" in result:
+        return result["data"]["addProjectV2ItemById"]["item"]["id"]
+    return None
 
 
 # =============================================================================
@@ -198,7 +231,7 @@ def push_features_as_issues(
     gh_repo: object,
     conn: object,
     data: dict[str, list[dict]],
-    gh: object = None,
+    token: str | None = None,
 ) -> int:
     """Push features as GitHub issues."""
     count = 0
@@ -206,9 +239,9 @@ def push_features_as_issues(
 
     # Get or create projects for epics
     projects = {}
-    if gh:
+    if token:
         for epic in data.get("epics", []):
-            project_id = get_or_create_project(gh, owner, repo, epic)
+            project_id = get_or_create_project(token, owner, repo, epic)
             if project_id:
                 projects[epic["epic_id"]] = project_id
                 print(f"  Project: {epic['epic_id']}")
@@ -259,8 +292,8 @@ def push_features_as_issues(
 
             # Add to project if epic has one
             epic_id = feature.get("epic_id")
-            if epic_id and epic_id in projects and gh:
-                if add_issue_to_project(gh, projects[epic_id], issue.node_id):
+            if epic_id and epic_id in projects and token:
+                if add_issue_to_project(token, projects[epic_id], issue.node_id):
                     print(f"  Created: #{issue.number} {fid} (added to {epic_id})")
                 else:
                     print(f"  Created: #{issue.number} {fid}")
@@ -270,7 +303,7 @@ def push_features_as_issues(
 
             # Push user stories as sub-issues
             feature_stories = [s for s in data.get("user_stories", []) if s.get("feature_id") == fid]
-            count += push_stories_for_feature(gh_repo, conn, feature, feature_stories, issue.number, gh, projects)
+            count += push_stories_for_feature(gh_repo, conn, feature, feature_stories, issue.number, token, projects)
 
         except GithubException as e:
             print(f"  Failed {fid}: {e}")
@@ -284,7 +317,7 @@ def push_stories_for_feature(
     feature: dict,
     stories: list[dict],
     feature_issue_number: int,
-    gh: object = None,
+    token: str | None = None,
     projects: dict = None,
 ) -> int:
     """Push user stories as issues linked to feature."""
@@ -326,8 +359,8 @@ def push_stories_for_feature(
 
             # Add to project
             epic_id = feature.get("epic_id")
-            if epic_id and epic_id in projects and gh:
-                add_issue_to_project(gh, projects[epic_id], issue.node_id)
+            if epic_id and epic_id in projects and token:
+                add_issue_to_project(token, projects[epic_id], issue.node_id)
 
             print(f"    Created: #{issue.number} {sid}")
             count += 1
@@ -400,7 +433,7 @@ def pm_sync_command(
         try:
             from rdm.story_audit.sync import extract_data
             data = extract_data(Path("requirements"))
-            created = push_features_as_issues(gh_repo, conn, data, gh=gh)
+            created = push_features_as_issues(gh_repo, conn, data, token=token)
             print(f"  Created {created} issues")
         except Exception as e:
             print(f"  Error loading requirements: {e}")
