@@ -6,12 +6,17 @@ This module provides:
 - Traceability auditing across code, tests, and docs
 - DuckDB sync for analytics
 - Duplicate ID detection
+- Schema documentation
+- Requirements structure initialization
 
 Usage:
     rdm story audit [repo_path]
-    rdm story validate [--strict]
+    rdm story validate [--strict] [--suggest-fixes]
     rdm story sync [--repo name]
-    rdm story check-ids [files...]
+    rdm story check-ids [files...] [--explain]
+    rdm story schema [--model Feature|Epic|UserStory|Risk|All]
+    rdm story init [--template infrastructure|application]
+    rdm story docs
 """
 
 from rdm.story_audit.schema import (
