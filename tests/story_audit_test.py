@@ -73,19 +73,62 @@ class TestFeatureModel:
 class TestRiskModels:
     """Tests for Risk traceability linking."""
 
-    def test_get_all_implemented_by_collects_user_story_ids(self) -> None:
-        """get_all_implemented_by aggregates US IDs from all controls."""
-        from rdm.story_audit.schema import Risk, RiskControl
+    def test_get_all_story_refs_collects_user_story_ids(self) -> None:
+        """get_all_story_refs aggregates US IDs from all controls via ac_refs."""
+        from rdm.story_audit.schema import Risk, RiskControl, RiskMitigation
 
         risk = Risk(
-            id="RSK-001",
+            id="RISK-IAM-001",
             title="Test Risk",
-            controls=[
-                RiskControl(id="RC-001", description="Control 1", implemented_by=["US-001", "US-002"]),
-                RiskControl(id="RC-002", description="Control 2", implemented_by=["US-003"]),
-            ],
+            stride="spoofing",
+            hazard="Test hazard",
+            situation="Test situation",
+            harm="Test harm",
+            severity="critical",
+            probability="unlikely",
+            level="high",
+            mitigation=RiskMitigation(
+                status="mitigated",
+                controls=[
+                    RiskControl(control="Control 1", ac_refs=["US-001:AC-001", "US-002:AC-001"]),
+                    RiskControl(control="Control 2", ac_refs=["US-003:AC-001"]),
+                ],
+                residual_risk="low",
+            ),
         )
-        assert risk.get_all_implemented_by() == ["US-001", "US-002", "US-003"]
+        # get_all_story_refs extracts US IDs from ac_refs
+        story_refs = risk.get_all_story_refs()
+        assert "US-001" in story_refs
+        assert "US-002" in story_refs
+        assert "US-003" in story_refs
+
+    def test_risk_control_extracts_story_refs_from_ac_refs(self) -> None:
+        """RiskControl.story_refs extracts US-XXX from US-XXX:AC-XXX format."""
+        from rdm.story_audit.schema import RiskControl
+
+        control = RiskControl(
+            control="OIDC restricted to repo",
+            ac_refs=["US-MGMT-003:AC-002", "US-MGMT-003:AC-003"],
+        )
+        assert control.story_refs == ["US-MGMT-003"]
+
+    def test_risk_cluster_parses_correctly(self) -> None:
+        """RiskCluster parses metadata, risks, and affected_requirements."""
+        from rdm.story_audit.schema import RiskCluster, RiskClusterMetadata
+
+        cluster = RiskCluster(
+            metadata=RiskClusterMetadata(
+                cluster_id="RC-IAM",
+                cluster_name="Identity & Access Management",
+                description="IAM risks",
+                stride_categories=["spoofing", "elevation"],
+            ),
+            affected_requirements=["US-MGMT-001", "US-MGMT-002"],
+            risks=[],
+        )
+        assert cluster.cluster_id == "RC-IAM"
+        assert cluster.cluster_name == "Identity & Access Management"
+        assert len(cluster.affected_requirements) == 2
 
 
 class TestRequirementsIndex:
@@ -115,25 +158,43 @@ class TestIdPatterns:
     """Tests for ID pattern regex matching - single source of truth in schema.py."""
 
     def test_id_pattern_matches_all_valid_prefixes(self) -> None:
-        """ID_PATTERN matches all valid prefixes: FT, US, EP, RSK, RC, DC, GR, ADR."""
+        """ID_PATTERN matches standard ID formats with digits at the end."""
         from rdm.story_audit.schema import ID_PATTERN
 
         valid = [
             "FT-001", "FT-1", "FT-12345",  # Feature - any digit count
             "US-001", "US-1", "US-999",     # User Story
             "EP-001", "EP-42",              # Epic
-            "RSK-001", "RSK-1",             # Risk (was missing before)
-            "RC-001", "RC-99",              # Risk Control (was missing before)
+            "RISK-IAM-001", "RISK-DATA-1",  # Risk (new format: RISK-CLUSTER-NNN)
             "DC-001", "DC-1",               # Design Control
             "GR-001", "GR-1",               # Guidance Reference
             "ADR-001", "ADR-1",             # Architecture Decision Record
+            "RC-001", "RC-42",              # RC with digits (legacy control IDs)
         ]
-        invalid = ["XX-001", "FT001", "ft-001", "US-", "RSK-", "-001"]
+        # Note: RC-IAM (cluster IDs) don't match the general ID_PATTERN
+        # They use RISK_CLUSTER_ID_PATTERN separately
+        invalid = ["XX-001", "FT001", "ft-001", "US-", "RSK-001", "-001", "RC-IAM"]
 
         for text in valid:
             assert ID_PATTERN.search(text) is not None, f"Should match: {text}"
         for text in invalid:
             assert ID_PATTERN.search(text) is None, f"Should not match: {text}"
+
+    def test_risk_id_pattern_validates_correctly(self) -> None:
+        """RISK_ID_PATTERN validates RISK-CLUSTER-NNN format."""
+        import re
+
+        from rdm.story_audit.schema import RISK_CLUSTER_ID_PATTERN, RISK_ID_PATTERN
+
+        # Risk IDs
+        assert re.match(RISK_ID_PATTERN, "RISK-IAM-001") is not None
+        assert re.match(RISK_ID_PATTERN, "RISK-DATA-123") is not None
+        assert re.match(RISK_ID_PATTERN, "RSK-001") is None  # Old format not supported
+
+        # Cluster IDs
+        assert re.match(RISK_CLUSTER_ID_PATTERN, "RC-IAM") is not None
+        assert re.match(RISK_CLUSTER_ID_PATTERN, "RC-DATA") is not None
+        assert re.match(RISK_CLUSTER_ID_PATTERN, "RC-001") is None  # Must be letters
 
     def test_id_definition_pattern_matches_yaml_definitions(self) -> None:
         """ID_DEFINITION_PATTERN matches 'id: XX-NNN' format in YAML."""
@@ -142,7 +203,6 @@ class TestIdPatterns:
         valid_lines = [
             "id: FT-001",
             "id: US-123",
-            "id: RSK-001",
             "id: RC-42",
             "  id: EP-1",  # indented
         ]
@@ -151,8 +211,7 @@ class TestIdPatterns:
             "feature_id: FT-001",  # Not a definition (different key)
             "idx: FT-001",  # Not 'id:' key
         ]
-        # Note: "# id: FT-001" (commented) would still match the regex.
-        # Comment handling is done at file processing level, not in regex.
+        # Note: RISK-IAM-001 format uses different validation (RISK_ID_PATTERN)
 
         for line in valid_lines:
             assert ID_DEFINITION_PATTERN.search(line) is not None, f"Should match: {line}"
@@ -164,16 +223,16 @@ class TestIdPatterns:
         from rdm.story_audit.schema import get_id_prefix, get_id_type, is_valid_id
 
         assert is_valid_id("FT-001") is True
-        assert is_valid_id("RSK-42") is True
+        assert is_valid_id("RISK-IAM-001") is True
         assert is_valid_id("INVALID") is False
 
         assert get_id_prefix("FT-001") == "FT"
-        assert get_id_prefix("RSK-001") == "RSK"
+        assert get_id_prefix("RISK-IAM-001") == "RISK"
         assert get_id_prefix("INVALID") is None
 
         assert get_id_type("FT-001") == "Feature"
-        assert get_id_type("RSK-001") == "Risk"
-        assert get_id_type("RC-001") == "Risk Control"
+        assert get_id_type("RISK-IAM-001") == "Risk"
+        assert get_id_type("RC-001") == "Risk Cluster"  # RC with digits still valid
 
 
 class TestAuditFindIdsInFile:

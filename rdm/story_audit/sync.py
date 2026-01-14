@@ -7,7 +7,7 @@ Usage:
     rdm story sync [--repo name] [--output path]
     rdm story sync --validate-only
 
-Requires: pip install rdm[analytics]
+Requires: pip install rdm[story-audit]
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from rdm.story_audit.schema import (
     SCHEMA_VERSION,
     Feature,
     RequirementsIndex,
-    RiskRegister,
+    RiskCluster,
 )
 
 
@@ -60,11 +60,11 @@ def parse_feature_yaml(feature_path: Path) -> Feature:
     return Feature(**data)
 
 
-def parse_risk_yaml(risk_path: Path) -> RiskRegister:
-    """Parse a risk YAML file with schema validation."""
+def parse_risk_yaml(risk_path: Path) -> RiskCluster:
+    """Parse a risk cluster YAML file with schema validation."""
     with open(risk_path) as f:
         data = yaml.safe_load(f)
-    return RiskRegister(**data)
+    return RiskCluster(**data)
 
 
 def build_feature_phase_map(index: RequirementsIndex) -> dict[str, str]:
@@ -109,6 +109,7 @@ def extract_data(
         "acceptance_criteria": [],
         "definition_of_done": [],
         "extra_fields_log": [],
+        "risk_clusters": [],
         "risks": [],
         "risk_controls": [],
     }
@@ -261,44 +262,103 @@ def extract_data(
         for i, label in enumerate(sorted(labels_set))
     ]
 
-    # Extract risks
-    risks_dir = yaml_dir / "risks"
-    if risks_dir.exists():
+    # Extract risks from risk management directory
+    # Supports structures:
+    # 1. {yaml_dir}/../03-risk-management/ (sibling folder, e.g., docs/01-design-input + docs/03-risk-management)
+    # 2. {yaml_dir}/../docs/03-risk-management/ (requirements alongside docs)
+    # 3. {yaml_dir}/03-risk-management/ (nested inside yaml_dir)
+    risk_candidates = [
+        yaml_dir.parent / "03-risk-management",
+        yaml_dir.parent / "docs" / "03-risk-management",
+        yaml_dir / "03-risk-management",
+    ]
+    risks_dir = next((d for d in risk_candidates if d.exists()), None)
+
+    control_idx = 0  # Counter for auto-generated control IDs
+
+    if risks_dir:
         for risk_path in sorted(risks_dir.glob("*.yaml")):
+            # Skip template files
+            if risk_path.name.startswith("_"):
+                continue
+
             try:
-                register = parse_risk_yaml(risk_path)
+                cluster = parse_risk_yaml(risk_path)
             except Exception as e:
                 print(f"Warning: Failed to parse {risk_path}: {e}")
                 continue
 
-            for risk in register.risks:
+            # Extract cluster metadata
+            cluster_record = {
+                "cluster_id": cluster.cluster_id,
+                "repo_name": repo_name,
+                "global_id": f"{repo_name}:{cluster.cluster_id}" if repo_name else cluster.cluster_id,
+                "cluster_name": cluster.cluster_name,
+                "description": cluster.metadata.description,
+                "stride_categories": cluster.metadata.stride_categories,
+                "assessed_date": cluster.metadata.assessed_date,
+                "root_risk": cluster.metadata.root_risk,
+                "affected_requirements": cluster.affected_requirements,
+                "risk_count": len(cluster.risks),
+                "source_file": risk_path.name,
+            }
+            data["risk_clusters"].append(cluster_record)
+
+            for risk in cluster.risks:
                 risk_record = {
                     "risk_id": risk.id,
                     "repo_name": repo_name,
                     "global_id": f"{repo_name}:{risk.id}" if repo_name else risk.id,
+                    "cluster_id": cluster.cluster_id,
                     "title": risk.title,
                     "description": risk.description,
-                    "category": risk.category,
+                    # STRIDE chain fields
+                    "stride": risk.stride,
+                    "hazard": risk.hazard,
+                    "situation": risk.situation,
+                    "harm": risk.harm,
+                    # Scoring fields
+                    "category": risk.stride,  # STRIDE is the category
                     "severity": risk.severity,
                     "probability": risk.probability,
-                    "risk_level": risk.risk_level,
+                    "risk_level": risk.level,
                     "residual_risk": risk.residual_risk,
                     "status": risk.status,
+                    # Traceability
+                    "affected_requirements": risk.affected_requirements,
                     "control_count": len(risk.controls),
                     "source_file": risk_path.name,
                 }
+
+                # Risk acceptance
+                if risk.mitigation.risk_acceptance:
+                    acceptance = risk.mitigation.risk_acceptance
+                    risk_record["acceptance_rationale"] = acceptance.rationale
+                    risk_record["acceptance_owner"] = acceptance.owner
+                    risk_record["acceptance_review_date"] = acceptance.review_date
+                else:
+                    risk_record["acceptance_rationale"] = None
+                    risk_record["acceptance_owner"] = None
+                    risk_record["acceptance_review_date"] = None
+
                 data["risks"].append(risk_record)
 
+                # Extract controls
                 for control in risk.controls:
+                    control_idx += 1
+                    control_id = f"CTRL-{control_idx:03d}"
+
                     control_record = {
-                        "control_id": control.id,
+                        "control_id": control_id,
                         "repo_name": repo_name,
-                        "global_id": f"{repo_name}:{control.id}" if repo_name else control.id,
+                        "global_id": f"{repo_name}:{control_id}" if repo_name else control_id,
                         "risk_id": risk.id,
-                        "description": control.description,
-                        "implemented_by": control.implemented_by,
-                        "verification": control.verification,
-                        "status": control.status,
+                        "cluster_id": cluster.cluster_id,
+                        "description": control.control,
+                        "implemented_by": control.story_refs,
+                        "ac_refs": control.ac_refs,
+                        "verification": None,  # Not in new format
+                        "status": None,  # Not in new format
                     }
                     data["risk_controls"].append(control_record)
 
@@ -338,7 +398,8 @@ def story_sync_command(
 
     print(f"  Parsed {len(data['features'])} features, {len(data['user_stories'])} user stories")
     if data["risks"]:
-        print(f"  Parsed {len(data['risks'])} risks, {len(data['risk_controls'])} controls")
+        cluster_info = f", {len(data['risk_clusters'])} clusters" if data["risk_clusters"] else ""
+        print(f"  Parsed {len(data['risks'])} risks, {len(data['risk_controls'])} controls{cluster_info}")
 
     if validate_only:
         print("\nValidation complete. No database created (--validate-only).")
@@ -348,7 +409,7 @@ def story_sync_command(
     try:
         import duckdb
     except ImportError:
-        print("\nError: duckdb is required for sync. Install with: pip install rdm[analytics]")
+        print("\nError: duckdb is required for sync. Install with: pip install rdm[story-audit]")
         return 1
 
     db_path = (output_path or Path("requirements.duckdb")).resolve()
@@ -531,6 +592,34 @@ def _create_and_populate_tables(conn: object, data: dict[str, list[dict]]) -> No
             [dod["dod_id"], dod["feature_id"], dod["item_text"], dod["sort_order"]],
         )
 
+    # === RISK CLUSTERS TABLE (Extended Format) ===
+    conn.execute("DROP TABLE IF EXISTS risk_clusters")
+    conn.execute("""
+        CREATE TABLE risk_clusters (
+            cluster_id VARCHAR,
+            repo_name VARCHAR,
+            global_id VARCHAR,
+            cluster_name VARCHAR,
+            description VARCHAR,
+            stride_categories VARCHAR[],
+            assessed_date VARCHAR,
+            root_risk VARCHAR,
+            affected_requirements VARCHAR[],
+            risk_count INTEGER,
+            source_file VARCHAR
+        )
+    """)
+    for rc in data["risk_clusters"]:
+        conn.execute(
+            "INSERT INTO risk_clusters VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                rc["cluster_id"], rc["repo_name"], rc["global_id"], rc["cluster_name"],
+                rc["description"], rc.get("stride_categories", []), rc.get("assessed_date"),
+                rc.get("root_risk"), rc.get("affected_requirements", []),
+                rc["risk_count"], rc["source_file"],
+            ],
+        )
+
     # === RISKS TABLE ===
     conn.execute("DROP TABLE IF EXISTS risks")
     conn.execute("""
@@ -538,26 +627,43 @@ def _create_and_populate_tables(conn: object, data: dict[str, list[dict]]) -> No
             risk_id VARCHAR,
             repo_name VARCHAR,
             global_id VARCHAR,
+            cluster_id VARCHAR,
             title VARCHAR,
             description VARCHAR,
+            -- STRIDE chain fields (extended format)
+            stride VARCHAR,
+            hazard VARCHAR,
+            situation VARCHAR,
+            harm VARCHAR,
+            -- Scoring fields
             category VARCHAR,
             severity VARCHAR,
             probability VARCHAR,
             risk_level VARCHAR,
             residual_risk VARCHAR,
             status VARCHAR,
+            -- Traceability
+            affected_requirements VARCHAR[],
             control_count INTEGER,
+            -- Risk acceptance (extended format)
+            acceptance_rationale VARCHAR,
+            acceptance_owner VARCHAR,
+            acceptance_review_date VARCHAR,
             source_file VARCHAR
         )
     """)
     for r in data["risks"]:
         conn.execute(
-            "INSERT INTO risks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO risks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
-                r["risk_id"], r["repo_name"], r["global_id"], r["title"],
-                r["description"], r["category"], r["severity"], r["probability"],
-                r["risk_level"], r["residual_risk"], r["status"],
-                r["control_count"], r["source_file"],
+                r["risk_id"], r["repo_name"], r["global_id"], r.get("cluster_id"),
+                r["title"], r["description"],
+                r.get("stride"), r.get("hazard"), r.get("situation"), r.get("harm"),
+                r.get("category"), r["severity"], r["probability"],
+                r.get("risk_level"), r.get("residual_risk"), r["status"],
+                r.get("affected_requirements", []), r["control_count"],
+                r.get("acceptance_rationale"), r.get("acceptance_owner"),
+                r.get("acceptance_review_date"), r["source_file"],
             ],
         )
 
@@ -569,19 +675,22 @@ def _create_and_populate_tables(conn: object, data: dict[str, list[dict]]) -> No
             repo_name VARCHAR,
             global_id VARCHAR,
             risk_id VARCHAR,
+            cluster_id VARCHAR,
             description VARCHAR,
             implemented_by VARCHAR[],
+            ac_refs VARCHAR[],
             verification VARCHAR,
             status VARCHAR
         )
     """)
     for rc in data["risk_controls"]:
         conn.execute(
-            "INSERT INTO risk_controls VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO risk_controls VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 rc["control_id"], rc["repo_name"], rc["global_id"], rc["risk_id"],
-                rc["description"], rc.get("implemented_by", []), rc.get("verification"),
-                rc.get("status"),
+                rc.get("cluster_id"), rc["description"],
+                rc.get("implemented_by", []), rc.get("ac_refs", []),
+                rc.get("verification"), rc.get("status"),
             ],
         )
 
