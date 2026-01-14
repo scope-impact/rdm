@@ -98,7 +98,7 @@ def handle_story_command(args):
 
     except ImportError as e:
         print(f"Error: Missing dependency for story_audit: {e}")
-        print("Install with: pip install rdm[story]")
+        print("Install with: pip install rdm[story-audit]")
         return 1
 
 

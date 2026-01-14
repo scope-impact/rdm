@@ -1025,7 +1025,7 @@ wheels = [
 
 [[package]]
 name = "rdm"
-version = "1.0.1a0"
+version = "1.1.0a0"
 source = { editable = "." }
 dependencies = [
     { name = "gitpython" },
@@ -1034,10 +1034,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-analytics = [
-    { name = "duckdb" },
-    { name = "pydantic" },
-]
 dev = [
     { name = "check-manifest" },
     { name = "coverage" },
@@ -1053,7 +1049,8 @@ dev = [
 github = [
     { name = "pygithub" },
 ]
-story = [
+story-audit = [
+    { name = "duckdb" },
     { name = "pydantic" },
 ]
 
@@ -1062,14 +1059,13 @@ requires-dist = [
     { name = "check-manifest", marker = "extra == 'dev'", specifier = "==0.51" },
     { name = "coverage", marker = "extra == 'dev'", specifier = "==7.13.1" },
     { name = "docutils", marker = "extra == 'dev'", specifier = "==0.21.2" },
-    { name = "duckdb", marker = "extra == 'analytics'", specifier = "==1.4.3" },
     { name = "duckdb", marker = "extra == 'dev'", specifier = "==1.4.3" },
+    { name = "duckdb", marker = "extra == 'story-audit'", specifier = "==1.4.3" },
     { name = "gitpython", specifier = "==3.1.46" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "mock", marker = "extra == 'dev'", specifier = "==5.2.0" },
-    { name = "pydantic", marker = "extra == 'analytics'", specifier = "==2.12.5" },
     { name = "pydantic", marker = "extra == 'dev'", specifier = "==2.12.5" },
-    { name = "pydantic", marker = "extra == 'story'", specifier = "==2.12.5" },
+    { name = "pydantic", marker = "extra == 'story-audit'", specifier = "==2.12.5" },
     { name = "pygithub", marker = "extra == 'github'", specifier = "==2.6.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==9.0.2" },
     { name = "pyyaml", specifier = "==6.0.3" },
@@ -1077,7 +1073,7 @@ requires-dist = [
     { name = "sphinx", marker = "extra == 'dev'", specifier = "==8.1.3" },
     { name = "sphinx-autobuild", marker = "extra == 'dev'", specifier = "==2024.10.3" },
 ]
-provides-extras = ["github", "story", "analytics", "dev"]
+provides-extras = ["github", "story-audit", "dev"]
 
 [[package]]
 name = "requests"

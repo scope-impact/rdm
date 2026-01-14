@@ -24,7 +24,7 @@ try:
 except ImportError:
     raise ImportError(
         "pydantic is required for story_audit. "
-        "Install with: pip install rdm[story]"
+        "Install with: pip install rdm[story-audit]"
     )
 
 
@@ -32,7 +32,7 @@ except ImportError:
 # SCHEMA VERSION
 # =============================================================================
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"  # Added extended risk schema support
 
 
 # =============================================================================
@@ -46,8 +46,8 @@ ID_PREFIXES = {
     "FT": "Feature",
     "US": "User Story",
     "EP": "Epic",
-    "RSK": "Risk",
-    "RC": "Risk Control",
+    "RISK": "Risk",  # Format: RISK-CLUSTER-NNN (e.g., RISK-IAM-001)
+    "RC": "Risk Cluster",  # Format: RC-XXX (e.g., RC-IAM)
     "DC": "Design Control",
     "GR": "Guidance Reference",
     "ADR": "Architecture Decision Record",
@@ -61,7 +61,8 @@ ID_DIGITS_PATTERN = r"\d+"  # One or more digits (flexible)
 
 # Pattern for matching any story/requirement ID in text (word boundary)
 # Matches: FT-001, US-123, EP-1, RSK-001, RC-42, DC-001, GR-001, ADR-001
-ID_PATTERN = re.compile(rf"\b({_ALL_PREFIXES})-({ID_DIGITS_PATTERN})\b")
+# Also matches extended format: RISK-IAM-001, RISK-DATA-002
+ID_PATTERN = re.compile(rf"\b({_ALL_PREFIXES})-(?:[A-Z]+-)?({ID_DIGITS_PATTERN})\b")
 
 # Pattern for matching ID definitions in YAML (id: XX-NNN)
 # Matches lines like "id: FT-001" or "- id: US-123"
@@ -74,8 +75,10 @@ ID_DEFINITION_PATTERN = re.compile(
 FEATURE_ID_PATTERN = r"^FT-\d+$"
 USER_STORY_ID_PATTERN = r"^US-([A-Z]+-)?(\d+)$"  # Allows US-001 or US-PREFIX-001
 EPIC_ID_PATTERN = r"^EP-\d+$"
-RISK_ID_PATTERN = r"^RSK-\d+$"
-RISK_CONTROL_ID_PATTERN = r"^RC-\d+$"
+# Risk ID: RISK-CLUSTER-NNN (e.g., RISK-IAM-001, RISK-DATA-002)
+RISK_ID_PATTERN = r"^RISK-[A-Z]+-\d+$"
+# Risk Cluster ID: RC-XXX (e.g., RC-IAM, RC-DATA)
+RISK_CLUSTER_ID_PATTERN = r"^RC-[A-Z]+$"
 
 
 def is_valid_id(story_id: str) -> bool:
@@ -135,54 +138,201 @@ class Status(str, Enum):
 
 
 class RiskControl(BaseModel):
-    """A control that mitigates a risk."""
+    """A control that mitigates a risk.
 
-    id: str = Field(..., pattern=RISK_CONTROL_ID_PATTERN, description="Risk Control ID (RC-XXX)")
-    description: str = Field(..., description="Control description")
-    implemented_by: list[str] = Field(
+    Format: Inline control with ac_refs linking to acceptance criteria.
+    Example:
+        - control: "OIDC restricted to repo:scope-impact/halla-health-infra"
+          ac_refs: [US-MGMT-003:AC-002]
+    """
+
+    control: str = Field(..., description="Control description")
+    ac_refs: list[str] = Field(
         default_factory=list,
-        description="User stories implementing this control (US-XXX)",
+        description="Acceptance criteria references (US-XXX:AC-XXX)",
     )
-    verification: str | None = Field(default=None, description="How control is verified")
-    status: str = Field(default="proposed", description="Implementation status")
+
+    model_config = {"extra": "allow"}
+
+    @property
+    def story_refs(self) -> list[str]:
+        """Extract user story IDs from ac_refs (US-XXX:AC-XXX -> US-XXX)."""
+        refs = []
+        for ac_ref in self.ac_refs:
+            if ":" in ac_ref:
+                us_id = ac_ref.split(":")[0]
+                if us_id not in refs:
+                    refs.append(us_id)
+        return refs
+
+
+class RiskAcceptance(BaseModel):
+    """Documentation for accepted risks."""
+
+    rationale: str = Field(..., description="Why this risk is acceptable")
+    owner: str = Field(..., description="Team or role responsible")
+    review_date: str | None = Field(default=None, description="Next review date (YYYY-QN)")
+
+    model_config = {"extra": "allow"}
+
+
+class RiskMitigation(BaseModel):
+    """Mitigation details for a risk."""
+
+    status: str = Field(..., description="mitigated|partial|accepted")
+    controls: list[RiskControl] = Field(default_factory=list, description="Control measures")
+    residual_risk: str = Field(..., description="Risk level after controls: low|medium|high")
+    risk_acceptance: RiskAcceptance | None = Field(
+        default=None, description="Acceptance details (only for accepted risks)"
+    )
 
     model_config = {"extra": "allow"}
 
 
 class Risk(BaseModel):
-    """A risk with controls."""
+    """A risk with STRIDE chain and mitigation controls.
 
-    id: str = Field(..., pattern=RISK_ID_PATTERN, description="Risk ID (RSK-XXX)")
+    Format: RISK-CLUSTER-NNN (e.g., RISK-IAM-001)
+
+    Example:
+        - id: RISK-IAM-001
+          title: "OIDC Provider Trust Boundary Bypass"
+          stride: spoofing
+          hazard: "GitHub OIDC provider trusts GitHub-issued tokens"
+          situation: "Misconfigured OIDC conditions allow unauthorized repo/branch"
+          harm: "Attacker gains AWS access; infrastructure takeover; data breach"
+          severity: critical
+          probability: unlikely
+          level: high
+          mitigation:
+            status: mitigated
+            controls: [...]
+            residual_risk: low
+    """
+
+    id: str = Field(..., pattern=RISK_ID_PATTERN, description="Risk ID (RISK-CLUSTER-NNN)")
     title: str = Field(..., description="Risk title")
-    description: str = Field(default="", description="Risk description")
-    category: str | None = Field(default=None, description="STRIDE category or custom")
-    severity: str = Field(default="medium", description="Severity level")
-    probability: str = Field(default="medium", description="Probability level")
-    risk_level: str | None = Field(default=None, description="Calculated risk level")
-    controls: list[RiskControl] = Field(
-        default_factory=list, description="Controls mitigating this risk"
+
+    # STRIDE chain (required for proper risk documentation)
+    stride: str = Field(
+        ...,
+        description="STRIDE category: spoofing|tampering|repudiation|info_disclosure|dos|elevation",
     )
-    residual_risk: str | None = Field(default=None, description="Risk after controls")
-    status: str = Field(default="identified", description="Risk status")
+    hazard: str = Field(..., description="What could go wrong - the threat source")
+    situation: str = Field(..., description="How it manifests - the attack scenario")
+    harm: str = Field(..., description="Who gets hurt and how - the impact")
+
+    # Severity × Probability scoring
+    severity: str = Field(..., description="Severity: critical|serious|minor|negligible")
+    probability: str = Field(..., description="Probability: rare|unlikely|possible|likely")
+    level: str = Field(..., description="Risk level from matrix: low|medium|high|block")
+
+    # Optional details
+    description: str = Field(default="", description="Additional context about the risk")
+    affected_requirements: list[str] = Field(
+        default_factory=list, description="User story IDs affected by this risk"
+    )
+
+    # Mitigation (required)
+    mitigation: RiskMitigation = Field(..., description="Mitigation details")
 
     model_config = {"extra": "allow"}
 
-    def get_all_implemented_by(self) -> list[str]:
-        """Get all US IDs implementing controls for this risk."""
+    @property
+    def controls(self) -> list[RiskControl]:
+        """Get controls from mitigation."""
+        return self.mitigation.controls
+
+    @property
+    def residual_risk(self) -> str:
+        """Get residual risk from mitigation."""
+        return self.mitigation.residual_risk
+
+    @property
+    def status(self) -> str:
+        """Get status from mitigation."""
+        return self.mitigation.status
+
+    def get_all_story_refs(self) -> list[str]:
+        """Get all user story IDs from controls."""
         us_ids = []
         for control in self.controls:
-            us_ids.extend(control.implemented_by)
-        return us_ids
+            us_ids.extend(control.story_refs)
+        return list(set(us_ids))
+
+    def get_all_affected_requirements(self) -> list[str]:
+        """Get all affected requirement IDs including from controls."""
+        reqs = list(self.affected_requirements)
+        reqs.extend(self.get_all_story_refs())
+        return list(set(reqs))
 
 
-class RiskRegister(BaseModel):
-    """A risk register file containing multiple risks."""
+class RiskClusterMetadata(BaseModel):
+    """Metadata for a risk cluster."""
 
-    id: str | None = Field(default=None, description="Register ID")
-    title: str = Field(default="Risk Register", description="Register title")
-    risks: list[Risk] = Field(default_factory=list, description="List of risks")
+    cluster_id: str = Field(..., pattern=RISK_CLUSTER_ID_PATTERN, description="Cluster ID (RC-XXX)")
+    cluster_name: str = Field(..., description="Cluster name")
+    description: str = Field(default="", description="What this risk cluster covers")
+    stride_categories: list[str] = Field(default_factory=list, description="STRIDE categories")
+    assessed_date: str | None = Field(default=None, description="Assessment date (YYYY-MM-DD)")
+    root_risk: str | None = Field(default=None, description="Primary threat this cluster addresses")
 
     model_config = {"extra": "allow"}
+
+
+class RiskCluster(BaseModel):
+    """A risk cluster file containing related risks.
+
+    Format: One file per cluster (e.g., iam.yaml, data.yaml, network.yaml)
+
+    Example file structure:
+        metadata:
+          cluster_id: RC-IAM
+          cluster_name: "Identity & Access Management"
+          description: "Risks related to authentication and authorization"
+          stride_categories: [spoofing, elevation]
+          assessed_date: "2025-01-14"
+          root_risk: "Unauthorized access to AWS resources"
+
+        affected_requirements:
+          - US-MGMT-002
+          - US-MGMT-003
+
+        risks:
+          - id: RISK-IAM-001
+            title: "OIDC Provider Trust Boundary Bypass"
+            ...
+    """
+
+    # Cluster metadata
+    metadata: RiskClusterMetadata = Field(..., description="Cluster metadata")
+    affected_requirements: list[str] = Field(
+        default_factory=list, description="User story IDs affected by this cluster"
+    )
+    risks: list[Risk] = Field(default_factory=list, description="List of risks in this cluster")
+
+    model_config = {"extra": "allow"}
+
+    @property
+    def cluster_id(self) -> str:
+        """Get cluster ID from metadata."""
+        return self.metadata.cluster_id
+
+    @property
+    def cluster_name(self) -> str:
+        """Get cluster name from metadata."""
+        return self.metadata.cluster_name
+
+    def get_all_affected_requirements(self) -> list[str]:
+        """Get all affected requirements from cluster and all risks."""
+        reqs = list(self.affected_requirements)
+        for risk in self.risks:
+            reqs.extend(risk.get_all_affected_requirements())
+        return list(set(reqs))
+
+
+# Alias for backward compatibility with sync.py
+RiskRegister = RiskCluster
 
 
 # =============================================================================

@@ -17,7 +17,7 @@ try:
     from pydantic import ValidationError
 except ImportError as e:
     raise ImportError(
-        f"Missing dependency: {e}. Install with: pip install rdm[story]"
+        f"Missing dependency: {e}. Install with: pip install rdm[story-audit]"
     )
 
 from rdm.story_audit.schema import (
