@@ -1,7 +1,7 @@
 # RDM template configuration for VitalPulse
 # Uses DuckDB queries to pull backlog data into documents
 
-duckdb: "vitalpulse.duckdb"
+duckdb: "../vitalpulse.duckdb"
 
 documents:
   - software_requirements_specification.md
