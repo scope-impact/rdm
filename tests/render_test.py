@@ -94,7 +94,10 @@ class TestDuckDBQuery:
             conn.execute("INSERT INTO items VALUES ('cherry', true)")
             conn.close()
 
-            template = "{% for i in query(\"SELECT name FROM items WHERE active = true ORDER BY name\") %}{{ i.name }} {% endfor %}"
+            template = (
+                '{% for i in query("SELECT name FROM items WHERE active = true ORDER BY name") %}'
+                "{{ i.name }} {% endfor %}"
+            )
 
             result = render_from_string(template, config={"duckdb": db_path})
 
@@ -213,9 +216,15 @@ class TestDuckDBQuery:
             """)
             conn.close()
 
-            template = """{% for row in query("SELECT t.title, m.name as milestone FROM tasks t JOIN milestones m ON t.milestone_id = m.id ORDER BY t.id") %}
-{{ row.title }} ({{ row.milestone }})
-{%- endfor %}"""
+            query_sql = (
+                "SELECT t.title, m.name as milestone FROM tasks t "
+                "JOIN milestones m ON t.milestone_id = m.id ORDER BY t.id"
+            )
+            template = (
+                '{% for row in query("' + query_sql + '") %}\n'
+                "{{ row.title }} ({{ row.milestone }})\n"
+                "{%- endfor %}"
+            )
 
             result = render_from_string(template, config={"duckdb": db_path})
 

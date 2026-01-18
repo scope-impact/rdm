@@ -3,7 +3,6 @@
 import tempfile
 from pathlib import Path
 
-import pytest
 
 from rdm.story_audit.backlog_validate import (
     ValidationResult,
