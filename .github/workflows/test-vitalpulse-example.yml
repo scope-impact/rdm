@@ -1,0 +1,97 @@
+name: Test VitalPulse Example
+
+env:
+  REGISTRY: ghcr.io
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/vitalpulse-backlog/**'
+      - 'rdm/**/*.py'
+      - '.github/workflows/test-vitalpulse-example.yml'
+  pull_request:
+    paths:
+      - 'examples/vitalpulse-backlog/**'
+      - 'rdm/**/*.py'
+  workflow_dispatch:
+
+jobs:
+  test-vitalpulse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Sync backlog to DuckDB
+        working-directory: examples/vitalpulse-backlog
+        run: uv run rdm story sync
+
+      - name: Verify DuckDB created
+        working-directory: examples/vitalpulse-backlog
+        run: |
+          ls -la vitalpulse.duckdb
+          uv run python -c "import duckdb; db=duckdb.connect('vitalpulse.duckdb'); print(db.execute('SELECT COUNT(*) FROM tasks').fetchone())"
+
+      - name: Render document templates
+        working-directory: examples/vitalpulse-backlog/docs
+        run: |
+          mkdir -p release
+          uv run rdm render software_requirements_specification.md config.yml > release/SRS.md
+          uv run rdm render risk_management_report.md config.yml > release/RMR.md
+
+      - name: Verify rendered markdown
+        working-directory: examples/vitalpulse-backlog/docs
+        run: |
+          echo "=== SRS Preview ==="
+          head -50 release/SRS.md
+          echo ""
+          echo "=== RMR Preview ==="
+          head -50 release/RMR.md
+
+      - name: Build PDF generation Docker image
+        working-directory: examples/vitalpulse-backlog/docs
+        run: |
+          docker build \
+            --build-arg BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}:latest \
+            -t vitalpulse-docs .
+
+      - name: Generate PDFs
+        working-directory: examples/vitalpulse-backlog/docs
+        run: |
+          docker run --rm -v "$(pwd):/data" -w /data vitalpulse-docs \
+            pandoc -d pandoc_pdf.yml release/SRS.md -o release/SRS.pdf
+          docker run --rm -v "$(pwd):/data" -w /data vitalpulse-docs \
+            pandoc -d pandoc_pdf.yml release/RMR.md -o release/RMR.pdf
+
+      - name: Verify PDFs created
+        working-directory: examples/vitalpulse-backlog/docs
+        run: |
+          echo "Generated PDFs:"
+          ls -la release/*.pdf
+
+          # Verify both PDFs exist and have content
+          for pdf in release/SRS.pdf release/RMR.pdf; do
+            if [ ! -s "$pdf" ]; then
+              echo "ERROR: $pdf is missing or empty!"
+              exit 1
+            fi
+            echo "$pdf: $(stat -c%s "$pdf") bytes"
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: vitalpulse-docs
+          path: |
+            examples/vitalpulse-backlog/docs/release/*.md
+            examples/vitalpulse-backlog/docs/release/*.pdf
+          retention-days: 7
