@@ -57,6 +57,8 @@ def cli(raw_arguments):
         exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
     elif args.command == 'story':
         exit_code = handle_story_command(args)
+    elif args.command == 'pm':
+        exit_code = handle_pm_command(args)
     return exit_code
 
 
@@ -76,6 +78,7 @@ def handle_story_command(args):
                 strict=args.strict,
                 verbose=args.verbose,
                 quiet=args.quiet,
+                suggest_fixes=args.suggest_fixes,
             )
 
         elif args.story_command == 'sync':
@@ -89,16 +92,44 @@ def handle_story_command(args):
 
         elif args.story_command == 'check-ids':
             from rdm.story_audit.check_ids import story_check_ids_command
-            files = [Path(f) for f in args.files] if args.files else None
-            return story_check_ids_command(files)
+            return story_check_ids_command(
+                requirements_dir=Path(args.requirements) if args.requirements else None,
+                explain=args.explain,
+            )
+
+        elif args.story_command == 'schema':
+            from rdm.story_audit.schema_docs import story_schema_command
+            return story_schema_command(model=args.model)
 
         else:
-            print("Unknown story subcommand. Use: audit, validate, sync, or check-ids")
+            print("Unknown story subcommand. Use: audit, validate, sync, check-ids, schema")
             return 1
 
     except ImportError as e:
         print(f"Error: Missing dependency for story_audit: {e}")
         print("Install with: pip install rdm[story-audit]")
+        return 1
+
+
+def handle_pm_command(args):
+    """Handle the pm (project management) subcommand."""
+    try:
+        if args.pm_command == 'sync':
+            from rdm.project_management.sync import pm_sync_command
+            return pm_sync_command(
+                repo=args.repo,
+                db_path=Path(args.db) if args.db else None,
+                pull=args.pull,
+                push=args.push,
+                status=args.status,
+            )
+        else:
+            print("Unknown pm subcommand. Use: sync")
+            return 1
+
+    except ImportError as e:
+        print(f"Error: Missing dependency: {e}")
+        print("Install with: pip install rdm[github] rdm[analytics]")
         return 1
 
 
@@ -162,6 +193,7 @@ def parse_arguments(arguments):
     story_validate_parser.add_argument('-s', '--strict', action='store_true', help='Fail on extra fields')
     story_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
     story_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
+    story_validate_parser.add_argument('--suggest-fixes', action='store_true', help='Show fix suggestions')
 
     # rdm story sync
     story_sync_help = 'sync requirements to DuckDB for analytics'
@@ -174,7 +206,34 @@ def parse_arguments(arguments):
     # rdm story check-ids
     story_check_help = 'check for duplicate story IDs'
     story_check_parser = story_subparsers.add_parser('check-ids', help=story_check_help)
-    story_check_parser.add_argument('files', nargs='*', help='Files to check (default: requirements/)')
+    story_check_parser.add_argument('-r', '--requirements', help='Path to requirements directory')
+    story_check_parser.add_argument('--explain', action='store_true', help='Show fix guidance')
+
+    # rdm story schema
+    story_schema_help = 'show YAML schema documentation'
+    story_schema_parser = story_subparsers.add_parser('schema', help=story_schema_help)
+    story_schema_parser.add_argument(
+        '--model', '-m',
+        choices=['Feature', 'Epic', 'UserStory', 'Risk', 'Index', 'All'],
+        default='All',
+        help='Model to show schema for (default: All)'
+    )
+
+    # =========================================================================
+    # rdm pm (project management)
+    # =========================================================================
+    pm_help = 'project management commands (GitHub sync)'
+    pm_parser = subparsers.add_parser('pm', help=pm_help)
+    pm_subparsers = pm_parser.add_subparsers(dest='pm_command', metavar='<subcommand>')
+
+    # rdm pm sync
+    pm_sync_help = 'sync GitHub issues/PRs with DuckDB'
+    pm_sync_parser = pm_subparsers.add_parser('sync', help=pm_sync_help)
+    pm_sync_parser.add_argument('--repo', help='GitHub repo (owner/name)')
+    pm_sync_parser.add_argument('--db', help='DuckDB path (default: github_sync.duckdb)')
+    pm_sync_parser.add_argument('--pull', action='store_true', help='Pull from GitHub only')
+    pm_sync_parser.add_argument('--push', action='store_true', help='Push to GitHub only')
+    pm_sync_parser.add_argument('--status', action='store_true', help='Show sync status')
 
     return parser.parse_args(arguments)
 
