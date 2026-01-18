@@ -75,13 +75,37 @@ def generate_template_output(config, template_filename, context, loaders=None):
         second_pass_environment = _create_jinja_environment(config, loaders)
         second_pass_environment.globals['first_pass_output'] = first_pass_output_filled
         output_line_list = generate_template_output_lines(second_pass_environment, template_filename, context)
-    return (line for line in output_line_list)
+    return iter(output_line_list)
 
 
 def generate_template_output_lines(environment, template_filename, context):
     template = environment.get_template(template_filename)
     source_line_list = _generate_source_line_list(template, context)
-    return [line for line in _generate_output_lines(environment, source_line_list)]
+    return list(_generate_output_lines(environment, source_line_list))
+
+
+def _create_duckdb_query_func(db_path):
+    """Create a query function that executes SQL against a DuckDB database.
+
+    Returns results as a list of dicts for easy template iteration.
+    """
+    try:
+        import duckdb
+    except ImportError:
+        raise ImportError(
+            "duckdb is required for database queries in templates. "
+            "Install with: pip install duckdb"
+        )
+
+    conn = duckdb.connect(db_path, read_only=True)
+
+    def query(sql):
+        """Execute SQL query and return results as list of dicts."""
+        result = conn.execute(sql)
+        columns = [desc[0] for desc in result.description]
+        return [dict(zip(columns, row)) for row in result.fetchall()]
+
+    return query
 
 
 def _create_jinja_environment(config, loaders=None):
@@ -96,6 +120,11 @@ def _create_jinja_environment(config, loaders=None):
     environment.filters['invert_dependencies'] = invert_dependencies
     environment.filters['join_to'] = join_to
     environment.filters['md_indent'] = md_indent
+
+    # Add DuckDB query function if configured
+    if db_path := config.get('duckdb'):
+        environment.globals['query'] = _create_duckdb_query_func(db_path)
+
     return environment
 
 
@@ -118,8 +147,8 @@ def _generate_source_line_list(template, context):
 
 
 def _generate_output_lines(environment, source_line_list):
-    output_generator = (line for line in source_line_list)
+    output_generator = iter(source_line_list)
     post_process_filters = post_processing_filter_list(environment)
     for post_process_filter in post_process_filters:
-        output_generator = (x for x in post_process_filter(output_generator))
+        output_generator = post_process_filter(output_generator)
     return output_generator
