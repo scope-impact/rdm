@@ -33,7 +33,7 @@ jobs:
 
       - name: Sync backlog to DuckDB
         working-directory: examples/vitalpulse-backlog
-        run: uv run rdm story sync
+        run: uv run rdm story sync . -o vitalpulse.duckdb
 
       - name: Verify DuckDB created
         working-directory: examples/vitalpulse-backlog
