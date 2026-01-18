@@ -14,3 +14,5 @@ dist
 .vscode
 
 var
+*.duckdb
+**/release/
