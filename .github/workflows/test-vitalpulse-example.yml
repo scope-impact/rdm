@@ -57,11 +57,19 @@ jobs:
           echo "=== RMR Preview ==="
           head -50 release/RMR.md
 
+      - name: Build wheel for base Docker image
+        run: uv build --wheel --out-dir rdm/init_files/dist
+
+      - name: Build base RDM Docker image
+        run: |
+          cd rdm/init_files
+          docker build -t rdm:latest .
+
       - name: Build PDF generation Docker image
         working-directory: examples/vitalpulse-backlog/docs
         run: |
           docker build \
-            --build-arg BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}:latest \
+            --build-arg BASE_IMAGE=rdm:latest \
             -t vitalpulse-docs .
 
       - name: Generate PDFs
