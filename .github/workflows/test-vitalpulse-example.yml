@@ -65,19 +65,12 @@ jobs:
           cd rdm/init_files
           docker build -t rdm:latest .
 
-      - name: Build PDF generation Docker image
-        working-directory: examples/vitalpulse-backlog/docs
-        run: |
-          docker build \
-            --build-arg BASE_IMAGE=rdm:latest \
-            -t vitalpulse-docs .
-
       - name: Generate PDFs
         working-directory: examples/vitalpulse-backlog/docs
         run: |
-          docker run --rm -v "$(pwd):/data" -w /data vitalpulse-docs \
+          docker run --rm -v "$(pwd):/data" -w /data rdm:latest \
             pandoc -d pandoc_pdf.yml release/SRS.md -o release/SRS.pdf
-          docker run --rm -v "$(pwd):/data" -w /data vitalpulse-docs \
+          docker run --rm -v "$(pwd):/data" -w /data rdm:latest \
             pandoc -d pandoc_pdf.yml release/RMR.md -o release/RMR.pdf
 
       - name: Verify PDFs created
