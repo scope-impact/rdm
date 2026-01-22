@@ -1,11 +1,12 @@
 """
-Sync requirements YAML files to DuckDB for analytics.
+Sync Backlog.md to DuckDB for analytics.
 
-Uses Pydantic schema from schema.py as single source of truth.
+Parses markdown files with YAML frontmatter and syncs to DuckDB
+with proper schema versioning and migrations.
 
 Usage:
-    rdm story sync [--repo name] [--output path]
-    rdm story sync --validate-only
+    rdm story sync /path/to/backlog -o out.duckdb
+    rdm story sync --migrate-only out.duckdb
 
 Requires: pip install rdm[story-audit]
 """
@@ -14,355 +15,293 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-try:
-    import yaml
-except ImportError:
-    raise ImportError("pyyaml is required. Install with: pip install pyyaml")
-
-from rdm.story_audit.schema import (
-    SCHEMA_VERSION,
-    Feature,
-    RequirementsIndex,
-    RiskCluster,
+from rdm.story_audit.backlog_schema import SCHEMA_VERSION, BacklogData
+from rdm.story_audit.backlog_parser import extract_backlog_data
+from rdm.story_audit.migrations.runner import (
+    ensure_schema_version_table,
+    get_current_version,
+    run_migrations,
 )
 
-
-# =============================================================================
-# HELPERS
-# =============================================================================
-
-
-def _count_dod_items(dod: list[str] | dict[str, list[str]]) -> int:
-    """Count definition of done items (handles both list and dict formats)."""
-    if isinstance(dod, dict):
-        return sum(len(items) for items in dod.values())
-    return len(dod)
+if TYPE_CHECKING:
+    import duckdb
 
 
 # =============================================================================
-# YAML PARSING WITH SCHEMA VALIDATION
+# DATABASE POPULATION
 # =============================================================================
 
 
-def parse_index_yaml(yaml_dir: Path) -> RequirementsIndex:
-    """Parse _index.yaml with schema validation."""
-    index_path = yaml_dir / "_index.yaml"
-    with open(index_path) as f:
-        data = yaml.safe_load(f)
-    return RequirementsIndex(**data)
+def populate_tables(
+    conn: "duckdb.DuckDBPyConnection",
+    data: BacklogData,
+) -> None:
+    """Populate all tables with extracted backlog data.
 
+    Args:
+        conn: DuckDB connection
+        data: Parsed BacklogData object
+    """
+    project_id = data.project_id
 
-def parse_feature_yaml(feature_path: Path) -> Feature:
-    """Parse a feature YAML file with schema validation."""
-    with open(feature_path) as f:
-        data = yaml.safe_load(f)
-    return Feature(**data)
+    # Clear existing data for this project
+    _clear_project_data(conn, project_id)
 
+    # Insert project
+    conn.execute(
+        """
+        INSERT INTO projects (project_id, task_prefix, project_name, description, repository)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        [
+            project_id,
+            data.config.task_prefix,
+            data.config.project_name,
+            data.config.description,
+            data.config.repository,
+        ],
+    )
 
-def parse_risk_yaml(risk_path: Path) -> RiskCluster:
-    """Parse a risk cluster YAML file with schema validation."""
-    with open(risk_path) as f:
-        data = yaml.safe_load(f)
-    return RiskCluster(**data)
-
-
-def build_feature_phase_map(index: RequirementsIndex) -> dict[str, str]:
-    """Build mapping of feature_id -> phase_id from index."""
-    feature_phase_map = {}
-    for phase_id, phase in index.phases.items():
-        for feature_id in phase.features:
-            feature_phase_map[feature_id] = phase_id
-    return feature_phase_map
-
-
-def get_epic_title(index: RequirementsIndex, epic_id: str | None) -> str | None:
-    """Get epic title by ID."""
-    if not epic_id:
-        return None
-    for epic in index.epics:
-        if epic.id == epic_id:
-            return epic.title
-    return None
-
-
-# =============================================================================
-# DATA EXTRACTION
-# =============================================================================
-
-
-def extract_data(
-    yaml_dir: Path,
-    repo_name: str | None = None,
-) -> dict[str, list[dict]]:
-    """Extract all data from YAML files using schema validation."""
-    index = parse_index_yaml(yaml_dir)
-    feature_phase_map = build_feature_phase_map(index)
-
-    # Initialize data containers
-    data: dict[str, list[dict]] = {
-        "phases": [],
-        "epics": [],
-        "labels": [],
-        "features": [],
-        "user_stories": [],
-        "acceptance_criteria": [],
-        "definition_of_done": [],
-        "extra_fields_log": [],
-        "risk_clusters": [],
-        "risks": [],
-        "risk_controls": [],
-    }
-
+    # Track labels for dimension table
     labels_set: set[str] = set()
-    criteria_id = 0
-    dod_id = 0
 
-    # Extract phases
-    for i, (phase_id, phase) in enumerate(index.phases.items()):
-        data["phases"].append({
-            "phase_id": phase_id,
-            "phase_name": phase_id.replace("_", " ").title(),
-            "description": phase.description,
-            "sort_order": i,
-            "feature_count": len(phase.features),
-        })
+    # Insert milestones
+    for milestone in data.milestones:
+        global_id = data.make_global_id(milestone.id)
+        task_count = sum(
+            1 for t in data.tasks if t.milestone == milestone.id
+        )
+        conn.execute(
+            """
+            INSERT INTO milestones
+            (global_id, project_id, local_id, title, description, status, task_count, source_file)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                global_id,
+                project_id,
+                milestone.id,
+                milestone.title,
+                milestone.description,
+                milestone.status,
+                task_count,
+                None,  # milestone files don't have source_file tracked
+            ],
+        )
+        labels_set.update(milestone.labels)
 
-    # Extract epics
-    for epic in index.epics:
-        data["epics"].append({
-            "epic_id": epic.id,
-            "title": epic.title,
-            "status": epic.status,
-            "phases": epic.phases,
-            "feature_ids": epic.features,
-        })
+    # Insert tasks
+    for task in data.tasks:
+        global_id = data.make_global_id(task.id)
+        subtask_count = sum(1 for s in data.subtasks if s.parent_task_id == task.id)
+        milestone_global = data.make_global_id(task.milestone) if task.milestone else None
 
-    # Extract features
-    for feature_path in sorted(yaml_dir.glob("features/FT-*.yaml")):
-        try:
-            feature = parse_feature_yaml(feature_path)
-        except Exception as e:
-            print(f"Warning: Failed to parse {feature_path}: {e}")
-            continue
+        conn.execute(
+            """
+            INSERT INTO tasks
+            (global_id, project_id, local_id, title, description, business_value,
+             status, milestone_id, priority, labels, created_date,
+             subtask_count, acceptance_criteria_count, completed_criteria_count, source_file)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                global_id,
+                project_id,
+                task.id,
+                task.title,
+                task.description,
+                task.business_value,
+                task.status,
+                milestone_global,
+                task.priority,
+                task.labels,
+                task.created_date,
+                subtask_count,
+                task.acceptance_criteria_count,
+                task.completed_criteria_count,
+                task.source_file,
+            ],
+        )
+        labels_set.update(task.labels)
 
-        # Collect labels
-        labels_set.update(feature.labels)
+        # Insert acceptance criteria for task
+        _insert_acceptance_criteria(conn, project_id, global_id, task.acceptance_criteria)
 
-        # Get phase from file or index
-        phase_id = feature.phase or feature_phase_map.get(feature.id, "unknown")
+    # Insert subtasks
+    for subtask in data.subtasks:
+        global_id = data.make_global_id(subtask.id)
+        parent_global = data.make_global_id(subtask.parent_task_id) if subtask.parent_task_id else ""
 
-        # Get epic title for denormalization
-        epic_title = get_epic_title(index, feature.epic_id)
+        conn.execute(
+            """
+            INSERT INTO subtasks
+            (global_id, project_id, local_id, parent_task_id, title, description,
+             status, labels, created_date, acceptance_criteria_count, completed_criteria_count, source_file)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                global_id,
+                project_id,
+                subtask.id,
+                parent_global,
+                subtask.title,
+                subtask.description,
+                subtask.status,
+                subtask.labels,
+                subtask.created_date,
+                subtask.acceptance_criteria_count,
+                subtask.completed_criteria_count,
+                subtask.source_file,
+            ],
+        )
+        labels_set.update(subtask.labels)
 
-        # Compute quality summary
-        quality_summary = feature.compute_quality_summary()
+        # Insert acceptance criteria for subtask
+        _insert_acceptance_criteria(conn, project_id, global_id, subtask.acceptance_criteria)
 
-        # Check for extra fields
-        extra = feature.get_extra_fields()
-        if extra:
-            data["extra_fields_log"].append({
-                "source": feature_path.name,
-                "type": "feature",
-                "id": feature.id,
-                "extra_fields": list(extra.keys()),
-            })
+    # Insert risks
+    for risk in data.risks:
+        global_id = data.make_global_id(risk.id)
 
-        feature_record = {
-            "feature_id": feature.id,
-            "repo_name": repo_name,
-            "global_id": f"{repo_name}:{feature.id}" if repo_name else feature.id,
-            "title": feature.title,
-            "description": feature.description,
-            "business_value": feature.business_value,
-            "epic_id": feature.epic_id,
-            "epic_title": epic_title,
-            "phase_id": phase_id,
-            "priority": feature.priority,
-            "status": feature.status,
-            "labels": feature.labels,
-            "user_story_count": len(feature.user_stories),
-            "dod_item_count": _count_dod_items(feature.definition_of_done),
-            "story_quality_core": quality_summary.core,
-            "story_quality_acceptable": quality_summary.acceptable,
-            "story_quality_weak": quality_summary.weak,
-            "has_technical_spec": feature.technical_spec is not None,
-            "has_existing_code": feature.existing_code is not None,
-            "has_business_value": bool(feature.business_value),
-            "source_file": feature_path.name,
-            "note": feature.note,
-        }
-        data["features"].append(feature_record)
+        conn.execute(
+            """
+            INSERT INTO risks
+            (global_id, project_id, local_id, title, stride_category, severity,
+             probability, risk_level, cluster, hazard, situation, harm, description,
+             mitigation_status, residual_risk, labels, control_count, source_file)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                global_id,
+                project_id,
+                risk.id,
+                risk.title,
+                risk.stride_category,
+                risk.severity,
+                risk.probability,
+                risk.risk_level,
+                risk.cluster,
+                risk.hazard,
+                risk.situation,
+                risk.harm,
+                risk.description,
+                risk.mitigation_status,
+                risk.residual_risk,
+                risk.labels,
+                len(risk.controls),
+                risk.source_file,
+            ],
+        )
+        labels_set.update(risk.labels)
 
-        # Extract user stories
-        for story in feature.user_stories:
-            story_extra = story.get_extra_fields()
-            if story_extra:
-                data["extra_fields_log"].append({
-                    "source": feature_path.name,
-                    "type": "user_story",
-                    "id": story.id,
-                    "extra_fields": list(story_extra.keys()),
-                })
+        # Insert affected requirements
+        for req_id in risk.affected_requirements:
+            conn.execute(
+                """
+                INSERT INTO risk_requirements (project_id, risk_id, requirement_id)
+                VALUES (?, ?, ?)
+                """,
+                [project_id, global_id, req_id],
+            )
 
-            story_record = {
-                "story_id": story.id,
-                "repo_name": repo_name,
-                "global_id": f"{repo_name}:{story.id}" if repo_name else story.id,
-                "feature_id": feature.id,
-                "feature_title": feature.title,
-                "epic_id": feature.epic_id,
-                "phase_id": phase_id,
-                "role": story.as_a,
-                "goal": story.i_want,
-                "benefit": story.so_that,
-                "full_story": story.full_story,
-                "priority": story.priority,
-                "story_quality": story.story_quality,
-                "status": story.status,
-                "acceptance_criteria_count": len(story.acceptance_criteria),
-                "note": story.note,
-            }
-            data["user_stories"].append(story_record)
+        # Insert controls
+        for i, (control_desc, refs) in enumerate(zip(risk.controls, risk.control_refs)):
+            conn.execute(
+                """
+                INSERT INTO risk_controls (project_id, risk_id, description, refs, sort_order)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                [project_id, global_id, control_desc, refs, i],
+            )
 
-            # Extract acceptance criteria
-            for i, ac_text in enumerate(story.acceptance_criteria):
-                criteria_id += 1
-                data["acceptance_criteria"].append({
-                    "criteria_id": criteria_id,
-                    "story_id": story.id,
-                    "feature_id": feature.id,
-                    "criteria_text": ac_text,
-                    "sort_order": i,
-                    "story_role": story.as_a,
-                    "feature_title": feature.title,
-                })
+    # Insert decisions
+    for decision in data.decisions:
+        global_id = data.make_global_id(decision.id)
 
-        # Extract definition of done
-        dod_items = feature.definition_of_done
-        if isinstance(dod_items, dict):
-            flat_items = []
-            for category, items in dod_items.items():
-                for item in items:
-                    flat_items.append(f"[{category}] {item}")
-            dod_items = flat_items
+        conn.execute(
+            """
+            INSERT INTO decisions
+            (global_id, project_id, local_id, title, date, status,
+             context, decision, rationale, consequences, labels, source_file)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                global_id,
+                project_id,
+                decision.id,
+                decision.title,
+                decision.date,
+                decision.status,
+                decision.context,
+                decision.decision,
+                decision.rationale,
+                decision.consequences,
+                decision.labels,
+                decision.source_file,
+            ],
+        )
+        labels_set.update(decision.labels)
 
-        for i, dod_text in enumerate(dod_items):
-            dod_id += 1
-            data["definition_of_done"].append({
-                "dod_id": dod_id,
-                "feature_id": feature.id,
-                "item_text": dod_text,
-                "sort_order": i,
-            })
+    # Insert labels dimension
+    for label in sorted(labels_set):
+        conn.execute(
+            """
+            INSERT INTO labels (project_id, name)
+            VALUES (?, ?)
+            ON CONFLICT DO NOTHING
+            """,
+            [project_id, label],
+        )
 
-    # Build labels dimension
-    data["labels"] = [
-        {"label_id": i, "label_name": label}
-        for i, label in enumerate(sorted(labels_set))
+
+def _clear_project_data(conn: "duckdb.DuckDBPyConnection", project_id: str) -> None:
+    """Clear all existing data for a project.
+
+    Args:
+        conn: DuckDB connection
+        project_id: Project ID to clear
+    """
+    tables = [
+        "labels",
+        "risk_controls",
+        "risk_requirements",
+        "decisions",
+        "risks",
+        "acceptance_criteria",
+        "subtasks",
+        "tasks",
+        "milestones",
+        "projects",
     ]
+    for table in tables:
+        conn.execute(f"DELETE FROM {table} WHERE project_id = ?", [project_id])
 
-    # Extract risks from risk management directory
-    # Supports structures:
-    # 1. {yaml_dir}/../03-risk-management/ (sibling folder, e.g., docs/01-design-input + docs/03-risk-management)
-    # 2. {yaml_dir}/../docs/03-risk-management/ (requirements alongside docs)
-    # 3. {yaml_dir}/03-risk-management/ (nested inside yaml_dir)
-    risk_candidates = [
-        yaml_dir.parent / "03-risk-management",
-        yaml_dir.parent / "docs" / "03-risk-management",
-        yaml_dir / "03-risk-management",
-    ]
-    risks_dir = next((d for d in risk_candidates if d.exists()), None)
 
-    control_idx = 0  # Counter for auto-generated control IDs
+def _insert_acceptance_criteria(
+    conn: "duckdb.DuckDBPyConnection",
+    project_id: str,
+    task_id: str,
+    criteria: list,
+) -> None:
+    """Insert acceptance criteria for a task or subtask.
 
-    if risks_dir:
-        for risk_path in sorted(risks_dir.glob("*.yaml")):
-            # Skip template files
-            if risk_path.name.startswith("_"):
-                continue
-
-            try:
-                cluster = parse_risk_yaml(risk_path)
-            except Exception as e:
-                print(f"Warning: Failed to parse {risk_path}: {e}")
-                continue
-
-            # Extract cluster metadata
-            cluster_record = {
-                "cluster_id": cluster.cluster_id,
-                "repo_name": repo_name,
-                "global_id": f"{repo_name}:{cluster.cluster_id}" if repo_name else cluster.cluster_id,
-                "cluster_name": cluster.cluster_name,
-                "description": cluster.metadata.description,
-                "stride_categories": cluster.metadata.stride_categories,
-                "assessed_date": cluster.metadata.assessed_date,
-                "root_risk": cluster.metadata.root_risk,
-                "affected_requirements": cluster.affected_requirements,
-                "risk_count": len(cluster.risks),
-                "source_file": risk_path.name,
-            }
-            data["risk_clusters"].append(cluster_record)
-
-            for risk in cluster.risks:
-                risk_record = {
-                    "risk_id": risk.id,
-                    "repo_name": repo_name,
-                    "global_id": f"{repo_name}:{risk.id}" if repo_name else risk.id,
-                    "cluster_id": cluster.cluster_id,
-                    "title": risk.title,
-                    "description": risk.description,
-                    # STRIDE chain fields
-                    "stride": risk.stride,
-                    "hazard": risk.hazard,
-                    "situation": risk.situation,
-                    "harm": risk.harm,
-                    # Scoring fields
-                    "category": risk.stride,  # STRIDE is the category
-                    "severity": risk.severity,
-                    "probability": risk.probability,
-                    "risk_level": risk.level,
-                    "residual_risk": risk.residual_risk,
-                    "status": risk.status,
-                    # Traceability
-                    "affected_requirements": risk.affected_requirements,
-                    "control_count": len(risk.controls),
-                    "source_file": risk_path.name,
-                }
-
-                # Risk acceptance
-                if risk.mitigation.risk_acceptance:
-                    acceptance = risk.mitigation.risk_acceptance
-                    risk_record["acceptance_rationale"] = acceptance.rationale
-                    risk_record["acceptance_owner"] = acceptance.owner
-                    risk_record["acceptance_review_date"] = acceptance.review_date
-                else:
-                    risk_record["acceptance_rationale"] = None
-                    risk_record["acceptance_owner"] = None
-                    risk_record["acceptance_review_date"] = None
-
-                data["risks"].append(risk_record)
-
-                # Extract controls
-                for control in risk.controls:
-                    control_idx += 1
-                    control_id = f"CTRL-{control_idx:03d}"
-
-                    control_record = {
-                        "control_id": control_id,
-                        "repo_name": repo_name,
-                        "global_id": f"{repo_name}:{control_id}" if repo_name else control_id,
-                        "risk_id": risk.id,
-                        "cluster_id": cluster.cluster_id,
-                        "description": control.control,
-                        "implemented_by": control.story_refs,
-                        "ac_refs": control.ac_refs,
-                        "verification": None,  # Not in new format
-                        "status": None,  # Not in new format
-                    }
-                    data["risk_controls"].append(control_record)
-
-    return data
+    Args:
+        conn: DuckDB connection
+        project_id: Project ID
+        task_id: Task global ID
+        criteria: List of AcceptanceCriterion objects
+    """
+    for i, ac in enumerate(criteria):
+        conn.execute(
+            """
+            INSERT INTO acceptance_criteria
+            (project_id, task_id, number, text, completed, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [project_id, task_id, ac.number, ac.text, ac.completed, i],
+        )
 
 
 # =============================================================================
@@ -371,54 +310,97 @@ def extract_data(
 
 
 def story_sync_command(
-    requirements_dir: Path | None = None,
+    backlog_dir: Path | None = None,
     output_path: Path | None = None,
-    repo_name: str | None = None,
-    validate_only: bool = False,
+    migrate_only: bool = False,
 ) -> int:
-    """Run story sync command."""
-    yaml_dir = (requirements_dir or Path("requirements")).resolve()
+    """Run story sync command.
 
-    if not yaml_dir.exists():
-        print(f"Error: Requirements directory not found: {yaml_dir}")
-        return 1
+    Args:
+        backlog_dir: Path to Backlog.md directory
+        output_path: Output database path
+        migrate_only: Only run migrations, don't sync data
 
-    print(f"YAML source:  {yaml_dir}")
-    print(f"Schema:       v{SCHEMA_VERSION}")
-    if repo_name:
-        print(f"Repo name:    {repo_name}")
-
-    # Extract data with validation
-    print("\nParsing YAML files with schema validation...")
-    try:
-        data = extract_data(yaml_dir, repo_name=repo_name)
-    except Exception as e:
-        print(f"\nError: Schema validation failed: {e}")
-        return 1
-
-    print(f"  Parsed {len(data['features'])} features, {len(data['user_stories'])} user stories")
-    if data["risks"]:
-        cluster_info = f", {len(data['risk_clusters'])} clusters" if data["risk_clusters"] else ""
-        print(f"  Parsed {len(data['risks'])} risks, {len(data['risk_controls'])} controls{cluster_info}")
-
-    if validate_only:
-        print("\nValidation complete. No database created (--validate-only).")
-        return 0
-
-    # Create database (requires duckdb)
+    Returns:
+        Exit code (0 = success, 1 = error)
+    """
+    # Import duckdb
     try:
         import duckdb
     except ImportError:
-        print("\nError: duckdb is required for sync. Install with: pip install rdm[story-audit]")
+        print("Error: duckdb is required for sync. Install with: pip install rdm[story-audit]")
         return 1
 
-    db_path = (output_path or Path("requirements.duckdb")).resolve()
-    print(f"Database:     {db_path}")
+    db_path = (output_path or Path("backlog.duckdb")).resolve()
+
+    # Handle migrate-only
+    if migrate_only:
+        print(f"Database:     {db_path}")
+        print(f"Schema:       v{SCHEMA_VERSION}")
+        print("\nRunning migrations only...")
+
+        conn = duckdb.connect(str(db_path))
+        ensure_schema_version_table(conn)
+
+        current = get_current_version(conn)
+        print(f"Current:      {current or 'none'}")
+
+        applied = run_migrations(conn)
+        if applied:
+            print(f"Applied:      {', '.join(applied)}")
+        else:
+            print("No pending migrations.")
+
+        conn.close()
+        return 0
+
+    # Validate backlog directory
+    if not backlog_dir:
+        print("Error: backlog_dir is required")
+        return 1
+
+    backlog_dir = backlog_dir.resolve()
+    config_path = backlog_dir / "config.yml"
+
+    if not config_path.exists():
+        print(f"Error: Not a Backlog.md directory (no config.yml): {backlog_dir}")
+        return 1
+
+    # Parse backlog data
+    print(f"Backlog:      {backlog_dir}")
+    print(f"Schema:       v{SCHEMA_VERSION}")
+
+    print("\nParsing markdown files...")
+    try:
+        data = extract_backlog_data(backlog_dir)
+    except Exception as e:
+        print(f"\nError: Failed to parse backlog: {e}")
+        return 1
+
+    print(f"  Project:    {data.config.project_name} ({data.project_id})")
+    print(f"  Milestones: {len(data.milestones)}")
+    print(f"  Tasks:      {len(data.tasks)}")
+    print(f"  Subtasks:   {len(data.subtasks)}")
+    print(f"  Risks:      {len(data.risks)}")
+    print(f"  Decisions:  {len(data.decisions)}")
+
+    # Create/migrate database
+    print(f"\nDatabase:     {db_path}")
 
     conn = duckdb.connect(str(db_path))
+    ensure_schema_version_table(conn)
 
-    # Create all tables and insert data
-    _create_and_populate_tables(conn, data)
+    current = get_current_version(conn)
+    if current:
+        print(f"Current ver:  {current}")
+
+    applied = run_migrations(conn)
+    if applied:
+        print(f"Migrations:   {', '.join(applied)}")
+
+    # Populate tables
+    print("\nPopulating tables...")
+    populate_tables(conn, data)
 
     conn.close()
 
@@ -426,292 +408,23 @@ def story_sync_command(
     return 0
 
 
-def _create_and_populate_tables(conn: object, data: dict[str, list[dict]]) -> None:
-    """Create all tables and populate with extracted data."""
-
-    # === PHASES TABLE ===
-    conn.execute("DROP TABLE IF EXISTS phases")
-    conn.execute("""
-        CREATE TABLE phases (
-            phase_id VARCHAR,
-            phase_name VARCHAR,
-            description VARCHAR,
-            sort_order INTEGER,
-            feature_count INTEGER
-        )
-    """)
-    for p in data["phases"]:
-        conn.execute(
-            "INSERT INTO phases VALUES (?, ?, ?, ?, ?)",
-            [p["phase_id"], p["phase_name"], p["description"], p["sort_order"], p["feature_count"]],
-        )
-
-    # === EPICS TABLE ===
-    conn.execute("DROP TABLE IF EXISTS epics")
-    conn.execute("""
-        CREATE TABLE epics (
-            epic_id VARCHAR,
-            title VARCHAR,
-            status VARCHAR,
-            phases VARCHAR[],
-            feature_ids VARCHAR[]
-        )
-    """)
-    for e in data["epics"]:
-        conn.execute(
-            "INSERT INTO epics VALUES (?, ?, ?, ?, ?)",
-            [e["epic_id"], e["title"], e["status"], e.get("phases", []), e.get("feature_ids", [])],
-        )
-
-    # === LABELS TABLE ===
-    conn.execute("DROP TABLE IF EXISTS labels")
-    conn.execute("""
-        CREATE TABLE labels (
-            label_id INTEGER,
-            label_name VARCHAR
-        )
-    """)
-    for lbl in data["labels"]:
-        conn.execute(
-            "INSERT INTO labels VALUES (?, ?)",
-            [lbl["label_id"], lbl["label_name"]],
-        )
-
-    # === FEATURES TABLE ===
-    conn.execute("DROP TABLE IF EXISTS features")
-    conn.execute("""
-        CREATE TABLE features (
-            feature_id VARCHAR,
-            repo_name VARCHAR,
-            global_id VARCHAR,
-            title VARCHAR,
-            description VARCHAR,
-            business_value VARCHAR,
-            epic_id VARCHAR,
-            epic_title VARCHAR,
-            phase_id VARCHAR,
-            priority VARCHAR,
-            status VARCHAR,
-            labels VARCHAR[],
-            user_story_count INTEGER,
-            dod_item_count INTEGER,
-            story_quality_core INTEGER,
-            story_quality_acceptable INTEGER,
-            story_quality_weak INTEGER,
-            has_technical_spec BOOLEAN,
-            has_existing_code BOOLEAN,
-            has_business_value BOOLEAN,
-            source_file VARCHAR,
-            note VARCHAR
-        )
-    """)
-    for f in data["features"]:
-        conn.execute(
-            "INSERT INTO features VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [
-                f["feature_id"], f["repo_name"], f["global_id"], f["title"],
-                f["description"], f["business_value"], f["epic_id"], f["epic_title"],
-                f["phase_id"], f["priority"], f["status"], f["labels"],
-                f["user_story_count"], f["dod_item_count"], f["story_quality_core"],
-                f["story_quality_acceptable"], f["story_quality_weak"],
-                f["has_technical_spec"], f["has_existing_code"], f["has_business_value"],
-                f["source_file"], f.get("note"),
-            ],
-        )
-
-    # === USER STORIES TABLE ===
-    conn.execute("DROP TABLE IF EXISTS user_stories")
-    conn.execute("""
-        CREATE TABLE user_stories (
-            story_id VARCHAR,
-            repo_name VARCHAR,
-            global_id VARCHAR,
-            feature_id VARCHAR,
-            feature_title VARCHAR,
-            epic_id VARCHAR,
-            phase_id VARCHAR,
-            role VARCHAR,
-            goal VARCHAR,
-            benefit VARCHAR,
-            full_story VARCHAR,
-            priority VARCHAR,
-            story_quality VARCHAR,
-            status VARCHAR,
-            acceptance_criteria_count INTEGER,
-            note VARCHAR
-        )
-    """)
-    for s in data["user_stories"]:
-        conn.execute(
-            "INSERT INTO user_stories VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [
-                s["story_id"], s["repo_name"], s["global_id"], s["feature_id"],
-                s["feature_title"], s["epic_id"], s["phase_id"], s["role"],
-                s["goal"], s["benefit"], s["full_story"], s["priority"],
-                s["story_quality"], s["status"], s["acceptance_criteria_count"],
-                s.get("note"),
-            ],
-        )
-
-    # === ACCEPTANCE CRITERIA TABLE ===
-    conn.execute("DROP TABLE IF EXISTS acceptance_criteria")
-    conn.execute("""
-        CREATE TABLE acceptance_criteria (
-            criteria_id INTEGER,
-            story_id VARCHAR,
-            feature_id VARCHAR,
-            criteria_text VARCHAR,
-            sort_order INTEGER,
-            story_role VARCHAR,
-            feature_title VARCHAR
-        )
-    """)
-    for ac in data["acceptance_criteria"]:
-        conn.execute(
-            "INSERT INTO acceptance_criteria VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [
-                ac["criteria_id"], ac["story_id"], ac["feature_id"],
-                ac["criteria_text"], ac["sort_order"], ac["story_role"],
-                ac["feature_title"],
-            ],
-        )
-
-    # === DEFINITION OF DONE TABLE ===
-    conn.execute("DROP TABLE IF EXISTS definition_of_done")
-    conn.execute("""
-        CREATE TABLE definition_of_done (
-            dod_id INTEGER,
-            feature_id VARCHAR,
-            item_text VARCHAR,
-            sort_order INTEGER
-        )
-    """)
-    for dod in data["definition_of_done"]:
-        conn.execute(
-            "INSERT INTO definition_of_done VALUES (?, ?, ?, ?)",
-            [dod["dod_id"], dod["feature_id"], dod["item_text"], dod["sort_order"]],
-        )
-
-    # === RISK CLUSTERS TABLE (Extended Format) ===
-    conn.execute("DROP TABLE IF EXISTS risk_clusters")
-    conn.execute("""
-        CREATE TABLE risk_clusters (
-            cluster_id VARCHAR,
-            repo_name VARCHAR,
-            global_id VARCHAR,
-            cluster_name VARCHAR,
-            description VARCHAR,
-            stride_categories VARCHAR[],
-            assessed_date VARCHAR,
-            root_risk VARCHAR,
-            affected_requirements VARCHAR[],
-            risk_count INTEGER,
-            source_file VARCHAR
-        )
-    """)
-    for rc in data["risk_clusters"]:
-        conn.execute(
-            "INSERT INTO risk_clusters VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [
-                rc["cluster_id"], rc["repo_name"], rc["global_id"], rc["cluster_name"],
-                rc["description"], rc.get("stride_categories", []), rc.get("assessed_date"),
-                rc.get("root_risk"), rc.get("affected_requirements", []),
-                rc["risk_count"], rc["source_file"],
-            ],
-        )
-
-    # === RISKS TABLE ===
-    conn.execute("DROP TABLE IF EXISTS risks")
-    conn.execute("""
-        CREATE TABLE risks (
-            risk_id VARCHAR,
-            repo_name VARCHAR,
-            global_id VARCHAR,
-            cluster_id VARCHAR,
-            title VARCHAR,
-            description VARCHAR,
-            -- STRIDE chain fields (extended format)
-            stride VARCHAR,
-            hazard VARCHAR,
-            situation VARCHAR,
-            harm VARCHAR,
-            -- Scoring fields
-            category VARCHAR,
-            severity VARCHAR,
-            probability VARCHAR,
-            risk_level VARCHAR,
-            residual_risk VARCHAR,
-            status VARCHAR,
-            -- Traceability
-            affected_requirements VARCHAR[],
-            control_count INTEGER,
-            -- Risk acceptance (extended format)
-            acceptance_rationale VARCHAR,
-            acceptance_owner VARCHAR,
-            acceptance_review_date VARCHAR,
-            source_file VARCHAR
-        )
-    """)
-    for r in data["risks"]:
-        conn.execute(
-            "INSERT INTO risks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [
-                r["risk_id"], r["repo_name"], r["global_id"], r.get("cluster_id"),
-                r["title"], r["description"],
-                r.get("stride"), r.get("hazard"), r.get("situation"), r.get("harm"),
-                r.get("category"), r["severity"], r["probability"],
-                r.get("risk_level"), r.get("residual_risk"), r["status"],
-                r.get("affected_requirements", []), r["control_count"],
-                r.get("acceptance_rationale"), r.get("acceptance_owner"),
-                r.get("acceptance_review_date"), r["source_file"],
-            ],
-        )
-
-    # === RISK CONTROLS TABLE ===
-    conn.execute("DROP TABLE IF EXISTS risk_controls")
-    conn.execute("""
-        CREATE TABLE risk_controls (
-            control_id VARCHAR,
-            repo_name VARCHAR,
-            global_id VARCHAR,
-            risk_id VARCHAR,
-            cluster_id VARCHAR,
-            description VARCHAR,
-            implemented_by VARCHAR[],
-            ac_refs VARCHAR[],
-            verification VARCHAR,
-            status VARCHAR
-        )
-    """)
-    for rc in data["risk_controls"]:
-        conn.execute(
-            "INSERT INTO risk_controls VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [
-                rc["control_id"], rc["repo_name"], rc["global_id"], rc["risk_id"],
-                rc.get("cluster_id"), rc["description"],
-                rc.get("implemented_by", []), rc.get("ac_refs", []),
-                rc.get("verification"), rc.get("status"),
-            ],
-        )
-
-
 def main() -> None:
-    """CLI entry point."""
+    """CLI entry point for standalone usage."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Sync requirements to DuckDB")
-    parser.add_argument("-r", "--requirements", type=Path)
-    parser.add_argument("-o", "--output", type=Path)
-    parser.add_argument("--repo", type=str)
-    parser.add_argument("--validate-only", action="store_true")
+    parser = argparse.ArgumentParser(description="Sync Backlog.md to DuckDB")
+    parser.add_argument("backlog_dir", nargs="?", type=Path, help="Path to Backlog.md directory")
+    parser.add_argument("-o", "--output", type=Path, help="Output database path")
+    parser.add_argument("--migrate-only", action="store_true", help="Only run migrations")
     args = parser.parse_args()
 
-    sys.exit(story_sync_command(
-        requirements_dir=args.requirements,
-        output_path=args.output,
-        repo_name=args.repo,
-        validate_only=args.validate_only,
-    ))
+    sys.exit(
+        story_sync_command(
+            backlog_dir=args.backlog_dir,
+            output_path=args.output,
+            migrate_only=args.migrate_only,
+        )
+    )
 
 
 if __name__ == "__main__":

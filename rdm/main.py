@@ -81,10 +81,9 @@ def handle_story_command(args):
         elif args.story_command == 'sync':
             from rdm.story_audit.sync import story_sync_command
             return story_sync_command(
-                requirements_dir=Path(args.requirements) if args.requirements else None,
+                backlog_dir=Path(args.backlog_dir) if args.backlog_dir else None,
                 output_path=Path(args.output) if args.output else None,
-                repo_name=args.repo,
-                validate_only=args.validate_only,
+                migrate_only=args.migrate_only,
             )
 
         elif args.story_command == 'check-ids':
@@ -92,8 +91,18 @@ def handle_story_command(args):
             files = [Path(f) for f in args.files] if args.files else None
             return story_check_ids_command(files)
 
+        elif args.story_command == 'backlog-validate':
+            from rdm.story_audit.backlog_validate import story_backlog_validate_command
+            return story_backlog_validate_command(
+                backlog_dir=Path(args.backlog_dir) if args.backlog_dir else None,
+                file_path=Path(args.file) if args.file else None,
+                strict=args.strict,
+                verbose=args.verbose,
+                quiet=args.quiet,
+            )
+
         else:
-            print("Unknown story subcommand. Use: audit, validate, sync, or check-ids")
+            print("Unknown story subcommand. Use: audit, validate, sync, check-ids, or backlog-validate")
             return 1
 
     except ImportError as e:
@@ -164,17 +173,25 @@ def parse_arguments(arguments):
     story_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
 
     # rdm story sync
-    story_sync_help = 'sync requirements to DuckDB for analytics'
+    story_sync_help = 'sync Backlog.md to DuckDB for analytics'
     story_sync_parser = story_subparsers.add_parser('sync', help=story_sync_help)
-    story_sync_parser.add_argument('-r', '--requirements', help='Path to requirements directory')
+    story_sync_parser.add_argument('backlog_dir', nargs='?', help='Path to Backlog.md directory')
     story_sync_parser.add_argument('-o', '--output', help='Output database path')
-    story_sync_parser.add_argument('--repo', help='Repository name for cross-repo auditing')
-    story_sync_parser.add_argument('--validate-only', action='store_true', help='Only validate, no DB')
+    story_sync_parser.add_argument('--migrate-only', action='store_true', help='Only run migrations')
 
     # rdm story check-ids
     story_check_help = 'check for duplicate story IDs'
     story_check_parser = story_subparsers.add_parser('check-ids', help=story_check_help)
     story_check_parser.add_argument('files', nargs='*', help='Files to check (default: requirements/)')
+
+    # rdm story backlog-validate
+    backlog_validate_help = 'validate Backlog.md markdown files for consistency'
+    backlog_validate_parser = story_subparsers.add_parser('backlog-validate', help=backlog_validate_help)
+    backlog_validate_parser.add_argument('backlog_dir', nargs='?', help='Path to backlog directory')
+    backlog_validate_parser.add_argument('-f', '--file', help='Validate single file')
+    backlog_validate_parser.add_argument('-s', '--strict', action='store_true', help='Treat warnings as errors')
+    backlog_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
+    backlog_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
 
     return parser.parse_args(arguments)
 

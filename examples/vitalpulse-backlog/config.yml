@@ -1,0 +1,45 @@
+# === Core Settings ===
+project_id: "vp"
+project_name: "VitalPulse Patient Monitoring System"
+description: "IEC 62304 Class C medical device for continuous vital signs monitoring in hospital ICU environments"
+repository: "example/vitalpulse-firmware"
+default_status: "To Do"
+statuses: ["To Do", "In Progress", "Review", "Done"]
+labels:
+  - firmware
+  - sensors
+  - display
+  - connectivity
+  - safety
+  - alarms
+  - security
+  - documentation
+  - verification
+milestones: []
+
+# === Task ID Settings ===
+task_prefix: "vp"
+zero_padded_ids: 3
+date_format: yyyy-mm-dd
+include_date_time_in_dates: true
+
+# === Regulatory Context ===
+device_class: "IEC 62304 Class C"
+safety_class: "Class C (life-supporting)"
+intended_use: "Continuous monitoring of vital signs (SpO2, ECG, BP, Temperature) for adult patients in ICU settings"
+regulatory_standards:
+  - "IEC 62304:2006/AMD1:2015 Medical device software lifecycle"
+  - "ISO 14971:2019 Risk management"
+  - "IEC 62366-1:2015 Usability engineering"
+  - "IEC 60601-1:2012 Medical electrical equipment"
+  - "IEC 60601-1-8:2006 Alarm systems"
+  - "HIPAA (for US market)"
+  - "MDR 2017/745 (for EU market)"
+
+# === Git & Branch Sync ===
+remote_operations: true
+check_active_branches: true
+active_branch_days: 30
+task_resolution_strategy: most_progressed
+auto_commit: false
+bypass_git_hooks: false
