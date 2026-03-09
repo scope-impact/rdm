@@ -123,10 +123,6 @@ def _builtin_checklist_folder():
     return os.path.dirname(os.path.abspath(__file__)) + '/checklists'
 
 
-def _builtin_checklist_file(filename):
-    return _builtin_checklist_folder() + '/' + os.path.basename(filename)
-
-
 def _find_failing_checklist_items(source_generator, checklist):
     checklist_keys = set(_extract_keys_from_checklist(checklist))
     found_keys = set(_find_keys_in_sources(source_generator, checklist_keys))

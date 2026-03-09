@@ -9,6 +9,7 @@ Usage:
 from __future__ import annotations
 
 import sys
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -92,15 +93,10 @@ def validate_index(yaml_dir: Path) -> ValidationResult:
         stats["feature_refs"] = len(index.features)
 
         # Check for duplicate epic IDs
-        epic_ids = [e.id for e in index.epics]
-        duplicates = [eid for eid in epic_ids if epic_ids.count(eid) > 1]
+        epic_id_counts = Counter(e.id for e in index.epics)
+        duplicates = [eid for eid, count in epic_id_counts.items() if count > 1]
         if duplicates:
             errors.append(f"Duplicate epic IDs: {set(duplicates)}")
-
-        # Check for features referenced in phases but not defined
-        all_phase_features = set()
-        for phase in index.phases.values():
-            all_phase_features.update(phase.features)
 
         # Warnings for missing descriptions
         for phase_id, phase in index.phases.items():
@@ -191,7 +187,8 @@ def validate_feature(feature_path: Path, strict: bool = False) -> ValidationResu
                 warnings.append(f"{story.id}: No acceptance criteria")
 
         # Check for duplicate story IDs within feature
-        duplicates = [sid for sid in story_ids if story_ids.count(sid) > 1]
+        story_id_counts = Counter(story_ids)
+        duplicates = [sid for sid, count in story_id_counts.items() if count > 1]
         if duplicates:
             errors.append(f"Duplicate story IDs: {set(duplicates)}")
 
