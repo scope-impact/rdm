@@ -108,6 +108,10 @@ def parse_acceptance_criteria(body: str) -> list[AcceptanceCriterion]:
 # =============================================================================
 
 
+_section_pattern_cache: dict[str, re.Pattern[str]] = {}
+_SECTION_MARKER_RE = re.compile(r"<!--\s*SECTION:\w+:(?:BEGIN|END)\s*-->")
+
+
 def extract_section(body: str, heading: str) -> str:
     """Extract content under a markdown heading.
 
@@ -118,11 +122,16 @@ def extract_section(body: str, heading: str) -> str:
     Returns:
         Content under the heading until next heading or end
     """
-    # Pattern: ## Heading\n content until next ## or end
-    pattern = rf"^##\s+{re.escape(heading)}\s*\n(.*?)(?=^##\s|\Z)"
-    match = re.search(pattern, body, re.MULTILINE | re.DOTALL)
+    # Cache compiled regex per heading to avoid recompilation
+    if heading not in _section_pattern_cache:
+        pattern = rf"^##\s+{re.escape(heading)}\s*\n(.*?)(?=^##\s|\Z)"
+        _section_pattern_cache[heading] = re.compile(pattern, re.MULTILINE | re.DOTALL)
+    match = _section_pattern_cache[heading].search(body)
     if match:
-        return match.group(1).strip()
+        content = match.group(1).strip()
+        # Strip backlog CLI section markers (<!-- SECTION:*:BEGIN/END -->)
+        content = _SECTION_MARKER_RE.sub("", content).strip()
+        return content
     return ""
 
 
@@ -205,8 +214,8 @@ def parse_milestone(file_path: Path) -> Milestone:
     features_section = extract_section(body, "Features")
     features = []
     for line in features_section.split("\n"):
-        # Pattern: - ft-001: Bootstrap Infrastructure...
-        match = re.match(r"^-\s+(ft-\d+):", line.strip())
+        # Pattern: - FT-001: Bootstrap Infrastructure... (case-insensitive)
+        match = re.match(r"^-\s+([\w-]+-\d+):", line.strip())
         if match:
             features.append(match.group(1))
 
@@ -251,8 +260,8 @@ def parse_task(file_path: Path) -> Task:
     subtasks_section = extract_section(body, "Subtasks")
     subtask_ids = []
     for line in subtasks_section.split("\n"):
-        # Pattern: - ft-003.01: K3s cluster...
-        match = re.match(r"^-\s+(ft-\d+\.\d+):", line.strip())
+        # Pattern: - FT-003.01: K3s cluster... (any task prefix)
+        match = re.match(r"^-\s+([\w-]+-\d+\.\d+):", line.strip())
         if match:
             subtask_ids.append(match.group(1))
 

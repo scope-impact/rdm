@@ -1,7 +1,7 @@
 ---
 id: m-1
 title: "Core Sensor Platform"
-status: in_progress
+status: active
 created_date: '2026-01-18'
 labels: [EP-001, sensors, firmware, foundation]
 ---
