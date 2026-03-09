@@ -433,7 +433,7 @@ def validate_milestone_file(
             str(file_path),
             "E022",
             f"Invalid milestone ID '{milestone_id}': must match pattern m-N (e.g., m-1, m-2)",
-            fix_hint=f"Change id to: m-{{number}} (e.g., m-1)",
+            fix_hint="Change id to: m-{number} (e.g., m-1)",
         )
 
     # Validate status
