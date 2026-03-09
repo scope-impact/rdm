@@ -419,8 +419,8 @@ def parse_risk(file_path: Path) -> RiskDoc:
     affected_section = extract_section(body, "Affected Requirements")
     affected_requirements = []
     for line in affected_section.split("\n"):
-        # Match new format ft-NNN.NN or legacy US-XXX-NNN
-        match = re.match(r"^-\s+(ft-\d+\.\d+|US-[A-Z]+-\d+)", line.strip())
+        # Match any task prefix (e.g., vp-001.01) or legacy US-XXX-NNN
+        match = re.match(r"^-\s+([\w-]+-\d+(?:\.\d+)?|US-[A-Z]+-\d+)", line.strip())
         if match:
             affected_requirements.append(match.group(1))
 

@@ -271,7 +271,7 @@ When you are ready, write it down in the task so that you can refer to it later.
 
 ```bash
 # Example
-backlog task edit 42 --plan "1. Research codebase for references\n2Research on internet for similar cases\n3. Implement\n4. Test"
+backlog task edit 42 --plan $'1. Research codebase for references\n2. Research on internet for similar cases\n3. Implement\n4. Test'
 ```
 
 ## 5.3. Implementation

@@ -33,7 +33,7 @@ def get_current_version(conn: "duckdb.DuckDBPyConnection") -> str | None:
             "SELECT version FROM schema_version ORDER BY applied_at DESC LIMIT 1"
         ).fetchone()
         return result[0] if result else None
-    except Exception:
+    except Exception:  # noqa: BLE001 — table may not exist yet
         return None
 
 

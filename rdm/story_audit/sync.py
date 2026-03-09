@@ -388,21 +388,22 @@ def story_sync_command(
     print(f"\nDatabase:     {db_path}")
 
     conn = duckdb.connect(str(db_path))
-    ensure_schema_version_table(conn)
+    try:
+        ensure_schema_version_table(conn)
 
-    current = get_current_version(conn)
-    if current:
-        print(f"Current ver:  {current}")
+        current = get_current_version(conn)
+        if current:
+            print(f"Current ver:  {current}")
 
-    applied = run_migrations(conn)
-    if applied:
-        print(f"Migrations:   {', '.join(applied)}")
+        applied = run_migrations(conn)
+        if applied:
+            print(f"Migrations:   {', '.join(applied)}")
 
-    # Populate tables
-    print("\nPopulating tables...")
-    populate_tables(conn, data)
-
-    conn.close()
+        # Populate tables
+        print("\nPopulating tables...")
+        populate_tables(conn, data)
+    finally:
+        conn.close()
 
     print(f"\nDone! Database saved to: {db_path}")
     return 0

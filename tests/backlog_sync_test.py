@@ -9,6 +9,7 @@ Tests the new Backlog.md-only sync with:
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -667,7 +668,8 @@ class TestHallaHealthInfraBacklog:
     @pytest.fixture
     def hhi_backlog_dir(self) -> Path | None:
         """Get halla-health-infra backlog directory if available."""
-        path = Path("/Users/sathish.narayanan/Documents/git/Backlog.md/backlog/halla-health-infra")
+        env_path = os.environ.get("HHI_BACKLOG_DIR")
+        path = Path(env_path) if env_path else Path.home() / "Documents/git/Backlog.md/backlog/halla-health-infra"
         if path.exists():
             return path
         return None

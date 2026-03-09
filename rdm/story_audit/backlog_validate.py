@@ -710,7 +710,8 @@ def validate_backlog(backlog_dir: Path, strict: bool = False) -> ValidationResul
 
     # Validate config (schema + field-level)
     validate_config_schema(backlog_dir / "config.yml", result)
-    validate_config(backlog_dir / "config.yml", result)
+    config_data = validate_config(backlog_dir / "config.yml", result)
+    task_prefix = (config_data or {}).get("task_prefix", "")
 
     # First pass: collect milestone IDs using schema + field validation
     known_milestones: set[str] = set()
@@ -765,6 +766,20 @@ def validate_backlog(backlog_dir: Path, strict: bool = False) -> ValidationResul
             )
         else:
             seen_ids[task.id] = file_path
+
+        # Check task ID starts with expected prefix
+        if task_prefix:
+            base_id = task.id.split(".")[0]  # strip subtask suffix
+            expected = task_prefix.upper() + "-"
+            if not base_id.upper().startswith(expected):
+                result.add_warning(
+                    file_path, "W017",
+                    f"Task ID '{task.id}' doesn't start with "
+                    f"expected prefix '{task_prefix}'",
+                    fix_hint=f"Rename id to start with "
+                    f"{task_prefix.upper()}- "
+                    f"(e.g., {task_prefix.upper()}-001)",
+                )
 
         # Validate status
         _check_enum_field(
