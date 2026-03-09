@@ -68,17 +68,14 @@ jobs:
       - name: Generate PDFs
         working-directory: examples/vitalpulse-backlog/docs
         run: |
-          docker run --rm -v "$(pwd):/data" -w /data rdm:latest \
-            pandoc -d pandoc_pdf.yml release/SRS.md -o release/SRS.pdf
-          docker run --rm -v "$(pwd):/data" -w /data rdm:latest \
+          docker run --rm -v "$(pwd):/data" -w /data rdm:latest sh -c '
+            pandoc -d pandoc_pdf.yml release/SRS.md -o release/SRS.pdf &&
             pandoc -d pandoc_pdf.yml release/RMR.md -o release/RMR.pdf
+          '
 
       - name: Verify PDFs created
         working-directory: examples/vitalpulse-backlog/docs
         run: |
-          echo "Generated PDFs:"
-          ls -la release/*.pdf
-
           # Verify both PDFs exist and have content
           for pdf in release/SRS.pdf release/RMR.pdf; do
             if [ ! -s "$pdf" ]; then

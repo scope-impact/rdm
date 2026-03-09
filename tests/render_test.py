@@ -216,12 +216,10 @@ class TestDuckDBQuery:
             """)
             conn.close()
 
-            query_sql = (
-                "SELECT t.title, m.name as milestone FROM tasks t "
-                "JOIN milestones m ON t.milestone_id = m.id ORDER BY t.id"
-            )
             template = (
-                '{% for row in query("' + query_sql + '") %}\n'
+                '{% for row in query("SELECT t.title, m.name as milestone'
+                ' FROM tasks t JOIN milestones m ON t.milestone_id = m.id'
+                ' ORDER BY t.id") %}\n'
                 "{{ row.title }} ({{ row.milestone }})\n"
                 "{%- endfor %}"
             )
