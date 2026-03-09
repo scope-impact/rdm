@@ -325,7 +325,8 @@ def validate_task_file(
             str(file_path),
             "E012",
             f"Invalid task ID '{task_id}': must be alphanumeric with hyphens (e.g., FT-001 or FT-001.01)",
-            fix_hint=f"Change id to match pattern: id: {{task_prefix}}-NNN (parent) or {{task_prefix}}-NNN.NN (subtask)",
+            fix_hint="Change id to match pattern: "
+            "id: {task_prefix}-NNN (parent) or {task_prefix}-NNN.NN (subtask)",
         )
 
     if is_subtask:
@@ -344,7 +345,9 @@ def validate_task_file(
                 str(file_path),
                 "W012",
                 f"Parent task '{parent_id}' not found in tasks/ directory",
-                fix_hint=f"Create the parent task file first, or fix parent_task_id to an existing task ID. Known tasks: {sorted(known_tasks)[:5]}{'...' if len(known_tasks) > 5 else ''}",
+                fix_hint="Create the parent task file first, or fix parent_task_id "
+                f"to an existing task ID. Known tasks: "
+                f"{sorted(known_tasks)[:5]}{'...' if len(known_tasks) > 5 else ''}",
             )
 
     # Validate status
@@ -366,7 +369,9 @@ def validate_task_file(
             str(file_path),
             "W014",
             f"Milestone '{milestone}' not found in milestones/ directory",
-            fix_hint=f"Create milestones/{milestone} - Title.md, or use an existing milestone: {sorted(known_milestones) if known_milestones else '(none defined)'}",
+            fix_hint=f"Create milestones/{milestone} - Title.md, or use "
+            f"an existing milestone: "
+            f"{sorted(known_milestones) if known_milestones else '(none defined)'}",
         )
 
     # Check acceptance criteria format
@@ -594,12 +599,14 @@ def _handle_validation_error(e: Exception, file_path: str, code: str, result: Va
             result.add_error(
                 file_path, code,
                 f"Schema error at field '{loc}': {err['msg']}",
-                fix_hint=f"Check the '{loc}' field in frontmatter — see backlog SKILL.md 'Frontmatter Fields Parsed by rdm' table for expected types and values",
+                fix_hint=f"Check the '{loc}' field in frontmatter — see "
+                "backlog SKILL.md for expected types and values",
             )
     else:
         result.add_error(
             file_path, code, f"Parse error: {e}",
-            fix_hint="The file could not be parsed. Check YAML frontmatter syntax (--- delimiters, proper indentation, quoted strings)",
+            fix_hint="The file could not be parsed. Check YAML frontmatter "
+            "syntax (--- delimiters, proper indentation, quoted strings)",
         )
 
 
@@ -786,7 +793,8 @@ def validate_backlog(backlog_dir: Path, strict: bool = False) -> ValidationResul
                     file_path,
                     "W012",
                     f"Parent task '{task.parent_task_id}' not found in tasks/",
-                    fix_hint=f"Create the parent task first, or fix parent_task_id. Known parent tasks: {known_tasks_hint}",
+                    fix_hint="Create the parent task first, or fix "
+                    f"parent_task_id. Known parent tasks: {known_tasks_hint}",
                 )
 
         # Validate milestone reference
@@ -795,7 +803,9 @@ def validate_backlog(backlog_dir: Path, strict: bool = False) -> ValidationResul
                 file_path,
                 "W014",
                 f"Milestone '{task.milestone}' not found in milestones/ directory",
-                fix_hint=f"Create milestones/{task.milestone} - Title.md, or use an existing milestone: {sorted(known_milestones) if known_milestones else '(none defined)'}",
+                fix_hint=f"Create milestones/{task.milestone} - Title.md, "
+                f"or use an existing milestone: "
+                f"{sorted(known_milestones) if known_milestones else '(none defined)'}",
             )
 
         # Validate AC numbering
@@ -934,7 +944,8 @@ def story_backlog_validate_command(
             result.add_error(
                 str(file_path), "E001",
                 "Could not parse YAML frontmatter",
-                fix_hint="File must start with '---' on line 1, followed by YAML key: value pairs, then '---' on its own line",
+                fix_hint="File must start with '---' on line 1, followed by "
+                "YAML key: value pairs, then '---' on its own line",
             )
         else:
             # Determine file type and validate
