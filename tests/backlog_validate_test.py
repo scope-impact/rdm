@@ -4,9 +4,9 @@ import tempfile
 from pathlib import Path
 
 
+from rdm.story_audit.backlog_parser import parse_frontmatter
 from rdm.story_audit.backlog_validate import (
     ValidationResult,
-    parse_frontmatter,
     validate_backlog,
     validate_config,
     validate_task_file,
@@ -29,19 +29,19 @@ status: Done
 # Description
 Some content here.
 """
-        fm, body, end_line = parse_frontmatter(content)
-        assert fm is not None
+        fm, body = parse_frontmatter(content)
+        assert fm
         assert fm["id"] == "ft-001"
         assert fm["title"] == "Test Task"
         assert "# Description" in body
 
-    def test_returns_none_for_missing_frontmatter(self) -> None:
+    def test_returns_empty_for_missing_frontmatter(self) -> None:
         content = "# Just a heading\n\nSome content."
-        fm, body, end_line = parse_frontmatter(content)
-        assert fm is None
+        fm, body = parse_frontmatter(content)
+        assert not fm
         assert body == content
 
-    def test_returns_none_for_invalid_yaml(self) -> None:
+    def test_returns_empty_for_invalid_yaml(self) -> None:
         content = """---
 id: ft-001
 title: [invalid yaml
@@ -49,8 +49,8 @@ title: [invalid yaml
 
 Content here.
 """
-        fm, body, end_line = parse_frontmatter(content)
-        assert fm is None
+        fm, body = parse_frontmatter(content)
+        assert not fm
 
 
 class TestValidateConfig:

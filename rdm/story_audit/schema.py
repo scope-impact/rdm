@@ -28,6 +28,12 @@ except ImportError:
     )
 
 
+def _get_extra_fields(instance: BaseModel) -> dict[str, Any]:
+    """Return any extra fields not in the Pydantic schema."""
+    extra = getattr(instance, "__pydantic_extra__", None)
+    return dict(extra) if extra else {}
+
+
 # =============================================================================
 # SCHEMA VERSION
 # =============================================================================
@@ -368,9 +374,7 @@ class UserStory(BaseModel):
 
     def get_extra_fields(self) -> dict[str, Any]:
         """Return any extra fields not in the schema."""
-        # Pydantic V2 stores extra fields in __pydantic_extra__
-        extra = getattr(self, "__pydantic_extra__", None)
-        return dict(extra) if extra else {}
+        return _get_extra_fields(self)
 
 
 # =============================================================================
@@ -452,9 +456,7 @@ class Feature(BaseModel):
 
     def get_extra_fields(self) -> dict[str, Any]:
         """Return any extra fields not in the schema."""
-        # Pydantic V2 stores extra fields in __pydantic_extra__
-        extra = getattr(self, "__pydantic_extra__", None)
-        return dict(extra) if extra else {}
+        return _get_extra_fields(self)
 
     def compute_quality_summary(self) -> StoryQualitySummary:
         """Compute story quality summary from user stories."""
@@ -550,18 +552,3 @@ def get_all_field_names(model: type[BaseModel]) -> set[str]:
     return set(model.model_fields.keys())
 
 
-def model_to_flat_dict(instance: BaseModel, prefix: str = "") -> dict[str, Any]:
-    """Flatten a Pydantic model to a dict suitable for database insertion."""
-    result = {}
-    for field_name, field_value in instance:
-        key = f"{prefix}{field_name}" if prefix else field_name
-
-        if isinstance(field_value, BaseModel):
-            result.update(model_to_flat_dict(field_value, f"{key}_"))
-        elif isinstance(field_value, list):
-            result[key] = field_value
-            result[f"{key}_count"] = len(field_value)
-        else:
-            result[key] = field_value
-
-    return result

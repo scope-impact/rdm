@@ -79,12 +79,16 @@ def _is_change(pull_request):
     return is_merged and not is_obsolete
 
 
+def _has_label(labels, name):
+    return any(label.name == name for label in labels)
+
+
 def _is_problem_report(labels):
-    return 'bug' in [label.name for label in labels]
+    return _has_label(labels, 'bug')
 
 
 def _is_obsolete(labels):
-    return 'obsolete' in [label.name for label in labels]
+    return _has_label(labels, 'obsolete')
 
 
 def _is_change_request(issue):
@@ -189,7 +193,7 @@ def change_approvals(config, pull_request):
     If there are no github review with the "approval" status, then we fall back to using
     github reviews with the "comment" status.
     '''
-    external_review = 'external-review' in [label.name for label in pull_request.labels]
+    external_review = _has_label(pull_request.labels, 'external-review')
 
     reviews_required = config.get('reviews_required', True)
 

@@ -41,6 +41,8 @@ from rdm.story_audit.backlog_schema import (
     Decision,
 )
 from rdm.story_audit.backlog_parser import (
+    AC_PATTERN,
+    parse_frontmatter as _parse_frontmatter,
     parse_task,
     parse_milestone,
     parse_decision,
@@ -117,35 +119,6 @@ DECISION_ID_PATTERN = re.compile(r"^decision-\d+$")
 
 
 # =============================================================================
-# FRONTMATTER PARSING
-# =============================================================================
-
-
-def parse_frontmatter(content: str) -> tuple[dict | None, str, int]:
-    """Extract YAML frontmatter from markdown.
-
-    Returns:
-        Tuple of (frontmatter dict or None if invalid, body, end_line)
-    """
-    if not content.startswith("---"):
-        return None, content, 0
-
-    end_match = re.search(r"\n---\s*\n", content[3:])
-    if not end_match:
-        return None, content, 0
-
-    yaml_str = content[3 : end_match.start() + 3]
-    body = content[end_match.end() + 3 :]
-    end_line = yaml_str.count("\n") + 2  # +2 for opening and closing ---
-
-    try:
-        frontmatter = yaml.safe_load(yaml_str) or {}
-        return frontmatter, body, end_line
-    except yaml.YAMLError:
-        return None, content, end_line
-
-
-# =============================================================================
 # FILE VALIDATORS
 # =============================================================================
 
@@ -202,9 +175,9 @@ def validate_task_file(
     """
     result.files_checked += 1
     content = file_path.read_text()
-    frontmatter, body, fm_end_line = parse_frontmatter(content)
+    frontmatter, body = _parse_frontmatter(content)
 
-    if frontmatter is None:
+    if not frontmatter:
         result.add_error(str(file_path), "E010", "Missing or invalid frontmatter")
         return None
 
@@ -275,8 +248,7 @@ def validate_task_file(
         )
 
     # Check acceptance criteria format
-    ac_pattern = re.compile(r"^-\s*\[([ xX])\]\s*#(\d+)\s+(.+)$", re.MULTILINE)
-    ac_matches = list(ac_pattern.finditer(body))
+    ac_matches = list(AC_PATTERN.finditer(body))
     if ac_matches:
         # Check for sequential numbering
         numbers = [int(m.group(2)) for m in ac_matches]
@@ -302,9 +274,9 @@ def validate_milestone_file(
     """
     result.files_checked += 1
     content = file_path.read_text()
-    frontmatter, body, fm_end_line = parse_frontmatter(content)
+    frontmatter, body = _parse_frontmatter(content)
 
-    if frontmatter is None:
+    if not frontmatter:
         result.add_error(str(file_path), "E020", "Missing or invalid frontmatter")
         return None
 
@@ -347,9 +319,9 @@ def validate_decision_file(file_path: Path, result: ValidationResult) -> str | N
     """
     result.files_checked += 1
     content = file_path.read_text()
-    frontmatter, body, fm_end_line = parse_frontmatter(content)
+    frontmatter, body = _parse_frontmatter(content)
 
-    if frontmatter is None:
+    if not frontmatter:
         result.add_error(str(file_path), "E030", "Missing or invalid frontmatter")
         return None
 
@@ -402,9 +374,9 @@ def validate_risk_file(file_path: Path, result: ValidationResult) -> list[str]:
     """
     result.files_checked += 1
     content = file_path.read_text()
-    frontmatter, body, fm_end_line = parse_frontmatter(content)
+    frontmatter, body = _parse_frontmatter(content)
 
-    if frontmatter is None:
+    if not frontmatter:
         result.add_error(str(file_path), "E040", "Missing or invalid frontmatter")
         return []
 
@@ -708,9 +680,9 @@ def story_backlog_validate_command(
 
         result = ValidationResult()
         content = file_path.read_text()
-        fm, _, _ = parse_frontmatter(content)
+        fm, _ = _parse_frontmatter(content)
 
-        if fm is None:
+        if not fm:
             result.add_error(str(file_path), "E001", "Invalid frontmatter")
         else:
             # Determine file type and validate
