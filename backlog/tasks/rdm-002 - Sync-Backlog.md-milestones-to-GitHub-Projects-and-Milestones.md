@@ -4,12 +4,12 @@ title: Sync Backlog.md milestones to GitHub Projects and Milestones
 status: Done
 assignee: []
 created_date: '2026-03-10 09:25'
-updated_date: '2026-03-10 09:36'
+updated_date: '2026-03-10 13:24'
 labels:
   - github-sync
+milestone: m-1
 dependencies: []
 priority: medium
-milestone: m-1
 ---
 
 ## Description
@@ -20,11 +20,11 @@ Push Backlog.md milestones as GitHub Milestones and optionally as GitHub Project
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Milestones created as GitHub Milestones with title and description
-- [ ] #2 Existing milestones reused (not duplicated)
-- [ ] #3 GitHub Project v2 board created per milestone when --projects flag set
-- [ ] #4 Tasks within milestone added to corresponding Project board
-- [ ] #5 Milestone status (active/completed/planned) mapped to GitHub milestone state
+- [x] #1 Milestones created as GitHub Milestones with title and description
+- [x] #2 Existing milestones reused (not duplicated)
+- [x] #3 GitHub Project v2 board created per milestone when --projects flag set
+- [x] #4 Tasks within milestone added to corresponding Project board
+- [x] #5 Milestone status (active/completed/planned) mapped to GitHub milestone state
 <!-- AC:END -->
 
 ## Implementation Notes
