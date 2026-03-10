@@ -1,14 +1,17 @@
+project_id: "rdm"
+task_prefix: "rdm"
 project_name: "rdm"
+description: "Regulatory Documentation Manager - IEC 62304 compliance tool"
+repository: "scope-impact/rdm"
 default_status: "To Do"
-statuses: ["To Do", "In Progress", "Done"]
-labels: []
-milestones: []
+statuses: ["To Do", "In Progress", "Done", "Blocked", "In Review"]
+labels: [bug, testing, refactor, github-sync]
 date_format: yyyy-mm-dd
 max_column_width: 20
 auto_open_browser: true
 default_port: 6420
 remote_operations: true
-auto_commit: true
+auto_commit: false
 zero_padded_ids: 3
 bypass_git_hooks: false
 check_active_branches: true
