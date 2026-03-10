@@ -94,6 +94,16 @@ uv run pytest tests
 
 ## Changes from Upstream
 
+### v1.1.0
+
+- **Story Audit module** (`rdm[story-audit]`): Backlog.md parser, schema validation, traceability audit, and duplicate ID detection
+- **Bidirectional GitHub Sync** (`rdm[github]`): Push Backlog.md tasks to GitHub Issues/Milestones/Projects v2, pull PRs into DuckDB for analytics
+- **VitalPulse example**: Full medical device backlog example with CI workflow
+- Alias-based status normalization with actionable fix hints in validator
+- Codebase simplification: removed dead code, deduplicated logic, fixed inefficiencies
+- Added CLAUDE.md for Claude Code development guidance
+- Dependency bumps: PyGithub 2.8.1, Ruff 0.14.13
+
 ### v1.0.0
 
 - Installation via `uv tool install` directly from GitHub
