@@ -27,7 +27,7 @@ jobs:
         run: uv build --wheel --out-dir rdm/init_files/dist
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
