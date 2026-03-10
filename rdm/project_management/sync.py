@@ -185,6 +185,7 @@ def pull_prs(
 def graphql(token: str, query: str, variables: dict = None) -> dict | None:
     """Execute a GitHub GraphQL query."""
     import urllib.request
+    import urllib.error
     import json
 
     data = json.dumps({"query": query, "variables": variables or {}}).encode()
@@ -197,10 +198,16 @@ def graphql(token: str, query: str, variables: dict = None) -> dict | None:
         },
     )
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=30) as resp:
             return json.loads(resp.read().decode())
-    except Exception as e:
-        print(f"  GraphQL error: {e}")
+    except urllib.error.HTTPError as e:
+        print(f"  GraphQL HTTP {e.code}: {e.reason}")
+        return None
+    except urllib.error.URLError as e:
+        print(f"  GraphQL network error: {e.reason}")
+        return None
+    except TimeoutError:
+        print("  GraphQL request timed out")
         return None
 
 
@@ -392,8 +399,8 @@ def push_tasks(
                 )
                 gh_milestones[ms.id] = gh_ms
                 print(f"  Milestone: {ms.id} ({ms.title})")
-            except GithubException:
-                pass
+            except GithubException as e:
+                print(f"  Milestone {ms.id} failed: {e}")
         milestone_map[ms.id] = gh_milestones.get(ms.id) or gh_milestones.get(ms.title)
 
     # Get or create GitHub Projects v2 for milestones
@@ -405,6 +412,19 @@ def push_tasks(
             if project_id:
                 projects[ms.id] = project_id
                 print(f"  Project: {ms.id}")
+
+    # Ensure labels exist in the repo
+    existing_labels = {lbl.name for lbl in gh_repo.get_labels()}
+    all_needed_labels = set()
+    for task in backlog_data.tasks:
+        all_needed_labels.update(task_labels(task))
+    for subtask in backlog_data.subtasks:
+        all_needed_labels.update(task_labels(subtask))
+    for label_name in all_needed_labels - existing_labels:
+        try:
+            gh_repo.create_label(name=label_name, color="ededed")
+        except GithubException:
+            pass
 
     # Load already-synced issues from DuckDB
     existing = {}
@@ -458,6 +478,9 @@ def push_tasks(
         except GithubException as e:
             print(f"  Failed {task.id}: {e}")
 
+    # Build task->milestone lookup for subtask project assignment
+    task_milestone_map = {task.id: task.milestone for task in backlog_data.tasks}
+
     # Push subtasks
     for subtask in backlog_data.subtasks:
         if subtask.id in existing:
@@ -491,11 +514,7 @@ def push_tasks(
             ])
 
             # Add to parent's project
-            parent_milestone = None
-            for task in backlog_data.tasks:
-                if task.id == subtask.parent_task_id:
-                    parent_milestone = task.milestone
-                    break
+            parent_milestone = task_milestone_map.get(subtask.parent_task_id)
             if parent_milestone and parent_milestone in projects and token:
                 add_issue_to_project(token, projects[parent_milestone], issue.node_id)
 
@@ -513,10 +532,10 @@ def push_tasks(
 # =============================================================================
 
 
-def _get_last_sync(conn) -> datetime | None:
+def _get_last_sync(conn, key: str = "last_sync") -> datetime | None:
     """Get last sync timestamp from DuckDB (timezone-aware UTC)."""
     rows = conn.execute(
-        "SELECT value FROM sync_meta WHERE key = 'last_sync'"
+        "SELECT value FROM sync_meta WHERE key = ?", [key]
     ).fetchall()
     if rows:
         dt = datetime.fromisoformat(rows[0][0])
@@ -541,19 +560,25 @@ def pm_sync_command(
         return 1
 
     db = db_path or Path("github_sync.duckdb")
-    conn = init_db(db)
 
+    # --status only needs the DB, no GitHub credentials
     if status:
-        prs = conn.execute("SELECT COUNT(*) FROM github_prs").fetchone()[0]
-        issues = conn.execute("SELECT COUNT(*) FROM github_issues").fetchone()[0]
-        last = _get_last_sync(conn)
-        print(f"Database:  {db}")
-        print(f"PRs:       {prs}")
-        print(f"Issues:    {issues}")
-        print(f"Last sync: {last or 'never'}")
-        conn.close()
+        conn = init_db(db)
+        try:
+            prs = conn.execute("SELECT COUNT(*) FROM github_prs").fetchone()[0]
+            issues = conn.execute("SELECT COUNT(*) FROM github_issues").fetchone()[0]
+            last_pull = _get_last_sync(conn, "last_pull")
+            last_push = _get_last_sync(conn, "last_push")
+            print(f"Database:   {db}")
+            print(f"PRs:        {prs}")
+            print(f"Issues:     {issues}")
+            print(f"Last pull:  {last_pull or 'never'}")
+            print(f"Last push:  {last_push or 'never'}")
+        finally:
+            conn.close()
         return 0
 
+    # Validate all inputs before opening DB or making API calls
     if not Github:
         print("Error: PyGithub required. Install with: pip install rdm[github]")
         return 1
@@ -568,45 +593,52 @@ def pm_sync_command(
         print("Error: Set GH_API_TOKEN env var")
         return 1
 
+    do_pull = pull or (not pull and not push)
+    do_push = push or (not pull and not push)
+
+    # Validate backlog dir early if pushing
+    backlog = backlog_dir or Path("backlog")
+    if do_push and not (backlog / "config.yml").exists():
+        print(f"Error: No config.yml found in {backlog}")
+        print("Run from repo root or use --backlog <path>")
+        return 1
+
     gh = Github(auth=Auth.Token(token))
     gh_repo = gh.get_repo(repo_name)
     print(f"Repository: {repo_name}")
     print(f"Database:   {db}")
 
-    do_pull = pull or (not pull and not push)
-    do_push = push or (not pull and not push)
+    conn = init_db(db)
+    try:
+        if do_pull:
+            since = _get_last_sync(conn, "last_pull")
+            mode = f"incremental (since {since})" if since else "full"
+            print(f"\nPulling PRs from GitHub ({mode})...")
+            pr_count = pull_prs(
+                gh_repo, conn,
+                base_branch=base_branch,
+                since=since,
+            )
+            print(f"  Synced {pr_count} PRs")
+            conn.execute(
+                "INSERT OR REPLACE INTO sync_meta VALUES ('last_pull', ?)",
+                [datetime.now(timezone.utc).isoformat()],
+            )
 
-    if do_pull:
-        since = _get_last_sync(conn)
-        mode = f"incremental (since {since})" if since else "full"
-        print(f"\nPulling PRs from GitHub ({mode})...")
-        pr_count = pull_prs(
-            gh_repo, conn,
-            base_branch=base_branch,
-            since=since,
-        )
-        print(f"  Synced {pr_count} PRs")
+        if do_push:
+            print("\nPushing Backlog.md tasks to GitHub...")
+            from rdm.story_audit.backlog_parser import extract_backlog_data
+            data = extract_backlog_data(backlog)
+            print(f"  Found {len(data.tasks)} tasks, {len(data.subtasks)} subtasks")
+            created = push_tasks(gh_repo, conn, data, token=token)
+            print(f"  Created {created} issues")
+            conn.execute(
+                "INSERT OR REPLACE INTO sync_meta VALUES ('last_push', ?)",
+                [datetime.now(timezone.utc).isoformat()],
+            )
+    finally:
+        conn.close()
 
-    if do_push:
-        print("\nPushing Backlog.md tasks to GitHub...")
-        backlog = backlog_dir or Path("backlog")
-        if not (backlog / "config.yml").exists():
-            print(f"  Error: No config.yml found in {backlog}")
-            print("  Run from repo root or use --backlog <path>")
-            conn.close()
-            return 1
-
-        from rdm.story_audit.backlog_parser import extract_backlog_data
-        data = extract_backlog_data(backlog)
-        print(f"  Found {len(data.tasks)} tasks, {len(data.subtasks)} subtasks")
-        created = push_tasks(gh_repo, conn, data, token=token)
-        print(f"  Created {created} issues")
-
-    conn.execute(
-        "INSERT OR REPLACE INTO sync_meta VALUES ('last_sync', ?)",
-        [datetime.now(timezone.utc).isoformat()],
-    )
-    conn.close()
     print("\nDone!")
     return 0
 
