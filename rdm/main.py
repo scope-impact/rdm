@@ -124,6 +124,8 @@ def handle_pm_command(args):
                 pull=args.pull,
                 push=args.push,
                 status=args.status,
+                backlog_dir=Path(args.backlog) if args.backlog else None,
+                base_branch=args.branch,
             )
         else:
             print("Unknown pm subcommand. Use: sync")
@@ -232,6 +234,8 @@ def parse_arguments(arguments):
     pm_sync_parser.add_argument('--pull', action='store_true', help='Pull from GitHub only')
     pm_sync_parser.add_argument('--push', action='store_true', help='Push to GitHub only')
     pm_sync_parser.add_argument('--status', action='store_true', help='Show sync status')
+    pm_sync_parser.add_argument('--backlog', help='Backlog directory (default: backlog/)')
+    pm_sync_parser.add_argument('--branch', help='Base branch filter for PRs (default: all)')
 
     return parser.parse_args(arguments)
 
