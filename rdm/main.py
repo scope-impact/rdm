@@ -110,6 +110,14 @@ def handle_story_command(args):
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
             )
 
+        elif args.story_command == 'verify':
+            from rdm.record.verify import verify_command
+            return verify_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                output=Path(args.output) if args.output else None,
+            )
+
         else:
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, "
@@ -239,6 +247,13 @@ def parse_arguments(arguments):
         '--allure-results',
         help='Path to an Allure results directory; reconcile SDD user needs against executed test results',
     )
+
+    # rdm story verify
+    story_verify_help = 'generate verification data (SDD user needs x Allure results) for the DHF'
+    story_verify_parser = story_subparsers.add_parser('verify', help=story_verify_help)
+    story_verify_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    story_verify_parser.add_argument('--allure-results', help='Path to an Allure results directory')
+    story_verify_parser.add_argument('-o', '--output', help='Output data file (default: verification.yml)')
 
     # =========================================================================
     # rdm pm (project management)

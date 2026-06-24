@@ -31,21 +31,16 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import yaml
-
 from rdm.record import allure
+from rdm.record.sdd import SDD_DOC
+from rdm.record.sdd import find_dhf_doc as _find_doc
+from rdm.record.sdd import user_need_ids as sdd_user_need_ids
 from rdm.story_audit.audit import ALLURE_PATTERN
 
 # Documents the gate requires, by id/basename. The basename matches the
 # template filenames installed by `rdm init` (see rdm/init_files/documents/).
 DESIGN_INPUT_DOC = "design_input.md"
 DESIGN_REVIEW_DOC = "design_review.md"
-
-# Source-of-truth document for user needs. Its absence is a soft warning.
-SDD_DOC = "software_design_specification.md"
-
-# Frontmatter fields the SDD may use to list the user-need IDs it captures.
-SDD_USER_NEED_FIELDS = ("user_needs", "user_need_ids", "ids")
 
 # A document is considered "incomplete" while it still contains scaffold
 # placeholders. These markers come from the init templates.
@@ -91,20 +86,6 @@ class GateResult:
         # gate runs before implementation, so the verifying tests (and their
         # Allure tags) legitimately may not exist yet.
         return all(a.ok for a in self.artifacts)
-
-
-def _find_doc(dhf_dir: Path, basename: str) -> Path | None:
-    """Locate a design document under the DHF directory.
-
-    Checks `<dhf>/documents/<basename>` first (the layout produced by
-    `rdm init`), then falls back to a recursive search so rendered/relocated
-    copies are still found.
-    """
-    preferred = dhf_dir / "documents" / basename
-    if preferred.exists():
-        return preferred
-    matches = sorted(dhf_dir.rglob(basename))
-    return matches[0] if matches else None
 
 
 def has_uncommitted_changes(path: Path) -> bool | None:
@@ -202,34 +183,6 @@ def _source_of_truth_warnings(dhf_dir: Path) -> list[str]:
     if sdd.ok:
         return []
     return [f"Software Design Specification (user-need source of truth): {'; '.join(sdd.reasons)}"]
-
-
-def _parse_frontmatter(text: str) -> dict:
-    """Parse a YAML frontmatter block delimited by leading `---` fences."""
-    if not text.lstrip().startswith("---"):
-        return {}
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return {}
-    try:
-        data = yaml.safe_load(parts[1])
-    except yaml.YAMLError:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def sdd_user_need_ids(dhf_dir: Path) -> set[str]:
-    """Return the user-need IDs declared in the SDD frontmatter."""
-    path = _find_doc(dhf_dir, SDD_DOC)
-    if path is None:
-        return set()
-    frontmatter = _parse_frontmatter(path.read_text(encoding="utf-8"))
-    ids: set[str] = set()
-    for field_name in SDD_USER_NEED_FIELDS:
-        value = frontmatter.get(field_name)
-        if isinstance(value, list):
-            ids.update(str(v).strip() for v in value if str(v).strip())
-    return ids
 
 
 def _find_tests_dir(dhf_dir: Path) -> Path | None:
