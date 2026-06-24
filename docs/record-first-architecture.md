@@ -40,7 +40,7 @@ they fit a bounded-context design (one SDD per context):
 | Level | Lives in | Required? |
 |-------|----------|-----------|
 | **Context needs** (capabilities) | each per-context SDD's frontmatter `user_needs` (context-scoped IDs, e.g. `ALRM-UN-001`) | always |
-| **Product needs** (cross-context journeys) | a `product_needs.yml` registry, each `composed_of` context-need IDs | **required when a need spans contexts**; omit if needs partition cleanly by context |
+| **Product needs** (cross-context journeys) | the **system architecture document** frontmatter (`product_needs`), each `composed_of` context-need IDs | **required when a need spans contexts**; omit if needs partition cleanly by context |
 
 Rules:
 
@@ -60,9 +60,9 @@ Rules:
 1. **Ingest**
    - `record/sdd.py` — discover the per-context SDD(s) and parse each one's
      frontmatter `user_needs` (context needs) and design data.
-   - `record/product_needs.py` (when product needs exist) — load the
-     `product_needs.yml` registry and resolve each `composed_of` to context
-     needs.
+   - `record/product_needs.py` (when product needs exist) — read the system
+     architecture document frontmatter `product_needs` and resolve each
+     `composed_of` to context needs.
    - `record/allure.py` — read an Allure results directory → per-context-need
      verification status.
    - `record/history.py` — git/PR → approvals + change history (reuse the

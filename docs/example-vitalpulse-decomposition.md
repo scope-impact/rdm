@@ -55,8 +55,22 @@ user_needs:
 
 ## Level 2 — product needs (journeys) decomposed
 
-Each product need composes context needs **by reference**. See
-`product_needs.yml` for the machine-readable registry.
+Each product need composes context needs **by reference**, declared in the
+**system architecture document** frontmatter (`docs/architecture.md`) — the same
+frontmatter mechanism as context needs, one altitude up:
+
+```yaml
+# docs/architecture.md
+---
+id: SDS-SYS-001
+title: VitalPulse System Architecture
+product_needs:
+  - id: PN-001
+    text: "Continuously inform the clinician of the patient's vital signs and promptly alert them to dangerous changes."
+    composed_of: [ACQ-UN-001, ACQ-UN-002, ACQ-UN-003, ALRM-UN-001, ALRM-UN-002, DISP-UN-001, DISP-UN-002]
+  # PN-002, PN-003 ...
+---
+```
 
 ### PN-001 — "Continuously inform the clinician of the patient's vital signs and promptly alert them to dangerous changes."
 Spans **acquisition + alarms + display**:

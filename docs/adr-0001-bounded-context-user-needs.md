@@ -41,17 +41,27 @@ cross-cutting problem never arises.
 ### Level 2 — Product needs (journeys) — OPTIONAL
 For a need that spans contexts, add a thin **product-level** need that
 **composes** Level-1 context needs. It does not restate design; it maps a
-journey across contexts.
+journey across contexts. Like context needs, it lives in **frontmatter** — in
+the **system architecture document** (the design document at the product
+altitude), not a separate data file:
 
 ```yaml
-# data/product_needs.yml  (or a top-level product SDD)
-- id: PN-001
-  text: "A clinician can securely retrieve a patient record"
-  composed_of: [AUTH-UN-001, RECORDS-UN-003, AUDIT-UN-002]
+# documents/architecture.md  (system / product-level design document)
+---
+id: SDS-SYS-001
+title: System Architecture
+product_needs:
+  - id: PN-001
+    text: "A clinician can securely retrieve a patient record"
+    composed_of: [AUTH-UN-001, RECORDS-UN-003, AUDIT-UN-002]
+---
 ```
 
 A cross-cutting need is therefore **referenced, never duplicated**: each context
-still owns its own piece; the product need is the seam.
+still owns its own piece; the product need is the seam. Needs live in the
+frontmatter of the design document at their altitude — context needs in the
+context SDD, product needs in the architecture document — one mechanism, two
+levels.
 
 ## ID scheme
 
@@ -113,7 +123,8 @@ cross-cutting concern is lifted out to the optional product layer, which holds
   context's `user_needs`; optionally load the product-need registry and resolve
   `composed_of`.
 - Templates: per-context SDD frontmatter gains `context` + `user_needs`
-  (id+text); optional `product_needs.yml` + a product-traceability section.
+  (id+text); optional `product_needs` in the architecture document frontmatter
+  + a product-traceability section.
 - Gates + traceability matrix: extend to the two-level model (context coverage,
   product composition, verification roll-up).
 
