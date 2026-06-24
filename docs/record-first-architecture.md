@@ -41,7 +41,7 @@ context boundaries). "Product need" vocabulary is not used.
 
 | Artifact | Role | Lives in |
 |----------|------|----------|
-| **user need** (validated, cross-cutting) | the journey / intended use; the **validation** anchor | defined once in the **system architecture document** frontmatter (`user_needs: [{id, text}]`) |
+| **user need** (validated, cross-cutting) | the journey / intended use; the **validation** anchor | defined once in the **V&V plan** frontmatter (`verification_and_validation_plan.md`, `user_needs: [{id, text}]`) — *not* in the architecture document, which holds design only |
 | **`satisfies`** reference | which user needs a context's design contributes to | each per-context **SDD** frontmatter (`satisfies: [UN-…]`) |
 | **acceptance criteria** (verified) | the conditions a user need dissolves into within a context | the context's tests, tagged `@allure.story("UN-…")` |
 
@@ -58,9 +58,9 @@ Rules:
 ## What RDM does
 
 1. **Ingest**
-   - `record/sdd.py` — read the user-needs registry (system architecture
-     document frontmatter `user_needs`); discover all per-context SDDs and read
-     each one's `satisfies` and design data.
+   - `record/sdd.py` — read the user-needs registry (V&V plan frontmatter
+     `user_needs`); discover all per-context SDDs and read each one's
+     `satisfies` and design data.
    - `record/allure.py` — read an Allure results directory → per-user-need
      verification status (aggregated across the SDDs that satisfy it).
    - `record/history.py` — git/PR → approvals + change history (reuse the

@@ -21,13 +21,15 @@ There is one need concept: the **user need**.
   user / intended use requires (the journey). It is the **validation** anchor.
 - A user need is **cross-cutting**: **multiple SDDs may address the same user
   need** (many-to-many). It is therefore **not owned by any single SDD**.
-- It is defined **once**, in a single user-needs registry — the **system
-  architecture document** frontmatter:
+- It is defined **once**, in the **validation & verification plan** — the
+  document whose job is to plan validation, and validation is defined *against*
+  user needs. Architecture stays pure design; needs sit at the validation/input
+  altitude:
 
   ```yaml
-  # documents/architecture.md
+  # documents/verification_and_validation_plan.md
   ---
-  id: SDS-SYS-001
+  id: VVP-001
   user_needs:
     - {id: UN-001, text: "A clinician is promptly alerted to dangerous changes in a patient's vitals"}
     - {id: UN-002, text: "..."}
@@ -92,10 +94,10 @@ defined once in the registry; each SDD points at it with `satisfies`.
 
 ## Consequences (implementation outline, deferred)
 
-- `record/sdd.py`: read the user-needs registry (architecture doc frontmatter);
-  glob all SDDs and read each `satisfies`; reconcile coverage.
-- Templates: system architecture doc frontmatter `user_needs`; per-context SDD
-  frontmatter `satisfies`.
+- `record/sdd.py`: read the user-needs registry from the V&V plan frontmatter
+  (`user_needs`); glob all SDDs and read each `satisfies`; reconcile coverage.
+- Templates: V&V plan frontmatter `user_needs`; per-context SDD frontmatter
+  `satisfies`. The architecture document holds design only — no need listing.
 - Gates + traceability matrix: aggregate verification across all SDDs per user
   need; add validation presence/approval as a separate, human-evidenced check.
 

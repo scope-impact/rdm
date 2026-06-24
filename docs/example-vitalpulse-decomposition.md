@@ -7,8 +7,9 @@ There is no "product need" layer — only user needs.
 
 ## User needs (validated, cross-cutting)
 
-Defined once in the system architecture document frontmatter
-(`architecture.md`):
+Defined once in the validation & verification plan frontmatter
+(`verification_and_validation_plan.md`) — not in the architecture document,
+which holds design only:
 
 | ID | User need (the journey) |
 |----|-------------------------|
