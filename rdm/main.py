@@ -118,6 +118,13 @@ def handle_story_command(args):
                 output=Path(args.output) if args.output else None,
             )
 
+        elif args.story_command == 'release-gate':
+            from rdm.story_audit.design_gate import story_release_gate_command
+            return story_release_gate_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+            )
+
         else:
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, "
@@ -254,6 +261,12 @@ def parse_arguments(arguments):
     story_verify_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     story_verify_parser.add_argument('--allure-results', help='Path to an Allure results directory')
     story_verify_parser.add_argument('-o', '--output', help='Output data file (default: verification.yml)')
+
+    # rdm story release-gate
+    release_gate_help = 'block release unless design is approved and every user need is verified'
+    release_gate_parser = story_subparsers.add_parser('release-gate', help=release_gate_help)
+    release_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    release_gate_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
 
     # =========================================================================
     # rdm pm (project management)

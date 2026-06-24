@@ -358,3 +358,114 @@ def story_design_gate_command(
         "design review before transitioning work into backlog tasks."
     )
     return 1
+
+
+@dataclass
+class ReleaseResult:
+    """Result of the release gate: design controls + full verification."""
+
+    design: GateResult
+    verified: list[str] = field(default_factory=list)
+    blocking: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+    @property
+    def passed(self) -> bool:
+        return not self.blocking
+
+
+def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
+    """Run the release gate.
+
+    A release requires, as hard conditions:
+      1. the design gate passes (design input + review present, complete, and
+         approved in version control),
+      2. the SDD declares at least one user need, and
+      3. every declared user need is *verified* by a passing Allure test --
+         any failed or untested user need blocks the release.
+
+    Orphan Allure tags (no matching user need) are warnings, not blockers.
+    """
+    design = run_design_gate(dhf_dir, allure_results_dir)
+    result = ReleaseResult(design=design)
+
+    if not design.passed:
+        for artifact in design.artifacts:
+            if not artifact.ok:
+                result.blocking.append(
+                    f"design control not met -- {artifact.name}: {'; '.join(artifact.reasons)}"
+                )
+
+    sdd_ids = sdd_user_need_ids(dhf_dir)
+    if not sdd_ids:
+        result.blocking.append("SDD declares no user needs (nothing to verify)")
+        return result
+
+    report = allure.reconcile(sdd_ids, Path(allure_results_dir))
+    result.verified = report.verified
+    for uid in report.failed:
+        verification = report.by_user_need[uid]
+        result.blocking.append(
+            f"user need {uid} FAILED verification ({verification.failed} failing test(s))"
+        )
+    for uid in report.untested:
+        result.blocking.append(f"user need {uid} not verified by any passing Allure test")
+
+    prefixes = {uid.split("-")[0] for uid in sdd_ids}
+    for tag in report.orphan_ids:
+        if tag.split("-")[0] in prefixes:
+            result.warnings.append(f"Allure result tag {tag} matches no SDD user need")
+
+    return result
+
+
+def story_release_gate_command(
+    dhf_dir: Path | None = None,
+    allure_results_dir: Path | None = None,
+) -> int:
+    """Run the `rdm story release-gate` command."""
+    dhf = (dhf_dir or Path("dhf")).resolve()
+    if not dhf.exists():
+        print(f"Error: DHF directory not found: {dhf}")
+        print("Run `rdm init` first, or pass --dhf <path>.")
+        return 2
+    if not allure_results_dir:
+        print("Error: --allure-results <dir> is required for the release gate")
+        return 2
+    results = Path(allure_results_dir)
+    if not results.exists():
+        print(f"Error: Allure results directory not found: {results}")
+        return 2
+
+    result = run_release_gate(dhf, results)
+
+    print("Release gate")
+    print(f"DHF: {dhf}\n")
+
+    design_state = "PASS" if result.design.passed else "FAIL"
+    print(f"  [{design_state}] design controls (design input + review approved)")
+    if result.verified:
+        print(f"  [OK]   verified user needs: {', '.join(result.verified)}")
+
+    if result.blocking:
+        print("\nBlocking:")
+        for reason in result.blocking:
+            print(f"  [FAIL] {reason}")
+    if result.warnings:
+        print("\nWarnings:")
+        for warning in result.warnings:
+            print(f"  [WARN] {warning}")
+
+    print()
+    if result.passed:
+        print(
+            "Release gate PASSED: design controls are approved and every user need "
+            "is verified by a passing test."
+        )
+        return 0
+
+    print(
+        "Release gate FAILED: do not release. Resolve every blocking item above "
+        "(approve design controls; verify all user needs)."
+    )
+    return 1
