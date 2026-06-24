@@ -103,8 +103,17 @@ def handle_story_command(args):
                 quiet=args.quiet,
             )
 
+        elif args.story_command == 'design-gate':
+            from rdm.story_audit.design_gate import story_design_gate_command
+            return story_design_gate_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+            )
+
         else:
-            print("Unknown story subcommand. Use: audit, validate, sync, check-ids, or backlog-validate")
+            print(
+                "Unknown story subcommand. Use: audit, validate, sync, "
+                "check-ids, backlog-validate, or design-gate"
+            )
             return 1
 
     except ImportError as e:
@@ -126,6 +135,8 @@ def handle_pm_command(args):
                 status=args.status,
                 backlog_dir=Path(args.backlog) if args.backlog else None,
                 base_branch=args.branch,
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                skip_design_gate=args.skip_design_gate,
             )
         else:
             print("Unknown pm subcommand. Use: sync")
@@ -219,6 +230,11 @@ def parse_arguments(arguments):
     backlog_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
     backlog_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
 
+    # rdm story design-gate
+    design_gate_help = 'verify design input and design review exist before tasks transition'
+    design_gate_parser = story_subparsers.add_parser('design-gate', help=design_gate_help)
+    design_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+
     # =========================================================================
     # rdm pm (project management)
     # =========================================================================
@@ -236,6 +252,11 @@ def parse_arguments(arguments):
     pm_sync_parser.add_argument('--status', action='store_true', help='Show sync status')
     pm_sync_parser.add_argument('--backlog', help='Backlog directory (default: backlog/)')
     pm_sync_parser.add_argument('--branch', help='Base branch filter for PRs (default: all)')
+    pm_sync_parser.add_argument('--dhf', help='DHF directory for the design gate (default: dhf/)')
+    pm_sync_parser.add_argument(
+        '--skip-design-gate', action='store_true',
+        help='Skip the design input/review gate before pushing tasks',
+    )
 
     return parser.parse_args(arguments)
 

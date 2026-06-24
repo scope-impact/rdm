@@ -553,6 +553,8 @@ def pm_sync_command(
     status: bool = False,
     backlog_dir: Path | None = None,
     base_branch: str | None = None,
+    dhf_dir: Path | None = None,
+    skip_design_gate: bool = False,
 ) -> int:
     """Run pm sync command."""
     if not duckdb:
@@ -602,6 +604,25 @@ def pm_sync_command(
         print(f"Error: No config.yml found in {backlog}")
         print("Run from repo root or use --backlog <path>")
         return 1
+
+    # Design-controls gate: design input and design review must exist and be
+    # complete before tasks transition into GitHub.
+    if do_push and not skip_design_gate:
+        from rdm.story_audit.design_gate import run_design_gate
+
+        dhf = dhf_dir or Path("dhf")
+        if not dhf.exists():
+            print(f"Error: DHF directory not found: {dhf}")
+            print("Run `rdm init` first, pass --dhf <path>, or use --skip-design-gate.")
+            return 1
+        gate = run_design_gate(dhf)
+        if not gate.passed:
+            print("Error: design gate failed. Resolve before pushing tasks:")
+            for artifact in gate.artifacts:
+                if not artifact.ok:
+                    print(f"  - {artifact.name}: {'; '.join(artifact.reasons)}")
+            print("Run `rdm story design-gate` for details, or --skip-design-gate to override.")
+            return 1
 
     gh = Github(auth=Auth.Token(token))
     gh_repo = gh.get_repo(repo_name)
