@@ -125,10 +125,17 @@ def handle_story_command(args):
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
             )
 
+        elif args.story_command == 'persona':
+            from rdm.record.persona_cmd import persona_command
+            return persona_command(
+                vv_plan=Path(args.vv_plan) if args.vv_plan else None,
+                persona_results=Path(args.persona_results) if args.persona_results else None,
+            )
+
         else:
             print(
-                "Unknown story subcommand. Use: audit, validate, sync, "
-                "check-ids, backlog-validate, or design-gate"
+                "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
+                "backlog-validate, design-gate, verify, release-gate, or persona"
             )
             return 1
 
@@ -267,6 +274,12 @@ def parse_arguments(arguments):
     release_gate_parser = story_subparsers.add_parser('release-gate', help=release_gate_help)
     release_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     release_gate_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
+
+    # rdm story persona
+    persona_help = 'report formative usability evidence from AI-persona simulated-use runs'
+    persona_parser = story_subparsers.add_parser('persona', help=persona_help)
+    persona_parser.add_argument('--vv-plan', help='Path to the V&V plan (carries the user_needs registry)')
+    persona_parser.add_argument('--persona-results', help='Path to a directory of *-persona.json run files')
 
     # =========================================================================
     # rdm pm (project management)

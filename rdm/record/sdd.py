@@ -60,3 +60,25 @@ def user_need_ids(dhf_dir: Path) -> set[str]:
         if isinstance(value, list):
             ids.update(str(v).strip() for v in value if str(v).strip())
     return ids
+
+
+def user_needs_from_doc(doc_path: Path) -> set[str]:
+    """Return user-need IDs from a document's frontmatter ``user_needs`` list.
+
+    Per ADR 0001 the user-need registry lives in the V&V plan; this reads it
+    from any document's frontmatter. Accepts both ``{id, text}`` mappings and
+    bare string IDs.
+    """
+    if not doc_path.exists():
+        return set()
+    frontmatter = parse_frontmatter(doc_path.read_text(encoding="utf-8"))
+    value = frontmatter.get("user_needs")
+    if not isinstance(value, list):
+        return set()
+    ids: set[str] = set()
+    for item in value:
+        if isinstance(item, dict) and str(item.get("id", "")).strip():
+            ids.add(str(item["id"]).strip())
+        elif not isinstance(item, dict) and str(item).strip():
+            ids.add(str(item).strip())
+    return ids
