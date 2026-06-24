@@ -34,42 +34,40 @@ This triad is a self-sufficient DHF spine: *requirements → verification eviden
 
 ## User needs: where they live (per ADR 0001)
 
-User needs are part of the system of record. RDM models them in two levels so
-they fit a bounded-context design (one SDD per context):
+User needs are part of the system of record. There is **one** need concept — the
+**user need** — and it is **cross-cutting**: multiple bounded-context SDDs may
+address the same user need (it is solution-independent and does not respect
+context boundaries). "Product need" vocabulary is not used.
 
-| Level | Lives in | Required? |
-|-------|----------|-----------|
-| **Context needs** (capabilities) | each per-context SDD's frontmatter `user_needs` (context-scoped IDs, e.g. `ALRM-UN-001`) | always |
-| **Product needs** (cross-context journeys) | the **system architecture document** frontmatter (`product_needs`), each `composed_of` context-need IDs | **required when a need spans contexts**; omit if needs partition cleanly by context |
+| Artifact | Role | Lives in |
+|----------|------|----------|
+| **user need** (validated, cross-cutting) | the journey / intended use; the **validation** anchor | defined once in the **system architecture document** frontmatter (`user_needs: [{id, text}]`) |
+| **`satisfies`** reference | which user needs a context's design contributes to | each per-context **SDD** frontmatter (`satisfies: [UN-…]`) |
+| **acceptance criteria** (verified) | the conditions a user need dissolves into within a context | the context's tests, tagged `@allure.story("UN-…")` |
 
 Rules:
 
-- A context need is owned by exactly one context (its SDD). A cross-cutting
-  need is **never duplicated** across SDDs — it is a product need that
-  *references* context needs via `composed_of`.
-- Allure tags reference **context** need IDs (verification happens where the
-  tests live). A **product need is verified iff every context need it composes
-  is verified.**
-- Capture product needs whenever the device has cross-context journeys (the
-  common case for anything non-trivial); for a single-context tool they may be
-  omitted. See ADR 0001 and the worked example in
-  `docs/example-vitalpulse-decomposition.md`.
+- A user need is **referenced** by many SDDs, never **duplicated** — defined
+  once in the registry; each SDD points at it via `satisfies`.
+- **Validation** is against the user need (human evidence — usability, clinical,
+  simulated use). **Verification** is against its acceptance criteria (Allure),
+  aggregated across **every** SDD that satisfies the need.
+- A user need is **met** when validated **and** all its acceptance criteria
+  (across contexts) are verified. See ADR 0001.
 
 ## What RDM does
 
 1. **Ingest**
-   - `record/sdd.py` — discover the per-context SDD(s) and parse each one's
-     frontmatter `user_needs` (context needs) and design data.
-   - `record/product_needs.py` (when product needs exist) — read the system
-     architecture document frontmatter `product_needs` and resolve each
-     `composed_of` to context needs.
-   - `record/allure.py` — read an Allure results directory → per-context-need
-     verification status.
+   - `record/sdd.py` — read the user-needs registry (system architecture
+     document frontmatter `user_needs`); discover all per-context SDDs and read
+     each one's `satisfies` and design data.
+   - `record/allure.py` — read an Allure results directory → per-user-need
+     verification status (aggregated across the SDDs that satisfy it).
    - `record/history.py` — git/PR → approvals + change history (reuse the
      existing `project_management/github.py` change/approval logic, reframed as
      "git is the record", PM-agnostic).
-2. **Reconcile / trace** (`trace.py`) — join context-need IDs ↔ Allure tags,
-   then roll up to product needs via `composed_of`:
+2. **Reconcile / trace** (`trace.py`) — join user-need IDs ↔ Allure tags across
+   contexts:
 
    | Status | Meaning |
    |--------|---------|
@@ -78,12 +76,13 @@ Rules:
    | untested | declared user need, no Allure test (coverage gap) |
    | orphan | Allure tag with no matching user need |
 
-   A product need is verified iff all of its composed context needs are.
+   Verification is aggregated across every SDD that satisfies the need;
+   **validation** (human evidence on the journey) is tracked separately.
 3. **Gate** (`design_gate.py`, existing) — design input/review present +
    complete + approved (committed) in git; baseline drift re-opens the gate.
 4. **Render** (existing pipeline) — templates + data → Markdown → PDF/DOCX, now
    also embedding **generated** sections:
-   - traceability matrix (product need → context needs → test → status),
+   - traceability matrix (user need → SDDs → test → status),
    - V&V / test record (from Allure pass/fail, timestamp, version),
    - revision/change history (from git).
 

@@ -1,112 +1,69 @@
-# Worked decomposition — VitalPulse product needs → bounded-context user needs
+# Worked example — VitalPulse user needs across bounded contexts
 
 Applies ADR 0001 to the VitalPulse Patient Monitoring System (IEC 62304 Class C;
-SpO2/ECG/NIBP/Temperature; ICU). It shows product-level journeys decomposed into
-context-scoped user needs, with cross-context journeys held together by
-reference (`composed_of`) — never duplication.
+SpO2/ECG/NIBP/Temperature; ICU). It shows **cross-cutting user needs** addressed
+by **multiple bounded-context SDDs**, with verification aggregated across them.
+There is no "product need" layer — only user needs.
 
-## Bounded contexts (one SDD each)
+## User needs (validated, cross-cutting)
 
-| Context | SDD | Scope |
-|---------|-----|-------|
-| `platform` | `sdd/platform.md` | RTOS, real-time scheduling, watchdog, fault handling |
-| `acquisition` | `sdd/acquisition.md` | AFE drivers and signal acquisition (SpO2, ECG, NIBP, Temp) |
-| `alarms` | `sdd/alarms.md` | limit detection, prioritisation/annunciation (IEC 60601-1-8) |
-| `display` | `sdd/display.md` | waveforms, numerics, alarm presentation |
-| `connectivity` | `sdd/connectivity.md` | central-station streaming, store-and-forward |
-| `security` | `sdd/security.md` | clinician auth, PHI encryption, access audit (HIPAA) |
+Defined once in the system architecture document frontmatter
+(`architecture.md`):
 
-## Level 1 — context user needs (capabilities)
+| ID | User need (the journey) |
+|----|-------------------------|
+| `UN-001` | Continuously inform the clinician of the patient's vital signs and promptly alert them to dangerous changes. |
+| `UN-002` | Make a patient's monitored data securely available to authorized clinicians at the central station. |
+| `UN-003` | Operate safely and deterministically as a life-supporting (Class C) device, tolerating single faults. |
 
-These live in each context's SDD frontmatter (`user_needs`). IDs are
-context-scoped; Allure tests tag the context need they verify.
+These are the **validation** anchors (usability / clinical / simulated-use
+evidence attaches here).
 
-| ID | User need |
-|----|-----------|
-| `PLAT-UN-001` | Schedule safety-critical tasks deterministically within their deadlines |
-| `PLAT-UN-002` | Detect and recover from a single fault (watchdog) into a safe state |
-| `ACQ-UN-001` | Measure SpO2 within the stated accuracy across the specified range |
-| `ACQ-UN-002` | Acquire the ECG waveform at the specified sample rate/bandwidth |
-| `ACQ-UN-003` | Measure NIBP and temperature within stated accuracy |
-| `ALRM-UN-001` | Detect a vital crossing a clinician-set limit within ≤ the specified delay |
-| `ALRM-UN-002` | Annunciate alarms by priority per IEC 60601-1-8 |
-| `ALRM-UN-003` | Preserve the alarm condition through a single fault (fail-safe/latched) |
-| `DISP-UN-001` | Display real-time waveforms for the active parameters |
-| `DISP-UN-002` | Display numeric vitals and current alarm state |
-| `CONN-UN-001` | Stream vitals to the central station in near-real-time |
-| `CONN-UN-002` | Buffer and forward on network loss with no data loss |
-| `SEC-UN-001` | Authenticate clinicians before granting access |
-| `SEC-UN-002` | Protect PHI in transit and at rest (encryption) |
-| `SEC-UN-003` | Record an audit trail of PHI access |
+## Bounded contexts (one SDD each) and what they satisfy
 
-Example SDD frontmatter (one context):
+Each context's SDD declares `satisfies: [UN-…]` — the user needs its design
+contributes to. A user need appears in **multiple** SDDs; it is referenced, not
+duplicated.
 
-```yaml
-# sdd/alarms.md
----
-id: SDS-ALRM-001
-context: alarms
-user_needs:
-  - {id: ALRM-UN-001, text: "Detect a vital crossing a clinician-set limit within ≤ the specified delay"}
-  - {id: ALRM-UN-002, text: "Annunciate alarms by priority per IEC 60601-1-8"}
-  - {id: ALRM-UN-003, text: "Preserve the alarm condition through a single fault"}
----
+| Context | SDD | `satisfies` |
+|---------|-----|-------------|
+| `platform` | `sdd/platform.md` | UN-003 |
+| `acquisition` | `sdd/acquisition.md` | UN-001 |
+| `alarms` | `sdd/alarms.md` | UN-001, UN-003 |
+| `display` | `sdd/display.md` | UN-001, UN-002 |
+| `connectivity` | `sdd/connectivity.md` | UN-002 |
+| `security` | `sdd/security.md` | UN-002 |
+
+Two things this makes visible — the cases that motivate the model:
+
+- **A user need is addressed by multiple contexts.** `UN-001` is satisfied by
+  `acquisition`, `alarms`, and `display`. It is defined once; each SDD points at
+  it.
+- **A context satisfies multiple user needs.** `alarms` satisfies `UN-001` and
+  `UN-003`; `display` satisfies `UN-001` and `UN-002`. Many-to-many.
+
+## Acceptance criteria (verified) within a context
+
+A user need dissolves into acceptance criteria inside each contributing context;
+each is verified by an `@allure`-tagged test. For example, within `alarms`
+(satisfying UN-001 and UN-003):
+
+```python
+@allure.story("UN-001")
+def test_threshold_breach_detected_within_limit(): ...
+
+@allure.story("UN-003")
+def test_alarm_condition_survives_single_fault(): ...
 ```
 
-## Level 2 — product needs (journeys) decomposed
+## How V&V rolls up per user need
 
-Each product need composes context needs **by reference**, declared in the
-**system architecture document** frontmatter (`docs/architecture.md`) — the same
-frontmatter mechanism as context needs, one altitude up:
-
-```yaml
-# docs/architecture.md
----
-id: SDS-SYS-001
-title: VitalPulse System Architecture
-product_needs:
-  - id: PN-001
-    text: "Continuously inform the clinician of the patient's vital signs and promptly alert them to dangerous changes."
-    composed_of: [ACQ-UN-001, ACQ-UN-002, ACQ-UN-003, ALRM-UN-001, ALRM-UN-002, DISP-UN-001, DISP-UN-002]
-  # PN-002, PN-003 ...
----
-```
-
-### PN-001 — "Continuously inform the clinician of the patient's vital signs and promptly alert them to dangerous changes."
-Spans **acquisition + alarms + display**:
-`ACQ-UN-001, ACQ-UN-002, ACQ-UN-003, ALRM-UN-001, ALRM-UN-002, DISP-UN-001, DISP-UN-002`
-
-### PN-002 — "Make a patient's monitored data securely available to authorized clinicians at the central station."
-Spans **connectivity + security + display**:
-`CONN-UN-001, CONN-UN-002, SEC-UN-001, SEC-UN-002, SEC-UN-003, DISP-UN-002`
-
-### PN-003 — "Operate safely and deterministically as a life-supporting (Class C) device, tolerating single faults."
-Spans **platform + alarms**:
-`PLAT-UN-001, PLAT-UN-002, ALRM-UN-003`
-
-## Decomposition matrix (product need × context)
-
-| Product need | platform | acquisition | alarms | display | connectivity | security |
-|---|---|---|---|---|---|---|
-| PN-001 | | ACQ-UN-001/002/003 | ALRM-UN-001/002 | DISP-UN-001/002 | | |
-| PN-002 | | | | DISP-UN-002 | CONN-UN-001/002 | SEC-UN-001/002/003 |
-| PN-003 | PLAT-UN-001/002 | | ALRM-UN-003 | | | |
-
-Two things this makes visible — exactly the cases that break "needs in one SDD":
-
-- **A context need serves multiple journeys.** `DISP-UN-002` is part of PN-001
-  *and* PN-002; `alarms` contributes to PN-001 *and* PN-003. It is declared
-  **once** in its context and referenced by both product needs.
-- **Every product need spans multiple contexts.** None is owned by a single
-  SDD; the journey lives in the `composed_of` mapping, the design lives in each
-  context's SDD.
-
-## Verification roll-up
-
-- A **context need** is verified when its Allure-tagged tests pass
-  (e.g. `@allure.story("ALRM-UN-001")`), reconciled per the existing model.
-- A **product need** is verified **iff every context need it composes is
-  verified**. PN-001 is not "verified" until all seven of its context needs are.
-
-This is the release-gate condition lifted to the product level: ship only when
-every product journey is fully verified across its contexts.
+- **Verification** — a user need is verified when all of its acceptance criteria
+  pass, **aggregated across every SDD that satisfies it**. `UN-001` is not
+  verified until the relevant tests in `acquisition`, `alarms`, *and* `display`
+  pass.
+- **Validation** — the user need (the journey) is validated by human evidence
+  (usability per IEC 62366, clinical, simulated use), recorded as controlled
+  documents and approved in git.
+- A user need is **met** when it is **validated** *and* fully **verified**. This
+  is the release-gate condition.

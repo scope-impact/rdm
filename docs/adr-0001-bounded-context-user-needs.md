@@ -1,135 +1,106 @@
-# ADR 0001 — User needs and SDDs per bounded context
+# ADR 0001 — User needs across bounded contexts
 
-> Status: Proposed (design only; not yet implemented).
+> Status: Proposed (design only; supersedes the earlier "product need" draft —
+> that vocabulary is dropped).
 
 ## Context
 
-We model **one SDD per bounded context** (DDD): each context — `auth`,
-`records`, `audit`, … — has its own design, model, and ubiquitous language.
-
-The open question: **where do user needs live**, and what happens when a need
-spans contexts?
-
-Earlier we noted that putting cross-cutting user needs inside a single global
-SDD is wrong (a need that spans contexts can't be owned by one output
-document). But with **per-context** SDDs the situation changes, and the natural
-question is: *can a user need also be per bounded context, living with its
-SDD?*
+We model **one SDD per bounded context** (DDD). A user need frequently spans
+contexts (it is solution-independent and does not know about our context
+boundaries). Earlier drafts introduced a separate "product need" layer to hold
+cross-context journeys; that was redundant, because **validation is against the
+user need** (21 CFR 820.30(g): "devices conform to defined user needs and
+intended uses"). The journey *is* the user need. So we ditch "product need" and
+keep a single need vocabulary.
 
 ## Decision
 
-Adopt a **two-level need model**.
+There is one need concept: the **user need**.
 
-### Level 1 — Context needs (capabilities) — REQUIRED
-Each bounded context owns its needs, **co-located in that context's SDD**
-frontmatter. These are context-scoped, so the need and the SDD are at the same
-altitude and co-location is correct.
+- A **user need** is the validated, solution-independent statement of what the
+  user / intended use requires (the journey). It is the **validation** anchor.
+- A user need is **cross-cutting**: **multiple SDDs may address the same user
+  need** (many-to-many). It is therefore **not owned by any single SDD**.
+- It is defined **once**, in a single user-needs registry — the **system
+  architecture document** frontmatter:
 
-```yaml
-# documents/sdd/auth.md
----
-id: SDS-AUTH-001
-context: auth
-user_needs:
-  - {id: AUTH-UN-001, text: "Authenticate a clinician via SSO"}
----
-```
+  ```yaml
+  # documents/architecture.md
+  ---
+  id: SDS-SYS-001
+  user_needs:
+    - {id: UN-001, text: "A clinician is promptly alerted to dangerous changes in a patient's vitals"}
+    - {id: UN-002, text: "..."}
+  ---
+  ```
 
-If your needs **partition cleanly by context**, this is all you need — and the
-cross-cutting problem never arises.
+- Each bounded-context SDD declares the user needs its design contributes to:
 
-### Level 2 — Product needs (journeys) — OPTIONAL
-For a need that spans contexts, add a thin **product-level** need that
-**composes** Level-1 context needs. It does not restate design; it maps a
-journey across contexts. Like context needs, it lives in **frontmatter** — in
-the **system architecture document** (the design document at the product
-altitude), not a separate data file:
+  ```yaml
+  # documents/sdd/alarms.md
+  ---
+  id: SDS-ALRM-001
+  context: alarms
+  satisfies: [UN-001]
+  ---
+  ```
 
-```yaml
-# documents/architecture.md  (system / product-level design document)
----
-id: SDS-SYS-001
-title: System Architecture
-product_needs:
-  - id: PN-001
-    text: "A clinician can securely retrieve a patient record"
-    composed_of: [AUTH-UN-001, RECORDS-UN-003, AUDIT-UN-002]
----
-```
+- Within each contributing context, a user need **dissolves into acceptance
+  criteria** (verified by `@allure`-tagged tests) and, optionally, **backlog
+  tasks** (plan).
 
-A cross-cutting need is therefore **referenced, never duplicated**: each context
-still owns its own piece; the product need is the seam. Needs live in the
-frontmatter of the design document at their altitude — context needs in the
-context SDD, product needs in the architecture document — one mechanism, two
-levels.
+## V&V mapping
+
+| Question | Against | Evidence |
+|----------|---------|----------|
+| **Validation** — "right thing?" | the **user need** (journey) | usability (IEC 62366), clinical, simulated/actual use — human, recorded as controlled docs, approved in git |
+| **Verification** — "built right?" | the **acceptance criteria** | `@allure` test results, aggregated across **every** SDD that satisfies the need |
+
+A user need is **met** when it is **validated** *and* **all** of its acceptance
+criteria — across every context that satisfies it — are **verified**.
 
 ## ID scheme
 
-Context-scoped IDs make ownership obvious and collision-free:
+- User need: `UN-NNN` — global, because it is cross-cutting.
+- Acceptance criteria / tests reference the user need they verify
+  (`@allure.story("UN-001")`); finer AC IDs are optional.
 
-- Context need: `<CONTEXT>-UN-NNN` (e.g. `AUTH-UN-001`).
-- Product need: `PN-NNN`.
-
-Allure tags reference **context** need IDs (`@allure.story("AUTH-UN-001")`) —
-verification happens at the context level, where the tests live.
-
-## Traceability (where the many-to-many actually is)
+## Traceability (many-to-many)
 
 | Relation | Cardinality | Source |
 |----------|-------------|--------|
-| context need → design | 1 ↔ 1 context (same SDD) | the context's SDD |
-| context need → tests | 1 ↔ N | Allure tags |
-| product need → context needs | **N ↔ M** | `composed_of` |
+| user need → SDDs | N ↔ M | each SDD's `satisfies` |
+| user need → tests | 1 ↔ N (spanning contexts) | `@allure` tags |
+| user need → validation | 1 ↔ 1+ | V&V plan + validation records |
 
-The many-to-many lives **only** at the product↔context seam. *Within* a context
-everything is clean and self-contained. A product need is **verified** iff every
-context need it composes is verified.
+The same user need is **referenced** by many SDDs, never **duplicated**: it is
+defined once in the registry; each SDD points at it with `satisfies`.
 
 ## Gates (when implemented)
 
-- **design-gate**: each context SDD present, complete, approved; each context
-  need declared; each product need's `composed_of` resolves to real context
-  needs.
-- **release-gate**: every context need verified by a passing Allure test; a
-  product need passes iff all its composing context needs pass.
+- **design-gate**: each SDD present, complete, approved; each `satisfies`
+  resolves to a real user need.
+- **release-gate**: every user need is verified (all its acceptance criteria
+  pass, aggregated across contexts) **and** has approved validation evidence.
 
-## Why this rehabilitates "needs in the SDD"
+## Why "product need" is dropped
 
-The earlier objection was: *user needs are cross-cutting, the SDD is scoped —
-don't put a cross-cutting thing in a scoped doc.* Decomposing needs to context
-scope removes the mismatch: a **context** need and its **context** SDD are the
-same altitude, so co-location is now the right call, not a smell. The
-cross-cutting concern is lifted out to the optional product layer, which holds
-**references, not copies**.
-
-## Pros / cons
-
-**Pros**
-- Each context is self-contained: needs + design + tests co-located, owned, and
-  gated together.
-- No cross-context duplication; cross-cutting needs are composed by reference.
-- Scales by addition: a new context is a new SDD, nothing global to edit.
-- Needs-in-SDD becomes correct (same-altitude co-location).
-
-**Cons**
-- Cross-cutting journeys require the extra product layer + composition.
-- Two ID levels and two-level verification aggregation to maintain.
-- Risk if teams skip Level 2 and let a real cross-cutting need hide as one
-  context's local need (loses the journey view).
+- Validation is against user needs, so the cross-context journey *is* a user
+  need — a separate "product need" was a redundant name for it.
+- The former "context user need" was really an acceptance criterion /
+  requirement (verified, not validated) — it folds into acceptance criteria.
 
 ## Consequences (implementation outline, deferred)
 
-- `record/sdd.py`: discover **all** SDDs (`glob documents/sdd/*.md`), read each
-  context's `user_needs`; optionally load the product-need registry and resolve
-  `composed_of`.
-- Templates: per-context SDD frontmatter gains `context` + `user_needs`
-  (id+text); optional `product_needs` in the architecture document frontmatter
-  + a product-traceability section.
-- Gates + traceability matrix: extend to the two-level model (context coverage,
-  product composition, verification roll-up).
+- `record/sdd.py`: read the user-needs registry (architecture doc frontmatter);
+  glob all SDDs and read each `satisfies`; reconcile coverage.
+- Templates: system architecture doc frontmatter `user_needs`; per-context SDD
+  frontmatter `satisfies`.
+- Gates + traceability matrix: aggregate verification across all SDDs per user
+  need; add validation presence/approval as a separate, human-evidenced check.
 
-## Litmus test for this ADR
+## Litmus test
 
-> Can two contexts both contribute to the same user journey without either
-> copying the other's need? Yes — each owns its context need; the product need
-> composes both by reference.
+> Can two contexts contribute to one user need without duplicating it? Yes — the
+> need is defined once in the registry; each SDD references it via `satisfies`,
+> and its acceptance criteria are verified wherever they live.
