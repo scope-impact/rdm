@@ -34,6 +34,12 @@ dependencies = [
 [project.optional-dependencies]
 github = ["pygithub==2.8.1"]
 story-audit = ["pydantic==2.12.5", "duckdb==1.4.3"]
+analytics = ["duckdb==1.4.3"]
+# Project-management pipeline (Backlog.md -> GitHub Issues/Projects, DuckDB
+# analytics). This is an OPTIONAL, detachable layer that operates on PLANNING
+# artifacts, not the system of record (SDD + Allure + git). RDM's record/render
+# core does not require it. See docs/plan-vs-record.md.
+plan = ["rdm[github]", "rdm[analytics]", "rdm[story-audit]"]
 dev = [
     "pytest==9.0.2",
     "ruff==0.14.13",

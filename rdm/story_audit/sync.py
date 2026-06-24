@@ -369,6 +369,8 @@ def story_sync_command(
     # Parse backlog data
     print(f"Backlog:      {backlog_dir}")
     print(f"Schema:       v{SCHEMA_VERSION}")
+    print("Note:         derived planning analytics — not a controlled record "
+          "(system of record: SDD + Allure + git).")
 
     print("\nParsing markdown files...")
     try:
