@@ -60,10 +60,6 @@ ENDTODO
 
 ### Approval
 
-[[Record the reviewers' approval. The transition of design inputs into backlog/implementation tasks is gated on this approval.]]
+The reviewers' approval of this design review is recorded in **version control**, not in this table. The pull request in which this review record was merged is the approval record of truth: its approver(s) are the sign-off, the merge commit fixes the date, and the commit author identifies authorship. Merge review is enforced by the project's `reviews_required` policy.
 
-| Name | Role | Date | Approved |
-| --- | --- | --- | --- |
-{%- for person in people %}
-| {{ person.name }} | {{ person.roles|join(', ') }} | TODO | [ ] |
-{%- endfor %}
+[[Approval is captured once, in the controlled version-control history, to avoid a duplicate sign-off record (21 CFR 820.30(e); records per 820.180). Reviewer independence is evidenced by the PR being approved by someone other than the commit author. The Participants table above records who took part in the review meeting (review content); it is not a substitute for the version-control approval and should not be turned into a sign-off sheet.]]

@@ -84,14 +84,6 @@ ENDTODO
 
 # Approval
 
-[[The design inputs must be reviewed and approved before they are used as the basis for the design (21 CFR 820.30(c)). Record the approval below. Approval of this document is a precondition for transitioning work into backlog/implementation tasks.]]
+Approval of these design inputs is recorded in **version control**, not in this document. The pull request in which this revision was reviewed and merged is the approval record of truth: the PR approver(s) constitute the sign-off, the merge commit fixes the date, and the commit author identifies authorship. Merge review is enforced by the project's `reviews_required` policy.
 
-TODO: Record the approval of these design inputs. Each approver should confirm that the design inputs are adequate and appropriate.
-
-| Name | Role | Date | Approved |
-| --- | --- | --- | --- |
-{%- for person in people %}
-| {{ person.name }} | {{ person.roles|join(', ') }} | TODO | [ ] |
-{%- endfor %}
-
-ENDTODO
+[[Approval is captured once, in the controlled version-control history, to avoid a duplicate and potentially conflicting sign-off record (21 CFR 820.30(c) review/approval; records per 820.180). Reviewer independence (820.30(e)) is evidenced by the PR being approved by someone other than the commit author. Do not re-record approvals here.]]
