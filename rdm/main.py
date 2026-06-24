@@ -107,6 +107,7 @@ def handle_story_command(args):
             from rdm.story_audit.design_gate import story_design_gate_command
             return story_design_gate_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
             )
 
         else:
@@ -234,6 +235,10 @@ def parse_arguments(arguments):
     design_gate_help = 'verify design input and design review exist before tasks transition'
     design_gate_parser = story_subparsers.add_parser('design-gate', help=design_gate_help)
     design_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    design_gate_parser.add_argument(
+        '--allure-results',
+        help='Path to an Allure results directory; reconcile SDD user needs against executed test results',
+    )
 
     # =========================================================================
     # rdm pm (project management)

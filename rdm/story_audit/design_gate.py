@@ -33,6 +33,7 @@ from pathlib import Path
 
 import yaml
 
+from rdm.record import allure
 from rdm.story_audit.audit import ALLURE_PATTERN
 
 # Documents the gate requires, by id/basename. The basename matches the
@@ -82,6 +83,7 @@ class GateResult:
     artifacts: list[ArtifactCheck] = field(default_factory=list)
     task_warnings: list[str] = field(default_factory=list)
     traceability_warnings: list[str] = field(default_factory=list)
+    verification_warnings: list[str] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
@@ -294,8 +296,42 @@ def _traceability_warnings(dhf_dir: Path) -> list[str]:
     return warnings
 
 
-def run_design_gate(dhf_dir: Path) -> GateResult:
-    """Run the design gate and return a structured result."""
+def _verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[str]:
+    """Reconcile SDD user needs against *executed* Allure results.
+
+    Unlike the source-tag scan, this reports whether each user need was actually
+    verified (a passing test), failed, or never exercised. Warnings only -- the
+    design gate runs before implementation; verification status is informational
+    here and would be enforced at a later release gate.
+    """
+    sdd_ids = sdd_user_need_ids(dhf_dir)
+    if not sdd_ids:
+        return []
+
+    report = allure.reconcile(sdd_ids, allure_results_dir)
+    warnings: list[str] = []
+    for uid in report.failed:
+        verification = report.by_user_need[uid]
+        warnings.append(
+            f"user need {uid} FAILED verification ({verification.failed} failing test(s))"
+        )
+    for uid in report.untested:
+        warnings.append(f"user need {uid} not verified by any passing Allure test")
+
+    prefixes = {uid.split("-")[0] for uid in sdd_ids}
+    for tag in report.orphan_ids:
+        if tag.split("-")[0] in prefixes:
+            warnings.append(f"Allure result tag {tag} matches no SDD user need")
+    return warnings
+
+
+def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> GateResult:
+    """Run the design gate and return a structured result.
+
+    When ``allure_results_dir`` is given and exists, traceability is reconciled
+    against executed Allure results (verification status); otherwise it falls
+    back to scanning the test sources for ``@allure`` tags.
+    """
     result = GateResult()
     result.artifacts.append(
         check_artifact(dhf_dir, DESIGN_INPUT_DOC, "Design Input")
@@ -304,12 +340,17 @@ def run_design_gate(dhf_dir: Path) -> GateResult:
         check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review")
     )
     result.task_warnings = _source_of_truth_warnings(dhf_dir)
-    result.traceability_warnings = _traceability_warnings(dhf_dir)
+
+    if allure_results_dir is not None and Path(allure_results_dir).exists():
+        result.verification_warnings = _verification_warnings(dhf_dir, Path(allure_results_dir))
+    else:
+        result.traceability_warnings = _traceability_warnings(dhf_dir)
     return result
 
 
 def story_design_gate_command(
     dhf_dir: Path | None = None,
+    allure_results_dir: Path | None = None,
 ) -> int:
     """Run the `rdm story design-gate` command."""
     dhf = (dhf_dir or Path("dhf")).resolve()
@@ -318,7 +359,7 @@ def story_design_gate_command(
         print("Run `rdm init` first, or pass --dhf <path>.")
         return 2
 
-    result = run_design_gate(dhf)
+    result = run_design_gate(dhf, allure_results_dir)
 
     print("Design-controls gate")
     print(f"DHF: {dhf}\n")
@@ -344,6 +385,11 @@ def story_design_gate_command(
     if result.traceability_warnings:
         print("\nTraceability warnings (SDD user needs <-> Allure tags):")
         for warning in result.traceability_warnings:
+            print(f"  [WARN] {warning}")
+
+    if result.verification_warnings:
+        print("\nVerification warnings (SDD user needs <-> Allure results):")
+        for warning in result.verification_warnings:
             print(f"  [WARN] {warning}")
 
     print()
