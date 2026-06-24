@@ -31,6 +31,10 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import yaml
+
+from rdm.story_audit.audit import ALLURE_PATTERN
+
 # Documents the gate requires, by id/basename. The basename matches the
 # template filenames installed by `rdm init` (see rdm/init_files/documents/).
 DESIGN_INPUT_DOC = "design_input.md"
@@ -38,6 +42,9 @@ DESIGN_REVIEW_DOC = "design_review.md"
 
 # Source-of-truth document for user needs. Its absence is a soft warning.
 SDD_DOC = "software_design_specification.md"
+
+# Frontmatter fields the SDD may use to list the user-need IDs it captures.
+SDD_USER_NEED_FIELDS = ("user_needs", "user_need_ids", "ids")
 
 # A document is considered "incomplete" while it still contains scaffold
 # placeholders. These markers come from the init templates.
@@ -74,9 +81,13 @@ class GateResult:
 
     artifacts: list[ArtifactCheck] = field(default_factory=list)
     task_warnings: list[str] = field(default_factory=list)
+    traceability_warnings: list[str] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
+        # Traceability gaps are reported as warnings, not failures: the design
+        # gate runs before implementation, so the verifying tests (and their
+        # Allure tags) legitimately may not exist yet.
         return all(a.ok for a in self.artifacts)
 
 
@@ -191,6 +202,98 @@ def _source_of_truth_warnings(dhf_dir: Path) -> list[str]:
     return [f"Software Design Specification (user-need source of truth): {'; '.join(sdd.reasons)}"]
 
 
+def _parse_frontmatter(text: str) -> dict:
+    """Parse a YAML frontmatter block delimited by leading `---` fences."""
+    if not text.lstrip().startswith("---"):
+        return {}
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return {}
+    try:
+        data = yaml.safe_load(parts[1])
+    except yaml.YAMLError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def sdd_user_need_ids(dhf_dir: Path) -> set[str]:
+    """Return the user-need IDs declared in the SDD frontmatter."""
+    path = _find_doc(dhf_dir, SDD_DOC)
+    if path is None:
+        return set()
+    frontmatter = _parse_frontmatter(path.read_text(encoding="utf-8"))
+    ids: set[str] = set()
+    for field_name in SDD_USER_NEED_FIELDS:
+        value = frontmatter.get(field_name)
+        if isinstance(value, list):
+            ids.update(str(v).strip() for v in value if str(v).strip())
+    return ids
+
+
+def _find_tests_dir(dhf_dir: Path) -> Path | None:
+    """Locate the test suite to reconcile Allure tags against."""
+    for base in (dhf_dir.parent, Path.cwd()):
+        candidate = base / "tests"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def allure_tag_ids(tests_dir: Path) -> dict[str, list[str]]:
+    """Map each Allure story/feature ID to the test files that reference it."""
+    refs: dict[str, list[str]] = {}
+    for py_file in tests_dir.rglob("test_*.py"):
+        try:
+            content = py_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for match in ALLURE_PATTERN.finditer(content):
+            refs.setdefault(match.group(2), []).append(str(py_file))
+    return refs
+
+
+def _traceability_warnings(dhf_dir: Path) -> list[str]:
+    """Reconcile SDD user-need IDs against Allure tags found in the tests.
+
+    Reports user needs with no verifying test, and Allure tags that look like
+    user-need IDs (share a declared prefix) but match no SDD user need. These
+    are warnings only -- see GateResult.passed.
+    """
+    sdd_ids = sdd_user_need_ids(dhf_dir)
+    if not sdd_ids:
+        # Nothing declared yet; the SDD source-of-truth warning already covers
+        # a missing or unpopulated SDD.
+        return []
+
+    tests_dir = _find_tests_dir(dhf_dir)
+    if tests_dir is None:
+        return [
+            "no tests/ directory found to reconcile Allure tags against the "
+            f"{len(sdd_ids)} SDD user need(s)"
+        ]
+
+    tagged = allure_tag_ids(tests_dir)
+    tagged_ids = set(tagged)
+    warnings: list[str] = []
+
+    for uid in sorted(sdd_ids - tagged_ids):
+        warnings.append(
+            f"user need {uid} (SDD) has no @allure.story/feature tag in tests"
+        )
+
+    # Orphans: only flag tags that share a prefix with a declared user need, to
+    # avoid noise from unrelated feature/story tags (e.g. FT-001, US-001).
+    prefixes = {uid.split("-")[0] for uid in sdd_ids}
+    for tag in sorted(tagged_ids - sdd_ids):
+        if tag.split("-")[0] in prefixes:
+            warnings.append(
+                f"Allure tag {tag} matches no SDD user need "
+                f"({', '.join(tagged[tag][:2])})"
+            )
+
+    return warnings
+
+
 def run_design_gate(dhf_dir: Path) -> GateResult:
     """Run the design gate and return a structured result."""
     result = GateResult()
@@ -201,6 +304,7 @@ def run_design_gate(dhf_dir: Path) -> GateResult:
         check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review")
     )
     result.task_warnings = _source_of_truth_warnings(dhf_dir)
+    result.traceability_warnings = _traceability_warnings(dhf_dir)
     return result
 
 
@@ -235,6 +339,11 @@ def story_design_gate_command(
     if result.task_warnings:
         print("\nTraceability warnings (sources of truth):")
         for warning in result.task_warnings:
+            print(f"  [WARN] {warning}")
+
+    if result.traceability_warnings:
+        print("\nTraceability warnings (SDD user needs <-> Allure tags):")
+        for warning in result.traceability_warnings:
             print(f"  [WARN] {warning}")
 
     print()

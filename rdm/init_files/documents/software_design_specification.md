@@ -2,6 +2,12 @@
 id: SDS-001
 revision: 1
 title: Software Design Specification
+# User-need IDs captured by this SDD. This list is the machine-readable
+# traceability source of truth: each ID should be referenced by an
+# @allure.story("ID") or @allure.feature("ID") tag on the test(s) that verify
+# its acceptance criteria. `rdm story design-gate` reconciles this list against
+# the Allure tags found in tests/.
+user_needs: []
 ---
 
 # Purpose

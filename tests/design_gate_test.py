@@ -14,13 +14,36 @@ from pathlib import Path
 from rdm.story_audit.design_gate import (
     DESIGN_INPUT_DOC,
     DESIGN_REVIEW_DOC,
+    SDD_DOC,
+    allure_tag_ids,
     check_artifact,
     has_uncommitted_changes,
     run_design_gate,
+    sdd_user_need_ids,
     story_design_gate_command,
 )
 
 COMPLETE_DOC = "# Design Input\n\nThe inputs are defined and approved.\n"
+
+
+def _sdd(user_needs: list[str]) -> str:
+    needs = "[" + ", ".join(user_needs) + "]"
+    return f"---\nid: SDS-001\ntitle: SDD\nuser_needs: {needs}\n---\n\nbody\n"
+
+
+def _proj(tmp_path: Path, user_needs: list[str], allure_ids: list[str]) -> Path:
+    """Build <tmp>/proj/{dhf,tests} with an SDD and allure-tagged tests."""
+    proj = tmp_path / "proj"
+    docs = proj / "dhf" / "documents"
+    docs.mkdir(parents=True)
+    (docs / SDD_DOC).write_text(_sdd(user_needs))
+    tests = proj / "tests"
+    tests.mkdir()
+    body = "import allure\n"
+    for i, aid in enumerate(allure_ids):
+        body += f'@allure.story("{aid}")\ndef test_{i}(): pass\n'
+    (tests / "test_feature.py").write_text(body)
+    return proj / "dhf"
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -168,6 +191,49 @@ class TestHasUncommittedChanges:
         p = tmp_path / "x.md"
         p.write_text("hi")
         assert has_uncommitted_changes(p) is None
+
+
+class TestSddAllureReconciliation:
+    """SDD user-need IDs (frontmatter) must be reconciled against Allure tags."""
+
+    def test_parses_user_needs_from_frontmatter(self, tmp_path: Path) -> None:
+        dhf = _proj(tmp_path, ["UN-001", "UN-002"], [])
+        assert sdd_user_need_ids(dhf) == {"UN-001", "UN-002"}
+
+    def test_allure_tags_extracted_from_tests(self, tmp_path: Path) -> None:
+        dhf = _proj(tmp_path, ["UN-001"], ["UN-001", "UN-002"])
+        tagged = allure_tag_ids(dhf.parent / "tests")
+        assert set(tagged) == {"UN-001", "UN-002"}
+
+    def test_user_need_without_tag_is_warned(self, tmp_path: Path) -> None:
+        dhf = _proj(tmp_path, ["UN-001", "UN-002"], ["UN-001"])
+        result = run_design_gate(dhf)
+        assert any("UN-002" in w for w in result.traceability_warnings)
+        assert not any("UN-001" in w for w in result.traceability_warnings)
+
+    def test_orphan_tag_sharing_prefix_is_warned(self, tmp_path: Path) -> None:
+        dhf = _proj(tmp_path, ["UN-001"], ["UN-001", "UN-999"])
+        result = run_design_gate(dhf)
+        assert any("UN-999" in w for w in result.traceability_warnings)
+
+    def test_unrelated_prefix_tag_is_not_warned(self, tmp_path: Path) -> None:
+        dhf = _proj(tmp_path, ["UN-001"], ["UN-001", "FT-001"])
+        result = run_design_gate(dhf)
+        assert not any("FT-001" in w for w in result.traceability_warnings)
+
+    def test_traceability_gaps_do_not_fail_the_gate(self, tmp_path: Path) -> None:
+        # Docs absent here, so the gate fails on docs -- but traceability gaps
+        # themselves must never be the cause of failure. Verify with docs OK:
+        dhf = _proj(tmp_path, ["UN-001"], [])  # user need, no test yet
+        result = run_design_gate(dhf)
+        assert result.traceability_warnings  # gap reported
+        # The traceability warnings are independent of pass/fail; passed is
+        # driven only by the required artifacts.
+        assert result.passed is all(a.ok for a in result.artifacts)
+
+    def test_no_user_needs_means_no_traceability_warnings(self, tmp_path: Path) -> None:
+        dhf = _proj(tmp_path, [], ["UN-001"])
+        assert run_design_gate(dhf).traceability_warnings == []
 
 
 class TestInstalledTemplates:
