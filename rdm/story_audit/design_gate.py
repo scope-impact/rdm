@@ -27,6 +27,7 @@ Requires: pip install rdm[story-audit]
 
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -52,10 +53,19 @@ class ArtifactCheck:
     exists: bool
     complete: bool
     reasons: list[str] = field(default_factory=list)
+    # Version-control state of the document:
+    #   True  -> has uncommitted changes (current revision is not yet approved)
+    #   False -> clean and tracked (the committed revision is the approved one)
+    #   None  -> cannot be determined (not a git work tree, or git unavailable)
+    uncommitted: bool | None = None
 
     @property
     def ok(self) -> bool:
-        return self.exists and self.complete
+        # Approval is the version-control record, not anything inside the file.
+        # A document with uncommitted changes has not been approved, so it
+        # fails the gate. An undeterminable state (None) does not fail here; it
+        # is surfaced as a warning by the command instead.
+        return self.exists and self.complete and self.uncommitted is not True
 
 
 @dataclass
@@ -84,8 +94,47 @@ def _find_doc(dhf_dir: Path, basename: str) -> Path | None:
     return matches[0] if matches else None
 
 
+def has_uncommitted_changes(path: Path) -> bool | None:
+    """Return the version-control state of a file.
+
+    Approval is the version-control record (the reviewed PR/commit that merged
+    the revision), so a document with uncommitted changes has not yet been
+    approved, and a committed change after a prior approval re-opens approval.
+
+    Returns:
+        True  - the file has uncommitted changes (modified or untracked)
+        False - the file is clean and tracked (committed revision == working copy)
+        None  - cannot be determined (not a git work tree, or git unavailable)
+
+    Note: a file excluded by .gitignore reports as clean; design documents are
+    expected to be tracked, so this edge case is not treated specially.
+    """
+    try:
+        inside = subprocess.run(
+            ["git", "-C", str(path.parent), "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+        )
+        if inside.returncode != 0 or inside.stdout.strip() != "true":
+            return None
+        status = subprocess.run(
+            ["git", "-C", str(path.parent), "status", "--porcelain", "--", str(path)],
+            capture_output=True,
+            text=True,
+        )
+        if status.returncode != 0:
+            return None
+        return bool(status.stdout.strip())
+    except (OSError, ValueError):
+        return None
+
+
 def check_artifact(dhf_dir: Path, basename: str, name: str) -> ArtifactCheck:
-    """Check that a required design document exists and has been filled out."""
+    """Check that a required design document exists, is filled out, and is approved.
+
+    "Approved" is verified against version control: a document with uncommitted
+    changes is not yet approved (see `has_uncommitted_changes`).
+    """
     path = _find_doc(dhf_dir, basename)
     if path is None:
         return ArtifactCheck(
@@ -109,12 +158,22 @@ def check_artifact(dhf_dir: Path, basename: str, name: str) -> ArtifactCheck:
             "fill in and remove TODO/ENDTODO blocks"
         )
 
+    uncommitted = has_uncommitted_changes(path)
+    if uncommitted is True:
+        reasons.append(
+            "has uncommitted changes; the current revision is not approved in "
+            "version control (commit and merge via a reviewed PR to record approval)"
+        )
+
     return ArtifactCheck(
         name=name,
         path=path,
         exists=True,
-        complete=not reasons,
+        # `complete` reflects document content; approval (uncommitted) is tracked
+        # separately so the two failure modes are reported distinctly.
+        complete=not leftover and bool(text.strip()),
         reasons=reasons,
+        uncommitted=uncommitted,
     )
 
 
@@ -163,9 +222,13 @@ def story_design_gate_command(
     for artifact in result.artifacts:
         if artifact.ok:
             print(f"  [OK]   {artifact.name}: {artifact.path}")
+            if artifact.uncommitted is None:
+                print(
+                    "           - [WARN] approval could not be verified via version "
+                    "control (not a git work tree); approval is the reviewed PR/commit"
+                )
         else:
-            label = "FAIL"
-            print(f"  [{label}] {artifact.name}: {artifact.path}")
+            print(f"  [FAIL] {artifact.name}: {artifact.path}")
             for reason in artifact.reasons:
                 print(f"           - {reason}")
 
@@ -176,11 +239,14 @@ def story_design_gate_command(
 
     print()
     if result.passed:
-        print("Design gate PASSED: design input and design review are present and complete.")
+        print(
+            "Design gate PASSED: design input and design review are present, "
+            "complete, and approved (committed) in version control."
+        )
         return 0
 
     print(
-        "Design gate FAILED: complete the design input and design review before "
-        "transitioning work into backlog tasks."
+        "Design gate FAILED: complete and commit (approve) the design input and "
+        "design review before transitioning work into backlog tasks."
     )
     return 1
