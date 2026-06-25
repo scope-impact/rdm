@@ -14,12 +14,12 @@ from pathlib import Path
 import yaml
 
 from rdm.record import allure
-from rdm.record.sdd import user_need_ids
+from rdm.record.sdd import registry_user_needs
 
 
 def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
     """Reconcile SDD user needs against Allure results into a render-ready dict."""
-    ids = user_need_ids(dhf_dir)
+    ids = registry_user_needs(dhf_dir)
     report = allure.reconcile(ids, allure_results_dir)
 
     needs = []
@@ -52,7 +52,9 @@ def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
 def write_verification_file(dhf_dir: Path, allure_results_dir: Path, output_path: Path) -> dict:
     """Write the verification data to a YAML file and return it."""
     data = build_verification(Path(dhf_dir), Path(allure_results_dir))
-    Path(output_path).write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     return data
 
 

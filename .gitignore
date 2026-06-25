@@ -19,3 +19,7 @@ var
 
 # Generated AI-persona usability evidence (produced by the usability-persona skill)
 **/persona-results/*-persona.json
+
+# Generated verification evidence (produced by the test suite / `rdm story verify`)
+**/allure-results/
+**/verification.yml

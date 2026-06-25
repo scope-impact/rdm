@@ -54,7 +54,9 @@ dev = [
     "docutils==0.21.2",
     "coverage==7.13.1",
     "pydantic==2.12.5",
-    "duckdb==1.4.3"
+    "duckdb==1.4.3",
+    "playwright==1.60.0",
+    "allure-pytest==2.16.0"
 ]
 
 [project.scripts]
