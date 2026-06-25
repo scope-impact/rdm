@@ -20,6 +20,8 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from rdm.record.reconcile import StatusReportMixin, aggregate_by_id
+
 # A run whose outcome is one of these counts as a failed attempt at the journey.
 _FAILURE_OUTCOMES = {"failure", "failed", "blocked", "abandoned"}
 
@@ -54,13 +56,10 @@ class NeedValidation:
 
 
 @dataclass
-class ValidationReport:
+class ValidationReport(StatusReportMixin):
     by_user_need: dict[str, NeedValidation] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     runs_found: int = 0
-
-    def _ids_with(self, status: str) -> list[str]:
-        return sorted(uid for uid, v in self.by_user_need.items() if v.status == status)
 
     @property
     def not_run(self) -> list[str]:
@@ -116,14 +115,8 @@ def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
     found" -- it does NOT mean validated.
     """
     runs = parse_runs(Path(results_dir))
-    aggregated = {uid: NeedValidation(uid) for uid in user_need_ids}
-    referenced: set[str] = set()
 
-    for run in runs:
-        referenced.add(run.user_need)
-        need = aggregated.get(run.user_need)
-        if need is None:
-            continue  # orphan, handled below
+    def _fold(need: NeedValidation, run: PersonaRun) -> None:
         need.runs += 1
         if run.persona and run.persona not in need.personas:
             need.personas.append(run.persona)
@@ -131,18 +124,25 @@ def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
         if run.outcome in _FAILURE_OUTCOMES:
             need.failures += 1
 
-    for need in aggregated.values():
+    def _status(need: NeedValidation) -> str:
         if need.runs == 0:
-            need.status = NOT_RUN
-        elif need.failures:
-            need.status = FAILED
-        elif need.issues:
-            need.status = ISSUES
-        else:
-            need.status = CLEAN
+            return NOT_RUN
+        if need.failures:
+            return FAILED
+        if need.issues:
+            return ISSUES
+        return CLEAN
 
+    by_user_need, orphan_ids = aggregate_by_id(
+        user_need_ids,
+        runs,
+        ids_of=lambda run: [run.user_need],
+        new=NeedValidation,
+        fold=_fold,
+        status=_status,
+    )
     return ValidationReport(
-        by_user_need=aggregated,
-        orphan_ids=sorted(referenced - user_need_ids),
+        by_user_need=by_user_need,
+        orphan_ids=orphan_ids,
         runs_found=len(runs),
     )

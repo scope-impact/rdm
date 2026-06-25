@@ -8,19 +8,26 @@ named ``story`` / ``feature``. This module maps those IDs to an aggregated
 verification status so the DHF can report whether each SDD user need was
 actually *verified* (executed and passed), not merely referenced by a tag.
 
-This is the executed-evidence counterpart to the source-tag scan in
-``story_audit.audit``: tags say a test *claims* to cover a user need; the Allure
+This is the executed-evidence counterpart to the source-tag scan
+(``scan_source_tags``): tags say a test *claims* to cover a user need; the Allure
 result says whether that test actually *passed*.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Allure label names that carry user-need IDs (mirrors audit.ALLURE_PATTERN,
-# which matches both @allure.story and @allure.feature).
+from rdm.record.reconcile import StatusReportMixin, aggregate_by_id
+
+# Matches @allure.story("ID") / @allure.feature("ID"). Single home for the
+# pattern (story_audit.audit re-exports it); group(2) is the ID.
+ALLURE_PATTERN = re.compile(r'@allure\.(story|feature)\(["\']([^"\']+)["\']\)')
+
+# Allure label names that carry user-need IDs (the result-file counterpart of
+# ALLURE_PATTERN, which matches both @allure.story and @allure.feature).
 USER_NEED_LABELS = ("story", "feature")
 
 # Allure statuses.
@@ -56,13 +63,10 @@ class UserNeedVerification:
 
 
 @dataclass
-class VerificationReport:
+class VerificationReport(StatusReportMixin):
     by_user_need: dict[str, UserNeedVerification] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     results_found: int = 0
-
-    def _ids_with(self, status: str) -> list[str]:
-        return sorted(uid for uid, v in self.by_user_need.items() if v.status == status)
 
     @property
     def verified(self) -> list[str]:
@@ -117,33 +121,59 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
     IDs referenced by tests but not declared in the SDD are returned as orphans.
     """
     results = parse_results(Path(results_dir))
-    aggregated = {uid: UserNeedVerification(uid) for uid in sdd_ids}
-    referenced: set[str] = set()
 
-    for result in results:
-        for uid in result.user_need_ids:
-            referenced.add(uid)
-            verification = aggregated.get(uid)
-            if verification is None:
-                continue  # orphan, handled below
-            verification.tests.append(result.name or result.source)
-            if result.status in _FAILING:
-                verification.failed += 1
-            elif result.status in _PASSING:
-                verification.passed += 1
-            else:
-                verification.skipped += 1
-
-    for verification in aggregated.values():
-        if verification.failed:
-            verification.status = FAILED
-        elif verification.passed:
-            verification.status = VERIFIED
+    def _fold(verification: UserNeedVerification, result: TestResult) -> None:
+        verification.tests.append(result.name or result.source)
+        if result.status in _FAILING:
+            verification.failed += 1
+        elif result.status in _PASSING:
+            verification.passed += 1
         else:
-            verification.status = UNTESTED
+            verification.skipped += 1
 
+    def _status(verification: UserNeedVerification) -> str:
+        if verification.failed:
+            return FAILED
+        if verification.passed:
+            return VERIFIED
+        return UNTESTED
+
+    by_user_need, orphan_ids = aggregate_by_id(
+        sdd_ids,
+        results,
+        ids_of=lambda result: result.user_need_ids,
+        new=UserNeedVerification,
+        fold=_fold,
+        status=_status,
+    )
     return VerificationReport(
-        by_user_need=aggregated,
-        orphan_ids=sorted(referenced - sdd_ids),
+        by_user_need=by_user_need,
+        orphan_ids=orphan_ids,
         results_found=len(results),
     )
+
+
+def find_tests_dir(dhf_dir: Path) -> Path | None:
+    """Locate the test suite to scan for @allure source tags."""
+    for base in (dhf_dir.parent, Path.cwd()):
+        candidate = base / "tests"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
+    """Map each @allure story/feature ID to the test files that reference it.
+
+    The source-tag counterpart of ``parse_results``: it reports which user needs
+    a test *claims* to cover (vs. whether the executed test passed).
+    """
+    refs: dict[str, list[str]] = {}
+    for py_file in tests_dir.rglob("test_*.py"):
+        try:
+            content = py_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for match in ALLURE_PATTERN.finditer(content):
+            refs.setdefault(match.group(2), []).append(str(py_file))
+    return refs

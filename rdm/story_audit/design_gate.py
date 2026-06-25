@@ -34,13 +34,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.record import allure
+from rdm.record.reconcile import relevant_orphans
 from rdm.record.sdd import (
     find_sdds,
     registry_user_needs,
     satisfies_by_sdd,
 )
 from rdm.record.sdd import find_dhf_doc as _find_doc
-from rdm.story_audit.audit import ALLURE_PATTERN
 
 # Documents the gate requires, by id/basename. The basename matches the
 # template filenames installed by `rdm init` (see rdm/init_files/documents/).
@@ -200,35 +200,6 @@ def _sdd_coverage_warnings(dhf_dir: Path) -> list[str]:
     return warnings
 
 
-def _find_tests_dir(dhf_dir: Path) -> Path | None:
-    """Locate the test suite to reconcile Allure tags against."""
-    for base in (dhf_dir.parent, Path.cwd()):
-        candidate = base / "tests"
-        if candidate.exists():
-            return candidate
-    return None
-
-
-def allure_tag_ids(tests_dir: Path) -> dict[str, list[str]]:
-    """Map each Allure story/feature ID to the test files that reference it."""
-    refs: dict[str, list[str]] = {}
-    for py_file in tests_dir.rglob("test_*.py"):
-        try:
-            content = py_file.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
-        for match in ALLURE_PATTERN.finditer(content):
-            refs.setdefault(match.group(2), []).append(str(py_file))
-    return refs
-
-
-def _relevant_orphans(orphans, sdd_ids: set[str]) -> list[str]:
-    """Orphan tags worth reporting: those sharing an ID prefix with a declared
-    user need, to avoid noise from unrelated tags (e.g. FT-001, US-001)."""
-    prefixes = {uid.split("-")[0] for uid in sdd_ids}
-    return [tag for tag in orphans if tag.split("-")[0] in prefixes]
-
-
 def _verification_messages(report) -> list[str]:
     """Failed/untested messages for an Allure verification report (shared by the
     design gate's warnings and the release gate's blocking list)."""
@@ -257,14 +228,14 @@ def _traceability_warnings(dhf_dir: Path) -> list[str]:
         # a missing or unpopulated SDD.
         return []
 
-    tests_dir = _find_tests_dir(dhf_dir)
+    tests_dir = allure.find_tests_dir(dhf_dir)
     if tests_dir is None:
         return [
             "no tests/ directory found to reconcile Allure tags against the "
             f"{len(sdd_ids)} SDD user need(s)"
         ]
 
-    tagged = allure_tag_ids(tests_dir)
+    tagged = allure.scan_source_tags(tests_dir)
     tagged_ids = set(tagged)
     warnings: list[str] = []
 
@@ -273,7 +244,7 @@ def _traceability_warnings(dhf_dir: Path) -> list[str]:
             f"user need {uid} (SDD) has no @allure.story/feature tag in tests"
         )
 
-    for tag in _relevant_orphans(sorted(tagged_ids - sdd_ids), sdd_ids):
+    for tag in relevant_orphans(sorted(tagged_ids - sdd_ids), sdd_ids):
         warnings.append(
             f"Allure tag {tag} matches no SDD user need ({', '.join(tagged[tag][:2])})"
         )
@@ -297,7 +268,7 @@ def _verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[str]
     warnings = _verification_messages(report)
     warnings += [
         f"Allure result tag {tag} matches no SDD user need"
-        for tag in _relevant_orphans(report.orphan_ids, sdd_ids)
+        for tag in relevant_orphans(report.orphan_ids, sdd_ids)
     ]
     return warnings
 
@@ -430,7 +401,7 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
     result.blocking += _verification_messages(report)
     result.warnings += [
         f"Allure result tag {tag} matches no SDD user need"
-        for tag in _relevant_orphans(report.orphan_ids, sdd_ids)
+        for tag in relevant_orphans(report.orphan_ids, sdd_ids)
     ]
     return result
 
