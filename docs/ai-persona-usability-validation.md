@@ -67,12 +67,17 @@ This is **informational** — formative findings inform the use-related risk
 analysis; they do not gate release (verification does; summative validation is
 human).
 
-## The driver (out of this repo)
-The Playwright driver lives where the device UI does (optional `rdm[validation]`
-extra would carry Playwright). Loop: read a persona spec (persona profile from
-the IFU + the user-need goal) → launch the UI → the LLM perceives (screenshot /
-accessibility tree) and acts (click/type) until goal/fail/timeout → write the
-`*-persona.json` above plus a trace. RDM only ingests the result.
+## The driver: the `usability-persona` skill
+The persona run is performed by the **`usability-persona` Claude skill**
+(`.claude/skills/usability-persona/`) rather than hand-authored JSON. Given a
+persona spec (persona profile from the IFU + the user-need goal) and the app
+URL, the skill drives the UI via Playwright: the LLM perceives (the bundled
+`scripts/snapshot.py` dumps the accessibility tree + a screenshot) and acts
+(click/type) **in character** until goal/fail/timeout, logging friction as it
+goes. It then writes the `*-persona.json` above via `scripts/write_evidence.py`
+(deterministic schema). RDM only ingests the result. Playwright runs wherever
+the UI does (Claude Code has full network/browser access; an `rdm[validation]`
+extra could carry it for other surfaces).
 
 ### Persona spec (example)
 ```yaml

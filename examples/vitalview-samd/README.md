@@ -26,11 +26,19 @@ persona-results/     ← sample formative usability evidence (*-persona.json)
 ## Try it
 
 ```bash
-# Formative usability evidence from AI-persona runs (informational; never gates):
+# 1. Generate formative usability evidence with the usability-persona skill:
+#    invoke the `usability-persona` skill for each spec in personas/, pointing it
+#    at the running dashboard URL and --results-dir persona-results. The skill
+#    drives the UI via Playwright and writes persona-results/*-persona.json.
+
+# 2. Report it (informational; never gates release):
 rdm story persona \
   --vv-plan docs/verification_and_validation_plan.md \
   --persona-results persona-results
 ```
+
+The evidence JSON is **produced by the `usability-persona` skill**
+(`.claude/skills/usability-persona/`), not hand-authored.
 
 User needs (the validated journeys) are defined once in the V&V plan; each
 bounded-context SDD references the user needs it contributes to via `satisfies`;
