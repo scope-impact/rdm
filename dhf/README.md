@@ -34,3 +34,16 @@ documents/
 ```bash
 rdm story design-gate --dhf dhf      # design input + review present, complete, approved (committed)
 ```
+
+## Verify it (generate the traceability matrix)
+
+```bash
+uv run pytest tests/acceptance --alluredir=dhf/allure-results   # run the tagged ACs
+rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+rdm story release-gate --dhf dhf --allure-results dhf/allure-results   # PASS when all needs verified
+rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
+```
+
+`dhf/allure-results/` and `dhf/data/verification.yml` are generated (gitignored);
+they are produced by running the acceptance suite, not committed.
+
