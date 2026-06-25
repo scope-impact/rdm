@@ -6,9 +6,10 @@ title: Traceability Matrix and Verification Status
 
 # Purpose
 
-The verification status of each RDM user need, generated from the system of
-record: the user-need registry (the V&V plan) reconciled against executed Allure
-results. Do not edit by hand. Regenerate with:
+The verification status of each **design input**, grouped under the **user
+need** it traces to, generated from the system of record: the design-input
+registry (`design_input.md`) reconciled against executed Allure results. Do not
+edit by hand. Regenerate with:
 
 ```
 uv run pytest tests/acceptance --alluredir=dhf/allure-results
@@ -19,22 +20,26 @@ rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verifica
 {% if verification is defined %}
 # Summary
 
-| Verified | Failed | Untested | Total | Allure results |
+| Verified | Failed | Untested | Total design inputs | Allure results |
 | --- | --- | --- | --- | --- |
 | {{ verification.summary.verified }} | {{ verification.summary.failed }} | {{ verification.summary.untested }} | {{ verification.summary.total }} | {{ verification.summary.results_found }} |
 
 # Traceability matrix
 
-| User Need | Status | Passed | Failed | Skipped | Verifying tests |
-| --- | --- | --- | --- | --- | --- |
-{%- for need in verification.needs %}
-| {{ need.user_need }} | {{ need.status }} | {{ need.passed }} | {{ need.failed }} | {{ need.skipped }} | {{ need.tests|join(', ') if need.tests else '—' }} |
+{% for group in verification.groups %}
+## {{ group.user_need }}
+
+| Design Input | Status | Passed | Failed | Skipped | Verifying tests | Output |
+| --- | --- | --- | --- | --- | --- | --- |
+{%- for di in group.design_inputs %}
+| {{ di.design_input }} | {{ di.status }} | {{ di.passed }} | {{ di.failed }} | {{ di.skipped }} | {{ di.tests|join(', ') if di.tests else '—' }} | {{ di.outputs|join(', ') if di.outputs else '—' }} |
 {%- endfor %}
+{% endfor %}
 
 {% if verification.orphans %}
 # Orphan test tags
 
-Allure tags matching no registered user need:
+Allure tags matching no declared design input:
 {% for orphan in verification.orphans %}
 - {{ orphan }}
 {%- endfor %}

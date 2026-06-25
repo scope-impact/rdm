@@ -16,6 +16,9 @@ import yaml
 # The SDD document's basename, as installed by `rdm init`.
 SDD_DOC = "software_design_specification.md"
 
+# The design-input document's basename (carries the design-input registry).
+DESIGN_INPUT_DOC = "design_input.md"
+
 # Frontmatter fields the SDD may use to list the user-need IDs it captures.
 SDD_USER_NEED_FIELDS = ("user_needs", "user_need_ids", "ids")
 
@@ -138,3 +141,40 @@ def registry_user_needs(dhf_dir: Path) -> set[str]:
     for md in dhf_dir.rglob("*.md"):
         ids |= user_needs_from_doc(md)
     return ids
+
+
+def design_inputs(dhf_dir: Path) -> list[dict]:
+    """Return the design-input registry from design_input.md frontmatter.
+
+    Each entry is ``{id, text, traces_to}`` where ``traces_to`` is the list of
+    user-need IDs the design input refines. The design inputs are the
+    verification anchor (tests verify them); they trace up to user needs.
+    """
+    path = find_dhf_doc(dhf_dir, DESIGN_INPUT_DOC)
+    if path is None:
+        return []
+    frontmatter = parse_frontmatter(path.read_text(encoding="utf-8"))
+    value = frontmatter.get("design_inputs")
+    if not isinstance(value, list):
+        return []
+    inputs: list[dict] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        di_id = str(item.get("id", "")).strip()
+        if not di_id:
+            continue
+        traces = item.get("traces_to") or []
+        inputs.append(
+            {
+                "id": di_id,
+                "text": str(item.get("text", "")).strip(),
+                "traces_to": [str(t).strip() for t in traces if str(t).strip()],
+            }
+        )
+    return inputs
+
+
+def design_input_ids(dhf_dir: Path) -> set[str]:
+    """The set of declared design-input IDs (the verification denominator)."""
+    return {di["id"] for di in design_inputs(dhf_dir)}

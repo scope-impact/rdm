@@ -14,37 +14,56 @@ from pathlib import Path
 import yaml
 
 from rdm.record import allure
-from rdm.record.sdd import registry_user_needs
+from rdm.record.sdd import design_inputs, registry_user_needs
 
 
 def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
-    """Reconcile SDD user needs against Allure results into a render-ready dict."""
-    ids = registry_user_needs(dhf_dir)
-    report = allure.reconcile(ids, allure_results_dir)
+    """Reconcile design inputs against Allure results into a render-ready dict.
 
-    needs = []
-    for uid in sorted(report.by_user_need):
-        verification = report.by_user_need[uid]
-        needs.append(
-            {
-                "user_need": uid,
-                "status": verification.status,
-                "passed": verification.passed,
-                "failed": verification.failed,
-                "skipped": verification.skipped,
-                "tests": sorted(verification.tests),
-            }
-        )
+    Verification is anchored on design inputs (the `@allure.story("DI-…")` tag);
+    each design-input row is grouped under the user need(s) it traces to.
+    """
+    inputs = design_inputs(dhf_dir)
+    di_ids = {di["id"] for di in inputs}
+    user_needs = registry_user_needs(dhf_dir)
+    report = allure.reconcile(di_ids, allure_results_dir)
+
+    def _row(di: dict) -> dict:
+        verification = report.by_user_need[di["id"]]
+        return {
+            "design_input": di["id"],
+            "text": di["text"],
+            "status": verification.status,
+            "passed": verification.passed,
+            "failed": verification.failed,
+            "skipped": verification.skipped,
+            "tests": sorted(verification.tests),
+            "outputs": sorted(verification.outputs),
+            "traces_to": di["traces_to"],
+        }
+
+    rows = {di["id"]: _row(di) for di in inputs}
+
+    groups = []
+    for un in sorted(user_needs):
+        members = [rows[di["id"]] for di in inputs if un in di["traces_to"]]
+        if members:
+            groups.append({"user_need": un, "design_inputs": members})
+    unassigned = [
+        rows[di["id"]] for di in inputs if not (set(di["traces_to"]) & user_needs)
+    ]
+    if unassigned:
+        groups.append({"user_need": "(unassigned / constraint)", "design_inputs": unassigned})
 
     return {
         "summary": {
             "verified": len(report.verified),
             "failed": len(report.failed),
             "untested": len(report.untested),
-            "total": len(ids),
+            "total": len(di_ids),
             "results_found": report.results_found,
         },
-        "needs": needs,
+        "groups": groups,
         "orphans": report.orphan_ids,
     }
 
@@ -81,7 +100,7 @@ def verify_command(
     summary = data["summary"]
     print(
         f"Wrote {out}: {summary['verified']} verified, {summary['failed']} failed, "
-        f"{summary['untested']} untested of {summary['total']} user need(s) "
+        f"{summary['untested']} untested of {summary['total']} design input(s) "
         f"({summary['results_found']} Allure result(s))"
     )
     return 0

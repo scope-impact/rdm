@@ -2,6 +2,27 @@
 id: DI-001
 revision: 1
 title: Design Input — RDM
+# Design-input registry: the verification anchor. Each is verified by a test
+# tagged @allure.story("DI-n") and traces up to the user need(s) it refines.
+design_inputs:
+  - id: DI-1
+    text: "RDM shall read the registry + satisfies refs from frontmatter and ingest Allure results, with no project-management dependency."
+    traces_to: [UN-001, UN-004]
+  - id: DI-2
+    text: "RDM shall block the transition into implementation until design input and review are present, complete, and approved (committed) in git; a later edit re-opens the gate."
+    traces_to: [UN-002]
+  - id: DI-3
+    text: "RDM shall block release unless every declared design input is verified by a passing test."
+    traces_to: [UN-003]
+  - id: DI-4
+    text: "RDM shall reconcile against Allure tags and render a traceability matrix from executed results."
+    traces_to: [UN-004]
+  - id: DI-5
+    text: "RDM shall support exercising UI usability formatively against a user need, recorded as evidence that never gates release."
+    traces_to: [UN-005]
+  - id: DI-6
+    text: "RDM shall keep planning artifacts out of the record; planning tooling shall be optional and its outputs marked non-record."
+    traces_to: []
 ---
 
 # Purpose

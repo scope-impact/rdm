@@ -14,9 +14,11 @@ Enforces design controls and verified coverage.
 - **Pre-commit hook** (`rdm/hook_files/pre-commit`) — blocks committing
   implementation work until the design gate passes; commits of the design docs
   themselves are allowed (that commit is the approval).
-- **Release gate** (`run_release_gate`) — blocks release unless every user need
-  is verified by a passing test.
+- **Release gate** (`run_release_gate`) — blocks release unless every design
+  input is verified by a passing test and every user need is addressed.
 
 Contributes to **UN-002** (block transition until approved) and **UN-003**
-(block release until verified). Acceptance criteria verified by
-`@allure.story("UN-002")` / `@allure.story("UN-003")` tests.
+(block release until verified). This context realises design inputs **DI-2**
+(design gate, refining UN-002) and **DI-3** (release gate, refining UN-003);
+their acceptance criteria are verified by `@allure.story("DI-2")` /
+`@allure.story("DI-3")` tests.

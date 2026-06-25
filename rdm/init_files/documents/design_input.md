@@ -2,6 +2,13 @@
 id: DI-001
 revision: 1
 title: Design Input
+# Design-input registry: the machine-readable verification anchor. Each entry is
+# verified by a test tagged @allure.story("<id>") and traces up to the user
+# need(s) it refines (declared in the V&V plan `user_needs`). Replace the example.
+design_inputs:
+  - id: DI-1
+    text: "TODO: state a verifiable requirement the design must satisfy."
+    traces_to: [UN-001]
 ---
 
 # Purpose
@@ -65,22 +72,15 @@ ENDTODO
 
 # Traceability
 
-The output of a design input is a **user need**. For {{ device.name }} the traceability **sources of truth** are:
+A **design input** refines one or more **user needs** (validated) and is itself **verified** (§820.30(f): output meets input) by the automated test(s) tagged with its ID. The traceability **sources of truth** for {{ device.name }} are:
 
-- The **Software Design Specification (SDD)** captures each **user need**.
-- An **Allure tag** on the corresponding automated test(s) captures each **acceptance criterion (AC)**.
+- The **design-input registry** (the `design_inputs` frontmatter above) declares each design input and the user need(s) it `traces_to`.
+- The **user-need registry** (the V&V plan `user_needs`) is the validation anchor.
+- An **Allure tag** `@allure.story("<DI-id>")` on the verifying test links each design input to its executed evidence; the test *is* the acceptance criterion ("live BDD" — no separate Gherkin spec).
 
-> **Design Input → User Need (captured in the SDD) → Acceptance Criteria (captured as Allure tags on the verifying tests).**
+> **User Need (validated) → Design Input (`traces_to`) → verifying test (`@allure.story`) → executed result.**
 
-[[Because the SDD and the Allure tags are the source of truth, design inputs remain traceable forward into the design and its verification, and backward from each test to the design input it satisfies (ISO 13485:2016 7.3.3, 21 CFR 820.30(c) and (j)). Backlog tasks may mirror this information for planning, but they are not the system of record.]]
-
-TODO: Maintain the mapping below from each design input to the user need recorded in the SDD and the Allure tag(s) that verify its acceptance criteria.
-
-| Design Input | User Need (SDD reference) | Acceptance Criteria (Allure tag) |
-| --- | --- | --- |
-| TODO | TODO | TODO |
-
-ENDTODO
+[[Because the registries and the Allure tags are the source of truth, design inputs remain traceable forward into the design and its verification, and backward from each test to the design input it satisfies (ISO 13485:2016 7.3.3, 21 CFR 820.30(c) and (j)). The generated traceability matrix reconciles the registry against executed results; backlog tasks may mirror this for planning, but they are not the system of record.]]
 
 # Approval
 

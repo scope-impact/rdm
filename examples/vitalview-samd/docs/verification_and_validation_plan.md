@@ -28,9 +28,12 @@ verified before release.
 
 # Verification approach
 
-Each user need dissolves into acceptance criteria in the bounded contexts that
-`satisfy` it; each is verified by an `@allure.story("UN-…")` test. A user need is
-verified when all its acceptance criteria pass, aggregated across those contexts.
+Each user need is refined into **design inputs** (`design_input.md`), realised by
+the bounded contexts that `satisfy` the need. Verification is anchored on the
+design inputs (§820.30(f): output meets input): each is verified by an
+`@allure.story("DI-…")` test — the test *is* the acceptance criterion ("live
+BDD"). A user need is met when it is validated and every design input that
+`traces_to` it is verified, aggregated across those contexts.
 
 # Validation approach
 

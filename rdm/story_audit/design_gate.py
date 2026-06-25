@@ -36,6 +36,8 @@ from pathlib import Path
 from rdm.record import allure
 from rdm.record.reconcile import relevant_orphans
 from rdm.record.sdd import (
+    design_input_ids,
+    design_inputs,
     find_sdds,
     registry_user_needs,
     satisfies_by_sdd,
@@ -204,71 +206,69 @@ def _verification_messages(report) -> list[str]:
     """Failed/untested messages for an Allure verification report (shared by the
     design gate's warnings and the release gate's blocking list)."""
     messages = [
-        f"user need {uid} FAILED verification "
+        f"design input {uid} FAILED verification "
         f"({report.by_user_need[uid].failed} failing test(s))"
         for uid in report.failed
     ]
     messages += [
-        f"user need {uid} not verified by any passing Allure test"
+        f"design input {uid} not verified by any passing Allure test"
         for uid in report.untested
     ]
     return messages
 
 
 def _traceability_warnings(dhf_dir: Path) -> list[str]:
-    """Reconcile SDD user-need IDs against Allure tags found in the tests.
+    """Reconcile design-input IDs against @allure tags found in the tests.
 
-    Reports user needs with no verifying test, and Allure tags that look like
-    user-need IDs (share a declared prefix) but match no SDD user need. These
-    are warnings only -- see GateResult.passed.
+    Reports design inputs with no verifying test, and Allure tags that share a
+    declared prefix but match no design input. Warnings only -- the verifying
+    tests legitimately may not exist yet at the design gate.
     """
-    sdd_ids = registry_user_needs(dhf_dir)
-    if not sdd_ids:
-        # Nothing declared yet; the SDD source-of-truth warning already covers
-        # a missing or unpopulated SDD.
+    di_ids = design_input_ids(dhf_dir)
+    if not di_ids:
+        # No design inputs declared yet; the SDD coverage warning covers gaps.
         return []
 
     tests_dir = allure.find_tests_dir(dhf_dir)
     if tests_dir is None:
         return [
             "no tests/ directory found to reconcile Allure tags against the "
-            f"{len(sdd_ids)} SDD user need(s)"
+            f"{len(di_ids)} design input(s)"
         ]
 
     tagged = allure.scan_source_tags(tests_dir)
     tagged_ids = set(tagged)
     warnings: list[str] = []
 
-    for uid in sorted(sdd_ids - tagged_ids):
+    for di in sorted(di_ids - tagged_ids):
         warnings.append(
-            f"user need {uid} (SDD) has no @allure.story/feature tag in tests"
+            f"design input {di} has no @allure.story/feature tag in tests"
         )
 
-    for tag in relevant_orphans(sorted(tagged_ids - sdd_ids), sdd_ids):
+    for tag in relevant_orphans(sorted(tagged_ids - di_ids), di_ids):
         warnings.append(
-            f"Allure tag {tag} matches no SDD user need ({', '.join(tagged[tag][:2])})"
+            f"Allure tag {tag} matches no design input ({', '.join(tagged[tag][:2])})"
         )
 
     return warnings
 
 
 def _verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[str]:
-    """Reconcile SDD user needs against *executed* Allure results.
+    """Reconcile design inputs against *executed* Allure results.
 
-    Unlike the source-tag scan, this reports whether each user need was actually
-    verified (a passing test), failed, or never exercised. Warnings only -- the
-    design gate runs before implementation; verification status is informational
-    here and would be enforced at a later release gate.
+    Reports whether each design input was actually verified (a passing test),
+    failed, or never exercised. Warnings only at the design gate; the release
+    gate enforces this.
     """
-    sdd_ids = registry_user_needs(dhf_dir)
-    if not sdd_ids:
+    di_ids = design_input_ids(dhf_dir)
+    if not di_ids:
         return []
 
-    report = allure.reconcile(sdd_ids, allure_results_dir)
+    report = allure.reconcile(di_ids, allure_results_dir)
     warnings = _verification_messages(report)
     warnings += [
-        f"Allure result tag {tag} matches no SDD user need"
-        for tag in relevant_orphans(report.orphan_ids, sdd_ids)
+        f"Allure result tag {tag} matches no design input"
+        for tag in relevant_orphans(report.orphan_ids, di_ids)
     ]
     return warnings
 
@@ -375,11 +375,12 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
     A release requires, as hard conditions:
       1. the design gate passes (design input + review present, complete, and
          approved in version control),
-      2. the SDD declares at least one user need, and
-      3. every declared user need is *verified* by a passing Allure test --
-         any failed or untested user need blocks the release.
+      2. at least one design input is declared, and
+      3. every declared design input is *verified* by a passing Allure test --
+         any failed or untested design input blocks the release, and
+      4. every user need is addressed by at least one design input.
 
-    Orphan Allure tags (no matching user need) are warnings, not blockers.
+    Orphan Allure tags (no matching design input) are warnings, not blockers.
     """
     design = run_design_gate(dhf_dir, allure_results_dir)
     result = ReleaseResult(design=design)
@@ -391,17 +392,24 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
                     f"design control not met -- {artifact.name}: {'; '.join(artifact.reasons)}"
                 )
 
-    sdd_ids = registry_user_needs(dhf_dir)
-    if not sdd_ids:
-        result.blocking.append("SDD declares no user needs (nothing to verify)")
+    inputs = design_inputs(dhf_dir)
+    di_ids = {di["id"] for di in inputs}
+    if not di_ids:
+        result.blocking.append("no design inputs declared (nothing to verify)")
         return result
 
-    report = allure.reconcile(sdd_ids, Path(allure_results_dir))
+    report = allure.reconcile(di_ids, Path(allure_results_dir))
     result.verified = report.verified
     result.blocking += _verification_messages(report)
+
+    # A user need with no design input is an unaddressed (hence unverified) need.
+    addressed = {un for di in inputs for un in di["traces_to"]}
+    for un in sorted(registry_user_needs(dhf_dir) - addressed):
+        result.blocking.append(f"user need {un} is addressed by no design input")
+
     result.warnings += [
-        f"Allure result tag {tag} matches no SDD user need"
-        for tag in relevant_orphans(report.orphan_ids, sdd_ids)
+        f"Allure result tag {tag} matches no design input"
+        for tag in relevant_orphans(report.orphan_ids, di_ids)
     ]
     return result
 
@@ -432,7 +440,7 @@ def story_release_gate_command(
     design_state = "PASS" if result.design.passed else "FAIL"
     print(f"  [{design_state}] design controls (design input + review approved)")
     if result.verified:
-        print(f"  [OK]   verified user needs: {', '.join(result.verified)}")
+        print(f"  [OK]   verified design inputs: {', '.join(result.verified)}")
 
     if result.blocking:
         print("\nBlocking:")
@@ -446,13 +454,13 @@ def story_release_gate_command(
     print()
     if result.passed:
         print(
-            "Release gate PASSED: design controls are approved and every user need "
-            "is verified by a passing test."
+            "Release gate PASSED: design controls are approved, every design input "
+            "is verified by a passing test, and every user need is addressed."
         )
         return 0
 
     print(
         "Release gate FAILED: do not release. Resolve every blocking item above "
-        "(approve design controls; verify all user needs)."
+        "(approve design controls; verify all design inputs; address all user needs)."
     )
     return 1

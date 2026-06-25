@@ -36,11 +36,14 @@ multiple SDDs, never duplicated.
 
 ## Verification (automated)
 
-A user need dissolves into acceptance criteria inside each contributing context;
-each is verified by an `@allure.story("UN-…")` test. A user need is verified
-when all its acceptance criteria pass, **aggregated across every SDD that
-satisfies it** — `UN-001` is not verified until the relevant tests in
-`ingestion`, `alerting`, *and* `dashboard` pass.
+Each user need is refined into **design inputs** (`design_input.md`), realised by
+the contributing contexts. Verification is anchored on the design input
+(§820.30(f): output meets input): each is verified by an `@allure.story("DI-…")`
+test — the test *is* the acceptance criterion ("live BDD"). A user need is met
+when validated **and** every design input that `traces_to` it is verified,
+**aggregated across every context that realises it** — `UN-001` is not fully
+verified until DI-1 and DI-2 (across `ingestion`, `alerting`, *and* `dashboard`)
+pass.
 
 ## Validation (human + formative)
 

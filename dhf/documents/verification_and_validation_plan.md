@@ -31,11 +31,13 @@ verified before a release.
 
 # Verification approach
 
-Each user need dissolves into acceptance criteria within the bounded contexts
-that `satisfy` it; each is verified by an automated test in RDM's `tests/`,
-tagged `@allure.story("UN-…")`. A user need is verified when all its acceptance
-criteria pass, aggregated across the contexts that satisfy it. `rdm story
-release-gate` enforces this.
+Each user need is refined into **design inputs** (`design_input.md`), realised by
+the bounded contexts that `satisfy` the need. Verification is anchored on the
+design inputs (§820.30(f): output meets input): each is verified by an automated
+test in RDM's `tests/`, tagged `@allure.story("DI-…")` — the test *is* the
+acceptance criterion ("live BDD"). A user need is met when it is validated and
+every design input that `traces_to` it is verified, aggregated across the
+contexts that satisfy it. `rdm story release-gate` enforces this.
 
 # Validation approach
 

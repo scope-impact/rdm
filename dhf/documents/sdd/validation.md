@@ -16,5 +16,7 @@ Exercises UI usability formatively against a user need.
 
 Contributes to **UN-005**. This evidence is **formative only** — it is not
 summative IEC 62366 validation and never gates release; the human summative
-study remains the validation record. Acceptance criteria verified by
-`@allure.story("UN-005")` tests.
+study remains the validation record. This context realises design input **DI-5**
+(formative usability against a user need); its acceptance criteria are verified
+by `@allure.story("DI-5")` tests. Note the persona ingest stays **user-need
+keyed** — validation is anchored on the user need, not the design input.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from rdm.record.allure import (
@@ -12,6 +13,15 @@ from rdm.record.allure import (
     reconcile,
 )
 from tests.util import write_allure_result as _result
+
+
+def _result_with_output(results_dir: Path, name: str, status: str, story: str, output: str) -> None:
+    """Write a result tagging a design input (story) and a design output (label)."""
+    results_dir.mkdir(parents=True, exist_ok=True)
+    labels = [{"name": "story", "value": story}, {"name": "output", "value": output}]
+    (results_dir / f"{name}-result.json").write_text(
+        json.dumps({"name": name, "status": status, "labels": labels})
+    )
 
 
 class TestParseResults:
@@ -29,6 +39,12 @@ class TestParseResults:
         (tmp_path / "bad-result.json").write_text("{not json")
         _result(tmp_path, "ok", "passed", "UN-001")
         assert len(parse_results(tmp_path)) == 1
+
+    def test_parses_output_label(self, tmp_path: Path) -> None:
+        _result_with_output(tmp_path, "t1", "passed", "DI-1", "SDS-core")
+        results = parse_results(tmp_path)
+        assert results[0].user_need_ids == ["DI-1"]
+        assert results[0].outputs == ["SDS-core"]
 
 
 class TestReconcile:
@@ -63,3 +79,11 @@ class TestReconcile:
         _result(tmp_path, "t2", "passed", "UN-999")
         report = reconcile({"UN-001"}, tmp_path)
         assert report.orphan_ids == ["UN-999"]
+
+    def test_outputs_aggregated_onto_verification(self, tmp_path: Path) -> None:
+        # Design outputs from the `output` label surface on the design input's
+        # verification, deduped across covering tests.
+        _result_with_output(tmp_path, "t1", "passed", "DI-1", "SDS-core")
+        _result_with_output(tmp_path, "t2", "passed", "DI-1", "SDS-core")
+        report = reconcile({"DI-1"}, tmp_path)
+        assert report.by_user_need["DI-1"].outputs == ["SDS-core"]

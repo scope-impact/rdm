@@ -30,12 +30,29 @@ def _sdd(user_needs: list[str]) -> str:
     return f"---\nid: SDS-001\ntitle: SDD\nuser_needs: {needs}\n---\n\nbody\n"
 
 
-def _proj(tmp_path: Path, user_needs: list[str], allure_ids: list[str]) -> Path:
-    """Build <tmp>/proj/{dhf,tests} with an SDD and allure-tagged tests."""
+def _proj(
+    tmp_path: Path,
+    design_input_ids: list[str],
+    allure_ids: list[str],
+    user_needs: list[str] | None = None,
+) -> Path:
+    """Build <tmp>/proj/{dhf,tests} with a design-input registry and allure-tagged
+    tests. Traceability is reconciled against design inputs, so the design-input
+    IDs are the anchor; an optional SDD declares the user-need registry.
+    """
     proj = tmp_path / "proj"
     docs = proj / "dhf" / "documents"
     docs.mkdir(parents=True)
-    (docs / SDD_DOC).write_text(_sdd(user_needs))
+    if design_input_ids:
+        rows = "\n".join(
+            f"  - {{id: {di}, text: {di} requirement, traces_to: []}}"
+            for di in design_input_ids
+        )
+        (docs / DESIGN_INPUT_DOC).write_text(
+            f"---\nid: DI-001\ndesign_inputs:\n{rows}\n---\n\nbody\n"
+        )
+    if user_needs:
+        (docs / SDD_DOC).write_text(_sdd(user_needs))
     tests = proj / "tests"
     tests.mkdir()
     body = "import allure\n"
@@ -183,45 +200,46 @@ class TestHasUncommittedChanges:
         assert has_uncommitted_changes(p) is None
 
 
-class TestSddAllureReconciliation:
-    """SDD user-need IDs (frontmatter) must be reconciled against Allure tags."""
+class TestDesignInputAllureReconciliation:
+    """Design-input IDs (registry frontmatter) must be reconciled against Allure
+    tags -- verification is anchored on design inputs, not user needs."""
 
     def test_parses_user_needs_from_frontmatter(self, tmp_path: Path) -> None:
-        dhf = _proj(tmp_path, ["UN-001", "UN-002"], [])
+        dhf = _proj(tmp_path, [], [], user_needs=["UN-001", "UN-002"])
         assert sdd_user_need_ids(dhf) == {"UN-001", "UN-002"}
 
     def test_allure_tags_extracted_from_tests(self, tmp_path: Path) -> None:
-        dhf = _proj(tmp_path, ["UN-001"], ["UN-001", "UN-002"])
+        dhf = _proj(tmp_path, ["DI-1"], ["DI-1", "DI-2"])
         tagged = allure_tag_ids(dhf.parent / "tests")
-        assert set(tagged) == {"UN-001", "UN-002"}
+        assert set(tagged) == {"DI-1", "DI-2"}
 
-    def test_user_need_without_tag_is_warned(self, tmp_path: Path) -> None:
-        dhf = _proj(tmp_path, ["UN-001", "UN-002"], ["UN-001"])
+    def test_design_input_without_tag_is_warned(self, tmp_path: Path) -> None:
+        dhf = _proj(tmp_path, ["DI-1", "DI-2"], ["DI-1"])
         result = run_design_gate(dhf)
-        assert any("UN-002" in w for w in result.traceability_warnings)
-        assert not any("UN-001" in w for w in result.traceability_warnings)
+        assert any("DI-2" in w for w in result.traceability_warnings)
+        assert not any("DI-1" in w for w in result.traceability_warnings)
 
     def test_orphan_tag_sharing_prefix_is_warned(self, tmp_path: Path) -> None:
-        dhf = _proj(tmp_path, ["UN-001"], ["UN-001", "UN-999"])
+        dhf = _proj(tmp_path, ["DI-1"], ["DI-1", "DI-999"])
         result = run_design_gate(dhf)
-        assert any("UN-999" in w for w in result.traceability_warnings)
+        assert any("DI-999" in w for w in result.traceability_warnings)
 
     def test_unrelated_prefix_tag_is_not_warned(self, tmp_path: Path) -> None:
-        dhf = _proj(tmp_path, ["UN-001"], ["UN-001", "FT-001"])
+        dhf = _proj(tmp_path, ["DI-1"], ["DI-1", "FT-001"])
         result = run_design_gate(dhf)
         assert not any("FT-001" in w for w in result.traceability_warnings)
 
     def test_traceability_gaps_do_not_fail_the_gate(self, tmp_path: Path) -> None:
         # Docs absent here, so the gate fails on docs -- but traceability gaps
         # themselves must never be the cause of failure. Verify with docs OK:
-        dhf = _proj(tmp_path, ["UN-001"], [])  # user need, no test yet
+        dhf = _proj(tmp_path, ["DI-1"], [])  # design input, no test yet
         result = run_design_gate(dhf)
         assert result.traceability_warnings  # gap reported
         # The traceability warnings are independent of pass/fail; passed is
         # driven only by the required artifacts.
         assert result.passed is all(a.ok for a in result.artifacts)
 
-    def test_no_user_needs_means_no_traceability_warnings(self, tmp_path: Path) -> None:
+    def test_no_design_inputs_means_no_traceability_warnings(self, tmp_path: Path) -> None:
         dhf = _proj(tmp_path, [], ["UN-001"])
         assert run_design_gate(dhf).traceability_warnings == []
 

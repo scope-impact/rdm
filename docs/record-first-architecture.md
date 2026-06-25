@@ -42,18 +42,20 @@ context boundaries). "Product need" vocabulary is not used.
 | Artifact | Role | Lives in |
 |----------|------|----------|
 | **user need** (validated, cross-cutting) | the journey / intended use; the **validation** anchor | defined once in the **V&V plan** frontmatter (`verification_and_validation_plan.md`, `user_needs: [{id, text}]`) — *not* in the architecture document, which holds design only |
+| **design input** (verified) | a verifiable requirement refining a user need; the **verification** anchor (§820.30(f): output meets input) | the **design-input registry** (`design_input.md`, `design_inputs: [{id, text, traces_to: [UN-…]}]`) |
 | **`satisfies`** reference | which user needs a context's design contributes to | each per-context **SDD** frontmatter (`satisfies: [UN-…]`) |
-| **acceptance criteria** (verified) | the conditions a user need dissolves into within a context | the context's tests, tagged `@allure.story("UN-…")` |
+| **acceptance criteria** = the test | each design input's verifying test ("live BDD") | the context's tests, tagged `@allure.story("DI-…")` |
 
 Rules:
 
-- A user need is **referenced** by many SDDs, never **duplicated** — defined
-  once in the registry; each SDD points at it via `satisfies`.
-- **Validation** is against the user need (human evidence — usability, clinical,
-  simulated use). **Verification** is against its acceptance criteria (Allure),
-  aggregated across **every** SDD that satisfies the need.
-- A user need is **met** when validated **and** all its acceptance criteria
-  (across contexts) are verified. See ADR 0001.
+- A user need is **referenced** by many SDDs and refined by many design inputs,
+  never **duplicated** — defined once in the registry.
+- **Validation** is against the user need (human + AI-persona formative evidence).
+  **Verification** is against the **design input** (its `@allure.story("DI-…")`
+  test passes), aggregated across **every** context that realises it. The test
+  *is* the acceptance criterion — no Gherkin/feature files ("live BDD").
+- A user need is **met** when validated **and** every design input that
+  `traces_to` it (across contexts) is verified. See ADR 0001.
 
 ## What RDM does
 

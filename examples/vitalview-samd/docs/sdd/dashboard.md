@@ -16,5 +16,7 @@ Contributes to:
   vitals.
 
 This is the surface an **AI persona** drives (Playwright) for formative usability
-evidence, and where the human summative usability study is run. Acceptance
-criteria verified by `@allure.story("UN-001")` / `@allure.story("UN-002")`.
+evidence, and where the human summative usability study is run. It realises the
+display side of design inputs **DI-2** (alert acknowledgement) and **DI-3** (view
+vitals); their acceptance criteria are verified by tests tagged
+`@allure.story("DI-2")` / `@allure.story("DI-3")`.

@@ -48,11 +48,13 @@ class TestResult:
     status: str
     user_need_ids: list[str] = field(default_factory=list)
     source: str = ""
+    # Design output(s) the test exercises, from @allure.label("output", ...).
+    outputs: list[str] = field(default_factory=list)
 
 
 @dataclass
 class UserNeedVerification:
-    """Aggregated verification status for one user need."""
+    """Aggregated verification status for one declared ID (a design input)."""
 
     user_need_id: str
     status: str = UNTESTED
@@ -60,6 +62,7 @@ class UserNeedVerification:
     failed: int = 0
     skipped: int = 0
     tests: list[str] = field(default_factory=list)
+    outputs: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -94,17 +97,24 @@ def parse_results(results_dir: Path) -> list[TestResult]:
         if not isinstance(data, dict):
             continue
         ids: list[str] = []
+        outputs: list[str] = []
         for label in data.get("labels", []) or []:
-            if isinstance(label, dict) and label.get("name") in USER_NEED_LABELS:
-                value = str(label.get("value", "")).strip()
-                if value:
-                    ids.append(value)
+            if not isinstance(label, dict):
+                continue
+            value = str(label.get("value", "")).strip()
+            if not value:
+                continue
+            if label.get("name") in USER_NEED_LABELS:
+                ids.append(value)
+            elif label.get("name") == "output":
+                outputs.append(value)
         results.append(
             TestResult(
                 name=str(data.get("name", "")),
                 status=str(data.get("status", "unknown")),
                 user_need_ids=ids,
                 source=result_file.name,
+                outputs=outputs,
             )
         )
     return results
@@ -124,6 +134,9 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
 
     def _fold(verification: UserNeedVerification, result: TestResult) -> None:
         verification.tests.append(result.name or result.source)
+        for output in result.outputs:
+            if output not in verification.outputs:
+                verification.outputs.append(output)
         if result.status in _FAILING:
             verification.failed += 1
         elif result.status in _PASSING:

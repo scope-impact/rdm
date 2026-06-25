@@ -6,9 +6,9 @@ title: Traceability Matrix and Verification Status
 
 # Purpose
 
-This document presents the verification status of each user need for {{ device.name }}, traced from the user needs declared in the Software Design Specification to the automated tests that verify them.
+This document presents the verification status of each **design input** for {{ device.name }}, grouped under the **user need** it traces to: design inputs are verified (§820.30(f): output meets input) by the automated tests tagged with their ID; user needs are validated separately.
 
-It is **generated** from the system of record: the SDD `user_needs` and the executed Allure test results. Do not edit the matrix by hand. Regenerate it with:
+It is **generated** from the system of record: the design-input registry (`design_input.md`), the user-need registry (V&V plan), and the executed Allure test results. Do not edit the matrix by hand. Regenerate it with:
 
 ```
 rdm story verify --dhf <dhf> --allure-results <allure-results-dir> -o data/verification.yml
@@ -19,24 +19,28 @@ then re-render this document.
 {% if verification is defined %}
 # Summary
 
-| Verified | Failed | Untested | Total | Allure results |
+| Verified | Failed | Untested | Total design inputs | Allure results |
 | --- | --- | --- | --- | --- |
 | {{ verification.summary.verified }} | {{ verification.summary.failed }} | {{ verification.summary.untested }} | {{ verification.summary.total }} | {{ verification.summary.results_found }} |
 
 # Traceability Matrix
 
-[[Each user need traces to the automated test(s) that verify its acceptance criteria; status reflects executed Allure results (ISO 13485:2016 7.3.6, 21 CFR 820.30(f)).]]
+[[Each design input traces up to the user need it refines and down to the automated test(s) that verify it; status reflects executed Allure results (ISO 13485:2016 7.3.6, 21 CFR 820.30(f)).]]
 
-| User Need | Status | Passed | Failed | Skipped | Verifying Tests |
-| --- | --- | --- | --- | --- | --- |
-{%- for need in verification.needs %}
-| {{ need.user_need }} | {{ need.status }} | {{ need.passed }} | {{ need.failed }} | {{ need.skipped }} | {{ need.tests|join(', ') if need.tests else '—' }} |
+{% for group in verification.groups %}
+## {{ group.user_need }}
+
+| Design Input | Status | Passed | Failed | Skipped | Verifying Tests | Output |
+| --- | --- | --- | --- | --- | --- | --- |
+{%- for di in group.design_inputs %}
+| {{ di.design_input }} | {{ di.status }} | {{ di.passed }} | {{ di.failed }} | {{ di.skipped }} | {{ di.tests|join(', ') if di.tests else '—' }} | {{ di.outputs|join(', ') if di.outputs else '—' }} |
 {%- endfor %}
+{% endfor %}
 
 {% if verification.orphans %}
 # Orphan Test Tags
 
-The following Allure tags reference no declared user need; either declare the user need in the SDD or correct the tag:
+The following Allure tags reference no declared design input; either declare the design input in `design_input.md` or correct the tag:
 
 {% for orphan in verification.orphans %}
 - {{ orphan }}
