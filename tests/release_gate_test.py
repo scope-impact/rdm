@@ -2,30 +2,12 @@
 
 from __future__ import annotations
 
-import json
-import subprocess
 from pathlib import Path
 
 from rdm.story_audit.design_gate import run_release_gate, story_release_gate_command
-
-COMPLETE = "# Doc\n\nApproved and complete.\n"
-
-
-def _git(repo: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-    )
-
-
-def _result(results: Path, name: str, status: str, *ids: str) -> None:
-    results.mkdir(parents=True, exist_ok=True)
-    labels = [{"name": "story", "value": i} for i in ids]
-    (results / f"{name}-result.json").write_text(
-        json.dumps({"name": name, "status": status, "labels": labels})
-    )
+from tests.util import COMPLETE_DOC as COMPLETE
+from tests.util import git_run as _git
+from tests.util import write_allure_result as _result
 
 
 def _project(tmp_path: Path, user_needs: list[str], *, commit: bool = True) -> Path:

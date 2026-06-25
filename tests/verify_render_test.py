@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import yaml
 
 from rdm.record.verify import build_verification, write_verification_file
+from tests.util import write_allure_result as _result
 
 
 def _sdd(dhf: Path, user_needs: list[str]) -> None:
@@ -16,14 +16,6 @@ def _sdd(dhf: Path, user_needs: list[str]) -> None:
     needs = "[" + ", ".join(user_needs) + "]"
     (docs / "software_design_specification.md").write_text(
         f"---\nid: SDS-001\ntitle: SDD\nuser_needs: {needs}\n---\n\nbody\n"
-    )
-
-
-def _result(results: Path, name: str, status: str, *ids: str) -> None:
-    results.mkdir(parents=True, exist_ok=True)
-    labels = [{"name": "story", "value": i} for i in ids]
-    (results / f"{name}-result.json").write_text(
-        json.dumps({"name": name, "status": status, "labels": labels})
     )
 
 

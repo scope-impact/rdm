@@ -13,7 +13,6 @@ Skips cleanly if allure-pytest is not installed.
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -22,26 +21,12 @@ from rdm.record import allure as allure_ingest
 from rdm.record import persona
 from rdm.record.verify import build_verification
 from rdm.story_audit.design_gate import check_artifact, run_release_gate
+from tests.util import COMPLETE_DOC as COMPLETE
+from tests.util import git_run as _git
+from tests.util import write_allure_result as _allure_result
 
 # Tagging requires allure-pytest; skip cleanly if it is not installed.
 allure = pytest.importorskip("allure")
-
-COMPLETE = "# Doc\n\nApproved and complete.\n"
-
-
-def _git(repo: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
-        cwd=repo, check=True, capture_output=True,
-    )
-
-
-def _allure_result(results: Path, name: str, status: str, *ids: str) -> None:
-    results.mkdir(parents=True, exist_ok=True)
-    labels = [{"name": "story", "value": i} for i in ids]
-    (results / f"{name}-result.json").write_text(
-        json.dumps({"name": name, "status": status, "labels": labels})
-    )
 
 
 def _vv_plan(docs: Path, needs: list[str]) -> None:

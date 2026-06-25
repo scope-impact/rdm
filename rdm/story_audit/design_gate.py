@@ -222,6 +222,28 @@ def allure_tag_ids(tests_dir: Path) -> dict[str, list[str]]:
     return refs
 
 
+def _relevant_orphans(orphans, sdd_ids: set[str]) -> list[str]:
+    """Orphan tags worth reporting: those sharing an ID prefix with a declared
+    user need, to avoid noise from unrelated tags (e.g. FT-001, US-001)."""
+    prefixes = {uid.split("-")[0] for uid in sdd_ids}
+    return [tag for tag in orphans if tag.split("-")[0] in prefixes]
+
+
+def _verification_messages(report) -> list[str]:
+    """Failed/untested messages for an Allure verification report (shared by the
+    design gate's warnings and the release gate's blocking list)."""
+    messages = [
+        f"user need {uid} FAILED verification "
+        f"({report.by_user_need[uid].failed} failing test(s))"
+        for uid in report.failed
+    ]
+    messages += [
+        f"user need {uid} not verified by any passing Allure test"
+        for uid in report.untested
+    ]
+    return messages
+
+
 def _traceability_warnings(dhf_dir: Path) -> list[str]:
     """Reconcile SDD user-need IDs against Allure tags found in the tests.
 
@@ -251,15 +273,10 @@ def _traceability_warnings(dhf_dir: Path) -> list[str]:
             f"user need {uid} (SDD) has no @allure.story/feature tag in tests"
         )
 
-    # Orphans: only flag tags that share a prefix with a declared user need, to
-    # avoid noise from unrelated feature/story tags (e.g. FT-001, US-001).
-    prefixes = {uid.split("-")[0] for uid in sdd_ids}
-    for tag in sorted(tagged_ids - sdd_ids):
-        if tag.split("-")[0] in prefixes:
-            warnings.append(
-                f"Allure tag {tag} matches no SDD user need "
-                f"({', '.join(tagged[tag][:2])})"
-            )
+    for tag in _relevant_orphans(sorted(tagged_ids - sdd_ids), sdd_ids):
+        warnings.append(
+            f"Allure tag {tag} matches no SDD user need ({', '.join(tagged[tag][:2])})"
+        )
 
     return warnings
 
@@ -277,19 +294,11 @@ def _verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[str]
         return []
 
     report = allure.reconcile(sdd_ids, allure_results_dir)
-    warnings: list[str] = []
-    for uid in report.failed:
-        verification = report.by_user_need[uid]
-        warnings.append(
-            f"user need {uid} FAILED verification ({verification.failed} failing test(s))"
-        )
-    for uid in report.untested:
-        warnings.append(f"user need {uid} not verified by any passing Allure test")
-
-    prefixes = {uid.split("-")[0] for uid in sdd_ids}
-    for tag in report.orphan_ids:
-        if tag.split("-")[0] in prefixes:
-            warnings.append(f"Allure result tag {tag} matches no SDD user need")
+    warnings = _verification_messages(report)
+    warnings += [
+        f"Allure result tag {tag} matches no SDD user need"
+        for tag in _relevant_orphans(report.orphan_ids, sdd_ids)
+    ]
     return warnings
 
 
@@ -418,19 +427,11 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
 
     report = allure.reconcile(sdd_ids, Path(allure_results_dir))
     result.verified = report.verified
-    for uid in report.failed:
-        verification = report.by_user_need[uid]
-        result.blocking.append(
-            f"user need {uid} FAILED verification ({verification.failed} failing test(s))"
-        )
-    for uid in report.untested:
-        result.blocking.append(f"user need {uid} not verified by any passing Allure test")
-
-    prefixes = {uid.split("-")[0] for uid in sdd_ids}
-    for tag in report.orphan_ids:
-        if tag.split("-")[0] in prefixes:
-            result.warnings.append(f"Allure result tag {tag} matches no SDD user need")
-
+    result.blocking += _verification_messages(report)
+    result.warnings += [
+        f"Allure result tag {tag} matches no SDD user need"
+        for tag in _relevant_orphans(report.orphan_ids, sdd_ids)
+    ]
     return result
 
 

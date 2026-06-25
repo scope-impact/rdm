@@ -15,16 +15,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.util import git_run as _git
+
 HOOK = Path(__file__).resolve().parents[1] / "rdm" / "hook_files" / "pre-commit"
-
-
-def _git(repo: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-    )
 
 
 def _run_hook(repo: Path, **env_overrides: str) -> int:

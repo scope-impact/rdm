@@ -8,7 +8,6 @@ backlog/implementation tasks.
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 from rdm.story_audit.design_gate import (
@@ -22,8 +21,8 @@ from rdm.story_audit.design_gate import (
 )
 from rdm.record.sdd import SDD_DOC
 from rdm.record.sdd import user_need_ids as sdd_user_need_ids
-
-COMPLETE_DOC = "# Design Input\n\nThe inputs are defined and approved.\n"
+from tests.util import COMPLETE_DOC
+from tests.util import git_run as _git
 
 
 def _sdd(user_needs: list[str]) -> str:
@@ -44,15 +43,6 @@ def _proj(tmp_path: Path, user_needs: list[str], allure_ids: list[str]) -> Path:
         body += f'@allure.story("{aid}")\ndef test_{i}(): pass\n'
     (tests / "test_feature.py").write_text(body)
     return proj / "dhf"
-
-
-def _git(repo: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-    )
 
 
 def _git_dhf(tmp_path: Path, commit: bool) -> Path:

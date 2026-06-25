@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from rdm.record.allure import (
@@ -12,12 +11,7 @@ from rdm.record.allure import (
     parse_results,
     reconcile,
 )
-
-
-def _result(results_dir: Path, name: str, status: str, *user_need_ids: str) -> None:
-    labels = [{"name": "story", "value": uid} for uid in user_need_ids]
-    payload = {"name": name, "status": status, "labels": labels}
-    (results_dir / f"{name}-result.json").write_text(json.dumps(payload))
+from tests.util import write_allure_result as _result
 
 
 class TestParseResults:
