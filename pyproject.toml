@@ -35,6 +35,10 @@ dependencies = [
 github = ["pygithub==2.8.1"]
 story-audit = ["pydantic==2.12.5", "duckdb==1.4.3"]
 analytics = ["duckdb==1.4.3"]
+# Playwright for the usability-persona skill (AI-persona usability validation).
+# Browsers are provided by the environment; if the preinstalled browser version
+# differs, launch with executable_path (see examples/.../app/run_persona_demo.py).
+validation = ["playwright==1.60.0"]
 # Project-management pipeline (Backlog.md -> GitHub Issues/Projects, DuckDB
 # analytics). This is an OPTIONAL, detachable layer that operates on PLANNING
 # artifacts, not the system of record (SDD + Allure + git). RDM's record/render

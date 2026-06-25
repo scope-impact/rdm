@@ -16,3 +16,6 @@ dist
 var
 *.duckdb
 **/release/
+
+# Generated AI-persona usability evidence (produced by the usability-persona skill)
+**/persona-results/*-persona.json

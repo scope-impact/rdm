@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VitalView</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; color: #1a2233; }
+  header { background: #14233b; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+  main { padding: 20px; max-width: 900px; margin: 0 auto; }
+  .hidden { display: none; }
+  button { font: inherit; padding: 8px 14px; border-radius: 6px; border: 1px solid #14233b; background: #14233b; color: #fff; cursor: pointer; }
+  input { font: inherit; padding: 8px; border: 1px solid #aab; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e2e6ee; }
+  tr.patient { cursor: pointer; }
+  tr.patient:hover { background: #f3f6fb; }
+  .alert-banner { background: #b3261e; color: #fff; padding: 12px 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .vital { display: inline-block; min-width: 120px; padding: 12px; margin: 6px; border: 1px solid #e2e6ee; border-radius: 8px; }
+  .vital .num { font-size: 28px; font-weight: 700; }
+  .crit { color: #b3261e; }
+  .ack { background: #fff; color: #b3261e; border-color: #fff; }
+  .link { background: none; border: none; color: #2257c5; text-decoration: underline; padding: 0; cursor: pointer; }
+  .muted { color: #66708a; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <strong>VitalView</strong>
+  <span id="who" class="muted"></span>
+</header>
+<main>
+
+  <!-- Sign in -->
+  <section id="login">
+    <h1>Sign in</h1>
+    <p class="muted">Demo: any username, password <code>demo</code>.</p>
+    <p><label>Username<br /><input id="username" name="username" /></label></p>
+    <p><label>Password<br /><input id="password" name="password" type="password" /></label></p>
+    <p><button id="signin">Sign in</button></p>
+    <p id="loginerr" class="crit hidden">Incorrect password.</p>
+  </section>
+
+  <!-- Patient list -->
+  <section id="patients" class="hidden">
+    <h1>Patients</h1>
+    <!-- Note: the filter is labelled "Filter", not "Search" - minor finding bait. -->
+    <p><input id="filter" placeholder="Filter…" aria-label="Filter patients" /></p>
+    <table>
+      <thead><tr><th>Bed</th><th>Name</th><th>MRN</th><th>Status</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+
+  <!-- Patient detail -->
+  <section id="detail" class="hidden">
+    <p><button id="back" class="link">&larr; Back to patients</button></p>
+    <h1 id="pname"></h1>
+    <div id="alert" class="alert-banner hidden">
+      <span id="alerttext"></span>
+      <!-- Acknowledge is in the banner, icon-light label -->
+      <button id="ack" class="ack">Ack</button>
+    </div>
+    <div id="vitals"></div>
+    <p id="ackdone" class="muted hidden">Alert acknowledged.</p>
+  </section>
+
+</main>
+<script>
+  const PATIENTS = [
+    { bed: "ICU-1", name: "A. Bauer", mrn: "MRN-3382", spo2: 97, hr: 78, crit: false },
+    { bed: "ICU-2", name: "C. Diaz", mrn: "MRN-2910", spo2: 83, hr: 122, crit: true },
+    { bed: "ICU-3", name: "E. Fischer", mrn: "MRN-4471", spo2: 96, hr: 81, crit: false },
+  ];
+  const $ = (id) => document.getElementById(id);
+
+  $("signin").onclick = () => {
+    if ($("password").value !== "demo") { $("loginerr").classList.remove("hidden"); return; }
+    $("who").textContent = "Dr. " + ($("username").value || "user");
+    $("login").classList.add("hidden");
+    $("patients").classList.remove("hidden");
+    renderRows("");
+  };
+
+  function renderRows(q) {
+    const rows = $("rows");
+    rows.innerHTML = "";
+    PATIENTS.filter(p => (p.name + p.mrn + p.bed).toLowerCase().includes(q.toLowerCase()))
+      .forEach(p => {
+        const tr = document.createElement("tr");
+        tr.className = "patient";
+        tr.innerHTML = `<td>${p.bed}</td><td>${p.name}</td><td>${p.mrn}</td>` +
+          `<td class="${p.crit ? "crit" : ""}">${p.crit ? "CRITICAL" : "stable"}</td>`;
+        tr.onclick = () => openPatient(p);
+        rows.appendChild(tr);
+      });
+  }
+  $("filter").oninput = (e) => renderRows(e.target.value);
+
+  function openPatient(p) {
+    $("patients").classList.add("hidden");
+    $("detail").classList.remove("hidden");
+    $("pname").textContent = `${p.name} (${p.bed})`;
+    $("ackdone").classList.add("hidden");
+    const a = $("alert");
+    if (p.crit) {
+      a.classList.remove("hidden");
+      $("alerttext").textContent = `CRITICAL: SpO2 ${p.spo2}% — below safe limit`;
+      $("ack").onclick = () => { a.classList.add("hidden"); $("ackdone").classList.remove("hidden"); };
+    } else {
+      a.classList.add("hidden");
+    }
+    $("vitals").innerHTML =
+      `<div class="vital"><div class="muted">SpO2</div><div class="num ${p.crit ? "crit" : ""}">${p.spo2}%</div></div>` +
+      `<div class="vital"><div class="muted">Heart rate</div><div class="num">${p.hr}</div></div>`;
+  }
+  $("back").onclick = () => { $("detail").classList.add("hidden"); $("patients").classList.remove("hidden"); };
+</script>
+</body>
+</html>
