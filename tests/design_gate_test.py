@@ -14,14 +14,14 @@ from pathlib import Path
 from rdm.story_audit.design_gate import (
     DESIGN_INPUT_DOC,
     DESIGN_REVIEW_DOC,
-    SDD_DOC,
     allure_tag_ids,
     check_artifact,
     has_uncommitted_changes,
     run_design_gate,
-    sdd_user_need_ids,
     story_design_gate_command,
 )
+from rdm.record.sdd import SDD_DOC
+from rdm.record.sdd import user_need_ids as sdd_user_need_ids
 
 COMPLETE_DOC = "# Design Input\n\nThe inputs are defined and approved.\n"
 

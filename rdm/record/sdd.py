@@ -82,3 +82,59 @@ def user_needs_from_doc(doc_path: Path) -> set[str]:
         elif not isinstance(item, dict) and str(item).strip():
             ids.add(str(item).strip())
     return ids
+
+
+def find_sdds(dhf_dir: Path) -> list[Path]:
+    """Discover SDD documents under a DHF.
+
+    A markdown file is treated as an SDD when any of these hold (the project may
+    have many SDDs, one per bounded context):
+
+    - it lives under a folder named ``sdd`` (case-insensitive), or
+    - its filename stem starts or ends with ``sdd`` (case-insensitive), e.g.
+      ``sdd-auth.md`` / ``auth-sdd.md`` / ``sdd.md``, or
+    - it is the legacy ``software_design_specification.md``.
+    """
+    found: set[Path] = set()
+    for md in dhf_dir.rglob("*.md"):
+        stem = md.stem.lower()
+        in_sdd_folder = any(part.lower() == "sdd" for part in md.parent.parts)
+        if in_sdd_folder or stem.startswith("sdd") or stem.endswith("sdd") or md.name == SDD_DOC:
+            found.add(md)
+    return sorted(found)
+
+
+def satisfies_for(sdd_path: Path) -> set[str]:
+    """Return the user-need IDs a single SDD declares it ``satisfies``."""
+    if not sdd_path.exists():
+        return set()
+    frontmatter = parse_frontmatter(sdd_path.read_text(encoding="utf-8"))
+    value = frontmatter.get("satisfies")
+    if not isinstance(value, list):
+        return set()
+    return {str(v).strip() for v in value if str(v).strip()}
+
+
+def satisfies_by_sdd(dhf_dir: Path) -> dict[Path, set[str]]:
+    """Map each discovered SDD to the user-need IDs it ``satisfies``."""
+    return {sdd: satisfies_for(sdd) for sdd in find_sdds(dhf_dir)}
+
+
+def satisfied_user_needs(dhf_dir: Path) -> set[str]:
+    """Union of user needs addressed (via ``satisfies``) across all SDDs."""
+    ids: set[str] = set()
+    for refs in satisfies_by_sdd(dhf_dir).values():
+        ids |= refs
+    return ids
+
+
+def registry_user_needs(dhf_dir: Path) -> set[str]:
+    """Union of ``user_needs`` declared in any document frontmatter under the DHF.
+
+    Per ADR 0001 the registry lives in the V&V plan, but this finds it wherever
+    it is authored (and remains compatible with declaring it in an SDD).
+    """
+    ids: set[str] = set()
+    for md in dhf_dir.rglob("*.md"):
+        ids |= user_needs_from_doc(md)
+    return ids

@@ -2,16 +2,18 @@
 Design-controls gate: ensure design input and design review exist and are
 approved before design work transitions into backlog/implementation tasks.
 
-Traceability model enforced here:
+Traceability model enforced here (ADR 0001):
 
-    Design Input  ->  User Need (captured in the SDD)
-                      Acceptance Criteria (captured as Allure tags on tests)
+    User Need (registry: V&V plan)  <- satisfies -  SDD (per bounded context)
+                                                      |
+                                       Acceptance Criteria (Allure tags on tests)
 
-The Software Design Specification (SDD) and the Allure tags are the sources of
-truth. The gate verifies that, for the design history file (DHF), both a Design
-Input document and a Design Review document exist and have been
-completed/approved. As a soft check it also warns when the SDD source of truth
-is missing.
+The gate verifies that, for the design history file (DHF), both a Design Input
+document and a Design Review document exist and have been completed/approved
+(committed) in version control. As soft checks it reconciles the user-need
+registry against the SDDs that `satisfy` it (SDDs are discovered as multiple
+documents, under an `sdd/` folder or named `*sdd*`) and against the Allure tags
+on the tests.
 
 Usage:
     rdm story design-gate                       # check ./dhf
@@ -32,9 +34,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.record import allure
-from rdm.record.sdd import SDD_DOC
+from rdm.record.sdd import (
+    find_sdds,
+    registry_user_needs,
+    satisfies_by_sdd,
+)
 from rdm.record.sdd import find_dhf_doc as _find_doc
-from rdm.record.sdd import user_need_ids as sdd_user_need_ids
 from rdm.story_audit.audit import ALLURE_PATTERN
 
 # Documents the gate requires, by id/basename. The basename matches the
@@ -171,18 +176,28 @@ def check_artifact(dhf_dir: Path, basename: str, name: str) -> ArtifactCheck:
     )
 
 
-def _source_of_truth_warnings(dhf_dir: Path) -> list[str]:
-    """Return soft warnings about missing traceability sources of truth.
+def _sdd_coverage_warnings(dhf_dir: Path) -> list[str]:
+    """Reconcile the user-need registry against the SDDs that ``satisfy`` it.
 
-    The Software Design Specification (SDD) is the source of truth for user
-    needs (acceptance criteria are captured as Allure tags on the verifying
-    tests, which live in the test suite rather than the DHF). A missing or
-    placeholder SDD is reported as a warning, not a hard failure.
+    SDDs are discovered as multiple documents (under an ``sdd`` folder or named
+    ``*sdd*``); each declares the user needs it ``satisfies``. Warns when no SDD
+    is found, when a registered user need is addressed by no SDD, or when an SDD
+    references a user need that is not in the registry. Warnings only.
     """
-    sdd = check_artifact(dhf_dir, SDD_DOC, "Software Design Specification")
-    if sdd.ok:
-        return []
-    return [f"Software Design Specification (user-need source of truth): {'; '.join(sdd.reasons)}"]
+    sdds = find_sdds(dhf_dir)
+    if not sdds:
+        return ["no SDD found (expected SDDs under an `sdd/` folder or named *sdd*)"]
+
+    warnings: list[str] = []
+    registry = registry_user_needs(dhf_dir)
+    satisfied: set[str] = set()
+    for sdd, refs in satisfies_by_sdd(dhf_dir).items():
+        satisfied |= refs
+        for ref in sorted(refs - registry):
+            warnings.append(f"{sdd.name} satisfies unknown user need {ref}")
+    for need in sorted(registry - satisfied):
+        warnings.append(f"user need {need} is not addressed by any SDD (no `satisfies`)")
+    return warnings
 
 
 def _find_tests_dir(dhf_dir: Path) -> Path | None:
@@ -214,7 +229,7 @@ def _traceability_warnings(dhf_dir: Path) -> list[str]:
     user-need IDs (share a declared prefix) but match no SDD user need. These
     are warnings only -- see GateResult.passed.
     """
-    sdd_ids = sdd_user_need_ids(dhf_dir)
+    sdd_ids = registry_user_needs(dhf_dir)
     if not sdd_ids:
         # Nothing declared yet; the SDD source-of-truth warning already covers
         # a missing or unpopulated SDD.
@@ -257,7 +272,7 @@ def _verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[str]
     design gate runs before implementation; verification status is informational
     here and would be enforced at a later release gate.
     """
-    sdd_ids = sdd_user_need_ids(dhf_dir)
+    sdd_ids = registry_user_needs(dhf_dir)
     if not sdd_ids:
         return []
 
@@ -292,7 +307,7 @@ def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> Ga
     result.artifacts.append(
         check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review")
     )
-    result.task_warnings = _source_of_truth_warnings(dhf_dir)
+    result.task_warnings = _sdd_coverage_warnings(dhf_dir)
 
     if allure_results_dir is not None and Path(allure_results_dir).exists():
         result.verification_warnings = _verification_warnings(dhf_dir, Path(allure_results_dir))
@@ -396,7 +411,7 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
                     f"design control not met -- {artifact.name}: {'; '.join(artifact.reasons)}"
                 )
 
-    sdd_ids = sdd_user_need_ids(dhf_dir)
+    sdd_ids = registry_user_needs(dhf_dir)
     if not sdd_ids:
         result.blocking.append("SDD declares no user needs (nothing to verify)")
         return result
