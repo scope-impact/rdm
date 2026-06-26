@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-9",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts section numbering ('## 1.1 hello'), auditor-note exclusion ([[...]] removed), and vocabulary expansion via the real extensions; a no-op extension fails each assert.",
+  "test_hash": "sha256:a167aab491bf761431779c20965e78087e6bee714f7133494e8438a29e1469c1",
+  "reviewed_tests": [
+    "test_markdown_post_processing"
+  ]
+}

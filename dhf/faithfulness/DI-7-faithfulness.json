@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-7",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "renders a template interpolating device.name/version from the data context and asserts the bound output; a render that ignored the context would fail it.",
+  "test_hash": "sha256:2014760ec57d95cfa92849e9ddd27baba18242128acb1a1badb2c53d56e7d9fb",
+  "reviewed_tests": [
+    "test_renders_template_against_data_context"
+  ]
+}
