@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-16",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts collect_from_lines extracts the named multi-line snippet ('hello\\nworld') and yields {} when no RDOC markers are present; a collector that mis-keyed or ignored delimiters fails it.",
+  "test_hash": "sha256:d1e4070a82b716cb64ea6ec42f7b36c65ea60ab1afe0189e07f1856394eadc43",
+  "reviewed_tests": [
+    "test_collects_delimited_code_snippets"
+  ]
+}
