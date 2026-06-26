@@ -242,7 +242,7 @@ def _verification_messages(report) -> list[str]:
     design gate's warnings and the release gate's blocking list)."""
     messages = [
         f"design input {uid} FAILED verification "
-        f"({report.by_user_need[uid].failed} failing test(s))"
+        f"({report.by_id[uid].failed} failing test(s))"
         for uid in report.failed
     ]
     messages += [
@@ -262,7 +262,7 @@ def _faithfulness_messages(report: faithfulness.FaithfulnessReport) -> list[str]
     ]
     messages += [
         f"design input {uid} FAILED faithfulness review "
-        f"({report.by_user_need[uid].rationale or 'test does not verify the input'})"
+        f"({report.by_id[uid].rationale or 'test does not verify the input'})"
         for uid in report.unfaithful
     ]
     messages += [
@@ -271,6 +271,14 @@ def _faithfulness_messages(report: faithfulness.FaithfulnessReport) -> list[str]
         for uid in report.stale
     ]
     return messages
+
+
+# Console label per faithfulness status (default ``[????]`` covers UNREVIEWED).
+_FAITHFULNESS_MARKS = {
+    faithfulness.FAITHFUL: "[OK]  ",
+    faithfulness.UNFAITHFUL: "[FAIL]",
+    faithfulness.STALE: "[STALE]",
+}
 
 
 def faithfulness_dir_for(dhf_dir: Path, faithfulness_dir: Path | None) -> Path:
@@ -482,8 +490,13 @@ def run_release_gate(
     result.blocking += _verification_messages(report)
 
     # Verified (the test passed) is necessary but not sufficient: the test must
-    # also be independently confirmed to actually verify the input.
-    faith = run_faithfulness_gate(dhf_dir, faithfulness_dir)
+    # also be independently confirmed to actually verify the input. Reuse the
+    # `inputs` already computed above rather than re-walking the DHF.
+    faith = faithfulness.reconcile(
+        inputs,
+        faithfulness_dir_for(dhf_dir, faithfulness_dir),
+        allure.find_tests_dir(dhf_dir),
+    )
     result.faithful = faith.faithful
     result.blocking += _faithfulness_messages(faith)
     result.warnings += [
@@ -579,16 +592,10 @@ def story_faithfulness_command(
     print(f"DHF: {dhf}")
     print(f"Verdicts: {vdir} ({report.verdicts_found} found)\n")
 
-    by_di = report.by_user_need
-    for di_id in sorted(by_di):
-        agg = by_di[di_id]
-        marks = {
-            faithfulness.FAITHFUL: "[OK]  ",
-            faithfulness.UNFAITHFUL: "[FAIL]",
-            faithfulness.STALE: "[STALE]",
-            faithfulness.UNREVIEWED: "[????]",
-        }
-        print(f"  {marks.get(agg.status, '[????]')} {di_id}: {agg.status}"
+    by_id = report.by_id
+    for di_id in sorted(by_id):
+        agg = by_id[di_id]
+        print(f"  {_FAITHFULNESS_MARKS.get(agg.status, '[????]')} {di_id}: {agg.status}"
               + (f" -- {agg.reviewer}" if agg.reviewer else ""))
         if agg.status != faithfulness.FAITHFUL and agg.rationale:
             print(f"            {agg.rationale}")

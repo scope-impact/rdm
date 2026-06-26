@@ -37,18 +37,18 @@ class TestReconcile:
     def test_clean_when_completed_no_issues(self, tmp_path: Path) -> None:
         _run(tmp_path, "a", "UN-001", "success")
         report = reconcile({"UN-001"}, tmp_path)
-        assert report.by_user_need["UN-001"].status == CLEAN
+        assert report.by_id["UN-001"].status == CLEAN
 
     def test_issues_when_problems_observed(self, tmp_path: Path) -> None:
         _run(tmp_path, "a", "UN-001", "success", issues=2)
         report = reconcile({"UN-001"}, tmp_path)
-        need = report.by_user_need["UN-001"]
+        need = report.by_id["UN-001"]
         assert need.status == ISSUES and len(need.issues) == 2
 
     def test_failed_dominates(self, tmp_path: Path) -> None:
         _run(tmp_path, "ok", "UN-001", "success")
         _run(tmp_path, "bad", "UN-001", "abandoned")
-        assert reconcile({"UN-001"}, tmp_path).by_user_need["UN-001"].status == FAILED
+        assert reconcile({"UN-001"}, tmp_path).by_id["UN-001"].status == FAILED
 
     def test_not_run_when_no_evidence(self, tmp_path: Path) -> None:
         report = reconcile({"UN-001"}, tmp_path)
@@ -63,7 +63,7 @@ class TestReconcile:
     def test_clean_is_not_a_pass_claim(self, tmp_path: Path) -> None:
         # "clean" must be a distinct status, never conflated with verified/validated.
         _run(tmp_path, "a", "UN-001", "success")
-        assert reconcile({"UN-001"}, tmp_path).by_user_need["UN-001"].status == CLEAN
+        assert reconcile({"UN-001"}, tmp_path).by_id["UN-001"].status == CLEAN
         assert CLEAN == "clean"
 
 

@@ -15,12 +15,12 @@ result says whether that test actually *passed*.
 
 from __future__ import annotations
 
-import json
+import ast
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record.reconcile import StatusReportMixin, aggregate_by_id
+from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # Matches @allure.story("ID") / @allure.feature("ID"). Single home for the
 # pattern (story_audit.audit re-exports it); group(2) is the ID.
@@ -67,7 +67,7 @@ class UserNeedVerification:
 
 @dataclass
 class VerificationReport(StatusReportMixin):
-    by_user_need: dict[str, UserNeedVerification] = field(default_factory=dict)
+    by_id: dict[str, UserNeedVerification] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     results_found: int = 0
 
@@ -84,40 +84,32 @@ class VerificationReport(StatusReportMixin):
         return self._ids_with(UNTESTED)
 
 
+def _build_result(data: dict, filename: str) -> TestResult:
+    """Build one ``TestResult`` from a parsed Allure result file."""
+    ids: list[str] = []
+    outputs: list[str] = []
+    for label in data.get("labels", []) or []:
+        if not isinstance(label, dict):
+            continue
+        value = str(label.get("value", "")).strip()
+        if not value:
+            continue
+        if label.get("name") in USER_NEED_LABELS:
+            ids.append(value)
+        elif label.get("name") == "output":
+            outputs.append(value)
+    return TestResult(
+        name=str(data.get("name", "")),
+        status=str(data.get("status", "unknown")),
+        user_need_ids=ids,
+        source=filename,
+        outputs=outputs,
+    )
+
+
 def parse_results(results_dir: Path) -> list[TestResult]:
     """Parse all ``*-result.json`` files in an Allure results directory."""
-    results: list[TestResult] = []
-    if not results_dir.exists():
-        return results
-    for result_file in sorted(results_dir.glob("*-result.json")):
-        try:
-            data = json.loads(result_file.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        if not isinstance(data, dict):
-            continue
-        ids: list[str] = []
-        outputs: list[str] = []
-        for label in data.get("labels", []) or []:
-            if not isinstance(label, dict):
-                continue
-            value = str(label.get("value", "")).strip()
-            if not value:
-                continue
-            if label.get("name") in USER_NEED_LABELS:
-                ids.append(value)
-            elif label.get("name") == "output":
-                outputs.append(value)
-        results.append(
-            TestResult(
-                name=str(data.get("name", "")),
-                status=str(data.get("status", "unknown")),
-                user_need_ids=ids,
-                source=result_file.name,
-                outputs=outputs,
-            )
-        )
-    return results
+    return load_json_records(results_dir, "-result.json", _build_result)
 
 
 def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
@@ -151,7 +143,7 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
             return VERIFIED
         return UNTESTED
 
-    by_user_need, orphan_ids = aggregate_by_id(
+    by_id, orphan_ids = aggregate_by_id(
         sdd_ids,
         results,
         ids_of=lambda result: result.user_need_ids,
@@ -160,7 +152,7 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
         status=_status,
     )
     return VerificationReport(
-        by_user_need=by_user_need,
+        by_id=by_id,
         orphan_ids=orphan_ids,
         results_found=len(results),
     )
@@ -198,3 +190,45 @@ def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
         for match in ALLURE_PATTERN.finditer(content):
             refs.setdefault(match.group(2), []).append(str(py_file))
     return refs
+
+
+def _decorator_tag_id(decorator: ast.expr) -> str | None:
+    """Return the ID from an ``@allure.story("ID")`` / ``.feature`` decorator node."""
+    if not isinstance(decorator, ast.Call) or not decorator.args:
+        return None
+    func = decorator.func
+    if not isinstance(func, ast.Attribute) or func.attr not in USER_NEED_LABELS:
+        return None
+    first = decorator.args[0]
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        return first.value.strip()
+    return None
+
+
+def scan_tagged_sources(tests_dir: Path | None) -> dict[str, list[str]]:
+    """Map each @allure story/feature ID to the *source* of the test function(s)
+    tagged with it (the AST counterpart of ``scan_source_tags``).
+
+    Captures the function body, not just the file, so a faithfulness verdict
+    pinned to this source only re-opens when the *tagged* function changes -- not
+    when an unrelated function in the same file is edited.
+    """
+    sources: dict[str, list[str]] = {}
+    if tests_dir is None or not tests_dir.exists():
+        return sources
+    for py_file in sorted(tests_dir.rglob("test_*.py")):
+        try:
+            text = py_file.read_text(encoding="utf-8", errors="ignore")
+            tree = ast.parse(text)
+        except (OSError, SyntaxError):
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            ids = [i for d in node.decorator_list if (i := _decorator_tag_id(d))]
+            if not ids:
+                continue
+            segment = ast.get_source_segment(text, node) or ""
+            for tag_id in ids:
+                sources.setdefault(tag_id, []).append(segment)
+    return sources

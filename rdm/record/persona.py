@@ -16,11 +16,10 @@ record. See docs/ai-persona-usability-validation.md.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record.reconcile import StatusReportMixin, aggregate_by_id
+from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # A run whose outcome is one of these counts as a failed attempt at the journey.
 _FAILURE_OUTCOMES = {"failure", "failed", "blocked", "abandoned"}
@@ -57,7 +56,7 @@ class NeedValidation:
 
 @dataclass
 class ValidationReport(StatusReportMixin):
-    by_user_need: dict[str, NeedValidation] = field(default_factory=dict)
+    by_id: dict[str, NeedValidation] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     runs_found: int = 0
 
@@ -78,32 +77,25 @@ class ValidationReport(StatusReportMixin):
         return self._ids_with(CLEAN)
 
 
+def _build_run(data: dict, filename: str) -> PersonaRun | None:
+    """Build one ``PersonaRun`` from a parsed ``*-persona.json`` file (skip if it
+    names no user need)."""
+    uid = str(data.get("user_need", "")).strip()
+    if not uid:
+        return None
+    issues = data.get("usability_issues") or []
+    return PersonaRun(
+        persona=str(data.get("persona", "")),
+        user_need=uid,
+        outcome=str(data.get("outcome", "")).lower(),
+        usability_issues=[i for i in issues if isinstance(i, dict)],
+        source=filename,
+    )
+
+
 def parse_runs(results_dir: Path) -> list[PersonaRun]:
     """Parse all ``*-persona.json`` run files in a results directory."""
-    runs: list[PersonaRun] = []
-    if not results_dir.exists():
-        return runs
-    for run_file in sorted(results_dir.glob("*-persona.json")):
-        try:
-            data = json.loads(run_file.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        if not isinstance(data, dict):
-            continue
-        uid = str(data.get("user_need", "")).strip()
-        if not uid:
-            continue
-        issues = data.get("usability_issues") or []
-        runs.append(
-            PersonaRun(
-                persona=str(data.get("persona", "")),
-                user_need=uid,
-                outcome=str(data.get("outcome", "")).lower(),
-                usability_issues=[i for i in issues if isinstance(i, dict)],
-                source=run_file.name,
-            )
-        )
-    return runs
+    return load_json_records(results_dir, "-persona.json", _build_run)
 
 
 def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
@@ -133,7 +125,7 @@ def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
             return ISSUES
         return CLEAN
 
-    by_user_need, orphan_ids = aggregate_by_id(
+    by_id, orphan_ids = aggregate_by_id(
         user_need_ids,
         runs,
         ids_of=lambda run: [run.user_need],
@@ -142,7 +134,7 @@ def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
         status=_status,
     )
     return ValidationReport(
-        by_user_need=by_user_need,
+        by_id=by_id,
         orphan_ids=orphan_ids,
         runs_found=len(runs),
     )

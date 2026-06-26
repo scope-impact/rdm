@@ -11,9 +11,35 @@ so it stays usable from the lightweight record layer.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Callable, Iterable, TypeVar
 
 A = TypeVar("A")
+
+
+def load_json_records(directory: Path, suffix: str, build: Callable[[dict, str], object | None]) -> list:
+    """Load ``*<suffix>`` JSON files from a directory into records.
+
+    Centralizes the glob + safe-decode + dict-check skeleton shared by every
+    record ingester (Allure results, persona runs, faithfulness verdicts). For
+    each well-formed object, ``build(data, filename)`` returns a record (or
+    ``None`` to skip it). A missing directory yields an empty list.
+    """
+    records: list = []
+    if not directory.exists():
+        return records
+    for path in sorted(directory.glob(f"*{suffix}")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        record = build(data, path.name)
+        if record is not None:
+            records.append(record)
+    return records
 
 
 def aggregate_by_id(
@@ -64,10 +90,11 @@ def relevant_orphans(orphans: Iterable[str], declared_ids: set[str]) -> list[str
 
 
 class StatusReportMixin:
-    """Provides ``_ids_with`` for reports whose ``by_user_need`` maps IDs to
-    aggregates carrying a ``status`` attribute."""
+    """Provides ``_ids_with`` for reports whose ``by_id`` maps declared IDs to
+    aggregates carrying a ``status`` attribute. The IDs may be user needs, design
+    inputs, etc. -- the mixin is agnostic."""
 
-    by_user_need: dict
+    by_id: dict
 
     def _ids_with(self, status: str) -> list[str]:
-        return ids_with_status(self.by_user_need, status)
+        return ids_with_status(self.by_id, status)

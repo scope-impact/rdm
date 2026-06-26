@@ -29,7 +29,7 @@ def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
     report = allure.reconcile(di_ids, allure_results_dir)
 
     def _row(di: dict) -> dict:
-        verification = report.by_user_need[di["id"]]
+        verification = report.by_id[di["id"]]
         return {
             "design_input": di["id"],
             "text": di["text"],

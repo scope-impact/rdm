@@ -47,7 +47,7 @@ def persona_command(
     if report.clean:
         print(f"  [clean]   no issues observed: {', '.join(report.clean)}")
     for uid in report.with_issues:
-        need = report.by_user_need[uid]
+        need = report.by_id[uid]
         print(f"  [issues]  {uid}: {len(need.issues)} usability issue(s) observed")
     for uid in report.failed:
         print(f"  [FAILED]  {uid}: a persona could not complete the journey")

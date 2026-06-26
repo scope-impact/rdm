@@ -18,38 +18,31 @@ Verdicts are produced as ``*-faithfulness.json`` records:
 
     {
       "design_input": "DI-1",
-      "verdict": "faithful",                 // faithful | unfaithful | weak
+      "verdict": "faithful",                 // faithful, else treated as not faithful
       "reviewer": "claude (independent of author)",
       "rationale": "exercises the real ingest path and asserts the grouped shape",
-      "test_hash": "sha256:…",               // hash of the tagged test source at review
-      "reviewed_tests": ["test_compile_verification_from_the_record"]
+      "test_hash": "sha256:…"                // hash of the tagged test source at review
     }
 
 This module ingests them and the release gate enforces them. Dependency-light
-(stdlib only) so it stays usable from the lightweight record layer.
+(stdlib + the shared record core) so it stays usable from the lightweight record
+layer.
 """
 
 from __future__ import annotations
 
-import ast
 import hashlib
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record.reconcile import StatusReportMixin, aggregate_by_id
+from rdm.record.allure import scan_tagged_sources
+from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # Faithfulness statuses.
 FAITHFUL = "faithful"
-UNFAITHFUL = "unfaithful"   # reviewed and judged not to verify the input (or "weak")
+UNFAITHFUL = "unfaithful"   # reviewed but the test does not (or only weakly) verify the input
 STALE = "stale"             # the verifying test changed since the verdict was made
 UNREVIEWED = "unreviewed"   # no faithfulness verdict on record
-
-# The verdict value a reviewer must record for the input to count as faithful.
-_FAITHFUL_VALUES = {FAITHFUL}
-
-# @allure.story("…") / @allure.feature("…") decorator names that carry the DI id.
-_TAG_ATTRS = ("story", "feature")
 
 
 @dataclass
@@ -61,7 +54,6 @@ class Verdict:
     reviewer: str = ""
     rationale: str = ""
     test_hash: str = ""
-    reviewed_tests: list[str] = field(default_factory=list)
     source: str = ""
 
 
@@ -75,13 +67,11 @@ class DesignInputFaithfulness:
     reviewer: str = ""
     rationale: str = ""
     reviewed_hash: str = ""
-    current_hash: str = ""
-    reviewed_tests: list[str] = field(default_factory=list)
 
 
 @dataclass
 class FaithfulnessReport(StatusReportMixin):
-    by_user_need: dict[str, DesignInputFaithfulness] = field(default_factory=dict)
+    by_id: dict[str, DesignInputFaithfulness] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     verdicts_found: int = 0
 
@@ -102,47 +92,6 @@ class FaithfulnessReport(StatusReportMixin):
         return self._ids_with(UNREVIEWED)
 
 
-def _allure_tag_id(decorator: ast.expr) -> str | None:
-    """Return the DI id from an ``@allure.story("ID")`` / ``.feature`` decorator."""
-    if not isinstance(decorator, ast.Call) or not decorator.args:
-        return None
-    func = decorator.func
-    if not isinstance(func, ast.Attribute) or func.attr not in _TAG_ATTRS:
-        return None
-    first = decorator.args[0]
-    if isinstance(first, ast.Constant) and isinstance(first.value, str):
-        return first.value.strip()
-    return None
-
-
-def tagged_test_sources(tests_dir: Path | None) -> dict[str, list[str]]:
-    """Map each design-input id to the source of the test function(s) tagged with it.
-
-    Uses the AST so it captures the *function body* (what actually gets verified),
-    not merely the file -- editing an unrelated test in the same file does not
-    restale a verdict, but weakening the tagged function does.
-    """
-    sources: dict[str, list[str]] = {}
-    if tests_dir is None or not tests_dir.exists():
-        return sources
-    for py_file in sorted(tests_dir.rglob("test_*.py")):
-        try:
-            text = py_file.read_text(encoding="utf-8", errors="ignore")
-            tree = ast.parse(text)
-        except (OSError, SyntaxError):
-            continue
-        for node in ast.walk(tree):
-            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                continue
-            ids = [i for d in node.decorator_list if (i := _allure_tag_id(d))]
-            if not ids:
-                continue
-            segment = ast.get_source_segment(text, node) or ""
-            for di_id in ids:
-                sources.setdefault(di_id, []).append(segment)
-    return sources
-
-
 def hash_for(di_text: str, test_sources: list[str]) -> str:
     """The verdict hash for a design input: its text + its tagged test source(s).
 
@@ -156,38 +105,26 @@ def hash_for(di_text: str, test_sources: list[str]) -> str:
 
 def current_hashes(design_inputs: list[dict], tests_dir: Path | None) -> dict[str, str]:
     """The hash each declared design input's verdict must match to be current."""
-    sources = tagged_test_sources(tests_dir)
+    sources = scan_tagged_sources(tests_dir)
     return {di["id"]: hash_for(di.get("text", ""), sources.get(di["id"], [])) for di in design_inputs}
 
 
 def parse_verdicts(verdicts_dir: Path) -> list[Verdict]:
     """Parse all ``*-faithfulness.json`` files in a directory."""
-    verdicts: list[Verdict] = []
-    if not verdicts_dir.exists():
-        return verdicts
-    for vf in sorted(verdicts_dir.glob("*-faithfulness.json")):
-        try:
-            data = json.loads(vf.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        if not isinstance(data, dict):
-            continue
+    def _build(data: dict, filename: str) -> Verdict | None:
         di = str(data.get("design_input", "")).strip()
         if not di:
-            continue
-        reviewed = data.get("reviewed_tests") or []
-        verdicts.append(
-            Verdict(
-                design_input=di,
-                verdict=str(data.get("verdict", "")).strip().lower(),
-                reviewer=str(data.get("reviewer", "")).strip(),
-                rationale=str(data.get("rationale", "")).strip(),
-                test_hash=str(data.get("test_hash", "")).strip(),
-                reviewed_tests=[str(t).strip() for t in reviewed if str(t).strip()],
-                source=vf.name,
-            )
+            return None
+        return Verdict(
+            design_input=di,
+            verdict=str(data.get("verdict", "")).strip().lower(),
+            reviewer=str(data.get("reviewer", "")).strip(),
+            rationale=str(data.get("rationale", "")).strip(),
+            test_hash=str(data.get("test_hash", "")).strip(),
+            source=filename,
         )
-    return verdicts
+
+    return load_json_records(Path(verdicts_dir), "-faithfulness.json", _build)
 
 
 def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | None) -> FaithfulnessReport:
@@ -203,36 +140,32 @@ def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | N
     di_ids = {di["id"] for di in design_inputs}
     expected = current_hashes(design_inputs, tests_dir)
 
-    def _new(di_id: str) -> DesignInputFaithfulness:
-        return DesignInputFaithfulness(design_input=di_id, current_hash=expected.get(di_id, ""))
-
     def _fold(agg: DesignInputFaithfulness, v: Verdict) -> None:
         # Last verdict (sorted by filename) wins; record its content.
         agg.verdict = v.verdict
         agg.reviewer = v.reviewer
         agg.rationale = v.rationale
         agg.reviewed_hash = v.test_hash
-        agg.reviewed_tests = v.reviewed_tests
 
     def _status(agg: DesignInputFaithfulness) -> str:
         if not agg.verdict:
             return UNREVIEWED
-        if agg.verdict not in _FAITHFUL_VALUES:
+        if agg.verdict != FAITHFUL:
             return UNFAITHFUL
-        if agg.reviewed_hash != agg.current_hash:
+        if agg.reviewed_hash != expected.get(agg.design_input, ""):
             return STALE
         return FAITHFUL
 
-    by_di, orphan_ids = aggregate_by_id(
+    by_id, orphan_ids = aggregate_by_id(
         di_ids,
         verdicts,
         ids_of=lambda v: [v.design_input],
-        new=_new,
+        new=DesignInputFaithfulness,
         fold=_fold,
         status=_status,
     )
     return FaithfulnessReport(
-        by_user_need=by_di,
+        by_id=by_id,
         orphan_ids=orphan_ids,
         verdicts_found=len(verdicts),
     )

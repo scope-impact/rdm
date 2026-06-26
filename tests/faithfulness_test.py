@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from rdm.record import faithfulness as f
+from rdm.record.allure import scan_tagged_sources
 
 
 def _di(di_id: str, text: str = "a requirement", traces: list[str] | None = None) -> dict:
@@ -28,19 +29,19 @@ def _tests_dir(tmp_path: Path, *funcs: str) -> Path:
     return t
 
 
-class TestTaggedTestSources:
+class TestScanTaggedSources:
     def test_extracts_function_body_for_tag(self, tmp_path: Path) -> None:
         td = _tests_dir(tmp_path, '@allure.story("DI-1")\ndef test_a():\n    assert 1 == 1')
-        sources = f.tagged_test_sources(td)
+        sources = scan_tagged_sources(td)
         assert "DI-1" in sources
         assert "assert 1 == 1" in sources["DI-1"][0]
 
     def test_ignores_untagged_functions(self, tmp_path: Path) -> None:
         td = _tests_dir(tmp_path, "def test_plain():\n    pass")
-        assert f.tagged_test_sources(td) == {}
+        assert scan_tagged_sources(td) == {}
 
     def test_missing_dir_is_empty(self, tmp_path: Path) -> None:
-        assert f.tagged_test_sources(tmp_path / "nope") == {}
+        assert scan_tagged_sources(tmp_path / "nope") == {}
 
 
 class TestReconcile:

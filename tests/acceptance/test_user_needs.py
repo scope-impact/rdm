@@ -142,7 +142,7 @@ def test_formative_usability_classified(tmp_path: Path) -> None:
                     "usability_issues": [{"severity": "confusion", "step": 1, "note": "x"}]})
     )
     report = persona.reconcile({"UN-001"}, runs)
-    assert report.by_user_need["UN-001"].status == persona.ISSUES
+    assert report.by_id["UN-001"].status == persona.ISSUES
 
 
 @allure.story("DI-6")
