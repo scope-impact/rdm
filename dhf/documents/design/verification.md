@@ -1,10 +1,23 @@
 ---
 id: SDS-VER-001
+kind: design
 context: verification
 satisfies: [UN-003, UN-004]
+design_inputs:
+  - id: DI-4
+    text: "RDM shall reconcile against Allure tags and render a traceability matrix from executed results."
+    traces_to: [UN-004]
 ---
 
 # Verification — Software Design
+
+## Design Inputs
+
+This context owns **DI-4 (traceability)** — reconcile against Allure tags and
+render a traceability matrix from executed results, not hand-maintained tables.
+Refines UN-004.
+
+## Design Outputs
 
 Turns executed test results into verification status and a traceable matrix.
 
@@ -14,8 +27,5 @@ Turns executed test results into verification status and a traceable matrix.
   DHF renders into a traceability matrix (design inputs grouped under the user
   need they trace to; generated, not hand-maintained).
 
-Contributes to **UN-003** (the release gate consumes this) and **UN-004**
-(verification status traceable from executed results). This context realises
-design input **DI-4** (reconcile against Allure tags and render the matrix from
-executed results); its acceptance criteria are verified by `@allure.story("DI-4")`
-tests.
+Contributes to **UN-003** (the release gate consumes this output) and **UN-004**.
+Acceptance criteria are verified by `@allure.story("DI-4")` tests.

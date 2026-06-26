@@ -1,19 +1,20 @@
 """
-Design-controls gate: ensure design input and design review exist and are
-approved before design work transitions into backlog/implementation tasks.
+Design-controls gate: ensure the per-context design document(s) and the design
+review exist and are approved before design work transitions into
+backlog/implementation tasks.
 
 Traceability model enforced here (ADR 0001):
 
-    User Need (registry: V&V plan)  <- satisfies -  SDD (per bounded context)
-                                                      |
-                                       Acceptance Criteria (Allure tags on tests)
+    User Need (registry: V&V plan)  <- satisfies -  design doc (per bounded context)
+                                                      |  declares design inputs
+                                       Design Input  <- @allure.story("DI") -  test
 
-The gate verifies that, for the design history file (DHF), both a Design Input
-document and a Design Review document exist and have been completed/approved
+The gate verifies that, for the design history file (DHF), at least one
+per-context design document (`kind: design`, carrying its design inputs and
+outputs) and a Design Review document exist and have been completed/approved
 (committed) in version control. As soft checks it reconciles the user-need
-registry against the SDDs that `satisfy` it (SDDs are discovered as multiple
-documents, under an `sdd/` folder or named `*sdd*`) and against the Allure tags
-on the tests.
+registry against the design documents that `satisfy` it and against the Allure
+tags on the tests.
 
 Usage:
     rdm story design-gate                       # check ./dhf
@@ -36,17 +37,19 @@ from pathlib import Path
 from rdm.record import allure
 from rdm.record.reconcile import relevant_orphans
 from rdm.record.sdd import (
+    context_of,
     design_input_ids,
     design_inputs,
-    find_sdds,
+    find_design_docs,
+    realises_by_context,
     registry_user_needs,
-    satisfies_by_sdd,
+    satisfies_by_context,
 )
 from rdm.record.sdd import find_dhf_doc as _find_doc
 
-# Documents the gate requires, by id/basename. The basename matches the
-# template filenames installed by `rdm init` (see rdm/init_files/documents/).
-DESIGN_INPUT_DOC = "design_input.md"
+# The design review is a standalone record (§820.30(e)); its basename matches the
+# template installed by `rdm init`. The design inputs and outputs are no longer a
+# separate document -- they live in the per-context design docs (`kind: design`).
 DESIGN_REVIEW_DOC = "design_review.md"
 
 # A document is considered "incomplete" while it still contains scaffold
@@ -130,22 +133,12 @@ def has_uncommitted_changes(path: Path) -> bool | None:
         return None
 
 
-def check_artifact(dhf_dir: Path, basename: str, name: str) -> ArtifactCheck:
-    """Check that a required design document exists, is filled out, and is approved.
+def check_doc_path(path: Path, name: str) -> ArtifactCheck:
+    """Check that a design-control document at ``path`` is filled out and approved.
 
     "Approved" is verified against version control: a document with uncommitted
     changes is not yet approved (see `has_uncommitted_changes`).
     """
-    path = _find_doc(dhf_dir, basename)
-    if path is None:
-        return ArtifactCheck(
-            name=name,
-            path=dhf_dir / "documents" / basename,
-            exists=False,
-            complete=False,
-            reasons=[f"{basename} not found under {dhf_dir}"],
-        )
-
     text = path.read_text(encoding="utf-8")
     reasons: list[str] = []
 
@@ -178,27 +171,69 @@ def check_artifact(dhf_dir: Path, basename: str, name: str) -> ArtifactCheck:
     )
 
 
-def _sdd_coverage_warnings(dhf_dir: Path) -> list[str]:
-    """Reconcile the user-need registry against the SDDs that ``satisfy`` it.
+def check_artifact(dhf_dir: Path, basename: str, name: str) -> ArtifactCheck:
+    """Check a required design-control document, located by basename."""
+    path = _find_doc(dhf_dir, basename)
+    if path is None:
+        return ArtifactCheck(
+            name=name,
+            path=dhf_dir / "documents" / basename,
+            exists=False,
+            complete=False,
+            reasons=[f"{basename} not found under {dhf_dir}"],
+        )
+    return check_doc_path(path, name)
 
-    SDDs are discovered as multiple documents (under an ``sdd`` folder or named
-    ``*sdd*``); each declares the user needs it ``satisfies``. Warns when no SDD
-    is found, when a registered user need is addressed by no SDD, or when an SDD
-    references a user need that is not in the registry. Warnings only.
+
+def check_design_docs(dhf_dir: Path) -> list[ArtifactCheck]:
+    """Check the per-context design documents (`kind: design`).
+
+    The design inputs + outputs live in these documents; the gate requires at
+    least one, present, complete, and approved.
     """
-    sdds = find_sdds(dhf_dir)
-    if not sdds:
-        return ["no SDD found (expected SDDs under an `sdd/` folder or named *sdd*)"]
+    docs = find_design_docs(dhf_dir)
+    if not docs:
+        return [
+            ArtifactCheck(
+                name="Software Design Description",
+                path=dhf_dir / "documents" / "design",
+                exists=False,
+                complete=False,
+                reasons=["no design document (`kind: design`) found under the DHF"],
+            )
+        ]
+    return [check_doc_path(doc, f"Software Design Description ({context_of(doc)})") for doc in docs]
+
+
+def _coverage_warnings(dhf_dir: Path) -> list[str]:
+    """Reconcile the user-need registry against the design docs' references.
+
+    Warns (warnings only) when a registered user need is addressed by no design
+    document, when a document ``satisfies`` or a design input ``traces_to`` an
+    unknown user need, or when a ``realises`` reference names an unknown design
+    input.
+    """
+    docs = find_design_docs(dhf_dir)
+    if not docs:
+        return ["no design document (`kind: design`) found under the DHF"]
 
     warnings: list[str] = []
     registry = registry_user_needs(dhf_dir)
     satisfied: set[str] = set()
-    for sdd, refs in satisfies_by_sdd(dhf_dir).items():
+    for doc, refs in satisfies_by_context(dhf_dir).items():
         satisfied |= refs
         for ref in sorted(refs - registry):
-            warnings.append(f"{sdd.name} satisfies unknown user need {ref}")
+            warnings.append(f"{doc.name} satisfies unknown user need {ref}")
     for need in sorted(registry - satisfied):
-        warnings.append(f"user need {need} is not addressed by any SDD (no `satisfies`)")
+        warnings.append(f"user need {need} is addressed by no design document (no `satisfies`)")
+
+    di_ids = design_input_ids(dhf_dir)
+    for di in design_inputs(dhf_dir):
+        for ref in sorted(set(di["traces_to"]) - registry):
+            warnings.append(f"design input {di['id']} traces_to unknown user need {ref}")
+    for doc, refs in realises_by_context(dhf_dir).items():
+        for ref in sorted(refs - di_ids):
+            warnings.append(f"{doc.name} realises unknown design input {ref}")
     return warnings
 
 
@@ -281,13 +316,11 @@ def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> Ga
     back to scanning the test sources for ``@allure`` tags.
     """
     result = GateResult()
-    result.artifacts.append(
-        check_artifact(dhf_dir, DESIGN_INPUT_DOC, "Design Input")
-    )
+    result.artifacts.extend(check_design_docs(dhf_dir))
     result.artifacts.append(
         check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review")
     )
-    result.task_warnings = _sdd_coverage_warnings(dhf_dir)
+    result.task_warnings = _coverage_warnings(dhf_dir)
 
     if allure_results_dir is not None and Path(allure_results_dir).exists():
         result.verification_warnings = _verification_warnings(dhf_dir, Path(allure_results_dir))
@@ -343,14 +376,14 @@ def story_design_gate_command(
     print()
     if result.passed:
         print(
-            "Design gate PASSED: design input and design review are present, "
-            "complete, and approved (committed) in version control."
+            "Design gate PASSED: the per-context design document(s) and the design "
+            "review are present, complete, and approved (committed) in version control."
         )
         return 0
 
     print(
-        "Design gate FAILED: complete and commit (approve) the design input and "
-        "design review before transitioning work into backlog tasks."
+        "Design gate FAILED: complete and commit (approve) the design document(s) "
+        "and design review before transitioning work into backlog tasks."
     )
     return 1
 
@@ -373,8 +406,8 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
     """Run the release gate.
 
     A release requires, as hard conditions:
-      1. the design gate passes (design input + review present, complete, and
-         approved in version control),
+      1. the design gate passes (the per-context design document(s) + review
+         present, complete, and approved in version control),
       2. at least one design input is declared, and
       3. every declared design input is *verified* by a passing Allure test --
          any failed or untested design input blocks the release, and
@@ -438,7 +471,7 @@ def story_release_gate_command(
     print(f"DHF: {dhf}\n")
 
     design_state = "PASS" if result.design.passed else "FAIL"
-    print(f"  [{design_state}] design controls (design input + review approved)")
+    print(f"  [{design_state}] design controls (design document(s) + review approved)")
     if result.verified:
         print(f"  [OK]   verified design inputs: {', '.join(result.verified)}")
 

@@ -1,10 +1,17 @@
 """
-Read the Software Design Specification (SDD) and other DHF documents.
+Read the per-context design documents and other DHF documents.
 
-The SDD frontmatter declares the user-need IDs that are the traceability source
-of truth (each is referenced by an Allure tag on the verifying test). This
-module parses those IDs and locates DHF documents on disk; it has no dependency
-on the story-audit / pydantic layer so the record pipeline stays lightweight.
+The unit of design is the **bounded context**, captured in **one document per
+context** (``kind: design`` in its frontmatter). Each such document carries both
+halves of design control: the **design inputs** it owns (§820.30(c), the "what")
+and the **design output** prose (§820.30(d), the "how"). Discovery keys on the
+``kind: design`` frontmatter marker — never on filename or folder — so documents
+can be named for the context they describe.
+
+The user-need registry (the validation anchor) lives once in the V&V plan
+(``user_needs``); each design document references the needs it ``satisfies`` and
+declares the design inputs that refine them. This module has no dependency on the
+story-audit / pydantic layer so the record pipeline stays lightweight.
 """
 
 from __future__ import annotations
@@ -13,14 +20,9 @@ from pathlib import Path
 
 import yaml
 
-# The SDD document's basename, as installed by `rdm init`.
-SDD_DOC = "software_design_specification.md"
-
-# The design-input document's basename (carries the design-input registry).
-DESIGN_INPUT_DOC = "design_input.md"
-
-# Frontmatter fields the SDD may use to list the user-need IDs it captures.
-SDD_USER_NEED_FIELDS = ("user_needs", "user_need_ids", "ids")
+# Frontmatter marker that identifies a per-context design document. Discovery
+# keys on this, not on filename/folder, so docs are named for their context.
+DESIGN_KIND = "design"
 
 
 def find_dhf_doc(dhf_dir: Path, basename: str) -> Path | None:
@@ -51,18 +53,12 @@ def parse_frontmatter(text: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def user_need_ids(dhf_dir: Path) -> set[str]:
-    """Return the user-need IDs declared in the SDD frontmatter."""
-    path = find_dhf_doc(dhf_dir, SDD_DOC)
-    if path is None:
-        return set()
-    frontmatter = parse_frontmatter(path.read_text(encoding="utf-8"))
-    ids: set[str] = set()
-    for field_name in SDD_USER_NEED_FIELDS:
-        value = frontmatter.get(field_name)
-        if isinstance(value, list):
-            ids.update(str(v).strip() for v in value if str(v).strip())
-    return ids
+def _frontmatter_of(path: Path) -> dict:
+    """Frontmatter of a document, or ``{}`` if unreadable/absent."""
+    try:
+        return parse_frontmatter(path.read_text(encoding="utf-8"))
+    except OSError:
+        return {}
 
 
 def user_needs_from_doc(doc_path: Path) -> set[str]:
@@ -74,8 +70,7 @@ def user_needs_from_doc(doc_path: Path) -> set[str]:
     """
     if not doc_path.exists():
         return set()
-    frontmatter = parse_frontmatter(doc_path.read_text(encoding="utf-8"))
-    value = frontmatter.get("user_needs")
+    value = _frontmatter_of(doc_path).get("user_needs")
     if not isinstance(value, list):
         return set()
     ids: set[str] = set()
@@ -87,46 +82,45 @@ def user_needs_from_doc(doc_path: Path) -> set[str]:
     return ids
 
 
-def find_sdds(dhf_dir: Path) -> list[Path]:
-    """Discover SDD documents under a DHF.
+def find_design_docs(dhf_dir: Path) -> list[Path]:
+    """Discover the per-context design documents under a DHF.
 
-    A markdown file is treated as an SDD when any of these hold (the project may
-    have many SDDs, one per bounded context):
-
-    - it lives under a folder named ``sdd`` (case-insensitive), or
-    - its filename stem starts or ends with ``sdd`` (case-insensitive), e.g.
-      ``sdd-auth.md`` / ``auth-sdd.md`` / ``sdd.md``, or
-    - it is the legacy ``software_design_specification.md``.
+    A markdown file is a design document when its frontmatter declares
+    ``kind: design``. There is one such document per bounded context; it holds
+    both the design inputs it owns and the design-output prose.
     """
-    found: set[Path] = set()
+    found: list[Path] = []
     for md in dhf_dir.rglob("*.md"):
-        stem = md.stem.lower()
-        in_sdd_folder = any(part.lower() == "sdd" for part in md.parent.parts)
-        if in_sdd_folder or stem.startswith("sdd") or stem.endswith("sdd") or md.name == SDD_DOC:
-            found.add(md)
+        if _frontmatter_of(md).get("kind") == DESIGN_KIND:
+            found.append(md)
     return sorted(found)
 
 
-def satisfies_for(sdd_path: Path) -> set[str]:
-    """Return the user-need IDs a single SDD declares it ``satisfies``."""
-    if not sdd_path.exists():
+def context_of(path: Path) -> str:
+    """The bounded-context name a design document declares (or its filename)."""
+    context = str(_frontmatter_of(path).get("context", "")).strip()
+    return context or path.stem
+
+
+def satisfies_for(doc_path: Path) -> set[str]:
+    """Return the user-need IDs a single design document ``satisfies``."""
+    if not doc_path.exists():
         return set()
-    frontmatter = parse_frontmatter(sdd_path.read_text(encoding="utf-8"))
-    value = frontmatter.get("satisfies")
+    value = _frontmatter_of(doc_path).get("satisfies")
     if not isinstance(value, list):
         return set()
     return {str(v).strip() for v in value if str(v).strip()}
 
 
-def satisfies_by_sdd(dhf_dir: Path) -> dict[Path, set[str]]:
-    """Map each discovered SDD to the user-need IDs it ``satisfies``."""
-    return {sdd: satisfies_for(sdd) for sdd in find_sdds(dhf_dir)}
+def satisfies_by_context(dhf_dir: Path) -> dict[Path, set[str]]:
+    """Map each design document to the user-need IDs it ``satisfies``."""
+    return {doc: satisfies_for(doc) for doc in find_design_docs(dhf_dir)}
 
 
 def satisfied_user_needs(dhf_dir: Path) -> set[str]:
-    """Union of user needs addressed (via ``satisfies``) across all SDDs."""
+    """Union of user needs addressed (via ``satisfies``) across design docs."""
     ids: set[str] = set()
-    for refs in satisfies_by_sdd(dhf_dir).values():
+    for refs in satisfies_by_context(dhf_dir).values():
         ids |= refs
     return ids
 
@@ -135,7 +129,7 @@ def registry_user_needs(dhf_dir: Path) -> set[str]:
     """Union of ``user_needs`` declared in any document frontmatter under the DHF.
 
     Per ADR 0001 the registry lives in the V&V plan, but this finds it wherever
-    it is authored (and remains compatible with declaring it in an SDD).
+    it is authored.
     """
     ids: set[str] = set()
     for md in dhf_dir.rglob("*.md"):
@@ -144,37 +138,56 @@ def registry_user_needs(dhf_dir: Path) -> set[str]:
 
 
 def design_inputs(dhf_dir: Path) -> list[dict]:
-    """Return the design-input registry from design_input.md frontmatter.
+    """Return the design inputs declared across all per-context design docs.
 
-    Each entry is ``{id, text, traces_to}`` where ``traces_to`` is the list of
-    user-need IDs the design input refines. The design inputs are the
-    verification anchor (tests verify them); they trace up to user needs.
+    Each design document owns its design inputs in a ``design_inputs``
+    frontmatter list of ``{id, text, traces_to}`` (``traces_to`` is the user
+    need(s) the input refines). The union across documents is the verification
+    anchor (tests verify each input via ``@allure.story("DI-…")``). If two
+    documents declare the same id, the first by sorted path wins.
     """
-    path = find_dhf_doc(dhf_dir, DESIGN_INPUT_DOC)
-    if path is None:
-        return []
-    frontmatter = parse_frontmatter(path.read_text(encoding="utf-8"))
-    value = frontmatter.get("design_inputs")
-    if not isinstance(value, list):
-        return []
     inputs: list[dict] = []
-    for item in value:
-        if not isinstance(item, dict):
+    seen: set[str] = set()
+    for doc in find_design_docs(dhf_dir):
+        value = _frontmatter_of(doc).get("design_inputs")
+        if not isinstance(value, list):
             continue
-        di_id = str(item.get("id", "")).strip()
-        if not di_id:
-            continue
-        traces = item.get("traces_to") or []
-        inputs.append(
-            {
-                "id": di_id,
-                "text": str(item.get("text", "")).strip(),
-                "traces_to": [str(t).strip() for t in traces if str(t).strip()],
-            }
-        )
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            di_id = str(item.get("id", "")).strip()
+            if not di_id or di_id in seen:
+                continue
+            seen.add(di_id)
+            traces = item.get("traces_to") or []
+            inputs.append(
+                {
+                    "id": di_id,
+                    "text": str(item.get("text", "")).strip(),
+                    "traces_to": [str(t).strip() for t in traces if str(t).strip()],
+                    "context": context_of(doc),
+                }
+            )
     return inputs
 
 
 def design_input_ids(dhf_dir: Path) -> set[str]:
     """The set of declared design-input IDs (the verification denominator)."""
     return {di["id"] for di in design_inputs(dhf_dir)}
+
+
+def realises_by_context(dhf_dir: Path) -> dict[Path, set[str]]:
+    """Map each design document to the shared design-input IDs it ``realises``.
+
+    ``realises`` lets a context contribute to a design input that another
+    context owns (declared in that other context's ``design_inputs``); it never
+    introduces a new input on its own.
+    """
+    refs: dict[Path, set[str]] = {}
+    for doc in find_design_docs(dhf_dir):
+        value = _frontmatter_of(doc).get("realises")
+        if isinstance(value, list):
+            refs[doc] = {str(v).strip() for v in value if str(v).strip()}
+        else:
+            refs[doc] = set()
+    return refs

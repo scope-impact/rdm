@@ -11,14 +11,16 @@ its cross-context **design**. It holds design only — the **user needs** live i
 the V&V plan (`verification_and_validation_plan.md`); each context SDD declares
 the user needs it contributes to via `satisfies`.
 
-## Bounded contexts (one SDD each)
+## Bounded contexts (one design document each)
 
-| Context | SDD | Responsibility |
-|---------|-----|----------------|
-| `auth` | `sdd/auth.md` | clinician authentication, authorization, PHI-access audit |
-| `ingestion` | `sdd/ingestion.md` | receive, validate, and store streamed vital signs |
-| `alerting` | `sdd/alerting.md` | detect dangerous changes against thresholds; notify |
-| `dashboard` | `sdd/dashboard.md` | the web UI: patient list, vitals view, alert acknowledgement |
+Each context is one `kind: design` document carrying its design inputs and output.
+
+| Context | Design document | Responsibility |
+|---------|-----------------|----------------|
+| `auth` | `design/auth.md` | clinician authentication, authorization, PHI-access audit |
+| `ingestion` | `design/ingestion.md` | receive, validate, and store streamed vital signs |
+| `alerting` | `design/alerting.md` | detect dangerous changes against thresholds; notify |
+| `dashboard` | `design/dashboard.md` | the web UI: patient list, vitals view, alert acknowledgement |
 
 ## Cross-context flow
 

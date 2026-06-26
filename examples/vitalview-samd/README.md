@@ -14,11 +14,11 @@ raises alerts on dangerous changes, and presents them to authorized clinicians.
 docs/
   verification_and_validation_plan.md   ← user_needs registry (UN-001..003) + V&V approach
   architecture.md                       ← system design (bounded contexts), NO need listing
-  sdd/
-    auth.md          satisfies: [UN-002, UN-003]
-    ingestion.md     satisfies: [UN-001, UN-002]
-    alerting.md      satisfies: [UN-001]
-    dashboard.md     satisfies: [UN-001, UN-002]
+  design/                               ← one `kind: design` doc per context: inputs (what) + output (how)
+    auth.md          satisfies: [UN-002, UN-003]   owns DI-4,  realises DI-3
+    ingestion.md     satisfies: [UN-001, UN-002]   realises DI-1, DI-3
+    alerting.md      satisfies: [UN-001]           owns DI-1, DI-2
+    dashboard.md     satisfies: [UN-001, UN-002]   owns DI-3,  realises DI-1, DI-2
 personas/            ← AI-persona specs (clinician journeys), reference user needs
 persona-results/     ← sample formative usability evidence (*-persona.json)
 ```

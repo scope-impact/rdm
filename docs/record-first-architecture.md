@@ -42,14 +42,15 @@ context boundaries). "Product need" vocabulary is not used.
 | Artifact | Role | Lives in |
 |----------|------|----------|
 | **user need** (validated, cross-cutting) | the journey / intended use; the **validation** anchor | defined once in the **V&V plan** frontmatter (`verification_and_validation_plan.md`, `user_needs: [{id, text}]`) — *not* in the architecture document, which holds design only |
-| **design input** (verified) | a verifiable requirement refining a user need; the **verification** anchor (§820.30(f): output meets input) | the **design-input registry** (`design_input.md`, `design_inputs: [{id, text, traces_to: [UN-…]}]`) |
-| **`satisfies`** reference | which user needs a context's design contributes to | each per-context **SDD** frontmatter (`satisfies: [UN-…]`) |
+| **design input** (verified) | a verifiable requirement refining a user need; the **verification** anchor (§820.30(f): output meets input) | declared once, in the **design document of the context that owns it** (`kind: design`, `design_inputs: [{id, text, traces_to: [UN-…]}]`) — same document as the design output |
+| **`satisfies`** / **`realises`** references | which user needs a context contributes to / which shared design input it helps realise | each per-context **design document** frontmatter (`satisfies: [UN-…]`, `realises: [DI-…]`) |
 | **acceptance criteria** = the test | each design input's verifying test ("live BDD") | the context's tests, tagged `@allure.story("DI-…")` |
 
 Rules:
 
-- A user need is **referenced** by many SDDs and refined by many design inputs,
-  never **duplicated** — defined once in the registry.
+- A user need is **referenced** by many design documents and refined by many
+  design inputs; a design input is **owned** by one context and **realised** by
+  others — never **duplicated**. Each is defined once.
 - **Validation** is against the user need (human + AI-persona formative evidence).
   **Verification** is against the **design input** (its `@allure.story("DI-…")`
   test passes), aggregated across **every** context that realises it. The test
@@ -61,8 +62,8 @@ Rules:
 
 1. **Ingest**
    - `record/sdd.py` — read the user-needs registry (V&V plan frontmatter
-     `user_needs`); discover all per-context SDDs and read each one's
-     `satisfies` and design data.
+     `user_needs`); discover all per-context design documents by `kind: design`
+     and read each one's `satisfies`, `design_inputs`, and `realises`.
    - `record/allure.py` — read an Allure results directory → per-user-need
      verification status (aggregated across the SDDs that satisfy it).
    - `record/history.py` — git/PR → approvals + change history (reuse the

@@ -12,15 +12,18 @@ and verification. This document holds **design only** — user needs live in the
 V&V plan; each context SDD declares the user needs it contributes to via
 `satisfies`.
 
-## Bounded contexts (one SDD each)
+## Bounded contexts (one design document each)
 
-| Context | SDD | Responsibility (modules) |
-|---------|-----|--------------------------|
-| `record` | `sdd/record.md` | ingest the system of record: parse SDD/V&V frontmatter, Allure results, git history (`rdm/record/`) |
-| `gating` | `sdd/gating.md` | design gate, release gate, pre-commit hook (`rdm/story_audit/design_gate.py`, `rdm/hook_files/pre-commit`) |
-| `verification` | `sdd/verification.md` | reconcile user needs vs Allure; render the traceability matrix (`rdm/record/allure.py`, `verify.py`) |
-| `validation` | `sdd/validation.md` | formative usability validation via the persona skill (`rdm/record/persona.py`, `.claude/skills/usability-persona/`) |
-| `rendering` | `sdd/rendering.md` | Jinja templates + data → Markdown → PDF/DOCX (`rdm/render.py`, `rdm/md_extensions/`) |
+Each context is one `kind: design` document carrying its design inputs (the
+*what*) and design output (the *how*).
+
+| Context | Design document | Responsibility (modules) |
+|---------|-----------------|--------------------------|
+| `record` | `design/record.md` | ingest the system of record: parse design/V&V frontmatter, Allure results, git history (`rdm/record/`) |
+| `gating` | `design/gating.md` | design gate, release gate, pre-commit hook (`rdm/story_audit/design_gate.py`, `rdm/hook_files/pre-commit`) |
+| `verification` | `design/verification.md` | reconcile design inputs vs Allure; render the traceability matrix (`rdm/record/allure.py`, `verify.py`) |
+| `validation` | `design/validation.md` | formative usability validation via the persona skill (`rdm/record/persona.py`, `.claude/skills/usability-persona/`) |
+| `rendering` | `design/rendering.md` | Jinja templates + data → Markdown → PDF/DOCX (`rdm/render.py`, `rdm/md_extensions/`) |
 
 ## Cross-context flow
 

@@ -7,9 +7,9 @@ title: Traceability Matrix and Verification Status
 # Purpose
 
 The verification status of each **design input**, grouped under the **user
-need** it traces to, generated from the system of record: the design-input
-registry (`design_input.md`) reconciled against executed Allure results. Do not
-edit by hand. Regenerate with:
+need** it traces to, generated from the system of record: the design inputs
+declared in the per-context design documents (`kind: design`) reconciled against
+executed Allure results. Do not edit by hand. Regenerate with:
 
 ```
 uv run pytest tests/acceptance --alluredir=dhf/allure-results

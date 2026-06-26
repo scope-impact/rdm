@@ -1,8 +1,9 @@
 """Tests for the release gate: design controls + full verification (hard fail).
 
-Verification is anchored on design inputs: the denominator is the design-input
-registry, a design input is verified when its `@allure.story("DI-…")` test
-passes, and a user need with no design input blocks the release.
+Verification is anchored on design inputs declared in the per-context design
+documents: the denominator is the union of those inputs, a design input is
+verified when its `@allure.story("DI-…")` test passes, and a user need with no
+design input blocks the release.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from rdm.story_audit.design_gate import run_release_gate, story_release_gate_com
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _result
+from tests.util import write_design_doc
 
 
 def _project(
@@ -22,9 +24,9 @@ def _project(
     *,
     commit: bool = True,
 ) -> Path:
-    """Build a git repo with approved design docs, a design-input registry, and
-    a user-need registry. `inputs` is ``(DI-id, [user needs it traces_to])``;
-    user_needs defaults to the union of everything the inputs trace to.
+    """Build a git repo with an approved per-context design doc (carrying the
+    design inputs), a design review, and a user-need registry. `inputs` is
+    ``(DI-id, [user needs it traces_to])``; user_needs defaults to their union.
     """
     if user_needs is None:
         user_needs = sorted({un for _, traces in inputs for un in traces})
@@ -32,15 +34,8 @@ def _project(
     docs = repo / "dhf" / "documents"
     docs.mkdir(parents=True)
     _git(repo, "init")
-    rows = "\n".join(
-        f"  - {{id: {di}, text: {di} requirement, traces_to: [{', '.join(traces)}]}}"
-        for di, traces in inputs
-    )
-    (docs / "design_input.md").write_text(
-        f"---\nid: DI-001\ndesign_inputs:\n{rows}\n---\n\nApproved and complete.\n"
-        if inputs
-        else COMPLETE
-    )
+    write_design_doc(docs / "design", "core", satisfies=tuple(user_needs),
+                     design_inputs=tuple(inputs))
     (docs / "design_review.md").write_text(COMPLETE)
     needs = "\n".join(f"  - {{id: {n}, text: {n}}}" for n in user_needs)
     (docs / "verification_and_validation_plan.md").write_text(

@@ -1,33 +1,29 @@
 """
 Tests for the design-controls gate.
 
-The gate ensures a Design Input document and a Design Review document exist and
-are complete (no scaffold placeholders) before design work transitions into
-backlog/implementation tasks.
+The gate ensures at least one per-context design document (`kind: design`,
+carrying its design inputs and outputs) and a Design Review document exist and
+are complete (no scaffold placeholders) and approved (committed) before design
+work transitions into backlog/implementation tasks.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
+from rdm.record.allure import scan_source_tags as allure_tag_ids
 from rdm.story_audit.design_gate import (
-    DESIGN_INPUT_DOC,
     DESIGN_REVIEW_DOC,
     check_artifact,
+    check_design_docs,
+    check_doc_path,
     has_uncommitted_changes,
     run_design_gate,
     story_design_gate_command,
 )
-from rdm.record.allure import scan_source_tags as allure_tag_ids
-from rdm.record.sdd import SDD_DOC
-from rdm.record.sdd import user_need_ids as sdd_user_need_ids
 from tests.util import COMPLETE_DOC
 from tests.util import git_run as _git
-
-
-def _sdd(user_needs: list[str]) -> str:
-    needs = "[" + ", ".join(user_needs) + "]"
-    return f"---\nid: SDS-001\ntitle: SDD\nuser_needs: {needs}\n---\n\nbody\n"
+from tests.util import write_design_doc
 
 
 def _proj(
@@ -36,23 +32,23 @@ def _proj(
     allure_ids: list[str],
     user_needs: list[str] | None = None,
 ) -> Path:
-    """Build <tmp>/proj/{dhf,tests} with a design-input registry and allure-tagged
-    tests. Traceability is reconciled against design inputs, so the design-input
-    IDs are the anchor; an optional SDD declares the user-need registry.
+    """Build <tmp>/proj/{dhf,tests} with a per-context design doc and allure-tagged
+    tests. Traceability is reconciled against design inputs.
     """
     proj = tmp_path / "proj"
     docs = proj / "dhf" / "documents"
     docs.mkdir(parents=True)
     if design_input_ids:
-        rows = "\n".join(
-            f"  - {{id: {di}, text: {di} requirement, traces_to: []}}"
-            for di in design_input_ids
+        write_design_doc(
+            docs / "design",
+            "core",
+            satisfies=tuple(user_needs or []),
+            design_inputs=tuple((di, []) for di in design_input_ids),
         )
-        (docs / DESIGN_INPUT_DOC).write_text(
-            f"---\nid: DI-001\ndesign_inputs:\n{rows}\n---\n\nbody\n"
+    elif user_needs:
+        (docs / "verification_and_validation_plan.md").write_text(
+            "---\nid: VVP-001\nuser_needs: [" + ", ".join(user_needs) + "]\n---\n\nplan\n"
         )
-    if user_needs:
-        (docs / SDD_DOC).write_text(_sdd(user_needs))
     tests = proj / "tests"
     tests.mkdir()
     body = "import allure\n"
@@ -63,13 +59,14 @@ def _proj(
 
 
 def _git_dhf(tmp_path: Path, commit: bool) -> Path:
-    """Create a DHF inside a git repo with both docs; optionally commit them."""
+    """Create a DHF inside a git repo with a design doc + review; optionally commit."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init")
     docs = repo / "dhf" / "documents"
     docs.mkdir(parents=True)
-    (docs / DESIGN_INPUT_DOC).write_text(COMPLETE_DOC)
+    write_design_doc(docs / "design", "core", satisfies=("UN-001",),
+                     design_inputs=(("DI-1", ["UN-001"]),))
     (docs / DESIGN_REVIEW_DOC).write_text(COMPLETE_DOC)
     if commit:
         _git(repo, "add", "-A")
@@ -77,65 +74,101 @@ def _git_dhf(tmp_path: Path, commit: bool) -> Path:
     return repo / "dhf"
 
 
-def _make_dhf(tmp_path: Path, input_text: str | None, review_text: str | None) -> Path:
+def _make_dhf(
+    tmp_path: Path,
+    *,
+    design_doc: bool = True,
+    review_text: str | None = COMPLETE_DOC,
+    design_inputs: tuple[tuple[str, list[str]], ...] = (("DI-1", ["UN-001"]),),
+    design_text: str | None = None,
+) -> Path:
     dhf = tmp_path / "dhf"
     docs = dhf / "documents"
     docs.mkdir(parents=True)
-    if input_text is not None:
-        (docs / DESIGN_INPUT_DOC).write_text(input_text)
+    if design_doc:
+        if design_text is not None:
+            (docs / "design").mkdir(parents=True, exist_ok=True)
+            (docs / "design" / "core.md").write_text(design_text)
+        else:
+            write_design_doc(docs / "design", "core", satisfies=("UN-001",),
+                             design_inputs=design_inputs)
     if review_text is not None:
         (docs / DESIGN_REVIEW_DOC).write_text(review_text)
     return dhf
 
 
-class TestCheckArtifact:
-    def test_missing_document_fails(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, None, None)
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
-        assert not result.exists
-        assert not result.ok
-        assert result.reasons
-
+class TestCheckDocPath:
     def test_placeholder_document_is_incomplete(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, "TODO: fill this in\nENDTODO\n", None)
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
+        p = tmp_path / "d.md"
+        p.write_text("TODO: fill this in\nENDTODO\n")
+        result = check_doc_path(p, "Design Review")
         assert result.exists
         assert not result.complete
         assert any("placeholder" in r for r in result.reasons)
 
     def test_complete_document_passes(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, COMPLETE_DOC, None)
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
-        assert result.ok
+        p = tmp_path / "d.md"
+        p.write_text(COMPLETE_DOC)
+        assert check_doc_path(p, "Design Review").ok
 
     def test_empty_document_is_incomplete(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, "   \n", None)
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
-        assert not result.complete
+        p = tmp_path / "d.md"
+        p.write_text("   \n")
+        assert not check_doc_path(p, "Design Review").complete
+
+
+class TestCheckArtifact:
+    def test_missing_document_fails(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path, review_text=None)
+        result = check_artifact(dhf, DESIGN_REVIEW_DOC, "Design Review")
+        assert not result.exists
+        assert not result.ok
+        assert result.reasons
 
     def test_document_found_outside_documents_dir(self, tmp_path: Path) -> None:
         dhf = tmp_path / "dhf"
         (dhf / "sub").mkdir(parents=True)
-        (dhf / "sub" / DESIGN_INPUT_DOC).write_text(COMPLETE_DOC)
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
+        (dhf / "sub" / DESIGN_REVIEW_DOC).write_text(COMPLETE_DOC)
+        result = check_artifact(dhf, DESIGN_REVIEW_DOC, "Design Review")
         assert result.ok
+
+
+class TestCheckDesignDocs:
+    def test_no_design_doc_fails(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path, design_doc=False)
+        checks = check_design_docs(dhf)
+        assert len(checks) == 1
+        assert not checks[0].exists
+        assert not checks[0].ok
+
+    def test_design_doc_present_and_complete_passes(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path)
+        checks = check_design_docs(dhf)
+        assert all(c.ok for c in checks)
+        assert "core" in checks[0].name
+
+    def test_incomplete_design_doc_fails(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path, design_text="---\nkind: design\ncontext: core\n---\nTODO\nENDTODO\n")
+        checks = check_design_docs(dhf)
+        assert not checks[0].complete
 
 
 class TestRunDesignGate:
     def test_gate_passes_when_both_complete(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, COMPLETE_DOC, COMPLETE_DOC)
-        result = run_design_gate(dhf)
-        assert result.passed
+        dhf = _make_dhf(tmp_path)
+        assert run_design_gate(dhf).passed
 
     def test_gate_fails_when_review_missing(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, COMPLETE_DOC, None)
-        result = run_design_gate(dhf)
-        assert not result.passed
+        dhf = _make_dhf(tmp_path, review_text=None)
+        assert not run_design_gate(dhf).passed
 
-    def test_gate_fails_when_input_incomplete(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, "TODO: x\nENDTODO", COMPLETE_DOC)
-        result = run_design_gate(dhf)
-        assert not result.passed
+    def test_gate_fails_when_no_design_doc(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path, design_doc=False)
+        assert not run_design_gate(dhf).passed
+
+    def test_gate_fails_when_design_doc_incomplete(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path, design_text="---\nkind: design\ncontext: core\n---\nTODO\nENDTODO\n")
+        assert not run_design_gate(dhf).passed
 
 
 class TestStoryDesignGateCommand:
@@ -143,11 +176,11 @@ class TestStoryDesignGateCommand:
         assert story_design_gate_command(dhf_dir=tmp_path / "nope") == 2
 
     def test_complete_dhf_returns_0(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, COMPLETE_DOC, COMPLETE_DOC)
+        dhf = _make_dhf(tmp_path)
         assert story_design_gate_command(dhf_dir=dhf) == 0
 
     def test_incomplete_dhf_returns_1(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, COMPLETE_DOC, None)
+        dhf = _make_dhf(tmp_path, review_text=None)
         assert story_design_gate_command(dhf_dir=dhf) == 1
 
 
@@ -155,30 +188,30 @@ class TestVersionControlApproval:
     """Approval is the version-control record, so uncommitted == not approved."""
 
     def test_non_git_path_is_undetermined(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path, COMPLETE_DOC, COMPLETE_DOC)
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
+        dhf = _make_dhf(tmp_path)
+        result = check_artifact(dhf, DESIGN_REVIEW_DOC, "Design Review")
         # Cannot determine VCS state outside a repo: undetermined, not a failure.
         assert result.uncommitted is None
         assert result.ok
 
     def test_committed_doc_is_approved(self, tmp_path: Path) -> None:
         dhf = _git_dhf(tmp_path, commit=True)
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
+        result = check_artifact(dhf, DESIGN_REVIEW_DOC, "Design Review")
         assert result.uncommitted is False
         assert result.ok
 
     def test_untracked_doc_is_not_approved(self, tmp_path: Path) -> None:
         dhf = _git_dhf(tmp_path, commit=False)
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
+        result = check_artifact(dhf, DESIGN_REVIEW_DOC, "Design Review")
         assert result.uncommitted is True
         assert not result.ok
         assert any("uncommitted" in r for r in result.reasons)
 
     def test_modified_after_commit_reopens_approval(self, tmp_path: Path) -> None:
         dhf = _git_dhf(tmp_path, commit=True)
-        # Baseline drift: edit the approved doc -> gate must fail again (M4).
-        (dhf / "documents" / DESIGN_INPUT_DOC).write_text(COMPLETE_DOC + "\nedited\n")
-        result = check_artifact(dhf, DESIGN_INPUT_DOC, "Design Input")
+        # Baseline drift: edit the approved doc -> gate must fail again.
+        (dhf / "documents" / DESIGN_REVIEW_DOC).write_text(COMPLETE_DOC + "\nedited\n")
+        result = check_artifact(dhf, DESIGN_REVIEW_DOC, "Design Review")
         assert result.uncommitted is True
         assert not result.ok
 
@@ -201,12 +234,8 @@ class TestHasUncommittedChanges:
 
 
 class TestDesignInputAllureReconciliation:
-    """Design-input IDs (registry frontmatter) must be reconciled against Allure
+    """Design-input IDs (declared in design docs) must be reconciled against Allure
     tags -- verification is anchored on design inputs, not user needs."""
-
-    def test_parses_user_needs_from_frontmatter(self, tmp_path: Path) -> None:
-        dhf = _proj(tmp_path, [], [], user_needs=["UN-001", "UN-002"])
-        assert sdd_user_need_ids(dhf) == {"UN-001", "UN-002"}
 
     def test_allure_tags_extracted_from_tests(self, tmp_path: Path) -> None:
         dhf = _proj(tmp_path, ["DI-1"], ["DI-1", "DI-2"])
@@ -230,13 +259,11 @@ class TestDesignInputAllureReconciliation:
         assert not any("FT-001" in w for w in result.traceability_warnings)
 
     def test_traceability_gaps_do_not_fail_the_gate(self, tmp_path: Path) -> None:
-        # Docs absent here, so the gate fails on docs -- but traceability gaps
-        # themselves must never be the cause of failure. Verify with docs OK:
+        # Review absent here, so the gate fails on docs -- but traceability gaps
+        # themselves must never be the cause of failure.
         dhf = _proj(tmp_path, ["DI-1"], [])  # design input, no test yet
         result = run_design_gate(dhf)
         assert result.traceability_warnings  # gap reported
-        # The traceability warnings are independent of pass/fail; passed is
-        # driven only by the required artifacts.
         assert result.passed is all(a.ok for a in result.artifacts)
 
     def test_no_design_inputs_means_no_traceability_warnings(self, tmp_path: Path) -> None:
@@ -245,9 +272,12 @@ class TestDesignInputAllureReconciliation:
 
 
 class TestInstalledTemplates:
-    """The init templates must ship and render the gate's required documents."""
+    """The init templates must ship the gate's required documents."""
 
     def test_templates_exist_in_init_files(self) -> None:
         docs = Path(__file__).resolve().parents[1] / "rdm" / "init_files" / "documents"
-        assert (docs / DESIGN_INPUT_DOC).exists()
         assert (docs / DESIGN_REVIEW_DOC).exists()
+        # The combined per-context design document (kind: design) ships too.
+        sdd = docs / "software_design_specification.md"
+        assert sdd.exists()
+        assert "kind: design" in sdd.read_text()

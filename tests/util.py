@@ -21,13 +21,44 @@ def git_run(repo: Path, *args: str) -> None:
     )
 
 
-def write_allure_result(results_dir: Path, name: str, status: str, *user_need_ids: str) -> None:
-    """Write one Allure ``*-result.json`` tagging the given user-need IDs."""
+def write_allure_result(results_dir: Path, name: str, status: str, *story_ids: str) -> None:
+    """Write one Allure ``*-result.json`` tagging the given story IDs (DI/UN)."""
     results_dir.mkdir(parents=True, exist_ok=True)
-    labels = [{"name": "story", "value": uid} for uid in user_need_ids]
+    labels = [{"name": "story", "value": sid} for sid in story_ids]
     (results_dir / f"{name}-result.json").write_text(
         json.dumps({"name": name, "status": status, "labels": labels})
     )
+
+
+def write_design_doc(
+    docs_dir: Path,
+    context: str,
+    *,
+    satisfies: tuple[str, ...] = (),
+    design_inputs: tuple[tuple[str, list[str]], ...] = (),
+    realises: tuple[str, ...] = (),
+) -> Path:
+    """Write a per-context design document (``kind: design``).
+
+    `design_inputs` is a tuple of ``(DI-id, [user needs it traces_to])``. Returns
+    the written path.
+    """
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    if design_inputs:
+        rows = "\n".join(
+            f"  - {{id: {di}, text: {di} requirement, traces_to: [{', '.join(traces)}]}}"
+            for di, traces in design_inputs
+        )
+        di_block = f"design_inputs:\n{rows}\n"
+    else:
+        di_block = "design_inputs: []\n"
+    path = docs_dir / f"{context}.md"
+    path.write_text(
+        f"---\nid: SDS-{context}\nkind: design\ncontext: {context}\n"
+        f"satisfies: [{', '.join(satisfies)}]\n{di_block}"
+        f"realises: [{', '.join(realises)}]\n---\n\ndesign\n"
+    )
+    return path
 
 
 def render_from_string(

@@ -5,7 +5,9 @@
 
 ## Context
 
-We model **one SDD per bounded context** (DDD). A user need frequently spans
+We model **one design document per bounded context** (DDD) — a single
+`kind: design` document per context that carries both its design inputs (the
+"what") and its design output (the "how"). A user need frequently spans
 contexts (it is solution-independent and does not know about our context
 boundaries). Earlier drafts introduced a separate "product need" layer to hold
 cross-context journeys; that was redundant, because **validation is against the
@@ -36,12 +38,15 @@ There is one need concept: the **user need**.
   ---
   ```
 
-- Each bounded-context SDD declares the user needs its design contributes to:
+- Each bounded context is captured in **one design document** (`kind: design`)
+  that declares the user needs its design contributes to (`satisfies`) and the
+  design inputs it owns (see the amendment below):
 
   ```yaml
-  # documents/sdd/alarms.md
+  # documents/design/alarms.md
   ---
   id: SDS-ALRM-001
+  kind: design          # discovery keys on this, never on filename/folder
   context: alarms
   satisfies: [UN-001]
   ---
@@ -60,18 +65,33 @@ design input**, not output meeting user need. So verification is anchored one
 rung below the user need, on the **design input**:
 
 - A **design input** is a verifiable requirement the design must satisfy. It is
-  declared once, as structured data, in the **design-input registry**
-  (`design_input.md` frontmatter), and `traces_to` the user need(s) it refines:
+  declared once, as structured data, **inside the design document of the context
+  that owns it** (`design_inputs` frontmatter) — design input and design output
+  live in the *same* per-context document (input is the "what", the prose below is
+  the "how"). Each input `traces_to` the user need(s) it refines:
 
   ```yaml
-  # documents/design_input.md
+  # documents/design/alarms.md
   ---
-  id: DI-001
-  design_inputs:
+  id: SDS-ALRM-001
+  kind: design
+  context: alarms
+  satisfies: [UN-001]
+  design_inputs:                                    # inputs this context OWNS
     - {id: DI-1, text: "...latency requirement...", traces_to: [UN-001]}
     - {id: DI-2, text: "...acknowledgement...",     traces_to: [UN-001]}
+  realises: [DI-7]                                  # OPTIONAL: a shared input owned elsewhere
   ---
+  # Design Inputs   (the "what")
+  # Design Outputs  (the "how")
   ```
+
+  A design input is **cross-cutting** like a user need: when more than one context
+  realises it, exactly one context **owns** it (declares it in `design_inputs`)
+  and the others reference it via `realises` — the same declare-once + reference
+  pattern as `satisfies`. The verification denominator is the **union** of
+  `design_inputs` across all design documents. There is no separate design-input
+  registry document.
 
 - Each design input is **verified** by the automated test tagged
   `@allure.story("DI-…")`. The **design-input set is the release-gate
@@ -145,14 +165,20 @@ inputs, never **duplicated**: it is defined once in the registry.
 - The former "context user need" was really an acceptance criterion /
   requirement (verified, not validated) — it folds into acceptance criteria.
 
-## Consequences (implementation outline, deferred)
+## Consequences (implemented)
 
 - `record/sdd.py`: read the user-needs registry from the V&V plan frontmatter
-  (`user_needs`); glob all SDDs and read each `satisfies`; reconcile coverage.
-- Templates: V&V plan frontmatter `user_needs`; per-context SDD frontmatter
-  `satisfies`. The architecture document holds design only — no need listing.
-- Gates + traceability matrix: aggregate verification across all SDDs per user
-  need; add validation presence/approval as a separate, human-evidenced check.
+  (`user_needs`); discover design documents by `kind: design` (never by
+  filename/folder); union each document's `design_inputs` (and read `satisfies` /
+  `realises`); reconcile coverage.
+- Templates: V&V plan frontmatter `user_needs`; per-context design document
+  frontmatter `kind: design` + `satisfies` + `design_inputs`. The architecture
+  document holds design only — no need listing; there is no separate
+  design-input document.
+- Gates + traceability matrix: the release-gate denominator is the union of
+  `design_inputs`; aggregate verification per design input and roll up to the
+  user need it `traces_to`; add validation presence/approval as a separate,
+  human-evidenced check.
 
 ## Litmus test
 

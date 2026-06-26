@@ -4,7 +4,7 @@ Each test *is* the acceptance criterion ("live BDD"): the test is the behaviour,
 the `@allure.story("DI-...")` tag is the traceability link to the design input it
 verifies, and the optional `@allure.label("output", "...")` records the design
 output exercised. There is no Gherkin / feature file / step glue — the reviewed
-spec lives in the registries (`design_input.md`, the V&V plan) and the living doc
+spec lives in the registries (the per-context design docs, the V&V plan) and the living doc
 is the Allure report. An `allure.step(...)` narrative is available but optional
 and free-form (it need not be Given/When/Then).
 
@@ -29,10 +29,11 @@ from rdm.project_management.sync import PROVENANCE_NOTE
 from rdm.record import allure as allure_ingest
 from rdm.record import persona
 from rdm.record.verify import build_verification
-from rdm.story_audit.design_gate import check_artifact, run_release_gate
+from rdm.story_audit.design_gate import check_design_docs, run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _allure_result
+from tests.util import write_design_doc
 
 # Tagging requires allure-pytest; skip cleanly if it is not installed.
 allure = pytest.importorskip("allure")
@@ -45,40 +46,25 @@ def _vv_plan(docs: Path, needs: list[str]) -> None:
     )
 
 
-def _design_input_doc(docs: Path, inputs: list[tuple[str, list[str]]]) -> None:
-    """Write a design_input.md with a `design_inputs` registry frontmatter.
-
-    `inputs` is a list of ``(DI-id, [user-need IDs it traces_to])``.
-    """
-    rows = "\n".join(
-        f"  - {{id: {di}, text: {di} requirement, traces_to: [{', '.join(traces)}]}}"
-        for di, traces in inputs
-    )
-    (docs / "design_input.md").write_text(
-        f"---\nid: DI-001\ndesign_inputs:\n{rows}\n---\n\nApproved and complete.\n"
-    )
-
-
 def _approved_dhf(
     tmp_path: Path,
     needs: list[str],
     inputs: list[tuple[str, list[str]]] | None = None,
 ) -> Path:
-    """A committed DHF: approved design docs, a V&V registry, a design-input
-    registry, and one SDD. By default one design input is declared per user need.
+    """A committed DHF: an approved per-context design doc (carrying the design
+    inputs + output), a design review, and a V&V registry. By default one design
+    input is declared per user need.
     """
     repo = tmp_path / "repo"
     docs = repo / "dhf" / "documents"
-    (docs / "sdd").mkdir(parents=True)
+    docs.mkdir(parents=True)
     _git(repo, "init")
     if inputs is None:
         inputs = [(f"DI-{i + 1}", [n]) for i, n in enumerate(needs)]
-    _design_input_doc(docs, inputs)
+    write_design_doc(docs / "design", "core", satisfies=tuple(needs),
+                     design_inputs=tuple(inputs))
     (docs / "design_review.md").write_text(COMPLETE)
     _vv_plan(docs, needs)
-    (docs / "sdd" / "core.md").write_text(
-        f"---\ncontext: core\nsatisfies: [{', '.join(needs)}]\n---\n\ndesign\n"
-    )
     _git(repo, "add", "-A")
     _git(repo, "commit", "-m", "approve")
     return repo / "dhf"
@@ -102,14 +88,14 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
 @allure.story("DI-2")
 def test_design_gate_requires_approval(tmp_path: Path) -> None:
     """DI-2: block transition until design docs are complete and approved."""
-    # Incomplete (placeholder) -> not complete.
-    docs = tmp_path / "dhf" / "documents"
+    # Incomplete (placeholder) design doc -> not complete.
+    docs = tmp_path / "dhf" / "documents" / "design"
     docs.mkdir(parents=True)
-    (docs / "design_input.md").write_text("TODO: fill me\nENDTODO\n")
-    assert not check_artifact(tmp_path / "dhf", "design_input.md", "Design Input").complete
+    (docs / "core.md").write_text("---\nkind: design\ncontext: core\n---\nTODO: fill me\nENDTODO\n")
+    assert not check_design_docs(tmp_path / "dhf")[0].complete
     # Approved (committed clean) -> ok.
     dhf = _approved_dhf(tmp_path, ["UN-002"])
-    assert check_artifact(dhf, "design_input.md", "Design Input").ok
+    assert all(c.ok for c in check_design_docs(dhf))
 
 
 @allure.story("DI-3")

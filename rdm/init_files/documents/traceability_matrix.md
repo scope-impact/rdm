@@ -8,7 +8,7 @@ title: Traceability Matrix and Verification Status
 
 This document presents the verification status of each **design input** for {{ device.name }}, grouped under the **user need** it traces to: design inputs are verified (§820.30(f): output meets input) by the automated tests tagged with their ID; user needs are validated separately.
 
-It is **generated** from the system of record: the design-input registry (`design_input.md`), the user-need registry (V&V plan), and the executed Allure test results. Do not edit the matrix by hand. Regenerate it with:
+It is **generated** from the system of record: the design inputs declared in the per-context design documents (`kind: design`), the user-need registry (V&V plan), and the executed Allure test results. Do not edit the matrix by hand. Regenerate it with:
 
 ```
 rdm story verify --dhf <dhf> --allure-results <allure-results-dir> -o data/verification.yml
@@ -40,7 +40,7 @@ then re-render this document.
 {% if verification.orphans %}
 # Orphan Test Tags
 
-The following Allure tags reference no declared design input; either declare the design input in `design_input.md` or correct the tag:
+The following Allure tags reference no declared design input; either declare the design input in a `kind: design` document or correct the tag:
 
 {% for orphan in verification.orphans %}
 - {{ orphan }}

@@ -22,12 +22,12 @@ which holds design only:
 Each context SDD declares `satisfies: [UN-…]`. A user need is **referenced** by
 multiple SDDs, never duplicated.
 
-| Context | SDD | `satisfies` |
-|---------|-----|-------------|
-| `auth` | `sdd/auth.md` | UN-002, UN-003 |
-| `ingestion` | `sdd/ingestion.md` | UN-001, UN-002 |
-| `alerting` | `sdd/alerting.md` | UN-001 |
-| `dashboard` | `sdd/dashboard.md` | UN-001, UN-002 |
+| Context | Design document | `satisfies` |
+|---------|-----------------|-------------|
+| `auth` | `design/auth.md` | UN-002, UN-003 |
+| `ingestion` | `design/ingestion.md` | UN-001, UN-002 |
+| `alerting` | `design/alerting.md` | UN-001 |
+| `dashboard` | `design/dashboard.md` | UN-001, UN-002 |
 
 - **A user need is addressed by multiple contexts.** `UN-001` is satisfied by
   `ingestion`, `alerting`, and `dashboard`.
@@ -36,7 +36,8 @@ multiple SDDs, never duplicated.
 
 ## Verification (automated)
 
-Each user need is refined into **design inputs** (`design_input.md`), realised by
+Each user need is refined into **design inputs** (declared in the per-context
+design documents, `kind: design`), realised by
 the contributing contexts. Verification is anchored on the design input
 (§820.30(f): output meets input): each is verified by an `@allure.story("DI-…")`
 test — the test *is* the acceptance criterion ("live BDD"). A user need is met

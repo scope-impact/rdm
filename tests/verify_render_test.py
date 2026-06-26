@@ -8,23 +8,19 @@ import yaml
 
 from rdm.record.verify import build_verification, write_verification_file
 from tests.util import write_allure_result as _result
+from tests.util import write_design_doc
 
 
 def _dhf(dhf: Path, inputs: list[tuple[str, list[str]]], user_needs: list[str]) -> None:
-    """Write a DHF with a design-input registry and a user-need registry.
+    """Write a DHF with a per-context design doc (carrying the design inputs) and
+    a user-need registry.
 
     `inputs` is ``(DI-id, [user needs it traces_to])``; verification is anchored
     on the design inputs, grouped under the user needs they trace to.
     """
     docs = dhf / "documents"
     docs.mkdir(parents=True, exist_ok=True)
-    rows = "\n".join(
-        f"  - {{id: {di}, text: {di} requirement, traces_to: [{', '.join(traces)}]}}"
-        for di, traces in inputs
-    )
-    (docs / "design_input.md").write_text(
-        f"---\nid: DI-001\ndesign_inputs:\n{rows}\n---\n\nbody\n"
-    )
+    write_design_doc(docs / "design", "core", design_inputs=tuple(inputs))
     needs = "\n".join(f"  - {{id: {n}, text: {n}}}" for n in user_needs)
     (docs / "verification_and_validation_plan.md").write_text(
         f"---\nid: VVP-001\nuser_needs:\n{needs}\n---\n\nplan\n"

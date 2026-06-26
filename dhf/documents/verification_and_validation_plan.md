@@ -31,7 +31,8 @@ verified before a release.
 
 # Verification approach
 
-Each user need is refined into **design inputs** (`design_input.md`), realised by
+Each user need is refined into **design inputs** (declared in the per-context
+design documents, `kind: design`), realised by
 the bounded contexts that `satisfy` the need. Verification is anchored on the
 design inputs (§820.30(f): output meets input): each is verified by an automated
 test in RDM's `tests/`, tagged `@allure.story("DI-…")` — the test *is* the
