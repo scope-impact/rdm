@@ -133,6 +133,15 @@ def handle_story_command(args):
                 faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
             )
 
+        elif args.story_command == 'trace':
+            from rdm.story_audit.design_gate import story_trace_command
+            return story_trace_command(
+                target=args.target,
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+            )
+
         elif args.story_command == 'persona':
             from rdm.record.persona_cmd import persona_command
             return persona_command(
@@ -143,7 +152,8 @@ def handle_story_command(args):
         else:
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
-                "backlog-validate, design-gate, verify, release-gate, faithfulness, or persona"
+                "backlog-validate, design-gate, verify, release-gate, faithfulness, "
+                "trace, or persona"
             )
             return 1
 
@@ -296,6 +306,14 @@ def parse_arguments(arguments):
         '--faithfulness',
         help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
     )
+
+    # rdm story trace
+    trace_help = 'show the traceability slice for a user need or design input (forward + backward)'
+    trace_parser = story_subparsers.add_parser('trace', help=trace_help)
+    trace_parser.add_argument('target', help='a user-need id (UN-…) or design-input id (DI-…)')
+    trace_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    trace_parser.add_argument('--allure-results', help='Allure results dir (adds verification status)')
+    trace_parser.add_argument('--faithfulness', help='Faithfulness verdicts dir (adds review status)')
 
     # rdm story persona
     persona_help = 'report formative usability evidence from AI-persona simulated-use runs'
