@@ -20,6 +20,8 @@ user_needs:
     text: "A regulatory author can check that documents contain the references a chosen standard/checklist requires (gap analysis)."
   - id: UN-007
     text: "A regulatory author can detect requirement-ID conflicts and locate every ID definition across the project (traceability integrity)."
+  - id: UN-008
+    text: "A regulatory author can scaffold a new compliant documentation project from a single command."
 ---
 
 # Purpose
@@ -52,5 +54,6 @@ contexts that satisfy it. `rdm story release-gate` enforces this.
 | UN-005 | review of persona-skill output against a real UI journey | `usability-persona` skill runs (`rdm story persona`) |
 | UN-006 | maintainer review that gap analysis flags real missing standard references against shipped checklists | dogfooding: `rdm gap` over RDM's own released docs |
 | UN-007 | maintainer review that ID-conflict and traceability audits catch real duplicates/orphans | dogfooding: `rdm story audit` / `check-ids` over RDM's own requirements |
+| UN-008 | maintainer review that a scaffolded project builds a release and passes the relevant gap checklists | dogfooding: `fresh_release_test` builds an init'd project end-to-end |
 
 Formative evidence never gates release.
