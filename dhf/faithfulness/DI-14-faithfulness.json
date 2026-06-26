@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-14",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts find_id_definitions returns exact (id,line) pairs and detect_conflicts flags only the duplicated definition (FT-001), not the single US-001; exercises real provenance + definition-vs-reference logic.",
+  "test_hash": "sha256:420743144a887e7abd7eed2f73b3a2ce411992f841b15462f7c931b8ea6e9e3d",
+  "reviewed_tests": [
+    "test_locates_definitions_and_flags_only_definitions"
+  ]
+}

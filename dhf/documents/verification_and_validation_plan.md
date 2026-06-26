@@ -18,6 +18,8 @@ user_needs:
     text: "The usability of a documented UI can be exercised formatively against a user need."
   - id: UN-006
     text: "A regulatory author can check that documents contain the references a chosen standard/checklist requires (gap analysis)."
+  - id: UN-007
+    text: "A regulatory author can detect requirement-ID conflicts and locate every ID definition across the project (traceability integrity)."
 ---
 
 # Purpose
@@ -49,5 +51,6 @@ contexts that satisfy it. `rdm story release-gate` enforces this.
 | UN-001..004 | maintainer review that the compiled DHF, gates, and traceability meet the documented intent | dogfooding: RDM compiles its own DHF (this file set) |
 | UN-005 | review of persona-skill output against a real UI journey | `usability-persona` skill runs (`rdm story persona`) |
 | UN-006 | maintainer review that gap analysis flags real missing standard references against shipped checklists | dogfooding: `rdm gap` over RDM's own released docs |
+| UN-007 | maintainer review that ID-conflict and traceability audits catch real duplicates/orphans | dogfooding: `rdm story audit` / `check-ids` over RDM's own requirements |
 
 Formative evidence never gates release.
