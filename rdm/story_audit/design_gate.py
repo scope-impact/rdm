@@ -270,13 +270,19 @@ def _faithfulness_messages(report: faithfulness.FaithfulnessReport) -> list[str]
         "changed since the review (re-review the test against the input)"
         for uid in report.stale
     ]
+    messages += [
+        f"design input {uid} is only PARTIALLY verified -- uncovered clause(s): "
+        f"{'; '.join(report.by_id[uid].uncovered_clauses) or 'see review'}"
+        for uid in report.partial
+    ]
     return messages
 
 
 # Console label per faithfulness status (default ``[????]`` covers UNREVIEWED).
 _FAITHFULNESS_MARKS = {
-    faithfulness.FAITHFUL: "[OK]  ",
-    faithfulness.UNFAITHFUL: "[FAIL]",
+    faithfulness.FAITHFUL: "[OK]   ",
+    faithfulness.UNFAITHFUL: "[FAIL] ",
+    faithfulness.PARTIAL: "[PART] ",
     faithfulness.STALE: "[STALE]",
 }
 

@@ -71,6 +71,24 @@ class TestReconcile:
         report = f.reconcile(inputs, vdir, None)
         assert report.unfaithful == ["DI-1"]
 
+    def test_partial_when_verdict_partial(self, tmp_path: Path) -> None:
+        inputs = [_di("DI-1")]
+        current = f.current_hashes(inputs, None)["DI-1"]
+        vdir = tmp_path / "v"
+        _write_verdict(vdir, "DI-1", "partial", test_hash=current)
+        assert f.reconcile(inputs, vdir, None).partial == ["DI-1"]
+
+    def test_faithful_with_uncovered_clauses_downgrades_to_partial(self, tmp_path: Path) -> None:
+        # A "faithful" verdict that still lists an uncovered clause is inconsistent
+        # -> the gate downgrades it to partial (overclaim can't slip through).
+        inputs = [_di("DI-1")]
+        current = f.current_hashes(inputs, None)["DI-1"]
+        vdir = tmp_path / "v"
+        _write_verdict(vdir, "DI-1", "faithful", test_hash=current,
+                       uncovered_clauses=["the second clause is untested"])
+        report = f.reconcile(inputs, vdir, None)
+        assert report.partial == ["DI-1"] and report.faithful == []
+
     def test_editing_the_test_restales_a_faithful_verdict(self, tmp_path: Path) -> None:
         inputs = [_di("DI-1", "req")]
         td = _tests_dir(tmp_path, '@allure.story("DI-1")\ndef test_a():\n    assert real_check()')

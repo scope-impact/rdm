@@ -2,7 +2,7 @@
 id: SDS-GATE-001
 kind: design
 context: gating
-satisfies: [UN-002, UN-003]
+satisfies: [UN-002, UN-003, UN-009]
 design_inputs:
   - id: DI-2
     text: "RDM shall block the transition into implementation until design input and review are present, complete, and approved (committed) in git; a later edit re-opens the gate."
@@ -10,6 +10,9 @@ design_inputs:
   - id: DI-3
     text: "RDM shall block release unless every declared design input is verified by a passing test."
     traces_to: [UN-003]
+  - id: DI-19
+    text: "RDM shall require an independent faithfulness verdict for every design input, blocking release on any unreviewed, unfaithful, partial, or stale verdict."
+    traces_to: [UN-009]
 ---
 
 # Gating — Software Design
@@ -23,6 +26,10 @@ This context owns:
   approved (committed) in git; a later edit re-opens the gate. Refines UN-002.
 - **DI-3 (release gate)** — block release unless every declared design input is
   verified by a passing test. Refines UN-003.
+- **DI-19 (faithfulness gate)** — require an independent faithfulness verdict for
+  every design input; block release on any `unreviewed`, `unfaithful`, `partial`
+  (a verdict listing uncovered clauses), or `stale` (test changed since review)
+  verdict. Refines UN-009.
 
 ## Design Outputs
 
@@ -35,7 +42,11 @@ Enforces design controls and verified coverage.
   implementation work until the design gate passes; commits of the design docs
   themselves are allowed (that commit is the approval).
 - **Release gate** (`run_release_gate`) — blocks release unless every design
-  input is verified by a passing test and every user need is addressed.
+  input is verified by a passing test, independently confirmed faithful, and
+  every user need is addressed.
+- **Faithfulness gate** (`rdm/record/faithfulness.py`, `run_faithfulness_gate`) —
+  reconciles design inputs against `*-faithfulness.json` verdicts into
+  faithful / unfaithful / partial / stale / unreviewed; only `faithful` passes.
 
-Acceptance criteria are verified by `@allure.story("DI-2")` /
-`@allure.story("DI-3")` tests.
+Acceptance criteria are verified by `@allure.story("DI-2" / "DI-3" / "DI-19")`
+tests.

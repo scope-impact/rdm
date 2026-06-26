@@ -18,10 +18,10 @@ import sys
 from pathlib import Path
 
 from rdm.record.allure import find_tests_dir
-from rdm.record.faithfulness import FAITHFUL, UNFAITHFUL, current_hashes
+from rdm.record.faithfulness import FAITHFUL, PARTIAL, UNFAITHFUL, current_hashes
 from rdm.record.sdd import design_inputs
 
-VERDICTS = {FAITHFUL, UNFAITHFUL, "weak"}
+VERDICTS = {FAITHFUL, PARTIAL, UNFAITHFUL, "weak"}
 
 
 def main() -> int:
@@ -32,6 +32,12 @@ def main() -> int:
     parser.add_argument("--reviewer", required=True, help="who reviewed (must be independent of the test author)")
     parser.add_argument("--rationale", required=True, help="why the test does / does not verify the input")
     parser.add_argument("--reviewed-tests", default="", help="comma-separated test names examined")
+    parser.add_argument(
+        "--uncovered",
+        default="",
+        help="semicolon-separated requirement clauses the test does NOT cover "
+        "(non-empty downgrades the verdict to partial at the gate)",
+    )
     args = parser.parse_args()
 
     dhf = Path(args.dhf)
@@ -44,6 +50,7 @@ def main() -> int:
     # Pin to the CURRENT hash so the verdict is valid for exactly the test it reviewed.
     test_hash = current_hashes(inputs, find_tests_dir(dhf))[args.design_input]
     reviewed = [t.strip() for t in args.reviewed_tests.split(",") if t.strip()]
+    uncovered = [c.strip() for c in args.uncovered.split(";") if c.strip()]
 
     record = {
         "design_input": args.design_input,
@@ -52,6 +59,7 @@ def main() -> int:
         "rationale": args.rationale,
         "test_hash": test_hash,
         "reviewed_tests": reviewed,
+        "uncovered_clauses": uncovered,
     }
 
     out_dir = dhf / "faithfulness"

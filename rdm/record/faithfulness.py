@@ -18,10 +18,11 @@ Verdicts are produced as ``*-faithfulness.json`` records:
 
     {
       "design_input": "DI-1",
-      "verdict": "faithful",                 // faithful, else treated as not faithful
+      "verdict": "faithful",                 // faithful | partial | unfaithful
       "reviewer": "claude (independent of author)",
       "rationale": "exercises the real ingest path and asserts the grouped shape",
-      "test_hash": "sha256:…"                // hash of the tagged test source at review
+      "test_hash": "sha256:…",               // hash of the tagged test source at review
+      "uncovered_clauses": []                // requirement clauses NOT exercised; non-empty -> partial
     }
 
 This module ingests them and the release gate enforces them. Dependency-light
@@ -41,6 +42,7 @@ from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_r
 # Faithfulness statuses.
 FAITHFUL = "faithful"
 UNFAITHFUL = "unfaithful"   # reviewed but the test does not (or only weakly) verify the input
+PARTIAL = "partial"         # the test covers some, but not all, of the requirement's clauses
 STALE = "stale"             # the verifying test changed since the verdict was made
 UNREVIEWED = "unreviewed"   # no faithfulness verdict on record
 
@@ -54,6 +56,9 @@ class Verdict:
     reviewer: str = ""
     rationale: str = ""
     test_hash: str = ""
+    # Requirement clauses the reviewer found NOT covered by the test. A non-empty
+    # list means the test is at best partial, even if `verdict` says faithful.
+    uncovered_clauses: list[str] = field(default_factory=list)
     source: str = ""
 
 
@@ -67,6 +72,7 @@ class DesignInputFaithfulness:
     reviewer: str = ""
     rationale: str = ""
     reviewed_hash: str = ""
+    uncovered_clauses: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -82,6 +88,10 @@ class FaithfulnessReport(StatusReportMixin):
     @property
     def unfaithful(self) -> list[str]:
         return self._ids_with(UNFAITHFUL)
+
+    @property
+    def partial(self) -> list[str]:
+        return self._ids_with(PARTIAL)
 
     @property
     def stale(self) -> list[str]:
@@ -115,12 +125,14 @@ def parse_verdicts(verdicts_dir: Path) -> list[Verdict]:
         di = str(data.get("design_input", "")).strip()
         if not di:
             return None
+        uncovered = data.get("uncovered_clauses") or []
         return Verdict(
             design_input=di,
             verdict=str(data.get("verdict", "")).strip().lower(),
             reviewer=str(data.get("reviewer", "")).strip(),
             rationale=str(data.get("rationale", "")).strip(),
             test_hash=str(data.get("test_hash", "")).strip(),
+            uncovered_clauses=[str(c).strip() for c in uncovered if str(c).strip()],
             source=filename,
         )
 
@@ -146,14 +158,20 @@ def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | N
         agg.reviewer = v.reviewer
         agg.rationale = v.rationale
         agg.reviewed_hash = v.test_hash
+        agg.uncovered_clauses = v.uncovered_clauses
 
     def _status(agg: DesignInputFaithfulness) -> str:
         if not agg.verdict:
             return UNREVIEWED
-        if agg.verdict != FAITHFUL:
-            return UNFAITHFUL
+        # A verdict only counts for the exact test it reviewed.
         if agg.reviewed_hash != expected.get(agg.design_input, ""):
             return STALE
+        # Explicit partial, OR a "faithful" verdict that nonetheless lists
+        # uncovered clauses (an inconsistent claim) -> partial.
+        if agg.verdict == PARTIAL or (agg.verdict == FAITHFUL and agg.uncovered_clauses):
+            return PARTIAL
+        if agg.verdict != FAITHFUL:
+            return UNFAITHFUL
         return FAITHFUL
 
     by_id, orphan_ids = aggregate_by_id(

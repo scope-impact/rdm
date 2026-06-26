@@ -132,13 +132,21 @@ def test_blocks_when_verified_but_not_faithfully_reviewed(tmp_path: Path) -> Non
 
 
 def test_blocks_on_unfaithful_verdict(tmp_path: Path) -> None:
+    from rdm.record.allure import find_tests_dir
+    from rdm.record.faithfulness import current_hashes
+    from rdm.record.sdd import design_inputs
+
     dhf = _project(tmp_path, [("DI-1", ["UN-001"])], faithful=False)
     results = tmp_path / "allure"
     _result(results, "a", "passed", "DI-1")
+    # An unfaithful verdict for the CURRENT test (matching hash, so it reads as
+    # unfaithful rather than stale).
+    cur = current_hashes(design_inputs(dhf), find_tests_dir(dhf))["DI-1"]
     (dhf / "faithfulness").mkdir(parents=True)
     (dhf / "faithfulness" / "DI-1-faithfulness.json").write_text(json.dumps({
         "design_input": "DI-1", "verdict": "unfaithful", "reviewer": "r",
         "rationale": "the test asserts a tautology, not the requirement",
+        "test_hash": cur,
     }))
     outcome = run_release_gate(dhf, results)
     assert not outcome.passed
