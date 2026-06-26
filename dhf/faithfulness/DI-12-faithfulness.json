@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-12",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts the exact coverage row (3/1/2/66%) and that verbose names the missing ISO-2; a report that miscounted or omitted missing items fails it.",
+  "test_hash": "sha256:060b35226ee3fbebb29360547c7465cac32b16404b147434c42ea6dad9d71821",
+  "reviewed_tests": [
+    "test_coverage_report_tabulates_and_lists_missing"
+  ]
+}

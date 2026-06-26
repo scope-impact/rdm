@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-11",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts the standard checklists are listed AND that auditing by built-in NAME loads it and resolves includes (returns 3 over an empty doc); exercises the real built-in+include machinery, not a stub.",
+  "test_hash": "sha256:f01029c2296494c89d949456fecb3fb1fd1b620b8264bf33f310631e99bb3c0a",
+  "reviewed_tests": [
+    "test_ships_composable_builtin_checklists"
+  ]
+}

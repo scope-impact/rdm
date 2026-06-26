@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-10",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts audit_for_gaps returns 3 when a required reference is absent and 0 when all are present; an audit that ignored coverage could not produce both exit codes.",
+  "test_hash": "sha256:a70aeb22399e1be99b3cab2d1b939c71e27d5699e54eb6bb57a5f814554ea3bb",
+  "reviewed_tests": [
+    "test_reports_missing_checklist_references"
+  ]
+}
