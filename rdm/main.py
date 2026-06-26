@@ -123,6 +123,14 @@ def handle_story_command(args):
             return story_release_gate_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+            )
+
+        elif args.story_command == 'faithfulness':
+            from rdm.story_audit.design_gate import story_faithfulness_command
+            return story_faithfulness_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
             )
 
         elif args.story_command == 'persona':
@@ -135,7 +143,7 @@ def handle_story_command(args):
         else:
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
-                "backlog-validate, design-gate, verify, release-gate, or persona"
+                "backlog-validate, design-gate, verify, release-gate, faithfulness, or persona"
             )
             return 1
 
@@ -270,10 +278,24 @@ def parse_arguments(arguments):
     story_verify_parser.add_argument('-o', '--output', help='Output data file (default: verification.yml)')
 
     # rdm story release-gate
-    release_gate_help = 'block release unless design is approved and every user need is verified'
+    release_gate_help = ('block release unless design is approved and every design input is '
+                         'verified and faithfully reviewed')
     release_gate_parser = story_subparsers.add_parser('release-gate', help=release_gate_help)
     release_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     release_gate_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
+    release_gate_parser.add_argument(
+        '--faithfulness',
+        help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
+    )
+
+    # rdm story faithfulness
+    faithfulness_help = 'report independent faithfulness review (does each verifying test verify its design input?)'
+    faithfulness_parser = story_subparsers.add_parser('faithfulness', help=faithfulness_help)
+    faithfulness_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    faithfulness_parser.add_argument(
+        '--faithfulness',
+        help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
+    )
 
     # rdm story persona
     persona_help = 'report formative usability evidence from AI-persona simulated-use runs'

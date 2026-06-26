@@ -34,6 +34,7 @@ from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _allure_result
 from tests.util import write_design_doc
+from tests.util import write_faithful_verdicts as _faithful
 
 # Tagging requires allure-pytest; skip cleanly if it is not installed.
 allure = pytest.importorskip("allure")
@@ -100,14 +101,19 @@ def test_design_gate_requires_approval(tmp_path: Path) -> None:
 
 @allure.story("DI-3")
 def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
-    """DI-3: block release until every design input is verified by a passing test."""
+    """DI-3: block release until every design input is verified by a passing test
+    AND independently confirmed to verify it (the faithfulness gate)."""
     dhf = _approved_dhf(tmp_path, ["UN-003"])  # DI-1 traces to UN-003
+    (dhf.parent / "tests").mkdir(exist_ok=True)  # isolate the test-source hash
     empty = tmp_path / "none"
     empty.mkdir()
     assert not run_release_gate(dhf, empty).passed  # untested -> blocked
     results = tmp_path / "allure"
     _allure_result(results, "a", "passed", "DI-1")
-    assert run_release_gate(dhf, results).passed  # verified -> passes
+    # Verified (the test passed) but not yet faithfully reviewed -> still blocked.
+    assert not run_release_gate(dhf, results).passed
+    _faithful(dhf)  # record the independent faithfulness verdict
+    assert run_release_gate(dhf, results).passed  # verified + faithful -> passes
 
 
 @allure.story("DI-4")
@@ -142,4 +148,14 @@ def test_formative_usability_classified(tmp_path: Path) -> None:
 @allure.story("DI-6")
 def test_planning_artifacts_marked_non_record() -> None:
     """DI-6: planning tooling is optional and its outputs are marked non-record."""
+    from types import SimpleNamespace
+
+    from rdm.project_management.sync import build_task_body
+
+    # The note declares non-record status...
     assert "not a controlled record" in PROVENANCE_NOTE
+    # ...and a generated planning artifact actually carries the stamp (verifying
+    # the behaviour, not merely the constant's wording).
+    task = SimpleNamespace(id="rdm-001", description="x", business_value="",
+                           acceptance_criteria=[], subtask_ids=[], priority="high")
+    assert PROVENANCE_NOTE in build_task_body(task)

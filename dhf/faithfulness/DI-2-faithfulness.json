@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-2",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts a placeholder design doc is NOT complete and a committed-clean one IS ok via check_design_docs; exercises both the completeness and git-approval paths the gate enforces.",
+  "test_hash": "sha256:2c446ec6d6c43873b2357de0c0855086134f5f923ec719779edcefbfa4277e85",
+  "reviewed_tests": [
+    "test_design_gate_requires_approval"
+  ]
+}

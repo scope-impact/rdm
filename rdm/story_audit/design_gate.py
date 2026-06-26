@@ -34,7 +34,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record import allure
+from rdm.record import allure, faithfulness
 from rdm.record.reconcile import relevant_orphans
 from rdm.record.sdd import (
     context_of,
@@ -252,6 +252,44 @@ def _verification_messages(report) -> list[str]:
     return messages
 
 
+def _faithfulness_messages(report: faithfulness.FaithfulnessReport) -> list[str]:
+    """Blocking messages for a faithfulness report: each design input whose
+    verifying test is not independently confirmed to verify it."""
+    messages = [
+        f"design input {uid} has no faithfulness review (its verifying test is "
+        "unconfirmed -- a passing test is not proof it verifies the input)"
+        for uid in report.unreviewed
+    ]
+    messages += [
+        f"design input {uid} FAILED faithfulness review "
+        f"({report.by_user_need[uid].rationale or 'test does not verify the input'})"
+        for uid in report.unfaithful
+    ]
+    messages += [
+        f"design input {uid} faithfulness review is STALE: its verifying test "
+        "changed since the review (re-review the test against the input)"
+        for uid in report.stale
+    ]
+    return messages
+
+
+def faithfulness_dir_for(dhf_dir: Path, faithfulness_dir: Path | None) -> Path:
+    """Resolve the faithfulness-verdicts directory (default ``<dhf>/faithfulness``)."""
+    return Path(faithfulness_dir) if faithfulness_dir else dhf_dir / "faithfulness"
+
+
+def run_faithfulness_gate(
+    dhf_dir: Path, faithfulness_dir: Path | None = None
+) -> faithfulness.FaithfulnessReport:
+    """Reconcile the declared design inputs against faithfulness verdicts."""
+    inputs = design_inputs(dhf_dir)
+    return faithfulness.reconcile(
+        inputs,
+        faithfulness_dir_for(dhf_dir, faithfulness_dir),
+        allure.find_tests_dir(dhf_dir),
+    )
+
+
 def _traceability_warnings(dhf_dir: Path) -> list[str]:
     """Reconcile design-input IDs against @allure tags found in the tests.
 
@@ -394,6 +432,7 @@ class ReleaseResult:
 
     design: GateResult
     verified: list[str] = field(default_factory=list)
+    faithful: list[str] = field(default_factory=list)
     blocking: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
@@ -402,16 +441,23 @@ class ReleaseResult:
         return not self.blocking
 
 
-def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
+def run_release_gate(
+    dhf_dir: Path,
+    allure_results_dir: Path,
+    faithfulness_dir: Path | None = None,
+) -> ReleaseResult:
     """Run the release gate.
 
     A release requires, as hard conditions:
       1. the design gate passes (the per-context design document(s) + review
          present, complete, and approved in version control),
-      2. at least one design input is declared, and
+      2. at least one design input is declared,
       3. every declared design input is *verified* by a passing Allure test --
-         any failed or untested design input blocks the release, and
-      4. every user need is addressed by at least one design input.
+         any failed or untested design input blocks the release,
+      4. every declared design input has a current, *faithful* review -- its
+         verifying test is independently confirmed to verify it (a passing test
+         is not proof on its own), and
+      5. every user need is addressed by at least one design input.
 
     Orphan Allure tags (no matching design input) are warnings, not blockers.
     """
@@ -435,6 +481,16 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
     result.verified = report.verified
     result.blocking += _verification_messages(report)
 
+    # Verified (the test passed) is necessary but not sufficient: the test must
+    # also be independently confirmed to actually verify the input.
+    faith = run_faithfulness_gate(dhf_dir, faithfulness_dir)
+    result.faithful = faith.faithful
+    result.blocking += _faithfulness_messages(faith)
+    result.warnings += [
+        f"faithfulness verdict for {tag} matches no declared design input"
+        for tag in relevant_orphans(faith.orphan_ids, di_ids)
+    ]
+
     # A user need with no design input is an unaddressed (hence unverified) need.
     addressed = {un for di in inputs for un in di["traces_to"]}
     for un in sorted(registry_user_needs(dhf_dir) - addressed):
@@ -450,6 +506,7 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
 def story_release_gate_command(
     dhf_dir: Path | None = None,
     allure_results_dir: Path | None = None,
+    faithfulness_dir: Path | None = None,
 ) -> int:
     """Run the `rdm story release-gate` command."""
     dhf = (dhf_dir or Path("dhf")).resolve()
@@ -465,7 +522,7 @@ def story_release_gate_command(
         print(f"Error: Allure results directory not found: {results}")
         return 2
 
-    result = run_release_gate(dhf, results)
+    result = run_release_gate(dhf, results, faithfulness_dir)
 
     print("Release gate")
     print(f"DHF: {dhf}\n")
@@ -474,6 +531,8 @@ def story_release_gate_command(
     print(f"  [{design_state}] design controls (design document(s) + review approved)")
     if result.verified:
         print(f"  [OK]   verified design inputs: {', '.join(result.verified)}")
+    if result.faithful:
+        print(f"  [OK]   faithfully reviewed design inputs: {', '.join(result.faithful)}")
 
     if result.blocking:
         print("\nBlocking:")
@@ -488,12 +547,60 @@ def story_release_gate_command(
     if result.passed:
         print(
             "Release gate PASSED: design controls are approved, every design input "
-            "is verified by a passing test, and every user need is addressed."
+            "is verified by a passing test AND independently confirmed to verify it, "
+            "and every user need is addressed."
         )
         return 0
 
     print(
         "Release gate FAILED: do not release. Resolve every blocking item above "
-        "(approve design controls; verify all design inputs; address all user needs)."
+        "(approve design controls; verify all design inputs; confirm test faithfulness; "
+        "address all user needs)."
     )
+    return 1
+
+
+def story_faithfulness_command(
+    dhf_dir: Path | None = None,
+    faithfulness_dir: Path | None = None,
+) -> int:
+    """Run the `rdm story faithfulness` command: report each design input's
+    independent faithfulness review (verifying test confirmed to verify it)."""
+    dhf = (dhf_dir or Path("dhf")).resolve()
+    if not dhf.exists():
+        print(f"Error: DHF directory not found: {dhf}")
+        print("Run `rdm init` first, or pass --dhf <path>.")
+        return 2
+
+    report = run_faithfulness_gate(dhf, faithfulness_dir)
+    vdir = faithfulness_dir_for(dhf, faithfulness_dir)
+
+    print("Faithfulness review (does each verifying test actually verify its input?)")
+    print(f"DHF: {dhf}")
+    print(f"Verdicts: {vdir} ({report.verdicts_found} found)\n")
+
+    by_di = report.by_user_need
+    for di_id in sorted(by_di):
+        agg = by_di[di_id]
+        marks = {
+            faithfulness.FAITHFUL: "[OK]  ",
+            faithfulness.UNFAITHFUL: "[FAIL]",
+            faithfulness.STALE: "[STALE]",
+            faithfulness.UNREVIEWED: "[????]",
+        }
+        print(f"  {marks.get(agg.status, '[????]')} {di_id}: {agg.status}"
+              + (f" -- {agg.reviewer}" if agg.reviewer else ""))
+        if agg.status != faithfulness.FAITHFUL and agg.rationale:
+            print(f"            {agg.rationale}")
+
+    blocking = _faithfulness_messages(report)
+    print()
+    if not blocking:
+        print(
+            "Faithfulness PASSED: every design input has a current, independent "
+            "review confirming its verifying test actually verifies it."
+        )
+        return 0
+    print(f"Faithfulness FAILED: {len(blocking)} design input(s) unconfirmed. "
+          "Run the `test-faithfulness` skill (or a human reviewer) to record verdicts.")
     return 1

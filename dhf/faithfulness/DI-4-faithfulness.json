@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-4",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "reconcile() over passed/failed/absent results yields verified/failed/untested respectively; checks the actual classification mapping, not a constant.",
+  "test_hash": "sha256:eec82dd0e8bb8ca59bc41a91a03960dfb331c05cee109b8c3e9bb7fc2839b59d",
+  "reviewed_tests": [
+    "test_verification_status_traceable_from_results"
+  ]
+}

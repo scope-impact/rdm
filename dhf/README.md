@@ -17,6 +17,8 @@ documents/
     verification.md   satisfies [UN-003, UN-004]   owns DI-4
     validation.md     satisfies [UN-005]           owns DI-5
     rendering.md      satisfies [UN-001]           realises DI-1, DI-4
+  faithfulness/                      independent §820.30(e) review: per-DI verdicts that the
+    DI-1-faithfulness.json …         verifying test actually verifies the input (hash-pinned)
 ```
 
 ## Model
@@ -28,6 +30,10 @@ documents/
   the user need they refine. A context can `realises` an input owned elsewhere.
 - **Verification** = each design input's `@allure.story("DI-…")` test (the test
   *is* the acceptance criterion, "live BDD"), aggregated across contexts.
+- **Faithfulness** = an independent review (the `test-faithfulness` skill or a
+  human) confirms each verifying test *actually verifies* its input, recorded as
+  hash-pinned `faithfulness/*.json` — the agentic §820.30(e) review. A passing
+  test isn't enough; it must also mean something.
 - **Validation** = human review + the `usability-persona` skill (formative), UN-keyed.
 - **Approval** = the reviewed, merged PR (git) — not a sign-off block here.
 
@@ -42,9 +48,13 @@ rdm story design-gate --dhf dhf      # design doc(s) + review present, complete,
 ```bash
 uv run pytest tests/acceptance --alluredir=dhf/allure-results   # run the tagged ACs
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-rdm story release-gate --dhf dhf --allure-results dhf/allure-results   # PASS when all needs verified
+rdm story faithfulness --dhf dhf       # every DI independently confirmed to verify its input
+rdm story release-gate --dhf dhf --allure-results dhf/allure-results   # PASS when all verified + faithful
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
 ```
+
+Faithfulness verdicts are produced by an independent reviewer (the
+`test-faithfulness` skill or a human) and committed under `dhf/faithfulness/`.
 
 `dhf/allure-results/` and `dhf/data/verification.yml` are generated (gitignored);
 they are produced by running the acceptance suite, not committed.

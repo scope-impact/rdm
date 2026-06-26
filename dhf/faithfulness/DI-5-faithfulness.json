@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-5",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "persona.reconcile over a run carrying a usability issue yields ISSUES status; exercises the formative ingest+classification path (and persona is absent from the release gate, so it never gates).",
+  "test_hash": "sha256:5b4454a72fc7b5be439dcbfd15daf3d893e68c4dd9ed4c7fcbe32cfd2fc9acd4",
+  "reviewed_tests": [
+    "test_formative_usability_classified"
+  ]
+}

@@ -28,13 +28,24 @@ author).
 
 - Design inputs DI-1..DI-6 are unambiguous and individually verifiable by an
   automated test.
-- Each user need (V&V plan) is addressed by at least one bounded-context SDD via
-  `satisfies`; no user need is duplicated across SDDs.
+- Each user need (V&V plan) is addressed by at least one bounded-context design
+  document via `satisfies`; no user need is duplicated across contexts.
 - The record core (record, gating, verification, validation, rendering) does not
   depend on the planning extra; planning is fenced as non-record (DI-6).
 - Approval is the version-control record; no duplicate sign-off is introduced.
 - Verification (Allure) and validation (human summative + persona formative) are
   distinguished; persona evidence never gates release.
+
+## Test-faithfulness review (per design input)
+
+The detailed §820.30(e) examination of *whether each verifying test actually
+verifies its design input* is recorded as machine-checkable, hash-pinned verdicts
+under `dhf/faithfulness/` (`rdm story faithfulness` reconciles them). At this
+revision every design input (DI-1..DI-6) carries a current `faithful` verdict;
+the release gate blocks if any is missing, negative, or stale (test changed since
+review). One weak test was found during this review (DI-6 originally asserted only
+the wording of `PROVENANCE_NOTE`) and was strengthened to assert the actual
+stamping behaviour before being marked faithful.
 
 ## Findings and actions
 

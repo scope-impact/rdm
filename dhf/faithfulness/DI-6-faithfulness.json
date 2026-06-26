@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-6",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts build_task_body actually embeds PROVENANCE_NOTE (the behaviour) in addition to the note's wording; a planning artifact emitted without the stamp fails it.",
+  "test_hash": "sha256:254b39ec68ab602d900eb20263303bdccb964bf77e353258967606f0f8cc6caf",
+  "reviewed_tests": [
+    "test_planning_artifacts_marked_non_record"
+  ]
+}

@@ -149,14 +149,23 @@ A user need is **met** when it is **validated** *and* **every design input that
 The same user need is **referenced** by many SDDs and refined by many design
 inputs, never **duplicated**: it is defined once in the registry.
 
-## Gates (when implemented)
+## Gates (implemented)
 
-- **design-gate**: each SDD present, complete, approved; each `satisfies`
-  resolves to a real user need; each design input `traces_to` a real user need.
-- **release-gate**: every **design input** is verified (its `@allure.story("DI-…")`
-  test passes, aggregated across contexts), every user need is addressed by at
-  least one design input, **and** every user need has approved validation
-  evidence.
+- **design-gate**: each design document present, complete, approved; each
+  `satisfies` resolves to a real user need; each design input `traces_to` a real
+  user need.
+- **faithfulness-gate** (`rdm story faithfulness`): every design input has a
+  **current, independent verdict** that its `@allure.story("DI-…")` test actually
+  *verifies* it — not a hollow/tautological/gamed assertion. The verdict is
+  hash-pinned to the verifying-test source, so an edit to the test re-opens the
+  review (goes `stale`). This is the agentic-era form of the §820.30(e) design
+  review: a passing test proves something *ran*; this proves it *means something*.
+  Verdicts are produced by an independent reviewer (the `test-faithfulness` skill
+  driving a second agent, or a human) and recorded as `*-faithfulness.json`.
+- **release-gate**: every **design input** is *verified* (its `@allure.story("DI-…")`
+  test passes, aggregated across contexts) **and** *faithful* (current
+  faithfulness verdict), every user need is addressed by at least one design
+  input, **and** every user need has approved validation evidence.
 
 ## Why "product need" is dropped
 

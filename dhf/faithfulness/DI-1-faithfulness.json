@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-1",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "drives build_verification over an approved DHF + a tagged Allure result and asserts total==1 plus the grouped DI-1 under UN-001 shape; an empty/no-op reconcile fails the structural asserts.",
+  "test_hash": "sha256:f61febf6c5c2d7c48d33b9d3a549889d31ad430f58e460834fa99b56bc8dab85",
+  "reviewed_tests": [
+    "test_compile_verification_from_the_record"
+  ]
+}

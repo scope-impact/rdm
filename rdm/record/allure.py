@@ -167,12 +167,20 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
 
 
 def find_tests_dir(dhf_dir: Path) -> Path | None:
-    """Locate the test suite to scan for @allure source tags."""
-    for base in (dhf_dir.parent, Path.cwd()):
-        candidate = base / "tests"
-        if candidate.exists():
-            return candidate
-    return None
+    """Locate the test suite to scan for @allure source tags.
+
+    Prefer ``<dhf>/../tests``; fall back to ``<cwd>/tests``. ``Path.cwd()`` is
+    evaluated lazily and guarded, because a prior test may have removed the
+    working directory (which would otherwise raise from the cwd lookup).
+    """
+    sibling = dhf_dir.parent / "tests"
+    if sibling.exists():
+        return sibling
+    try:
+        cwd_tests = Path.cwd() / "tests"
+    except OSError:
+        return None
+    return cwd_tests if cwd_tests.exists() else None
 
 
 def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:

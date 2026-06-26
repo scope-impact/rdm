@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-3",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts blocked with no results, blocked when verified-but-unreviewed, and pass only when verified AND faithful; drives the real release-gate transitions, not a stub.",
+  "test_hash": "sha256:3b5524d23886f42b1ac658968d6e6ea2084ca950e0a7b05350f71294f39e9f75",
+  "reviewed_tests": [
+    "test_release_gate_blocks_until_verified"
+  ]
+}

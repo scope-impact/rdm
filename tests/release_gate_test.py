@@ -8,6 +8,7 @@ design input blocks the release.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from rdm.story_audit.design_gate import run_release_gate, story_release_gate_command
@@ -15,6 +16,7 @@ from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _result
 from tests.util import write_design_doc
+from tests.util import write_faithful_verdicts as _faithful
 
 
 def _project(
@@ -23,16 +25,18 @@ def _project(
     user_needs: list[str] | None = None,
     *,
     commit: bool = True,
+    faithful: bool = True,
 ) -> Path:
     """Build a git repo with an approved per-context design doc (carrying the
-    design inputs), a design review, and a user-need registry. `inputs` is
-    ``(DI-id, [user needs it traces_to])``; user_needs defaults to their union.
+    design inputs), a design review, a user-need registry, and (by default)
+    faithfulness verdicts. `inputs` is ``(DI-id, [user needs it traces_to])``.
     """
     if user_needs is None:
         user_needs = sorted({un for _, traces in inputs for un in traces})
     repo = tmp_path / "repo"
     docs = repo / "dhf" / "documents"
     docs.mkdir(parents=True)
+    (repo / "tests").mkdir()  # empty -> isolate the test-source hash from this repo
     _git(repo, "init")
     write_design_doc(docs / "design", "core", satisfies=tuple(user_needs),
                      design_inputs=tuple(inputs))
@@ -44,7 +48,10 @@ def _project(
     if commit:
         _git(repo, "add", "-A")
         _git(repo, "commit", "-m", "approve design")
-    return repo / "dhf"
+    dhf = repo / "dhf"
+    if faithful:
+        _faithful(dhf)
+    return dhf
 
 
 def test_passes_when_design_approved_and_all_verified(tmp_path: Path) -> None:
@@ -112,6 +119,45 @@ def test_orphan_tag_is_warning_not_blocking(tmp_path: Path) -> None:
     outcome = run_release_gate(dhf, results)
     assert outcome.passed
     assert any("DI-777" in w for w in outcome.warnings)
+
+
+def test_blocks_when_verified_but_not_faithfully_reviewed(tmp_path: Path) -> None:
+    # The test passes (verified) but no faithfulness verdict exists -> blocked.
+    dhf = _project(tmp_path, [("DI-1", ["UN-001"])], faithful=False)
+    results = tmp_path / "allure"
+    _result(results, "a", "passed", "DI-1")
+    outcome = run_release_gate(dhf, results)
+    assert not outcome.passed
+    assert any("DI-1" in b and "faithfulness" in b for b in outcome.blocking)
+
+
+def test_blocks_on_unfaithful_verdict(tmp_path: Path) -> None:
+    dhf = _project(tmp_path, [("DI-1", ["UN-001"])], faithful=False)
+    results = tmp_path / "allure"
+    _result(results, "a", "passed", "DI-1")
+    (dhf / "faithfulness").mkdir(parents=True)
+    (dhf / "faithfulness" / "DI-1-faithfulness.json").write_text(json.dumps({
+        "design_input": "DI-1", "verdict": "unfaithful", "reviewer": "r",
+        "rationale": "the test asserts a tautology, not the requirement",
+    }))
+    outcome = run_release_gate(dhf, results)
+    assert not outcome.passed
+    assert any("DI-1" in b and "FAILED faithfulness" in b for b in outcome.blocking)
+
+
+def test_stale_verdict_blocks(tmp_path: Path) -> None:
+    # A faithful verdict pinned to the wrong hash is stale -> blocked.
+    dhf = _project(tmp_path, [("DI-1", ["UN-001"])], faithful=False)
+    results = tmp_path / "allure"
+    _result(results, "a", "passed", "DI-1")
+    (dhf / "faithfulness").mkdir(parents=True)
+    (dhf / "faithfulness" / "DI-1-faithfulness.json").write_text(json.dumps({
+        "design_input": "DI-1", "verdict": "faithful", "reviewer": "r",
+        "rationale": "looked good at the time", "test_hash": "sha256:deadbeef",
+    }))
+    outcome = run_release_gate(dhf, results)
+    assert not outcome.passed
+    assert any("DI-1" in b and "STALE" in b for b in outcome.blocking)
 
 
 def test_command_requires_allure_results(tmp_path: Path) -> None:

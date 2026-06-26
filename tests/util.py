@@ -61,6 +61,31 @@ def write_design_doc(
     return path
 
 
+def write_faithful_verdicts(
+    dhf: Path, verdicts_dir: Path | None = None, reviewer: str = "reviewer (independent)"
+) -> Path:
+    """Write a `faithful` verdict per declared design input, hash-pinned the same
+    way the gate computes it (so the verdicts are current). Returns the dir.
+    """
+    from rdm.record.allure import find_tests_dir
+    from rdm.record.faithfulness import current_hashes
+    from rdm.record.sdd import design_inputs
+
+    out = verdicts_dir or (dhf / "faithfulness")
+    out.mkdir(parents=True, exist_ok=True)
+    inputs = design_inputs(dhf)
+    hashes = current_hashes(inputs, find_tests_dir(dhf))
+    for di in inputs:
+        (out / f"{di['id']}-faithfulness.json").write_text(json.dumps({
+            "design_input": di["id"],
+            "verdict": "faithful",
+            "reviewer": reviewer,
+            "rationale": "the verifying test exercises the input",
+            "test_hash": hashes[di["id"]],
+        }))
+    return out
+
+
 def render_from_string(
     input_string=None,
     context=None,

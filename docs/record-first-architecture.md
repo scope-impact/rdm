@@ -81,8 +81,14 @@ Rules:
 
    Verification is aggregated across every SDD that satisfies the need;
    **validation** (human evidence on the journey) is tracked separately.
-3. **Gate** (`design_gate.py`, existing) — design input/review present +
-   complete + approved (committed) in git; baseline drift re-opens the gate.
+3. **Gate** (`design_gate.py`) — design document(s)/review present + complete +
+   approved (committed) in git; baseline drift re-opens the gate. The
+   **release gate** additionally requires every design input to be *verified*
+   (passing tagged test) **and** *faithful* — an independent, hash-pinned verdict
+   (`faithfulness.py`, `rdm story faithfulness`) that the test actually verifies
+   the input; editing the test re-opens that review. The faithfulness verdict is
+   the agentic-era §820.30(e) review: "the test passes" vs "the test means
+   something".
 4. **Render** (existing pipeline) — templates + data → Markdown → PDF/DOCX, now
    also embedding **generated** sections:
    - traceability matrix (user need → SDDs → test → status),
