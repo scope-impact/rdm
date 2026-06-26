@@ -55,3 +55,13 @@ def test_locates_definitions_and_flags_only_definitions(tmp_path: Path) -> None:
     }
     conflicts = detect_conflicts(requirements)
     assert len(conflicts) == 1 and conflicts[0][0] == "FT-001"  # only the duplicated one
+
+    # An ID defined once but merely *referenced* elsewhere ("- FT-002") is NOT a
+    # conflict — references must not be mistaken for definitions.
+    referenced = {
+        "FT-002": [
+            StoryReference("FT-002", "feature.yaml", 1, "requirement", "id: FT-002"),
+            StoryReference("FT-002", "index.yaml", 5, "requirement", "- FT-002"),
+        ],
+    }
+    assert detect_conflicts(referenced) == []

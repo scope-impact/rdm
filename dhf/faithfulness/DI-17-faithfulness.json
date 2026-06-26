@@ -2,8 +2,8 @@
   "design_input": "DI-17",
   "verdict": "faithful",
   "reviewer": "claude (independent review pass)",
-  "rationale": "translates a real gtest XML and asserts the loaded YAML has Cherry=pass and BadOne=fail, and that an unknown format raises ValueError; exercises the real parse+flatten+write+dispatch path (first test of translate.py).",
-  "test_hash": "sha256:f0bf8e14e9c337fe3b5fe3ec1b3a8d439125aef4b4f45e8ebc7c42b48c61a3b6",
+  "rationale": "translates a real gtest XML (Cherry=pass, BadOne=fail) AND a qttest XML (someTestCase=pass), plus rejects an unknown format; now covers two of the named formats, not just gtest.",
+  "test_hash": "sha256:7ec42680ad78f6fc442d074a15273dbab2bc22b4a43f1eb9c4202787217c78f8",
   "reviewed_tests": [
     "test_translates_foreign_test_results"
   ]

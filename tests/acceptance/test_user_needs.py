@@ -84,6 +84,14 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
     # Rows are design inputs, grouped under the user need they trace to.
     assert data["groups"][0]["user_need"] == "UN-001"
     assert data["groups"][0]["design_inputs"][0]["design_input"] == "DI-1"
+    # ...with NO project-management dependency: the record core must not import
+    # the planning layer (a violation would show as a source-level import).
+    import rdm.record as _record_pkg
+    _record_dir = Path(_record_pkg.__file__).parent
+    assert not any(
+        "project_management" in p.read_text(encoding="utf-8")
+        for p in _record_dir.glob("*.py")
+    )
 
 
 @allure.story("DI-2")

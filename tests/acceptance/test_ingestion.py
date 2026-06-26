@@ -21,7 +21,9 @@ from rdm.util import load_yaml
 
 allure = pytest.importorskip("allure")
 
-_GTEST_XML = Path(__file__).resolve().parents[1] / "test_data" / "test_detail.xml"
+_TEST_DATA = Path(__file__).resolve().parents[1] / "test_data"
+_GTEST_XML = _TEST_DATA / "test_detail.xml"
+_QTTEST_XML = _TEST_DATA / "integration.xml"
 
 
 @allure.story("DI-16")
@@ -45,5 +47,12 @@ def test_translates_foreign_test_results(tmp_path: Path) -> None:
     assert results["SomeModule.Cherry"]["result"] == "pass"
     assert results["HasOneFailure.BadOne"]["result"] == "fail"
 
+    # A different format (qttest) is also supported, not just gtest.
+    qt_out = tmp_path / "qt.yml"
+    translate_test_results("qttest", str(_QTTEST_XML), str(qt_out))
+    qt = load_yaml(str(qt_out))
+    assert qt["some_module.SomeName::someTestCase"]["result"] == "pass"
+
+    # An unknown format is rejected.
     with pytest.raises(ValueError):
         translate_test_results("nonsense-format", str(_GTEST_XML), str(out))

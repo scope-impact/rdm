@@ -2,8 +2,8 @@
   "design_input": "DI-11",
   "verdict": "faithful",
   "reviewer": "claude (independent review pass)",
-  "rationale": "asserts the standard checklists are listed AND that auditing by built-in NAME loads it and resolves includes (returns 3 over an empty doc); exercises the real built-in+include machinery, not a stub.",
-  "test_hash": "sha256:f01029c2296494c89d949456fecb3fb1fd1b620b8264bf33f310631e99bb3c0a",
+  "rationale": "asserts the standards are shipped AND that an included key is genuinely required (partial doc covering only the top-level key \u2192 exit 3, full \u2192 0); a broken include-resolver would pass the partial doc, so this now pins the 'resolves include directives' clause.",
+  "test_hash": "sha256:c348f8fffbe2cd8da3a928ae14f2949a0f2ae2705fec1562acb97190ad03c36c",
   "reviewed_tests": [
     "test_ships_composable_builtin_checklists"
   ]

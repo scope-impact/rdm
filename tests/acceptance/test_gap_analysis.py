@@ -46,11 +46,18 @@ def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
     for expected in ("62304_2015_class_b", "14971_2019", "FDA-SW_2021_enhanced"):
         assert expected in listed
 
-    # Auditing by built-in NAME (not path) exercises built-in load + include
-    # resolution end-to-end; a document covering nothing must fail.
-    empty = tmp_path / "empty.md"
-    empty.write_text("No references here.\n")
-    assert audit_for_gaps("62304_2015_class_b", [str(empty)], coverage=False) == 3
+    # `include` resolution: a key defined ONLY in an included file is still
+    # required. If includes were ignored, covering the top-level key alone would
+    # pass (0); resolution makes the included B-1 required, so partial → gap (3).
+    (tmp_path / "base.txt").write_text("B-1 base requirement\n")
+    main = tmp_path / "main.txt"
+    main.write_text("include base.txt\nM-1 main requirement\n")
+    partial = tmp_path / "partial.md"
+    partial.write_text("covers [[M-1]] only\n")
+    full = tmp_path / "full.md"
+    full.write_text("covers [[M-1]] and [[B-1]]\n")
+    assert audit_for_gaps(str(main), [str(partial)], coverage=False) == 3  # included key missing
+    assert audit_for_gaps(str(main), [str(full)], coverage=False) == 0     # included key covered
 
 
 @allure.story("DI-12")
