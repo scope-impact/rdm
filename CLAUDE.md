@@ -14,6 +14,46 @@ uv run ruff check --fix .      # Lint with auto-fix
 
 Ruff config: line-length 120, rules E/W/F (see `[tool.ruff]` in pyproject.toml).
 
+## RDM develops itself with RDM (dogfood)
+
+RDM's own development is governed by RDM's record-first design controls. RDM is
+the product under control; its DHF lives in `dhf/` (see `dhf/README.md`). When
+changing RDM, you are working inside that DHF's scope:
+
+- **The record** — one `kind: design` document per bounded context under
+  `dhf/documents/design/` (record, gating, verification, validation, rendering),
+  each owning its `design_inputs`; user needs in the V&V plan; the design review
+  in `dhf/documents/design_review.md`; faithfulness verdicts in
+  `dhf/faithfulness/`. Never hand-edit the traceability matrix — it is generated.
+- **Acceptance criteria are tests** — each design input DI-n is verified by a
+  test tagged `@allure.story("DI-n")` in `tests/acceptance/`. Add/changing a
+  design input means adding/adjusting its tagged test ("live BDD").
+- **Local gate** — install the pre-commit hook so implementation commits are
+  blocked unless the design docs are approved (committed):
+
+  ```bash
+  uv run rdm hooks .githooks && git config core.hooksPath .githooks
+  ```
+
+- **CI enforcement** — `.github/workflows/design-controls.yml` runs the full
+  pipeline on every push/PR: design-gate → acceptance tests (Allure) → verify →
+  faithfulness → release-gate. A change that leaves a DI unverified, breaks the
+  design gate, or edits a tagged test without re-recording its faithfulness
+  verdict (goes **stale**) fails CI.
+- **After editing a tagged test**, re-record its faithfulness verdict (an
+  independent reviewer, the `test-faithfulness` skill, or `write_verdict.py`) —
+  the hash-pin intentionally re-opens the §820.30(e) review on any test change.
+
+Run the gates locally exactly as CI does:
+
+```bash
+uv run rdm story design-gate --dhf dhf
+uv run pytest tests/acceptance --alluredir=dhf/allure-results
+uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+uv run rdm story faithfulness --dhf dhf
+uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+```
+
 ## Architecture
 
 RDM is a documentation-as-code CLI tool for IEC 62304 medical device software. It generates regulatory documents from Markdown templates + YAML data files.
