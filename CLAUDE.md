@@ -10,9 +10,14 @@ uv run pytest tests            # Run all tests
 uv run pytest tests/render_test.py::test_invert_dependencies  # Run single test
 uv run ruff check .            # Lint
 uv run ruff check --fix .      # Lint with auto-fix
+uv run --extra docs pdoc rdm -o build/api   # Build API reference docs (gitignored)
 ```
 
 Ruff config: line-length 120, rules E/W/F (see `[tool.ruff]` in pyproject.toml).
+
+API reference docs are generated from the source and docstrings by
+[pdoc](https://pdoc.dev) (zero-config). They land in `build/api/` (gitignored);
+serve live with `uv run --extra docs pdoc rdm`.
 
 ## RDM develops itself with RDM (dogfood)
 
