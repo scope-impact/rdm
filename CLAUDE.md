@@ -10,14 +10,18 @@ uv run pytest tests            # Run all tests
 uv run pytest tests/render_test.py::test_invert_dependencies  # Run single test
 uv run ruff check .            # Lint
 uv run ruff check --fix .      # Lint with auto-fix
-uv run --extra docs pdoc rdm -o build/api   # Build API reference docs (gitignored)
+uv run --extra docs mkdocs build   # Build the docs site -> site/ (gitignored)
+uv run --extra docs mkdocs serve   # Live-preview the docs at localhost:8000
 ```
 
 Ruff config: line-length 120, rules E/W/F (see `[tool.ruff]` in pyproject.toml).
 
-API reference docs are generated from the source and docstrings by
-[pdoc](https://pdoc.dev) (zero-config). They land in `build/api/` (gitignored);
-serve live with `uv run --extra docs pdoc rdm`.
+Documentation is a [MkDocs](https://www.mkdocs.org/) site (Material theme):
+the Markdown prose under `docs/` plus an API reference generated from the source
+docstrings via [mkdocstrings](https://mkdocstrings.github.io/). Config is
+`mkdocs.yml`; nav and the `::: rdm.…` reference pages live in `docs/`. The
+rendered site lands in `site/` (gitignored). `mkdocs build --strict` fails on a
+broken link or missing nav entry — run it the way CI does.
 
 ## RDM develops itself with RDM (dogfood)
 

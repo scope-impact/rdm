@@ -44,14 +44,23 @@ validation = ["playwright==1.60.0"]
 # artifacts, not the system of record (SDD + Allure + git). RDM's record/render
 # core does not require it. See docs/plan-vs-record.md.
 plan = ["rdm[github]", "rdm[analytics]", "rdm[story-audit]"]
-# API reference docs generated straight from the source + docstrings (zero
-# config). Build with: uv run --extra docs pdoc rdm -o build/api
-docs = ["pdoc==16.0.0"]
+# Documentation site (Markdown prose under docs/ + an API reference generated
+# from the source docstrings via mkdocstrings). Build with:
+#   uv run --extra docs mkdocs build      # -> site/ (gitignored)
+#   uv run --extra docs mkdocs serve      # live preview
+docs = [
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.6.21",
+    "mkdocstrings[python]==0.30.1",
+    "ruff==0.14.13",  # mkdocstrings uses it to format rendered signatures
+]
 dev = [
     "pytest==9.0.2",
     "ruff==0.14.13",
     "check-manifest==0.51",
-    "pdoc==16.0.0",
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.6.21",
+    "mkdocstrings[python]==0.30.1",
     "mock==5.2.0",
     "docutils==0.21.2",
     "coverage==7.13.1",
