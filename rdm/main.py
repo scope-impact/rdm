@@ -142,6 +142,15 @@ def handle_story_command(args):
                 faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
             )
 
+        elif args.story_command == 'mutation-probe':
+            from rdm.story_audit.mutation import story_mutation_probe_command
+            return story_mutation_probe_command(
+                file=args.file,
+                find=args.find,
+                replace=args.replace,
+                test=args.test,
+            )
+
         elif args.story_command == 'verdict':
             from rdm.story_audit.design_gate import story_verdict_command
             return story_verdict_command(
@@ -166,7 +175,7 @@ def handle_story_command(args):
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
                 "backlog-validate, design-gate, verify, release-gate, faithfulness, "
-                "verdict, trace, or persona"
+                "verdict, mutation-probe, trace, or persona"
             )
             return 1
 
@@ -319,6 +328,14 @@ def parse_arguments(arguments):
         '--faithfulness',
         help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
     )
+
+    # rdm story mutation-probe
+    mutation_help = 'prove a test catches a defect: apply a one-line mutation, run the test, always revert'
+    mutation_parser = story_subparsers.add_parser('mutation-probe', help=mutation_help)
+    mutation_parser.add_argument('--file', required=True, help='source file to mutate')
+    mutation_parser.add_argument('--find', required=True, help='exact text to replace (must occur once)')
+    mutation_parser.add_argument('--replace', required=True, help='replacement text (the mutation)')
+    mutation_parser.add_argument('--test', required=True, help='pytest -k selector for the verifying test')
 
     # rdm story verdict
     verdict_help = 'record an independent faithfulness verdict for a design input (hash-pinned to its test)'

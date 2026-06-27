@@ -16,6 +16,9 @@ design_inputs:
   - id: DI-20
     text: "RDM shall provide a command to record a faithfulness verdict for a design input, hash-pinned to the current verifying-test source, and reject an undeclared design input."
     traces_to: [UN-009]
+  - id: DI-21
+    text: "RDM shall provide a mutation probe that applies a one-line source mutation, runs a test, reports whether the test caught it (killed) or not (survived), and always restores the file."
+    traces_to: [UN-009]
 ---
 
 # Gating — Software Design
@@ -38,6 +41,10 @@ This context owns:
   undeclared design input. (The producer command the `test-faithfulness` skill
   calls — so the skill depends on the `rdm` binary, not a bundled script.)
   Refines UN-009.
+- **DI-21 (mutation probe)** — provide `rdm story mutation-probe` to apply a
+  one-line source mutation, run a test, report killed/survived, and always
+  restore the file. Turns "this test would catch a broken X" from a reviewer's
+  claim into executed evidence. Refines UN-009.
 
 ## Design Outputs
 
@@ -58,6 +65,9 @@ Enforces design controls and verified coverage.
 - **Verdict recorder** (`record_verdict`, `rdm story verdict`) — writes a verdict
   hash-pinned to the current test source; the `test-faithfulness` skill's only
   dependency on RDM (no bundled script).
+- **Mutation probe** (`rdm/story_audit/mutation.py`, `rdm story mutation-probe`) —
+  applies a one-line mutation, runs the test, reports killed/survived, always
+  restores the file; the executed-evidence half of the faithfulness review.
 
 Acceptance criteria are verified by `@allure.story("DI-2" / "DI-3" / "DI-19" /
-"DI-20")` tests.
+"DI-20" / "DI-21")` tests.

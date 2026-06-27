@@ -48,11 +48,20 @@ them and their current state):
    resolving include directives   ✗ NOT EXERCISED                    (would still pass!) ← gap
    ```
 
-3. **For every covered clause, name the mutation that breaks it** and confirm the
-   test would FAIL under that mutation. "It would catch a violation" is not a
-   belief — state the concrete one-line change to the implementation (or input)
-   that violates the clause, and check the assertion that goes red. If you cannot
-   name a mutation the test catches, the clause is **not** covered.
+3. **For every covered clause, name the mutation that breaks it — then PROVE it
+   with the mutation probe.** "It would catch a violation" is not a belief: run
+
+   ```bash
+   rdm story mutation-probe --file <impl.py> \
+     --find '<exact code that implements the clause>' \
+     --replace '<a one-line break of it>' \
+     --test <the tagged test>
+   ```
+
+   `KILLED` = the test caught it (the clause is genuinely covered). `SURVIVED` =
+   the test PASSED with the code broken → the clause is **not** covered, no matter
+   what the test's name says. The probe always restores the file. If you cannot
+   find a mutation the test kills, the clause is uncovered.
 
 4. **Decide the verdict — `faithful` only if EVERY clause is covered:**
    - **faithful** — every clause has a covering assertion with a named failing
