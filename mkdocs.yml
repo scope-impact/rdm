@@ -3,6 +3,7 @@ site_description: >-
   Documentation-as-code for IEC 62304 medical-device software: compile and gate
   a Design History File from the system of record (design documents + executed
   Allure results + git).
+site_url: https://scope-impact.github.io/rdm/
 repo_url: https://github.com/scope-impact/rdm
 repo_name: scope-impact/rdm
 docs_dir: docs
