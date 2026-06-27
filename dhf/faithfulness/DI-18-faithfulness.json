@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-18",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "clauses: forward/backward/owner/realisers(\u2713), status+tests fields(\u2713 probe: status\u2192None KILLS via the enriched trace over executed results)",
+  "test_hash": "sha256:ee3058212ae315de17082112c6798a2d5c27d24087b1c6a870e8e1c03fe39f9c",
+  "reviewed_tests": [
+    "test_trace_user_need_and_design_input"
+  ],
+  "uncovered_clauses": []
+}

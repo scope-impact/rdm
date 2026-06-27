@@ -1,0 +1,4 @@
+# Render config for RDM's own DHF. Minimal: the record-first documents are
+# plain markdown + frontmatter; the traceability matrix renders from the
+# generated data/verification.yml.
+md_extensions: []

@@ -67,8 +67,9 @@ MIN_SOURCE_FILE_LINES_FOR_ORPHAN_CHECK = 20
 # PATTERNS (ID_PATTERN imported from schema.py - single source of truth)
 # =============================================================================
 
-# Matches @allure.story("US-001") or @allure.feature("FT-001")
-ALLURE_PATTERN = re.compile(r'@allure\.(story|feature)\(["\']([^"\']+)["\']\)')
+# Matches @allure.story("US-001") or @allure.feature("FT-001").
+# Single definition lives in record.allure; re-exported here for existing callers.
+from rdm.record.allure import ALLURE_PATTERN  # noqa: E402,F401
 
 # Matches @trace("US-001")
 TRACE_PATTERN = re.compile(r'@trace\(["\']([^"\']+)["\']')

@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-21",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "clauses: applies-mutation(\u2713 stub runner sees 'VALUE = 2' during the run), reports-killed/survived(\u2713 asserts both from the runner's return), always-restores(\u2713 file == original after, even on the survived path), rejects-ambiguous(\u2713 error when find not unique). A probe that skipped apply/restore or mis-reported would fail a specific assert.",
+  "test_hash": "sha256:28272b44d669f2328dd61f4ed0c10051b3358720791f0220f531b2d2060ca95d",
+  "reviewed_tests": [
+    "test_mutation_probe_applies_reports_and_restores"
+  ],
+  "uncovered_clauses": []
+}

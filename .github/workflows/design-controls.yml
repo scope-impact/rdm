@@ -1,0 +1,70 @@
+name: Design controls (dogfood)
+
+# RDM eats its own dog food: this runs RDM's record-first gates against RDM's own
+# Design History File (dhf/) on every change. A PR that leaves a design input
+# unverified, breaks the design gate, or edits a verifying test without
+# re-recording its faithfulness verdict (stale) fails here.
+on: [push, pull_request]
+
+jobs:
+  design-controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Design gate (input + review present, complete, approved in git)
+        run: uv run rdm story design-gate --dhf dhf
+
+      - name: Run acceptance tests → Allure evidence
+        run: uv run pytest tests/acceptance --alluredir=dhf/allure-results
+
+      - name: Generate verification data
+        run: uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+
+      - name: Faithfulness review (each test confirmed to verify its design input)
+        run: uv run rdm story faithfulness --dhf dhf
+
+      - name: Release gate (verified + faithful + every user need addressed)
+        run: uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+
+      # ---- Allure report (the living document) ---------------------------------
+      # Additive: the gates above already consume the raw *-result.json. These
+      # steps render the browsable Allure HTML report + trends and publish it as a
+      # build artifact. `if: always()` so the report is produced even when a gate
+      # fails — that is exactly when you want to inspect it.
+      - name: Set up Java (Allure CLI runtime)
+        if: always()
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Generate Allure report
+        if: always()
+        run: |
+          npm install -g allure-commandline
+          allure generate dhf/allure-results --clean -o allure-report
+
+      - name: Upload Allure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+          if-no-files-found: warn
+
+      - name: Upload verification record (results + verification.yml)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-record
+          path: |
+            dhf/allure-results
+            dhf/data/verification.yml
+          if-no-files-found: warn

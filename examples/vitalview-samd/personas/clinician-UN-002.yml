@@ -1,0 +1,10 @@
+# AI-persona spec: drives the VitalView dashboard to exercise UN-002.
+# Formative evidence only -- not summative IEC 62366 validation.
+persona: physician
+user_need: UN-002
+profile: "Attending physician on rounds, on a tablet, intermittent connectivity"
+goal: "Sign in, find a specific patient, and read their current and recent vitals"
+success:
+  - "signed in successfully"
+  - "correct patient located"
+  - "current and recent vitals read"

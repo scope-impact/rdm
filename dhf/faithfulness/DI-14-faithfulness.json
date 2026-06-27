@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-14",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts (id,line) provenance, that two definitions conflict, AND that an ID with one definition + one '- FT-002' reference is NOT flagged; pins the 'definitions not references' clause.",
+  "test_hash": "sha256:bfb2f5d9076cf6d79eb034dacb69c448bbd8892acf2c04924df880552caa056e",
+  "reviewed_tests": [
+    "test_locates_definitions_and_flags_only_definitions"
+  ]
+}

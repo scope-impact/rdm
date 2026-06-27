@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-15",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "calls the real init() and asserts the scaffold contains Makefile, config.yml, documents/, and the design-controls templates incl. a kind:design doc; an empty or partial scaffold fails the file/content assertions.",
+  "test_hash": "sha256:a9ec4e609783dfc857f01ee1412bc2e98e65900483121462f3afe2e9f0585842",
+  "reviewed_tests": [
+    "test_init_scaffolds_a_project"
+  ]
+}

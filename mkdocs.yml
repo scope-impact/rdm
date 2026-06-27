@@ -1,0 +1,67 @@
+site_name: RDM — Regulatory Documentation Manager
+site_description: >-
+  Documentation-as-code for IEC 62304 medical-device software: compile and gate
+  a Design History File from the system of record (design documents + executed
+  Allure results + git).
+site_url: https://scope-impact.github.io/rdm/
+repo_url: https://github.com/scope-impact/rdm
+repo_name: scope-impact/rdm
+docs_dir: docs
+# build/ and dist/ are gitignored; keep the rendered site there too.
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_root_heading: true
+            show_source: true
+            show_submodules: true
+            members_order: source
+            docstring_section_style: spacy
+            separate_signature: true
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Record-first architecture: record-first-architecture.md
+      - Plan vs. record: plan-vs-record.md
+      - ADR 0001 — User needs across bounded contexts: adr-0001-bounded-context-user-needs.md
+  - Guides:
+      - FAQ: FAQ.md
+      - Audit checklist format: checklist-format.md
+      - AI-persona usability validation: ai-persona-usability-validation.md
+      - Worked example — VitalView: example-vitalview-decomposition.md
+  - Change history: HISTORY.md
+  - API reference: reference.md

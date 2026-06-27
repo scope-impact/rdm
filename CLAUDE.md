@@ -10,9 +10,58 @@ uv run pytest tests            # Run all tests
 uv run pytest tests/render_test.py::test_invert_dependencies  # Run single test
 uv run ruff check .            # Lint
 uv run ruff check --fix .      # Lint with auto-fix
+uv run --extra docs mkdocs build   # Build the docs site -> site/ (gitignored)
+uv run --extra docs mkdocs serve   # Live-preview the docs at localhost:8000
 ```
 
 Ruff config: line-length 120, rules E/W/F (see `[tool.ruff]` in pyproject.toml).
+
+Documentation is a [MkDocs](https://www.mkdocs.org/) site (Material theme):
+the Markdown prose under `docs/` plus an API reference generated from the source
+docstrings via [mkdocstrings](https://mkdocstrings.github.io/). Config is
+`mkdocs.yml`; nav and the `::: rdm.…` reference pages live in `docs/`. The
+rendered site lands in `site/` (gitignored). `mkdocs build --strict` fails on a
+broken link or missing nav entry — run it the way CI does.
+
+## RDM develops itself with RDM (dogfood)
+
+RDM's own development is governed by RDM's record-first design controls. RDM is
+the product under control; its DHF lives in `dhf/` (see `dhf/README.md`). When
+changing RDM, you are working inside that DHF's scope:
+
+- **The record** — one `kind: design` document per bounded context under
+  `dhf/documents/design/` (record, gating, verification, validation, rendering),
+  each owning its `design_inputs`; user needs in the V&V plan; the design review
+  in `dhf/documents/design_review.md`; faithfulness verdicts in
+  `dhf/faithfulness/`. Never hand-edit the traceability matrix — it is generated.
+- **Acceptance criteria are tests** — each design input DI-n is verified by a
+  test tagged `@allure.story("DI-n")` in `tests/acceptance/`. Add/changing a
+  design input means adding/adjusting its tagged test ("live BDD").
+- **Local gate** — install the pre-commit hook so implementation commits are
+  blocked unless the design docs are approved (committed):
+
+  ```bash
+  uv run rdm hooks .githooks && git config core.hooksPath .githooks
+  ```
+
+- **CI enforcement** — `.github/workflows/design-controls.yml` runs the full
+  pipeline on every push/PR: design-gate → acceptance tests (Allure) → verify →
+  faithfulness → release-gate. A change that leaves a DI unverified, breaks the
+  design gate, or edits a tagged test without re-recording its faithfulness
+  verdict (goes **stale**) fails CI.
+- **After editing a tagged test**, re-record its faithfulness verdict (an
+  independent reviewer, the `test-faithfulness` skill, or `rdm story verdict`) —
+  the hash-pin intentionally re-opens the §820.30(e) review on any test change.
+
+Run the gates locally exactly as CI does:
+
+```bash
+uv run rdm story design-gate --dhf dhf
+uv run pytest tests/acceptance --alluredir=dhf/allure-results
+uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+uv run rdm story faithfulness --dhf dhf
+uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+```
 
 ## Architecture
 

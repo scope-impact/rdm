@@ -103,8 +103,80 @@ def handle_story_command(args):
                 quiet=args.quiet,
             )
 
+        elif args.story_command == 'design-gate':
+            from rdm.story_audit.design_gate import story_design_gate_command
+            return story_design_gate_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+            )
+
+        elif args.story_command == 'verify':
+            from rdm.record.verify import verify_command
+            return verify_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                output=Path(args.output) if args.output else None,
+            )
+
+        elif args.story_command == 'release-gate':
+            from rdm.story_audit.design_gate import story_release_gate_command
+            return story_release_gate_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+            )
+
+        elif args.story_command == 'faithfulness':
+            from rdm.story_audit.design_gate import story_faithfulness_command
+            return story_faithfulness_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+            )
+
+        elif args.story_command == 'trace':
+            from rdm.story_audit.design_gate import story_trace_command
+            return story_trace_command(
+                target=args.target,
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+            )
+
+        elif args.story_command == 'mutation-probe':
+            from rdm.story_audit.mutation import story_mutation_probe_command
+            return story_mutation_probe_command(
+                file=args.file,
+                find=args.find,
+                replace=args.replace,
+                test=args.test,
+            )
+
+        elif args.story_command == 'verdict':
+            from rdm.story_audit.design_gate import story_verdict_command
+            return story_verdict_command(
+                target=args.target,
+                verdict=args.verdict,
+                reviewer=args.reviewer,
+                rationale=args.rationale,
+                reviewed_tests=args.reviewed_tests,
+                uncovered=args.uncovered,
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+            )
+
+        elif args.story_command == 'persona':
+            from rdm.record.persona_cmd import persona_command
+            return persona_command(
+                vv_plan=Path(args.vv_plan) if args.vv_plan else None,
+                persona_results=Path(args.persona_results) if args.persona_results else None,
+            )
+
         else:
-            print("Unknown story subcommand. Use: audit, validate, sync, check-ids, or backlog-validate")
+            print(
+                "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
+                "backlog-validate, design-gate, verify, release-gate, faithfulness, "
+                "verdict, mutation-probe, trace, or persona"
+            )
             return 1
 
     except ImportError as e:
@@ -126,6 +198,8 @@ def handle_pm_command(args):
                 status=args.status,
                 backlog_dir=Path(args.backlog) if args.backlog else None,
                 base_branch=args.branch,
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                skip_design_gate=args.skip_design_gate,
             )
         else:
             print("Unknown pm subcommand. Use: sync")
@@ -219,6 +293,79 @@ def parse_arguments(arguments):
     backlog_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
     backlog_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
 
+    # rdm story design-gate
+    design_gate_help = 'verify design input and design review exist before tasks transition'
+    design_gate_parser = story_subparsers.add_parser('design-gate', help=design_gate_help)
+    design_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    design_gate_parser.add_argument(
+        '--allure-results',
+        help='Path to an Allure results directory; reconcile SDD user needs against executed test results',
+    )
+
+    # rdm story verify
+    story_verify_help = 'generate verification data (SDD user needs x Allure results) for the DHF'
+    story_verify_parser = story_subparsers.add_parser('verify', help=story_verify_help)
+    story_verify_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    story_verify_parser.add_argument('--allure-results', help='Path to an Allure results directory')
+    story_verify_parser.add_argument('-o', '--output', help='Output data file (default: verification.yml)')
+
+    # rdm story release-gate
+    release_gate_help = ('block release unless design is approved and every design input is '
+                         'verified and faithfully reviewed')
+    release_gate_parser = story_subparsers.add_parser('release-gate', help=release_gate_help)
+    release_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    release_gate_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
+    release_gate_parser.add_argument(
+        '--faithfulness',
+        help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
+    )
+
+    # rdm story faithfulness
+    faithfulness_help = 'report independent faithfulness review (does each verifying test verify its design input?)'
+    faithfulness_parser = story_subparsers.add_parser('faithfulness', help=faithfulness_help)
+    faithfulness_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    faithfulness_parser.add_argument(
+        '--faithfulness',
+        help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
+    )
+
+    # rdm story mutation-probe
+    mutation_help = 'prove a test catches a defect: apply a one-line mutation, run the test, always revert'
+    mutation_parser = story_subparsers.add_parser('mutation-probe', help=mutation_help)
+    mutation_parser.add_argument('--file', required=True, help='source file to mutate')
+    mutation_parser.add_argument('--find', required=True, help='exact text to replace (must occur once)')
+    mutation_parser.add_argument('--replace', required=True, help='replacement text (the mutation)')
+    mutation_parser.add_argument('--test', required=True, help='pytest -k selector for the verifying test')
+
+    # rdm story verdict
+    verdict_help = 'record an independent faithfulness verdict for a design input (hash-pinned to its test)'
+    verdict_parser = story_subparsers.add_parser('verdict', help=verdict_help)
+    verdict_parser.add_argument('target', help='the design-input id (DI-…) being reviewed')
+    verdict_parser.add_argument('--verdict', required=True,
+                                choices=['faithful', 'partial', 'unfaithful', 'weak'])
+    verdict_parser.add_argument('--reviewer', required=True,
+                                help='who reviewed (must be independent of the test author)')
+    verdict_parser.add_argument('--rationale', required=True,
+                                help='per-clause reasoning incl. the failing mutation(s)')
+    verdict_parser.add_argument('--reviewed-tests', help='comma-separated test names examined')
+    verdict_parser.add_argument('--uncovered', help='semicolon-separated requirement clauses NOT covered')
+    verdict_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    verdict_parser.add_argument('--faithfulness', help='Verdicts dir (default: <dhf>/faithfulness)')
+
+    # rdm story trace
+    trace_help = 'show the traceability slice for a user need or design input (forward + backward)'
+    trace_parser = story_subparsers.add_parser('trace', help=trace_help)
+    trace_parser.add_argument('target', help='a user-need id (UN-…) or design-input id (DI-…)')
+    trace_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    trace_parser.add_argument('--allure-results', help='Allure results dir (adds verification status)')
+    trace_parser.add_argument('--faithfulness', help='Faithfulness verdicts dir (adds review status)')
+
+    # rdm story persona
+    persona_help = 'report formative usability evidence from AI-persona simulated-use runs'
+    persona_parser = story_subparsers.add_parser('persona', help=persona_help)
+    persona_parser.add_argument('--vv-plan', help='Path to the V&V plan (carries the user_needs registry)')
+    persona_parser.add_argument('--persona-results', help='Path to a directory of *-persona.json run files')
+
     # =========================================================================
     # rdm pm (project management)
     # =========================================================================
@@ -236,6 +383,11 @@ def parse_arguments(arguments):
     pm_sync_parser.add_argument('--status', action='store_true', help='Show sync status')
     pm_sync_parser.add_argument('--backlog', help='Backlog directory (default: backlog/)')
     pm_sync_parser.add_argument('--branch', help='Base branch filter for PRs (default: all)')
+    pm_sync_parser.add_argument('--dhf', help='DHF directory for the design gate (default: dhf/)')
+    pm_sync_parser.add_argument(
+        '--skip-design-gate', action='store_true',
+        help='Skip the design input/review gate before pushing tasks',
+    )
 
     return parser.parse_args(arguments)
 

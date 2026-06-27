@@ -98,7 +98,7 @@ uv run pytest tests
 
 - **Story Audit module** (`rdm[story-audit]`): Backlog.md parser, schema validation, traceability audit, and duplicate ID detection
 - **Bidirectional GitHub Sync** (`rdm[github]`): Push Backlog.md tasks to GitHub Issues/Milestones/Projects v2, pull PRs into DuckDB for analytics
-- **VitalPulse example**: Full medical device backlog example with CI workflow
+- **VitalView example**: Software-only medical device (SaMD) worked example for the record-first model (user needs, bounded-context SDDs, AI-persona usability validation)
 - Alias-based status normalization with actionable fix hints in validator
 - Codebase simplification: removed dead code, deduplicated logic, fixed inefficiencies
 - Added CLAUDE.md for Claude Code development guidance

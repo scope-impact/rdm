@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rdm"
-version = "1.1.0"
+version = "1.2.0"
 description = "Regulatory Documentation Manager"
 readme = "README.md"
 license = {text = "MIT"}
@@ -34,17 +34,40 @@ dependencies = [
 [project.optional-dependencies]
 github = ["pygithub==2.8.1"]
 story-audit = ["pydantic==2.12.5", "duckdb==1.4.3"]
+analytics = ["duckdb==1.4.3"]
+# Playwright for the usability-persona skill (AI-persona usability validation).
+# Browsers are provided by the environment; if the preinstalled browser version
+# differs, launch with executable_path (see examples/.../app/run_persona_demo.py).
+validation = ["playwright==1.60.0"]
+# Project-management pipeline (Backlog.md -> GitHub Issues/Projects, DuckDB
+# analytics). This is an OPTIONAL, detachable layer that operates on PLANNING
+# artifacts, not the system of record (SDD + Allure + git). RDM's record/render
+# core does not require it. See docs/plan-vs-record.md.
+plan = ["rdm[github]", "rdm[analytics]", "rdm[story-audit]"]
+# Documentation site (Markdown prose under docs/ + an API reference generated
+# from the source docstrings via mkdocstrings). Build with:
+#   uv run --extra docs mkdocs build      # -> site/ (gitignored)
+#   uv run --extra docs mkdocs serve      # live preview
+docs = [
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.6.21",
+    "mkdocstrings[python]==0.30.1",
+    "ruff==0.14.13",  # mkdocstrings uses it to format rendered signatures
+]
 dev = [
     "pytest==9.0.2",
     "ruff==0.14.13",
     "check-manifest==0.51",
-    "sphinx==8.1.3",
-    "sphinx-autobuild==2024.10.3",
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.6.21",
+    "mkdocstrings[python]==0.30.1",
     "mock==5.2.0",
     "docutils==0.21.2",
     "coverage==7.13.1",
     "pydantic==2.12.5",
-    "duckdb==1.4.3"
+    "duckdb==1.4.3",
+    "playwright==1.60.0",
+    "allure-pytest==2.16.0"
 ]
 
 [project.scripts]

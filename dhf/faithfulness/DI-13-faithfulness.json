@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-13",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "asserts check_for_duplicates flags FT-001 (defined in two files, 2 entries) AND excludes US-009 (defined once); a checker that flagged everything or nothing fails one assert.",
+  "test_hash": "sha256:70064732278e63882fb963263878932564618dc97775fb7ab07bbd4008c5f19d",
+  "reviewed_tests": [
+    "test_detects_duplicate_ids_across_files"
+  ]
+}

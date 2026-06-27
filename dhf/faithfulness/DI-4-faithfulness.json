@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-4",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "clauses: reconcile(\u2713 probe: VERIFIED\u2192UNTESTED KILLS), render-matrix-assembly(\u2713 probe: status\u2192'verified' KILLS via the mixed pass/fail row set grouped under UN-001)",
+  "test_hash": "sha256:4c0a02c091469444622087e52f700a531ef299ef0c4b578afb79a894ef1807fa",
+  "reviewed_tests": [
+    "test_verification_status_traceable_from_results"
+  ],
+  "uncovered_clauses": []
+}

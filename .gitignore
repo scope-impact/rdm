@@ -3,6 +3,7 @@
 __pycache__
 *.egg-info
 build
+site
 rdm/init_files/release
 dist
 *.pdf
@@ -16,3 +17,10 @@ dist
 var
 *.duckdb
 **/release/
+
+# Generated AI-persona usability evidence (produced by the usability-persona skill)
+**/persona-results/*-persona.json
+
+# Generated verification evidence (produced by the test suite / `rdm story verify`)
+**/allure-results/
+**/verification.yml

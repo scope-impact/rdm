@@ -12,7 +12,11 @@ Usage:
     rdm pm sync --status                      # Show sync counts
     rdm pm sync --push --backlog ./backlog    # Custom backlog dir
 
-Requires: GH_API_TOKEN env var, pip install rdm[github] rdm[analytics]
+Requires: GH_API_TOKEN env var, pip install rdm[plan]
+
+This is the optional project-management pipeline. It operates on planning
+artifacts, not the system of record (SDD + Allure + git). See
+docs/plan-vs-record.md.
 """
 
 from __future__ import annotations
@@ -301,6 +305,15 @@ def add_issue_to_project(token: str, project_id: str, issue_node_id: str) -> str
 # =============================================================================
 
 
+# Provenance stamp for synced planning artifacts. These are derived planning
+# data for coordination/visibility -- NOT a controlled record. The system of
+# record is the SDD, the Allure results, and the git history.
+PROVENANCE_NOTE = (
+    "_Derived planning data — not a controlled record. "
+    "System of record: SDD + Allure results + git history._"
+)
+
+
 def _format_acceptance_criteria(criteria) -> str:
     """Format acceptance criteria as compact checkbox list."""
     lines = []
@@ -327,6 +340,7 @@ def build_task_body(task) -> str:
         parts.append("### Subtasks\n" + "\n".join(f"- {sid}" for sid in task.subtask_ids))
 
     parts.append(f"---\n_Source: {task.id} | Priority: {task.priority}_")
+    parts.append(PROVENANCE_NOTE)
 
     return "\n\n".join(parts)
 
@@ -345,6 +359,7 @@ def build_subtask_body(subtask, parent_issue_number: int) -> str:
         f"---\n_Parent: #{parent_issue_number} | "
         f"Source: {subtask.id} | Priority: {subtask.priority}_"
     )
+    parts.append(PROVENANCE_NOTE)
 
     return "\n\n".join(parts)
 
@@ -553,10 +568,12 @@ def pm_sync_command(
     status: bool = False,
     backlog_dir: Path | None = None,
     base_branch: str | None = None,
+    dhf_dir: Path | None = None,
+    skip_design_gate: bool = False,
 ) -> int:
     """Run pm sync command."""
     if not duckdb:
-        print("Error: duckdb required. Install with: pip install rdm[analytics]")
+        print("Error: duckdb required. Install with: pip install rdm[plan]")
         return 1
 
     db = db_path or Path("github_sync.duckdb")
@@ -580,7 +597,7 @@ def pm_sync_command(
 
     # Validate all inputs before opening DB or making API calls
     if not Github:
-        print("Error: PyGithub required. Install with: pip install rdm[github]")
+        print("Error: PyGithub required. Install with: pip install rdm[plan]")
         return 1
 
     repo_name = repo or os.getenv("GITHUB_REPOSITORY")
@@ -603,10 +620,31 @@ def pm_sync_command(
         print("Run from repo root or use --backlog <path>")
         return 1
 
+    # Design-controls gate: design input and design review must exist and be
+    # complete before tasks transition into GitHub.
+    if do_push and not skip_design_gate:
+        from rdm.story_audit.design_gate import run_design_gate
+
+        dhf = dhf_dir or Path("dhf")
+        if not dhf.exists():
+            print(f"Error: DHF directory not found: {dhf}")
+            print("Run `rdm init` first, pass --dhf <path>, or use --skip-design-gate.")
+            return 1
+        gate = run_design_gate(dhf)
+        if not gate.passed:
+            print("Error: design gate failed. Resolve before pushing tasks:")
+            for artifact in gate.artifacts:
+                if not artifact.ok:
+                    print(f"  - {artifact.name}: {'; '.join(artifact.reasons)}")
+            print("Run `rdm story design-gate` for details, or --skip-design-gate to override.")
+            return 1
+
     gh = Github(auth=Auth.Token(token))
     gh_repo = gh.get_repo(repo_name)
     print(f"Repository: {repo_name}")
     print(f"Database:   {db}")
+    print("Note:       derived planning data — not a controlled record "
+          "(system of record: SDD + Allure + git).")
 
     conn = init_db(db)
     try:

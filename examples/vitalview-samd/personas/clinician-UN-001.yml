@@ -1,0 +1,9 @@
+# AI-persona spec: drives the VitalView dashboard to exercise UN-001.
+# Formative evidence only -- not summative IEC 62366 validation.
+persona: icu-nurse
+user_need: UN-001
+profile: "ICU nurse, time-pressured, frequent interruptions, gloved hands"
+goal: "Notice a critical SpO2 alert and acknowledge it for the correct patient"
+success:
+  - "critical alert noticed within the target time"
+  - "alert acknowledged for the correct patient"

@@ -1,0 +1,10 @@
+{
+  "design_input": "DI-8",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "calls invert_dependencies/join_to/md_indent and asserts exact outputs (inverted edge, joined row, shifted heading); a broken filter fails it. Note: verifies filter behaviour, not their use in a full matrix (covered by DI-4).",
+  "test_hash": "sha256:8017dd5f5a7ed5abb3b421a6e4adb4146fdf9e6fc38d6c6b34fc300d8544a3d6",
+  "reviewed_tests": [
+    "test_traceability_filters"
+  ]
+}

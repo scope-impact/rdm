@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-19",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "clauses: independent-verdict-required(\u2713 FA-5 unreviewed detected), blocks-unfaithful(\u2713 FA-2), blocks-partial(\u2713 FA-3 via uncovered clause), blocks-stale(\u2713 FA-4 wrong hash); asserts only FA-1 is faithful and _faithfulness_messages emits a blocker for each of the other four. A gate that passed any non-faithful state would fail the bucket or blocking assertions.",
+  "test_hash": "sha256:2726a3cc888d05be6fe3b1ecc22948b04e603ebe0f7a5a584854052b61f30dde",
+  "reviewed_tests": [
+    "test_faithfulness_gate_classifies_and_blocks"
+  ],
+  "uncovered_clauses": []
+}

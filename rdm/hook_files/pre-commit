@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+#
+# Design-controls gate (IEC 62304 / ISO 13485 7.3 / 21 CFR 820.30).
+#
+# Blocks a commit that introduces IMPLEMENTATION work unless the design input
+# and design review are complete and approved (committed) in version control.
+#
+# Committing only the design documents themselves is allowed -- that commit is
+# how the design gets approved. This keeps the gate enforced for everyday work
+# while avoiding a chicken-and-egg deadlock: you could never approve the design
+# docs if their own commit were blocked for being "uncommitted".
+#
+# Configuration (environment variables):
+#   RDM_DHF_DIR              design history file directory   (default: dhf)
+#   RDM_WORK_PATTERN         regex of staged paths that count
+#                            as implementation work          (default: \.py$)
+#   RDM_SKIP_DESIGN_GATE=1   bypass the gate for this commit (discouraged)
+#
+set -euo pipefail
+
+DHF_DIR="${RDM_DHF_DIR:-dhf}"
+WORK_PATTERN="${RDM_WORK_PATTERN:-\.py$}"
+
+if [ -n "${RDM_SKIP_DESIGN_GATE:-}" ]; then
+    echo "rdm design-gate: BYPASSED via RDM_SKIP_DESIGN_GATE" >&2
+    exit 0
+fi
+
+# Staged additions/changes (ignoring deletions), excluding the DHF itself.
+staged="$(git diff --cached --name-only --diff-filter=ACMR || true)"
+work="$(printf '%s\n' "$staged" | grep -E "$WORK_PATTERN" | grep -vE "^${DHF_DIR}/" || true)"
+
+# No implementation work staged -> nothing to gate (e.g. authoring/approving the
+# design documents, or editing docs and config).
+[ -z "$work" ] && exit 0
+
+if ! command -v rdm >/dev/null 2>&1; then
+    echo "rdm design-gate: 'rdm' not on PATH; cannot verify design controls (allowing commit)" >&2
+    exit 0
+fi
+
+if [ ! -d "$DHF_DIR" ]; then
+    echo "rdm design-gate: '$DHF_DIR' not found; run 'rdm init' or set RDM_DHF_DIR" >&2
+    echo "                 (or RDM_SKIP_DESIGN_GATE=1 to bypass)" >&2
+    exit 1
+fi
+
+if ! output="$(rdm story design-gate --dhf "$DHF_DIR" 2>&1)"; then
+    echo "$output" >&2
+    echo "" >&2
+    echo "rdm design-gate: commit blocked -- complete and approve (commit) the design" >&2
+    echo "                 input and design review before committing implementation work." >&2
+    echo "                 (RDM_SKIP_DESIGN_GATE=1 to bypass)" >&2
+    exit 1
+fi
+
+exit 0
