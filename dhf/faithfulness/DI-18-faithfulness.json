@@ -2,9 +2,10 @@
   "design_input": "DI-18",
   "verdict": "faithful",
   "reviewer": "claude (independent review pass)",
-  "rationale": "calls build_trace and asserts the forward slice (UN-001 \u2192 [DI-1], owned by core) and the backward slice (DI-1 \u2192 traces_to UN-001, owned_by core, realised_by edge), plus graceful error on an unknown target; exercises the real forward+backward resolution.",
-  "test_hash": "sha256:7bb9bd4cef2aaed557095654efe65f6fc198402fd8d9d234eec1887603100983",
+  "rationale": "clauses: forward/backward/owner/realisers(\u2713), status+tests fields(\u2713 probe: status\u2192None KILLS via the enriched trace over executed results)",
+  "test_hash": "sha256:ee3058212ae315de17082112c6798a2d5c27d24087b1c6a870e8e1c03fe39f9c",
   "reviewed_tests": [
     "test_trace_user_need_and_design_input"
-  ]
+  ],
+  "uncovered_clauses": []
 }

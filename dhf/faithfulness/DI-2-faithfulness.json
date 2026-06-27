@@ -2,9 +2,10 @@
   "design_input": "DI-2",
   "verdict": "faithful",
   "reviewer": "claude (independent review pass)",
-  "rationale": "asserts a placeholder design doc is NOT complete and a committed-clean one IS ok via check_design_docs; exercises both the completeness and git-approval paths the gate enforces.",
-  "test_hash": "sha256:2c446ec6d6c43873b2357de0c0855086134f5f923ec719779edcefbfa4277e85",
+  "rationale": "clauses: present/complete(\u2713 placeholder\u2192not complete), approved-committed(\u2713), uncommitted-reopens(\u2713 a complete-but-uncommitted doc is not ok \u2014 probe: dropping the uncommitted check in ArtifactCheck.ok KILLS the test)",
+  "test_hash": "sha256:8f0baba39291c317a205f0c04b7fe8e4d6d5e105122401b374e3b1f7309e4395",
   "reviewed_tests": [
     "test_design_gate_requires_approval"
-  ]
+  ],
+  "uncovered_clauses": []
 }

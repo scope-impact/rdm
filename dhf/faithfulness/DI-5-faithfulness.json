@@ -2,9 +2,10 @@
   "design_input": "DI-5",
   "verdict": "faithful",
   "reviewer": "claude (independent review pass)",
-  "rationale": "persona.reconcile over a run carrying a usability issue yields ISSUES status; exercises the formative ingest+classification path (and persona is absent from the release gate, so it never gates). Re-reviewed after a mechanical by_id rename that does not change what is verified.",
-  "test_hash": "sha256:addc727221c397492f75a353c4a485ff54b1da3e11032892af1a9913946cb9bc",
+  "rationale": "clause: classify formative status(\u2713 probe: ISSUES\u2192CLEAN KILLS). 'never gates release' removed from the requirement \u2014 a structural/negative property (persona absent from the release gate), now a documented design note.",
+  "test_hash": "sha256:1a3c8a3604471c7224572a98de0d140216b86df4d16bdcd996b4e7946e59d71a",
   "reviewed_tests": [
     "test_formative_usability_classified"
-  ]
+  ],
+  "uncovered_clauses": []
 }

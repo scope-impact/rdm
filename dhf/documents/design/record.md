@@ -8,7 +8,7 @@ design_inputs:
     text: "RDM shall read the user-need registry + satisfies refs from frontmatter and ingest Allure results, with no project-management dependency."
     traces_to: [UN-001, UN-004]
   - id: DI-6
-    text: "RDM shall keep planning artifacts out of the record; planning tooling shall be optional and its outputs marked non-record."
+    text: "RDM shall mark planning-tool outputs as non-record, keeping planning artifacts out of the controlled record."
     traces_to: []
 ---
 
@@ -21,9 +21,11 @@ This context owns the design inputs declared in the frontmatter:
 - **DI-1 (record ingest)** — read the user-need registry and per-context
   `satisfies` references from frontmatter, and ingest executed Allure results,
   without depending on any project-management tool. Refines UN-001 and UN-004.
-- **DI-6 (plan/record separation)** — keep planning artifacts out of the record;
-  planning tooling is optional and its outputs are marked non-record. A
-  cross-cutting constraint (`traces_to: []`).
+- **DI-6 (plan/record separation)** — mark planning-tool outputs as non-record,
+  keeping planning artifacts out of the controlled record. A cross-cutting
+  constraint (`traces_to: []`). (That planning tooling is *optional* — the record
+  core needs no planning extra — is the structural property DI-1's "no
+  project-management dependency" test already pins.)
 
 ## Design Outputs
 

@@ -5,7 +5,7 @@ context: validation
 satisfies: [UN-005]
 design_inputs:
   - id: DI-5
-    text: "RDM shall support exercising UI usability formatively against a user need, recorded as evidence that never gates release."
+    text: "RDM shall classify AI-persona simulated-use runs into a per-user-need formative status (clean / issues / failed / not_run)."
     traces_to: [UN-005]
 ---
 
@@ -13,9 +13,14 @@ design_inputs:
 
 ## Design Inputs
 
-This context owns **DI-5 (formative validation)** — support exercising UI
-usability formatively against a user need, recorded as evidence that never gates
-release. Refines UN-005.
+This context owns **DI-5 (formative validation)** — classify AI-persona
+simulated-use runs into a per-user-need formative status. Refines UN-005.
+
+> **Design property (not a DI clause):** this evidence is *formative only* and
+> **never gates release** — the persona reconciler is structurally absent from
+> the release gate (a negative/structural property, not mutation-testable; see
+> the gating context, where the release gate consults only verification and
+> faithfulness).
 
 ## Design Outputs
 

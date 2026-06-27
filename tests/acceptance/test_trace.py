@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from rdm.story_audit.design_gate import build_trace
+from tests.util import write_allure_result as _allure_result
 from tests.util import write_design_doc
 
 allure = pytest.importorskip("allure")
@@ -55,3 +56,11 @@ def test_trace_user_need_and_design_input(tmp_path: Path) -> None:
 
     # Unknown target is reported, not crashed.
     assert "error" in build_trace(dhf, "DI-404")
+
+    # With executed results, the slice carries the design input's STATUS and the
+    # verifying TESTS (the clause that was previously untested).
+    results = tmp_path / "allure"
+    _allure_result(results, "the_test", "passed", "DI-1")
+    enriched = build_trace(dhf, "DI-1", allure_results_dir=results)
+    assert enriched["status"] == "verified"
+    assert enriched["tests"] == ["the_test"]

@@ -2,9 +2,10 @@
   "design_input": "DI-6",
   "verdict": "faithful",
   "reviewer": "claude (independent review pass)",
-  "rationale": "asserts build_task_body actually embeds PROVENANCE_NOTE (the behaviour) in addition to the note's wording; a planning artifact emitted without the stamp fails it.",
-  "test_hash": "sha256:254b39ec68ab602d900eb20263303bdccb964bf77e353258967606f0f8cc6caf",
+  "rationale": "clause: outputs-marked-non-record(\u2713 build_task_body embeds PROVENANCE_NOTE). 'optional' removed \u2014 the no-planning-dependency property is pinned by DI-1's no-import test.",
+  "test_hash": "sha256:496c613655166f930ea641f4b32ed7a8bc3e01975a2b993342c470620880acc2",
   "reviewed_tests": [
     "test_planning_artifacts_marked_non_record"
-  ]
+  ],
+  "uncovered_clauses": []
 }
