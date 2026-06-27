@@ -142,6 +142,19 @@ def handle_story_command(args):
                 faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
             )
 
+        elif args.story_command == 'verdict':
+            from rdm.story_audit.design_gate import story_verdict_command
+            return story_verdict_command(
+                target=args.target,
+                verdict=args.verdict,
+                reviewer=args.reviewer,
+                rationale=args.rationale,
+                reviewed_tests=args.reviewed_tests,
+                uncovered=args.uncovered,
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+            )
+
         elif args.story_command == 'persona':
             from rdm.record.persona_cmd import persona_command
             return persona_command(
@@ -153,7 +166,7 @@ def handle_story_command(args):
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
                 "backlog-validate, design-gate, verify, release-gate, faithfulness, "
-                "trace, or persona"
+                "verdict, trace, or persona"
             )
             return 1
 
@@ -306,6 +319,21 @@ def parse_arguments(arguments):
         '--faithfulness',
         help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
     )
+
+    # rdm story verdict
+    verdict_help = 'record an independent faithfulness verdict for a design input (hash-pinned to its test)'
+    verdict_parser = story_subparsers.add_parser('verdict', help=verdict_help)
+    verdict_parser.add_argument('target', help='the design-input id (DI-…) being reviewed')
+    verdict_parser.add_argument('--verdict', required=True,
+                                choices=['faithful', 'partial', 'unfaithful', 'weak'])
+    verdict_parser.add_argument('--reviewer', required=True,
+                                help='who reviewed (must be independent of the test author)')
+    verdict_parser.add_argument('--rationale', required=True,
+                                help='per-clause reasoning incl. the failing mutation(s)')
+    verdict_parser.add_argument('--reviewed-tests', help='comma-separated test names examined')
+    verdict_parser.add_argument('--uncovered', help='semicolon-separated requirement clauses NOT covered')
+    verdict_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    verdict_parser.add_argument('--faithfulness', help='Verdicts dir (default: <dhf>/faithfulness)')
 
     # rdm story trace
     trace_help = 'show the traceability slice for a user need or design input (forward + backward)'

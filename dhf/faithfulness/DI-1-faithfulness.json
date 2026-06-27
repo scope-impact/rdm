@@ -2,9 +2,10 @@
   "design_input": "DI-1",
   "verdict": "faithful",
   "reviewer": "claude (independent review pass)",
-  "rationale": "exercises build_verification over a real registry+results AND now asserts the record core imports no project_management (the 'no PM dependency' clause); a PM import or broken ingest fails it.",
+  "rationale": "clauses: ingest registry+satisfies+allure(\u2713 build_verification over a real DHF asserts grouped DI\u2192UN shape), no-PM-dependency(\u2713 asserts record core imports no project_management)",
   "test_hash": "sha256:2c63aba1733e25fd45b0d6840dc59232b6be787bd5b806ed38bba8f708e7b5b8",
   "reviewed_tests": [
     "test_compile_verification_from_the_record"
-  ]
+  ],
+  "uncovered_clauses": []
 }

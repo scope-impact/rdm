@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-20",
+  "verdict": "faithful",
+  "reviewer": "claude (independent review pass)",
+  "rationale": "clauses: records-hash-pinned(\u2713 asserts the written verdict reconciles faithful via the current source hash \u2014 a wrong/empty hash would read stale), rejects-undeclared(\u2713 record_verdict returns None for DI-404)",
+  "test_hash": "sha256:ca6f687f65bbf365deba890f1c9320dacdf071ac5087932c8e1eeead957982fa",
+  "reviewed_tests": [
+    "test_records_verdict_hash_pinned_and_rejects_unknown"
+  ],
+  "uncovered_clauses": []
+}

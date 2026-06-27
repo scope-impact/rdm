@@ -41,7 +41,7 @@ changing RDM, you are working inside that DHF's scope:
   design gate, or edits a tagged test without re-recording its faithfulness
   verdict (goes **stale**) fails CI.
 - **After editing a tagged test**, re-record its faithfulness verdict (an
-  independent reviewer, the `test-faithfulness` skill, or `write_verdict.py`) —
+  independent reviewer, the `test-faithfulness` skill, or `rdm story verdict`) —
   the hash-pin intentionally re-opens the §820.30(e) review on any test change.
 
 Run the gates locally exactly as CI does:

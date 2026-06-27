@@ -67,17 +67,21 @@ them and their current state):
    - If the input is untestable as written, push back — the *input* needs
      sharpening, not a generous verdict.
 
-5. **Record the verdict** (computes the current source hash and pins to it). The
-   rationale MUST name the per-clause failing mutation(s) — a verdict whose
-   rationale does not is not a real review:
+5. **Record the verdict** with the installed `rdm` binary (this skill depends on
+   `rdm`, not a bundled script). It computes the current verifying-test source
+   hash and pins the verdict to it. The rationale MUST name the per-clause
+   failing mutation(s) — a verdict whose rationale does not is not a real review.
+   For partial coverage, pass the uncovered clause(s) with `--uncovered` (the
+   gate downgrades to `partial` and blocks):
 
    ```bash
-   python .claude/skills/test-faithfulness/scripts/write_verdict.py \
-     --dhf dhf --design-input DI-11 --verdict faithful \
+   rdm story verdict DI-11 --dhf dhf --verdict faithful \
      --reviewer "claude (independent of author)" \
      --reviewed-tests test_ships_composable_builtin_checklists \
      --rationale "clauses: ships(✓ name asserted), standards(✓ 3 names), includes(✓ a key defined only in an included file is required — partial doc→exit3, full→0; a broken include-resolver would pass the partial doc)"
    ```
+
+   Requires `rdm` on PATH (`pip install rdm[story-audit]`).
 
 6. **Re-check** with `rdm story faithfulness --dhf <dhf>` — every input should be
    `faithful`. The release gate (`rdm story release-gate`) then blocks unless

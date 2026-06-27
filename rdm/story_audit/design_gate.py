@@ -30,6 +30,7 @@ Requires: pip install rdm[story-audit]
 
 from __future__ import annotations
 
+import json
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -719,4 +720,82 @@ def story_trace_command(
             print(f"  verified by: {', '.join(trace['tests'])}")
         if trace["faithfulness"]:
             print(f"  faithfulness:{trace['faithfulness']}")
+    return 0
+
+
+# Verdict values a reviewer may record (anything other than `faithful` blocks).
+_VERDICT_VALUES = (faithfulness.FAITHFUL, faithfulness.PARTIAL, faithfulness.UNFAITHFUL, "weak")
+
+
+def record_verdict(
+    dhf_dir: Path,
+    design_input_id: str,
+    verdict: str,
+    *,
+    reviewer: str,
+    rationale: str,
+    reviewed_tests: list[str] | None = None,
+    uncovered_clauses: list[str] | None = None,
+    faithfulness_dir: Path | None = None,
+) -> Path | None:
+    """Write a faithfulness verdict for one design input, hash-pinned to the
+    CURRENT verifying-test source (so it is valid for exactly the test reviewed,
+    and goes stale on any later edit). Returns the path, or ``None`` if the id is
+    not a declared design input.
+    """
+    inputs = design_inputs(dhf_dir)
+    if design_input_id not in {di["id"] for di in inputs}:
+        return None
+    test_hash = faithfulness.current_hashes(inputs, allure.find_tests_dir(dhf_dir)).get(design_input_id, "")
+    out_dir = faithfulness_dir_for(dhf_dir, faithfulness_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    record = {
+        "design_input": design_input_id,
+        "verdict": verdict,
+        "reviewer": reviewer,
+        "rationale": rationale,
+        "test_hash": test_hash,
+        "reviewed_tests": reviewed_tests or [],
+        "uncovered_clauses": uncovered_clauses or [],
+    }
+    out = out_dir / f"{design_input_id}-faithfulness.json"
+    out.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    return out
+
+
+def story_verdict_command(
+    target: str,
+    verdict: str,
+    reviewer: str,
+    rationale: str,
+    reviewed_tests: str | None = None,
+    uncovered: str | None = None,
+    dhf_dir: Path | None = None,
+    faithfulness_dir: Path | None = None,
+) -> int:
+    """Run `rdm story verdict <DI-id> …`: record an independent faithfulness verdict.
+
+    Replaces the standalone write_verdict.py script so the `test-faithfulness`
+    skill depends on the installed `rdm` binary, not a bundled file.
+    """
+    dhf = (dhf_dir or Path("dhf")).resolve()
+    if not dhf.exists():
+        print(f"Error: DHF directory not found: {dhf}")
+        return 2
+    if verdict not in _VERDICT_VALUES:
+        print(f"Error: --verdict must be one of: {', '.join(_VERDICT_VALUES)}")
+        return 2
+    tests = [t.strip() for t in (reviewed_tests or "").split(",") if t.strip()]
+    clauses = [c.strip() for c in (uncovered or "").split(";") if c.strip()]
+    out = record_verdict(
+        dhf, target, verdict,
+        reviewer=reviewer, rationale=rationale,
+        reviewed_tests=tests, uncovered_clauses=clauses,
+        faithfulness_dir=faithfulness_dir,
+    )
+    if out is None:
+        declared = ", ".join(sorted(design_input_ids(dhf)))
+        print(f"Error: {target} is not a declared design input ({declared})")
+        return 2
+    print(f"wrote {out} ({verdict}" + (f", {len(clauses)} uncovered clause(s)" if clauses else "") + ")")
     return 0
