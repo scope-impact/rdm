@@ -2,7 +2,7 @@
 
 Verification is anchored on design inputs declared in the per-context design
 documents: the denominator is the union of those inputs, a design input is
-verified when its `@allure.story("DI-…")` test passes, and a user need with no
+verified when its DI-tagged `@allure.story` test passes, and a user need with no
 design input blocks the release.
 """
 

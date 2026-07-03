@@ -48,10 +48,13 @@ def cli(raw_arguments):
     elif args.command == 'gap' and args.list:
         list_default_checklists()
     elif args.command == 'gap' and args.coverage:
-        # In coverage mode, checklist + files can all be checklists or source files
+        # In coverage mode, checklist + files can all be checklists or source
+        # files: a checklist is a .txt path or a built-in checklist name.
+        from rdm.gaps import _builtin_checklist_dictionary
+        builtins = _builtin_checklist_dictionary()
         all_files = ([args.checklist] if args.checklist else []) + args.files
-        checklists = [f for f in all_files if f.endswith('.txt')]
-        sources = [f for f in all_files if not f.endswith('.txt')]
+        checklists = [f for f in all_files if f.endswith('.txt') or f in builtins]
+        sources = [f for f in all_files if not (f.endswith('.txt') or f in builtins)]
         exit_code = audit_for_gaps(checklists, sources, True, args.verbose)
     elif args.command == 'gap':
         exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)

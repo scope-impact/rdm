@@ -1,7 +1,7 @@
 """Acceptance tests for the rendering context's design inputs (see dhf/).
 
 Each test is the acceptance criterion ("live BDD") for a rendering design input,
-tagged `@allure.story("DI-…")`. They exercise the real render engine / filters /
+tagged with `@allure.story` and its DI id. They exercise the real render engine / filters /
 markdown extensions, so a passing tag is evidence the requirement is met.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results

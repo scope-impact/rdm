@@ -1,8 +1,8 @@
 """Acceptance tests for the story-audit context's design inputs (see dhf/).
 
 Each test is the acceptance criterion ("live BDD") for a traceability-integrity
-design input, tagged `@allure.story("DI-…")`, exercising the real story-audit
-engine.
+design input, tagged with `@allure.story` and its DI id, exercising the real
+story-audit engine.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results
 

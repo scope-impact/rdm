@@ -5,6 +5,13 @@ method documented in `docs/record-first-architecture.md` and ADR 0001). RDM is
 the product under design control here. The step-by-step procedure for changing
 RDM inside this DHF's scope is `AGENT_WORKFLOW.md` (this directory).
 
+Scope note: RDM is not a medical device, so this DHF deliberately implements
+the **design-controls slice** (design inputs, review, verification, validation,
+traceability — the §820.30-shaped record) and not the full IEC 62304 lifecycle
+document set (risk management file, SOUP register, maintenance and
+problem-resolution plans, …). Running `rdm gap 62304_2015_class_b` over these
+documents is expected to report those items as missing.
+
 ## Layout (the record)
 
 ```

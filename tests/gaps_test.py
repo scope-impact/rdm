@@ -233,3 +233,19 @@ def test_coverage_report_verbose_shows_missing(tmp_path, capsys):
 def test_coverage_report_no_checklists():
     result = coverage_report([], [])
     assert result == 1
+
+
+def test_gap_coverage_cli_resolves_builtin_checklist_name(tmp_path, capsys):
+    """Regression: `rdm gap --coverage <builtin-name> <sources>` must classify a
+    built-in checklist NAME (no .txt suffix) as a checklist, not a source."""
+    from rdm.main import cli
+
+    source = tmp_path / "doc.md"
+    source.write_text("Mentions [[62304:4.1]] only.")
+
+    result = cli(["gap", "--coverage", "62304_2015_class_b", str(source)])
+    captured = capsys.readouterr()
+
+    assert "no checklists specified" not in captured.out
+    assert "62304_2015_CLASS_B" in captured.out
+    assert result == 0
