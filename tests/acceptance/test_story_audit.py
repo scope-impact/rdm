@@ -65,3 +65,62 @@ def test_locates_definitions_and_flags_only_definitions(tmp_path: Path) -> None:
         ],
     }
     assert detect_conflicts(referenced) == []
+
+
+def _record_first_repo(tmp_path: Path) -> Path:
+    """A repo with a DHF declaring DI-1 (tagged by a test) and DI-2 (untagged)."""
+    repo = tmp_path / "repo"
+    (repo / "dhf" / "documents" / "design").mkdir(parents=True)
+    (repo / "dhf" / "documents" / "design" / "alarms.md").write_text(
+        "---\n"
+        "id: SDS-A-001\n"
+        "kind: design\n"
+        "context: alarms\n"
+        "design_inputs:\n"
+        "  - id: DI-1\n"
+        '    text: "a tagged input"\n'
+        "    traces_to: [UN-001]\n"
+        "  - id: DI-2\n"
+        '    text: "an untagged input"\n'
+        "    traces_to: [UN-001]\n"
+        "---\n\n# Alarms\n"
+    )
+    (repo / "tests").mkdir()
+    (repo / "tests" / "test_alarms.py").write_text(
+        'import allure\n\n@allure.story("DI-1")\ndef test_one():\n    pass\n'
+    )
+    return repo
+
+
+@allure.story("DI-23")
+@allure.label("output", "rdm/story_audit/audit.py")
+def test_audit_includes_record_first_design_inputs(tmp_path: Path, capsys) -> None:
+    """DI-23: with a DHF present, the audit reports per-design-input tag
+    coverage, lists untagged inputs as stories without coverage, and reflects
+    them in the score; without a DHF, legacy behavior is unchanged."""
+    from rdm.story_audit.audit import run_audit, print_report
+
+    repo = _record_first_repo(tmp_path)
+    result = run_audit(repo)
+    print_report(result, repo)
+    out = capsys.readouterr().out
+
+    # Per-design-input test-tag coverage is reported.
+    assert "| DI-1 | tagged (1 file(s)) |" in out
+    assert "| DI-2 | UNTAGGED |" in out
+
+    # The untagged input is listed as a story without coverage.
+    assert "Stories Without Coverage" in out
+    assert "- DI-2" in out
+
+    # The score reflects it: 1 of 2 requirement-universe IDs covered -> the
+    # coverage criterion is missed (50% < 70%), which a legacy-only scan
+    # (0 requirements -> vacuous 100%) would never show.
+    assert "- [ ] Coverage 50%" in out
+
+    # Without a DHF, nothing record-first is reported (legacy unchanged).
+    (repo / "dhf" / "documents" / "design" / "alarms.md").unlink()
+    print_report(run_audit(repo), repo)
+    legacy_out = capsys.readouterr().out
+    assert "Design inputs (DHF)" not in legacy_out
+    assert "DI-2" not in legacy_out
