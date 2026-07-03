@@ -59,6 +59,7 @@ nav:
       - Plan vs. record: plan-vs-record.md
       - ADR 0001 — User needs across bounded contexts: adr-0001-bounded-context-user-needs.md
   - Guides:
+      - Agent workflow (design controls): agent-workflow.md
       - FAQ: FAQ.md
       - Audit checklist format: checklist-format.md
       - AI-persona usability validation: ai-persona-usability-validation.md

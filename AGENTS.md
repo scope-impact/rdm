@@ -1,3 +1,26 @@
+# Design controls come first
+
+RDM develops itself under its own record-first design controls. Before writing
+any implementation, read **`dhf/AGENT_WORKFLOW.md`** — the canonical end-to-end
+procedure (design input → tagged acceptance test → independent faithfulness
+verdict → generated traceability matrix). CI and the pre-commit hook enforce it;
+a change that skips it fails the build.
+
+Non-negotiables:
+
+- A behavior change is governed by a **design input** (`DI-n`) declared in a
+  `kind: design` document under `dhf/documents/design/` — scaffold one with
+  `uv run rdm story new-input`.
+- Design docs are committed **before** implementation (the commit is the
+  approval; the gate blocks implementation commits until then).
+- Each DI is verified by a test tagged `@allure.story("DI-n")` in
+  `tests/acceptance/`, and needs an **independent** faithfulness verdict —
+  never review a test you authored (use the `test-faithfulness` skill).
+- Never hand-edit `dhf/documents/traceability_matrix.md` — it is generated.
+
+The Backlog.md tasks below are **planning, never the record**: they are
+coordination scaffolding and must never be cited as design, verification, or
+approval evidence (see `docs/plan-vs-record.md`).
 
 <!-- BACKLOG.MD GUIDELINES START -->
 # Instructions for the usage of Backlog.md CLI Tool

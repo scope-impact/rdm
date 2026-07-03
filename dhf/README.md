@@ -2,7 +2,8 @@
 
 This is RDM's own DHF, produced with RDM's record-first model (it dogfoods the
 method documented in `docs/record-first-architecture.md` and ADR 0001). RDM is
-the product under design control here.
+the product under design control here. The step-by-step procedure for changing
+RDM inside this DHF's scope is `AGENT_WORKFLOW.md` (this directory).
 
 ## Layout (the record)
 

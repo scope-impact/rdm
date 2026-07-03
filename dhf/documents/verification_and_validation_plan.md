@@ -24,6 +24,8 @@ user_needs:
     text: "A regulatory author can scaffold a new compliant documentation project from a single command."
   - id: UN-009
     text: "A release is blocked unless each design input's verifying test has been independently confirmed to actually verify it (not merely pass)."
+  - id: UN-010
+    text: "A contributor (human or agent) is guided to author a new design input that is fully traced: declared in its owning context, verified by a tagged test, and carried through the gates."
 ---
 
 # Purpose
@@ -58,5 +60,6 @@ contexts that satisfy it. `rdm story release-gate` enforces this.
 | UN-007 | maintainer review that ID-conflict and traceability audits catch real duplicates/orphans | dogfooding: `rdm story audit` / `check-ids` over RDM's own requirements |
 | UN-008 | maintainer review that a scaffolded project builds a release and passes the relevant gap checklists | dogfooding: `fresh_release_test` builds an init'd project end-to-end |
 | UN-009 | maintainer/second-agent review that the faithfulness gate blocks unreviewed/unfaithful/partial/stale verdicts | dogfooding: `rdm story faithfulness` over RDM's own DHF, with an independent reviewer |
+| UN-010 | maintainer review that a scaffolded design input lands fully traced (frontmatter entry, tagged stub test, checklist) and that the agent workflow runbook matches the enforced gates | dogfooding: `rdm story new-input` used against RDM's own DHF; agent sessions following `dhf/AGENT_WORKFLOW.md` |
 
 Formative evidence never gates release.
