@@ -39,3 +39,41 @@ def test_init_scaffolds_a_project(tmp_path: Path) -> None:
     assert (docs / "design_review.md").is_file()
     assert (docs / "traceability_matrix.md").is_file()
     assert "kind: design" in (docs / "software_design_specification.md").read_text()
+
+
+@allure.story("DI-22")
+@allure.label("output", "rdm/init_files/AGENTS.md")
+def test_init_scaffolds_an_agent_operating_procedure(tmp_path: Path) -> None:
+    """DI-22: the scaffold lays down an AGENTS.md documenting the record-first workflow."""
+    project = tmp_path / "regulatory"  # must not pre-exist (copytree)
+    init(str(project))
+
+    agents = project / "AGENTS.md"
+    assert agents.is_file()
+    text = agents.read_text()
+
+    # design approved (committed) before implementation
+    assert "Design record first, committed first" in text
+    assert "that commit *is* the approval" in text
+
+    # each design input verified by an @allure.story-tagged acceptance test
+    assert '@allure.story("DI-…")' in text
+
+    # the design/release gates run via rdm story
+    assert "rdm story design-gate" in text
+    assert "rdm story release-gate" in text
+    assert "rdm story verify" in text
+    assert "rdm story faithfulness" in text
+
+    prose = " ".join(text.replace("**", "").split())  # unwrap lines, drop emphasis
+
+    # EACH design input is verified — the universality, not just the mechanism
+    assert "each design input is verified by an automated test tagged" in prose
+
+    # independent faithfulness review of EVERY verifying test
+    assert (
+        "Every new or edited tagged test needs a verdict recorded by a reviewer "
+        "independent of the test's author" in prose
+    )
+    assert "rdm story verdict" in text
+    assert "Never record a verdict for a test you authored" in text
