@@ -44,7 +44,8 @@ def test_init_scaffolds_a_project(tmp_path: Path) -> None:
 
 
 def _mini_dhf(tmp_path: Path) -> Path:
-    """A minimal DHF: one design doc owning DI-1/DI-3, one registered user need."""
+    """A minimal DHF: two design contexts (so context *choice* is observable),
+    design inputs DI-1/DI-3 taken, one registered user need."""
     dhf = tmp_path / "dhf"
     (dhf / "documents" / "design").mkdir(parents=True)
     (dhf / "documents" / "vv_plan.md").write_text(
@@ -60,10 +61,19 @@ def _mini_dhf(tmp_path: Path) -> Path:
         "  - id: DI-1\n"
         '    text: "existing input"\n'
         "    traces_to: [UN-001]\n"
+        "---\n\n# Alarms\n"
+    )
+    (dhf / "documents" / "design" / "trends.md").write_text(
+        "---\n"
+        "id: SDS-T-001\n"
+        "kind: design\n"
+        "context: trends\n"
+        "satisfies: [UN-001]\n"
+        "design_inputs:\n"
         "  - id: DI-3\n"
         '    text: "another input"\n'
         "    traces_to: [UN-001]\n"
-        "---\n\n# Alarms\n"
+        "---\n\n# Trends\n"
     )
     (tmp_path / "tests").mkdir()
     return dhf
@@ -82,12 +92,15 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     out = capsys.readouterr().out
 
     # Allocates the next UNUSED id: max(DI-1, DI-3) + 1, not first-gap or count.
-    # The entry lands in the chosen context's design_inputs frontmatter, traced.
+    # The entry lands in the CHOSEN context's design_inputs frontmatter (and not
+    # in the other context's), traced to the user need.
     declared = {di["id"]: di for di in design_inputs(dhf)}
     assert set(declared) == {"DI-1", "DI-3", "DI-4"}
     assert declared["DI-4"]["text"] == "RDM shall beep."
     assert declared["DI-4"]["traces_to"] == ["UN-001"]
     assert declared["DI-4"]["context"] == "alarms"
+    assert "DI-4" in (dhf / "documents" / "design" / "alarms.md").read_text()
+    assert "DI-4" not in (dhf / "documents" / "design" / "trends.md").read_text()
 
     # Emits a stub acceptance test tagged with the new id that FAILS until
     # implemented (honest red at the release gate), and prints the checklist.
