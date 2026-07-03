@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-22",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "Re-review after fixture fix (two contexts: alarms/DI-1, trends/DI-3). All probes via rdm story mutation-probe on rdm/story_audit/new_input.py, all KILLED: allocate-next-unused-id(return f\"DI-{highest + 1}\" -> return \"DI-2\" \u2014 max across BOTH docs discriminated from first-gap); insert-entry-into-frontmatter(doc_path.write_text(...) -> pass; traced facet: traces_to line -> traces_to: []); insert-into-CHOSEN-context(doc = contexts[context] -> doc = contexts[sorted(contexts)[-1]] KILLED by the new 'DI-4 in alarms.md and not in trends.md' assertions \u2014 previously SURVIVED, now closed; note the sorted(contexts)[0] mutant still survives only by coincidence since the chosen context alarms is also sorted-first \u2014 behaviorally equivalent for this input); stub-tagged-with-new-id(@allure.story(\"{di_id}\") -> @allure.story(\"DI-TODO\")); stub-fails-until-implemented(pytest.fail(...) -> pass, caught by ExitCode.TESTS_FAILED); print-checklist(print(CHECKLIST.format(...)) -> pass); reject-unknown-context(if context not in contexts: -> if False:); reject-unknown-user-need(if unknown: -> if False:, caught by ids-unchanged assertion).",
+  "test_hash": "sha256:26fe1961d6b5c73deda4df25527c3145ec7bb44c868e94bc2a6edf1f77274435",
+  "reviewed_tests": [
+    "test_new_input_scaffolds_a_traced_design_input"
+  ],
+  "uncovered_clauses": []
+}

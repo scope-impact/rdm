@@ -378,7 +378,8 @@ def parse_arguments(arguments):
     new_input_parser.add_argument('--context', help='bounded context that will OWN the input')
     new_input_parser.add_argument('--text', help='the requirement ("RDM shall ..."), in verifiable clauses')
     new_input_parser.add_argument('--traces-to', help='comma-separated user-need id(s) the input refines')
-    new_input_parser.add_argument('--test-file', help='stub test destination (default: tests/acceptance/test_<context>.py)')
+    new_input_parser.add_argument('--test-file',
+                                  help='stub test destination (default: tests/acceptance/test_<context>.py)')
     new_input_parser.add_argument('--list', action='store_true',
                                   help='print contexts, taken DI ids, next free id, and user needs')
 

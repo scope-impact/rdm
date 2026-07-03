@@ -140,7 +140,11 @@ def write_stub_test(test_file: Path, di_id: str, text: str, context: str) -> Non
 def _print_inventory(dhf_dir: Path) -> None:
     """Read-only discovery: contexts, taken DI ids, next free id, user needs."""
     contexts = docs_by_context(dhf_dir)
-    taken = sorted(design_input_ids(dhf_dir), key=lambda d: int(_DI_NUMBER.match(d).group(1)) if _DI_NUMBER.match(d) else 0)
+    def _number(di_id: str) -> int:
+        match = _DI_NUMBER.match(di_id)
+        return int(match.group(1)) if match else 0
+
+    taken = sorted(design_input_ids(dhf_dir), key=_number)
     print(f"DHF: {dhf_dir}\n")
     print("Contexts (kind: design):")
     for name, doc in sorted(contexts.items()):
