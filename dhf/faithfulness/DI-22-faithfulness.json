@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-22",
+  "verdict": "faithful",
+  "reviewer": "claude subagent reviewer #2 (independent of test author)",
+  "rationale": "Re-review after test strengthened (prior verdict: partial, two scope clauses uncovered). Clauses: (1) scaffold lays down AGENTS.md \u2014 covered by init()+is_file() on the scaffolded copy: removing rdm/init_files/AGENTS.md from the package KILLED. (2) design approved (committed) before implementation \u2014 'Design record first, committed first'->'Design record whenever convenient' KILLED; 'that commit *is* the approval'->'a separate sign-off grants approval' KILLED. (3) EACH design input verified by @allure.story-tagged acceptance test \u2014 mechanism: all-occurrence '@allure.story(\"DI-\u2026\")'->'@pytest.mark.di(\"DI-\u2026\")' KILLED; universality now pinned via whitespace-normalized prose assertion: 'each design input is verified by an'->'important design inputs may get an' KILLED (this mutation SURVIVED the prior review). (4) design/release gates run via rdm story \u2014 probe 'rdm story verify'->'rdm check verify' KILLED; manual all-occurrence mutations of 'rdm story design-gate', 'rdm story release-gate', 'rdm story faithfulness', 'rdm story verdict' each KILLED (restored, tree clean). (5) independent faithfulness review of EVERY verifying test \u2014 independence: \"the test's author\"->'any convenient reviewer' KILLED and 'Never record a verdict for a test you authored'->'Recording a verdict for your own test is fine' KILLED; universality now pinned: 'Every new or'->'Only a release-critical' KILLED (this mutation SURVIVED the prior review). Both previously uncovered scope clauses are now covered by the prose assertions in the test body; every clause has an executed failing mutation.",
+  "test_hash": "sha256:492e5ee769171ef58a838d5a57eeb8dcfae27fb8b14350e9ac69f2431fd80f90",
+  "reviewed_tests": [
+    "test_init_scaffolds_an_agent_operating_procedure"
+  ],
+  "uncovered_clauses": []
+}
