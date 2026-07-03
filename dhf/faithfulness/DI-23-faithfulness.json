@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-23",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: (1a) include design inputs when DHF present \u2014 KILLED by inverting the dhf guard 'if not dhf_dir.exists()'->'if dhf_dir.exists()' and by dropping 'result.requirements[di_id].extend(refs)'->pass; (1b) without record-first inputs legacy output unchanged \u2014 KILLED by making the '| Design inputs (DHF) |' summary line unconditional ('if result.design_inputs:'->'if True:'; assertions 'Design inputs (DHF)'/'DI-2' not in legacy output caught it); the stricter 'if not dhf_dir.exists()'->'if False:' probe SURVIVED but is a proven equivalent mutant \u2014 find_design_docs/design_inputs return empty on a nonexistent dhf/ and tagged only fills from declared inputs, so behavior is identical with or without the guard; (2) per-design-input test-tag coverage reported \u2014 KILLED by dropping 'result.tests[di_id].extend(refs)'->pass (DI-1 no longer 'tagged (1 file(s))'), by forcing status='tagged (1 file(s))' (DI-2 no longer UNTAGGED), and by suppressing the table row print; (3) untagged inputs listed as stories without coverage \u2014 KILLED by 'untested = req_ids - covered_ids'->'untested = set()'; (4) reflected in traceability score \u2014 KILLED by 'coverage = ...'->'coverage = 100' (assertion '- [ ] Coverage 50%' caught the vacuous score)",
+  "test_hash": "sha256:cebfff482d1c830798464d84f1b84c7365f00bd91fa2a7fa7ebb91808e27611c",
+  "reviewed_tests": [
+    "test_audit_includes_record_first_design_inputs"
+  ],
+  "uncovered_clauses": []
+}
