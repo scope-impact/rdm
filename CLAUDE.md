@@ -41,11 +41,13 @@ scope:
 - **Acceptance criteria are tests** — each design input DI-n is verified by a
   test tagged `@allure.story("DI-n")` in `tests/acceptance/`. Add/changing a
   design input means adding/adjusting its tagged test ("live BDD").
-- **Local gate** — install the pre-commit hook so implementation commits are
-  blocked unless the design docs are approved (committed):
+- **Local gate** — the design-gate pre-commit hook is committed in `.githooks/`
+  and activated automatically at session start (`.claude/settings.json` runs
+  `scripts/agent-bootstrap.sh`, which also syncs dependencies). Manual
+  activation, if ever needed:
 
   ```bash
-  uv run rdm hooks .githooks && git config core.hooksPath .githooks
+  git config core.hooksPath .githooks
   ```
 
 - **CI enforcement** — `.github/workflows/design-controls.yml` runs the full

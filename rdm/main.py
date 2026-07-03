@@ -171,11 +171,22 @@ def handle_story_command(args):
                 persona_results=Path(args.persona_results) if args.persona_results else None,
             )
 
+        elif args.story_command == 'new-input':
+            from rdm.story_audit.new_input import story_new_input_command
+            return story_new_input_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                context=args.context,
+                text=args.text,
+                traces_to=args.traces_to,
+                test_file=Path(args.test_file) if args.test_file else None,
+                list_only=args.list,
+            )
+
         else:
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
                 "backlog-validate, design-gate, verify, release-gate, faithfulness, "
-                "verdict, mutation-probe, trace, or persona"
+                "verdict, mutation-probe, trace, new-input, or persona"
             )
             return 1
 
@@ -359,6 +370,17 @@ def parse_arguments(arguments):
     trace_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     trace_parser.add_argument('--allure-results', help='Allure results dir (adds verification status)')
     trace_parser.add_argument('--faithfulness', help='Faithfulness verdicts dir (adds review status)')
+
+    # rdm story new-input
+    new_input_help = 'scaffold a traced design input: frontmatter entry, stub tagged test, checklist'
+    new_input_parser = story_subparsers.add_parser('new-input', help=new_input_help)
+    new_input_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    new_input_parser.add_argument('--context', help='bounded context that will OWN the input')
+    new_input_parser.add_argument('--text', help='the requirement ("RDM shall ..."), in verifiable clauses')
+    new_input_parser.add_argument('--traces-to', help='comma-separated user-need id(s) the input refines')
+    new_input_parser.add_argument('--test-file', help='stub test destination (default: tests/acceptance/test_<context>.py)')
+    new_input_parser.add_argument('--list', action='store_true',
+                                  help='print contexts, taken DI ids, next free id, and user needs')
 
     # rdm story persona
     persona_help = 'report formative usability evidence from AI-persona simulated-use runs'
