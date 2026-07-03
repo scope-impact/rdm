@@ -1,3 +1,40 @@
+# Design controls — read this before changing any code
+
+RDM is developed under its own record-first design controls (IEC 62304 /
+21 CFR 820.30, dogfooded). Every change must be fully traceable: user need →
+design input → tagged acceptance test → implementation → independent
+faithfulness verdict → green gates. CI enforces this on every push.
+
+**First action in any session:**
+
+```bash
+bash contrib/agent-bootstrap.sh
+```
+
+(installs dependencies, points `core.hooksPath` at the committed `.githooks/`
+design-gate hook, and reports the gate state — Claude Code runs it
+automatically at session start).
+
+**The full step-by-step operating procedure is
+`.claude/skills/traceable-change/SKILL.md`** — plain Markdown; read and follow
+it even if you are not Claude. The independent-review procedure for
+faithfulness verdicts is `.claude/skills/test-faithfulness/SKILL.md`.
+
+Hard rules (the SOP explains each):
+
+- Design record first: the `dhf/documents/design/*.md` change is **committed
+  before** any implementation `.py` commit — that commit is the approval; the
+  pre-commit hook blocks the reverse order.
+- Every design input DI-n is verified by a test tagged `@allure.story("DI-n")`
+  in `tests/acceptance/`.
+- Never bypass the gate: no `RDM_SKIP_DESIGN_GATE=1`, no
+  `git commit --no-verify`, never unset/re-point `core.hooksPath`.
+- Never hand-edit `dhf/faithfulness/*.json` (only `rdm story verdict`), the
+  generated traceability matrix, or `backlog/tasks/*.md` (CLI only, below).
+- Never record a faithfulness verdict for a test you authored. Independence
+  means a human or a *separate* agent instance that did not write the test
+  records it — if your tooling cannot spawn one, leave the verdict to the PR
+  reviewer and expect CI to stay red until it is recorded.
 
 <!-- BACKLOG.MD GUIDELINES START -->
 # Instructions for the usage of Backlog.md CLI Tool

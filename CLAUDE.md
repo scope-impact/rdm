@@ -25,43 +25,31 @@ broken link or missing nav entry — run it the way CI does.
 
 ## RDM develops itself with RDM (dogfood)
 
-RDM's own development is governed by RDM's record-first design controls. RDM is
-the product under control; its DHF lives in `dhf/` (see `dhf/README.md`). When
-changing RDM, you are working inside that DHF's scope:
+RDM's own development is governed by RDM's record-first design controls; its
+DHF lives in `dhf/` (see `dhf/README.md`).
 
-- **The record** — one `kind: design` document per bounded context under
-  `dhf/documents/design/` (record, gating, verification, validation, rendering),
-  each owning its `design_inputs`; user needs in the V&V plan; the design review
-  in `dhf/documents/design_review.md`; faithfulness verdicts in
-  `dhf/faithfulness/`. Never hand-edit the traceability matrix — it is generated.
-- **Acceptance criteria are tests** — each design input DI-n is verified by a
-  test tagged `@allure.story("DI-n")` in `tests/acceptance/`. Add/changing a
-  design input means adding/adjusting its tagged test ("live BDD").
-- **Local gate** — install the pre-commit hook so implementation commits are
-  blocked unless the design docs are approved (committed):
+**For ANY change, follow `.claude/skills/traceable-change/SKILL.md`** — it is
+the operating procedure (classify the change, design record committed first,
+tagged acceptance test, gates exactly as CI, independent faithfulness verdict);
+this section is only the summary. The headline rules:
 
-  ```bash
-  uv run rdm hooks .githooks && git config core.hooksPath .githooks
-  ```
+- Touching `.py`? The design record (a `kind: design` doc under
+  `dhf/documents/design/`, owning its `design_inputs`) must be **committed
+  before** the implementation — that commit is the approval, and the pre-commit
+  hook enforces it. Each DI-n is verified by a test tagged
+  `@allure.story("DI-n")` in `tests/acceptance/` ("live BDD").
+- Editing a tagged test makes its faithfulness verdict **stale** — an
+  **independent** reviewer (never the test's author; see the
+  `test-faithfulness` skill) must re-record it via `rdm story verdict`.
+- Never hand-edit the traceability matrix, `dhf/faithfulness/*.json`, or
+  `backlog/tasks/*.md`; never bypass the gate (`RDM_SKIP_DESIGN_GATE`,
+  `--no-verify`).
 
-- **CI enforcement** — `.github/workflows/design-controls.yml` runs the full
-  pipeline on every push/PR: design-gate → acceptance tests (Allure) → verify →
-  faithfulness → release-gate. A change that leaves a DI unverified, breaks the
-  design gate, or edits a tagged test without re-recording its faithfulness
-  verdict (goes **stale**) fails CI.
-- **After editing a tagged test**, re-record its faithfulness verdict (an
-  independent reviewer, the `test-faithfulness` skill, or `rdm story verdict`) —
-  the hash-pin intentionally re-opens the §820.30(e) review on any test change.
-
-Run the gates locally exactly as CI does:
-
-```bash
-uv run rdm story design-gate --dhf dhf
-uv run pytest tests/acceptance --alluredir=dhf/allure-results
-uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-uv run rdm story faithfulness --dhf dhf
-uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
-```
+Session bootstrap (Claude Code runs it automatically via the SessionStart hook;
+other agents/humans run it once by hand): `bash contrib/agent-bootstrap.sh` —
+installs deps, points `core.hooksPath` at the committed `.githooks/`, reports
+the gate state. CI (`.github/workflows/design-controls.yml`) re-runs the full
+gate pipeline on every push/PR as the non-bypassable floor.
 
 ## Architecture
 

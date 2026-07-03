@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#
+# Repo-local pre-commit wrapper for RDM's own repository.
+#
+# The real hook logic lives in `rdm/hook_files/pre-commit` (the file `rdm hooks`
+# ships to downstream projects) — do NOT duplicate logic here. This wrapper only
+# guarantees the shipped hook can find the `rdm` CLI in a fresh clone: the
+# shipped hook allows the commit when `rdm` is not on PATH, and in a fresh agent
+# container it never is. `uv run` (or `.venv/bin`) puts it there.
+#
+# Enable with: git config core.hooksPath .githooks   (contrib/agent-bootstrap.sh
+# does this for you).
+#
+set -euo pipefail
+
+repo="$(git rev-parse --show-toplevel)"
+hook="$repo/rdm/hook_files/pre-commit"
+
+if command -v uv >/dev/null 2>&1; then
+    exec uv run --directory "$repo" -- bash "$hook"
+fi
+
+# No uv: fall back to the project venv, if any, then run the shipped hook.
+PATH="$repo/.venv/bin:$PATH" exec bash "$hook"
