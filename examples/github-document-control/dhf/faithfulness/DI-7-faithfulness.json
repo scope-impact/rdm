@@ -1,13 +1,11 @@
 {
   "design_input": "DI-7",
-  "verdict": "partial",
+  "verdict": "faithful",
   "reviewer": "claude (independent of author)",
-  "rationale": "clauses: controlled index document(KILLED: index frontmatter id DMR-001->DMR-999 fails the self-entry frontmatter-agreement assertion \u2014 the index lists itself in dmr.yml; frontmatter presence also independently enforced by the DI-2 test over documents/*.md), rendered from repository data(KILLED: jinja loop {%- for entry in dmr.entries %} replaced by hand-written table rows \u2014 index_src loop assertion fails; the \"no {%- for in rendered\" assertion guards against unrendered output), lists each controlled document with its identity and revision(KILLED: dmr.yml SOP-DC-001 revision 1->2 disagrees with the document frontmatter; KILLED: dmr.yml entry id SOP-DC-001->SOP-DC-999 fails frontmatter agreement). NOT COVERED: enumerating the specification set \u2014 deleting the entire SOP-DC-001 entry from data/dmr.yml SURVIVED; the test iterates whatever entries dmr.yml declares (per-entry presence + consistency) but asserts nothing about completeness, i.e. that every controlled document under documents/ appears in the index.",
-  "test_hash": "sha256:6222ad68c55a21c5cf49b0a30dbcb1126f98f01a3e72ed85a4a668ad3758eb7e",
+  "rationale": "clauses: controlled index document(KILLED: index frontmatter id DMR-001->DMR-999 fails the self-entry frontmatter-agreement assertion \u2014 the index lists itself in dmr.yml; frontmatter presence also independently enforced by the DI-2 test), enumerating the specification set(previously UNCOVERED \u2014 test now asserts every documents/*.md frontmatter id appears in dmr.yml entries: deleting the entire SOP-DC-001 entry from data/dmr.yml KILLED), rendered from repository data(KILLED: jinja loop {%- for entry in dmr.entries %} replaced by hand-written table rows; \"no {%- for in rendered\" guards unrendered output), lists each controlled document with its identity and revision(KILLED: dmr.yml SOP revision 1->2 disagrees with the document frontmatter, re-verified after strengthening; KILLED: dmr.yml entry id ->SOP-DC-999 fails frontmatter agreement). 4/4 clauses killed.",
+  "test_hash": "sha256:e3638194fbd6aab9c9ac3fef36600d5fc32d616c4114c9f9093280265a6bf7aa",
   "reviewed_tests": [
     "test_dmr_index_lists_the_specification_set_from_data"
   ],
-  "uncovered_clauses": [
-    "enumerating the specification set (completeness): removing a controlled document entry from data/dmr.yml passes \u2014 no assertion that the index covers all controlled documents"
-  ]
+  "uncovered_clauses": []
 }
