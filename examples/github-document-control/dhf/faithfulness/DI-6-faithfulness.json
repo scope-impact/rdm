@@ -1,0 +1,13 @@
+{
+  "design_input": "DI-6",
+  "verdict": "partial",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: merge-commit only(KILLED: allow_merge_commit true->false), squash disabled(KILLED: allow_squash_merge false->true), rebase disabled(KILLED: allow_rebase_merge false->true), head branch deleted on merge(KILLED: delete_branch_on_merge true->false), setup applies settings(KILLED: gh api --method PATCH repos/$REPO --input $SETTINGS_FILE line removed from setup.sh), declared-as-config-code covered by construction (test parses the checked-in settings.json; absent/invalid file errors). NOT COVERED: setup drift-checks the settings \u2014 the assertion contains($want) in setup is satisfied by the RULESET drift check at setup.sh line 52: neutering the settings drift check (contains($want)->true on the settings line) SURVIVED, and deleting the entire settings drift-check block SURVIVED. 5/6 clauses killed; control probe (comment-only mutation) SURVIVED as expected, validating the harness.",
+  "test_hash": "sha256:60961b74d6be4f9d1835c6ab49d09fdbfad14586c4ab0fe756dc5535db677f2d",
+  "reviewed_tests": [
+    "test_merge_behavior_is_configuration_code"
+  ],
+  "uncovered_clauses": [
+    "setup script drift-checks the merge settings against the live repository: a mutant that neuters or deletes the settings-specific drift check in setup.sh passes, because the contains($want) assertion is anchored equally to the ruleset drift check"
+  ]
+}

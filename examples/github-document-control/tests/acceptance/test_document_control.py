@@ -149,7 +149,9 @@ def test_merge_behavior_is_configuration_code() -> None:
     setup = (EXAMPLE / "setup.sh").read_text()
     assert "settings.json" in setup
     assert '--method PATCH "repos/$REPO" --input "$SETTINGS_FILE"' in setup  # apply path
-    assert "contains($want)" in setup                                        # drift check
+    # The SETTINGS-specific drift check (not just the ruleset's): the live
+    # repo object must be compared against the checked-in settings file.
+    assert 'gh api "repos/$REPO" | jq -e --argjson want "$(cat "$SETTINGS_FILE")" \'contains($want)\'' in setup
 
 
 @allure.story("DI-7")
@@ -174,6 +176,13 @@ def test_dmr_index_lists_the_specification_set_from_data() -> None:
         assert frontmatter["id"] == entry["id"]
         assert frontmatter["revision"] == entry["revision"]
 
+    # ENUMERATING the specification set means completeness: every controlled
+    # document under documents/ is indexed (an un-indexed spec fails).
+    indexed_ids = {entry["id"] for entry in dmr_data["entries"]}
+    for doc in sorted((EXAMPLE / "documents").glob("*.md")):
+        doc_id = yaml.safe_load(doc.read_text().split("---", 2)[1])["id"]
+        assert doc_id in indexed_ids, f"{doc.name} ({doc_id}) missing from the DMR index"
+
     # The index is itself controlled (id + revision) and generated (loop in
     # source, data in render).
     index_src = (EXAMPLE / "documents" / "device_master_record_index.md").read_text()
@@ -191,6 +200,16 @@ def test_release_writes_a_device_history_record() -> None:
     run_text = "\n".join(step.get("run", "") for step in steps)
 
     manifest = next(s for s in steps if "device-history-record.json" in s.get("run", ""))
+    # The fields must be BOUND to the actual release context, not just named:
+    # a manifest recording a constant SHA/tag/actor would be a false record.
+    for binding in (
+        '--arg tag "${{ github.ref_name }}"',
+        '--arg commit_sha "${{ github.sha }}"',
+        '--arg released_by "${{ github.actor }}"',
+        '--arg released_at "$(date -u',
+        '--argjson artifacts "$(ls release',
+    ):
+        assert binding in manifest["run"], f"manifest missing binding: {binding}"
     for field in ("$tag", "$commit_sha", "$released_by", "$released_at", "$artifacts"):
         assert field in manifest["run"], f"manifest missing {field}"
     # Written under release/, which the release step attaches wholesale.
