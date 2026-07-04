@@ -12,6 +12,8 @@ user_needs:
     text: "A released document set is retrievable, complete, and human-readable throughout the retention period."
   - id: UN-004
     text: "The document control system satisfies the applicable 21 CFR Part 11 controls for electronic records and electronic signatures."
+  - id: UN-005
+    text: "The current approved specification set (device master record) and the record of each release (device history record) are identifiable and retrievable from the system."
 ---
 
 # Purpose

@@ -128,3 +128,24 @@ def test_sop_addresses_every_part11_checklist_item(tmp_path: Path) -> None:
     shutil.copy(SOP, stripped)
     stripped.write_text(stripped.read_text().replace("[[P11:11.10e]]", ""))
     assert audit_for_gaps(str(CHECKLIST), [str(stripped)], coverage=False) == 3
+
+
+@allure.story("DI-6")
+@allure.label("output", "TODO")
+def test_di_6_not_implemented() -> None:
+    """DI-6: Repository merge behavior shall be declared as configuration code: pull requests merge only by merge commit so the reviewed SHA is preserved in history, squash and rebase merges are disabled, head branches are deleted on merge, and the setup script shall apply and drift-check these settings against the live repository."""
+    pytest.fail("DI-6 acceptance test not implemented -- replace this stub with real assertions")
+
+
+@allure.story("DI-7")
+@allure.label("output", "TODO")
+def test_di_7_not_implemented() -> None:
+    """DI-7: The device master record shall be a controlled index document enumerating the specification set, rendered from repository data so it lists each controlled document with its identity and revision."""
+    pytest.fail("DI-7 acceptance test not implemented -- replace this stub with real assertions")
+
+
+@allure.story("DI-8")
+@allure.label("output", "TODO")
+def test_di_8_not_implemented() -> None:
+    """DI-8: Each document release shall produce a device history record: a manifest recording the tag, commit SHA, releasing actor, timestamp, and artifact list, attached to the release alongside the copies."""
+    pytest.fail("DI-8 acceptance test not implemented -- replace this stub with real assertions")
