@@ -25,6 +25,11 @@ YAML data + Jinja2 templates → Markdown → PDF/DOCX (via Pandoc/Typst)
   — a complete record-first project in `examples/`: GitHub rulesets as design
   outputs, PR approval as the Part 11 electronic signature, and gap analysis
   proving the SOP covers the 21 CFR Part 11 checklist.
+- **[Document control (Part 11)](document-control.md)** — RDM makes the same
+  claim for its own record, and the
+  **[traceability matrix](traceability-matrix.md)** on this site is generated
+  from a live acceptance run at every docs build: published evidence, not a
+  stale copy.
 
 ## The evidence chain
 

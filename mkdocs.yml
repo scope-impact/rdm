@@ -56,6 +56,10 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.inlinehilite
 
+# Build-time evidence generation (docs/traceability-matrix.md) — see the hook.
+hooks:
+  - docs/_hooks/evidence.py
+
 nav:
   - Home: index.md
   - Architecture:
@@ -68,5 +72,8 @@ nav:
       - Audit checklist format: checklist-format.md
       - AI-persona usability validation: ai-persona-usability-validation.md
       - Worked example — VitalView: example-vitalview-decomposition.md
+  - Evidence:
+      - Document control (Part 11): document-control.md
+      - Traceability matrix (generated): traceability-matrix.md
   - Change history: HISTORY.md
   - API reference: reference.md
