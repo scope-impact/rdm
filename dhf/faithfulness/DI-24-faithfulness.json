@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-24",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "Clause-by-clause, each proven by a KILLED mutation probe against the tagged test: (1) V&V plan laid down - skip copying rel~verification_and_validation_plan.md KILLED; (2) per-context design template - skip copying example_context.md KILLED, and deleting every 'kind: design' occurrence from the packaged template rdm/adopt_files/.../example_context.md KILLED (template data is probe-visible via editable install; an earlier probe that removed only the frontmatter key SURVIVED but was an equivalent mutant - a comment line still contained the substring); (3) design review - skip design_review.md KILLED; (4) traceability matrix - skip traceability_matrix.md KILLED; (5) runbook - skip AGENT_WORKFLOW.md KILLED; (6) design-gate pre-commit hook - swapping hook source to hook_files/commit-msg (no design-gate) KILLED, so the content assertion is load-bearing, not mere existence; (7) session bootstrap - skip agent-bootstrap.sh KILLED, dropping it from _EXECUTABLE (exec bit) KILLED (source template is non-executable so chmod is load-bearing), skip .claude/settings.json wiring KILLED; (8) CI gate workflow - skip design-controls.yml KILLED; (9) skip-never-overwrite - 'if dest.exists():' -> 'if False:' (overwrite) KILLED via pre-existing dhf/README.md sentinel and untouched src/app.py; skip reporting - skipped.append -> copied.append KILLED ('Skipped' report and rerun 'Laid down:' absence both assert); (10) idempotent re-run - same mutation KILLED the rerun assertion; (11) one-command success - 'return 0' -> 'return 1' in adopt_command KILLED. No uncovered clause.",
+  "test_hash": "sha256:0d9b5448f4ec3781c19c36677559911e7b7f500b1a42e6e54432a6babc98be88",
+  "reviewed_tests": [
+    "test_adopt_brings_existing_repo_under_controls"
+  ],
+  "uncovered_clauses": []
+}
