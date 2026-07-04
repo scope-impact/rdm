@@ -2,7 +2,7 @@
 id: SDS-SCAF-001
 kind: design
 context: scaffolding
-satisfies: [UN-008, UN-010]
+satisfies: [UN-008, UN-010, UN-011]
 design_inputs:
   - id: DI-15
     text: "RDM shall scaffold a new documentation project from one command, laying down the document templates, build Makefile, and render config."
@@ -10,6 +10,9 @@ design_inputs:
   - id: DI-22
     text: "RDM shall scaffold a new design input: allocate the next unused DI id, insert the entry into the chosen context's design_inputs frontmatter, emit a stub acceptance test tagged with the new id that fails until implemented, and print the remaining traceability checklist, rejecting an unknown context or user need."
     traces_to: [UN-010]
+  - id: DI-24
+    text: "RDM shall bring an existing repository under design controls from one command: lay down the DHF skeleton (V&V plan, per-context design template, design review, traceability matrix), the agent workflow runbook, the design-gate pre-commit hook, a session bootstrap, and a CI gate workflow, skipping (never overwriting) any destination file that already exists."
+    traces_to: [UN-011]
 ---
 
 # Scaffolding — Software Design
@@ -32,6 +35,19 @@ This context owns:
   prose, commit-approval, implementation, real assertions, faithfulness verdict,
   gates, matrix). An unknown context or user need is rejected — a design input
   can never be scaffolded outside the record.
+- **DI-24 (brownfield adoption)**, refining UN-011: `rdm adopt` brings an
+  *existing* repository under record-first design controls from one command —
+  where `rdm init` (DI-15) creates a new documentation project, `rdm adopt`
+  drops only the **control surface** into a repo that already has code: the DHF
+  skeleton (V&V plan with a `user_needs` registry to fill, a per-context
+  `kind: design` template, the design review, the traceability-matrix
+  template), the agent workflow runbook, the design-gate pre-commit hook
+  (`.githooks/`), a session bootstrap (`.claude/settings.json` +
+  `scripts/agent-bootstrap.sh`), and a CI gate workflow. Existing files are
+  **skipped, never overwritten** — adoption must not disturb the repository it
+  is protecting, and re-running is safe (idempotent). The laid-down templates
+  deliberately carry unresolved placeholder markers: the design gate stays red
+  until the adopting team writes and commits its actual record.
 
 ## Design Outputs
 
@@ -44,6 +60,18 @@ For **DI-22** — `rdm story new-input` and `rdm/story_audit/new_input.py`:
   hand-authored formatting and comments in the design doc survive;
 - `--list` prints the discovery inventory (contexts, existing DI ids, next free
   id, user needs) read-only.
+
+For **DI-24** — `rdm adopt` and `rdm/adopt.py`:
+
+- `rdm/adopt_files/` — the packaged control-surface tree, mirroring destination
+  paths (`dhf/…`, `.claude/settings.json`, `scripts/agent-bootstrap.sh`,
+  `.github/workflows/design-controls.yml`); the pre-commit hook is copied from
+  `rdm/hook_files/pre-commit` at adopt time so the gate has one source of truth
+  (only the design gate is installed — the issue-reference hooks stay opt-in).
+- `adopt(target)` walks the tree: creates missing files (preserving the
+  executable bit on scripts/hooks), records and reports every skipped
+  pre-existing path, and prints the next steps (fill the templates, commit the
+  record, wire `core.hooksPath`).
 
 For **DI-15** — `rdm init` and `rdm/init.py`:
 
