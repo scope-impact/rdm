@@ -11,6 +11,12 @@ YAML data + Jinja2 templates → Markdown → PDF/DOCX (via Pandoc/Typst)
 
 ## Where to start
 
+- **New here?** [Install](installation.md), then follow a quickstart:
+  [a new documentation project](quickstart-new-project.md) (`rdm init`) or
+  [an existing repository](quickstart-existing-repo.md) (`rdm adopt`). The
+  task-oriented **User guide** covers [authoring](authoring.md),
+  [gap analysis](gap-analysis.md),
+  [design controls](design-controls.md), and the [CLI reference](cli.md).
 - **[Agent workflow](agent-workflow.md)** — the canonical procedure for changing
   a record-first project (human or AI agent): the loop the diagrams below draw.
 - **[Record-first architecture](record-first-architecture.md)** — how RDM treats
