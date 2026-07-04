@@ -1,0 +1,21 @@
+# 21 CFR Part 11 audit checklist — document control on git/GitHub
+#
+# The subset of Part 11 controls applicable to an electronic document-control
+# system built on git with GitHub as the service provider. This checklist is
+# not a substitute for reading and implementing the regulation; each phrase is
+# a mnemonic for the cited section. Sections concerning open systems (§11.30)
+# and id-code/password combinations (§11.300 c-e beyond uniqueness) are
+# addressed through the GitHub organization's own security policy documents.
+#
+P11:11.10a validation of the system for accuracy, reliability, and the ability to discern altered records
+P11:11.10b accurate and complete copies of records in human readable and electronic form
+P11:11.10c protection of records for accurate and ready retrieval throughout the retention period
+P11:11.10d limiting system access to authorized individuals
+P11:11.10e secure, computer-generated, time-stamped audit trail that does not obscure prior entries
+P11:11.10f operational checks enforcing permitted sequencing of steps
+P11:11.10g authority checks ensuring only authorized individuals sign or alter records
+P11:11.10i persons who use the system have the education, training, and experience to do so
+P11:11.10k adequate controls over the distribution of and changes to systems documentation
+P11:11.50 signature manifestation: printed name, date and time, and meaning of each signing
+P11:11.70 signatures linked to their records so they cannot be excised, copied, or transferred
+P11:11.100 each electronic signature unique to one individual, never reused or reassigned

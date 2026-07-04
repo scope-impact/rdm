@@ -1,0 +1,37 @@
+name: Release controlled documents
+
+# 21 CFR 11.10(b): accurate and complete copies in human-readable (PDF) and
+# electronic (git archive at the tag) form, attached to the GitHub Release.
+# Copy this file to .github/workflows/ in a real repository.
+on:
+  push:
+    tags:
+      - "doc-*"
+
+jobs:
+  release-documents:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install rdm + pandoc
+        run: |
+          pip install "rdm[story-audit]"
+          sudo apt-get update && sudo apt-get install -y pandoc
+      - name: Render controlled documents (human-readable copies)
+        run: |
+          mkdir -p release
+          for doc in documents/*.md; do
+            rdm render "$doc" config.yml data/history.yml > "release/$(basename "$doc")"
+            pandoc "release/$(basename "$doc")" -o "release/$(basename "$doc" .md).pdf"
+          done
+      - name: Electronic copy (complete document set at this tag)
+        run: git archive --format=zip --output=release/document-set-${{ github.ref_name }}.zip ${{ github.ref_name }}
+      - name: Attach copies to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*

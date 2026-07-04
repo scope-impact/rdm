@@ -1,0 +1,9 @@
+# Revision history data for rendered documents (context key = file stem, so
+# this file is `history` in templates). In a live project this file is
+# generated from `git log --follow` on the document (e.g. in the release
+# workflow), keeping the rendered history a record, not a hand-maintained table.
+entries:
+  - revision: 1
+    date: "2026-07-04"
+    author: "Example Author"
+    change: "Initial approved release of the document control procedure."
