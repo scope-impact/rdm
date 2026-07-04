@@ -1,0 +1,13 @@
+# Device Master Record index data (§820.181 analog): the current approved
+# specification set. In a live project this can be generated from the
+# documents/ frontmatter (id + revision per file) in CI, keeping the index a
+# record rather than a hand-maintained table.
+entries:
+  - id: SOP-DC-001
+    title: "Document Control Procedure"
+    path: documents/document_control_procedure.md
+    revision: 1
+  - id: DMR-001
+    title: "Device Master Record Index"
+    path: documents/device_master_record_index.md
+    revision: 1

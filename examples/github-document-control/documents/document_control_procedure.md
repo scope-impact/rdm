@@ -60,6 +60,10 @@ approve their own change). This approval is the electronic signature of record:
   (code owners) and who may merge; write access is granted per the access
   policy below. Commits must be cryptographically signed (verified signatures
   required by ruleset), so authorship of every change is attributable.
+- **Merge behavior** — pull requests merge only by merge commit (squash and
+  rebase merges are disabled in the repository settings, kept as configuration
+  code): the SHA that was reviewed is the SHA preserved in history, so the
+  signature–record link survives the merge unaltered.
 
 ## Access
 
@@ -123,6 +127,18 @@ records are kept per the training SOP.
 This procedure and the configuration files it validates are themselves
 controlled documents in this repository [[P11:11.10k]] — changes to them
 follow the same pull-request approval path they describe.
+
+# Records: DHF, DMR, DHR
+
+| Record | Regulation | In this system |
+| --- | --- | --- |
+| Design history file (DHF) | §820.30(j) | `dhf/` — design inputs, review, verification evidence, faithfulness verdicts |
+| Device master record (DMR) | §820.181 | the controlled specification set at the approved tip, enumerated by `documents/device_master_record_index.md` (rendered from repository data) |
+| Device history record (DHR) | §820.184 | per release: the `device-history-record.json` manifest (tag, commit SHA, releasing actor, timestamp, artifact list) attached to the GitHub Release with the copies |
+
+The DMR for a given release is the index and its listed documents at the
+release tag; the DHR proves each released set was produced from that exact
+approved revision.
 
 # Revision history
 

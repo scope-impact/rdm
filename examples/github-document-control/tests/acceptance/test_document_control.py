@@ -36,15 +36,20 @@ SOP = EXAMPLE / "documents" / "document_control_procedure.md"
 CHECKLIST = EXAMPLE / "checklists" / "part11_document_control.txt"
 
 
-def _render_sop() -> str:
+def _render(template: str, data_files: list[str]) -> str:
     import jinja2
 
     config = load_yaml(EXAMPLE / "config.yml")
-    context = context_from_data_files([str(EXAMPLE / "data" / "history.yml")])
+    context = context_from_data_files(data_files)
     out = io.StringIO()
-    render_template_to_file(config, "documents/document_control_procedure.md", context, out,
+    render_template_to_file(config, template, context, out,
                             loaders=[jinja2.FileSystemLoader(str(EXAMPLE))])
     return out.getvalue()
+
+
+def _render_sop() -> str:
+    return _render("documents/document_control_procedure.md",
+                   [str(EXAMPLE / "data" / "history.yml")])
 
 
 @allure.story("DI-1")
@@ -131,21 +136,64 @@ def test_sop_addresses_every_part11_checklist_item(tmp_path: Path) -> None:
 
 
 @allure.story("DI-6")
-@allure.label("output", "TODO")
-def test_di_6_not_implemented() -> None:
-    """DI-6: Repository merge behavior shall be declared as configuration code: pull requests merge only by merge commit so the reviewed SHA is preserved in history, squash and rebase merges are disabled, head branches are deleted on merge, and the setup script shall apply and drift-check these settings against the live repository."""
-    pytest.fail("DI-6 acceptance test not implemented -- replace this stub with real assertions")
+@allure.label("output", "github/settings.json")
+def test_merge_behavior_is_configuration_code() -> None:
+    """DI-6: merge-commit-only settings are declared as code, and setup.sh
+    applies and drift-checks them against the live repository."""
+    settings = json.loads((EXAMPLE / "github" / "settings.json").read_text())
+    assert settings["allow_merge_commit"] is True      # the reviewed SHA survives
+    assert settings["allow_squash_merge"] is False     # squash rewrites it
+    assert settings["allow_rebase_merge"] is False     # rebase rewrites it
+    assert settings["delete_branch_on_merge"] is True
+
+    setup = (EXAMPLE / "setup.sh").read_text()
+    assert "settings.json" in setup
+    assert '--method PATCH "repos/$REPO" --input "$SETTINGS_FILE"' in setup  # apply path
+    assert "contains($want)" in setup                                        # drift check
 
 
 @allure.story("DI-7")
-@allure.label("output", "TODO")
-def test_di_7_not_implemented() -> None:
-    """DI-7: The device master record shall be a controlled index document enumerating the specification set, rendered from repository data so it lists each controlled document with its identity and revision."""
-    pytest.fail("DI-7 acceptance test not implemented -- replace this stub with real assertions")
+@allure.label("output", "documents/device_master_record_index.md")
+def test_dmr_index_lists_the_specification_set_from_data() -> None:
+    """DI-7: the DMR index is a controlled document rendered from repository
+    data, listing each controlled document with identity and revision."""
+    dmr_data = yaml.safe_load((EXAMPLE / "data" / "dmr.yml").read_text())
+    rendered = _render(
+        "documents/device_master_record_index.md",
+        [str(EXAMPLE / "data" / "history.yml"), str(EXAMPLE / "data" / "dmr.yml")],
+    )
+
+    for entry in dmr_data["entries"]:
+        # Every indexed document is listed with its identity and revision...
+        assert f"| {entry['id']} |" in rendered
+        assert f"`{entry['path']}`" in rendered
+        # ...and the index agrees with the document's OWN frontmatter (the
+        # record is consistent, not just present).
+        doc = EXAMPLE / entry["path"]
+        frontmatter = yaml.safe_load(doc.read_text().split("---", 2)[1])
+        assert frontmatter["id"] == entry["id"]
+        assert frontmatter["revision"] == entry["revision"]
+
+    # The index is itself controlled (id + revision) and generated (loop in
+    # source, data in render).
+    index_src = (EXAMPLE / "documents" / "device_master_record_index.md").read_text()
+    assert "{%- for entry in dmr.entries %}" in index_src
+    assert "{%- for" not in rendered
 
 
 @allure.story("DI-8")
-@allure.label("output", "TODO")
-def test_di_8_not_implemented() -> None:
-    """DI-8: Each document release shall produce a device history record: a manifest recording the tag, commit SHA, releasing actor, timestamp, and artifact list, attached to the release alongside the copies."""
-    pytest.fail("DI-8 acceptance test not implemented -- replace this stub with real assertions")
+@allure.label("output", "github/workflows/release-documents.yml")
+def test_release_writes_a_device_history_record() -> None:
+    """DI-8: the release workflow writes a manifest (tag, commit SHA, actor,
+    timestamp, artifacts) and attaches it with the copies."""
+    workflow = yaml.safe_load((EXAMPLE / "github" / "workflows" / "release-documents.yml").read_text())
+    steps = workflow["jobs"]["release-documents"]["steps"]
+    run_text = "\n".join(step.get("run", "") for step in steps)
+
+    manifest = next(s for s in steps if "device-history-record.json" in s.get("run", ""))
+    for field in ("$tag", "$commit_sha", "$released_by", "$released_at", "$artifacts"):
+        assert field in manifest["run"], f"manifest missing {field}"
+    # Written under release/, which the release step attaches wholesale.
+    assert "> release/device-history-record.json" in run_text
+    attach = next(s for s in steps if "release" in s.get("uses", ""))
+    assert attach["with"]["files"] == "release/*"
