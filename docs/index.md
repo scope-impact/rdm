@@ -21,6 +21,10 @@ YAML data + Jinja2 templates → Markdown → PDF/DOCX (via Pandoc/Typst)
   bounded contexts; verification anchored on design inputs ("live BDD").
 - **[Worked example — VitalView](example-vitalview-decomposition.md)** — a
   decomposition of user needs across contexts on a realistic device.
+- **[Worked example — git as document control](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)**
+  — a complete record-first project in `examples/`: GitHub rulesets as design
+  outputs, PR approval as the Part 11 electronic signature, and gap analysis
+  proving the SOP covers the 21 CFR Part 11 checklist.
 
 ## The evidence chain
 
