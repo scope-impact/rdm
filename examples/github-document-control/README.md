@@ -41,8 +41,18 @@ flowchart LR
 | `tests/acceptance/` | the acceptance criteria — they inspect the *real* configuration and render the *real* SOP |
 
 > `github/` is deliberately not `.github/` so this example's workflow doesn't
-> run in the RDM repository — copy its contents to `.github/` (and import the
-> ruleset) when using this for real.
+> run in the RDM repository — copy its contents to `.github/` when using this
+> for real. Apply the ruleset either via the UI (Repo → Settings → Rules →
+> Import) or with the provided script (requires `gh` + `jq` and admin access):
+>
+> ```bash
+> ./setup.sh owner/repo            # create or update the ruleset from the JSON
+> ./setup.sh --check owner/repo    # audit: live settings vs the checked-in JSON
+> ```
+>
+> `--check` exits non-zero on drift — run it on a schedule as the
+> "configuration has not drifted" audit (§11.10(a) leans on it). Repository
+> rulesets require a public repo or a paid plan on private ones.
 
 ## The Part 11 mapping in one table
 
