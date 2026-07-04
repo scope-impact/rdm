@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-25",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: ships-as-builtin(\u2713 'part11_document_control' asserted in list_default_checklists output AND resolved by name in audit_for_gaps \u2014 silencing the listing print KILLED; breaking _full_file_path builtin resolution KILLED), statement-passes-gap-analysis(\u2713 audit_for_gaps==0 against the real committed dhf/documents/document_control.md \u2014 renaming checklist key P11:11.10e\u2192P11:11.10x KILLED; corrupting the [[P11:11.10c]] citation in the statement KILLED), falsifiability-arm(\u2713 load-bearing, not vacuous: stripped statement must yield 3 \u2014 mutating audit_for_gaps 'return 3'\u2192'return 0' KILLED, so an empty/hollow checklist or dead gap engine cannot make ==0 pass vacuously). 5/5 probes KILLED; no surviving mutants; tree clean after each probe.",
+  "test_hash": "sha256:2b3f4cb907847982f918a1943058d69291ebca85e38e88fb478683d964b6f682",
+  "reviewed_tests": [
+    "test_rdm_claims_git_as_its_own_document_control"
+  ],
+  "uncovered_clauses": []
+}
