@@ -76,3 +76,25 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
     # Verbose mode names the missing reference.
     coverage_report([str(checklist)], [str(source)], verbose=True)
     assert "ISO-2" in capsys.readouterr().out
+
+
+@allure.story("DI-25")
+@allure.label("output", "rdm/checklists/part11_document_control.txt")
+def test_rdm_claims_git_as_its_own_document_control(tmp_path: Path, capsys) -> None:
+    """DI-25: the Part 11 document-control checklist ships as a built-in, and
+    RDM's own document-control statement passes gap analysis against it."""
+    import shutil
+
+    # The checklist ships (resolvable by built-in name, not just as a file).
+    list_default_checklists()
+    assert "part11_document_control" in capsys.readouterr().out
+
+    # RDM's own claim is executable: the statement covers every checklist item.
+    statement = Path(__file__).parents[2] / "dhf" / "documents" / "document_control.md"
+    assert audit_for_gaps("part11_document_control", [str(statement)], coverage=False) == 0
+
+    # Falsifiable: dropping one control from the statement fails the audit.
+    stripped = tmp_path / "statement_missing_audit_trail.md"
+    shutil.copy(statement, stripped)
+    stripped.write_text(stripped.read_text().replace("[[P11:11.10e]]", ""))
+    assert audit_for_gaps("part11_document_control", [str(stripped)], coverage=False) == 3
