@@ -36,6 +36,9 @@ def cli(raw_arguments):
         render_template_to_file(config, args.template, context, sys.stdout)
     elif args.command == 'init':
         init(args.output)
+    elif args.command == 'adopt':
+        from rdm.adopt import adopt_command
+        exit_code = adopt_command(args.target)
     elif args.command == 'pull':
         pull_from_project_manager(args.config)
     elif args.command == 'hooks':
@@ -234,6 +237,11 @@ def parse_arguments(arguments):
     init_parser = subparsers.add_parser('init', help=init_help)
     init_output_help = 'Path where templates are copied'
     init_parser.add_argument('-o', '--output', default='dhf', help=init_output_help)
+
+    adopt_help = 'bring an EXISTING repository under record-first design controls (never overwrites)'
+    adopt_parser = subparsers.add_parser('adopt', help=adopt_help)
+    adopt_parser.add_argument('target', nargs='?', default='.',
+                              help='repository root to adopt into (default: .)')
 
     render_help = 'render a template using the specified data files'
     render_parser = subparsers.add_parser('render', help=render_help)

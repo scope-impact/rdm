@@ -1,0 +1,37 @@
+name: Design controls
+
+# Record-first gates on every change (laid down by `rdm adopt`).
+#
+# Phased adoption: the design gate runs from day one. The verification /
+# faithfulness / release steps are commented out — uncomment them when your
+# first design input and its tagged acceptance test land, otherwise the
+# release gate fails on "no design inputs declared".
+on: [push, pull_request]
+
+jobs:
+  design-controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install rdm + test tooling
+        run: pip install "rdm[story-audit]" pytest allure-pytest
+
+      - name: Design gate (design docs + review present, complete, approved)
+        run: rdm story design-gate --dhf dhf
+
+      # Uncomment when your first design input lands:
+      #
+      # - name: Acceptance tests -> Allure evidence
+      #   run: pytest tests/acceptance --alluredir=dhf/allure-results
+      #
+      # - name: Generate verification data
+      #   run: rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+      #
+      # - name: Faithfulness (each test independently confirmed to verify its input)
+      #   run: rdm story faithfulness --dhf dhf
+      #
+      # - name: Release gate (verified + faithful + every user need addressed)
+      #   run: rdm story release-gate --dhf dhf --allure-results dhf/allure-results

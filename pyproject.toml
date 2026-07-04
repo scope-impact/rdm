@@ -95,7 +95,14 @@ rdm = [
     "init_files/images/uimockups/*",
     "init_files/documents/*",
     "init_files/documents/510k/*",
-    "hook_files/*"
+    "hook_files/*",
+    "adopt_files/.claude/*",
+    "adopt_files/.github/workflows/*",
+    "adopt_files/.githooks/*",
+    "adopt_files/dhf/*",
+    "adopt_files/dhf/documents/*",
+    "adopt_files/dhf/documents/design/*",
+    "adopt_files/scripts/*"
 ]
 
 [tool.ruff]

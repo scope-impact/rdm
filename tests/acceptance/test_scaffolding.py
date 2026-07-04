@@ -118,3 +118,50 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
         dhf_dir=dhf, context="alarms", text="x", traces_to="UN-999"
     ) != 0
     assert set(di["id"] for di in design_inputs(dhf)) == {"DI-1", "DI-3", "DI-4"}
+
+
+@allure.story("DI-24")
+@allure.label("output", "rdm/adopt.py")
+def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> None:
+    """DI-24: one command lays down the DHF skeleton, runbook, design-gate hook,
+    session bootstrap, and CI workflow into an existing repo, skipping (never
+    overwriting) anything that already exists."""
+    import os
+
+    from rdm.adopt import adopt_command
+
+    repo = tmp_path / "legacy"
+    (repo / "src").mkdir(parents=True)
+    (repo / "src" / "app.py").write_text("print('legacy')\n")
+    (repo / "dhf").mkdir()
+    sentinel = "# our own pre-existing DHF notes\n"
+    (repo / "dhf" / "README.md").write_text(sentinel)
+
+    assert adopt_command(str(repo)) == 0
+    out = capsys.readouterr().out
+
+    # The control surface lands: DHF skeleton...
+    docs = repo / "dhf" / "documents"
+    assert (docs / "verification_and_validation_plan.md").is_file()   # V&V plan
+    design_template = docs / "design" / "example_context.md"
+    assert "kind: design" in design_template.read_text()              # context template
+    assert (docs / "design_review.md").is_file()                      # design review
+    assert (docs / "traceability_matrix.md").is_file()                # matrix template
+    # ...the runbook, the hook, the bootstrap, and the CI workflow.
+    assert (repo / "dhf" / "AGENT_WORKFLOW.md").is_file()
+    hook = repo / ".githooks" / "pre-commit"
+    assert "design-gate" in hook.read_text() and os.access(hook, os.X_OK)
+    bootstrap = repo / "scripts" / "agent-bootstrap.sh"
+    assert os.access(bootstrap, os.X_OK)
+    assert "agent-bootstrap" in (repo / ".claude" / "settings.json").read_text()
+    assert "rdm story design-gate" in (repo / ".github" / "workflows" / "design-controls.yml").read_text()
+
+    # Pre-existing files are skipped, never overwritten — and reported.
+    assert (repo / "dhf" / "README.md").read_text() == sentinel
+    assert "dhf/README.md" in out and "Skipped" in out
+    assert (repo / "src" / "app.py").read_text() == "print('legacy')\n"
+
+    # Re-running is safe: everything now exists, so nothing is copied.
+    assert adopt_command(str(repo)) == 0
+    rerun_out = capsys.readouterr().out
+    assert "Laid down:" not in rerun_out
