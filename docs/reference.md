@@ -44,3 +44,13 @@ The gates and traceability commands layered on the record core.
 ### `rdm.story_audit.mutation`
 
 ::: rdm.story_audit.mutation
+
+### `rdm.story_audit.new_input`
+
+::: rdm.story_audit.new_input
+
+## Scaffolding
+
+### `rdm.adopt`
+
+::: rdm.adopt

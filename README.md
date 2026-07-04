@@ -37,6 +37,15 @@ cd dhf
 make pdfs
 ```
 
+### Existing repository (brownfield)
+
+```sh
+# Lay down record-first design controls WITHOUT touching existing files:
+# DHF skeleton, agent runbook, design-gate pre-commit hook, session
+# bootstrap, and CI gates. Never overwrites; re-running is a no-op.
+rdm adopt .
+```
+
 ### Update
 
 ```sh
@@ -81,7 +90,18 @@ jobs:
 
 ## Documentation
 
-For detailed documentation on templating, data files, project management backends, and more, see the [original RDM documentation](https://github.com/innolitics/rdm#readme).
+Full documentation lives at **[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/)**:
+installation and quickstarts, a task-oriented user guide (authoring/rendering,
+gap analysis, the `rdm story` design-controls workflow), the complete CLI
+reference, the record-first concepts, and the site's own live verification
+evidence — the traceability matrix is generated from an acceptance-suite run
+on every docs build.
+
+RDM dogfoods itself: its own development is governed by its record-first design
+controls (see `dhf/AGENT_WORKFLOW.md`), its own record is controlled in git per
+the shipped 21 CFR Part 11 checklist (`dhf/documents/document_control.md`), and
+`examples/github-document-control/` is a complete worked example of git as a
+document control system with GitHub as the service provider.
 
 ## Development
 
@@ -93,6 +113,28 @@ uv run pytest tests
 ```
 
 ## Changes from Upstream
+
+### Unreleased
+
+- **Agent-era design controls, end to end**: canonical change procedure
+  (`dhf/AGENT_WORKFLOW.md`), always-on local design gate (committed
+  `.githooks/` + session bootstrap), and CI gates
+- **`rdm adopt`**: bring an existing repository under record-first design
+  controls from one command (never overwrites)
+- **`rdm story new-input`**: scaffold a traced design input (frontmatter
+  entry, failing tagged stub test, checklist)
+- **Record-first-aware `rdm story audit`**: design-input tag coverage in the
+  report and score
+- **`part11_document_control` built-in checklist** + RDM's own Part 11-mapped
+  document-control statement, enforced by an acceptance test
+- **Worked example** `examples/github-document-control/`: git as document
+  control with GitHub as provider — rulesets/settings as code, PR approval as
+  the Part 11 e-signature, DMR/DHR analogs, drift-audit script, its own
+  gated DHF
+- **Docs site**: user manual (quickstarts, guides, CLI reference), Mermaid
+  diagrams, and build-time-generated verification evidence
+- Fixes: `rdm gap --coverage` with built-in checklist names; tag-scanner
+  false positive; root-container test skip
 
 ### v1.1.0
 

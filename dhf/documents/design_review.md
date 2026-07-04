@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 1
+revision: 2
 title: Design Review — RDM
 ---
 
@@ -53,6 +53,43 @@ stamping behaviour before being marked faithful.
   user-need registry from per-context SDD frontmatter in code; migrating them to
   read the V&V-plan registry (ADR 0001 consequence) is tracked as follow-up and
   does not block this review.
+
+# Design Review 2 — Agent enablement and document control
+
+**Scope reviewed:** the design inputs added for agent-era contributor
+enablement and document control — DI-22 (design-input scaffolding,
+`rdm story new-input`), DI-23 (record-first-aware traceability audit), DI-24
+(brownfield adoption, `rdm adopt`), and DI-25 (Part 11 document-control
+checklist + RDM's own document-control statement, `document_control.md`) —
+together with the user needs they refine (UN-010, UN-011) and the canonical
+change procedure (`AGENT_WORKFLOW.md`).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Each new design input is unambiguous, owned by exactly one context
+  (scaffolding, story_audit, gap_analysis), and individually verified by an
+  `@allure.story`-tagged acceptance test.
+- Every user need in the V&V plan registry is addressed by at least one design
+  input; the release gate enforces the full denominator.
+- The document-control statement's Part 11 mapping is held to the shipped
+  `part11_document_control` checklist by an executable, falsifiable check.
+- Independence of the §820.30(e) faithfulness review was exercised, not just
+  asserted: reviews for DI-22 and for the worked example's DI-6..8 initially
+  returned `partial` with executed surviving mutations; the verifying tests
+  were strengthened and re-reviewed to `faithful`. The partial verdicts and
+  the strengthening commits remain in history as the audit trail of the loop
+  working.
+- The pre-commit design gate blocked an implementation commit staged ahead of
+  its design approval during this cycle (DI-25) — the enforced sequencing
+  operates as designed.
+
+## Findings and actions
+
+- No blocking findings. The follow-up from Review 1 (migrating the release
+  gate to read the V&V-plan registry) is implemented; the release-gate
+  denominator is the union of `design_inputs` reconciled against the registry.
 
 # Approval
 

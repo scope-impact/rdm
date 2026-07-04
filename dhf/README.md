@@ -15,18 +15,25 @@ documents is expected to report those items as missing.
 ## Layout (the record)
 
 ```
+AGENT_WORKFLOW.md                    the change procedure (start here)
 documents/
   design_review.md                   design review record (gated)
-  verification_and_validation_plan.md user-need registry (UN-001..005) + V&V approach
+  verification_and_validation_plan.md user-need registry (UN-…) + V&V approach
+  document_control.md                git/GitHub as this record's document control (Part 11-mapped)
   architecture.md                    system design / bounded contexts (design only, no needs)
-  design/                            one `kind: design` doc per context: design inputs (what) + output (how)
-    record.md         satisfies [UN-001, UN-004]   owns DI-1, DI-6
-    gating.md         satisfies [UN-002, UN-003]   owns DI-2, DI-3
-    verification.md   satisfies [UN-003, UN-004]   owns DI-4
-    validation.md     satisfies [UN-005]           owns DI-5
-    rendering.md      satisfies [UN-001]           realises DI-1, DI-4
-  faithfulness/                      independent §820.30(e) review: per-DI verdicts that the
-    DI-1-faithfulness.json …         verifying test actually verifies the input (hash-pinned)
+  traceability_matrix.md             matrix TEMPLATE (rendered from generated data; never hand-edited)
+  design/                            one `kind: design` doc per bounded context:
+    <context>.md                       the design inputs it owns (what) + design output (how)
+faithfulness/                        independent §820.30(e) review: per-DI verdicts that the
+  DI-<n>-faithfulness.json             verifying test actually verifies the input (hash-pinned)
+```
+
+The live inventory — which contexts exist, which design inputs each owns, and
+which user needs they trace to — is generated, not maintained here:
+
+```bash
+rdm story new-input --dhf dhf --list    # contexts, taken DI ids, user needs
+rdm story trace UN-… | DI-…             # one need's / input's slice
 ```
 
 ## Model

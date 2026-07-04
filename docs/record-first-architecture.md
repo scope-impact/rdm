@@ -1,8 +1,14 @@
 # RDM as a record compiler: SDD + Allure + git → DHF
 
-> Status: proposal / design sketch. Describes a target shape for RDM, not the
-> current implementation. Project management is explicitly **out of scope** of
-> the record.
+> Status: **implemented** (originally a design sketch; kept as the conceptual
+> reference). The record core exists as described — `rdm/record/` (SDD +
+> Allure ingest, reconciliation, verification, faithfulness) with the gates
+> layered on top (`rdm story design-gate / verify / faithfulness /
+> release-gate`) — and RDM's own DHF is compiled with it. Project management
+> remains explicitly **out of scope** of the record; its demotion to a
+> clearly-fenced optional extra is the one migration step still open. For the
+> hands-on version of this material see the
+> [user guide](design-controls.md).
 
 ## Thesis
 
@@ -160,9 +166,12 @@ rdm/
 
 ## Migration path
 
-1. Add `record/allure.py` (results ingester) + verification status — new
-   capability, no breakage.
-2. Make the traceability matrix and V&V/test-record DHF sections generated.
-3. Reframe `pm`/`backlog`/DuckDB as an optional `rdm[plan]` extra; add the
-   plan-vs-record boundary note and provenance stamps.
+1. ~~Add `record/allure.py` (results ingester) + verification status~~ — done.
+2. ~~Make the traceability matrix and V&V/test-record DHF sections generated~~ —
+   done (`rdm story verify` + the matrix template; the docs site publishes the
+   rendered matrix as evidence on every build).
+3. Reframe `pm`/`backlog`/DuckDB as an optional `rdm[plan]` extra — partially
+   done: the boundary note and provenance stamps exist
+   ([Plan vs. record](plan-vs-record.md)); the packaging extra is still named
+   `story-audit`/`github`.
 4. (Later) drop or spin out the plan pipeline entirely.

@@ -14,28 +14,18 @@ YAML data + Jinja2 templates → Markdown → PDF/DOCX (via Pandoc/Typst)
 - **New here?** [Install](installation.md), then follow a quickstart:
   [a new documentation project](quickstart-new-project.md) (`rdm init`) or
   [an existing repository](quickstart-existing-repo.md) (`rdm adopt`). The
-  task-oriented **User guide** covers [authoring](authoring.md),
-  [gap analysis](gap-analysis.md),
-  [design controls](design-controls.md), and the [CLI reference](cli.md).
-- **[Agent workflow](agent-workflow.md)** — the canonical procedure for changing
-  a record-first project (human or AI agent): the loop the diagrams below draw.
-- **[Record-first architecture](record-first-architecture.md)** — how RDM treats
-  the SDD + Allure + git as the system of record and compiles the DHF from it.
-- **[Plan vs. record](plan-vs-record.md)** — why the planning layer (Backlog.md /
-  GitHub) is an optional, detachable extra, fenced off from the record.
-- **[ADR 0001](adr-0001-bounded-context-user-needs.md)** — user needs across
-  bounded contexts; verification anchored on design inputs ("live BDD").
-- **[Worked example — VitalView](example-vitalview-decomposition.md)** — a
-  decomposition of user needs across contexts on a realistic device.
-- **[Worked example — git as document control](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)**
-  — a complete record-first project in `examples/`: GitHub rulesets as design
-  outputs, PR approval as the Part 11 electronic signature, and gap analysis
-  proving the SOP covers the 21 CFR Part 11 checklist.
-- **[Document control (Part 11)](document-control.md)** — RDM makes the same
-  claim for its own record, and the
-  **[traceability matrix](traceability-matrix.md)** on this site is generated
-  from a live acceptance run at every docs build: published evidence, not a
-  stale copy.
+  **User guide** covers [authoring](authoring.md),
+  [gap analysis](gap-analysis.md), [design controls](design-controls.md), the
+  [agent workflow](agent-workflow.md), and the [CLI reference](cli.md).
+- **Why it works this way**: [record-first architecture](record-first-architecture.md),
+  [plan vs. record](plan-vs-record.md), and
+  [ADR 0001](adr-0001-bounded-context-user-needs.md); worked examples for
+  [a realistic device (VitalView)](example-vitalview-decomposition.md) and
+  [git as a document control system](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control).
+- **Proof, not promises**: [RDM's own document control](document-control.md)
+  is held to the shipped Part 11 checklist, and this site's
+  [traceability matrix](traceability-matrix.md) is generated from a live
+  acceptance run at every build.
 
 ## The evidence chain
 
