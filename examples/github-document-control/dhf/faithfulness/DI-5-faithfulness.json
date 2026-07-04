@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-5",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: SOP addresses every checklist item(KILLED: removing [[P11:11.10i]] from the SOP -> audit_for_gaps!=0; KILLED: removing [[P11:11.10e]] likewise), gap analysis reports full coverage and is falsifiable(KILLED: deleting the P11:11.10e line from the checklist makes the stripped-SOP arm return 0 not 3, failing the ==3 assertion - proves the audit genuinely detects gaps rather than vacuously returning 0). SURVIVED (documented, equivalent): deleting a different checklist line (P11:11.100) passes - shrinking the checklist does not violate the DI, whose direction is SOP-coverage-of-the-checklist, not checklist immutability.",
+  "test_hash": "sha256:dd0c59c4131b884f0cade5e8e6e832df84edd09063968ddcad32842e3f57c508",
+  "reviewed_tests": [
+    "test_sop_addresses_every_part11_checklist_item"
+  ],
+  "uncovered_clauses": []
+}
