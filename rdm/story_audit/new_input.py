@@ -125,6 +125,37 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
     doc_path.write_text("".join(lines), encoding="utf-8")
 
 
+def update_satisfies(doc_path: Path, refs: list[str]) -> list[str]:
+    """Add any user need in ``refs`` missing from the doc's inline ``satisfies``
+    list (declare-once stays consistent without a hand edit). Returns the needs
+    added. Only the inline ``satisfies: [ ... ]`` form is rewritten; a missing
+    key is created after ``context:``.
+    """
+    lines = doc_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    fences = [i for i, line in enumerate(lines) if line.rstrip("\n") == "---"]
+    if len(fences) < 2 or fences[0] != 0:
+        return []
+    close = fences[1]
+
+    for i in range(1, close):
+        match = re.match(r"^satisfies:\s*\[(.*)\]\s*$", lines[i])
+        if match:
+            current = [ref.strip() for ref in match.group(1).split(",") if ref.strip()]
+            added = [ref for ref in refs if ref not in current]
+            if added:
+                lines[i] = f"satisfies: [{', '.join(current + added)}]\n"
+                doc_path.write_text("".join(lines), encoding="utf-8")
+            return added
+
+    # No satisfies key: create it right after `context:` (or before the fence).
+    insert_at = next(
+        (i + 1 for i in range(1, close) if re.match(r"^context:", lines[i])), close
+    )
+    lines.insert(insert_at, f"satisfies: [{', '.join(refs)}]\n")
+    doc_path.write_text("".join(lines), encoding="utf-8")
+    return list(refs)
+
+
 def write_stub_test(test_file: Path, di_id: str, text: str, context: str) -> None:
     """Append a failing stub test tagged with the new design-input id."""
     fn_suffix = di_id.lower().replace("-", "_")
@@ -193,6 +224,7 @@ def story_new_input_command(
     di_id = next_design_input_id(dhf)
     doc = contexts[context]
     insert_design_input(doc, di_id, text, refs)
+    added_needs = update_satisfies(doc, refs)
 
     if test_file is None:
         tests_dir = find_tests_dir(dhf) or (dhf.parent / "tests")
@@ -201,6 +233,8 @@ def story_new_input_command(
 
     print(f"Scaffolded {di_id} ({context}):")
     print(f"  design input -> {doc}")
+    if added_needs:
+        print(f"  satisfies    -> added {', '.join(added_needs)} to {doc.name}")
     print(f"  stub test    -> {test_file}  (fails until implemented, by design)")
     print()
     print(CHECKLIST.format(di_id=di_id, doc=doc.name, test_file=test_file, dhf=dhf.name))

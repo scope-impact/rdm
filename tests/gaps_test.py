@@ -1,6 +1,6 @@
 import pytest
 
-from rdm.gaps import _find_keys_in_sources, \
+from rdm.gaps import _find_keys_in_sources, _find_keys_in_content, \
     _read_raw_checklists, _split_out_include_files, _extract_keys_from_checklist, _find_failing_checklist_items, \
     _next_number, _next_non_number, _components, SectionalAnalysis, coverage_report
 
@@ -74,10 +74,25 @@ def example_raw_checklist():
     ]
 
 
-document_a = "We like apple pie."
-document_b = "We hate banana splits."
-document_ac = "We like apple pie and cherry pie."
-document_ad = "Never put dates in apple pie."
+document_a = "We like [[apple]] pie."
+document_b = "We hate [[banana]] splits."
+document_ac = "We like [[apple]] pie and [[cherry]] pie."
+document_ad = "Never put [[dates]] in [[apple]] pie."
+
+
+def test_reference_requires_brackets_and_exact_key():
+    """A bare prose mention is not a reference, and a shorter key never
+    matches inside a longer one (X-1 vs X-12)."""
+    keys = {'X-1', 'X-12'}
+    assert set(_find_keys_in_content("We mention X-1 in prose only.", keys)) == set()
+    assert set(_find_keys_in_content("Covers [[X-12]] only.", keys)) == {'X-12'}
+    assert set(_find_keys_in_content("Covers [[X-1]] and [[X-12]].", keys)) == {'X-1', 'X-12'}
+    # Prose inside a block still counts for every key it names (template style).
+    assert set(_find_keys_in_content("[[This section fulfills X-1, X-12]]", keys)) == {'X-1', 'X-12'}
+    # A dotted DESCENDANT covers its parent (hierarchy convention)...
+    assert set(_find_keys_in_content("Covers [[X-1.a]].", keys)) == {'X-1'}
+    # ...but a longer sibling still does not.
+    assert set(_find_keys_in_content("Covers [[X-120]].", keys)) == set()
 
 
 def test_extract_keys_from_short_checklist(example_short_checklist):

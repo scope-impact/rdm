@@ -49,7 +49,10 @@ def _mini_dhf(tmp_path: Path) -> Path:
     dhf = tmp_path / "dhf"
     (dhf / "documents" / "design").mkdir(parents=True)
     (dhf / "documents" / "vv_plan.md").write_text(
-        "---\nuser_needs:\n  - {id: UN-001, text: 'a need'}\n---\n"
+        "---\nuser_needs:\n"
+        "  - {id: UN-001, text: 'a need'}\n"
+        "  - {id: UN-002, text: 'another need'}\n"
+        "---\n"
     )
     (dhf / "documents" / "design" / "alarms.md").write_text(
         "---\n"
@@ -87,7 +90,7 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     dhf = _mini_dhf(tmp_path)
 
     assert story_new_input_command(
-        dhf_dir=dhf, context="alarms", text="RDM shall beep.", traces_to="UN-001"
+        dhf_dir=dhf, context="alarms", text="RDM shall beep.", traces_to="UN-002"
     ) == 0
     out = capsys.readouterr().out
 
@@ -97,10 +100,15 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     declared = {di["id"]: di for di in design_inputs(dhf)}
     assert set(declared) == {"DI-1", "DI-3", "DI-4"}
     assert declared["DI-4"]["text"] == "RDM shall beep."
-    assert declared["DI-4"]["traces_to"] == ["UN-001"]
+    assert declared["DI-4"]["traces_to"] == ["UN-002"]
     assert declared["DI-4"]["context"] == "alarms"
-    assert "DI-4" in (dhf / "documents" / "design" / "alarms.md").read_text()
+    alarms_text = (dhf / "documents" / "design" / "alarms.md").read_text()
+    assert "DI-4" in alarms_text
     assert "DI-4" not in (dhf / "documents" / "design" / "trends.md").read_text()
+
+    # The newly referenced user need joins the owning context's satisfies list
+    # (UN-002 was not there; UN-001 stays).
+    assert "satisfies: [UN-001, UN-002]" in alarms_text
 
     # Emits a stub acceptance test tagged with the new id that FAILS until
     # implemented (honest red at the release gate), and prints the checklist.

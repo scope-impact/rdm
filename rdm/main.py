@@ -42,7 +42,7 @@ def cli(raw_arguments):
     elif args.command == 'pull':
         pull_from_project_manager(args.config)
     elif args.command == 'hooks':
-        install_hooks(args.dest)
+        install_hooks(args.dest, with_issue_hooks=args.with_issue_hooks)
     elif args.command == 'collect':
         snippets = collect_from_files(args.files)
         yaml.dump(snippets, sys.stdout, default_style='|')
@@ -135,6 +135,8 @@ def handle_story_command(args):
         elif args.story_command == 'faithfulness':
             from rdm.story_audit.design_gate import story_faithfulness_command
             return story_faithfulness_command(
+                stale_only=args.stale,
+                replay=args.replay,
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
             )
@@ -168,6 +170,8 @@ def handle_story_command(args):
                 uncovered=args.uncovered,
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+                hash_scope=args.hash_scope,
+                probe=args.probe,
             )
 
         elif args.story_command == 'persona':
@@ -175,6 +179,18 @@ def handle_story_command(args):
             return persona_command(
                 vv_plan=Path(args.vv_plan) if args.vv_plan else None,
                 persona_results=Path(args.persona_results) if args.persona_results else None,
+            )
+
+        elif args.story_command == 'dmr':
+            from rdm.record.dmr import dmr_command
+            return dmr_command(Path(args.documents_dir), Path(args.output))
+
+        elif args.story_command == 'evidence-bundle':
+            from rdm.record.bundle import evidence_bundle_command
+            return evidence_bundle_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                output=Path(args.output) if args.output else None,
             )
 
         elif args.story_command == 'new-input':
@@ -264,6 +280,8 @@ def parse_arguments(arguments):
     hooks_help = 'install githooks in current repository'
     hooks_parser = subparsers.add_parser('hooks', help=hooks_help)
     hooks_parser.add_argument('dest', nargs='?', help='Path where hooks are saved')
+    hooks_parser.add_argument('--with-issue-hooks', action='store_true',
+                              help='also install the commit-msg/prepare-commit-msg issue-reference hooks')
 
     collect_help = 'collect documentation snippets into a yaml file'
     collect_parser = subparsers.add_parser('collect', help=collect_help)
@@ -350,6 +368,10 @@ def parse_arguments(arguments):
         '--faithfulness',
         help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
     )
+    faithfulness_parser.add_argument('--stale', action='store_true',
+                                     help='show only non-faithful inputs (the review worklist)')
+    faithfulness_parser.add_argument('--replay', action='store_true',
+                                     help='re-execute recorded killing mutation probes; fail if any survives')
 
     # rdm story mutation-probe
     mutation_help = 'prove a test catches a defect: apply a one-line mutation, run the test, always revert'
@@ -371,6 +393,10 @@ def parse_arguments(arguments):
                                 help='per-clause reasoning incl. the failing mutation(s)')
     verdict_parser.add_argument('--reviewed-tests', help='comma-separated test names examined')
     verdict_parser.add_argument('--uncovered', help='semicolon-separated requirement clauses NOT covered')
+    verdict_parser.add_argument('--hash-scope', choices=['module', 'function'], default='module',
+                                help='pin scope: full test file(s) (module, default) or tagged functions only')
+    verdict_parser.add_argument('--probe', action='append',
+                                help='executed mutation probe as JSON with file/find/replace/test; repeatable')
     verdict_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     verdict_parser.add_argument('--faithfulness', help='Verdicts dir (default: <dhf>/faithfulness)')
 
@@ -381,6 +407,19 @@ def parse_arguments(arguments):
     trace_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     trace_parser.add_argument('--allure-results', help='Allure results dir (adds verification status)')
     trace_parser.add_argument('--faithfulness', help='Faithfulness verdicts dir (adds review status)')
+
+    # rdm story dmr
+    dmr_help = 'generate device-master-record index data from controlled documents\' frontmatter'
+    dmr_parser = story_subparsers.add_parser('dmr', help=dmr_help)
+    dmr_parser.add_argument('documents_dir', help='directory of controlled documents (*.md with frontmatter)')
+    dmr_parser.add_argument('-o', '--output', required=True, help='output data file (e.g. data/dmr.yml)')
+
+    # rdm story evidence-bundle
+    bundle_help = 'write the retained release evidence set: verification data, matrix, verdicts, manifest'
+    bundle_parser = story_subparsers.add_parser('evidence-bundle', help=bundle_help)
+    bundle_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    bundle_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
+    bundle_parser.add_argument('-o', '--output', help='output directory (default: release-evidence/)')
 
     # rdm story new-input
     new_input_help = 'scaffold a traced design input: frontmatter entry, stub tagged test, checklist'

@@ -4,6 +4,16 @@
 standard's checklist requires. A reference is a `[[KEY]]` marker in the
 document; the checklist maps keys to the standard's clauses.
 
+Reference semantics (exact and auditable):
+
+- keys count only **inside** `[[ … ]]` blocks — a bare prose mention
+  ("we do not address X-1 here") is never a reference;
+- a block may be prose naming several keys
+  (`[[This section fulfills X-1 and X-2]]`);
+- matching is exact with one hierarchy rule: a dotted **descendant** covers
+  its parent (`[[62304:5.6.2.a]]` addresses item `62304:5.6.2`), but a longer
+  sibling never covers a shorter key (`[[X-12]]` does not address `X-1`).
+
 ```bash
 rdm gap --list                                     # shipped checklists
 rdm gap 62304_2015_class_b documents/*.md          # exit 0 = fully covered; 3 = gaps (listed)

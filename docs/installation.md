@@ -29,6 +29,12 @@ rdm --help
 | `pytest` + `allure-pytest` | producing the executed verification evidence the gates consume |
 | `git` | the record itself — approval, history, baselines |
 
+## Platform note
+
+The CLI is cross-platform Python; the *enforcement* pieces — the pre-commit
+design gate, `scripts/agent-bootstrap.sh`, and the example's `setup.sh` — are
+bash scripts. On Windows, run them under Git Bash or WSL.
+
 ## For contributors to RDM
 
 ```bash

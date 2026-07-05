@@ -24,7 +24,8 @@ allure = pytest.importorskip("allure")
 @allure.label("output", "rdm/gaps.py")
 def test_reports_missing_checklist_references(tmp_path: Path) -> None:
     """DI-10: a missing required reference makes the audit exit non-zero; a fully
-    covered document exits zero."""
+    covered document exits zero. A reference is a delimited [[KEY]] — a bare
+    prose mention does not count, and a longer key never satisfies a shorter."""
     checklist = tmp_path / "cl.txt"
     checklist.write_text("X-1 first requirement\nX-2 second requirement\n")
 
@@ -35,6 +36,19 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
     covered = tmp_path / "full.md"
     covered.write_text("Covers [[X-1]] and [[X-2]].\n")
     assert audit_for_gaps(str(checklist), [str(covered)], coverage=False) == 0  # complete → zero
+
+    # A bare mention is not a reference: "we do not address X-2" must not
+    # count as covering X-2.
+    prose = tmp_path / "prose.md"
+    prose.write_text("Covers [[X-1]]. We do not address X-2 here.\n")
+    assert audit_for_gaps(str(checklist), [str(prose)], coverage=False) == 3
+
+    # Exact key matching: [[X-12]] must not satisfy the key X-1.
+    prefix_cl = tmp_path / "prefix_cl.txt"
+    prefix_cl.write_text("X-1 first requirement\nX-12 twelfth requirement\n")
+    only_longer = tmp_path / "only_longer.md"
+    only_longer.write_text("Covers [[X-12]] only.\n")
+    assert audit_for_gaps(str(prefix_cl), [str(only_longer)], coverage=False) == 3
 
 
 @allure.story("DI-11")

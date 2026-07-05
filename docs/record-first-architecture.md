@@ -170,8 +170,8 @@ rdm/
 2. ~~Make the traceability matrix and V&V/test-record DHF sections generated~~ —
    done (`rdm story verify` + the matrix template; the docs site publishes the
    rendered matrix as evidence on every build).
-3. Reframe `pm`/`backlog`/DuckDB as an optional `rdm[plan]` extra — partially
-   done: the boundary note and provenance stamps exist
-   ([Plan vs. record](plan-vs-record.md)); the packaging extra is still named
-   `story-audit`/`github`.
+3. ~~Reframe `pm`/`backlog`/DuckDB as an optional `rdm[plan]` extra~~ — done:
+   the `plan` extra exists (aggregating `github`/`analytics`/`story-audit`),
+   with the boundary note and provenance stamps
+   ([Plan vs. record](plan-vs-record.md)).
 4. (Later) drop or spin out the plan pipeline entirely.

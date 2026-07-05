@@ -84,6 +84,24 @@ rdm story verdict DI-10 --dhf dhf --verdict faithful \
 Verdicts: `faithful` passes; `partial` (with `--uncovered`), `unfaithful`,
 `weak`, `stale`, and missing all block release.
 
+**Replayable reviews.** Record the probes with the verdict (repeatable
+`--probe`, JSON with `file`/`find`/`replace`/`test`), and the review becomes
+continuously verifiable instead of trust-at-review-time:
+
+```bash
+rdm story verdict DI-10 … \
+  --probe '{"file": "rdm/gaps.py", "find": "return 3", "replace": "return 0", "test": "test_reports_missing"}'
+rdm story faithfulness --dhf dhf --replay   # re-executes every recorded killing
+                                            # probe; fails if any now survives
+rdm story faithfulness --dhf dhf --stale    # only the non-faithful worklist
+```
+
+**Hash scope.** A verdict pins what the reviewer saw. The default `module`
+scope covers the full test file(s), so editing a shared helper or fixture
+re-opens the review too; `--hash-scope function` pins only the tagged
+functions (for files with unrelated churn). Verdicts recorded before scopes
+existed are honored as function-scoped.
+
 ## Querying and reporting
 
 ```bash
@@ -92,6 +110,22 @@ rdm story trace UN-004 --dhf dhf        # one need: the inputs that refine it
 rdm story audit .                       # repo-wide traceability report + score
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
 ```
+
+## Release artifacts
+
+```bash
+rdm story dmr documents/ -o data/dmr.yml
+```
+Generates device-master-record index data (one entry per controlled document:
+id, title, path, revision) from the documents' own frontmatter — the index
+stays a record, never a hand-maintained table.
+
+```bash
+rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence/
+```
+Writes the retained release evidence set — verification data, the rendered
+traceability matrix, the faithfulness verdicts, and a manifest — ready to
+attach to a release tag so the evidence outlives CI artifact retention.
 
 `rdm story audit` is DHF-aware: on a record-first repository it reports each
 design input's test-tag coverage and counts untagged inputs against the score.

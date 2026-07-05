@@ -26,7 +26,8 @@ def tmp_repo(tmpdir):
     subprocess.check_call(['git', 'config', 'user.name', 'Tester Bot'])
     repo.git.commit('-m', '\'message\'', '--no-verify')
 
-    subprocess.check_call(['rdm', 'hooks'])
+    # These tests exercise the issue-reference hooks, which are opt-in (DI-26).
+    subprocess.check_call(['rdm', 'hooks', '--with-issue-hooks'])
 
     yield repo
 

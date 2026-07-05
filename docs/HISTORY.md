@@ -19,6 +19,24 @@
   reference), Mermaid diagrams, and a traceability-matrix evidence page
   generated from a live acceptance run at every build.
 - Fix `rdm gap --coverage` with built-in checklist names.
+- Faithfulness reviews become continuously verifiable: verdicts can record
+  their executed mutation probes (`rdm story verdict --probe`), and
+  `rdm story faithfulness --replay` re-executes every recorded killing probe,
+  failing if any now survives; `--stale` lists the review worklist.
+- Verdict hash scope: module scope by default (editing a shared helper or
+  fixture re-opens the review), `--hash-scope function` selectable, and
+  pre-existing verdicts honored as function-scoped.
+- Sound `rdm gap` reference matching: keys count only inside `[[ … ]]` blocks,
+  matched exactly with a dotted-descendant-covers-parent hierarchy rule — a
+  bare prose mention or a longer sibling key no longer counts as coverage.
+- `rdm story new-input` also adds newly referenced user needs to the owning
+  context's `satisfies` list.
+- `rdm hooks` installs only the design-gate pre-commit hook by default; the
+  issue-reference hooks moved behind `--with-issue-hooks`.
+- New `rdm story dmr` (device-master-record index data generated from
+  controlled documents' frontmatter) and `rdm story evidence-bundle` (the
+  retained release evidence set: verification data, rendered matrix,
+  verdicts, manifest).
 
 ## v0.11.0
 
