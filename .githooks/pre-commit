@@ -15,14 +15,16 @@
 #   RDM_WORK_PATTERN         regex of staged paths that count as implementation
 #                            work (default: source/template/config extensions)
 #   RDM_WORK_EXCLUDE         regex of staged paths that never count (default:
-#                            the DHF, docs, planning and CI/agent scaffolding)
+#                            only the DHF itself and the planning directory —
+#                            a whole-directory exemption is a gate hole, so
+#                            e.g. docs/ build hooks and CI workflows ARE gated)
 #   RDM_SKIP_DESIGN_GATE=1   bypass the gate for this commit (discouraged)
 #
 set -euo pipefail
 
 DHF_DIR="${RDM_DHF_DIR:-dhf}"
 WORK_PATTERN="${RDM_WORK_PATTERN:-\.(py|ya?ml|toml|j2|jinja2|sh|js|ts)$}"
-WORK_EXCLUDE="${RDM_WORK_EXCLUDE:-^(${DHF_DIR}|docs|backlog|\.github|\.claude|\.githooks)/|\.md$}"
+WORK_EXCLUDE="${RDM_WORK_EXCLUDE:-^(${DHF_DIR}|backlog)/}"
 
 if [ -n "${RDM_SKIP_DESIGN_GATE:-}" ]; then
     echo "rdm design-gate: BYPASSED via RDM_SKIP_DESIGN_GATE" >&2

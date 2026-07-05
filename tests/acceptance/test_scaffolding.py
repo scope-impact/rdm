@@ -27,6 +27,8 @@ allure = pytest.importorskip("allure")
 @allure.label("output", "rdm/init.py")
 def test_init_scaffolds_a_project(tmp_path: Path) -> None:
     """DI-15: `rdm init` lays down the templates, Makefile, and render config."""
+    import yaml
+
     project = tmp_path / "regulatory"  # must not pre-exist (copytree)
     init(str(project))
 
@@ -41,6 +43,16 @@ def test_init_scaffolds_a_project(tmp_path: Path) -> None:
     assert (docs / "design_review.md").is_file()
     assert (docs / "traceability_matrix.md").is_file()
     assert "kind: design" in (docs / "software_design_specification.md").read_text()
+
+    # the record-first control surface matches the adopt scaffold: the V&V
+    # plan carries a machine-readable `user_needs` registry (the coverage
+    # denominator the gates read), and the agent runbook lands at the root —
+    # an init project must not discover at gate time that its registry has
+    # no home.
+    vv_plan = (docs / "verification_and_validation_plan.md").read_text()
+    frontmatter = yaml.safe_load(vv_plan.split("---")[1])
+    assert frontmatter["user_needs"] == []              # present, empty, parseable
+    assert (project / "AGENT_WORKFLOW.md").is_file()    # same runbook as `rdm adopt`
 
 
 def _mini_dhf(tmp_path: Path) -> Path:
@@ -71,7 +83,8 @@ def _mini_dhf(tmp_path: Path) -> Path:
         "id: SDS-T-001\n"
         "kind: design\n"
         "context: trends\n"
-        "satisfies: [UN-001]\n"
+        "satisfies:\n"          # block-style list: the other YAML form in the wild
+        "  - UN-001\n"
         "design_inputs:\n"
         "  - id: DI-3\n"
         '    text: "another input"\n'
@@ -118,6 +131,29 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     assert result == pytest.ExitCode.TESTS_FAILED
     assert "checklist" in out and "DI-4" in out
 
+    # A BLOCK-style satisfies list is edited in place — the item is appended to
+    # the existing list, never emitted as a second `satisfies:` key (a duplicate
+    # key silently shadows the first when the YAML is next parsed). The
+    # requirement text is embedded safely: quotes, a backslash, and a
+    # triple-quote must corrupt neither the frontmatter nor the stub test.
+    import ast
+
+    import yaml
+
+    hostile = 'The "trend" shall use \\ paths and tolerate """ in prose.'
+    assert story_new_input_command(
+        dhf_dir=dhf, context="trends", text=hostile, traces_to="UN-002"
+    ) == 0
+    trends_text = (dhf / "documents" / "design" / "trends.md").read_text()
+    assert trends_text.count("satisfies:") == 1              # no duplicate key
+    frontmatter = yaml.safe_load(trends_text.split("---")[1])
+    assert frontmatter["satisfies"] == ["UN-001", "UN-002"]  # appended to the block
+    declared = {di["id"]: di for di in design_inputs(dhf)}
+    assert declared["DI-5"]["text"] == hostile               # YAML round-trips exactly
+    trends_stub = tmp_path / "tests" / "acceptance" / "test_trends.py"
+    ast.parse(trends_stub.read_text())                       # stub is valid Python
+    assert '@allure.story("DI-5")' in trends_stub.read_text()
+
     # Rejects an unknown context and an unknown user need (nothing scaffolded).
     assert story_new_input_command(
         dhf_dir=dhf, context="nope", text="x", traces_to="UN-001"
@@ -125,7 +161,7 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     assert story_new_input_command(
         dhf_dir=dhf, context="alarms", text="x", traces_to="UN-999"
     ) != 0
-    assert set(di["id"] for di in design_inputs(dhf)) == {"DI-1", "DI-3", "DI-4"}
+    assert set(di["id"] for di in design_inputs(dhf)) == {"DI-1", "DI-3", "DI-4", "DI-5"}
 
 
 @allure.story("DI-24")

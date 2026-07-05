@@ -116,6 +116,27 @@ def test_verdicts_carry_replayable_probes(tmp_path: Path, monkeypatch, capsys) -
     _, _, failures = replay_probes(weak_report)
     assert len(failures) == 1 and "SURVIVES" in failures[0]
 
+    # A recorded probe whose selector matches no test replays as an ERROR, not
+    # a kill: pytest exit 5 (nothing collected) is exactly the false-KILLED
+    # path a `returncode != 0` replay would miscount as evidence.
+    typo = dict(probe, test="no_such_test_selector_xyz")
+    record_verdict(dhf, "DI-1", "faithful", reviewer="r2", rationale="typo'd selector",
+                   probes=[typo])
+    _, killed, failures = replay_probes(run_faithfulness_gate(dhf))
+    assert killed == 0
+    assert len(failures) == 1 and "error" in failures[0].lower()
+
+    # A probe that can no longer execute (its file is gone) is a per-probe
+    # gate failure, reported and skipped past — the replay never crashes and
+    # the remaining probes still run (strong test restored first).
+    (tmp_path / "tests" / "test_core.py").write_text(_TAGGED_TEST)
+    gone = dict(probe, file="vanished.py")
+    record_verdict(dhf, "DI-1", "faithful", reviewer="r2", rationale="file gone",
+                   probes=[gone, probe])
+    replayed, killed, failures = replay_probes(run_faithfulness_gate(dhf))
+    assert replayed == 2 and killed == 1              # the healthy probe still ran
+    assert len(failures) == 1 and "vanished.py" in failures[0]
+
     # --stale filters the report to the non-faithful worklist: the unreviewed
     # input is listed, the faithful one is EXCLUDED.
     (dhf / "faithfulness" / "DI-1-faithfulness.json").unlink()

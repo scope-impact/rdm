@@ -2,6 +2,15 @@
 id: VVP-001
 revision: 1
 title: Verification and Validation Plan
+# User-need registry: this product's validated journeys, defined ONCE here.
+# Per-context design documents (kind: design) reference them via `satisfies`;
+# design inputs refine them via `traces_to` (see AGENT_WORKFLOW.md). Register
+# a need in the same change as its first design input — the release gate
+# blocks any need nothing traces to.
+user_needs: []
+# e.g.:
+#   - id: UN-001
+#     text: "A clinician is promptly alerted to dangerous changes in a patient's vitals."
 ---
 
 # Purpose
@@ -9,6 +18,14 @@ title: Verification and Validation Plan
 This document describes the plan regarding how {{device.name}} will be verified and validated.
 
 [[Fulfills FDA-SW:vandv, FDA-SW:sdmp-vandv, and 62304:5.5.2]]
+
+# User Needs
+
+The user needs {{device.name}} validates against are registered in this
+document's frontmatter (`user_needs`) — they are the validation anchors and
+the coverage denominator for the traceability gates (`rdm story
+release-gate`). Design inputs declared in the `kind: design` documents refine
+them via `traces_to`; see `AGENT_WORKFLOW.md` for the change procedure.
 
 # Scope
 

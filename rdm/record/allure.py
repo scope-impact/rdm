@@ -158,21 +158,37 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
     )
 
 
+def _repo_root(path: Path) -> Path | None:
+    """The enclosing git repository root (``.git`` may be a dir or a file)."""
+    for ancestor in [path, *path.parents]:
+        if (ancestor / ".git").exists():
+            return ancestor
+    return None
+
+
 def find_tests_dir(dhf_dir: Path) -> Path | None:
     """Locate the test suite to scan for @allure source tags.
 
-    Prefer ``<dhf>/../tests``; fall back to ``<cwd>/tests``. ``Path.cwd()`` is
-    evaluated lazily and guarded, because a prior test may have removed the
-    working directory (which would otherwise raise from the cwd lookup).
+    Anchored to the repository that CONTAINS the DHF: prefer ``<dhf>/../tests``,
+    then walk upward — never past the DHF's own git repository root, and never
+    outside a repository. The invoking process's working directory is
+    deliberately not consulted: a ``<cwd>/tests`` fallback would let an audit
+    of another checkout count the caller's test tags as that repository's
+    coverage (DI-23).
     """
-    sibling = dhf_dir.parent / "tests"
-    if sibling.exists():
-        return sibling
     try:
-        cwd_tests = Path.cwd() / "tests"
-    except OSError:
-        return None
-    return cwd_tests if cwd_tests.exists() else None
+        start = Path(dhf_dir).resolve().parent
+    except OSError:  # cwd removed under us and dhf_dir is relative
+        start = Path(dhf_dir).parent
+    root = _repo_root(start)
+    chain = [start, *start.parents]
+    # Without a repository boundary, only the DHF's sibling is trustworthy.
+    chain = chain[: chain.index(root) + 1] if root in chain else [start]
+    for ancestor in chain:
+        candidate = ancestor / "tests"
+        if candidate.exists():
+            return candidate
+    return None
 
 
 # Conventional test-file names per ecosystem (DI-31): pytest, JS/TS runners

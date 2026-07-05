@@ -150,8 +150,13 @@ def test_merge_behavior_is_configuration_code() -> None:
     assert "settings.json" in setup
     assert '--method PATCH "repos/$REPO" --input "$SETTINGS_FILE"' in setup  # apply path
     # The SETTINGS-specific drift check (not just the ruleset's): the live
-    # repo object must be compared against the checked-in settings file.
-    assert 'gh api "repos/$REPO" | jq -e --argjson want "$(cat "$SETTINGS_FILE")" \'contains($want)\'' in setup
+    # repo object is projected onto the declared fields and compared for
+    # EXACT equality. A containment test is not a drift check — jq `contains`
+    # matches substrings and array subsets, so a changed value could pass.
+    assert 'live_settings="$(gh api "repos/$REPO")"' in setup
+    assert 'matches_declared "$want_settings"' in setup
+    assert "def prune($w):" in setup                  # projected-equality helper
+    assert "contains($want)" not in setup             # subset matching banned
 
 
 @allure.story("DI-7")

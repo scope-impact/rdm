@@ -607,10 +607,15 @@ def replay_probes(report) -> tuple[int, int, list[str]]:
                 continue  # survived/equivalent probes are documentation, not claims
             replayed += 1
             file_path = Path(str(probe.get("file", "")))
-            outcome = run_mutation_probe(
-                file_path, str(probe.get("find", "")), str(probe.get("replace", "")),
-                _pytest_runner(str(probe.get("test", ""))),
-            )
+            try:
+                outcome = run_mutation_probe(
+                    file_path, str(probe.get("find", "")), str(probe.get("replace", "")),
+                    _pytest_runner(str(probe.get("test", ""))),
+                )
+            except OSError as error:
+                # A probe that can no longer execute (file gone, unreadable) is
+                # a per-probe gate failure, not a crash of the whole replay.
+                outcome = {"error": f"cannot execute probe on {file_path}: {error}"}
             if outcome.get("killed"):
                 killed += 1
                 print(f"  [KILLED]   {di_id}: {file_path} :: {probe.get('test')}")
@@ -870,8 +875,11 @@ def story_verdict_command(
         except json.JSONDecodeError as error:
             print(f"Error: --probe is not valid JSON ({error}): {raw}")
             return 2
+        if not isinstance(parsed, dict):
+            print(f"Error: --probe must be a JSON object with file/find/replace/test keys: {raw}")
+            return 2
         missing = {"file", "find", "replace", "test"} - set(parsed)
-        if not isinstance(parsed, dict) or missing:
+        if missing:
             print(f"Error: --probe needs file/find/replace/test keys (missing: {', '.join(sorted(missing))})")
             return 2
         parsed.setdefault("result", "KILLED")

@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- Findings from an independent review of the agent-era tooling (PR #40),
+  all fixed through the design-controls loop:
+    - Mutation-probe verdicts discriminate pytest exit codes: only a genuine
+      test failure (exit 1) counts as KILLED; a run that errors or collects
+      no tests (exit 5 — e.g. a typo'd selector) is reported as an error,
+      never as a kill. Probe replay treats a probe that can no longer execute
+      as a per-probe gate failure instead of crashing, and runs pytest under
+      the current interpreter (`sys.executable`).
+    - `rdm gap` again accepts the `[[KEY: annotation]]` idiom the shipped
+      `rdm init` templates use, while a longer colon-qualified key still never
+      satisfies its prefix.
+    - Test-suite discovery for tag scanning anchors to the repository that
+      contains the DHF (bounded by its git root) — never the caller's working
+      directory, which could import foreign test tags as coverage.
+    - `rdm story new-input` edits block-style `satisfies` lists in place
+      (never a duplicate key) and escapes the requirement text embedded in
+      the generated stub's docstring.
+    - `rdm init` now lays down the `user_needs` registry in the V&V plan and
+      the `AGENT_WORKFLOW.md` runbook — parity with `rdm adopt`, so an
+      init-scaffolded project works with the record-first gates out of the box.
+    - The repository-controls drift check (`--check` in `setup.sh` /
+      `apply-repo-controls.sh`) compares the live configuration projected
+      onto the declared fields for exact equality; jq `contains` subset
+      matching could miss changed values.
+    - The pre-commit gate's default exclusion is narrowed to `dhf/` and
+      `backlog/` — docs build hooks and CI workflows are implementation and
+      are gated too.
+
 - Add `rdm adopt`: bring an existing repository under record-first design
   controls from one command (DHF skeleton, agent runbook, design-gate
   pre-commit hook, session bootstrap, CI gates) — never overwrites.

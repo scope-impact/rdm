@@ -210,20 +210,23 @@ def _find_keys_in_sources(source_generator, checklist_keys):
 
 # A reference lives inside a [[ ... ]] block (possibly as prose naming several
 # keys). Keys are matched with key-alphabet boundaries so a shorter key never
-# matches inside a longer sibling (X-1 inside X-12), while a dotted DESCENDANT
-# still covers its parent ([[62304:5.6.2.a]] addresses item 62304:5.6.2 — the
-# hierarchy convention the shipped templates use). A bare mention outside any
-# [[ ]] block is not a reference.
+# matches inside a longer sibling (X-1 inside X-12) and a colon-qualified key
+# never satisfies its prefix (FDA-SW inside FDA-SW:sdmp), while two deliberate
+# allowances hold: a dotted DESCENDANT covers its parent ([[62304:5.6.2.a]]
+# addresses item 62304:5.6.2) and a key may carry a `: annotation` tail
+# ([[FDA-SW:sdmp: pointer note]] — the idiom the shipped `rdm init` templates
+# use), since a colon followed by a non-key character cannot begin a longer
+# key. A bare mention outside any [[ ]] block is not a reference.
 _REFERENCE_BLOCK_PATTERN = re.compile(r'\[\[(.+?)\]\]', re.DOTALL)
 _KEY_CHARS = 'A-Za-z0-9._:\\-'
-_KEY_CHARS_NO_DOT = 'A-Za-z0-9_:\\-'
+_KEY_CHARS_NO_DOT_NO_COLON = 'A-Za-z0-9_\\-'
 
 
 def _find_keys_in_content(content, checklist_keys):
     referenced = ' '.join(match.group(1) for match in _REFERENCE_BLOCK_PATTERN.finditer(content))
     for key in checklist_keys:
-        pattern = '(?<![{before}]){key}(?![{after}])'.format(
-            before=_KEY_CHARS, after=_KEY_CHARS_NO_DOT, key=re.escape(key))
+        pattern = '(?<![{before}]){key}(?![{after}])(?!:[{before}])'.format(
+            before=_KEY_CHARS, after=_KEY_CHARS_NO_DOT_NO_COLON, key=re.escape(key))
         if re.search(pattern, referenced):
             yield key
 

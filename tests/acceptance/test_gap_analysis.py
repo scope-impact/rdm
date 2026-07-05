@@ -50,6 +50,22 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
     only_longer.write_text("Covers [[X-12]] only.\n")
     assert audit_for_gaps(str(prefix_cl), [str(only_longer)], coverage=False) == 3
 
+    # The `[[KEY: annotation]]` idiom the shipped `rdm init` templates use
+    # counts as a reference to KEY — the colon-space tail is prose, not a
+    # longer key. But a colon-QUALIFIED key ([[FDA-SW:sdmp]]) still never
+    # satisfies its prefix (FDA-SW).
+    colon_cl = tmp_path / "colon_cl.txt"
+    colon_cl.write_text("FDA-SW:sdmp development and maintenance practices\n")
+    annotated = tmp_path / "annotated.md"
+    annotated.write_text("[[FDA-SW:sdmp: This document is a pointer document.]]\n")
+    assert audit_for_gaps(str(colon_cl), [str(annotated)], coverage=False) == 0
+
+    prefix_colon_cl = tmp_path / "prefix_colon_cl.txt"
+    prefix_colon_cl.write_text("FDA-SW parent guidance\nFDA-SW:sdmp practices\n")
+    qualified_only = tmp_path / "qualified_only.md"
+    qualified_only.write_text("Covers [[FDA-SW:sdmp]] only.\n")
+    assert audit_for_gaps(str(prefix_colon_cl), [str(qualified_only)], coverage=False) == 3
+
 
 @allure.story("DI-11")
 @allure.label("output", "rdm/checklists/")

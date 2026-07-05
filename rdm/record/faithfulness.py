@@ -190,11 +190,14 @@ def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | N
     verdicts = parse_verdicts(Path(verdicts_dir))
     di_ids = {di["id"] for di in design_inputs}
     # Each verdict is judged at the scope it was recorded at (DI-28); verdicts
-    # from before the field existed are function-scoped.
-    expected = {
-        SCOPE_FUNCTION: current_hashes(design_inputs, tests_dir, SCOPE_FUNCTION),
-        SCOPE_MODULE: current_hashes(design_inputs, tests_dir, SCOPE_MODULE),
-    }
+    # from before the field existed are function-scoped. Hashes are computed
+    # per scope on first use — most records are single-scope.
+    expected: dict[str, dict] = {}
+
+    def _expected(scope: str) -> dict:
+        if scope not in expected:
+            expected[scope] = current_hashes(design_inputs, tests_dir, scope)
+        return expected[scope]
 
     def _fold(agg: DesignInputFaithfulness, v: Verdict) -> None:
         # Last verdict (sorted by filename) wins; record its content.
@@ -212,7 +215,7 @@ def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | N
         # A verdict only counts for the exact test it reviewed, at the scope
         # it was pinned at.
         scope = agg.hash_scope if agg.hash_scope in _SCOPES else SCOPE_FUNCTION
-        if agg.reviewed_hash != expected[scope].get(agg.design_input, ""):
+        if agg.reviewed_hash != _expected(scope).get(agg.design_input, ""):
             return STALE
         # Explicit partial, OR a "faithful" verdict that nonetheless lists
         # uncovered clauses (an inconsistent claim) -> partial.

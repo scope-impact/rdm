@@ -36,6 +36,22 @@ normalize() {
     jq -S '{name, target, enforcement, conditions, rules: (.rules | sort_by(.type))}'
 }
 
+# Compare LIVE configuration against declared JSON: project the live object
+# onto the declared fields (extra server-side fields are not drift), then
+# require EXACT equality. A containment/subset test is not a drift check --
+# jq's `contains` matches substrings and array subsets, so a changed value
+# (e.g. a review count, a branch pattern) could pass unnoticed.
+PRUNE='def prune($w):
+  if ($w|type) == "object" and type == "object" then
+    with_entries(select(.key as $k | $w | has($k)) | .key as $k | .value |= prune($w[$k]))
+  elif ($w|type) == "array" and type == "array" then
+    . as $l | [range(0; length) as $i | $l[$i] | prune($w[$i] // $l[$i])]
+  else . end;'
+
+matches_declared() {  # usage: echo "$live_json" | matches_declared "$want_json"
+    jq -e --argjson want "$1" "$PRUNE prune(\$want) == \$want" >/dev/null
+}
+
 existing_id="$(gh api "repos/$REPO/rulesets" --jq "map(select(.name == \"$NAME\")) | (first // {}) | .id // empty")"
 
 if [ "$MODE" = "check" ]; then
@@ -47,24 +63,26 @@ if [ "$MODE" = "check" ]; then
     else
         live="$(gh api "repos/$REPO/rulesets/$existing_id" | normalize)"
         want="$(normalize < "$RULESET_FILE")"
-        # Subset check: the live ruleset must contain everything we declare
-        # (the API echoes extra server-side fields; those are not drift).
-        if echo "$live" | jq -e --argjson want "$want" 'contains($want)' >/dev/null; then
+        if echo "$live" | matches_declared "$want"; then
             echo "OK: live ruleset '$NAME' on $REPO matches $RULESET_FILE"
         else
             echo "DRIFT: live ruleset '$NAME' on $REPO differs from $RULESET_FILE" >&2
-            diff <(echo "$want") <(echo "$live") >&2 || true
+            diff <(echo "$want" | jq -S .) \
+                 <(echo "$live" | jq -S --argjson want "$want" "$PRUNE prune(\$want)") >&2 || true
             drift=1
         fi
     fi
 
-    # Repository merge settings (DI-6): the live repo must contain every
-    # key/value declared in settings.json.
-    if gh api "repos/$REPO" | jq -e --argjson want "$(cat "$SETTINGS_FILE")" 'contains($want)' >/dev/null; then
+    # Repository merge settings (DI-6): the live values of every declared key
+    # must equal the declared values exactly.
+    live_settings="$(gh api "repos/$REPO")"
+    want_settings="$(cat "$SETTINGS_FILE")"
+    if echo "$live_settings" | matches_declared "$want_settings"; then
         echo "OK: live repository settings on $REPO match $SETTINGS_FILE"
     else
         echo "DRIFT: live repository settings on $REPO differ from $SETTINGS_FILE" >&2
-        diff <(jq -S . "$SETTINGS_FILE") <(gh api "repos/$REPO" | jq -S "with_entries(select(.key as \$k | $(jq 'keys' "$SETTINGS_FILE") | index(\$k)))") >&2 || true
+        diff <(jq -S . "$SETTINGS_FILE") \
+             <(echo "$live_settings" | jq -S --argjson want "$want_settings" "$PRUNE prune(\$want)") >&2 || true
         drift=1
     fi
 

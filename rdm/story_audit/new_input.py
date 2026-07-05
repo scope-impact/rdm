@@ -29,7 +29,7 @@ from rdm.record.sdd import (
 _DI_NUMBER = re.compile(r"^DI-(\d+)$")
 
 CHECKLIST = """\
-Remaining traceability checklist (see dhf/AGENT_WORKFLOW.md):
+Remaining traceability checklist (see {workflow}):
   1. Describe {di_id} in the '## Design Inputs' / '## Design Outputs' prose of {doc}
   2. Commit the design docs FIRST -- that commit is the approval (design gate)
   3. Implement the design output
@@ -64,6 +64,13 @@ def test_{fn_suffix}_not_implemented() -> None:
 '''
 
 
+def _workflow_pointer(dhf_dir: Path) -> str:
+    """Where this DHF's runbook actually lives: both scaffolds (`rdm init`,
+    `rdm adopt`) lay `AGENT_WORKFLOW.md` down at the DHF root — point at that,
+    not at a hardcoded `dhf/` the project may not have."""
+    return str(Path(dhf_dir.name) / "AGENT_WORKFLOW.md")
+
+
 def next_design_input_id(dhf_dir: Path) -> str:
     """Allocate the next unused DI-n across every design document in the DHF."""
     highest = 0
@@ -84,6 +91,21 @@ def _yaml_quote(text: str) -> str:
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def _docstring_escape(text: str) -> str:
+    """Escape text for safe embedding in a double-quoted docstring: a quote,
+    backslash, or triple-quote in the requirement text must not corrupt the
+    generated test module."""
+    return text.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _frontmatter_close(lines: list[str]) -> int | None:
+    """Index of the closing frontmatter fence, or None without a leading block."""
+    fences = [i for i, line in enumerate(lines) if line.rstrip("\n") == "---"]
+    if len(fences) < 2 or fences[0] != 0:
+        return None
+    return fences[1]
+
+
 def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[str]) -> None:
     """Insert a design-input entry into a design doc's frontmatter by line edit.
 
@@ -92,10 +114,9 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
     document has no frontmatter block.
     """
     lines = doc_path.read_text(encoding="utf-8").splitlines(keepends=True)
-    fences = [i for i, line in enumerate(lines) if line.rstrip("\n") == "---"]
-    if len(fences) < 2 or fences[0] != 0:
+    close = _frontmatter_close(lines)
+    if close is None:
         raise ValueError(f"{doc_path} has no frontmatter block to declare design inputs in")
-    close = fences[1]
 
     entry = (
         f"  - id: {di_id}\n"
@@ -126,24 +147,42 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
 
 
 def update_satisfies(doc_path: Path, refs: list[str]) -> list[str]:
-    """Add any user need in ``refs`` missing from the doc's inline ``satisfies``
-    list (declare-once stays consistent without a hand edit). Returns the needs
-    added. Only the inline ``satisfies: [ ... ]`` form is rewritten; a missing
+    """Add any user need in ``refs`` missing from the doc's ``satisfies`` list
+    (declare-once stays consistent without a hand edit). Returns the needs
+    added. Both YAML forms are edited in place — inline ``satisfies: [ … ]``
+    and a block list — never by adding a second ``satisfies`` key; a missing
     key is created after ``context:``.
     """
     lines = doc_path.read_text(encoding="utf-8").splitlines(keepends=True)
-    fences = [i for i, line in enumerate(lines) if line.rstrip("\n") == "---"]
-    if len(fences) < 2 or fences[0] != 0:
+    close = _frontmatter_close(lines)
+    if close is None:
         return []
-    close = fences[1]
 
     for i in range(1, close):
-        match = re.match(r"^satisfies:\s*\[(.*)\]\s*$", lines[i])
-        if match:
-            current = [ref.strip() for ref in match.group(1).split(",") if ref.strip()]
+        inline = re.match(r"^satisfies:\s*\[(.*)\]\s*$", lines[i])
+        if inline:
+            current = [ref.strip() for ref in inline.group(1).split(",") if ref.strip()]
             added = [ref for ref in refs if ref not in current]
             if added:
                 lines[i] = f"satisfies: [{', '.join(current + added)}]\n"
+                doc_path.write_text("".join(lines), encoding="utf-8")
+            return added
+        if re.match(r"^satisfies:\s*(#.*)?$", lines[i]):
+            # Block-style list: append the missing items to it, keeping the
+            # existing indentation. Never emit a duplicate `satisfies:` key.
+            current: list[str] = []
+            indent, end = "  ", i + 1
+            for j in range(i + 1, close):
+                item = re.match(r"^(\s+)-\s*(\S+)\s*(#.*)?$", lines[j])
+                if not item:
+                    break
+                indent = item.group(1)
+                current.append(item.group(2))
+                end = j + 1
+            added = [ref for ref in refs if ref not in current]
+            for offset, ref in enumerate(added):
+                lines.insert(end + offset, f"{indent}- {ref}\n")
+            if added:
                 doc_path.write_text("".join(lines), encoding="utf-8")
             return added
 
@@ -159,7 +198,7 @@ def update_satisfies(doc_path: Path, refs: list[str]) -> list[str]:
 def write_stub_test(test_file: Path, di_id: str, text: str, context: str) -> None:
     """Append a failing stub test tagged with the new design-input id."""
     fn_suffix = di_id.lower().replace("-", "_")
-    stub = STUB_TEST.format(di_id=di_id, fn_suffix=fn_suffix, text=text)
+    stub = STUB_TEST.format(di_id=di_id, fn_suffix=fn_suffix, text=_docstring_escape(text))
     if test_file.exists():
         with test_file.open("a", encoding="utf-8") as handle:
             handle.write(stub)
@@ -218,7 +257,8 @@ def story_new_input_command(
     if unknown:
         print(f"Error: unknown user need(s): {', '.join(unknown)}. "
               f"Registered: {', '.join(sorted(needs))}")
-        print("Register a new user need in the V&V plan frontmatter first (see dhf/AGENT_WORKFLOW.md).")
+        print("Register a new user need in the V&V plan frontmatter first "
+              f"(see {_workflow_pointer(dhf)}).")
         return 2
 
     di_id = next_design_input_id(dhf)
@@ -237,5 +277,6 @@ def story_new_input_command(
         print(f"  satisfies    -> added {', '.join(added_needs)} to {doc.name}")
     print(f"  stub test    -> {test_file}  (fails until implemented, by design)")
     print()
-    print(CHECKLIST.format(di_id=di_id, doc=doc.name, test_file=test_file, dhf=dhf.name))
+    print(CHECKLIST.format(di_id=di_id, doc=doc.name, test_file=test_file, dhf=dhf.name,
+                           workflow=_workflow_pointer(dhf)))
     return 0

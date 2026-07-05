@@ -94,10 +94,12 @@ def _record_first_repo(tmp_path: Path) -> Path:
 
 @allure.story("DI-23")
 @allure.label("output", "rdm/story_audit/audit.py")
-def test_audit_includes_record_first_design_inputs(tmp_path: Path, capsys) -> None:
+def test_audit_includes_record_first_design_inputs(tmp_path: Path, capsys, monkeypatch) -> None:
     """DI-23: with a DHF present, the audit reports per-design-input tag
     coverage, lists untagged inputs as stories without coverage, and reflects
-    them in the score; without a DHF, legacy behavior is unchanged."""
+    them in the score; the scan is anchored to the audited repository (the
+    caller's cwd must never poison coverage); without a DHF, legacy behavior
+    is unchanged."""
     from rdm.story_audit.audit import run_audit, print_report
 
     repo = _record_first_repo(tmp_path)
@@ -117,6 +119,41 @@ def test_audit_includes_record_first_design_inputs(tmp_path: Path, capsys) -> No
     # coverage criterion is missed (50% < 70%), which a legacy-only scan
     # (0 requirements -> vacuous 100%) would never show.
     assert "- [ ] Coverage 50%" in out
+
+    # The scan is anchored to the AUDITED repository, never the caller's cwd:
+    # auditing a repo with no test suite, from a cwd whose own tests/ tags the
+    # very same DI ids, must report every input UNTAGGED — the old <cwd>/tests
+    # fallback imported the caller's tags as the audited repo's coverage.
+    import shutil
+
+    bare = tmp_path / "bare"
+    shutil.copytree(repo / "dhf", bare / "dhf")          # same DHF, no tests/
+    decoy_home = tmp_path / "decoy_home"
+    (decoy_home / "tests").mkdir(parents=True)
+    (decoy_home / "tests" / "test_poison.py").write_text(
+        'import allure\n\n@allure.story("DI-1")\ndef test_a():\n    pass\n\n'
+        '@allure.story("DI-2")\ndef test_b():\n    pass\n'
+    )
+    monkeypatch.chdir(decoy_home)
+    print_report(run_audit(bare), bare)
+    poisoned_check = capsys.readouterr().out
+    assert "| DI-1 | UNTAGGED |" in poisoned_check
+    assert "| DI-2 | UNTAGGED |" in poisoned_check
+
+    # Within a repository the walk-up is bounded by the repo root: a nested
+    # DHF finds the repo's tests/, and a tests/ outside the boundary is unseen.
+    from rdm.record.allure import find_tests_dir
+
+    nested = tmp_path / "gitrepo"
+    (nested / ".git").mkdir(parents=True)
+    (nested / "tests").mkdir()
+    (nested / "product" / "dhf").mkdir(parents=True)
+    assert find_tests_dir(nested / "product" / "dhf") == nested / "tests"
+    fenced = tmp_path / "gitrepo2"
+    (fenced / ".git").mkdir(parents=True)
+    (fenced / "dhf").mkdir(parents=True)
+    (tmp_path / "tests").mkdir()                         # outside the repo
+    assert find_tests_dir(fenced / "dhf") is None
 
     # Without a DHF, nothing record-first is reported (legacy unchanged).
     (repo / "dhf" / "documents" / "design" / "alarms.md").unlink()
