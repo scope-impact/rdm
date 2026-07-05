@@ -56,6 +56,10 @@ approve their own change). This approval is the electronic signature of record:
 - **Uniqueness** [[P11:11.100]] — one GitHub account per individual, single
   sign-on enforced, credential sharing prohibited, accounts never reassigned;
   two-factor authentication is required org-wide.
+- **Accountability** [[P11:11.10j]] — this procedure states, as written
+  policy, that a pull-request approval is the approver's electronic
+  signature and that approvers are accountable for the content they approve;
+  acknowledgement is part of contributor onboarding.
 - **Authority** [[P11:11.10g]] — repository rulesets restrict who may approve
   (code owners) and who may merge; write access is granted per the access
   policy below. Commits must be cryptographically signed (verified signatures
@@ -71,6 +75,10 @@ Repository access is limited to authorized individuals [[P11:11.10d]] through
 GitHub organization membership, team-based permissions (least privilege), and
 mandatory two-factor authentication. Access grants and removals follow the
 personnel on/off-boarding SOP; the GitHub audit log records permission changes.
+
+Every writing client authenticates with an account-bound credential (SSH key
+or token issued to the individual's 2FA-protected account), so the validity
+of the source of each input is checked [[P11:11.10h]].
 
 ## Audit trail
 

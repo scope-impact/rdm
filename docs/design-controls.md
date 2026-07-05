@@ -149,6 +149,12 @@ rdm story persona --vv-plan dhf/documents/verification_and_validation_plan.md \
 Reconciles AI-persona simulated-use runs against the user-need registry —
 formative usability evidence only; it informs but never gates release.
 
+**Summative records.** Human validation judgments live in the record too:
+`<dhf>/validation/UN-…-validation.json` (`user_need`, `disposition:
+"approved"`, `reviewer`, `summary`). The release gate names every user need
+lacking an approved record — as a warning, because a machine cannot supply
+the judgment, but its absence must never be silent.
+
 ## Planning-side tools
 
 `rdm story sync`, `check-ids`, `backlog-validate`, and `rdm pm sync` operate on

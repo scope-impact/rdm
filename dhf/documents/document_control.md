@@ -37,10 +37,22 @@ are tags; the revision history is the git history itself. Planning artifacts
   `git archive` at any tag reproduces the complete electronic record set.
 - **Retention and retrieval** [[P11:11.10c]] — every clone is a full replica
   of the history; release tags identify record baselines; the GitHub-hosted
-  repository is the retained store for the retention period.
+  repository is the retained store. Retention period: the full history is
+  retained for as long as RDM is maintained, and release baselines (tags and
+  their evidence bundles) for no less than five years after the release they
+  record. An organization-controlled mirror is an open action (audit NC-6).
 - **Access** [[P11:11.10d]] — write access is limited to authorized
   individuals through GitHub organization membership with two-factor
   authentication; the audit log records permission changes.
+- **Device checks** [[P11:11.10h]] — every writing client is authenticated to
+  an account-bound credential (SSH key or token issued to the individual's
+  2FA-protected account); anonymous or unauthenticated input cannot reach the
+  record.
+- **Signature accountability** [[P11:11.10j]] — the contributor policy
+  (`dhf/AGENT_WORKFLOW.md` and this statement, both controlled documents)
+  states that a pull-request approval is the approver's electronic signature
+  and that the approver is accountable for what it approves; verdict reviewers
+  are named in each hash-pinned verdict.
 - **Audit trail** [[P11:11.10e]] — the git history: secure (SHA-chained),
   computer-generated, time-stamped, author-attributed on every action; a later
   change never obscures an earlier entry, and the trail lives exactly as long
@@ -52,7 +64,11 @@ are tags; the revision history is the git history itself. Planning artifacts
 - **Authority** [[P11:11.10g]] — only authorized reviewers can approve a pull
   request into the default branch; the reviewer of a faithfulness verdict must
   be independent of the test's author (enforced procedure, recorded in each
-  verdict).
+  verdict). The branch controls are configuration code in this repository —
+  `.github/rulesets/controlled-record.json` (pull-request review, verified
+  commit signatures, required checks, no history rewriting) and
+  `repo-settings.json` — applied and drift-checked with
+  `scripts/apply-repo-controls.sh [--check]`.
 - **Training** [[P11:11.10i]] — contributors (human or agent) are directed
   through `dhf/AGENT_WORKFLOW.md` before changing the record; agent sessions
   load it automatically at session start.

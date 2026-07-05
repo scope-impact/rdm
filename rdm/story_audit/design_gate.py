@@ -516,6 +516,17 @@ def run_release_gate(
     for un in sorted(registry_user_needs(dhf_dir) - addressed):
         result.blocking.append(f"user need {un} is addressed by no design input")
 
+    # Summative validation is human-evidenced (DI-33): a missing approved
+    # record is named, loudly, but a machine cannot supply the judgment --
+    # warning, not blocking.
+    from rdm.record.validation import unvalidated_user_needs
+
+    result.warnings += [
+        f"user need {un} has no approved validation record "
+        f"(add {dhf_dir.name}/validation/{un}-validation.json)"
+        for un in unvalidated_user_needs(dhf_dir)
+    ]
+
     result.warnings += [
         f"Allure result tag {tag} matches no design input"
         for tag in relevant_orphans(report.orphan_ids, di_ids)

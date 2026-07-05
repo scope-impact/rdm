@@ -15,6 +15,8 @@ P11:11.10e secure, computer-generated, time-stamped audit trail that does not ob
 P11:11.10f operational checks enforcing permitted sequencing of steps
 P11:11.10g authority checks ensuring only authorized individuals sign or alter records
 P11:11.10i persons who use the system have the education, training, and experience to do so
+P11:11.10h device checks to determine the validity of the source of data input or operational instruction
+P11:11.10j written policies holding individuals accountable for actions initiated under their electronic signatures
 P11:11.10k adequate controls over the distribution of and changes to systems documentation
 P11:11.50 signature manifestation: printed name, date and time, and meaning of each signing
 P11:11.70 signatures linked to their records so they cannot be excised, copied, or transferred

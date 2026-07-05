@@ -36,6 +36,12 @@
 - Polyglot tag discovery: JS/TS allure calls and Java Story/Feature
   annotations are scanned across conventional test-file names; non-Python
   tests pin faithfulness verdicts at whole-file scope.
+- Summative validation records (`<dhf>/validation/UN-…-validation.json`);
+  the release gate warns for every user need lacking an approved record.
+- Part 11 checklist completeness: §11.10(h) device checks and §11.10(j)
+  signature accountability added (audit finding NC-4).
+- RDM's own repository controls as code: `.github/rulesets/` +
+  `scripts/apply-repo-controls.sh [--check]`.
 - Mutation probes run with an isolated bytecode cache: CPython's
   (mtime-seconds, size) pyc validation could serve stale bytecode to a
   size-preserving mutation applied within one second, making a killing
