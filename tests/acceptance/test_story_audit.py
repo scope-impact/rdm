@@ -124,3 +124,31 @@ def test_audit_includes_record_first_design_inputs(tmp_path: Path, capsys) -> No
     legacy_out = capsys.readouterr().out
     assert "Design inputs (DHF)" not in legacy_out
     assert "DI-2" not in legacy_out
+
+
+@allure.story("DI-32")
+@allure.label("output", "rdm/story_audit/validate.py")
+def test_legacy_yaml_workflow_is_deprecated(tmp_path: Path, monkeypatch, capsys) -> None:
+    """DI-32: validate and check-ids print a deprecation notice naming the
+    record-first replacement, and stay functional with unchanged exit codes."""
+    from rdm.story_audit.check_ids import story_check_ids_command
+    from rdm.story_audit.validate import story_validate_command
+
+    good = tmp_path / "requirements"
+    good.mkdir()
+    (good / "ft-001.yaml").write_text("id: FT-001\n")
+    monkeypatch.chdir(tmp_path)
+
+    # check-ids: notice on stderr, names the replacement, exit code unchanged.
+    assert story_check_ids_command([good / "ft-001.yaml"]) == 0
+    err = capsys.readouterr().err
+    assert "DEPRECATED" in err and "record-first" in err
+
+    dup = good / "dup.yaml"
+    dup.write_text("id: FT-001\n")
+    assert story_check_ids_command([good / "ft-001.yaml", dup]) == 1  # still detects
+
+    # validate: same notice, still functional against the requirements dir.
+    assert story_validate_command(requirements_dir=good) in (0, 1)
+    err = capsys.readouterr().err
+    assert "DEPRECATED" in err and "rdm story validate" in err

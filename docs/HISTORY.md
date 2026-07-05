@@ -33,6 +33,11 @@
   context's `satisfies` list.
 - `rdm hooks` installs only the design-gate pre-commit hook by default; the
   issue-reference hooks moved behind `--with-issue-hooks`.
+- Polyglot tag discovery: JS/TS allure calls and Java Story/Feature
+  annotations are scanned across conventional test-file names; non-Python
+  tests pin faithfulness verdicts at whole-file scope.
+- The legacy YAML requirements workflow (`story validate`, `check-ids`) is
+  deprecated with a notice; functional, exit codes unchanged.
 - New `rdm story dmr` (device-master-record index data generated from
   controlled documents' frontmatter) and `rdm story evidence-bundle` (the
   retained release evidence set: verification data, rendered matrix,

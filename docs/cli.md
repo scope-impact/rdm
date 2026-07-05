@@ -41,8 +41,8 @@ Common flags: `--dhf DIR` (default `dhf/`), `--faithfulness DIR` (default
 |---|---|
 | `rdm story sync BACKLOG_DIR -o DB` | sync Backlog.md → DuckDB analytics (`--migrate-only` for schema only) |
 | `rdm story backlog-validate [DIR]` | validate Backlog.md files (`-f` single file, `--strict`, `--verbose`) |
-| `rdm story check-ids [FILES…]` | duplicate requirement-ID detection (legacy YAML requirements; superseded by the record-first model for new projects) |
-| `rdm story validate` | validate legacy requirements YAML against the schema (legacy; new projects use the DHF + gates) |
+| `rdm story check-ids [FILES…]` | duplicate requirement-ID detection (**deprecated** legacy YAML path — prints a notice; functional, exit codes unchanged) |
+| `rdm story validate` | validate legacy requirements YAML against the schema (**deprecated** — new projects use the DHF + gates) |
 | `rdm pm sync` | bidirectional GitHub sync: tasks → issues, PRs → DuckDB (extra: `github`) |
 
 Planning outputs are stamped as derived data — never cite them as evidence

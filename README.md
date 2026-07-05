@@ -147,6 +147,8 @@ uv run pytest tests
   verification data, verdicts, manifest)
 - `rdm hooks` defaults to the design-gate hook only (`--with-issue-hooks`
   opts into the legacy pair); `new-input` keeps `satisfies` lists in sync
+- **Polyglot traceability**: JS/TS and Java test tags discovered for
+  linkage, audit, and faithfulness; legacy YAML workflow deprecated
 - Fixes: `rdm gap --coverage` with built-in checklist names; tag-scanner
   false positive; root-container test skip
 

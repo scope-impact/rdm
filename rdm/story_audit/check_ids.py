@@ -78,6 +78,9 @@ def story_check_ids_command(files: list[Path] | None = None) -> int:
     Returns:
         0 if no duplicates, 1 if duplicates found
     """
+    from rdm.story_audit.validate import print_legacy_deprecation
+
+    print_legacy_deprecation("rdm story check-ids")
     # Get files to check
     if files:
         yaml_files = [f for f in files if f.suffix in (".yaml", ".yml")]
