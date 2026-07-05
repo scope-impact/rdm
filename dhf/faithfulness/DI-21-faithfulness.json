@@ -1,12 +1,13 @@
 {
   "design_input": "DI-21",
-  "verdict": "faithful",
-  "reviewer": "claude (independent of author)",
-  "rationale": "Probes via rdm story mutation-probe on rdm/story_audit/mutation.py, all KILLED (module under review is the probe machinery itself: the running process restores with the imported original while the pytest subprocess re-imports the mutant). Original clauses (test_mutation_probe_applies_reports_and_restores): (1) applies the mutation live: writing the original instead of original.replace(find,replace,1) KILLED (stub runner asserts 'VALUE = 2' on disk during the run); (2) reports killed: inverting \"killed\": not tests_passed -> tests_passed KILLED; (3) reports survived: inverting \"survived\" KILLED; (4) always restores: replacing the finally-block '_write(file_path, original)  # always revert' with pass KILLED (file==original asserted after killed AND survived paths, plus res['restored']); (5) exactly-once application (ambiguous site rejected): occurrences != 1 -> occurrences < 1 KILLED ('error' in result + file untouched asserted). Defense clauses (test_mutation_probe_restore_survives_interruption): (6) journal-before-mutating: journaling '' instead of the original KILLED (runner reads the journal mid-window and asserts it equals the original), and leaving the journal behind (unlink -> exists) KILLED (not journal.exists() after a normal probe); (7) interrupted-probe recovery: neutering the restore write in recover_interrupted_probe KILLED (res['recovered'] and file==original and journal gone; recover_interrupted_probe(src) is False afterwards); (8) termination signal still restores: not installing the SIGTERM handler (signal.signal -> signal.getsignal) KILLED (pytest.raises(KeyboardInterrupt) + file restored + no journal; without the handler TERM kills the process instead); (9) per-write cache invalidation via unique mtimes: constant mtime os.utime ns=(1,1) KILLED and second-truncated mtime (int(time.time())*1e9, the exact pyc mtime-seconds granularity / same-second scenario) KILLED via len({before,during,after})==3. Equivalent mutant documented: deleting the _bump_mtime call from _write SURVIVED because this filesystem timestamps consecutive writes with naturally distinct nanoseconds - the assertion pins the required observable (three distinct mtimes across the probe's writes, falsified by any non-unique scheme incl. the same-second case) rather than the bump mechanism.",
-  "test_hash": "sha256:4e4ee750eb2e56bda9707bcbcdcb58eca122e1bbc838b4658da8c3e5cd71d375",
+  "verdict": "partial",
+  "reviewer": "claude-reviewer (independent of author)",
+  "rationale": "Full re-review after PR #40 amended the DI text (strict exit-code discrimination) and added test_mutation_probe_only_a_genuine_test_failure_is_a_kill. All probes via rdm story mutation-probe on rdm/story_audit/mutation.py (the module under review IS the probe machinery: the running process keeps the imported original while the pytest subprocess re-imports the mutant). Core clauses (test_mutation_probe_applies_reports_and_restores): (1) applies the mutation live: writing the original instead of original.replace(find,replace,1) KILLED (stub runner asserts 'VALUE = 2' on disk during the run); (2) reports killed: inverting the mapping '\"killed\": outcome == TESTS_FAILED' -> '(outcome != TESTS_FAILED)' KILLED; (3) reports survived: '\"survived\": outcome == TESTS_PASSED' -> '(outcome != TESTS_PASSED)' KILLED; (4) always restores: the finally-block restore write -> pass KILLED (file==original asserted after killed AND survived paths, plus res['restored']); (5) exactly-once application (ambiguous site rejected): occurrences != 1 -> occurrences < 1 KILLED ('error' in result + file untouched). Exit-code discrimination (test_mutation_probe_only_a_genuine_test_failure_is_a_kill): (6) only a genuine test failure is a kill: 'if proc.returncode == 1:' -> 'if proc.returncode:' (the old any-nonzero-is-FAILED behavior) KILLED (exit-5 no-tests-collected must come back as an error, not TESTS_FAILED); (7) an unclean run is reported as an error, never a kill: dropping the 'if outcome not in (TESTS_PASSED, TESTS_FAILED):' guard ('if False:') KILLED (an error outcome would silently become a killed=False/survived=False dict with no 'error' key); (8) no-tests-collected is identified as such: exit-5 message condition '== 5' -> '== 55' KILLED ('no tests matched' asserted in the outcome). Defense clauses (test_mutation_probe_restore_survives_interruption): (9) journal-before-mutating: journaling '' instead of the original KILLED (runner reads the journal mid-window), and journal left behind after a normal probe (unlink -> exists) KILLED; (10) interrupted-probe recovery: neutering the restore write in recover_interrupted_probe KILLED (res['recovered'], file==original, journal gone, recover_interrupted_probe(src) is False afterwards); (11) SIGTERM during the probe window converted to an exception: handler body 'raise KeyboardInterrupt(...)' -> pass KILLED (pytest.raises(KeyboardInterrupt) + file restored + no journal). The handler-NOT-installed mutant (signal.signal -> signal.getsignal), recorded KILLED by the prior review under the old any-nonzero logic, now correctly replays as ERROR (exit -15: the raised TERM kills the inner pytest itself) and is recorded below as documentation, not a claim -- the clause is pinned by the neutered-handler kill instead; (12) unique-ns mtime observable: constant mtime os.utime ns=(1,1) KILLED and second-truncated mtime (int(time.time())*1e9) KILLED via len({before,during,after})==3. UNCOVERED CLAUSE (hence partial): 'every write invalidates the bytecode cache so a same-second size-preserving mutation cannot run stale' is NOT verified by the tests -- and is empirically FALSE on CPython 3.11: the pyc validation key truncates mtime to whole seconds ((mtime-seconds, size)), so distinct nanosecond mtimes within the same second do not invalidate the cache. Executed evidence: the size-PRESERVING survived-inversion mutant ('\"survived\": outcome == TESTS_PASSED' -> '== TESTS_FAILED', both replacement tokens 12 chars) SURVIVED 2 of 3 runs because the inner pytest was served stale bytecode of the ORIGINAL module (recorded below with result SURVIVED); a minimal out-of-repo reproduction (import, same-size same-second rewrite + unique-ns os.utime, fresh-interpreter re-import) also served the stale module. The acceptance test asserts three distinct st_mtime_ns values -- an observable that does not entail pyc invalidation; covering the clause needs either a write scheme that changes the (mtime-seconds, size) key or an assertion that a same-second size-preserving mutant is actually re-imported.",
+  "test_hash": "sha256:1b45ead2579ec0d5bf56e1faf34766aeba09b5f068b4a44ed3b7dab6b08f6cb1",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_mutation_probe_applies_reports_and_restores",
+    "test_mutation_probe_only_a_genuine_test_failure_is_a_kill",
     "test_mutation_probe_restore_survives_interruption"
   ],
   "probes": [
@@ -19,15 +20,15 @@
     },
     {
       "file": "rdm/story_audit/mutation.py",
-      "find": "\"killed\": not tests_passed",
-      "replace": "\"killed\": tests_passed",
+      "find": "\"killed\": outcome == TESTS_FAILED",
+      "replace": "\"killed\": (outcome != TESTS_FAILED)",
       "test": "test_mutation_probe_applies_reports_and_restores",
       "result": "KILLED"
     },
     {
       "file": "rdm/story_audit/mutation.py",
-      "find": "\"survived\": tests_passed",
-      "replace": "\"survived\": not tests_passed",
+      "find": "\"survived\": outcome == TESTS_PASSED",
+      "replace": "\"survived\": (outcome != TESTS_PASSED)",
       "test": "test_mutation_probe_applies_reports_and_restores",
       "result": "KILLED"
     },
@@ -47,15 +48,29 @@
     },
     {
       "file": "rdm/story_audit/mutation.py",
-      "find": "journal.write_text(original, encoding=\"utf-8\")",
-      "replace": "journal.write_text(\"\", encoding=\"utf-8\")",
-      "test": "test_mutation_probe_restore_survives_interruption",
+      "find": "if proc.returncode == 1:",
+      "replace": "if proc.returncode:",
+      "test": "test_mutation_probe_only_a_genuine_test_failure_is_a_kill",
       "result": "KILLED"
     },
     {
       "file": "rdm/story_audit/mutation.py",
-      "find": "file_path.write_text(journal.read_text(encoding=\"utf-8\"), encoding=\"utf-8\")",
-      "replace": "journal.read_text(encoding=\"utf-8\")",
+      "find": "if outcome not in (TESTS_PASSED, TESTS_FAILED):",
+      "replace": "if False:",
+      "test": "test_mutation_probe_only_a_genuine_test_failure_is_a_kill",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "what = (\"no tests matched the selector\" if proc.returncode == 5",
+      "replace": "what = (\"no tests matched the selector\" if proc.returncode == 55",
+      "test": "test_mutation_probe_only_a_genuine_test_failure_is_a_kill",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "journal.write_text(original, encoding=\"utf-8\")",
+      "replace": "journal.write_text(\"\", encoding=\"utf-8\")",
       "test": "test_mutation_probe_restore_survives_interruption",
       "result": "KILLED"
     },
@@ -68,8 +83,15 @@
     },
     {
       "file": "rdm/story_audit/mutation.py",
-      "find": "previous = signal.signal(signal.SIGTERM, _raise)",
-      "replace": "previous = signal.getsignal(signal.SIGTERM)",
+      "find": "file_path.write_text(journal.read_text(encoding=\"utf-8\"), encoding=\"utf-8\")",
+      "replace": "journal.read_text(encoding=\"utf-8\")",
+      "test": "test_mutation_probe_restore_survives_interruption",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "raise KeyboardInterrupt(\"SIGTERM during mutation probe\")",
+      "replace": "pass  # SIGTERM ignored by the handler",
       "test": "test_mutation_probe_restore_survives_interruption",
       "result": "KILLED"
     },
@@ -86,7 +108,23 @@
       "replace": "unique_ns = int(time.time()) * 1_000_000_000",
       "test": "test_mutation_probe_restore_survives_interruption",
       "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "previous = signal.signal(signal.SIGTERM, _raise)",
+      "replace": "previous = signal.getsignal(signal.SIGTERM)",
+      "test": "test_mutation_probe_restore_survives_interruption",
+      "result": "ERROR (inner pytest terminated by the uncaught SIGTERM, exit -15 -- documentation, not a kill claim)"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "\"survived\": outcome == TESTS_PASSED",
+      "replace": "\"survived\": outcome == TESTS_FAILED",
+      "test": "test_mutation_probe_applies_reports_and_restores",
+      "result": "SURVIVED (2 of 3 runs: size-preserving mutant served stale pyc of the original -- the uncovered-clause evidence, not a kill claim)"
     }
   ],
-  "uncovered_clauses": []
+  "uncovered_clauses": [
+    "every write invalidates the bytecode cache so a same-second size-preserving mutation cannot run stale (pyc key is (mtime-seconds, size) on CPython 3.11, and unique-ns bumps within one second do not invalidate -- size-preserving mutant demonstrably ran stale)"
+  ]
 }

@@ -70,11 +70,13 @@
   signature accountability added (audit finding NC-4).
 - RDM's own repository controls as code: `.github/rulesets/` +
   `scripts/apply-repo-controls.sh [--check]`.
-- Mutation probes run with an isolated bytecode cache: CPython's
-  (mtime-seconds, size) pyc validation could serve stale bytecode to a
-  size-preserving mutation applied within one second, making a killing
-  probe falsely SURVIVE under back-to-back `--replay` (found by an
-  independent review; hardened in `_pytest_runner`).
+- Mutation-probe writes advance the probed file's mtime to a fresh whole
+  second: CPython's (mtime-seconds, size) pyc validation could serve stale
+  bytecode to a size-preserving mutation applied within one second, making a
+  killing probe falsely SURVIVE under back-to-back `--replay`. Found by an
+  independent review; a second independent review then proved the first fix
+  (unique-nanosecond mtime bumps) insufficient — the pyc key truncates mtime
+  to whole seconds — leading to the whole-second advance.
 - The legacy YAML requirements workflow (`story validate`, `check-ids`) is
   deprecated with a notice; functional, exit codes unchanged.
 - New `rdm story dmr` (device-master-record index data generated from

@@ -92,8 +92,9 @@ def test_mutation_probe_only_a_genuine_test_failure_is_a_kill(tmp_path: Path, mo
 def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     """DI-21 (defense in depth): the original is journaled before mutating and
     an interrupted probe is recovered on the next probe; SIGTERM mid-window
-    still restores; every write gives the file a fresh mtime so stale bytecode
-    can never be served to a same-second, size-preserving mutation."""
+    still restores; every write advances the file's mtime to a fresh whole
+    second so stale bytecode can never be served to a same-second,
+    size-preserving mutation."""
     import signal
 
     from rdm.story_audit.mutation import JOURNAL_SUFFIX, recover_interrupted_probe
@@ -137,15 +138,23 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     assert src.read_text() == original               # restored despite the TERM
     assert not journal.exists()
 
-    # Every write bumps the mtime uniquely (the pyc-staleness defense): the
-    # mutated and restored file must never share an mtime, even same-second.
-    mtimes = []
+    # Every write advances the mtime to a FRESH WHOLE SECOND (the
+    # pyc-staleness defense). CPython's bytecode-cache key is (mtime truncated
+    # to whole seconds, size), so distinct nanoseconds within one second do
+    # NOT invalidate the cache — the mtime SECONDS must strictly increase on
+    # every write. Pinning the file's mtime into the future first makes this
+    # deterministic: a clock-based bump (the disproven nanosecond scheme)
+    # would move the mtime BACKWARD here and fail, in any timing.
+    import os
+
+    future = int(src.stat().st_mtime) + 100
+    os.utime(src, (future, future))
+    mtime_seconds = []
 
     def mtime_runner() -> str:
-        mtimes.append(src.stat().st_mtime_ns)
+        mtime_seconds.append(int(src.stat().st_mtime))
         return TESTS_FAILED
 
-    before = src.stat().st_mtime_ns
     run_mutation_probe(src, "VALUE = 1", "VALUE = 2", mtime_runner)
-    after = src.stat().st_mtime_ns
-    assert len({before, mtimes[0], after}) == 3      # three distinct mtimes
+    after = int(src.stat().st_mtime)
+    assert future < mtime_seconds[0] < after         # strictly newer whole seconds

@@ -1,9 +1,9 @@
 {
   "design_input": "DI-27",
   "verdict": "faithful",
-  "reviewer": "claude (independent of author)",
-  "rationale": "Re-review after the test was strengthened per the previous partial verdict: the fixture now declares a second design input (DI-2, tagged test_second_requirement), records a faithful DI-2 verdict before the --stale call, and asserts 'DI-2' is ABSENT from the filtered output. All probes via rdm story mutation-probe on rdm/story_audit/design_gate.py, all KILLED. Clauses: (1) probes stored as structured data: record_verdict `\"probes\": probes or [],` -> `\"probes\": [],` KILLED by the JSON round-trip equality (re-verified against the edited module); (2) replay re-executes the recorded killing probes: replay_probes `killed += 1` -> `pass` KILLED by (replayed, killed, failures) == (1, 1, []); (3) replay fails when a probe no longer kills: discarding the SURVIVES failure (`failures.append(f\"{di_id}: recorded killing probe now SURVIVES \"` -> assign to `_`) KILLED by len(failures) == 1 and 'SURVIVES' in failures[0] after the test is weakened; (4) --stale filters the report to non-faithful inputs, both directions: non-faithful shown - `if stale_only and agg.status == faithfulness.FAITHFUL:` -> `if stale_only:` (skip everything) KILLED by 'DI-1: unreviewed' in the output; faithful excluded - same line -> `if False:` (no filter) now KILLED by the new `'DI-2' not in shown` assertion (this exact mutant SURVIVED before the fixture gained the faithful DI-2). The previously uncovered clause is closed; no uncovered clauses remain.",
-  "test_hash": "sha256:f33fdebfaf36897ff782a01b8572e869d370dcf76c032dd8d087b1a0d3f3db6a",
+  "reviewer": "claude-reviewer (independent of author)",
+  "rationale": "Full re-review after PR #40 amended the DI text (a probe that can no longer execute is a per-probe gate failure, reported without aborting the replay) and strengthened the test with a typo'd-selector probe (must replay as an error, not a kill) and a vanished-file probe (reported failure while the remaining probe still runs). All probes via rdm story mutation-probe on rdm/story_audit/design_gate.py, all KILLED. Clauses: (1) probes stored as structured data: record_verdict '\"probes\": probes or [],' -> '\"probes\": [],' KILLED by the JSON round-trip equality; (2) replay re-executes the recorded killing probes: replay_probes 'killed += 1' -> 'pass' KILLED by (replayed, killed, failures) == (1, 1, []); (3) replay fails when a probe no longer kills: discarding the SURVIVES failure append (assign to _) KILLED by len(failures) == 1 and 'SURVIVES' in failures[0] after the test is weakened; (4) a probe run that errors is a reported gate failure, never a kill: discarding the error-branch failures.append (assign to _) KILLED (the typo'd-selector probe must produce killed == 0 AND one failure containing 'error'; the vanished-file probe one failure naming 'vanished.py'); (5) a probe that can no longer execute is a per-probe failure, not a crash of the replay: re-raising in the except OSError handler ('outcome = {\"error\": ...}' -> 'raise') KILLED (with the file gone the replay must not propagate, and the remaining healthy probe must still run: replayed == 2, killed == 1); (6) --stale filters the report to non-faithful inputs, both directions: 'if stale_only and agg.status == faithfulness.FAITHFUL:' -> 'if stale_only:' (hide everything) KILLED by 'DI-1: unreviewed' in the output, and -> 'if False:' (no filter) KILLED by 'DI-2' absent from the output. No uncovered clauses.",
+  "test_hash": "sha256:a7e7b87d5fd976ec4a99c75caec130b8616281367b16179812ce82f6cfe190ee",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_verdicts_carry_replayable_probes"
@@ -27,6 +27,20 @@
       "file": "rdm/story_audit/design_gate.py",
       "find": "                failures.append(f\"{di_id}: recorded killing probe now SURVIVES \"",
       "replace": "                _ = (f\"{di_id}: recorded killing probe now SURVIVES \"",
+      "test": "test_verdicts_carry_replayable_probes",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "                failures.append(f\"{di_id}: probe error -- {outcome['error']}\")",
+      "replace": "                _ = (f\"{di_id}: probe error -- {outcome['error']}\")",
+      "test": "test_verdicts_carry_replayable_probes",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "                outcome = {\"error\": f\"cannot execute probe on {file_path}: {error}\"}",
+      "replace": "                raise",
       "test": "test_verdicts_carry_replayable_probes",
       "result": "KILLED"
     },

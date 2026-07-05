@@ -19,14 +19,15 @@ The restore guarantee is defended in depth (DI-21): a bare ``finally`` dies
 with the process, so the original is journaled to a sidecar (recovered on the
 next probe of that file -- survives SIGKILL), SIGTERM during the probe window
 is converted to an exception (a shell timeout still restores in-process), and
-every write bumps the file's mtime by a unique nanosecond so CPython's
+every write advances the file's mtime to a fresh whole second so CPython's
 (mtime-seconds, size) ``.pyc`` key can never serve stale bytecode to a
-same-second, size-preserving mutation.
+same-second, size-preserving mutation. (Sub-second bumps are NOT enough: the
+pyc key truncates mtime to whole seconds -- an independent review proved a
+unique-nanosecond scheme let exactly such a mutant run stale.)
 """
 
 from __future__ import annotations
 
-import itertools
 import os
 import signal
 import subprocess
@@ -47,8 +48,6 @@ TESTS_FAILED = "failed"
 # mid-window; the next probe of the same file restores from it first.
 JOURNAL_SUFFIX = ".rdm-probe-orig"
 
-_write_counter = itertools.count()
-
 
 def _journal_path(file_path: Path) -> Path:
     return file_path.with_name(file_path.name + JOURNAL_SUFFIX)
@@ -63,22 +62,28 @@ def recover_interrupted_probe(file_path: Path) -> bool:
     journal = _journal_path(file_path)
     if not journal.exists():
         return False
-    file_path.write_text(journal.read_text(encoding="utf-8"), encoding="utf-8")
-    _bump_mtime(file_path)
+    _write(file_path, journal.read_text(encoding="utf-8"))
     journal.unlink()
     return True
 
 
-def _bump_mtime(file_path: Path) -> None:
-    """Give the file a unique nanosecond mtime so the bytecode cache key
-    (mtime-seconds is too coarse) always invalidates after a write."""
-    unique_ns = time.time_ns() + next(_write_counter)
-    os.utime(file_path, ns=(unique_ns, unique_ns))
+def _advance_mtime(file_path: Path, previous: int) -> None:
+    """Stamp the file with a fresh WHOLE-second mtime, strictly beyond
+    ``previous`` (its mtime before the write). CPython's pyc validation key is
+    (source mtime truncated to whole seconds, source size), so a sub-second
+    bump is invisible to it; and because every write lands strictly beyond
+    every earlier one, no two versions of the file can ever share a cache key
+    — even back-to-back writes within one wall-clock second."""
+    fresh = max(previous + 1, int(time.time()))
+    os.utime(file_path, (fresh, fresh))
 
 
 def _write(file_path: Path, content: str) -> None:
+    # The pre-write mtime must be captured BEFORE write_text restamps the
+    # file with the current clock, or monotonicity is lost.
+    previous = int(file_path.stat().st_mtime)
     file_path.write_text(content, encoding="utf-8")
-    _bump_mtime(file_path)
+    _advance_mtime(file_path, previous)
 
 
 @contextmanager
