@@ -51,8 +51,11 @@ def _mini_record(tmp_path: Path, test_body: str) -> Path:
     (dhf / "documents" / "design").mkdir(parents=True)
     (dhf / "documents" / "design" / "core.md").write_text(
         "---\nid: SDS-C-001\nkind: design\ncontext: core\n"
-        "design_inputs:\n  - id: DI-1\n"
-        '    text: "the value is good"\n    traces_to: []\n---\n\n# Core\n'
+        "design_inputs:\n"
+        "  - id: DI-1\n"
+        '    text: "the value is good"\n    traces_to: []\n'
+        "  - id: DI-2\n"
+        '    text: "a second requirement"\n    traces_to: []\n---\n\n# Core\n'
     )
     (tmp_path / "impl.py").write_text('VALUE = "good"\n')
     tests = tmp_path / "tests"
@@ -74,6 +77,11 @@ def _load_value():
 @allure.story("DI-1")
 def test_value_is_good():
     assert _load_value() == "good"
+
+
+@allure.story("DI-2")
+def test_second_requirement():
+    assert True
 '''
 
 
@@ -108,12 +116,15 @@ def test_verdicts_carry_replayable_probes(tmp_path: Path, monkeypatch, capsys) -
     _, _, failures = replay_probes(weak_report)
     assert len(failures) == 1 and "SURVIVES" in failures[0]
 
-    # --stale filters the report to the non-faithful worklist.
+    # --stale filters the report to the non-faithful worklist: the unreviewed
+    # input is listed, the faithful one is EXCLUDED.
     (dhf / "faithfulness" / "DI-1-faithfulness.json").unlink()
+    record_verdict(dhf, "DI-2", "faithful", reviewer="r2", rationale="current")
     capsys.readouterr()
     story_faithfulness_command(dhf_dir=dhf, stale_only=True)
     shown = capsys.readouterr().out
     assert "DI-1: unreviewed" in shown
+    assert "DI-2" not in shown
 
 
 @allure.story("DI-28")

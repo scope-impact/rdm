@@ -1,0 +1,35 @@
+{
+  "design_input": "DI-26",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "All probes via rdm story mutation-probe on rdm/hooks.py, all KILLED. Clauses: (1) the design-gate pre-commit hook installs by default: `DESIGN_GATE_HOOKS = ('pre-commit',)` -> `()` KILLED (default pre-commit must exist and be executable); (2) ONLY that hook by default: `names = DESIGN_GATE_HOOKS + (ISSUE_HOOKS if with_issue_hooks else ())` -> always all three (`DESIGN_GATE_HOOKS + ISSUE_HOOKS`) KILLED by the not-exists assertions on commit-msg / prepare-commit-msg; (3) issue hooks land solely with the explicit flag: same line -> always `DESIGN_GATE_HOOKS` (flag ignored) KILLED by the opt-in X_OK assertions on all three hooks. Executability is asserted (os.access X_OK) for every installed hook.",
+  "test_hash": "sha256:478885549eb2772f2ce6703ea130bd85becf6a78d96e78282199b0a1b020705d",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_hooks_installs_design_gate_only_by_default"
+  ],
+  "probes": [
+    {
+      "file": "rdm/hooks.py",
+      "find": "    names = DESIGN_GATE_HOOKS + (ISSUE_HOOKS if with_issue_hooks else ())",
+      "replace": "    names = DESIGN_GATE_HOOKS + ISSUE_HOOKS",
+      "test": "test_hooks_installs_design_gate_only_by_default",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/hooks.py",
+      "find": "    names = DESIGN_GATE_HOOKS + (ISSUE_HOOKS if with_issue_hooks else ())",
+      "replace": "    names = DESIGN_GATE_HOOKS",
+      "test": "test_hooks_installs_design_gate_only_by_default",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/hooks.py",
+      "find": "DESIGN_GATE_HOOKS = ('pre-commit',)",
+      "replace": "DESIGN_GATE_HOOKS = ()",
+      "test": "test_hooks_installs_design_gate_only_by_default",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
+}

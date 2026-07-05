@@ -2,10 +2,41 @@
   "design_input": "DI-22",
   "verdict": "faithful",
   "reviewer": "claude (independent of author)",
-  "rationale": "Re-review after fixture fix (two contexts: alarms/DI-1, trends/DI-3). All probes via rdm story mutation-probe on rdm/story_audit/new_input.py, all KILLED: allocate-next-unused-id(return f\"DI-{highest + 1}\" -> return \"DI-2\" \u2014 max across BOTH docs discriminated from first-gap); insert-entry-into-frontmatter(doc_path.write_text(...) -> pass; traced facet: traces_to line -> traces_to: []); insert-into-CHOSEN-context(doc = contexts[context] -> doc = contexts[sorted(contexts)[-1]] KILLED by the new 'DI-4 in alarms.md and not in trends.md' assertions \u2014 previously SURVIVED, now closed; note the sorted(contexts)[0] mutant still survives only by coincidence since the chosen context alarms is also sorted-first \u2014 behaviorally equivalent for this input); stub-tagged-with-new-id(@allure.story(\"{di_id}\") -> @allure.story(\"DI-TODO\")); stub-fails-until-implemented(pytest.fail(...) -> pass, caught by ExitCode.TESTS_FAILED); print-checklist(print(CHECKLIST.format(...)) -> pass); reject-unknown-context(if context not in contexts: -> if False:); reject-unknown-user-need(if unknown: -> if False:, caught by ids-unchanged assertion).",
-  "test_hash": "sha256:26fe1961d6b5c73deda4df25527c3145ec7bb44c868e94bc2a6edf1f77274435",
+  "rationale": "Re-review: the DI text gained the satisfies clause. All probes via rdm story mutation-probe on rdm/story_audit/new_input.py, all KILLED. New clause - newly referenced user need joins the owning context's satisfies list: update_satisfies `added = [ref for ref in refs if ref not in current]` -> `added = []` KILLED by `satisfies: [UN-001, UN-002]` (UN-001 retained, UN-002 added). Spot-checked prior clauses still kill: next-unused-id (`return f\"DI-{highest + 1}\"` -> `return \"DI-2\"` KILLED - max across both contexts, not first-gap); stub tagged with the new id (`@allure.story(\"{di_id}\")` -> `\"DI-TODO\"` KILLED); reject unknown context (`if context not in contexts:` -> `if False:` KILLED, backed by the ids-unchanged assertion). Insert-into-CHOSEN-context (DI-4 in alarms.md, absent from trends.md), failing-stub-until-implemented (ExitCode.TESTS_FAILED), checklist-print, and unknown-user-need clauses are asserted unchanged from the previous review pass, where each was KILLED; the sorted(contexts)[0] context mutant remains behaviorally equivalent for this fixture (the chosen context alarms is also sorted-first).",
+  "test_hash": "sha256:5e60862e1b7f77345dadc0e7ce52bb64e63ca5731b9d908024bddc0a30d1bd2f",
+  "hash_scope": "module",
   "reviewed_tests": [
     "test_new_input_scaffolds_a_traced_design_input"
+  ],
+  "probes": [
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "            added = [ref for ref in refs if ref not in current]",
+      "replace": "            added = []",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "    return f\"DI-{highest + 1}\"",
+      "replace": "    return \"DI-2\"",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "@allure.story(\"{di_id}\")",
+      "replace": "@allure.story(\"DI-TODO\")",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "    if context not in contexts:",
+      "replace": "    if False:",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    }
   ],
   "uncovered_clauses": []
 }

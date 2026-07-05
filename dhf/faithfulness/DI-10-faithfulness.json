@@ -1,10 +1,42 @@
 {
   "design_input": "DI-10",
   "verdict": "faithful",
-  "reviewer": "claude (independent review pass)",
-  "rationale": "asserts audit_for_gaps returns 3 when a required reference is absent and 0 when all are present; an audit that ignored coverage could not produce both exit codes.",
-  "test_hash": "sha256:a70aeb22399e1be99b3cab2d1b939c71e27d5699e54eb6bb57a5f814554ea3bb",
+  "reviewer": "claude (independent of author)",
+  "rationale": "Re-review after test strengthening (DI text unchanged). All probes via rdm story mutation-probe on rdm/gaps.py, all KILLED. Clauses: (1) missing required reference -> non-zero: failing branch `return 3` -> `return 0` KILLED (the partial, bare-prose, and prefix docs all assert exit 3); (2) fully covered set -> zero: success branch `return 0` -> `return 3` KILLED; (3) NEW - a bare prose mention is not a reference: matching against the whole content instead of the [[..]] blocks (`referenced = ' '.join(... _REFERENCE_BLOCK_PATTERN ...)` -> `referenced = content`) KILLED by the 'We do not address X-2' doc asserting 3; (4) NEW - [[X-12]] does not satisfy X-1: dropping the after-boundary lookahead from the key pattern KILLED by the only-[[X-12]] doc asserting 3. The human-readable listing of missing keys is exercised under DI-12's coverage test; here the audit's report is its exit status, pinned in both directions.",
+  "test_hash": "sha256:29820b70f2ca3086c0bfd6e27f96c26d803c269c83067053b00276b56f014a86",
+  "hash_scope": "module",
   "reviewed_tests": [
     "test_reports_missing_checklist_references"
-  ]
+  ],
+  "probes": [
+    {
+      "file": "rdm/gaps.py",
+      "find": "        return 3",
+      "replace": "        return 0",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "        return 0",
+      "replace": "        return 3",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "    referenced = ' '.join(match.group(1) for match in _REFERENCE_BLOCK_PATTERN.finditer(content))",
+      "replace": "    referenced = content",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "        pattern = '(?<![{before}]){key}(?![{after}])'.format(",
+      "replace": "        pattern = '(?<![{before}]){key}'.format(",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
 }

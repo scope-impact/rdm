@@ -1,0 +1,51 @@
+{
+  "design_input": "DI-27",
+  "verdict": "partial",
+  "reviewer": "claude (independent of author)",
+  "rationale": "Probes via rdm story mutation-probe on rdm/story_audit/design_gate.py. Covered clauses (KILLED): (1) probes stored as structured data: record_verdict `\"probes\": probes or [],` -> `\"probes\": [],` KILLED by the JSON round-trip equality; (2) replay re-executes the recorded killing probes: replay_probes `killed += 1` -> `pass` KILLED by (replayed, killed, failures) == (1, 1, []); (3) replay fails when a probe no longer kills: discarding the SURVIVES failure (`failures.append(f\"{di_id}: recorded killing probe now SURVIVES \"` -> assign to `_`) KILLED by len(failures) == 1 and 'SURVIVES' in failures[0] after the test is weakened; (4a) non-faithful inputs are shown under --stale: `if stale_only and agg.status == faithfulness.FAITHFUL:` -> `if stale_only:` (skip everything) KILLED by 'DI-1: unreviewed' in the output. UNCOVERED (4b): the filtering-out of faithful inputs - a report that ignores --stale entirely passes (probe recorded as SURVIVED). Fix: add a second, faithful design input to the fixture and assert it absent from the --stale output, then re-review.",
+  "test_hash": "sha256:3198fb120bb275c9247b0b9be3d2ffa1e746d78876d4fe237bceeb277ee0dc96",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_verdicts_carry_replayable_probes"
+  ],
+  "probes": [
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        \"probes\": probes or [],",
+      "replace": "        \"probes\": [],",
+      "test": "test_verdicts_carry_replayable_probes",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "                killed += 1",
+      "replace": "                pass",
+      "test": "test_verdicts_carry_replayable_probes",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "                failures.append(f\"{di_id}: recorded killing probe now SURVIVES \"",
+      "replace": "                _ = (f\"{di_id}: recorded killing probe now SURVIVES \"",
+      "test": "test_verdicts_carry_replayable_probes",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        if stale_only and agg.status == faithfulness.FAITHFUL:",
+      "replace": "        if stale_only:",
+      "test": "test_verdicts_carry_replayable_probes",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        if stale_only and agg.status == faithfulness.FAITHFUL:",
+      "replace": "        if False:",
+      "test": "test_verdicts_carry_replayable_probes",
+      "result": "SURVIVED"
+    }
+  ],
+  "uncovered_clauses": [
+    "the --stale filter's exclusion of FAITHFUL inputs from the report: the no-filter mutant (`if stale_only and agg.status == faithfulness.FAITHFUL: continue` -> `if False:`) SURVIVES, because the fixture's only design input is non-faithful at the filtered call, so nothing can be asserted absent from the output"
+  ]
+}
