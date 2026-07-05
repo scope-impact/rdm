@@ -1,10 +1,42 @@
 {
   "design_input": "DI-15",
   "verdict": "faithful",
-  "reviewer": "claude (independent review pass)",
-  "rationale": "calls the real init() and asserts the scaffold contains Makefile, config.yml, documents/, and the design-controls templates incl. a kind:design doc; an empty or partial scaffold fails the file/content assertions.",
-  "test_hash": "sha256:a9ec4e609783dfc857f01ee1412bc2e98e65900483121462f3afe2e9f0585842",
+  "reviewer": "claude-reviewer-3 (independent of author)",
+  "rationale": "Re-review after PR #40 fixes (fd78dd2): DI-15 prose gained the user_needs-registry/runbook parity claim and the test was strengthened to match. All probes executed via rdm story mutation-probe against test_init_scaffolds_a_project. Clause table: (1) one command lays down templates/Makefile/config -- gut init's copytree (mkdir only): KILLED by the Makefile/config.yml/documents assertions. (2) design-controls templates ship -- copytree then unlink the scaffolded software_design_specification.md: KILLED by its is_file assertion (design_review.md and traceability_matrix.md asserted alongside). (3) the scaffolded V&V plan carries a machine-readable user_needs registry -- rename 'user_needs: []' to 'user_need_registry: []' in the shipped template rdm/init_files/documents/verification_and_validation_plan.md: KILLED by the yaml.safe_load + frontmatter['user_needs'] == [] assertion (present, empty, parseable). (4) AGENT_WORKFLOW.md lands at the project root, copied from the adopt tree at init time -- copy the runbook to 'WORKFLOW.md' instead: KILLED by the (project / 'AGENT_WORKFLOW.md').is_file() assertion. Documented hole (SURVIVED, not an equivalent mutant): mutating the shipped template's frontmatter line 'kind: design' to 'kind: prose' in software_design_specification.md survives, because the test's substring check '\"kind: design\" in read_text()' is also satisfied by a template comment ('Discovery keys on `kind: design` ...') on line 8 of the same file. The template's presence is verified (clause 2 probe), but the frontmatter-key integrity of its content is only substring-checked; a future strengthening should parse the frontmatter. This is a sub-property beyond DI-15's laying-down clauses, all of which have killing probes, so the verdict stays faithful with the hole recorded honestly.",
+  "test_hash": "sha256:3f6c36fa79199522b984d522ac25c80c5bf6de297af7000ae3c2fc5dca06f886",
+  "hash_scope": "module",
   "reviewed_tests": [
     "test_init_scaffolds_a_project"
-  ]
+  ],
+  "probes": [
+    {
+      "file": "rdm/init.py",
+      "find": "        shutil.copytree(init_directory, output_directory)",
+      "replace": "        Path(output_directory).mkdir(parents=True, exist_ok=True)",
+      "test": "test_init_scaffolds_a_project",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/init.py",
+      "find": "        shutil.copytree(init_directory, output_directory)",
+      "replace": "        shutil.copytree(init_directory, output_directory); (Path(output_directory) / \"documents\" / \"software_design_specification.md\").unlink()",
+      "test": "test_init_scaffolds_a_project",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/init_files/documents/verification_and_validation_plan.md",
+      "find": "user_needs: []",
+      "replace": "user_need_registry: []",
+      "test": "test_init_scaffolds_a_project",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/init.py",
+      "find": "        shutil.copy(runbook, Path(output_directory) / 'AGENT_WORKFLOW.md')",
+      "replace": "        shutil.copy(runbook, Path(output_directory) / 'WORKFLOW.md')",
+      "test": "test_init_scaffolds_a_project",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
 }

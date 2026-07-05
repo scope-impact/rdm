@@ -1,9 +1,9 @@
 {
   "design_input": "DI-22",
   "verdict": "faithful",
-  "reviewer": "claude (independent of author)",
-  "rationale": "Re-review: the DI text gained the satisfies clause. All probes via rdm story mutation-probe on rdm/story_audit/new_input.py, all KILLED. New clause - newly referenced user need joins the owning context's satisfies list: update_satisfies `added = [ref for ref in refs if ref not in current]` -> `added = []` KILLED by `satisfies: [UN-001, UN-002]` (UN-001 retained, UN-002 added). Spot-checked prior clauses still kill: next-unused-id (`return f\"DI-{highest + 1}\"` -> `return \"DI-2\"` KILLED - max across both contexts, not first-gap); stub tagged with the new id (`@allure.story(\"{di_id}\")` -> `\"DI-TODO\"` KILLED); reject unknown context (`if context not in contexts:` -> `if False:` KILLED, backed by the ids-unchanged assertion). Insert-into-CHOSEN-context (DI-4 in alarms.md, absent from trends.md), failing-stub-until-implemented (ExitCode.TESTS_FAILED), checklist-print, and unknown-user-need clauses are asserted unchanged from the previous review pass, where each was KILLED; the sorted(contexts)[0] context mutant remains behaviorally equivalent for this fixture (the chosen context alarms is also sorted-first).",
-  "test_hash": "sha256:5e60862e1b7f77345dadc0e7ce52bb64e63ca5731b9d908024bddc0a30d1bd2f",
+  "reviewer": "claude-reviewer-3 (independent of author)",
+  "rationale": "Re-review after the DI-22 amendment (block-style satisfies handling + safe text embedding, fd78dd2). All twelve probes executed via rdm story mutation-probe against test_new_input_scaffolds_a_traced_design_input; all KILLED, none survived. Clause table: (1) next unused DI id across the whole DHF -- return 'DI-2' instead of max+1: KILLED (fixture takes DI-1/DI-3 across two contexts; test demands exactly {DI-1, DI-3, DI-4}). (2) entry inserted into the CHOSEN context's design_inputs -- doc = contexts[sorted(contexts)[0]]: KILLED. Note: this exact mutant was documented as behaviorally equivalent in the previous review (single scaffold into the sorted-first context); the strengthened test's second scaffold into 'trends' now kills it. (3) stub tagged with the new id -- @allure.story('DI-TODO'): KILLED; stub FAILS until implemented -- pytest.fail(...) -> pass: KILLED by the pytest.ExitCode.TESTS_FAILED assertion on a real pytest run of the stub. (4) checklist printed -- reword the CHECKLIST header so 'checklist' vanishes from stdout: KILLED. (5) unknown context rejected -- 'if context not in contexts:' -> 'if False:': KILLED; unknown user need rejected -- 'if unknown:' -> 'if False:': KILLED (backed by the ids-unchanged assertion, nothing scaffolded). (6) newly referenced need joins an INLINE satisfies list -- rewrite the inline list without the added refs: KILLED by 'satisfies: [UN-001, UN-002]' in alarms.md. (7) AMENDED: a BLOCK-style satisfies list is edited in place without a duplicate key -- (a) disable the block-branch guard so the code falls through to the create-new-key path: KILLED by trends_text.count('satisfies:') == 1 (the duplicate-key assertion); (b) misplace the appended item at the closing fence (end + offset -> close + offset) so it lands outside the list: KILLED by the parsed frontmatter['satisfies'] == ['UN-001', 'UN-002'] assertion. (8) AMENDED: requirement text embedded safely -- (a) _docstring_escape -> identity: KILLED; the hostile text containing a triple-quote corrupts the generated stub and ast.parse raises SyntaxError; (b) _yaml_quote -> bare quoting with no escaping: KILLED by the exact YAML round-trip assertion declared['DI-5']['text'] == hostile. No surviving mutants; the previously recorded equivalent mutant (sorted-first context) is now killed by the strengthened test.",
+  "test_hash": "sha256:2ff8a947b0740785996ae5426c73e6de53bf8bb9e14c92ff7e8c84723aa5b66a",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_new_input_scaffolds_a_traced_design_input"
@@ -11,15 +11,15 @@
   "probes": [
     {
       "file": "rdm/story_audit/new_input.py",
-      "find": "            added = [ref for ref in refs if ref not in current]",
-      "replace": "            added = []",
+      "find": "    return f\"DI-{highest + 1}\"",
+      "replace": "    return \"DI-2\"",
       "test": "test_new_input_scaffolds_a_traced_design_input",
       "result": "KILLED"
     },
     {
       "file": "rdm/story_audit/new_input.py",
-      "find": "    return f\"DI-{highest + 1}\"",
-      "replace": "    return \"DI-2\"",
+      "find": "    doc = contexts[context]",
+      "replace": "    doc = contexts[sorted(contexts)[0]]",
       "test": "test_new_input_scaffolds_a_traced_design_input",
       "result": "KILLED"
     },
@@ -32,8 +32,64 @@
     },
     {
       "file": "rdm/story_audit/new_input.py",
+      "find": "    pytest.fail(\"{di_id} acceptance test not implemented -- replace this stub with real assertions\")",
+      "replace": "    pass",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "Remaining traceability checklist (see {workflow}):",
+      "replace": "Remaining traceability steps (see {workflow}):",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
       "find": "    if context not in contexts:",
       "replace": "    if False:",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "    if unknown:",
+      "replace": "    if False:",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "                lines[i] = f\"satisfies: [{', '.join(current + added)}]\\n\"",
+      "replace": "                lines[i] = f\"satisfies: [{', '.join(current)}]\\n\"",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "        if re.match(r\"^satisfies:\\s*(#.*)?$\", lines[i]):",
+      "replace": "        if False:",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "                lines.insert(end + offset, f\"{indent}- {ref}\\n\")",
+      "replace": "                lines.insert(close + offset, f\"{indent}- {ref}\\n\")",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "    return text.replace(\"\\\\\", \"\\\\\\\\\").replace('\"', '\\\\\"')",
+      "replace": "    return text",
+      "test": "test_new_input_scaffolds_a_traced_design_input",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/new_input.py",
+      "find": "    return '\"' + text.replace(\"\\\\\", \"\\\\\\\\\").replace('\"', '\\\\\"') + '\"'",
+      "replace": "    return '\"' + text + '\"'",
       "test": "test_new_input_scaffolds_a_traced_design_input",
       "result": "KILLED"
     }
