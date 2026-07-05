@@ -62,6 +62,15 @@ The hard gate: design approved **and** every design input verified by a
 passing test **and** faithful **and** every user need addressed by at least
 one input.
 
+## Polyglot products
+
+Executed verification (Allure results) is language-agnostic, and source-tag
+discovery also reads JS/TS `allure.story(...)` calls and Java
+`@Story(...)`/`@Feature(...)` annotations across conventional test-file names
+(`*.test.ts`, `*.spec.js`, `*Test.java`, `*_test.go`, …). Function-scope
+verdict hashing is Python-only; tests in other languages pin at whole-file
+scope.
+
 ## Faithfulness review
 
 A passing test proves code ran, not that the requirement is met. Whoever wrote
