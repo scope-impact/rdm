@@ -59,11 +59,14 @@ This context owns:
   **journaled** to a sidecar before mutating and any leftover journal is
   recovered at the start of the next probe of that file — surviving even
   SIGKILL; (b) SIGTERM during the probe window is converted to an exception so
-  a shell timeout still restores in-process; (c) every write bumps the file's
-  mtime by a unique nanosecond value, so CPython's (mtime-seconds, size) pyc
-  key can never serve stale bytecode to a same-second size-preserving
-  mutation — without the cold-cache-per-probe slowdown that caused the
-  timeout incident. The verdict discrimination is strict: only a genuine
+  a shell timeout still restores in-process; (c) every write advances the
+  file's mtime to a **fresh whole second**, strictly beyond both the previous
+  value and the clock — CPython's pyc key is (mtime truncated to seconds,
+  size), so a nanosecond-granularity bump within the same second is invisible
+  to it (an independent review proved the earlier unique-ns scheme let a
+  same-second size-preserving mutant run stale bytecode); the whole-second
+  advance changes the key on every write without the cold-cache-per-probe
+  slowdown that caused the timeout incident. The verdict discrimination is strict: only a genuine
   test failure counts as a kill. A run that did not execute cleanly — a
   collection error, no tests matched the selector, an internal failure —
   is an **error**, never a kill: a typo'd selector must not manufacture
