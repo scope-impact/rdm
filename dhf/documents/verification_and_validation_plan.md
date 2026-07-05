@@ -28,6 +28,8 @@ user_needs:
     text: "A contributor (human or agent) is guided to author a new design input that is fully traced: declared in its owning context, verified by a tagged test, and carried through the gates."
   - id: UN-011
     text: "An existing repository (brownfield, little or no documentation) can be brought under record-first design controls from a single command, without disturbing its current contents."
+  - id: UN-012
+    text: "A release's evidence (verification data, traceability matrix, faithfulness verdicts) and the device-master-record index can be produced as retained, generated artifacts from the record."
 ---
 
 # Purpose
@@ -64,5 +66,6 @@ contexts that satisfy it. `rdm story release-gate` enforces this.
 | UN-009 | maintainer/second-agent review that the faithfulness gate blocks unreviewed/unfaithful/partial/stale verdicts | dogfooding: `rdm story faithfulness` over RDM's own DHF, with an independent reviewer |
 | UN-010 | maintainer review that a scaffolded design input lands fully traced (frontmatter entry, tagged stub test, checklist) and that the agent workflow runbook matches the enforced gates | dogfooding: `rdm story new-input` used against RDM's own DHF; agent sessions following `dhf/AGENT_WORKFLOW.md` |
 | UN-011 | maintainer review that an adopted repository ends up with the working control surface (DHF skeleton, runbook, hook, bootstrap, CI) and that nothing pre-existing was overwritten | trial adoption into a scratch copy of a real repository; `rdm adopt` acceptance test exercises the skip-not-overwrite contract |
+| UN-012 | maintainer review that a produced evidence bundle and DMR index are complete and agree with the record they were generated from | dogfooding: `rdm story dmr` / `evidence-bundle` run against RDM's own DHF and the worked example |
 
 Formative evidence never gates release.

@@ -2,7 +2,7 @@
 id: SDS-REC-001
 kind: design
 context: record
-satisfies: [UN-001, UN-004]
+satisfies: [UN-001, UN-004, UN-012]
 design_inputs:
   - id: DI-1
     text: "RDM shall read the user-need registry + satisfies refs from frontmatter and ingest Allure results, with no project-management dependency."
@@ -10,6 +10,9 @@ design_inputs:
   - id: DI-6
     text: "RDM shall mark planning-tool outputs as non-record, keeping planning artifacts out of the controlled record."
     traces_to: []
+  - id: DI-29
+    text: "RDM shall generate device-master-record index data from controlled documents' frontmatter, writing one entry per document (id, title, path, revision) to a data file the DMR index renders from."
+    traces_to: [UN-012]
 ---
 
 # Record — Software Design
@@ -26,6 +29,11 @@ This context owns the design inputs declared in the frontmatter:
   constraint (`traces_to: []`). (That planning tooling is *optional* — the record
   core needs no planning extra — is the structural property DI-1's "no
   project-management dependency" test already pins.)
+- **DI-29 (DMR index data)** — `rdm story dmr` generates device-master-record
+  index data from the controlled documents' own frontmatter (one entry per
+  document: id, title, path, revision), so the DMR index is derived from the
+  record rather than hand-maintained — the same generated-not-transcribed rule
+  the traceability matrix follows. Refines UN-012.
 
 ## Design Outputs
 

@@ -8,7 +8,7 @@ design_inputs:
     text: "RDM shall scaffold a new documentation project from one command, laying down the document templates, build Makefile, and render config."
     traces_to: [UN-008]
   - id: DI-22
-    text: "RDM shall scaffold a new design input: allocate the next unused DI id, insert the entry into the chosen context's design_inputs frontmatter, emit a stub acceptance test tagged with the new id that fails until implemented, and print the remaining traceability checklist, rejecting an unknown context or user need."
+    text: "RDM shall scaffold a new design input: allocate the next unused DI id, insert the entry into the chosen context's design_inputs frontmatter, add any newly referenced user need to that context's satisfies list, emit a stub acceptance test tagged with the new id that fails until implemented, and print the remaining traceability checklist, rejecting an unknown context or user need."
     traces_to: [UN-010]
   - id: DI-24
     text: "RDM shall bring an existing repository under design controls from one command: lay down the DHF skeleton (V&V plan, per-context design template, design review, traceability matrix), the agent workflow runbook, the design-gate pre-commit hook, a session bootstrap, and a CI gate workflow, skipping (never overwriting) any destination file that already exists."
@@ -33,8 +33,10 @@ This context owns:
   `@allure.story("DI-n")` that **fails until implemented** (so the release gate
   stays honestly red), and prints the remaining traceability checklist (design
   prose, commit-approval, implementation, real assertions, faithfulness verdict,
-  gates, matrix). An unknown context or user need is rejected — a design input
-  can never be scaffolded outside the record.
+  gates, matrix). A user need referenced by `--traces-to` that the context does
+  not yet `satisfies` is added to that list (declare-once, reference-everywhere
+  stays consistent without a hand edit). An unknown context or user need is
+  rejected — a design input can never be scaffolded outside the record.
 - **DI-24 (brownfield adoption)**, refining UN-011: `rdm adopt` brings an
   *existing* repository under record-first design controls from one command —
   where `rdm init` (DI-15) creates a new documentation project, `rdm adopt`

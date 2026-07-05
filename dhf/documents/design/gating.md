@@ -19,6 +19,15 @@ design_inputs:
   - id: DI-21
     text: "RDM shall provide a mutation probe that applies a one-line source mutation, runs a test, reports whether the test caught it (killed) or not (survived), and always restores the file."
     traces_to: [UN-009]
+  - id: DI-26
+    text: "rdm hooks shall install only the design-gate pre-commit hook by default, adding the issue-reference hooks solely when requested via an explicit flag."
+    traces_to: [UN-002]
+  - id: DI-27
+    text: "RDM shall record faithfulness verdicts with their executed mutation probes as structured data, support replaying the recorded killing probes and failing when any probe no longer kills, and support filtering the faithfulness report to non-faithful inputs."
+    traces_to: [UN-009]
+  - id: DI-28
+    text: "RDM shall pin each faithfulness verdict at a recorded hash scope, module scope by default (the full source files containing the verifying tests) with function scope selectable, and judge staleness per verdict using its recorded scope, honoring legacy verdicts as function-scoped."
+    traces_to: [UN-009]
 ---
 
 # Gating — Software Design
@@ -45,6 +54,23 @@ This context owns:
   one-line source mutation, run a test, report killed/survived, and always
   restore the file. Turns "this test would catch a broken X" from a reviewer's
   claim into executed evidence. Refines UN-009.
+- **DI-26 (design-gate-only hooks default)** — `rdm hooks` installs only the
+  design-gate pre-commit hook by default; the legacy issue-reference hooks
+  (commit-msg / prepare-commit-msg) are installed only with
+  `--with-issue-hooks`. RDM's own repo deleted them; downstream defaults
+  should match. Refines UN-002.
+- **DI-27 (replayable probes)** — a verdict can carry the reviewer's executed
+  mutation probes as structured data (`--probe` JSON, repeated), and
+  `rdm story faithfulness --replay` re-executes every recorded killing probe,
+  failing if any now survives — the review becomes continuously verifiable
+  evidence, not a trust-at-review-time claim. `--stale` filters the report to
+  non-faithful inputs (the reviewer's worklist). Refines UN-009.
+- **DI-28 (verdict hash scope)** — each verdict records its `hash_scope`.
+  Default `module`: the pin covers the full source files containing the
+  verifying tests, so editing a shared helper or fixture re-opens the review
+  (function-only pinning let helper edits hollow a test silently). `function`
+  remains selectable for noisy files; verdicts without the field are honored
+  as function-scoped (no retroactive staleness). Refines UN-009.
 
 ## Design Outputs
 

@@ -164,8 +164,13 @@ inputs, never **duplicated**: it is defined once in the registry.
   driving a second agent, or a human) and recorded as `*-faithfulness.json`.
 - **release-gate**: every **design input** is *verified* (its `@allure.story("DI-…")`
   test passes, aggregated across contexts) **and** *faithful* (current
-  faithfulness verdict), every user need is addressed by at least one design
-  input, **and** every user need has approved validation evidence.
+  faithfulness verdict), and every user need is addressed by at least one
+  design input. *Validation* evidence (human summative review per the V&V
+  plan's approach table, plus formative persona runs) is recorded and reviewed
+  but is **not machine-gated** today — the gate enforces the
+  verification-and-faithfulness denominator; making UN-keyed validation
+  records a gate condition is a candidate future hardening, not an
+  implemented check.
 
 ## Why "product need" is dropped
 
