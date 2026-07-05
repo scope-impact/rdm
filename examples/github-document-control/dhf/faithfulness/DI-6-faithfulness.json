@@ -1,11 +1,70 @@
 {
   "design_input": "DI-6",
   "verdict": "faithful",
-  "reviewer": "claude (independent of author)",
-  "rationale": "clauses: merge-commit only(KILLED: allow_merge_commit true->false), squash disabled(KILLED: allow_squash_merge false->true, re-verified after test strengthening), rebase disabled(KILLED: allow_rebase_merge false->true), head branch deleted on merge(KILLED: delete_branch_on_merge true->false), setup applies settings(KILLED: gh api --method PATCH repos/$REPO --input $SETTINGS_FILE line removed from setup.sh), setup drift-checks the settings(previously UNCOVERED \u2014 the old contains($want) assertion was satisfied by the ruleset drift check; test now asserts the settings-specific drift-check line verbatim: neutering it to jq -e ... true KILLED, deleting the entire settings drift-check block KILLED), declared-as-config-code covered by construction (test parses the checked-in settings.json). 6/6 clauses killed; control probe (comment-only mutation) SURVIVED as expected, validating the harness.",
-  "test_hash": "sha256:234820c223d96e03b3fdc8eb2556138b4874e1bd6cc9ebc229085e44bf3dcc60",
+  "reviewer": "claude-reviewer-6 (independent of author)",
+  "rationale": "Clause table (all probes executed via rdm story mutation-probe, files auto-restored): (1) merge-commit only \u2014 settings.json allow_merge_commit true->false KILLED; (2) squash disabled \u2014 allow_squash_merge false->true KILLED; (3) rebase disabled \u2014 allow_rebase_merge false->true KILLED; (4) head branch deleted on merge \u2014 delete_branch_on_merge true->false KILLED; (5) setup APPLIES the settings \u2014 setup.sh gh api --method PATCH repos/$REPO --input $SETTINGS_FILE line replaced with no-op KILLED; (6) setup drift-checks the settings by EXACT projected comparison (amended prose: a subset/containment test is not a drift check) \u2014 (a) reverting the settings check to jq contains($want) subset semantics KILLED (caught by both the matches_declared assertion and the contains($want)-absence assertion), (b) gutting the projected-equality helper by renaming def prune($w): KILLED, (c) neutering the live fetch live_settings=$(gh api repos/$REPO) to cat $SETTINGS_FILE (self-comparison) KILLED; (7) declared-as-config-code \u2014 covered by construction: the test parses the checked-in github/settings.json directly. 7/7 probes KILLED across 6 probed clauses + 1 by-construction clause; control probe (comment-only mutation in setup.sh) SURVIVED as expected, validating the harness.",
+  "test_hash": "sha256:e5adb92146dd20307b99f9d9605782e43735a9df299ab43320dd0b0255a07082",
+  "hash_scope": "module",
   "reviewed_tests": [
     "test_merge_behavior_is_configuration_code"
+  ],
+  "probes": [
+    {
+      "file": "examples/github-document-control/github/settings.json",
+      "find": "\"allow_merge_commit\": true",
+      "replace": "\"allow_merge_commit\": false",
+      "test": "test_merge_behavior_is_configuration_code",
+      "result": "KILLED"
+    },
+    {
+      "file": "examples/github-document-control/github/settings.json",
+      "find": "\"allow_squash_merge\": false",
+      "replace": "\"allow_squash_merge\": true",
+      "test": "test_merge_behavior_is_configuration_code",
+      "result": "KILLED"
+    },
+    {
+      "file": "examples/github-document-control/github/settings.json",
+      "find": "\"allow_rebase_merge\": false",
+      "replace": "\"allow_rebase_merge\": true",
+      "test": "test_merge_behavior_is_configuration_code",
+      "result": "KILLED"
+    },
+    {
+      "file": "examples/github-document-control/github/settings.json",
+      "find": "\"delete_branch_on_merge\": true",
+      "replace": "\"delete_branch_on_merge\": false",
+      "test": "test_merge_behavior_is_configuration_code",
+      "result": "KILLED"
+    },
+    {
+      "file": "examples/github-document-control/setup.sh",
+      "find": "gh api --method PATCH \"repos/$REPO\" --input \"$SETTINGS_FILE\" >/dev/null",
+      "replace": "true # settings no longer applied",
+      "test": "test_merge_behavior_is_configuration_code",
+      "result": "KILLED"
+    },
+    {
+      "file": "examples/github-document-control/setup.sh",
+      "find": "if echo \"$live_settings\" | matches_declared \"$want_settings\"; then",
+      "replace": "if echo \"$live_settings\" | jq -e --argjson want \"$want_settings\" 'contains($want)' >/dev/null; then",
+      "test": "test_merge_behavior_is_configuration_code",
+      "result": "KILLED"
+    },
+    {
+      "file": "examples/github-document-control/setup.sh",
+      "find": "PRUNE='def prune($w):",
+      "replace": "PRUNE='def keep_all($w):",
+      "test": "test_merge_behavior_is_configuration_code",
+      "result": "KILLED"
+    },
+    {
+      "file": "examples/github-document-control/setup.sh",
+      "find": "live_settings=\"$(gh api \"repos/$REPO\")\"",
+      "replace": "live_settings=\"$(cat \"$SETTINGS_FILE\")\"",
+      "test": "test_merge_behavior_is_configuration_code",
+      "result": "KILLED"
+    }
   ],
   "uncovered_clauses": []
 }
