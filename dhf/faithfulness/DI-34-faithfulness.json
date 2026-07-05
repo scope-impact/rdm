@@ -1,0 +1,63 @@
+{
+  "design_input": "DI-34",
+  "verdict": "faithful",
+  "reviewer": "claude-agent independent reviewer (not test author)",
+  "rationale": "Decomposed DI-34 into 6 clauses; each has a covering assertion and an executed KILLED mutation probe. (a) *_test.yml scanned: set(tags)=={DI-7,DI-8,DI-9} + tags[DI-7] path assertion; removing *_test.yml from TEST_FILE_GLOBS KILLED. (b) *_test.yaml scanned: DI-9 lives in playbook_test.yaml; removing *_test.yaml KILLED. (c) ID-shaped tags count as story tags (inline-list DI-7, block-list DI-8, scalar DI-9): breaking ANSIBLE_ID_TAG to r'^$' KILLED. (d) non-ID operational tags ignored: explicit 'always'/'bootstrap' not-in assertions plus set equality; dropping the ANSIBLE_ID_TAG.match filter in _yaml_tag_ids KILLED. (e) non-test YAML not scanned: group_vars.yml carries DI-6 which set equality excludes; widening globs to *.yml/*.yaml KILLED. (f) whole-file scope: sources[DI-7]==[full file text] and sources[DI-8] likewise; truncating the non-py append in scan_tagged_sources to the first line KILLED. Extra: disabling the yaml branch in _tag_ids_in (return []) KILLED. File restored after every probe (md5 verified).",
+  "test_hash": "sha256:fe57581efc642b8783205ad9f4f37eb18c1f3ce98b01c143c9d4bf4bd12547dc",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_ansible_test_task_tags_are_discovered"
+  ],
+  "probes": [
+    {
+      "file": "rdm/record/allure.py",
+      "find": "    \"*_test.yml\", \"*_test.yaml\",",
+      "replace": "    \"*_test.yaml\",",
+      "test": "test_ansible_test_task_tags_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "    \"*_test.yml\", \"*_test.yaml\",",
+      "replace": "    \"*_test.yml\",",
+      "test": "test_ansible_test_task_tags_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "ANSIBLE_ID_TAG = re.compile(r\"^[A-Za-z][A-Za-z0-9_]*-\\d+$\")",
+      "replace": "ANSIBLE_ID_TAG = re.compile(r\"^$\")",
+      "test": "test_ansible_test_task_tags_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "if isinstance(tag, str) and ANSIBLE_ID_TAG.match(tag)",
+      "replace": "if isinstance(tag, str)",
+      "test": "test_ansible_test_task_tags_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "    \"*_test.yml\", \"*_test.yaml\",",
+      "replace": "    \"*.yml\", \"*.yaml\",",
+      "test": "test_ansible_test_task_tags_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "sources.setdefault(tag_id, []).append(text)",
+      "replace": "sources.setdefault(tag_id, []).append(text.splitlines()[0])",
+      "test": "test_ansible_test_task_tags_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "        return _yaml_tag_ids(content)",
+      "replace": "        return []",
+      "test": "test_ansible_test_task_tags_are_discovered",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
+}

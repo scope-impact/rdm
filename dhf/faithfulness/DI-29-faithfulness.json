@@ -1,9 +1,9 @@
 {
   "design_input": "DI-29",
   "verdict": "faithful",
-  "reviewer": "claude (independent of author)",
-  "rationale": "Re-pin of the prior faithful verdict: it went stale because commit 5d2d0e5 appended the DI-31 test to the same module (tests/acceptance/test_record.py) and the pin is module-scoped; the DI-29 tagged test function is byte-identical (diff verified purely additive) and all 4 recorded probes were re-executed this session via --replay, all KILLED. Original review, re-confirmed: probes via rdm story mutation-probe on rdm/record/dmr.py, all KILLED. Clauses: (1) one entry per controlled document, an un-identified document is not indexed (and is skipped loudly): `if not doc_id:` -> `if False:` KILLED (notes.md warning on stderr + the exact entries equality); (2) entry fields generated from frontmatter - revision: `\"revision\": frontmatter.get(\"revision\")` -> `None` KILLED; path: `md.relative_to(base).as_posix() ...` -> `md.name` KILLED; id and title are pinned by the same exact entries-list equality; (3) written to a data file the DMR index renders from, marked generated: dropping the GENERATED header from the written file KILLED; deterministic regeneration is asserted byte-for-byte. Documented equivalent mutant: `return sorted(entries, key=id)` -> `return entries` SURVIVED - glob filename order coincides with id order in this fixture and both are deterministic; ordering is not a clause of the DI text.",
-  "test_hash": "sha256:a03d53ae8355ea960fb2c5652f8002c2c341129c4c985968633f5a81ad041343",
+  "reviewer": "claude-agent independent reviewer (not test author)",
+  "rationale": "Independent re-review after the module-scope hash pin was re-opened by an unrelated DI-34 test appended to tests/acceptance/test_record.py (git diff verified purely additive; the DI-29 test function is byte-identical). Judged fresh from the current test body; all probes re-executed this session on rdm/record/dmr.py, all KILLED. Clauses: (1) one entry per controlled document, an un-identified document is not indexed and is skipped loudly: exact data['entries'] list equality + 'notes.md' asserted in stderr; probe `if not doc_id:` -> `if False:` KILLED. (2) entry fields (id, title, path, revision) generated from frontmatter: pinned by the exact entries-list equality; probes `\"revision\": frontmatter.get(\"revision\")` -> `None` KILLED, `\"path\": md.relative_to(base)...` -> `md.name` KILLED, and (added this review) `\"title\": str(frontmatter.get(\"title\",\"\")).strip()` -> `\"\"` KILLED; id is pinned by the same exact equality. (3) written to a data file the DMR index renders from, marked generated: 'GENERATED' asserted in the written file, probe dropping the header from write_text KILLED; deterministic regeneration asserted byte-for-byte (second run output == first). Known equivalent mutant from the prior review (drop `sorted(entries, key=id)`) remains a non-clause: ordering is not in the DI text and glob order coincides with id order in the fixture.",
+  "test_hash": "sha256:c0b5a05aee87fc988edce03903a1e2f1152f36a46042f96dbb60c91d0b788281",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_dmr_index_data_is_generated_from_frontmatter"
@@ -27,6 +27,13 @@
       "file": "rdm/record/dmr.py",
       "find": "            \"path\": md.relative_to(base).as_posix() if md.is_relative_to(base) else str(md),",
       "replace": "            \"path\": md.name,",
+      "test": "test_dmr_index_data_is_generated_from_frontmatter",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/dmr.py",
+      "find": "            \"title\": str(frontmatter.get(\"title\", \"\")).strip(),",
+      "replace": "            \"title\": \"\",",
       "test": "test_dmr_index_data_is_generated_from_frontmatter",
       "result": "KILLED"
     },

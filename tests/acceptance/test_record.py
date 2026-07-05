@@ -88,3 +88,51 @@ def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
     assert "def test_py" in sources["DI-1"][0] and "def helper" not in sources["DI-1"][0]
     assert sources["DI-2"] == [(tests / "alarms.test.ts").read_text()]
     assert sources["DI-3"] == [(tests / "AlarmTest.java").read_text()]
+
+
+@allure.story("DI-34")
+@allure.label("output", "rdm/record/allure.py")
+def test_ansible_test_task_tags_are_discovered(tmp_path: Path) -> None:
+    """DI-34: Ansible test task files (*_test.yml / *_test.yaml) are scanned;
+    ID-shaped task tags count as story tags, operational tags are ignored,
+    non-test YAML is not scanned, and the source pins at whole-file scope."""
+    from rdm.record.allure import scan_source_tags, scan_tagged_sources
+
+    tests = tmp_path / "tests"
+    (tests / "ansible").mkdir(parents=True)
+    state_test = tests / "ansible" / "state_management_test.yml"
+    state_test.write_text(
+        "- name: stack roots use an S3 backend\n"
+        "  ansible.builtin.assert:\n"
+        "    that: \"'backend = \\\"s3\\\"' in root_hcl\"\n"
+        "  tags: [DI-7, always]\n"
+        "- name: state locking enabled\n"
+        "  ansible.builtin.assert:\n"
+        "    that: \"'use_lockfile = true' in root_hcl\"\n"
+        "  tags:\n"
+        "    - DI-8\n"
+        "    - bootstrap\n"
+    )
+    (tests / "ansible" / "playbook_test.yaml").write_text(
+        "- hosts: localhost\n"
+        "  tasks:\n"
+        "    - name: nested play task tag is found\n"
+        "      ansible.builtin.assert:\n"
+        "        that: true\n"
+        "      tags: DI-9\n"
+    )
+    (tests / "ansible" / "group_vars.yml").write_text(
+        "tags: [DI-6]\n"  # not *_test.yml -> never scanned
+    )
+
+    # ID-shaped tags are discovered in both list and scalar/block forms;
+    # operational tags and non-test YAML files are not.
+    tags = scan_source_tags(tests)
+    assert set(tags) == {"DI-7", "DI-8", "DI-9"}
+    assert tags["DI-7"] == [str(state_test)]
+    assert "always" not in tags and "bootstrap" not in tags
+
+    # Whole-file scope: the pinned source is the full task file.
+    sources = scan_tagged_sources(tests)
+    assert sources["DI-7"] == [state_test.read_text()]
+    assert sources["DI-8"] == [state_test.read_text()]

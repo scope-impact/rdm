@@ -20,6 +20,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import yaml
+
 from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # Matches @allure.story("ID") / @allure.feature("ID"). Single home for the
@@ -192,13 +194,15 @@ def find_tests_dir(dhf_dir: Path) -> Path | None:
 
 
 # Conventional test-file names per ecosystem (DI-31): pytest, JS/TS runners
-# (jest/vitest/playwright), Java (JUnit + allure-java), Go.
+# (jest/vitest/playwright), Java (JUnit + allure-java), Go, and Ansible test
+# task files (DI-34).
 TEST_FILE_GLOBS = (
     "test_*.py", "*_test.py",
     "*.test.js", "*.test.jsx", "*.test.ts", "*.test.tsx",
     "*.spec.js", "*.spec.ts",
     "*Test.java", "*Tests.java",
     "*_test.go",
+    "*_test.yml", "*_test.yaml",
 )
 
 # Non-Python tag syntaxes (DI-31): JS/TS runtime calls `allure.story("…")`
@@ -207,6 +211,46 @@ POLYGLOT_TAG_PATTERNS = (
     re.compile(r'(?<!@)\ballure\.(story|feature)\(\s*["\']([^"\']+)["\']'),
     re.compile(r'@(Story|Feature)\(\s*"([^"]+)"'),
 )
+
+# Ansible task tags that carry a verification ID (DI-34). Ansible has no
+# allure call site — the story ID travels as a task tag (and reaches Allure
+# through a run-time callback plugin), so only ID-shaped tags (letters-dash-
+# digits, e.g. DI-7) count; operational tags (`always`, `bootstrap`, …) don't.
+ANSIBLE_ID_TAG = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\d+$")
+
+_YAML_SUFFIXES = (".yml", ".yaml")
+
+
+def _yaml_tag_ids(content: str) -> list[str]:
+    """Every ID-shaped Ansible tag in a test task file (DI-34).
+
+    Walks all YAML documents (task lists or plays) collecting `tags` values;
+    unparseable YAML yields no tags rather than an error — the file simply
+    claims no coverage.
+    """
+    try:
+        documents = list(yaml.safe_load_all(content))
+    except yaml.YAMLError:
+        return []
+
+    ids: list[str] = []
+
+    def _walk(node) -> None:
+        if isinstance(node, dict):
+            tags = node.get("tags")
+            candidates = tags if isinstance(tags, list) else [tags]
+            ids.extend(
+                tag for tag in candidates
+                if isinstance(tag, str) and ANSIBLE_ID_TAG.match(tag)
+            )
+            for value in node.values():
+                _walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                _walk(value)
+
+    _walk(documents)
+    return ids
 
 
 def _iter_test_files(tests_dir: Path):
@@ -222,6 +266,8 @@ def _tag_ids_in(path: Path, content: str) -> list[str]:
     """Every story/feature tag ID a test source file claims, per its language."""
     if path.suffix == ".py":
         return [m.group(2) for m in ALLURE_PATTERN.finditer(content)]
+    if path.suffix in _YAML_SUFFIXES:
+        return _yaml_tag_ids(content)
     ids: list[str] = []
     for pattern in POLYGLOT_TAG_PATTERNS:
         ids.extend(m.group(2) for m in pattern.finditer(content))
