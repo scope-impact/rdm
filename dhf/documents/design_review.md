@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 2
+revision: 3
 title: Design Review — RDM
 ---
 
@@ -90,6 +90,41 @@ change procedure (`AGENT_WORKFLOW.md`).
 - No blocking findings. The follow-up from Review 1 (migrating the release
   gate to read the V&V-plan registry) is implemented; the release-gate
   denominator is the union of `design_inputs` reconciled against the registry.
+
+# Design Review 3 — Soundness hardening, release artifacts, audit response
+
+**Scope reviewed:** the design inputs added or amended after Review 2 —
+DI-26 (design-gate-only hooks default), DI-27 (replayable probes, report
+filters), DI-28 (per-verdict hash scope), DI-29/DI-30 (DMR index data and the
+release evidence bundle, with UN-012), DI-31 (polyglot tag discovery), DI-32
+(legacy-workflow deprecation), the DI-21 amendment (defense-in-depth probe
+restore after the SIGTERM/stale-pyc incidents), the DI-10/DI-22 amendments
+(sound gap reference matching; satisfies-list sync), and DI-33 (summative
+validation records + release-gate warnings, raised by external-style audit
+finding NC-1).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Each input is owned by one context, individually verified by a tagged test,
+  and carries a current independent faithfulness verdict; from DI-26 onward
+  verdicts embed executed mutation probes and are replay-verified.
+- The incident record (SIGTERM restore gap; same-second stale-pyc; the replay
+  timeout) shows root-cause fixes flowing through this same loop, with the
+  interim partial verdicts retained as evidence.
+- Audit findings NC-4 (checklist completeness: §11.10(h)/(j)), NC-5 (this
+  review entry), and NC-6 (retention statement) are dispositioned in this
+  revision; NC-1 is dispositioned by DI-33 plus the summative reviews that
+  remain a human obligation; NC-2/NC-3 (human PR review and approval; unique,
+  signed identities) are open human actions tracked in the pull request.
+
+## Findings and actions
+
+- Open: summative validation records for UN-001..012 (human reviewers, per the
+  V&V plan approach table) — the release gate now names each missing record.
+- Open: merge via an independent, human-reviewed PR; individual signing
+  identities (NC-2/NC-3).
 
 # Approval
 
