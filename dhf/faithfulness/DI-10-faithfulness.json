@@ -1,9 +1,9 @@
 {
   "design_input": "DI-10",
   "verdict": "faithful",
-  "reviewer": "claude (independent of author)",
-  "rationale": "Re-review after test strengthening (DI text unchanged). All probes via rdm story mutation-probe on rdm/gaps.py, all KILLED. Clauses: (1) missing required reference -> non-zero: failing branch `return 3` -> `return 0` KILLED (the partial, bare-prose, and prefix docs all assert exit 3); (2) fully covered set -> zero: success branch `return 0` -> `return 3` KILLED; (3) NEW - a bare prose mention is not a reference: matching against the whole content instead of the [[..]] blocks (`referenced = ' '.join(... _REFERENCE_BLOCK_PATTERN ...)` -> `referenced = content`) KILLED by the 'We do not address X-2' doc asserting 3; (4) NEW - [[X-12]] does not satisfy X-1: dropping the after-boundary lookahead from the key pattern KILLED by the only-[[X-12]] doc asserting 3. The human-readable listing of missing keys is exercised under DI-12's coverage test; here the audit's report is its exit status, pinned in both directions.",
-  "test_hash": "sha256:29820b70f2ca3086c0bfd6e27f96c26d803c269c83067053b00276b56f014a86",
+  "reviewer": "claude-reviewer-5 (independent of author)",
+  "rationale": "Full re-review after PR #40 matcher change (_KEY_CHARS_NO_DOT became _KEY_CHARS_NO_DOT_NO_COLON; key pattern gained the (?!:[before]) lookahead) and the two new test scenarios. All probes via rdm story mutation-probe on rdm/gaps.py, all KILLED. Clauses: (1) missing required reference -> non-zero: failing branch 'return 3' -> 'return 0' KILLED (partial, bare-prose, prefix, and colon-qualified docs all assert exit 3); (2) fully covered -> zero: success branch 'return 0' -> 'return 3' KILLED (full.md and annotated.md assert 0); (3) bare prose mention is not a reference: matching whole content instead of [[..]] blocks (referenced = content) KILLED by the 'We do not address X-2' doc; (4) longer sibling never satisfies shorter ([[X-12]] vs X-1): dropping the after-boundary lookahead (?![after]) KILLED by the only-[[X-12]] doc; (5) NEW - [[KEY: annotation]] counts as a reference to KEY: restoring colon to the after-boundary class ('A-Za-z0-9_\\-' -> 'A-Za-z0-9_:\\-') KILLED by the annotated [[FDA-SW:sdmp: pointer]] doc asserting 0; (6) NEW - colon-QUALIFIED longer key never satisfies its prefix: dropping the second lookahead (?!:[before]) KILLED by the [[FDA-SW:sdmp]]-only doc asserting 3 against a checklist requiring FDA-SW. The human-readable listing of missing keys remains exercised under DI-12; here the audit's contract is its exit status, pinned in both directions and at both boundary allowances.",
+  "test_hash": "sha256:2009fe701fe4807f246da1cd81c9ae629bfb5dc19ee48ae2828ec0b1eee2e7b9",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_reports_missing_checklist_references"
@@ -32,8 +32,22 @@
     },
     {
       "file": "rdm/gaps.py",
-      "find": "        pattern = '(?<![{before}]){key}(?![{after}])'.format(",
-      "replace": "        pattern = '(?<![{before}]){key}'.format(",
+      "find": "        pattern = '(?<![{before}]){key}(?![{after}])(?!:[{before}])'.format(",
+      "replace": "        pattern = '(?<![{before}]){key}(?!:[{before}])'.format(",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "_KEY_CHARS_NO_DOT_NO_COLON = 'A-Za-z0-9_\\\\-'",
+      "replace": "_KEY_CHARS_NO_DOT_NO_COLON = 'A-Za-z0-9_:\\\\-'",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "        pattern = '(?<![{before}]){key}(?![{after}])(?!:[{before}])'.format(",
+      "replace": "        pattern = '(?<![{before}]){key}(?![{after}])'.format(",
       "test": "test_reports_missing_checklist_references",
       "result": "KILLED"
     }
