@@ -1,10 +1,56 @@
 {
   "design_input": "DI-10",
   "verdict": "faithful",
-  "reviewer": "claude (independent review pass)",
-  "rationale": "asserts audit_for_gaps returns 3 when a required reference is absent and 0 when all are present; an audit that ignored coverage could not produce both exit codes.",
-  "test_hash": "sha256:a70aeb22399e1be99b3cab2d1b939c71e27d5699e54eb6bb57a5f814554ea3bb",
+  "reviewer": "claude-reviewer-5 (independent of author)",
+  "rationale": "Full re-review after PR #40 matcher change (_KEY_CHARS_NO_DOT became _KEY_CHARS_NO_DOT_NO_COLON; key pattern gained the (?!:[before]) lookahead) and the two new test scenarios. All probes via rdm story mutation-probe on rdm/gaps.py, all KILLED. Clauses: (1) missing required reference -> non-zero: failing branch 'return 3' -> 'return 0' KILLED (partial, bare-prose, prefix, and colon-qualified docs all assert exit 3); (2) fully covered -> zero: success branch 'return 0' -> 'return 3' KILLED (full.md and annotated.md assert 0); (3) bare prose mention is not a reference: matching whole content instead of [[..]] blocks (referenced = content) KILLED by the 'We do not address X-2' doc; (4) longer sibling never satisfies shorter ([[X-12]] vs X-1): dropping the after-boundary lookahead (?![after]) KILLED by the only-[[X-12]] doc; (5) NEW - [[KEY: annotation]] counts as a reference to KEY: restoring colon to the after-boundary class ('A-Za-z0-9_\\-' -> 'A-Za-z0-9_:\\-') KILLED by the annotated [[FDA-SW:sdmp: pointer]] doc asserting 0; (6) NEW - colon-QUALIFIED longer key never satisfies its prefix: dropping the second lookahead (?!:[before]) KILLED by the [[FDA-SW:sdmp]]-only doc asserting 3 against a checklist requiring FDA-SW. The human-readable listing of missing keys remains exercised under DI-12; here the audit's contract is its exit status, pinned in both directions and at both boundary allowances.",
+  "test_hash": "sha256:2009fe701fe4807f246da1cd81c9ae629bfb5dc19ee48ae2828ec0b1eee2e7b9",
+  "hash_scope": "module",
   "reviewed_tests": [
     "test_reports_missing_checklist_references"
-  ]
+  ],
+  "probes": [
+    {
+      "file": "rdm/gaps.py",
+      "find": "        return 3",
+      "replace": "        return 0",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "        return 0",
+      "replace": "        return 3",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "    referenced = ' '.join(match.group(1) for match in _REFERENCE_BLOCK_PATTERN.finditer(content))",
+      "replace": "    referenced = content",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "        pattern = '(?<![{before}]){key}(?![{after}])(?!:[{before}])'.format(",
+      "replace": "        pattern = '(?<![{before}]){key}(?!:[{before}])'.format(",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "_KEY_CHARS_NO_DOT_NO_COLON = 'A-Za-z0-9_\\\\-'",
+      "replace": "_KEY_CHARS_NO_DOT_NO_COLON = 'A-Za-z0-9_:\\\\-'",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/gaps.py",
+      "find": "        pattern = '(?<![{before}]){key}(?![{after}])(?!:[{before}])'.format(",
+      "replace": "        pattern = '(?<![{before}]){key}(?![{after}])'.format(",
+      "test": "test_reports_missing_checklist_references",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
 }

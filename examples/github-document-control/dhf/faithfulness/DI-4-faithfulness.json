@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-4",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: rendered doc embeds revision history(KILLED: exact data row asserted in render; loop tamper {%- -> {% kills via source assertion), from repository data(KILLED: history.yml author 'Example Author'->'Someone Else' changes the render and fails the row assertion - proves data flows to output), not a hand-maintained table(KILLED: replacing the whole jinja loop with a literal table row fails the source-contains-loop assertion). SURVIVED (documented residual): a gamed mutant that KEEPS the vestigial loop but hardcodes the row body inside it passes all three assertions; killing it would require rendering twice with different history contexts and asserting the output tracks the data. Named per-clause mutations all killed; residual is an adversarial deeper variant.",
+  "test_hash": "sha256:988f4eda18b8354ac4b528fa9e20555ef59d394064675dbfe85df54366f38b5a",
+  "reviewed_tests": [
+    "test_rendered_sop_embeds_generated_revision_history"
+  ],
+  "uncovered_clauses": []
+}

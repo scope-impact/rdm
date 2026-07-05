@@ -24,3 +24,6 @@ var
 # Generated verification evidence (produced by the test suite / `rdm story verify`)
 **/allure-results/
 **/verification.yml
+
+# Generated at docs build time (docs/_hooks/evidence.py)
+docs/traceability-matrix.md

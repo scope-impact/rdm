@@ -35,7 +35,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - name: Set up Python
         run: uv python install 3.12
-      - name: Build the docs site (strict)
+      - name: Install all extras (the evidence hook runs the acceptance suite)
+        run: uv sync --all-extras
+      - name: Build the docs site (strict; generates the traceability-matrix evidence page)
         run: uv run --extra docs mkdocs build --strict
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'

@@ -304,6 +304,18 @@ def print_summary(summary: ValidationSummary) -> None:
 # =============================================================================
 
 
+def print_legacy_deprecation(command: str) -> None:
+    """DI-32: the YAML requirements workflow is deprecated (functional, unchanged
+    exit codes) in favor of the record-first model -- design inputs in kind:
+    design documents, verified by tagged tests and gated (`rdm story
+    design-gate` / `release-gate`; see dhf/AGENT_WORKFLOW.md in an adopted repo).
+    """
+    print(f"DEPRECATED: `{command}` operates on the legacy YAML requirements "
+          "workflow; new projects should use the record-first model "
+          "(`rdm adopt`, `rdm story new-input`, the design/release gates).",
+          file=sys.stderr)
+
+
 def story_validate_command(
     requirements_dir: Path | None = None,
     file_path: Path | None = None,
@@ -312,6 +324,7 @@ def story_validate_command(
     quiet: bool = False,
 ) -> int:
     """Run story validate command."""
+    print_legacy_deprecation("rdm story validate")
     print(f"Schema Version: v{SCHEMA_VERSION}")
 
     if file_path:

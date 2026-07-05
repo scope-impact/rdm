@@ -1,0 +1,56 @@
+{
+  "design_input": "DI-31",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "Probes via rdm story mutation-probe on rdm/record/allure.py, all KILLED. Clauses: (1) JS/TS allure-call discovery: JS pattern `\\ballure\\.` -> `\\bxallure\\.` KILLED (exact set(tags) equality + tags['DI-2'] == the .ts file); (2) Java @Story/@Feature discovery: `@(Story|Feature)` -> `@(XStory|XFeature)` KILLED (tags['DI-3'] == the .java file); (3) conventional test-file names, probed in BOTH directions: dropping `*.test.ts` from TEST_FILE_GLOBS KILLED (the TS test vanishes) and adding `*.txt` KILLED (notes.txt's allure.story('DI-9') prose would be scanned -- the non-test-file-NOT-scanned negative is pinned by the exact set equality); (4) function-scope capture for Python: `ast.get_source_segment(text, node) or \"\"` -> `text` KILLED ('def helper' must be OUTSIDE the pinned source while 'def test_py' is inside); (5) whole-file scope for other languages: non-Python branch `append(text)` -> `append(\"\")` KILLED (sources['DI-2']/['DI-3'] asserted equal to the full file text byte-for-byte). Purpose clause (tag-linkage warnings, audit coverage, faithfulness hashing in polyglot repos) is exercised via the real shared path: the tested scan_source_tags/scan_tagged_sources are exactly what story_audit/audit.py:234, design_gate.py:327 and record/faithfulness.py:143,154 consume; downstream reporting is covered by those features' own tagged tests.",
+  "test_hash": "sha256:9209e18cca11642f1fe2c91d7079e8db1b8e22bfe8da5e74d4a4a79500ce241f",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_polyglot_test_sources_are_discovered"
+  ],
+  "probes": [
+    {
+      "file": "rdm/record/allure.py",
+      "find": "(?<!@)\\ballure\\.",
+      "replace": "(?<!@)\\bxallure\\.",
+      "test": "test_polyglot_test_sources_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "@(Story|Feature)",
+      "replace": "@(XStory|XFeature)",
+      "test": "test_polyglot_test_sources_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "\"*.test.js\", \"*.test.jsx\", \"*.test.ts\", \"*.test.tsx\",",
+      "replace": "\"*.test.js\", \"*.test.jsx\", \"*.test.tsx\",",
+      "test": "test_polyglot_test_sources_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "\"*_test.go\",",
+      "replace": "\"*_test.go\", \"*.txt\",",
+      "test": "test_polyglot_test_sources_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "segment = ast.get_source_segment(text, node) or \"\"",
+      "replace": "segment = text",
+      "test": "test_polyglot_test_sources_are_discovered",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "sources.setdefault(tag_id, []).append(text)",
+      "replace": "sources.setdefault(tag_id, []).append(\"\")",
+      "test": "test_polyglot_test_sources_are_discovered",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
+}

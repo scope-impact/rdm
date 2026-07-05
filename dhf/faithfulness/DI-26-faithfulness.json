@@ -1,0 +1,35 @@
+{
+  "design_input": "DI-26",
+  "verdict": "faithful",
+  "reviewer": "claude-reviewer (independent of author)",
+  "rationale": "Re-pin after the PR #40 edits to tests/acceptance/test_gating.py (module-scope pin; git diff HEAD~2 confirms only test_verdicts_carry_replayable_probes changed -- this test's body is untouched). Spot-check re-executed against the current module: always-all-three-hooks mutant KILLED. Prior review carried forward: all probes via rdm story mutation-probe on rdm/hooks.py, all KILLED. Clauses: (1) the design-gate pre-commit hook installs by default: `DESIGN_GATE_HOOKS = ('pre-commit',)` -> `()` KILLED (default pre-commit must exist and be executable); (2) ONLY that hook by default: `names = DESIGN_GATE_HOOKS + (ISSUE_HOOKS if with_issue_hooks else ())` -> always all three (`DESIGN_GATE_HOOKS + ISSUE_HOOKS`) KILLED by the not-exists assertions on commit-msg / prepare-commit-msg; (3) issue hooks land solely with the explicit flag: same line -> always `DESIGN_GATE_HOOKS` (flag ignored) KILLED by the opt-in X_OK assertions on all three hooks. Executability is asserted (os.access X_OK) for every installed hook.",
+  "test_hash": "sha256:32c793061711e84fbcb653c69302bdaa5d25da938f6089b8f03353906ec7e1ee",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_hooks_installs_design_gate_only_by_default"
+  ],
+  "probes": [
+    {
+      "file": "rdm/hooks.py",
+      "find": "    names = DESIGN_GATE_HOOKS + (ISSUE_HOOKS if with_issue_hooks else ())",
+      "replace": "    names = DESIGN_GATE_HOOKS + ISSUE_HOOKS",
+      "test": "test_hooks_installs_design_gate_only_by_default",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/hooks.py",
+      "find": "    names = DESIGN_GATE_HOOKS + (ISSUE_HOOKS if with_issue_hooks else ())",
+      "replace": "    names = DESIGN_GATE_HOOKS",
+      "test": "test_hooks_installs_design_gate_only_by_default",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/hooks.py",
+      "find": "DESIGN_GATE_HOOKS = ('pre-commit',)",
+      "replace": "DESIGN_GATE_HOOKS = ()",
+      "test": "test_hooks_installs_design_gate_only_by_default",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
+}

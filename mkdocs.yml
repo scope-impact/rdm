@@ -49,19 +49,39 @@ markdown_extensions:
       permalink: true
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.inlinehilite
+
+# Build-time evidence generation (docs/traceability-matrix.md) — see the hook.
+hooks:
+  - docs/_hooks/evidence.py
 
 nav:
   - Home: index.md
-  - Architecture:
+  - Getting started:
+      - Installation: installation.md
+      - New project (rdm init): quickstart-new-project.md
+      - Existing repository (rdm adopt): quickstart-existing-repo.md
+  - User guide:
+      - Authoring and rendering: authoring.md
+      - Gap analysis (checklists): gap-analysis.md
+      - Design controls and traceability: design-controls.md
+      - Agent workflow (the change procedure): agent-workflow.md
+      - CLI reference: cli.md
+      - FAQ: FAQ.md
+  - Concepts:
       - Record-first architecture: record-first-architecture.md
       - Plan vs. record: plan-vs-record.md
       - ADR 0001 — User needs across bounded contexts: adr-0001-bounded-context-user-needs.md
-  - Guides:
-      - FAQ: FAQ.md
       - Audit checklist format: checklist-format.md
       - AI-persona usability validation: ai-persona-usability-validation.md
       - Worked example — VitalView: example-vitalview-decomposition.md
+  - Evidence:
+      - Document control (Part 11): document-control.md
+      - Traceability matrix (generated): traceability-matrix.md
   - Change history: HISTORY.md
   - API reference: reference.md

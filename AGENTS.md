@@ -1,3 +1,32 @@
+# Design controls come first
+
+RDM is a design-controls tool that governs its own development with the same
+controls. **The intent: a change here is not just working code — it is working
+code plus an unbroken chain of evidence** (user need → design input → tagged
+test → independent faithfulness verdict → generated traceability matrix), with
+approval recorded as the git commit of the design docs. CI and the pre-commit
+hook check every link; a change that skips one fails the build.
+
+Before writing any implementation, read **`dhf/AGENT_WORKFLOW.md`** — the
+canonical procedure, with a decision tree, why/do/done-when for each step, a
+worked example from this repo's history, and gate-failure fixes. The short
+version:
+
+- A behavior change is governed by a **design input** (`DI-n`): scaffold it
+  with `uv run rdm story new-input` (`--list` shows contexts, taken ids, and
+  user needs), then commit the design docs **before** the implementation —
+  the commit is the approval, and the gate blocks implementation commits
+  until it exists.
+- The tagged test (`@allure.story("DI-n")`, `tests/acceptance/`) **is** the
+  acceptance criterion, and it needs an **independent** faithfulness verdict —
+  never review a test you authored; hand it to the `test-faithfulness` skill
+  or a second agent. Editing a tagged test re-opens its review automatically.
+- Never hand-edit `dhf/documents/traceability_matrix.md` — it is generated
+  from executed results.
+
+The Backlog.md tasks below are **planning, never the record**: coordination
+scaffolding only, never cited as design, verification, or approval evidence
+(see `docs/plan-vs-record.md`).
 
 <!-- BACKLOG.MD GUIDELINES START -->
 # Instructions for the usage of Backlog.md CLI Tool

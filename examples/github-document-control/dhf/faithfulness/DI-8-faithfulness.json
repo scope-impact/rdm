@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-8",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: produces a manifest under release/(KILLED: redirect > release/device-history-record.json -> /tmp/\u2026), records tag(KILLED: tag removed wholesale from jq --arg + object), commit SHA(KILLED: commit_sha removed wholesale, re-verified after strengthening), releasing actor(KILLED: released_by removed wholesale), timestamp(KILLED: released_at removed wholesale), artifact list(KILLED: artifacts removed wholesale), fields bound to the actual release context(previously UNCOVERED \u2014 test now asserts the ${{ github.* }}/date bindings verbatim: --arg commit_sha bound to a constant KILLED; dropping only the --arg commit_sha line, which previously survived via the jq-object mention, now KILLED), attached to the release alongside the copies(KILLED: files: release/* narrowed to release/*.pdf). The \"each document release\" trigger clause is covered by the DI-3 test (doc-* tag trigger). All clauses killed.",
+  "test_hash": "sha256:a349af534445aa5449298ff9961a94c50fdd31190a35383cf827a4bcf4c5d78f",
+  "reviewed_tests": [
+    "test_release_writes_a_device_history_record"
+  ],
+  "uncovered_clauses": []
+}

@@ -1,0 +1,42 @@
+{
+  "design_input": "DI-29",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "Re-pin of the prior faithful verdict: it went stale because commit 5d2d0e5 appended the DI-31 test to the same module (tests/acceptance/test_record.py) and the pin is module-scoped; the DI-29 tagged test function is byte-identical (diff verified purely additive) and all 4 recorded probes were re-executed this session via --replay, all KILLED. Original review, re-confirmed: probes via rdm story mutation-probe on rdm/record/dmr.py, all KILLED. Clauses: (1) one entry per controlled document, an un-identified document is not indexed (and is skipped loudly): `if not doc_id:` -> `if False:` KILLED (notes.md warning on stderr + the exact entries equality); (2) entry fields generated from frontmatter - revision: `\"revision\": frontmatter.get(\"revision\")` -> `None` KILLED; path: `md.relative_to(base).as_posix() ...` -> `md.name` KILLED; id and title are pinned by the same exact entries-list equality; (3) written to a data file the DMR index renders from, marked generated: dropping the GENERATED header from the written file KILLED; deterministic regeneration is asserted byte-for-byte. Documented equivalent mutant: `return sorted(entries, key=id)` -> `return entries` SURVIVED - glob filename order coincides with id order in this fixture and both are deterministic; ordering is not a clause of the DI text.",
+  "test_hash": "sha256:a03d53ae8355ea960fb2c5652f8002c2c341129c4c985968633f5a81ad041343",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_dmr_index_data_is_generated_from_frontmatter"
+  ],
+  "probes": [
+    {
+      "file": "rdm/record/dmr.py",
+      "find": "        if not doc_id:",
+      "replace": "        if False:",
+      "test": "test_dmr_index_data_is_generated_from_frontmatter",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/dmr.py",
+      "find": "            \"revision\": frontmatter.get(\"revision\"),",
+      "replace": "            \"revision\": None,",
+      "test": "test_dmr_index_data_is_generated_from_frontmatter",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/dmr.py",
+      "find": "            \"path\": md.relative_to(base).as_posix() if md.is_relative_to(base) else str(md),",
+      "replace": "            \"path\": md.name,",
+      "test": "test_dmr_index_data_is_generated_from_frontmatter",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/dmr.py",
+      "find": "    out.write_text(header + yaml.safe_dump(payload, sort_keys=False), encoding=\"utf-8\")",
+      "replace": "    out.write_text(yaml.safe_dump(payload, sort_keys=False), encoding=\"utf-8\")",
+      "test": "test_dmr_index_data_is_generated_from_frontmatter",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
+}

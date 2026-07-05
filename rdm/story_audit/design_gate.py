@@ -516,6 +516,17 @@ def run_release_gate(
     for un in sorted(registry_user_needs(dhf_dir) - addressed):
         result.blocking.append(f"user need {un} is addressed by no design input")
 
+    # Summative validation is human-evidenced (DI-33): a missing approved
+    # record is named, loudly, but a machine cannot supply the judgment --
+    # warning, not blocking.
+    from rdm.record.validation import unvalidated_user_needs
+
+    result.warnings += [
+        f"user need {un} has no approved validation record "
+        f"(add {dhf_dir.name}/validation/{un}-validation.json)"
+        for un in unvalidated_user_needs(dhf_dir)
+    ]
+
     result.warnings += [
         f"Allure result tag {tag} matches no design input"
         for tag in relevant_orphans(report.orphan_ids, di_ids)
@@ -580,12 +591,57 @@ def story_release_gate_command(
     return 1
 
 
+def replay_probes(report) -> tuple[int, int, list[str]]:
+    """Re-execute every recorded KILLED mutation probe (DI-27).
+
+    Returns ``(replayed, still_killed, failures)`` where ``failures`` describes
+    probes that now survive or error — evidence the review no longer holds.
+    """
+    from rdm.story_audit.mutation import _pytest_runner, run_mutation_probe
+
+    replayed = killed = 0
+    failures: list[str] = []
+    for di_id in sorted(report.by_id):
+        for probe in report.by_id[di_id].probes:
+            if str(probe.get("result", "")).strip().upper() != "KILLED":
+                continue  # survived/equivalent probes are documentation, not claims
+            replayed += 1
+            file_path = Path(str(probe.get("file", "")))
+            try:
+                outcome = run_mutation_probe(
+                    file_path, str(probe.get("find", "")), str(probe.get("replace", "")),
+                    _pytest_runner(str(probe.get("test", ""))),
+                )
+            except OSError as error:
+                # A probe that can no longer execute (file gone, unreadable) is
+                # a per-probe gate failure, not a crash of the whole replay.
+                outcome = {"error": f"cannot execute probe on {file_path}: {error}"}
+            if outcome.get("killed"):
+                killed += 1
+                print(f"  [KILLED]   {di_id}: {file_path} :: {probe.get('test')}")
+            elif "error" in outcome:
+                failures.append(f"{di_id}: probe error -- {outcome['error']}")
+                print(f"  [ERROR]    {di_id}: {outcome['error']}")
+            else:
+                failures.append(f"{di_id}: recorded killing probe now SURVIVES "
+                                f"({file_path} :: {probe.get('test')})")
+                print(f"  [SURVIVED] {di_id}: {file_path} :: {probe.get('test')}")
+    return replayed, killed, failures
+
+
 def story_faithfulness_command(
     dhf_dir: Path | None = None,
     faithfulness_dir: Path | None = None,
+    stale_only: bool = False,
+    replay: bool = False,
 ) -> int:
     """Run the `rdm story faithfulness` command: report each design input's
-    independent faithfulness review (verifying test confirmed to verify it)."""
+    independent faithfulness review (verifying test confirmed to verify it).
+
+    ``stale_only`` filters the report to non-faithful inputs (the reviewer's
+    worklist); ``replay`` re-executes every recorded killing mutation probe and
+    fails if any no longer kills.
+    """
     dhf = (dhf_dir or Path("dhf")).resolve()
     if not dhf.exists():
         print(f"Error: DHF directory not found: {dhf}")
@@ -600,14 +656,28 @@ def story_faithfulness_command(
     print(f"Verdicts: {vdir} ({report.verdicts_found} found)\n")
 
     by_id = report.by_id
+    shown = 0
     for di_id in sorted(by_id):
         agg = by_id[di_id]
+        if stale_only and agg.status == faithfulness.FAITHFUL:
+            continue
+        shown += 1
         print(f"  {_FAITHFULNESS_MARKS.get(agg.status, '[????]')} {di_id}: {agg.status}"
               + (f" -- {agg.reviewer}" if agg.reviewer else ""))
         if agg.status != faithfulness.FAITHFUL and agg.rationale:
             print(f"            {agg.rationale}")
+    if stale_only and shown == 0:
+        print("  (none -- every design input is faithful)")
 
-    blocking = _faithfulness_messages(report)
+    replay_failures: list[str] = []
+    if replay:
+        print("\nReplaying recorded killing probes:")
+        replayed, killed, replay_failures = replay_probes(report)
+        print(f"\n  {killed}/{replayed} recorded killing probe(s) still kill.")
+        if replayed == 0:
+            print("  (no structured probes on record -- record them with `rdm story verdict --probe`)")
+
+    blocking = _faithfulness_messages(report) + replay_failures
     print()
     if not blocking:
         print(
@@ -615,7 +685,7 @@ def story_faithfulness_command(
             "review confirming its verifying test actually verifies it."
         )
         return 0
-    print(f"Faithfulness FAILED: {len(blocking)} design input(s) unconfirmed. "
+    print(f"Faithfulness FAILED: {len(blocking)} item(s) unconfirmed. "
           "Run the `test-faithfulness` skill (or a human reviewer) to record verdicts.")
     return 1
 
@@ -737,16 +807,23 @@ def record_verdict(
     reviewed_tests: list[str] | None = None,
     uncovered_clauses: list[str] | None = None,
     faithfulness_dir: Path | None = None,
+    hash_scope: str = faithfulness.DEFAULT_SCOPE,
+    probes: list[dict] | None = None,
 ) -> Path | None:
     """Write a faithfulness verdict for one design input, hash-pinned to the
     CURRENT verifying-test source (so it is valid for exactly the test reviewed,
-    and goes stale on any later edit). Returns the path, or ``None`` if the id is
-    not a declared design input.
+    and goes stale on any later edit). ``hash_scope`` selects what the pin
+    covers (module scope by default -- helper edits re-open the review);
+    ``probes`` records the reviewer's executed mutations so the review can be
+    replayed. Returns the path, or ``None`` if the id is not a declared design
+    input.
     """
     inputs = design_inputs(dhf_dir)
     if design_input_id not in {di["id"] for di in inputs}:
         return None
-    test_hash = faithfulness.current_hashes(inputs, allure.find_tests_dir(dhf_dir)).get(design_input_id, "")
+    test_hash = faithfulness.current_hashes(
+        inputs, allure.find_tests_dir(dhf_dir), scope=hash_scope
+    ).get(design_input_id, "")
     out_dir = faithfulness_dir_for(dhf_dir, faithfulness_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     record = {
@@ -755,7 +832,9 @@ def record_verdict(
         "reviewer": reviewer,
         "rationale": rationale,
         "test_hash": test_hash,
+        "hash_scope": hash_scope,
         "reviewed_tests": reviewed_tests or [],
+        "probes": probes or [],
         "uncovered_clauses": uncovered_clauses or [],
     }
     out = out_dir / f"{design_input_id}-faithfulness.json"
@@ -772,6 +851,8 @@ def story_verdict_command(
     uncovered: str | None = None,
     dhf_dir: Path | None = None,
     faithfulness_dir: Path | None = None,
+    hash_scope: str = faithfulness.DEFAULT_SCOPE,
+    probe: list[str] | None = None,
 ) -> int:
     """Run `rdm story verdict <DI-id> …`: record an independent faithfulness verdict.
 
@@ -787,11 +868,28 @@ def story_verdict_command(
         return 2
     tests = [t.strip() for t in (reviewed_tests or "").split(",") if t.strip()]
     clauses = [c.strip() for c in (uncovered or "").split(";") if c.strip()]
+    probes: list[dict] = []
+    for raw in probe or []:
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as error:
+            print(f"Error: --probe is not valid JSON ({error}): {raw}")
+            return 2
+        if not isinstance(parsed, dict):
+            print(f"Error: --probe must be a JSON object with file/find/replace/test keys: {raw}")
+            return 2
+        missing = {"file", "find", "replace", "test"} - set(parsed)
+        if missing:
+            print(f"Error: --probe needs file/find/replace/test keys (missing: {', '.join(sorted(missing))})")
+            return 2
+        parsed.setdefault("result", "KILLED")
+        probes.append(parsed)
     out = record_verdict(
         dhf, target, verdict,
         reviewer=reviewer, rationale=rationale,
         reviewed_tests=tests, uncovered_clauses=clauses,
         faithfulness_dir=faithfulness_dir,
+        hash_scope=hash_scope, probes=probes,
     )
     if out is None:
         declared = ", ".join(sorted(design_input_ids(dhf)))

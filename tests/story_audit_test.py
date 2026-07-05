@@ -7,8 +7,11 @@ Tests business logic, not framework validation (Pydantic handles that).
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
+
+import pytest
 
 
 # =============================================================================
@@ -413,6 +416,8 @@ class TestCheckIds:
         assert "FT-001" in duplicates
         assert len(duplicates["FT-001"]) == 2
 
+    @pytest.mark.skipif(os.geteuid() == 0,
+                        reason="root ignores file permissions; chmod 000 cannot make the file unreadable")
     def test_logs_warning_on_file_error(self, capsys: object) -> None:
         """find_id_definitions logs warning when file cannot be read."""
         from rdm.story_audit.check_ids import find_id_definitions

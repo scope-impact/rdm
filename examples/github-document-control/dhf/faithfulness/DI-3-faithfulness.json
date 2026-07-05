@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-3",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: triggered by release tag push(KILLED: tag doc-* -> v*), human-readable rendered copies(KILLED: 'rdm render $doc' replaced by cat), complete electronic archive(KILLED: git archive -> git bundle), attached to the release(KILLED: softprops/action-gh-release -> upload-artifact). SURVIVED (documented): removing only the pandoc PDF-conversion line passes because 'pandoc' still appears in the apt-get install run text - equivalent mutant w.r.t. the DI text (rdm-rendered Markdown copies remain human-readable and attached; DI does not mandate PDF), but the 'pandoc in run_text' assertion is weakly anchored to the install step.",
+  "test_hash": "sha256:97f30b919c697731e1d40e6e95b2dbba0221da5c233e81d159fe4822ebb1816b",
+  "reviewed_tests": [
+    "test_release_is_tag_triggered_with_both_copy_forms"
+  ],
+  "uncovered_clauses": []
+}

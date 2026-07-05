@@ -1,0 +1,6 @@
+# Controlled documents and the configuration that controls them require a
+# quality-team code-owner review (the electronic signature of record).
+/documents/   @example-org/quality
+/checklists/  @example-org/quality
+/github/      @example-org/quality
+/dhf/         @example-org/quality

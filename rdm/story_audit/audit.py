@@ -54,6 +54,10 @@ class AuditResult:
     conflicts: list[tuple[str, list[StoryReference]]] = field(default_factory=list)
     orphan_tests: list[str] = field(default_factory=list)
     orphan_sources: list[str] = field(default_factory=list)
+    # Record-first (DHF) design inputs: declared DI ids and the tagged subset.
+    design_inputs: dict[str, list[StoryReference]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
 
 
 # =============================================================================
@@ -192,6 +196,57 @@ def scan_sources(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list
     return refs, orphans
 
 
+def scan_design_inputs(
+    repo_path: Path,
+) -> tuple[dict[str, list[StoryReference]], dict[str, list[StoryReference]]]:
+    """Scan a record-first DHF for design inputs and their test-tag coverage.
+
+    Returns ``(declared, tagged)``: every design input declared in the DHF's
+    ``kind: design`` documents (as requirement references), and the subset that
+    a test references via an ``@allure.story``/``feature`` tag (as test
+    references). Both empty when the repository has no ``dhf/`` — legacy
+    behavior is unchanged.
+    """
+    declared: dict[str, list[StoryReference]] = defaultdict(list)
+    tagged: dict[str, list[StoryReference]] = defaultdict(list)
+    dhf_dir = repo_path / "dhf"
+    if not dhf_dir.exists():
+        return declared, tagged
+
+    from rdm.record.allure import find_tests_dir, scan_source_tags
+    from rdm.record.sdd import context_of, design_inputs, find_design_docs
+
+    doc_by_context = {context_of(doc): doc for doc in find_design_docs(dhf_dir)}
+    inputs = design_inputs(dhf_dir)
+    for di in inputs:
+        doc = doc_by_context.get(di["context"])
+        declared[di["id"]].append(
+            StoryReference(
+                story_id=di["id"],
+                file_path=str(doc) if doc else str(dhf_dir),
+                line_number=0,
+                context="requirement",
+                snippet=di["text"][:80],
+            )
+        )
+
+    tests_dir = find_tests_dir(dhf_dir)
+    tag_refs = scan_source_tags(tests_dir) if tests_dir else {}
+    for di in inputs:
+        for test_file in tag_refs.get(di["id"], []):
+            tagged[di["id"]].append(
+                StoryReference(
+                    story_id=di["id"],
+                    file_path=test_file,
+                    line_number=0,
+                    context="test",
+                    snippet="@allure tag",
+                )
+            )
+
+    return declared, tagged
+
+
 def scan_docs(repo_path: Path) -> dict[str, list[StoryReference]]:
     """Scan documentation for story references."""
     refs: dict[str, list[StoryReference]] = defaultdict(list)
@@ -252,6 +307,16 @@ def run_audit(repo_path: Path) -> AuditResult:
     result.sources, result.orphan_sources = scan_sources(repo_path)
     result.docs = scan_docs(repo_path)
 
+    # Record-first DHF: design inputs join the requirements universe, and their
+    # @allure-tagged tests count as coverage — so an untagged design input shows
+    # up as a story without coverage and degrades the score, instead of being
+    # invisible to a legacy-only scan.
+    result.design_inputs, di_tagged = scan_design_inputs(repo_path)
+    for di_id, refs in result.design_inputs.items():
+        result.requirements[di_id].extend(refs)
+    for di_id, refs in di_tagged.items():
+        result.tests[di_id].extend(refs)
+
     # Collect all IDs
     for refs in [result.requirements, result.tests, result.sources, result.docs]:
         result.all_ids.update(refs.keys())
@@ -291,7 +356,20 @@ def print_report(result: AuditResult, repo_path: Path) -> None:
     print(f"| ID conflicts | {len(result.conflicts)} |")
     print(f"| Orphan test files | {len(result.orphan_tests)} |")
     print(f"| Orphan source files | {len(result.orphan_sources)} |")
+    if result.design_inputs:
+        print(f"| Design inputs (DHF) | {len(result.design_inputs)} |")
     print()
+
+    # Record-first design inputs: per-input test-tag coverage
+    if result.design_inputs:
+        print(f"## Design Inputs (DHF) ({len(result.design_inputs)})\n")
+        print("| Design input | Test tag |")
+        print("|--------------|----------|")
+        for di_id in sorted(result.design_inputs, key=lambda d: (len(d), d)):
+            di_tests = [r for r in result.tests.get(di_id, []) if r.context == "test"]
+            status = f"tagged ({len(di_tests)} file(s))" if di_tests else "UNTAGGED"
+            print(f"| {di_id} | {status} |")
+        print()
 
     # ID Conflicts
     if result.conflicts:

@@ -1,0 +1,63 @@
+{
+  "design_input": "DI-32",
+  "verdict": "faithful",
+  "reviewer": "claude-reviewer-4 (independent of author)",
+  "rationale": "RE-PIN (independent, claude-reviewer-4): DI-32 went stale only because the shared module tests/acceptance/test_story_audit.py was edited by the PR #40 fix (fd78dd2), which changed only test_audit_includes_record_first_design_inputs (confirmed via git diff against origin/claude/agent-principles-traceability-ruq02b -- the sole hunks touch that function's signature, docstring, and body); test_legacy_yaml_workflow_is_deprecated is byte-identical. Spot-check probe re-executed on this checkout: validate.py call site `print_legacy_deprecation(\"rdm story validate\")` -> `pass` KILLED. Prior rationale carried forward unchanged below. || Probes via rdm story mutation-probe, KILLED unless noted. Clauses: (1) validate emits the notice: call site `print_legacy_deprecation(\"rdm story validate\")` -> `pass` KILLED -- note the capsys window at the validate assertion also contains a second check-ids notice, so this kill rides on `'rdm story validate' in err`, which only the validate notice can produce; (2) check-ids emits the notice: call site `print_legacy_deprecation(\"rdm story check-ids\")` -> `pass` KILLED against the first, clean capture window ('DEPRECATED' absent from stderr); (3) notice names the record-first replacement: wording `record-first model` -> `modern model` in the message KILLED ('record-first' asserted in stderr); (4) remaining functional with unchanged exit codes: check-ids duplicate path `return 1` -> `return 0  # mutated` KILLED by the still-detects == 1 assertion (killed by THIS test alone via the -k selector, independently of DI-13's test), check-ids clean path `return 0` -> `return 1  # mutated` KILLED (== 0 asserted), validate normal-path return -> `return 2` KILLED (exit pinned inside the pre-deprecation {0,1} contract; a deprecation-induced crash would also fail the test). Exit-code probe replacements deliberately change file size: a size-preserving one-liner (return 1 -> return 0) flaked SURVIVED once under back-to-back --replay because CPython pyc validation is (mtime-seconds, size) and probe restore+re-mutate can land in the same second. Documented residual (SURVIVED, recorded below, re-confirmed with a size-changing variant): swapping validate's 0/1 mapping survives the `in (0, 1)` assertion -- that mapping line predates DI-32 (introduced with validate.py in 09c6f75; DI-32's commit 5d2d0e5 is purely additive: the notice function plus two call sites), so the swap mutates legacy validation semantics outside this DI's design output, not the deprecation mechanism the 'unchanged exit codes' clause constrains.",
+  "test_hash": "sha256:1b232f741657f90b3303ac132ea543035f6220d65a376b25d67a53388c3847bf",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_legacy_yaml_workflow_is_deprecated"
+  ],
+  "probes": [
+    {
+      "file": "rdm/story_audit/validate.py",
+      "find": "    print_legacy_deprecation(\"rdm story validate\")",
+      "replace": "    pass",
+      "test": "test_legacy_yaml_workflow_is_deprecated",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/check_ids.py",
+      "find": "    print_legacy_deprecation(\"rdm story check-ids\")",
+      "replace": "    pass",
+      "test": "test_legacy_yaml_workflow_is_deprecated",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/validate.py",
+      "find": "new projects should use the record-first model",
+      "replace": "new projects should use the modern model",
+      "test": "test_legacy_yaml_workflow_is_deprecated",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/check_ids.py",
+      "find": "        return 1",
+      "replace": "        return 0  # mutated",
+      "test": "test_legacy_yaml_workflow_is_deprecated",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/check_ids.py",
+      "find": "    print(f\"No duplicate IDs found ({len(id_locations)} unique IDs checked)\")\n    return 0",
+      "replace": "    print(f\"No duplicate IDs found ({len(id_locations)} unique IDs checked)\")\n    return 1  # mutated",
+      "test": "test_legacy_yaml_workflow_is_deprecated",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/validate.py",
+      "find": "    return 0 if summary.invalid_files == 0 else 1",
+      "replace": "    return 2",
+      "test": "test_legacy_yaml_workflow_is_deprecated",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/validate.py",
+      "find": "    return 0 if summary.invalid_files == 0 else 1",
+      "replace": "    return (1 if summary.invalid_files == 0 else 0)",
+      "test": "test_legacy_yaml_workflow_is_deprecated",
+      "result": "SURVIVED"
+    }
+  ],
+  "uncovered_clauses": []
+}

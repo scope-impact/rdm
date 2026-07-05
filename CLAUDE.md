@@ -16,6 +16,11 @@ uv run --extra docs mkdocs serve   # Live-preview the docs at localhost:8000
 
 Ruff config: line-length 120, rules E/W/F (see `[tool.ruff]` in pyproject.toml).
 
+Note: the docs build runs the acceptance suite (a build hook generates the
+traceability-matrix evidence page from a live run), so expect `mkdocs build`
+to take ~10s and to need the full dev environment for real evidence — it
+degrades to a "no data" notice otherwise.
+
 Documentation is a [MkDocs](https://www.mkdocs.org/) site (Material theme):
 the Markdown prose under `docs/` plus an API reference generated from the source
 docstrings via [mkdocstrings](https://mkdocstrings.github.io/). Config is
@@ -26,8 +31,12 @@ broken link or missing nav entry — run it the way CI does.
 ## RDM develops itself with RDM (dogfood)
 
 RDM's own development is governed by RDM's record-first design controls. RDM is
-the product under control; its DHF lives in `dhf/` (see `dhf/README.md`). When
-changing RDM, you are working inside that DHF's scope:
+the product under control; its DHF lives in `dhf/` (see `dhf/README.md`).
+**`dhf/AGENT_WORKFLOW.md` is the canonical end-to-end procedure** — the
+decision tree, the 8-step loop, and the gate-failure fixes. Scaffold a new
+design input with `uv run rdm story new-input` (`--list` shows contexts, taken
+ids, and user needs). When changing RDM, you are working inside that DHF's
+scope:
 
 - **The record** — one `kind: design` document per bounded context under
   `dhf/documents/design/` (record, gating, verification, validation, rendering),
@@ -37,11 +46,13 @@ changing RDM, you are working inside that DHF's scope:
 - **Acceptance criteria are tests** — each design input DI-n is verified by a
   test tagged `@allure.story("DI-n")` in `tests/acceptance/`. Add/changing a
   design input means adding/adjusting its tagged test ("live BDD").
-- **Local gate** — install the pre-commit hook so implementation commits are
-  blocked unless the design docs are approved (committed):
+- **Local gate** — the design-gate pre-commit hook is committed in `.githooks/`
+  and activated automatically at session start (`.claude/settings.json` runs
+  `scripts/agent-bootstrap.sh`, which also syncs dependencies). Manual
+  activation, if ever needed:
 
   ```bash
-  uv run rdm hooks .githooks && git config core.hooksPath .githooks
+  git config core.hooksPath .githooks
   ```
 
 - **CI enforcement** — `.github/workflows/design-controls.yml` runs the full
@@ -49,9 +60,10 @@ changing RDM, you are working inside that DHF's scope:
   faithfulness → release-gate. A change that leaves a DI unverified, breaks the
   design gate, or edits a tagged test without re-recording its faithfulness
   verdict (goes **stale**) fails CI.
-- **After editing a tagged test**, re-record its faithfulness verdict (an
-  independent reviewer, the `test-faithfulness` skill, or `rdm story verdict`) —
-  the hash-pin intentionally re-opens the §820.30(e) review on any test change.
+- **After editing a tagged test**, re-record its faithfulness verdict — invoke
+  the `test-faithfulness` skill (or an independent reviewer; recorded via
+  `rdm story verdict`). The reviewer must not be the test's author. The
+  hash-pin intentionally re-opens the §820.30(e) review on any test change.
 
 Run the gates locally exactly as CI does:
 

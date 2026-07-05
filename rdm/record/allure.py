@@ -158,37 +158,91 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
     )
 
 
+def _repo_root(path: Path) -> Path | None:
+    """The enclosing git repository root (``.git`` may be a dir or a file)."""
+    for ancestor in [path, *path.parents]:
+        if (ancestor / ".git").exists():
+            return ancestor
+    return None
+
+
 def find_tests_dir(dhf_dir: Path) -> Path | None:
     """Locate the test suite to scan for @allure source tags.
 
-    Prefer ``<dhf>/../tests``; fall back to ``<cwd>/tests``. ``Path.cwd()`` is
-    evaluated lazily and guarded, because a prior test may have removed the
-    working directory (which would otherwise raise from the cwd lookup).
+    Anchored to the repository that CONTAINS the DHF: prefer ``<dhf>/../tests``,
+    then walk upward — never past the DHF's own git repository root, and never
+    outside a repository. The invoking process's working directory is
+    deliberately not consulted: a ``<cwd>/tests`` fallback would let an audit
+    of another checkout count the caller's test tags as that repository's
+    coverage (DI-23).
     """
-    sibling = dhf_dir.parent / "tests"
-    if sibling.exists():
-        return sibling
     try:
-        cwd_tests = Path.cwd() / "tests"
-    except OSError:
-        return None
-    return cwd_tests if cwd_tests.exists() else None
+        start = Path(dhf_dir).resolve().parent
+    except OSError:  # cwd removed under us and dhf_dir is relative
+        start = Path(dhf_dir).parent
+    root = _repo_root(start)
+    chain = [start, *start.parents]
+    # Without a repository boundary, only the DHF's sibling is trustworthy.
+    chain = chain[: chain.index(root) + 1] if root in chain else [start]
+    for ancestor in chain:
+        candidate = ancestor / "tests"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+# Conventional test-file names per ecosystem (DI-31): pytest, JS/TS runners
+# (jest/vitest/playwright), Java (JUnit + allure-java), Go.
+TEST_FILE_GLOBS = (
+    "test_*.py", "*_test.py",
+    "*.test.js", "*.test.jsx", "*.test.ts", "*.test.tsx",
+    "*.spec.js", "*.spec.ts",
+    "*Test.java", "*Tests.java",
+    "*_test.go",
+)
+
+# Non-Python tag syntaxes (DI-31): JS/TS runtime calls `allure.story("…")`
+# (no decorator @), and Java annotations `@Story("…")` / `@Feature("…")`.
+POLYGLOT_TAG_PATTERNS = (
+    re.compile(r'(?<!@)\ballure\.(story|feature)\(\s*["\']([^"\']+)["\']'),
+    re.compile(r'@(Story|Feature)\(\s*"([^"]+)"'),
+)
+
+
+def _iter_test_files(tests_dir: Path):
+    seen: set[Path] = set()
+    for pattern in TEST_FILE_GLOBS:
+        for path in tests_dir.rglob(pattern):
+            if path not in seen:
+                seen.add(path)
+                yield path
+
+
+def _tag_ids_in(path: Path, content: str) -> list[str]:
+    """Every story/feature tag ID a test source file claims, per its language."""
+    if path.suffix == ".py":
+        return [m.group(2) for m in ALLURE_PATTERN.finditer(content)]
+    ids: list[str] = []
+    for pattern in POLYGLOT_TAG_PATTERNS:
+        ids.extend(m.group(2) for m in pattern.finditer(content))
+    return ids
 
 
 def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
-    """Map each @allure story/feature ID to the test files that reference it.
+    """Map each story/feature tag ID to the test files that reference it.
 
     The source-tag counterpart of ``parse_results``: it reports which user needs
-    a test *claims* to cover (vs. whether the executed test passed).
+    a test *claims* to cover (vs. whether the executed test passed). Reads
+    Python decorators, JS/TS allure calls, and Java annotations (DI-31).
     """
     refs: dict[str, list[str]] = {}
-    for py_file in tests_dir.rglob("test_*.py"):
+    for test_file in sorted(_iter_test_files(tests_dir)):
         try:
-            content = py_file.read_text(encoding="utf-8", errors="ignore")
+            content = test_file.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             continue
-        for match in ALLURE_PATTERN.finditer(content):
-            refs.setdefault(match.group(2), []).append(str(py_file))
+        for tag_id in _tag_ids_in(test_file, content):
+            refs.setdefault(tag_id, []).append(str(test_file))
     return refs
 
 
@@ -206,21 +260,30 @@ def _decorator_tag_id(decorator: ast.expr) -> str | None:
 
 
 def scan_tagged_sources(tests_dir: Path | None) -> dict[str, list[str]]:
-    """Map each @allure story/feature ID to the *source* of the test function(s)
-    tagged with it (the AST counterpart of ``scan_source_tags``).
+    """Map each story/feature tag ID to the *source* of the test(s) tagged
+    with it (the function-scope counterpart of ``scan_source_tags``).
 
-    Captures the function body, not just the file, so a faithfulness verdict
-    pinned to this source only re-opens when the *tagged* function changes -- not
-    when an unrelated function in the same file is edited.
+    For Python, captures the tagged function body (AST), so a verdict pinned to
+    this source only re-opens when the *tagged* function changes. For other
+    languages (DI-31: JS/TS allure calls, Java annotations) there is no
+    cross-language AST, so the whole file is the source segment — stated, not
+    silent: a verdict on a non-Python test re-opens on any edit to its file.
     """
     sources: dict[str, list[str]] = {}
     if tests_dir is None or not tests_dir.exists():
         return sources
-    for py_file in sorted(tests_dir.rglob("test_*.py")):
+    for test_file in sorted(_iter_test_files(tests_dir)):
         try:
-            text = py_file.read_text(encoding="utf-8", errors="ignore")
+            text = test_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if test_file.suffix != ".py":
+            for tag_id in _tag_ids_in(test_file, text):
+                sources.setdefault(tag_id, []).append(text)
+            continue
+        try:
             tree = ast.parse(text)
-        except (OSError, SyntaxError):
+        except SyntaxError:
             continue
         for node in ast.walk(tree):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

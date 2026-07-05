@@ -1,0 +1,42 @@
+{
+  "design_input": "DI-30",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "Probes via rdm story mutation-probe on rdm/record/bundle.py, all KILLED. Clauses: (1) the verification data is in the bundle: writing it under a different name (`verification_path = out_dir / \"verification.yml\"` -> `\"verification-data.yml\"`) KILLED ((out/'verification.yml').is_file() plus the manifest files set); (2) the traceability matrix is RENDERED from that data: rendering with an empty context (`context = {\"verification\": ...}` -> `{}`) KILLED ('total=1 verified=1', 'row:DI-1:verified', and no '{%' template markers may remain); (3) the faithfulness verdicts travel with the bundle: `shutil.copy2(verdict, verdicts_out / verdict.name)` -> `pass` KILLED (verdict file present + manifest files set); (4) a manifest describing the bundle: emptying its files list (the rglob condition `if p.is_file() and p.name != \"manifest.json\"` -> `if False`) KILLED by the exact files-set equality, with on-disk manifest == returned manifest and the design_inputs/verified/faithfulness_verdicts counts asserted; (5) written to an output directory for retention: every assertion reads back from the out/ directory.",
+  "test_hash": "sha256:8fdcd76fb2da0323fdeb50b2a43481361b434be3adc801a73d40df529a0c115a",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_evidence_bundle_writes_the_retained_release_set"
+  ],
+  "probes": [
+    {
+      "file": "rdm/record/bundle.py",
+      "find": "        context = {\"verification\": yaml.safe_load(verification_path.read_text())}",
+      "replace": "        context = {}",
+      "test": "test_evidence_bundle_writes_the_retained_release_set",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/bundle.py",
+      "find": "        shutil.copy2(verdict, verdicts_out / verdict.name)",
+      "replace": "        pass",
+      "test": "test_evidence_bundle_writes_the_retained_release_set",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/bundle.py",
+      "find": "            if p.is_file() and p.name != \"manifest.json\"",
+      "replace": "            if False",
+      "test": "test_evidence_bundle_writes_the_retained_release_set",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/bundle.py",
+      "find": "    verification_path = out_dir / \"verification.yml\"",
+      "replace": "    verification_path = out_dir / \"verification-data.yml\"",
+      "test": "test_evidence_bundle_writes_the_retained_release_set",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
+}

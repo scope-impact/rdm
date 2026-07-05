@@ -36,7 +36,7 @@ import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record.allure import scan_tagged_sources
+from rdm.record.allure import scan_source_tags, scan_tagged_sources
 from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # Faithfulness statuses.
@@ -45,6 +45,16 @@ UNFAITHFUL = "unfaithful"   # reviewed but the test does not (or only weakly) ve
 PARTIAL = "partial"         # the test covers some, but not all, of the requirement's clauses
 STALE = "stale"             # the verifying test changed since the verdict was made
 UNREVIEWED = "unreviewed"   # no faithfulness verdict on record
+
+# Verdict hash scopes (DI-28). ``function`` pins the tagged test function's
+# source only; ``module`` pins the full source of every file containing a
+# tagged test, so editing a shared helper or fixture also re-opens the review.
+# New verdicts default to module scope; verdicts recorded before the field
+# existed are honored as function-scoped (no retroactive staleness).
+SCOPE_FUNCTION = "function"
+SCOPE_MODULE = "module"
+DEFAULT_SCOPE = SCOPE_MODULE
+_SCOPES = (SCOPE_FUNCTION, SCOPE_MODULE)
 
 
 @dataclass
@@ -56,6 +66,11 @@ class Verdict:
     reviewer: str = ""
     rationale: str = ""
     test_hash: str = ""
+    # Hash scope the verdict was pinned at ("" = legacy, treated as function).
+    hash_scope: str = ""
+    # The reviewer's executed mutation probes (DI-27): each a dict with
+    # file/find/replace/test (+ result). Killing probes can be replayed.
+    probes: list[dict] = field(default_factory=list)
     # Requirement clauses the reviewer found NOT covered by the test. A non-empty
     # list means the test is at best partial, even if `verdict` says faithful.
     uncovered_clauses: list[str] = field(default_factory=list)
@@ -72,6 +87,8 @@ class DesignInputFaithfulness:
     reviewer: str = ""
     rationale: str = ""
     reviewed_hash: str = ""
+    hash_scope: str = ""
+    probes: list[dict] = field(default_factory=list)
     uncovered_clauses: list[str] = field(default_factory=list)
 
 
@@ -113,9 +130,28 @@ def hash_for(di_text: str, test_sources: list[str]) -> str:
     return f"sha256:{digest}"
 
 
-def current_hashes(design_inputs: list[dict], tests_dir: Path | None) -> dict[str, str]:
-    """The hash each declared design input's verdict must match to be current."""
-    sources = scan_tagged_sources(tests_dir)
+def current_hashes(
+    design_inputs: list[dict], tests_dir: Path | None, scope: str = SCOPE_FUNCTION
+) -> dict[str, str]:
+    """The hash each declared design input's verdict must match to be current.
+
+    ``function`` scope hashes the tagged test functions' source segments;
+    ``module`` scope hashes the full source of every file containing a tagged
+    test for the input (so helper/fixture edits also invalidate the verdict).
+    """
+    if scope == SCOPE_MODULE:
+        files_by_id = scan_source_tags(tests_dir) if tests_dir else {}
+        sources = {}
+        for di_id, paths in files_by_id.items():
+            texts = []
+            for path in sorted(set(paths)):
+                try:
+                    texts.append(Path(path).read_text(encoding="utf-8", errors="ignore"))
+                except OSError:
+                    continue
+            sources[di_id] = texts
+    else:
+        sources = scan_tagged_sources(tests_dir)
     return {di["id"]: hash_for(di.get("text", ""), sources.get(di["id"], [])) for di in design_inputs}
 
 
@@ -126,12 +162,15 @@ def parse_verdicts(verdicts_dir: Path) -> list[Verdict]:
         if not di:
             return None
         uncovered = data.get("uncovered_clauses") or []
+        probes = data.get("probes") or []
         return Verdict(
             design_input=di,
             verdict=str(data.get("verdict", "")).strip().lower(),
             reviewer=str(data.get("reviewer", "")).strip(),
             rationale=str(data.get("rationale", "")).strip(),
             test_hash=str(data.get("test_hash", "")).strip(),
+            hash_scope=str(data.get("hash_scope", "")).strip().lower(),
+            probes=[p for p in probes if isinstance(p, dict)],
             uncovered_clauses=[str(c).strip() for c in uncovered if str(c).strip()],
             source=filename,
         )
@@ -150,7 +189,15 @@ def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | N
     """
     verdicts = parse_verdicts(Path(verdicts_dir))
     di_ids = {di["id"] for di in design_inputs}
-    expected = current_hashes(design_inputs, tests_dir)
+    # Each verdict is judged at the scope it was recorded at (DI-28); verdicts
+    # from before the field existed are function-scoped. Hashes are computed
+    # per scope on first use — most records are single-scope.
+    expected: dict[str, dict] = {}
+
+    def _expected(scope: str) -> dict:
+        if scope not in expected:
+            expected[scope] = current_hashes(design_inputs, tests_dir, scope)
+        return expected[scope]
 
     def _fold(agg: DesignInputFaithfulness, v: Verdict) -> None:
         # Last verdict (sorted by filename) wins; record its content.
@@ -158,13 +205,17 @@ def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | N
         agg.reviewer = v.reviewer
         agg.rationale = v.rationale
         agg.reviewed_hash = v.test_hash
+        agg.hash_scope = v.hash_scope if v.hash_scope in _SCOPES else SCOPE_FUNCTION
+        agg.probes = v.probes
         agg.uncovered_clauses = v.uncovered_clauses
 
     def _status(agg: DesignInputFaithfulness) -> str:
         if not agg.verdict:
             return UNREVIEWED
-        # A verdict only counts for the exact test it reviewed.
-        if agg.reviewed_hash != expected.get(agg.design_input, ""):
+        # A verdict only counts for the exact test it reviewed, at the scope
+        # it was pinned at.
+        scope = agg.hash_scope if agg.hash_scope in _SCOPES else SCOPE_FUNCTION
+        if agg.reviewed_hash != _expected(scope).get(agg.design_input, ""):
             return STALE
         # Explicit partial, OR a "faithful" verdict that nonetheless lists
         # uncovered clauses (an inconsistent claim) -> partial.

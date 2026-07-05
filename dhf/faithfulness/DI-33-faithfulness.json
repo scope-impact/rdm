@@ -1,0 +1,56 @@
+{
+  "design_input": "DI-33",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: ingest user_need/disposition/reviewer from <dhf>/validation (records keyed by UN; blanking the reviewer parse -> reviewer assertion fails, KILLED); per-missing-UN warning at release gate (UN-001+UN-002 both named with no records; neutering the design_gate loop 'for un in unvalidated_user_needs(dhf_dir)'->'for un in []' KILLED); only APPROVED clears (pending UN-002 still warns, approved UN-001 cleared; '== APPROVED'->'!= APPROVED' KILLED and ->'in (APPROVED, \"pending\")' KILLED; '- approved'->'- set()' KILLED via UN-001-not-warned + unvalidated==[UN-002]); warning does not block (gate.passed asserted in both states; warnings+=->blocking+= on the validation block KILLED via gate.passed)",
+  "test_hash": "sha256:cfce3a44838a72fad3552c13ab502db1a44262d37425ad57d84ceb550166f5a6",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_release_gate_names_unvalidated_user_needs"
+  ],
+  "probes": [
+    {
+      "file": "rdm/record/validation.py",
+      "find": "record[\"disposition\"] == APPROVED",
+      "replace": "record[\"disposition\"] != APPROVED",
+      "test": "test_release_gate_names_unvalidated_user_needs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/validation.py",
+      "find": "record[\"disposition\"] == APPROVED",
+      "replace": "record[\"disposition\"] in (APPROVED, \"pending\")",
+      "test": "test_release_gate_names_unvalidated_user_needs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/validation.py",
+      "find": "\"reviewer\": str(data.get(\"reviewer\", \"\")).strip(),",
+      "replace": "\"reviewer\": \"\",",
+      "test": "test_release_gate_names_unvalidated_user_needs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "result.warnings += [\n        f\"user need {un} has no approved validation record \"",
+      "replace": "result.blocking += [\n        f\"user need {un} has no approved validation record \"",
+      "test": "test_release_gate_names_unvalidated_user_needs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "for un in unvalidated_user_needs(dhf_dir)",
+      "replace": "for un in []",
+      "test": "test_release_gate_names_unvalidated_user_needs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/validation.py",
+      "find": "registry_user_needs(Path(dhf_dir)) - approved",
+      "replace": "registry_user_needs(Path(dhf_dir)) - set()",
+      "test": "test_release_gate_names_unvalidated_user_needs",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": []
+}

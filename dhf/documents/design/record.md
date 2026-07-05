@@ -2,7 +2,7 @@
 id: SDS-REC-001
 kind: design
 context: record
-satisfies: [UN-001, UN-004]
+satisfies: [UN-001, UN-004, UN-012]
 design_inputs:
   - id: DI-1
     text: "RDM shall read the user-need registry + satisfies refs from frontmatter and ingest Allure results, with no project-management dependency."
@@ -10,6 +10,12 @@ design_inputs:
   - id: DI-6
     text: "RDM shall mark planning-tool outputs as non-record, keeping planning artifacts out of the controlled record."
     traces_to: []
+  - id: DI-29
+    text: "RDM shall generate device-master-record index data from controlled documents' frontmatter, writing one entry per document (id, title, path, revision) to a data file the DMR index renders from."
+    traces_to: [UN-012]
+  - id: DI-31
+    text: "RDM shall discover verification tags in non-Python test sources — JavaScript/TypeScript allure calls and Java Story/Feature annotations across conventional test-file names — so tag-linkage warnings, audit coverage, and faithfulness hashing work in polyglot repositories, with function-scope hashing for Python and whole-file scope for other languages."
+    traces_to: [UN-004]
 ---
 
 # Record — Software Design
@@ -26,6 +32,20 @@ This context owns the design inputs declared in the frontmatter:
   constraint (`traces_to: []`). (That planning tooling is *optional* — the record
   core needs no planning extra — is the structural property DI-1's "no
   project-management dependency" test already pins.)
+- **DI-29 (DMR index data)** — `rdm story dmr` generates device-master-record
+  index data from the controlled documents' own frontmatter (one entry per
+  document: id, title, path, revision), so the DMR index is derived from the
+  record rather than hand-maintained — the same generated-not-transcribed rule
+  the traceability matrix follows. Refines UN-012.
+- **DI-31 (polyglot tag discovery)** — executed verification (Allure results)
+  was always language-agnostic; source-tag scanning was Python-only, so a
+  TypeScript or Java product got no authoring-time linkage warnings, no audit
+  coverage, and no faithfulness hashing. Tag discovery now also reads
+  JavaScript/TypeScript `allure.story(...)`/`allure.feature(...)` calls and
+  Java `@Story(...)`/`@Feature(...)` annotations across conventional test-file
+  names (`*.test.*` / `*.spec.*` / `*Test.java` / `*_test.go` …).
+  Function-scope verdict hashing remains Python (AST); other languages pin at
+  whole-file scope — stated, not silent. Refines UN-004.
 
 ## Design Outputs
 

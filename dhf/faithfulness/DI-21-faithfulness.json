@@ -1,11 +1,121 @@
 {
   "design_input": "DI-21",
   "verdict": "faithful",
-  "reviewer": "claude (independent review pass)",
-  "rationale": "clauses: applies-mutation(\u2713 stub runner sees 'VALUE = 2' during the run), reports-killed/survived(\u2713 asserts both from the runner's return), always-restores(\u2713 file == original after, even on the survived path), rejects-ambiguous(\u2713 error when find not unique). A probe that skipped apply/restore or mis-reported would fail a specific assert.",
-  "test_hash": "sha256:28272b44d669f2328dd61f4ed0c10051b3358720791f0220f531b2d2060ca95d",
+  "reviewer": "claude-reviewer-2 (independent of author)",
+  "rationale": "Full independent re-review after commits 0d79943/f124494 replaced the disproven unique-nanosecond mtime scheme with a monotonic whole-second advance (_write captures the pre-write mtime; _advance_mtime stamps max(previous+1, int(time.time()))) and the test pins it deterministically (future-pinned mtime, strict whole-second increase across the mutant write and the restore write). All probes executed via rdm story mutation-probe on rdm/story_audit/mutation.py (the module under review IS the probe machinery: the running process keeps the imported original while the pytest subprocess re-imports the mutant). Clause table -- Core (test_mutation_probe_applies_reports_and_restores): (1) applies the mutation live: writing the original instead of original.replace(find,replace,1) KILLED (stub runner asserts 'VALUE = 2' on disk during the run); (2) reports killed: '\"killed\": outcome == TESTS_FAILED' -> '!=' KILLED; (3) reports survived: '\"survived\": outcome == TESTS_PASSED' -> '!=' KILLED; (4) always restores: finally-block restore write -> pass KILLED (file==original after killed AND survived paths, plus res['restored']); (5) exactly-once application (ambiguous site rejected): occurrences != 1 -> < 1 KILLED. Exit-code discrimination (test_mutation_probe_only_a_genuine_test_failure_is_a_kill): (6) only a genuine test failure is a kill: 'if proc.returncode == 1:' -> 'if proc.returncode:' (old any-nonzero behavior) KILLED (exit-5 must come back as error, not TESTS_FAILED); (7) an unclean run is an error, never a kill: dropping the 'outcome not in (TESTS_PASSED, TESTS_FAILED)' guard ('if False:') KILLED; (8) no-tests-collected identified: exit-5 condition '== 5' -> '== 55' KILLED. Defense in depth (test_mutation_probe_restore_survives_interruption): (9) journal-before-mutating: journaling '' instead of the original KILLED (runner reads the journal mid-window); journal removed after a normal probe: unlink -> exists KILLED; (10) interrupted-probe recovery: neutering the restore write in recover_interrupted_probe (_write -> bare read) KILLED (res['recovered'], file==original, journal gone, recover_interrupted_probe(src) False after) -- note the recovery path now goes through _write, so the prior verdict's file_path.write_text probe was retargeted; (11) SIGTERM converted to an exception: handler body raise -> pass KILLED (pytest.raises(KeyboardInterrupt) + restored + no journal); (12) whole-second bytecode-cache invalidation, the clause that made the prior verdict partial: 'fresh = max(previous + 1, int(time.time()))' -> 'max(previous, ...)' (loses the strict advance) KILLED, and '_advance_mtime(file_path, previous)' -> '_advance_mtime(file_path, int(file_path.stat().st_mtime))' (post-write clock capture, the old broken ordering) KILLED -- both die on the future-pinned 'future < mtime_seconds[0] < after' assertion, which is exactly the (mtime-seconds, size) pyc-key property. Empirical confirmation: the size-preserving survived-inversion mutant ('\"survived\": outcome == TESTS_PASSED' -> '== TESTS_FAILED', both tokens 12 chars) that previously SURVIVED 2 of 3 runs on stale bytecode now KILLED 3/3 consecutive runs; it is recorded as a replayable killing probe. The prior verdict's handler-NOT-installed mutant (signal.signal -> signal.getsignal) is NOT re-recorded: it replays as ERROR (the re-raised TERM kills the inner pytest itself, exit -15) -- not evidence either way; the clause is pinned by the neutered-handler kill instead. Totals this review: 17 probe executions, 17 KILLED, 0 SURVIVED, 0 ERROR. No uncovered clauses remain.",
+  "test_hash": "sha256:588e9215dbe8fe67e4c16109ef62d51e1b6285ee5564fb9ff53863a8a2a7115c",
+  "hash_scope": "module",
   "reviewed_tests": [
-    "test_mutation_probe_applies_reports_and_restores"
+    "test_mutation_probe_applies_reports_and_restores",
+    "test_mutation_probe_only_a_genuine_test_failure_is_a_kill",
+    "test_mutation_probe_restore_survives_interruption"
+  ],
+  "probes": [
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "_write(file_path, original.replace(find, replace, 1))",
+      "replace": "_write(file_path, original)",
+      "test": "test_mutation_probe_applies_reports_and_restores",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "\"killed\": outcome == TESTS_FAILED",
+      "replace": "\"killed\": (outcome != TESTS_FAILED)",
+      "test": "test_mutation_probe_applies_reports_and_restores",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "\"survived\": outcome == TESTS_PASSED",
+      "replace": "\"survived\": (outcome != TESTS_PASSED)",
+      "test": "test_mutation_probe_applies_reports_and_restores",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "_write(file_path, original)  # always revert",
+      "replace": "pass  # always revert",
+      "test": "test_mutation_probe_applies_reports_and_restores",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "if occurrences != 1:",
+      "replace": "if occurrences < 1:",
+      "test": "test_mutation_probe_applies_reports_and_restores",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "if proc.returncode == 1:",
+      "replace": "if proc.returncode:",
+      "test": "test_mutation_probe_only_a_genuine_test_failure_is_a_kill",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "if outcome not in (TESTS_PASSED, TESTS_FAILED):",
+      "replace": "if False:",
+      "test": "test_mutation_probe_only_a_genuine_test_failure_is_a_kill",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "what = (\"no tests matched the selector\" if proc.returncode == 5",
+      "replace": "what = (\"no tests matched the selector\" if proc.returncode == 55",
+      "test": "test_mutation_probe_only_a_genuine_test_failure_is_a_kill",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "journal.write_text(original, encoding=\"utf-8\")",
+      "replace": "journal.write_text(\"\", encoding=\"utf-8\")",
+      "test": "test_mutation_probe_restore_survives_interruption",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "journal.unlink(missing_ok=True)",
+      "replace": "journal.exists()",
+      "test": "test_mutation_probe_restore_survives_interruption",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "_write(file_path, journal.read_text(encoding=\"utf-8\"))",
+      "replace": "journal.read_text(encoding=\"utf-8\")",
+      "test": "test_mutation_probe_restore_survives_interruption",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "raise KeyboardInterrupt(\"SIGTERM during mutation probe\")",
+      "replace": "pass  # SIGTERM ignored by the handler",
+      "test": "test_mutation_probe_restore_survives_interruption",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "fresh = max(previous + 1, int(time.time()))",
+      "replace": "fresh = max(previous, int(time.time()))",
+      "test": "test_mutation_probe_restore_survives_interruption",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "_advance_mtime(file_path, previous)",
+      "replace": "_advance_mtime(file_path, int(file_path.stat().st_mtime))",
+      "test": "test_mutation_probe_restore_survives_interruption",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/mutation.py",
+      "find": "\"survived\": outcome == TESTS_PASSED",
+      "replace": "\"survived\": outcome == TESTS_FAILED",
+      "test": "test_mutation_probe_applies_reports_and_restores",
+      "result": "KILLED"
+    }
   ],
   "uncovered_clauses": []
 }

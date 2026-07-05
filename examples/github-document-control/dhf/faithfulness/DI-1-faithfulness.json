@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-1",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: default-branch scope(KILLED: include ~DEFAULT_BRANCH->refs/heads/scratch), PR w/ >=1 approval(KILLED: required_approving_review_count 1->0), code-owner approval(KILLED: require_code_owner_review true->false; KILLED: /documents/ line removed from CODEOWNERS; also dismiss_stale_reviews_on_push true->false KILLED), verified signatures(KILLED: rule type required_signatures->x_required_signatures), passing status checks(KILLED: part11-gap-analysis context renamed), no history rewrite(KILLED: non_fast_forward->x_non_fast_forward), no deletion(KILLED: deletion->x_deletion), enforced(KILLED: enforcement active->disabled), config-as-code(covered by construction: test parses the checked-in JSON; absent file errors). 10/10 probes killed.",
+  "test_hash": "sha256:8e666051d641ad0ff65b86c3015d4bf451a934b752a039a4b572cd2e38848339",
+  "reviewed_tests": [
+    "test_ruleset_gates_the_default_branch"
+  ],
+  "uncovered_clauses": []
+}

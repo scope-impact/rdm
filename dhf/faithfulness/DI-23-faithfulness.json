@@ -1,0 +1,98 @@
+{
+  "design_input": "DI-23",
+  "verdict": "faithful",
+  "reviewer": "claude-reviewer-4 (independent of author)",
+  "rationale": "Independent re-review after the PR #40 fix (fd78dd2): the test gained a cwd-decoy scenario and repo-boundary assertions on find_tests_dir; every probe below was (re-)executed via rdm story mutation-probe on this checkout. Clauses: (1a) include design inputs when DHF present -- KILLED by inverting the dhf guard `if not dhf_dir.exists()` -> `if dhf_dir.exists()` and by dropping `result.requirements[di_id].extend(refs)` -> pass; (1b) without record-first inputs legacy output unchanged -- KILLED by making the `| Design inputs (DHF) |` summary line unconditional (`if result.design_inputs:` -> `if True:`; the `Design inputs (DHF)`/`DI-2` not-in-legacy-output assertions caught it); the stricter guard-drop `if not dhf_dir.exists():` -> `if False:` again SURVIVED but remains a proven equivalent mutant -- find_design_docs/design_inputs return empty on a nonexistent dhf/ and `tagged` only fills from declared inputs, so the guard is a fast path with identical observable behavior; (2) per-design-input test-tag coverage reported -- KILLED by dropping `result.tests[di_id].extend(refs)` -> pass (DI-1 no longer `tagged (1 file(s))`), by forcing status=`tagged (1 file(s))` (DI-2 no longer UNTAGGED), and by suppressing the table-row print; (3) untagged inputs listed as stories without coverage -- KILLED by `untested = req_ids - covered_ids` -> `untested = set()`; (4) reflected in traceability score -- KILLED by `coverage = ...` -> `coverage = 100` (the `- [ ] Coverage 50%` assertion caught the vacuous score); (5) NEW: scan anchored to the repository containing the DHF, invoker cwd never consulted -- KILLED by restoring the old `<cwd>/tests` fallback at find_tests_dir's final `return None` (the decoy-cwd scenario's `| DI-1 | UNTAGGED |` / `| DI-2 | UNTAGGED |` assertions caught the poisoned coverage); (6) NEW: walk-up bounded by the DHF's own git root -- KILLED by unbounding the chain (`chain = chain[: chain.index(root) + 1] if root in chain else [start]` -> `chain = [start, *start.parents]`; the fenced-repo `find_tests_dir(fenced / 'dhf') is None` assertion caught the outside-the-repo tests/); (7) NEW: sibling preference / in-repo walk-up still works -- KILLED by collapsing the chain construction to `[start]` only (the nested-repo assertion `find_tests_dir(nested/product/dhf) == nested/tests` failed). Totals: 11 KILLED, 1 SURVIVED (documented equivalent).",
+  "test_hash": "sha256:44a09fc64c1920214b40672ff8f8eb1a269c7977a4d20045f896318643af77ef",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_audit_includes_record_first_design_inputs"
+  ],
+  "probes": [
+    {
+      "file": "rdm/record/allure.py",
+      "find": "        if candidate.exists():\n            return candidate\n    return None",
+      "replace": "        if candidate.exists():\n            return candidate\n    return (Path.cwd() / \"tests\") if (Path.cwd() / \"tests\").exists() else None",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "    chain = chain[: chain.index(root) + 1] if root in chain else [start]",
+      "replace": "    chain = [start, *start.parents]",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/allure.py",
+      "find": "    chain = [start, *start.parents]",
+      "replace": "    chain = [start]",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "    if not dhf_dir.exists():",
+      "replace": "    if dhf_dir.exists():",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "result.requirements[di_id].extend(refs)",
+      "replace": "pass",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "if result.design_inputs:\n        print(f\"| Design inputs (DHF) | {len(result.design_inputs)} |\")",
+      "replace": "if True:\n        print(f\"| Design inputs (DHF) | {len(result.design_inputs)} |\")",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "result.tests[di_id].extend(refs)",
+      "replace": "pass",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "status = f\"tagged ({len(di_tests)} file(s))\" if di_tests else \"UNTAGGED\"",
+      "replace": "status = \"tagged (1 file(s))\"",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "print(f\"| {di_id} | {status} |\")",
+      "replace": "pass",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "untested = req_ids - covered_ids",
+      "replace": "untested = set()",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "coverage = len(covered_ids) / len(req_ids) * 100 if req_ids else 100",
+      "replace": "coverage = 100",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/audit.py",
+      "find": "    if not dhf_dir.exists():",
+      "replace": "    if False:",
+      "test": "test_audit_includes_record_first_design_inputs",
+      "result": "SURVIVED"
+    }
+  ],
+  "uncovered_clauses": []
+}

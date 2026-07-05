@@ -36,10 +36,13 @@ def cli(raw_arguments):
         render_template_to_file(config, args.template, context, sys.stdout)
     elif args.command == 'init':
         init(args.output)
+    elif args.command == 'adopt':
+        from rdm.adopt import adopt_command
+        exit_code = adopt_command(args.target)
     elif args.command == 'pull':
         pull_from_project_manager(args.config)
     elif args.command == 'hooks':
-        install_hooks(args.dest)
+        install_hooks(args.dest, with_issue_hooks=args.with_issue_hooks)
     elif args.command == 'collect':
         snippets = collect_from_files(args.files)
         yaml.dump(snippets, sys.stdout, default_style='|')
@@ -48,10 +51,13 @@ def cli(raw_arguments):
     elif args.command == 'gap' and args.list:
         list_default_checklists()
     elif args.command == 'gap' and args.coverage:
-        # In coverage mode, checklist + files can all be checklists or source files
+        # In coverage mode, checklist + files can all be checklists or source
+        # files: a checklist is a .txt path or a built-in checklist name.
+        from rdm.gaps import _builtin_checklist_dictionary
+        builtins = _builtin_checklist_dictionary()
         all_files = ([args.checklist] if args.checklist else []) + args.files
-        checklists = [f for f in all_files if f.endswith('.txt')]
-        sources = [f for f in all_files if not f.endswith('.txt')]
+        checklists = [f for f in all_files if f.endswith('.txt') or f in builtins]
+        sources = [f for f in all_files if not (f.endswith('.txt') or f in builtins)]
         exit_code = audit_for_gaps(checklists, sources, True, args.verbose)
     elif args.command == 'gap':
         exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
@@ -129,6 +135,8 @@ def handle_story_command(args):
         elif args.story_command == 'faithfulness':
             from rdm.story_audit.design_gate import story_faithfulness_command
             return story_faithfulness_command(
+                stale_only=args.stale,
+                replay=args.replay,
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
             )
@@ -162,6 +170,8 @@ def handle_story_command(args):
                 uncovered=args.uncovered,
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+                hash_scope=args.hash_scope,
+                probe=args.probe,
             )
 
         elif args.story_command == 'persona':
@@ -171,11 +181,34 @@ def handle_story_command(args):
                 persona_results=Path(args.persona_results) if args.persona_results else None,
             )
 
+        elif args.story_command == 'dmr':
+            from rdm.record.dmr import dmr_command
+            return dmr_command(Path(args.documents_dir), Path(args.output))
+
+        elif args.story_command == 'evidence-bundle':
+            from rdm.record.bundle import evidence_bundle_command
+            return evidence_bundle_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                output=Path(args.output) if args.output else None,
+            )
+
+        elif args.story_command == 'new-input':
+            from rdm.story_audit.new_input import story_new_input_command
+            return story_new_input_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                context=args.context,
+                text=args.text,
+                traces_to=args.traces_to,
+                test_file=Path(args.test_file) if args.test_file else None,
+                list_only=args.list,
+            )
+
         else:
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
                 "backlog-validate, design-gate, verify, release-gate, faithfulness, "
-                "verdict, mutation-probe, trace, or persona"
+                "verdict, mutation-probe, trace, new-input, or persona"
             )
             return 1
 
@@ -221,6 +254,11 @@ def parse_arguments(arguments):
     init_output_help = 'Path where templates are copied'
     init_parser.add_argument('-o', '--output', default='dhf', help=init_output_help)
 
+    adopt_help = 'bring an EXISTING repository under record-first design controls (never overwrites)'
+    adopt_parser = subparsers.add_parser('adopt', help=adopt_help)
+    adopt_parser.add_argument('target', nargs='?', default='.',
+                              help='repository root to adopt into (default: .)')
+
     render_help = 'render a template using the specified data files'
     render_parser = subparsers.add_parser('render', help=render_help)
     render_parser.add_argument('template')
@@ -242,6 +280,8 @@ def parse_arguments(arguments):
     hooks_help = 'install githooks in current repository'
     hooks_parser = subparsers.add_parser('hooks', help=hooks_help)
     hooks_parser.add_argument('dest', nargs='?', help='Path where hooks are saved')
+    hooks_parser.add_argument('--with-issue-hooks', action='store_true',
+                              help='also install the commit-msg/prepare-commit-msg issue-reference hooks')
 
     collect_help = 'collect documentation snippets into a yaml file'
     collect_parser = subparsers.add_parser('collect', help=collect_help)
@@ -328,6 +368,10 @@ def parse_arguments(arguments):
         '--faithfulness',
         help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
     )
+    faithfulness_parser.add_argument('--stale', action='store_true',
+                                     help='show only non-faithful inputs (the review worklist)')
+    faithfulness_parser.add_argument('--replay', action='store_true',
+                                     help='re-execute recorded killing mutation probes; fail if any survives')
 
     # rdm story mutation-probe
     mutation_help = 'prove a test catches a defect: apply a one-line mutation, run the test, always revert'
@@ -349,6 +393,10 @@ def parse_arguments(arguments):
                                 help='per-clause reasoning incl. the failing mutation(s)')
     verdict_parser.add_argument('--reviewed-tests', help='comma-separated test names examined')
     verdict_parser.add_argument('--uncovered', help='semicolon-separated requirement clauses NOT covered')
+    verdict_parser.add_argument('--hash-scope', choices=['module', 'function'], default='module',
+                                help='pin scope: full test file(s) (module, default) or tagged functions only')
+    verdict_parser.add_argument('--probe', action='append',
+                                help='executed mutation probe as JSON with file/find/replace/test; repeatable')
     verdict_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     verdict_parser.add_argument('--faithfulness', help='Verdicts dir (default: <dhf>/faithfulness)')
 
@@ -359,6 +407,31 @@ def parse_arguments(arguments):
     trace_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     trace_parser.add_argument('--allure-results', help='Allure results dir (adds verification status)')
     trace_parser.add_argument('--faithfulness', help='Faithfulness verdicts dir (adds review status)')
+
+    # rdm story dmr
+    dmr_help = 'generate device-master-record index data from controlled documents\' frontmatter'
+    dmr_parser = story_subparsers.add_parser('dmr', help=dmr_help)
+    dmr_parser.add_argument('documents_dir', help='directory of controlled documents (*.md with frontmatter)')
+    dmr_parser.add_argument('-o', '--output', required=True, help='output data file (e.g. data/dmr.yml)')
+
+    # rdm story evidence-bundle
+    bundle_help = 'write the retained release evidence set: verification data, matrix, verdicts, manifest'
+    bundle_parser = story_subparsers.add_parser('evidence-bundle', help=bundle_help)
+    bundle_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    bundle_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
+    bundle_parser.add_argument('-o', '--output', help='output directory (default: release-evidence/)')
+
+    # rdm story new-input
+    new_input_help = 'scaffold a traced design input: frontmatter entry, stub tagged test, checklist'
+    new_input_parser = story_subparsers.add_parser('new-input', help=new_input_help)
+    new_input_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    new_input_parser.add_argument('--context', help='bounded context that will OWN the input')
+    new_input_parser.add_argument('--text', help='the requirement ("RDM shall ..."), in verifiable clauses')
+    new_input_parser.add_argument('--traces-to', help='comma-separated user-need id(s) the input refines')
+    new_input_parser.add_argument('--test-file',
+                                  help='stub test destination (default: tests/acceptance/test_<context>.py)')
+    new_input_parser.add_argument('--list', action='store_true',
+                                  help='print contexts, taken DI ids, next free id, and user needs')
 
     # rdm story persona
     persona_help = 'report formative usability evidence from AI-persona simulated-use runs'

@@ -1,0 +1,11 @@
+{
+  "design_input": "DI-2",
+  "verdict": "faithful",
+  "reviewer": "claude (independent of author)",
+  "rationale": "clauses: every controlled document(test globs documents/*.md, asserts non-empty, loops over all - covered by construction), declares identity(KILLED: id->x_id; KILLED: id set to whitespace, caught by strip()), declares revision(KILLED: revision->x_revision), in frontmatter(KILLED: leading --- delimiter removed -> startswith fails). 4/4 probes killed.",
+  "test_hash": "sha256:1b143152811a3f54691e3912d219c6dca2f2975d6a446d41a31869b6b2f3e47d",
+  "reviewed_tests": [
+    "test_controlled_documents_declare_identity_and_revision"
+  ],
+  "uncovered_clauses": []
+}
