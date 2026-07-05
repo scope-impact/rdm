@@ -16,6 +16,9 @@ design_inputs:
   - id: DI-31
     text: "RDM shall discover verification tags in non-Python test sources — JavaScript/TypeScript allure calls and Java Story/Feature annotations across conventional test-file names — so tag-linkage warnings, audit coverage, and faithfulness hashing work in polyglot repositories, with function-scope hashing for Python and whole-file scope for other languages."
     traces_to: [UN-004]
+  - id: DI-34
+    text: "RDM shall discover verification tags in Ansible test task files (*_test.yml / *_test.yaml): every Ansible tag shaped like an ID (letters-dash-digits) counts as an Allure story tag, non-ID operational tags are ignored, non-test YAML files are not scanned, and verdicts pin at whole-file scope — so tag-linkage warnings, audit coverage, and faithfulness hashing work in Ansible-verified repositories."
+    traces_to: [UN-004]
 ---
 
 # Record — Software Design
@@ -46,6 +49,15 @@ This context owns the design inputs declared in the frontmatter:
   names (`*.test.*` / `*.spec.*` / `*Test.java` / `*_test.go` …).
   Function-scope verdict hashing remains Python (AST); other languages pin at
   whole-file scope — stated, not silent. Refines UN-004.
+- **DI-34 (Ansible tag discovery)** — infrastructure repositories verify with
+  Ansible, whose acceptance tasks have no `allure.story(...)` call site: the
+  story ID travels as an Ansible task tag and reaches Allure through a callback
+  plugin at run time. Source-side, tag discovery now also reads Ansible test
+  task files (`*_test.yml` / `*_test.yaml`, mirroring `*_test.go`): every tag
+  shaped like an ID (letters-dash-digits, e.g. `DI-7`) counts as a story tag,
+  operational tags (`always`, `bootstrap`, …) are ignored, and YAML files
+  outside the test-file naming convention are not scanned. Like the other
+  non-Python languages, verdicts pin at whole-file scope. Refines UN-004.
 
 ## Design Outputs
 
