@@ -17,7 +17,7 @@ design_inputs:
     text: "RDM shall provide a command to record a faithfulness verdict for a design input, hash-pinned to the current verifying-test source, and reject an undeclared design input."
     traces_to: [UN-009]
   - id: DI-21
-    text: "RDM shall provide a mutation probe that applies a one-line source mutation, runs a test, reports whether the test caught it (killed) or not (survived), and always restores the file."
+    text: "RDM shall provide a mutation probe that applies a one-line source mutation, runs a test, reports whether the test caught it (killed) or not (survived), and always restores the file: the original is journaled beside the file before mutating so an interrupted probe is recovered on the next probe of that file, a termination signal during the probe still restores, and every write invalidates the bytecode cache so a same-second size-preserving mutation cannot run stale."
     traces_to: [UN-009]
   - id: DI-26
     text: "rdm hooks shall install only the design-gate pre-commit hook by default, adding the issue-reference hooks solely when requested via an explicit flag."
@@ -53,7 +53,17 @@ This context owns:
 - **DI-21 (mutation probe)** — provide `rdm story mutation-probe` to apply a
   one-line source mutation, run a test, report killed/survived, and always
   restore the file. Turns "this test would catch a broken X" from a reviewer's
-  claim into executed evidence. Refines UN-009.
+  claim into executed evidence. The restore guarantee is defended in depth
+  (each layer added after an incident proved the previous one insufficient):
+  a `finally` restore alone dies with the process, so (a) the original is
+  **journaled** to a sidecar before mutating and any leftover journal is
+  recovered at the start of the next probe of that file — surviving even
+  SIGKILL; (b) SIGTERM during the probe window is converted to an exception so
+  a shell timeout still restores in-process; (c) every write bumps the file's
+  mtime by a unique nanosecond value, so CPython's (mtime-seconds, size) pyc
+  key can never serve stale bytecode to a same-second size-preserving
+  mutation — without the cold-cache-per-probe slowdown that caused the
+  timeout incident. Refines UN-009.
 - **DI-26 (design-gate-only hooks default)** — `rdm hooks` installs only the
   design-gate pre-commit hook by default; the legacy issue-reference hooks
   (commit-msg / prepare-commit-msg) are installed only with
