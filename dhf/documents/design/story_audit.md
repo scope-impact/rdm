@@ -13,6 +13,9 @@ design_inputs:
   - id: DI-23
     text: "RDM shall include record-first design inputs in the traceability audit when the repository contains a DHF: report per-design-input test-tag coverage, list untagged design inputs as stories without coverage, and reflect them in the traceability score."
     traces_to: [UN-007]
+  - id: DI-32
+    text: "RDM shall mark the legacy YAML requirements workflow as deprecated: story validate and story check-ids emit a deprecation notice directing users to the record-first model, while remaining functional with unchanged exit codes."
+    traces_to: [UN-007]
 ---
 
 # Story audit — Software Design
@@ -25,6 +28,12 @@ This context owns the traceability-integrity requirements, refining UN-007:
   reported as a conflict; a uniquely-defined ID is not.
 - **DI-14 (definition provenance)** — every ID definition is located with file +
   line, and conflict detection flags *definitions*, not references to an ID.
+- **DI-32 (legacy path deprecation)** — the pre-record-first YAML requirements
+  workflow (`story validate`, `story check-ids` over `requirements/`) is
+  deprecated in favor of the DHF + gates: both commands now print a
+  deprecation notice naming the replacement while remaining functional with
+  unchanged exit codes — existing users keep working, new users are steered
+  to one traceability model instead of one and a half. Refines UN-007.
 - **DI-23 (record-first audit)** — on a repository whose record is a DHF
   (record-first model), `rdm story audit` must not report a legacy-only score
   that ignores the actual requirements. When a DHF is present, the audit
