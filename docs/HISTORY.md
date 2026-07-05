@@ -36,6 +36,11 @@
 - Polyglot tag discovery: JS/TS allure calls and Java Story/Feature
   annotations are scanned across conventional test-file names; non-Python
   tests pin faithfulness verdicts at whole-file scope.
+- Mutation probes run with an isolated bytecode cache: CPython's
+  (mtime-seconds, size) pyc validation could serve stale bytecode to a
+  size-preserving mutation applied within one second, making a killing
+  probe falsely SURVIVE under back-to-back `--replay` (found by an
+  independent review; hardened in `_pytest_runner`).
 - The legacy YAML requirements workflow (`story validate`, `check-ids`) is
   deprecated with a notice; functional, exit codes unchanged.
 - New `rdm story dmr` (device-master-record index data generated from

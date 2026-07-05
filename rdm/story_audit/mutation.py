@@ -54,13 +54,26 @@ def run_mutation_probe(
 
 def _pytest_runner(test_selector: str) -> Callable[[], bool]:
     """A run_tests callable that runs ``pytest -k <selector>`` and returns whether
-    it passed. pytest is a dev/CI dependency, invoked as a subprocess (like git)."""
+    it passed. pytest is a dev/CI dependency, invoked as a subprocess (like git).
+
+    Each run uses an isolated, fresh bytecode cache: CPython validates ``.pyc``
+    files by (mtime-seconds, size), so a size-preserving mutation applied and
+    restored within the same second can otherwise execute STALE bytecode and
+    make a killing probe falsely report SURVIVED (found by an independent
+    review running back-to-back ``faithfulness --replay`` probes).
+    """
     def run() -> bool:
-        proc = subprocess.run(
-            ["python", "-m", "pytest", "-q", "-k", test_selector],
-            capture_output=True,
-            text=True,
-        )
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory(prefix="rdm-probe-pyc-") as cache_dir:
+            env = dict(os.environ, PYTHONPYCACHEPREFIX=cache_dir)
+            proc = subprocess.run(
+                ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "-k", test_selector],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
         return proc.returncode == 0
     return run
 
