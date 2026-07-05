@@ -17,13 +17,13 @@ design_inputs:
     text: "RDM shall provide a command to record a faithfulness verdict for a design input, hash-pinned to the current verifying-test source, and reject an undeclared design input."
     traces_to: [UN-009]
   - id: DI-21
-    text: "RDM shall provide a mutation probe that applies a one-line source mutation, runs a test, reports whether the test caught it (killed) or not (survived), and always restores the file: the original is journaled beside the file before mutating so an interrupted probe is recovered on the next probe of that file, a termination signal during the probe still restores, and every write invalidates the bytecode cache so a same-second size-preserving mutation cannot run stale."
+    text: "RDM shall provide a mutation probe that applies a one-line source mutation, runs a test, reports whether the test caught it (killed) or not (survived) — counting only a genuine test failure as a kill; a run that errors or collects no tests is reported as an error, never as a kill — and always restores the file: the original is journaled beside the file before mutating so an interrupted probe is recovered on the next probe of that file, a termination signal during the probe still restores, and every write invalidates the bytecode cache so a same-second size-preserving mutation cannot run stale."
     traces_to: [UN-009]
   - id: DI-26
     text: "rdm hooks shall install only the design-gate pre-commit hook by default, adding the issue-reference hooks solely when requested via an explicit flag."
     traces_to: [UN-002]
   - id: DI-27
-    text: "RDM shall record faithfulness verdicts with their executed mutation probes as structured data, support replaying the recorded killing probes and failing when any probe no longer kills, and support filtering the faithfulness report to non-faithful inputs."
+    text: "RDM shall record faithfulness verdicts with their executed mutation probes as structured data, support replaying the recorded killing probes — failing when any probe no longer kills or can no longer execute, with a per-probe error reported as a gate failure rather than aborting the replay — and support filtering the faithfulness report to non-faithful inputs."
     traces_to: [UN-009]
   - id: DI-28
     text: "RDM shall pin each faithfulness verdict at a recorded hash scope, module scope by default (the full source files containing the verifying tests) with function scope selectable, and judge staleness per verdict using its recorded scope, honoring legacy verdicts as function-scoped."
@@ -63,7 +63,12 @@ This context owns:
   mtime by a unique nanosecond value, so CPython's (mtime-seconds, size) pyc
   key can never serve stale bytecode to a same-second size-preserving
   mutation — without the cold-cache-per-probe slowdown that caused the
-  timeout incident. Refines UN-009.
+  timeout incident. The verdict discrimination is strict: only a genuine
+  test failure counts as a kill. A run that did not execute cleanly — a
+  collection error, no tests matched the selector, an internal failure —
+  is an **error**, never a kill: a typo'd selector must not manufacture
+  "the test caught it" evidence (an independent review found exactly this
+  false-KILLED path). Refines UN-009.
 - **DI-26 (design-gate-only hooks default)** — `rdm hooks` installs only the
   design-gate pre-commit hook by default; the legacy issue-reference hooks
   (commit-msg / prepare-commit-msg) are installed only with
@@ -73,14 +78,20 @@ This context owns:
   mutation probes as structured data (`--probe` JSON, repeated), and
   `rdm story faithfulness --replay` re-executes every recorded killing probe,
   failing if any now survives — the review becomes continuously verifiable
-  evidence, not a trust-at-review-time claim. `--stale` filters the report to
-  non-faithful inputs (the reviewer's worklist). Refines UN-009.
+  evidence, not a trust-at-review-time claim. A probe that can no longer
+  execute (its file or find-text is gone, or the test run errors) is itself
+  a replay failure, reported per probe — the replay must neither crash on
+  the first broken probe nor count a broken run as a kill. `--stale` filters
+  the report to non-faithful inputs (the reviewer's worklist). Refines UN-009.
 - **DI-28 (verdict hash scope)** — each verdict records its `hash_scope`.
   Default `module`: the pin covers the full source files containing the
   verifying tests, so editing a shared helper or fixture re-opens the review
   (function-only pinning let helper edits hollow a test silently). `function`
   remains selectable for noisy files; verdicts without the field are honored
-  as function-scoped (no retroactive staleness). Refines UN-009.
+  as function-scoped (no retroactive staleness from the *scope* mechanism
+  itself; widening test-file *discovery* — new conventional file-name globs,
+  DI-31 — may still re-open module-scope reviews, accepted because staleness
+  fails safe: it demands a re-review, it never silently passes). Refines UN-009.
 
 ## Design Outputs
 

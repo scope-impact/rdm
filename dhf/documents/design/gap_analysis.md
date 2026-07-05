@@ -26,7 +26,13 @@ This context owns the gap-analysis requirements, all refining UN-006 (check that
 documents contain the references a chosen standard requires):
 
 - **DI-10 (gap detection)** — report the checklist references missing from a set
-  of documents; exit non-zero when any are absent.
+  of documents; exit non-zero when any are absent. A reference is a key inside
+  a `[[ … ]]` block, matched exactly (a bare prose mention or a longer sibling
+  key never counts), with two deliberate allowances: a dotted *descendant*
+  covers its parent (`[[62304:5.6.2.a]]` addresses `62304:5.6.2`), and a key
+  may be followed by a `: annotation` tail (`[[FDA-SW:sdmp: pointer note]]` —
+  the idiom the shipped `rdm init` templates use) without breaking the match,
+  while a longer colon-qualified key still never satisfies its prefix.
 - **DI-11 (built-in composable checklists)** — ship the standard checklists and
   resolve `include` directives so e.g. `62304_2015_class_b` composes the base +
   class-A lists.

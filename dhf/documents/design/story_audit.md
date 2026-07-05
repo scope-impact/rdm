@@ -42,7 +42,10 @@ This context owns the traceability-integrity requirements, refining UN-007:
   design inputs under stories-without-coverage, and counts them in the
   traceability score — so an unverified design input degrades the grade
   instead of being invisible. (Executed pass/fail stays the release gate's
-  job; the audit checks static linkage.)
+  job; the audit checks static linkage.) The test-suite scan is anchored to
+  the repository that contains the DHF — never the invoking process's working
+  directory — so auditing another checkout cannot import the caller's own
+  test tags as that repository's coverage.
 
 ## Design Outputs
 

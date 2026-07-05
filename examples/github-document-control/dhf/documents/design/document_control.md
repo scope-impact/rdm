@@ -54,7 +54,10 @@ single procedure):
   reviewed is the SHA preserved in history — the §11.70 linking argument),
   squash and rebase merges disabled (both rewrite the reviewed commits), head
   branches deleted on merge; `setup.sh` applies and drift-checks them like the
-  ruleset. Refines UN-001, UN-004.
+  ruleset. The drift check compares the declared values **exactly** against the
+  live configuration projected onto the declared fields — a subset/containment
+  test is not a drift check (jq's `contains` matches substrings and array
+  subsets, so a changed value can pass unnoticed). Refines UN-001, UN-004.
 - **DI-7 (device master record)** — the DMR (§820.181 analog) is the current
   approved specification set: a controlled index document rendered from
   repository data (`data/dmr.yml`), listing each controlled document with its

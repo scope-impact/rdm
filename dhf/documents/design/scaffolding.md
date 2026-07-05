@@ -24,7 +24,10 @@ This context owns:
 - **DI-15 (project scaffolding)**, refining UN-008: `rdm init` lays down a
   complete starting project — the document templates, the build `Makefile`, and
   the render `config.yml` — so a regulatory author starts from a working
-  skeleton rather than a blank repo.
+  skeleton rather than a blank repo. The scaffolded V&V plan carries the same
+  `user_needs` registry frontmatter the adopt path (DI-24) lays down, so an
+  init-scaffolded project speaks the record-first model from day one instead
+  of discovering at gate time that its registry has no home.
 - **DI-22 (design-input scaffolding)**, refining UN-010: `rdm story new-input`
   guides a contributor (human or agent) through authoring a *traced* design
   input rather than a loose one — it allocates the next unused DI id across the
@@ -35,7 +38,11 @@ This context owns:
   prose, commit-approval, implementation, real assertions, faithfulness verdict,
   gates, matrix). A user need referenced by `--traces-to` that the context does
   not yet `satisfies` is added to that list (declare-once, reference-everywhere
-  stays consistent without a hand edit). An unknown context or user need is
+  stays consistent without a hand edit) — whichever YAML form the document uses,
+  inline `satisfies: [ … ]` or a block list, without ever duplicating the key.
+  The requirement text is embedded safely wherever it lands (YAML frontmatter,
+  the stub's docstring): quotes, backslashes, or a triple-quote in the text must
+  not corrupt the document or the generated test. An unknown context or user need is
   rejected — a design input can never be scaffolded outside the record.
 - **DI-24 (brownfield adoption)**, refining UN-011: `rdm adopt` brings an
   *existing* repository under record-first design controls from one command —
