@@ -1,0 +1,40 @@
+title: Design History File Binder
+subtitle: Combined release packet
+output: release/DHF-Binder.pdf
+sections:
+- title: 01 Planning and Controls
+  files:
+  - title: Software Plan
+    path: release/software_plan.pdf
+  - title: Risk Management Plan
+    path: release/risk_management_plan.pdf
+  - title: Design Review
+    path: release/design_review.pdf
+- title: 02 Design Records
+  files:
+  - title: Software Requirements Specification
+    path: release/software_requirements_specification.pdf
+  - title: Software Design Specification
+    path: release/software_design_specification.pdf
+  - title: System and Software Architecture Diagram
+    path: release/system_and_software_architecture_diagram.pdf
+- title: 03 Verification and Release
+  files:
+  - title: Verification and Validation Plan
+    path: release/verification_and_validation_plan.pdf
+  - title: Traceability Matrix
+    path: release/traceability_matrix.pdf
+  - title: Test Record
+    path: release/test_record.pdf
+  - title: Software Release Activity Record
+    path: release/software_release_activity_record.pdf
+- title: 04 Risk and Maintenance
+  files:
+  - title: Risk Assessment
+    path: release/risk_assessment.pdf
+  - title: Risk Management Report
+    path: release/risk_management_report.pdf
+  - title: Revision Level History
+    path: release/revision_level_history.pdf
+  - title: Unresolved Anomalies
+    path: release/unresolved_anomalies.pdf

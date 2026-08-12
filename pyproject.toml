@@ -35,6 +35,7 @@ dependencies = [
 github = ["pygithub==2.8.1"]
 story-audit = ["pydantic==2.12.5", "duckdb==1.4.3"]
 analytics = ["duckdb==1.4.3"]
+pdf = ["pypdf==6.4.1", "reportlab==4.4.6"]
 # Playwright for the usability-persona skill (AI-persona usability validation).
 # Browsers are provided by the environment; if the preinstalled browser version
 # differs, launch with executable_path (see examples/.../app/run_persona_demo.py).

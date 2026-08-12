@@ -9,6 +9,7 @@
 | `rdm init [-o DIR]` | scaffold a **new** documentation project (templates, Makefile, render config; default `-o dhf`) |
 | `rdm adopt [TARGET]` | bring an **existing** repository under design controls: DHF skeleton, runbook, pre-commit gate, session bootstrap, CI workflow — skips (never overwrites) existing files |
 | `rdm render TEMPLATE CONFIG [DATA…]` | render a Jinja2 Markdown template with the data files (each file's stem becomes a template variable) → stdout |
+| `rdm binder [MANIFEST] [-o PDF] [--root DIR] [--no-dividers]` | assemble rendered PDFs into a bookmarked release binder from a JSON/YAML manifest (extra: `pdf`) |
 | `rdm gap [-l] [-c] [-v] CHECKLIST [FILES…]` | audit documents for required `[[KEY]]` references; `-l` list built-ins, `-c` coverage table, `-v` name missing items; exit 0 covered / 3 gaps |
 | `rdm collect [FILES…]` | extract `RDOC name … ENDRDOC` snippets from source files into YAML → stdout |
 | `rdm translate FORMAT IN OUT` | convert test-runner XML (`auto`, `gtest`, `qttest`, `xunit`) into a YAML data file |
