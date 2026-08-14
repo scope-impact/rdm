@@ -21,6 +21,8 @@ version:
   acceptance criterion, and it needs an **independent** faithfulness verdict —
   never review a test you authored; hand it to the `test-faithfulness` skill
   or a second agent. Editing a tagged test re-opens its review automatically.
+  That skill lives in [agent-skills](https://github.com/scope-impact/agent-skills),
+  not in this repo — see `.claude/skills/README.md`.
 - Never hand-edit `dhf/documents/traceability_matrix.md` — it is generated
   from executed results.
 
