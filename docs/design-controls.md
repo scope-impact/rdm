@@ -105,6 +105,38 @@ rdm story faithfulness --dhf dhf --replay   # re-executes every recorded killing
 rdm story faithfulness --dhf dhf --stale    # only the non-faithful worklist
 ```
 
+### Exhaustive mutation testing as a second net
+
+`rdm story mutation-probe` proves that a *named* clause is covered. It cannot
+tell you about a clause nobody thought to name — the probe only tests the
+mutations a reviewer imagined. [mutmut](https://mutmut.readthedocs.io/) closes
+that gap from the other side: it generates hundreds of mutants automatically
+and reports which survive.
+
+```bash
+uv run mutmut run          # scoped by [tool.mutmut] in pyproject.toml
+uv run mutmut results      # what survived
+```
+
+The two are not interchangeable, and the mutmut score is **never DHF
+evidence**:
+
+| | `mutation-probe` | `mutmut` |
+|---|---|---|
+| Mutants | one, named by a reviewer | hundreds, generated |
+| Output | replayable evidence tied to a design input | a score and a survivor list |
+| Role | the record | a finding generator — tells you where to aim a probe |
+
+**A caveat that will bite you.** mutmut runs the suite against a *copy* of the
+tree under `mutants/`, and copies only the Python sources it mutates. rdm's
+acceptance tests read real repo files — the built-in checklists, the DHF
+itself, hook templates — so they fail against the copy while passing in place,
+with a confusing `FileNotFoundError`. Data paths must be listed in `also_copy`,
+and the default `tests_dir` is therefore scoped to unit tests.
+
+That sandbox model is precisely why the in-place probe exists: rdm's tests are
+coupled to the repository, and mutating in place is what lets them run at all.
+
 **Hash scope.** A verdict pins what the reviewer saw. The default `module`
 scope covers the full test file(s), so editing a shared helper or fixture
 re-opens the review too; `--hash-scope function` pins only the tagged

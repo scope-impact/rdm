@@ -27,3 +27,7 @@ var
 
 # Generated at docs build time (docs/_hooks/evidence.py)
 docs/traceability-matrix.md
+
+# mutmut working copy of the source tree
+mutants/
+.mutmut-cache
