@@ -125,23 +125,28 @@ universal = true
 # Scoped narrow on purpose: a full-tree run is slow, and the value is in
 # aiming it at the module you are reviewing. Override on the command line.
 [tool.mutmut]
-# Exhaustive mutation testing — a FINDING GENERATOR, never DHF evidence.
-# `rdm story mutation-probe` proves one named clause is covered and records
-# that as replayable evidence; mutmut generates mutants nobody thought of and
-# reports which survive. Use it to find where to aim a real probe.
+# Exhaustive mutation testing. Generates hundreds of mutants automatically and
+# reports which survive — the coverage the hand-aimed `rdm story mutation-probe`
+# cannot give, because a probe only tests mutations a reviewer thought of.
 #
-# Scoped narrow by default because a full-tree run is slow and the value is in
+# Scoped to one module by default: a full-tree run is slow, and the value is in
 # aiming it at the module under review. Override on the command line.
 paths_to_mutate = ["rdm/gaps.py"]
+tests_dir = ["tests/"]
 
-# NOTE: mutmut runs the suite against a COPY of the tree under mutants/, and
-# copies only the Python sources it mutates. rdm's acceptance tests read real
-# repo files — built-in checklists, the DHF, hook templates — so they fail on
-# the copy while passing in place. Two consequences:
-#   1. Anything loaded as data must be listed in also_copy below.
-#   2. tests_dir points at unit tests. Widening it to tests/ requires adding
-#      every data path those acceptance tests touch, and a new data file will
-#      break the run later with a confusing FileNotFoundError.
-# This copy-the-tree model is exactly why the in-place mutation-probe exists.
-tests_dir = ["tests/gaps_test.py"]
-also_copy = ["rdm/checklists/", "rdm/init_files/", "rdm/templates/", "dhf/", "examples/"]
+# mutmut runs the suite against a COPY of the tree under mutants/, copying only
+# the Python sources it mutates. Every path below is read at runtime by the
+# package or the tests — omit one and its tests fail on the copy while passing
+# in place, with a FileNotFoundError that names nothing useful. Add to this list
+# when new package data or a new fixture directory appears.
+also_copy = [
+    "rdm/checklists/",     # built-in gap-analysis checklists
+    "rdm/init_files/",     # `rdm init` scaffolding
+    "rdm/hook_files/",     # git hook templates
+    "rdm/adopt_files/",    # `rdm adopt` scaffolding
+    "dhf/",                # rdm's own DHF — the acceptance tests read it
+    "examples/",
+    "docs/",
+    "README.md",
+    "LICENSE.txt",
+]

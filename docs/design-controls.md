@@ -129,13 +129,15 @@ evidence**:
 
 **A caveat that will bite you.** mutmut runs the suite against a *copy* of the
 tree under `mutants/`, and copies only the Python sources it mutates. rdm's
-acceptance tests read real repo files — the built-in checklists, the DHF
-itself, hook templates — so they fail against the copy while passing in place,
-with a confusing `FileNotFoundError`. Data paths must be listed in `also_copy`,
-and the default `tests_dir` is therefore scoped to unit tests.
+tests read real repo files — the built-in checklists, the DHF itself, hook and
+adopt templates, the docs — so any path missing from `also_copy` fails on the
+copy while passing in place, with a `FileNotFoundError` that names nothing
+useful. The list in `pyproject.toml` covers the current suite; extend it when
+new package data or a fixture directory appears.
 
-That sandbox model is precisely why the in-place probe exists: rdm's tests are
-coupled to the repository, and mutating in place is what lets them run at all.
+First full-suite run over `rdm/gaps.py`: 414 mutants, 100 survivors (~76%
+killed). Survivors are a worklist, not defects — read each one and decide
+whether it marks a real hole worth a tagged test.
 
 **Hash scope.** A verdict pins what the reviewer saw. The default `module`
 scope covers the full test file(s), so editing a shared helper or fixture
