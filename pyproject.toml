@@ -124,6 +124,12 @@ universal = true
 # Exhaustive mutation testing (dev only; not part of the record).
 # Scoped narrow on purpose: a full-tree run is slow, and the value is in
 # aiming it at the module you are reviewing. Override on the command line.
+[tool.pytest.ini_options]
+# mutmut leaves a copy of the tree under mutants/ after a run. Without this,
+# a plain `pytest` collects those copies and reports dozens of confusing
+# collection errors that have nothing to do with your change.
+norecursedirs = ["mutants", ".venv", "build", "dist"]
+
 [tool.mutmut]
 # Exhaustive mutation testing. Generates hundreds of mutants automatically and
 # reports which survive — the coverage the hand-aimed `rdm story mutation-probe`
