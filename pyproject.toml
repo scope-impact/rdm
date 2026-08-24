@@ -67,7 +67,13 @@ dev = [
     "pydantic==2.12.5",
     "duckdb==1.4.3",
     "playwright==1.60.0",
-    "allure-pytest==2.16.0"
+    "allure-pytest==2.16.0",
+    # Exhaustive mutation testing, complementing `rdm story mutation-probe`.
+    # The probe proves ONE named clause is covered and records that as evidence;
+    # mutmut generates mutants nobody thought of and reports what survives.
+    # Its score is a finding generator, never DHF evidence. See
+    # docs/design-controls.md.
+    "mutmut==3.3.1"
 ]
 
 [project.scripts]
@@ -114,3 +120,39 @@ select = ["E", "W", "F"]
 
 [tool.bdist_wheel]
 universal = true
+
+# Exhaustive mutation testing (dev only; not part of the record).
+# Scoped narrow on purpose: a full-tree run is slow, and the value is in
+# aiming it at the module you are reviewing. Override on the command line.
+[tool.pytest.ini_options]
+# mutmut leaves a copy of the tree under mutants/ after a run. Without this,
+# a plain `pytest` collects those copies and reports dozens of confusing
+# collection errors that have nothing to do with your change.
+norecursedirs = ["mutants", ".venv", "build", "dist"]
+
+[tool.mutmut]
+# Exhaustive mutation testing. Generates hundreds of mutants automatically and
+# reports which survive — the coverage the hand-aimed `rdm story mutation-probe`
+# cannot give, because a probe only tests mutations a reviewer thought of.
+#
+# Scoped to one module by default: a full-tree run is slow, and the value is in
+# aiming it at the module under review. Override on the command line.
+paths_to_mutate = ["rdm/gaps.py"]
+tests_dir = ["tests/"]
+
+# mutmut runs the suite against a COPY of the tree under mutants/, copying only
+# the Python sources it mutates. Every path below is read at runtime by the
+# package or the tests — omit one and its tests fail on the copy while passing
+# in place, with a FileNotFoundError that names nothing useful. Add to this list
+# when new package data or a new fixture directory appears.
+also_copy = [
+    "rdm/checklists/",     # built-in gap-analysis checklists
+    "rdm/init_files/",     # `rdm init` scaffolding
+    "rdm/hook_files/",     # git hook templates
+    "rdm/adopt_files/",    # `rdm adopt` scaffolding
+    "dhf/",                # rdm's own DHF — the acceptance tests read it
+    "examples/",
+    "docs/",
+    "README.md",
+    "LICENSE.txt",
+]
