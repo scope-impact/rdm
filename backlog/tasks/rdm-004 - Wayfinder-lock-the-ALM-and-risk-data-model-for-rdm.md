@@ -4,7 +4,7 @@ title: 'Wayfinder: lock the ALM and risk data model for rdm'
 status: To Do
 assignee: []
 created_date: '2026-08-27 05:54'
-updated_date: '2026-08-27 06:45'
+updated_date: '2026-08-27 07:00'
 labels:
   - 'wayfinder:map'
 dependencies: []
@@ -58,7 +58,7 @@ EOF
 
 ## Not yet specified
 
-- **P1/P2 adoption.** Narrowed by RDM-004.01: the decomposition exists, `p2_level` is optional, and effects may target p1 or p2 but never severity. What remains is how a markdown author expresses p1 and p2 separately at all, since no register carries either today.
+- **P1/P2 adoption.** Narrowed by RDM-004.01: the decomposition exists, effects may target p1 or p2 but never severity. What remains is how a markdown author expresses p1 and p2 separately — and this is now known to be blocked on a process change, not just a notation choice. `RMP-001` defines one probability scored from the situation (which is p1) and has no p2 concept at all, so there are no level definitions to score a p2 against. See Out of scope.
 - **CAUSE separation.** How the markdown splits today's single `### Hazard` section into cause and situation, and what the parser does with it.
 - **ReqIF interchange.** Whether import/export from DOORS or Polarion is in scope at all; if so, whether entity names move to ReqIF's (`SpecObject`, `SpecType`, `AttributeDefinition`, `SpecRelation`). Narrowed by RDM-004.05: adopting the names is cheap and buys no validation, since ReqIF cannot express a mandatory field and its schema declares no referential integrity. The remaining question is round-trip fidelity, not vocabulary.
 - **Which rdm design inputs and contexts the locked decisions become.** Needs most decisions closed first; `story_audit` (SDS-AUDIT-001) and `record` (SDS-REC-001) are the likely homes.
@@ -69,5 +69,7 @@ EOF
 
 - Executing the migration — writing the DuckDB migration, changing the parser, adding tagged acceptance tests and faithfulness verdicts. The destination is the locked schema plus the plan; execution is a separate effort.
 - Changing the halla-health risk registers. They are the evidence this map reasons from, not its subject.
+- Revising `RMP-001` to define a two-part probability. Found while checking the process behind RDM-004.01: the governing risk process has no `p2` concept, so the decomposition this map adopted is unusable until that document is revised. Real work, and a hard dependency for decision-001 — but a governed process change in the `documentation` repository, not rdm schema work.
+- Bringing the risk registers into conformance with `RMP-001` work instruction WI-1. Found in the same check: `last_review:` appears in WI-1's own file-format example and is absent from all nine cluster files; 17 of 34 risks score High or Block, which the escalation path says require Tech Lead and Product Owner sign-off, and while the wallet register states three times that no approval is recorded, infra's four clusters are silent — which reads as approved when it is not; and the wallet adds a fifth cluster, `RC-SAFETY`, beyond WI-1's four without declaring the extension. All authoring work on other repositories.
 - Re-modelling the 34 under-modelled risks so that a hazardous situation carries each of its several harms. Ruled out while resolving [Decide what a mitigation's effect attaches to](backlog/tasks/rdm-004.01%20-%20Decide-what-a-mitigations-effect-attaches-to.md): the decision that 1:1 is not honest makes those registers wrong, but fixing them is authoring work on halla-health, not schema work on rdm. A named follow-on effort, not a step on this route.
 <!-- SECTION:DESCRIPTION:END -->
