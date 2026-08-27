@@ -4,7 +4,7 @@ title: 'Wayfinder: lock the ALM and risk data model for rdm'
 status: To Do
 assignee: []
 created_date: '2026-08-27 05:54'
-updated_date: '2026-08-27 07:00'
+updated_date: '2026-08-27 07:39'
 labels:
   - 'wayfinder:map'
 dependencies: []
@@ -53,6 +53,7 @@ EOF
 
 <!-- one line per closed ticket: gist, then zoom the link -->
 
+- [Research whether the standards already define health hazard categories](backlog/tasks/rdm-004.12%20-%20Research-whether-the-standards-already-define-health-hazard-categories.md) — no adoptable list exists: everything closed and generative is a per-element identification prompt (SHARD/HAZOP, STPA, LINDDUN), everything shaped for filing is open and post-market, and IEC 62366-1:2015 removed the one generative taxonomy a committee tried. Verified locally that `ISO-82304-2:4.1-Q7` is a row in our own checklist, not a clause — so the obligation has no external anchor and the schema is free to choose. Findings in [docs/research/health-hazard-taxonomies.md](docs/research/health-hazard-taxonomies.md), with every external claim marked inference because the proxy blocked every source.
 - [Decide what a mitigation's effect attaches to](backlog/tasks/rdm-004.01%20-%20Decide-what-a-mitigations-effect-attaches-to.md) — `MEASURE_EFFECT` references `PROBABILITY_OF_HARM` (harm pathway), decided on intent rather than evidence since the estate's 34 situations each carry exactly one harm and make the two options isomorphic today; one `MEASURE` with several effect rows; effects derived with explicit override, reducing-or-neutral, targeting p1/p2 and never severity; residuals provisional. Recorded as [decision-001](backlog/decisions/decision-001%20-%20Mitigation-effects-attach-to-the-harm-pathway-not-the-hazardous-situation.md).
 - [Research how ReqIF and StrictDoc express types as data](backlog/tasks/rdm-004.05%20-%20Research-how-ReqIF-and-StrictDoc-express-types-as-data.md) — neither reference implementation validates instances against their types, so borrowing ReqIF's names buys interchange and no validation; and neither has a usable query surface for a data-modelled type. Findings in [docs/research/reqif-strictdoc-typing.md](docs/research/reqif-strictdoc-typing.md).
 
