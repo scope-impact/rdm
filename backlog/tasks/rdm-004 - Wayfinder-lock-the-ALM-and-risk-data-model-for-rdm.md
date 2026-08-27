@@ -4,7 +4,7 @@ title: 'Wayfinder: lock the ALM and risk data model for rdm'
 status: To Do
 assignee: []
 created_date: '2026-08-27 05:54'
-updated_date: '2026-08-27 06:17'
+updated_date: '2026-08-27 06:45'
 labels:
   - 'wayfinder:map'
 dependencies: []
@@ -53,11 +53,12 @@ EOF
 
 <!-- one line per closed ticket: gist, then zoom the link -->
 
+- [Decide what a mitigation's effect attaches to](backlog/tasks/rdm-004.01%20-%20Decide-what-a-mitigations-effect-attaches-to.md) — `MEASURE_EFFECT` references `PROBABILITY_OF_HARM` (harm pathway), decided on intent rather than evidence since the estate's 34 situations each carry exactly one harm and make the two options isomorphic today; one `MEASURE` with several effect rows; effects derived with explicit override, reducing-or-neutral, targeting p1/p2 and never severity; residuals provisional. Recorded as [decision-001](backlog/decisions/decision-001%20-%20Mitigation-effects-attach-to-the-harm-pathway-not-the-hazardous-situation.md).
 - [Research how ReqIF and StrictDoc express types as data](backlog/tasks/rdm-004.05%20-%20Research-how-ReqIF-and-StrictDoc-express-types-as-data.md) — neither reference implementation validates instances against their types, so borrowing ReqIF's names buys interchange and no validation; and neither has a usable query surface for a data-modelled type. Findings in [docs/research/reqif-strictdoc-typing.md](docs/research/reqif-strictdoc-typing.md).
 
 ## Not yet specified
 
-- **P1/P2 adoption.** Whether `PROBABILITY_OF_HARM` requires the ISO 14971 decomposition, and what happens to the 34 existing risks (20 infra, 14 wallet) scored with a single probability. Hangs on the fold algorithm.
+- **P1/P2 adoption.** Narrowed by RDM-004.01: the decomposition exists, `p2_level` is optional, and effects may target p1 or p2 but never severity. What remains is how a markdown author expresses p1 and p2 separately at all, since no register carries either today.
 - **CAUSE separation.** How the markdown splits today's single `### Hazard` section into cause and situation, and what the parser does with it.
 - **ReqIF interchange.** Whether import/export from DOORS or Polarion is in scope at all; if so, whether entity names move to ReqIF's (`SpecObject`, `SpecType`, `AttributeDefinition`, `SpecRelation`). Narrowed by RDM-004.05: adopting the names is cheap and buys no validation, since ReqIF cannot express a mandatory field and its schema declares no referential integrity. The remaining question is round-trip fidelity, not vocabulary.
 - **Which rdm design inputs and contexts the locked decisions become.** Needs most decisions closed first; `story_audit` (SDS-AUDIT-001) and `record` (SDS-REC-001) are the likely homes.
@@ -68,4 +69,5 @@ EOF
 
 - Executing the migration — writing the DuckDB migration, changing the parser, adding tagged acceptance tests and faithfulness verdicts. The destination is the locked schema plus the plan; execution is a separate effort.
 - Changing the halla-health risk registers. They are the evidence this map reasons from, not its subject.
+- Re-modelling the 34 under-modelled risks so that a hazardous situation carries each of its several harms. Ruled out while resolving [Decide what a mitigation's effect attaches to](backlog/tasks/rdm-004.01%20-%20Decide-what-a-mitigations-effect-attaches-to.md): the decision that 1:1 is not honest makes those registers wrong, but fixing them is authoring work on halla-health, not schema work on rdm. A named follow-on effort, not a step on this route.
 <!-- SECTION:DESCRIPTION:END -->
