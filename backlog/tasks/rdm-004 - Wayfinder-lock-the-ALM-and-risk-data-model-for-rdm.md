@@ -4,7 +4,7 @@ title: 'Wayfinder: lock the ALM and risk data model for rdm'
 status: To Do
 assignee: []
 created_date: '2026-08-27 05:54'
-updated_date: '2026-08-27 05:57'
+updated_date: '2026-08-27 06:17'
 labels:
   - 'wayfinder:map'
 dependencies: []
@@ -32,17 +32,34 @@ Only some of these are linked into the harness skill list. All of them exist in 
 - **halla-health-infra is the reference implementation for risk traces** — its four clusters carry 95 `(refs: …)` control→requirement traces across 104 controls. The wallet's register carries 0. rdm's parser already supports the mechanism.
 - **Plan only.** Execution hands off as a separate effort once this map closes.
 
+**Do not trust `backlog task list --ready` on this map.** In backlog.md 1.50.1 it behaves as "has no dependencies" rather than its documented "all dependencies completed": with RDM-004.05 closed, RDM-004.06 stayed off the `--ready` listing even though its only dependency was Done. Wayfinder calls `--ready` load-bearing, and this is the worse direction of failure — as tickets close, their dependents never join the frontier, so the map silently reads as smaller than it is and looks finished while blocked work remains. Compute the frontier from the task files instead:
+
+```bash
+uv run python - <<'EOF'
+import yaml, pathlib
+T = {}
+for p in pathlib.Path('backlog/tasks').glob('rdm-004*.md'):
+    fm = yaml.safe_load(p.read_text().split('---')[1]); T[fm['id']] = fm
+for i, fm in sorted(T.items()):
+    if i == 'RDM-004' or fm['status'] != 'To Do' or fm.get('assignee'): continue
+    if all(T.get(d, {}).get('status') == 'Done' for d in (fm.get('dependencies') or [])):
+        print(i, '-', fm['title'])
+EOF
+```
+
 **Why the schema is not intact today.** rdm's `risks` table flattens `hazard`/`situation`/`harm` into VARCHAR columns and carries `severity`/`probability`/`risk_level`/`residual_risk` as a before/after column pair — both shapes the source model explicitly rejects. `risk_controls.description` is a string, so measures have no identity and no reuse. Absent entirely: `CAUSE`, `PROBABILITY_OF_HARM`, `MEASURE_EFFECT`, `RISK_SCALE`/`RISK_LEVEL`/`RISK_POLICY`, `REVISION`, `SNAPSHOT`. Present and working: `TRACE` via `risk_requirements` + `risk_controls.refs`.
 
 ## Decisions so far
 
 <!-- one line per closed ticket: gist, then zoom the link -->
 
+- [Research how ReqIF and StrictDoc express types as data](backlog/tasks/rdm-004.05%20-%20Research-how-ReqIF-and-StrictDoc-express-types-as-data.md) — neither reference implementation validates instances against their types, so borrowing ReqIF's names buys interchange and no validation; and neither has a usable query surface for a data-modelled type. Findings in [docs/research/reqif-strictdoc-typing.md](docs/research/reqif-strictdoc-typing.md).
+
 ## Not yet specified
 
 - **P1/P2 adoption.** Whether `PROBABILITY_OF_HARM` requires the ISO 14971 decomposition, and what happens to the 34 existing risks (20 infra, 14 wallet) scored with a single probability. Hangs on the fold algorithm.
 - **CAUSE separation.** How the markdown splits today's single `### Hazard` section into cause and situation, and what the parser does with it.
-- **ReqIF interchange.** Whether import/export from DOORS or Polarion is in scope at all; if so, whether entity names move to ReqIF's (`SpecObject`, `SpecType`, `AttributeDefinition`, `SpecRelation`).
+- **ReqIF interchange.** Whether import/export from DOORS or Polarion is in scope at all; if so, whether entity names move to ReqIF's (`SpecObject`, `SpecType`, `AttributeDefinition`, `SpecRelation`). Narrowed by RDM-004.05: adopting the names is cheap and buys no validation, since ReqIF cannot express a mandatory field and its schema declares no referential integrity. The remaining question is round-trip fidelity, not vocabulary.
 - **Which rdm design inputs and contexts the locked decisions become.** Needs most decisions closed first; `story_audit` (SDS-AUDIT-001) and `record` (SDS-REC-001) are the likely homes.
 - **The migration plan itself** — assembled once the decisions above are closed. The final artifact of this map.
 - **How the repo-by-repo audit sequences** after the map closes: infra first (already conformant), then the wallet, then documentation.
