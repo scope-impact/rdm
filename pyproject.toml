@@ -56,7 +56,7 @@ docs = [
 ]
 dev = [
     "pytest==9.0.2",
-    "ruff==0.14.13",
+    "ruff==0.14.14",
     "check-manifest==0.51",
     "mkdocs==1.6.1",
     "mkdocs-material==9.6.21",
