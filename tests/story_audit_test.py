@@ -592,3 +592,31 @@ class TestAuditScoreRefusesAbsentEvidence:
         out = capsys.readouterr().out
 
         assert "Coverage >= 70% (100%) (+30)" in out
+
+    def test_coverage_cannot_exceed_a_hundred_percent(self, tmp_path: Path, capsys: object) -> None:
+        """Coverage is the covered share of the requirements, not a raw ratio.
+
+        covered_ids holds every tested or traced id, including ids no
+        requirement declares. Dividing that count by the requirement count
+        reported rdm's own repository at 194% coverage, and let the 70% bar be
+        cleared by ids nothing asked for.
+        """
+        from rdm.story_audit.audit import print_report, run_audit
+
+        (tmp_path / "requirements").mkdir()
+        (tmp_path / "requirements" / "stories.yaml").write_text("- id: US-001\n")
+        (tmp_path / "tests").mkdir()
+        # One test covers the requirement; three cover ids nothing declares.
+        (tmp_path / "tests" / "test_story.py").write_text(
+            "import allure\n\n"
+            '@allure.story("US-001")\ndef test_one() -> None:\n    pass\n\n'
+            '@allure.story("US-777")\ndef test_two() -> None:\n    pass\n\n'
+            '@allure.story("US-778")\ndef test_three() -> None:\n    pass\n\n'
+            '@allure.story("US-779")\ndef test_four() -> None:\n    pass\n'
+        )
+
+        print_report(run_audit(tmp_path), tmp_path)
+        out = capsys.readouterr().out
+
+        assert "Coverage >= 70% (100%) (+30)" in out
+        assert "400%" not in out

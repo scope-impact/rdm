@@ -500,7 +500,12 @@ def print_report(result: AuditResult, repo_path: Path) -> None:
     if not req_ids:
         skip("coverage", "No requirements found")
     else:
-        coverage = len(covered_ids) / len(req_ids) * 100
+        # Intersect: covered_ids holds every tested or traced id, including
+        # ones that are not requirements at all, so dividing the raw count by
+        # the requirement count reported coverage above 100% (rdm's own repo
+        # read 194%) and could clear the 70% bar on ids no requirement asked
+        # for. What is being measured is the covered share OF the requirements.
+        coverage = len(req_ids & covered_ids) / len(req_ids) * 100
         if coverage >= 70:
             award(30, 30, f"Coverage >= 70% ({coverage:.0f}%)")
         else:
