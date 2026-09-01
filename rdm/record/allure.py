@@ -205,6 +205,7 @@ TEST_FILE_GLOBS = (
     "*Test.java", "*Tests.java",
     "*_test.go",
     "*_test.yml", "*_test.yaml", "test_*.yml", "test_*.yaml",
+    "*-tests.yml", "*_tests.yml", "*-tests.yaml", "*_tests.yaml",
 )
 
 # Non-Python tag syntaxes (DI-31): JS/TS runtime calls `allure.story("…")`
