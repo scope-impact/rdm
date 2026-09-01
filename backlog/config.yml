@@ -4,7 +4,7 @@ project_name: "rdm"
 description: "Regulatory Documentation Manager - IEC 62304 compliance tool"
 repository: "scope-impact/rdm"
 default_status: "To Do"
-statuses: ["To Do", "In Progress", "Done", "Blocked", "In Review"]
+statuses: ["To Do", "In Progress", "Done", "Blocked", "In Review", "Cancelled"]
 labels: [bug, testing, refactor, github-sync]
 date_format: yyyy-mm-dd
 max_column_width: 20
