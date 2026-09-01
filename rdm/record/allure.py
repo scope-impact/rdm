@@ -192,13 +192,19 @@ def find_tests_dir(dhf_dir: Path) -> Path | None:
 
 
 # Conventional test-file names per ecosystem (DI-31): pytest, JS/TS runners
-# (jest/vitest/playwright), Java (JUnit + allure-java), Go.
+# (jest/vitest/playwright), Java (JUnit + allure-java), Go, and Ansible task
+# files used as acceptance tests. The Ansible case is not exotic: an estate can
+# carry its whole design-input acceptance suite as tagged YAML tasks, and while
+# these globs omitted YAML every one of those tags scanned as zero -- coverage
+# read 0% and every test file read as an orphan, which is the same false
+# reading as an unaudited repo, only inverted.
 TEST_FILE_GLOBS = (
     "test_*.py", "*_test.py",
     "*.test.js", "*.test.jsx", "*.test.ts", "*.test.tsx",
     "*.spec.js", "*.spec.ts",
     "*Test.java", "*Tests.java",
     "*_test.go",
+    "*_test.yml", "*_test.yaml", "test_*.yml", "test_*.yaml",
 )
 
 # Non-Python tag syntaxes (DI-31): JS/TS runtime calls `allure.story("…")`
@@ -208,8 +214,34 @@ POLYGLOT_TAG_PATTERNS = (
     re.compile(r'@(Story|Feature)\(\s*"([^"]+)"'),
 )
 
+# What a design-input / story id looks like, matched locally on purpose: the
+# canonical ID_PATTERN lives in story_audit.schema, and importing it here would
+# make this module -- which must work without the story-audit extra -- depend on
+# pydantic. Kept deliberately narrow so ordinary Ansible tags (`bootstrap`,
+# `security`) are not mistaken for ids.
+TAG_ID_PATTERN = re.compile(r"[A-Z]{2,}(?:-[A-Z]+)?-\d+")
 
-def _iter_test_files(tests_dir: Path):
+# Ansible carries the id in the task's own tag list -- `tags: [DI-5]`, or a
+# block/YAML-list form -- so the whole list is captured and split downstream.
+YAML_TAG_PATTERN = re.compile(r"^\s*tags:\s*(?:\[([^\]]*)\]|(\S.*))?$", re.M)
+
+# What each ecosystem's tag syntax looks like, for telling a test file that
+# claims nothing (an orphan) from one whose claim we simply cannot parse.
+TAG_SYNTAX_MARKERS = {
+    ".py": ("@allure",),
+    ".yml": ("tags:",),
+    ".yaml": ("tags:",),
+}
+_DEFAULT_TAG_MARKERS = ("allure.story", "allure.feature", "@Story", "@Feature")
+
+
+def iter_test_files(tests_dir: Path):
+    """Every conventional test file under ``tests_dir``, one ecosystem at a time.
+
+    The single source of truth for "what counts as a test file" -- callers must
+    not re-glob, because a second, narrower glob elsewhere is how the audit came
+    to disagree with the Allure ingest about which files exist.
+    """
     seen: set[Path] = set()
     for pattern in TEST_FILE_GLOBS:
         for path in tests_dir.rglob(pattern):
@@ -218,10 +250,33 @@ def _iter_test_files(tests_dir: Path):
                 yield path
 
 
+# Retained under the old private name: imported elsewhere in this package.
+_iter_test_files = iter_test_files
+
+
+def claims_a_tag(path: Path, content: str) -> bool:
+    """Whether the file carries its ecosystem's tag syntax at all.
+
+    Used only to decide orphan status, so it asks the weaker question than
+    ``_tag_ids_in``: not "which ids" but "does this file even try to claim one".
+    """
+    markers = TAG_SYNTAX_MARKERS.get(path.suffix, _DEFAULT_TAG_MARKERS)
+    return any(marker in content for marker in markers)
+
+
 def _tag_ids_in(path: Path, content: str) -> list[str]:
     """Every story/feature tag ID a test source file claims, per its language."""
     if path.suffix == ".py":
         return [m.group(2) for m in ALLURE_PATTERN.finditer(content)]
+    if path.suffix in (".yml", ".yaml"):
+        ids = []
+        for m in YAML_TAG_PATTERN.finditer(content):
+            listed = m.group(1) or m.group(2) or ""
+            for token in re.split(r"[,\s]+", listed.strip()):
+                token = token.strip("\"'-").strip()
+                if token and TAG_ID_PATTERN.fullmatch(token):
+                    ids.append(token)
+        return ids
     ids: list[str] = []
     for pattern in POLYGLOT_TAG_PATTERNS:
         ids.extend(m.group(2) for m in pattern.finditer(content))
@@ -236,12 +291,16 @@ def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
     Python decorators, JS/TS allure calls, and Java annotations (DI-31).
     """
     refs: dict[str, list[str]] = {}
-    for test_file in sorted(_iter_test_files(tests_dir)):
+    for test_file in sorted(iter_test_files(tests_dir)):
         try:
             content = test_file.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             continue
-        for tag_id in _tag_ids_in(test_file, content):
+        # One entry per file, not per tag occurrence: a file may claim the same
+        # id many times -- an Ansible suite tags every task in a context with
+        # the design input it exercises -- and callers report these as a file
+        # count ("tagged (n file(s))").
+        for tag_id in dict.fromkeys(_tag_ids_in(test_file, content)):
             refs.setdefault(tag_id, []).append(str(test_file))
     return refs
 

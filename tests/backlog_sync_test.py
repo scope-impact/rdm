@@ -721,3 +721,202 @@ class TestHallaHealthInfraBacklog:
             assert ":" not in task_row[1]  # Local ID is original
 
             conn.close()
+
+
+RISK_CLUSTER_TEMPLATE = """---
+id: {doc_id}
+title: "{title}"
+type: risk-cluster
+labels: [risk, {cluster}]
+created_date: '2026-01-01'
+---
+
+## {risk_id}: {risk_title}
+
+| Attribute | Value |
+|-----------|-------|
+| **{stride_label}** | {stride} |
+| **Severity** | Critical |
+| **Probability** | Unlikely |
+| **Risk Level** | High |
+
+### Hazard
+
+A hazard.
+
+### Situation
+
+A hazardous situation.
+
+### Harm
+
+A harm.
+"""
+
+
+def _write_cluster(
+    directory: Path,
+    *,
+    cluster: str = "RC-IAM",
+    risk_id: str = "RISK-IAM-001",
+    stride_label: str = "STRIDE Category",
+    stride: str = "Spoofing",
+) -> Path:
+    """Write one risk-cluster document, in the estate's real shape."""
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"risks-001 - {cluster}.md"
+    path.write_text(
+        RISK_CLUSTER_TEMPLATE.format(
+            doc_id=f"doc-{cluster.lower()}",
+            title=cluster,
+            cluster=cluster,
+            risk_id=risk_id,
+            risk_title="A risk",
+            stride_label=stride_label,
+            stride=stride,
+        )
+    )
+    return path
+
+
+def _write_backlog(root: Path) -> Path:
+    """A minimal Backlog.md directory at ``root/backlog``."""
+    backlog = root / "backlog"
+    backlog.mkdir(parents=True, exist_ok=True)
+    (backlog / "config.yml").write_text(
+        'project_id: "test"\ntask_prefix: "ft"\nproject_name: "Test Project"\n'
+    )
+    return backlog
+
+
+class TestRiskClusterDiscovery:
+    """Risk clusters must be found where the estate actually keeps them.
+
+    Discovery globbed only ``backlog/docs/**/*RC-*.md``. Both Halla Health
+    products keep their clusters in the DHF instead -- halla-health-infra in
+    ``dhf/documents/risk/``, the wallet in ``dhf/risk/`` -- so extract_backlog_data
+    reported 0 risks for a repository holding 20 of them, and the risk tooling
+    was auditing an empty set.
+    """
+
+    def test_finds_a_cluster_in_the_dhf(self, tmp_path: Path) -> None:
+        """A cluster under dhf/documents/risk/ is discovered."""
+        from rdm.story_audit.backlog_parser import extract_backlog_data
+
+        backlog = _write_backlog(tmp_path)
+        _write_cluster(tmp_path / "dhf" / "documents" / "risk")
+
+        data = extract_backlog_data(backlog)
+        assert [r.id for r in data.risks] == ["risk-iam-001"]
+
+    def test_still_finds_a_cluster_under_backlog_docs(self, tmp_path: Path) -> None:
+        """The original location keeps working."""
+        from rdm.story_audit.backlog_parser import extract_backlog_data
+
+        backlog = _write_backlog(tmp_path)
+        _write_cluster(backlog / "docs" / "risks")
+
+        data = extract_backlog_data(backlog)
+        assert [r.id for r in data.risks] == ["risk-iam-001"]
+
+    def test_explicit_roots_override_the_search(self, tmp_path: Path) -> None:
+        """A caller can say exactly where to look."""
+        from rdm.story_audit.backlog_parser import extract_backlog_data
+
+        backlog = _write_backlog(tmp_path)
+        _write_cluster(tmp_path / "dhf" / "documents" / "risk")
+        elsewhere = tmp_path / "somewhere"
+        _write_cluster(elsewhere, cluster="RC-DATA", risk_id="RISK-DATA-001")
+
+        data = extract_backlog_data(backlog, risk_roots=[elsewhere])
+        assert [r.id for r in data.risks] == ["risk-data-001"]
+
+    def test_the_same_file_reached_twice_yields_one_risk(self, tmp_path: Path) -> None:
+        """Overlapping roots must not double-count a cluster."""
+        from rdm.story_audit.backlog_parser import extract_backlog_data
+
+        backlog = _write_backlog(tmp_path)
+        _write_cluster(backlog / "docs")
+
+        data = extract_backlog_data(backlog)
+        assert len(data.risks) == 1
+
+    def test_duplicate_risk_ids_are_reported_not_silently_merged(
+        self, tmp_path: Path, capsys: object
+    ) -> None:
+        """Two clusters claiming one id is a conflict a sync would hide."""
+        from rdm.story_audit.backlog_parser import extract_backlog_data
+
+        backlog = _write_backlog(tmp_path)
+        _write_cluster(tmp_path / "dhf" / "product-a" / "risk")
+        _write_cluster(tmp_path / "dhf" / "product-b" / "risk")
+
+        data = extract_backlog_data(backlog)
+        out = capsys.readouterr().out
+
+        assert len(data.risks) == 1
+        assert "RISK-IAM-001" in out or "risk-iam-001" in out
+
+    def test_vendored_directories_are_not_searched(self, tmp_path: Path) -> None:
+        """node_modules is not a source of controlled records."""
+        from rdm.story_audit.backlog_parser import extract_backlog_data
+
+        backlog = _write_backlog(tmp_path)
+        _write_cluster(tmp_path / "node_modules" / "pkg" / "risk")
+
+        data = extract_backlog_data(backlog)
+        assert data.risks == []
+
+
+class TestStrideLabelVariants:
+    """A label mismatch must not silently erase a risk's STRIDE category.
+
+    parse_risk_table lowercases and underscores the label, so `**STRIDE**`
+    lands under the key `stride` while every consumer reads `stride_category`.
+    All 14 risks in the halla-health wallet's clusters write `**STRIDE**`, so
+    every one of them parsed with no category at all -- silently, since a
+    missing category is indistinguishable from an unclassified risk.
+    """
+
+    def test_stride_category_label_is_read(self, tmp_path: Path) -> None:
+        """The documented label works, as before."""
+        from rdm.story_audit.backlog_parser import parse_risk_cluster
+
+        path = _write_cluster(tmp_path, stride_label="STRIDE Category")
+        assert parse_risk_cluster(path)[0].stride_category == "Spoofing"
+
+    def test_bare_stride_label_is_read(self, tmp_path: Path) -> None:
+        """`**STRIDE**` is the wallet's spelling and means the same thing."""
+        from rdm.story_audit.backlog_parser import parse_risk_cluster
+
+        path = _write_cluster(tmp_path, stride_label="STRIDE")
+        assert parse_risk_cluster(path)[0].stride_category == "Spoofing"
+
+    def test_unclassified_risk_is_reported(self, tmp_path: Path, capsys: object) -> None:
+        """A risk with no classification at all must be visible, not silent."""
+        from rdm.story_audit.backlog_parser import parse_risk_cluster
+
+        path = _write_cluster(tmp_path, stride_label="Threat Type")
+        risks = parse_risk_cluster(path)
+        out = capsys.readouterr().out
+
+        assert risks[0].stride_category is None
+        assert "RISK-IAM-001" in out
+
+    def test_a_safety_risk_needs_no_stride_category(self, tmp_path: Path, capsys: object) -> None:
+        """STRIDE is a security taxonomy; a patient-safety hazard has no category in it.
+
+        The wallet's RC-SAFETY cluster classifies by hazard_category, so warning
+        about its missing STRIDE category would be noise, not a finding.
+        """
+        from rdm.story_audit.backlog_parser import parse_risk_cluster
+
+        path = _write_cluster(
+            tmp_path, cluster="RC-SAFETY", risk_id="RISK-SAFETY-001",
+            stride_label="Hazard Category", stride="Delayed care",
+        )
+        risks = parse_risk_cluster(path)
+        out = capsys.readouterr().out
+
+        assert risks[0].stride_category is None
+        assert "RISK-SAFETY-001" not in out

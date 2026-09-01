@@ -87,3 +87,105 @@ class TestReconcile:
         _result_with_output(tmp_path, "t2", "passed", "DI-1", "SDS-core")
         report = reconcile({"DI-1"}, tmp_path)
         assert report.by_id["DI-1"].outputs == ["SDS-core"]
+
+
+class TestYamlTestDiscovery:
+    """Ansible task files used as acceptance tests must be discoverable.
+
+    An estate can carry its entire design-input acceptance suite as tagged
+    Ansible tasks. While TEST_FILE_GLOBS omitted YAML, every one of those tags
+    scanned as zero: coverage read 0% and each test file read as an orphan --
+    the same wrong answer an unaudited repo gives, only inverted.
+    """
+
+    def _suite(self, tests_dir: Path) -> Path:
+        tests_dir.mkdir(parents=True, exist_ok=True)
+        (tests_dir / "foundation_dns_test.yml").write_text(
+            "---\n"
+            "- name: read the DNS layer sources\n"
+            "  ansible.builtin.set_fact:\n"
+            "    zone: \"{{ lookup('file', 'main.tf') }}\"\n"
+            "  tags: [DI-5]\n"
+            "\n"
+            '- name: "DI-5 clause 1: the module provisions a public zone"\n'
+            "  ansible.builtin.assert:\n"
+            "    that:\n"
+            "      - zone is regex('aws_route53_zone')\n"
+            "  tags: [DI-5, dns]\n"
+        )
+        return tests_dir
+
+    def test_yaml_test_file_is_discovered(self, tmp_path: Path) -> None:
+        """A *_test.yml file counts as a test file."""
+        from rdm.record.allure import iter_test_files
+
+        found = {p.name for p in iter_test_files(self._suite(tmp_path / "tests"))}
+        assert "foundation_dns_test.yml" in found
+
+    def test_ansible_task_tags_resolve_to_design_inputs(self, tmp_path: Path) -> None:
+        """`tags: [DI-5]` is the tag syntax, so DI-5 is the claimed id."""
+        from rdm.record.allure import scan_source_tags
+
+        refs = scan_source_tags(self._suite(tmp_path / "tests"))
+        assert "DI-5" in refs
+
+    def test_ordinary_ansible_tags_are_not_mistaken_for_ids(self, tmp_path: Path) -> None:
+        """`dns` is a plain Ansible tag and must not enter the id universe."""
+        from rdm.record.allure import scan_source_tags
+
+        refs = scan_source_tags(self._suite(tmp_path / "tests"))
+        assert "dns" not in refs
+        assert set(refs) == {"DI-5"}
+
+    def test_a_tagged_yaml_suite_is_not_an_orphan(self, tmp_path: Path) -> None:
+        """claims_a_tag recognises the Ansible tag syntax, so the file is not orphaned."""
+        from rdm.record.allure import claims_a_tag
+
+        path = self._suite(tmp_path / "tests") / "foundation_dns_test.yml"
+        assert claims_a_tag(path, path.read_text())
+
+    def test_untagged_yaml_suite_is_an_orphan(self, tmp_path: Path) -> None:
+        """A YAML test claiming no tag at all is still reported as an orphan."""
+        from rdm.record.allure import claims_a_tag
+
+        path = tmp_path / "bare_test.yml"
+        path.write_text("---\n- name: asserts nothing traceable\n  ansible.builtin.debug:\n    msg: hi\n")
+        assert not claims_a_tag(path, path.read_text())
+
+    def test_audit_credits_a_design_input_tagged_only_in_yaml(
+        self, tmp_path: Path, capsys: object
+    ) -> None:
+        """End to end, in the halla-health-infra shape.
+
+        Design inputs declared in the DHF, acceptance tests written as tagged
+        Ansible tasks, no Python test in the repository at all. Before YAML was
+        discoverable this scored Coverage 0% with every test file an orphan,
+        while in fact every design input was tagged.
+        """
+        from rdm.story_audit.audit import print_report, run_audit
+        from tests.util import write_design_doc
+
+        write_design_doc(
+            tmp_path / "dhf" / "documents" / "design",
+            "foundation_dns",
+            design_inputs=(("DI-5", ["UN-001"]),),
+        )
+        self._suite(tmp_path / "tests")
+
+        print_report(run_audit(tmp_path), tmp_path)
+        out = capsys.readouterr().out
+
+        assert "| DI-5 | tagged (1 file(s)) |" in out
+        assert "Coverage >= 70% (100%) (+30)" in out
+        assert "No test files found" not in out
+
+    def test_a_file_claiming_one_id_many_times_counts_once(self, tmp_path: Path) -> None:
+        """An Ansible suite tags every task in a context with the same design input.
+
+        Callers report these as a file count ("tagged (n file(s))"), so counting
+        occurrences made one file with thirteen DI-1 tags read as thirteen files.
+        """
+        from rdm.record.allure import scan_source_tags
+
+        refs = scan_source_tags(self._suite(tmp_path / "tests"))
+        assert refs["DI-5"] == [str(tmp_path / "tests" / "foundation_dns_test.yml")]

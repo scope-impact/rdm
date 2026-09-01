@@ -13,6 +13,7 @@ Parses markdown files with YAML frontmatter from:
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 try:
@@ -287,6 +288,20 @@ def parse_task(file_path: Path) -> Task:
 # =============================================================================
 
 
+# Table labels that mean the same field. The key is what consumers read; the
+# values are spellings found in the estate's own risk clusters. halla-health-infra
+# writes `**STRIDE Category**`, the halla-health wallet writes `**STRIDE**`, and
+# because the label is lowercased into the lookup key the second spelling landed
+# under `stride` and every consumer reading `stride_category` saw None -- all 14
+# wallet risks lost their classification silently, since a missing category is
+# indistinguishable from a risk nobody classified.
+RISK_TABLE_ALIASES = {
+    "stride": "stride_category",
+    "stride_type": "stride_category",
+    "risk_level": "risk_level",
+}
+
+
 def parse_risk_table(body: str) -> dict[str, str]:
     """Parse risk details table from markdown.
 
@@ -296,6 +311,9 @@ def parse_risk_table(body: str) -> dict[str, str]:
         | **STRIDE Category** | Spoofing |
         | **Severity** | Critical |
 
+    Known label spellings are normalised via RISK_TABLE_ALIASES, so a cluster
+    writing `**STRIDE**` is read the same as one writing `**STRIDE Category**`.
+
     Returns:
         Dict of attribute -> value
     """
@@ -304,6 +322,7 @@ def parse_risk_table(body: str) -> dict[str, str]:
 
     for match in table_pattern.finditer(body):
         key = match.group(1).strip().lower().replace(" ", "_")
+        key = RISK_TABLE_ALIASES.get(key, key)
         value = match.group(2).strip()
         result[key] = value
 
@@ -546,6 +565,17 @@ def parse_risk_cluster(file_path: Path) -> list[RiskDoc]:
         section = body[start:end].strip()
 
         table_data = parse_risk_table(section)
+        if not (table_data.get("stride_category") or table_data.get("hazard_category")):
+            # Say so rather than storing None: an unreadable label and a risk
+            # nobody classified are the same value downstream, and the first is
+            # a documentation bug worth fixing at source. A safety cluster is
+            # not the bug -- a patient-safety hazard has no STRIDE category and
+            # classifies by hazard_category instead -- so either satisfies this.
+            print(
+                f"Warning: {match.group(1)} in {file_path.name} carries no risk "
+                f"classification (labels found: "
+                f"{', '.join(sorted(table_data)) or 'none'})"
+            )
         controls, control_refs = _extract_risk_controls_from_section(section)
 
         mitigation = _extract_risk_section(section, "Mitigation")
@@ -623,11 +653,57 @@ def parse_decision(file_path: Path) -> Decision:
 # =============================================================================
 
 
-def extract_backlog_data(backlog_dir: Path) -> BacklogData:
+# Directories never searched for controlled records.
+RISK_SEARCH_SKIP_DIRS = frozenset(
+    {"node_modules", ".git", ".venv", "venv", "site", "build", "dist", "mutants"}
+)
+
+
+def find_risk_clusters(
+    backlog_dir: Path, risk_roots: Sequence[Path] | None = None
+) -> list[Path]:
+    """Every risk-cluster document reachable from a backlog directory.
+
+    Discovery used to glob ``backlog/docs/**/*RC-*.md`` and nothing else, but
+    neither Halla Health product keeps its clusters there: halla-health-infra
+    holds them in ``dhf/documents/risk/`` and the wallet in ``dhf/risk/``. So a
+    repository with 20 documented risks reported 0, and the risk tooling scored
+    an empty set -- which, before the audit scoring was fixed, then read as
+    full marks.
+
+    Searches ``backlog/docs`` and the repository containing the backlog, unless
+    ``risk_roots`` names the roots explicitly. Results are deduplicated by
+    resolved path, so overlapping roots cannot double-count a cluster.
+    """
+    roots = (
+        [Path(r) for r in risk_roots]
+        if risk_roots is not None
+        else [backlog_dir / "docs", backlog_dir.parent]
+    )
+    found: dict[Path, None] = {}
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*RC-*.md")):
+            if RISK_SEARCH_SKIP_DIRS.intersection(path.parts):
+                continue
+            try:
+                key = path.resolve()
+            except OSError:
+                key = path
+            found.setdefault(key, None)
+    return list(found)
+
+
+def extract_backlog_data(
+    backlog_dir: Path, risk_roots: Sequence[Path] | None = None
+) -> BacklogData:
     """Extract all data from a Backlog.md directory.
 
     Args:
         backlog_dir: Path to backlog directory containing config.yml
+        risk_roots: Where to look for risk clusters. Defaults to
+            ``backlog/docs`` plus the repository containing the backlog.
 
     Returns:
         BacklogData object with all parsed content
@@ -663,18 +739,30 @@ def extract_backlog_data(backlog_dir: Path) -> BacklogData:
             except Exception as e:
                 print(f"Warning: Failed to parse task {md_file}: {e}")
 
-    # Parse risks from RC-* (risk cluster) files
-    # Pattern: {task_prefix}-doc-NNN - RC-*.md or doc-NNN - RC-*.md
-    # Searches docs/ and docs/risks/ subdirectories
+    # Parse risks from RC-* (risk cluster) files, wherever the repository keeps
+    # them -- see find_risk_clusters for why backlog/docs alone was not enough.
     risks = []
-    docs_dir = backlog_dir / "docs"
-    if docs_dir.exists():
-        for md_file in sorted(docs_dir.glob("**/*RC-*.md")):
-            try:
-                cluster_risks = parse_risk_cluster(md_file)
-                risks.extend(cluster_risks)
-            except Exception as e:
-                print(f"Warning: Failed to parse risk cluster {md_file}: {e}")
+    seen_risk_ids: dict[str, Path] = {}
+    for md_file in find_risk_clusters(backlog_dir, risk_roots):
+        try:
+            cluster_risks = parse_risk_cluster(md_file)
+        except Exception as e:
+            print(f"Warning: Failed to parse risk cluster {md_file}: {e}")
+            continue
+        for risk in cluster_risks:
+            first = seen_risk_ids.get(risk.id)
+            if first is not None:
+                # Two clusters claiming one id would collide on insert. Keep the
+                # first and name both files: a duplicate id is a real conflict,
+                # not something for a sync to resolve quietly.
+                print(
+                    f"Warning: duplicate risk id {risk.id.upper()} in "
+                    f"{md_file.name}; already defined in {first.name} -- keeping "
+                    "the first"
+                )
+                continue
+            seen_risk_ids[risk.id] = md_file
+            risks.append(risk)
 
     # Parse decisions
     decisions = []
