@@ -54,6 +54,11 @@ class AuditResult:
     conflicts: list[tuple[str, list[StoryReference]]] = field(default_factory=list)
     orphan_tests: list[str] = field(default_factory=list)
     orphan_sources: list[str] = field(default_factory=list)
+    # How many files discovery actually looked at. A ratio whose denominator is
+    # zero cannot be scored, and scoring it anyway is what let an empty
+    # repository earn full marks, so the counts travel with the result.
+    test_files_scanned: int = 0
+    source_files_scanned: int = 0
     # Record-first (DHF) design inputs: declared DI ids and the tagged subset.
     design_inputs: dict[str, list[StoryReference]] = field(
         default_factory=lambda: defaultdict(list)
@@ -73,7 +78,11 @@ MIN_SOURCE_FILE_LINES_FOR_ORPHAN_CHECK = 20
 
 # Matches @allure.story("US-001") or @allure.feature("FT-001").
 # Single definition lives in record.allure; re-exported here for existing callers.
-from rdm.record.allure import ALLURE_PATTERN  # noqa: E402,F401
+from rdm.record.allure import (  # noqa: E402,F401
+    ALLURE_PATTERN,
+    claims_a_tag as _claims_a_tag,
+    iter_test_files,
+)
 
 # Matches @trace("US-001")
 TRACE_PATTERN = re.compile(r'@trace\(["\']([^"\']+)["\']')
@@ -121,10 +130,15 @@ def scan_requirements(repo_path: Path) -> dict[str, list[StoryReference]]:
     return refs
 
 
-def scan_tests(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list[str]]:
-    """Scan test files for story references and find orphans."""
+def scan_tests(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list[str], int]:
+    """Scan test files for story references and find orphans.
+
+    Returns the references, the orphans, and how many test files were seen --
+    the last so the caller can tell "no orphans" from "no tests".
+    """
     refs: dict[str, list[StoryReference]] = defaultdict(list)
     orphans = []
+    scanned = 0
     tests_path = repo_path / "tests"
 
     if not tests_path.exists():
@@ -134,26 +148,31 @@ def scan_tests(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list[s
             break
 
     if not tests_path.exists():
-        return refs, orphans
+        return refs, orphans, scanned
 
-    for py_file in tests_path.rglob("test_*.py"):
-        file_refs = find_ids_in_file(py_file, "test")
+    for test_file in iter_test_files(tests_path):
+        scanned += 1
+        file_refs = find_ids_in_file(test_file, "test")
         if file_refs:
             for ref in file_refs:
                 refs[ref.story_id].append(ref)
         else:
-            # Check if file has @allure decorators at all
-            content = py_file.read_text(encoding="utf-8", errors="ignore")
-            if "@allure" not in content:
-                orphans.append(str(py_file))
+            # Check if the file carries a tag syntax at all
+            content = test_file.read_text(encoding="utf-8", errors="ignore")
+            if not _claims_a_tag(test_file, content):
+                orphans.append(str(test_file))
 
-    return refs, orphans
+    return refs, orphans, scanned
 
 
-def scan_sources(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list[str]]:
-    """Scan source files for @trace decorators and find orphans."""
+def scan_sources(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list[str], int]:
+    """Scan source files for @trace decorators and find orphans.
+
+    Returns the references, the orphans, and how many source files were seen.
+    """
     refs: dict[str, list[StoryReference]] = defaultdict(list)
     orphans = []
+    scanned = 0
 
     # Check both src/ and apps/*/src/
     source_paths = [repo_path / "src"]
@@ -166,6 +185,7 @@ def scan_sources(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list
         for py_file in src_path.rglob("*.py"):
             if py_file.name == "__init__.py":
                 continue
+            scanned += 1
 
             file_refs = find_ids_in_file(py_file, "source")
             content = py_file.read_text(encoding="utf-8", errors="ignore")
@@ -193,7 +213,7 @@ def scan_sources(repo_path: Path) -> tuple[dict[str, list[StoryReference]], list
                 if len(content.splitlines()) > MIN_SOURCE_FILE_LINES_FOR_ORPHAN_CHECK:
                     orphans.append(str(py_file))
 
-    return refs, orphans
+    return refs, orphans, scanned
 
 
 def scan_design_inputs(
@@ -303,8 +323,8 @@ def run_audit(repo_path: Path) -> AuditResult:
 
     # Scan all locations
     result.requirements = scan_requirements(repo_path)
-    result.tests, result.orphan_tests = scan_tests(repo_path)
-    result.sources, result.orphan_sources = scan_sources(repo_path)
+    result.tests, result.orphan_tests, result.test_files_scanned = scan_tests(repo_path)
+    result.sources, result.orphan_sources, result.source_files_scanned = scan_sources(repo_path)
     result.docs = scan_docs(repo_path)
 
     # Record-first DHF: design inputs join the requirements universe, and their
@@ -441,47 +461,74 @@ def print_report(result: AuditResult, repo_path: Path) -> None:
         )
     print()
 
-    # Health score
+    # Health score.
+    #
+    # Every criterion below is a ratio, and a ratio over an empty set says
+    # nothing about the repository. Each one used to resolve that case in the
+    # repository's favour -- coverage fell back to 100%, and zero orphans out of
+    # zero files read as "few orphans" -- so an empty directory scored 100/100,
+    # grade A. A repo with no requirements is unaudited, not perfectly
+    # traceable, so an unmeasurable criterion now awards nothing and says which
+    # evidence was missing.
     print("## Traceability Score\n")
     score = 0
+    attainable = 0
+    unmeasured: list[str] = []
 
-    # No conflicts: +30
-    if not result.conflicts:
-        score += 30
-        print("- [x] No ID conflicts (+30)")
-    else:
-        print(f"- [ ] ID conflicts found: {len(result.conflicts)} (+0)")
+    def award(points: int, earned: int, detail: str) -> None:
+        """Score one criterion that could be measured."""
+        nonlocal score, attainable
+        attainable += points
+        score += earned
+        mark = "x" if earned == points else " "
+        print(f"- [{mark}] {detail} (+{earned})")
 
-    # Coverage > 70%: +30
-    coverage = len(covered_ids) / len(req_ids) * 100 if req_ids else 100
-    if coverage >= 70:
-        score += 30
-        print(f"- [x] Coverage >= 70% ({coverage:.0f}%) (+30)")
-    else:
-        partial = int(coverage / 70 * 30)
-        score += partial
-        print(f"- [ ] Coverage {coverage:.0f}% (+{partial})")
+    def skip(label: str, missing: str) -> None:
+        """Decline to score a criterion whose evidence set is empty."""
+        unmeasured.append(missing)
+        print(f"- [!] {missing}: {label} not scored (+0)")
 
-    # Few orphan tests: +20
-    tests_path = repo_path / "tests"
-    test_count = len(list(tests_path.rglob("test_*.py"))) if tests_path.exists() else 1
-    orphan_pct = len(result.orphan_tests) / max(test_count, 1) * 100
-    if orphan_pct < 20:
-        score += 20
-        print(f"- [x] Orphan tests < 20% ({orphan_pct:.0f}%) (+20)")
+    # No conflicts: +30. Vacuous with no IDs at all.
+    if not result.all_ids:
+        skip("conflicts", "No IDs found")
+    elif not result.conflicts:
+        award(30, 30, "No ID conflicts")
     else:
-        print(f"- [ ] Orphan tests {orphan_pct:.0f}% (+0)")
+        award(30, 0, f"ID conflicts found: {len(result.conflicts)}")
 
-    # Few orphan sources: +20
-    if len(result.orphan_sources) < 5:
-        score += 20
-        print(f"- [x] Orphan sources < 5 ({len(result.orphan_sources)}) (+20)")
+    # Coverage >= 70%: +30. Undefined with no requirements.
+    if not req_ids:
+        skip("coverage", "No requirements found")
     else:
-        print(f"- [ ] Orphan sources: {len(result.orphan_sources)} (+0)")
+        coverage = len(covered_ids) / len(req_ids) * 100
+        if coverage >= 70:
+            award(30, 30, f"Coverage >= 70% ({coverage:.0f}%)")
+        else:
+            award(30, int(coverage / 70 * 30), f"Coverage {coverage:.0f}%")
+
+    # Few orphan tests: +20. Zero tests is not zero orphans.
+    if not result.test_files_scanned:
+        skip("orphan tests", "No test files found")
+    else:
+        orphan_pct = len(result.orphan_tests) / result.test_files_scanned * 100
+        if orphan_pct < 20:
+            award(20, 20, f"Orphan tests < 20% ({orphan_pct:.0f}%)")
+        else:
+            award(20, 0, f"Orphan tests {orphan_pct:.0f}%")
+
+    # Few orphan sources: +20. Zero sources is not zero orphans.
+    if not result.source_files_scanned:
+        skip("orphan sources", "No source files found")
+    elif len(result.orphan_sources) < 5:
+        award(20, 20, f"Orphan sources < 5 ({len(result.orphan_sources)})")
+    else:
+        award(20, 0, f"Orphan sources: {len(result.orphan_sources)}")
 
     print(f"\n**Total Score: {score}/100**")
 
-    if score >= 90:
+    if attainable == 0:
+        grade = "N/A - No evidence found to audit"
+    elif score >= 90:
         grade = "A - Excellent traceability"
     elif score >= 70:
         grade = "B - Good traceability"
@@ -491,6 +538,14 @@ def print_report(result: AuditResult, repo_path: Path) -> None:
         grade = "D - Significant gaps"
 
     print(f"**Grade: {grade}**")
+    if unmeasured:
+        print()
+        print(
+            f"> Only {attainable} of 100 points were attainable: "
+            + "; ".join(unmeasured)
+            + ". A criterion with nothing to measure earns nothing, so this score "
+            "is a floor and the grade reflects what could be checked, not what is true."
+        )
     print()
 
     print("=" * 60)

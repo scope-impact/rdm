@@ -518,3 +518,77 @@ definition_of_done: [Done item 1]
 
         assert "FT-001" in result.all_ids
         assert "US-001" in result.all_ids
+
+
+class TestAuditScoreRefusesAbsentEvidence:
+    """The score must never reward a repository for having no evidence.
+
+    Every criterion in print_report measures a ratio, and each one used to
+    resolve its empty case in the repository's favour: coverage fell back to
+    100%, orphan counts of zero read as "few orphans". An empty directory
+    therefore scored 100/100, grade A -- the exact shape of false green this
+    tool exists to catch, since a repo with no requirements is unaudited, not
+    perfectly traceable.
+    """
+
+    def test_empty_repository_does_not_score_a_hundred(self, tmp_path: Path, capsys: object) -> None:
+        """An empty directory has no evidence, so it earns no coverage points."""
+        from rdm.story_audit.audit import print_report, run_audit
+
+        print_report(run_audit(tmp_path), tmp_path)
+        out = capsys.readouterr().out
+
+        assert "Total Score: 100/100" not in out
+        assert "A - Excellent traceability" not in out
+
+    def test_empty_repository_says_why_it_scored_nothing(self, tmp_path: Path, capsys: object) -> None:
+        """A zero must be explained, or it reads as a tooling failure."""
+        from rdm.story_audit.audit import print_report, run_audit
+
+        print_report(run_audit(tmp_path), tmp_path)
+        out = capsys.readouterr().out
+
+        assert "no requirements" in out.lower()
+
+    def test_no_requirements_earns_no_coverage_points(self, tmp_path: Path, capsys: object) -> None:
+        """Coverage over an empty requirement set is undefined, not 100%."""
+        from rdm.story_audit.audit import print_report, run_audit
+
+        print_report(run_audit(tmp_path), tmp_path)
+        out = capsys.readouterr().out
+
+        assert "Coverage >= 70% (100%)" not in out
+
+    def test_no_test_files_earns_no_orphan_test_points(self, tmp_path: Path, capsys: object) -> None:
+        """Zero discovered tests is not the same as zero orphaned tests."""
+        from rdm.story_audit.audit import print_report, run_audit
+
+        print_report(run_audit(tmp_path), tmp_path)
+        out = capsys.readouterr().out
+
+        assert "Orphan tests < 20%" not in out
+
+    def test_no_source_files_earns_no_orphan_source_points(self, tmp_path: Path, capsys: object) -> None:
+        """Zero discovered sources is not the same as zero orphaned sources."""
+        from rdm.story_audit.audit import print_report, run_audit
+
+        print_report(run_audit(tmp_path), tmp_path)
+        out = capsys.readouterr().out
+
+        assert "Orphan sources < 5" not in out
+
+    def test_real_coverage_still_scores(self, tmp_path: Path, capsys: object) -> None:
+        """The guard must not suppress a genuine pass: evidence present, points awarded."""
+        from rdm.story_audit.audit import print_report, run_audit
+
+        (tmp_path / "requirements").mkdir()
+        (tmp_path / "requirements" / "stories.yaml").write_text("- id: US-001\n")
+        (tmp_path / "tests").mkdir()
+        (tmp_path / "tests" / "test_story.py").write_text(
+            'import allure\n\n@allure.story("US-001")\ndef test_one() -> None:\n    pass\n'
+        )
+
+        print_report(run_audit(tmp_path), tmp_path)
+        out = capsys.readouterr().out
+
+        assert "Coverage >= 70% (100%) (+30)" in out
