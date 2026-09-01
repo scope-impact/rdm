@@ -215,3 +215,37 @@ class TestYamlTestDiscovery:
             "ft-004.02-kubeconfig-ssm-tests.yml",
             "some_tests.yaml",
         }
+
+    def test_singular_test_directory_is_found(self, tmp_path: Path) -> None:
+        """Dart, Flutter and Maven put the suite in `test/`, not `tests/`.
+
+        halla_health_app carries 162 Dart test files under `test/`; looking only
+        for the plural made the whole suite read as absent.
+        """
+        from rdm.record.allure import find_tests_dir
+
+        (tmp_path / "dhf").mkdir()
+        (tmp_path / "test").mkdir()
+        assert find_tests_dir(tmp_path / "dhf") == tmp_path / "test"
+
+    def test_plural_test_directory_still_wins(self, tmp_path: Path) -> None:
+        """Where both exist, `tests/` is preferred — it is rdm's own convention."""
+        from rdm.record.allure import find_tests_dir
+
+        (tmp_path / "dhf").mkdir()
+        (tmp_path / "test").mkdir()
+        (tmp_path / "tests").mkdir()
+        assert find_tests_dir(tmp_path / "dhf") == tmp_path / "tests"
+
+    def test_dart_test_files_are_discovered(self, tmp_path: Path) -> None:
+        """`*_test.dart` is a test file."""
+        from rdm.record.allure import iter_test_files
+
+        d = tmp_path / "test" / "providers"
+        d.mkdir(parents=True)
+        (d / "clear_local_data_test.dart").write_text("void main() {}\n")
+        (d / "helpers.dart").write_text("// not a test\n")
+
+        assert {p.name for p in iter_test_files(tmp_path / "test")} == {
+            "clear_local_data_test.dart"
+        }
