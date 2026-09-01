@@ -189,3 +189,29 @@ class TestYamlTestDiscovery:
 
         refs = scan_source_tags(self._suite(tmp_path / "tests"))
         assert refs["DI-5"] == [str(tmp_path / "tests" / "foundation_dns_test.yml")]
+
+    def test_plural_tests_suffix_is_discovered(self, tmp_path: Path) -> None:
+        """`ft-004.01-flux-bootstrap-tests.yml` is a test file too.
+
+        halla-health-infra's live-tier suite -- 26 Ansible task files verified
+        against the running estate -- is named `*-tests.yml`, so the singular
+        globs alone found none of them and the live tier could not be
+        discovered at all.
+        """
+        from rdm.record.allure import iter_test_files
+
+        tests_dir = tmp_path / "tests" / "roles" / "gitops" / "tasks"
+        tests_dir.mkdir(parents=True)
+        for name in (
+            "ft-004.01-flux-bootstrap-tests.yml",
+            "ft-004.02-kubeconfig-ssm-tests.yml",
+            "some_tests.yaml",
+        ):
+            (tests_dir / name).write_text("---\n- name: a check\n  tags: [DI-16]\n")
+
+        found = {p.name for p in iter_test_files(tmp_path / "tests")}
+        assert found == {
+            "ft-004.01-flux-bootstrap-tests.yml",
+            "ft-004.02-kubeconfig-ssm-tests.yml",
+            "some_tests.yaml",
+        }
