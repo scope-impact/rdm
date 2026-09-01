@@ -166,6 +166,11 @@ def _repo_root(path: Path) -> Path | None:
     return None
 
 
+# Conventional names for a test suite directory. Plural first: it is the
+# pytest/Go/Ansible convention and the one rdm's own repositories use.
+TESTS_DIR_NAMES = ("tests", "test")
+
+
 def find_tests_dir(dhf_dir: Path) -> Path | None:
     """Locate the test suite to scan for @allure source tags.
 
@@ -175,6 +180,10 @@ def find_tests_dir(dhf_dir: Path) -> Path | None:
     deliberately not consulted: a ``<cwd>/tests`` fallback would let an audit
     of another checkout count the caller's test tags as that repository's
     coverage (DI-23).
+
+    ``tests`` and ``test`` are both accepted, in that order per ancestor: Dart,
+    Flutter and Maven put the suite in ``test/``, and looking only for the plural
+    made every one of those repositories read as having no tests at all.
     """
     try:
         start = Path(dhf_dir).resolve().parent
@@ -185,9 +194,10 @@ def find_tests_dir(dhf_dir: Path) -> Path | None:
     # Without a repository boundary, only the DHF's sibling is trustworthy.
     chain = chain[: chain.index(root) + 1] if root in chain else [start]
     for ancestor in chain:
-        candidate = ancestor / "tests"
-        if candidate.exists():
-            return candidate
+        for name in TESTS_DIR_NAMES:
+            candidate = ancestor / name
+            if candidate.exists():
+                return candidate
     return None
 
 
@@ -206,6 +216,7 @@ TEST_FILE_GLOBS = (
     "*_test.go",
     "*_test.yml", "*_test.yaml", "test_*.yml", "test_*.yaml",
     "*-tests.yml", "*_tests.yml", "*-tests.yaml", "*_tests.yaml",
+    "*_test.dart",
 )
 
 # Non-Python tag syntaxes (DI-31): JS/TS runtime calls `allure.story("…")`
