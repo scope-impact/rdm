@@ -137,3 +137,71 @@ def test_export_holds_no_scoring_policy(tmp_path):
     data = export_dhf(_dhf(tmp_path))
     assert "matrix" not in data
     assert not any("matrix" in str(k).lower() for k in data)
+
+
+def test_table_values_lose_their_markdown_emphasis(tmp_path):
+    """`**High**` and `High` are one risk level; a consumer comparing strings saw two."""
+    from rdm.story_audit.backlog_parser import parse_risk_table
+
+    table = parse_risk_table("| **Risk Level** | **High** |\n| **Severity** | `Serious` |\n")
+    assert table["risk_level"] == "High"
+    assert table["severity"] == "Serious"
+
+
+def test_post_control_rows_are_read(tmp_path):
+    """A residual re-scored from a post-control pair, rather than asserted."""
+    from rdm.story_audit.backlog_parser import parse_risk_table
+
+    table = parse_risk_table(
+        "| **Severity (post-control)** | Serious |\n"
+        "| **Probability (post-control)** | Unlikely |\n"
+    )
+    assert table["severity_post_control"] == "Serious"
+    assert table["probability_post_control"] == "Unlikely"
+
+
+def test_every_attribute_row_survives(tmp_path):
+    """A row this parser has no field for must stay reachable, not vanish."""
+    from rdm.story_audit.backlog_parser import parse_risk_cluster
+
+    path = _write(tmp_path, "RC-X.md", """
+        ---
+        id: rc-x
+        type: risk-cluster
+        labels: [risk-cluster, RC-X]
+        ---
+
+        ## RISK-PROD-X-001: Something
+
+        | Attribute | Value |
+        |-----------|-------|
+        | **STRIDE** | Tampering |
+        | **Severity** | Minor |
+        | **Probability** | Rare |
+        | **Risk Level** | Low |
+        | **Monitoring** | A weekly report |
+
+        ### Hazard
+
+        A thing.
+
+        ### Situation
+
+        It happens.
+
+        ### Harm
+
+        Someone is inconvenienced.
+        """)
+    risk = parse_risk_cluster(path)[0]
+    assert risk.risk_id == "RISK-PROD-X-001"
+    assert risk.attributes["monitoring"] == "A weekly report"
+
+
+def test_a_wrapped_chain_section_collapses_to_one_line(tmp_path):
+    """Source line breaks are the author's column width, not the sentence."""
+    from rdm.story_audit.backlog_parser import _unwrap
+
+    assert _unwrap("A generative assistant can emit\ndiagnostic language.") == (
+        "A generative assistant can emit diagnostic language."
+    )

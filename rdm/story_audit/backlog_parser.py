@@ -300,7 +300,26 @@ RISK_TABLE_ALIASES = {
     "stride": "stride_category",
     "stride_type": "stride_category",
     "risk_level": "risk_level",
+    "hazard_category": "hazard_category",
+    # A residual re-scored from a post-control severity and probability, rather
+    # than asserted as a bare level. Parenthesised labels are the spelling in
+    # use; without these the rows parse to keys nothing reads.
+    "severity_(post-control)": "severity_post_control",
+    "severity_post-control": "severity_post_control",
+    "post-control_severity": "severity_post_control",
+    "probability_(post-control)": "probability_post_control",
+    "probability_post-control": "probability_post_control",
+    "post-control_probability": "probability_post_control",
 }
+
+
+def _unwrap(text: str) -> str:
+    """Collapse a source-wrapped paragraph to one line.
+
+    The line breaks are the markdown author's column width, not part of the
+    sentence; leaving them in means every consumer re-collapses them.
+    """
+    return re.sub(r"\s+", " ", text or "").strip()
 
 
 def parse_risk_table(body: str) -> dict[str, str]:
@@ -324,7 +343,10 @@ def parse_risk_table(body: str) -> dict[str, str]:
     for match in table_pattern.finditer(body):
         key = match.group(1).strip().lower().replace(" ", "_")
         key = RISK_TABLE_ALIASES.get(key, key)
-        value = match.group(2).strip()
+        # A value read out of a table should not carry the table's emphasis:
+        # `**High**` and `High` are the same risk level, and a consumer that
+        # compares them as strings sees two.
+        value = re.sub(r"\*\*|`", "", match.group(2)).strip()
         result[key] = value
 
     return result
@@ -595,14 +617,19 @@ def parse_risk_cluster(file_path: Path) -> list[RiskDoc]:
                 type="risk",
                 created_date=created_date,
                 labels=cluster_labels.copy(),
+                risk_id=match.group(1),
                 stride_category=table_data.get("stride_category"),
+                hazard_category=table_data.get("hazard_category"),
                 severity=table_data.get("severity"),
                 probability=table_data.get("probability"),
                 risk_level=table_data.get("risk_level"),
+                severity_post_control=table_data.get("severity_post_control"),
+                probability_post_control=table_data.get("probability_post_control"),
+                attributes=table_data,
                 cluster=cluster_name,
-                hazard=_extract_risk_section(section, "Hazard"),
-                situation=_extract_risk_section(section, "Situation"),
-                harm=_extract_risk_section(section, "Harm"),
+                hazard=_unwrap(_extract_risk_section(section, "Hazard")),
+                situation=_unwrap(_extract_risk_section(section, "Situation")),
+                harm=_unwrap(_extract_risk_section(section, "Harm")),
                 description=_extract_risk_section(section, "Description"),
                 affected_requirements=_extract_affected_requirements_from_section(section),
                 mitigation_status=mitigation_status,

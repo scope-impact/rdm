@@ -182,10 +182,24 @@ class RiskDoc(BaseModel):
     labels: list[str] = Field(default_factory=list, description="Labels")
 
     # Body content (parsed from risk table)
+    risk_id: str | None = Field(default=None, description="Risk ID as written (RISK-…-NNN)")
     stride_category: str | None = Field(default=None, description="STRIDE category")
+    hazard_category: str | None = Field(
+        default=None, description="Hazard category, where a risk classifies outside STRIDE"
+    )
     severity: str | None = Field(default=None, description="Severity level")
     probability: str | None = Field(default=None, description="Probability level")
     risk_level: str | None = Field(default=None, description="Risk level")
+    severity_post_control: str | None = Field(
+        default=None, description="Severity after controls, for a re-scored residual"
+    )
+    probability_post_control: str | None = Field(
+        default=None, description="Probability after controls, for a re-scored residual"
+    )
+    attributes: dict[str, str] = Field(
+        default_factory=dict,
+        description="Every row of the risk's attribute table, so an unmodelled row is not lost",
+    )
     cluster: str | None = Field(default=None, description="Risk cluster (RC-IAM)")
 
     # Hazard-Situation-Harm chain
