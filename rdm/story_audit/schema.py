@@ -68,7 +68,11 @@ ID_DIGITS_PATTERN = r"\d+"  # One or more digits (flexible)
 # Pattern for matching any story/requirement ID in text (word boundary)
 # Matches: FT-001, US-123, EP-1, RSK-001, RC-42, DC-001, GR-001, ADR-001
 # Also matches extended format: RISK-IAM-001, RISK-DATA-002
-ID_PATTERN = re.compile(rf"\b({_ALL_PREFIXES})-(?:[A-Z]+-)?({ID_DIGITS_PATTERN})\b")
+# Any number of uppercase segments may sit between prefix and digits, so an id
+# can be namespaced per product where two repos share one traceability run:
+# RISK-INFRA-DATA-001 and RISK-WALLET-DATA-001 are distinct ids, and
+# UN-WALLET-FLUTTER-APP-5 (two segments) is expressible at all.
+ID_PATTERN = re.compile(rf"\b({_ALL_PREFIXES})-(?:[A-Z]+-)*({ID_DIGITS_PATTERN})\b")
 
 # Pattern for matching ID definitions in YAML (id: XX-NNN)
 # Matches lines like "id: FT-001" or "- id: US-123"
@@ -81,8 +85,10 @@ ID_DEFINITION_PATTERN = re.compile(
 FEATURE_ID_PATTERN = r"^FT-\d+$"
 USER_STORY_ID_PATTERN = r"^US-([A-Z]+-)?(\d+)$"  # Allows US-001 or US-PREFIX-001
 EPIC_ID_PATTERN = r"^EP-\d+$"
-# Risk ID: RISK-CLUSTER-NNN (e.g., RISK-IAM-001, RISK-DATA-002)
-RISK_ID_PATTERN = r"^RISK-[A-Z]+-\d+$"
+# Risk ID: RISK-[NAMESPACE-]CLUSTER-NNN (e.g. RISK-IAM-001,
+# RISK-INFRA-DATA-001). The namespace segment is what keeps two products'
+# risk registers apart when both are read in one run.
+RISK_ID_PATTERN = r"^RISK(?:-[A-Z]+)+-\d+$"
 # Risk Cluster ID: RC-XXX (e.g., RC-IAM, RC-DATA)
 RISK_CLUSTER_ID_PATTERN = r"^RC-[A-Z]+$"
 

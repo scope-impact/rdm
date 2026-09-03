@@ -231,7 +231,7 @@ POLYGLOT_TAG_PATTERNS = (
 # make this module -- which must work without the story-audit extra -- depend on
 # pydantic. Kept deliberately narrow so ordinary Ansible tags (`bootstrap`,
 # `security`) are not mistaken for ids.
-TAG_ID_PATTERN = re.compile(r"[A-Z]{2,}(?:-[A-Z]+)?-\d+")
+TAG_ID_PATTERN = re.compile(r"[A-Z]{2,}(?:-[A-Z]+)*-\d+")
 
 # Ansible carries the id in the task's own tag list -- `tags: [DI-5]`, or a
 # block/YAML-list form -- so the whole list is captured and split downstream.
