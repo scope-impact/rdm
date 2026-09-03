@@ -40,9 +40,9 @@ class BacklogConfig(BaseModel):
     Example:
         project_id: "hhi"
         task_prefix: "ft"
-        project_name: "Halla Health Infrastructure"
+        project_name: "Example Platform Infrastructure"
         description: "AWS multi-account infrastructure..."
-        repository: "scope-impact/halla-health-infra"
+        repository: "example-org/example-infra"
         labels:
           - bootstrap
           - networking

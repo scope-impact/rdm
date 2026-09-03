@@ -70,8 +70,8 @@ ID_DIGITS_PATTERN = r"\d+"  # One or more digits (flexible)
 # Also matches extended format: RISK-IAM-001, RISK-DATA-002
 # Any number of uppercase segments may sit between prefix and digits, so an id
 # can be namespaced per product where two repos share one traceability run:
-# RISK-INFRA-DATA-001 and RISK-WALLET-DATA-001 are distinct ids, and
-# UN-WALLET-FLUTTER-APP-5 (two segments) is expressible at all.
+# RISK-<product>-DATA-001 stays distinct per product, and a two-segment id
+# such as UN-<product>-<context>-5 is expressible at all.
 ID_PATTERN = re.compile(rf"\b({_ALL_PREFIXES})-(?:[A-Z]+-)*({ID_DIGITS_PATTERN})\b")
 
 # Pattern for matching ID definitions in YAML (id: XX-NNN)
@@ -89,6 +89,11 @@ EPIC_ID_PATTERN = r"^EP-\d+$"
 # RISK-INFRA-DATA-001). The namespace segment is what keeps two products'
 # risk registers apart when both are read in one run.
 RISK_ID_PATTERN = r"^RISK(?:-[A-Z]+)+-\d+$"
+# A risk heading in a cluster document: `## RISK-…-NNN: Title`. Compiled here
+# so a namespaced id is recognised everywhere the bare form is; parsing this
+# with a single-segment pattern makes a namespaced register read as empty.
+RISK_HEADING_PATTERN = re.compile(r"^##\s+(RISK(?:-[A-Z]+)+-\d+):\s*(.+)$", re.MULTILINE)
+
 # Risk Cluster ID: RC-XXX (e.g., RC-IAM, RC-DATA)
 RISK_CLUSTER_ID_PATTERN = r"^RC-[A-Z]+$"
 
@@ -154,7 +159,7 @@ class RiskControl(BaseModel):
 
     Format: Inline control with ac_refs linking to acceptance criteria.
     Example:
-        - control: "OIDC restricted to repo:scope-impact/halla-health-infra"
+        - control: "OIDC trust policy restricted to a single repository"
           ac_refs: [US-MGMT-003:AC-002]
     """
 

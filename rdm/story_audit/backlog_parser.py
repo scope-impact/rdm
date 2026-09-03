@@ -21,6 +21,7 @@ try:
 except ImportError:
     raise ImportError("pyyaml is required. Install with: pip install pyyaml")
 
+from rdm.story_audit.schema import RISK_HEADING_PATTERN
 from rdm.story_audit.backlog_schema import (
     AcceptanceCriterion,
     BacklogConfig,
@@ -178,9 +179,9 @@ def parse_config(config_path: Path) -> BacklogConfig:
     # Handle missing project_id by deriving from repository or task_prefix
     if "project_id" not in data:
         if "repository" in data and data["repository"]:
-            # Extract from repo: "scope-impact/halla-health-infra" -> "hhi"
+            # Extract initials from an "owner/repo" slug -> a short prefix
             repo = data["repository"].split("/")[-1]
-            # Take first letter of each word: halla-health-infra -> hhi
+            # Take the first letter of each hyphenated word
             data["project_id"] = "".join(
                 word[0] for word in repo.replace("-", " ").replace("_", " ").split() if word
             )
@@ -289,12 +290,12 @@ def parse_task(file_path: Path) -> Task:
 
 
 # Table labels that mean the same field. The key is what consumers read; the
-# values are spellings found in the estate's own risk clusters. halla-health-infra
-# writes `**STRIDE Category**`, the halla-health wallet writes `**STRIDE**`, and
-# because the label is lowercased into the lookup key the second spelling landed
-# under `stride` and every consumer reading `stride_category` saw None -- all 14
-# wallet risks lost their classification silently, since a missing category is
-# indistinguishable from a risk nobody classified.
+# values are spellings seen in real risk clusters. One register writing
+# `**STRIDE Category**` and another `**STRIDE**` is enough to break this: the
+# label is lowercased into the lookup key, so the second spelling lands under
+# `stride`, every consumer reading `stride_category` sees None, and a whole
+# register loses its classification silently -- a missing category and a risk
+# nobody classified are the same value downstream.
 RISK_TABLE_ALIASES = {
     "stride": "stride_category",
     "stride_type": "stride_category",
@@ -551,9 +552,7 @@ def parse_risk_cluster(file_path: Path) -> list[RiskDoc]:
     # Derive cluster name from labels (e.g., RC-IAM)
     cluster_name = next((lbl for lbl in cluster_labels if lbl.startswith("RC-")), None)
 
-    # Split by ## RISK-XXX-NNN: Title
-    risk_pattern = re.compile(r"^##\s+(RISK-[A-Z]+-\d+):\s*(.+)$", re.MULTILINE)
-    matches = list(risk_pattern.finditer(body))
+    matches = list(RISK_HEADING_PATTERN.finditer(body))
 
     risks = []
     for i, match in enumerate(matches):
@@ -664,12 +663,11 @@ def find_risk_clusters(
 ) -> list[Path]:
     """Every risk-cluster document reachable from a backlog directory.
 
-    Discovery used to glob ``backlog/docs/**/*RC-*.md`` and nothing else, but
-    neither Halla Health product keeps its clusters there: halla-health-infra
-    holds them in ``dhf/documents/risk/`` and the wallet in ``dhf/risk/``. So a
-    repository with 20 documented risks reported 0, and the risk tooling scored
-    an empty set -- which, before the audit scoring was fixed, then read as
-    full marks.
+    Discovery used to glob ``backlog/docs/**/*RC-*.md`` and nothing else, but a
+    project under design controls commonly keeps its clusters in the DHF instead
+    -- ``dhf/risk/`` or ``dhf/documents/risk/``. A repository with 20 documented
+    risks then reported 0, and the risk tooling scored an empty set, which
+    before the audit scoring was fixed read as full marks.
 
     Searches ``backlog/docs`` and the repository containing the backlog, unless
     ``risk_roots`` names the roots explicitly. Results are deduplicated by

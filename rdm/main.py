@@ -181,6 +181,10 @@ def handle_story_command(args):
                 persona_results=Path(args.persona_results) if args.persona_results else None,
             )
 
+        elif args.story_command == 'export':
+            from rdm.record.export import export_command
+            return export_command(args)
+
         elif args.story_command == 'dmr':
             from rdm.record.dmr import dmr_command
             return dmr_command(Path(args.documents_dir), Path(args.output))
@@ -407,6 +411,15 @@ def parse_arguments(arguments):
     trace_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     trace_parser.add_argument('--allure-results', help='Allure results dir (adds verification status)')
     trace_parser.add_argument('--faithfulness', help='Faithfulness verdicts dir (adds review status)')
+
+    # rdm story export
+    export_help = ('serialise the DHF as a data file for `rdm render` and for querying '
+                   '(needs, design inputs, documents, risks, test tags)')
+    export_parser = story_subparsers.add_parser('export', help=export_help)
+    export_parser.add_argument('--dhf', default='dhf', help='Path to DHF directory (default: dhf/)')
+    export_parser.add_argument('--tests', help='test root to scan for id tags (default: discovered)')
+    export_parser.add_argument('--format', choices=['yaml', 'json'], default='yaml',
+                               help='output format (default: yaml, the form `rdm render` reads)')
 
     # rdm story dmr
     dmr_help = 'generate device-master-record index data from controlled documents\' frontmatter'
