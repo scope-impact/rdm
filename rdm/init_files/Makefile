@@ -37,10 +37,6 @@ release/%.typ: release/%.md pandoc_pdf.yml template.typ
 	@mkdir -p $(@D)
 	pandoc --defaults=./pandoc_pdf.yml -t typst $< -o $@
 
-# Manually call recipe to pull down your development history
-data/history.yml:
-	rdm pull $< > $@
-
 .PHONY: all pdfs docs clean
 
 clean:

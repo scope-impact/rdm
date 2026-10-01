@@ -59,21 +59,22 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.graph.cli
 
-## Design-controls gates (`rdm story`)
+## The gates (`rdm story`)
 
-The gates and traceability commands layered on the record core.
+The design gate, release gate, design-input scaffolding and the mutation
+probe, over the record core.
 
-### `rdm.story_audit.design_gate`
+### `rdm.gates.design_gate`
 
-::: rdm.story_audit.design_gate
+::: rdm.gates.design_gate
 
-### `rdm.story_audit.mutation`
+### `rdm.gates.mutation`
 
-::: rdm.story_audit.mutation
+::: rdm.gates.mutation
 
-### `rdm.story_audit.new_input`
+### `rdm.gates.new_input`
 
-::: rdm.story_audit.new_input
+::: rdm.gates.new_input
 
 ## Scaffolding
 

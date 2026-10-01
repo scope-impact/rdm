@@ -17,7 +17,7 @@ jobs:
           pip3 install --user virtualenv
           python3 -m virtualenv tmp-venv
           source tmp-venv/bin/activate
-          pip install --no-cache-dir rdm[github]
+          pip install --no-cache-dir rdm
       - name: Generate release documents
         run: |
           source tmp-venv/bin/activate

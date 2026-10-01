@@ -152,33 +152,6 @@ class TestYamlTestDiscovery:
         path.write_text("---\n- name: asserts nothing traceable\n  ansible.builtin.debug:\n    msg: hi\n")
         assert not claims_a_tag(path, path.read_text())
 
-    def test_audit_credits_a_design_input_tagged_only_in_yaml(
-        self, tmp_path: Path, capsys: object
-    ) -> None:
-        """End to end, in the halla-health-infra shape.
-
-        Design inputs declared in the DHF, acceptance tests written as tagged
-        Ansible tasks, no Python test in the repository at all. Before YAML was
-        discoverable this scored Coverage 0% with every test file an orphan,
-        while in fact every design input was tagged.
-        """
-        from rdm.story_audit.audit import print_report, run_audit
-        from tests.util import write_design_doc
-
-        write_design_doc(
-            tmp_path / "dhf" / "documents" / "design",
-            "foundation_dns",
-            design_inputs=(("DI-5", ["UN-001"]),),
-        )
-        self._suite(tmp_path / "tests")
-
-        print_report(run_audit(tmp_path), tmp_path)
-        out = capsys.readouterr().out
-
-        assert "| DI-5 | tagged (1 file(s)) |" in out
-        assert "Coverage >= 70% (100%) (+30)" in out
-        assert "No test files found" not in out
-
     def test_a_file_claiming_one_id_many_times_counts_once(self, tmp_path: Path) -> None:
         """An Ansible suite tags every task in a context with the same design input.
 

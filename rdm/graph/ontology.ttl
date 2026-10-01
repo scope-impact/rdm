@@ -137,8 +137,8 @@ rdm:residualDecision a owl:DatatypeProperty ; rdfs:label "residual decision" ; r
     rdfs:comment "acceptable, accepted, needs acceptance, unacceptable, or not evaluated (a control lacks a passing test)." .
 rdm:riskStatus a owl:DatatypeProperty ; rdfs:label "status" ; rdfs:domain rdm:Risk ;
     rdfs:comment "proposed (no person has approved the rating yet) or approved." .
-rdm:declarationCount a owl:DatatypeProperty ; rdfs:label "declaration count" ; rdfs:domain rdm:Risk ;
-    rdfs:comment "How many register entries declare this risk id." .
+rdm:declarationCount a owl:DatatypeProperty ; rdfs:label "declaration count" ;
+    rdfs:comment "How many times the record declares this id (a user need, design input or risk); more than one is a conflict." .
 
 rdm:status a owl:DatatypeProperty ;
     rdfs:label "status" ; rdfs:domain rdm:TestRun ;

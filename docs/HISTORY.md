@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- One data model (Design Review 11): DuckDB, the planning tooling
+  (`rdm story audit | sync | backlog-validate | check-ids | validate`, `rdm pm`,
+  `rdm pull`) and the `story-audit`, `analytics`, `github` and `plan` extras are
+  removed; the gates move to `rdm/gates/` and need no extra. A duplicated
+  user-need or design-input id now fails the design gate (DI-46).
 - Risk evaluation per the requirements skill (Design Review 10): no default
   matrix — a register needs a declared `risk_policy` with per-level
   acceptability; a residual is not evaluated until its controls are verified;

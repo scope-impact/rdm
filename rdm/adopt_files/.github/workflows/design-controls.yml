@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install rdm + test tooling
-        run: pip install "rdm[story-audit]" pytest allure-pytest
+        run: pip install rdm pytest allure-pytest
 
       - name: Design gate (design docs + review present, complete, approved)
         run: rdm story design-gate --dhf dhf

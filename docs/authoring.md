@@ -41,9 +41,6 @@ title: "My controlled document"
 | `md_indent` | indent an included snippet, optionally shifting its heading levels |
 | `first_pass_output` | two-pass rendering: reference content computed later in the document (e.g. a table of contents over generated sections) |
 
-DuckDB-backed queries are also available for templates that report over synced
-planning data — see the [API reference](reference.md) for `rdm.render`.
-
 ## Collecting snippets from source
 
 Keep fragments of documentation next to the code and pull them into documents:

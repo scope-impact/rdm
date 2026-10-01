@@ -20,7 +20,7 @@ echo "-> gates -> generated traceability matrix -> reviewed pull request)."
 if command -v rdm >/dev/null 2>&1; then
     rdm story design-gate --dhf dhf 2>/dev/null | tail -1 || true
 else
-    echo "note: 'rdm' not on PATH -- install with: pip install 'rdm[story-audit]'"
+    echo "note: 'rdm' not on PATH -- install with: pip install rdm"
 fi
 
 exit 0

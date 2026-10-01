@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rdm.record.allure import scan_source_tags as allure_tag_ids
-from rdm.story_audit.design_gate import (
+from rdm.gates.design_gate import (
     DESIGN_REVIEW_DOC,
     check_artifact,
     check_design_docs,

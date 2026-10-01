@@ -23,7 +23,7 @@ from pathlib import Path
 from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # Matches @allure.story("ID") / @allure.feature("ID"). Single home for the
-# pattern (story_audit.audit re-exports it); group(2) is the ID.
+# pattern; group(2) is the ID.
 ALLURE_PATTERN = re.compile(r'@allure\.(story|feature)\(["\']([^"\']+)["\']\)')
 
 # Allure label names that carry user-need IDs (the result-file counterpart of
@@ -226,11 +226,8 @@ POLYGLOT_TAG_PATTERNS = (
     re.compile(r'@(Story|Feature)\(\s*"([^"]+)"'),
 )
 
-# What a design-input / story id looks like, matched locally on purpose: the
-# canonical ID_PATTERN lives in story_audit.schema, and importing it here would
-# make this module -- which must work without the story-audit extra -- depend on
-# pydantic. Kept deliberately narrow so ordinary Ansible tags (`bootstrap`,
-# `security`) are not mistaken for ids.
+# What a design-input / story id looks like. Kept deliberately narrow so
+# ordinary Ansible tags (`bootstrap`, `security`) are not mistaken for ids.
 TAG_ID_PATTERN = re.compile(r"[A-Z]{2,}(?:-[A-Z]+)?-\d+")
 
 # Ansible carries the id in the task's own tag list -- `tags: [DI-5]`, or a

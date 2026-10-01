@@ -13,21 +13,19 @@
 | `rdm collect [FILES…]` | extract `RDOC name … ENDRDOC` snippets from source files into YAML → stdout |
 | `rdm translate FORMAT IN OUT` | convert test-runner XML (`auto`, `gtest`, `qttest`, `xunit`) into a YAML data file |
 | `rdm hooks [DEST] [--with-issue-hooks]` | install the design-gate pre-commit hook into `DEST` or `.git/hooks`; the issue-reference hooks only with the flag |
-| `rdm pull CONFIG` | legacy: pull data from the configured project-management tool |
 
-## Design controls & traceability — `rdm story …` (extra: `story-audit`)
+## Design controls & traceability — `rdm story …`
 
 | Command | What it does |
 |---|---|
 | `new-input --context C --text T --traces-to UN[,UN…]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test, checklist; `--list` shows contexts / taken ids / user needs |
-| `design-gate` | design docs + review present, complete, approved (committed); warnings for DI↔tag mismatches |
+| `design-gate` | design docs + review present, complete, approved (committed); every user-need and design-input id declared once; warnings for DI↔tag mismatches |
 | `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix |
 | `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed + every risk evaluated, controlled and acceptable ([risk register](risk.md)) |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
 | `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, manifest |
 | `mutation-probe --file F --find A --replace B --test T` | reviewer tool: break one line on purpose, run one test, report KILLED (caught) / SURVIVED (missed), always restore; never gates |
 | `trace UN-nnn \| DI-n` | the traceability slice for one need or input (forward + backward) |
-| `audit [REPO]` | repo-wide traceability report + score; DHF-aware (design-input tag coverage) |
 | `persona --vv-plan F --persona-results DIR` | reconcile formative AI-persona usability runs against the user-need registry (never gates) |
 
 Common flag: `--dhf DIR` (default `dhf/`).
@@ -45,15 +43,7 @@ Common flag: `--dhf DIR` (default `dhf/`).
 
 See [The record as a graph](graph.md).
 
-## Planning layer (optional, non-record)
+## Planning
 
-| Command | What it does |
-|---|---|
-| `rdm story sync BACKLOG_DIR -o DB` | sync Backlog.md → DuckDB analytics (`--migrate-only` for schema only) |
-| `rdm story backlog-validate [DIR]` | validate Backlog.md files (`-f` single file, `--strict`, `--verbose`) |
-| `rdm story check-ids [FILES…]` | duplicate requirement-ID detection (**deprecated** legacy YAML path — prints a notice; functional, exit codes unchanged) |
-| `rdm story validate` | validate legacy requirements YAML against the schema (**deprecated** — new projects use the DHF + gates) |
-| `rdm pm sync` | bidirectional GitHub sync: tasks → issues, PRs → DuckDB (extra: `github`) |
-
-Planning outputs are stamped as derived data — never cite them as evidence
+RDM ships no planning tooling: tasks and issues live in their own tools
 ([Plan vs. record](plan-vs-record.md)).

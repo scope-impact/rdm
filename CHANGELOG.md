@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Removed — DuckDB and the planning tooling
+- `rdm story audit`, `sync`, `backlog-validate`, `check-ids`, `validate`;
+  `rdm pm sync`; `rdm pull`; the `duckdb` query in templates; the
+  `story-audit`, `analytics`, `github` and `plan` extras. The record and its
+  RDF graph are the only data model (Design Review 11). DI-6, DI-13, DI-14,
+  DI-23 and DI-32 retired.
+- The gates (`design_gate`, `new_input`, `mutation`) move to `rdm/gates/` and
+  are part of the core install.
+
+### Added
+- A user-need or design-input id declared more than once fails the design
+  gate, naming every declaring document; the graph counts declarations and
+  its shapes report a repeat (DI-46, UN-007).
+
 ### Changed — RDM as four parts
 - README, docs home and navigation describe RDM as Record, Gates, Graph and
   Documents, with a plain "what it does not do" list; the intended use is in

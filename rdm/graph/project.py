@@ -31,6 +31,7 @@ import pyoxigraph as ox
 from rdm.record.allure import find_tests_dir, parse_results, reconcile, scan_source_tags
 from rdm.record.sdd import (
     context_of,
+    declarations,
     design_inputs,
     find_design_docs,
     parse_frontmatter,
@@ -131,9 +132,16 @@ def controlled_documents(dhf: Path, root: Path) -> list[dict]:
 def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "record"
     texts = user_need_texts(dhf)
+    declared = declarations(dhf)
+
+    def count(node, ident):  # DI-46: how many times the record declares this id
+        ds.add(node, rdm("declarationCount"),
+               ox.Literal(str(len(declared.get(ident, [])) or 1), datatype=_term(_XSD + "integer")), g)
+
     for un in sorted(registry_user_needs(dhf)):
         need = ds.thing(ds.node("need", un), rdm("UserNeed"), un, g)
         ds.add(need, _term(_DCT + "identifier"), un, g)
+        count(need, un)
         if un in texts:
             ds.add(need, rdm("text"), texts[un], g)
 
@@ -169,6 +177,7 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
     for di in design_inputs(dhf):
         node = ds.thing(ds.node("input", di["id"]), rdm("DesignInput"), di["id"], g)
         ds.add(node, _term(_DCT + "identifier"), di["id"], g)
+        count(node, di["id"])
         ds.add(node, rdm("text"), di["text"], g)
         ds.add(node, rdm("ownedBy"), ds.node("context", di["context"]), g)
         for un in di["traces_to"]:

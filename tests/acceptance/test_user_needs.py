@@ -25,11 +25,10 @@ from pathlib import Path
 
 import pytest
 
-from rdm.project_management.sync import PROVENANCE_NOTE
 from rdm.record import allure as allure_ingest
 from rdm.record import persona
 from rdm.record.verify import build_verification
-from rdm.story_audit.design_gate import check_design_docs, run_release_gate
+from rdm.gates.design_gate import check_design_docs, run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _allure_result
@@ -178,17 +177,3 @@ def test_formative_usability_classified(tmp_path: Path) -> None:
     assert report.by_id["UN-001"].status == persona.ISSUES
 
 
-@allure.story("DI-6")
-def test_planning_artifacts_marked_non_record() -> None:
-    """DI-6: planning tooling is optional and its outputs are marked non-record."""
-    from types import SimpleNamespace
-
-    from rdm.project_management.sync import build_task_body
-
-    # The note declares non-record status...
-    assert "not a controlled record" in PROVENANCE_NOTE
-    # ...and a generated planning artifact actually carries the stamp (verifying
-    # the behaviour, not merely the constant's wording).
-    task = SimpleNamespace(id="rdm-001", description="x", business_value="",
-                           acceptance_criteria=[], subtask_ids=[], priority="high")
-    assert PROVENANCE_NOTE in build_task_body(task)

@@ -88,32 +88,17 @@ assigns each bounded context to a part. Agent skills live in scope-impact/agent-
 - `rdm/gaps.py` — Gap analysis: validates documents against regulatory checklists (IEC 62304, ISO 13485, etc.). Built-in checklists in `rdm/checklists/`.
 - `rdm/md_extensions/` — Markdown post-processing: section numbering, vocabulary expansion.
 - `rdm/init_files/` — Scaffold templates for `rdm init` (Makefile, config.yml, document templates, Dockerfile).
+- `rdm/gates/` — Design gate (including duplicate ids), release gate, `new-input` scaffolding, mutation probe — core, no extra.
 - `rdm/record/` — Reads the record: design/V&V frontmatter (`sdd.py`), Allure results (`allure.py`), verification (`verify.py`), the risk register and policy (`risk.py`).
 - `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | validate | serve | explorer-file | mcp`, extra `graph`): named graphs per source, embedded Oxigraph store, SHACL gate shapes, SPARQL endpoint for AWS Graph Explorer, and a read-only MCP server for agents (`agent.py`, registered in `.mcp.json`). See `docs/graph.md`.
 
-### Optional modules (extras)
+### Optional extras
 
-- `rdm/story_audit/` — Requirements traceability (`pip install rdm[story-audit]`):
-  - `backlog_parser.py` — Parses Backlog.md markdown files → `BacklogData` Pydantic v2 model
-  - `backlog_schema.py` — Models: `BacklogData`, `Task`, `Milestone`, `AcceptanceCriterion`
-  - `validate.py`, `audit.py`, `check_ids.py` — Schema validation, traceability audit, duplicate detection
-  - `sync.py` — Backlog.md → DuckDB analytics sync
-  - `migrations/` — DuckDB schema migrations
+- `graph` — `rdm/graph/` (pyoxigraph, oxigraph, pyshacl, mcp).
+- `validation` — Playwright, for the usability-persona runs.
 
-- `rdm/project_management/` — GitHub sync (`pip install rdm[github] rdm[story-audit]`):
-  - `sync.py` — Bidirectional sync: Backlog.md tasks → GitHub Issues (push), GitHub PRs → DuckDB (pull)
-  - `github.py` — Legacy read-only GitHub backend
-  - `base.py` — `BaseBackend` ABC
-
-### Data flow for GitHub sync
-
-```
-Backlog.md files → backlog_parser.extract_backlog_data() → BacklogData
-  → push_tasks() → GitHub Issues (via PyGithub REST API)
-  → Milestones/Projects v2 (via GraphQL)
-
-GitHub PRs → pull_prs() → DuckDB github_prs table (with linked task IDs)
-```
+RDM ships no planning tooling: Backlog.md (below) is used through its own CLI,
+and nothing in RDM reads it (`docs/plan-vs-record.md`).
 
 ## Task Management
 

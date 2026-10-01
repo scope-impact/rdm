@@ -5,7 +5,7 @@ report the orphan IDs (referenced but not declared).
 
 Both the Allure verification reconciler (``record.allure``) and the persona
 formative reconciler (``record.persona``) are this one shape with a different
-aggregate type and status policy. Dependency-free (no pydantic / no story_audit)
+aggregate type and status policy. Dependency-free (no pydantic)
 so it stays usable from the lightweight record layer.
 """
 

@@ -53,5 +53,6 @@ git add dhf/ .githooks/ .claude/ scripts/ .github/ && git commit -m "Adopt desig
 Adopt is a ratchet: all **new** work is gated from day one; the old code is
 backfilled context-by-context, by risk — declare only the design inputs you
 can verify in the same change, and tag *existing* tests rather than writing
-new ones. `rdm story audit` is the progress meter. The full strategy is in
+new ones. `rdm graph validate` (untagged inputs, stray tags) is the progress
+meter. The full strategy is in
 the [agent workflow](agent-workflow.md).

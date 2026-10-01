@@ -13,7 +13,7 @@ import pytest
 import yaml
 
 from rdm.record.risk import read_policy, risks
-from rdm.story_audit.design_gate import run_release_gate
+from rdm.gates.design_gate import run_release_gate
 from tests.acceptance.test_graph_shapes import _dhf, _results
 
 allure = pytest.importorskip("allure")

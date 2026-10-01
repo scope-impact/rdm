@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from rdm.record.validation import parse_validation_records, unvalidated_user_needs
-from rdm.story_audit.design_gate import run_release_gate
+from rdm.gates.design_gate import run_release_gate
 from tests.util import git_run
 
 allure = pytest.importorskip("allure")

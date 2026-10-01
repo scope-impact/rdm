@@ -25,7 +25,7 @@ Exit codes:
     1 - gate failed (a required artifact is missing or incomplete)
     2 - bad invocation (path not found)
 
-Requires: pip install rdm[story-audit]
+Part of the core install: it reads only the record (``rdm.record``).
 """
 
 from __future__ import annotations
@@ -308,6 +308,18 @@ def _verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[str]
     return warnings
 
 
+def check_unique_ids(dhf_dir: Path) -> ArtifactCheck:
+    """Every user-need and design-input id declared once (DI-46). The record
+    reader keeps an id's first declaration, so a second would silently drop
+    out of every gate and the graph."""
+    from rdm.record.sdd import duplicate_declarations
+
+    reasons = [f"{ident} is declared {len(docs)} times: {', '.join(docs)}"
+               for ident, docs in sorted(duplicate_declarations(dhf_dir).items())]
+    return ArtifactCheck(name="Requirement ids", path=Path(dhf_dir), exists=True,
+                         complete=not reasons, reasons=reasons, uncommitted=False)
+
+
 def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> GateResult:
     """Run the design gate and return a structured result.
 
@@ -320,6 +332,7 @@ def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> Ga
     result.artifacts.append(
         check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review")
     )
+    result.artifacts.append(check_unique_ids(dhf_dir))
     result.task_warnings = _coverage_warnings(dhf_dir)
 
     if allure_results_dir is not None and Path(allure_results_dir).exists():

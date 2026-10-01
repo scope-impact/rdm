@@ -71,9 +71,8 @@ Rules:
      and read each one's `satisfies`, `design_inputs`, and `realises`.
    - `record/allure.py` — read an Allure results directory → per-user-need
      verification status (aggregated across the SDDs that satisfy it).
-   - `record/history.py` — git/PR → approvals + change history (reuse the
-     existing `project_management/github.py` change/approval logic, reframed as
-     "git is the record", PM-agnostic).
+   - git/PR → approvals + change history: the design gate reads git
+     directly; the graph projects each design document's latest commit.
 2. **Reconcile / trace** (`trace.py`) — join user-need IDs ↔ Allure tags across
    contexts:
 
@@ -112,12 +111,9 @@ PM tool (Backlog.md / GitHub Issues / Jira / none)
   board; an agent may decompose work on the fly and keep nothing.
 - The **only** PM → record path is via **git** (commits/PRs). RDM never ingests
   a PM tool directly.
-- Plan artifacts are **never cited as evidence.** Any synced output (backlog,
-  issues, DuckDB) is stamped *"derived planning data — not a controlled
-  record."*
-- The existing `backlog` / `pm sync` / DuckDB code becomes an optional,
-  detachable convenience (e.g. an `rdm[plan]` extra), removable with zero
-  regulatory impact.
+- Plan artifacts are **never cited as evidence.**
+- RDM ships no planning tooling: the former Backlog/GitHub/DuckDB sync was
+  removed with zero regulatory impact (Design Review 11).
 
 ## The contract at the boundary
 
@@ -142,7 +138,6 @@ rdm/
   trace.py           # reconcile user_needs <-> allure -> matrix + coverage
   design_gate.py     # existing gate (present + complete + approved)
   render.py / gaps/  # existing -> consume record, emit DHF sections
-  plan/              # OPTIONAL extra: backlog / pm sync / duckdb (non-record)
 ```
 
 ## What changes vs today
@@ -167,8 +162,5 @@ rdm/
 2. ~~Make the traceability matrix and V&V/test-record DHF sections generated~~ —
    done (`rdm story verify` + the matrix template; the docs site publishes the
    rendered matrix as evidence on every build).
-3. ~~Reframe `pm`/`backlog`/DuckDB as an optional `rdm[plan]` extra~~ — done:
-   the `plan` extra exists (aggregating `github`/`analytics`/`story-audit`),
-   with the boundary note and provenance stamps
-   ([Plan vs. record](plan-vs-record.md)).
-4. (Later) drop or spin out the plan pipeline entirely.
+3. ~~Reframe `pm`/`backlog`/DuckDB as an optional `rdm[plan]` extra~~ — done.
+4. ~~Drop the plan pipeline entirely~~ — done (Design Review 11).

@@ -48,7 +48,7 @@ elif command -v uv >/dev/null 2>&1 && [ -f pyproject.toml ]; then
     RDM=(uv run rdm)
 else
     echo "rdm design-gate: 'rdm' not on PATH and no 'uv' + pyproject.toml to fall back to." >&2
-    echo "                 Install it (pip install rdm[story-audit] / uv sync --all-extras)" >&2
+    echo "                 Install it (pip install rdm / uv sync)" >&2
     echo "                 -- commit blocked. (RDM_SKIP_DESIGN_GATE=1 to bypass, discouraged)" >&2
     exit 1
 fi

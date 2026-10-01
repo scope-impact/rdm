@@ -9,7 +9,6 @@ from rdm.gaps import audit_for_gaps, list_default_checklists
 from rdm.collect import collect_from_files
 from rdm.hooks import install_hooks
 from rdm.init import init
-from rdm.pull import pull_from_project_manager
 from rdm.render import render_template_to_file
 from rdm.translate import translate_test_results, XML_FORMATS
 from rdm.util import context_from_data_files, print_error, load_yaml
@@ -39,8 +38,6 @@ def cli(raw_arguments):
     elif args.command == 'adopt':
         from rdm.adopt import adopt_command
         exit_code = adopt_command(args.target)
-    elif args.command == 'pull':
-        pull_from_project_manager(args.config)
     elif args.command == 'hooks':
         install_hooks(args.dest, with_issue_hooks=args.with_issue_hooks)
     elif args.command == 'collect':
@@ -63,8 +60,6 @@ def cli(raw_arguments):
         exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
     elif args.command == 'story':
         exit_code = handle_story_command(args)
-    elif args.command == 'pm':
-        exit_code = handle_pm_command(args)
     elif args.command == 'graph':
         exit_code = handle_graph_command(args)
     return exit_code
@@ -119,46 +114,8 @@ def handle_graph_command(args):
 def handle_story_command(args):
     """Handle the story subcommand and its sub-subcommands."""
     try:
-        if args.story_command == 'audit':
-            from rdm.story_audit.audit import story_audit_command
-            repo_path = Path(args.repo) if args.repo else None
-            return story_audit_command(repo_path)
-
-        elif args.story_command == 'validate':
-            from rdm.story_audit.validate import story_validate_command
-            return story_validate_command(
-                requirements_dir=Path(args.requirements) if args.requirements else None,
-                file_path=Path(args.file) if args.file else None,
-                strict=args.strict,
-                verbose=args.verbose,
-                quiet=args.quiet,
-            )
-
-        elif args.story_command == 'sync':
-            from rdm.story_audit.sync import story_sync_command
-            return story_sync_command(
-                backlog_dir=Path(args.backlog_dir) if args.backlog_dir else None,
-                output_path=Path(args.output) if args.output else None,
-                migrate_only=args.migrate_only,
-            )
-
-        elif args.story_command == 'check-ids':
-            from rdm.story_audit.check_ids import story_check_ids_command
-            files = [Path(f) for f in args.files] if args.files else None
-            return story_check_ids_command(files)
-
-        elif args.story_command == 'backlog-validate':
-            from rdm.story_audit.backlog_validate import story_backlog_validate_command
-            return story_backlog_validate_command(
-                backlog_dir=Path(args.backlog_dir) if args.backlog_dir else None,
-                file_path=Path(args.file) if args.file else None,
-                strict=args.strict,
-                verbose=args.verbose,
-                quiet=args.quiet,
-            )
-
-        elif args.story_command == 'design-gate':
-            from rdm.story_audit.design_gate import story_design_gate_command
+        if args.story_command == 'design-gate':
+            from rdm.gates.design_gate import story_design_gate_command
             return story_design_gate_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
@@ -173,14 +130,14 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'release-gate':
-            from rdm.story_audit.design_gate import story_release_gate_command
+            from rdm.gates.design_gate import story_release_gate_command
             return story_release_gate_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
             )
 
         elif args.story_command == 'mutation-probe':
-            from rdm.story_audit.mutation import story_mutation_probe_command
+            from rdm.gates.mutation import story_mutation_probe_command
             return story_mutation_probe_command(
                 file=args.file,
                 find=args.find,
@@ -189,7 +146,7 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'trace':
-            from rdm.story_audit.design_gate import story_trace_command
+            from rdm.gates.design_gate import story_trace_command
             return story_trace_command(
                 target=args.target,
                 dhf_dir=Path(args.dhf) if args.dhf else None,
@@ -216,7 +173,7 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'new-input':
-            from rdm.story_audit.new_input import story_new_input_command
+            from rdm.gates.new_input import story_new_input_command
             return story_new_input_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 context=args.context,
@@ -228,41 +185,13 @@ def handle_story_command(args):
 
         else:
             print(
-                "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
-                "backlog-validate, design-gate, verify, release-gate, trace, "
+                "Unknown story subcommand. Use: design-gate, verify, release-gate, trace, "
                 "mutation-probe, new-input, dmr, evidence-bundle, or persona"
             )
             return 1
 
     except ImportError as e:
-        print(f"Error: Missing dependency for story_audit: {e}")
-        print("Install with: pip install rdm[story-audit]")
-        return 1
-
-
-def handle_pm_command(args):
-    """Handle the pm (project management) subcommand."""
-    try:
-        if args.pm_command == 'sync':
-            from rdm.project_management.sync import pm_sync_command
-            return pm_sync_command(
-                repo=args.repo,
-                db_path=Path(args.db) if args.db else None,
-                pull=args.pull,
-                push=args.push,
-                status=args.status,
-                backlog_dir=Path(args.backlog) if args.backlog else None,
-                base_branch=args.branch,
-                dhf_dir=Path(args.dhf) if args.dhf else None,
-                skip_design_gate=args.skip_design_gate,
-            )
-        else:
-            print("Unknown pm subcommand. Use: sync")
-            return 1
-
-    except ImportError as e:
         print(f"Error: Missing dependency: {e}")
-        print("Install with: pip install rdm[github] rdm[analytics]")
         return 1
 
 
@@ -286,10 +215,6 @@ def parse_arguments(arguments):
     render_parser.add_argument('template')
     render_parser.add_argument('config', help='Path to project `config.yml` file')
     render_parser.add_argument('data_files', nargs='*')
-
-    pull_help = 'pull data from the project management tool'
-    pull_parser = subparsers.add_parser('pull', help=pull_help)
-    pull_parser.add_argument('config', help='Path to project `config.yml` file')
 
     gap_help = 'use checklist to verify documents have expected references to particular standard(s)'
     gap_parser = subparsers.add_parser('gap', help=gap_help)
@@ -315,45 +240,10 @@ def parse_arguments(arguments):
     translate_parser.add_argument('input')
     translate_parser.add_argument('output')
 
-    # Story audit commands
-    story_help = 'requirements traceability and story audit tools'
+    # Design controls: the gates and traceability over the record
+    story_help = 'design controls: design and release gates, traceability, design-input scaffolding'
     story_parser = subparsers.add_parser('story', help=story_help)
     story_subparsers = story_parser.add_subparsers(dest='story_command', metavar='<subcommand>')
-
-    # rdm story audit
-    story_audit_help = 'run traceability audit on repository'
-    story_audit_parser = story_subparsers.add_parser('audit', help=story_audit_help)
-    story_audit_parser.add_argument('repo', nargs='?', default='.', help='Repository path (default: .)')
-
-    # rdm story validate
-    story_validate_help = 'validate requirements YAML against schema'
-    story_validate_parser = story_subparsers.add_parser('validate', help=story_validate_help)
-    story_validate_parser.add_argument('-r', '--requirements', help='Path to requirements directory')
-    story_validate_parser.add_argument('-f', '--file', help='Validate single file')
-    story_validate_parser.add_argument('-s', '--strict', action='store_true', help='Fail on extra fields')
-    story_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
-    story_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
-
-    # rdm story sync
-    story_sync_help = 'sync Backlog.md to DuckDB for analytics'
-    story_sync_parser = story_subparsers.add_parser('sync', help=story_sync_help)
-    story_sync_parser.add_argument('backlog_dir', nargs='?', help='Path to Backlog.md directory')
-    story_sync_parser.add_argument('-o', '--output', help='Output database path')
-    story_sync_parser.add_argument('--migrate-only', action='store_true', help='Only run migrations')
-
-    # rdm story check-ids
-    story_check_help = 'check for duplicate story IDs'
-    story_check_parser = story_subparsers.add_parser('check-ids', help=story_check_help)
-    story_check_parser.add_argument('files', nargs='*', help='Files to check (default: requirements/)')
-
-    # rdm story backlog-validate
-    backlog_validate_help = 'validate Backlog.md markdown files for consistency'
-    backlog_validate_parser = story_subparsers.add_parser('backlog-validate', help=backlog_validate_help)
-    backlog_validate_parser.add_argument('backlog_dir', nargs='?', help='Path to backlog directory')
-    backlog_validate_parser.add_argument('-f', '--file', help='Validate single file')
-    backlog_validate_parser.add_argument('-s', '--strict', action='store_true', help='Treat warnings as errors')
-    backlog_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
-    backlog_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
 
     # rdm story design-gate
     design_gate_help = 'verify design input and design review exist before tasks transition'
@@ -424,29 +314,7 @@ def parse_arguments(arguments):
     persona_parser.add_argument('--vv-plan', help='Path to the V&V plan (carries the user_needs registry)')
     persona_parser.add_argument('--persona-results', help='Path to a directory of *-persona.json run files')
 
-    # =========================================================================
-    # rdm pm (project management)
-    # =========================================================================
-    pm_help = 'project management commands (GitHub sync)'
-    pm_parser = subparsers.add_parser('pm', help=pm_help)
     _add_graph_parser(subparsers)
-    pm_subparsers = pm_parser.add_subparsers(dest='pm_command', metavar='<subcommand>')
-
-    # rdm pm sync
-    pm_sync_help = 'sync GitHub issues/PRs with DuckDB'
-    pm_sync_parser = pm_subparsers.add_parser('sync', help=pm_sync_help)
-    pm_sync_parser.add_argument('--repo', help='GitHub repo (owner/name)')
-    pm_sync_parser.add_argument('--db', help='DuckDB path (default: github_sync.duckdb)')
-    pm_sync_parser.add_argument('--pull', action='store_true', help='Pull from GitHub only')
-    pm_sync_parser.add_argument('--push', action='store_true', help='Push to GitHub only')
-    pm_sync_parser.add_argument('--status', action='store_true', help='Show sync status')
-    pm_sync_parser.add_argument('--backlog', help='Backlog directory (default: backlog/)')
-    pm_sync_parser.add_argument('--branch', help='Base branch filter for PRs (default: all)')
-    pm_sync_parser.add_argument('--dhf', help='DHF directory for the design gate (default: dhf/)')
-    pm_sync_parser.add_argument(
-        '--skip-design-gate', action='store_true',
-        help='Skip the design input/review gate before pushing tasks',
-    )
 
     return parser.parse_args(arguments)
 

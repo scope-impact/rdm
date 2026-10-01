@@ -2,8 +2,8 @@
 
 This is the user manual for the record-first workflow. The concepts are in
 [Record-first architecture](record-first-architecture.md); the step-by-step
-change procedure is the [agent workflow](agent-workflow.md). Requires
-`pip install "rdm[story-audit]"`.
+change procedure is the [agent workflow](agent-workflow.md). Part of the
+core install (`pip install rdm`).
 
 ## The model in one breath
 
@@ -94,7 +94,6 @@ ship one, and its score is not DHF evidence.
 ```bash
 rdm story trace DI-4 --dhf dhf          # one input: its need, owner, tests, status
 rdm story trace UN-004 --dhf dhf        # one need: the inputs that refine it
-rdm story audit .                       # repo-wide traceability report + score
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
 ```
 
@@ -114,9 +113,6 @@ Writes the retained release evidence set — verification data, the rendered
 traceability matrix, and a manifest — ready to
 attach to a release tag so the evidence outlives CI artifact retention.
 
-`rdm story audit` is DHF-aware: on a record-first repository it reports each
-design input's test-tag coverage and counts untagged inputs against the score.
-
 ## Validation evidence (formative)
 
 ```bash
@@ -133,9 +129,9 @@ formative usability evidence only; it informs but never gates release.
 lacking an approved record — as a warning, because a machine cannot supply
 the judgment, but its absence must never be silent.
 
-## Planning-side tools
+## Planning
 
-`rdm story sync`, `check-ids`, `backlog-validate`, and `rdm pm sync` operate on
-the optional planning layer (Backlog.md / GitHub Issues / DuckDB analytics).
-Planning artifacts are coordination, never the record — see
-[Plan vs. record](plan-vs-record.md).
+RDM ships no planning tooling. Tasks, issues and boards live in their own
+tools and are never the record — see [Plan vs. record](plan-vs-record.md).
+For repo-wide questions the old `rdm story audit` answered, query the graph
+(`rdm graph query`, or `trace` and `validate` over MCP).

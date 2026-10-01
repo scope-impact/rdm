@@ -18,7 +18,7 @@ import pytest
 
 from rdm.init import init
 from rdm.record.sdd import design_inputs
-from rdm.story_audit.new_input import story_new_input_command
+from rdm.gates.new_input import story_new_input_command
 
 allure = pytest.importorskip("allure")
 
@@ -96,7 +96,7 @@ def _mini_dhf(tmp_path: Path) -> Path:
 
 
 @allure.story("DI-22")
-@allure.label("output", "rdm/story_audit/new_input.py")
+@allure.label("output", "rdm/gates/new_input.py")
 def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> None:
     """DI-22: next unused id allocated, frontmatter entry inserted, failing tagged
     stub test emitted, checklist printed; unknown context/user need rejected."""

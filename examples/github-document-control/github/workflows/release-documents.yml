@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
       - name: Install rdm + pandoc
         run: |
-          pip install "rdm[story-audit]"
+          pip install rdm
           sudo apt-get update && sudo apt-get install -y pandoc
       - name: Render controlled documents (human-readable copies)
         run: |

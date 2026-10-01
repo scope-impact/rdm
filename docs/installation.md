@@ -3,15 +3,14 @@
 RDM is a Python CLI (Python 3.9+).
 
 ```bash
-pip install rdm                    # core: render, init, adopt, gap, collect, translate
-pip install "rdm[story-audit]"     # + design controls & traceability (rdm story …)
-pip install "rdm[github]"          # + GitHub project-management sync (rdm pm …)
+pip install rdm                    # core: record, gates (rdm story …), gap, render, init, adopt
+pip install "rdm[graph]"           # + the record as an RDF graph and the agent server (rdm graph …)
 ```
 
 With [uv](https://docs.astral.sh/uv/) inside a project:
 
 ```bash
-uv add "rdm[story-audit]"
+uv add rdm
 ```
 
 Check the install:

@@ -32,18 +32,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-github = ["pygithub==2.8.1"]
-story-audit = ["pydantic==2.12.5", "duckdb==1.4.3"]
-analytics = ["duckdb==1.4.3"]
 # Playwright for the usability-persona skill (AI-persona usability validation).
 # Browsers are provided by the environment; if the preinstalled browser version
 # differs, launch with executable_path (see examples/.../app/run_persona_demo.py).
 validation = ["playwright==1.60.0"]
-# Project-management pipeline (Backlog.md -> GitHub Issues/Projects, DuckDB
-# analytics). This is an OPTIONAL, detachable layer that operates on PLANNING
-# artifacts, not the system of record (SDD + Allure + git). RDM's record/render
-# core does not require it. See docs/plan-vs-record.md.
-plan = ["rdm[github]", "rdm[analytics]", "rdm[story-audit]"]
 # The design record as a linked-data graph (DI-35/36): an embedded RDF store
 # (pyoxigraph) and the oxigraph CLI that serves it as a SPARQL endpoint for
 # graph browsers such as AWS Graph Explorer; pyshacl runs the gate shapes
@@ -70,8 +62,6 @@ dev = [
     "mock==5.2.0",
     "docutils==0.21.2",
     "coverage==7.13.1",
-    "pydantic==2.12.5",
-    "duckdb==1.4.3",
     "playwright==1.60.0",
     "allure-pytest==2.16.0",
     "pyoxigraph==0.5.11",
@@ -91,7 +81,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["rdm*", "rdm.story_audit*"]
+include = ["rdm*"]
 exclude = ["contrib*", "docs*", "tests*"]
 
 [tool.setuptools.package-data]

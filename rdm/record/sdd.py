@@ -137,6 +137,29 @@ def registry_user_needs(dhf_dir: Path) -> set[str]:
     return ids
 
 
+def declarations(dhf_dir: Path) -> dict[str, list[str]]:
+    """Every user-need and design-input id, with the document (relative to the
+    DHF) of each declaration — one entry per declaration, so an id declared
+    twice in one document lists that document twice (DI-46)."""
+    found: dict[str, list[str]] = {}
+    for md in sorted(Path(dhf_dir).rglob("*.md")):
+        front = _frontmatter_of(md)
+        where = str(md.relative_to(dhf_dir))
+        entries = list(front.get("user_needs") or [])
+        if front.get("kind") == DESIGN_KIND:
+            entries += list(front.get("design_inputs") or [])
+        for item in entries if isinstance(entries, list) else []:
+            ident = str(item.get("id", "") if isinstance(item, dict) else item).strip()
+            if ident:
+                found.setdefault(ident, []).append(where)
+    return found
+
+
+def duplicate_declarations(dhf_dir: Path) -> dict[str, list[str]]:
+    """The ids declared more than once, with every declaring document."""
+    return {ident: docs for ident, docs in declarations(dhf_dir).items() if len(docs) > 1}
+
+
 def user_need_texts(dhf_dir: Path) -> dict[str, str]:
     """Each registered user need's text, where its ``{id, text}`` entry gives one."""
     texts: dict[str, str] = {}
