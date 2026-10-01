@@ -8,6 +8,17 @@
   declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
   attachment (DI-57).
 
+### Added — evidence tied to its version and its test
+- `rdm.pytest_plugin` labels each tagged run with the commit under test and a
+  dirty working tree (DI-59); the graph links run → commit and the record →
+  the commit it was built at, and warns on an unversioned or stale run
+  (DI-60).
+- A test is a function (`rdm:Test`, defined in its file), and a run links to
+  the test it ran; warnings for a test that never ran and a run whose test
+  does not claim its design input (DI-61).
+- Every controlled document, not only design documents, carries its latest
+  commit and its landing (DI-35, DI-51).
+
 ### Removed — noise from the graph
 - Allure labels as nodes (565 in RDM's own graph), links (`rdfs:seeAlso`),
   test cases (`rdm:runOf`) and container fixtures (DI-55, retired) are no

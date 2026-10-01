@@ -45,6 +45,7 @@ def _project(tmp_path: Path) -> Path:
         '@allure.story("DI-2")\ndef test_log():\n    pass\n\n'
         '@allure.story("DI-99")\ndef test_undeclared():\n    pass\n\n'
         'def test_untagged():\n    pass\n')
+    (repo / ".gitignore").write_text("__pycache__/\n")  # what any repository ignores
     git_run(repo, "init")
     git_run(repo, "remote", "add", "origin", "git@github.com:acme/device.git")
     git_run(repo, "add", "-A")
@@ -53,7 +54,7 @@ def _project(tmp_path: Path) -> Path:
 
 
 def _run(repo: Path) -> dict[str, dict]:
-    out = repo / "allure"
+    out = repo.parent / "allure"  # outside the repository: results are not part of the commit
     subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-p", "rdm.pytest_plugin",
                     f"--alluredir={out}", "--rdm-dhf", str(repo / "sw" / "dhf"), "tests"],
                    cwd=repo, check=True, capture_output=True)
@@ -96,7 +97,7 @@ def test_runs_are_labelled_from_the_record(tmp_path: Path) -> None:
         assert _labels(log, "severity") in ([], ["normal"])
     with clause("the requirement text is attached to the result"):
         names = {a["name"]: a["source"] for a in alarm["attachments"]}
-        text = (repo / "allure" / names["requirement DI-1"]).read_text()
+        text = (repo.parent / "allure" / names["requirement DI-1"]).read_text()
         assert text == "DI-1 (alarms): The device shall alarm.\nTraces to: UN-1, UN-2\n"
     with clause("an undeclared id or an untagged test gets nothing from the record"):
         for name in ("test_undeclared", "test_untagged"):
@@ -107,3 +108,29 @@ def test_runs_are_labelled_from_the_record(tmp_path: Path) -> None:
         assert web_url("https://token@github.com/acme/device.git") == "https://github.com/acme/device"
         assert web_url("ssh://git@gitlab.example/team/device") == "https://gitlab.example/team/device"
         assert web_url(None) is None
+
+
+@allure.story("DI-59")
+@allure.label("output", "rdm/pytest_plugin.py")
+def test_runs_carry_the_commit_under_test(tmp_path: Path) -> None:
+    """DI-59: each run of a test tagged with a declared design input carries the
+    commit under test, and a mark when the working tree had uncommitted changes."""
+    repo = _project(tmp_path)
+    head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True,
+                          text=True).stdout.strip()
+    clean = _run(repo)
+    attach("test_alarm labels, clean tree", clean["test_alarm"]["labels"])
+    with clause("a run of a tagged, declared test carries the commit under test"):
+        assert _labels(clean["test_alarm"], "commit") == [head] and _labels(clean["test_log"], "commit") == [head]
+    with clause("a clean working tree carries no mark"):
+        assert not _labels(clean["test_alarm"], "worktree")
+    with clause("an undeclared id or an untagged test carries no commit"):
+        assert not _labels(clean["test_undeclared"], "commit") and not _labels(clean["test_untagged"], "commit")
+    with clause("uncommitted changes mark the run"):
+        tests = repo / "tests" / "test_alarms.py"
+        tests.write_text(tests.read_text() + "\n# an edit not yet committed\n")
+        for f in (repo.parent / "allure").glob("*"):
+            f.unlink()
+        dirty = _run(repo)
+        assert _labels(dirty["test_alarm"], "worktree") == ["dirty"]
+        assert _labels(dirty["test_alarm"], "commit") == [head]

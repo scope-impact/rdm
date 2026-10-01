@@ -65,7 +65,8 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
     assert {("residualSeverity", "Minor"), ("residualLevel", "Low"), ("residualDecision", "acceptable")} <= f2
     report = validate(quads)
     assert not [r for r in report if r.severity == "Violation"]
-    assert [(r.label, r.message) for r in report if r.severity == "Warning"] == [
+    risk_warnings = [r for r in report if r.severity == "Warning" and not r.message.startswith("test run")]
+    assert [(r.label, r.message) for r in risk_warnings] == [
         ("RISK-F-1", "risk is proposed: a person has not approved its rating")]
 
     with clause("The residual decision is \"not evaluated\" until every control has a passing test"):

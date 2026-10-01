@@ -302,6 +302,61 @@ def _python_tag_ids(content: str) -> list[str]:
     return ids
 
 
+def _python_tests(content: str) -> list[tuple[str, list[str]]] | None:
+    """Each tagged Python test in a file (DI-61): its qualified name
+    (``test_x`` or ``TestClass::test_x``) and its tags — its own decorators,
+    its class's, and a module-level ``pytestmark``'s, which reaches every
+    ``test*`` function and ``Test*`` method. None when the file does not parse."""
+    try:
+        tree = ast.parse(content)
+    except (SyntaxError, ValueError):
+        return None
+    module: list[str] = []
+    for node in tree.body:
+        if (isinstance(node, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets)):
+            marks = node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value]
+            module.extend(tag for tag in map(_allure_tag, marks) if tag)
+
+    def tags_of(node) -> list[str]:
+        return [tag for tag in map(_allure_tag, node.decorator_list) if tag]
+
+    tests: list[tuple[str, list[str]]] = []
+    functions = (ast.FunctionDef, ast.AsyncFunctionDef)
+    for node in tree.body:
+        if isinstance(node, functions):
+            inherited = module if node.name.startswith("test") else []
+            tests.append((node.name, tags_of(node) + inherited))
+        elif isinstance(node, ast.ClassDef):
+            outer = tags_of(node) + (module if node.name.startswith("Test") else [])
+            for item in node.body:
+                if isinstance(item, functions):
+                    inherited = outer if item.name.startswith("test") else []
+                    tests.append((f"{node.name}::{item.name}", tags_of(item) + inherited))
+    return [(name, list(dict.fromkeys(tags))) for name, tags in tests if tags]
+
+
+def scan_source_tests(tests_dir: Path) -> list[tuple[Path, str | None, list[str]]]:
+    """Every tagged test under ``tests_dir`` (DI-61): ``(file, name, tags)``,
+    where ``name`` is a Python test's qualified name, or None for a file whose
+    tags are read by pattern (another language, or Python that does not
+    parse) — then the file is the test."""
+    found: list[tuple[Path, str | None, list[str]]] = []
+    for test_file in sorted(iter_test_files(tests_dir)):
+        try:
+            content = test_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        tests = _python_tests(content) if test_file.suffix == ".py" else None
+        if tests is not None:
+            found.extend((test_file, name, tags) for name, tags in tests)
+        else:
+            tags = list(dict.fromkeys(_tag_ids_in(test_file, content)))
+            if tags:
+                found.append((test_file, None, tags))
+    return found
+
+
 def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
     """Map each story tag ID to the test files that reference it.
 

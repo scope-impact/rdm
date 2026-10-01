@@ -112,7 +112,8 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
                        f'dcterms:identifier "SDS-ALM-001" ; dcterms:title "Alarms design" ; rdm:revision "3" }}')
 
     with clause("Tests graph: the tag, as a tag -- DI-2 has none, and nothing says it is \"unverified\""):
-        assert _ask(s, f"GRAPH {tst} {{ ?f a rdm:TestFile ; rdm:verifies {di1} ; rdm:path \"tests/test_alarms.py\" }}")
+        assert _ask(s, f"GRAPH {tst} {{ ?t a rdm:Test ; rdm:verifies {di1} ; rdm:definedIn ?f . "
+                       f"?f a rdm:TestFile ; rdm:path \"tests/test_alarms.py\" }}")
         assert not _ask(s, "?f rdm:verifies <urn:dhf:acme:input/DI-2>")
 
     with clause("Executions graph, only when results are given"):

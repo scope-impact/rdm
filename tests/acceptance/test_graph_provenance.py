@@ -27,7 +27,7 @@ from tests.acceptance.test_risk import POLICY, _register, _risk  # noqa: E402
 
 RDM = "https://github.com/scope-impact/rdm/ns#"
 PROV = "http://www.w3.org/ns/prov#"
-NOT_LANDED = "design document's latest change has not landed on the default branch"
+NOT_LANDED = "document's latest change has not landed on the default branch"
 
 
 def _git(repo: Path, who: str, *args: str) -> str:
@@ -47,8 +47,8 @@ def _label(quads, node: str) -> str:
 @allure.story("DI-51")
 @allure.label("output", "rdm/graph/project.py")
 def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Path) -> None:
-    """DI-51: the first-parent commit of the default branch that landed a design
-    document's latest change — the commit itself when direct (or squashed), the
+    """DI-51: the first-parent commit of the default branch that landed a
+    controlled document's latest change — the commit itself when direct (or squashed), the
     merge otherwise — and its author; a shape warns when it has not landed."""
     dhf = _dhf(tmp_path / "x")                 # committed by "t" on the initial branch
     repo = dhf.parent
@@ -97,6 +97,10 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
         assert ("landedIn", f"urn:dhf:proj:commit/{direct}") in core_doc
         assert {_label(quads, o) for p, o in core_doc if p == "landedBy"} == {"t"}
         assert not {r.label for r in validate(quads) if r.message == NOT_LANDED}
+    with clause("Every controlled document, not only design documents: the V&V plan has its commit and landing"):
+        vvp = _facts(quads, "urn:dhf:proj:doc/VVP-1")
+        assert ("prov:wasGeneratedBy", f"urn:dhf:proj:commit/{direct}") in vvp
+        assert ("landedIn", f"urn:dhf:proj:commit/{direct}") in vvp
 
 
 @allure.story("DI-52")

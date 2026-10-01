@@ -28,7 +28,7 @@ from urllib.parse import quote
 
 import pyoxigraph as ox
 
-from rdm.record.allure import find_tests_dir, reconcile, scan_source_tags
+from rdm.record.allure import find_tests_dir, reconcile, scan_source_tests
 from rdm.record.sdd import (
     context_of,
     declarations,
@@ -210,24 +210,37 @@ def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> Non
             ds.add(doc, _term(_DCT + "references"), ds.node("doc", str(ref).strip()), g)
 
 
-def _tests(ds: _Dataset, dhf: Path, root: Path) -> None:
+def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
+    """Each tagged test, defined in its file and verifying its design inputs
+    (DI-61). Returns the Python tests keyed by the full name Allure gives
+    their runs (``tests.x.TestClass#test_y``), so a run can find its test."""
     tests_dir = find_tests_dir(dhf)
+    by_full_name: dict[str, ox.NamedNode] = {}
     if tests_dir is None:
-        return
-    for tag, files in sorted(scan_source_tags(tests_dir).items()):
-        if not _ID.match(tag):
+        return by_full_name
+    for file, name, tags in scan_source_tests(tests_dir):
+        tags = [tag for tag in tags if _ID.match(tag)]
+        if not tags:
             continue
-        for file in sorted(set(files)):
-            rel = _rel(Path(file), root)
-            node = ds.thing(ds.node("test", rel), rdm("TestFile"), rel, "tests")
-            ds.add(node, rdm("path"), rel, "tests")
-            ds.add(node, rdm("verifies"), ds.node("input", tag), "tests")
+        rel = _rel(Path(file), root)
+        test_file = ds.thing(ds.node("testfile", rel), rdm("TestFile"), rel, "tests")
+        ds.add(test_file, rdm("path"), rel, "tests")
+        ident = f"{rel}::{name}" if name else rel
+        test = ds.thing(ds.node("test", ident), rdm("Test"), ident, "tests")
+        ds.add(test, rdm("definedIn"), test_file, "tests")
+        for tag in tags:
+            ds.add(test, rdm("verifies"), ds.node("input", tag), "tests")
+        if name and rel.endswith(".py"):
+            *owner, function = name.split("::")
+            module = rel[:-3].replace("/", ".")
+            by_full_name[".".join([module, *owner]) + "#" + function] = test
+    return by_full_name
 
 
-def _executions(ds: _Dataset, results_dir: Path) -> None:
+def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode]) -> None:
     from rdm.graph.allure import project_results
 
-    project_results(ds, Path(results_dir))
+    project_results(ds, Path(results_dir), tests)
 
 
 def _git_out(root: Path, *args: str) -> str | None:
@@ -270,14 +283,18 @@ def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str |
 
 def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "git"
-    by_path = {e["path"]: e["id"] for e in controlled_documents(dhf, root)}
+    head = _git_out(root, "rev-parse", "HEAD")
+    if head:  # DI-60: the commit the record was built at
+        record = ds.thing(_term(ds.base + "record"), rdm("Record"), ds.base.split(":")[2], g)
+        ds.add(record, rdm("atCommit"), _commit(ds, root, head, g)[0], g)
+    matrix = find_dhf_doc(dhf, MATRIX_DOC)
     branch = default_branch(root)
     first_parent = set((_git_out(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
-    for path in find_design_docs(dhf):
-        doc_id = by_path.get(_rel(path, root))
-        if doc_id is None:
+    for entry in controlled_documents(dhf, root):  # DI-35, DI-51: every controlled document
+        if matrix is not None and entry["file"] == matrix:
             continue
-        sha = _git_out(root, "log", "-1", "--format=%H", "--", _rel(path, root))
+        doc_id = entry["id"]
+        sha = _git_out(root, "log", "-1", "--format=%H", "--", entry["path"])
         if not sha:
             continue  # never committed: no fact to state
         doc = ds.node("doc", doc_id)
@@ -363,9 +380,9 @@ def project(
     root = _repo_root(dhf.parent) or dhf.parent
     ds = _Dataset(project_name or default_project(dhf))
     _record(ds, dhf, root)
-    _tests(ds, dhf, root)
+    tests = _tests(ds, dhf, root)
     if allure_results_dir is not None and Path(allure_results_dir).exists():
-        _executions(ds, Path(allure_results_dir))
+        _executions(ds, Path(allure_results_dir), tests)
     if _repo_root(dhf.parent) is not None:
         _git(ds, dhf, root)
     verified: set[str] = set()

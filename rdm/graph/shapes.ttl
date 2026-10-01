@@ -89,7 +89,7 @@ rdm:ContextReferencesShape a sh:NodeShape ;
 # Like the design gate, only tags that share an id prefix with a declared
 # design input are reported (a stray US-001 in a fixture string is noise).
 rdm:TestTagShape a sh:NodeShape ;
-    sh:targetClass rdm:TestFile ;
+    sh:targetClass rdm:Test ;
     # A SPARQL constraint takes its severity from the shape (pySHACL ignores
     # it on the constraint node).
     sh:severity sh:Warning ;
@@ -163,11 +163,11 @@ rdm:UniqueRequirementShape a sh:NodeShape ;
 
 # DI-51: a design document whose latest change is not on the default branch.
 rdm:LandedShape a sh:NodeShape ;
-    sh:targetSubjectsOf rdm:describes ;
+    sh:targetClass rdm:Document ;
     sh:severity sh:Warning ;
     sh:sparql [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "design document's latest change has not landed on the default branch" ;
+        sh:message "document's latest change has not landed on the default branch" ;
         sh:select """SELECT $this WHERE {
             $this <http://www.w3.org/ns/prov#wasGeneratedBy> ?c .
             FILTER NOT EXISTS { $this rdm:landedIn ?l } }""" ;
@@ -199,6 +199,41 @@ rdm:DocumentReferenceShape a sh:NodeShape ;
             $this dcterms:references ?value .
             FILTER(STRSTARTS(STR(?value), CONCAT(STRBEFORE(STR($this), ":doc/"), ":doc/")))
             FILTER NOT EXISTS { ?value a rdm:Document } }""" ;
+    ] .
+
+# --- Evidence tied to its version and to its test (DI-60, DI-61) -------------
+
+rdm:RunVersionShape a sh:NodeShape ;
+    sh:targetClass rdm:TestRun ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "test run is tied to no commit: the version it is evidence for is unknown" ;
+        sh:select """SELECT $this WHERE { FILTER NOT EXISTS { $this rdm:testedAt ?c } }""" ;
+    ] , [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "test run tested another commit than the record's: stale evidence" ;
+        sh:select """SELECT $this WHERE {
+            $this rdm:testedAt ?tested . ?record rdm:atCommit ?head .
+            FILTER (?tested != ?head) }""" ;
+    ] , [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "test run exercises a design input its test does not claim" ;
+        sh:select """SELECT $this WHERE {
+            $this rdm:runOf ?test ; rdm:exercises ?input .
+            FILTER NOT EXISTS { ?test rdm:verifies ?input } }""" ;
+    ] .
+
+rdm:TestRanShape a sh:NodeShape ;
+    sh:targetClass rdm:Test ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "tagged test has no run, while other tests in its file ran: its claim was never executed" ;
+        sh:select """SELECT $this WHERE {
+            $this rdm:definedIn ?file .
+            FILTER NOT EXISTS { ?run rdm:runOf $this }
+            FILTER EXISTS { ?other rdm:definedIn ?file . ?any rdm:runOf ?other } }""" ;
     ] .
 
 rdm: sh:declare

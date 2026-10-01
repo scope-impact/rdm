@@ -40,7 +40,16 @@ rdm:Document a owl:Class ;
 rdm:TestFile a owl:Class ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Test file" ;
-    rdfs:comment "A test source file carrying verification tags." .
+    rdfs:comment "A test source file that defines tagged tests." .
+
+rdm:Test a owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Test" ;
+    rdfs:comment "One tagged test: a Python test function or method, or the whole file where tags are read by pattern (DI-61)." .
+
+rdm:Record a owl:Class ;
+    rdfs:label "Record" ;
+    rdfs:comment "The design record the graph was built from (DI-60)." .
 
 rdm:TestRun a owl:Class ;
     rdfs:subClassOf prov:Activity ;
@@ -99,9 +108,28 @@ rdm:revision a owl:DatatypeProperty ;
 rdm:path a owl:DatatypeProperty ;
     rdfs:label "path" ; rdfs:comment "Repository-relative path." .
 
+rdm:definedIn a owl:ObjectProperty ;
+    rdfs:label "defined in" ; rdfs:domain rdm:Test ; rdfs:range rdm:TestFile .
+
+rdm:runOf a owl:ObjectProperty ;
+    rdfs:label "run of" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Test ;
+    rdfs:comment "The test a run ran, matched by Allure's full name (DI-61)." .
+
+rdm:testedAt a owl:ObjectProperty ;
+    rdfs:label "tested at" ; rdfs:domain rdm:TestRun ; rdfs:range prov:Activity ;
+    rdfs:comment "The commit under test: the version the run is evidence for (DI-60)." .
+
+rdm:uncommittedChanges a owl:DatatypeProperty ;
+    rdfs:label "uncommitted changes" ; rdfs:domain rdm:TestRun ;
+    rdfs:comment "The run tested a working tree with changes not in its commit (DI-60)." .
+
+rdm:atCommit a owl:ObjectProperty ;
+    rdfs:label "at commit" ; rdfs:domain rdm:Record ; rdfs:range prov:Activity ;
+    rdfs:comment "The commit the record was at when the graph was built (DI-60)." .
+
 rdm:verifies a owl:ObjectProperty ;
-    rdfs:label "verifies" ; rdfs:domain rdm:TestFile ; rdfs:range rdm:DesignInput ;
-    rdfs:comment "The test file carries a verification tag for the design input. A tag, not a verdict." .
+    rdfs:label "verifies" ; rdfs:domain rdm:Test ; rdfs:range rdm:DesignInput ;
+    rdfs:comment "The test carries a verification tag for the design input. A tag, not a verdict." .
 
 rdm:exercises a owl:ObjectProperty ;
     rdfs:label "exercises" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:DesignInput .

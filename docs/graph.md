@@ -119,7 +119,7 @@ SELECT ?need ?input ?owner
 WHERE {
   ?i a rdm:DesignInput ; dcterms:identifier ?input ; rdm:ownedBy/rdfs:label ?owner .
   OPTIONAL { ?i rdm:tracesTo/rdfs:label ?need }
-  OPTIONAL { ?f rdm:verifies ?i ; rdm:path ?path }
+  OPTIONAL { ?t rdm:verifies ?i ; rdm:definedIn/rdm:path ?path }
   OPTIONAL { ?r rdm:exercises ?i ; rdm:status ?status }
 }
 GROUP BY ?need ?input ?owner
@@ -172,7 +172,7 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | `rdm:DesignInput` | a design input; a subclass of `oslc_rm:Requirement` (OSLC Requirements Management) |
 | `rdm:UserNeed`, `rdm:BoundedContext`, `rdm:Document` | the other record entities |
 | `rdm:tracesTo`, `rdm:ownedBy`, `rdm:realises`, `rdm:declaredIn` | how they relate (a context's needs: `?i rdm:ownedBy ?c ; rdm:tracesTo ?need`) |
-| `rdm:TestFile` `rdm:verifies` / `rdm:TestRun` `rdm:exercises`, `rdm:status` | tests and results |
+| `rdm:Test` `rdm:verifies`, `rdm:definedIn` `rdm:TestFile` / `rdm:TestRun` `rdm:exercises`, `rdm:runOf`, `rdm:testedAt`, `rdm:status` | tests and results: a test is a function (or a whole file read by pattern); a run is a run of a test, at a commit |
 | `dcterms:identifier`, `dcterms:title`, `rdm:revision` | document metadata (Dublin Core) |
 | `prov:wasGeneratedBy`, `prov:Activity`, `prov:Agent`, `prov:endedAtTime` | commits and authors (PROV-O) |
 | `rdm:Clause` ⊂ `skos:Concept`, `rdm:Checklist` ⊂ `skos:Collection`, `skos:ConceptScheme` | clauses, checklists, standards (SKOS) |
@@ -189,6 +189,8 @@ design controls:
 | a result file | an `rdm:TestRun` (a `prov:Activity`) with `dcterms:identifier` (uuid), `rdm:fullName`, `rdm:status`, `prov:startedAtTime` / `prov:endedAtTime` |
 | `statusDetails` | `rdm:statusMessage`, `rdm:statusTrace` |
 | a `story` label | `rdm:exercises` the design input |
+| `fullName` | `rdm:runOf` the `rdm:Test` (`tests/x.py::TestClass::test_y`) it ran (DI-61) |
+| a `commit` label (`rdm.pytest_plugin`, DI-59) | `rdm:testedAt` that commit; `worktree=dirty` → `rdm:uncommittedChanges` (DI-60) |
 | an `output` label | `rdm:exercisesOutput` an `rdm:SourceFile` — the code the run exercises |
 | `parameters` | `rdm:parameter`, each a name and a value |
 | `steps`, `attachments` | `rdm:step` (nested, ordered), `rdm:attachment` (name, media type, file) |
@@ -198,6 +200,23 @@ So the chain runs all the way to code — design input → test → run → sour
 file — from labels the tests already carry, and `trace` lists a design
 input's source files. Attachment content stays in the files (which the
 release bundle keeps); the graph holds the reference.
+
+## Evidence tied to its version and its test
+
+A run is evidence for one build of one test, and the graph now says which:
+
+- `rdm.pytest_plugin` labels each tagged run with the commit under test, and
+  `worktree=dirty` when the working tree had uncommitted changes; the run
+  links to the commit (`rdm:testedAt`), and the record node to the commit the
+  graph was built at (`rdm:atCommit`). `rdm graph validate` warns on a run
+  tied to no commit and on a run of another commit than the record's — stale
+  results presented as current.
+- The claim is per test, not per file: a Python test function or method
+  (including those a module-level `pytestmark` tags) is an `rdm:Test`,
+  `rdm:definedIn` its file, and a run links to it through Allure's full name
+  (`rdm:runOf`). A file in another language, read by pattern, is one test.
+  Validation warns on a tagged test that never ran while its file's other
+  tests did, and on a run exercising a design input its test does not claim.
 
 ## Who landed a change
 
@@ -378,6 +397,6 @@ For example, this lists design inputs with no tagged test:
 ```sparql
 SELECT ?id WHERE {
   ?i a rdm:DesignInput ; dcterms:identifier ?id .
-  FILTER NOT EXISTS { ?f rdm:verifies ?i }
+  FILTER NOT EXISTS { ?t rdm:verifies ?i }
 }
 ```

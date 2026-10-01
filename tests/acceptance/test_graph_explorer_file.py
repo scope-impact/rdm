@@ -48,7 +48,8 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
     with clause("Every node of the record -- of every kind -- and nothing from the vocabulary"):
         vertices = set(graph["data"]["vertices"])
         for node in ("urn:dhf:acme:need/UN-001", "urn:dhf:acme:input/DI-1", "urn:dhf:acme:context/alarms",
-                     "urn:dhf:acme:doc/SDS-ALM-001", "urn:dhf:acme:test/tests/test_alarms.py",
+                     "urn:dhf:acme:doc/SDS-ALM-001", "urn:dhf:acme:testfile/tests/test_alarms.py",
+                     "urn:dhf:acme:test/tests/test_alarms.py%3A%3Atest_alarm",
                      "urn:dhf:acme:run/r1-result", "urn:rdm:clause:STD:1", "urn:rdm:checklist:mini"):
             assert node in vertices, node
         assert any(v.startswith("urn:dhf:acme:commit/") for v in vertices)

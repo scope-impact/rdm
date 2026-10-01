@@ -118,7 +118,7 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
     assert ("DI-2", "design input has no tagged test file") in warnings
     assert ("DI-2", "design input traces to an undeclared user need") in warnings
     assert ("core", "context realises an undeclared design input") in warnings
-    assert ("tests/test_core.py", "test tag DI-99 names no declared design input") in warnings
+    assert ("tests/test_core.py::test_1", "test tag DI-99 names no declared design input") in warnings
     assert not any("US-1" in message for _, message in warnings)  # unrelated prefix: noise, not reported
     assert not any(label == "DI-1" for label, _ in warnings)
 

@@ -12,7 +12,9 @@ record, with Allure's dynamic API:
   its design document, where its user needs are declared (the V&V plan), and
   the risk document of each risk it controls;
 - ``severity``: critical when the input controls a risk;
-- an attachment with the input's text.
+- an attachment with the input's text;
+- ``commit``: the commit under test, and ``worktree=dirty`` when the working
+  tree had uncommitted changes (DI-59).
 
 Enable it for a run with ``-p rdm.pytest_plugin``, or in the repository's
 top-level ``conftest.py`` with ``pytest_plugins = ["rdm.pytest_plugin"]``; to
@@ -75,6 +77,7 @@ def _record(dhf: str) -> dict:
         "controls": controls,
         "web": web_url(_git(root, "remote", "get-url", "origin")),
         "commit": _git(root, "rev-parse", "HEAD"),
+        "dirty": bool(_git(root, "status", "--porcelain")),
     }
 
 
@@ -117,10 +120,13 @@ def pytest_runtest_call(item):
     if ids:
         dhf = item.config.getoption("--rdm-dhf", default=None) or str(Path(str(item.config.rootpath)) / "dhf")
         record = _record(str(Path(dhf).resolve())) if Path(dhf).is_dir() else None
-        for di in ids:
-            requirement = record["inputs"].get(di) if record else None
-            if not requirement:
-                continue
+        declared = [di for di in ids if record and di in record["inputs"]]
+        if declared and record["commit"]:  # DI-59: the version this run is evidence for
+            allure.dynamic.label("commit", record["commit"])
+            if record["dirty"]:
+                allure.dynamic.label("worktree", "dirty")
+        for di in declared:
+            requirement = record["inputs"][di]
             for need in requirement["traces_to"]:
                 allure.dynamic.epic(need)
             allure.dynamic.feature(requirement["context"])

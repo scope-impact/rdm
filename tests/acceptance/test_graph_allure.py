@@ -82,7 +82,7 @@ def test_results_are_projected_in_full(tmp_path: Path) -> None:
     with clause("not projected: labels as nodes, links, a test case per history id, container fixtures"):
         predicates = {q.predicate.value for q in quads}
         nodes = {q.subject.value for q in quads}
-        assert not predicates & {RDM + "hasLabel", RDM + "runOf", RDM + "setsUp", RDM + "tearsDown",
+        assert not predicates & {RDM + "hasLabel", RDM + "setsUp", RDM + "tearsDown",
                                  "http://www.w3.org/2000/01/rdf-schema#seeAlso"}
         assert not any(n.startswith((P + "label/", P + "testcase/", P + "fixture/")) for n in nodes)
         executions = [q for q in quads if q.graph_name.value.endswith("graph/executions")]
