@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added — Allure results as RDF
+- `rdm/graph/allure.py`: each result in full — uuid, full name, times, status
+  message and trace, parameters, labels, links, and a test case shared by the
+  runs of one test (DI-54); container fixtures linked to the runs they served
+  (DI-55); output labels linking runs to source files, listed by `trace`
+  (DI-56).
+
 ### Added — test evidence
 - `rdm story evidence-bundle` keeps the executed Allure results, with every
   attachment and container they reference, in `allure-results/` (DI-30).

@@ -6,8 +6,9 @@ one queryable graph that people and agents read from.
 
 ```
 regulation → checklist → clause ← document
-user need → design input → tagged test → result → commit
+user need → design input → tagged test → result → source file
 risk → control (a design input) → tagged test → result
+design document → the commit that landed it
 ```
 
 Every link is a file you write or a fact a tool records. Nothing in the chain

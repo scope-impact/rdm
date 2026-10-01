@@ -149,7 +149,7 @@ The endpoint's default graph is the union of all of them.
 |---|---|
 | `urn:dhf:<project>:graph/record` | user needs, bounded contexts, design inputs, controlled documents |
 | `…graph/tests` | verification tags found in test sources |
-| `…graph/executions` | Allure results (only with `--allure-results`): each run's status, steps (`rdm:step`, nested, in order) and attachments (`rdm:attachment`) |
+| `…graph/executions` | Allure results in full (only with `--allure-results`): each run's status, times, failure message and trace, parameters, labels, links, steps and attachments; the test case its runs share; container fixtures; and the source files it exercises |
 | `…graph/git` | each design document's latest commit and its author, and the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`) |
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
@@ -173,6 +173,27 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | `prov:wasGeneratedBy`, `prov:Activity`, `prov:Agent`, `prov:endedAtTime` | commits and authors (PROV-O) |
 | `rdm:Clause` ⊂ `skos:Concept`, `rdm:Checklist` ⊂ `skos:Collection`, `skos:ConceptScheme` | clauses, checklists, standards (SKOS) |
 | `dcterms:references` | a document claims a clause with a `[[KEY]]` tag |
+
+## Test results, in full
+
+`--allure-results` brings in everything Allure recorded, not just pass or fail:
+
+| In Allure | In the graph |
+| --- | --- |
+| a result file | an `rdm:TestRun` (a `prov:Activity`) with `dcterms:identifier` (uuid), `rdm:fullName`, `rdm:status`, `prov:startedAtTime` / `prov:endedAtTime` |
+| `statusDetails` | `rdm:statusMessage`, `rdm:statusTrace` |
+| `historyId` | `rdm:runOf` an `rdm:TestCase` the runs of one test share, across executions |
+| `labels` | `rdm:hasLabel`, each a name and a value; `story`/`feature` also as `rdm:exercises` (the design input) |
+| an `output` label | `rdm:exercisesOutput` an `rdm:SourceFile` — the code the run exercises |
+| `parameters` | `rdm:parameter`, each a name and a value |
+| `links` | `rdfs:seeAlso` |
+| `steps`, `attachments` | `rdm:step` (nested, ordered), `rdm:attachment` (name, media type, file) |
+| a container's `befores` / `afters` | an `rdm:Fixture` that `rdm:setsUp` / `rdm:tearsDown` its runs |
+
+So the chain runs all the way to code — design input → test → run → source
+file — from labels the tests already carry, and `trace` lists a design
+input's source files. Attachment content stays in the files (which the
+release bundle keeps); the graph holds the reference.
 
 ## Who landed a change
 

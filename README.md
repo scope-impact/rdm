@@ -12,8 +12,9 @@ The chain it holds:
 
 ```
 regulation → checklist → clause ← document
-user need → design input → tagged test → result → commit
+user need → design input → tagged test → result → source file
 risk → control (a design input) → tagged test → result
+design document → the commit that landed it
 ```
 
 Every link is a file you write or a fact a tool records. Nothing in the chain
@@ -179,6 +180,10 @@ uv run pytest tests
 
 ### Unreleased
 
+- Allure results as RDF (Design Review 14, `rdm/graph/allure.py`): each run in
+  full — times, failure details, parameters, labels, links (DI-54); container
+  fixtures (DI-55); output labels link runs to source files, and `trace` lists a
+  design input's code (DI-56). The acceptance suite records a step per clause.
 - Test evidence (Design Review 13): the release bundle keeps the executed Allure
   results with their attachments and containers (DI-30); the graph and `trace`
   carry each run's steps and attachments (DI-53); RDM's gate and risk tests
