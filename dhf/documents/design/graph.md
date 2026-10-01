@@ -26,7 +26,7 @@ design_inputs:
     text: "RDM's agent server shall offer no way to change the record or the graph: query shall accept SELECT, ASK, CONSTRUCT and DESCRIBE and reject SPARQL Update, and shall cap results at a row limit, saying when it cut them."
     traces_to: [UN-015]
   - id: DI-45
-    text: "RDM shall project the risk register into a risks graph — each risk with its hazard, situation, harm, severity, probability, initial and residual level, the design inputs that control it, and its acceptance — with SHACL shapes that block exactly the risks the release gate blocks, and the agent server's trace shall accept a risk id and list, for a design input, the risks it controls."
+    text: "RDM shall project the risk register into a risks graph — each risk with its category, STRIDE category, linked risks, hazard, situation, harm, scores, initial and residual level, residual decision (acceptable, accepted, needs acceptance, unacceptable, or not evaluated while a control lacks a passing test), status, controlling design inputs and acceptance — with SHACL shapes that block exactly the risks the release gate blocks, and the agent server's trace shall accept a risk id and list, for a design input, the risks it controls."
     traces_to: [UN-016, UN-015]
 ---
 
@@ -119,13 +119,15 @@ source: the graph is derived, rebuilt on demand, and never edited.
   request. Refines UN-015.
 
 - **DI-45 (risks in the graph)** — a risks graph: each `rdm:Risk` with its
-  hazard, situation, harm, severity, probability, computed initial and
-  residual level and acceptance, and `rdm:controlledBy` to the design inputs
-  that control it — so a query walks risk → design input → test → run. Risk
-  shapes in `shapes.ttl` block exactly what DI-44 blocks, keeping
-  `rdm graph validate` (and the agent's `validate`) in agreement with the
-  release gate. `trace` takes a `RISK-…` id, and a design input's trace
-  lists the risks it controls. Refines UN-016 and UN-015.
+  category and STRIDE category, `rdm:linkedTo` other risks, its chain, scores
+  and evaluated levels, its **residual decision** — `acceptable`,
+  `accepted`, `needs acceptance`, `unacceptable`, or `not evaluated` while a
+  controlling design input has no passing test — its status and acceptance,
+  and `rdm:controlledBy` to the design inputs that control it. The decision
+  is computed by the same function the release gate uses, so the risk shapes
+  block exactly what the gate blocks. `trace` takes a `RISK-…` id, and a
+  design input's trace lists the risks it controls. Refines UN-016 and
+  UN-015.
 
 ## Design Outputs
 

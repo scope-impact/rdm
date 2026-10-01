@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 9
+revision: 10
 title: Design Review — RDM
 ---
 
@@ -311,6 +311,41 @@ shapes, agent trace); RDM's own tool-risk register (RMF-001).
 - Open: halla-health's registers use the cluster-file Markdown format, which
   the planning-side parser reads; moving them into the record format is work
   on halla-health, not RDM.
+
+# Design Review 10 — Risk evaluation per the requirements skill
+
+**Scope reviewed:** DI-43, DI-44 and DI-45 as amended, measured against the
+`requirements` skill (scope-impact/agent-skills); RDM's own risk policy
+(RMP-001) and register (RMF-001).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- No default policy. A matrix's cells are not ISO 14971 values; evaluation
+  needs criteria the project set before the decision, so a register with no
+  declared `risk_policy` blocks ("acceptability criteria missing").
+- Acceptability is policy data, not code: per level `acceptable`, `justify`
+  or `unacceptable`. The fixed Low/Medium/High/Block rules are gone; level
+  names are the project's.
+- A residual is evaluated only once every control's design input has a
+  passing test; until then it is *not evaluated* and blocks. A passing test
+  shows the control was built as specified; effectiveness remains the
+  reviewer's judgement.
+- Safety and security are separate branches: `category`, `stride` for a
+  security risk, `linked` to the safety risk it bears on.
+- Residual severity is allowed, defaulting to the initial severity. This
+  departs from RDM-004 decision-001 ("a control never changes severity"),
+  because ISO 14971 lets a control reduce severity and the requirements
+  skill records it; decision-001 should be revisited on that map.
+- `status: proposed` marks ratings no person has approved, as a warning.
+  RMP-001 and RMF-001 were written by an agent and are proposed until a
+  maintainer reviews them.
+
+## Findings and actions
+
+- Open: a maintainer to review RMP-001 and RMF-001 and set `status:
+  approved` (or change them).
 
 # Approval
 
