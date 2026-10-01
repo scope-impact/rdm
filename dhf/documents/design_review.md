@@ -159,7 +159,10 @@ feeds verdict hashing), UN-012, and the document-control statement.
 
 - Accepted: a test can pass without proving its requirement; detecting that
   is the pull-request reviewer's job. Teams that want automated evidence can
-  run a mutation-testing tool in CI; RDM no longer ships one.
+  run a mutation-testing tool in CI.
+- Addendum: the mutation probe is kept as a standalone reviewer tool (DI-34,
+  refining the new UN-013), so that judgment can be backed by an executed
+  check. It records no verdict and gates nothing; DI-21 stays retired.
 - Open (carried from Review 3): summative validation records; human PR review
   and individual signing identities (NC-2/NC-3).
 

@@ -2,7 +2,7 @@
 id: SDS-VER-001
 kind: design
 context: verification
-satisfies: [UN-003, UN-004, UN-012]
+satisfies: [UN-003, UN-004, UN-012, UN-013]
 design_inputs:
   - id: DI-4
     text: "RDM shall reconcile against Allure tags and render a traceability matrix from executed results."
@@ -13,6 +13,9 @@ design_inputs:
   - id: DI-30
     text: "RDM shall produce a release evidence bundle from the record: the verification data, the rendered traceability matrix, and a manifest describing the bundle, written to an output directory for retention."
     traces_to: [UN-012]
+  - id: DI-34
+    text: "RDM shall provide a mutation probe for reviewers that applies a one-line source mutation, runs a test, and reports whether the test caught it (killed) or not (survived) — counting only a genuine test failure as a kill; a run that errors or collects no tests is reported as an error, never as a kill — and always restores the file: the original is journaled beside the file before mutating so an interrupted probe is recovered on the next probe of that file, a termination signal during the probe still restores, and every write invalidates the bytecode cache so a same-second size-preserving mutation cannot run stale; the probe never gates a release."
+    traces_to: [UN-013]
 ---
 
 # Verification — Software Design
@@ -31,6 +34,19 @@ This context owns:
   release's retained evidence set to an output directory: the verification
   data, the rendered traceability matrix, and a manifest describing the bundle — the DHR-shaped artifact set a team
   attaches to a release tag. Refines UN-012.
+- **DI-34 (mutation probe, reviewer tool)** — `rdm story mutation-probe
+  --file F --find A --replace B --test T` breaks one line on purpose, runs one
+  test, and reports KILLED (the test caught it) or SURVIVED (it did not). It is
+  how a pull-request reviewer turns "this test would catch a broken X" from a
+  claim into an executed check. Only a genuine test failure is a kill; a run
+  that errors or collects nothing is an error, so a typo'd selector cannot
+  manufacture evidence. The file is always restored, defended in depth: the
+  original is journaled to a sidecar first (recovered on the next probe of the
+  file, even after SIGKILL), SIGTERM restores in-process, and every write
+  advances the mtime to a fresh whole second so CPython never runs stale
+  bytecode for a same-size mutant. It records nothing and gates nothing — the
+  reviewer's judgment, on the pull request, is the record. Restored from the
+  retired DI-21 without its verdict coupling. Refines UN-013.
 
 ## Design Outputs
 
@@ -41,6 +57,7 @@ Turns executed test results into verification status and a traceable matrix.
 - `rdm/record/verify.py` + `rdm story verify` — write a `verification.yml` the
   DHF renders into a traceability matrix (design inputs grouped under the user
   need they trace to; generated, not hand-maintained).
+- `rdm/story_audit/mutation.py` + `rdm story mutation-probe` — DI-34.
 - `build_trace` + `rdm story trace <id>` — the read-only audit query: forward
   (user need → design inputs) and backward (design input → need, owner,
   realisers, verifying tests, status).
