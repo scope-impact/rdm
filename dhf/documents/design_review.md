@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 6
+revision: 7
 title: Design Review — RDM
 ---
 
@@ -223,6 +223,30 @@ Documents — with the ten existing contexts assigned to them.
 - Open: known measurement faults in the record — duplicate Allure results
   from the docs build, test tags read from string literals, and the Part 11
   document-control claims not linked to any design input.
+
+# Design Review 7 — Measurement faults
+
+**Scope reviewed:** DI-40 (record context) and the three measurement faults
+left open by Design Review 6.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Test tags read from string literals: a product defect in Python tag
+  discovery. DI-40 reads tags from the syntax tree instead.
+- Duplicate Allure results: the docs build and local runs append to
+  `dhf/allure-results`, so a second run doubles every result. Not a product
+  behaviour: every documented and scaffolded acceptance command now passes
+  `--clean-alluredir`.
+- Part 11 document control not linked to a design input: closed, not a fault.
+  DC-001 is a quality-system document; its links are to the Part 11 clauses it
+  claims, which is correct. A document-to-input link type would add
+  vocabulary for a picture, not for a question anyone asks.
+
+## Findings and actions
+
+- None open from this review.
 
 # Approval
 
