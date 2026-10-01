@@ -70,6 +70,7 @@ nav:
       - Authoring and rendering: authoring.md
       - Gap analysis (checklists): gap-analysis.md
       - Design controls and traceability: design-controls.md
+      - The record as a graph (RDF): graph.md
       - Agent workflow (the change procedure): agent-workflow.md
       - CLI reference: cli.md
       - FAQ: FAQ.md

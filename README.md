@@ -116,6 +116,10 @@ uv run pytest tests
 
 ### Unreleased
 
+- **The record as a graph** (`rdm graph build | query | serve`, extra
+  `graph`): the DHF projected into RDF named graphs (OSLC RM, Dublin Core and
+  PROV-O vocabulary), queried with SPARQL over an embedded Oxigraph store, and
+  browsable in AWS Graph Explorer — derived from the Markdown, never edited
 - **Agent-era design controls, end to end**: canonical change procedure
   (`dhf/AGENT_WORKFLOW.md`), always-on local design gate (committed
   `.githooks/` + session bootstrap), and CI gates

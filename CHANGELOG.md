@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added — the design record as a linked-data graph
+- `rdm graph build | query | serve` (optional extra `graph`): projects the
+  record into RDF named graphs (record, tests, executions, git, ontology),
+  stores it in an embedded Oxigraph database, answers SPARQL, and serves a
+  SPARQL 1.1 endpoint for AWS Graph Explorer. DI-35, DI-36, user need UN-014.
+
 ### Changed — `rdm story mutation-probe` is a standalone reviewer tool
 - Same command and restore guarantees, now recorded as DI-34 (user need
   UN-013): a reviewer proves a test catches a specific defect. It records no

@@ -32,6 +32,16 @@
 
 Common flag: `--dhf DIR` (default `dhf/`).
 
+## The record as a graph — `rdm graph …` (extra: `graph`)
+
+| Command | What it does |
+|---|---|
+| `build [--allure-results DIR] [-o FILE] [--store DIR] [--project NAME]` | project the record into RDF named graphs; sorted N-Quads to a file or stdout, and/or a rebuilt Oxigraph store |
+| `query 'SPARQL' [--store DIR] [--format tsv\|csv\|json]` | SELECT / ASK / CONSTRUCT over the store, or over an in-memory projection of `--dhf` |
+| `serve [--store DIR] [--bind HOST:PORT]` | SPARQL 1.1 endpoint (union default graph, CORS) for AWS Graph Explorer and other SPARQL clients |
+
+See [The record as a graph](graph.md).
+
 ## Planning layer (optional, non-record)
 
 | Command | What it does |

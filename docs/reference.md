@@ -29,6 +29,16 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.record.persona
 
+## The record as a graph (`rdm graph`)
+
+### `rdm.graph.project`
+
+::: rdm.graph.project
+
+### `rdm.graph.cli`
+
+::: rdm.graph.cli
+
 ## Design-controls gates (`rdm story`)
 
 The gates and traceability commands layered on the record core.

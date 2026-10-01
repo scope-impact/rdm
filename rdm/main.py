@@ -65,7 +65,32 @@ def cli(raw_arguments):
         exit_code = handle_story_command(args)
     elif args.command == 'pm':
         exit_code = handle_pm_command(args)
+    elif args.command == 'graph':
+        exit_code = handle_graph_command(args)
     return exit_code
+
+
+def handle_graph_command(args):
+    """Handle `rdm graph build | query | serve` (the record as a linked-data graph)."""
+    from rdm.graph import cli as graph_cli
+
+    def _path(value):
+        return Path(value) if value else None
+
+    if args.graph_command == 'build':
+        return graph_cli.graph_build_command(
+            dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
+            output=_path(args.output), store=_path(args.store), project_name=args.project,
+        )
+    if args.graph_command == 'query':
+        return graph_cli.graph_query_command(
+            args.sparql, store=_path(args.store), dhf_dir=_path(args.dhf),
+            allure_results_dir=_path(args.allure_results), fmt=args.format,
+        )
+    if args.graph_command == 'serve':
+        return graph_cli.graph_serve_command(store=_path(args.store), bind=args.bind)
+    print("Unknown graph subcommand. Use: build, query, or serve")
+    return 1
 
 
 def handle_story_command(args):
@@ -381,6 +406,7 @@ def parse_arguments(arguments):
     # =========================================================================
     pm_help = 'project management commands (GitHub sync)'
     pm_parser = subparsers.add_parser('pm', help=pm_help)
+    _add_graph_parser(subparsers)
     pm_subparsers = pm_parser.add_subparsers(dest='pm_command', metavar='<subcommand>')
 
     # rdm pm sync
@@ -400,6 +426,31 @@ def parse_arguments(arguments):
     )
 
     return parser.parse_args(arguments)
+
+
+def _add_graph_parser(subparsers):
+    """`rdm graph`: the design record projected into RDF (needs extra: graph)."""
+    graph_parser = subparsers.add_parser(
+        'graph', help='the design record as a linked-data (RDF) graph: build, query, serve')
+    graph_sub = graph_parser.add_subparsers(dest='graph_command', metavar='<subcommand>')
+
+    build = graph_sub.add_parser('build', help='project the record into RDF (sorted N-Quads and/or an Oxigraph store)')
+    build.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    build.add_argument('--allure-results', help='Allure results dir (adds the executions graph)')
+    build.add_argument('-o', '--output', help='write sorted N-Quads here (default: stdout, unless --store)')
+    build.add_argument('--store', help='(re)build an Oxigraph store in this directory, e.g. .rdm/graph')
+    build.add_argument('--project', help='project name in instance IRIs (default: the repository name)')
+
+    query = graph_sub.add_parser('query', help='answer a SPARQL query (SELECT/ASK/CONSTRUCT)')
+    query.add_argument('sparql', help='the SPARQL query text')
+    query.add_argument('--store', help='query this store (default: a fresh in-memory projection of --dhf)')
+    query.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    query.add_argument('--allure-results', help='Allure results dir (for the in-memory projection)')
+    query.add_argument('--format', choices=['tsv', 'csv', 'json'], default='tsv', help='SELECT result format')
+
+    serve = graph_sub.add_parser('serve', help='serve the store as a SPARQL 1.1 endpoint (for AWS Graph Explorer)')
+    serve.add_argument('--store', help='store directory (default: .rdm/graph)')
+    serve.add_argument('--bind', default='localhost:7878', help='host:port (default: localhost:7878)')
 
 
 if __name__ == '__main__':

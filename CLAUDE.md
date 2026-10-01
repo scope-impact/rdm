@@ -86,6 +86,7 @@ RDM is a documentation-as-code CLI tool for IEC 62304 medical device software. I
 - `rdm/gaps.py` — Gap analysis: validates documents against regulatory checklists (IEC 62304, ISO 13485, etc.). Built-in checklists in `rdm/checklists/`.
 - `rdm/md_extensions/` — Markdown post-processing: section numbering, vocabulary expansion.
 - `rdm/init_files/` — Scaffold templates for `rdm init` (Makefile, config.yml, document templates, Dockerfile).
+- `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | serve`, extra `graph`): named graphs per source, embedded Oxigraph store, SPARQL endpoint for AWS Graph Explorer. See `docs/graph.md`.
 
 ### Optional modules (extras)
 
