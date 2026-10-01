@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 5
+revision: 6
 title: Design Review — RDM
 ---
 
@@ -196,6 +196,33 @@ Graph Explorer).
   and `[[…]]` reference tags, matched by `rdm gap`'s own code) and DI-38 the
   gate rules as SHACL shapes (pySHACL), held by test to agreement with the
   release gate and `rdm gap`. The coded gates remain authoritative.
+
+# Design Review 6 — Product structure
+
+**Scope reviewed:** the intended use (V&V plan) and the system architecture
+(`architecture.md`), restated as four parts — Record, Gates, Graph,
+Documents — with the ten existing contexts assigned to them.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- No design input, user need or module changes; this is the record of how the
+  existing contexts fit together.
+- The record is the only thing people and agents write, and only through a
+  reviewed pull request. Graph, matrix, documents and evidence are derived
+  and never edited — consistent with Design Review 5 and RDM-004.
+- The graph is the read interface for agents; it accepts no writes.
+- Agent skills are maintained outside RDM (`scope-impact/agent-skills`).
+
+## Findings and actions
+
+- Open: risk management, regulation-to-checklist, and a read-only agent
+  interface are named as not yet in scope; each enters as a user need with
+  design inputs.
+- Open: known measurement faults in the record — duplicate Allure results
+  from the docs build, test tags read from string literals, and the Part 11
+  document-control claims not linked to any design input.
 
 # Approval
 

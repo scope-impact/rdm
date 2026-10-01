@@ -39,6 +39,15 @@ user_needs:
 Defines how RDM is verified (does it meet its acceptance criteria?) and validated
 (does it meet the user needs / intended use?).
 
+# Intended use
+
+RDM keeps the design record of regulated software — needs, design inputs,
+checklists, tagged tests, results and their git history — and lets the team
+gate releases on it, render regulatory documents from it, and query it as a
+read-only graph. Its users are regulatory authors, engineers, reviewers, and
+agents working under their direction. RDM is not a medical device and does not
+itself establish compliance; it keeps the evidence that a team presents.
+
 # User needs
 
 Declared in this document's frontmatter (`user_needs`) — the validation anchors
