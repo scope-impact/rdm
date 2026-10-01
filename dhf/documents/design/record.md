@@ -19,6 +19,7 @@ design_inputs:
   - id: DI-34
     text: "RDM shall keep an append-only, hash-chained event journal in the DHF (journal.jsonl), appending one event each time a faithfulness verdict is recorded, each event carrying a sequence number, a timestamp, a type, a payload, the previous event's hash, and its own SHA-256 hash over its body and the previous hash; rdm story journal --verify shall detect any edited, deleted, inserted, or reordered event and report the first broken sequence number; and the release gate shall block on a journal that fails verification."
     traces_to: [UN-012]
+    depends_on: [DI-20]
 ---
 
 # Record — Software Design

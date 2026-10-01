@@ -155,6 +155,15 @@ faithfulness reviews).
 
 ## Findings and actions
 
+- Dogfood: RDM's own inputs now declare their `depends_on` edges (DI-18, 20,
+  27, 28, 30, 34, 35, 36, 38, 39 onto the inputs whose behavior they are
+  defined in terms of). Declaring them re-opened exactly those ten reviews and
+  no other — DI-35 working on its own record — and they are re-reviewed
+  independently. Pre-branch verdicts classified as D (no fingerprints), the
+  new ones as C; the re-reviews give every one of them fingerprints.
+- Action: DI-23's recorded probes no longer execute (their find-text left
+  `allure.py`/`audit.py` before this review); DI-23 is re-reviewed so its
+  replay evidence holds again.
 - Accepted risk: concurrent branches each appending to `journal.jsonl`
   conflict at merge; resolution is to keep one branch's chain and re-record
   the other branch's verdict events (the verify command detects a bad merge).

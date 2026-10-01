@@ -16,6 +16,7 @@ design_inputs:
   - id: DI-20
     text: "RDM shall provide a command to record a faithfulness verdict for a design input, hash-pinned to the current verifying-test source, and reject an undeclared design input."
     traces_to: [UN-009]
+    depends_on: [DI-19]
   - id: DI-21
     text: "RDM shall provide a mutation probe that applies a one-line source mutation, runs a test, reports whether the test caught it (killed) or not (survived) — counting only a genuine test failure as a kill; a run that errors or collects no tests is reported as an error, never as a kill — and always restores the file: the original is journaled beside the file before mutating so an interrupted probe is recovered on the next probe of that file, a termination signal during the probe still restores, and every write invalidates the bytecode cache so a same-second size-preserving mutation cannot run stale."
     traces_to: [UN-009]
@@ -25,21 +26,27 @@ design_inputs:
   - id: DI-27
     text: "RDM shall record faithfulness verdicts with their executed mutation probes as structured data, support replaying the recorded killing probes — failing when any probe no longer kills or can no longer execute, with a per-probe error reported as a gate failure rather than aborting the replay — and support filtering the faithfulness report to non-faithful inputs."
     traces_to: [UN-009]
+    depends_on: [DI-20, DI-21]
   - id: DI-28
     text: "RDM shall pin each faithfulness verdict at a recorded hash scope, module scope by default (the full source files containing the verifying tests) with function scope selectable, and judge staleness per verdict using its recorded scope, honoring legacy verdicts as function-scoped."
     traces_to: [UN-009]
+    depends_on: [DI-20]
   - id: DI-35
     text: "RDM shall let a design input declare the design inputs it depends_on; a dependent's faithfulness pin shall cover the text of every input it transitively depends on, so a change to an upstream input's text makes the verdicts of its downstream inputs stale while leaving unrelated inputs' verdicts current, tolerating dependency cycles; and the design gate shall warn on a dependency naming an undeclared design input."
     traces_to: [UN-009]
+    depends_on: [DI-28]
   - id: DI-36
     text: "RDM shall record, with each new faithfulness verdict, normalized fingerprints of the design-input text and of the verifying-test source that ignore whitespace, comments, and docstrings; classify each stale verdict as A (formatting- or comment-only change), B (verifying-test change), C (requirement-text change), or D (unclassifiable: no fingerprints on record), showing the class in the faithfulness report; and let rdm story verdict --carry-forward re-pin a stale verdict without a new review only when it classifies as A, recording the carry-forward and its class in the verdict, and refusing every other class."
     traces_to: [UN-009]
+    depends_on: [DI-28, DI-20]
   - id: DI-38
     text: "RDM shall provide rdm story gate-selftest, which builds a synthetic fully-passing DHF in a scratch git repository, confirms the release gate passes it, then injects each fault class in isolation (an untested design input, a failing test, an unreviewed, unfaithful, partial, and stale verdict, a user need no input traces to, an uncommitted design-document edit, a broken journal, and a reworded locked design input) and confirms the release gate blocks each; it shall report caught or missed per fault and exit non-zero if the clean baseline is blocked or any fault escapes."
     traces_to: [UN-003]
+    depends_on: [DI-3, DI-19, DI-34, DI-37]
   - id: DI-39
     text: "RDM shall carry negative knowledge across faithfulness reviews: recording a verdict over an earlier one shall preserve that verdict's surviving probes and uncovered clauses, together with any findings it had already carried, in a prior_findings list whose entries name the earlier verdict and reviewer; the review worklist (rdm story faithfulness --stale) shall print each listed input's prior findings; and prior findings shall never by themselves block a release."
     traces_to: [UN-009]
+    depends_on: [DI-20, DI-27]
 ---
 
 # Gating — Software Design

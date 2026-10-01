@@ -10,9 +10,11 @@ design_inputs:
   - id: DI-18
     text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status)."
     traces_to: [UN-004]
+    depends_on: [DI-4]
   - id: DI-30
     text: "RDM shall produce a release evidence bundle from the record: the verification data, the rendered traceability matrix, the faithfulness verdicts, and a manifest describing the bundle, written to an output directory for retention."
     traces_to: [UN-012]
+    depends_on: [DI-4, DI-19]
 ---
 
 # Verification — Software Design
