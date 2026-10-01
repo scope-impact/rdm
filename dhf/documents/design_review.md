@@ -269,6 +269,8 @@ validate) and DI-42 (read-only), in the graph context.
   (stdio runs as the local user).
 - Fixed in passing: a duplicate `design_inputs` key in the graph design
   document's frontmatter.
+- Addendum: DI-35 now projects each user need's identifier and text; the
+  graph held only the id, so an agent tracing a need could not read it.
 
 ## Findings and actions
 
