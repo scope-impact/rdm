@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 18
+revision: 19
 title: Design Review — RDM
 ---
 
@@ -545,6 +545,36 @@ every design document.
   gone from the record, `rdm story new-input` no longer edits it, and the
   design gate's coverage warning reads the inputs (DI-1, DI-22). An old DHF
   that still carries `satisfies` is read without error; the key is ignored.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 18 — Noise out of the graph
+
+**Scope reviewed:** DI-54 and DI-58 amended; DI-55 retired.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- From the same critical pass over the edges: most of the executions graph
+  repeated the record or said nothing about design controls.
+- Labels (565 nodes in RDM's own graph, the largest part of it): `story` and
+  `output` already become `rdm:exercises` and `rdm:exercisesOutput`; epic and
+  feature are written from the record by DI-57, so projecting them read the
+  record back through Allure; the rest is runner metadata.
+- Links (`rdfs:seeAlso`): GitHub URLs repeating the `declaredIn` chain. They
+  stay in the Allure report, where a person clicks them.
+- Test cases: one per run while one execution is loaded; nothing to share.
+- Fixtures (DI-55, retired): Allure's set-up and tear-down halves became two
+  fixtures each (`tmp_path`, `tmp_path::0`), and `tmp_path` or `capsys`
+  tell a reviewer nothing about a design input.
+- The traceability matrix template (TM-001) is output, rendered from what the
+  graph holds; its `prov:wasDerivedFrom` edges (DI-58) were an island-filler.
+  It is no longer projected.
+- Nothing is lost as evidence: the raw results, containers and attachments
+  stay in the evidence bundle (DI-30).
 
 ## Findings and actions
 

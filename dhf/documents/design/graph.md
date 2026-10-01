@@ -43,16 +43,13 @@ design_inputs:
     text: "The graph shall carry each test run's steps — name, status and order, nested under their parent step — and its attachments, on the run or on a step — name, media type and file — and the agent server's trace shall list them with each run."
     traces_to: [UN-014, UN-015, UN-004]
   - id: DI-54
-    text: "RDM shall project each executed Allure result in full — its uuid, full name, start and end times, status message and trace, parameters, every label as a name and a value, and its links — and shall link the runs of one test across executions through the result's history id."
+    text: "RDM shall project each executed Allure result's uuid, full name, start and end times, status message and trace, and parameters, and shall not project what the record already holds or what claims nothing about design controls: its labels as nodes, its links, a test case per history id, and container fixtures."
     traces_to: [UN-014, UN-004]
-  - id: DI-55
-    text: "RDM shall project the fixtures that Allure containers record — each before or after fixture with its name, status, times, steps and attachments — linked to the test runs it set up or tore down."
-    traces_to: [UN-014]
   - id: DI-56
     text: "RDM shall link each test run to the source files its output labels name, and the agent server's trace shall list, for a design input, the source files its runs exercise."
     traces_to: [UN-014, UN-015]
   - id: DI-58
-    text: "The graph shall link each bounded context to the controlled document whose contexts frontmatter declares it, with its part, each controlled document to the controlled documents its references frontmatter names, and the traceability matrix to the design documents and the document declaring the user needs it is generated from; a shape shall warn on a bounded context no document declares once any document declares contexts, and validation shall fail on a reference to a document the record does not hold."
+    text: "The graph shall link each bounded context to the controlled document whose contexts frontmatter declares it, with its part, each controlled document to the controlled documents its references frontmatter names, and shall not project the traceability matrix template, an output generated from the record; a shape shall warn on a bounded context no document declares once any document declares contexts, and validation shall fail on a reference to a document the record does not hold."
     traces_to: [UN-014, UN-015]
 ---
 
@@ -131,7 +128,7 @@ source: the graph is derived, rebuilt on demand, and never edited.
   graph from file* instead of a hundred manual expansions. `--exclude
   TestRun` (repeatable) leaves out a class's nodes and their links to
   declutter, and the details that hang only from them (a run's steps,
-  attachments, labels, parameters, fixtures and test case), which would
+  attachments and parameters), which would
   otherwise float as islands; `--endpoint` names the served endpoint (default
   `http://localhost:7878`). Refines UN-014.
 - **DI-41 (agent server)** — `rdm graph mcp` is a Model Context Protocol
@@ -190,8 +187,8 @@ source: the graph is derived, rebuilt on demand, and never edited.
   the design documents. A document names the controlled documents it relies
   on in `references:` (`dcterms:references`, document to document), and a
   reference to a document the record does not hold fails validation. The
-  traceability matrix is linked (`prov:wasDerivedFrom`) to the design
-  documents and the user-need registry it is generated from. Refines UN-014
+  traceability matrix template is not projected: it is an output, rendered
+  from what the graph already holds. Refines UN-014
   and UN-015.
 
 - **DI-53 (evidence in the graph)** — a passed run says nothing about what
@@ -201,22 +198,26 @@ source: the graph is derived, rebuilt on demand, and never edited.
   agent goes from a design input to the evidence itself. Refines UN-014,
   UN-015 and UN-004.
 
-- **DI-54 (Allure results, in full)** — the executions graph held a run's
-  name, status, tags, steps and attachments; the rest of each result was
-  dropped. Now each run also carries its uuid, full name, start and end
-  times (PROV-O `startedAtTime` / `endedAtTime`), failure message and trace,
-  parameters, every label (`rdm:hasLabel`: name, value) and its links
-  (`rdfs:seeAlso`). Runs of one test across executions share a test-case
-  node (`rdm:runOf`, keyed by Allure's history id). Refines UN-014, UN-004.
-- **DI-55 (fixtures)** — Allure writes set-up and tear-down into container
-  files. Each before or after fixture becomes an `rdm:Fixture` with its
-  name, status, times, steps and attachments, linked to the runs it served
-  (`rdm:setsUp` / `rdm:tearsDown`). Refines UN-014.
+- **DI-54 (Allure results, what counts)** — each run carries its uuid, full
+  name, start and end times (PROV-O `startedAtTime` / `endedAtTime`), failure
+  message and trace, and parameters, besides its status, steps and
+  attachments. Deliberately not projected (Design Review 18): labels as
+  nodes — `story` and `output` become `rdm:exercises` / `rdm:exercisesOutput`,
+  epic and feature come from the record itself (DI-57), and the rest
+  (`host`, `thread`, `framework`, `suite`…) is runner metadata; links, which
+  repeat the record's own `declaredIn` chain; and a test case per history id,
+  one-to-one with runs while one execution is loaded. The raw results stay
+  in the evidence bundle (DI-30). Refines UN-014, UN-004.
 - **DI-56 (runs to code)** — a test's `@allure.label("output", "rdm/…")`
   already names the code it exercises. Each run links to those files
   (`rdm:exercisesOutput` → `rdm:SourceFile`), and `trace` lists a design
   input's source files: design input → test → run → code, with nothing new
   to author. Refines UN-014, UN-015.
+
+Retired (Design Review 18): DI-55 — container fixtures (`tmp_path`,
+`capsys`…) say nothing about a design input, and Allure's set-up and
+tear-down halves became two fixtures each. The containers stay in the
+evidence bundle (DI-30).
 
 ## Design Outputs
 
@@ -244,7 +245,7 @@ for serving):
   pySHACL runner (DI-38).
 - `rdm/graph/explorer.py` — the Graph Explorer graph file (DI-39).
 - risks: projected from `rdm/record/risk.py` into the `risks` named graph (DI-45).
-- `rdm/graph/allure.py` — Allure results, containers and attachments → RDF (DI-53..56).
+- `rdm/graph/allure.py` — Allure results, containers and attachments → RDF (DI-53, DI-54, DI-56).
 - `rdm/graph/agent.py` — the read-only agent tools and the MCP server (DI-41, DI-42; `mcp` SDK in the `graph` extra).
 - `rdm/graph/cli.py` — `rdm graph build | query | serve | validate | explorer-file | mcp`.
 
