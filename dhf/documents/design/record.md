@@ -11,10 +11,10 @@ design_inputs:
     text: "RDM shall generate device-master-record index data from controlled documents' frontmatter, writing one entry per document (id, title, path, revision) to a data file the DMR index renders from."
     traces_to: [UN-012]
   - id: DI-31
-    text: "RDM shall discover verification tags in non-Python test sources — JavaScript/TypeScript allure calls and Java Story/Feature annotations across conventional test-file names — so tag-linkage warnings and audit coverage work in polyglot repositories."
+    text: "RDM shall discover verification tags in non-Python test sources — JavaScript/TypeScript allure.story calls and Java @Story annotations across conventional test-file names — so tag-linkage warnings and verification work in polyglot repositories; only the story names a design input."
     traces_to: [UN-004]
   - id: DI-40
-    text: "RDM shall read a Python test file's verification tags only from allure story/feature decorators on its test functions and classes and from a module-level pytestmark — never from strings or comments — so a test that writes fixture files is not counted as verifying the ids those files name; a file that does not parse falls back to the decorator pattern."
+    text: "RDM shall read a Python test file's verification tags only from allure story decorators on its test functions and classes and from a module-level pytestmark — never from strings or comments — so a test that writes fixture files is not counted as verifying the ids those files name; a file that does not parse falls back to the decorator pattern. Only the story names a design input: feature and epic carry the bounded context and the user needs."
     traces_to: [UN-004]
 ---
 
@@ -47,7 +47,8 @@ This context owns the design inputs declared in the frontmatter:
   in RDM's own suite. Python tags are now read from the syntax tree: allure
   `story`/`feature` decorators on functions and classes, and a module-level
   `pytestmark`. A file that does not parse falls back to the pattern. Refines
-  UN-004.
+  UN-004. Amended (Design Review 15): only `story` names a design input;
+  `feature` and `epic` carry the context and the user needs (DI-57).
 
 ## Design Outputs
 

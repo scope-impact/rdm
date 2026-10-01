@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 14
+revision: 15
 title: Design Review — RDM
 ---
 
@@ -458,6 +458,30 @@ module, `rdm/graph/allure.py`.
   the tags, steps and attachments, and each run attaches the text of the
   design input it verifies; unit tests carry none, held by
   `tests/allure_scope_test.py`.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 15 — The Allure behaviors hierarchy
+
+**Scope reviewed:** DI-31 and DI-40 amended (only `story` names a design
+input); DI-57 (`rdm.pytest_plugin`), in the verification context.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Allure's epic → feature → story is RDM's user need → bounded context →
+  design input. Until now both `story` and `feature` named a design input,
+  which left Allure's own hierarchy unusable. `feature` and `epic` now carry
+  the context and the needs; `story` alone is the verification link.
+- Derived, not typed: the plugin reads the record when the test runs, so a
+  re-homed input or a new need changes the labels without touching a test.
+- The link pins the design document at the tested commit, so the report
+  shows the requirement as it was, not as it is now.
+- Opt-in (`pytest_plugins`), so installing RDM changes no one's test run.
+- Allure remains for acceptance tests only.
 
 ## Findings and actions
 

@@ -2,7 +2,7 @@
 id: SDS-VER-001
 kind: design
 context: verification
-satisfies: [UN-003, UN-004, UN-012, UN-013]
+satisfies: [UN-003, UN-004, UN-012, UN-013, UN-010]
 design_inputs:
   - id: DI-4
     text: "RDM shall reconcile against Allure tags and render a traceability matrix from executed results."
@@ -19,6 +19,9 @@ design_inputs:
   - id: DI-47
     text: "The mutation probe shall always restore the file it mutated: it journals the original beside the file so an interrupted probe is recovered on the next probe of that file, restores on a termination signal, and invalidates the bytecode cache on every write."
     traces_to: [UN-013]
+  - id: DI-57
+    text: "RDM shall provide a pytest plugin that, for each test tagged with a design input's story, labels the run from the record at test time — the input's user needs as Allure epics, its bounded context as the feature, a link to its design document at the tested commit, critical severity when it controls a risk — and attaches the input's text."
+    traces_to: [UN-004, UN-010]
 ---
 
 # Verification — Software Design
@@ -60,6 +63,17 @@ This context owns:
   journaled beside the file, an interrupted probe is recovered on the next
   probe of that file, a termination signal restores, and every write
   invalidates the bytecode cache. Refines UN-013.
+
+- **DI-57 (the Allure hierarchy, from the record)** — Allure organises
+  results as epic → feature → story; RDM's record is user need → bounded
+  context → design input. A test carries one hand-written tag,
+  `@allure.story("DI-n")`; `rdm.pytest_plugin` (enabled with
+  `pytest_plugins = ["rdm.pytest_plugin"]`, record at `--rdm-dhf`, default
+  `dhf`) adds the rest at run time with Allure's dynamic API — epics,
+  feature, a link to the design document at the tested commit, critical
+  severity for an input that controls a risk, and the requirement text as an
+  attachment — so the labels cannot drift from the record. Refines UN-004
+  and UN-010.
 
 ## Design Outputs
 
