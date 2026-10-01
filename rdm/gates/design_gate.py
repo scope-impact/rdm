@@ -30,12 +30,12 @@ Part of the core install: it reads only the record (``rdm.record``).
 
 from __future__ import annotations
 
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.record import allure
 from rdm.record.reconcile import relevant_orphans
+from rdm.record.git import git
 from rdm.record.sdd import (
     context_of,
     design_input_ids,
@@ -113,24 +113,10 @@ def has_uncommitted_changes(path: Path) -> bool | None:
     Note: a file excluded by .gitignore reports as clean; design documents are
     expected to be tracked, so this edge case is not treated specially.
     """
-    try:
-        inside = subprocess.run(
-            ["git", "-C", str(path.parent), "rev-parse", "--is-inside-work-tree"],
-            capture_output=True,
-            text=True,
-        )
-        if inside.returncode != 0 or inside.stdout.strip() != "true":
-            return None
-        status = subprocess.run(
-            ["git", "-C", str(path.parent), "status", "--porcelain", "--", str(path)],
-            capture_output=True,
-            text=True,
-        )
-        if status.returncode != 0:
-            return None
-        return bool(status.stdout.strip())
-    except (OSError, ValueError):
+    if git(path.parent, "rev-parse", "--is-inside-work-tree") != "true":
         return None
+    status = git(path.parent, "status", "--porcelain", "--", str(path))
+    return None if status is None else bool(status)
 
 
 def check_doc_path(path: Path, name: str) -> ArtifactCheck:

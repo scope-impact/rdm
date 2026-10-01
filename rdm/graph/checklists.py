@@ -25,10 +25,11 @@ from urllib.parse import quote
 
 import pyoxigraph as ox
 
+from rdm.graph.ns import DCTERMS, SKOS
+
 from rdm import gaps
 
-_SKOS = "http://www.w3.org/2004/02/skos/core#"
-_DCT = "http://purl.org/dc/terms/"
+_SKOS, _DCT = SKOS, DCTERMS
 _RDF_SUFFIXES = {
     ".ttl": ox.RdfFormat.TURTLE, ".nt": ox.RdfFormat.N_TRIPLES, ".nq": ox.RdfFormat.N_QUADS,
     ".trig": ox.RdfFormat.TRIG, ".jsonld": ox.RdfFormat.JSON_LD, ".rdf": ox.RdfFormat.RDF_XML,

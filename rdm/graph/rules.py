@@ -14,7 +14,7 @@ from functools import lru_cache
 
 import pyoxigraph as ox
 
-from rdm.graph.cli import with_prefixes
+from rdm.graph.ns import with_prefixes
 from rdm.graph.project import ONTOLOGY_FILE
 
 

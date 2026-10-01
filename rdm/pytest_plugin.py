@@ -27,21 +27,17 @@ pytest root. Use it for acceptance tests only: unit tests carry no Allure.
 from __future__ import annotations
 
 import re
-import subprocess
 from functools import lru_cache
 from pathlib import Path
 
 import pytest
 
+from rdm.record.git import git
+
 
 def pytest_addoption(parser):
     parser.addoption("--rdm-dhf", default=None,
                      help="RDM design history file the acceptance tests verify (default: dhf under the pytest root)")
-
-
-def _git(root: Path, *args: str) -> str | None:
-    out = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
-    return out.stdout.strip() if out.returncode == 0 and out.stdout.strip() else None
 
 
 def web_url(remote: str | None) -> str | None:
@@ -61,7 +57,7 @@ def _record(dhf: str) -> dict:
     from rdm.record.sdd import declarations, design_inputs
 
     path = Path(dhf)
-    root = Path(_git(path, "rev-parse", "--show-toplevel") or path.parent).resolve()
+    root = Path(git(path, "rev-parse", "--show-toplevel") or path.parent).resolve()
 
     def rel(doc: Path) -> str:
         return doc.resolve().relative_to(root).as_posix()
@@ -75,9 +71,9 @@ def _record(dhf: str) -> dict:
         "declared": {id_: list(dict.fromkeys(rel(path / d) for d in docs))
                      for id_, docs in declarations(path).items()},
         "controls": controls,
-        "web": web_url(_git(root, "remote", "get-url", "origin")),
-        "commit": _git(root, "rev-parse", "HEAD"),
-        "dirty": bool(_git(root, "status", "--porcelain")),
+        "web": web_url(git(root, "remote", "get-url", "origin")),
+        "commit": git(root, "rev-parse", "HEAD"),
+        "dirty": bool(git(root, "status", "--porcelain")),
     }
 
 

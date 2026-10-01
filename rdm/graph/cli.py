@@ -3,34 +3,14 @@
 
 from __future__ import annotations
 
-import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+from rdm.graph.ns import PREFIXES, with_prefixes  # noqa: F401 (re-exported)
+
 DEFAULT_STORE = Path(".rdm/graph")
-
-# Prefixes every query may use without declaring them (a query's own PREFIX
-# for the same name wins).
-PREFIXES = {
-    "rdm": "https://github.com/scope-impact/rdm/ns#",
-    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
-    "xsd": "http://www.w3.org/2001/XMLSchema#",
-    "dcterms": "http://purl.org/dc/terms/",
-    "prov": "http://www.w3.org/ns/prov#",
-    "oslc_rm": "http://open-services.net/ns/rm#",
-    "skos": "http://www.w3.org/2004/02/skos/core#",
-}
-
-
-def with_prefixes(sparql: str) -> str:
-    """Prepend the standard PREFIX lines the query does not declare itself."""
-    declared = {m.group(1) for m in re.finditer(r"(?im)^\s*PREFIX\s+([A-Za-z_][\w-]*)?:", sparql)}
-    head = "".join(f"PREFIX {name}: <{iri}>\n" for name, iri in PREFIXES.items() if name not in declared)
-    return head + sparql
-
 
 def _missing_extra() -> int:
     print("Error: the graph commands need the optional extra: pip install 'rdm[graph]'")

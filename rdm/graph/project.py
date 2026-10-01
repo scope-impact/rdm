@@ -23,13 +23,14 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-import subprocess
 from pathlib import Path
 from urllib.parse import quote
 
 import pyoxigraph as ox
 
+from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
 from rdm.record.allure import find_tests_dir, reconcile, scan_source_tests
+from rdm.record.git import git, repo_root
 from rdm.record.sdd import (
     MATRIX_DOC,
     context_of,
@@ -45,13 +46,9 @@ from rdm.record.sdd import (
 )
 
 
-NS = "https://github.com/scope-impact/rdm/ns#"
+NS = RDM
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
-_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-_RDFS = "http://www.w3.org/2000/01/rdf-schema#"
-_XSD = "http://www.w3.org/2001/XMLSchema#"
-_DCT = "http://purl.org/dc/terms/"
-_PROV = "http://www.w3.org/ns/prov#"
+_RDF, _RDFS, _XSD, _DCT, _PROV = RDF, RDFS, XSD, DCTERMS, PROV
 
 # An id worth a node: DI-3, UN-012, RISK-14 ... (a tag like "{di_id}" in a
 # template string is not).
@@ -73,15 +70,6 @@ def rdm(local: str) -> ox.NamedNode:
 
 def _slug(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", text).strip("-") or "unnamed"
-
-
-def _repo_root(path: Path) -> Path | None:
-    try:
-        out = subprocess.run(["git", "-C", str(path), "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True)
-    except OSError:
-        return None
-    return Path(out.stdout.strip()) if out.returncode == 0 and out.stdout.strip() else None
 
 
 class _Dataset:
@@ -245,19 +233,14 @@ def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode])
     project_results(ds, Path(results_dir), tests)
 
 
-def _git_out(root: Path, *args: str) -> str | None:
-    out = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
-    return out.stdout.strip() if out.returncode == 0 else None
-
-
 def default_branch(root: Path) -> str | None:
     """The branch changes land on: origin's HEAD, else origin's or the local
     main or master (origin first: a local branch may be stale)."""
-    remote = _git_out(root, "rev-parse", "--abbrev-ref", "origin/HEAD")
+    remote = git(root, "rev-parse", "--abbrev-ref", "origin/HEAD")
     if remote and remote != "origin/HEAD":
         return remote
     for ref in ("refs/remotes/origin/main", "refs/remotes/origin/master", "refs/heads/main", "refs/heads/master"):
-        if _git_out(root, "rev-parse", "--verify", "--quiet", ref):
+        if git(root, "rev-parse", "--verify", "--quiet", ref):
             return ref.split("/", 2)[2]
     return None
 
@@ -266,7 +249,7 @@ def default_branch(root: Path) -> str | None:
 def _commit_facts(root: Path, sha: str) -> tuple[str, str, str, str]:
     """A commit's full sha, author, time and subject. A commit never changes, so
     one git call per commit serves every projection that names it."""
-    return tuple(_git_out(root, "log", "-1", "--format=%H%x1f%an%x1f%aI%x1f%s", sha).split("\x1f", 3))
+    return tuple(git(root, "log", "-1", "--format=%H%x1f%an%x1f%aI%x1f%s", sha).split("\x1f", 3))
 
 
 def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, ox.NamedNode]:
@@ -286,21 +269,21 @@ def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str |
     the oldest first-parent commit descending from it (the merge)."""
     if sha in first_parent:
         return sha
-    path = _git_out(root, "rev-list", "--first-parent", "--ancestry-path", f"{sha}..{branch}")
+    path = git(root, "rev-list", "--first-parent", "--ancestry-path", f"{sha}..{branch}")
     return path.splitlines()[-1] if path else None
 
 
 def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "git"
-    head = _git_out(root, "rev-parse", "HEAD")
+    head = git(root, "rev-parse", "HEAD")
     if head:  # DI-60: the commit the record was built at
         record = ds.thing(_term(ds.base + "record"), rdm("Record"), ds.base.split(":")[2], g)
         ds.add(record, rdm("atCommit"), _commit(ds, root, head, g)[0], g)
     branch = default_branch(root)
-    first_parent = set((_git_out(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
+    first_parent = set((git(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
     for entry in controlled_documents(dhf, root):  # DI-35, DI-51: every controlled document
         doc_id = entry["id"]
-        sha = _git_out(root, "log", "-1", "--format=%H", "--", entry["path"])
+        sha = git(root, "log", "-1", "--format=%H", "--", entry["path"])
         if not sha:
             continue  # never committed: no fact to state
         doc = ds.node("doc", doc_id)
@@ -380,7 +363,7 @@ def project(
     ``infer`` adds what the vocabulary's rules derive, in the inferred graph
     (DI-62)."""
     dhf = Path(dhf_dir).resolve()
-    repo = _repo_root(dhf.parent)
+    repo = repo_root(dhf.parent)
     root = repo or dhf.parent
     results = Path(allure_results_dir) if allure_results_dir is not None and Path(allure_results_dir).exists() else None
     ds = _Dataset(project_name or (repo or dhf.parent).name)

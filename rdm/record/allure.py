@@ -21,6 +21,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from rdm.record.git import repo_root
 from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # Matches @allure.story("ID"): only the story names a design input. Single
@@ -159,14 +160,6 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
     )
 
 
-def _repo_root(path: Path) -> Path | None:
-    """The enclosing git repository root (``.git`` may be a dir or a file)."""
-    for ancestor in [path, *path.parents]:
-        if (ancestor / ".git").exists():
-            return ancestor
-    return None
-
-
 # Conventional names for a test suite directory. Plural first: it is the
 # pytest/Go/Ansible convention and the one rdm's own repositories use.
 TESTS_DIR_NAMES = ("tests", "test")
@@ -190,7 +183,7 @@ def find_tests_dir(dhf_dir: Path) -> Path | None:
         start = Path(dhf_dir).resolve().parent
     except OSError:  # cwd removed under us and dhf_dir is relative
         start = Path(dhf_dir).parent
-    root = _repo_root(start)
+    root = repo_root(start)
     chain = [start, *start.parents]
     # Without a repository boundary, only the DHF's sibling is trustworthy.
     chain = chain[: chain.index(root) + 1] if root in chain else [start]

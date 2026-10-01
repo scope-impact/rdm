@@ -14,10 +14,10 @@ from pathlib import Path
 
 import pyoxigraph as ox
 
+from rdm.graph.ns import RDFS, SHACL, SKOS
+
 SHAPES_FILE = Path(__file__).with_name("shapes.ttl")
-_SH = "http://www.w3.org/ns/shacl#"
-_LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
-_NOTATION = "http://www.w3.org/2004/02/skos/core#notation"
+_SH, _LABEL, _NOTATION = SHACL, RDFS + "label", SKOS + "notation"
 SEVERITY_ORDER = {"Violation": 0, "Warning": 1, "Info": 2}
 
 
