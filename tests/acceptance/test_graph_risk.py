@@ -21,6 +21,7 @@ from rdm.graph.agent import Record, trace  # noqa: E402
 from rdm.graph.project import project  # noqa: E402
 from rdm.graph.validate import validate  # noqa: E402
 from tests.acceptance.test_graph_shapes import _dhf, _results  # noqa: E402
+from rdm.gates.design_gate import run_release_gate  # noqa: E402
 from tests.acceptance.test_risk import ACCEPT, CASES, _gate, _policy, _register, _risk  # noqa: E402
 
 RDM = "https://github.com/scope-impact/rdm/ns#"
@@ -67,7 +68,7 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
     assert not [r for r in report if r.severity == "Violation"]
     risk_warnings = [r for r in report if r.severity == "Warning" and not r.message.startswith("test run")]
     assert [(r.label, r.message) for r in risk_warnings] == [
-        ("RISK-F-1", "risk is proposed: a person has not approved its rating")]
+        ("RISK-F-1", "risk RISK-F-1 is proposed: a person has not approved its rating")]
 
     with clause("The residual decision is \"not evaluated\" until every control has a passing test"):
         (tmp_path / "facts-red").mkdir()
@@ -98,11 +99,20 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
             by_shapes = {r.label for r in validate(project(case_dhf, results))
                          if r.severity == "Violation" and r.focus.startswith("urn:dhf:proj:risk/")}
             assert by_shapes == by_gate, (name, by_shapes, by_gate)
+    with clause("A malformed risk policy: the gate blocks, and the shapes block every risk with its message"):
+        case_dhf, gate = _gate(tmp_path / "agree", "bad-policy", [_risk("RISK-B-1"), _risk("RISK-B-2")])
+        _policy(case_dhf, {"severities": ["Minor"]})
+        gate = run_release_gate(case_dhf, tmp_path / "agree" / "bad-policy" / "allure")
+        problem = next(m for m in gate.blocking if m.startswith("risk_policy in"))
+        report = validate(project(case_dhf, tmp_path / "agree" / "bad-policy" / "allure"))
+        flagged = {(r.label, r.message) for r in report
+                   if r.severity == "Violation" and r.focus.startswith("urn:dhf:proj:risk/")}
+        assert flagged == {(rid, problem) for rid in ("RISK-B-1", "RISK-B-2")}
     with clause("A risk with no id: the gate blocks it, and so do the shapes, on a stand-in node"):
         case_dhf, gate = _gate(tmp_path / "agree", "no-id", [_risk(None), _risk("RISK-N-1")])
         assert "a risk in dhf/documents/risk/risks.md has no id" in gate.blocking
         flagged = [r for r in validate(project(case_dhf, tmp_path / "agree" / "no-id" / "allure"))
-                   if r.severity == "Violation" and r.message == "risk has no id"]
+                   if r.severity == "Violation" and r.message == "a risk in dhf/documents/risk/risks.md has no id"]
         assert [r.label for r in flagged] == ["risk with no id #1 in dhf/documents/risk/risks.md"]
         undeclared = trace(Record(tmp_path / "agree" / "undeclared-control" / "proj" / "dhf"), "RISK-U-2")["risk"]
         assert [c["id"] for c in undeclared["controls"]] == ["DI-1"] and undeclared["undeclared_controls"] == ["DI-77"]

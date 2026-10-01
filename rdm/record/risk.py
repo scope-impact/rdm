@@ -164,67 +164,90 @@ def residual_decision(risk: Risk, policy: Policy | None, verified: set[str]) -> 
     return UNACCEPTABLE
 
 
-def findings(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tuple[list[str], list[str]]:
-    """The release gate's risk findings (DI-44): (blocking, warnings)."""
+@dataclass(frozen=True)
+class Finding:
+    """One result of the risk rules: its message, whether it blocks a release,
+    and the risk it is about (an index into the register; None for the
+    register as a whole)."""
+
+    message: str
+    blocking: bool = True
+    risk: int | None = None
+
+
+def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tuple[list[Risk], list[Finding]]:
+    """The register and every finding of the risk rules (DI-44, DI-50) — the one
+    place the rules are written: the release gate reports these findings, and
+    the graph projects them for its shapes (DI-45)."""
     try:
         policy = read_policy(dhf_dir)
     except ValueError as error:
-        return [str(error)], []
+        return risks(dhf_dir, None), [Finding(str(error))]
     register = risks(dhf_dir, policy)
     if not register:
-        return [], []
-    blocking: list[str] = []
-    warnings: list[str] = []
+        return register, []
+    found: list[Finding] = []
     if policy is None:
-        blocking.append("the risk register has risks but no risk_policy is declared "
-                        "(acceptability criteria missing)")
+        found.append(Finding("the risk register has risks but no risk_policy is declared "
+                             "(acceptability criteria missing)"))
     elif policy.status != "approved":
-        warnings.append(f"the risk policy in {policy.source} is {policy.status}: a person has not approved it")
+        found.append(Finding(f"the risk policy in {policy.source} is {policy.status}: a person has not approved it",
+                             blocking=False))
     ids = Counter(r.id for r in register if r.id)
-    for risk_id, count in sorted(ids.items()):
-        if count > 1:
-            blocking.append(f"risk {risk_id} is declared {count} times")
-    for r in register:
+    reported: set[str] = set()  # each duplicated id once
+    for index, r in enumerate(register):
+        def block(message: str, index: int = index) -> None:
+            found.append(Finding(message, risk=index))
+
         if not r.id:
-            blocking.append(f"a risk in {r.document} has no id")
+            block(f"a risk in {r.document} has no id")
+        elif ids[r.id] > 1 and r.id not in reported:
+            reported.add(r.id)
+            block(f"risk {r.id} is declared {ids[r.id]} times")
         name = f"risk {r.id}" if r.id else f"a risk in {r.document} with no id"
         for part in ("hazard", "situation", "harm"):
             if not getattr(r, part):
-                blocking.append(f"{name} has no {part}")
+                block(f"{name} has no {part}")
         if r.category not in CATEGORIES:
-            blocking.append(f"{name} needs a category of safety or security (got {r.category or 'none'})")
+            block(f"{name} needs a category of safety or security (got {r.category or 'none'})")
         elif r.category == "security" and r.stride not in STRIDE:
-            blocking.append(f"{name} is a security risk with no STRIDE category ({', '.join(STRIDE)})")
+            block(f"{name} is a security risk with no STRIDE category ({', '.join(STRIDE)})")
         for link in r.linked:
             if link not in ids:
-                blocking.append(f"{name} links {link}, which is not a declared risk")
+                block(f"{name} links {link}, which is not a declared risk")
         if policy is None:
-            blocking.append(f"{name} cannot be evaluated: no risk policy")
+            block(f"{name} cannot be evaluated: no risk policy")
         elif r.level is None:
-            blocking.append(f"{name}: severity {r.severity!r} × probability {r.probability!r} "
-                            f"is not defined by the risk policy ({policy.source})")
+            block(f"{name}: severity {r.severity!r} × probability {r.probability!r} "
+                  f"is not defined by the risk policy ({policy.source})")
         elif r.recorded_level and r.recorded_level != r.level:
-            blocking.append(f"{name} records level {r.recorded_level}; the risk policy says {r.level}")
+            block(f"{name} records level {r.recorded_level}; the risk policy says {r.level}")
         for control in r.controls:
             if control not in design_input_ids:
-                blocking.append(f"{name} names control {control}, which is not a declared design input")
+                block(f"{name} names control {control}, which is not a declared design input")
         if r.controls and not r.residual_probability:
-            blocking.append(f"{name} has controls but no residual score")
+            block(f"{name} has controls but no residual score")
         elif policy is not None and r.level is not None and r.residual_probability and r.residual_level is None:
-            blocking.append(f"{name}: residual {r.residual_severity or r.severity!r} × "
-                            f"{r.residual_probability!r} is not defined by the risk policy")
+            block(f"{name}: residual {r.residual_severity or r.severity!r} × "
+                  f"{r.residual_probability!r} is not defined by the risk policy")
         unverified = [c for c in r.controls if c in design_input_ids and c not in verified]
         if unverified and r.residual_level is not None:
-            blocking.append(f"{name}: residual not evaluated — control {', '.join(unverified)} "
-                            "has no passing test")
+            block(f"{name}: residual not evaluated — control {', '.join(unverified)} has no passing test")
         decision = residual_decision(r, policy, verified)
         if decision == UNACCEPTABLE:
-            blocking.append(f"{name} has an unacceptable residual level of {r.residual_level}")
+            block(f"{name} has an unacceptable residual level of {r.residual_level}")
         elif decision == NEEDS_ACCEPTANCE:
-            blocking.append(f"{name} has a residual level of {r.residual_level} that needs an acceptance "
-                            "(who accepted it and why)")
+            block(f"{name} has a residual level of {r.residual_level} that needs an acceptance "
+                  "(who accepted it and why)")
         if r.status not in STATUSES:
-            blocking.append(f"{name} has an unknown status {r.status!r} (proposed or approved)")
+            block(f"{name} has an unknown status {r.status!r} (proposed or approved)")
         elif r.status == "proposed":
-            warnings.append(f"{name} is proposed: a person has not approved its rating")
-    return blocking, warnings
+            found.append(Finding(f"{name} is proposed: a person has not approved its rating",
+                                 blocking=False, risk=index))
+    return register, found
+
+
+def findings(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tuple[list[str], list[str]]:
+    """The release gate's risk findings (DI-44): (blocking, warnings)."""
+    _, found = assess(dhf_dir, design_input_ids, verified)
+    return [f.message for f in found if f.blocking], [f.message for f in found if not f.blocking]

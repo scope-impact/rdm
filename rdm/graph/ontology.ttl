@@ -168,6 +168,11 @@ rdm:statusTrace a owl:DatatypeProperty ; rdfs:label "status trace" .
 rdm:exercisesOutput a owl:ObjectProperty ; rdfs:label "exercises output" ; rdfs:domain rdm:TestRun ;
     rdfs:range rdm:SourceFile ; rdfs:comment "The code a run exercises: design input -> test -> run -> code." .
 
+rdm:finding a owl:DatatypeProperty ; rdfs:label "finding" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "A release-blocking finding of the risk rules on this risk, as the release gate reports it (DI-45)." .
+rdm:riskWarning a owl:DatatypeProperty ; rdfs:label "risk warning" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "A warning of the risk rules on this risk, as the release gate reports it (DI-45)." .
+
 rdm:Risk a owl:Class ;
     rdfs:label "Risk" ;
     rdfs:comment "One risk of the register: hazard, situation, harm, scored severity × probability, its controls and residual (DI-45)." .

@@ -316,24 +316,25 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
 
 def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
     """The risk register (DI-45): each risk's branch, chain, scores, evaluated
-    levels, residual decision, status, controls and acceptance. Without a
-    usable policy the levels are left out, so the shapes report every risk as
-    unevaluated, as the release gate blocks."""
+    levels, residual decision, status, controls and acceptance — and the
+    release gate's own findings on it (``rdm:finding`` blocks,
+    ``rdm:riskWarning`` warns), which the shapes report, so the two cannot
+    disagree. A finding about the register as a whole goes on every risk."""
     from collections import Counter
 
-    from rdm.record.risk import read_policy, residual_decision, risks
+    from rdm.record.risk import assess, read_policy, residual_decision
 
     try:
         policy = read_policy(dhf)
     except ValueError:
         policy = None
-    register = risks(dhf, policy)
+    register, found = assess(dhf, design_input_ids(dhf), verified)
     declared = Counter(r.id for r in register if r.id)
     doc_ids = {entry["path"]: entry["id"] for entry in controlled_documents(dhf, root)}
     g = "risks"
     policy_doc = doc_ids.get(_rel(dhf / policy.source, root)) if policy else None
     unnamed = Counter()
-    for r in register:
+    for index, r in enumerate(register):
         if r.id:
             node = ds.thing(ds.node("risk", r.id), rdm("Risk"), r.id, g)
             ds.add(node, _term(_DCT + "identifier"), r.id, g)
@@ -362,6 +363,9 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
             ds.add(node, rdm("declaredIn"), ds.node("doc", doc_id), g)
         if policy_doc:  # DI-52: the policy the risk was evaluated against
             ds.add(node, rdm("evaluatedAgainst"), ds.node("doc", policy_doc), g)
+        for finding in found:
+            if finding.risk == index or (finding.risk is None and finding.blocking):
+                ds.add(node, rdm("finding" if finding.blocking else "riskWarning"), finding.message, g)
 
 
 def _ontology(ds: _Dataset) -> None:
