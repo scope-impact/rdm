@@ -2,6 +2,21 @@
 id: SDS-SYS-001
 title: RDM System Architecture
 context: system
+# The bounded contexts, each with the part it belongs to (DI-58). Each has one
+# design document, design/<context>.md; the table below describes them.
+contexts:
+  - {id: record, part: Record}
+  - {id: ingestion, part: Record}
+  - {id: scaffolding, part: Record}
+  - {id: risk, part: Record}
+  - {id: gating, part: Gates}
+  - {id: verification, part: Gates}
+  - {id: gap_analysis, part: Gates}
+  - {id: validation, part: Gates}
+  - {id: graph, part: Graph}
+  - {id: rendering, part: Documents}
+# The record is controlled as DC-001 states.
+references: [DC-001]
 ---
 
 # System Architecture

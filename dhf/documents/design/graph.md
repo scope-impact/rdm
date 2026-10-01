@@ -52,6 +52,9 @@ design_inputs:
   - id: DI-56
     text: "RDM shall link each test run to the source files its output labels name, and the agent server's trace shall list, for a design input, the source files its runs exercise."
     traces_to: [UN-014, UN-015]
+  - id: DI-58
+    text: "The graph shall link each bounded context to the controlled document whose contexts frontmatter declares it, with its part, each controlled document to the controlled documents its references frontmatter names, and the traceability matrix to the design documents and the document declaring the user needs it is generated from; a shape shall warn on a bounded context no document declares once any document declares contexts, and validation shall fail on a reference to a document the record does not hold."
+    traces_to: [UN-014, UN-015]
 ---
 
 # Graph — Software Design
@@ -176,6 +179,19 @@ source: the graph is derived, rebuilt on demand, and never edited.
   declares them (`rdm:declaredIn`), risks to the policy document they were
   evaluated against (`rdm:evaluatedAgainst`), and design documents to the
   design review the design gate requires (`rdm:reviewedIn`). Refines UN-014
+  and UN-015.
+- **DI-58 (no island documents, second pass)** — browsing RDM's own graph in
+  Graph Explorer left three documents unlinked: the architecture, the
+  traceability matrix and the document-control procedure. The architecture
+  now declares the bounded contexts in frontmatter (`contexts:`, each with its
+  part), and each context links to it (`rdm:declaredIn`, `rdm:part`); a shape
+  warns on a context with a design document but no declaration, once any
+  document declares contexts, so the architecture cannot silently fall behind
+  the design documents. A document names the controlled documents it relies
+  on in `references:` (`dcterms:references`, document to document), and a
+  reference to a document the record does not hold fails validation. The
+  traceability matrix is linked (`prov:wasDerivedFrom`) to the design
+  documents and the user-need registry it is generated from. Refines UN-014
   and UN-015.
 
 - **DI-53 (evidence in the graph)** — a passed run says nothing about what
