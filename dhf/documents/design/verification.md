@@ -68,8 +68,8 @@ This context owns:
   results as epic → feature → story; RDM's record is user need → bounded
   context → design input. A test carries one hand-written tag,
   `@allure.story("DI-n")`; `rdm.pytest_plugin` (enabled with
-  `pytest_plugins = ["rdm.pytest_plugin"]`, record at `--rdm-dhf`, default
-  `dhf`) adds the rest at run time with Allure's dynamic API — epics,
+  `-p rdm.pytest_plugin`, or its hook imported in the acceptance conftest;
+  record at `--rdm-dhf`, default `dhf`) adds the rest at run time with Allure's dynamic API — epics,
   feature, a link to the design document at the tested commit, critical
   severity for an input that controls a risk, and the requirement text as an
   attachment — so the labels cannot drift from the record. Refines UN-004
