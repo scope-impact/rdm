@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 3
+revision: 4
 title: Design Review — RDM
 ---
 
@@ -125,6 +125,43 @@ finding NC-1).
   V&V plan approach table) — the release gate now names each missing record.
 - Open: merge via an independent, human-reviewed PR; individual signing
   identities (NC-2/NC-3).
+
+# Design Review 4 — Retiring the faithfulness gate
+
+**Scope reviewed:** removal of the per-design-input faithfulness review —
+DI-19 (faithfulness gate), DI-20 (verdict recorder), DI-21 (mutation probe),
+DI-27 (replayable probes), DI-28 (verdict hash scope) and the user need they
+refined, UN-009 — plus the wording amendments that follow from it: DI-30 (the
+evidence bundle no longer carries verdicts), DI-31 (tag discovery no longer
+feeds verdict hashing), UN-012, and the document-control statement.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Rationale: the faithfulness verdicts were RDM's own construct, not a
+  §820.30 or IEC 62304 requirement. Their hash pins re-opened reviews on
+  edits that changed no requirement and no product behavior (a one-line test
+  edit, a shared test module, a dependency declaration), and the defects they
+  found were overwhelmingly in RDM's own verification machinery. An
+  experiment (branch `claude/phoenix-borrowings`, not merged) added six more
+  mechanisms to make that cost bearable, which confirmed the direction was
+  wrong.
+- Independent verification is now the human-reviewed pull request: git is the
+  controlled record and audit trail, the ruleset requires an approving
+  review by someone other than the author, and CI runs design-gate →
+  acceptance tests → verify → release-gate on every change. A passing tagged
+  test per design input remains the release condition (DI-3).
+- Retired ids (DI-19, DI-20, DI-21, DI-27, DI-28, UN-009) are not reused.
+  Their history, verdicts and probes remain in git.
+
+## Findings and actions
+
+- Accepted: a test can pass without proving its requirement; detecting that
+  is the pull-request reviewer's job. Teams that want automated evidence can
+  run a mutation-testing tool in CI; RDM no longer ships one.
+- Open (carried from Review 3): summative validation records; human PR review
+  and individual signing identities (NC-2/NC-3).
 
 # Approval
 

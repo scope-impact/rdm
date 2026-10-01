@@ -14,7 +14,7 @@ design_inputs:
     text: "RDM shall generate device-master-record index data from controlled documents' frontmatter, writing one entry per document (id, title, path, revision) to a data file the DMR index renders from."
     traces_to: [UN-012]
   - id: DI-31
-    text: "RDM shall discover verification tags in non-Python test sources — JavaScript/TypeScript allure calls and Java Story/Feature annotations across conventional test-file names — so tag-linkage warnings, audit coverage, and faithfulness hashing work in polyglot repositories, with function-scope hashing for Python and whole-file scope for other languages."
+    text: "RDM shall discover verification tags in non-Python test sources — JavaScript/TypeScript allure calls and Java Story/Feature annotations across conventional test-file names — so tag-linkage warnings and audit coverage work in polyglot repositories."
     traces_to: [UN-004]
 ---
 
@@ -39,13 +39,12 @@ This context owns the design inputs declared in the frontmatter:
   the traceability matrix follows. Refines UN-012.
 - **DI-31 (polyglot tag discovery)** — executed verification (Allure results)
   was always language-agnostic; source-tag scanning was Python-only, so a
-  TypeScript or Java product got no authoring-time linkage warnings, no audit
-  coverage, and no faithfulness hashing. Tag discovery now also reads
+  TypeScript or Java product got no authoring-time linkage warnings and no
+  audit coverage. Tag discovery now also reads
   JavaScript/TypeScript `allure.story(...)`/`allure.feature(...)` calls and
   Java `@Story(...)`/`@Feature(...)` annotations across conventional test-file
-  names (`*.test.*` / `*.spec.*` / `*Test.java` / `*_test.go` …).
-  Function-scope verdict hashing remains Python (AST); other languages pin at
-  whole-file scope — stated, not silent. Refines UN-004.
+  names (`*.test.*` / `*.spec.*` / `*Test.java` / `*_test.go` …). Refines
+  UN-004.
 
 ## Design Outputs
 

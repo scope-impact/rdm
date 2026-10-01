@@ -32,8 +32,7 @@ This context owns:
 > **Design property (not a DI clause):** this evidence is *formative only* and
 > **never gates release** — the persona reconciler is structurally absent from
 > the release gate (a negative/structural property, not mutation-testable; see
-> the gating context, where the release gate consults only verification and
-> faithfulness).
+> the gating context, where the release gate consults only verification).
 
 ## Design Outputs
 

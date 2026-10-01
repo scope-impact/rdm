@@ -35,8 +35,7 @@ This context owns:
   `design_inputs` frontmatter, emits a stub acceptance test tagged
   `@allure.story("DI-n")` that **fails until implemented** (so the release gate
   stays honestly red), and prints the remaining traceability checklist (design
-  prose, commit-approval, implementation, real assertions, faithfulness verdict,
-  gates, matrix). A user need referenced by `--traces-to` that the context does
+  prose, commit-approval, implementation, real assertions, gates, matrix). A user need referenced by `--traces-to` that the context does
   not yet `satisfies` is added to that list (declare-once, reference-everywhere
   stays consistent without a hand edit) — whichever YAML form the document uses,
   inline `satisfies: [ … ]` or a block list, without ever duplicating the key.
