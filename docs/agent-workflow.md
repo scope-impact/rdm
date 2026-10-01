@@ -1,4 +1,4 @@
-# Agent workflow — changing RDM traceably
+# Changing the record
 
 RDM is a design-controls tool that governs its own development with the same
 controls it provides. The consequence: a change to RDM is **not just working
@@ -27,7 +27,7 @@ above with **why / do / done-when** for each step, a worked example drawn from
 the repository's own history, and tables of hard rules and gate-failure
 fixes.
 
-The model behind the procedure is described in
-[Record-first architecture](record-first-architecture.md),
-[Plan vs. record](plan-vs-record.md), and
-[ADR 0001](adr-0001-bounded-context-user-needs.md).
+The model behind the procedure is [How RDM works](record-first-architecture.md)
+and [the data model](data-model.md); what to write is
+[Design inputs and tests](design-controls.md), and what the gates then check is
+[The gates](gates.md).

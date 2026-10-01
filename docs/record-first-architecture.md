@@ -1,166 +1,132 @@
-# RDM as a record compiler: SDD + Allure + git → DHF
+# How RDM works
 
-> Status: **implemented** (originally a design sketch; kept as the conceptual
-> reference). The record core exists as described — `rdm/record/` (SDD +
-> Allure ingest, reconciliation, verification) with the gates layered on top
-> (`rdm story design-gate / verify / release-gate`) — and RDM's own DHF is compiled with it. Project management
-> remains explicitly **out of scope** of the record; its demotion to a
-> clearly-fenced optional extra is the one migration step still open. For the
-> hands-on version of this material see the
-> [user guide](design-controls.md).
+## One idea
 
-## Thesis
+**The record is the only thing anyone writes.** Everything else — gate
+verdicts, the graph, the rendered documents, the traceability matrix, the
+release evidence bundle — is derived from it by a tool, and none of it is ever
+edited by hand or fed back in.
 
-RDM is a **record compiler**. Its only inputs are the *system of record*; its
-only output is the Design History File (DHF). Project management is external
-and optional — RDM never depends on it.
+The record is Markdown frontmatter and tests in git. It changes only through
+a pull request that someone other than the author reviews; the merge is the
+approval. That holds for people and for agents alike: an agent that wants to
+change the record edits the Markdown and the tests and opens a pull request,
+the same as a person.
 
-```
-System of record (inputs)            RDM (compiler)              Output
----------------------------          ---------------------       --------------
-SDD + data/*.yml  ─┐
- (design, user_needs)               ingest → reconcile           DHF
-Allure results    ─┼──────────────► → gate → render ──────────►  (Markdown →
- (verification evidence)                                          PDF / DOCX)
-git history       ─┘
- (approval, change)
-```
+| Written (the record) | Derived (by RDM) |
+| --- | --- |
+| user needs, in the V&V plan | gate verdicts (design gate, release gate, gap analysis) |
+| design inputs, in one design document per bounded context | the RDF graph, its SHACL validation, the agent server's answers |
+| the risk policy and risk register | the traceability matrix and verification data |
+| checklists, and `[[KEY]]` references in documents | rendered regulatory documents (PDF / DOCX) |
+| acceptance tests tagged `@allure.story("DI-n")` | the evidence bundle kept with a release |
+| — | test results (Allure), recorded by running the tests |
+| — | approval and change history, recorded by git and the forge |
 
-## The three record inputs
+The two rows without a written side are facts a tool records: what ran and
+what passed, and who changed what, when. RDM reads them; nobody writes them.
 
-| Input | Design-control meaning | Source of truth for |
-|-------|------------------------|---------------------|
-| **SDD + `data/*.yml`** | the design and the user needs (the *what* and *how*) | requirements / design, `user_needs` IDs |
-| **Allure results** | executed **verification evidence** linked by `@allure.story("DI-…")` | acceptance criteria status (pass/fail) |
-| **git history** | approval (reviewed/merged PRs, `reviews_required`) + change history + revision/baseline | who approved, what changed, when |
+## The evidence chain
 
-This triad is a self-sufficient DHF spine: *requirements → verification evidence
-→ approval/change record.* Delete every plan artifact and it is unchanged.
+A change is complete when every link exists, is current, and is checked by a
+machine — not when the code works:
 
-## User needs: where they live (per ADR 0001)
-
-User needs are part of the system of record. There is **one** need concept — the
-**user need** — and it is **cross-cutting**: multiple bounded-context SDDs may
-address the same user need (it is solution-independent and does not respect
-context boundaries). "Product need" vocabulary is not used.
-
-| Artifact | Role | Lives in |
-|----------|------|----------|
-| **user need** (validated, cross-cutting) | the journey / intended use; the **validation** anchor | defined once in the **V&V plan** frontmatter (`verification_and_validation_plan.md`, `user_needs: [{id, text}]`) — *not* in the architecture document, which holds design only |
-| **design input** (verified) | a verifiable requirement refining a user need; the **verification** anchor (§820.30(f): output meets input) | declared once, in the **design document of the context that owns it** (`kind: design`, `design_inputs: [{id, text, traces_to: [UN-…]}]`) — same document as the design output |
-| **`realises`** references | which shared design input, owned by another context, a context helps realise | each per-context **design document** frontmatter (`realises: [DI-…]`). The user needs a context serves are not declared: they follow from its inputs' `traces_to` (and those it realises) |
-| **acceptance criteria** = the test | each design input's verifying test ("live BDD") | the context's tests, tagged `@allure.story("DI-…")` |
-
-Rules:
-
-- A user need is **referenced** by many design documents and refined by many
-  design inputs; a design input is **owned** by one context and **realised** by
-  others — never **duplicated**. Each is defined once.
-- **Validation** is against the user need (human + AI-persona formative evidence).
-  **Verification** is against the **design input** (its `@allure.story("DI-…")`
-  test passes), aggregated across **every** context that realises it. The test
-  *is* the acceptance criterion — no Gherkin/feature files ("live BDD").
-- A user need is **met** when validated **and** every design input that
-  `traces_to` it (across contexts) is verified. See ADR 0001.
-
-## What RDM does
-
-1. **Ingest**
-   - `record/sdd.py` — read the user-needs registry (V&V plan frontmatter
-     `user_needs`); discover all per-context design documents by `kind: design`
-     and read each one's `design_inputs` and `realises`.
-   - `record/allure.py` — read an Allure results directory → per-user-need
-     verification status (aggregated across the design inputs that trace to it).
-   - git/PR → approvals + change history: the design gate reads git
-     directly; the graph projects each design document's latest commit.
-2. **Reconcile / trace** (`trace.py`) — join user-need IDs ↔ Allure tags across
-   contexts:
-
-   | Status | Meaning |
-   |--------|---------|
-   | verified | user need has ≥1 Allure test, all passed |
-   | failed | has tests, some failed |
-   | untested | declared user need, no Allure test (coverage gap) |
-   | orphan | Allure tag with no matching user need |
-
-   Verification is aggregated across every design input that traces to the need;
-   **validation** (human evidence on the journey) is tracked separately.
-3. **Gate** (`design_gate.py`) — design document(s)/review present + complete +
-   approved (committed) in git; baseline drift re-opens the gate. The
-   **release gate** additionally requires every design input to be *verified*
-   (passing tagged test) and every user need to be addressed. Whether the test
-   actually *means something* — the §820.30(e) question beyond "the test
-   passes" — is answered by the independent, human-reviewed pull request.
-4. **Render** (existing pipeline) — templates + data → Markdown → PDF/DOCX, now
-   also embedding **generated** sections:
-   - traceability matrix (user need → SDDs → test → status),
-   - V&V / test record (from Allure pass/fail, timestamp, version),
-   - revision/change history (from git).
-
-## What is NOT RDM: project management
-
-```
-PM tool (Backlog.md / GitHub Issues / Jira / none)
-      │  coordination only — "who does what, when"
-      │  may produce commits / PRs
-      ▼
-    git history  ──►  ingested by RDM
+```mermaid
+flowchart LR
+    subgraph why["WHY"]
+        UN["User need UN-nnn<br>V&V plan<br><i>defined once</i>"]
+    end
+    subgraph what["WHAT"]
+        DI["Design input DI-n<br>design document<br><i>owned by one context</i>"]
+        RISK["Risk<br>risk register"]
+    end
+    subgraph proof["PROOF"]
+        TEST["Acceptance test<br><code>@allure.story</code><br><i>the test is the criterion</i>"]
+        RUN["Test run<br>at a commit"]
+        PR["Pull-request review<br><i>passing ≠ proving</i>"]
+    end
+    DI -- "traces_to" --> UN
+    RISK -- "controlled by" --> DI
+    TEST -- "verifies" --> DI
+    RUN -- "run of" --> TEST
+    TEST -- "judged by" --> PR
 ```
 
-- PM is **coordination scaffolding**, not a record. A human team may want a
-  board; an agent may decompose work on the fly and keep nothing.
-- The **only** PM → record path is via **git** (commits/PRs). RDM never ingests
-  a PM tool directly.
-- Plan artifacts are **never cited as evidence.**
-- RDM ships no planning tooling: the former Backlog/GitHub/DuckDB sync was
-  removed with zero regulatory impact (Design Review 11).
+A user need is **met** when it is validated, and every design input that
+traces to it is verified by a passing tagged test, at the commit being
+released, reviewed by someone other than its author.
 
-## The contract at the boundary
+## A change, start to finish
 
-RDM depends only on:
-
-1. a git repository,
-2. an SDD declaring `user_needs`, and
-3. an Allure results directory.
-
-Nothing about *how* the work was planned. Anyone — human or agent — contributes
-by editing the SDD, writing `@allure`-tagged tests, and committing via reviewed
-PRs. That is the whole interface.
-
-## Module shape (target)
-
-```
-rdm/
-  record/            # system-of-record ingest layer (new)
-    sdd.py           #   SDD frontmatter user_needs + design data
-    allure.py        #   Allure results dir -> verification status
-    history.py       #   git/PR -> approvals + change history
-  trace.py           # reconcile user_needs <-> allure -> matrix + coverage
-  design_gate.py     # existing gate (present + complete + approved)
-  render.py / gaps/  # existing -> consume record, emit DHF sections
+```mermaid
+sequenceDiagram
+    participant A as Author<br>(person or agent)
+    participant G as Gates<br>(machine)
+    participant R as Reviewer<br>(not the author)
+    A->>G: rdm story new-input
+    G-->>A: DI id + failing stub test + checklist
+    A->>G: commit the design documents first
+    G-->>A: design gate passes (that commit is the approval)
+    A->>A: implement; replace the stub with real assertions
+    A->>G: push, open a pull request
+    G-->>A: CI: design gate → acceptance tests → verify → release gate
+    A->>R: request review
+    alt a test does not prove its clause
+        R-->>A: request changes
+        A->>R: strengthen the test, push again
+    end
+    R->>G: approve and merge — the approval record
 ```
 
-## What changes vs today
+The full procedure, with the decision of whether a change needs a design
+input at all, is [Changing the record](agent-workflow.md).
 
-- **Allure results become a first-class input.** Today only `@allure` tags are
-  scanned from source; the executed *results* are not ingested. Add the results
-  ingester so verification *status* (not just linkage) enters the DHF.
-- **Traceability matrix and V&V become generated DHF sections** from SDD↔Allure,
-  not hand-maintained tables.
-- **Change/approval history is sourced from git**, framed PM-agnostically.
-- **The PM pipeline is demoted** to an optional, clearly-fenced extra.
+## A record-first repository
 
-## What stays the same
+```mermaid
+flowchart TD
+    subgraph repo["your product's repository"]
+        subgraph record["the record — controlled"]
+            VVP["V&V plan<br>user_needs"]
+            DESIGN["design/*.md<br>design_inputs"]
+            RISKS["risk/*.md<br>risk policy, register"]
+            TESTS["tests/acceptance<br>@allure.story"]
+        end
+        subgraph enforce["enforcement — on by default"]
+            HOOK[".githooks/pre-commit<br>design gate before implementation"]
+            CI["CI workflow<br>the gates on every push"]
+            RUNBOOK["dhf/AGENT_WORKFLOW.md<br>the procedure"]
+        end
+        subgraph plan["planning — never evidence"]
+            PM["Backlog.md, issues, boards"]
+        end
+    end
+    PM -. "only path in: a reviewed commit" .-> record
+    style plan stroke-dasharray: 5 5
+```
 
-- The design gate (present + complete + approved, baseline-drift aware).
-- The Jinja render pipeline, templates, and `data/*.yml` model.
-- `rdm gap` checklist verification.
+`rdm adopt` lays down the record skeleton and the enforcement without
+touching existing files ([existing repository](quickstart-existing-repo.md)).
+Planning tools stay outside the record: [Plan vs. record](plan-vs-record.md).
 
-## Migration path
+## What RDM depends on
 
-1. ~~Add `record/allure.py` (results ingester) + verification status~~ — done.
-2. ~~Make the traceability matrix and V&V/test-record DHF sections generated~~ —
-   done (`rdm story verify` + the matrix template; the docs site publishes the
-   rendered matrix as evidence on every build).
-3. ~~Reframe `pm`/`backlog`/DuckDB as an optional `rdm[plan]` extra~~ — done.
-4. ~~Drop the plan pipeline entirely~~ — done (Design Review 11).
+1. a git repository;
+2. a design history file (`dhf/`) with the V&V plan and the design documents;
+3. Allure results from running the acceptance tests.
+
+Nothing about how the work was planned, which tracker is used, or who (or
+what) wrote the change.
+
+## Where the code lives
+
+| Part | Modules |
+| --- | --- |
+| Record — read it | `rdm/record/` — design and V&V frontmatter (`sdd.py`), Allure results (`allure.py`), verification (`verify.py`), the risk register (`risk.py`), release evidence (`bundle.py`, `dmr.py`), usability evidence (`persona.py`, `validation.py`) |
+| Record — scaffold it | `rdm/init.py`, `rdm/adopt.py`, `rdm/gates/new_input.py`; `rdm/pytest_plugin.py` labels each test run from the record |
+| Gates | `rdm/gates/design_gate.py` (design and release gates), `rdm/gaps.py` (gap analysis), `rdm/gates/mutation.py` (the reviewer's probe) |
+| Graph | `rdm/graph/` — projection (`project.py`, `allure.py`, `checklists.py`), vocabulary and gate shapes (`ontology.ttl`, `shapes.ttl`), SHACL validation, Graph Explorer file, the MCP server (`agent.py`) |
+| Documents | `rdm/render.py`, `rdm/md_extensions/`, `rdm/init_files/` |
+
+RDM's own architecture document assigns each bounded context to one of these
+parts ([`dhf/documents/architecture.md`](https://github.com/scope-impact/rdm/blob/main/dhf/documents/architecture.md)).

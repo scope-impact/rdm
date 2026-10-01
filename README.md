@@ -160,9 +160,18 @@ jobs:
 
 ## Documentation
 
-[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/) — getting
-started, one section per part, the CLI reference, and the traceability matrix
-generated from a live acceptance run at every docs build.
+[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/), laid out
+like the product:
+
+- **The big picture** — how RDM works, and the data model: what is written,
+  what is derived.
+- **Get started** — install, `rdm init`, `rdm adopt`.
+- **Record · Gates · Graph · Documents** — one section per part: writing
+  design inputs and tests, the gates, the graph (SHACL, Graph Explorer, the
+  agent server), rendering.
+- **RDM on RDM** — how RDM controls itself, with the traceability matrix
+  generated from a live acceptance run at every docs build.
+- **Reference** — CLI, API, FAQ, decisions.
 
 RDM is developed under its own design controls: its record is `dhf/`, and every
 change goes through `dhf/AGENT_WORKFLOW.md`.

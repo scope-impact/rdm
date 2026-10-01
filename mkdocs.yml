@@ -62,32 +62,41 @@ hooks:
 
 nav:
   - Home: index.md
-  - Getting started:
+  - The big picture:
+      - How RDM works: record-first-architecture.md
+      - The data model: data-model.md
+      - Plan vs. record: plan-vs-record.md
+      - Worked example — VitalView: example-vitalview-decomposition.md
+  - Get started:
       - Installation: installation.md
       - New project (rdm init): quickstart-new-project.md
       - Existing repository (rdm adopt): quickstart-existing-repo.md
   - Record:
-      - Design controls and traceability: design-controls.md
-      - Agent workflow (the change procedure): agent-workflow.md
+      - Design inputs and tests: design-controls.md
+      - Changing the record: agent-workflow.md
       - Risk register: risk.md
-      - Plan vs. record: plan-vs-record.md
   - Gates:
-      - Gap analysis (checklists): gap-analysis.md
+      - The gates: gates.md
+      - Gap analysis: gap-analysis.md
       - Checklist format: checklist-format.md
-      - AI-persona usability validation: ai-persona-usability-validation.md
+      - Usability validation (formative): ai-persona-usability-validation.md
   - Graph:
-      - The record as a graph (RDF): graph.md
+      - The record as a graph: graph.md
+      - Gate rules as SHACL: graph-shapes.md
+      - Browsing in Graph Explorer: graph-explorer.md
+      - For agents (MCP): agents.md
   - Documents:
       - Authoring and rendering: authoring.md
-  - Concepts:
-      - Record-first architecture: record-first-architecture.md
-      - ADR 0001 — User needs across bounded contexts: adr-0001-bounded-context-user-needs.md
-      - Worked example — VitalView: example-vitalview-decomposition.md
-  - Evidence:
+  - RDM on RDM:
+      - How RDM controls itself: dogfood.md
       - Document control (Part 11): document-control.md
       - Traceability matrix (generated): traceability-matrix.md
   - Reference:
-      - CLI reference: cli.md
-      - API reference: reference.md
+      - CLI: cli.md
+      - API: reference.md
       - FAQ: FAQ.md
+      - ADR 0001 — User needs across bounded contexts: adr-0001-bounded-context-user-needs.md
       - Change history: HISTORY.md
+      - Research notes:
+          - Health hazard taxonomies: research/health-hazard-taxonomies.md
+          - ReqIF and StrictDoc typing: research/reqif-strictdoc-typing.md

@@ -1,20 +1,35 @@
-# Design controls and traceability — the `rdm story` commands
+# Design inputs and tests
 
-This is the user manual for the record-first workflow. The concepts are in
-[Record-first architecture](record-first-architecture.md); the step-by-step
-change procedure is the [agent workflow](agent-workflow.md). Part of the
-core install (`pip install rdm`).
+How to write the record: declare a design input, write the test that is its
+acceptance criterion, and let RDM label the test runs from the record. The
+step-by-step change procedure is [Changing the record](agent-workflow.md);
+what the gates then check is [The gates](gates.md).
 
 ## The model in one breath
 
-User needs (`UN-nnn`, in the V&V plan frontmatter) are refined by design
-inputs (`DI-n`, declared in per-context `kind: design` documents). Each design
-input is verified by a test tagged `@allure.story("DI-n")` — the test *is* the
-acceptance criterion. Approval is the git commit; independent verification is
-the human-reviewed pull request. The traceability matrix is generated, never
-hand-edited.
+User needs (`UN-nnn`, in the V&V plan) are refined by design inputs (`DI-n`,
+in the design document of the bounded context that owns them). Each design
+input is verified by an acceptance test tagged `@allure.story("DI-n")` — the
+test *is* the acceptance criterion. The merge of the reviewed pull request is
+the approval. See [the data model](data-model.md) for every entity and link.
 
-## Declaring work
+```yaml
+# dhf/documents/verification_and_validation_plan.md
+user_needs:
+  - {id: UN-001, text: "A clinician is alerted to a deteriorating patient."}
+```
+
+```yaml
+# dhf/documents/design/alarms.md
+kind: design
+context: alarms
+design_inputs:
+  - id: DI-1
+    text: "The system shall raise an alarm within 2 s of a reading above the limit."
+    traces_to: [UN-001]
+```
+
+## Declaring a design input
 
 ```bash
 rdm story new-input --dhf dhf --list        # contexts, taken DI ids, next free id, user needs
@@ -23,124 +38,79 @@ rdm story new-input --dhf dhf --context alarms \
 ```
 
 Scaffolds a traced design input: allocates the next unused `DI-n`, inserts the
-frontmatter entry into the owning context's document, writes a stub tagged
-test that **fails until implemented**, and prints the remaining checklist.
-Unknown contexts and user needs are rejected.
+entry into the owning context's design document, writes a stub tagged test
+that **fails until implemented**, and prints the remaining checklist. An
+unknown context or user need is rejected. Write the text as verifiable
+clauses; a design input too big for one test to name its failing clause
+should be split.
 
-## The gates
+## Writing the test
 
-```bash
-rdm story design-gate --dhf dhf
+```python
+import allure
+
+@allure.story("DI-1")                         # the link the whole chain hangs on
+@allure.label("output", "src/alarms.py")      # the code this test exercises
+def test_alarm_within_two_seconds(device):
+    """DI-1: an alarm within 2 s of a reading above the limit."""
+    with allure.step("a reading above the limit raises an alarm"):
+        alarm = device.read(150)
+        allure.attach(repr(alarm), name="alarm")   # what the assertion looked at
+        assert alarm.raised
+    with allure.step("within 2 s"):
+        assert alarm.latency_s <= 2
 ```
-The design documents and design review must be **present, complete (no
-`TODO`/`ENDTODO` markers), and approved (committed clean)**. Editing an
-approved document re-opens the gate. Install the matching pre-commit hook with
-`rdm hooks .githooks && git config core.hooksPath .githooks` (or let
-[`rdm adopt`](quickstart-existing-repo.md) set it up): implementation commits
-are blocked while the gate is red; committing only design docs is always
-allowed — that commit is the approval.
+
+- **One step per clause** of the design input's text, so a failure names the
+  clause it broke.
+- **Attach what you checked**, so the evidence shows more than "passed".
+- **Only the story names a design input.** Feature and epic are not tags you
+  write (below).
+- **Acceptance tests only.** Unit tests carry no Allure tags, steps or
+  attachments, so nothing but an acceptance test can be counted as
+  verification.
+- **Other languages.** JS/TS `allure.story(...)` calls and Java `@Story(...)`
+  annotations are read across conventional test-file names (`*.test.ts`,
+  `*.spec.js`, `*Test.java`, `*_test.go`, …). There, the whole file is the
+  test.
+
+## Labels from the record
+
+Allure's behaviors hierarchy is epic → feature → story; in RDM that is user
+need → bounded context → design input. A test declares only the story.
+`rdm.pytest_plugin` adds the rest at run time, from the record, with Allure's
+own API (`allure.dynamic`), so the labels can never drift from it:
+
+| Label | Value |
+| --- | --- |
+| `epic` | each user need the design input traces to |
+| `feature` | the bounded context that owns it |
+| `link` | each Markdown document that declares it, at the commit under test: its design document, the V&V plan, the risk document of each risk it controls |
+| `severity` | `critical` when the design input controls a risk |
+| `commit` | the commit under test, with `worktree=dirty` when the working tree had uncommitted changes |
+| attachment `requirement DI-n` | the design input's text |
+
+Enable it for the acceptance suite only — import its hook in that suite's
+`conftest.py`, or pass `-p rdm.pytest_plugin --rdm-dhf dhf`:
+
+```python
+# tests/acceptance/conftest.py
+from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
+```
+
+## Running the acceptance criteria
 
 ```bash
 pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-```
-Runs the acceptance criteria and reconciles the executed Allure results
-against every declared design input: verified / failed / untested per input,
-written to the data file the traceability matrix renders from.
-
-```bash
-rdm story release-gate --dhf dhf --allure-results dhf/allure-results
-```
-The hard gate: design approved **and** every design input verified by a
-passing tagged test **and** every user need addressed by at least one
-input **and**, when the DHF has a risk register, every risk evaluated against
-the declared risk policy, controlled by verified design inputs, and
-residually acceptable or accepted — see [Risk register](risk.md).
-
-## Polyglot products
-
-Executed verification (Allure results) is language-agnostic, and source-tag
-discovery also reads JS/TS `allure.story(...)` calls and Java `@Story(...)`
-annotations across conventional test-file names (`*.test.ts`, `*.spec.js`,
-`*Test.java`, `*_test.go`, …). Only the story names a design input.
-
-## Allure labels from the record
-
-Allure's behaviors hierarchy is epic → feature → story. In RDM the story is
-the design input, the feature its bounded context, and the epic the user need
-it traces to. A test declares only the story; `rdm.pytest_plugin` adds the rest
-at run time from the record, with Allure's own API (`allure.dynamic`):
-
-- `epic` — each user need the design input traces to;
-- `feature` — the bounded context whose design document declares it;
-- `link` — each Markdown document that declares it, at the commit under test:
-  its design document, the V&V plan where its user needs are declared, and the
-  risk document of each risk it controls (one link per document);
-- `severity` — `critical` when the design input controls a risk;
-- an attachment `requirement DI-n` — the design input's text.
-
-Enable it for the acceptance suite only — import its hook in that suite's
-`conftest.py` (`from rdm.pytest_plugin import pytest_runtest_call`), or pass
-`-p rdm.pytest_plugin --rdm-dhf dhf` — so unit tests stay free of Allure.
-
-## Independent review
-
-A passing test proves code ran, not that the requirement is met. That judgment
-belongs to the pull-request reviewer, who must not be the change's author:
-git is the controlled record, the repository ruleset requires an approving
-review, and CI runs the gates above on every change. The reviewer reads each
-affected design input's text against its tagged test and asks whether the test
-would fail if the behavior broke — a tautology, a mocked-out code path, or 2 of
-3 clauses covered is a reason to request changes. To back that judgment with
-an executed check, break the clause on purpose and see whether the test notices:
-
-```bash
-rdm story mutation-probe --file <impl> --find '<code for a clause>' \
-  --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
-```
-
-The probe runs the test once unmutated first and refuses one that does not
-pass — a red test would "catch" anything. It always restores the file (even
-if interrupted) and counts only a genuine test failure as a catch. It records
-nothing and never gates release.
-
-Teams that want automated evidence of test strength can run a mutation-testing
-tool (for example [mutmut](https://mutmut.readthedocs.io/)) in CI; RDM does not
-ship one, and its score is not DHF evidence.
-
-## Querying and reporting
-
-```bash
-rdm story trace DI-4 --dhf dhf          # one input: its need, owner, tests, status
-rdm story trace UN-004 --dhf dhf        # one need: the inputs that refine it
+rdm story trace DI-1 --dhf dhf          # one input: its need, owner, tests, status
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
 ```
 
-## Release artifacts
-
-```bash
-rdm story dmr documents/ -o data/dmr.yml
-```
-Generates device-master-record index data (one entry per controlled document:
-id, title, path, revision) from the documents' own frontmatter — the index
-stays a record, never a hand-maintained table.
-
-```bash
-rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence/
-```
-Writes the retained release evidence set — verification data, the rendered
-traceability matrix, the executed Allure results with every attachment and
-container they reference, and a manifest — ready to attach to a release tag
-so the evidence outlives CI artifact retention. Upload it as a CI artifact and
-the pipeline records its digest.
-
-Give the evidence something to hold: an `allure.step` per clause of the
-design input, and `allure.attach` for what the assertion checked. Keep Allure
-to the acceptance (end-to-end) tests that verify design inputs; unit tests
-carry no tags, steps or attachments, so nothing but an acceptance test can be
-counted as verification. The graph
-carries both (`rdm:step`, `rdm:attachment`), and `trace` lists them with each
-run.
+`verify` reconciles the executed results against every declared design input
+— verified, failed or untested — into the data the traceability matrix renders
+from. `--clean-alluredir` matters: results left from an earlier run would
+otherwise count as evidence.
 
 ## Validation evidence (formative)
 
@@ -149,18 +119,12 @@ rdm story persona --vv-plan dhf/documents/verification_and_validation_plan.md \
   --persona-results persona-results/
 ```
 
-Reconciles AI-persona simulated-use runs against the user-need registry —
-formative usability evidence only; it informs but never gates release.
+Reconciles AI-persona simulated-use runs against the user needs — formative
+usability evidence only; it informs but never gates release
+([usability validation](ai-persona-usability-validation.md)).
 
-**Summative records.** Human validation judgments live in the record too:
+Human validation judgments live in the record too:
 `<dhf>/validation/UN-…-validation.json` (`user_need`, `disposition:
 "approved"`, `reviewer`, `summary`). The release gate names every user need
-lacking an approved record — as a warning, because a machine cannot supply
-the judgment, but its absence must never be silent.
-
-## Planning
-
-RDM ships no planning tooling. Tasks, issues and boards live in their own
-tools and are never the record — see [Plan vs. record](plan-vs-record.md).
-For repo-wide questions the old `rdm story audit` answered, query the graph
-(`rdm graph query`, or `trace` and `validate` over MCP).
+lacking one — as a warning, because a machine cannot supply the judgment, but
+its absence is never silent.

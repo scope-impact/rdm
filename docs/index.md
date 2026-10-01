@@ -1,138 +1,67 @@
 # RDM
 
 RDM keeps the design record of regulated software — medical-device software
-under IEC 62304 first — as Markdown and tests in git, checks it, and makes it
-one queryable graph that people and agents read from.
+under IEC 62304 first — as Markdown and tests in git. It checks the record,
+renders regulatory documents from it, and builds it into one read-only graph
+that people and agents query.
 
 ```
 regulation → checklist → clause ← document
-user need → design input → tagged test → result → source file
-risk → control (a design input) → tagged test → result
-design document → the commit that landed it
+user need → design input → test → run (at a commit) → source file
+risk → control (a design input) → test → run
+document → the commit that landed it
 ```
 
-Every link is a file you write or a fact a tool records. Nothing in the chain
-is typed into a database by hand.
+Every link is a line someone wrote in a reviewed pull request, or a fact a
+tool recorded. Nothing is typed into a database, and nothing derived is ever
+edited.
 
-## The four parts
-
-| Part | What it is | Start here |
-| --- | --- | --- |
-| **Record** | User needs, design inputs (one design document per bounded context), the risk register, checklists, tagged tests. Markdown + git, changed only by a reviewed pull request. | [Design controls](design-controls.md), [risk register](risk.md), [agent workflow](agent-workflow.md) |
-| **Gates** | Machine checks on the record: design approved before implementation, every input verified, every need addressed and every risk scored and controlled before release, every required clause referenced. | [The gates](design-controls.md#the-gates), [gap analysis](gap-analysis.md) |
-| **Graph** | The record built into a read-only RDF graph. Agents read it through an MCP server (`rdm graph mcp`); people browse it. Rebuilt from the record, never edited. | [The record as a graph](graph.md) |
-| **Documents** | Regulatory documents rendered from the record (PDF/DOCX). | [Authoring and rendering](authoring.md) |
+## One record, three things derived from it
 
 ```mermaid
 flowchart LR
-    subgraph write["written by people and agents — through reviewed PRs"]
-        R["Record<br>Markdown + tests in git"]
+    subgraph write["written by people and agents — only through reviewed pull requests"]
+        R["<b>Record</b><br>needs, design inputs, risks,<br>checklists, tagged tests"]
     end
-    R --> G["Gates<br>pass / block"]
-    R --> K["Graph<br>read-only"]
-    R --> D["Documents<br>PDF / DOCX"]
-    K --> A["agents, browsers, SPARQL"]
+    R --> G["<b>Gates</b><br>pass / block"]
+    R --> K["<b>Graph</b><br>read-only RDF"]
+    R --> D["<b>Documents</b><br>PDF / DOCX"]
+    K --> A["agents (MCP), Graph Explorer, SPARQL"]
 ```
 
-Agent skills for working with RDM — writing design inputs, test-first, risk
-analysis — live in
-[scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).
+| Part | What it is | Read |
+| --- | --- | --- |
+| **Record** | User needs, design inputs (one design document per bounded context), the risk register, checklists, tagged acceptance tests. Markdown and git. | [Design inputs and tests](design-controls.md), [changing the record](agent-workflow.md), [risk register](risk.md) |
+| **Gates** | Machine checks: design approved before implementation; before release, every design input verified, every need addressed, every risk controlled; every required clause referenced. | [The gates](gates.md), [gap analysis](gap-analysis.md) |
+| **Graph** | The record as RDF, rebuilt on every run and never edited. Agents read it over MCP; people browse it in Graph Explorer. | [The record as a graph](graph.md), [for agents](agents.md) |
+| **Documents** | Regulatory documents rendered from the record. | [Authoring and rendering](authoring.md) |
+
+How the parts fit, and why the record is the only thing anyone writes:
+[How RDM works](record-first-architecture.md) and
+[the data model](data-model.md).
 
 ## What it does not do
 
 - It does not make a device compliant. It keeps the evidence straight; a
   regulator judges the evidence, not the tool.
-- A green release gate means every design input has a passing tagged test, not
-  that the test proves the input. The pull-request reviewer judges that.
+- A green release gate means every design input has a passing tagged test,
+  not that the test proves the input. The pull-request reviewer judges that.
 - Checklists are written by hand. Nothing turns a regulation into a checklist.
-- The risk gate checks a register's form, not its truth: whether a control is
-  effective, and whether a residual is as low as practicable, are the reviewer's.
-  It ships no risk matrix: acceptability criteria are the project's to declare.
-- A built store (`rdm graph build --store`, `serve`) is as current as its last
-  build; the agent server (`rdm graph mcp`) reads the record afresh on every call.
+- The risk gate checks a register's form, not its truth: whether a control
+  works, and whether a residual is as low as practicable, are the reviewer's.
+  It ships no risk matrix; acceptability is the project's to declare.
+- Git shows who *landed* a change, not who *approved* it; the approval is the
+  pull-request review on the forge.
 
-## Where to start
+## Start
 
-[Install](installation.md), then [start a new project](quickstart-new-project.md)
-(`rdm init`) or [adopt an existing repository](quickstart-existing-repo.md)
-(`rdm adopt`). RDM's own [document control](document-control.md) and this site's
-[traceability matrix](traceability-matrix.md) are generated evidence from RDM's
-own record.
+1. [Install](installation.md).
+2. [Start a new project](quickstart-new-project.md) (`rdm init`) or
+   [adopt an existing repository](quickstart-existing-repo.md) (`rdm adopt`).
+3. Make your first change the record-first way:
+   [changing the record](agent-workflow.md).
 
-## The evidence chain
-
-A change is **complete** when every link below exists, is current, and is
-machine-checked — not just when the code works:
-
-```mermaid
-flowchart LR
-    subgraph why["WHY"]
-        UN["User need UN-nnn<br>V&V plan frontmatter<br><i>defined once</i>"]
-    end
-    subgraph what["WHAT"]
-        DI["Design input DI-n<br><code>kind: design</code> document<br><i>owned by one context</i>"]
-    end
-    subgraph proof["PROOF"]
-        TEST["Acceptance test<br><code>@allure.story</code> tag<br><i>the test is the AC</i>"]
-        PR["Pull-request review<br>independent of the author<br><i>passing ≠ proving</i>"]
-    end
-    DI -- "traces_to" --> UN
-    TEST -- "verifies" --> DI
-    TEST -- "judged by" --> PR
-    DI -- "approval = the git commit" --> MATRIX["Traceability matrix<br><i>generated, never hand-edited</i>"]
-    TEST -- "executed results" --> MATRIX
-```
-
-A user need is **met** when it is validated **and** every design input that
-`traces_to` it is verified by a passing tagged test, reviewed independently in
-the pull request.
-
-## The change lifecycle
-
-```mermaid
-sequenceDiagram
-    participant A as Author<br>(human / agent 1)
-    participant G as Gates<br>(machine)
-    participant R as PR reviewer<br>(human, not the author)
-    A->>G: rdm story new-input
-    G-->>A: DI id + failing stub test + checklist
-    A->>G: commit design docs FIRST
-    G-->>A: design-gate PASS (the commit is the approval)
-    A->>A: implement, replace stub with real assertions
-    A->>G: push / PR
-    G-->>A: CI — design-gate → acceptance → verify → release-gate ✅
-    A->>R: request review — never approve your own PR
-    alt test does not prove a clause
-        R-->>A: request changes (names the gap)
-        A->>R: strengthen the test, push again
-    end
-    R->>G: approve and merge — the approval record
-```
-
-## A record-first repository
-
-```mermaid
-flowchart TD
-    subgraph repo["your-product repository"]
-        subgraph record["the record — controlled"]
-            VVP["V&V plan<br>user_needs: UN-nnn"]
-            DESIGN["documents/design/*.md<br>kind: design, design_inputs"]
-            TESTS["tests/acceptance<br>@allure.story tagged"]
-        end
-        subgraph enforce["enforcement — on by default"]
-            BOOT["session bootstrap<br>.claude/settings.json"]
-            RUNBOOK["dhf/AGENT_WORKFLOW.md<br>the canonical procedure"]
-            HOOK[".githooks/pre-commit<br>design gate before implementation"]
-            CI["design-controls.yml<br>the four gates on every push"]
-        end
-        subgraph plan["planning — never evidence"]
-            PM["Backlog.md / issues / boards"]
-        end
-    end
-    BOOT --> RUNBOOK
-    BOOT --> HOOK
-    PM -. "only path in: a reviewed git commit" .-> record
-
-    style plan stroke-dasharray: 5 5
-```
-
+RDM is developed with RDM: see [how RDM controls itself](dogfood.md), and the
+[traceability matrix](traceability-matrix.md) this site generates from a live
+test run on every build. Agent skills for working with RDM live in
+[scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).

@@ -12,6 +12,13 @@ The Markdown record stays the only thing you edit. The graph is derived: it is
 rebuilt from the record on every run, and Graph Explorer only browses it. To
 change something, edit the Markdown and rebuild.
 
+| Page | For |
+| --- | --- |
+| this page | building, querying and serving the graph, and what is in it |
+| [Gate rules as SHACL](graph-shapes.md) | `rdm graph validate`: the gate rules as shapes, and adding your own |
+| [Browsing in Graph Explorer](graph-explorer.md) | seeing the record as a picture |
+| [For agents](agents.md) | the read-only MCP server |
+
 ```bash
 pip install 'rdm[graph]'     # pyoxigraph, the oxigraph CLI, pyshacl
 ```
@@ -43,64 +50,10 @@ from any origin so Graph Explorer can reach it, which is exactly why it must
 not accept updates: any web page you have open could otherwise clear or forge
 the graph you are reviewing.
 
-## Browse it in AWS Graph Explorer
-
-With `rdm graph serve` running, start Graph Explorer and point it at the
-endpoint. On Linux, `--network host` lets the container reach `localhost:7878`:
-
-```bash
-docker run --rm --network host \
-  --env HOST=localhost \
-  --env PROXY_SERVER_HTTPS_CONNECTION=false \
-  --env GRAPH_TYPE=sparql \
-  --env USING_PROXY_SERVER=true \
-  --env PUBLIC_OR_PROXY_ENDPOINT=http://localhost \
-  --env GRAPH_CONNECTION_URL=http://localhost:7878 \
-  public.ecr.aws/neptune/graph-explorer
-```
-
-Open <http://localhost/explorer>, search for a design input (for example
-`DI-3`), add it, and expand its neighbors: its user need, owning context,
-declaring document, verifying test file and test runs appear as edges.
-
-On macOS or Windows (Docker Desktop), drop `--network host`, add
-`-p 80:80`, and use `GRAPH_CONNECTION_URL=http://host.docker.internal:7878`.
-Newer Graph Explorer releases need only `GRAPH_CONNECTION_URL` (the
-`USING_PROXY_SERVER` / `PUBLIC_OR_PROXY_ENDPOINT` pair is the older form,
-still honored). A 404 for `/rdf/statistics/summary` in the browser console is
-harmless: that summary is a Neptune-only endpoint, and Graph Explorer falls
-back without it.
-
-### Make it readable
-
-Graph Explorer keeps these settings in the browser, so you set them once:
-
-- **Namespaces → Custom:** add `rdm` = `https://github.com/scope-impact/rdm/ns#`.
-  Classes and edges then read `rdm:Clause`, `rdm:includes` instead of an
-  auto-generated prefix.
-- **Styles → Resources → Customize** each type: set *Display Name* to
-  `rdfs:label`, so nodes show `DI-3`, `P11:11.10a`, `62304_2015_class_c`
-  rather than IRIs. Every node in the graph carries a label. A different
-  shape per type helps too (for example a star for standards and a tag for
-  documents).
-- **Search** finds nodes by `rdfs:label`; the *Class* filter set to
-  `skos:ConceptScheme` with **Add All** puts every loaded standard on the
-  canvas at once.
-- **Expand** (sidebar) expands the selected node, optionally to one
-  neighbor type, for example only `rdm:Checklist` to follow an include
-  chain. Expansion is capped at 10 neighbors by default (`Settings`).
-
-Graph Explorer v3.2.2's *Search → Query* panel runs a `SELECT` against the
-endpoint and lists the rows (paste the query, **Submit**) — for example every
-risk with its controls, their verifying tests and runs.
-It cannot draw those rows, and it asks for `CONSTRUCT` results as JSON, which
-a standard SPARQL endpoint rejects: build pictures from search and expansion
-or a graph file (below), and use `rdm graph query` for scripted questions.
-
-## Your project's whole traceability graph
+## The whole chain in one query
 
 Run the acceptance suite, then project everything the record knows: needs,
-design inputs, contexts, documents, test files, test runs, commits, and the
+design inputs, contexts, documents, tests, test runs, commits, and the
 checklists your documents are held to.
 
 ```bash
@@ -110,7 +63,7 @@ rdm graph build --allure-results dhf/allure-results \
 ```
 
 The whole chain — need → design input → owner → verifying tests → results —
-is one query (RDM's own DHF: 15 needs, 47 inputs):
+is one query:
 
 ```sparql
 SELECT ?need ?input ?owner
@@ -126,24 +79,6 @@ GROUP BY ?need ?input ?owner
 ORDER BY ?need xsd:integer(STRAFTER(?input, "-"))
 ```
 
-To see all of it at once, write a Graph Explorer graph file and load it with
-**Load graph from file** (the folder icon in the Graph View toolbar), with
-`rdm graph serve` running:
-
-```bash
-rdm graph explorer-file --store .rdm/graph -o rdm.graph.json
-# a calmer picture: leave out test runs, commits and authors
-rdm graph explorer-file --store .rdm/graph -o rdm-core.graph.json \
-  --exclude TestRun --exclude Activity --exclude Agent
-```
-
-The file lists every node and every link between nodes; Graph Explorer
-fetches labels and properties from the endpoint (`--endpoint`, default
-`http://localhost:7878`). `--exclude` also leaves out what hangs only from the
-excluded nodes — without test runs, their steps, attachments and parameters
-go too, so the core view holds the record and nothing that floats. Expect a cluster per bounded context — its design
-inputs, their needs, documents and tests — and one per checklist.
-
 ## What is in the graph
 
 One named graph per source, so a query can always tell where a fact came from.
@@ -152,9 +87,9 @@ The endpoint's default graph is the union of all of them.
 | Graph | Holds |
 |---|---|
 | `urn:dhf:<project>:graph/record` | user needs, bounded contexts, design inputs, controlled documents |
-| `…graph/tests` | verification tags found in test sources |
+| `…graph/tests` | tagged tests found in test sources: each test, the file that defines it, and the design inputs it verifies |
 | `…graph/executions` | Allure results (only with `--allure-results`): each run's status, times, failure message and trace, parameters, steps and attachments, the design inputs it exercises and the source files it exercises |
-| `…graph/git` | each design document's latest commit and its author, and the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`) |
+| `…graph/git` | each controlled document's latest commit and its author, the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`), and the commit the record was built at |
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
 | `…graph/references` | documents' `[[KEY]]` tags, linked to the clauses they name |
@@ -176,7 +111,9 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | `dcterms:identifier`, `dcterms:title`, `rdm:revision` | document metadata (Dublin Core) |
 | `prov:wasGeneratedBy`, `prov:Activity`, `prov:Agent`, `prov:endedAtTime` | commits and authors (PROV-O) |
 | `rdm:Clause` ⊂ `skos:Concept`, `rdm:Checklist` ⊂ `skos:Collection`, `skos:ConceptScheme` | clauses, checklists, standards (SKOS) |
-| `dcterms:references` | a document claims a clause with a `[[KEY]]` tag |
+| `dcterms:references` | a document claims a clause with a `[[KEY]]` tag, or names a document it relies on |
+| `rdm:Risk`, `rdm:controlledBy`, `rdm:evaluatedAgainst` | the risk register ([risk register](risk.md)) |
+| `rdm:landedIn`, `rdm:landedBy`, `rdm:atCommit` | the commit that landed a document's change; the commit the record was built at |
 
 ## Test results, in full
 
@@ -218,10 +155,10 @@ A run is evidence for one build of one test, and the graph now says which:
   Validation warns on a tagged test that never ran while its file's other
   tests did, and on a run exercising a design input its test does not claim.
 
-## Who landed a change
+## Who landed a change, and links between documents
 
 Git records who *landed* a change on the default branch, not who *reviewed*
-it — only the forge (GitHub) knows reviewers. So for each design document the
+it — only the forge (GitHub) knows reviewers. So for each controlled document the
 graph records the commit that brought its latest change onto the default
 branch: the commit itself when it was committed or squashed straight onto
 it, otherwise the merge. `rdm:landedIn` points at that commit and
@@ -308,84 +245,6 @@ covers its parent (`[[62304:5.6.2.a]]` covers `62304:5.6.2`), a longer sibling
 never matches a shorter key, and only `[[…]]` blocks count. So a clause no
 document references in the graph is exactly an item `rdm gap` reports
 missing.
-
-## Validate against the gate rules (SHACL)
-
-`rdm graph validate` checks the graph against the gate rules, written as SHACL
-shapes in `rdm/graph/shapes.ttl`:
-
-```bash
-rdm graph validate --allure-results dhf/allure-results --checklist part11_document_control
-```
-
-| Severity | Rule |
-|---|---|
-| Violation | a user need no design input traces to |
-| Violation | a design input with no passing test run, or with a failed / broken one |
-| Violation | a checklist clause no document references |
-| Violation | malformed checklist data (a clause without a key or a standard; a non-clause member) |
-| Warning | a design input with no tagged test file |
-| Warning | a `tracesTo` / `realises` naming an undeclared need or input |
-| Warning | a test tag sharing the design-input prefix but naming no declared input |
-
-It exits 1 on any violation. The coded gates (`rdm story release-gate`,
-`rdm gap`) remain authoritative; an acceptance test holds the shapes to
-blocking exactly the same design inputs and user needs.
-
-Add your own rules as more shape files, with no code change:
-
-```bash
-rdm graph validate --shapes team-rules.ttl
-```
-
-```turtle
-@prefix sh:  <http://www.w3.org/ns/shacl#> .
-@prefix rdm: <https://github.com/scope-impact/rdm/ns#> .
-@prefix dcterms: <http://purl.org/dc/terms/> .
-
-[] a sh:NodeShape ;
-   sh:targetClass rdm:Document ;
-   sh:property [ sh:path dcterms:title ; sh:minCount 1 ;
-                 sh:message "every controlled document needs a title" ] .
-```
-
-## For agents (MCP, read-only)
-
-`rdm graph mcp` serves the record to an agent as a
-[Model Context Protocol](https://modelcontextprotocol.io) server over stdio,
-which most agent harnesses speak. Register it once; for Claude Code, in the
-project's `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "rdm": {
-      "command": "rdm",
-      "args": ["graph", "mcp", "--dhf", "dhf", "--allure-results", "dhf/allure-results"]
-    }
-  }
-}
-```
-
-Other harnesses take the same command and arguments in their own MCP
-settings.
-
-| Tool | Answers |
-| --- | --- |
-| `trace` | a `UN-n`, `DI-n` or risk id: text, contexts, owning document and last commit, needs refined, tagged tests and runs, risks controlled; for a risk, its chain, scores and controlling inputs ([risk register](risk.md)) |
-| `query` | any read-only SPARQL (SELECT, ASK, CONSTRUCT, DESCRIBE), prefixes predeclared, capped at 200 rows by default with `truncated` saying when |
-| `schema` | the vocabulary and prefixes, so the agent can write its own queries |
-| `validate` | the gate shapes' results: violations and warnings |
-
-Every call projects the record afresh (a fraction of a second), so an agent
-editing a branch sees its own edits on the next call — there is no store to
-rebuild.
-
-It cannot change anything or reach the network. There is no write tool,
-`query` refuses `SERVICE` (a federated query would make the server send HTTP
-requests), `trace` takes only an id, and `query` refuses SPARQL
-Update. An agent that wants to change the record does what a person does:
-edits the Markdown and tests, and opens a pull request for review.
 
 ## Open world
 
