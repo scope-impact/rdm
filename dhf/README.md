@@ -40,7 +40,7 @@ rdm story trace UN-… | DI-…             # one need's / input's slice
 ## Model
 
 - **User needs** (validated journeys) are defined once in the V&V plan; each
-  context design doc references the needs it contributes to via `satisfies`.
+  context serves the needs its design inputs trace to (derived, never declared).
 - **Design inputs** (the verifiable *what*) are declared once, in the per-context
   design document that owns them (`design_inputs` frontmatter), and `traces_to`
   the user need they refine. A context can `realises` an input owned elsewhere.

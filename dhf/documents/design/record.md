@@ -2,10 +2,9 @@
 id: SDS-REC-001
 kind: design
 context: record
-satisfies: [UN-001, UN-004, UN-012]
 design_inputs:
   - id: DI-1
-    text: "RDM shall read the user-need registry + satisfies refs from frontmatter and ingest Allure results, with no project-management dependency."
+    text: "RDM shall read the user-need registry and the design inputs that trace to it from frontmatter and ingest Allure results, with no project-management dependency."
     traces_to: [UN-001, UN-004]
   - id: DI-29
     text: "RDM shall generate device-master-record index data from controlled documents' frontmatter, writing one entry per document (id, title, path, revision) to a data file the DMR index renders from."
@@ -24,8 +23,9 @@ design_inputs:
 
 This context owns the design inputs declared in the frontmatter:
 
-- **DI-1 (record ingest)** — read the user-need registry and per-context
-  `satisfies` references from frontmatter, and ingest executed Allure results,
+- **DI-1 (record ingest)** — read the user-need registry and the design
+  inputs (`design_inputs`, each with the needs it `traces_to`) from
+  frontmatter, and ingest executed Allure results,
   without depending on any project-management tool. Refines UN-001 and UN-004.
 
 - **DI-29 (DMR index data)** — `rdm story dmr` generates device-master-record
@@ -55,8 +55,9 @@ This context owns the design inputs declared in the frontmatter:
 Ingests the system of record so the rest of RDM can compile and gate the DHF.
 
 - `rdm/record/sdd.py` — discover per-context design documents (`kind: design`);
-  read the user-need registry (`user_needs`), the design inputs (`design_inputs`),
-  and `satisfies` references from frontmatter.
+  read the user-need registry (`user_needs`) and the design inputs
+  (`design_inputs`) from frontmatter. Which needs a context serves follows
+  from its design inputs' `traces_to`; it is not declared separately.
 - `rdm/record/allure.py` — parse an Allure results directory into per-design-input
   executed status; scan test sources for the tags they claim (Python from the
   syntax tree, other languages by pattern).

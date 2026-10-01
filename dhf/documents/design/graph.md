@@ -2,7 +2,6 @@
 id: SDS-GRAPH-001
 kind: design
 context: graph
-satisfies: [UN-014, UN-006, UN-003, UN-015, UN-016, UN-004]
 design_inputs:
   - id: DI-35
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each design document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
@@ -38,7 +37,7 @@ design_inputs:
     text: "For each design document, the graph shall record the commit on the default branch's first-parent history that landed its latest change — a merge, squash or direct commit — with that commit's author, and a shape shall warn when the change has not landed on the default branch."
     traces_to: [UN-014, UN-015]
   - id: DI-52
-    text: "The graph shall link each user need to the document that declares it, each risk to the document holding the risk policy it was evaluated against, and each design document to the design review the design gate requires."
+    text: "The graph shall link each user need to the document that declares it, and each risk to the document holding the risk policy it was evaluated against."
     traces_to: [UN-014, UN-015]
   - id: DI-53
     text: "The graph shall carry each test run's steps — name, status and order, nested under their parent step — and its attachments, on the run or on a step — name, media type and file — and the agent server's trace shall list them with each run."
@@ -114,7 +113,7 @@ source: the graph is derived, rebuilt on demand, and never edited.
   violations (release-blocking) — a user need no design input traces to; a
   design input with no passing test run, or with a failed/broken one; a
   checklist clause no document references; warnings — a design input with no
-  tagged test file, a `tracesTo` / `satisfies` / `realises` naming an
+  tagged test file, a `tracesTo` / `realises` naming an
   undeclared user need or design input, a test tag naming no declared design
   input. `rdm graph validate` runs them (and any `--shapes FILE`, so a team can
   add its own rules as data) and prints severity, focus node and message per
@@ -177,9 +176,10 @@ source: the graph is derived, rebuilt on demand, and never edited.
   Refines UN-014 and UN-015.
 - **DI-52 (no island documents)** — user needs link to the document that
   declares them (`rdm:declaredIn`), risks to the policy document they were
-  evaluated against (`rdm:evaluatedAgainst`), and design documents to the
-  design review the design gate requires (`rdm:reviewedIn`). Refines UN-014
-  and UN-015.
+  evaluated against (`rdm:evaluatedAgainst`). Design documents are not linked
+  to the design review: nothing in the record says which review covered which
+  document, and a constant edge to the one review would claim it did. Refines
+  UN-014 and UN-015.
 - **DI-58 (no island documents, second pass)** — browsing RDM's own graph in
   Graph Explorer left three documents unlinked: the architecture, the
   traceability matrix and the document-control procedure. The architecture
@@ -231,7 +231,7 @@ for serving):
   commits (`prov:Activity`, `prov:wasGeneratedBy`, `prov:wasAssociatedWith`,
   `prov:endedAtTime`). RDM-specific terms only where no standard term fits:
   `rdm:UserNeed`, `rdm:BoundedContext`, `rdm:TestFile`, `rdm:TestRun`,
-  `rdm:tracesTo`, `rdm:satisfies`, `rdm:ownedBy`, `rdm:realises`,
+  `rdm:tracesTo`, `rdm:ownedBy`, `rdm:realises`,
   `rdm:declaredIn`, `rdm:verifies`, `rdm:exercises`, `rdm:status`,
   `rdm:revision`, `rdm:text`.
 - IRIs: vocabulary `https://github.com/scope-impact/rdm/ns#`; instances

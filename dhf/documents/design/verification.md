@@ -2,7 +2,6 @@
 id: SDS-VER-001
 kind: design
 context: verification
-satisfies: [UN-003, UN-004, UN-012, UN-013, UN-010]
 design_inputs:
   - id: DI-4
     text: "RDM shall reconcile against Allure tags and render a traceability matrix from executed results."

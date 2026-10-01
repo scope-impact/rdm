@@ -2,7 +2,6 @@
 id: SDS-GAP-001
 kind: design
 context: gap_analysis
-satisfies: [UN-006]
 # DI-25 holds this procedure to the Part 11 checklist (DI-58: a document link).
 references: [DC-001]
 design_inputs:

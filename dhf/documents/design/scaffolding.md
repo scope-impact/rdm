@@ -2,13 +2,12 @@
 id: SDS-SCAF-001
 kind: design
 context: scaffolding
-satisfies: [UN-008, UN-010, UN-011]
 design_inputs:
   - id: DI-15
     text: "RDM shall scaffold a new documentation project from one command, laying down the document templates, build Makefile, and render config."
     traces_to: [UN-008]
   - id: DI-22
-    text: "RDM shall scaffold a new design input: allocate the next unused DI id, insert the entry into the chosen context's design_inputs frontmatter, add any newly referenced user need to that context's satisfies list, emit a stub acceptance test tagged with the new id that fails until implemented, and print the remaining traceability checklist, rejecting an unknown context or user need."
+    text: "RDM shall scaffold a new design input: allocate the next unused DI id, insert the entry into the chosen context's design_inputs frontmatter, emit a stub acceptance test tagged with the new id that fails until implemented, and print the remaining traceability checklist, rejecting an unknown context or user need."
     traces_to: [UN-010]
   - id: DI-24
     text: "RDM shall bring an existing repository under design controls from one command: lay down the DHF skeleton (V&V plan, per-context design template, design review, traceability matrix), the agent workflow runbook, the design-gate pre-commit hook, a session bootstrap, and a CI gate workflow, skipping (never overwriting) any destination file that already exists."
@@ -35,10 +34,9 @@ This context owns:
   `design_inputs` frontmatter, emits a stub acceptance test tagged
   `@allure.story("DI-n")` that **fails until implemented** (so the release gate
   stays honestly red), and prints the remaining traceability checklist (design
-  prose, commit-approval, implementation, real assertions, gates, matrix). A user need referenced by `--traces-to` that the context does
-  not yet `satisfies` is added to that list (declare-once, reference-everywhere
-  stays consistent without a hand edit) — whichever YAML form the document uses,
-  inline `satisfies: [ … ]` or a block list, without ever duplicating the key.
+  prose, commit-approval, implementation, real assertions, gates, matrix). The
+  user needs named by `--traces-to` go on the input itself; there is no
+  context-level list to keep in step.
   The requirement text is embedded safely wherever it lands (YAML frontmatter,
   the stub's docstring): quotes, backslashes, or a triple-quote in the text must
   not corrupt the document or the generated test. An unknown context or user need is

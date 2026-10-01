@@ -24,8 +24,8 @@ references: [DC-001]
 RDM keeps the design record of regulated software as Markdown and tests in
 git, checks it, renders regulatory documents from it, and builds it into a
 read-only graph that people and agents query. This document holds **design
-only** — user needs live in the V&V plan; each context's design document
-declares the needs it contributes to via `satisfies`.
+only** — user needs live in the V&V plan; a context serves the needs its
+design inputs trace to (`traces_to`), so that is never declared twice.
 
 ## The four parts
 

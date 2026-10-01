@@ -2,7 +2,7 @@
 id: VVP-001
 title: Verification and Validation Plan — RDM
 # User-need registry (ADR 0001): RDM's validated journeys, defined once here.
-# Per-context SDDs reference these via `satisfies`. Verification = acceptance
+# Design inputs trace to these via `traces_to`. Verification = acceptance
 # criteria as @allure-tagged tests in RDM's tests/, aggregated across contexts.
 # Validation = human review + the usability-persona skill (formative).
 user_needs:
@@ -61,13 +61,13 @@ verified before a release.
 # Verification approach
 
 Each user need is refined into **design inputs** (declared in the per-context
-design documents, `kind: design`), realised by
-the bounded contexts that `satisfy` the need. Verification is anchored on the
+design documents, `kind: design`), owned by
+bounded contexts; a context serves the needs its inputs trace to. Verification is anchored on the
 design inputs (§820.30(f): output meets input): each is verified by an automated
 test in RDM's `tests/`, tagged `@allure.story("DI-…")` — the test *is* the
 acceptance criterion ("live BDD"). A user need is met when it is validated and
-every design input that `traces_to` it is verified, aggregated across the
-contexts that satisfy it. `rdm story release-gate` enforces this.
+every design input that `traces_to` it is verified, wherever those inputs are
+owned. `rdm story release-gate` enforces this.
 
 # Validation approach
 

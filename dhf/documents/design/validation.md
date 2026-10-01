@@ -2,7 +2,6 @@
 id: SDS-VAL-001
 kind: design
 context: validation
-satisfies: [UN-005]
 design_inputs:
   - id: DI-5
     text: "RDM shall classify AI-persona simulated-use runs into a per-user-need formative status (clean / issues / failed / not_run)."

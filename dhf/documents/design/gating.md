@@ -2,7 +2,6 @@
 id: SDS-GATE-001
 kind: design
 context: gating
-satisfies: [UN-002, UN-003, UN-007]
 design_inputs:
   - id: DI-2
     text: "RDM shall block the transition into implementation until design input and review are present, complete, and approved (committed) in git; a later edit re-opens the gate."

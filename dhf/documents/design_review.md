@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 17
+revision: 18
 title: Design Review — RDM
 ---
 
@@ -519,6 +519,32 @@ document.
   the table's prose in step stays the reviewer's job.
 - A reference to a document the record does not hold fails validation: a
   dangling reference is a broken record, not a style issue.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 17 — Edges that claim nothing
+
+**Scope reviewed:** DI-1, DI-22 and DI-52 amended; `satisfies` removed from
+every design document.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- A critical pass over every edge in the graph found two that state no
+  independent fact.
+- `rdm:reviewedIn` linked every design document to the one design review
+  because the design gate requires a review to exist — not because the
+  review covered the document. Removed (DI-52).
+- `satisfies` declared, per context, the user needs its design inputs already
+  trace to: the same fact stated twice, and it had drifted (`verification`
+  claimed UN-003, which none of its inputs trace to). A context's needs are
+  now the transitive consequence of design input → `traces_to`; the field is
+  gone from the record, `rdm story new-input` no longer edits it, and the
+  design gate's coverage warning reads the inputs (DI-1, DI-22). An old DHF
+  that still carries `satisfies` is read without error; the key is ignored.
 
 ## Findings and actions
 

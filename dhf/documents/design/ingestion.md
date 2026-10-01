@@ -2,7 +2,6 @@
 id: SDS-ING-001
 kind: design
 context: ingestion
-satisfies: [UN-001]
 design_inputs:
   - id: DI-16
     text: "RDM shall extract delimited code snippets from source files (RDOC/ENDRDOC), keyed by name, for inclusion in documents."

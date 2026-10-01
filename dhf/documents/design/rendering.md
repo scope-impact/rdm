@@ -2,7 +2,6 @@
 id: SDS-REN-001
 kind: design
 context: rendering
-satisfies: [UN-001]
 design_inputs:
   - id: DI-7
     text: "RDM shall render a Markdown template against a supplied data context with Jinja2, so generated data populates the document."
