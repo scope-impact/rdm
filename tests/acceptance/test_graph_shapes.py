@@ -99,12 +99,12 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path, capsys) -> None
     (lists / "mini.txt").write_text("STD:1 a clause no document references\n")
     (lists / "bad.ttl").write_text(
         "@prefix rdm: <https://github.com/scope-impact/rdm/ns#> .\n"
-        "<urn:rdm:clause:BAD:1> a rdm:Clause .\n")  # no key, no standard
+        "<urn:rdm:clause:BAD:1> a rdm:Clause .\n")  # no key, no standard (labelled from its IRI)
     quads = project(dhf, results, checklists=[str(lists / "mini.txt"), str(lists / "bad.ttl")])
     found = {(r.severity, r.label, r.message) for r in validate(quads)}
     assert ("Violation", "STD:1", "checklist clause is referenced by no document") in found
-    assert ("Violation", "urn:rdm:clause:BAD:1", "clause needs exactly one key (skos:notation)") in found
-    assert ("Violation", "urn:rdm:clause:BAD:1",
+    assert ("Violation", "BAD:1", "clause needs exactly one key (skos:notation)") in found
+    assert ("Violation", "BAD:1",
             "clause needs a standard (skos:inScheme a skos:ConceptScheme)") in found
 
     # Warnings: untagged input, undeclared references, a stray tag sharing the DI prefix.

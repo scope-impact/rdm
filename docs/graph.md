@@ -65,6 +65,30 @@ still honored). A 404 for `/rdf/statistics/summary` in the browser console is
 harmless: that summary is a Neptune-only endpoint, and Graph Explorer falls
 back without it.
 
+### Make it readable
+
+Graph Explorer keeps these settings in the browser, so you set them once:
+
+- **Namespaces → Custom:** add `rdm` = `https://github.com/scope-impact/rdm/ns#`.
+  Classes and edges then read `rdm:Clause`, `rdm:includes` instead of an
+  auto-generated prefix.
+- **Styles → Resources → Customize** each type: set *Display Name* to
+  `rdfs:label`, so nodes show `DI-3`, `P11:11.10a`, `62304_2015_class_c`
+  rather than IRIs. Every node in the graph carries a label. A different
+  shape per type helps too (for example a star for standards and a tag for
+  documents).
+- **Search** finds nodes by `rdfs:label`; the *Class* filter set to
+  `skos:ConceptScheme` with **Add All** puts every loaded standard on the
+  canvas at once.
+- **Expand** (sidebar) expands the selected node, optionally to one
+  neighbor type, for example only `rdm:Checklist` to follow an include
+  chain. Expansion is capped at 10 neighbors by default (`Settings`).
+
+Graph Explorer v3.2.2 lists free-form query results in its *Query* panel but
+cannot draw them, and it asks for `CONSTRUCT` results as JSON, which a
+standard SPARQL endpoint rejects. Build views from search and expansion, and
+use `rdm graph query` for questions.
+
 ## What is in the graph
 
 One named graph per source, so a query can always tell where a fact came from.

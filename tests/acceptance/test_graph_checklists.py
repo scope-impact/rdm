@@ -108,6 +108,10 @@ def test_checklists_are_data_and_references_match_rdm_gap(tmp_path: Path) -> Non
 
     # An RDF checklist is loaded as-is (richer metadata kept) and takes part in matching.
     assert _ask(s, f'GRAPH {cl} {{ <urn:rdm:standard:RDFX> skos:prefLabel "RDF-native standard" }}')
+    # ...and its nodes get labels like any other (key, preferred label, IRI tail).
+    assert _ask(s, f'GRAPH {cl} {{ {_clause("RDFX:1")} rdfs:label "RDFX:1" . '
+                   f'<urn:rdm:standard:RDFX> rdfs:label "RDF-native standard" . '
+                   f'<urn:rdm:checklist:native> rdfs:label "native" }}')
 
     # References: [[…]] tags only, matched as rdm gap matches (a descendant
     # covers its parent; an annotation tail is allowed; bare mentions are not tags).

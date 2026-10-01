@@ -19,6 +19,7 @@ reused, so a clause no document references here is exactly an item
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from urllib.parse import quote
 
@@ -144,10 +145,38 @@ def checklist_quads(specs: list[str], graph: ox.NamedNode) -> tuple[list[ox.Quad
             if parent in keys:
                 add(clause_node(key), ox.NamedNode(_SKOS + "broader"), clause_node(parent))
                 break
+    _label_unlabelled(quads, graph)
     # Keys declared by native RDF checklists take part in reference matching too.
     notation = ox.NamedNode(_SKOS + "notation")
     keys |= {q.object.value for q in quads if q.predicate == notation}
     return quads, keys
+
+
+def _iri_tail(iri: str) -> str:
+    """A readable name from an IRI: the id after ``urn:rdm:<kind>:`` (keeping
+    the key's own colons, ``urn:rdm:clause:BAD:1`` -> ``BAD:1``), else the
+    last path or fragment segment."""
+    match = re.match(r"^urn:rdm:[^:]+:(.+)$", iri)
+    if match:
+        return match.group(1)
+    return re.split(r"[/#]", iri.rstrip("/#"))[-1] or iri
+
+
+def _label_unlabelled(quads: list[ox.Quad], graph: ox.NamedNode) -> None:
+    """Give every typed checklist node an ``rdfs:label`` (DI-35's rule), so an
+    RDF-authored checklist is as searchable as a text one: its key, preferred
+    label or title, else the last segment of its IRI."""
+    from rdm.graph.project import LABEL, TYPE
+
+    names = (_SKOS + "notation", _SKOS + "prefLabel", _DCT + "title")
+    by_subject: dict = {}
+    for q in quads:
+        by_subject.setdefault(q.subject, {}).setdefault(q.predicate.value, q.object)
+    for subject, props in by_subject.items():
+        if TYPE.value not in props or LABEL.value in props or not isinstance(subject, ox.NamedNode):
+            continue
+        name = next((props[n].value for n in names if n in props), _iri_tail(subject.value))
+        quads.append(ox.Quad(subject, LABEL, ox.Literal(name), graph))
 
 
 def reference_quads(documents: list[dict], doc_node, keys: set[str], graph: ox.NamedNode) -> list[ox.Quad]:
