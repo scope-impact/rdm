@@ -2,9 +2,13 @@
 
 ## Unreleased
 
+### Changed — `rdm story mutation-probe` is a standalone reviewer tool
+- Same command and restore guarantees, now recorded as DI-34 (user need
+  UN-013): a reviewer proves a test catches a specific defect. It records no
+  verdict and gates nothing.
+
 ### Removed — the faithfulness gate
-- `rdm story faithfulness`, `rdm story verdict` and `rdm story mutation-probe`,
-  faithfulness verdicts (`dhf/faithfulness/*.json`), probe replay, verdict hash
+- `rdm story faithfulness` and `rdm story verdict`, faithfulness verdicts (`dhf/faithfulness/*.json`), probe replay, verdict hash
   scope, the `test-faithfulness` skill and `contrib/mutmut_by_design_input.py`.
   Retired design inputs DI-19, DI-20, DI-21, DI-27, DI-28 and user need UN-009
   (ids are not reused).

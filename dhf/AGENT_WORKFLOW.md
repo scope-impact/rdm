@@ -181,7 +181,14 @@ Ordinary git from here. The pull request **is** the independent verification:
 a reviewer other than the author reads each DI's text against its tagged test
 and asks whether the test would fail if the behavior broke — a tautology, a
 mocked-out code path, or 2 of 3 clauses covered is a reason to request
-changes. The merged, reviewed PR completes the approval record.
+changes. To check rather than eyeball, break a clause and run its test:
+
+```bash
+uv run rdm story mutation-probe --file <impl> --find '<code for a clause>' \
+  --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
+```
+
+The merged, reviewed PR completes the approval record.
 
 ## A worked example — from this repository's own history
 

@@ -70,7 +70,16 @@ git is the controlled record, the repository ruleset requires an approving
 review, and CI runs the gates above on every change. The reviewer reads each
 affected design input's text against its tagged test and asks whether the test
 would fail if the behavior broke — a tautology, a mocked-out code path, or 2 of
-3 clauses covered is a reason to request changes.
+3 clauses covered is a reason to request changes. To back that judgment with
+an executed check, break the clause on purpose and see whether the test notices:
+
+```bash
+rdm story mutation-probe --file <impl> --find '<code for a clause>' \
+  --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
+```
+
+The probe always restores the file (even if interrupted) and counts only a
+genuine test failure as a catch. It records nothing and never gates release.
 
 Teams that want automated evidence of test strength can run a mutation-testing
 tool (for example [mutmut](https://mutmut.readthedocs.io/)) in CI; RDM does not

@@ -2,8 +2,10 @@
 
 ## Unreleased
 
-- Retire the faithfulness gate: `rdm story faithfulness`, `verdict` and
-  `mutation-probe`, the `dhf/faithfulness/` verdicts, probe replay, verdict
+- Keep `rdm story mutation-probe` as a standalone reviewer tool (DI-34,
+  UN-013): no verdicts, never a gate.
+- Retire the faithfulness gate: `rdm story faithfulness` and `verdict`, the
+  `dhf/faithfulness/` verdicts, probe replay, verdict
   hash scope, the `test-faithfulness` skill and
   `contrib/mutmut_by_design_input.py` are removed (DI-19, DI-20, DI-21, DI-27,
   DI-28 and UN-009 retired, ids not reused). The verdicts' hash pins re-opened

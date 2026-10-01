@@ -109,8 +109,12 @@ rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 
 ### 7 — commit, push, PR (the independent review)
 The reviewer — never the author — checks that each tagged test fails if its
-requirement is broken, not merely that it passes. The merged, reviewed PR
-completes the approval record.
+requirement is broken, not merely that it passes. To check rather than eyeball:
+```bash
+rdm story mutation-probe --file <impl> --find '<code for a clause>' \
+  --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
+```
+The merged, reviewed PR completes the approval record.
 
 ## Hard rules
 

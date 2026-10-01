@@ -143,8 +143,9 @@ uv run pytest tests
   opts into the legacy pair); `new-input` keeps `satisfies` lists in sync
 - **Polyglot traceability**: JS/TS and Java test tags discovered for
   linkage and audit; legacy YAML workflow deprecated
-- **Faithfulness gate retired**: `rdm story faithfulness`, `verdict` and
-  `mutation-probe` removed (DI-19/20/21/27/28, UN-009) — its hash-pinned
+- **Faithfulness gate retired**: `rdm story faithfulness` and `verdict`
+  removed (DI-19/20/21/27/28, UN-009); `mutation-probe` kept as a standalone
+  reviewer tool (DI-34) — its hash-pinned
   verdicts re-opened reviews on edits that changed no requirement;
   independent verification is now the human-reviewed pull request
 - Fixes: `rdm gap --coverage` with built-in checklist names; tag-scanner
