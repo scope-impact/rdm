@@ -34,6 +34,8 @@ user_needs:
     text: "A regulatory author can query and visually explore the design record as a linked graph, without changing how the record is authored."
   - id: UN-015
     text: "An agent, in any harness, can read the design record — query it, trace a need or input to its tests and results, and check it against the gate rules — and cannot change it."
+  - id: UN-016
+    text: "A team can keep its risk register in the record, with each risk scored from its own matrix and each control traced to a verified design input, and cannot release while a risk is unscored, uncontrolled, or residually unacceptable without a named acceptance."
 ---
 
 # Purpose
@@ -82,5 +84,6 @@ contexts that satisfy it. `rdm story release-gate` enforces this.
 | UN-013 | maintainer review that a probe reports a broken behavior as caught only when the test genuinely fails, and never leaves the code mutated | dogfooding: reviewers probing RDM's own tests during pull-request review |
 | UN-014 | maintainer review that the projected graph agrees with the record it was built from (needs, inputs, contexts, documents, tests, results, commits) and is explorable in a graph browser | dogfooding: RDM's own DHF projected, queried, and browsed in AWS Graph Explorer |
 | UN-015 | maintainer review that an agent harness connected to the server answers traceability questions about RDM's own record correctly and has no way to change it | dogfooding: agent sessions on RDM itself using `rdm graph mcp` |
+| UN-016 | maintainer review that the gate's risk findings match a manual review of the same register with the risk-analysis method | dogfooding: RDM's own tool-risk register (`dhf/documents/risk/`) held to the release gate |
 
 Formative evidence never gates release.

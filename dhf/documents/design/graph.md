@@ -2,7 +2,7 @@
 id: SDS-GRAPH-001
 kind: design
 context: graph
-satisfies: [UN-014, UN-006, UN-003, UN-015]
+satisfies: [UN-014, UN-006, UN-003, UN-015, UN-016]
 design_inputs:
   - id: DI-35
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each design document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
@@ -25,6 +25,9 @@ design_inputs:
   - id: DI-42
     text: "RDM's agent server shall offer no way to change the record or the graph: query shall accept SELECT, ASK, CONSTRUCT and DESCRIBE and reject SPARQL Update, and shall cap results at a row limit, saying when it cut them."
     traces_to: [UN-015]
+  - id: DI-45
+    text: "RDM shall project the risk register into a risks graph — each risk with its hazard, situation, harm, severity, probability, initial and residual level, the design inputs that control it, and its acceptance — with SHACL shapes that block exactly the risks the release gate blocks, and the agent server's trace shall accept a risk id and list, for a design input, the risks it controls."
+    traces_to: [UN-016, UN-015]
 ---
 
 # Graph — Software Design
@@ -115,6 +118,15 @@ source: the graph is derived, rebuilt on demand, and never edited.
   cannot flood an agent's context. Changing the record stays a reviewed pull
   request. Refines UN-015.
 
+- **DI-45 (risks in the graph)** — a risks graph: each `rdm:Risk` with its
+  hazard, situation, harm, severity, probability, computed initial and
+  residual level and acceptance, and `rdm:controlledBy` to the design inputs
+  that control it — so a query walks risk → design input → test → run. Risk
+  shapes in `shapes.ttl` block exactly what DI-44 blocks, keeping
+  `rdm graph validate` (and the agent's `validate`) in agreement with the
+  release gate. `trace` takes a `RISK-…` id, and a design input's trace
+  lists the risks it controls. Refines UN-016 and UN-015.
+
 ## Design Outputs
 
 `rdm/graph/` (optional extra `graph`: `pyoxigraph`, plus the `oxigraph` CLI
@@ -140,7 +152,8 @@ for serving):
 - `rdm/graph/shapes.ttl` + `rdm/graph/validate.py` — the gate shapes and the
   pySHACL runner (DI-38).
 - `rdm/graph/explorer.py` — the Graph Explorer graph file (DI-39).
+- risks: projected from `rdm/record/risk.py` into the `risks` named graph (DI-45).
 - `rdm/graph/agent.py` — the read-only agent tools and the MCP server (DI-41, DI-42; `mcp` SDK in the `graph` extra).
 - `rdm/graph/cli.py` — `rdm graph build | query | serve | validate | explorer-file | mcp`.
 
-Acceptance criteria are verified by `@allure.story("DI-35" / "DI-36" / "DI-37" / "DI-38" / "DI-39" / "DI-41" / "DI-42")` tests.
+Acceptance criteria are verified by `@allure.story("DI-35" / "DI-36" / "DI-37" / "DI-38" / "DI-39" / "DI-41" / "DI-42" / "DI-45")` tests.

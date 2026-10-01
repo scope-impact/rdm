@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 8
+revision: 9
 title: Design Review — RDM
 ---
 
@@ -275,6 +275,39 @@ validate) and DI-42 (read-only), in the graph context.
 ## Findings and actions
 
 - None open from this review.
+
+# Design Review 9 — Risk register
+
+**Scope reviewed:** UN-016; the new `risk` context with DI-43 (read and score
+the register) and DI-44 (release-gate rules); DI-45 (risks in the graph,
+shapes, agent trace); RDM's own tool-risk register (RMF-001).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- A control is a design input. The chain risk → design input → test → result
+  needs no new entity, and "every control is verified" is the existing rule
+  that every design input has a passing test.
+- Built on RDM-004's settled decision-001: a control changes probability,
+  never severity, so the residual records probability only.
+- Kept small against RDM-004's open tickets: one probability per risk (no
+  p1/p2 split, .02), a lookup matrix rather than a formula (.03), and one
+  home for severity and probability — the risk entry (.04). Each can grow
+  later without changing a register written to this format.
+- The gate checks only what a machine can: chain, score, control present and
+  declared, residual scored, acceptance named. Substantiating a control in
+  the code and ALARP stay with the reviewer and the risk-analysis skill.
+- RMF-001 scores RDM's own tool risks; RISK-TOOL-005 is a Medium residual
+  accepted with its reason, so the acceptance rule is exercised on the record.
+
+## Findings and actions
+
+- Fixed in passing: `rdm story new-input` wrote a second `design_inputs:`
+  key under an empty `[]` (DI-22), and its stub tests failed line-length lint.
+- Open: halla-health's registers use the cluster-file Markdown format, which
+  the planning-side parser reads; moving them into the record format is work
+  on halla-health, not RDM.
 
 # Approval
 

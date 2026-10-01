@@ -33,6 +33,7 @@ documents, evidence bundle) is edited by hand or fed back into the record.
 | Record | `ingestion` | `design/ingestion.md` | `rdm/collect.py`, `rdm/translate.py` — code snippets, foreign test results |
 | Record | `scaffolding` | `design/scaffolding.md` | `rdm/init.py`, `rdm/adopt.py`, `rdm story new-input` |
 | Record | `story_audit` | `design/story_audit.md` | `rdm/story_audit/` — ID integrity, traceability audit |
+| Record | `risk` | `design/risk.md` | `rdm/record/risk.py` — the risk register, scored from the risk matrix; its release rules |
 | Gates | `gating` | `design/gating.md` | `rdm/story_audit/design_gate.py`, `rdm/hook_files/pre-commit` — design gate, release gate |
 | Gates | `verification` | `design/verification.md` | `rdm/record/verify.py`, `rdm/story_audit/mutation.py` — inputs vs results, traceability matrix, mutation probe |
 | Gates | `gap_analysis` | `design/gap_analysis.md` | `rdm/gaps.py`, `rdm/checklists/` — documents vs checklists |
@@ -51,5 +52,5 @@ Planning tooling (`rdm/project_management`) sits outside the record (see
 
 ## Not yet in scope
 
-Risk management (ISO 14971) and turning a regulation into a checklist. Each
-enters through a user need and design inputs in this record before any code.
+Turning a regulation into a checklist. It enters through a user need and
+design inputs in this record before any code.
