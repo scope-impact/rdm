@@ -22,8 +22,13 @@ import re
 import textwrap
 
 # Whole-line comments in the non-Python languages tag discovery reads (DI-31):
-# JS/TS/Java/Go ``//`` and ``/* … */`` continuation lines, YAML/shell ``#``.
-_LINE_COMMENT = re.compile(r"^\s*(//|#|/\*|\*)")
+# JS/TS/Java/Go ``//`` lines, YAML/shell ``# …`` lines (a ``#`` followed by
+# whitespace, ``!`` or end of line -- so JS ``#private`` fields stay code), and
+# ``/* … */`` blocks that start a line. Anything not clearly a comment is kept:
+# misreading code as a comment would let a behavioral change classify as
+# cosmetic (class A) and be carried forward unreviewed.
+_LINE_COMMENT = re.compile(r"^\s*(//|#(\s|!|$))")
+_BLOCK_OPEN = re.compile(r"^\s*/\*")
 
 
 def normalize_text(text: str) -> str:
@@ -56,6 +61,32 @@ def _strip_docstrings(tree: ast.AST) -> None:
             node.body = body[1:] or [ast.Pass()]
 
 
+def _code_lines(source: str) -> list[str]:
+    """Lines of a non-Python source minus whole-line and leading block comments."""
+    kept: list[str] = []
+    in_block = False
+    for line in source.splitlines():
+        if in_block:
+            if "*/" in line:
+                in_block = False
+                rest = line.split("*/", 1)[1]
+                if rest.strip():
+                    kept.append(rest)
+            continue
+        if _BLOCK_OPEN.match(line):
+            after = line.split("/*", 1)[1]
+            if "*/" in after:
+                rest = after.split("*/", 1)[1]
+                if rest.strip():
+                    kept.append(rest)
+            else:
+                in_block = True
+            continue
+        if not _LINE_COMMENT.match(line):
+            kept.append(line)
+    return kept
+
+
 def normalize_source(source: str) -> str:
     """Test source reduced to what can change its behavior.
 
@@ -66,8 +97,7 @@ def normalize_source(source: str) -> str:
     try:
         tree = ast.parse(textwrap.dedent(source))
     except (SyntaxError, ValueError):
-        kept = [line for line in source.splitlines() if not _LINE_COMMENT.match(line)]
-        return " ".join(" ".join(kept).split())
+        return " ".join(" ".join(_code_lines(source)).split())
     _strip_docstrings(tree)
     return ast.dump(tree, include_attributes=False)
 

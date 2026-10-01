@@ -17,18 +17,28 @@ from rdm.story_audit import gate_selftest as gs
 allure = pytest.importorskip("allure")
 
 # The fault classes DI-38 names, in its words -> the selftest's fault names.
-_REQUIRED_FAULTS = [
-    "untested design input",
-    "failing test",
-    "unreviewed verdict",
-    "unfaithful verdict",
-    "partial verdict",
-    "stale verdict",
-    "user need no input traces to",
-    "uncommitted design-document edit",
-    "broken journal",
-    "reworded locked design input",
-]
+# For each, every blocker the injected fault may produce: the fault itself
+# plus its unavoidable consequences (deleting a verdict also orphans its
+# journal event; rewording a locked input also stales its verdict; one test
+# module pins both inputs). Anything else blocking means the injection was
+# not isolated.
+_ISOLATED_BLOCKERS = {
+    "untested design input": ["design input DI-2 not verified by any passing Allure test"],
+    "failing test": ["design input DI-2 FAILED verification"],
+    "unreviewed verdict": ["design input DI-2 has no faithfulness review",
+                           "journal fails verification at seq 2: DI-2-faithfulness.json"],
+    "unfaithful verdict": ["design input DI-2 FAILED faithfulness review"],
+    "partial verdict": ["design input DI-2 is only PARTIALLY verified"],
+    "stale verdict": ["design input DI-1 faithfulness review is STALE",
+                      "design input DI-2 faithfulness review is STALE"],
+    "user need no input traces to": ["user need UN-2 is addressed by no design input"],
+    "uncommitted design-document edit": ["design control not met -- Software Design Description (core): "
+                                         "has uncommitted changes"],
+    "broken journal": ["journal fails verification at seq 1: event_hash does not match"],
+    "reworded locked design input": ["design control not met -- Design-input lock: design input DI-1 "
+                                     "was reworded", "design input DI-1 faithfulness review is STALE"],
+}
+_REQUIRED_FAULTS = list(_ISOLATED_BLOCKERS)
 
 
 @allure.story("DI-38")
@@ -50,10 +60,13 @@ def test_gate_selftest_proves_precision_and_recall(tmp_path: Path, capsys, monke
     assert [o.name for o in result.faults] == _REQUIRED_FAULTS
     for outcome in result.faults:
         assert outcome.caught, (outcome.name, outcome.blocking)
-    # Isolation: a single injected fault yields one kind of blocker, not a
-    # cascade that would also "catch" the other faults.
-    by_name = {o.name: o.blocking for o in result.faults}
-    assert len(by_name["failing test"]) == 1 and len(by_name["partial verdict"]) == 1
+    # Isolation: each injection produces exactly its own blockers -- every
+    # allowed blocker fires, and nothing else blocks.
+    for outcome in result.faults:
+        allowed = _ISOLATED_BLOCKERS[outcome.name]
+        assert len(outcome.blocking) == len(allowed), (outcome.name, outcome.blocking)
+        for expected in allowed:
+            assert sum(m.startswith(expected) for m in outcome.blocking) == 1, (outcome.name, expected)
 
     # Clause: the command reports caught/missed per fault and exits 0 when clean.
     capsys.readouterr()
@@ -63,11 +76,16 @@ def test_gate_selftest_proves_precision_and_recall(tmp_path: Path, capsys, monke
         assert f"[CAUGHT] {name}" in out
     assert "[OK]     clean baseline passes" in out
 
-    # Clause: an escaped fault -> reported MISSED, non-zero exit.
-    monkeypatch.setattr(gs, "FAULTS", gs.FAULTS + [("no-op fault", lambda fx: None, "never named")])
+    # Clause: an escaped fault -> reported MISSED, non-zero exit. Being
+    # blocked for some *other* reason does not count as catching it.
+    monkeypatch.setattr(gs, "FAULTS", gs.FAULTS + [
+        ("no-op fault", lambda fx: None, "never named"),
+        ("mislabelled fault", gs._untested, "a blocker the gate never prints"),
+    ])
     assert gs.gate_selftest_command() == 1
     out = capsys.readouterr().out
-    assert "[MISSED] no-op fault" in out and "escaped: no-op fault" in out
+    assert "[MISSED] no-op fault" in out and "[MISSED] mislabelled fault" in out
+    assert "escaped: no-op fault, mislabelled fault" in out
 
     # Clause: a blocked clean baseline (false positive) -> non-zero exit.
     monkeypatch.setattr(gs, "FAULTS", [])

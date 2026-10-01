@@ -31,6 +31,26 @@ _COSMETIC = _TESTS.replace(
 )
 _BEHAVIORAL = _TESTS.replace("assert 2 * 2 == 4", "assert 2 * 2 >= 0")
 
+# A non-Python verifying test (DI-31 polyglot discovery) for DI-2.
+_JS = """const allure = require("allure-js-commons");
+
+test("doubles", () => {
+  allure.story("DI-2");
+  const doubled = 2
+    * 2;
+  expect(doubled).toBe(4);
+});
+"""
+_JS_COSMETIC = (
+    "/**\n * Doubling suite.\n */\n// a line comment\n# shebang-style comment\n"
+    + _JS.replace('test("doubles", () => {', 'test("doubles",   () => {\n\n')
+)
+# Behavioral edits on lines a naive comment filter would drop: a `*`
+# continuation line and a JS `#private` field.
+_JS_STAR_CHANGE = _JS.replace("    * 2;", "    * 3;")
+_JS_PRIVATE = _JS.replace('test("doubles"', 'class K { #limit = 1; }\ntest("doubles"')
+_JS_PRIVATE_CHANGE = _JS_PRIVATE.replace("#limit = 1;", "#limit = 2;")
+
 
 def _verdict(fx) -> dict:
     return json.loads((fx.dhf / "faithfulness" / "DI-2-faithfulness.json").read_text())
@@ -91,6 +111,23 @@ def test_stale_verdicts_are_classified_and_only_class_a_carries_forward(tmp_path
     report = run_faithfulness_gate(fx.dhf)
     assert report.by_id["DI-2"].change_class == f.CLASS_REQUIREMENT
     assert carry_forward_verdict(fx.dhf, "DI-2")[0] is None
+
+    # Clause (non-Python sources): comments and whitespace are ignored there
+    # too, but code on comment-looking lines is not.
+    def js_class(name: str, first: str, second: str) -> str:
+        fx = build_fixture(tmp_path / name)
+        js = fx.repo / "tests" / "calc.test.js"
+        js.write_text(first)
+        from rdm.story_audit.design_gate import record_verdict
+        record_verdict(fx.dhf, "DI-2", "faithful", reviewer="r", rationale="with the JS test")
+        assert run_faithfulness_gate(fx.dhf).by_id["DI-2"].status == f.FAITHFUL
+        js.write_text(second)
+        return run_faithfulness_gate(fx.dhf).by_id["DI-2"].change_class
+
+    assert js_class("js-a", _JS, _JS_COSMETIC) == f.CLASS_TRIVIAL
+    assert js_class("js-b", _JS, _JS.replace("toBe(4)", "toBe(5)")) == f.CLASS_TEST
+    assert js_class("js-star", _JS, _JS_STAR_CHANGE) == f.CLASS_TEST
+    assert js_class("js-private", _JS_PRIVATE, _JS_PRIVATE_CHANGE) == f.CLASS_TEST
 
     # Clause: class D -- a verdict with no fingerprints on record.
     fx = build_fixture(tmp_path / "d")

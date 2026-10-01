@@ -8,6 +8,7 @@ Skips cleanly if allure-pytest is not installed.
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 
 import pytest
@@ -19,8 +20,9 @@ from rdm.story_audit.design_gate import run_design_gate
 allure = pytest.importorskip("allure")
 
 _ENTRIES = {
-    # DI-3 -> DI-2 -> DI-1 (transitive); DI-4 unrelated; DI-5 <-> DI-6 cycle;
-    # DI-7 names an undeclared input.
+    # DI-3 -> DI-2 -> DI-1 (transitive); DI-4 unrelated; DI-5 <-> DI-6 cycle,
+    # with DI-8 hanging off it (depends on the cycle without being part of it)
+    # and DI-9 -> DI-10 -> DI-11 -> DI-9 a 3-cycle; DI-7 names an undeclared input.
     "DI-1": ("Base requirement.", []),
     "DI-2": ("Builds on the base.", ["DI-1"]),
     "DI-3": ("Builds on the builder.", ["DI-2"]),
@@ -28,7 +30,21 @@ _ENTRIES = {
     "DI-5": ("Half of a cycle.", ["DI-6"]),
     "DI-6": ("Other half of a cycle.", ["DI-5"]),
     "DI-7": ("Depends on nothing declared.", ["DI-99"]),
+    "DI-8": ("Depends on a cycle it is not part of.", ["DI-5"]),
+    "DI-9": ("First of a three-cycle.", ["DI-10"]),
+    "DI-10": ("Second of a three-cycle.", ["DI-11"]),
+    "DI-11": ("Third of a three-cycle.", ["DI-9"]),
 }
+
+
+def _within(seconds: float, fn):
+    """Run ``fn`` and fail (instead of hanging the suite) if it does not return."""
+    box: dict = {}
+    worker = threading.Thread(target=lambda: box.setdefault("value", fn()), daemon=True)
+    worker.start()
+    worker.join(seconds)
+    assert not worker.is_alive(), "dependency resolution did not terminate (cycle not tolerated)"
+    return box["value"]
 
 
 def _write_dhf(dhf: Path, texts: dict[str, str]) -> None:
@@ -73,22 +89,25 @@ def test_upstream_change_invalidates_only_downstream(tmp_path: Path) -> None:
     # Clause: a design input declares the inputs it depends_on.
     dhf = tmp_path / "declared" / "dhf"
     _write_dhf(dhf, {di: text for di, (text, _) in _ENTRIES.items()})
-    declared = {di["id"]: di["depends_on"] for di in design_inputs(dhf)}
+    declared = {di["id"]: di["depends_on"] for di in design_inputs(dhf)}  # parse only: no resolution
     assert declared["DI-2"] == ["DI-1"] and declared["DI-4"] == []
 
     # Clauses: the pin covers the transitive upstream text -> rewording DI-1
     # stales DI-1 itself and its downstream DI-2 and DI-3 ...
-    stale = _stale_after_rewording(tmp_path, "DI-1")
+    stale = _within(5, lambda: _stale_after_rewording(tmp_path, "DI-1"))
     assert {"DI-2", "DI-3"} <= set(stale)
     # ... while unrelated inputs stay current.
     assert stale == ["DI-1", "DI-2", "DI-3"]
     # A downstream change does not travel upstream.
-    assert _stale_after_rewording(tmp_path, "DI-3") == ["DI-3"]
+    assert _within(5, lambda: _stale_after_rewording(tmp_path, "DI-3")) == ["DI-3"]
 
-    # Clause: dependency cycles are tolerated (no hang; both halves react).
-    assert _stale_after_rewording(tmp_path, "DI-5") == ["DI-5", "DI-6"]
+    # Clause: dependency cycles are tolerated -- resolution terminates, every
+    # member of a cycle reacts, and so does an input depending on the cycle.
+    assert _within(5, lambda: _stale_after_rewording(tmp_path, "DI-5")) == ["DI-5", "DI-6", "DI-8"]
+    assert _within(5, lambda: _stale_after_rewording(tmp_path, "DI-10")) == ["DI-10", "DI-11", "DI-9"]
+    assert _within(5, lambda: _stale_after_rewording(tmp_path, "DI-8")) == ["DI-8"]
 
     # Clause: the design gate warns on a dependency naming an undeclared input.
-    warnings = run_design_gate(dhf).task_warnings
+    warnings = _within(5, lambda: run_design_gate(dhf).task_warnings)
     assert "design input DI-7 depends_on unknown design input DI-99" in warnings
     assert not any("DI-2 depends_on" in w for w in warnings)
