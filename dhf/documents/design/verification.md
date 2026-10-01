@@ -14,7 +14,10 @@ design_inputs:
     text: "RDM shall produce a release evidence bundle from the record: the verification data, the rendered traceability matrix, and a manifest describing the bundle, written to an output directory for retention."
     traces_to: [UN-012]
   - id: DI-34
-    text: "RDM shall provide a mutation probe for reviewers that runs a test once unmutated — reporting an error, never a result, when it does not pass — then applies a one-line source mutation, runs the test again, and reports whether the test caught it (killed) or not (survived) — counting only a genuine test failure as a kill; a run that errors or collects no tests is reported as an error, never as a kill — and always restores the file: the original is journaled beside the file before mutating so an interrupted probe is recovered on the next probe of that file, a termination signal during the probe still restores, and every write invalidates the bytecode cache so a same-second size-preserving mutation cannot run stale; the probe never gates a release."
+    text: "RDM shall provide a mutation probe for reviewers that runs a test once unmutated — reporting an error, never a result, when it does not pass — then applies a one-line source mutation, runs the test again, and reports killed or survived, counting only a genuine test failure as a kill; the probe never gates a release."
+    traces_to: [UN-013]
+  - id: DI-47
+    text: "The mutation probe shall always restore the file it mutated: it journals the original beside the file so an interrupted probe is recovered on the next probe of that file, restores on a termination signal, and invalidates the bytecode cache on every write."
     traces_to: [UN-013]
 ---
 
@@ -47,6 +50,12 @@ This context owns:
   bytecode for a same-size mutant. It records nothing and gates nothing — the
   reviewer's judgment, on the pull request, is the record. Restored from the
   retired DI-21 without its verdict coupling. Refines UN-013.
+
+- **DI-47 (the probe always restores)** — split from DI-34 (Design Review
+  12) so the restore guarantees have their own test: the original is
+  journaled beside the file, an interrupted probe is recovered on the next
+  probe of that file, a termination signal restores, and every write
+  invalidates the bytecode cache. Refines UN-013.
 
 ## Design Outputs
 

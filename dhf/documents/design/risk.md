@@ -8,7 +8,10 @@ design_inputs:
     text: "RDM shall read the risk register from the frontmatter of kind: risk documents — for each risk its id, category (safety or security), STRIDE category for a security risk, linked risks, hazard, situation, harm, severity, probability, controls (design input ids), residual severity and probability (severity defaults to the initial one), acceptance (who and why) and status (proposed or approved) — and evaluate each risk only against a risk policy the project declares (severities, probabilities, a level for each pair, and for each level whether it is acceptable, acceptable only with a recorded justification, or unacceptable), shipping no default policy."
     traces_to: [UN-016]
   - id: DI-44
-    text: "The release gate shall block when the register has risks and no risk policy is declared; on a risk id declared twice or missing; and on any risk with an empty hazard, situation or harm, a missing or unknown category, a security risk without a STRIDE category, a link to an undeclared risk, a severity or probability the policy does not define, a recorded level other than the policy's, a control that is not a declared design input, controls but no residual score, a control not verified by a passing test (its residual is not evaluated), a residual — the initial risk when nothing controls it — the policy calls unacceptable, or one it accepts only with justification and no acceptance saying who and why; a proposed risk or policy shall be a warning that a person has not approved it."
+    text: "The release gate shall block when the register has risks and no risk policy is declared, and on a risk id declared twice or missing, an empty hazard, situation or harm, a missing or unknown category, a security risk without a STRIDE category, a link to an undeclared risk, a severity or probability the policy does not define, a recorded level other than the policy's, a control that is not a declared design input, or controls with no residual score."
+    traces_to: [UN-016, UN-003]
+  - id: DI-50
+    text: "The release gate shall block a risk whose residual is not evaluated because a control has no passing test, whose residual — the initial risk when nothing controls it — the policy calls unacceptable, or that the policy accepts only with justification and no acceptance saying who accepted it and why; a proposed risk or policy shall be a warning."
     traces_to: [UN-016, UN-003]
 ---
 
@@ -58,6 +61,11 @@ reasonably practicable, stay human judgements.
   asks for a justification. `status: proposed` on a risk or on the policy
   is a warning, as a missing validation record is: a person has not yet
   approved those ratings. Refines UN-016 and UN-003.
+
+- **DI-50 (residual rules)** — split from DI-44: a residual is not
+  evaluated until every control has a passing test; an unacceptable residual
+  blocks; a `justify` residual needs an acceptance naming who and why; a
+  proposed risk or policy warns. Refines UN-016 and UN-003.
 
 ## Design Outputs
 

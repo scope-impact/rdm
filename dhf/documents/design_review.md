@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 11
+revision: 12
 title: Design Review — RDM
 ---
 
@@ -378,6 +378,37 @@ context; the gates moved to `rdm/gates/`.
 - Open: projects that used `rdm story sync` or `rdm pm sync` keep their
   planning data in Backlog.md and GitHub; halla-health's Backlog risk
   clusters convert to `kind: risk` documents in that repository.
+
+# Design Review 12 — Findings from the graph's own analysis
+
+**Scope reviewed:** DI-36 and DI-42 amended; DI-34, DI-37, DI-38 and DI-44
+narrowed, with DI-47, DI-48, DI-49 and DI-50 split from them; DI-51 (who
+landed a change) and DI-52 (no island documents); RISK-TOOL-006 and
+RISK-TOOL-007.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Security, found in review: `rdm graph serve` was read-write with open
+  CORS (a cross-origin `CLEAR ALL` emptied the store), and the agent's
+  `query` let `SERVICE` reach the network. Both now refused; recorded as
+  RISK-TOOL-006 and RISK-TOOL-007, which RISK-TOOL-004 had not covered.
+- Provenance: the graph showed only authorship, and the latest commit
+  touching a file is never the merge that landed it. DI-51 records the
+  landing commit. It is named *landed*, not *approved*: git cannot see
+  reviewers, and the graph claims only what git records.
+- Islands: the V&V plan, the risk policy and the design review connected to
+  nothing. DI-52 links needs, risks and design documents to them. The
+  architecture and matrix template stay unlinked: neither declares anything.
+- Requirement size: four design inputs ran past 120 words with one test
+  each. Each is split along its existing clauses so a failing test names
+  the clause.
+
+## Findings and actions
+
+- Open: the reviewer of record lives on the forge (GitHub); projecting it
+  is a later design input.
 
 # Approval
 

@@ -58,6 +58,28 @@ risks:
     acceptance:
       by: "RDM maintainers, by approving the pull request that records this register"
       rationale: "Whether a test proves its input is a reviewer's judgement. The mutation probe makes it checkable on demand; requiring it for every clause is the faithfulness gate Design Review 4 retired for costing more than it caught. Monitored by reviewers probing the tests a change touches."
+  - id: RISK-TOOL-006
+    category: security
+    stride: Tampering
+    status: proposed
+    hazard: "The served graph accepts SPARQL updates from any web origin."
+    situation: "A person browses the graph in Graph Explorer while a web page they have open posts an update to the local endpoint."
+    harm: "The graph the person reviews is cleared or shows forged verification, and they act on evidence the record does not hold."
+    severity: Serious
+    probability: Unlikely
+    controls: [DI-36]
+    residual: {probability: Rare}
+  - id: RISK-TOOL-007
+    category: security
+    stride: Information disclosure
+    status: proposed
+    hazard: "An agent's read-only query can make the agent server send network requests."
+    situation: "A prompt-injected agent sends a query with a SERVICE clause naming an internal or external address."
+    harm: "The server probes or reaches services from the user's machine, outside the review the record is under."
+    severity: Serious
+    probability: Unlikely
+    controls: [DI-42]
+    residual: {probability: Rare}
 ---
 
 # Risk register — RDM as a tool

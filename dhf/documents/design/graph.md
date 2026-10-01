@@ -8,13 +8,13 @@ design_inputs:
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each design document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
     traces_to: [UN-014]
   - id: DI-36
-    text: "RDM shall load the projected dataset into a persistent Oxigraph store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a SPARQL 1.1 HTTP endpoint whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer."
+    text: "RDM shall load the projected dataset into a persistent Oxigraph store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a read-only SPARQL 1.1 HTTP endpoint, refusing updates, whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer."
     traces_to: [UN-014]
   - id: DI-37
-    text: "RDM shall add regulatory checklists to the graph on request, as data so that a new checklist needs no code or vocabulary change: each checklist, in rdm gap's text format (resolving includes and built-in names as rdm gap does) or as an RDF file, becomes a checklist node (a SKOS collection whose members are its own items and which links each checklist it includes); each item becomes a clause (a SKOS concept with its key as notation, its description as definition, the standard named by its key prefix as concept scheme, and its nearest listed parent clause as broader), in a checklists graph; and each controlled document's [[...]] reference tags become dcterms:references links to the clauses it references, in a references graph, using rdm gap's own key matching so that a clause no document references is exactly a clause rdm gap reports missing."
+    text: "RDM shall add regulatory checklists to the graph on request, as data: each checklist — in rdm gap's text format, resolving includes and built-in names as rdm gap does, or an RDF file — becomes a SKOS collection of its own items that links the checklists it includes, and each item a clause with its key, description, standard (named by the key prefix) and nearest listed parent clause."
     traces_to: [UN-014, UN-006]
   - id: DI-38
-    text: "RDM shall ship SHACL shapes expressing the gate rules over the graph — every user need is addressed by a design input, every design input has a passing test run and no failing or broken one, and every checklist clause is referenced by a document as violations; a design input with no tagged test file, a reference to an undeclared user need or design input, and a test tag naming no declared design input as warnings — and rdm graph validate shall run them, plus any user-supplied shape files, over the projected graph, reporting each result with its severity, focus node and message and exiting non-zero on any violation; the shapes shall block exactly the design inputs and user needs the release gate blocks."
+    text: "RDM shall ship SHACL shapes expressing the gate rules over the graph — unaddressed user needs, design inputs without a passing run or with a failing one, and unreferenced checklist clauses as violations; untagged design inputs, references to undeclared ids and stray test tags as warnings — that block exactly the design inputs and user needs the release gate blocks."
     traces_to: [UN-014, UN-003]
   - id: DI-39
     text: "RDM shall write the projected graph as an AWS Graph Explorer graph file: every node of the record and every link between two such nodes, leaving out the vocabulary and type statements, optionally leaving out the nodes of chosen classes together with their links, and naming the served SPARQL endpoint as the file's connection, so that the whole traceability graph opens in Graph Explorer in one step."
@@ -23,11 +23,23 @@ design_inputs:
     text: "RDM shall serve the design record to agents as an MCP server over stdio (rdm graph mcp) with four tools: schema (the vocabulary and the predeclared prefixes), query (SPARQL), trace (a user need or design input with its contexts, documents, tests and runs) and validate (the gate shapes' results), each answering from a projection rebuilt from the record on that call."
     traces_to: [UN-015]
   - id: DI-42
-    text: "RDM's agent server shall offer no way to change the record or the graph: query shall accept SELECT, ASK, CONSTRUCT and DESCRIBE and reject SPARQL Update, and shall cap results at a row limit, saying when it cut them."
+    text: "RDM's agent server shall offer no way to change the record or the graph, or to reach the network: query shall accept SELECT, ASK, CONSTRUCT and DESCRIBE and reject SPARQL Update and federated SERVICE calls, trace shall accept only id-shaped input, and results shall be capped at a row limit, saying when they were cut."
     traces_to: [UN-015]
   - id: DI-45
     text: "RDM shall project the risk register into a risks graph — each risk with its category, STRIDE category, linked risks, hazard, situation, harm, scores, initial and residual level, residual decision (acceptable, accepted, needs acceptance, unacceptable, or not evaluated while a control lacks a passing test), status, controlling design inputs and acceptance — with SHACL shapes that block exactly the risks the release gate blocks, and the agent server's trace shall accept a risk id and list, for a design input, the risks it controls."
     traces_to: [UN-016, UN-015]
+  - id: DI-48
+    text: "RDM shall link each controlled document to the checklist clauses its [[...]] tags reference, using rdm gap's own key matching, so that a clause no document references is exactly a clause rdm gap reports missing."
+    traces_to: [UN-014, UN-006]
+  - id: DI-49
+    text: "rdm graph validate shall run the shipped shapes and any user-supplied shape files over the projected graph, report each result with its severity, focus node and message, and exit non-zero on any violation."
+    traces_to: [UN-014, UN-003]
+  - id: DI-51
+    text: "For each design document, the graph shall record the commit on the default branch's first-parent history that landed its latest change — a merge, squash or direct commit — with that commit's author, and a shape shall warn when the change has not landed on the default branch."
+    traces_to: [UN-014, UN-015]
+  - id: DI-52
+    text: "The graph shall link each user need to the document that declares it, each risk to the document holding the risk policy it was evaluated against, and each design document to the design review the design gate requires."
+    traces_to: [UN-014, UN-015]
 ---
 
 # Graph — Software Design
@@ -51,7 +63,9 @@ source: the graph is derived, rebuilt on demand, and never edited.
   `rdfs:label` (its id, or a readable name) for graph browsers. Output is
   N-Quads sorted line by line — deterministic, diffable, loadable by any
   RDF tool. Refines UN-014.
-- **DI-36 (store, query, serve)** — `--store DIR` loads the dataset into an
+- **DI-36 (store, query, serve)** — served read-only (`oxigraph
+  serve-read-only`, Design Review 12): a read-write endpoint with open CORS let
+  any web page clear or forge the graph a browser shows. `--store DIR` loads the dataset into an
   embedded Oxigraph store, cleared first so a removed design input never
   lingers. `rdm graph query '<SPARQL>'` answers SELECT / ASK / CONSTRUCT
   over the store, or over an in-memory projection when no store is given.
@@ -111,7 +125,9 @@ source: the graph is derived, rebuilt on demand, and never edited.
   tests and runs, as JSON) and `validate` (the gate shapes' results). Each call
   projects the record afresh (about a third of a second for RDM's own), so an
   agent working on a branch never reads a stale graph. Refines UN-015.
-- **DI-42 (read-only)** — the graph is the source of truth agents consult,
+- **DI-42 (read-only)** — amended in Design Review 12: `query` also refuses
+  `SERVICE` (pyoxigraph would otherwise make the HTTP request), and `trace`
+  takes only id-shaped input. The graph is the source of truth agents consult,
   never one they write. The server has no write tool; `query` rejects SPARQL
   Update and anything other than SELECT, ASK, CONSTRUCT and DESCRIBE; results
   are capped (default 200 rows) and say when they were cut, so one query
@@ -128,6 +144,25 @@ source: the graph is derived, rebuilt on demand, and never edited.
   block exactly what the gate blocks. `trace` takes a `RISK-…` id, and a
   design input's trace lists the risks it controls. Refines UN-016 and
   UN-015.
+
+- **DI-48 (reference links)** — split from DI-37: each controlled
+  document's `[[…]]` tags become `dcterms:references` to the clauses they
+  name, matched by `rdm gap`'s own code. Refines UN-014 and UN-006.
+- **DI-49 (`rdm graph validate`)** — split from DI-38: the command that runs
+  the shapes (and user shape files) and exits on a violation. Refines UN-014
+  and UN-003.
+- **DI-51 (who landed a change)** — git records who *landed* a change on the
+  default branch, not who *reviewed* it (only the forge knows reviewers).
+  For each design document the graph records the first-parent commit of the
+  default branch that brought its latest change in — a merge, squash or
+  direct commit — as `rdm:landedIn`, with its author as `rdm:landedBy`. A
+  change not yet on the default branch has neither, and a shape warns.
+  Refines UN-014 and UN-015.
+- **DI-52 (no island documents)** — user needs link to the document that
+  declares them (`rdm:declaredIn`), risks to the policy document they were
+  evaluated against (`rdm:evaluatedAgainst`), and design documents to the
+  design review the design gate requires (`rdm:reviewedIn`). Refines UN-014
+  and UN-015.
 
 ## Design Outputs
 
