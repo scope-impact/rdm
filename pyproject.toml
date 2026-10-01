@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rdm"
 version = "1.2.0"
-description = "Regulatory Documentation Manager"
+description = "The design record of regulated software as Markdown and tests in git: gated, rendered, and queryable as a graph"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [

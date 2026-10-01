@@ -447,7 +447,7 @@ def parse_arguments(arguments):
 def _add_graph_parser(subparsers):
     """`rdm graph`: the design record projected into RDF (needs extra: graph)."""
     graph_parser = subparsers.add_parser(
-        'graph', help='the design record as a linked-data (RDF) graph: build, query, serve')
+        'graph', help='the design record as a linked-data (RDF) graph: build, query, validate, serve, explorer-file')
     graph_sub = graph_parser.add_subparsers(dest='graph_command', metavar='<subcommand>')
 
     build = graph_sub.add_parser('build', help='project the record into RDF (sorted N-Quads and/or an Oxigraph store)')

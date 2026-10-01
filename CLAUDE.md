@@ -75,9 +75,11 @@ uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 
 ## Architecture
 
-RDM is a documentation-as-code CLI tool for IEC 62304 medical device software. It generates regulatory documents from Markdown templates + YAML data files.
-
-**Core pipeline**: YAML data + Jinja2 templates → Markdown → PDF/DOCX (via Pandoc/Typst)
+RDM keeps the design record of regulated software (IEC 62304 first) as Markdown and tests in git, in four parts:
+**Record** (needs, design inputs, checklists, tagged tests; changed only by a reviewed PR), **Gates** (design gate,
+release gate, gap analysis), **Graph** (the record as a read-only RDF graph for people and agents; never edited), and
+**Documents** (YAML data + Jinja2 templates → Markdown → PDF/DOCX via Pandoc/Typst). `dhf/documents/architecture.md`
+assigns each bounded context to a part. Agent skills live in scope-impact/agent-skills, not here.
 
 ### Key modules
 

@@ -2,11 +2,47 @@
   <img src="https://github.com/scope-impact/rdm/actions/workflows/tests.yml/badge.svg?branch=main">
 </a>
 
-# Regulatory Documentation Manager
+# RDM
 
-> **Fork Notice:** This is a maintained fork of [innolitics/rdm](https://github.com/innolitics/rdm). All credit for the original work goes to the [Innolitics](https://innolitics.com) team.
+RDM keeps the design record of regulated software — medical-device software
+under IEC 62304 first — as Markdown and tests in git, checks it, and makes it
+one queryable graph that people and agents read from.
 
-RDM is a documentation-as-code tool that provides Markdown templates and Python scripts to manage medical device software documentation. It's especially well-suited for software-only medical devices following IEC 62304.
+The chain it holds:
+
+```
+regulation → checklist → clause ← document
+user need → design input → tagged test → result → commit
+```
+
+Every link is a file you write or a fact a tool records. Nothing in the chain
+is typed into a database by hand.
+
+## The four parts
+
+| Part | What it is | Commands |
+| --- | --- | --- |
+| **Record** | User needs, design inputs (one design document per bounded context), checklists, tests tagged `@allure.story("DI-n")`. Markdown + git. Changed only by a reviewed pull request — the approval is the merge. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story audit` |
+| **Gates** | Machine checks: no implementation before the design is approved, no release until every input has a passing test and every need is addressed, no clause a checklist requires left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
+| **Graph** | The record built into an RDF graph (Oxigraph): needs, inputs, contexts, documents, tests, results, commits, checklist clauses. **Read-only** — rebuilt from the record, never edited. The interface for agents and for exploring. | `rdm graph build \| query \| validate \| serve \| explorer-file` |
+| **Documents** | Regulatory documents (PDF/DOCX) rendered from the record: Markdown templates + YAML data → Pandoc/Typst. | `rdm render`, `make pdfs` |
+
+How agents should work with it — writing design inputs, test-first, risk
+analysis — is kept as skills in
+[scope-impact/agent-skills](https://github.com/scope-impact/agent-skills), not here.
+
+## What it does not do
+
+- It does not make a device compliant. It keeps the evidence straight; a
+  regulator judges the evidence, not the tool.
+- A green release gate means every design input has a passing tagged test. It
+  does not mean the test proves the input — the pull-request reviewer judges
+  that (`rdm story mutation-probe` helps them check).
+- Checklists are written by hand. Nothing turns a regulation into a checklist.
+- No risk management (ISO 14971) yet.
+- Agents reach the graph through the CLI and SPARQL only; there is no
+  dedicated agent interface yet.
+- The graph is as current as its last build.
 
 ## Quick Start
 
@@ -90,18 +126,12 @@ jobs:
 
 ## Documentation
 
-Full documentation lives at **[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/)**:
-installation and quickstarts, a task-oriented user guide (authoring/rendering,
-gap analysis, the `rdm story` design-controls workflow), the complete CLI
-reference, the record-first concepts, and the site's own live verification
-evidence — the traceability matrix is generated from an acceptance-suite run
-on every docs build.
+[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/) — getting
+started, one section per part, the CLI reference, and the traceability matrix
+generated from a live acceptance run at every docs build.
 
-RDM dogfoods itself: its own development is governed by its record-first design
-controls (see `dhf/AGENT_WORKFLOW.md`), its own record is controlled in git per
-the shipped 21 CFR Part 11 checklist (`dhf/documents/document_control.md`), and
-`examples/github-document-control/` is a complete worked example of git as a
-document control system with GitHub as the service provider.
+RDM is developed under its own design controls: its record is `dhf/`, and every
+change goes through `dhf/AGENT_WORKFLOW.md`.
 
 ## Development
 
@@ -112,10 +142,13 @@ uv sync --all-extras
 uv run pytest tests
 ```
 
-## Changes from Upstream
+## Changes
 
 ### Unreleased
 
+- **Four parts**: RDM restated as Record, Gates, Graph and Documents (README,
+  docs, intended use, architecture — Design Review 6); agent skills maintained
+  in scope-impact/agent-skills
 - **The record as a graph** (`rdm graph build | query | serve`, extra
   `graph`): the DHF and its regulatory checklists projected into RDF named
   graphs (OSLC RM, Dublin Core, PROV-O and SKOS vocabulary; checklists as
@@ -175,6 +208,8 @@ uv run pytest tests
 - Added GitHub Action for CI/CD (`scope-impact/rdm@v1`)
 - Fixed broken cross-references in software_plan.md template
 
-## License
+## Origin and license
 
-[MIT](LICENSE.txt) - Original work by [Innolitics](https://innolitics.com)
+RDM started as a fork of [innolitics/rdm](https://github.com/innolitics/rdm), the
+document-rendering part above; credit for that work goes to the
+[Innolitics](https://innolitics.com) team. [MIT](LICENSE.txt).

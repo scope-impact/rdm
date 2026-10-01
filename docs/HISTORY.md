@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Restate RDM as four parts — Record, Gates, Graph, Documents — in the README,
+  the docs home and navigation, the intended use and the architecture (Design
+  Review 6). Agent skills are maintained in scope-impact/agent-skills.
 - Keep `rdm story mutation-probe` as a standalone reviewer tool (DI-34,
   UN-013): no verdicts, never a gate.
 - Retire the faithfulness gate: `rdm story faithfulness` and `verdict`, the

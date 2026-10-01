@@ -1,31 +1,60 @@
-# RDM — Regulatory Documentation Manager
+# RDM
 
-RDM is a documentation-as-code CLI for **IEC 62304** medical-device software. It
-generates regulatory documents from Markdown templates + YAML data files, and —
-record-first — **compiles and gates a Design History File** from the system of
-record: per-context design documents + executed Allure results + git.
+RDM keeps the design record of regulated software — medical-device software
+under IEC 62304 first — as Markdown and tests in git, checks it, and makes it
+one queryable graph that people and agents read from.
 
 ```
-YAML data + Jinja2 templates → Markdown → PDF/DOCX (via Pandoc/Typst)
+regulation → checklist → clause ← document
+user need → design input → tagged test → result → commit
 ```
+
+Every link is a file you write or a fact a tool records. Nothing in the chain
+is typed into a database by hand.
+
+## The four parts
+
+| Part | What it is | Start here |
+| --- | --- | --- |
+| **Record** | User needs, design inputs (one design document per bounded context), checklists, tagged tests. Markdown + git, changed only by a reviewed pull request. | [Design controls](design-controls.md), [agent workflow](agent-workflow.md) |
+| **Gates** | Machine checks on the record: design approved before implementation, every input verified and every need addressed before release, every required clause referenced. | [The gates](design-controls.md#the-gates), [gap analysis](gap-analysis.md) |
+| **Graph** | The record built into a read-only RDF graph — the interface for agents and for exploring. Rebuilt from the record, never edited. | [The record as a graph](graph.md) |
+| **Documents** | Regulatory documents rendered from the record (PDF/DOCX). | [Authoring and rendering](authoring.md) |
+
+```mermaid
+flowchart LR
+    subgraph write["written by people and agents — through reviewed PRs"]
+        R["Record<br>Markdown + tests in git"]
+    end
+    R --> G["Gates<br>pass / block"]
+    R --> K["Graph<br>read-only"]
+    R --> D["Documents<br>PDF / DOCX"]
+    K --> A["agents, browsers, SPARQL"]
+```
+
+Agent skills for working with RDM — writing design inputs, test-first, risk
+analysis — live in
+[scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).
+
+## What it does not do
+
+- It does not make a device compliant. It keeps the evidence straight; a
+  regulator judges the evidence, not the tool.
+- A green release gate means every design input has a passing tagged test, not
+  that the test proves the input. The pull-request reviewer judges that.
+- Checklists are written by hand. Nothing turns a regulation into a checklist.
+- No risk management (ISO 14971) yet.
+- Agents reach the graph through the CLI and SPARQL only; there is no
+  dedicated agent interface yet.
+- The graph is as current as its last build.
 
 ## Where to start
 
-- **New here?** [Install](installation.md), then follow a quickstart:
-  [a new documentation project](quickstart-new-project.md) (`rdm init`) or
-  [an existing repository](quickstart-existing-repo.md) (`rdm adopt`). The
-  **User guide** covers [authoring](authoring.md),
-  [gap analysis](gap-analysis.md), [design controls](design-controls.md), the
-  [agent workflow](agent-workflow.md), and the [CLI reference](cli.md).
-- **Why it works this way**: [record-first architecture](record-first-architecture.md),
-  [plan vs. record](plan-vs-record.md), and
-  [ADR 0001](adr-0001-bounded-context-user-needs.md); worked examples for
-  [a realistic device (VitalView)](example-vitalview-decomposition.md) and
-  [git as a document control system](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control).
-- **Proof, not promises**: [RDM's own document control](document-control.md)
-  is held to the shipped Part 11 checklist, and this site's
-  [traceability matrix](traceability-matrix.md) is generated from a live
-  acceptance run at every build.
+[Install](installation.md), then [start a new project](quickstart-new-project.md)
+(`rdm init`) or [adopt an existing repository](quickstart-existing-repo.md)
+(`rdm adopt`). RDM's own [document control](document-control.md) and this site's
+[traceability matrix](traceability-matrix.md) are generated evidence from RDM's
+own record.
 
 ## The evidence chain
 
@@ -104,4 +133,3 @@ flowchart TD
     style plan stroke-dasharray: 5 5
 ```
 
-See the **[API reference](reference.md)** for the modules that implement this.
