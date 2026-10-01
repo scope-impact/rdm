@@ -116,6 +116,13 @@ rdm story mutation-probe --file <impl> --find '<code for a clause>' \
 ```
 The merged, reviewed PR completes the approval record.
 
+**Merge with a merge commit — never squash or rebase.** A squash folds the
+record-first commits (design document, then implementation) into one, so the
+history no longer shows the design was approved before the code; a rebase
+rewrites the commits that were reviewed. Configure the repository to allow
+merge commits only, as `examples/github-document-control/` does
+(`allow_squash_merge: false`, `allow_rebase_merge: false`).
+
 ## Hard rules
 
 | Rule | Because |

@@ -91,9 +91,10 @@ def _read_text_checklist(path: Path) -> tuple[list[dict], list[Path]]:
     return items, includes
 
 
-def checklist_quads(specs: list[str], graph: ox.NamedNode) -> tuple[list[ox.Quad], set[str]]:
+def checklist_quads(specs: list[str], graph: ox.NamedNode) -> tuple[list[ox.Quad], dict[str, ox.NamedNode]]:
     """Quads for the requested checklists (and everything they include), plus
-    every clause key they declare."""
+    every clause key they declare, mapped to that clause's node — the
+    generated IRI for a text checklist, the file's own subject for an RDF one."""
     quads: list[ox.Quad] = []
     keys: set[str] = set()
 
@@ -147,9 +148,12 @@ def checklist_quads(specs: list[str], graph: ox.NamedNode) -> tuple[list[ox.Quad
                 break
     _label_unlabelled(quads, graph)
     # Keys declared by native RDF checklists take part in reference matching too.
+    clauses = {key: clause_node(key) for key in keys}
     notation = ox.NamedNode(_SKOS + "notation")
-    keys |= {q.object.value for q in quads if q.predicate == notation}
-    return quads, keys
+    for q in quads:
+        if q.predicate == notation and isinstance(q.subject, ox.NamedNode):
+            clauses.setdefault(q.object.value, q.subject)
+    return quads, clauses
 
 
 def _iri_tail(iri: str) -> str:
@@ -179,13 +183,14 @@ def _label_unlabelled(quads: list[ox.Quad], graph: ox.NamedNode) -> None:
         quads.append(ox.Quad(subject, LABEL, ox.Literal(name), graph))
 
 
-def reference_quads(documents: list[dict], doc_node, keys: set[str], graph: ox.NamedNode) -> list[ox.Quad]:
+def reference_quads(documents: list[dict], doc_node, clauses: dict[str, ox.NamedNode],
+                    graph: ox.NamedNode) -> list[ox.Quad]:
     """``dcterms:references`` from each controlled document to the clauses its
     ``[[…]]`` tags name, matched exactly as ``rdm gap`` matches them."""
     references = ox.NamedNode(_DCT + "references")
     quads = []
     for doc in documents:
         text = Path(doc["file"]).read_text(encoding="utf-8", errors="ignore")
-        for key in sorted(set(gaps._find_keys_in_content(text, keys))):
-            quads.append(ox.Quad(doc_node(doc["id"]), references, clause_node(key), graph))
+        for key in sorted(set(gaps._find_keys_in_content(text, set(clauses)))):
+            quads.append(ox.Quad(doc_node(doc["id"]), references, clauses[key], graph))
     return quads

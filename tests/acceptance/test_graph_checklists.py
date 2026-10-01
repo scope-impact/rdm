@@ -38,7 +38,7 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
         "---\nid: SDS-1\nkind: design\ncontext: core\ndesign_inputs: []\n---\n# Core\n")
     (dhf / "documents" / "plan.md").write_text(
         "---\nid: PLAN-1\n---\n# Plan\n"
-        "Covers [[STD:1.2.a]] and [[RDFX:1: a pointer note]].\n"
+        "Covers [[STD:1.2.a]], [[RDFX:1: a pointer note]] and [[RDFX:2]].\n"
         "Mentions STD:4 outside a tag block, which is not a reference.\n")
     lists = tmp_path / "checklists"
     lists.mkdir()
@@ -55,7 +55,10 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
         "<urn:rdm:standard:RDFX> a skos:ConceptScheme ; skos:prefLabel \"RDF-native standard\" .\n"
         "<urn:rdm:clause:RDFX:1> a rdm:Clause ; skos:notation \"RDFX:1\" ; "
         "skos:inScheme <urn:rdm:standard:RDFX> ; skos:definition \"authored as RDF\" .\n"
-        "<urn:rdm:checklist:native> a rdm:Checklist ; skos:member <urn:rdm:clause:RDFX:1> .\n")
+        "<https://example.org/std/rdfx/2> a rdm:Clause ; skos:notation \"RDFX:2\" ; "
+        "skos:inScheme <urn:rdm:standard:RDFX> .\n"
+        "<urn:rdm:checklist:native> a rdm:Checklist ; skos:member <urn:rdm:clause:RDFX:1> , "
+        "<https://example.org/std/rdfx/2> .\n")
     return dhf, lists / "parent.txt", rdf
 
 
@@ -129,6 +132,9 @@ def test_reference_tags_become_links_matched_as_rdm_gap_matches(tmp_path: Path) 
     for key in ("STD:1.2.a", "STD:1.2", "RDFX:1"):
         assert _ask(s, f"GRAPH {refs} {{ {doc} dcterms:references {_clause(key)} }}"), key
     assert not _ask(s, f"?d dcterms:references {_clause('STD:4')}")
+    # An RDF clause with its own IRI is the one referenced — no clause is fabricated for it.
+    assert _ask(s, f"GRAPH {refs} {{ {doc} dcterms:references <https://example.org/std/rdfx/2> }}")
+    assert not _ask(s, f"?x ?p {_clause('RDFX:2')}") and not _ask(s, f"{_clause('RDFX:2')} ?p ?x")
 
     # Unreferenced clauses == rdm gap's missing items, for the same documents.
     unreferenced = {row["k"].value for row in s.query(

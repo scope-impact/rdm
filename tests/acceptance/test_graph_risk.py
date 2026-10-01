@@ -94,5 +94,11 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
         by_shapes = {r.label for r in validate(project(case_dhf, results))
                      if r.severity == "Violation" and r.focus.startswith("urn:dhf:proj:risk/")}
         assert by_shapes == by_gate, (name, by_shapes, by_gate)
+    # A risk with no id: the gate blocks it, and so do the shapes, on a stand-in node.
+    case_dhf, gate = _gate(tmp_path / "agree", "no-id", [_risk(None), _risk("RISK-N-1")])
+    assert "a risk in dhf/documents/risk/risks.md has no id" in gate.blocking
+    flagged = [r for r in validate(project(case_dhf, tmp_path / "agree" / "no-id" / "allure"))
+               if r.severity == "Violation" and r.message == "risk has no id"]
+    assert [r.label for r in flagged] == ["risk with no id #1 in dhf/documents/risk/risks.md"]
     undeclared = trace(Record(tmp_path / "agree" / "undeclared-control" / "proj" / "dhf"), "RISK-U-2")["risk"]
     assert [c["id"] for c in undeclared["controls"]] == ["DI-1"] and undeclared["undeclared_controls"] == ["DI-77"]

@@ -192,6 +192,13 @@ uv run rdm story mutation-probe --file <impl> --find '<code for a clause>' \
 
 The merged, reviewed PR completes the approval record.
 
+**Merge with a merge commit — never squash or rebase.** A squash folds the
+record-first commits (design document, then implementation) into one, so the
+history no longer shows the design was approved before the code; a rebase
+rewrites the commits that were reviewed. Configure the repository to allow
+merge commits only, as `examples/github-document-control/` does
+(`allow_squash_merge: false`, `allow_rebase_merge: false`).
+
 ## A worked example — from this repository's own history
 
 `rdm story new-input` itself was added exactly this way; every artifact is in
@@ -219,6 +226,7 @@ now the PR reviewer's to catch.
 | Never hand-edit the traceability matrix | it is generated from executed results; edits would be fiction |
 | Never approve a PR you authored | self-review over-rates; independence is the entire point of the PR review |
 | Design docs commit before implementation | the commit is the approval; the hook and CI enforce the order |
+| Merge PRs with a merge commit, never squash or rebase | a squash erases the design-before-code order the record-first commits prove |
 | A DI is declared once; other contexts use `realises` | duplicated requirements drift apart |
 | `dhf/allure-results/`, `dhf/data/` are generated, gitignored | evidence is produced by running, not by committing |
 | Backlog/issues/plans are never cited as evidence | plan-vs-record boundary; the record is SDD + Allure + git |

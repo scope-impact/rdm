@@ -292,15 +292,22 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
         policy = read_policy(dhf)
     except ValueError:
         policy = None
-    register = [r for r in risks(dhf, policy) if r.id]
-    declared = Counter(r.id for r in register)
+    register = risks(dhf, policy)
+    declared = Counter(r.id for r in register if r.id)
     doc_ids = {entry["path"]: entry["id"] for entry in controlled_documents(dhf, root)}
     g = "risks"
     policy_doc = doc_ids.get(_rel(dhf / policy.source, root)) if policy else None
+    unnamed = Counter()
     for r in register:
-        node = ds.thing(ds.node("risk", r.id), rdm("Risk"), r.id, g)
-        ds.add(node, _term(_DCT + "identifier"), r.id, g)
-        ds.add(node, rdm("declarationCount"), ox.Literal(str(declared[r.id]), datatype=_term(_XSD + "integer")), g)
+        if r.id:
+            node = ds.thing(ds.node("risk", r.id), rdm("Risk"), r.id, g)
+            ds.add(node, _term(_DCT + "identifier"), r.id, g)
+            ds.add(node, rdm("declarationCount"),
+                   ox.Literal(str(declared[r.id]), datatype=_term(_XSD + "integer")), g)
+        else:  # still in the graph, so the shapes block it as the release gate does
+            unnamed[r.document] += 1
+            label = f"risk with no id #{unnamed[r.document]} in {r.document}"
+            node = ds.thing(ds.node("risk", f"_no-id/{r.document}/{unnamed[r.document]}"), rdm("Risk"), label, g)
         ds.add(node, rdm("residualDecision"), residual_decision(r, policy, verified), g)
         for prop, value in (("category", r.category), ("stride", r.stride), ("hazard", r.hazard),
                             ("situation", r.situation), ("harm", r.harm), ("severity", r.severity),
@@ -357,10 +364,10 @@ def project(
     if checklists:
         from rdm.graph.checklists import checklist_quads, reference_quads
 
-        quads, keys = checklist_quads(list(checklists), ds.graph("checklists"))
+        quads, clauses = checklist_quads(list(checklists), ds.graph("checklists"))
         ds.quads.extend(quads)
         ds.quads.extend(reference_quads(controlled_documents(dhf, root), lambda doc_id: ds.node("doc", doc_id),
-                                        keys, ds.graph("references")))
+                                        clauses, ds.graph("references")))
     _ontology(ds)
     unique = {str(q): q for q in ds.quads}
     return [unique[k] for k in sorted(unique)]

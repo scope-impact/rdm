@@ -117,6 +117,7 @@ rdm:TestTagShape a sh:NodeShape ;
 # function (rdm/record/risk.py), so the two cannot drift.
 rdm:RiskShape a sh:NodeShape ;
     sh:targetClass rdm:Risk ;
+    sh:property [ sh:path <http://purl.org/dc/terms/identifier> ; sh:minCount 1 ; sh:message "risk has no id" ] ;
     sh:property [ sh:path rdm:hazard ; sh:minCount 1 ; sh:message "risk has no hazard" ] ;
     sh:property [ sh:path rdm:situation ; sh:minCount 1 ; sh:message "risk has no situation" ] ;
     sh:property [ sh:path rdm:harm ; sh:minCount 1 ; sh:message "risk has no harm" ] ;
