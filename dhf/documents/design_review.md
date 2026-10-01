@@ -486,6 +486,11 @@ input); DI-57 (`rdm.pytest_plugin`), in the verification context.
   only its design document — the V&V plan where its user needs are declared
   and the risk document of each risk it controls — each pinned to the tested
   commit, so a reviewer reaches the whole record from one result.
+- Addendum: browsing RDM's own graph in AWS Graph Explorer showed
+  `explorer-file --exclude TestRun` leaving about a thousand islands — the
+  run details DI-53..56 added (labels, steps, attachments, fixtures, test
+  cases). DI-39 now leaves out, with an excluded class, the nodes that hang
+  only from it.
 
 ## Findings and actions
 

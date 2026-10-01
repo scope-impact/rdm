@@ -17,7 +17,7 @@ design_inputs:
     text: "RDM shall ship SHACL shapes expressing the gate rules over the graph — unaddressed user needs, design inputs without a passing run or with a failing one, and unreferenced checklist clauses as violations; untagged design inputs, references to undeclared ids and stray test tags as warnings — that block exactly the design inputs and user needs the release gate blocks."
     traces_to: [UN-014, UN-003]
   - id: DI-39
-    text: "RDM shall write the projected graph as an AWS Graph Explorer graph file: every node of the record and every link between two such nodes, leaving out the vocabulary and type statements, optionally leaving out the nodes of chosen classes together with their links, and naming the served SPARQL endpoint as the file's connection, so that the whole traceability graph opens in Graph Explorer in one step."
+    text: "RDM shall write the projected graph as an AWS Graph Explorer graph file: every node of the record and every link between two such nodes, leaving out the vocabulary and type statements, optionally leaving out the nodes of chosen classes together with their links and with the nodes that hang only from them (left with no path to a node outside the test-run results), and naming the served SPARQL endpoint as the file's connection, so that the whole traceability graph opens in Graph Explorer in one step."
     traces_to: [UN-014]
   - id: DI-41
     text: "RDM shall serve the design record to agents as an MCP server over stdio (rdm graph mcp) with four tools: schema (the vocabulary and the predeclared prefixes), query (SPARQL), trace (a user need or design input with its contexts, documents, tests and runs) and validate (the gate shapes' results), each answering from a projection rebuilt from the record on that call."
@@ -128,7 +128,9 @@ source: the graph is derived, rebuilt on demand, and never edited.
   `rdf:type` statements — so the full traceability graph opens with *Load
   graph from file* instead of a hundred manual expansions. `--exclude
   TestRun` (repeatable) leaves out a class's nodes and their links to
-  declutter; `--endpoint` names the served endpoint (default
+  declutter, and the details that hang only from them (a run's steps,
+  attachments, labels, parameters, fixtures and test case), which would
+  otherwise float as islands; `--endpoint` names the served endpoint (default
   `http://localhost:7878`). Refines UN-014.
 - **DI-41 (agent server)** — `rdm graph mcp` is a Model Context Protocol
   server over stdio, the interface agent harnesses already speak. Four tools:
