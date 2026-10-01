@@ -24,6 +24,14 @@ _RISK_FIELDS = ("category", "stride", "hazard", "situation", "harm", "severity",
                 "residualSeverity", "residualProbability", "residualLevel", "residualDecision", "acceptedBy",
                 "acceptanceRationale", "riskStatus")
 _UPDATE = re.compile(r"(?i)\b(INSERT|DELETE|LOAD|CLEAR|CREATE|DROP|COPY|MOVE|ADD)\b")
+_SERVICE = re.compile(r"(?i)\bSERVICE\b")
+# String literals, IRIs and comments, removed before looking for SERVICE so a
+# literal or an IRI that merely contains the word is not refused.
+_NOT_KEYWORDS = re.compile(
+    r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\''           # long literals
+    r'|"(?:[^"\\\n]|\\.)*"|\'(?:[^\'\\\n]|\\.)*\''   # short literals
+    r'|<[^<>\s]*>|#[^\n]*')                                # IRIs, comments
+_TRACE_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 
 
 class ReadOnlyError(ValueError):
@@ -59,6 +67,8 @@ def schema() -> dict:
 def query(record: Record, sparql: str, limit: int = ROW_LIMIT) -> dict:
     """Answer a read-only SPARQL query: SELECT rows, an ASK boolean, or
     CONSTRUCT/DESCRIBE triples — at most ``limit`` rows, flagged if cut."""
+    if _SERVICE.search(_NOT_KEYWORDS.sub(" ", sparql)):
+        raise ReadOnlyError("SERVICE is not accepted: the agent server does not reach the network.")
     text = with_prefixes(sparql)
     try:
         result = record.store().query(text, use_default_graph_as_union=True)
@@ -135,6 +145,8 @@ def trace(record: Record, ident: str) -> dict:
     design input (with its document, tests, runs and the risks it controls),
     or one risk (with its scores and each controlling input)."""
     ident = ident.strip().upper()
+    if not _TRACE_ID.match(ident):
+        raise ValueError(f"{ident!r} is not an id (a UN-n, DI-n or risk id)")
     store = record.store()
     if not _ID.match(ident):
         found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:Risk ; dcterms:identifier "{ident}" }}')

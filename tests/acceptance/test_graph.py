@@ -13,6 +13,7 @@ import shutil
 import socket
 import subprocess
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -175,7 +176,7 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
         pytest.skip("oxigraph CLI not installed")
     port = _free_port()
     args = graph_cli.serve_args(location, f"127.0.0.1:{port}")
-    assert {"--union-default-graph", "--cors"} <= set(args) and str(location) in args
+    assert {"serve-read-only", "--union-default-graph", "--cors"} <= set(args) and str(location) in args
     server = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         url = f"http://127.0.0.1:{port}/sparql?" + urllib.parse.urlencode(
@@ -191,6 +192,18 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
                 time.sleep(0.25)
         else:
             pytest.fail("oxigraph serve did not come up")
+        # Read-only: an update from another origin is refused, and the data stays.
+        update = urllib.request.Request(
+            f"http://127.0.0.1:{port}/update", method="POST",
+            data=urllib.parse.urlencode({"update": "CLEAR ALL"}).encode(),
+            headers={"Origin": "https://elsewhere.example",
+                     "Content-Type": "application/x-www-form-urlencoded"})
+        with pytest.raises(urllib.error.HTTPError) as refused:
+            urllib.request.urlopen(update, timeout=5)
+        assert refused.value.code >= 400
+        with urllib.request.urlopen(urllib.request.Request(
+                url, headers={"Accept": "text/csv"}), timeout=5) as response:
+            assert response.read().decode().split() == ["l", "UN-001", "UN-002"]
     finally:
         server.terminate()
         server.wait(timeout=10)

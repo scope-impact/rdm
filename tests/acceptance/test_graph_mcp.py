@@ -106,7 +106,7 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
 @allure.label("output", "rdm/graph/agent.py")
 def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
     """DI-42: no write tool; query takes SELECT/ASK/CONSTRUCT/DESCRIBE, rejects
-    SPARQL Update, and caps rows, saying when it cut them."""
+    SPARQL Update and SERVICE; trace takes only ids; rows capped, the cut reported."""
     dhf, results = _record(tmp_path)
     before = {p: p.read_bytes() for p in dhf.rglob("*") if p.is_file()}
     count = "SELECT (COUNT(*) AS ?n) WHERE { ?s ?p ?o }"
@@ -122,6 +122,12 @@ def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
             "PREFIX ex: <urn:ex:> DROP GRAPH ex:g",
         )]
         out["garbage"] = await call("query", {"sparql": "not sparql at all"})
+        out["services"] = [await call("query", {"sparql": q}) for q in (
+            "SELECT * WHERE { SERVICE <http://127.0.0.1:9/sparql> { ?s ?p ?o } }",
+            "select * where { ?s ?p ?o . service ?u { ?a ?b ?c } }",
+        )]
+        out["service_word"] = await call("query", {"sparql": 'ASK { ?s ?p ?o FILTER(?o != "SERVICE") }'})
+        out["bad_ids"] = [await call("trace", {"id": i}) for i in ('DI-1" } UNION { ?s ?p ?o', "DI 1", "")]
         out["n1"] = await call("query", {"sparql": count})
         out["ask"] = await call("query", {"sparql": "ASK { ?s a rdm:DesignInput }"})
         out["construct"] = await call(
@@ -139,6 +145,14 @@ def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
         assert error and "SPARQL Update is not accepted: the graph is read-only" in message
     error, message = out["garbage"]
     assert error and "not a SPARQL query" in message
+    # No network: SERVICE is refused (any case, IRI or variable endpoint), while
+    # the word inside a literal is just text.
+    for error, message in out["services"]:
+        assert error and "SERVICE is not accepted: the agent server does not reach the network" in message
+    assert out["service_word"] == (False, {"boolean": True})
+    # trace takes only id-shaped input.
+    for error, message in out["bad_ids"]:
+        assert error and "is not an id" in message
     assert out["n0"][1]["rows"] == out["n1"][1]["rows"]
     assert {p: p.read_bytes() for p in dhf.rglob("*") if p.is_file()} == before
 

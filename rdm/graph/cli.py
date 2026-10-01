@@ -117,10 +117,13 @@ def graph_query_command(
 
 
 def serve_args(store: Path, bind: str) -> list[str]:
-    """The `oxigraph serve` invocation: union default graph + CORS, so a graph
-    browser (AWS Graph Explorer) sees every named graph without GRAPH clauses."""
+    """The `oxigraph serve-read-only` invocation: union default graph + CORS, so
+    a graph browser (AWS Graph Explorer) sees every named graph without GRAPH
+    clauses. Read-only, because CORS lets any web page reach the endpoint: a
+    writable one could be cleared or forged from a page the user has open."""
     binary = shutil.which("oxigraph") or "oxigraph"
-    return [binary, "serve", "--location", str(store), "--bind", bind, "--cors", "--union-default-graph"]
+    return [binary, "serve-read-only", "--location", str(store), "--bind", bind, "--cors",
+            "--union-default-graph"]
 
 
 def graph_serve_command(store: Path | None = None, bind: str = "localhost:7878") -> int:
@@ -130,7 +133,7 @@ def graph_serve_command(store: Path | None = None, bind: str = "localhost:7878")
         print(f"Error: store not found: {location} (run `rdm graph build --store {location}` first)")
         return 2
     args = serve_args(location, bind)
-    print(f"SPARQL endpoint: http://{bind}/sparql  (union default graph, CORS on)", file=sys.stderr)
+    print(f"SPARQL endpoint: http://{bind}/sparql  (read-only, union default graph, CORS on)", file=sys.stderr)
     try:
         return subprocess.run(args).returncode
     except FileNotFoundError:
