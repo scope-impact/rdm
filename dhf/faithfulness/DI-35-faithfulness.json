@@ -1,14 +1,28 @@
 {
   "design_input": "DI-35",
-  "verdict": "partial",
+  "verdict": "faithful",
   "reviewer": "claude-reviewer (independent of author)",
-  "rationale": "Clauses: (1) a DI declares depends_on: frontmatter value asserted; KILLED by sdd reader returning depends_on []; (2) pin covers transitive upstream text: rewording DI-1 stales DI-2 AND DI-3; KILLED by dropping the transitive pending.extend, by pinned_text returning own text only, by pinning upstream ids without their text, and by current_hashes hashing di text instead of pinned_text; (3) unrelated inputs stay current: exact stale list ['DI-1','DI-2','DI-3'] and downstream change not travelling upstream; KILLED by upstream_closure returning every declared id; (4) tolerating dependency cycles: PARTIAL \u2014 the only cycle exercised is a 2-cycle DI-5<->DI-6 where each half's own id closes the loop, so the `dep == di_id` and `dep in seen` guards are mutually redundant for it: removing `dep in seen` SURVIVED and removing `dep == di_id` SURVIVED. Removing `dep in seen` would hang (infinite loop) on an input that depends on a cycle it is not part of (e.g. DI-8 -> DI-5 <-> DI-6), and the test does not exercise that shape, so the general cycle-termination guarantee is not verified; (5) design gate warns on undeclared dependency: exact warning text asserted and no false warning for DI-2; KILLED by removing the warning and by not subtracting declared ids. Verdict partial: clause (4) only covered for the self-closing 2-cycle.",
-  "test_hash": "sha256:ef1ce86f3975e06d30ad6005cb51ab2e097539432c5a631a2616f5c50a18ff50",
+  "rationale": "Re-review after test strengthening. Clauses: (1) a DI declares depends_on: KILLED by sdd reader returning []; (2) pin covers transitive upstream text (DI-1 reword stales DI-2 and DI-3): KILLED by dropping transitive pending.extend, by pinned_text returning own text only, by current_hashes hashing raw text instead of pinned_text; (3) unrelated inputs stay current (exact stale lists incl. DI-8 reword staling only DI-8): KILLED by upstream_closure returning every declared id; (4) tolerating dependency cycles: now exercised with a dependent hanging off a 2-cycle (DI-8 -> DI-5 <-> DI-6) and a 3-cycle DI-9->DI-10->DI-11, each resolution under a 5s termination guard; removing the `dep in seen` guard (non-terminating) is now KILLED (was SURVIVED). Removing the `dep == di_id` guard still SURVIVED, but it is an equivalent mutant for this requirement: the seen-set still terminates, and including an input's own text in its own pin changes no staleness outcome; (5) design gate warns on undeclared dependency: KILLED by not subtracting declared ids. All clauses covered.",
+  "test_hash": "sha256:3a3036215a895f96a56cd528c1213be535eafbbe726f313c133a7bcb190ad6ed",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_upstream_change_invalidates_only_downstream"
   ],
   "probes": [
+    {
+      "file": "rdm/record/faithfulness.py",
+      "find": "        if dep in seen or dep == di_id or dep not in by_id:",
+      "replace": "        if dep == di_id or dep not in by_id:",
+      "test": "test_upstream_change_invalidates_only_downstream",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/faithfulness.py",
+      "find": "        if dep in seen or dep == di_id or dep not in by_id:",
+      "replace": "        if dep in seen or dep not in by_id:",
+      "test": "test_upstream_change_invalidates_only_downstream",
+      "result": "SURVIVED"
+    },
     {
       "file": "rdm/record/sdd.py",
       "find": "\"depends_on\": [str(d).strip() for d in depends if str(d).strip()],",
@@ -32,13 +46,6 @@
     },
     {
       "file": "rdm/record/faithfulness.py",
-      "find": "    lines = [f\"{u}: {str(by_id[u].get('text', '')).strip()}\" for u in upstream]",
-      "replace": "    lines = [f\"{u}\" for u in upstream]",
-      "test": "test_upstream_change_invalidates_only_downstream",
-      "result": "KILLED"
-    },
-    {
-      "file": "rdm/record/faithfulness.py",
       "find": "    return sorted(seen)\n",
       "replace": "    return sorted(by_id)\n",
       "test": "test_upstream_change_invalidates_only_downstream",
@@ -46,29 +53,8 @@
     },
     {
       "file": "rdm/record/faithfulness.py",
-      "find": "        if dep in seen or dep == di_id or dep not in by_id:",
-      "replace": "        if dep in seen or dep not in by_id:",
-      "test": "test_upstream_change_invalidates_only_downstream",
-      "result": "SURVIVED"
-    },
-    {
-      "file": "rdm/record/faithfulness.py",
-      "find": "        if dep in seen or dep == di_id or dep not in by_id:",
-      "replace": "        if dep == di_id or dep not in by_id:",
-      "test": "test_upstream_change_invalidates_only_downstream",
-      "result": "SURVIVED"
-    },
-    {
-      "file": "rdm/record/faithfulness.py",
       "find": "    return {di[\"id\"]: hash_for(pinned_text(di, by_id), sources.get(di[\"id\"], [])) for di in design_inputs}",
       "replace": "    return {di[\"id\"]: hash_for(di.get(\"text\", \"\"), sources.get(di[\"id\"], [])) for di in design_inputs}",
-      "test": "test_upstream_change_invalidates_only_downstream",
-      "result": "KILLED"
-    },
-    {
-      "file": "rdm/story_audit/design_gate.py",
-      "find": "            warnings.append(f\"design input {di['id']} depends_on unknown design input {ref}\")",
-      "replace": "            pass",
       "test": "test_upstream_change_invalidates_only_downstream",
       "result": "KILLED"
     },
@@ -80,11 +66,9 @@
       "result": "KILLED"
     }
   ],
-  "uncovered_clauses": [
-    "tolerating dependency cycles (only a self-closing 2-cycle DI-5<->DI-6 is exercised, an input depending on a cycle it is not part of, e.g. DI-8 depends_on DI-5, is not, so removing the dep-in-seen guard, which would then loop forever, survives)"
-  ],
+  "uncovered_clauses": [],
   "text_fingerprint": "sha256:b018fe69c707c109f4b6f132edd082b0d3cc17d5a923083bf15329c520a26a2b",
-  "tests_fingerprint": "sha256:895c0c593b43ed626f8c846018328149dd8e64e801739953056b33d5d41b03e0",
+  "tests_fingerprint": "sha256:47113856a7c5f0e9b35b2cad2d856821b96a7c72385806dab17b0bc875ac12c4",
   "prior_findings": [
     {
       "verdict": "partial",
@@ -109,6 +93,30 @@
       "uncovered_clauses": [
         "tolerating dependency cycles: only a self-closing 2-cycle is exercised",
         "a dependent of a cycle it is not part of (e.g. DI-8 depends_on DI-5 with DI-5<->DI-6) is never exercised, so removing the  guard (which would hang) survives"
+      ]
+    },
+    {
+      "verdict": "partial",
+      "reviewer": "claude-reviewer (independent of author)",
+      "test_hash": "sha256:ef1ce86f3975e06d30ad6005cb51ab2e097539432c5a631a2616f5c50a18ff50",
+      "surviving_probes": [
+        {
+          "file": "rdm/record/faithfulness.py",
+          "find": "        if dep in seen or dep == di_id or dep not in by_id:",
+          "replace": "        if dep in seen or dep not in by_id:",
+          "test": "test_upstream_change_invalidates_only_downstream",
+          "result": "SURVIVED"
+        },
+        {
+          "file": "rdm/record/faithfulness.py",
+          "find": "        if dep in seen or dep == di_id or dep not in by_id:",
+          "replace": "        if dep == di_id or dep not in by_id:",
+          "test": "test_upstream_change_invalidates_only_downstream",
+          "result": "SURVIVED"
+        }
+      ],
+      "uncovered_clauses": [
+        "tolerating dependency cycles (only a self-closing 2-cycle DI-5<->DI-6 is exercised, an input depending on a cycle it is not part of, e.g. DI-8 depends_on DI-5, is not, so removing the dep-in-seen guard, which would then loop forever, survives)"
       ]
     }
   ]
