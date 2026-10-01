@@ -136,3 +136,41 @@ def graph_serve_command(store: Path | None = None, bind: str = "localhost:7878")
         return _missing_extra()
     except KeyboardInterrupt:
         return 0
+
+
+def graph_explorer_file_command(
+    output: Path,
+    store: Path | None = None,
+    dhf_dir: Path | None = None,
+    allure_results_dir: Path | None = None,
+    checklists: list[str] | None = None,
+    endpoint: str | None = None,
+    exclude: list[str] | None = None,
+) -> int:
+    """Write the whole record as a Graph Explorer graph file (DI-39)."""
+    try:
+        import pyoxigraph as ox
+
+        from rdm.graph.explorer import DEFAULT_ENDPOINT, write_explorer_file
+        from rdm.graph.project import project
+    except ImportError:
+        return _missing_extra()
+    if store is not None:
+        if not Path(store).exists():
+            print(f"Error: store not found: {store}")
+            return 2
+        quads = list(ox.Store.read_only(str(store)))
+    else:
+        dhf = Path(dhf_dir or "dhf")
+        if not dhf.exists():
+            print(f"Error: DHF directory not found: {dhf}")
+            return 2
+        try:
+            quads = project(dhf, allure_results_dir, checklists=checklists)
+        except FileNotFoundError as error:
+            print(f"Error: {error}")
+            return 2
+    graph = write_explorer_file(output, quads, endpoint or DEFAULT_ENDPOINT, exclude)
+    print(f"wrote {output}: {len(graph['data']['vertices'])} nodes, {len(graph['data']['edges'])} links "
+          "(Graph Explorer: Load graph from file)", file=sys.stderr)
+    return 0

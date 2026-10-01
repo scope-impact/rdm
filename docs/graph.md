@@ -89,6 +89,51 @@ cannot draw them, and it asks for `CONSTRUCT` results as JSON, which a
 standard SPARQL endpoint rejects. Build views from search and expansion, and
 use `rdm graph query` for questions.
 
+## Your project's whole traceability graph
+
+Run the acceptance suite, then project everything the record knows: needs,
+design inputs, contexts, documents, test files, test runs, commits, and the
+checklists your documents are held to.
+
+```bash
+pytest tests/acceptance --alluredir=dhf/allure-results
+rdm graph build --allure-results dhf/allure-results \
+  --checklist part11_document_control --store .rdm/graph
+```
+
+The whole chain — need → design input → owner → verifying tests → results —
+is one query (RDM's own DHF: 13 needs, 33 inputs, 145 nodes, 269 links):
+
+```sparql
+SELECT ?need ?input ?owner
+       (GROUP_CONCAT(DISTINCT ?path; separator=" ") AS ?tests)
+       (GROUP_CONCAT(DISTINCT ?status; separator="/") AS ?results)
+WHERE {
+  ?i a rdm:DesignInput ; dcterms:identifier ?input ; rdm:ownedBy/rdfs:label ?owner .
+  OPTIONAL { ?i rdm:tracesTo/rdfs:label ?need }
+  OPTIONAL { ?f rdm:verifies ?i ; rdm:path ?path }
+  OPTIONAL { ?r rdm:exercises ?i ; rdm:status ?status }
+}
+GROUP BY ?need ?input ?owner
+ORDER BY ?need xsd:integer(STRAFTER(?input, "-"))
+```
+
+To see all of it at once, write a Graph Explorer graph file and load it with
+**Load graph from file** (the folder icon in the Graph View toolbar), with
+`rdm graph serve` running:
+
+```bash
+rdm graph explorer-file --store .rdm/graph -o rdm.graph.json
+# a calmer picture: leave out test runs, commits and authors
+rdm graph explorer-file --store .rdm/graph -o rdm-core.graph.json \
+  --exclude TestRun --exclude Activity --exclude Agent
+```
+
+The file lists every node and every link between nodes; Graph Explorer
+fetches labels and properties from the endpoint (`--endpoint`, default
+`http://localhost:7878`). Expect a cluster per bounded context — its design
+inputs, their needs, documents and tests — and one per checklist.
+
 ## What is in the graph
 
 One named graph per source, so a query can always tell where a fact came from.

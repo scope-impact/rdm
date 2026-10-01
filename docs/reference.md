@@ -43,6 +43,10 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.graph.validate
 
+### `rdm.graph.explorer`
+
+::: rdm.graph.explorer
+
 ### `rdm.graph.cli`
 
 ::: rdm.graph.cli

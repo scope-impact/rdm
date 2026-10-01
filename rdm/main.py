@@ -90,6 +90,12 @@ def handle_graph_command(args):
         )
     if args.graph_command == 'serve':
         return graph_cli.graph_serve_command(store=_path(args.store), bind=args.bind)
+    if args.graph_command == 'explorer-file':
+        return graph_cli.graph_explorer_file_command(
+            Path(args.output), store=_path(args.store), dhf_dir=_path(args.dhf),
+            allure_results_dir=_path(args.allure_results), checklists=args.checklist,
+            endpoint=args.endpoint, exclude=args.exclude,
+        )
     if args.graph_command == 'validate':
         try:
             from rdm.graph.validate import validate_command
@@ -99,7 +105,7 @@ def handle_graph_command(args):
             dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
             checklists=args.checklist, extra_shapes=[Path(s) for s in args.shapes or []],
         )
-    print("Unknown graph subcommand. Use: build, query, serve, or validate")
+    print("Unknown graph subcommand. Use: build, query, serve, validate, or explorer-file")
     return 1
 
 
@@ -466,6 +472,18 @@ def _add_graph_parser(subparsers):
     validate.add_argument('--allure-results', help='Allure results dir (needed for the verification shapes)')
     validate.add_argument('--checklist', action='append', help='checklist(s) to hold the documents to; repeatable')
     validate.add_argument('--shapes', action='append', help='an additional SHACL shapes file; repeatable')
+
+    explorer = graph_sub.add_parser(
+        'explorer-file', help='write the whole record as an AWS Graph Explorer graph file (Load graph from file)')
+    explorer.add_argument('-o', '--output', required=True, help='graph file to write, e.g. rdm.graph.json')
+    explorer.add_argument('--store', help='read this store (default: a fresh projection of --dhf)')
+    explorer.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    explorer.add_argument('--allure-results', help='Allure results dir (for the fresh projection)')
+    explorer.add_argument('--checklist', action='append', help='checklist(s) for the fresh projection; repeatable')
+    explorer.add_argument('--endpoint', help='SPARQL endpoint Graph Explorer reads details from '
+                                             '(default: http://localhost:7878)')
+    explorer.add_argument('--exclude', action='append',
+                          help='leave out a class and its links, e.g. TestRun; repeatable')
 
     serve = graph_sub.add_parser('serve', help='serve the store as a SPARQL 1.1 endpoint (for AWS Graph Explorer)')
     serve.add_argument('--store', help='store directory (default: .rdm/graph)')

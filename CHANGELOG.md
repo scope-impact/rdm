@@ -12,6 +12,8 @@
   with `rdm gap`'s own reader and matcher (DI-37).
 - `rdm graph validate`: the gate rules as SHACL shapes (plus `--shapes` for
   your own), held by test to agreement with the release gate (DI-38).
+- `rdm graph explorer-file`: the whole record as an AWS Graph Explorer graph
+  file, so the full traceability graph opens in one step (DI-39).
 
 ### Changed — `rdm story mutation-probe` is a standalone reviewer tool
 - Same command and restore guarantees, now recorded as DI-34 (user need
