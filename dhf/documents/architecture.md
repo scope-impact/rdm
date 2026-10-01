@@ -32,10 +32,9 @@ documents, evidence bundle) is edited by hand or fed back into the record.
 | Record | `record` | `design/record.md` | `rdm/record/` — design/V&V frontmatter, Allure results, git |
 | Record | `ingestion` | `design/ingestion.md` | `rdm/collect.py`, `rdm/translate.py` — code snippets, foreign test results |
 | Record | `scaffolding` | `design/scaffolding.md` | `rdm/init.py`, `rdm/adopt.py`, `rdm story new-input` |
-| Record | `story_audit` | `design/story_audit.md` | `rdm/story_audit/` — ID integrity, traceability audit |
 | Record | `risk` | `design/risk.md` | `rdm/record/risk.py` — the risk register, scored from the risk matrix; its release rules |
-| Gates | `gating` | `design/gating.md` | `rdm/story_audit/design_gate.py`, `rdm/hook_files/pre-commit` — design gate, release gate |
-| Gates | `verification` | `design/verification.md` | `rdm/record/verify.py`, `rdm/story_audit/mutation.py` — inputs vs results, traceability matrix, mutation probe |
+| Gates | `gating` | `design/gating.md` | `rdm/gates/design_gate.py`, `rdm/hook_files/pre-commit` — design gate (including duplicate ids), release gate |
+| Gates | `verification` | `design/verification.md` | `rdm/record/verify.py`, `rdm/gates/mutation.py` — inputs vs results, traceability matrix, mutation probe |
 | Gates | `gap_analysis` | `design/gap_analysis.md` | `rdm/gaps.py`, `rdm/checklists/` — documents vs checklists |
 | Gates | `validation` | `design/validation.md` | `rdm/record/persona.py`, `rdm/record/validation.py` — formative usability evidence |
 | Graph | `graph` | `design/graph.md` | `rdm/graph/` — RDF projection, SHACL gate shapes, SPARQL, Graph Explorer file, read-only MCP server |
@@ -47,8 +46,8 @@ Record → Gates decide (design gate before implementation, release gate before
 release, gap analysis against checklists) → Graph and Documents are derived
 from the same record. Agent skills (how to author design inputs, test-first,
 risk analysis) are maintained outside RDM, in `scope-impact/agent-skills`.
-Planning tooling (`rdm/project_management`) sits outside the record (see
-`docs/plan-vs-record.md`).
+RDM ships no planning tooling: tasks and issues live in their own tools,
+outside the record (see `docs/plan-vs-record.md`).
 
 ## Not yet in scope
 

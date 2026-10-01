@@ -202,7 +202,7 @@ the repo to inspect:
 | 1 | UN-010 registered ("a contributor is guided to author a fully traced design input") | `verification_and_validation_plan.md` frontmatter |
 | 2 | DI-22 declared in the scaffolding context, 6-clause requirement text | `dhf/documents/design/scaffolding.md` |
 | 3 | Design docs committed *before* any code | commit `Approve design record: UN-010, DI-22, …` |
-| 4–5 | Implementation + tagged test | `rdm/story_audit/new_input.py`, `tests/acceptance/test_scaffolding.py` |
+| 4–5 | Implementation + tagged test | `rdm/gates/new_input.py`, `tests/acceptance/test_scaffolding.py` |
 | 6–7 | All gates green, pushed, PR reviewed | CI run on the PR |
 
 History: at the time, an independent review step (the since-retired
@@ -232,7 +232,7 @@ now the PR reviewer's to catch.
 | design-gate: *unresolved placeholders* | `TODO`/`ENDTODO` left in a design doc | finish the doc |
 | design-gate: *uncommitted changes* | a design doc is edited but not committed | commit it (that commit is the approval) |
 | pre-commit: *commit blocked* | implementation staged while the design gate fails | fix/commit the design record first |
-| pre-commit: *'rdm' not on PATH … blocked* | gate runner missing | `uv sync --all-extras` (or `pip install rdm[story-audit]`) |
+| pre-commit: *'rdm' not on PATH … blocked* | gate runner missing | `uv sync --all-extras` (or `pip install rdm`) |
 | release-gate: *DI-n untested* | no executed result for the tag | write/tag the test, re-run the acceptance suite |
 | release-gate: *DI-n failed* | the tagged test failed | fix the implementation (or the test) |
 | release-gate: *user need addressed by no design input* | a UN nothing traces to | add a DI with `traces_to`, or remove the need |

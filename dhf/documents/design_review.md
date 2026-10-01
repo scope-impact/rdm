@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 10
+revision: 11
 title: Design Review — RDM
 ---
 
@@ -346,6 +346,38 @@ shapes, agent trace); RDM's own tool-risk register (RMF-001).
 
 - Open: a maintainer to review RMP-001 and RMF-001 and set `status:
   approved` (or change them).
+
+# Design Review 11 — One data model: the record and its graph
+
+**Scope reviewed:** removing DuckDB, the planning tooling and the
+story-audit context; UN-007 amended; DI-46 (duplicate ids) in the gating
+context; the gates moved to `rdm/gates/`.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The record and its RDF graph are RDM's only data model. DuckDB served
+  planning analytics (Backlog and GitHub sync) and SQL in templates, none of
+  it part of the record. Planning lives in its own tools (plan-vs-record).
+- Retired: DI-6, DI-13, DI-14, DI-23, DI-32 (see the gating design
+  document). Removed with them: `rdm story audit | sync | backlog-validate |
+  check-ids | validate`, `rdm pm`, `rdm pull`, the template `duckdb` query,
+  and the `story-audit`, `analytics`, `github` and `plan` extras.
+- UN-007 keeps its verification: DI-46 makes a duplicated user-need or
+  design-input id fail the design gate. The retired scan read any file for
+  id-shaped strings; DI-46 reads the record, which is what the gates use.
+- The gates (`design_gate`, `new_input`, `mutation`) move from the planning
+  package to `rdm/gates/`, so the design gate, release gate, mutation probe
+  and pre-commit hook need no extra.
+
+## Findings and actions
+
+- Open: scope-impact/agent-skills — the `backlog` and `story-audit` skills
+  name removed commands and are updated in the same change.
+- Open: projects that used `rdm story sync` or `rdm pm sync` keep their
+  planning data in Backlog.md and GitHub; halla-health's Backlog risk
+  clusters convert to `kind: risk` documents in that repository.
 
 # Approval
 

@@ -19,7 +19,7 @@ user_needs:
   - id: UN-006
     text: "A regulatory author can check that documents contain the references a chosen standard/checklist requires (gap analysis)."
   - id: UN-007
-    text: "A regulatory author can detect requirement-ID conflicts and locate every ID definition across the project (traceability integrity)."
+    text: "A contributor is stopped when a user-need or design-input id is declared more than once, and told every document that declares it."
   - id: UN-008
     text: "A regulatory author can scaffold a new compliant documentation project from a single command."
   - id: UN-010
@@ -76,7 +76,7 @@ contexts that satisfy it. `rdm story release-gate` enforces this.
 | UN-001..004 | maintainer review that the compiled DHF, gates, and traceability meet the documented intent | dogfooding: RDM compiles its own DHF (this file set) |
 | UN-005 | review of persona-skill output against a real UI journey | `usability-persona` skill runs (`rdm story persona`) |
 | UN-006 | maintainer review that gap analysis flags real missing standard references against shipped checklists | dogfooding: `rdm gap` over RDM's own released docs |
-| UN-007 | maintainer review that ID-conflict and traceability audits catch real duplicates/orphans | dogfooding: `rdm story audit` / `check-ids` over RDM's own requirements |
+| UN-007 | maintainer review that a duplicated id stops the design gate and names every declaring document | dogfooding: the design gate on RDM's own DHF at every commit |
 | UN-008 | maintainer review that a scaffolded project builds a release and passes the relevant gap checklists | dogfooding: `fresh_release_test` builds an init'd project end-to-end |
 | UN-010 | maintainer review that a scaffolded design input lands fully traced (frontmatter entry, tagged stub test, checklist) and that the agent workflow runbook matches the enforced gates | dogfooding: `rdm story new-input` used against RDM's own DHF; agent sessions following `dhf/AGENT_WORKFLOW.md` |
 | UN-011 | maintainer review that an adopted repository ends up with the working control surface (DHF skeleton, runbook, hook, bootstrap, CI) and that nothing pre-existing was overwritten | trial adoption into a scratch copy of a real repository; `rdm adopt` acceptance test exercises the skip-not-overwrite contract |

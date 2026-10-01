@@ -59,7 +59,7 @@ This context owns:
 
 ## Design Outputs
 
-For **DI-22** — `rdm story new-input` and `rdm/story_audit/new_input.py`:
+For **DI-22** — `rdm story new-input` and `rdm/gates/new_input.py`:
 
 - reuses the record ingest layer (`rdm/record/sdd.py`: `find_design_docs`,
   `design_input_ids`, `registry_user_needs`, `context_of`) so the scaffolder and

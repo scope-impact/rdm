@@ -57,7 +57,7 @@ Turns executed test results into verification status and a traceable matrix.
 - `rdm/record/verify.py` + `rdm story verify` — write a `verification.yml` the
   DHF renders into a traceability matrix (design inputs grouped under the user
   need they trace to; generated, not hand-maintained).
-- `rdm/story_audit/mutation.py` + `rdm story mutation-probe` — DI-34.
+- `rdm/gates/mutation.py` + `rdm story mutation-probe` — DI-34.
 - `build_trace` + `rdm story trace <id>` — the read-only audit query: forward
   (user need → design inputs) and backward (design input → need, owner,
   realisers, verifying tests, status).

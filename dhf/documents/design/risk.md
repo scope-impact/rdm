@@ -65,7 +65,7 @@ reasonably practicable, stay human judgements.
   evaluated levels), `residual_decision` and `findings(dhf, …)` (DI-44's
   blocking findings and warnings), dependency-light like the rest of
   `rdm/record/`.
-- `run_release_gate` (`rdm/story_audit/design_gate.py`) adds those findings
+- `run_release_gate` (`rdm/gates/design_gate.py`) adds those findings
   to its blocking list and warnings.
 
 Acceptance criteria are verified by `@allure.story("DI-43" / "DI-44")` tests.
