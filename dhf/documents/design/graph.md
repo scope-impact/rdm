@@ -161,9 +161,12 @@ source: the graph is derived, rebuilt on demand, and never edited.
   and evaluated levels, its **residual decision** — `acceptable`,
   `accepted`, `needs acceptance`, `unacceptable`, or `not evaluated` while a
   controlling design input has no passing test — its status and acceptance,
-  and `rdm:controlledBy` to the design inputs that control it. The decision
-  is computed by the same function the release gate uses, so the risk shapes
-  block exactly what the gate blocks. `trace` takes a `RISK-…` id, and a
+  and `rdm:controlledBy` to the design inputs that control it. The risk rules
+  are written once, in `rdm/record/risk.py`: the release gate reports their
+  findings, and the projection carries the same findings on each risk
+  (`rdm:finding` blocks, `rdm:riskWarning` warns; a finding about the whole
+  register goes on every risk), so the risk shapes block exactly what the
+  gate blocks, in the gate's words. `trace` takes a `RISK-…` id, and a
   design input's trace lists the risks it controls. Refines UN-016 and
   UN-015.
 

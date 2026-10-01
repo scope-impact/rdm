@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 21
+revision: 22
 title: Design Review — RDM
 ---
 
@@ -633,6 +633,30 @@ documents').
 - No learned model enters the record. An agent may use the rules to answer
   and to suggest; a suggestion becomes part of the record only through a
   reviewed pull request.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 21 — One home for each rule and helper
+
+**Scope reviewed:** a refactor with no change to any design input's text;
+DI-45's prose updated for how the risk shapes now agree with the gate.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- From a reuse / simplification / efficiency / altitude review of this
+  branch. The risk rules were written twice — in Python for the release gate
+  and again as SHACL — and agreed only because an acceptance test compared
+  them. They are now written once (`rdm/record/risk.py`); the graph carries
+  the gate's findings and the shapes report them. The test that held the two
+  together now also covers a malformed risk policy.
+- Git access, namespaces, the gap-analysis matching the graph relies on, and
+  id patterns each get one home instead of several copies.
+- A projection reads each document once and asks git for every document's
+  latest commit in one call; the projected graph is unchanged.
 
 ## Findings and actions
 
