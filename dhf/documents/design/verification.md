@@ -11,7 +11,7 @@ design_inputs:
     text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status)."
     traces_to: [UN-004]
   - id: DI-30
-    text: "RDM shall produce a release evidence bundle from the record: the verification data, the rendered traceability matrix, and a manifest describing the bundle, written to an output directory for retention."
+    text: "RDM shall produce a release evidence bundle from the record: the verification data, the rendered traceability matrix, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files, written to an output directory for retention."
     traces_to: [UN-012]
   - id: DI-34
     text: "RDM shall provide a mutation probe for reviewers that runs a test once unmutated — reporting an error, never a result, when it does not pass — then applies a one-line source mutation, runs the test again, and reports killed or survived, counting only a genuine test failure as a kill; the probe never gates a release."
