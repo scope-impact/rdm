@@ -52,5 +52,8 @@ Planning tooling (`rdm/project_management`) sits outside the record (see
 
 ## Not yet in scope
 
-Turning a regulation into a checklist. It enters through a user need and
-design inputs in this record before any code.
+In rough order: turning a regulation into a checklist mapped to its
+standard's clauses; pushing the graph to an external RDF store, with the
+vocabulary and gate shapes versioned; and several projects in one graph
+(clause identifiers are already project-independent). Each enters through a
+user need and design inputs in this record before any code.
