@@ -116,6 +116,13 @@ uv run pytest tests
 
 ### Unreleased
 
+- **Borrowings from the Phoenix architecture** (DI-34..DI-39; see
+  [Acknowledgements](#acknowledgements)): hash-chained record journal
+  (`rdm story journal --verify`), selective invalidation via `depends_on`,
+  A/B/C/D change classification with class-A `verdict --carry-forward`,
+  content-fingerprinted design inputs (`rdm story lock`), a fault-injection
+  self-test of the release gate (`rdm story gate-selftest`, run in CI), and
+  negative knowledge carried across faithfulness reviews (`prior_findings`)
 - **Agent-era design controls, end to end**: canonical change procedure
   (`dhf/AGENT_WORKFLOW.md`), always-on local design gate (committed
   `.githooks/` + session bootstrap), and CI gates
@@ -169,6 +176,28 @@ uv run pytest tests
 - New lightweight Docker image (Alpine + Pandoc 3.6 + Typst 0.12)
 - Added GitHub Action for CI/CD (`scope-impact/rdm@v1`)
 - Fixed broken cross-references in software_plan.md template
+
+## Acknowledgements
+
+- [Innolitics](https://innolitics.com) — the original
+  [innolitics/rdm](https://github.com/innolitics/rdm) this project forks.
+- [Chad Fowler](https://chadfowler.com/)'s **Phoenix architecture**
+  ([essays](https://aicoding.leaflet.pub/),
+  [chad/phoenix](https://github.com/chad/phoenix)) — regenerative software
+  where intent, not code, is the durable artifact. Six RDM design inputs adapt
+  its ideas to record-first design controls:
+
+  | Phoenix idea | In RDM |
+  |---|---|
+  | Hash-chained provenance journal | `dhf/journal.jsonl`, verified by `rdm story journal --verify` and the release gate (DI-34) |
+  | Selective invalidation (clause → canon → IU) | `depends_on` between design inputs; rewording one re-opens only its downstream reviews (DI-35) |
+  | A/B/C/D change classification | stale verdicts classified; only formatting-only (A) changes may be carried forward unreviewed (DI-36) |
+  | Content-addressed identity | design-input fingerprints + `design_inputs.lock.json` (DI-37) |
+  | Fault-injecting the trust surface | `rdm story gate-selftest` measures the release gate's precision and recall (DI-38) |
+  | Negative knowledge ("known failures — do not repeat") | `prior_findings` carried into the next faithfulness review (DI-39) |
+
+  The ideas were adapted, not copied: no Phoenix code is included. The
+  design rationale is in Design Review 4 (`dhf/documents/design_review.md`).
 
 ## License
 
