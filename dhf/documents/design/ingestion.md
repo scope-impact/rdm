@@ -41,6 +41,5 @@ Acceptance criteria are verified by `@allure.story("DI-16" / "DI-17")` tests;
 
 ## Out of scope
 
-`rdm pull` (GitHub issues/PRs) is **planning** data, not part of the controlled
-record — it is fenced by DI-6 (plan ≠ record) and intentionally owns no design
-input here.
+Planning data (issues, pull requests, task boards) is not part of the
+controlled record, and RDM no longer pulls it (Design Review 11).
