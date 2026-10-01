@@ -7,8 +7,8 @@ V&V plan frontmatter), executed test results (Allure), and git history —
 approval is the reviewed, merged commit.
 
 **Start with `AGENT_WORKFLOW.md`** (this directory): the end-to-end procedure
-every change follows — design input → tagged acceptance test → independent
-faithfulness verdict → gates → generated traceability matrix.
+every change follows — design input → tagged acceptance test → gates →
+generated traceability matrix → independently reviewed pull request.
 
 Gate and verify exactly as CI does:
 
@@ -16,7 +16,6 @@ Gate and verify exactly as CI does:
 rdm story design-gate --dhf dhf
 pytest tests/acceptance --alluredir=dhf/allure-results
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-rdm story faithfulness --dhf dhf
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
 

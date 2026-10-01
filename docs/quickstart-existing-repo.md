@@ -44,9 +44,9 @@ git add dhf/ .githooks/ .claude/ scripts/ .github/ && git commit -m "Adopt desig
    ```
 
 4. Follow the printed checklist (commit the design docs first — that commit
-   *is* the approval — then implement, replace the failing stub test, get an
-   independent [faithfulness verdict](design-controls.md#faithfulness-review), run
-   the gates).
+   *is* the approval — then implement, replace the failing stub test, run the
+   gates, and open a pull request for
+   [independent review](design-controls.md#independent-review)).
 
 ## Backfilling an undocumented codebase
 

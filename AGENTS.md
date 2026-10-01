@@ -3,9 +3,10 @@
 RDM is a design-controls tool that governs its own development with the same
 controls. **The intent: a change here is not just working code — it is working
 code plus an unbroken chain of evidence** (user need → design input → tagged
-test → independent faithfulness verdict → generated traceability matrix), with
-approval recorded as the git commit of the design docs. CI and the pre-commit
-hook check every link; a change that skips one fails the build.
+test → generated traceability matrix), with approval recorded as the git commit
+of the design docs and independent verification as the reviewed pull request.
+CI and the pre-commit hook check every link; a change that skips one fails the
+build.
 
 Before writing any implementation, read **`dhf/AGENT_WORKFLOW.md`** — the
 canonical procedure, with a decision tree, why/do/done-when for each step, a
@@ -18,9 +19,8 @@ version:
   the commit is the approval, and the gate blocks implementation commits
   until it exists.
 - The tagged test (`@allure.story("DI-n")`, `tests/acceptance/`) **is** the
-  acceptance criterion, and it needs an **independent** faithfulness verdict —
-  never review a test you authored; hand it to the `test-faithfulness` skill
-  or a second agent. Editing a tagged test re-opens its review automatically.
+  acceptance criterion. Whether it actually proves the DI is judged by the
+  **independent** pull-request reviewer — never the test's author.
 - Never hand-edit `dhf/documents/traceability_matrix.md` — it is generated
   from executed results.
 

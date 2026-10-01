@@ -12,7 +12,7 @@ analysis.
 flowchart LR
     subgraph record["the record (this example)"]
         SOP["documents/<br>document_control_procedure.md<br><i>the controlled SOP</i>"]
-        DHF["dhf/<br>user needs UN-001..004<br>design inputs DI-1..5<br>faithfulness verdicts"]
+        DHF["dhf/<br>user needs UN-001..004<br>design inputs DI-1..5<br>design review"]
     end
     subgraph outputs["design outputs = configuration code"]
         RULES["github/rulesets/*.json<br><i>PR + code-owner approval,<br>signed commits, no rewrites</i>"]
@@ -37,7 +37,7 @@ flowchart LR
 | `github/rulesets/controlled-documents.json` | branch ruleset: ≥1 independent code-owner approval, verified commit signatures, required status checks, no force-push/deletion — *import under Repo → Settings → Rules* |
 | `github/CODEOWNERS` | routes controlled paths to the quality team (the authorized signers) |
 | `github/workflows/release-documents.yml` | tag-triggered release: renders PDF copies + attaches a `git archive` electronic set (§11.10(b)/(c)) |
-| `dhf/` | the record: user needs, design inputs DI-1..5, design review, faithfulness verdicts, matrix template |
+| `dhf/` | the record: user needs, design inputs DI-1..5, design review, matrix template |
 | `tests/acceptance/` | the acceptance criteria — they inspect the *real* configuration and render the *real* SOP |
 
 > `github/` is deliberately not `.github/` so this example's workflow doesn't
@@ -77,7 +77,6 @@ From this directory:
 rdm story design-gate --dhf dhf                 # record present, complete, approved
 pytest tests/acceptance --alluredir=dhf/allure-results
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-rdm story faithfulness --dhf dhf                # independent verdicts current
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 rdm gap checklists/part11_document_control.txt documents/document_control_procedure.md
 rdm render documents/document_control_procedure.md config.yml data/history.yml

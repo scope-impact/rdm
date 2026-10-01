@@ -52,9 +52,3 @@ _Avoid_: reduction, impact
 The same assessment at two stages — before any measure, and after the applied
 measures fold together. Stages are rows, not a before/after column pair.
 _Avoid_: gross risk, net risk, pre/post mitigation
-
-**Faithfulness verdict**:
-An independent reviewer's recorded judgement that a design input's verifying
-test actually verifies it, rather than passing hollowly. Hash-pinned, so editing
-the test re-opens the review.
-_Avoid_: test review, sign-off

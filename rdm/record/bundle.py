@@ -3,7 +3,7 @@ Release evidence bundle (DI-30): the retained artifact set for a release.
 
 Writes, to an output directory: the verification data (declared design inputs
 reconciled against executed Allure results), the rendered traceability matrix,
-a copy of the faithfulness verdicts, and a manifest describing the bundle —
+and a manifest describing the bundle —
 the DHR-shaped set a team attaches to a release tag so the evidence outlives
 CI artifact retention.
 """
@@ -11,7 +11,6 @@ CI artifact retention.
 from __future__ import annotations
 
 import json
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -44,15 +43,7 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
             render_template_to_file(config, template.name, context, handle,
                                     loaders=[jinja2.FileSystemLoader(str(template.parent))])
 
-    # 3. The faithfulness verdicts (the §820.30(e) review record).
-    verdicts_src = dhf_dir / "faithfulness"
-    verdict_files = sorted(verdicts_src.glob("*-faithfulness.json")) if verdicts_src.is_dir() else []
-    verdicts_out = out_dir / "faithfulness"
-    verdicts_out.mkdir(exist_ok=True)
-    for verdict in verdict_files:
-        shutil.copy2(verdict, verdicts_out / verdict.name)
-
-    # 4. The manifest describing what this bundle contains.
+    # 3. The manifest describing what this bundle contains.
     summary = data["summary"]
     manifest = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -61,7 +52,6 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
         "verified": summary["verified"],
         "failed": summary["failed"],
         "untested": summary["untested"],
-        "faithfulness_verdicts": len(verdict_files),
         "files": sorted(
             p.relative_to(out_dir).as_posix() for p in out_dir.rglob("*")
             if p.is_file() and p.name != "manifest.json"
@@ -89,6 +79,5 @@ def evidence_bundle_command(
     print(f"Wrote release evidence bundle to {out}:")
     print(f"  design inputs : {manifest['verified']}/{manifest['design_inputs']} verified "
           f"({manifest['failed']} failed, {manifest['untested']} untested)")
-    print(f"  verdicts      : {manifest['faithfulness_verdicts']}")
     print(f"  files         : {len(manifest['files'])} + manifest.json")
     return 0

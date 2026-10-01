@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Retire the faithfulness gate: `rdm story faithfulness`, `verdict` and
+  `mutation-probe`, the `dhf/faithfulness/` verdicts, probe replay, verdict
+  hash scope, the `test-faithfulness` skill and
+  `contrib/mutmut_by_design_input.py` are removed (DI-19, DI-20, DI-21, DI-27,
+  DI-28 and UN-009 retired, ids not reused). The verdicts' hash pins re-opened
+  reviews on edits that changed no requirement; independent verification is
+  now the human-reviewed pull request, with git as the controlled record. CI
+  runs design-gate → acceptance tests → verify → release-gate, and the
+  evidence bundle no longer carries verdicts (Design Review 4).
 - Findings from an independent review of the agent-era tooling (PR #40),
   all fixed through the design-controls loop:
     - Mutation-probe verdicts discriminate pytest exit codes: only a genuine

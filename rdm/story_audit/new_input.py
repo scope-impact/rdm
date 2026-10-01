@@ -35,10 +35,9 @@ Remaining traceability checklist (see {workflow}):
   3. Implement the design output
   4. Replace the stub body in {test_file} with real assertions
      (one per requirement clause; keep the @allure.story tag)
-  5. Independent faithfulness verdict (test-faithfulness skill / second agent):
-       rdm story verdict {di_id} --dhf {dhf} --verdict faithful --reviewer ... --rationale ...
-  6. Run the gates as CI does (design-gate, acceptance suite, verify,
-     faithfulness, release-gate) and regenerate the traceability matrix\
+  5. Run the gates as CI does (design-gate, acceptance suite, verify,
+     release-gate) and regenerate the traceability matrix
+  6. Open a pull request: its independent review is the verification review\
 """
 
 STUB_HEADER = '''"""Acceptance tests for the {context} context's design inputs (see dhf/).

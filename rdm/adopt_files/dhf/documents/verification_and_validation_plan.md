@@ -27,7 +27,8 @@ Each user need is refined into **design inputs** (declared in the per-context
 design documents, `kind: design`). Each design input is verified by an
 automated test tagged `@allure.story("DI-…")` — the test *is* the acceptance
 criterion ("live BDD"). `rdm story release-gate` enforces that every declared
-input is verified by a passing test AND independently confirmed faithful.
+input is verified by a passing test; the pull-request review independently
+confirms each test genuinely verifies its input.
 
 # Validation approach
 

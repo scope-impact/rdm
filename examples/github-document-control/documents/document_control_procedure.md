@@ -140,7 +140,7 @@ follow the same pull-request approval path they describe.
 
 | Record | Regulation | In this system |
 | --- | --- | --- |
-| Design history file (DHF) | §820.30(j) | `dhf/` — design inputs, review, verification evidence, faithfulness verdicts |
+| Design history file (DHF) | §820.30(j) | `dhf/` — design inputs, review, verification evidence |
 | Device master record (DMR) | §820.181 | the controlled specification set at the approved tip, enumerated by `documents/device_master_record_index.md` (rendered from repository data) |
 | Device history record (DHR) | §820.184 | per release: the `device-history-record.json` manifest (tag, commit SHA, releasing actor, timestamp, artifact list) attached to the GitHub Release with the copies |
 

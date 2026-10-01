@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Removed — the faithfulness gate
+- `rdm story faithfulness`, `rdm story verdict` and `rdm story mutation-probe`,
+  faithfulness verdicts (`dhf/faithfulness/*.json`), probe replay, verdict hash
+  scope, the `test-faithfulness` skill and `contrib/mutmut_by_design_input.py`.
+  Retired design inputs DI-19, DI-20, DI-21, DI-27, DI-28 and user need UN-009
+  (ids are not reused).
+- Why: the verdicts were RDM's own construct, not a §820.30 or IEC 62304
+  requirement, and their hash pins re-opened reviews on edits that changed no
+  requirement or product behavior. Independent verification is now the
+  human-reviewed pull request, with git as the controlled record (Design
+  Review 4).
+
+### Changed
+- CI runs design-gate → acceptance tests (Allure) → verify → release-gate.
+- `release-gate` requires the design approved, every design input verified by
+  a passing tagged test, and every user need addressed — no verdicts.
+- `rdm story evidence-bundle` no longer includes verdicts.
+
 ## 1.2.0
 
 Record-first design controls and an agentic faithfulness pipeline — RDM now

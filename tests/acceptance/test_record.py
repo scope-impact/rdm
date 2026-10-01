@@ -49,9 +49,8 @@ def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) ->
 @allure.label("output", "rdm/record/allure.py")
 def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
     """DI-31: JS/TS allure calls and Java annotations are discovered across
-    conventional test-file names; Python keeps function-scope source capture
-    while other languages pin the whole file."""
-    from rdm.record.allure import scan_source_tags, scan_tagged_sources
+    conventional test-file names."""
+    from rdm.record.allure import scan_source_tags
 
     tests = tmp_path / "tests"
     tests.mkdir()
@@ -81,10 +80,3 @@ def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
     assert set(tags) == {"DI-1", "DI-2", "DI-3"}
     assert tags["DI-2"] == [str(tests / "alarms.test.ts")]
     assert tags["DI-3"] == [str(tests / "AlarmTest.java")]
-
-    # Function scope for Python (the helper is OUTSIDE the pinned source);
-    # whole-file scope for the other languages.
-    sources = scan_tagged_sources(tests)
-    assert "def test_py" in sources["DI-1"][0] and "def helper" not in sources["DI-1"][0]
-    assert sources["DI-2"] == [(tests / "alarms.test.ts").read_text()]
-    assert sources["DI-3"] == [(tests / "AlarmTest.java").read_text()]

@@ -10,9 +10,9 @@ change procedure is the [agent workflow](agent-workflow.md). Requires
 User needs (`UN-nnn`, in the V&V plan frontmatter) are refined by design
 inputs (`DI-n`, declared in per-context `kind: design` documents). Each design
 input is verified by a test tagged `@allure.story("DI-n")` — the test *is* the
-acceptance criterion — and independently confirmed **faithful** (the test
-really verifies the requirement). Approval is the git commit. The traceability
-matrix is generated, never hand-edited.
+acceptance criterion. Approval is the git commit; independent verification is
+the human-reviewed pull request. The traceability matrix is generated, never
+hand-edited.
 
 ## Declaring work
 
@@ -49,101 +49,32 @@ against every declared design input: verified / failed / untested per input,
 written to the data file the traceability matrix renders from.
 
 ```bash
-rdm story faithfulness --dhf dhf
-```
-Reports whether each design input has a **current, independent** verdict that
-its test actually verifies it. Verdicts are hash-pinned to the test source —
-editing a tagged test makes its verdict `stale` until re-reviewed.
-
-```bash
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
 The hard gate: design approved **and** every design input verified by a
-passing test **and** faithful **and** every user need addressed by at least
-one input.
+passing tagged test **and** every user need addressed by at least one
+input.
 
 ## Polyglot products
 
 Executed verification (Allure results) is language-agnostic, and source-tag
 discovery also reads JS/TS `allure.story(...)` calls and Java
 `@Story(...)`/`@Feature(...)` annotations across conventional test-file names
-(`*.test.ts`, `*.spec.js`, `*Test.java`, `*_test.go`, …). Function-scope
-verdict hashing is Python-only; tests in other languages pin at whole-file
-scope.
+(`*.test.ts`, `*.spec.js`, `*Test.java`, `*_test.go`, …).
 
-## Faithfulness review
+## Independent review
 
-A passing test proves code ran, not that the requirement is met. Whoever wrote
-the test must not review it. The reviewer decomposes the requirement into
-clauses and proves coverage with executed mutations:
+A passing test proves code ran, not that the requirement is met. That judgment
+belongs to the pull-request reviewer, who must not be the change's author:
+git is the controlled record, the repository ruleset requires an approving
+review, and CI runs the gates above on every change. The reviewer reads each
+affected design input's text against its tagged test and asks whether the test
+would fail if the behavior broke — a tautology, a mocked-out code path, or 2 of
+3 clauses covered is a reason to request changes.
 
-```bash
-rdm story mutation-probe --file rdm/gaps.py \
-  --find 'return 3' --replace 'return 0' \
-  --test test_reports_missing_checklist_references
-# KILLED = the test caught the break; SURVIVED = the clause is not covered.
-# The probed file is always restored.
-
-rdm story verdict DI-10 --dhf dhf --verdict faithful \
-  --reviewer "reviewer-name (independent of author)" \
-  --reviewed-tests test_reports_missing_checklist_references \
-  --rationale "clauses: … (each with the mutation that was KILLED)"
-```
-
-Verdicts: `faithful` passes; `partial` (with `--uncovered`), `unfaithful`,
-`weak`, `stale`, and missing all block release.
-
-**Replayable reviews.** Record the probes with the verdict (repeatable
-`--probe`, JSON with `file`/`find`/`replace`/`test`), and the review becomes
-continuously verifiable instead of trust-at-review-time:
-
-```bash
-rdm story verdict DI-10 … \
-  --probe '{"file": "rdm/gaps.py", "find": "return 3", "replace": "return 0", "test": "test_reports_missing"}'
-rdm story faithfulness --dhf dhf --replay   # re-executes every recorded killing
-                                            # probe; fails if any now survives
-rdm story faithfulness --dhf dhf --stale    # only the non-faithful worklist
-```
-
-### Exhaustive mutation testing as a second net
-
-`rdm story mutation-probe` proves that a *named* clause is covered. It cannot
-tell you about a clause nobody thought to name — the probe only tests the
-mutations a reviewer imagined. [mutmut](https://mutmut.readthedocs.io/) closes
-that gap from the other side: it generates hundreds of mutants automatically
-and reports which survive.
-
-```bash
-uv run mutmut run          # scoped by [tool.mutmut] in pyproject.toml
-uv run mutmut results      # what survived
-```
-
-The two are not interchangeable, and the mutmut score is **never DHF
-evidence**:
-
-| | `mutation-probe` | `mutmut` |
-|---|---|---|
-| Mutants | one, named by a reviewer | hundreds, generated |
-| Output | replayable evidence tied to a design input | a score and a survivor list |
-| Role | the record | a finding generator — tells you where to aim a probe |
-
-**A caveat that will bite you.** mutmut runs the suite against a *copy* of the
-tree under `mutants/`, and copies only the Python sources it mutates. rdm's
-tests read real repo files — the built-in checklists, the DHF itself, hook and
-adopt templates, the docs — so any path missing from `also_copy` fails on the
-copy while passing in place, with a `FileNotFoundError` that names nothing
-useful. The list in `pyproject.toml` covers the current suite; extend it when
-new package data or a fixture directory appears.
-
-First full-suite run over `rdm/gaps.py`: 414 mutants, 100 survivors (~76%
-killed). Survivors are a worklist, not defects — read each one and decide
-whether it marks a real hole worth a tagged test.
-
-**Hash scope.** A verdict pins what the reviewer saw. The default `module`
-scope covers the full test file(s), so editing a shared helper or fixture
-re-opens the review too; `--hash-scope function` pins only the tagged
-functions (for files with unrelated churn). Verdicts recorded before scopes
-existed are honored as function-scoped.
+Teams that want automated evidence of test strength can run a mutation-testing
+tool (for example [mutmut](https://mutmut.readthedocs.io/)) in CI; RDM does not
+ship one, and its score is not DHF evidence.
 
 ## Querying and reporting
 
@@ -167,7 +98,7 @@ stays a record, never a hand-maintained table.
 rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence/
 ```
 Writes the retained release evidence set — verification data, the rendered
-traceability matrix, the faithfulness verdicts, and a manifest — ready to
+traceability matrix, and a manifest — ready to
 attach to a release tag so the evidence outlives CI artifact retention.
 
 `rdm story audit` is DHF-aware: on a record-first repository it reports each

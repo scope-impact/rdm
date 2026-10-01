@@ -22,7 +22,7 @@ def load_json_records(directory: Path, suffix: str, build: Callable[[dict, str],
     """Load ``*<suffix>`` JSON files from a directory into records.
 
     Centralizes the glob + safe-decode + dict-check skeleton shared by every
-    record ingester (Allure results, persona runs, faithfulness verdicts). For
+    record ingester (Allure results, persona runs, validation records). For
     each well-formed object, ``build(data, filename)`` returns a record (or
     ``None`` to skip it). A missing directory yields an empty list.
     """

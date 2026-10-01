@@ -133,22 +133,20 @@ uv run pytest tests
   gated DHF
 - **Docs site**: user manual (quickstarts, guides, CLI reference), Mermaid
   diagrams, and build-time-generated verification evidence
-- **Replayable faithfulness reviews**: verdicts record their executed
-  mutation probes; `rdm story faithfulness --replay` re-executes them and
-  fails on survivors; `--stale` lists the review worklist
-- **Verdict hash scope**: module-scope pinning by default (helper/fixture
-  edits re-open the review), function scope selectable, legacy verdicts
-  honored
 - **Sound gap matching**: references count only inside `[[ … ]]` blocks,
   exact keys with descendant-covers-parent hierarchy — prose mentions and
   sibling keys no longer count as coverage
 - **`rdm story dmr`** and **`rdm story evidence-bundle`**: DMR index data
   generated from frontmatter; the retained release evidence set (matrix,
-  verification data, verdicts, manifest)
+  verification data, manifest)
 - `rdm hooks` defaults to the design-gate hook only (`--with-issue-hooks`
   opts into the legacy pair); `new-input` keeps `satisfies` lists in sync
 - **Polyglot traceability**: JS/TS and Java test tags discovered for
-  linkage, audit, and faithfulness; legacy YAML workflow deprecated
+  linkage and audit; legacy YAML workflow deprecated
+- **Faithfulness gate retired**: `rdm story faithfulness`, `verdict` and
+  `mutation-probe` removed (DI-19/20/21/27/28, UN-009) — its hash-pinned
+  verdicts re-opened reviews on edits that changed no requirement;
+  independent verification is now the human-reviewed pull request
 - Fixes: `rdm gap --coverage` with built-in checklist names; tag-scanner
   false positive; root-container test skip
 

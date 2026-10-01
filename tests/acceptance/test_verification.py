@@ -1,7 +1,7 @@
 """Acceptance test for the verification context's DI-30 (see dhf/).
 
 The release evidence bundle: the retained artifact set (verification data,
-rendered matrix, verdicts, manifest) produced from the record. Skips cleanly
+rendered matrix, manifest) produced from the record. Skips cleanly
 if allure-pytest is not installed.
 """
 
@@ -18,8 +18,8 @@ allure = pytest.importorskip("allure")
 
 
 def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
-    """A minimal DHF with one verified design input, one verdict, a matrix
-    template, and a passing Allure result."""
+    """A minimal DHF with one verified design input, a matrix template, and a
+    passing Allure result."""
     dhf = tmp_path / "dhf"
     (dhf / "documents" / "design").mkdir(parents=True)
     (dhf / "documents" / "design" / "core.md").write_text(
@@ -39,11 +39,6 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
         "{% endfor %}{% endfor %}{% endif %}"
     )
     (dhf / "config.yml").write_text("md_extensions: []\n")
-    (dhf / "faithfulness").mkdir()
-    (dhf / "faithfulness" / "DI-1-faithfulness.json").write_text(json.dumps(
-        {"design_input": "DI-1", "verdict": "faithful", "reviewer": "r2",
-         "rationale": "x", "test_hash": "sha256:irrelevant-here"}
-    ))
     results = tmp_path / "allure-results"
     results.mkdir()
     (results / "t1-result.json").write_text(json.dumps(
@@ -57,7 +52,7 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
 @allure.label("output", "rdm/record/bundle.py")
 def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None:
     """DI-30: the bundle contains the verification data, the rendered matrix,
-    the faithfulness verdicts, and a manifest that agrees with them."""
+    and a manifest that agrees with them."""
     dhf, results = _mini_release(tmp_path)
     out = tmp_path / "release-evidence"
 
@@ -72,14 +67,9 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
     assert "row:DI-1:verified" in matrix
     assert "{%" not in matrix
 
-    # The verdicts travel with the bundle.
-    assert (out / "faithfulness" / "DI-1-faithfulness.json").is_file()
-
     # The manifest describes exactly what was bundled.
     on_disk = json.loads((out / "manifest.json").read_text())
     assert on_disk == manifest
     assert manifest["design_inputs"] == 1 and manifest["verified"] == 1
-    assert manifest["faithfulness_verdicts"] == 1
-    assert set(manifest["files"]) == {
-        "verification.yml", "traceability_matrix.md", "faithfulness/DI-1-faithfulness.json",
-    }
+    assert "faithfulness_verdicts" not in manifest
+    assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"}

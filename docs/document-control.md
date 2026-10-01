@@ -4,9 +4,8 @@ RDM does not just *recommend* git as a document control system — it makes the
 claim for its own record and holds itself to it on every push. The controlled
 statement is
 [`dhf/documents/document_control.md`](https://github.com/scope-impact/rdm/blob/main/dhf/documents/document_control.md)
-(DC-001): RDM's Design History File, design documents, faithfulness verdicts,
-and the source that realises them are controlled **in git, with GitHub as the
-service provider**.
+(DC-001): RDM's Design History File, design documents, and the source that
+realises them are controlled **in git, with GitHub as the service provider**.
 
 ## The claim is executable
 
@@ -31,9 +30,9 @@ the best way:
 
 | Part 11 control | Mechanism |
 |---|---|
-| 11.10(a) validation, altered-record discernment | controls are enforced code (gate, hook, CI), verified by tagged tests; any change produces a new SHA, and hash-pinned verdicts go stale on edits |
+| 11.10(a) validation, altered-record discernment | controls are enforced code (gate, hook, CI), verified by tagged tests; any change produces a new SHA |
 | 11.10(b)/(c) copies, retention | rendered site + matrix via `rdm render`; `git archive` at any tag; every clone is a full replica |
-| 11.10(d)/(g) access, authority | GitHub org membership + 2FA; PR approval into the default branch; verdict reviewer independent of the test author |
+| 11.10(d)/(g) access, authority | GitHub org membership + 2FA; PR approval into the default branch; approver must not be the change's author |
 | 11.10(e) audit trail | the git history: SHA-chained, time-stamped, author-attributed |
 | 11.10(f) sequencing | the design-controls loop itself: hook blocks implementation before design approval; CI gates in order |
 | 11.10(i) training | `dhf/AGENT_WORKFLOW.md`, loaded automatically at agent session start |

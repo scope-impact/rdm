@@ -27,12 +27,11 @@ TODO — e.g.: each design input is unambiguous and individually verifiable by a
 automated test; each user need is addressed by at least one context via
 `satisfies`; verification and validation evidence are distinguished.
 
-## Test-faithfulness review (per design input)
+## Verifying-test review (per design input)
 
-The detailed examination of *whether each verifying test actually verifies its
-design input* is recorded as hash-pinned verdicts under `dhf/faithfulness/`
-(`rdm story faithfulness` reconciles them). The release gate blocks if any is
-missing, negative, or stale.
+Whether each verifying test actually verifies its design input is examined
+by the reviewer of the pull request that adds or changes it — someone other
+than its author — and recorded as that pull request's approval.
 
 # Approval
 

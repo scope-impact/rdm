@@ -34,7 +34,6 @@ from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _allure_result
 from tests.util import write_design_doc
-from tests.util import write_faithful_verdicts as _faithful
 
 # Tagging requires allure-pytest; skip cleanly if it is not installed.
 allure = pytest.importorskip("allure")
@@ -119,19 +118,16 @@ def test_design_gate_requires_approval(tmp_path: Path) -> None:
 
 @allure.story("DI-3")
 def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
-    """DI-3: block release until every design input is verified by a passing test
-    AND independently confirmed to verify it (the faithfulness gate)."""
+    """DI-3: block release until every design input is verified by a passing test."""
     dhf = _approved_dhf(tmp_path, ["UN-003"])  # DI-1 traces to UN-003
-    (dhf.parent / "tests").mkdir(exist_ok=True)  # isolate the test-source hash
     empty = tmp_path / "none"
     empty.mkdir()
     assert not run_release_gate(dhf, empty).passed  # untested -> blocked
     results = tmp_path / "allure"
+    _allure_result(results, "a", "failed", "DI-1")
+    assert not run_release_gate(dhf, results).passed  # failing -> blocked
     _allure_result(results, "a", "passed", "DI-1")
-    # Verified (the test passed) but not yet faithfully reviewed -> still blocked.
-    assert not run_release_gate(dhf, results).passed
-    _faithful(dhf)  # record the independent faithfulness verdict
-    assert run_release_gate(dhf, results).passed  # verified + faithful -> passes
+    assert run_release_gate(dhf, results).passed  # verified -> passes
 
 
 @allure.story("DI-4")

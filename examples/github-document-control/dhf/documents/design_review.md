@@ -33,11 +33,11 @@ of the authoring of the reviewed design stage.
 - The approval-as-electronic-signature model (manifestation, linking,
   uniqueness) is stated in the SOP and enforced by the ruleset.
 
-## Test-faithfulness review (per design input)
+## Verifying-test review (per design input)
 
-Recorded as hash-pinned verdicts under `dhf/faithfulness/`
-(`rdm story faithfulness` reconciles them); the release gate blocks on any
-missing, negative, or stale verdict.
+Whether each design input's tagged test actually verifies it is judged by the
+independent reviewer of the pull request; the release gate blocks unless
+every design input is verified by a passing tagged test.
 
 # Approval
 

@@ -15,7 +15,6 @@ result says whether that test actually *passed*.
 
 from __future__ import annotations
 
-import ast
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -262,9 +261,6 @@ def iter_test_files(tests_dir: Path):
                 yield path
 
 
-# Retained under the old private name: imported elsewhere in this package.
-_iter_test_files = iter_test_files
-
 
 def claims_a_tag(path: Path, content: str) -> bool:
     """Whether the file carries its ecosystem's tag syntax at all.
@@ -317,52 +313,3 @@ def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
     return refs
 
 
-def _decorator_tag_id(decorator: ast.expr) -> str | None:
-    """Return the ID from an ``@allure.story("ID")`` / ``.feature`` decorator node."""
-    if not isinstance(decorator, ast.Call) or not decorator.args:
-        return None
-    func = decorator.func
-    if not isinstance(func, ast.Attribute) or func.attr not in USER_NEED_LABELS:
-        return None
-    first = decorator.args[0]
-    if isinstance(first, ast.Constant) and isinstance(first.value, str):
-        return first.value.strip()
-    return None
-
-
-def scan_tagged_sources(tests_dir: Path | None) -> dict[str, list[str]]:
-    """Map each story/feature tag ID to the *source* of the test(s) tagged
-    with it (the function-scope counterpart of ``scan_source_tags``).
-
-    For Python, captures the tagged function body (AST), so a verdict pinned to
-    this source only re-opens when the *tagged* function changes. For other
-    languages (DI-31: JS/TS allure calls, Java annotations) there is no
-    cross-language AST, so the whole file is the source segment — stated, not
-    silent: a verdict on a non-Python test re-opens on any edit to its file.
-    """
-    sources: dict[str, list[str]] = {}
-    if tests_dir is None or not tests_dir.exists():
-        return sources
-    for test_file in sorted(_iter_test_files(tests_dir)):
-        try:
-            text = test_file.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
-        if test_file.suffix != ".py":
-            for tag_id in _tag_ids_in(test_file, text):
-                sources.setdefault(tag_id, []).append(text)
-            continue
-        try:
-            tree = ast.parse(text)
-        except SyntaxError:
-            continue
-        for node in ast.walk(tree):
-            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                continue
-            ids = [i for d in node.decorator_list if (i := _decorator_tag_id(d))]
-            if not ids:
-                continue
-            segment = ast.get_source_segment(text, node) or ""
-            for tag_id in ids:
-                sources.setdefault(tag_id, []).append(segment)
-    return sources

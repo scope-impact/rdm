@@ -33,7 +33,7 @@ broken link or missing nav entry — run it the way CI does.
 RDM's own development is governed by RDM's record-first design controls. RDM is
 the product under control; its DHF lives in `dhf/` (see `dhf/README.md`).
 **`dhf/AGENT_WORKFLOW.md` is the canonical end-to-end procedure** — the
-decision tree, the 8-step loop, and the gate-failure fixes. Scaffold a new
+decision tree, the 7-step loop, and the gate-failure fixes. Scaffold a new
 design input with `uv run rdm story new-input` (`--list` shows contexts, taken
 ids, and user needs). When changing RDM, you are working inside that DHF's
 scope:
@@ -41,8 +41,8 @@ scope:
 - **The record** — one `kind: design` document per bounded context under
   `dhf/documents/design/` (record, gating, verification, validation, rendering),
   each owning its `design_inputs`; user needs in the V&V plan; the design review
-  in `dhf/documents/design_review.md`; faithfulness verdicts in
-  `dhf/faithfulness/`. Never hand-edit the traceability matrix — it is generated.
+  in `dhf/documents/design_review.md`. Never hand-edit the traceability
+  matrix — it is generated.
 - **Acceptance criteria are tests** — each design input DI-n is verified by a
   test tagged `@allure.story("DI-n")` in `tests/acceptance/`. Add/changing a
   design input means adding/adjusting its tagged test ("live BDD").
@@ -57,13 +57,12 @@ scope:
 
 - **CI enforcement** — `.github/workflows/design-controls.yml` runs the full
   pipeline on every push/PR: design-gate → acceptance tests (Allure) → verify →
-  faithfulness → release-gate. A change that leaves a DI unverified, breaks the
-  design gate, or edits a tagged test without re-recording its faithfulness
-  verdict (goes **stale**) fails CI.
-- **After editing a tagged test**, re-record its faithfulness verdict — invoke
-  the `test-faithfulness` skill (or an independent reviewer; recorded via
-  `rdm story verdict`). The reviewer must not be the test's author. The
-  hash-pin intentionally re-opens the §820.30(e) review on any test change.
+  release-gate. A change that leaves a DI unverified or breaks the design gate
+  fails CI.
+- **Independent verification is the pull-request review** — git is the
+  controlled record, and a reviewer other than the author approves the PR.
+  Whether a tagged test actually proves its design input is that reviewer's
+  call; no separate verdict is recorded.
 
 Run the gates locally exactly as CI does:
 
@@ -71,7 +70,6 @@ Run the gates locally exactly as CI does:
 uv run rdm story design-gate --dhf dhf
 uv run pytest tests/acceptance --alluredir=dhf/allure-results
 uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-uv run rdm story faithfulness --dhf dhf
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
 

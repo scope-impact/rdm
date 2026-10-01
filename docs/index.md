@@ -42,39 +42,39 @@ flowchart LR
     end
     subgraph proof["PROOF"]
         TEST["Acceptance test<br><code>@allure.story</code> tag<br><i>the test is the AC</i>"]
-        VERDICT["Faithfulness verdict<br>independent + mutation-proven<br><i>hash-pinned: edit test → stale</i>"]
+        PR["Pull-request review<br>independent of the author<br><i>passing ≠ proving</i>"]
     end
     DI -- "traces_to" --> UN
     TEST -- "verifies" --> DI
-    TEST -- "passing ≠ proving" --> VERDICT
+    TEST -- "judged by" --> PR
     DI -- "approval = the git commit" --> MATRIX["Traceability matrix<br><i>generated, never hand-edited</i>"]
-    VERDICT --> MATRIX
+    TEST -- "executed results" --> MATRIX
 ```
 
 A user need is **met** when it is validated **and** every design input that
-`traces_to` it is verified by a passing, independently-confirmed-faithful test.
+`traces_to` it is verified by a passing tagged test, reviewed independently in
+the pull request.
 
 ## The change lifecycle
 
 ```mermaid
 sequenceDiagram
     participant A as Author<br>(human / agent 1)
-    participant R as Reviewer<br>(independent: agent 2 / human)
     participant G as Gates<br>(machine)
+    participant R as PR reviewer<br>(human, not the author)
     A->>G: rdm story new-input
     G-->>A: DI id + failing stub test + checklist
     A->>G: commit design docs FIRST
     G-->>A: design-gate PASS (the commit is the approval)
     A->>A: implement, replace stub with real assertions
-    A->>R: hand off — never review your own test
-    R->>R: clause table + mutation probes (KILLED / SURVIVED)
-    alt uncovered clause found
-        R-->>A: verdict partial (names the gap)
-        A->>R: strengthen the test, re-review
-    end
-    R->>G: rdm story verdict — faithful
     A->>G: push / PR
-    G-->>A: CI — design-gate → acceptance → verify → faithfulness → release-gate ✅
+    G-->>A: CI — design-gate → acceptance → verify → release-gate ✅
+    A->>R: request review — never approve your own PR
+    alt test does not prove a clause
+        R-->>A: request changes (names the gap)
+        A->>R: strengthen the test, push again
+    end
+    R->>G: approve and merge — the approval record
 ```
 
 ## A record-first repository
@@ -86,13 +86,12 @@ flowchart TD
             VVP["V&V plan<br>user_needs: UN-nnn"]
             DESIGN["documents/design/*.md<br>kind: design, design_inputs"]
             TESTS["tests/acceptance<br>@allure.story tagged"]
-            FAITH["faithfulness/*.json<br>hash-pinned verdicts"]
         end
         subgraph enforce["enforcement — on by default"]
             BOOT["session bootstrap<br>.claude/settings.json"]
             RUNBOOK["dhf/AGENT_WORKFLOW.md<br>the canonical procedure"]
             HOOK[".githooks/pre-commit<br>design gate before implementation"]
-            CI["design-controls.yml<br>the five gates on every push"]
+            CI["design-controls.yml<br>the four gates on every push"]
         end
         subgraph plan["planning — never evidence"]
             PM["Backlog.md / issues / boards"]

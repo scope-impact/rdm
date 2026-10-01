@@ -30,12 +30,11 @@ Requires: pip install rdm[story-audit]
 
 from __future__ import annotations
 
-import json
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record import allure, faithfulness
+from rdm.record import allure
 from rdm.record.reconcile import relevant_orphans
 from rdm.record.sdd import (
     context_of,
@@ -253,58 +252,6 @@ def _verification_messages(report) -> list[str]:
     return messages
 
 
-def _faithfulness_messages(report: faithfulness.FaithfulnessReport) -> list[str]:
-    """Blocking messages for a faithfulness report: each design input whose
-    verifying test is not independently confirmed to verify it."""
-    messages = [
-        f"design input {uid} has no faithfulness review (its verifying test is "
-        "unconfirmed -- a passing test is not proof it verifies the input)"
-        for uid in report.unreviewed
-    ]
-    messages += [
-        f"design input {uid} FAILED faithfulness review "
-        f"({report.by_id[uid].rationale or 'test does not verify the input'})"
-        for uid in report.unfaithful
-    ]
-    messages += [
-        f"design input {uid} faithfulness review is STALE: its verifying test "
-        "changed since the review (re-review the test against the input)"
-        for uid in report.stale
-    ]
-    messages += [
-        f"design input {uid} is only PARTIALLY verified -- uncovered clause(s): "
-        f"{'; '.join(report.by_id[uid].uncovered_clauses) or 'see review'}"
-        for uid in report.partial
-    ]
-    return messages
-
-
-# Console label per faithfulness status (default ``[????]`` covers UNREVIEWED).
-_FAITHFULNESS_MARKS = {
-    faithfulness.FAITHFUL: "[OK]   ",
-    faithfulness.UNFAITHFUL: "[FAIL] ",
-    faithfulness.PARTIAL: "[PART] ",
-    faithfulness.STALE: "[STALE]",
-}
-
-
-def faithfulness_dir_for(dhf_dir: Path, faithfulness_dir: Path | None) -> Path:
-    """Resolve the faithfulness-verdicts directory (default ``<dhf>/faithfulness``)."""
-    return Path(faithfulness_dir) if faithfulness_dir else dhf_dir / "faithfulness"
-
-
-def run_faithfulness_gate(
-    dhf_dir: Path, faithfulness_dir: Path | None = None
-) -> faithfulness.FaithfulnessReport:
-    """Reconcile the declared design inputs against faithfulness verdicts."""
-    inputs = design_inputs(dhf_dir)
-    return faithfulness.reconcile(
-        inputs,
-        faithfulness_dir_for(dhf_dir, faithfulness_dir),
-        allure.find_tests_dir(dhf_dir),
-    )
-
-
 def _traceability_warnings(dhf_dir: Path) -> list[str]:
     """Reconcile design-input IDs against @allure tags found in the tests.
 
@@ -447,7 +394,6 @@ class ReleaseResult:
 
     design: GateResult
     verified: list[str] = field(default_factory=list)
-    faithful: list[str] = field(default_factory=list)
     blocking: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
@@ -459,7 +405,6 @@ class ReleaseResult:
 def run_release_gate(
     dhf_dir: Path,
     allure_results_dir: Path,
-    faithfulness_dir: Path | None = None,
 ) -> ReleaseResult:
     """Run the release gate.
 
@@ -468,11 +413,11 @@ def run_release_gate(
          present, complete, and approved in version control),
       2. at least one design input is declared,
       3. every declared design input is *verified* by a passing Allure test --
-         any failed or untested design input blocks the release,
-      4. every declared design input has a current, *faithful* review -- its
-         verifying test is independently confirmed to verify it (a passing test
-         is not proof on its own), and
-      5. every user need is addressed by at least one design input.
+         any failed or untested design input blocks the release, and
+      4. every user need is addressed by at least one design input.
+
+    Whether a passing test genuinely verifies its input is judged by the
+    human review of the pull request that changed it.
 
     Orphan Allure tags (no matching design input) are warnings, not blockers.
     """
@@ -496,20 +441,6 @@ def run_release_gate(
     result.verified = report.verified
     result.blocking += _verification_messages(report)
 
-    # Verified (the test passed) is necessary but not sufficient: the test must
-    # also be independently confirmed to actually verify the input. Reuse the
-    # `inputs` already computed above rather than re-walking the DHF.
-    faith = faithfulness.reconcile(
-        inputs,
-        faithfulness_dir_for(dhf_dir, faithfulness_dir),
-        allure.find_tests_dir(dhf_dir),
-    )
-    result.faithful = faith.faithful
-    result.blocking += _faithfulness_messages(faith)
-    result.warnings += [
-        f"faithfulness verdict for {tag} matches no declared design input"
-        for tag in relevant_orphans(faith.orphan_ids, di_ids)
-    ]
 
     # A user need with no design input is an unaddressed (hence unverified) need.
     addressed = {un for di in inputs for un in di["traces_to"]}
@@ -537,7 +468,6 @@ def run_release_gate(
 def story_release_gate_command(
     dhf_dir: Path | None = None,
     allure_results_dir: Path | None = None,
-    faithfulness_dir: Path | None = None,
 ) -> int:
     """Run the `rdm story release-gate` command."""
     dhf = (dhf_dir or Path("dhf")).resolve()
@@ -553,7 +483,7 @@ def story_release_gate_command(
         print(f"Error: Allure results directory not found: {results}")
         return 2
 
-    result = run_release_gate(dhf, results, faithfulness_dir)
+    result = run_release_gate(dhf, results)
 
     print("Release gate")
     print(f"DHF: {dhf}\n")
@@ -562,8 +492,6 @@ def story_release_gate_command(
     print(f"  [{design_state}] design controls (design document(s) + review approved)")
     if result.verified:
         print(f"  [OK]   verified design inputs: {', '.join(result.verified)}")
-    if result.faithful:
-        print(f"  [OK]   faithfully reviewed design inputs: {', '.join(result.faithful)}")
 
     if result.blocking:
         print("\nBlocking:")
@@ -578,115 +506,14 @@ def story_release_gate_command(
     if result.passed:
         print(
             "Release gate PASSED: design controls are approved, every design input "
-            "is verified by a passing test AND independently confirmed to verify it, "
-            "and every user need is addressed."
+            "is verified by a passing test, and every user need is addressed."
         )
         return 0
 
     print(
         "Release gate FAILED: do not release. Resolve every blocking item above "
-        "(approve design controls; verify all design inputs; confirm test faithfulness; "
-        "address all user needs)."
+        "(approve design controls; verify all design inputs; address all user needs)."
     )
-    return 1
-
-
-def replay_probes(report) -> tuple[int, int, list[str]]:
-    """Re-execute every recorded KILLED mutation probe (DI-27).
-
-    Returns ``(replayed, still_killed, failures)`` where ``failures`` describes
-    probes that now survive or error — evidence the review no longer holds.
-    """
-    from rdm.story_audit.mutation import _pytest_runner, run_mutation_probe
-
-    replayed = killed = 0
-    failures: list[str] = []
-    for di_id in sorted(report.by_id):
-        for probe in report.by_id[di_id].probes:
-            if str(probe.get("result", "")).strip().upper() != "KILLED":
-                continue  # survived/equivalent probes are documentation, not claims
-            replayed += 1
-            file_path = Path(str(probe.get("file", "")))
-            try:
-                outcome = run_mutation_probe(
-                    file_path, str(probe.get("find", "")), str(probe.get("replace", "")),
-                    _pytest_runner(str(probe.get("test", ""))),
-                )
-            except OSError as error:
-                # A probe that can no longer execute (file gone, unreadable) is
-                # a per-probe gate failure, not a crash of the whole replay.
-                outcome = {"error": f"cannot execute probe on {file_path}: {error}"}
-            if outcome.get("killed"):
-                killed += 1
-                print(f"  [KILLED]   {di_id}: {file_path} :: {probe.get('test')}")
-            elif "error" in outcome:
-                failures.append(f"{di_id}: probe error -- {outcome['error']}")
-                print(f"  [ERROR]    {di_id}: {outcome['error']}")
-            else:
-                failures.append(f"{di_id}: recorded killing probe now SURVIVES "
-                                f"({file_path} :: {probe.get('test')})")
-                print(f"  [SURVIVED] {di_id}: {file_path} :: {probe.get('test')}")
-    return replayed, killed, failures
-
-
-def story_faithfulness_command(
-    dhf_dir: Path | None = None,
-    faithfulness_dir: Path | None = None,
-    stale_only: bool = False,
-    replay: bool = False,
-) -> int:
-    """Run the `rdm story faithfulness` command: report each design input's
-    independent faithfulness review (verifying test confirmed to verify it).
-
-    ``stale_only`` filters the report to non-faithful inputs (the reviewer's
-    worklist); ``replay`` re-executes every recorded killing mutation probe and
-    fails if any no longer kills.
-    """
-    dhf = (dhf_dir or Path("dhf")).resolve()
-    if not dhf.exists():
-        print(f"Error: DHF directory not found: {dhf}")
-        print("Run `rdm init` first, or pass --dhf <path>.")
-        return 2
-
-    report = run_faithfulness_gate(dhf, faithfulness_dir)
-    vdir = faithfulness_dir_for(dhf, faithfulness_dir)
-
-    print("Faithfulness review (does each verifying test actually verify its input?)")
-    print(f"DHF: {dhf}")
-    print(f"Verdicts: {vdir} ({report.verdicts_found} found)\n")
-
-    by_id = report.by_id
-    shown = 0
-    for di_id in sorted(by_id):
-        agg = by_id[di_id]
-        if stale_only and agg.status == faithfulness.FAITHFUL:
-            continue
-        shown += 1
-        print(f"  {_FAITHFULNESS_MARKS.get(agg.status, '[????]')} {di_id}: {agg.status}"
-              + (f" -- {agg.reviewer}" if agg.reviewer else ""))
-        if agg.status != faithfulness.FAITHFUL and agg.rationale:
-            print(f"            {agg.rationale}")
-    if stale_only and shown == 0:
-        print("  (none -- every design input is faithful)")
-
-    replay_failures: list[str] = []
-    if replay:
-        print("\nReplaying recorded killing probes:")
-        replayed, killed, replay_failures = replay_probes(report)
-        print(f"\n  {killed}/{replayed} recorded killing probe(s) still kill.")
-        if replayed == 0:
-            print("  (no structured probes on record -- record them with `rdm story verdict --probe`)")
-
-    blocking = _faithfulness_messages(report) + replay_failures
-    print()
-    if not blocking:
-        print(
-            "Faithfulness PASSED: every design input has a current, independent "
-            "review confirming its verifying test actually verifies it."
-        )
-        return 0
-    print(f"Faithfulness FAILED: {len(blocking)} item(s) unconfirmed. "
-          "Run the `test-faithfulness` skill (or a human reviewer) to record verdicts.")
     return 1
 
 
@@ -703,13 +530,12 @@ def build_trace(
     dhf_dir: Path,
     target: str,
     allure_results_dir: Path | None = None,
-    faithfulness_dir: Path | None = None,
 ) -> dict:
     """Return the traceability slice for one user need or design input.
 
-    Pure read over the record (and, when given, executed Allure results +
-    faithfulness verdicts). ``target`` is a user-need id (→ its design inputs) or
-    a design-input id (→ its need(s), owner/realisers, tests, status, verdict).
+    Pure read over the record (and, when given, executed Allure results).
+    ``target`` is a user-need id (→ its design inputs) or a design-input id
+    (→ its need(s), owner/realisers, tests, status).
     Returns ``{"error": …}`` if the target is not declared.
     """
     inputs = design_inputs(dhf_dir)
@@ -718,14 +544,9 @@ def build_trace(
     realised = _realised_by(dhf_dir)
 
     verif = allure.reconcile(set(by_id), Path(allure_results_dir)) if allure_results_dir else None
-    fdir = faithfulness_dir_for(dhf_dir, faithfulness_dir)
-    faith = (
-        faithfulness.reconcile(inputs, fdir, allure.find_tests_dir(dhf_dir)) if fdir.exists() else None
-    )
 
     def _di_slice(di: dict) -> dict:
         v = verif.by_id.get(di["id"]) if verif else None
-        f = faith.by_id.get(di["id"]) if faith else None
         return {
             "design_input": di["id"],
             "text": di["text"],
@@ -734,7 +555,6 @@ def build_trace(
             "realised_by": sorted(realised.get(di["id"], [])),
             "status": v.status if v else None,
             "tests": sorted(v.tests) if v else [],
-            "faithfulness": f.status if f else None,
         }
 
     if target in needs:
@@ -749,7 +569,6 @@ def story_trace_command(
     target: str,
     dhf_dir: Path | None = None,
     allure_results_dir: Path | None = None,
-    faithfulness_dir: Path | None = None,
 ) -> int:
     """Run `rdm story trace <UN-/DI-id>`: print the traceability slice."""
     dhf = (dhf_dir or Path("dhf")).resolve()
@@ -757,7 +576,7 @@ def story_trace_command(
         print(f"Error: DHF directory not found: {dhf}")
         return 2
 
-    trace = build_trace(dhf, target, allure_results_dir, faithfulness_dir)
+    trace = build_trace(dhf, target, allure_results_dir)
     if "error" in trace:
         print(f"Error: {trace['error']}")
         return 2
@@ -767,12 +586,7 @@ def story_trace_command(
         if not trace["design_inputs"]:
             print("  (none — this user need is addressed by no design input)")
         for di in trace["design_inputs"]:
-            extra = " ".join(
-                p for p in (
-                    f"[{di['status']}]" if di["status"] else "",
-                    f"faithful={di['faithfulness']}" if di["faithfulness"] else "",
-                ) if p
-            )
+            extra = f"[{di['status']}]" if di["status"] else ""
             print(f"  {di['design_input']} (owned by {di['owned_by']}) {extra}".rstrip())
             print(f"      {di['text']}")
             if di["tests"]:
@@ -788,112 +602,4 @@ def story_trace_command(
             print(f"  status:      {trace['status']}")
         if trace["tests"]:
             print(f"  verified by: {', '.join(trace['tests'])}")
-        if trace["faithfulness"]:
-            print(f"  faithfulness:{trace['faithfulness']}")
-    return 0
-
-
-# Verdict values a reviewer may record (anything other than `faithful` blocks).
-_VERDICT_VALUES = (faithfulness.FAITHFUL, faithfulness.PARTIAL, faithfulness.UNFAITHFUL, "weak")
-
-
-def record_verdict(
-    dhf_dir: Path,
-    design_input_id: str,
-    verdict: str,
-    *,
-    reviewer: str,
-    rationale: str,
-    reviewed_tests: list[str] | None = None,
-    uncovered_clauses: list[str] | None = None,
-    faithfulness_dir: Path | None = None,
-    hash_scope: str = faithfulness.DEFAULT_SCOPE,
-    probes: list[dict] | None = None,
-) -> Path | None:
-    """Write a faithfulness verdict for one design input, hash-pinned to the
-    CURRENT verifying-test source (so it is valid for exactly the test reviewed,
-    and goes stale on any later edit). ``hash_scope`` selects what the pin
-    covers (module scope by default -- helper edits re-open the review);
-    ``probes`` records the reviewer's executed mutations so the review can be
-    replayed. Returns the path, or ``None`` if the id is not a declared design
-    input.
-    """
-    inputs = design_inputs(dhf_dir)
-    if design_input_id not in {di["id"] for di in inputs}:
-        return None
-    test_hash = faithfulness.current_hashes(
-        inputs, allure.find_tests_dir(dhf_dir), scope=hash_scope
-    ).get(design_input_id, "")
-    out_dir = faithfulness_dir_for(dhf_dir, faithfulness_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    record = {
-        "design_input": design_input_id,
-        "verdict": verdict,
-        "reviewer": reviewer,
-        "rationale": rationale,
-        "test_hash": test_hash,
-        "hash_scope": hash_scope,
-        "reviewed_tests": reviewed_tests or [],
-        "probes": probes or [],
-        "uncovered_clauses": uncovered_clauses or [],
-    }
-    out = out_dir / f"{design_input_id}-faithfulness.json"
-    out.write_text(json.dumps(record, indent=2), encoding="utf-8")
-    return out
-
-
-def story_verdict_command(
-    target: str,
-    verdict: str,
-    reviewer: str,
-    rationale: str,
-    reviewed_tests: str | None = None,
-    uncovered: str | None = None,
-    dhf_dir: Path | None = None,
-    faithfulness_dir: Path | None = None,
-    hash_scope: str = faithfulness.DEFAULT_SCOPE,
-    probe: list[str] | None = None,
-) -> int:
-    """Run `rdm story verdict <DI-id> …`: record an independent faithfulness verdict.
-
-    Replaces the standalone write_verdict.py script so the `test-faithfulness`
-    skill depends on the installed `rdm` binary, not a bundled file.
-    """
-    dhf = (dhf_dir or Path("dhf")).resolve()
-    if not dhf.exists():
-        print(f"Error: DHF directory not found: {dhf}")
-        return 2
-    if verdict not in _VERDICT_VALUES:
-        print(f"Error: --verdict must be one of: {', '.join(_VERDICT_VALUES)}")
-        return 2
-    tests = [t.strip() for t in (reviewed_tests or "").split(",") if t.strip()]
-    clauses = [c.strip() for c in (uncovered or "").split(";") if c.strip()]
-    probes: list[dict] = []
-    for raw in probe or []:
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError as error:
-            print(f"Error: --probe is not valid JSON ({error}): {raw}")
-            return 2
-        if not isinstance(parsed, dict):
-            print(f"Error: --probe must be a JSON object with file/find/replace/test keys: {raw}")
-            return 2
-        missing = {"file", "find", "replace", "test"} - set(parsed)
-        if missing:
-            print(f"Error: --probe needs file/find/replace/test keys (missing: {', '.join(sorted(missing))})")
-            return 2
-        parsed.setdefault("result", "KILLED")
-        probes.append(parsed)
-    out = record_verdict(
-        dhf, target, verdict,
-        reviewer=reviewer, rationale=rationale,
-        reviewed_tests=tests, uncovered_clauses=clauses,
-        faithfulness_dir=faithfulness_dir,
-        hash_scope=hash_scope, probes=probes,
-    )
-    if out is None:
-        declared = ", ".join(sorted(design_input_ids(dhf)))
-        print(f"Error: {target} is not a declared design input ({declared})")
-        return 2
-    print(f"wrote {out} ({verdict}" + (f", {len(clauses)} uncovered clause(s)" if clauses else "") + ")")
     return 0

@@ -129,16 +129,6 @@ def handle_story_command(args):
             return story_release_gate_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
-                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
-            )
-
-        elif args.story_command == 'faithfulness':
-            from rdm.story_audit.design_gate import story_faithfulness_command
-            return story_faithfulness_command(
-                stale_only=args.stale,
-                replay=args.replay,
-                dhf_dir=Path(args.dhf) if args.dhf else None,
-                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
             )
 
         elif args.story_command == 'trace':
@@ -147,31 +137,6 @@ def handle_story_command(args):
                 target=args.target,
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
-                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
-            )
-
-        elif args.story_command == 'mutation-probe':
-            from rdm.story_audit.mutation import story_mutation_probe_command
-            return story_mutation_probe_command(
-                file=args.file,
-                find=args.find,
-                replace=args.replace,
-                test=args.test,
-            )
-
-        elif args.story_command == 'verdict':
-            from rdm.story_audit.design_gate import story_verdict_command
-            return story_verdict_command(
-                target=args.target,
-                verdict=args.verdict,
-                reviewer=args.reviewer,
-                rationale=args.rationale,
-                reviewed_tests=args.reviewed_tests,
-                uncovered=args.uncovered,
-                dhf_dir=Path(args.dhf) if args.dhf else None,
-                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
-                hash_scope=args.hash_scope,
-                probe=args.probe,
             )
 
         elif args.story_command == 'persona':
@@ -207,8 +172,8 @@ def handle_story_command(args):
         else:
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
-                "backlog-validate, design-gate, verify, release-gate, faithfulness, "
-                "verdict, mutation-probe, trace, new-input, or persona"
+                "backlog-validate, design-gate, verify, release-gate, trace, "
+                "new-input, dmr, evidence-bundle, or persona"
             )
             return 1
 
@@ -351,54 +316,10 @@ def parse_arguments(arguments):
 
     # rdm story release-gate
     release_gate_help = ('block release unless design is approved and every design input is '
-                         'verified and faithfully reviewed')
+                         'verified by a passing test')
     release_gate_parser = story_subparsers.add_parser('release-gate', help=release_gate_help)
     release_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     release_gate_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
-    release_gate_parser.add_argument(
-        '--faithfulness',
-        help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
-    )
-
-    # rdm story faithfulness
-    faithfulness_help = 'report independent faithfulness review (does each verifying test verify its design input?)'
-    faithfulness_parser = story_subparsers.add_parser('faithfulness', help=faithfulness_help)
-    faithfulness_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    faithfulness_parser.add_argument(
-        '--faithfulness',
-        help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
-    )
-    faithfulness_parser.add_argument('--stale', action='store_true',
-                                     help='show only non-faithful inputs (the review worklist)')
-    faithfulness_parser.add_argument('--replay', action='store_true',
-                                     help='re-execute recorded killing mutation probes; fail if any survives')
-
-    # rdm story mutation-probe
-    mutation_help = 'prove a test catches a defect: apply a one-line mutation, run the test, always revert'
-    mutation_parser = story_subparsers.add_parser('mutation-probe', help=mutation_help)
-    mutation_parser.add_argument('--file', required=True, help='source file to mutate')
-    mutation_parser.add_argument('--find', required=True, help='exact text to replace (must occur once)')
-    mutation_parser.add_argument('--replace', required=True, help='replacement text (the mutation)')
-    mutation_parser.add_argument('--test', required=True, help='pytest -k selector for the verifying test')
-
-    # rdm story verdict
-    verdict_help = 'record an independent faithfulness verdict for a design input (hash-pinned to its test)'
-    verdict_parser = story_subparsers.add_parser('verdict', help=verdict_help)
-    verdict_parser.add_argument('target', help='the design-input id (DI-…) being reviewed')
-    verdict_parser.add_argument('--verdict', required=True,
-                                choices=['faithful', 'partial', 'unfaithful', 'weak'])
-    verdict_parser.add_argument('--reviewer', required=True,
-                                help='who reviewed (must be independent of the test author)')
-    verdict_parser.add_argument('--rationale', required=True,
-                                help='per-clause reasoning incl. the failing mutation(s)')
-    verdict_parser.add_argument('--reviewed-tests', help='comma-separated test names examined')
-    verdict_parser.add_argument('--uncovered', help='semicolon-separated requirement clauses NOT covered')
-    verdict_parser.add_argument('--hash-scope', choices=['module', 'function'], default='module',
-                                help='pin scope: full test file(s) (module, default) or tagged functions only')
-    verdict_parser.add_argument('--probe', action='append',
-                                help='executed mutation probe as JSON with file/find/replace/test; repeatable')
-    verdict_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    verdict_parser.add_argument('--faithfulness', help='Verdicts dir (default: <dhf>/faithfulness)')
 
     # rdm story trace
     trace_help = 'show the traceability slice for a user need or design input (forward + backward)'
@@ -406,7 +327,6 @@ def parse_arguments(arguments):
     trace_parser.add_argument('target', help='a user-need id (UN-…) or design-input id (DI-…)')
     trace_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     trace_parser.add_argument('--allure-results', help='Allure results dir (adds verification status)')
-    trace_parser.add_argument('--faithfulness', help='Faithfulness verdicts dir (adds review status)')
 
     # rdm story dmr
     dmr_help = 'generate device-master-record index data from controlled documents\' frontmatter'
@@ -415,7 +335,7 @@ def parse_arguments(arguments):
     dmr_parser.add_argument('-o', '--output', required=True, help='output data file (e.g. data/dmr.yml)')
 
     # rdm story evidence-bundle
-    bundle_help = 'write the retained release evidence set: verification data, matrix, verdicts, manifest'
+    bundle_help = 'write the retained release evidence set: verification data, matrix, manifest'
     bundle_parser = story_subparsers.add_parser('evidence-bundle', help=bundle_help)
     bundle_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     bundle_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')

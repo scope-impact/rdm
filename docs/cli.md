@@ -22,18 +22,14 @@
 | `new-input --context C --text T --traces-to UN[,UN…]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test, checklist; `--list` shows contexts / taken ids / user needs |
 | `design-gate` | design docs + review present, complete, approved (committed); warnings for DI↔tag mismatches |
 | `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix |
-| `faithfulness [--stale] [--replay]` | every design input has a current, independent verdict (hash-pinned; test edits go `stale`); `--stale` lists only the worklist, `--replay` re-executes recorded killing probes and fails on survivors |
-| `release-gate --allure-results DIR` | hard gate: approved + all inputs verified + all faithful + every user need addressed |
-| `verdict DI-n --verdict V --reviewer R --rationale …` | record a faithfulness verdict (`faithful`/`partial`/`unfaithful`/`weak`; `--uncovered` for partial; `--probe` JSON per executed mutation, repeatable; `--hash-scope module\|function`, default module) |
+| `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
-| `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, verdicts, manifest |
-| `mutation-probe --file F --find A --replace B --test T` | prove a test catches a defect: apply a one-line mutation, run the test, report KILLED/SURVIVED, always restore |
+| `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, manifest |
 | `trace UN-nnn \| DI-n` | the traceability slice for one need or input (forward + backward) |
 | `audit [REPO]` | repo-wide traceability report + score; DHF-aware (design-input tag coverage) |
 | `persona --vv-plan F --persona-results DIR` | reconcile formative AI-persona usability runs against the user-need registry (never gates) |
 
-Common flags: `--dhf DIR` (default `dhf/`), `--faithfulness DIR` (default
-`<dhf>/faithfulness`).
+Common flag: `--dhf DIR` (default `dhf/`).
 
 ## Planning layer (optional, non-record)
 

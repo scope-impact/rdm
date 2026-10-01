@@ -2,9 +2,8 @@
 
 > Status: **implemented** (originally a design sketch; kept as the conceptual
 > reference). The record core exists as described — `rdm/record/` (SDD +
-> Allure ingest, reconciliation, verification, faithfulness) with the gates
-> layered on top (`rdm story design-gate / verify / faithfulness /
-> release-gate`) — and RDM's own DHF is compiled with it. Project management
+> Allure ingest, reconciliation, verification) with the gates layered on top
+> (`rdm story design-gate / verify / release-gate`) — and RDM's own DHF is compiled with it. Project management
 > remains explicitly **out of scope** of the record; its demotion to a
 > clearly-fenced optional extra is the one migration step still open. For the
 > hands-on version of this material see the
@@ -90,11 +89,9 @@ Rules:
 3. **Gate** (`design_gate.py`) — design document(s)/review present + complete +
    approved (committed) in git; baseline drift re-opens the gate. The
    **release gate** additionally requires every design input to be *verified*
-   (passing tagged test) **and** *faithful* — an independent, hash-pinned verdict
-   (`faithfulness.py`, `rdm story faithfulness`) that the test actually verifies
-   the input; editing the test re-opens that review. The faithfulness verdict is
-   the agentic-era §820.30(e) review: "the test passes" vs "the test means
-   something".
+   (passing tagged test) and every user need to be addressed. Whether the test
+   actually *means something* — the §820.30(e) question beyond "the test
+   passes" — is answered by the independent, human-reviewed pull request.
 4. **Render** (existing pipeline) — templates + data → Markdown → PDF/DOCX, now
    also embedding **generated** sections:
    - traceability matrix (user need → SDDs → test → status),

@@ -25,10 +25,6 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.record.verify
 
-### `rdm.record.faithfulness`
-
-::: rdm.record.faithfulness
-
 ### `rdm.record.persona`
 
 ::: rdm.record.persona
@@ -40,10 +36,6 @@ The gates and traceability commands layered on the record core.
 ### `rdm.story_audit.design_gate`
 
 ::: rdm.story_audit.design_gate
-
-### `rdm.story_audit.mutation`
-
-::: rdm.story_audit.mutation
 
 ### `rdm.story_audit.new_input`
 

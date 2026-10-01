@@ -16,7 +16,7 @@ fi
 # 2. Orient the session: the canonical procedure, and the current gate state.
 echo "Design controls are active (pre-commit design gate via .githooks)."
 echo "Canonical change procedure: dhf/AGENT_WORKFLOW.md (design input -> tagged test"
-echo "-> independent faithfulness verdict -> gates -> generated traceability matrix)."
+echo "-> gates -> generated traceability matrix -> reviewed pull request)."
 if command -v rdm >/dev/null 2>&1; then
     rdm story design-gate --dhf dhf 2>/dev/null | tail -1 || true
 else

@@ -154,23 +154,19 @@ inputs, never **duplicated**: it is defined once in the registry.
 - **design-gate**: each design document present, complete, approved; each
   `satisfies` resolves to a real user need; each design input `traces_to` a real
   user need.
-- **faithfulness-gate** (`rdm story faithfulness`): every design input has a
-  **current, independent verdict** that its `@allure.story("DI-…")` test actually
-  *verifies* it — not a hollow/tautological/gamed assertion. The verdict is
-  hash-pinned to the verifying-test source, so an edit to the test re-opens the
-  review (goes `stale`). This is the agentic-era form of the §820.30(e) design
-  review: a passing test proves something *ran*; this proves it *means something*.
-  Verdicts are produced by an independent reviewer (the `test-faithfulness` skill
-  driving a second agent, or a human) and recorded as `*-faithfulness.json`.
 - **release-gate**: every **design input** is *verified* (its `@allure.story("DI-…")`
-  test passes, aggregated across contexts) **and** *faithful* (current
-  faithfulness verdict), and every user need is addressed by at least one
-  design input. *Validation* evidence (human summative review per the V&V
+  test passes, aggregated across contexts), and every user need is addressed
+  by at least one design input. *Validation* evidence (human summative review per the V&V
   plan's approach table, plus formative persona runs) is recorded and reviewed
   but is **not machine-gated** today — the gate enforces the
-  verification-and-faithfulness denominator; making UN-keyed validation
+  verification denominator; making UN-keyed validation
   records a gate condition is a candidate future hardening, not an
   implemented check.
+
+Whether a passing test actually *proves* its design input is judged by the
+independent reviewer of the pull request (git is the controlled record). An
+earlier faithfulness gate with hash-pinned per-input verdicts was retired in
+Design Review 4.
 
 ## Why "product need" is dropped
 

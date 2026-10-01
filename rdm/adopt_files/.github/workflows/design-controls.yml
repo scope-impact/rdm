@@ -3,7 +3,7 @@ name: Design controls
 # Record-first gates on every change (laid down by `rdm adopt`).
 #
 # Phased adoption: the design gate runs from day one. The verification /
-# faithfulness / release steps are commented out — uncomment them when your
+# release steps are commented out — uncomment them when your
 # first design input and its tagged acceptance test land, otherwise the
 # release gate fails on "no design inputs declared".
 on: [push, pull_request]
@@ -30,8 +30,5 @@ jobs:
       # - name: Generate verification data
       #   run: rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
       #
-      # - name: Faithfulness (each test independently confirmed to verify its input)
-      #   run: rdm story faithfulness --dhf dhf
-      #
-      # - name: Release gate (verified + faithful + every user need addressed)
+      # - name: Release gate (verified + every user need addressed)
       #   run: rdm story release-gate --dhf dhf --allure-results dhf/allure-results

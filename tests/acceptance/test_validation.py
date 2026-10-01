@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 
-from rdm.record.faithfulness import hash_for
 from rdm.record.validation import parse_validation_records, unvalidated_user_needs
 from rdm.story_audit.design_gate import run_release_gate
 from tests.util import git_run
@@ -21,7 +20,7 @@ allure = pytest.importorskip("allure")
 
 
 def _validated_record(tmp_path: Path) -> tuple[Path, Path]:
-    """A minimal passing record: two user needs, one DI each, verified + faithful."""
+    """A minimal passing record: two user needs, one DI each, verified."""
     dhf = tmp_path / "dhf"
     (dhf / "documents" / "design").mkdir(parents=True)
     (dhf / "documents" / "vv_plan.md").write_text(
@@ -39,19 +38,12 @@ def _validated_record(tmp_path: Path) -> tuple[Path, Path]:
     (dhf / "documents" / "design_review.md").write_text(
         "---\nid: DR-001\n---\n# Review\nApproved.\n"
     )
-    (dhf / "faithfulness").mkdir()
-    (tmp_path / "tests").mkdir()  # empty sibling tests dir: deterministic hashes
     results = tmp_path / "allure-results"
     results.mkdir()
-    for di, text in (("DI-1", "req one"), ("DI-2", "req two")):
+    for di in ("DI-1", "DI-2"):
         (results / f"{di}-result.json").write_text(json.dumps(
             {"name": di, "status": "passed",
              "labels": [{"name": "story", "value": di}]}
-        ))
-        (dhf / "faithfulness" / f"{di}-faithfulness.json").write_text(json.dumps(
-            {"design_input": di, "verdict": "faithful", "reviewer": "r2",
-             "rationale": "x", "test_hash": hash_for(text, []),
-             "hash_scope": "function"}
         ))
     git_run(tmp_path, "init")
     git_run(tmp_path, "add", "-A")

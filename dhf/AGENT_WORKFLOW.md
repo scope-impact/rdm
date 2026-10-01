@@ -19,15 +19,18 @@ chain of evidence:
 │ (V&V plan            │traces│ (owned by ONE context │verify│ @allure.story("DI-n")│
 │  frontmatter)        │ _to  │  doc, kind: design)  │      │ tests/acceptance/    │
 └─────────────────────┘      └──────────────────────┘      └──────────┬───────────┘
-                                  approval = the git                  │ but does the test
-                                  commit of the doc                   │ MEAN anything?
+                                  approval = the git                  │ executed
+                                  commit of the doc                   │ results
                                                                       ▼
 ┌─────────────────────┐      ┌──────────────────────┐      ┌──────────────────────┐
-│ Traceability matrix │◄─────│ verification.yml     │      │ Faithfulness verdict │
-│ (rendered, never    │      │ (generated from       │      │ (INDEPENDENT review, │
-│  hand-edited)       │      │  executed results)    │      │  hash-pinned JSON)   │
+│ Traceability matrix │◄─────│ verification.yml     │◄─────│ Allure results       │
+│ (rendered, never    │      │ (generated from       │      │ (one per tagged-test │
+│  hand-edited)       │      │  executed results)    │      │  run, gitignored)    │
 └─────────────────────┘      └──────────────────────┘      └──────────────────────┘
 ```
+
+Whether the test actually *means* anything is judged by a human: the change
+lands through a pull request that a reviewer other than the author approves.
 
 Every arrow is checked by a gate. A change is **complete** when:
 
@@ -38,9 +41,10 @@ Every arrow is checked by a gate. A change is **complete** when:
    the commit *is* the approval; there is no separate sign-off bureaucracy;
 3. a test tagged `@allure.story("DI-n")` **passes** — executed evidence, not a
    claim;
-4. an **independent reviewer** (never the test's author) has confirmed the test
-   actually verifies the requirement — because a test can pass without proving
-   anything, and an agent grading its own homework reliably over-grades;
+4. the change is merged through a **pull request approved by a reviewer other
+   than the author**, who judges whether the test actually verifies the
+   requirement — because a test can pass without proving anything, and an
+   agent grading its own homework reliably over-grades;
 5. the traceability matrix regenerates cleanly — it is derived from the record,
    so it can never drift from reality.
 
@@ -61,7 +65,7 @@ Does the change alter what RDM does (behavior, CLI, output, gate logic)?
 │   ├── an existing DI already covers it
 │   │     → find it: uv run rdm story trace <DI-n | UN-nnn>
 │   │     → skip to step 3 (edit its design doc prose if the "how" changed,
-│   │       then implementation → test → re-review)
+│   │       then implementation → test → PR review)
 │   └── nothing covers it → full loop, step 1
 └── NO (refactor, docs, comments, CI plumbing)
     → no DI work; commit as usual (the gates still run and should stay green)
@@ -156,54 +160,28 @@ def test_<behavior>(...):
 
 **Done when:** `uv run pytest tests/acceptance -q` passes.
 
-### Step 6 — independent faithfulness verdict (the PROOF the proof is real)
-
-**Why:** this is the step most worth understanding. A passing test proves code
-ran, not that the requirement is met — a test can assert a tautology, exercise
-a mock, or cover 2 of 3 clauses. In an agent-authored codebase the same model
-may have written the requirement, the code, *and* the test, so RDM requires a
-**different reviewer** (second agent, the `test-faithfulness` skill, or a
-human) to prove, clause by clause and with executed mutations, that the test
-would actually fail if the behavior broke. The verdict is hash-pinned to the
-test source: any later edit to the test makes it `stale` and re-opens the
-review automatically.
-
-**Do (as the author):** hand off — request the review, never record your own.
-
-**Do (as the reviewer):** follow `.claude/skills/test-faithfulness/SKILL.md`:
-split the DI text into clauses, and for each one prove coverage:
-```bash
-uv run rdm story mutation-probe --file <impl.py> \
-  --find '<code implementing the clause>' --replace '<one-line break>' \
-  --test <test_name>          # KILLED = covered; SURVIVED = gap. Always restores.
-uv run rdm story verdict DI-n --dhf dhf --verdict faithful \
-  --reviewer "<who> (independent of author)" --reviewed-tests <test_name> \
-  --rationale "<each clause + the mutation that was KILLED>"
-```
-If a clause is uncovered, record `partial` with `--uncovered` — the honest loop
-is *gap found → author strengthens the test → re-review*, not a generous verdict.
-
-**Done when:** `uv run rdm story faithfulness --dhf dhf` prints `PASSED`.
-
-### Step 7 — run the gates as CI will
+### Step 6 — run the gates as CI will
 
 ```bash
 uv run rdm story design-gate --dhf dhf
 uv run pytest tests/acceptance --alluredir=dhf/allure-results
 uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-uv run rdm story faithfulness --dhf dhf
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
 Plus the general suite: `uv run pytest tests`, `uv run ruff check .`, and
 `uv run --extra docs mkdocs build --strict` if docs changed.
 
-**Done when:** all five print `PASSED` (the matrix can then be rendered from
+**Done when:** all four print `PASSED` (the matrix can then be rendered from
 the generated data: `uv run rdm render dhf/documents/traceability_matrix.md
 dhf/config.yml dhf/data/verification.yml` — generated output, never hand-edited).
 
-### Step 8 — commit, push, PR
+### Step 7 — commit, push, PR (the independent review)
 
-Ordinary git from here; the merged, reviewed PR completes the approval record.
+Ordinary git from here. The pull request **is** the independent verification:
+a reviewer other than the author reads each DI's text against its tagged test
+and asks whether the test would fail if the behavior broke — a tautology, a
+mocked-out code path, or 2 of 3 clauses covered is a reason to request
+changes. The merged, reviewed PR completes the approval record.
 
 ## A worked example — from this repository's own history
 
@@ -216,20 +194,21 @@ the repo to inspect:
 | 2 | DI-22 declared in the scaffolding context, 6-clause requirement text | `dhf/documents/design/scaffolding.md` |
 | 3 | Design docs committed *before* any code | commit `Approve design record: UN-010, DI-22, …` |
 | 4–5 | Implementation + tagged test | `rdm/story_audit/new_input.py`, `tests/acceptance/test_scaffolding.py` |
-| 6 | Independent review found a real gap: with a one-context fixture, a mutant ignoring `--context` **survived** → verdict `partial` → author strengthened the fixture to two contexts → re-review: all 8 mutations **killed** → `faithful` | `dhf/faithfulness/DI-22-faithfulness.json`; commit `Strengthen the DI-22 test …` |
-| 7–8 | All gates green, pushed | CI run on the PR |
+| 6–7 | All gates green, pushed, PR reviewed | CI run on the PR |
 
-The step-6 detour is the system working as designed: the test *passed* the
-whole time — only the independent mutation probe revealed it couldn't yet
-prove one clause.
+History: at the time, an independent review step (the since-retired
+faithfulness gate, Design Review 4) found that the test passed with a
+one-context fixture even though a mutant ignoring `--context` survived; the
+author strengthened the fixture to two contexts (commit `Strengthen the DI-22
+test …`). That kind of gap — a passing test that does not prove a clause — is
+now the PR reviewer's to catch.
 
 ## Hard rules
 
 | Rule | Because |
 |---|---|
 | Never hand-edit the traceability matrix | it is generated from executed results; edits would be fiction |
-| Never review a test you authored | self-review over-rates; independence is the entire point of step 6 |
-| Editing a tagged test ⇒ its verdict goes `stale` ⇒ re-review | the hash-pin re-opens §820.30(e) on any change, by design |
+| Never approve a PR you authored | self-review over-rates; independence is the entire point of the PR review |
 | Design docs commit before implementation | the commit is the approval; the hook and CI enforce the order |
 | A DI is declared once; other contexts use `realises` | duplicated requirements drift apart |
 | `dhf/allure-results/`, `dhf/data/` are generated, gitignored | evidence is produced by running, not by committing |
@@ -246,9 +225,6 @@ prove one clause.
 | pre-commit: *commit blocked* | implementation staged while the design gate fails | fix/commit the design record first |
 | pre-commit: *'rdm' not on PATH … blocked* | gate runner missing | `uv sync --all-extras` (or `pip install rdm[story-audit]`) |
 | release-gate: *DI-n untested* | no executed result for the tag | write/tag the test, re-run the acceptance suite |
-| release-gate: *DI-n failed* | the tagged test failed | fix the implementation (or the test — then step 6 again) |
-| faithfulness: *unreviewed* | no verdict for the DI | hand to an independent reviewer (step 6) |
-| faithfulness: *stale* | test or DI text changed since review | re-review, re-record |
-| faithfulness: *partial / unfaithful / weak* | a clause is not genuinely covered | strengthen the test, then re-review |
+| release-gate: *DI-n failed* | the tagged test failed | fix the implementation (or the test) |
 | release-gate: *user need addressed by no design input* | a UN nothing traces to | add a DI with `traces_to`, or remove the need |
 | *orphan tag* (warning) | `@allure.story` id matches no declared DI | declare the DI or fix the tag |
