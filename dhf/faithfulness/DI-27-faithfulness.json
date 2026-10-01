@@ -1,12 +1,13 @@
 {
   "design_input": "DI-27",
-  "verdict": "partial",
+  "verdict": "faithful",
   "reviewer": "claude-reviewer-2 (independent of author)",
-  "rationale": "Re-review reason: depends_on declared (DI-27 -> DI-20, DI-21); DI-27 text and test unchanged. Upstream context: DI-20 (the recorder, hash-pinned) is the path probes are stored through -- the test records via the real record_verdict; DI-21 (a probe run that errors or collects nothing is an error, never a kill) is what the replay's error branch must honor -- the typo'd-selector case exercises exactly that through the real runner. All 7 recorded probes re-executed one at a time via rdm story mutation-probe on rdm/story_audit/design_gate.py, all still KILLED, plus one new probe. Clauses: (1) probes recorded as structured data -- `\"probes\": probes or [],` -> `\"probes\": [],` KILLED (JSON round-trip equality); (2) replay re-executes the recorded probes and counts kills -- `killed += 1` -> pass KILLED ((1,1,[]) asserted); (2b) replay is of the recorded KILLING probes only -- NOT COVERED: removing the non-KILLED skip in replay_probes (`continue  # survived/equivalent ...` -> `pass`) SURVIVED, because every probe the test records is KILLED; with DI-39 asking reviewers to record SURVIVED probes, this mutant would make every verdict with a documented equivalent mutant fail replay (or count it as evidence) and the test cannot tell; (3) replay fails when a probe no longer kills -- discarding the SURVIVES failure append KILLED; (4) a probe run that errors is a reported gate failure, never a kill (DI-21 semantics) -- discarding the error-branch append KILLED (typo'd selector must give killed==0 and one 'error' failure); (5) a probe that can no longer execute is a per-probe failure, the replay is not aborted -- re-raising in the except OSError handler KILLED (replayed==2, killed==1, one failure naming vanished.py); (6) --stale filters to non-faithful inputs, both directions -- `if stale_only and ... FAITHFUL:` -> `if stale_only:` KILLED and -> `if False:` KILLED. Verdict partial on clause 2b. Fix: record a SURVIVED probe alongside the killing one in the test and assert replayed counts only the KILLED probe (and that its survival is not a failure).",
-  "test_hash": "sha256:9e645e2b84c3ed5f98d500d023615406766f241093cbb5f5db436fc19211c215",
+  "rationale": "Re-review reason: test strengthened after my depends_on re-review found clause (2b) uncovered (DI-27 -> DI-20, DI-21). A new tagged module tests/acceptance/test_replay_scope.py::test_replay_runs_only_killing_probes records a KILLED and a SURVIVED probe and asserts replay_probes == (1, 1, []). Because the pin is module-scoped, it now covers both files. All probes re-executed one at a time via rdm story mutation-probe on rdm/story_audit/design_gate.py. Clauses: (1) probes recorded as structured data -- `\"probes\": probes or [],` -> `[]` KILLED; (2) replay re-executes the recorded probes and counts kills -- `killed += 1` -> pass KILLED; (2b) only the recorded KILLING probes are replayed -- removing the non-KILLED skip (`continue  # survived/equivalent ...` -> `pass`) now KILLED by test_replay_runs_only_killing_probes. It still SURVIVES against test_verdicts_carry_replayable_probes, which is expected since that test records only KILLED probes; both runs are recorded. (3) replay fails when a probe no longer kills -- discarding the SURVIVES failure append KILLED; (4) a probe run that errors is a reported gate failure, never a kill (DI-21 semantics) -- discarding the error-branch append KILLED (typo'd selector); (5) a probe that can no longer execute is a per-probe failure and does not abort the replay -- re-raising in except OSError KILLED; (6) --stale filters to non-faithful inputs, both directions -- `if stale_only:` and `if False:` KILLED. All clauses covered.",
+  "test_hash": "sha256:bfad535e6d49f8d000b4ec33715403e6863c599daf09e51a770686911041a984",
   "hash_scope": "module",
   "reviewed_tests": [
-    "test_verdicts_carry_replayable_probes"
+    "test_verdicts_carry_replayable_probes",
+    "test_replay_runs_only_killing_probes"
   ],
   "probes": [
     {
@@ -64,12 +65,35 @@
       "replace": "                pass",
       "test": "test_verdicts_carry_replayable_probes",
       "result": "SURVIVED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "                continue  # survived/equivalent probes are documentation, not claims",
+      "replace": "                pass",
+      "test": "test_replay_runs_only_killing_probes",
+      "result": "KILLED"
     }
   ],
-  "uncovered_clauses": [
-    "replay re-executes only the recorded KILLING probes (all recorded probes in the test are KILLED, so removing the skip of SURVIVED/equivalent probes in replay_probes survives)"
-  ],
+  "uncovered_clauses": [],
   "text_fingerprint": "sha256:d1b4000800dda2afe3dc5b86e7fb66b9c7b6ffd9d3791fab173cafbceda76a88",
-  "tests_fingerprint": "sha256:79aec4d139771bdd4256d3308f4d7d199936b76ea4f77197d24a47d51b451421",
-  "prior_findings": []
+  "tests_fingerprint": "sha256:b7f3cd0d931c7fe5cd42debf9903dd01f82efd2600e84b65dcdf0f8033703fc8",
+  "prior_findings": [
+    {
+      "verdict": "partial",
+      "reviewer": "claude-reviewer-2 (independent of author)",
+      "test_hash": "sha256:9e645e2b84c3ed5f98d500d023615406766f241093cbb5f5db436fc19211c215",
+      "surviving_probes": [
+        {
+          "file": "rdm/story_audit/design_gate.py",
+          "find": "                continue  # survived/equivalent probes are documentation, not claims",
+          "replace": "                pass",
+          "test": "test_verdicts_carry_replayable_probes",
+          "result": "SURVIVED"
+        }
+      ],
+      "uncovered_clauses": [
+        "replay re-executes only the recorded KILLING probes (all recorded probes in the test are KILLED, so removing the skip of SURVIVED/equivalent probes in replay_probes survives)"
+      ]
+    }
+  ]
 }

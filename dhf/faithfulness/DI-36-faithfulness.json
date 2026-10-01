@@ -1,9 +1,9 @@
 {
   "design_input": "DI-36",
-  "verdict": "partial",
+  "verdict": "faithful",
   "reviewer": "claude-reviewer-2 (independent of author)",
-  "rationale": "Re-review reason: depends_on declared (DI-36 -> DI-28, DI-20); DI-36 text and test unchanged. Upstream context: DI-20 is the recorder that must write the fingerprints (exercised through the real record_verdict / carry_forward_verdict); DI-28 makes fingerprints scope-dependent (module default) -- new probe: record_verdict fingerprinting at SCOPE_FUNCTION regardless of hash_scope KILLED. Also checked against DI-35 (pins cover upstream text), which DI-36 does not declare but which decides what a stale verdict's 'requirement-text change' is. All 20 recorded probes re-executed one at a time via rdm story mutation-probe; results identical to the prior review (19 KILLED, 1 SURVIVED documented equivalent), plus 2 new probes. Clauses: (1) new verdicts record normalized fingerprints -- empty text_fingerprint KILLED; recorder fingerprinting at the wrong scope KILLED (new); (2) text ignores whitespace -- raw normalize_text KILLED; (3) test source ignores whitespace/comments/docstrings: Python -- skipping _strip_docstrings KILLED; non-Python -- removing the line-comment filter, dropping '//', disabling leading /* */ blocks, never closing a block, keeping block-interior lines KILLED; ONLY comments -- widening '#' to any '#'-leading line, dropping code after '*/' (one-line and multi-line closers), old fail-open '*'-leading regex all KILLED; `after = line` instead of the text after '/*' SURVIVED (equivalent unless a line opens with the degenerate '/*/'); (4) classify A/B/C/D -- swapping C/B precedence KILLED, disabling D KILLED; (4b) a stale verdict caused by an UPSTREAM (depends_on) requirement-text change classifies as C -- NOT COVERED: current_fingerprints fingerprinting the input's own text instead of pinned_text(di, by_id) SURVIVED, because no fixture input declares depends_on; under that mutant every verdict re-opened by an upstream reword (exactly the ten re-opened by this dogfood commit) would classify as A and `rdm story verdict --carry-forward` would re-pin it with no review; (5) class shown in the report -- suppressing the suffix KILLED; (6)-(7) carry-forward re-pins class A and records class/from_hash -- carried_forward=None KILLED; (8) refuses every other class -- admitting B, C, D each KILLED. Verdict partial on (4b). Fix: add a dependent input to the fixture, reword its upstream, and assert class C and a refused carry-forward (and consider declaring DI-36 depends_on DI-35 in the record).",
-  "test_hash": "sha256:6bedcf7c88c20c0ec7de2ca0972c8584f25486be381acc0ff9ead3318ef16007",
+  "rationale": "Re-review reason: requirement record change (DI-36 now also depends_on DI-35, class C) plus test strengthening after my depends_on re-review found clause (4b) uncovered. The fixture gives DI-2 depends_on DI-1 and records DI-2; rewording only DI-1 must classify DI-2 as C and carry_forward_verdict must refuse it. Upstream context: DI-20 is the recorder (exercised for real), DI-28 is the scope (recorder fingerprinting at the wrong scope KILLED), and DI-35 means a dependent's requirement text includes its upstream text. All 22 probes re-executed one at a time via rdm story mutation-probe. Clauses: (1) new verdicts record normalized fingerprints -- empty text_fingerprint KILLED, fingerprinting at SCOPE_FUNCTION regardless of hash_scope KILLED; (2) text ignores whitespace -- raw normalize_text KILLED; (3) test source ignores whitespace/comments/docstrings -- Python: skipping _strip_docstrings KILLED. Non-Python: line-comment filter removal, dropping '//', disabling leading block comments, never closing a block, keeping block-interior lines all KILLED. Only comments are ignored: widening '#', dropping code after '*/' (one-line and multi-line), the '*'-leading fail-open regex all KILLED. `after = line` SURVIVED again, a documented equivalent mutant. (4) classify A/B/C/D -- swapping C/B precedence KILLED, disabling D KILLED; (4b) an upstream (depends_on) reword classifies the dependent as C, not A -- current_fingerprints using the own text instead of pinned_text now KILLED (was SURVIVED); (5) class shown in the report -- suppressing the suffix KILLED; (6)-(7) carry-forward re-pins class A and records class/from_hash -- carried_forward=None KILLED; (8) refuses every other class -- admitting B, C, D each KILLED. All clauses covered.",
+  "test_hash": "sha256:2970d5c3ca52492a66dac2158b254cdd6dd4645917ba4ab62a8fdd0cd5869485",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_stale_verdicts_are_classified_and_only_class_a_carries_forward"
@@ -154,7 +154,7 @@
       "find": "        di[\"id\"]: (text_fingerprint(pinned_text(di, by_id)), source_fingerprint(sources.get(di[\"id\"], [])))",
       "replace": "        di[\"id\"]: (text_fingerprint(di[\"text\"]), source_fingerprint(sources.get(di[\"id\"], [])))",
       "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
-      "result": "SURVIVED"
+      "result": "KILLED"
     },
     {
       "file": "rdm/story_audit/design_gate.py",
@@ -164,11 +164,9 @@
       "result": "KILLED"
     }
   ],
-  "uncovered_clauses": [
-    "a verdict made stale by an upstream (depends_on) requirement-text change classifies as C, not A, so carry-forward refuses it: current_fingerprints fingerprinting only the input's own text (not pinned_text) survives, since no fixture input declares depends_on"
-  ],
-  "text_fingerprint": "sha256:6ae244ac06b070b218fd2063618bc769ddd3c1a192cbaa164a53b5e29f96ebf1",
-  "tests_fingerprint": "sha256:d6c89d55d0d78a2efea79350d893c51c7d9be9222b15cec5764453e8362afb53",
+  "uncovered_clauses": [],
+  "text_fingerprint": "sha256:fff4a2840c2caa3407d971284ebb2c06473becfcf50e1c3b27a5f78930ec4a1e",
+  "tests_fingerprint": "sha256:71b09c3b361911467952de70d40f4aac734a4d44e28c71f6fa884db6e483c489",
   "prior_findings": [
     {
       "verdict": "partial",
@@ -232,6 +230,30 @@
         }
       ],
       "uncovered_clauses": []
+    },
+    {
+      "verdict": "partial",
+      "reviewer": "claude-reviewer-2 (independent of author)",
+      "test_hash": "sha256:6bedcf7c88c20c0ec7de2ca0972c8584f25486be381acc0ff9ead3318ef16007",
+      "surviving_probes": [
+        {
+          "file": "rdm/record/fingerprint.py",
+          "find": "            after = line.split(\"/*\", 1)[1]",
+          "replace": "            after = line",
+          "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+          "result": "SURVIVED"
+        },
+        {
+          "file": "rdm/record/faithfulness.py",
+          "find": "        di[\"id\"]: (text_fingerprint(pinned_text(di, by_id)), source_fingerprint(sources.get(di[\"id\"], [])))",
+          "replace": "        di[\"id\"]: (text_fingerprint(di[\"text\"]), source_fingerprint(sources.get(di[\"id\"], [])))",
+          "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+          "result": "SURVIVED"
+        }
+      ],
+      "uncovered_clauses": [
+        "a verdict made stale by an upstream (depends_on) requirement-text change classifies as C, not A, so carry-forward refuses it: current_fingerprints fingerprinting only the input's own text (not pinned_text) survives, since no fixture input declares depends_on"
+      ]
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
   "design_input": "DI-18",
-  "verdict": "partial",
+  "verdict": "faithful",
   "reviewer": "claude-reviewer-2 (independent of author)",
-  "rationale": "Re-review reason: depends_on declared (DI-18 -> DI-4); DI-18 text and test unchanged. Upstream context: DI-4 (reconcile against Allure tags, render the matrix from executed results) defines where the slice's tests/status come from, so the status/tests clauses must be fed by real executed results -- the test does write an Allure result and calls the real build_trace. Prior verdict recorded no probes; all probes below newly executed one at a time via rdm story mutation-probe on rdm/story_audit/design_gate.py. Clauses: (1) slice for a user need lists ITS design inputs -- assert [ids] == ['DI-1'] holds, but restricting to the need is NOT verified: `members = [... for di in inputs if target in di[\"traces_to\"]]` -> drop the filter (every declared input) SURVIVED, because the fixture declares only one design input, which traces to the need; GAP; (2) slice for a design input names its need -- `\"traces_to\": []` KILLED; (3) owner -- `\"owned_by\": None` KILLED; (4) realisers -- `\"realised_by\": []` KILLED; (5) verifying tests -- `\"tests\": []` KILLED; (6) status -- `\"status\": None` KILLED, and disabling the upstream Allure reconcile (`verif = None`) KILLED (status/tests really come from DI-4 reconciliation of executed results); (7) undeclared target reported not crashed -- error return replaced by a fake design_input slice KILLED. Verdict partial: clause (1) is tested narrower than stated (a slice that leaked another need's inputs would pass). Fix: add a second design input tracing to a different user need to the fixture and keep the exact == ['DI-1'] assertion. Hash scope kept as function (legacy verdict had no hash_scope, honored as function-scoped per DI-28).",
-  "test_hash": "sha256:4b6379980d1927399dd1e91674b2abb8a0a317436bb3f4406fd927bca41c8775",
+  "rationale": "Re-review reason: test strengthened after my depends_on re-review found clause (1) narrower than stated (DI-18 -> DI-4 depends_on). The fixture now declares DI-2 tracing to UN-002 and asserts UN-002's slice is exactly [DI-2]. All 8 probes re-executed one at a time via rdm story mutation-probe on rdm/story_audit/design_gate.py, all KILLED. Clauses: (1) a user need's slice lists ITS design inputs and only those -- dropping the traces_to filter in build_trace (every declared input) now KILLED (was SURVIVED); (2) design-input slice names its need -- `\"traces_to\": []` KILLED; (3) owner -- `\"owned_by\": None` KILLED; (4) realisers -- `\"realised_by\": []` KILLED; (5) verifying tests -- `\"tests\": []` KILLED; (6) status -- `\"status\": None` KILLED, and disabling the upstream DI-4 Allure reconcile (`verif = None`) KILLED, so status/tests come from executed results; (7) undeclared target reported, not crashed -- error return replaced by a fake slice KILLED. All clauses covered. Hash scope kept as function (unchanged from my previous verdict).",
+  "test_hash": "sha256:5f0d64dbd7116d22ae2cb628d0613678824a6eb58f6e004c8f08156aeca4fc6c",
   "hash_scope": "function",
   "reviewed_tests": [
     "test_trace_user_need_and_design_input"
@@ -14,7 +14,7 @@
       "find": "        members = [_di_slice(di) for di in inputs if target in di[\"traces_to\"]]",
       "replace": "        members = [_di_slice(di) for di in inputs]",
       "test": "test_trace_user_need_and_design_input",
-      "result": "SURVIVED"
+      "result": "KILLED"
     },
     {
       "file": "rdm/story_audit/design_gate.py",
@@ -66,10 +66,26 @@
       "result": "KILLED"
     }
   ],
-  "uncovered_clauses": [
-    "user-need slice lists only that need's design inputs (the fixture declares a single design input, so dropping the traces_to filter in build_trace -- returning every declared input -- survives)"
-  ],
+  "uncovered_clauses": [],
   "text_fingerprint": "sha256:06fa384ee46f9328c2f9d4ba982ce0092c31c8fff977a8b24b432ca7119e21b3",
-  "tests_fingerprint": "sha256:8fa9acb8479fae04a1720b4b9f77056bc3173741aa36624e1c6a0b76370b0a12",
-  "prior_findings": []
+  "tests_fingerprint": "sha256:4a8120ef77c6d43a8ea03ffa30551af6538aba7c9ee13bbb8668263f0b29c38e",
+  "prior_findings": [
+    {
+      "verdict": "partial",
+      "reviewer": "claude-reviewer-2 (independent of author)",
+      "test_hash": "sha256:4b6379980d1927399dd1e91674b2abb8a0a317436bb3f4406fd927bca41c8775",
+      "surviving_probes": [
+        {
+          "file": "rdm/story_audit/design_gate.py",
+          "find": "        members = [_di_slice(di) for di in inputs if target in di[\"traces_to\"]]",
+          "replace": "        members = [_di_slice(di) for di in inputs]",
+          "test": "test_trace_user_need_and_design_input",
+          "result": "SURVIVED"
+        }
+      ],
+      "uncovered_clauses": [
+        "user-need slice lists only that need's design inputs (the fixture declares a single design input, so dropping the traces_to filter in build_trace -- returning every declared input -- survives)"
+      ]
+    }
+  ]
 }
