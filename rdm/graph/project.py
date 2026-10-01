@@ -273,6 +273,20 @@ def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str |
     return path.splitlines()[-1] if path else None
 
 
+def _latest_commits(root: Path, paths: list[str]) -> dict[str, str]:
+    """Each path's latest commit — what ``git log -1 -- <path>`` gives — from one
+    ``git log`` over all of them: newest first, the first commit naming a path
+    is its latest."""
+    latest: dict[str, str] = {}
+    wanted, sha = set(paths), None
+    for line in (git(root, "log", "--format=%x00%H", "--name-only", "--", *paths) or "").splitlines():
+        if line.startswith("\x00"):
+            sha = line[1:]
+        elif line in wanted and sha:
+            latest.setdefault(line, sha)
+    return latest
+
+
 def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "git"
     head = git(root, "rev-parse", "HEAD")
@@ -281,15 +295,19 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
         ds.add(record, rdm("atCommit"), _commit(ds, root, head, g)[0], g)
     branch = default_branch(root)
     first_parent = set((git(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
-    for entry in controlled_documents(dhf, root):  # DI-35, DI-51: every controlled document
-        doc_id = entry["id"]
-        sha = git(root, "log", "-1", "--format=%H", "--", entry["path"])
+    documents = controlled_documents(dhf, root)  # DI-35, DI-51: every controlled document
+    latest = _latest_commits(root, [entry["path"] for entry in documents])
+    landings: dict[str, str | None] = {}  # documents often share a commit
+    for entry in documents:
+        sha = latest.get(entry["path"])
         if not sha:
             continue  # never committed: no fact to state
-        doc = ds.node("doc", doc_id)
+        doc = ds.node("doc", entry["id"])
         commit, _ = _commit(ds, root, sha, g)
         ds.add(doc, _term(_PROV + "wasGeneratedBy"), commit, g)
-        landed = _landing(root, sha, branch, first_parent) if branch else None
+        if branch and sha not in landings:
+            landings[sha] = _landing(root, sha, branch, first_parent)
+        landed = landings.get(sha)
         if landed:
             landing, who = _commit(ds, root, landed, g)
             ds.add(doc, rdm("landedIn"), landing, g)
