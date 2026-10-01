@@ -8,7 +8,9 @@ record, with Allure's dynamic API:
 
 - ``epic``: each user need the design input traces to;
 - ``feature``: its bounded context;
-- ``link``: its design document, at the commit under test;
+- ``link``: each Markdown document that declares it, at the commit under test —
+  its design document, where its user needs are declared (the V&V plan), and
+  the risk document of each risk it controls;
 - ``severity``: critical when the input controls a risk;
 - an attachment with the input's text.
 
@@ -51,17 +53,26 @@ def web_url(remote: str | None) -> str | None:
 
 @lru_cache(maxsize=4)
 def _record(dhf: str) -> dict:
-    """Design inputs, their documents, and the inputs that control risks."""
+    """Design inputs, the documents that declare each id (repo-relative), and
+    the risks each input controls."""
     from rdm.record.risk import risks
-    from rdm.record.sdd import design_inputs, find_design_docs, context_of
+    from rdm.record.sdd import declarations, design_inputs
 
     path = Path(dhf)
-    root = Path(_git(path, "rev-parse", "--show-toplevel") or path.parent)
-    docs = {context_of(doc): doc for doc in find_design_docs(path)}
+    root = Path(_git(path, "rev-parse", "--show-toplevel") or path.parent).resolve()
+
+    def rel(doc: Path) -> str:
+        return doc.resolve().relative_to(root).as_posix()
+
+    controls: dict[str, list[tuple[str, str]]] = {}
+    for risk in risks(path):
+        for control in risk.controls:
+            controls.setdefault(control, []).append((risk.id, rel(path.parent / risk.document)))
     return {
         "inputs": {di["id"]: di for di in design_inputs(path)},
-        "docs": {ctx: str(doc.resolve().relative_to(root.resolve())) for ctx, doc in docs.items()},
-        "controls": {c for r in risks(path) for c in r.controls},
+        "declared": {id_: list(dict.fromkeys(rel(path / d) for d in docs))
+                     for id_, docs in declarations(path).items()},
+        "controls": controls,
         "web": web_url(_git(root, "remote", "get-url", "origin")),
         "commit": _git(root, "rev-parse", "HEAD"),
     }
@@ -75,6 +86,23 @@ def story_ids(item) -> list[str]:
     ids = [str(v) for m in marks if m.name == "allure_label" and str(m.kwargs.get("label_type")) in
            ("story", "LabelType.STORY") for v in m.args]
     return list(dict.fromkeys(ids))
+
+
+def _documents(record: dict, di: str, requirement: dict) -> list[tuple[str, str]]:
+    """(link name, repo-relative Markdown path), one per document that
+    declares the input: its design document, the V&V plan (or wherever) its
+    user needs are declared, and the risk document of each risk it controls.
+    One link per document (Allure keeps one link per URL), named for the ids it
+    declares. None without a web remote and a commit to pin them to."""
+    if not (record["web"] and record["commit"]):
+        return []
+    found = [(di, doc) for doc in record["declared"].get(di, [])]
+    found += [(need, doc) for need in requirement["traces_to"] for doc in record["declared"].get(need, [])]
+    found += [(risk, doc) for risk, doc in record["controls"].get(di, [])]
+    ids: dict[str, list[str]] = {}
+    for id_, doc in found:
+        ids.setdefault(doc, []).append(id_)
+    return [(f"{', '.join(names)} in {doc}", doc) for doc, names in ids.items()]
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -96,9 +124,8 @@ def pytest_runtest_call(item):
             for need in requirement["traces_to"]:
                 allure.dynamic.epic(need)
             allure.dynamic.feature(requirement["context"])
-            doc = record["docs"].get(requirement["context"])
-            if doc and record["web"] and record["commit"]:
-                allure.dynamic.link(f"{record['web']}/blob/{record['commit']}/{doc}", name=f"{di} in {doc}")
+            for name, doc in _documents(record, di, requirement):
+                allure.dynamic.link(f"{record['web']}/blob/{record['commit']}/{doc}", name=name)
             if di in record["controls"]:
                 allure.dynamic.severity(allure.severity_level.CRITICAL)
             allure.attach(f"{di} ({requirement['context']}): {requirement['text']}\n"

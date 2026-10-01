@@ -73,7 +73,9 @@ at run time from the record, with Allure's own API (`allure.dynamic`):
 
 - `epic` — each user need the design input traces to;
 - `feature` — the bounded context whose design document declares it;
-- `link` — that design document at the commit under test;
+- `link` — each Markdown document that declares it, at the commit under test:
+  its design document, the V&V plan where its user needs are declared, and the
+  risk document of each risk it controls (one link per document);
 - `severity` — `critical` when the design input controls a risk;
 - an attachment `requirement DI-n` — the design input's text.
 

@@ -4,8 +4,8 @@
 
 ### Added — Allure labels from the record
 - `rdm.pytest_plugin` labels each acceptance run with Allure's API: epic (user
-  need), feature (bounded context), a link to the design document at the
-  commit, severity critical for a risk control, and the requirement text as an
+  need), feature (bounded context), links to the Markdown documents that
+  declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
   attachment (DI-57).
 
 ### Changed — only the story names a design input

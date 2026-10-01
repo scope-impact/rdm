@@ -26,7 +26,7 @@ from tests.util import git_run  # noqa: E402
 
 def _project(tmp_path: Path) -> Path:
     repo = tmp_path / "device"
-    docs = repo / "dhf" / "documents"
+    docs = repo / "sw" / "dhf" / "documents"  # not at the repo root: links are repo-relative
     (docs / "design").mkdir(parents=True)
     (docs / "vv.md").write_text("---\nid: VVP-1\nuser_needs:\n  - {id: UN-1, text: a}\n  - {id: UN-2, text: b}\n---\n")
     (docs / "design" / "alarms.md").write_text(
@@ -55,7 +55,7 @@ def _project(tmp_path: Path) -> Path:
 def _run(repo: Path) -> dict[str, dict]:
     out = repo / "allure"
     subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-p", "rdm.pytest_plugin",
-                    f"--alluredir={out}", "--rdm-dhf", str(repo / "dhf"), "tests"],
+                    f"--alluredir={out}", "--rdm-dhf", str(repo / "sw" / "dhf"), "tests"],
                    cwd=repo, check=True, capture_output=True)
     return {(d := json.loads(f.read_text()))["name"]: d for f in out.glob("*-result.json")}
 
@@ -68,8 +68,9 @@ def _labels(result: dict, name: str) -> list[str]:
 @allure.label("output", "rdm/pytest_plugin.py")
 def test_runs_are_labelled_from_the_record(tmp_path: Path) -> None:
     """DI-57: epics from the input's user needs, the feature from its context,
-    a link to its design document at the tested commit, critical severity when
-    it controls a risk, and the requirement text attached — from the record,
+    links to the Markdown that declares it (design document, V&V plan, risk
+    document) at the tested commit, critical severity when it controls a risk,
+    and the requirement text attached — from the record,
     for tagged tests only."""
     repo = _project(tmp_path)
     commit = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True,
@@ -81,9 +82,15 @@ def test_runs_are_labelled_from_the_record(tmp_path: Path) -> None:
         assert _labels(alarm, "epic") == ["UN-1", "UN-2"] and _labels(log, "epic") == ["UN-2"]
     with clause("the feature is its bounded context; the story stays the design input"):
         assert _labels(alarm, "feature") == ["alarms"] and _labels(alarm, "story") == ["DI-1"]
-    with clause("a link to its design document at the tested commit"):
-        assert alarm["links"] == [{"type": "link", "name": "DI-1 in dhf/documents/design/alarms.md",
-                                   "url": f"https://github.com/acme/device/blob/{commit}/dhf/documents/design/alarms.md"}]
+    blob = f"https://github.com/acme/device/blob/{commit}/sw/dhf/documents"
+    with clause("links to the Markdown that declares it — design document, V&V plan per user need, "
+                "risk document per risk it controls — one per document, at the tested commit"):
+        assert alarm["links"] == [
+            {"type": "link", "name": "DI-1 in sw/dhf/documents/design/alarms.md", "url": f"{blob}/design/alarms.md"},
+            {"type": "link", "name": "UN-1, UN-2 in sw/dhf/documents/vv.md", "url": f"{blob}/vv.md"},
+            {"type": "link", "name": "RISK-A-1 in sw/dhf/documents/risk/rmf.md", "url": f"{blob}/risk/rmf.md"}]
+        assert [link["name"] for link in log["links"]] == [
+            "DI-2 in sw/dhf/documents/design/alarms.md", "UN-2 in sw/dhf/documents/vv.md"]
     with clause("critical severity when the input controls a risk, and not otherwise"):
         assert _labels(alarm, "severity") == ["critical"]
         assert _labels(log, "severity") in ([], ["normal"])
