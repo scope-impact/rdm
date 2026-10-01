@@ -12,7 +12,7 @@ design_inputs:
     text: "RDM shall load the projected dataset into a persistent Oxigraph store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a SPARQL 1.1 HTTP endpoint whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer."
     traces_to: [UN-014]
   - id: DI-37
-    text: "RDM shall add regulatory checklists to the graph on request: each checklist item (resolving includes and built-in names exactly as rdm gap does) becomes a clause node with its key and description, linked to every checklist that contains it, in a checklists graph; and each controlled document's [[...]] reference tags become links from the document to the clauses it references, in a references graph, using the same key matching as rdm gap so that a clause no document references in the graph is exactly a clause rdm gap reports missing."
+    text: "RDM shall add regulatory checklists to the graph on request, as data so that a new checklist needs no code or vocabulary change: each checklist, in rdm gap's text format (resolving includes and built-in names as rdm gap does) or as an RDF file, becomes a checklist node (a SKOS collection whose members are its own items and which links each checklist it includes); each item becomes a clause (a SKOS concept with its key as notation, its description as definition, the standard named by its key prefix as concept scheme, and its nearest listed parent clause as broader), in a checklists graph; and each controlled document's [[...]] reference tags become dcterms:references links to the clauses it references, in a references graph, using rdm gap's own key matching so that a clause no document references is exactly a clause rdm gap reports missing."
     traces_to: [UN-014, UN-006]
   - id: DI-38
     text: "RDM shall ship SHACL shapes expressing the gate rules over the graph — every user need is addressed by a design input, every design input has a passing test run and no failing or broken one, and every checklist clause is referenced by a document as violations; a design input with no tagged test file, a reference to an undeclared user need or design input, and a test tag naming no declared design input as warnings — and rdm graph validate shall run them, plus any user-supplied shape files, over the projected graph, reporting each result with its severity, focus node and message and exiting non-zero on any violation; the shapes shall block exactly the design inputs and user needs the release gate blocks."
@@ -49,19 +49,26 @@ source: the graph is derived, rebuilt on demand, and never edited.
   any SPARQL client) connects to. Graph Explorer browses; it never writes:
   changes are made in the Markdown and re-projected. Refines UN-014.
 - **DI-37 (checklists and reference tags)** — the other half of RDM's record:
-  gap analysis. `rdm graph build --checklist part11_document_control` (any
-  built-in name or a checklist file, repeatable) loads each checklist into a
-  `…graph/checklists` graph: a `rdm:Checklist` per checklist and a
-  `rdm:Clause` per item (`dcterms:identifier` = the key, `rdm:description`),
-  linked with `rdm:inChecklist` — a key shared by several checklists (the
-  62304 class A/B/C lists) is one clause in several checklists. Includes and
-  built-in names resolve with `rdm gap`'s own reader. Each controlled
-  document's `[[…]]` reference tags become `rdm:references` links in a
-  `…graph/references` graph, matched with `rdm gap`'s own key matcher
-  (descendant keys cover their parent; a longer sibling never matches a
-  shorter key), so "a clause nothing references" in the graph and "a missing
-  item" in `rdm gap` are the same set by construction. Refines UN-014 and
-  UN-006.
+  gap analysis, modelled so checklists stay **data**. A standard is a
+  `skos:ConceptScheme` named by its key prefix (`62304`, `P11`, `FDA-SW`,
+  `14971`, …); a checklist item is an `rdm:Clause` (`rdfs:subClassOf
+  skos:Concept`) with `skos:notation` = its key, `skos:definition` = its
+  description, `skos:inScheme` = its standard, and `skos:broader` = its
+  nearest listed dotted parent (`62304:5.6.2.a` → `62304:5.6.2`); a checklist
+  is an `rdm:Checklist` (`rdfs:subClassOf skos:Collection`) whose
+  `skos:member`s are its own items and which `rdm:includes` the checklists it
+  includes — its effective contents are `rdm:includes*/skos:member`, so
+  includes are never flattened away. A key shared by several checklists (the
+  62304 class A/B/C lists) is one clause in several collections. Adding a
+  standard is adding a file: `rdm graph build --checklist NAME|FILE`
+  (repeatable) takes a built-in name, a `.txt` checklist in `rdm gap`'s format
+  (read by `rdm gap`'s own reader), or an RDF file (`.ttl`, `.nt`, `.jsonld`,
+  …) loaded as-is for richer metadata such as a standard's title or edition
+  — the shapes (DI-38) check checklist data too. Each controlled document's
+  `[[…]]` tags become `dcterms:references` links in `…graph/references`,
+  matched with `rdm gap`'s own key matcher, so "a clause nothing references"
+  and "a missing item" in `rdm gap` are the same set by construction.
+  Refines UN-014 and UN-006.
 - **DI-38 (SHACL shapes for the gates)** — `rdm/graph/shapes.ttl` states the
   gate rules as SHACL, closed-world checks over the open-world graph:
   violations (release-blocking) — a user need no design input traces to; a
