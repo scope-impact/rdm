@@ -38,7 +38,7 @@ design_inputs:
   - id: DI-36
     text: "RDM shall record, with each new faithfulness verdict, normalized fingerprints of the design-input text and of the verifying-test source that ignore whitespace, comments, and docstrings; classify each stale verdict as A (formatting- or comment-only change), B (verifying-test change), C (requirement-text change), or D (unclassifiable: no fingerprints on record), showing the class in the faithfulness report; and let rdm story verdict --carry-forward re-pin a stale verdict without a new review only when it classifies as A, recording the carry-forward and its class in the verdict, and refusing every other class."
     traces_to: [UN-009]
-    depends_on: [DI-28, DI-20]
+    depends_on: [DI-28, DI-20, DI-35]
   - id: DI-38
     text: "RDM shall provide rdm story gate-selftest, which builds a synthetic fully-passing DHF in a scratch git repository, confirms the release gate passes it, then injects each fault class in isolation (an untested design input, a failing test, an unreviewed, unfaithful, partial, and stale verdict, a user need no input traces to, an uncommitted design-document edit, a broken journal, and a reworded locked design input) and confirms the release gate blocks each; it shall report caught or missed per fault and exit non-zero if the clean baseline is blocked or any fault escapes."
     traces_to: [UN-003]
