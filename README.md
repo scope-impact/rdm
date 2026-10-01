@@ -146,6 +146,10 @@ uv run pytest tests
 
 ### Unreleased
 
+- **Tag discovery**: Python test tags are read from decorators and `pytestmark` only, never from
+  strings or comments (DI-40): fixture files written by a test no longer count
+  as coverage. Every acceptance command passes `--clean-alluredir`, so repeated
+  runs and docs builds no longer double the results (Design Review 7).
 - **Four parts**: RDM restated as Record, Gates, Graph and Documents (README,
   docs, intended use, architecture — Design Review 6); agent skills maintained
   in scope-impact/agent-skills

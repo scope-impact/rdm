@@ -75,7 +75,7 @@ From this directory:
 
 ```bash
 rdm story design-gate --dhf dhf                 # record present, complete, approved
-pytest tests/acceptance --alluredir=dhf/allure-results
+pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 rdm gap checklists/part11_document_control.txt documents/document_control_procedure.md

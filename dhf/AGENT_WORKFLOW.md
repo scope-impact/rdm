@@ -164,7 +164,7 @@ def test_<behavior>(...):
 
 ```bash
 uv run rdm story design-gate --dhf dhf
-uv run pytest tests/acceptance --alluredir=dhf/allure-results
+uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
 uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```

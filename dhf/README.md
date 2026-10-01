@@ -58,7 +58,7 @@ rdm story design-gate --dhf dhf      # design doc(s) + review present, complete,
 ## Verify it (generate the traceability matrix)
 
 ```bash
-uv run pytest tests/acceptance --alluredir=dhf/allure-results   # run the tagged ACs
+uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results   # run the tagged ACs
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results   # PASS when all verified + every need addressed
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml

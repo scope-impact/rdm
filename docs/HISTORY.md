@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Python test tags are read from decorators and `pytestmark` only, never from
+  strings or comments (DI-40): fixture files written by a test no longer count
+  as coverage. Every acceptance command passes `--clean-alluredir`, so repeated
+  runs and docs builds no longer double the results (Design Review 7).
 - Restate RDM as four parts — Record, Gates, Graph, Documents — in the README,
   the docs home and navigation, the intended use and the architecture (Design
   Review 6). Agent skills are maintained in scope-impact/agent-skills.

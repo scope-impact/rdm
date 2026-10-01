@@ -96,7 +96,7 @@ design inputs, contexts, documents, test files, test runs, commits, and the
 checklists your documents are held to.
 
 ```bash
-pytest tests/acceptance --alluredir=dhf/allure-results
+pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
 rdm graph build --allure-results dhf/allure-results \
   --checklist part11_document_control --store .rdm/graph
 ```

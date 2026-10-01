@@ -15,6 +15,7 @@ result says whether that test actually *passed*.
 
 from __future__ import annotations
 
+import ast
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -275,7 +276,7 @@ def claims_a_tag(path: Path, content: str) -> bool:
 def _tag_ids_in(path: Path, content: str) -> list[str]:
     """Every story/feature tag ID a test source file claims, per its language."""
     if path.suffix == ".py":
-        return [m.group(2) for m in ALLURE_PATTERN.finditer(content)]
+        return _python_tag_ids(content)
     if path.suffix in (".yml", ".yaml"):
         ids = []
         for m in YAML_TAG_PATTERN.finditer(content):
@@ -288,6 +289,37 @@ def _tag_ids_in(path: Path, content: str) -> list[str]:
     ids: list[str] = []
     for pattern in POLYGLOT_TAG_PATTERNS:
         ids.extend(m.group(2) for m in pattern.finditer(content))
+    return ids
+
+
+def _allure_tag(node: ast.AST) -> str | None:
+    """The id in ``allure.story("ID")`` / ``allure.feature("ID")``, else None."""
+    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+            and node.func.attr in USER_NEED_LABELS
+            and isinstance(node.func.value, ast.Name) and node.func.value.id == "allure"
+            and node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)):
+        return node.args[0].value
+    return None
+
+
+def _python_tag_ids(content: str) -> list[str]:
+    """Tags a Python test file claims (DI-40): allure decorators on functions
+    and classes, and a module-level ``pytestmark`` -- never text inside strings
+    or comments, so a test that writes fixture files does not claim their ids.
+    A file that does not parse falls back to the decorator pattern."""
+    try:
+        tree = ast.parse(content)
+    except (SyntaxError, ValueError):
+        return [m.group(2) for m in ALLURE_PATTERN.finditer(content)]
+    ids: list[str] = []
+    for node in tree.body:  # module-level pytestmark = allure.story(...) | [ ... ]
+        if (isinstance(node, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets)):
+            marks = node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value]
+            ids.extend(tag for tag in map(_allure_tag, marks) if tag)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            ids.extend(tag for tag in map(_allure_tag, node.decorator_list) if tag)
     return ids
 
 

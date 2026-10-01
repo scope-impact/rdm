@@ -8,7 +8,7 @@ the suite.
 
 Run from the example directory (or with the repository root on sys.path):
 
-    pytest tests/acceptance --alluredir=dhf/allure-results
+    pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
     rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
     rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 

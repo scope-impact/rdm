@@ -12,7 +12,7 @@ declared in the per-context design documents (`kind: design`) reconciled against
 executed Allure results. Do not edit by hand. Regenerate with:
 
 ```
-uv run pytest tests/acceptance --alluredir=dhf/allure-results
+uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
 ```

@@ -39,7 +39,7 @@ def _generate() -> str:
     try:
         subprocess.run(
             [sys.executable, "-m", "pytest", "tests/acceptance",
-             "--alluredir", "dhf/allure-results", "-q"],
+             "--clean-alluredir", "--alluredir", "dhf/allure-results", "-q"],
             cwd=ROOT, check=True, capture_output=True, timeout=600,
         )
         verify_rc = cli([

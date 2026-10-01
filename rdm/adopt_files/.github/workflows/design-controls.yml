@@ -25,7 +25,7 @@ jobs:
       # Uncomment when your first design input lands:
       #
       # - name: Acceptance tests -> Allure evidence
-      #   run: pytest tests/acceptance --alluredir=dhf/allure-results
+      #   run: pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
       #
       # - name: Generate verification data
       #   run: rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml

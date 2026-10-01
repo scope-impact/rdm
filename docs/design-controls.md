@@ -41,7 +41,7 @@ are blocked while the gate is red; committing only design docs is always
 allowed — that commit is the approval.
 
 ```bash
-pytest tests/acceptance --alluredir=dhf/allure-results
+pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 ```
 Runs the acceptance criteria and reconciles the executed Allure results
