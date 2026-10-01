@@ -59,21 +59,21 @@ def _write_dhf(dhf: Path, texts: dict[str, str]) -> None:
     (docs / "core.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _pin_all(dhf: Path, vdir: Path) -> None:
+def _pin_all(dhf: Path, vdir: Path, scope: str) -> None:
     inputs = design_inputs(dhf)
-    hashes = f.current_hashes(inputs, None)
+    hashes = f.current_hashes(inputs, None, scope)
     vdir.mkdir(parents=True, exist_ok=True)
     for di_id, digest in hashes.items():
-        body = {"design_input": di_id, "verdict": "faithful", "test_hash": digest}
+        body = {"design_input": di_id, "verdict": "faithful", "test_hash": digest, "hash_scope": scope}
         (vdir / f"{di_id}-faithfulness.json").write_text(json.dumps(body))
 
 
-def _stale_after_rewording(tmp_path: Path, reworded: str) -> list[str]:
-    dhf = tmp_path / reworded / "dhf"
+def _stale_after_rewording(tmp_path: Path, reworded: str, scope: str = f.SCOPE_FUNCTION) -> list[str]:
+    dhf = tmp_path / scope / reworded / "dhf"
     texts = {di: text for di, (text, _) in _ENTRIES.items()}
     _write_dhf(dhf, texts)
-    vdir = tmp_path / reworded / "verdicts"
-    _pin_all(dhf, vdir)
+    vdir = tmp_path / scope / reworded / "verdicts"
+    _pin_all(dhf, vdir, scope)
     assert f.reconcile(design_inputs(dhf), vdir, None).stale == []  # all current first
     texts[reworded] = texts[reworded] + " Reworded."
     _write_dhf(dhf, texts)
@@ -98,6 +98,8 @@ def test_upstream_change_invalidates_only_downstream(tmp_path: Path) -> None:
     assert {"DI-2", "DI-3"} <= set(stale)
     # ... while unrelated inputs stay current.
     assert stale == ["DI-1", "DI-2", "DI-3"]
+    # The same holds for module-scope pins (the default verdict scope).
+    assert _within(5, lambda: _stale_after_rewording(tmp_path, "DI-1", f.SCOPE_MODULE)) == ["DI-1", "DI-2", "DI-3"]
     # A downstream change does not travel upstream.
     assert _within(5, lambda: _stale_after_rewording(tmp_path, "DI-3")) == ["DI-3"]
 

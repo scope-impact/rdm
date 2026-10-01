@@ -22,15 +22,16 @@ allure = pytest.importorskip("allure")
 
 
 def _dhf(tmp_path: Path) -> Path:
-    """A small DHF: one user need refined by a design input owned by 'core' and
-    realised by 'edge'."""
+    """A small DHF: UN-001 refined by DI-1 (owned by 'core', realised by
+    'edge'); UN-002 refined by DI-2 -- so a need's slice must hold only ITS inputs."""
     docs = tmp_path / "dhf" / "documents"
     docs.mkdir(parents=True)
     (docs / "verification_and_validation_plan.md").write_text(
-        "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: a need}\n---\n\nplan\n"
+        "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: a need}\n"
+        "  - {id: UN-002, text: another need}\n---\n\nplan\n"
     )
-    write_design_doc(docs / "design", "core", satisfies=("UN-001",),
-                     design_inputs=(("DI-1", ["UN-001"]),))
+    write_design_doc(docs / "design", "core", satisfies=("UN-001", "UN-002"),
+                     design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-002"])))
     write_design_doc(docs / "design", "edge", satisfies=("UN-001",), realises=("DI-1",))
     return tmp_path / "dhf"
 
@@ -46,6 +47,8 @@ def test_trace_user_need_and_design_input(tmp_path: Path) -> None:
     assert fwd["kind"] == "user_need"
     assert [di["design_input"] for di in fwd["design_inputs"]] == ["DI-1"]
     assert fwd["design_inputs"][0]["owned_by"] == "core"
+    # ... and only the inputs that trace to it.
+    assert [di["design_input"] for di in build_trace(dhf, "UN-002")["design_inputs"]] == ["DI-2"]
 
     # Backward: the design input names its need, owner, and realisers.
     back = build_trace(dhf, "DI-1")

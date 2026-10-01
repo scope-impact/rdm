@@ -137,6 +137,19 @@ def test_stale_verdicts_are_classified_and_only_class_a_carries_forward(tmp_path
     # ... while the comments themselves remain cosmetic.
     assert js_class("js-inline-a", _JS_INLINE_BLOCK, _JS_INLINE_BLOCK.replace("note", "remark")) == f.CLASS_TRIVIAL
 
+    # Clause (with DI-35): a dependent's text fingerprint covers its upstream
+    # text, so rewording only the upstream input classifies the dependent as
+    # C -- never A -- and its carry-forward is refused.
+    fx = build_fixture(tmp_path / "upstream")
+    _reword(fx, '    text: "The system shall double a number."\n    traces_to: [UN-1]\n',
+            '    text: "The system shall double a number."\n    traces_to: [UN-1]\n    depends_on: [DI-1]\n')
+    from rdm.story_audit.design_gate import record_verdict
+    record_verdict(fx.dhf, "DI-2", "faithful", reviewer="r", rationale="now depends on DI-1")
+    assert run_faithfulness_gate(fx.dhf).by_id["DI-2"].status == f.FAITHFUL
+    _reword(fx, "add two numbers.", "add three numbers.")
+    assert run_faithfulness_gate(fx.dhf).by_id["DI-2"].change_class == f.CLASS_REQUIREMENT
+    assert carry_forward_verdict(fx.dhf, "DI-2")[0] is None
+
     # Clause: class D -- a verdict with no fingerprints on record.
     fx = build_fixture(tmp_path / "d")
     legacy = _verdict(fx)
