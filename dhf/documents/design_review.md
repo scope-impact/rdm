@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 19
+revision: 20
 title: Design Review — RDM
 ---
 
@@ -575,6 +575,34 @@ every design document.
   It is no longer projected.
 - Nothing is lost as evidence: the raw results, containers and attachments
   stay in the evidence bundle (DI-30).
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 19 — Evidence that says what it is evidence for
+
+**Scope reviewed:** DI-59 (verification), DI-60 and DI-61 (graph); DI-35 and
+DI-51 amended (every controlled document's commit, not only design
+documents').
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The three gaps the critical pass over the edges left open.
+- A run was not tied to the version it tested. The plugin now labels each
+  tagged run with the commit and a dirty working tree (DI-59); the graph
+  links run to commit and warns on an unversioned or stale run (DI-60).
+  A dirty working tree is recorded, not warned on: it is the normal local
+  loop, and CI runs on a clean checkout.
+- The claim (source tag) and the evidence (run) never met, and the claim was
+  per file. A test is now a function, defined in its file; a run is a run of
+  that test (DI-61). The two drift warnings apply only once runs link to
+  tests, so a project whose results cannot be matched gets no false alarm.
+- Only design documents had a commit and a landing; the V&V plan, the risk
+  documents, the design review and the other controlled documents now do too
+  (DI-35, DI-51). More documents will show as not yet landed until merge.
 
 ## Findings and actions
 

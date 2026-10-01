@@ -21,6 +21,9 @@ design_inputs:
   - id: DI-57
     text: "RDM shall provide a pytest plugin that, for each test tagged with a design input's story, labels the run from the record at test time — the input's user needs as Allure epics, its bounded context as the feature, links to the Markdown documents that declare it at the tested commit (its design document, the V&V plan for its user needs, and the risk document of each risk it controls), critical severity when it controls a risk — and attaches the input's text."
     traces_to: [UN-004, UN-010]
+  - id: DI-59
+    text: "rdm.pytest_plugin shall label each run of a test tagged with a declared design input with the commit under test, and mark the run when the working tree had uncommitted changes."
+    traces_to: [UN-004, UN-003]
 ---
 
 # Verification — Software Design
@@ -74,6 +77,11 @@ This context owns:
   risk it controls), critical severity for an input that controls a risk, and the requirement text as an
   attachment — so the labels cannot drift from the record. Refines UN-004
   and UN-010.
+
+- **DI-59 (the commit under test)** — the plugin labels each run of a tagged
+  test with the commit under test (`commit`) and, when the working tree had
+  uncommitted changes, `worktree=dirty`, so the evidence says which version
+  it is evidence for (the graph side is DI-60). Refines UN-004 and UN-003.
 
 ## Design Outputs
 

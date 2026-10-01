@@ -4,7 +4,7 @@ kind: design
 context: graph
 design_inputs:
   - id: DI-35
-    text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each design document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
+    text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each controlled document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
     traces_to: [UN-014]
   - id: DI-36
     text: "RDM shall load the projected dataset into a persistent Oxigraph store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a read-only SPARQL 1.1 HTTP endpoint, refusing updates, whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer."
@@ -34,7 +34,7 @@ design_inputs:
     text: "rdm graph validate shall run the shipped shapes and any user-supplied shape files over the projected graph, report each result with its severity, focus node and message, and exit non-zero on any violation."
     traces_to: [UN-014, UN-003]
   - id: DI-51
-    text: "For each design document, the graph shall record the commit on the default branch's first-parent history that landed its latest change — a merge, squash or direct commit — with that commit's author, and a shape shall warn when the change has not landed on the default branch."
+    text: "For each controlled document, the graph shall record the commit on the default branch's first-parent history that landed its latest change — a merge, squash or direct commit — with that commit's author, and a shape shall warn when the change has not landed on the default branch."
     traces_to: [UN-014, UN-015]
   - id: DI-52
     text: "The graph shall link each user need to the document that declares it, and each risk to the document holding the risk policy it was evaluated against."
@@ -51,6 +51,12 @@ design_inputs:
   - id: DI-58
     text: "The graph shall link each bounded context to the controlled document whose contexts frontmatter declares it, with its part, each controlled document to the controlled documents its references frontmatter names, and shall not project the traceability matrix template, an output generated from the record; a shape shall warn on a bounded context no document declares once any document declares contexts, and validation shall fail on a reference to a document the record does not hold."
     traces_to: [UN-014, UN-015]
+  - id: DI-60
+    text: "The graph shall link each test run to the commit its commit label names, record the commit the record was built at and whether the run tested uncommitted changes, and a shape shall warn on a run tied to no commit and on a run that tested a commit other than the record's."
+    traces_to: [UN-014, UN-003]
+  - id: DI-61
+    text: "The graph shall record each tagged test — a Python test function or method, including those a module-level mark tags, or the whole file where tags are read by pattern — defined in its test file and verifying the design inputs its tags name, link each test run to the test it ran through the result's full name, and, when runs are linked to tests, a shape shall warn on a tagged test with no run and on a run that exercises a design input its test does not claim."
+    traces_to: [UN-014, UN-004]
 ---
 
 # Graph — Software Design
@@ -213,6 +219,25 @@ source: the graph is derived, rebuilt on demand, and never edited.
   (`rdm:exercisesOutput` → `rdm:SourceFile`), and `trace` lists a design
   input's source files: design input → test → run → code, with nothing new
   to author. Refines UN-014, UN-015.
+- **DI-60 (evidence tied to a version)** — a passing run is evidence for the
+  build it ran against, and nothing said which. Each run now links to the
+  commit its `commit` label names (`rdm:testedAt`, written by the plugin,
+  DI-59), with `rdm:uncommittedChanges` when the working tree was not clean;
+  the record node carries the commit the graph was built at
+  (`rdm:atCommit`). A shape warns on a run tied to no commit (its version is
+  unknown) and on a run that tested a different commit than the record's —
+  stale results presented as current. Refines UN-014 and UN-003.
+- **DI-61 (the claim and the evidence meet)** — the source scan said "this
+  file verifies DI-n" and the results said "this run exercised DI-n", and
+  nothing joined them. Each tagged test is now an `rdm:Test`: a Python test
+  function or method (`tests/x.py::TestClass::test_y`, including the tests a
+  module-level `pytestmark` tags), or the whole file where a language's tags
+  are read by pattern, `rdm:definedIn` its `rdm:TestFile` and
+  `rdm:verifies` its design inputs. A run links to the test it ran
+  (`rdm:runOf`) through Allure's full name. Once runs link to tests, a shape
+  warns on a tagged test with no run (the claim was never executed) and on a
+  run exercising a design input its test does not claim (the source and the
+  results disagree). Refines UN-014 and UN-004.
 
 Retired (Design Review 18): DI-55 — container fixtures (`tmp_path`,
 `capsys`…) say nothing about a design input, and Allure's set-up and
@@ -231,7 +256,7 @@ for serving):
   Requirements Management), `dcterms:identifier` / `dcterms:title`, PROV-O for
   commits (`prov:Activity`, `prov:wasGeneratedBy`, `prov:wasAssociatedWith`,
   `prov:endedAtTime`). RDM-specific terms only where no standard term fits:
-  `rdm:UserNeed`, `rdm:BoundedContext`, `rdm:TestFile`, `rdm:TestRun`,
+  `rdm:UserNeed`, `rdm:BoundedContext`, `rdm:Test`, `rdm:TestFile`, `rdm:TestRun`,
   `rdm:tracesTo`, `rdm:ownedBy`, `rdm:realises`,
   `rdm:declaredIn`, `rdm:verifies`, `rdm:exercises`, `rdm:status`,
   `rdm:revision`, `rdm:text`.
