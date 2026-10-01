@@ -114,6 +114,19 @@ rdm:reviewedIn a owl:ObjectProperty ; rdfs:label "reviewed in" ; rdfs:domain rdm
 rdm:evaluatedAgainst a owl:ObjectProperty ; rdfs:label "evaluated against" ; rdfs:range rdm:Document ;
     rdfs:comment "The document holding the risk policy the risk was evaluated against." .
 
+rdm:Step a owl:Class ;
+    rdfs:label "Test step" ;
+    rdfs:comment "One Allure step of a test run, in order, nested under its parent step (DI-53)." .
+rdm:Attachment a owl:Class ;
+    rdfs:label "Attachment" ;
+    rdfs:comment "Evidence a test run or step attached: a file in the Allure results (DI-53)." .
+rdm:step a owl:ObjectProperty ; rdfs:label "step" ; rdfs:range rdm:Step ;
+    rdfs:comment "From a test run or a step to a step it contains." .
+rdm:attachment a owl:ObjectProperty ; rdfs:label "attachment" ; rdfs:range rdm:Attachment ;
+    rdfs:comment "From a test run or a step to evidence it attached." .
+rdm:position a owl:DatatypeProperty ; rdfs:label "position" ; rdfs:domain rdm:Step ;
+    rdfs:comment "The step's place in the run: 1, 2, 2.1 ..." .
+
 rdm:Risk a owl:Class ;
     rdfs:label "Risk" ;
     rdfs:comment "One risk of the register: hazard, situation, harm, scored severity × probability, its controls and residual (DI-45)." .

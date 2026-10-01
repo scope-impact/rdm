@@ -81,7 +81,7 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
     assert (traced["level"], traced["residualLevel"], traced["residualDecision"], traced["riskStatus"]) == (
         "High", "Medium", "accepted", "proposed")
     assert [c["id"] for c in traced["controls"]] == ["DI-1", "DI-2"] and traced["undeclared_controls"] == []
-    assert traced["controls"][0]["runs"] == [{"test": "DI-1-0", "status": "passed"}]
+    assert traced["controls"][0]["runs"] == [{"test": "DI-1-0", "status": "passed", "steps": [], "attachments": []}]
     assert trace(record, "DI-2")["design_input"]["risks"] == ["RISK-F-1"]
     with pytest.raises(ValueError, match="RISK-NOPE-1 is not a declared"):
         trace(record, "RISK-NOPE-1")

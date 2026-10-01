@@ -82,7 +82,7 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
     assert di["document"]["id"] == "SDS-ALM-001" and di["document"]["path"] == "dhf/documents/design/alarms.md"
     assert di["document"]["last_commit"].endswith("approve design")
     assert di["tests"] == ["tests/test_alarms.py"]
-    assert di["runs"] == [{"test": "test_alarm", "status": "passed"}]
+    assert di["runs"] == [{"test": "test_alarm", "status": "passed", "steps": [], "attachments": []}]
 
     # trace a user need (id case-insensitive): its text, contexts and inputs.
     error, un = out["trace_un"]

@@ -43,8 +43,18 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
     results.mkdir()
     (results / "t1-result.json").write_text(json.dumps(
         {"name": "t1", "status": "passed",
-         "labels": [{"name": "story", "value": "DI-1"}]}
+         "labels": [{"name": "story", "value": "DI-1"}],
+         "attachments": [{"name": "gate output", "source": "a1-attachment.txt", "type": "text/plain"}],
+         "steps": [{"name": "clause 1", "status": "passed",
+                    "attachments": [{"name": "graph", "source": "a2-attachment.json", "type": "application/json"}]}]}
     ))
+    (results / "a1-attachment.txt").write_text("Release gate PASSED\n")
+    (results / "a2-attachment.json").write_text("{}")
+    (results / "c1-container.json").write_text(json.dumps(
+        {"children": ["t1"], "befores": [{"name": "fixture", "attachments": [
+            {"name": "setup log", "source": "a3-attachment.txt", "type": "text/plain"}]}]}))
+    (results / "a3-attachment.txt").write_text("set up\n")
+    (results / "stray-attachment.txt").write_text("not referenced by any result\n")
     return dhf, results
 
 
@@ -52,7 +62,8 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
 @allure.label("output", "rdm/record/bundle.py")
 def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None:
     """DI-30: the bundle contains the verification data, the rendered matrix,
-    and a manifest that agrees with them."""
+    the executed results with their attachments and containers, and a manifest
+    that agrees with them."""
     dhf, results = _mini_release(tmp_path)
     out = tmp_path / "release-evidence"
 
@@ -72,4 +83,10 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
     assert on_disk == manifest
     assert manifest["design_inputs"] == 1 and manifest["verified"] == 1
     assert "faithfulness_verdicts" not in manifest
-    assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"}
+    # The executed results ride along: results, containers, and every attachment
+    # they reference (on the test, its steps, or a fixture) -- nothing else.
+    bundled = {"allure-results/" + n for n in
+               ("t1-result.json", "c1-container.json", "a1-attachment.txt", "a2-attachment.json", "a3-attachment.txt")}
+    assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"} | bundled
+    assert (out / "allure-results" / "a1-attachment.txt").read_text() == "Release gate PASSED\n"
+    assert not (out / "allure-results" / "stray-attachment.txt").exists()

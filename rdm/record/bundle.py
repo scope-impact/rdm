@@ -3,7 +3,8 @@ Release evidence bundle (DI-30): the retained artifact set for a release.
 
 Writes, to an output directory: the verification data (declared design inputs
 reconciled against executed Allure results), the rendered traceability matrix,
-and a manifest describing the bundle —
+the executed Allure results themselves with the attachments and containers
+they reference, and a manifest describing the bundle —
 the DHR-shaped set a team attaches to a release tag so the evidence outlives
 CI artifact retention.
 """
@@ -11,11 +12,46 @@ CI artifact retention.
 from __future__ import annotations
 
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
 from rdm.record.sdd import find_dhf_doc
 from rdm.record.verify import write_verification_file
+
+
+def _attachment_sources(node) -> set[str]:
+    """Every attachment ``source`` in an Allure result or container, at any depth."""
+    found: set[str] = set()
+    if isinstance(node, dict):
+        for item in node.get("attachments") or []:
+            if isinstance(item, dict) and item.get("source"):
+                found.add(str(item["source"]))
+        for value in node.values():
+            found |= _attachment_sources(value)
+    elif isinstance(node, list):
+        for value in node:
+            found |= _attachment_sources(value)
+    return found
+
+
+def copy_results(results_dir: Path, dest: Path) -> list[str]:
+    """Copy the results, containers and referenced attachments; return their names."""
+    dest.mkdir(parents=True, exist_ok=True)
+    names: set[str] = set()
+    for path in sorted(results_dir.glob("*-result.json")) + sorted(results_dir.glob("*-container.json")):
+        names.add(path.name)
+        try:
+            names |= _attachment_sources(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue  # an unreadable file is still copied as-is
+    copied = []
+    for name in sorted(names):
+        source = results_dir / name
+        if source.is_file() and Path(name).name == name:  # a plain file in the results dir, nothing outside it
+            shutil.copy2(source, dest / name)
+            copied.append(name)
+    return copied
 
 
 def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> dict:
@@ -43,7 +79,12 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
             render_template_to_file(config, template.name, context, handle,
                                     loaders=[jinja2.FileSystemLoader(str(template.parent))])
 
-    # 3. The manifest describing what this bundle contains.
+    # 3. The executed results themselves: every result and container, and each
+    # attachment they name (on the test, its steps, or a fixture) -- the
+    # evidence behind each verdict, kept past CI artifact retention.
+    copy_results(Path(allure_results_dir), out_dir / "allure-results")
+
+    # 4. The manifest describing what this bundle contains.
     summary = data["summary"]
     manifest = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

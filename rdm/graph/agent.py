@@ -102,6 +102,18 @@ def _select(store: ox.Store, sparql: str) -> list[dict]:
     return [{v: _value(s[v]) for v in variables} for s in result]
 
 
+def _evidence(store: ox.Store, node: str) -> dict:
+    """A run's (or step's) steps, in order and nested, and its attachments (DI-53)."""
+    attachments = sorted(({"name": r["name"], "type": r["type"], "file": r["file"]} for r in _select(
+        store, f"SELECT ?name ?type ?file WHERE {{ <{node}> rdm:attachment ?a . ?a rdfs:label ?name ; "
+               f"rdm:path ?file . OPTIONAL {{ ?a dcterms:format ?type }} }}")), key=lambda a: a["file"])
+    steps = _select(store, f"SELECT ?s ?name ?status ?pos WHERE {{ <{node}> rdm:step ?s . ?s rdfs:label ?name ; "
+                           f"rdm:position ?pos . OPTIONAL {{ ?s rdm:status ?status }} }}")
+    steps.sort(key=lambda r: [int(n) for n in r["pos"].split(".")])
+    return {"steps": [{"name": r["name"], "status": r["status"], **_evidence(store, r["s"])} for r in steps],
+            "attachments": attachments}
+
+
 def _input(store: ox.Store, node: str) -> dict:
     one = _select(store, f"""SELECT ?id ?text ?context ?doc ?path ?commit WHERE {{
         <{node}> dcterms:identifier ?id ; rdm:text ?text .
@@ -119,8 +131,8 @@ def _input(store: ox.Store, node: str) -> dict:
             store, f"SELECT ?path WHERE {{ ?t rdm:verifies <{node}> ; rdfs:label ?path }}")),
         "risks": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ ?r rdm:controlledBy <{node}> ; dcterms:identifier ?id }}")),
-        "runs": sorted(({"test": r["name"], "status": r["status"]} for r in _select(
-            store, f"SELECT ?name ?status WHERE {{ ?r rdm:exercises <{node}> ; rdfs:label ?name ; "
+        "runs": sorted(({"test": r["name"], "status": r["status"], **_evidence(store, r["r"])} for r in _select(
+            store, f"SELECT ?r ?name ?status WHERE {{ ?r rdm:exercises <{node}> ; rdfs:label ?name ; "
                    f"rdm:status ?status }}")), key=lambda r: (r["test"], r["status"])),
     }
 
