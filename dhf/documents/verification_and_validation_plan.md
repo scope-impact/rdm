@@ -32,6 +32,8 @@ user_needs:
     text: "A reviewer can prove, on demand, that a specific verifying test detects a specific defect in the code it verifies."
   - id: UN-014
     text: "A regulatory author can query and visually explore the design record as a linked graph, without changing how the record is authored."
+  - id: UN-015
+    text: "An agent, in any harness, can read the design record — query it, trace a need or input to its tests and results, and check it against the gate rules — and cannot change it."
 ---
 
 # Purpose
@@ -79,5 +81,6 @@ contexts that satisfy it. `rdm story release-gate` enforces this.
 | UN-012 | maintainer review that a produced evidence bundle and DMR index are complete and agree with the record they were generated from | dogfooding: `rdm story dmr` / `evidence-bundle` run against RDM's own DHF and the worked example |
 | UN-013 | maintainer review that a probe reports a broken behavior as caught only when the test genuinely fails, and never leaves the code mutated | dogfooding: reviewers probing RDM's own tests during pull-request review |
 | UN-014 | maintainer review that the projected graph agrees with the record it was built from (needs, inputs, contexts, documents, tests, results, commits) and is explorable in a graph browser | dogfooding: RDM's own DHF projected, queried, and browsed in AWS Graph Explorer |
+| UN-015 | maintainer review that an agent harness connected to the server answers traceability questions about RDM's own record correctly and has no way to change it | dogfooding: agent sessions on RDM itself using `rdm graph mcp` |
 
 Formative evidence never gates release.

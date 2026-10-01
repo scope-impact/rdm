@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 7
+revision: 8
 title: Design Review — RDM
 ---
 
@@ -243,6 +243,32 @@ left open by Design Review 6.
   DC-001 is a quality-system document; its links are to the Part 11 clauses it
   claims, which is correct. A document-to-input link type would add
   vocabulary for a picture, not for a question anyone asks.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 8 — Read-only agent interface
+
+**Scope reviewed:** UN-015, DI-41 (MCP server: schema, query, trace,
+validate) and DI-42 (read-only), in the graph context.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- MCP over stdio, because agent harnesses (Claude Code, Warp, open-source
+  harnesses) already speak it; the official `mcp` SDK, in the existing
+  `graph` extra rather than a new one.
+- Read-only by construction: no write tool, SPARQL Update rejected. An agent
+  that wants a change writes it to the record and opens a pull request,
+  like anyone else.
+- Freshness: projected per call rather than from a built store, since
+  projection is cheap; no cache to go stale.
+- Kept out: a `propose` tool (that is git), HTTP transport, authentication
+  (stdio runs as the local user).
+- Fixed in passing: a duplicate `design_inputs` key in the graph design
+  document's frontmatter.
 
 ## Findings and actions
 

@@ -2,8 +2,7 @@
 id: SDS-GRAPH-001
 kind: design
 context: graph
-satisfies: [UN-014, UN-006, UN-003]
-design_inputs: []
+satisfies: [UN-014, UN-006, UN-003, UN-015]
 design_inputs:
   - id: DI-35
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs, bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each design document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
@@ -20,6 +19,12 @@ design_inputs:
   - id: DI-39
     text: "RDM shall write the projected graph as an AWS Graph Explorer graph file: every node of the record and every link between two such nodes, leaving out the vocabulary and type statements, optionally leaving out the nodes of chosen classes together with their links, and naming the served SPARQL endpoint as the file's connection, so that the whole traceability graph opens in Graph Explorer in one step."
     traces_to: [UN-014]
+  - id: DI-41
+    text: "RDM shall serve the design record to agents as an MCP server over stdio (rdm graph mcp) with four tools: schema (the vocabulary and the predeclared prefixes), query (SPARQL), trace (a user need or design input with its contexts, documents, tests and runs) and validate (the gate shapes' results), each answering from a projection rebuilt from the record on that call."
+    traces_to: [UN-015]
+  - id: DI-42
+    text: "RDM's agent server shall offer no way to change the record or the graph: query shall accept SELECT, ASK, CONSTRUCT and DESCRIBE and reject SPARQL Update, and shall cap results at a row limit, saying when it cut them."
+    traces_to: [UN-015]
 ---
 
 # Graph — Software Design
@@ -96,6 +101,19 @@ source: the graph is derived, rebuilt on demand, and never edited.
   TestRun` (repeatable) leaves out a class's nodes and their links to
   declutter; `--endpoint` names the served endpoint (default
   `http://localhost:7878`). Refines UN-014.
+- **DI-41 (agent server)** — `rdm graph mcp` is a Model Context Protocol
+  server over stdio, the interface agent harnesses already speak. Four tools:
+  `schema` (vocabulary and prefixes, so an agent can write queries),
+  `query` (SPARQL), `trace` (one need or input with its contexts, documents,
+  tests and runs, as JSON) and `validate` (the gate shapes' results). Each call
+  projects the record afresh (about a third of a second for RDM's own), so an
+  agent working on a branch never reads a stale graph. Refines UN-015.
+- **DI-42 (read-only)** — the graph is the source of truth agents consult,
+  never one they write. The server has no write tool; `query` rejects SPARQL
+  Update and anything other than SELECT, ASK, CONSTRUCT and DESCRIBE; results
+  are capped (default 200 rows) and say when they were cut, so one query
+  cannot flood an agent's context. Changing the record stays a reviewed pull
+  request. Refines UN-015.
 
 ## Design Outputs
 
@@ -122,6 +140,7 @@ for serving):
 - `rdm/graph/shapes.ttl` + `rdm/graph/validate.py` — the gate shapes and the
   pySHACL runner (DI-38).
 - `rdm/graph/explorer.py` — the Graph Explorer graph file (DI-39).
-- `rdm/graph/cli.py` — `rdm graph build | query | serve | validate | explorer-file`.
+- `rdm/graph/agent.py` — the read-only agent tools and the MCP server (DI-41, DI-42; `mcp` SDK in the `graph` extra).
+- `rdm/graph/cli.py` — `rdm graph build | query | serve | validate | explorer-file | mcp`.
 
-Acceptance criteria are verified by `@allure.story("DI-35" / "DI-36" / "DI-37" / "DI-38" / "DI-39")` tests.
+Acceptance criteria are verified by `@allure.story("DI-35" / "DI-36" / "DI-37" / "DI-38" / "DI-39" / "DI-41" / "DI-42")` tests.
