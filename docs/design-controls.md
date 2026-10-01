@@ -78,8 +78,10 @@ rdm story mutation-probe --file <impl> --find '<code for a clause>' \
   --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
 ```
 
-The probe always restores the file (even if interrupted) and counts only a
-genuine test failure as a catch. It records nothing and never gates release.
+The probe runs the test once unmutated first and refuses one that does not
+pass — a red test would "catch" anything. It always restores the file (even
+if interrupted) and counts only a genuine test failure as a catch. It records
+nothing and never gates release.
 
 Teams that want automated evidence of test strength can run a mutation-testing
 tool (for example [mutmut](https://mutmut.readthedocs.io/)) in CI; RDM does not

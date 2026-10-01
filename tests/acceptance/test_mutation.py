@@ -25,6 +25,15 @@ from rdm.story_audit.mutation import (
 allure = pytest.importorskip("allure")
 
 
+def _runner(src: Path, original: str, mutated: str, seen: list | None = None):
+    """Passes on the unmutated file, returns ``mutated`` under the mutation."""
+    def run() -> str:
+        if seen is not None:
+            seen.append(src.read_text())
+        return TESTS_PASSED if src.read_text() == original else mutated
+    return run
+
+
 @allure.story("DI-34")
 @allure.label("output", "rdm/story_audit/mutation.py")
 def test_mutation_probe_applies_reports_and_restores(tmp_path: Path) -> None:
@@ -37,14 +46,9 @@ def test_mutation_probe_applies_reports_and_restores(tmp_path: Path) -> None:
 
     # A runner that "catches" the mutation (tests FAIL) → killed. It also records
     # what the file looked like *while it ran*, proving the mutation was applied.
-    seen = {}
-
-    def catching_runner() -> str:
-        seen["during"] = src.read_text()
-        return TESTS_FAILED  # tests ran and failed under the mutation
-
-    res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", catching_runner)
-    assert seen["during"] == "VALUE = 2\n"          # mutation was live during the run
+    seen: list[str] = []
+    res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", _runner(src, original, TESTS_FAILED, seen))
+    assert seen == [original, "VALUE = 2\n"]        # run unmutated first, then with the mutation live
     assert res["killed"] and not res["survived"]     # caught
     assert res["restored"] and src.read_text() == original  # always reverted
 
@@ -58,6 +62,16 @@ def test_mutation_probe_applies_reports_and_restores(tmp_path: Path) -> None:
     assert "error" in run_mutation_probe(src, "x = 1", "x = 2", lambda: TESTS_FAILED)
     assert src.read_text() == "x = 1\nx = 1\n"
 
+    # A test that does not pass unmutated is refused: it would "catch" any
+    # mutation. Error, never KILLED, and the mutation is never applied.
+    src.write_text(original)
+    seen = []
+    res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", lambda: seen.append(src.read_text()) or TESTS_FAILED)
+    assert "error" in res and "fails before any mutation" in res["error"] and not res.get("killed")
+    assert seen == [original] and src.read_text() == original
+    res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", lambda: "pytest did not run cleanly (exit 2)")
+    assert "error" in res and "did not execute cleanly" in res["error"] and not res.get("killed")
+
 
 @allure.story("DI-34")
 @allure.label("output", "rdm/story_audit/mutation.py")
@@ -70,7 +84,7 @@ def test_mutation_probe_only_a_genuine_test_failure_is_a_kill(tmp_path: Path, mo
 
     # A runner that did not execute cleanly → error, NOT killed; still restored.
     res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2",
-                             lambda: "no tests matched the selector (exit 5)")
+                             _runner(src, original, "no tests matched the selector (exit 5)"))
     assert "error" in res and "no tests matched" in res["error"]
     assert not res.get("killed") and not res.get("survived")
     assert res["restored"] and src.read_text() == original
@@ -109,6 +123,8 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     seen = {}
 
     def observing_runner() -> str:
+        if src.read_text() == original:
+            return TESTS_PASSED
         seen["journal_during"] = journal.read_text()
         return TESTS_FAILED
 
@@ -120,7 +136,7 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     # left behind) is recovered by the next probe of that file.
     src.write_text("VALUE = 2\n")                    # the crash left the mutant live
     journal.write_text(original)                     # ...and the journal behind
-    res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", lambda: TESTS_FAILED)
+    res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", _runner(src, original, TESTS_FAILED))
     assert res["recovered"] and res["killed"]        # recovered, then probed normally
     assert src.read_text() == original and not journal.exists()
     assert recover_interrupted_probe(src) is False   # nothing left to recover
@@ -130,6 +146,8 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     src.write_text(original)
 
     def terminating_runner() -> str:
+        if src.read_text() == original:
+            return TESTS_PASSED
         signal.raise_signal(signal.SIGTERM)
         return TESTS_PASSED  # unreachable
 
@@ -152,6 +170,8 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     mtime_seconds = []
 
     def mtime_runner() -> str:
+        if src.read_text() == original:
+            return TESTS_PASSED
         mtime_seconds.append(int(src.stat().st_mtime))
         return TESTS_FAILED
 

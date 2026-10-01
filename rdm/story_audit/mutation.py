@@ -111,9 +111,10 @@ def run_mutation_probe(
     replace: str,
     run_tests: Callable[[], str],
 ) -> dict:
-    """Apply ``find -> replace`` once in ``file_path``, run ``run_tests``
-    (returns ``TESTS_PASSED``, ``TESTS_FAILED``, or an error description), then
-    restore the file unconditionally.
+    """Run ``run_tests`` on the unmutated file (it must pass), apply
+    ``find -> replace`` once in ``file_path``, run ``run_tests`` again (returns
+    ``TESTS_PASSED``, ``TESTS_FAILED``, or an error description), then restore
+    the file unconditionally.
 
     Returns ``{"killed": bool, "survived": bool, "restored": bool, "recovered":
     bool}``, or ``{"error": ..., "restored": ..., "recovered": ...}`` when the
@@ -128,6 +129,15 @@ def run_mutation_probe(
     occurrences = original.count(find)
     if occurrences != 1:
         return {"error": f"`find` text occurs {occurrences} time(s) in {file_path} (need exactly 1)"}
+
+    # A test that does not pass unmutated would "catch" any mutation: run it
+    # first, and refuse to report a result from it (DI-34).
+    baseline = run_tests()
+    if baseline != TESTS_PASSED:
+        why = ("the test fails before any mutation" if baseline == TESTS_FAILED
+               else f"test run did not execute cleanly: {baseline}")
+        return {"error": f"{why} — fix it first; a probe of it would prove nothing",
+                "restored": True, "recovered": recovered}
 
     journal = _journal_path(file_path)
     journal.write_text(original, encoding="utf-8")
