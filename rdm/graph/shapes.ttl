@@ -162,6 +162,18 @@ rdm:UniqueRequirementShape a sh:NodeShape ;
     sh:property [ sh:path rdm:declarationCount ; sh:maxInclusive 1 ;
                   sh:message "id is declared more than once in the record" ] .
 
+# DI-51: a design document whose latest change is not on the default branch.
+rdm:LandedShape a sh:NodeShape ;
+    sh:targetSubjectsOf rdm:describes ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "design document's latest change has not landed on the default branch" ;
+        sh:select """SELECT $this WHERE {
+            $this <http://www.w3.org/ns/prov#wasGeneratedBy> ?c .
+            FILTER NOT EXISTS { $this rdm:landedIn ?l } }""" ;
+    ] .
+
 rdm:ProposedRiskShape a sh:NodeShape ;
     sh:targetClass rdm:Risk ;
     sh:property [ sh:path rdm:riskStatus ; sh:not [ sh:hasValue "proposed" ] ; sh:severity sh:Warning ;

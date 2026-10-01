@@ -33,6 +33,7 @@ from rdm.record.sdd import (
     context_of,
     declarations,
     design_inputs,
+    find_dhf_doc,
     find_design_docs,
     parse_frontmatter,
     realises_by_context,
@@ -40,6 +41,8 @@ from rdm.record.sdd import (
     satisfies_for,
     user_need_texts,
 )
+
+DESIGN_REVIEW_DOC = "design_review.md"  # the review the design gate requires (rdm.gates.design_gate)
 
 NS = "https://github.com/scope-impact/rdm/ns#"
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
@@ -129,20 +132,6 @@ def controlled_documents(dhf: Path, root: Path) -> list[dict]:
 
 def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "record"
-    texts = user_need_texts(dhf)
-    declared = declarations(dhf)
-
-    def count(node, ident):  # DI-46: how many times the record declares this id
-        ds.add(node, rdm("declarationCount"),
-               ox.Literal(str(len(declared.get(ident, [])) or 1), datatype=_term(_XSD + "integer")), g)
-
-    for un in sorted(registry_user_needs(dhf)):
-        need = ds.thing(ds.node("need", un), rdm("UserNeed"), un, g)
-        ds.add(need, _term(_DCT + "identifier"), un, g)
-        count(need, un)
-        if un in texts:
-            ds.add(need, rdm("text"), texts[un], g)
-
     # Controlled documents (frontmatter id), keyed by that id.
     doc_by_path = {}
     for entry in controlled_documents(dhf, root):
@@ -155,6 +144,26 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         ds.add(doc, rdm("path"), entry["path"], g)
         doc_by_path[entry["path"]] = doc
 
+    texts = user_need_texts(dhf)
+    declared = declarations(dhf)
+
+    def count(node, ident):  # DI-46: how many times the record declares this id
+        ds.add(node, rdm("declarationCount"),
+               ox.Literal(str(len(declared.get(ident, [])) or 1), datatype=_term(_XSD + "integer")), g)
+
+    for un in sorted(registry_user_needs(dhf)):
+        need = ds.thing(ds.node("need", un), rdm("UserNeed"), un, g)
+        ds.add(need, _term(_DCT + "identifier"), un, g)
+        count(need, un)
+        for where in declared.get(un, [])[:1]:  # DI-52: the document that declares it
+            declaring = doc_by_path.get(_rel(dhf / where, root))
+            if declaring is not None:
+                ds.add(need, rdm("declaredIn"), declaring, g)
+        if un in texts:
+            ds.add(need, rdm("text"), texts[un], g)
+
+    review_path = find_dhf_doc(dhf, DESIGN_REVIEW_DOC)
+    review = doc_by_path.get(_rel(review_path, root)) if review_path else None
     declared_in: dict[str, ox.NamedNode] = {}
     for path in find_design_docs(dhf):
         context = context_of(path)
@@ -164,6 +173,8 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         doc = doc_by_path.get(_rel(path, root))
         if doc is not None:
             ds.add(doc, rdm("describes"), ctx, g)
+            if review is not None:  # DI-52: the review the design gate requires
+                ds.add(doc, rdm("reviewedIn"), review, g)
             front = parse_frontmatter(path.read_text(encoding="utf-8"))
             for item in front.get("design_inputs") or []:
                 if isinstance(item, dict) and str(item.get("id", "")).strip():
@@ -208,26 +219,64 @@ def _executions(ds: _Dataset, results_dir: Path) -> None:
                 ds.add(run, rdm("exercises"), ds.node("input", di), "executions")
 
 
+def _git_out(root: Path, *args: str) -> str | None:
+    out = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+    return out.stdout.strip() if out.returncode == 0 else None
+
+
+def default_branch(root: Path) -> str | None:
+    """The branch changes land on: origin's HEAD, else origin's or the local
+    main or master (origin first: a local branch may be stale)."""
+    remote = _git_out(root, "rev-parse", "--abbrev-ref", "origin/HEAD")
+    if remote and remote != "origin/HEAD":
+        return remote
+    for ref in ("refs/remotes/origin/main", "refs/remotes/origin/master", "refs/heads/main", "refs/heads/master"):
+        if _git_out(root, "rev-parse", "--verify", "--quiet", ref):
+            return ref.split("/", 2)[2]
+    return None
+
+
+def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, ox.NamedNode]:
+    """A commit node with its time and author (prov:Agent)."""
+    sha, author, when, subject = _git_out(root, "log", "-1", "--format=%H%x1f%an%x1f%aI%x1f%s", sha).split("\x1f", 3)
+    commit = ds.thing(ds.node("commit", sha), _term(_PROV + "Activity"), f"{sha[:7]} {subject}", g)
+    ds.add(commit, rdm("sha"), sha, g)
+    ds.add(commit, _term(_PROV + "endedAtTime"), ox.Literal(when, datatype=_term(_XSD + "dateTime")), g)
+    agent = ds.thing(ds.node("agent", _slug(author)), _term(_PROV + "Agent"), author, g)
+    ds.add(commit, _term(_PROV + "wasAssociatedWith"), agent, g)
+    return commit, agent
+
+
+def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str | None:
+    """The first-parent commit of ``branch`` that brought ``sha`` in (DI-51):
+    ``sha`` itself when it is on that line (a direct or squash commit), else
+    the oldest first-parent commit descending from it (the merge)."""
+    if sha in first_parent:
+        return sha
+    path = _git_out(root, "rev-list", "--first-parent", "--ancestry-path", f"{sha}..{branch}")
+    return path.splitlines()[-1] if path else None
+
+
 def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "git"
     by_path = {e["path"]: e["id"] for e in controlled_documents(dhf, root)}
+    branch = default_branch(root)
+    first_parent = set((_git_out(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
     for path in find_design_docs(dhf):
         doc_id = by_path.get(_rel(path, root))
         if doc_id is None:
             continue
-        out = subprocess.run(
-            ["git", "-C", str(root), "log", "-1", "--format=%H%x1f%an%x1f%aI%x1f%s", "--", _rel(path, root)],
-            capture_output=True, text=True,
-        )
-        if out.returncode != 0 or not out.stdout.strip():
+        sha = _git_out(root, "log", "-1", "--format=%H", "--", _rel(path, root))
+        if not sha:
             continue  # never committed: no fact to state
-        sha, author, when, subject = out.stdout.strip().split("\x1f", 3)
-        commit = ds.thing(ds.node("commit", sha), _term(_PROV + "Activity"), f"{sha[:7]} {subject}", g)
-        ds.add(commit, rdm("sha"), sha, g)
-        ds.add(commit, _term(_PROV + "endedAtTime"), ox.Literal(when, datatype=_term(_XSD + "dateTime")), g)
-        agent = ds.thing(ds.node("agent", _slug(author)), _term(_PROV + "Agent"), author, g)
-        ds.add(commit, _term(_PROV + "wasAssociatedWith"), agent, g)
-        ds.add(ds.node("doc", doc_id), _term(_PROV + "wasGeneratedBy"), commit, g)
+        doc = ds.node("doc", doc_id)
+        commit, _ = _commit(ds, root, sha, g)
+        ds.add(doc, _term(_PROV + "wasGeneratedBy"), commit, g)
+        landed = _landing(root, sha, branch, first_parent) if branch else None
+        if landed:
+            landing, who = _commit(ds, root, landed, g)
+            ds.add(doc, rdm("landedIn"), landing, g)
+            ds.add(doc, rdm("landedBy"), who, g)
 
 
 def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
@@ -247,6 +296,7 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
     declared = Counter(r.id for r in register)
     doc_ids = {entry["path"]: entry["id"] for entry in controlled_documents(dhf, root)}
     g = "risks"
+    policy_doc = doc_ids.get(_rel(dhf / policy.source, root)) if policy else None
     for r in register:
         node = ds.thing(ds.node("risk", r.id), rdm("Risk"), r.id, g)
         ds.add(node, _term(_DCT + "identifier"), r.id, g)
@@ -268,6 +318,8 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
         doc_id = doc_ids.get(_rel(dhf.parent / r.document, root))
         if doc_id:
             ds.add(node, rdm("declaredIn"), ds.node("doc", doc_id), g)
+        if policy_doc:  # DI-52: the policy the risk was evaluated against
+            ds.add(node, rdm("evaluatedAgainst"), ds.node("doc", policy_doc), g)
 
 
 def _ontology(ds: _Dataset) -> None:
