@@ -12,6 +12,23 @@ from rdm.graph.ns import PREFIXES, with_prefixes  # noqa: F401 (re-exported)
 
 DEFAULT_STORE = Path(".rdm/graph")
 
+def project_record(dhf_dir: Path | None, allure_results_dir: Path | None = None,
+                   checklists: list[str] | None = None, **options) -> list | None:
+    """The projection a command reads, or None after printing why (a missing
+    DHF, checklist or file): the command then exits 2."""
+    from rdm.graph.project import project
+
+    dhf = Path(dhf_dir or "dhf")
+    if not dhf.exists():
+        print(f"Error: DHF directory not found: {dhf}")
+        return None
+    try:
+        return project(dhf, allure_results_dir, checklists=checklists, **options)
+    except FileNotFoundError as error:
+        print(f"Error: {error}")
+        return None
+
+
 def _missing_extra() -> int:
     print("Error: the graph commands need the optional extra: pip install 'rdm[graph]'")
     return 2
@@ -28,17 +45,11 @@ def graph_build_command(
 ) -> int:
     """Project the record; write sorted N-Quads and/or (re)build a store."""
     try:
-        from rdm.graph.project import build_store, nquads, project
+        from rdm.graph.project import build_store, nquads
     except ImportError:
         return _missing_extra()
-    dhf = Path(dhf_dir or "dhf")
-    if not dhf.exists():
-        print(f"Error: DHF directory not found: {dhf}")
-        return 2
-    try:
-        quads = project(dhf, allure_results_dir, project_name, checklists, infer=infer)
-    except FileNotFoundError as error:
-        print(f"Error: {error}")
+    quads = project_record(dhf_dir, allure_results_dir, checklists, project_name=project_name, infer=infer)
+    if quads is None:
         return 2
     if output is None and store is None:
         sys.stdout.write(nquads(quads))
@@ -65,8 +76,6 @@ def graph_query_command(
     """Answer a SPARQL query over a store, or over a fresh in-memory projection."""
     try:
         import pyoxigraph as ox
-
-        from rdm.graph.project import project
     except ImportError:
         return _missing_extra()
     if store is not None:
@@ -75,12 +84,11 @@ def graph_query_command(
             return 2
         db = ox.Store.read_only(str(store))
     else:
-        dhf = Path(dhf_dir or "dhf")
-        if not dhf.exists():
-            print(f"Error: DHF directory not found: {dhf}")
+        quads = project_record(dhf_dir, allure_results_dir, checklists, infer=infer)
+        if quads is None:
             return 2
         db = ox.Store()
-        db.extend(project(dhf, allure_results_dir, checklists=checklists, infer=infer))
+        db.extend(quads)
     try:
         # Named graphs are queried as one dataset, as `rdm graph serve` does.
         result = db.query(with_prefixes(sparql), use_default_graph_as_union=True)
@@ -138,7 +146,6 @@ def graph_explorer_file_command(
         import pyoxigraph as ox
 
         from rdm.graph.explorer import DEFAULT_ENDPOINT, write_explorer_file
-        from rdm.graph.project import project
     except ImportError:
         return _missing_extra()
     if store is not None:
@@ -147,14 +154,8 @@ def graph_explorer_file_command(
             return 2
         quads = list(ox.Store.read_only(str(store)))
     else:
-        dhf = Path(dhf_dir or "dhf")
-        if not dhf.exists():
-            print(f"Error: DHF directory not found: {dhf}")
-            return 2
-        try:
-            quads = project(dhf, allure_results_dir, checklists=checklists)
-        except FileNotFoundError as error:
-            print(f"Error: {error}")
+        quads = project_record(dhf_dir, allure_results_dir, checklists)
+        if quads is None:
             return 2
     graph = write_explorer_file(output, quads, endpoint or DEFAULT_ENDPOINT, exclude)
     print(f"wrote {output}: {len(graph['data']['vertices'])} nodes, {len(graph['data']['edges'])} links "

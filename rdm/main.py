@@ -326,52 +326,45 @@ def _add_graph_parser(subparsers):
         'graph',
         help='the design record as a linked-data (RDF) graph: build, query, validate, serve, explorer-file, mcp')
     graph_sub = graph_parser.add_subparsers(dest='graph_command', metavar='<subcommand>')
+    # The record a graph command reads: the same three options on every one.
+    record = argparse.ArgumentParser(add_help=False)
+    record.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    record.add_argument('--allure-results', help='Allure results dir (adds the test runs)')
+    record.add_argument('--checklist', action='append',
+                        help='add a checklist: built-in name (rdm gap --list) or a .txt/RDF file; repeatable')
 
-    build = graph_sub.add_parser('build', help='project the record into RDF (sorted N-Quads and/or an Oxigraph store)')
-    build.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    build.add_argument('--allure-results', help='Allure results dir (adds the executions graph)')
+    build = graph_sub.add_parser('build', parents=[record],
+                                 help='project the record into RDF (sorted N-Quads and/or an Oxigraph store)')
     build.add_argument('-o', '--output', help='write sorted N-Quads here (default: stdout, unless --store)')
     build.add_argument('--store', help='(re)build an Oxigraph store in this directory, e.g. .rdm/graph')
     build.add_argument('--project', help='project name in instance IRIs (default: the repository name)')
-    build.add_argument('--checklist', action='append',
-                       help='add a checklist: built-in name (rdm gap --list) or a .txt/RDF file; repeatable')
     build.add_argument('--infer', action='store_true',
                        help="add what the vocabulary's rules derive, in a separate inferred graph")
 
-    query = graph_sub.add_parser('query', help='answer a SPARQL query (SELECT/ASK/CONSTRUCT)')
+    query = graph_sub.add_parser('query', parents=[record], help='answer a SPARQL query (SELECT/ASK/CONSTRUCT)')
     query.add_argument('sparql', help='the SPARQL query text')
     query.add_argument('--store', help='query this store (default: a fresh in-memory projection of --dhf)')
-    query.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    query.add_argument('--allure-results', help='Allure results dir (for the in-memory projection)')
     query.add_argument('--format', choices=['tsv', 'csv', 'json'], default='tsv', help='SELECT result format')
-    query.add_argument('--checklist', action='append', help='checklist(s) for the in-memory projection; repeatable')
     query.add_argument('--infer', action='store_true',
                        help="include what the vocabulary's rules derive (in-memory projection only)")
 
-    validate = graph_sub.add_parser('validate', help='check the graph against the SHACL gate shapes (+ your own)')
-    validate.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    validate.add_argument('--allure-results', help='Allure results dir (needed for the verification shapes)')
-    validate.add_argument('--checklist', action='append', help='checklist(s) to hold the documents to; repeatable')
+    validate = graph_sub.add_parser('validate', parents=[record],
+                                    help='check the graph against the SHACL gate shapes (+ your own)')
     validate.add_argument('--shapes', action='append', help='an additional SHACL shapes file; repeatable')
 
     explorer = graph_sub.add_parser(
-        'explorer-file', help='write the whole record as an AWS Graph Explorer graph file (Load graph from file)')
+        'explorer-file', parents=[record],
+        help='write the whole record as an AWS Graph Explorer graph file (Load graph from file)')
     explorer.add_argument('-o', '--output', required=True, help='graph file to write, e.g. rdm.graph.json')
     explorer.add_argument('--store', help='read this store (default: a fresh projection of --dhf)')
-    explorer.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    explorer.add_argument('--allure-results', help='Allure results dir (for the fresh projection)')
-    explorer.add_argument('--checklist', action='append', help='checklist(s) for the fresh projection; repeatable')
     explorer.add_argument('--endpoint', help='SPARQL endpoint Graph Explorer reads details from '
                                              '(default: http://localhost:7878)')
     explorer.add_argument('--exclude', action='append',
                           help='leave out a class and its links, e.g. TestRun; repeatable')
 
-    agent = graph_sub.add_parser(
-        'mcp',
+    graph_sub.add_parser(
+        'mcp', parents=[record],
         help='serve the record to agents, read-only, as an MCP server over stdio (schema, query, trace, validate)')
-    agent.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    agent.add_argument('--allure-results', help='Allure results dir (adds test runs to trace and validate)')
-    agent.add_argument('--checklist', action='append', help='checklist(s) to include; repeatable')
 
     serve = graph_sub.add_parser('serve', help='serve the store as a SPARQL 1.1 endpoint (for AWS Graph Explorer)')
     serve.add_argument('--store', help='store directory (default: .rdm/graph)')

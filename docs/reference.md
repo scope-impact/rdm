@@ -1,9 +1,8 @@
 # API reference
 
 Generated from the source docstrings by
-[mkdocstrings](https://mkdocstrings.github.io/). The record core is
-dependency-light; the project-management surface lives behind the optional
-`plan` extra.
+[mkdocstrings](https://mkdocstrings.github.io/). The record core and the
+gates need no extra; the graph needs the `graph` extra.
 
 ## Record core
 
@@ -33,11 +32,27 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.record.risk
 
+### `rdm.record.ids`
+
+::: rdm.record.ids
+
+### `rdm.record.git`
+
+::: rdm.record.git
+
 ## The record as a graph (`rdm graph`)
 
 ### `rdm.graph.project`
 
 ::: rdm.graph.project
+
+### `rdm.graph.ns`
+
+::: rdm.graph.ns
+
+### `rdm.graph.rules`
+
+::: rdm.graph.rules
 
 ### `rdm.graph.checklists`
 

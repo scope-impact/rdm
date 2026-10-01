@@ -78,25 +78,19 @@ def validate_command(
     extra_shapes: list[Path] | None = None,
 ) -> int:
     """Run `rdm graph validate`: print each result; exit 1 on any violation."""
-    from rdm.graph.project import project
+    from rdm.graph.cli import project_record
 
-    dhf = Path(dhf_dir or "dhf")
-    if not dhf.exists():
-        print(f"Error: DHF directory not found: {dhf}")
-        return 2
     for path in extra_shapes or []:
         if not Path(path).exists():
             print(f"Error: shapes file not found: {path}")
             return 2
-    try:
-        quads = project(dhf, allure_results_dir, checklists=checklists)
-    except FileNotFoundError as error:
-        print(f"Error: {error}")
+    quads = project_record(dhf_dir, allure_results_dir, checklists)
+    if quads is None:
         return 2
     results = validate(quads, extra_shapes)
 
     print("Graph validation (SHACL gate shapes)")
-    print(f"DHF: {dhf.resolve()}\n")
+    print(f"DHF: {Path(dhf_dir or 'dhf').resolve()}\n")
     for r in results:
         print(f"  [{r.severity.upper():9}] {r.label}: {r.message}")
     violations = sum(r.severity == "Violation" for r in results)

@@ -8,6 +8,19 @@
   declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
   attachment (DI-57).
 
+### Changed — one home for each rule and helper
+- The risk rules are written once (`rdm.record.risk.assess`): the release gate
+  reports their findings and the graph carries them on each risk
+  (`rdm:finding`, `rdm:riskWarning`), so the risk shapes report the gate's own
+  messages and cannot drift from it (DI-45).
+- One id grammar (`rdm.record.ids`), one git helper (`rdm.record.git`), one
+  namespace module (`rdm.graph.ns`), and a public `rdm.gaps` API the graph
+  uses; orphan test tags are projected as data (`rdm:undeclaredTag`).
+- A projection parses each document once and asks git for every document's
+  latest commit in one call — about 1 s to 0.2 s per MCP call; the release
+  gate about 1.1 s to 0.06 s. `rdm graph` subcommands share their record
+  options, and `query` reports a missing checklist instead of a traceback.
+
 ### Added — rules for derived relations
 - Each relation the graph derives rather than stores is declared in the
   vocabulary with its SPARQL CONSTRUCT (`rdm:Rule`); the first,

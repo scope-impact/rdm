@@ -11,6 +11,7 @@ agent that wants a change edits the record and opens a pull request.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import pyoxigraph as ox
@@ -259,7 +260,7 @@ def mcp_command(dhf_dir: Path | None = None, allure_results_dir: Path | None = N
     """Run `rdm graph mcp`: serve the record over MCP stdio until the client disconnects."""
     dhf = Path(dhf_dir or "dhf")
     if not dhf.exists():
-        print(f"Error: DHF directory not found: {dhf}", file=__import__("sys").stderr)
+        print(f"Error: DHF directory not found: {dhf}", file=sys.stderr)
         return 2
     server(Record(dhf, allure_results_dir, checklists)).run("stdio")
     return 0
