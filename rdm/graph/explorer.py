@@ -16,10 +16,26 @@ import pyoxigraph as ox
 
 _TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 DEFAULT_ENDPOINT = "http://localhost:7878"
+_EXECUTIONS = "graph/executions"  # the test-run results (rdm/graph/allure.py)
 
 
 def _local(iri: str) -> str:
     return iri.rsplit("#", 1)[-1].rsplit("/", 1)[-1]
+
+
+def _reachable(start: set[str], links) -> set[str]:
+    """Nodes connected to ``start`` by ``links`` in either direction."""
+    neighbours: dict[str, set[str]] = {}
+    for s, _, o in links:
+        neighbours.setdefault(s, set()).add(o)
+        neighbours.setdefault(o, set()).add(s)
+    seen, todo = set(start), list(start)
+    while todo:
+        for n in neighbours.get(todo.pop(), ()):
+            if n not in seen:
+                seen.add(n)
+                todo.append(n)
+    return seen
 
 
 def explorer_graph(quads: list[ox.Quad], endpoint: str = DEFAULT_ENDPOINT,
@@ -27,19 +43,24 @@ def explorer_graph(quads: list[ox.Quad], endpoint: str = DEFAULT_ENDPOINT,
     """The Graph Explorer file for ``quads``: every typed instance node (its
     IRI is a ``urn:``, so the vocabulary is left out) and every link between two
     of them except ``rdf:type``; ``exclude`` names classes (by local name,
-    e.g. ``TestRun``) whose nodes and links are left out."""
+    e.g. ``TestRun``) whose nodes and links are left out, together with the
+    nodes that hang only from them: those left with no path to a node outside
+    the test-run results (a run's steps, labels, attachments, fixtures...)."""
     excluded = set(exclude or [])
     types: dict[str, set[str]] = {}
+    anchors: set[str] = set()  # typed outside the test-run results
     for q in quads:
         if q.predicate.value == _TYPE and isinstance(q.subject, ox.NamedNode) and q.subject.value.startswith("urn:"):
             types.setdefault(q.subject.value, set()).add(_local(q.object.value))
+            if not str(getattr(q.graph_name, "value", "")).endswith(_EXECUTIONS):
+                anchors.add(q.subject.value)
     nodes = {n for n, kinds in types.items() if not kinds & excluded}
-    edges = {
-        f"{q.subject.value}-[{q.predicate.value}]->{q.object.value}"
-        for q in quads
-        if q.predicate.value != _TYPE and isinstance(q.object, ox.NamedNode)
-        and q.subject.value in nodes and q.object.value in nodes
-    }
+    links = [(q.subject.value, q.predicate.value, q.object.value) for q in quads
+             if q.predicate.value != _TYPE and isinstance(q.object, ox.NamedNode)
+             and q.subject.value in nodes and q.object.value in nodes]
+    if excluded:
+        nodes = _reachable(anchors & nodes, links)
+    edges = {f"{s}-[{p}]->{o}" for s, p, o in links if s in nodes and o in nodes}
     return {
         "meta": {
             "kind": "graph-export",

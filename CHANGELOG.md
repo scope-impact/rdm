@@ -8,6 +8,11 @@
   declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
   attachment (DI-57).
 
+### Fixed — Graph Explorer
+- `rdm graph explorer-file --exclude TestRun` left a run's details (steps,
+  attachments, labels, fixtures, test cases) as about a thousand islands; they
+  now go with the excluded runs (DI-39).
+
 ### Changed — only the story names a design input
 - Tag discovery reads `@allure.story` (Python), `allure.story` (JS/TS) and
   `@Story` (Java) only; a feature carries the context, not a design input

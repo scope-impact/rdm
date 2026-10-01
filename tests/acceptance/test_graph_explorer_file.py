@@ -15,7 +15,7 @@ import pytest
 allure = pytest.importorskip("allure")
 
 from tests.acceptance.evidence import clause  # noqa: E402
-pytest.importorskip("pyoxigraph")
+ox = pytest.importorskip("pyoxigraph")
 
 from rdm.graph import cli as graph_cli  # noqa: E402
 from rdm.graph.explorer import explorer_graph  # noqa: E402
@@ -23,6 +23,7 @@ from rdm.graph.project import project  # noqa: E402
 from tests.acceptance.test_graph import _record  # noqa: E402
 
 NS = "https://github.com/scope-impact/rdm/ns#"
+TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 
 
 @allure.story("DI-39")
@@ -67,11 +68,26 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
                           and not q.predicate.value.endswith("#type")}
         assert len(edges) == len(expected_links)
 
-    with clause("Leaving out a class drops its nodes and their links, and only those"):
+    with clause("Leaving out a class drops its nodes and their links, the nodes that hang only from them, "
+                "and only those"):
         trimmed = explorer_graph(quads, exclude=["TestRun"])["data"]
         assert "urn:dhf:acme:run/r1-result" not in trimmed["vertices"]
         assert not any("run/r1-result" in e for e in trimmed["edges"])
-        assert set(trimmed["vertices"]) == vertices - {"urn:dhf:acme:run/r1-result"}
+        # the run's story label hung only from the run: it goes with it
+        run_details = {v for v in vertices if v.startswith("urn:dhf:acme:label/")}
+        assert run_details
+        assert set(trimmed["vertices"]) == vertices - {"urn:dhf:acme:run/r1-result"} - run_details
+        # a record node with no links at all is a record island, and stays
+        lone_need = ox.Quad(ox.NamedNode("urn:dhf:acme:need/UN-LONE"), ox.NamedNode(TYPE),
+                            ox.NamedNode(NS + "UserNeed"), ox.NamedNode("urn:dhf:acme:graph/record"))
+        island = explorer_graph(quads + [lone_need], exclude=["TestRun"])["data"]
+        assert "urn:dhf:acme:need/UN-LONE" in island["vertices"]
+        # leaving out labels keeps the run: it links to the record (run -> design input)
+        assert "urn:dhf:acme:run/r1-result" in explorer_graph(quads, exclude=["ResultLabel"])["data"]["vertices"]
+        # with nothing left out, nothing is pruned: a lone run detail stays
+        lone = ox.Quad(ox.NamedNode("urn:dhf:acme:label/lone"), ox.NamedNode(TYPE), ox.NamedNode(NS + "ResultLabel"),
+                       ox.NamedNode("urn:dhf:acme:graph/executions"))
+        assert "urn:dhf:acme:label/lone" in explorer_graph(quads + [lone])["data"]["vertices"]
 
     with clause("The command writes it, from a fresh projection or from a built store"):
         out = tmp_path / "acme.graph.json"

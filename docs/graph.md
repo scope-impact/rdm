@@ -90,10 +90,13 @@ Graph Explorer keeps these settings in the browser, so you set them once:
   neighbor type, for example only `rdm:Checklist` to follow an include
   chain. Expansion is capped at 10 neighbors by default (`Settings`).
 
-Graph Explorer v3.2.2 lists free-form query results in its *Query* panel but
-cannot draw them, and it asks for `CONSTRUCT` results as JSON, which a
-standard SPARQL endpoint rejects. Build views from search and expansion, and
-use `rdm graph query` for questions.
+Graph Explorer v3.2.2's *Search → Query* panel runs a `SELECT` against the
+endpoint and lists the rows (paste the query, **Submit**) — for example every
+risk with its controls, their verifying tests and runs, or the Markdown each
+run links to (`?run rdfs:seeAlso ?markdown`, from the plugin's links, DI-57).
+It cannot draw those rows, and it asks for `CONSTRUCT` results as JSON, which
+a standard SPARQL endpoint rejects: build pictures from search and expansion
+or a graph file (below), and use `rdm graph query` for scripted questions.
 
 ## Your project's whole traceability graph
 
@@ -108,7 +111,7 @@ rdm graph build --allure-results dhf/allure-results \
 ```
 
 The whole chain — need → design input → owner → verifying tests → results —
-is one query (RDM's own DHF: 13 needs, 33 inputs, 145 nodes, 269 links):
+is one query (RDM's own DHF: 15 needs, 47 inputs):
 
 ```sparql
 SELECT ?need ?input ?owner
@@ -137,7 +140,10 @@ rdm graph explorer-file --store .rdm/graph -o rdm-core.graph.json \
 
 The file lists every node and every link between nodes; Graph Explorer
 fetches labels and properties from the endpoint (`--endpoint`, default
-`http://localhost:7878`). Expect a cluster per bounded context — its design
+`http://localhost:7878`). `--exclude` also leaves out what hangs only from the
+excluded nodes — without test runs, their steps, attachments, labels,
+parameters, fixtures and test cases go too, so the core view of RDM's own
+record is about 140 nodes and 330 links rather than a thousand islands. Expect a cluster per bounded context — its design
 inputs, their needs, documents and tests — and one per checklist.
 
 ## What is in the graph
