@@ -28,6 +28,18 @@ design_inputs:
   - id: DI-28
     text: "RDM shall pin each faithfulness verdict at a recorded hash scope, module scope by default (the full source files containing the verifying tests) with function scope selectable, and judge staleness per verdict using its recorded scope, honoring legacy verdicts as function-scoped."
     traces_to: [UN-009]
+  - id: DI-35
+    text: "RDM shall let a design input declare the design inputs it depends_on; a dependent's faithfulness pin shall cover the text of every input it transitively depends on, so a change to an upstream input's text makes the verdicts of its downstream inputs stale while leaving unrelated inputs' verdicts current, tolerating dependency cycles; and the design gate shall warn on a dependency naming an undeclared design input."
+    traces_to: [UN-009]
+  - id: DI-36
+    text: "RDM shall record, with each new faithfulness verdict, normalized fingerprints of the design-input text and of the verifying-test source that ignore whitespace, comments, and docstrings; classify each stale verdict as A (formatting- or comment-only change), B (verifying-test change), C (requirement-text change), or D (unclassifiable: no fingerprints on record), showing the class in the faithfulness report; and let rdm story verdict --carry-forward re-pin a stale verdict without a new review only when it classifies as A, recording the carry-forward and its class in the verdict, and refusing every other class."
+    traces_to: [UN-009]
+  - id: DI-38
+    text: "RDM shall provide rdm story gate-selftest, which builds a synthetic fully-passing DHF in a scratch git repository, confirms the release gate passes it, then injects each fault class in isolation (an untested design input, a failing test, an unreviewed, unfaithful, partial, and stale verdict, a user need no input traces to, an uncommitted design-document edit, a broken journal, and a reworded locked design input) and confirms the release gate blocks each; it shall report caught or missed per fault and exit non-zero if the clean baseline is blocked or any fault escapes."
+    traces_to: [UN-003]
+  - id: DI-39
+    text: "RDM shall carry negative knowledge across faithfulness reviews: recording a verdict over an earlier one shall preserve that verdict's surviving probes and uncovered clauses, together with any findings it had already carried, in a prior_findings list whose entries name the earlier verdict and reviewer; the review worklist (rdm story faithfulness --stale) shall print each listed input's prior findings; and prior findings shall never by themselves block a release."
+    traces_to: [UN-009]
 ---
 
 # Gating — Software Design
@@ -95,6 +107,43 @@ This context owns:
   itself; widening test-file *discovery* — new conventional file-name globs,
   DI-31 — may still re-open module-scope reviews, accepted because staleness
   fails safe: it demands a re-review, it never silently passes). Refines UN-009.
+- **DI-35 (selective invalidation)** — a design input may declare
+  `depends_on: [DI-…]` in its frontmatter entry. The faithfulness pin of a
+  dependent folds in the text of every input in its transitive upstream
+  closure, so rewording an upstream input re-opens the reviews downstream of
+  it — and only those (an unrelated input's pin is untouched). The closure is
+  cycle-safe. An input with no `depends_on` hashes exactly as before, so the
+  mechanism causes no retroactive staleness. The design gate warns on a
+  dependency naming an undeclared input. Borrowed from the Phoenix
+  architecture's clause → canon → implementation-unit invalidation walk.
+  Refines UN-009.
+- **DI-36 (change classification)** — every new verdict also records two
+  normalized fingerprints: of the requirement text (whitespace-collapsed) and
+  of the verifying-test source (Python: the AST with docstrings removed, so
+  comments, formatting and docstrings vanish; other languages: comment lines
+  dropped and whitespace collapsed). A stale verdict is then classified:
+  **A** both fingerprints still match (formatting/comment-only change),
+  **B** only the test fingerprint moved, **C** the requirement fingerprint
+  moved (dominates B), **D** the verdict predates fingerprints. The report
+  prints the class beside each stale input. `rdm story verdict DI-n
+  --carry-forward` re-pins a class-A verdict without a new review, recording
+  `carried_forward: {class, from_hash}` (and, via DI-34, a journal event);
+  it refuses B, C and D — those need a reviewer. A typo fix no longer forces
+  a full §820.30(e) re-review, but it is still a recorded act. Refines UN-009.
+- **DI-38 (gate self-test)** — `rdm story gate-selftest` measures the release
+  gate itself (the Phoenix "fault-inject the trust surface" idea). It builds a
+  synthetic, fully-passing DHF in a scratch git repository, asserts the gate
+  passes it (precision: no false block), then injects each fault class in
+  isolation into a fresh copy and asserts the gate blocks it (recall). It
+  prints a caught/missed table and exits non-zero on a blocked baseline or an
+  escaped fault. CI runs it. Refines UN-003.
+- **DI-39 (negative knowledge)** — recording a verdict over an earlier one
+  carries that verdict's SURVIVED probes and uncovered clauses (plus whatever
+  it had itself carried) into `prior_findings`, each entry naming the earlier
+  verdict and reviewer. `rdm story faithfulness --stale` prints them under each
+  worklist item so the next reviewer starts from known gaps instead of
+  rediscovering them. Prior findings are history, not status: they never block
+  a release on their own. Refines UN-009.
 
 ## Design Outputs
 
@@ -118,6 +167,16 @@ Enforces design controls and verified coverage.
 - **Mutation probe** (`rdm/story_audit/mutation.py`, `rdm story mutation-probe`) —
   applies a one-line mutation, runs the test, reports killed/survived, always
   restores the file; the executed-evidence half of the faithfulness review.
+- **Selective invalidation** (`rdm/record/faithfulness.py` `upstream_closure`,
+  folded into `current_hashes`; `depends_on` read by `rdm/record/sdd.py`) —
+  DI-35.
+- **Change classification** (`rdm/record/fingerprint.py`;
+  `faithfulness.classify_change`; `record_verdict(carry_forward=True)` /
+  `rdm story verdict --carry-forward`) — DI-36.
+- **Gate self-test** (`rdm/story_audit/gate_selftest.py`,
+  `rdm story gate-selftest`) — DI-38.
+- **Negative knowledge** (`record_verdict` carries `prior_findings`; printed by
+  `story_faithfulness_command --stale`) — DI-39.
 
 Acceptance criteria are verified by `@allure.story("DI-2" / "DI-3" / "DI-19" /
 "DI-20" / "DI-21")` tests.

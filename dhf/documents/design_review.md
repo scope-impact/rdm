@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 3
+revision: 4
 title: Design Review — RDM
 ---
 
@@ -125,6 +125,41 @@ finding NC-1).
   V&V plan approach table) — the release gate now names each missing record.
 - Open: merge via an independent, human-reviewed PR; individual signing
   identities (NC-2/NC-3).
+
+# Design Review 4 — Borrowings from the Phoenix architecture
+
+**Scope reviewed:** six design inputs adapted from Chad Fowler's Phoenix
+architecture (regenerative software; `github.com/chad/phoenix`), each mapped
+onto RDM's record-first controls rather than copied: DI-34 (hash-chained
+event journal), DI-35 (selective invalidation via `depends_on`), DI-36
+(A/B/C/D change classification with carry-forward of class-A changes only),
+DI-37 (content fingerprint + design-input lock), DI-38 (release-gate
+self-test by fault injection), and DI-39 (negative knowledge carried across
+faithfulness reviews).
+
+**Disposition:** Approved for implementation.
+
+## Items reviewed
+
+- Each input is owned by one context, traces to an existing user need
+  (UN-003, UN-007, UN-009, UN-012), and is stated as testable clauses.
+- No retroactive staleness: inputs without `depends_on` hash exactly as
+  before (DI-35); fingerprints are recorded only on new verdicts, so existing
+  verdicts classify as D rather than being silently re-pinned (DI-36); the
+  lock and the journal are opt-in by presence (DI-34, DI-37).
+- Fail-safe direction preserved: carry-forward is refused for anything but a
+  formatting/comment-only change; prior findings are history and never relax
+  or tighten the gate on their own (DI-39).
+- The new tests live in their own acceptance modules, so module-scope pins of
+  existing verdicts are not disturbed.
+
+## Findings and actions
+
+- Accepted risk: concurrent branches each appending to `journal.jsonl`
+  conflict at merge; resolution is to keep one branch's chain and re-record
+  the other branch's verdict events (the verify command detects a bad merge).
+- Open (carried from Review 3): summative validation records; human PR review
+  and individual signing identities (NC-2/NC-3).
 
 # Approval
 
