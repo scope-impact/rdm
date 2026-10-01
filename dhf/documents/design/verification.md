@@ -20,7 +20,7 @@ design_inputs:
     text: "The mutation probe shall always restore the file it mutated: it journals the original beside the file so an interrupted probe is recovered on the next probe of that file, restores on a termination signal, and invalidates the bytecode cache on every write."
     traces_to: [UN-013]
   - id: DI-57
-    text: "RDM shall provide a pytest plugin that, for each test tagged with a design input's story, labels the run from the record at test time — the input's user needs as Allure epics, its bounded context as the feature, a link to its design document at the tested commit, critical severity when it controls a risk — and attaches the input's text."
+    text: "RDM shall provide a pytest plugin that, for each test tagged with a design input's story, labels the run from the record at test time — the input's user needs as Allure epics, its bounded context as the feature, links to the Markdown documents that declare it at the tested commit (its design document, the V&V plan for its user needs, and the risk document of each risk it controls), critical severity when it controls a risk — and attaches the input's text."
     traces_to: [UN-004, UN-010]
 ---
 
@@ -70,8 +70,9 @@ This context owns:
   `@allure.story("DI-n")`; `rdm.pytest_plugin` (enabled with
   `-p rdm.pytest_plugin`, or its hook imported in the acceptance conftest;
   record at `--rdm-dhf`, default `dhf`) adds the rest at run time with Allure's dynamic API — epics,
-  feature, a link to the design document at the tested commit, critical
-  severity for an input that controls a risk, and the requirement text as an
+  feature, links to the Markdown that declares it at the tested commit (the
+  design document, the V&V plan for its user needs, the risk document of each
+  risk it controls), critical severity for an input that controls a risk, and the requirement text as an
   attachment — so the labels cannot drift from the record. Refines UN-004
   and UN-010.
 

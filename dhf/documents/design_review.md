@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 15
+revision: 16
 title: Design Review — RDM
 ---
 
@@ -482,6 +482,10 @@ input); DI-57 (`rdm.pytest_plugin`), in the verification context.
   shows the requirement as it was, not as it is now.
 - Opt-in (`pytest_plugins`), so installing RDM changes no one's test run.
 - Allure remains for acceptance tests only.
+- Addendum: DI-57 links every Markdown document that declares the input, not
+  only its design document — the V&V plan where its user needs are declared
+  and the risk document of each risk it controls — each pinned to the tested
+  commit, so a reviewer reaches the whole record from one result.
 
 ## Findings and actions
 
