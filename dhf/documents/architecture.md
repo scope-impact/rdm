@@ -18,7 +18,7 @@ declares the needs it contributes to via `satisfies`.
 |------|----------------|-----------------------|
 | **Record** | read and scaffold the record: needs, design inputs, checklists, tagged tests, results, git | scaffolding only (`init`, `adopt`, `new-input`); every other change is a reviewed commit |
 | **Gates** | pass/block decisions on the record | no |
-| **Graph** | the record as RDF, queried and validated; the read interface for agents | no — rebuilt from the record, never edited |
+| **Graph** | the record as RDF, queried and validated; agents read it over MCP (`rdm graph mcp`) | no — rebuilt from the record, never edited |
 | **Documents** | regulatory documents rendered from the record | no |
 
 Only people and agents change the record, and only through a reviewed pull
@@ -37,7 +37,7 @@ documents, evidence bundle) is edited by hand or fed back into the record.
 | Gates | `verification` | `design/verification.md` | `rdm/record/verify.py`, `rdm/story_audit/mutation.py` — inputs vs results, traceability matrix, mutation probe |
 | Gates | `gap_analysis` | `design/gap_analysis.md` | `rdm/gaps.py`, `rdm/checklists/` — documents vs checklists |
 | Gates | `validation` | `design/validation.md` | `rdm/record/persona.py`, `rdm/record/validation.py` — formative usability evidence |
-| Graph | `graph` | `design/graph.md` | `rdm/graph/` — RDF projection, SHACL gate shapes, SPARQL, Graph Explorer file |
+| Graph | `graph` | `design/graph.md` | `rdm/graph/` — RDF projection, SHACL gate shapes, SPARQL, Graph Explorer file, read-only MCP server |
 | Documents | `rendering` | `design/rendering.md` | `rdm/render.py`, `rdm/md_extensions/` — templates + data → Markdown → PDF/DOCX |
 
 ## Flow
@@ -51,6 +51,5 @@ Planning tooling (`rdm/project_management`) sits outside the record (see
 
 ## Not yet in scope
 
-Risk management (ISO 14971), turning a regulation into a checklist, and a
-dedicated read-only agent interface over the graph. Each enters through a
-user need and design inputs in this record before any code.
+Risk management (ISO 14971) and turning a regulation into a checklist. Each
+enters through a user need and design inputs in this record before any code.
