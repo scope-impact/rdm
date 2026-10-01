@@ -108,7 +108,8 @@ def _frontmatter_close(lines: list[str]) -> int | None:
 def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[str]) -> None:
     """Insert a design-input entry into a design doc's frontmatter by line edit.
 
-    Appends to the end of an existing ``design_inputs`` list, or creates the key
+    Appends to the end of an existing ``design_inputs`` list (an empty ``[]``
+    becomes that list), or creates the key
     just before the closing frontmatter fence. Raises ``ValueError`` when the
     document has no frontmatter block.
     """
@@ -126,6 +127,11 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
     key_index = None
     for i in range(1, close):
         if re.match(r"^design_inputs:\s*(#.*)?$", lines[i]):
+            key_index = i
+            break
+        if re.match(r"^design_inputs:\s*\[\s*\]\s*(#.*)?$", lines[i]):
+            # An empty flow list becomes the block list, never a second key.
+            lines[i] = "design_inputs:\n"
             key_index = i
             break
 

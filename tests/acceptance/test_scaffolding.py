@@ -154,6 +154,18 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     ast.parse(trends_stub.read_text())                       # stub is valid Python
     assert '@allure.story("DI-5")' in trends_stub.read_text()
 
+    # A context declaring `design_inputs: []` gets its list filled in place,
+    # never a second `design_inputs:` key.
+    (dhf / "documents" / "design" / "empty.md").write_text(
+        "---\nid: SDS-EMPTY\nkind: design\ncontext: empty\nsatisfies: [UN-001]\n"
+        "design_inputs: []\n---\n# Empty\n")
+    assert story_new_input_command(
+        dhf_dir=dhf, context="empty", text="RDM shall fill.", traces_to="UN-001"
+    ) == 0
+    empty_text = (dhf / "documents" / "design" / "empty.md").read_text()
+    assert empty_text.count("design_inputs:") == 1
+    assert [d["id"] for d in yaml.safe_load(empty_text.split("---")[1])["design_inputs"]] == ["DI-6"]
+
     # Rejects an unknown context and an unknown user need (nothing scaffolded).
     assert story_new_input_command(
         dhf_dir=dhf, context="nope", text="x", traces_to="UN-001"
@@ -161,7 +173,7 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     assert story_new_input_command(
         dhf_dir=dhf, context="alarms", text="x", traces_to="UN-999"
     ) != 0
-    assert set(di["id"] for di in design_inputs(dhf)) == {"DI-1", "DI-3", "DI-4", "DI-5"}
+    assert set(di["id"] for di in design_inputs(dhf)) == {"DI-1", "DI-3", "DI-4", "DI-5", "DI-6"}
 
 
 @allure.story("DI-24")
