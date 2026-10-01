@@ -1,0 +1,94 @@
+{
+  "design_input": "DI-39",
+  "verdict": "faithful",
+  "reviewer": "claude-reviewer (independent of author)",
+  "rationale": "Clauses: (1) recording over an earlier verdict preserves its surviving probes: exact prior_findings entry with surviving_probes==[SURVIVED probe]; KILLED by record_verdict writing prior_findings=[] and by not filtering out KILLED probes; (2) ...and its uncovered clauses: KILLED by dropping uncovered; (3) together with findings it had already carried (accumulation, incl. through a verdict that added none): alice survives carol's re-pin and alice+dave accumulate; KILLED by not carrying previous prior_findings and by appending an entry for a verdict with no findings (if True); (4) entries name the earlier verdict and reviewer: exact verdict/reviewer/test_hash asserted; KILLED by blanking reviewer and by blanking verdict; (5) --stale worklist prints each listed input's prior findings: exact 'prior finding (partial verdict by alice): probe SURVIVED -- ...' and uncovered-clause lines for alice and dave, killing probe absent; KILLED by suppressing the print and by reconcile not loading prior_findings; (6) prior findings never block a release by themselves: release-gate blocking == [] with two prior findings on a faithful verdict; KILLED by treating prior findings as partial in reconcile and by adding prior-finding inputs to the release gate's blocking list. All clauses covered.",
+  "test_hash": "sha256:68a506aec0e30754983366d67838f48f2ab9fdd02edc5571e6ba117cdfd79330",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_prior_findings_carry_forward_and_reach_the_worklist"
+  ],
+  "probes": [
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        \"prior_findings\": _carried_findings(out),",
+      "replace": "        \"prior_findings\": [],",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    carried = [p for p in previous.get(\"prior_findings\") or [] if isinstance(p, dict)]",
+      "replace": "    carried = []",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        if isinstance(p, dict) and str(p.get(\"result\", \"\")).strip().upper() != \"KILLED\"",
+      "replace": "        if isinstance(p, dict)",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    uncovered = [str(c) for c in previous.get(\"uncovered_clauses\") or [] if str(c).strip()]",
+      "replace": "    uncovered = []",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "            \"reviewer\": previous.get(\"reviewer\", \"\"),\n            \"test_hash\"",
+      "replace": "            \"reviewer\": \"\",\n            \"test_hash\"",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "            \"verdict\": previous.get(\"verdict\", \"\"),\n            \"reviewer\": previous.get(\"reviewer\", \"\"),",
+      "replace": "            \"verdict\": \"\",\n            \"reviewer\": previous.get(\"reviewer\", \"\"),",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    if surviving or uncovered:\n        carried.append",
+      "replace": "    if True:\n        carried.append",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "                print(f\"            {line}\")",
+      "replace": "                pass",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/faithfulness.py",
+      "find": "        agg.prior_findings = v.prior_findings",
+      "replace": "        agg.prior_findings = []",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/faithfulness.py",
+      "find": "        if agg.verdict == PARTIAL or (agg.verdict == FAITHFUL and agg.uncovered_clauses):",
+      "replace": "        if agg.verdict == PARTIAL or (agg.verdict == FAITHFUL and (agg.uncovered_clauses or agg.prior_findings)):",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    result.blocking += _faithfulness_messages(faith)\n",
+      "replace": "    result.blocking += _faithfulness_messages(faith) + [d for d, a in faith.by_id.items() if a.prior_findings]\n",
+      "test": "test_prior_findings_carry_forward_and_reach_the_worklist",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": [],
+  "text_fingerprint": "sha256:8a4f6f5e53c9096d9a710f513fe16e54651c5ec0711b74e2bcfe71c6a2848f76",
+  "tests_fingerprint": "sha256:ba5054bdc44f2e88d90c16c3ed849e9fbc197dd0d5cc0a68f5754189d6817664",
+  "prior_findings": []
+}

@@ -1,0 +1,115 @@
+{
+  "design_input": "DI-37",
+  "verdict": "faithful",
+  "reviewer": "claude-reviewer (independent of author)",
+  "rationale": "Clauses: (1) content fingerprint = short SHA-256 of whitespace-normalized text: exact 12-hex expected value, whitespace variant equal, reworded differs; KILLED by lengthening _SHORT to 16 and by hashing un-normalized text; (2) reported in verification data: rows[DI-1].fingerprint asserted; KILLED by blanking it in verify.build_verification; (3) reported in the trace: build_trace()['fingerprint'] asserted; KILLED by blanking it in build_trace; (4) rdm story lock records every declared id's fingerprint: exact lock dict asserted via lock_command; KILLED by locking only the first input; (5) retains removed ids as retired: DI-2 in retired and not in inputs after drop; KILLED by dropping retired.setdefault and by not carrying previous retired forward; (6) gate fails on reworded-without-relock (and relock clears): KILLED by disabling the reworded branch and by forcing the lock artifact complete; (7) gate fails on retired-id reuse even after relock: KILLED by reclassifying reused as unlocked; (8) warns on declared id not yet locked (gate still passes): KILLED by disabling the unlocked branch; (9) only when the lock file is present: no lock artifact when lock removed; KILLED by read_lock returning an empty lock when absent and by never attaching the lock artifact. All clauses covered. Note (cross-cutting, not counted as a DI clause gap): the argparse dispatch in rdm/main.py is not exercised (mutating it to return 0 SURVIVED); the test drives the command function directly, which is the repo-wide acceptance-test convention.",
+  "test_hash": "sha256:ac542f282335c139d759e1f8b09d4bfac50ff5edd6dbbc589a8cc674e0d8dc37",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_content_fingerprint_and_lock_guard_wording_and_ids"
+  ],
+  "probes": [
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "_SHORT = len(\"sha256:\") + 12",
+      "replace": "_SHORT = len(\"sha256:\") + 16",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "    return text_fingerprint(text)[:_SHORT]",
+      "replace": "    return (\"sha256:\" + __import__(\"hashlib\").sha256(text.encode()).hexdigest())[:_SHORT]",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/verify.py",
+      "find": "            \"fingerprint\": fingerprint(di[\"text\"]),",
+      "replace": "            \"fingerprint\": \"\",",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "            \"fingerprint\": anchor.fingerprint(di[\"text\"]),",
+      "replace": "            \"fingerprint\": \"\",",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "    inputs = {di[\"id\"]: fingerprint(di.get(\"text\", \"\")) for di in design_inputs}",
+      "replace": "    inputs = {di[\"id\"]: fingerprint(di.get(\"text\", \"\")) for di in design_inputs[:1]}",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "            retired.setdefault(di_id, fp)",
+      "replace": "            pass",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "    retired = dict(previous[\"retired\"])",
+      "replace": "    retired = {}",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "            found.reworded.append(di_id)",
+      "replace": "            pass",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "            found.reused.append(di_id)",
+      "replace": "            found.unlocked.append(di_id)",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "            found.unlocked.append(di_id)\n        elif",
+      "replace": "            pass\n        elif",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        complete=not failures,",
+      "replace": "        complete=True,",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/anchor.py",
+      "find": "    if not path.exists():\n        return None",
+      "replace": "    if not path.exists():\n        return {\"inputs\": {}, \"retired\": {}}",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    if lock_check is not None:\n        result.artifacts.append(lock_check)",
+      "replace": "    if False:\n        result.artifacts.append(lock_check)",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/main.py",
+      "find": "            return lock_command(dhf_dir=Path(args.dhf) if args.dhf else None)",
+      "replace": "            return 0",
+      "test": "test_content_fingerprint_and_lock_guard_wording_and_ids",
+      "result": "SURVIVED"
+    }
+  ],
+  "uncovered_clauses": [],
+  "text_fingerprint": "sha256:e979c7232457992f19755bf1d3794ba99dd12f6edff7a30807b66b8235b1c551",
+  "tests_fingerprint": "sha256:503721dc71e4b0108a89889660a3c84f2c4519826edb4c3acae6dee04a323079",
+  "prior_findings": []
+}

@@ -1,0 +1,110 @@
+{
+  "design_input": "DI-38",
+  "verdict": "partial",
+  "reviewer": "claude-reviewer (independent of author)",
+  "rationale": "Clauses: (1) builds a synthetic fully-passing DHF in a scratch git repository: rev-parse toplevel == fixture repo; KILLED by removing git init; (2) confirms the release gate passes it: baseline_blocking == [] and '[OK] clean baseline passes'; (3) injects each named fault class (10, exact list) and confirms the gate blocks each: KILLED by dropping the broken-journal fault, by making the broken-journal injector a no-op, by having the reworded injector re-lock, and by disabling the release gate's journal blocker (the self-test exercises the real gate); (4) IN ISOLATION: PARTIAL - single-blocker isolation is asserted only for 'failing test' and 'partial verdict'; polluting the stale injector with an extra untested-DI-1 fault SURVIVED, polluting the unfaithful injector with an uncommitted design-doc edit SURVIVED; and the by-name catch criterion can be weakened to bool(blocking) and SURVIVED, so a fault blocked for an unrelated reason would still count as caught; (5) reports caught or missed per fault: [CAUGHT] for all 10 and [MISSED] for a monkeypatched no-op fault; KILLED by always printing [CAUGHT]; (6) exits non-zero if the clean baseline is blocked: TODO-in-design-review baseline -> exit 1; KILLED by ignoring baseline_blocking in passed and by not running the baseline; (7) exits non-zero if any fault escapes: KILLED by ignoring missed in passed. Note: rdm/main.py dispatch for `rdm story gate-selftest` is not exercised (return 0 mutation SURVIVED) - repo-wide convention, not counted. Verdict partial on clause (4).",
+  "test_hash": "sha256:c3173f46841709c8f1fa392309213e37e2326c58d9f4d8972d81d61b51a34003",
+  "hash_scope": "module",
+  "reviewed_tests": [
+    "test_gate_selftest_proves_precision_and_recall"
+  ],
+  "probes": [
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "    _git(repo, \"init\", \"-q\")",
+      "replace": "    pass",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "    (\"broken journal\", _broken_journal, \"journal fails verification\"),\n",
+      "replace": "",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "            result.faults.append(FaultOutcome(name, any(expected in m for m in blocking), blocking))",
+      "replace": "            result.faults.append(FaultOutcome(name, bool(blocking), blocking))",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "SURVIVED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "        return not self.baseline_blocking and not self.missed",
+      "replace": "        return not self.missed",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "        return not self.baseline_blocking and not self.missed",
+      "replace": "        return not self.baseline_blocking",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "        print(f\"  {'[CAUGHT]' if outcome.caught else '[MISSED]'} {outcome.name}\")",
+      "replace": "        print(f\"  [CAUGHT] {outcome.name}\")",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "    first[\"payload\"][\"verdict\"] = \"unfaithful\"  # edit history, keep the old hash",
+      "replace": "    pass",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "    fx.commit(\"reword DI-1 without re-locking\")",
+      "replace": "    anchor.write_lock(fx.dhf, design_inputs(fx.dhf))\n    fx.commit(\"reword DI-1 without re-locking\")",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "        result.baseline_blocking = _gate(build_fixture(Path(scratch) / \"baseline\"))",
+      "replace": "        result.baseline_blocking = []",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "def _stale(fx: Fixture) -> None:\n",
+      "replace": "def _stale(fx: Fixture) -> None:\n    (fx.results / \"DI-1-result.json\").unlink()\n",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "SURVIVED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "def _unfaithful(fx: Fixture) -> None:\n",
+      "replace": "def _unfaithful(fx: Fixture) -> None:\n    _uncommitted(fx)\n",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "SURVIVED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        result.blocking.append(f\"journal fails verification at seq {chain.broken_seq}: {chain.reason}\")",
+      "replace": "        pass",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/main.py",
+      "find": "            return gate_selftest_command()",
+      "replace": "            return 0",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "SURVIVED"
+    }
+  ],
+  "uncovered_clauses": [
+    "each fault class injected in isolation (single-cause blocking asserted for only 2 of 10 faults: extra faults piggy-backed on the stale and unfaithful injectors survive, and weakening the by-name catch check to any-blocking survives)"
+  ],
+  "text_fingerprint": "sha256:7a5442df70a9dea61b71fef1e3d92d0aa4e7a2e6e9bc074d44ec77e4402363a6",
+  "tests_fingerprint": "sha256:705df216bca6496d06bdfd8ca713fd6fecf25f13dd548f799c55f3ae9bf93172",
+  "prior_findings": []
+}
