@@ -31,7 +31,7 @@ git history       ─┘
 | Input | Design-control meaning | Source of truth for |
 |-------|------------------------|---------------------|
 | **SDD + `data/*.yml`** | the design and the user needs (the *what* and *how*) | requirements / design, `user_needs` IDs |
-| **Allure results** | executed **verification evidence** linked by `@allure.story/feature("UN-…")` | acceptance criteria status (pass/fail) |
+| **Allure results** | executed **verification evidence** linked by `@allure.story("DI-…")` | acceptance criteria status (pass/fail) |
 | **git history** | approval (reviewed/merged PRs, `reviews_required`) + change history + revision/baseline | who approved, what changed, when |
 
 This triad is a self-sufficient DHF spine: *requirements → verification evidence

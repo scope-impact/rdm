@@ -50,8 +50,8 @@ def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) ->
 @allure.story("DI-31")
 @allure.label("output", "rdm/record/allure.py")
 def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
-    """DI-31: JS/TS allure calls and Java annotations are discovered across
-    conventional test-file names."""
+    """DI-31: JS/TS allure.story calls and Java @Story annotations are
+    discovered across conventional test-file names; features name no input."""
     from rdm.record.allure import scan_source_tags
 
     tests = tmp_path / "tests"
@@ -65,6 +65,7 @@ def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
         "import { allure } from 'allure-playwright';\n"
         "test('alarm fires', async () => {\n"
         "  await allure.story('DI-2');\n"
+        "  await allure.feature('DI-7');\n"
         "  expect(fire()).toBe(true);\n"
         "});\n"
     )
@@ -72,12 +73,13 @@ def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
         "import io.qameta.allure.Story;\n\n"
         "public class AlarmTest {\n"
         '  @Story("DI-3")\n'
+        '  @Feature("DI-8")\n'
         "  @Test\n  void alarmFires() { assertTrue(fire()); }\n"
         "}\n"
     )
     (tests / "notes.txt").write_text('allure.story("DI-9") mentioned in prose\n')
 
-    with clause("Every language's tag is discovered; the non-test file is not scanned"):
+    with clause("Every language's story tag is discovered; features and the non-test file are not"):
         tags = scan_source_tags(tests)
         assert set(tags) == {"DI-1", "DI-2", "DI-3"}
         assert tags["DI-2"] == [str(tests / "alarms.test.ts")]

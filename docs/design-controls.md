@@ -60,9 +60,26 @@ residually acceptable or accepted — see [Risk register](risk.md).
 ## Polyglot products
 
 Executed verification (Allure results) is language-agnostic, and source-tag
-discovery also reads JS/TS `allure.story(...)` calls and Java
-`@Story(...)`/`@Feature(...)` annotations across conventional test-file names
-(`*.test.ts`, `*.spec.js`, `*Test.java`, `*_test.go`, …).
+discovery also reads JS/TS `allure.story(...)` calls and Java `@Story(...)`
+annotations across conventional test-file names (`*.test.ts`, `*.spec.js`,
+`*Test.java`, `*_test.go`, …). Only the story names a design input.
+
+## Allure labels from the record
+
+Allure's behaviors hierarchy is epic → feature → story. In RDM the story is
+the design input, the feature its bounded context, and the epic the user need
+it traces to. A test declares only the story; `rdm.pytest_plugin` adds the rest
+at run time from the record, with Allure's own API (`allure.dynamic`):
+
+- `epic` — each user need the design input traces to;
+- `feature` — the bounded context whose design document declares it;
+- `link` — that design document at the commit under test;
+- `severity` — `critical` when the design input controls a risk;
+- an attachment `requirement DI-n` — the design input's text.
+
+Enable it for the acceptance suite only — import its hook in that suite's
+`conftest.py` (`from rdm.pytest_plugin import pytest_runtest_call`), or pass
+`-p rdm.pytest_plugin --rdm-dhf dhf` — so unit tests stay free of Allure.
 
 ## Independent review
 

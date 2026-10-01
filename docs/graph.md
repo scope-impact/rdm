@@ -183,7 +183,7 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | a result file | an `rdm:TestRun` (a `prov:Activity`) with `dcterms:identifier` (uuid), `rdm:fullName`, `rdm:status`, `prov:startedAtTime` / `prov:endedAtTime` |
 | `statusDetails` | `rdm:statusMessage`, `rdm:statusTrace` |
 | `historyId` | `rdm:runOf` an `rdm:TestCase` the runs of one test share, across executions |
-| `labels` | `rdm:hasLabel`, each a name and a value; `story`/`feature` also as `rdm:exercises` (the design input) |
+| `labels` | `rdm:hasLabel`, each a name and a value; `story` also as `rdm:exercises` (the design input); `epic` and `feature` are the user need and bounded context the plugin adds (DI-57) |
 | an `output` label | `rdm:exercisesOutput` an `rdm:SourceFile` — the code the run exercises |
 | `parameters` | `rdm:parameter`, each a name and a value |
 | `links` | `rdfs:seeAlso` |

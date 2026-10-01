@@ -3,8 +3,9 @@ Ingest Allure results into per-user-need verification status.
 
 Allure writes one ``*-result.json`` file per executed test into a results
 directory. Each result carries a ``status`` and a list of ``labels``; the
-``@allure.story("ID")`` / ``@allure.feature("ID")`` decorators appear as labels
-named ``story`` / ``feature``. This module maps those IDs to an aggregated
+``@allure.story("ID")`` decorator appears as a label named ``story``
+(``feature`` and ``epic`` carry the bounded context and user needs, DI-57).
+This module maps those IDs to an aggregated
 verification status so the DHF can report whether each SDD user need was
 actually *verified* (executed and passed), not merely referenced by a tag.
 
@@ -22,13 +23,13 @@ from pathlib import Path
 
 from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
-# Matches @allure.story("ID") / @allure.feature("ID"). Single home for the
-# pattern; group(2) is the ID.
-ALLURE_PATTERN = re.compile(r'@allure\.(story|feature)\(["\']([^"\']+)["\']\)')
+# Matches @allure.story("ID"): only the story names a design input. Single
+# home for the pattern; group(2) is the ID.
+ALLURE_PATTERN = re.compile(r'@allure\.(story)\(["\']([^"\']+)["\']\)')
 
-# Allure label names that carry user-need IDs (the result-file counterpart of
-# ALLURE_PATTERN, which matches both @allure.story and @allure.feature).
-USER_NEED_LABELS = ("story", "feature")
+# The Allure label that names a design input (the result-file counterpart of
+# ALLURE_PATTERN).
+USER_NEED_LABELS = ("story",)
 
 # Allure statuses.
 _FAILING = {"failed", "broken"}
@@ -220,10 +221,11 @@ TEST_FILE_GLOBS = (
 )
 
 # Non-Python tag syntaxes (DI-31): JS/TS runtime calls `allure.story("…")`
-# (no decorator @), and Java annotations `@Story("…")` / `@Feature("…")`.
+# (no decorator @), and Java annotations `@Story("…")`. Only the story names a
+# design input; a feature carries the bounded context (DI-57).
 POLYGLOT_TAG_PATTERNS = (
-    re.compile(r'(?<!@)\ballure\.(story|feature)\(\s*["\']([^"\']+)["\']'),
-    re.compile(r'@(Story|Feature)\(\s*"([^"]+)"'),
+    re.compile(r'(?<!@)\ballure\.(story)\(\s*["\']([^"\']+)["\']'),
+    re.compile(r'@(Story)\(\s*"([^"]+)"'),
 )
 
 # What a design-input / story id looks like. Kept deliberately narrow so
@@ -251,7 +253,7 @@ def iter_test_files(tests_dir: Path):
 
 
 def _tag_ids_in(path: Path, content: str) -> list[str]:
-    """Every story/feature tag ID a test source file claims, per its language."""
+    """Every story tag ID a test source file claims, per its language."""
     if path.suffix == ".py":
         return _python_tag_ids(content)
     if path.suffix in (".yml", ".yaml"):
@@ -270,7 +272,7 @@ def _tag_ids_in(path: Path, content: str) -> list[str]:
 
 
 def _allure_tag(node: ast.AST) -> str | None:
-    """The id in ``allure.story("ID")`` / ``allure.feature("ID")``, else None."""
+    """The id in ``allure.story("ID")``, else None."""
     if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
             and node.func.attr in USER_NEED_LABELS
             and isinstance(node.func.value, ast.Name) and node.func.value.id == "allure"
@@ -301,7 +303,7 @@ def _python_tag_ids(content: str) -> list[str]:
 
 
 def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
-    """Map each story/feature tag ID to the test files that reference it.
+    """Map each story tag ID to the test files that reference it.
 
     The source-tag counterpart of ``parse_results``: it reports which user needs
     a test *claims* to cover (vs. whether the executed test passed). Reads

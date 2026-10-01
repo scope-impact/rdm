@@ -165,8 +165,11 @@ def test_<behavior>(...):
 ```
 
 A step per clause makes a failure name its clause; an attachment keeps what
-the assertion looked at, and every run also attaches the text of the design
-input it verifies (`tests/acceptance/conftest.py`). This is for acceptance
+the assertion looked at. Declare only the story: `rdm.pytest_plugin` (hooked in
+`tests/acceptance/conftest.py`) labels every run from the record with Allure's
+API — epic (user need), feature (context), a link to the design document at
+the commit, severity critical for a risk control, and the design input's text
+as an attachment. Never hand-write `@allure.feature`/`@allure.epic` for these. This is for acceptance
 (end-to-end) tests only: unit tests carry no Allure tags, steps or
 attachments. Both land in the Allure results, which the release
 bundle retains and the graph projects (`trace` lists them).

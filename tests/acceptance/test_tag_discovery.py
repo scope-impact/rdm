@@ -43,9 +43,10 @@ class TestGroup:
 @allure.story("DI-40")
 @allure.label("output", "rdm/record/allure.py")
 def test_python_tags_come_from_decorators_only(tmp_path: Path) -> None:
-    """DI-40: tags from allure story/feature decorators on functions (sync and
-    async) and classes and from a module-level pytestmark; none from strings or
-    comments; a file that does not parse falls back to the decorator pattern."""
+    """DI-40: tags from allure story decorators on functions (sync and async)
+    and classes and from a module-level pytestmark; none from strings,
+    comments or feature decorators; a file that does not parse falls back to
+    the decorator pattern."""
     tests = tmp_path / "tests"
     tests.mkdir()
     (tests / "test_writer.py").write_text(FIXTURE_WRITER)
@@ -59,15 +60,16 @@ def test_python_tags_come_from_decorators_only(tmp_path: Path) -> None:
     tags = scan_source_tags(tests)
     files = {tag: sorted(Path(f).name for f in paths) for tag, paths in tags.items()}
 
-    with clause("Decorators on functions, async methods and classes; module pytestmark (list or single)"):
+    with clause("Story decorators on functions, async methods and classes; module pytestmark (list or single)"):
         assert files["DI-1"] == ["test_writer.py"]
-        assert files["DI-2"] == ["test_writer.py"]
         assert files["DI-3"] == ["test_writer.py"]
-        assert files["DI-4"] == files["DI-5"] == ["test_marked.py"]
+        assert files["DI-4"] == ["test_marked.py"]
         assert files["DI-10"] == ["test_single_mark.py"]
+    with clause("Only the story names a design input: a feature (the context) does not"):
+        assert "DI-2" not in files and "DI-5" not in files
     with clause("Text inside strings and comments claims nothing"):
         for tag in ("DI-6", "DI-7", "DI-8", "DI-9"):
             assert tag not in files, tag
     with clause("A file that does not parse still has its decorator-pattern tags read"):
         assert files["DI-11"] == ["test_broken.py"]
-        assert set(files) == {"DI-1", "DI-2", "DI-3", "DI-4", "DI-5", "DI-10", "DI-11"}
+        assert set(files) == {"DI-1", "DI-3", "DI-4", "DI-10", "DI-11"}

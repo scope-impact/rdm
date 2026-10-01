@@ -120,6 +120,16 @@ The merged, reviewed PR completes the approval record.
 end-to-end acceptance tests that verify design inputs; unit tests carry no
 Allure tags, so nothing else can be counted as verification.
 
+**Declare only the story.** A test names its design input with
+`@allure.story`; RDM labels the rest from the record at run time with Allure's
+API — epic (user need), feature (bounded context), a link to the design
+document at the commit, severity critical for a risk control, and the design
+input's text as an attachment. Hook it into the acceptance suite only, in
+`tests/acceptance/conftest.py`:
+```python
+from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
+```
+
 **Merge with a merge commit — never squash or rebase.** A squash folds the
 record-first commits (design document, then implementation) into one, so the
 history no longer shows the design was approved before the code; a rebase

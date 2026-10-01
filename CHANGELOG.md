@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added — Allure labels from the record
+- `rdm.pytest_plugin` labels each acceptance run with Allure's API: epic (user
+  need), feature (bounded context), a link to the design document at the
+  commit, severity critical for a risk control, and the requirement text as an
+  attachment (DI-57).
+
+### Changed — only the story names a design input
+- Tag discovery reads `@allure.story` (Python), `allure.story` (JS/TS) and
+  `@Story` (Java) only; a feature carries the context, not a design input
+  (DI-31, DI-40).
+
 ### Added — Allure results as RDF
 - `rdm/graph/allure.py`: each result in full — uuid, full name, times, status
   message and trace, parameters, labels, links, and a test case shared by the

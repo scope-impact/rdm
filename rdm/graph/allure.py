@@ -7,7 +7,7 @@ status and its message and trace, parameters, every label (as a name/value
 pair, so an unknown label needs no vocabulary change), links, steps and
 attachments. Runs of one test across executions share an ``rdm:TestCase``
 (Allure's history id). ``output`` labels link a run to the source files it
-exercises; ``story``/``feature`` labels to the design inputs it verifies.
+exercises; ``story`` labels to the design inputs it verifies.
 Each ``*-container.json`` contributes its before and after fixtures, linked
 to the runs they served. Attachment content stays in the files; the graph
 holds the reference.
