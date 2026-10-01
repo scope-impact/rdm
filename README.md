@@ -19,6 +19,31 @@ risk → control (a design input) → tagged test → result
 Every link is a file you write or a fact a tool records. Nothing in the chain
 is typed into a database by hand.
 
+## Why
+
+RDM started as a tool for people writing regulatory documents. It is being
+extended so agents can work on regulated software with the same
+traceability: a knowledge core that holds the whole design record —
+regulations and the checklists drawn from them, design documents in bounded
+contexts, user needs, design inputs, tests, results and risks — as one
+linked graph.
+
+- **One source of truth, changed only by authorized people.** The record is
+  Markdown and tests in git. People and agents propose changes as pull
+  requests, and a reviewer who is not the author approves them. The graph
+  and every document are rebuilt from the record and never edited.
+- **Any harness.** Agents read the record through an MCP server, which
+  Claude Code, Warp and many open-source harnesses speak. A harness that can
+  only run commands can use `rdm graph query` instead.
+- **Any graph database.** The graph is RDF in standard vocabularies (OSLC
+  RM, Dublin Core, PROV-O, SKOS), so any RDF store can load it. Oxigraph is
+  the one RDM embeds.
+- **Skills are the method; RDM is the check.** How to write requirements,
+  analyse risk and develop test-first lives in
+  [scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).
+  A skill decides what to write; RDM checks that what was written is
+  complete, traced and verified.
+
 ## The four parts
 
 | Part | What it is | Commands |
@@ -27,10 +52,6 @@ is typed into a database by hand.
 | **Gates** | Machine checks: no implementation before the design is approved, no release until every input has a passing test, every need is addressed and every risk is scored, controlled and acceptable, no clause a checklist requires left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
 | **Graph** | The record built into an RDF graph (Oxigraph): needs, inputs, contexts, documents, tests, results, commits, checklist clauses. **Read-only** — rebuilt from the record, never edited. Agents read it through an MCP server; people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
 | **Documents** | Regulatory documents (PDF/DOCX) rendered from the record: Markdown templates + YAML data → Pandoc/Typst. | `rdm render`, `make pdfs` |
-
-How agents should work with it — writing design inputs, test-first, risk
-analysis — is kept as skills in
-[scope-impact/agent-skills](https://github.com/scope-impact/agent-skills), not here.
 
 ## What it does not do
 
@@ -45,6 +66,16 @@ analysis — is kept as skills in
   It ships no risk matrix: acceptability criteria are the project's to declare.
 - A built store (`rdm graph build --store`, `serve`) is as current as its last
   build; the agent server (`rdm graph mcp`) reads the record afresh on every call.
+
+## Direction
+
+Not built yet, in rough order:
+
+- Turning a regulation into a checklist mapped to its standard's clauses.
+- `rdm graph push` to an external graph database, with the vocabulary and
+  gate shapes versioned so another store reads them the same way.
+- Several projects in one graph. Clause identifiers are already shared
+  across repositories, so one query can ask which projects claim a clause.
 
 ## Quick Start
 
