@@ -454,6 +454,10 @@ module, `rdm/graph/allure.py`.
 - Split into three design inputs so none outgrows one test.
 - Alongside, not a design input: RDM's own acceptance tests record a step
   per clause, from the clause comments they already carry.
+- Addendum: Allure is for acceptance (end-to-end) tests only. They carry
+  the tags, steps and attachments, and each run attaches the text of the
+  design input it verifies; unit tests carry none, held by
+  `tests/allure_scope_test.py`.
 
 ## Findings and actions
 
