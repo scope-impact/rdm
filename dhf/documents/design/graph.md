@@ -235,9 +235,11 @@ source: the graph is derived, rebuilt on demand, and never edited.
   are read by pattern, `rdm:definedIn` its `rdm:TestFile` and
   `rdm:verifies` its design inputs. A run links to the test it ran
   (`rdm:runOf`) through Allure's full name. Once runs link to tests, a shape
-  warns on a tagged test with no run (the claim was never executed) and on a
-  run exercising a design input its test does not claim (the source and the
-  results disagree). Refines UN-014 and UN-004.
+  warns on a tagged test with no run while other tests of its file ran (the
+  claim was never executed — a file never matched, as in a language whose
+  results carry no Python full name, is not reported) and on a run exercising
+  a design input its test does not claim (the source and the results
+  disagree). Refines UN-014 and UN-004.
 
 Retired (Design Review 18): DI-55 — container fixtures (`tmp_path`,
 `capsys`…) say nothing about a design input, and Allure's set-up and
