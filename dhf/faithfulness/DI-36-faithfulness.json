@@ -1,14 +1,49 @@
 {
   "design_input": "DI-36",
-  "verdict": "partial",
+  "verdict": "faithful",
   "reviewer": "claude-reviewer (independent of author)",
-  "rationale": "Re-review after test strengthening + comment-filter fix. Covered (KILLED): fingerprints recorded (empty text_fingerprint); text whitespace-blind (raw normalize_text); Python docstrings (skip _strip_docstrings); A/B/C/D classification (swap C/B precedence, disable D); class in report (suppress suffix); carry-forward records class (carried_forward=None) and refuses non-A (admit B). Non-Python comments now exercised via a JS verifying test: removing the line-comment filter KILLED (was SURVIVED); reverting to the old fail-open regex treating '*'-leading lines as comments KILLED (the '* 2' -> '* 3' continuation edit must be class B); dropping '//' from the regex KILLED; disabling leading /* */ block handling KILLED; never closing a block KILLED. Still SURVIVED: (a) widening the '#' rule back to any '#'-leading line - the test's #private case puts the field mid-line ('class K { #limit = 1; }'), so no '#'-leading code line is ever exercised and the #private part of the fix is unverified; (b) dropping code that follows a closing '*/' on a single-line leading block comment, and (c) on the closing line of a multi-line block - both would make a behavioural edit there classify as A and be carried forward unreviewed. Verdict partial: the clause that the non-Python fingerprint ignores ONLY comments (code on comment-adjacent lines must still classify B) is not fully verified.",
-  "test_hash": "sha256:4b274b3b3836542849665aaeff6397916e6694bb78b9b61ebe9eaeb9bfa40892",
+  "rationale": "Re-review after second strengthening. Clauses: (1) new verdicts record normalized fingerprints: KILLED by empty text_fingerprint; (2) text ignores whitespace: KILLED by raw normalize_text; (3) test source ignores whitespace, comments, docstrings - Python: KILLED by skipping _strip_docstrings; non-Python (JS fixture): KILLED by removing the line-comment filter, dropping '//', disabling leading /* */ blocks, never closing a block, keeping block-interior lines as code; and ONLY comments (code on comment-adjacent lines still counts): now KILLED (all three SURVIVED last round) - widening '#' to any '#'-leading line (own-line #private edit must be class B), dropping code after '*/' on a one-line leading block, and on the closing line of a multi-line block; also KILLED by reverting to the old fail-open regex treating '*'-leading lines as comments. SURVIVED: `after = line` instead of the text after '/*' - an equivalent mutant (the code after the first '*/' is identical unless a line opens with the degenerate '/*/'); (4) classify A/B/C/D: KILLED by swapping C/B precedence and by disabling the D branch; (5) class shown in report: KILLED by suppressing the suffix; (6)-(7) carry-forward re-pins class A and records class/from_hash: KILLED by carried_forward=None; (8) refuses every other class: KILLED by admitting B, by admitting C, by admitting D. All clauses covered.",
+  "test_hash": "sha256:a83138f085c9124f3b14b24e06592043fd7245fe89c495acf7eb14ea9ba9054a",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_stale_verdicts_are_classified_and_only_class_a_carries_forward"
   ],
   "probes": [
+    {
+      "file": "rdm/record/fingerprint.py",
+      "find": "_LINE_COMMENT = re.compile(r\"^\\s*(//|#(\\s|!|$))\")",
+      "replace": "_LINE_COMMENT = re.compile(r\"^\\s*(//|#)\")",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/fingerprint.py",
+      "find": "            if \"*/\" in after:\n                rest = after.split(\"*/\", 1)[1]\n                if rest.strip():\n                    kept.append(rest)",
+      "replace": "            if \"*/\" in after:\n                pass",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/fingerprint.py",
+      "find": "                rest = line.split(\"*/\", 1)[1]\n                if rest.strip():\n                    kept.append(rest)",
+      "replace": "                pass",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/fingerprint.py",
+      "find": "            continue\n        if _BLOCK_OPEN.match(line):",
+      "replace": "            kept.append(line)\n            continue\n        if _BLOCK_OPEN.match(line):",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/fingerprint.py",
+      "find": "            after = line.split(\"/*\", 1)[1]",
+      "replace": "            after = line",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "SURVIVED"
+    },
     {
       "file": "rdm/record/fingerprint.py",
       "find": "        if not _LINE_COMMENT.match(line):\n            kept.append(line)",
@@ -22,13 +57,6 @@
       "replace": "_LINE_COMMENT = re.compile(r\"^\\s*(//|#|/\\*|\\*)\")",
       "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
       "result": "KILLED"
-    },
-    {
-      "file": "rdm/record/fingerprint.py",
-      "find": "_LINE_COMMENT = re.compile(r\"^\\s*(//|#(\\s|!|$))\")",
-      "replace": "_LINE_COMMENT = re.compile(r\"^\\s*(//|#)\")",
-      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
-      "result": "SURVIVED"
     },
     {
       "file": "rdm/record/fingerprint.py",
@@ -50,20 +78,6 @@
       "replace": "                rest",
       "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
       "result": "KILLED"
-    },
-    {
-      "file": "rdm/record/fingerprint.py",
-      "find": "            if \"*/\" in after:\n                rest = after.split(\"*/\", 1)[1]\n                if rest.strip():\n                    kept.append(rest)",
-      "replace": "            if \"*/\" in after:\n                pass",
-      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
-      "result": "SURVIVED"
-    },
-    {
-      "file": "rdm/record/fingerprint.py",
-      "find": "                rest = line.split(\"*/\", 1)[1]\n                if rest.strip():\n                    kept.append(rest)",
-      "replace": "                pass",
-      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
-      "result": "SURVIVED"
     },
     {
       "file": "rdm/story_audit/design_gate.py",
@@ -116,17 +130,29 @@
     },
     {
       "file": "rdm/story_audit/design_gate.py",
+      "find": "    if agg.change_class != faithfulness.CLASS_TRIVIAL:",
+      "replace": "    if agg.change_class not in (faithfulness.CLASS_TRIVIAL, faithfulness.CLASS_REQUIREMENT):",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    if agg.change_class != faithfulness.CLASS_TRIVIAL:",
+      "replace": "    if agg.change_class not in (faithfulness.CLASS_TRIVIAL, faithfulness.CLASS_UNKNOWN):",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
       "find": "        carried_forward={\"class\": faithfulness.CLASS_TRIVIAL, \"from_hash\": agg.reviewed_hash},",
       "replace": "        carried_forward=None,",
       "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
       "result": "KILLED"
     }
   ],
-  "uncovered_clauses": [
-    "non-Python fingerprint ignores only comments (code on a line starting with #private, or following a closing */ of a line-leading block comment, is never edited in the test, so fail-open mutants of those paths survive)"
-  ],
+  "uncovered_clauses": [],
   "text_fingerprint": "sha256:f81c46972b68d04fc4a5fad0e9bd41d2bc1b8b5c59bc6d1c83bc72a74cb13918",
-  "tests_fingerprint": "sha256:ae9c95d140c92ee819b8dbd2b54a1fa518af1c00f79d3af5259cd3a0fe007aa7",
+  "tests_fingerprint": "sha256:d6c89d55d0d78a2efea79350d893c51c7d9be9222b15cec5764453e8362afb53",
   "prior_findings": [
     {
       "verdict": "partial",
@@ -143,6 +169,37 @@
       ],
       "uncovered_clauses": [
         "test-source fingerprint ignores comments for non-Python verifying tests (JS/TS/Java, in scope per DI-31): removing the whole-line-comment filter in normalize_source survives because only a Python test fixture is exercised"
+      ]
+    },
+    {
+      "verdict": "partial",
+      "reviewer": "claude-reviewer (independent of author)",
+      "test_hash": "sha256:4b274b3b3836542849665aaeff6397916e6694bb78b9b61ebe9eaeb9bfa40892",
+      "surviving_probes": [
+        {
+          "file": "rdm/record/fingerprint.py",
+          "find": "_LINE_COMMENT = re.compile(r\"^\\s*(//|#(\\s|!|$))\")",
+          "replace": "_LINE_COMMENT = re.compile(r\"^\\s*(//|#)\")",
+          "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+          "result": "SURVIVED"
+        },
+        {
+          "file": "rdm/record/fingerprint.py",
+          "find": "            if \"*/\" in after:\n                rest = after.split(\"*/\", 1)[1]\n                if rest.strip():\n                    kept.append(rest)",
+          "replace": "            if \"*/\" in after:\n                pass",
+          "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+          "result": "SURVIVED"
+        },
+        {
+          "file": "rdm/record/fingerprint.py",
+          "find": "                rest = line.split(\"*/\", 1)[1]\n                if rest.strip():\n                    kept.append(rest)",
+          "replace": "                pass",
+          "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+          "result": "SURVIVED"
+        }
+      ],
+      "uncovered_clauses": [
+        "non-Python fingerprint ignores only comments (code on a line starting with #private, or following a closing */ of a line-leading block comment, is never edited in the test, so fail-open mutants of those paths survive)"
       ]
     }
   ]
