@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.record.git import repo_root
+from rdm.record.ids import is_id
 from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # Matches @allure.story("ID"): only the story names a design input. Single
@@ -223,7 +224,6 @@ POLYGLOT_TAG_PATTERNS = (
 
 # What a design-input / story id looks like. Kept deliberately narrow so
 # ordinary Ansible tags (`bootstrap`, `security`) are not mistaken for ids.
-TAG_ID_PATTERN = re.compile(r"[A-Z]{2,}(?:-[A-Z]+)?-\d+")
 
 # Ansible carries the id in the task's own tag list -- `tags: [DI-5]`, or a
 # block/YAML-list form -- so the whole list is captured and split downstream.
@@ -255,7 +255,7 @@ def _tag_ids_in(path: Path, content: str) -> list[str]:
             listed = m.group(1) or m.group(2) or ""
             for token in re.split(r"[,\s]+", listed.strip()):
                 token = token.strip("\"'-").strip()
-                if token and TAG_ID_PATTERN.fullmatch(token):
+                if token and is_id(token):
                     ids.append(token)
         return ids
     ids: list[str] = []

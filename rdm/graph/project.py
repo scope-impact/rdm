@@ -31,6 +31,7 @@ import pyoxigraph as ox
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
 from rdm.record.allure import find_tests_dir, reconcile, scan_source_tests
 from rdm.record.git import git, repo_root
+from rdm.record.ids import is_id, relevant_orphans
 from rdm.record.sdd import (
     MATRIX_DOC,
     context_of,
@@ -50,9 +51,6 @@ NS = RDM
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
 _RDF, _RDFS, _XSD, _DCT, _PROV = RDF, RDFS, XSD, DCTERMS, PROV
 
-# An id worth a node: DI-3, UN-012, RISK-14 ... (a tag like "{di_id}" in a
-# template string is not).
-_ID = re.compile(r"^[A-Z][A-Z0-9]*-\d+$")
 
 
 def _term(iri: str) -> ox.NamedNode:
@@ -208,8 +206,9 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
     by_full_name: dict[str, ox.NamedNode] = {}
     if tests_dir is None:
         return by_full_name
+    declared = design_input_ids(dhf)
     for file, name, tags in scan_source_tests(tests_dir):
-        tags = [tag for tag in tags if _ID.match(tag)]
+        tags = [tag for tag in tags if is_id(tag)]
         if not tags:
             continue
         rel = _rel(Path(file), root)
@@ -220,6 +219,8 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
         ds.add(test, rdm("definedIn"), test_file, "tests")
         for tag in tags:
             ds.add(test, rdm("verifies"), ds.node("input", tag), "tests")
+        for tag in relevant_orphans(sorted(set(tags) - declared), declared):  # as the design gate reports them
+            ds.add(test, rdm("undeclaredTag"), tag, "tests")
         if name and rel.endswith(".py"):
             *owner, function = name.split("::")
             module = rel[:-3].replace("/", ".")

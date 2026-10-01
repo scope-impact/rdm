@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.record import allure
-from rdm.record.reconcile import relevant_orphans
+from rdm.record.ids import relevant_orphans
 from rdm.record.git import git
 from rdm.record.sdd import (
     context_of,

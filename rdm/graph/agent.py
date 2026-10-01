@@ -17,9 +17,9 @@ import pyoxigraph as ox
 
 from rdm.graph.cli import PREFIXES, with_prefixes
 from rdm.graph.project import ONTOLOGY_FILE, project
+from rdm.record.ids import is_id
 
 ROW_LIMIT = 200
-_ID = re.compile(r"^(UN|DI)-\d+$")
 _RISK_FIELDS = ("category", "stride", "hazard", "situation", "harm", "severity", "probability", "level",
                 "residualSeverity", "residualProbability", "residualLevel", "residualDecision", "acceptedBy",
                 "acceptanceRationale", "riskStatus")
@@ -31,7 +31,6 @@ _NOT_KEYWORDS = re.compile(
     r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\''           # long literals
     r'|"(?:[^"\\\n]|\\.)*"|\'(?:[^\'\\\n]|\\.)*\''   # short literals
     r'|<[^<>\s]*>|#[^\n]*')                                # IRIs, comments
-_TRACE_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 
 
 class ReadOnlyError(ValueError):
@@ -164,10 +163,10 @@ def trace(record: Record, ident: str) -> dict:
     design input (with its document, tests, runs and the risks it controls),
     or one risk (with its scores and each controlling input)."""
     ident = ident.strip().upper()
-    if not _TRACE_ID.match(ident):
+    if not is_id(ident):
         raise ValueError(f"{ident!r} is not an id (a UN-n, DI-n or risk id)")
     store = record.store()
-    if not _ID.match(ident):
+    if not ident.startswith(("UN-", "DI-")):
         found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:Risk ; dcterms:identifier "{ident}" }}')
         if not found:
             raise ValueError(f"{ident} is not a declared user need (UN-n), design input (DI-n) or risk")

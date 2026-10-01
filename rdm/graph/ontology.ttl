@@ -108,6 +108,10 @@ rdm:revision a owl:DatatypeProperty ;
 rdm:path a owl:DatatypeProperty ;
     rdfs:label "path" ; rdfs:comment "Repository-relative path." .
 
+rdm:undeclaredTag a owl:DatatypeProperty ;
+    rdfs:label "undeclared tag" ; rdfs:domain rdm:Test ;
+    rdfs:comment "A tag on the test naming no declared design input, though sharing a declared input's prefix — what the design gate warns about." .
+
 rdm:definedIn a owl:ObjectProperty ;
     rdfs:label "defined in" ; rdfs:domain rdm:Test ; rdfs:range rdm:TestFile .
 

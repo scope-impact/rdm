@@ -82,13 +82,6 @@ def ids_with_status(by_id: dict, status: str) -> list[str]:
     return sorted(uid for uid, agg in by_id.items() if agg.status == status)
 
 
-def relevant_orphans(orphans: Iterable[str], declared_ids: set[str]) -> list[str]:
-    """Orphan tags worth reporting: those sharing an ID prefix with a declared
-    need, to avoid noise from unrelated tags (e.g. FT-001, US-001)."""
-    prefixes = {uid.split("-")[0] for uid in declared_ids}
-    return [tag for tag in orphans if tag.split("-")[0] in prefixes]
-
-
 class StatusReportMixin:
     """Provides ``_ids_with`` for reports whose ``by_id`` maps declared IDs to
     aggregates carrying a ``status`` attribute. The IDs may be user needs, design

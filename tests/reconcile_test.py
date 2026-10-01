@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from rdm.record.reconcile import aggregate_by_id, ids_with_status, relevant_orphans
+from rdm.record.ids import relevant_orphans
+from rdm.record.reconcile import aggregate_by_id, ids_with_status
 
 
 @dataclass

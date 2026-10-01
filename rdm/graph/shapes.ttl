@@ -86,8 +86,8 @@ rdm:ContextReferencesShape a sh:NodeShape ;
     sh:property [ sh:path rdm:realises ; sh:class rdm:DesignInput ;
                   sh:severity sh:Warning ; sh:message "context realises an undeclared design input" ] .
 
-# Like the design gate, only tags that share an id prefix with a declared
-# design input are reported (a stray US-001 in a fixture string is noise).
+# The projection marks the tags the design gate warns about (rdm.record.ids.
+# relevant_orphans): only those sharing a declared input's id prefix.
 rdm:TestTagShape a sh:NodeShape ;
     sh:targetClass rdm:Test ;
     # A SPARQL constraint takes its severity from the shape (pySHACL ignores
@@ -97,17 +97,7 @@ rdm:TestTagShape a sh:NodeShape ;
         a sh:SPARQLConstraint ;
         sh:message "test tag {?tag} names no declared design input" ;
         sh:prefixes rdm: ;
-        sh:select """
-            SELECT $this ?tag WHERE {
-                $this rdm:verifies ?input .
-                FILTER NOT EXISTS { ?input a rdm:DesignInput }
-                BIND (REPLACE(STR(?input), "^.*/", "") AS ?tag)
-                FILTER EXISTS {
-                    ?declared a rdm:DesignInput ; dcterms:identifier ?id .
-                    FILTER (STRBEFORE(?id, "-") = STRBEFORE(?tag, "-"))
-                }
-            }
-        """ ;
+        sh:select """SELECT $this ?tag WHERE { $this rdm:undeclaredTag ?tag }""" ;
     ] .
 
 # The risk register's release rules (DI-44, DI-45): the same risks the

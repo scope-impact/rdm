@@ -1,0 +1,25 @@
+"""
+Record ids, one grammar: an upper-case prefix of two or more characters, any
+further upper-case segments, and a number — UN-012, DI-3, RISK-TOOL-001.
+Text that does not match (a "{di_id}" in a template string, a word) is no id.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Iterable
+
+ID = re.compile(r"[A-Z][A-Z0-9]+(?:-[A-Z][A-Z0-9]*)*-\d+")
+
+
+def is_id(text: str) -> bool:
+    """Whether ``text`` is a record id."""
+    return ID.fullmatch(text) is not None
+
+
+def relevant_orphans(orphans: Iterable[str], declared_ids: set[str]) -> list[str]:
+    """Tags naming no declared id worth reporting: those sharing an id prefix
+    with a declared one, to avoid noise from unrelated tags (e.g. FT-001,
+    US-001)."""
+    prefixes = {uid.split("-")[0] for uid in declared_ids}
+    return [tag for tag in orphans if tag.split("-")[0] in prefixes]
