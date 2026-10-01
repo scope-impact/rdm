@@ -129,6 +129,8 @@ def _input(store: ox.Store, node: str) -> dict:
             store, f"SELECT ?c WHERE {{ ?x rdm:realises <{node}> ; rdfs:label ?c }}")),
         "tests": sorted(r["path"] for r in _select(
             store, f"SELECT ?path WHERE {{ ?t rdm:verifies <{node}> ; rdfs:label ?path }}")),
+        "code": sorted(r["p"] for r in _select(
+            store, f"SELECT DISTINCT ?p WHERE {{ ?r rdm:exercises <{node}> ; rdm:exercisesOutput/rdm:path ?p }}")),
         "risks": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ ?r rdm:controlledBy <{node}> ; dcterms:identifier ?id }}")),
         "runs": sorted(({"test": r["name"], "status": r["status"], **_evidence(store, r["r"])} for r in _select(
@@ -229,7 +231,8 @@ def server(record: Record):
 
     @app.tool(name="trace", annotations=read_only,
               description="Trace a user need (UN-n), design input (DI-n) or risk id: text, contexts, owning document "
-                          "and last commit, needs refined, tagged tests and runs, risks controlled; for a risk, "
+                          "and last commit, needs refined, tagged tests, runs (with steps and attachments), the source "
+                          "files they exercise, risks controlled; for a risk, "
                           "its chain, scores, levels, acceptance and each controlling design input.")
     def _trace(id: str) -> dict:
         try:

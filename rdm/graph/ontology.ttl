@@ -127,6 +127,35 @@ rdm:attachment a owl:ObjectProperty ; rdfs:label "attachment" ; rdfs:range rdm:A
 rdm:position a owl:DatatypeProperty ; rdfs:label "position" ; rdfs:domain rdm:Step ;
     rdfs:comment "The step's place in the run: 1, 2, 2.1 ..." .
 
+rdm:TestCase a owl:Class ;
+    rdfs:label "Test case" ;
+    rdfs:comment "One test across executions: the runs sharing an Allure history id (DI-54)." .
+rdm:Fixture a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Fixture" ;
+    rdfs:comment "A before or after fixture an Allure container recorded (DI-55)." .
+rdm:SourceFile a owl:Class ;
+    rdfs:label "Source file" ;
+    rdfs:comment "A file a test run exercises, named by its output label (DI-56)." .
+rdm:ResultLabel a owl:Class ; rdfs:label "Result label" ;
+    rdfs:comment "One Allure label of a run: a name and a value (DI-54)." .
+rdm:Parameter a owl:Class ; rdfs:label "Parameter" ;
+    rdfs:comment "One parameter of a parametrised run: a name and a value (DI-54)." .
+rdm:runOf a owl:ObjectProperty ; rdfs:label "run of" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:TestCase .
+rdm:hasLabel a owl:ObjectProperty ; rdfs:label "has label" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:ResultLabel .
+rdm:parameter a owl:ObjectProperty ; rdfs:label "parameter" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Parameter .
+rdm:name a owl:DatatypeProperty ; rdfs:label "name" .
+rdm:value a owl:DatatypeProperty ; rdfs:label "value" .
+rdm:fullName a owl:DatatypeProperty ; rdfs:label "full name" ; rdfs:domain rdm:TestRun .
+rdm:statusMessage a owl:DatatypeProperty ; rdfs:label "status message" .
+rdm:statusTrace a owl:DatatypeProperty ; rdfs:label "status trace" .
+rdm:exercisesOutput a owl:ObjectProperty ; rdfs:label "exercises output" ; rdfs:domain rdm:TestRun ;
+    rdfs:range rdm:SourceFile ; rdfs:comment "The code a run exercises: design input -> test -> run -> code." .
+rdm:phase a owl:DatatypeProperty ; rdfs:label "phase" ; rdfs:domain rdm:Fixture ;
+    rdfs:comment "before or after." .
+rdm:setsUp a owl:ObjectProperty ; rdfs:label "sets up" ; rdfs:domain rdm:Fixture ; rdfs:range rdm:TestRun .
+rdm:tearsDown a owl:ObjectProperty ; rdfs:label "tears down" ; rdfs:domain rdm:Fixture ; rdfs:range rdm:TestRun .
+
 rdm:Risk a owl:Class ;
     rdfs:label "Risk" ;
     rdfs:comment "One risk of the register: hazard, situation, harm, scored severity × probability, its controls and residual (DI-45)." .

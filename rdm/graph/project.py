@@ -21,7 +21,6 @@ judgments stay in the gates.
 
 from __future__ import annotations
 
-import json
 import re
 import subprocess
 from pathlib import Path
@@ -29,7 +28,7 @@ from urllib.parse import quote
 
 import pyoxigraph as ox
 
-from rdm.record.allure import find_tests_dir, parse_results, reconcile, scan_source_tags
+from rdm.record.allure import find_tests_dir, reconcile, scan_source_tags
 from rdm.record.sdd import (
     context_of,
     declarations,
@@ -210,42 +209,10 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> None:
             ds.add(node, rdm("verifies"), ds.node("input", tag), "tests")
 
 
-def _evidence(ds: _Dataset, owner: ox.NamedNode, raw: dict, run: str, key: str, g: str) -> None:
-    """A run's or step's attachments and (recursively) its steps (DI-53)."""
-    for item in raw.get("attachments") or []:
-        if isinstance(item, dict) and item.get("source"):
-            source = str(item["source"])
-            att = ds.thing(ds.node("attachment", source), rdm("Attachment"), str(item.get("name") or source), g)
-            ds.add(att, rdm("path"), source, g)
-            if item.get("type"):
-                ds.add(att, _term(_DCT + "format"), str(item["type"]), g)
-            ds.add(owner, rdm("attachment"), att, g)
-    for n, step in enumerate(raw.get("steps") or [], 1):
-        if not isinstance(step, dict):
-            continue
-        position = f"{key}.{n}" if key else str(n)
-        node = ds.thing(ds.node("step", f"{run}/{position}"),
-                        rdm("Step"), str(step.get("name") or position), g)
-        ds.add(node, rdm("position"), position, g)
-        if step.get("status"):
-            ds.add(node, rdm("status"), str(step["status"]), g)
-        ds.add(owner, rdm("step"), node, g)
-        _evidence(ds, node, step, run, position, g)
-
-
 def _executions(ds: _Dataset, results_dir: Path) -> None:
-    g = "executions"
-    for result in parse_results(Path(results_dir)):
-        run = ds.thing(ds.node("run", Path(result.source).stem), rdm("TestRun"), result.name or result.source, g)
-        ds.add(run, rdm("status"), result.status, g)
-        for di in result.user_need_ids:
-            if _ID.match(di):
-                ds.add(run, rdm("exercises"), ds.node("input", di), g)
-        try:
-            raw = json.loads((Path(results_dir) / Path(result.source).name).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            continue
-        _evidence(ds, run, raw, Path(result.source).stem, "", g)
+    from rdm.graph.allure import project_results
+
+    project_results(ds, Path(results_dir))
 
 
 def _git_out(root: Path, *args: str) -> str | None:
