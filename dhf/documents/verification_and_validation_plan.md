@@ -30,6 +30,8 @@ user_needs:
     text: "A release's evidence (verification data, traceability matrix) and the device-master-record index can be produced as retained, generated artifacts from the record."
   - id: UN-013
     text: "A reviewer can prove, on demand, that a specific verifying test detects a specific defect in the code it verifies."
+  - id: UN-014
+    text: "A regulatory author can query and visually explore the design record as a linked graph, without changing how the record is authored."
 ---
 
 # Purpose
@@ -67,5 +69,6 @@ contexts that satisfy it. `rdm story release-gate` enforces this.
 | UN-011 | maintainer review that an adopted repository ends up with the working control surface (DHF skeleton, runbook, hook, bootstrap, CI) and that nothing pre-existing was overwritten | trial adoption into a scratch copy of a real repository; `rdm adopt` acceptance test exercises the skip-not-overwrite contract |
 | UN-012 | maintainer review that a produced evidence bundle and DMR index are complete and agree with the record they were generated from | dogfooding: `rdm story dmr` / `evidence-bundle` run against RDM's own DHF and the worked example |
 | UN-013 | maintainer review that a probe reports a broken behavior as caught only when the test genuinely fails, and never leaves the code mutated | dogfooding: reviewers probing RDM's own tests during pull-request review |
+| UN-014 | maintainer review that the projected graph agrees with the record it was built from (needs, inputs, contexts, documents, tests, results, commits) and is explorable in a graph browser | dogfooding: RDM's own DHF projected, queried, and browsed in AWS Graph Explorer |
 
 Formative evidence never gates release.

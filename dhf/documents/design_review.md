@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 4
+revision: 5
 title: Design Review — RDM
 ---
 
@@ -165,6 +165,33 @@ feeds verdict hashing), UN-012, and the document-control statement.
   check. It records no verdict and gates nothing; DI-21 stays retired.
 - Open (carried from Review 3): summative validation records; human PR review
   and individual signing identities (NC-2/NC-3).
+
+# Design Review 5 — Design record as a linked-data graph
+
+**Scope reviewed:** UN-014, the new `graph` context, DI-35 (RDF projection of
+the record) and DI-36 (Oxigraph store, SPARQL query, SPARQL endpoint for AWS
+Graph Explorer).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Consistent with RDM-004's settled rule that Markdown is the authoring
+  surface and any database is a derived projection: the graph is rebuilt from
+  the record, never edited, and Graph Explorer is a browser, not an editor.
+- Open-world semantics are explicit: the graph asserts only recorded facts;
+  pass/fail judgments stay in the gates (a later SHACL step may express them
+  as shapes — not in scope here).
+- Store choice: Oxigraph (embedded, SPARQL 1.1, named graphs, persistent,
+  actively released); Kuzu ruled out (property graph, archived Oct 2025);
+  Jena/GraphDB/RDFox deferred (server, proprietary, or licensed).
+- Optional extra: the record core keeps no RDF dependency.
+
+## Findings and actions
+
+- Open: whether this projection is the answer to RDM-004.06 (types as data)
+  is decided on that ticket, not here.
+- Not in scope: backlog/plan graph, SHACL shapes, OWL reasoning.
 
 # Approval
 
