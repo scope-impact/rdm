@@ -2,6 +2,11 @@
 
 > Status: Proposed (design only; supersedes the earlier "product need" draft —
 > that vocabulary is dropped).
+>
+> **Amended (Design Review 17):** the per-context `satisfies` list below is
+> gone. It restated what the design inputs already say — a context serves the
+> needs its inputs (owned or realised) `traces_to` — and it drifted. Read
+> `satisfies` in this record as that derived relation; RDM ignores the key.
 
 ## Context
 

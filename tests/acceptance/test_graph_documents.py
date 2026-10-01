@@ -33,7 +33,7 @@ def _dhf(tmp_path: Path, architecture: str | None) -> Path:
     (docs / "vv.md").write_text("---\nid: VVP-1\nuser_needs:\n  - {id: UN-001, text: a need}\n---\n")
     for context in ("alarms", "ui"):
         (docs / "design" / f"{context}.md").write_text(
-            f"---\nid: SDS-{context.upper()}\nkind: design\ncontext: {context}\nsatisfies: [UN-001]\n"
+            f"---\nid: SDS-{context.upper()}\nkind: design\ncontext: {context}\n"
             "design_inputs: []\n---\n")
     (docs / "control.md").write_text("---\nid: DC-1\ntitle: Document control\n---\nCovers [[STD:1]].\n")
     (docs / "traceability_matrix.md").write_text("---\nid: TM-1\n---\n{{ verification }}\n")

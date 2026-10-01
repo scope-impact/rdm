@@ -2,7 +2,6 @@
 id: SDS-AUTH-001
 kind: design
 context: auth
-satisfies: [UN-002, UN-003]
 design_inputs:
   - id: DI-4
     text: "VitalView shall restrict patient-data access to authorized clinicians and write an audit record for each access."

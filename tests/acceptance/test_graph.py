@@ -54,9 +54,9 @@ def _record(tmp_path: Path, extra_input: bool = True) -> tuple[Path, Path]:
         inputs += "  - id: DI-2\n    text: 'The device shall log.'\n    traces_to: [UN-002]\n"
     (docs / "design" / "alarms.md").write_text(
         "---\nid: SDS-ALM-001\ntitle: Alarms design\nrevision: 3\nkind: design\ncontext: alarms\n"
-        f"satisfies: [UN-001, UN-002]\ndesign_inputs:\n{inputs}---\n# Alarms\n")
+        f"design_inputs:\n{inputs}---\n# Alarms\n")
     (docs / "design" / "ui.md").write_text(
-        "---\nid: SDS-UI-001\nkind: design\ncontext: ui\nsatisfies: [UN-001]\nrealises: [DI-1]\n"
+        "---\nid: SDS-UI-001\nkind: design\ncontext: ui\nrealises: [DI-1]\n"
         "design_inputs: []\n---\n# UI\n")
     (docs / "design_review.md").write_text("---\nid: DR-001\n---\n# Review\nApproved.\n")
     (repo / "tests").mkdir()
@@ -99,7 +99,10 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
     with clause("Record graph: needs, contexts, inputs (text, needs, owner, realiser, doc), documents"):
         assert _ask(s, f"GRAPH {rec} {{ <urn:dhf:acme:need/UN-001> a rdm:UserNeed ; dcterms:identifier \"UN-001\" ; "
                        f"rdm:text \"a need\" }}")
-        assert _ask(s, f"GRAPH {rec} {{ {ctx} a rdm:BoundedContext ; rdm:satisfies <urn:dhf:acme:need/UN-002> }}")
+        assert _ask(s, f"GRAPH {rec} {{ {ctx} a rdm:BoundedContext }}")
+        # a context's needs are not declared: they follow from its inputs (DI-1)
+        assert not _ask(s, "?c rdm:satisfies ?n")
+        assert _ask(s, f"?i rdm:ownedBy {ctx} ; rdm:tracesTo <urn:dhf:acme:need/UN-002>")
         assert _ask(s, f'GRAPH {rec} {{ {di1} a rdm:DesignInput ; rdm:text "The device shall alarm." ; '
                        f'rdm:tracesTo <urn:dhf:acme:need/UN-001> ; rdm:ownedBy {ctx} ; '
                        f'rdm:declaredIn <urn:dhf:acme:doc/SDS-ALM-001> }}')

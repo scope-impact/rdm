@@ -42,7 +42,6 @@ def _proj(
         write_design_doc(
             docs / "design",
             "core",
-            satisfies=tuple(user_needs or []),
             design_inputs=tuple((di, []) for di in design_input_ids),
         )
     elif user_needs:
@@ -65,8 +64,7 @@ def _git_dhf(tmp_path: Path, commit: bool) -> Path:
     _git(repo, "init")
     docs = repo / "dhf" / "documents"
     docs.mkdir(parents=True)
-    write_design_doc(docs / "design", "core", satisfies=("UN-001",),
-                     design_inputs=(("DI-1", ["UN-001"]),))
+    write_design_doc(docs / "design", "core", design_inputs=(("DI-1", ["UN-001"]),))
     (docs / DESIGN_REVIEW_DOC).write_text(COMPLETE_DOC)
     if commit:
         _git(repo, "add", "-A")
@@ -90,8 +88,7 @@ def _make_dhf(
             (docs / "design").mkdir(parents=True, exist_ok=True)
             (docs / "design" / "core.md").write_text(design_text)
         else:
-            write_design_doc(docs / "design", "core", satisfies=("UN-001",),
-                             design_inputs=design_inputs)
+            write_design_doc(docs / "design", "core", design_inputs=design_inputs)
     if review_text is not None:
         (docs / DESIGN_REVIEW_DOC).write_text(review_text)
     return dhf
@@ -281,3 +278,20 @@ class TestInstalledTemplates:
         sdd = docs / "software_design_specification.md"
         assert sdd.exists()
         assert "kind: design" in sdd.read_text()
+
+
+def test_coverage_warnings_read_the_design_inputs(tmp_path: Path) -> None:
+    """A user need is covered when a design input traces to it; a legacy
+    ``satisfies`` list on a design document no longer counts."""
+    from rdm.gates.design_gate import _coverage_warnings
+
+    docs = tmp_path / "dhf" / "documents"
+    docs.mkdir(parents=True)
+    (docs / "vv.md").write_text("---\nid: VVP-1\nuser_needs:\n  - {id: UN-1, text: a}\n  - {id: UN-2, text: b}\n---\n")
+    write_design_doc(docs / "design", "core", design_inputs=(("DI-1", ["UN-1"]), ("DI-2", ["UN-9"])))
+    legacy = docs / "design" / "core.md"
+    legacy.write_text(legacy.read_text().replace("kind: design\n", "kind: design\nsatisfies: [UN-2]\n", 1))
+    warnings = _coverage_warnings(tmp_path / "dhf")
+    assert "user need UN-2 is traced to by no design input" in warnings
+    assert not any("UN-1" in w for w in warnings)
+    assert "design input DI-2 traces_to unknown user need UN-9" in warnings

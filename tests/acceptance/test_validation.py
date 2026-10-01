@@ -32,7 +32,7 @@ def _validated_record(tmp_path: Path) -> tuple[Path, Path]:
     )
     (dhf / "documents" / "design" / "core.md").write_text(
         "---\nid: SDS-C-001\nkind: design\ncontext: core\n"
-        "satisfies: [UN-001, UN-002]\n"
+        ""
         "design_inputs:\n"
         "  - id: DI-1\n    text: 'req one'\n    traces_to: [UN-001]\n"
         "  - id: DI-2\n    text: 'req two'\n    traces_to: [UN-002]\n---\n\n# Core\n"

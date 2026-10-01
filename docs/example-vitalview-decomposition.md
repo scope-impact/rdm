@@ -17,22 +17,23 @@ which holds design only:
 | `UN-002` | A clinician can securely sign in and view a patient's current and recent vital signs. |
 | `UN-003` | Access to patient data is restricted to authorized clinicians and is audited. |
 
-## Bounded contexts and what they satisfy
+## Bounded contexts and the needs they serve
 
-Each context SDD declares `satisfies: [UN-…]`. A user need is **referenced** by
-multiple SDDs, never duplicated.
+No context declares its user needs: a context serves the needs that the design
+inputs it owns or realises trace to (`traces_to`). A user need is **referenced**
+by those inputs, never duplicated. Derived from the example's design inputs:
 
-| Context | Design document | `satisfies` |
+| Context | Design document | Serves (derived) |
 |---------|-----------------|-------------|
 | `auth` | `design/auth.md` | UN-002, UN-003 |
 | `ingestion` | `design/ingestion.md` | UN-001, UN-002 |
 | `alerting` | `design/alerting.md` | UN-001 |
 | `dashboard` | `design/dashboard.md` | UN-001, UN-002 |
 
-- **A user need is addressed by multiple contexts.** `UN-001` is satisfied by
+- **A user need is served by multiple contexts.** `UN-001` is served by
   `ingestion`, `alerting`, and `dashboard`.
-- **A context satisfies multiple user needs.** `auth` satisfies UN-002 and
-  UN-003; `dashboard` satisfies UN-001 and UN-002. Many-to-many.
+- **A context serves multiple user needs.** `auth` serves UN-002 and UN-003;
+  `dashboard` serves UN-001 and UN-002. Many-to-many.
 
 ## Verification (automated)
 

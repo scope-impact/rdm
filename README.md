@@ -254,7 +254,7 @@ uv run pytest tests
   generated from frontmatter; the retained release evidence set (matrix,
   verification data, manifest)
 - `rdm hooks` defaults to the design-gate hook only (`--with-issue-hooks`
-  opts into the legacy pair); `new-input` keeps `satisfies` lists in sync
+  opts into the legacy pair); `new-input` scaffolds an input with its `traces_to`
 - **Polyglot traceability**: JS/TS and Java test tags discovered for
   linkage and audit; legacy YAML workflow deprecated
 - **Faithfulness gate retired**: `rdm story faithfulness` and `verdict`

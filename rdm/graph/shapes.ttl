@@ -83,8 +83,6 @@ rdm:DesignInputTaggedShape a sh:NodeShape ;
 
 rdm:ContextReferencesShape a sh:NodeShape ;
     sh:targetClass rdm:BoundedContext ;
-    sh:property [ sh:path rdm:satisfies ; sh:class rdm:UserNeed ;
-                  sh:severity sh:Warning ; sh:message "context satisfies an undeclared user need" ] ;
     sh:property [ sh:path rdm:realises ; sh:class rdm:DesignInput ;
                   sh:severity sh:Warning ; sh:message "context realises an undeclared design input" ] .
 

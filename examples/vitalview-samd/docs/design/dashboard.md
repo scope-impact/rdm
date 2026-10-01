@@ -2,7 +2,6 @@
 id: SDS-DASH-001
 kind: design
 context: dashboard
-satisfies: [UN-001, UN-002]
 design_inputs:
   - id: DI-3
     text: "VitalView shall let an authenticated clinician view a patient's current and recent vital signs."

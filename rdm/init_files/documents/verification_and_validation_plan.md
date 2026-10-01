@@ -3,8 +3,8 @@ id: VVP-001
 revision: 1
 title: Verification and Validation Plan
 # User-need registry: this product's validated journeys, defined ONCE here.
-# Per-context design documents (kind: design) reference them via `satisfies`;
-# design inputs refine them via `traces_to` (see AGENT_WORKFLOW.md). Register
+# Design inputs, declared in the per-context design documents (kind: design),
+# refine them via `traces_to` (see AGENT_WORKFLOW.md). Register
 # a need in the same change as its first design input — the release gate
 # blocks any need nothing traces to.
 user_needs: []

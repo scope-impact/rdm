@@ -30,7 +30,7 @@ def _project(tmp_path: Path) -> Path:
     (docs / "design").mkdir(parents=True)
     (docs / "vv.md").write_text("---\nid: VVP-1\nuser_needs:\n  - {id: UN-1, text: a}\n  - {id: UN-2, text: b}\n---\n")
     (docs / "design" / "alarms.md").write_text(
-        "---\nid: SDS-ALM\nkind: design\ncontext: alarms\nsatisfies: [UN-1, UN-2]\ndesign_inputs:\n"
+        "---\nid: SDS-ALM\nkind: design\ncontext: alarms\ndesign_inputs:\n"
         "  - {id: DI-1, text: 'The device shall alarm.', traces_to: [UN-1, UN-2]}\n"
         "  - {id: DI-2, text: 'The device shall log.', traces_to: [UN-2]}\n---\n# Alarms\n")
     (docs / "risk").mkdir()

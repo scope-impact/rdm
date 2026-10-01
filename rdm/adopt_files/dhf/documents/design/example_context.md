@@ -4,7 +4,6 @@
 id: SDS-CTX-001
 kind: design
 context: TODO-your-context-name
-satisfies: []        # user needs this context contributes to, e.g. [UN-001]
 design_inputs: []
 # Scaffold inputs with `rdm story new-input --context <ctx> --text "..." --traces-to UN-…`
 # Each entry: {id: DI-n, text: "the verifiable requirement", traces_to: [UN-…]}

@@ -5,15 +5,15 @@ backlog/implementation tasks.
 
 Traceability model enforced here (ADR 0001):
 
-    User Need (registry: V&V plan)  <- satisfies -  design doc (per bounded context)
-                                                      |  declares design inputs
-                                       Design Input  <- @allure.story("DI") -  test
+    User Need (registry: V&V plan)  <- traces_to -  Design Input  <- @allure.story("DI") -  test
+                                                      |  declared in, owned by
+                                       design doc (per bounded context)
 
 The gate verifies that, for the design history file (DHF), at least one
 per-context design document (`kind: design`, carrying its design inputs and
 outputs) and a Design Review document exist and have been completed/approved
 (committed) in version control. As soft checks it reconciles the user-need
-registry against the design documents that `satisfy` it and against the Allure
+registry against the design inputs that trace to it and against the Allure
 tags on the tests.
 
 Usage:
@@ -43,7 +43,6 @@ from rdm.record.sdd import (
     find_design_docs,
     realises_by_context,
     registry_user_needs,
-    satisfies_by_context,
 )
 from rdm.record.sdd import find_dhf_doc as _find_doc
 
@@ -208,10 +207,9 @@ def check_design_docs(dhf_dir: Path) -> list[ArtifactCheck]:
 def _coverage_warnings(dhf_dir: Path) -> list[str]:
     """Reconcile the user-need registry against the design docs' references.
 
-    Warns (warnings only) when a registered user need is addressed by no design
-    document, when a document ``satisfies`` or a design input ``traces_to`` an
-    unknown user need, or when a ``realises`` reference names an unknown design
-    input.
+    Warns (warnings only) when a registered user need is traced to by no design
+    input, when a design input ``traces_to`` an unknown user need, or when a
+    ``realises`` reference names an unknown design input.
     """
     docs = find_design_docs(dhf_dir)
     if not docs:
@@ -219,16 +217,13 @@ def _coverage_warnings(dhf_dir: Path) -> list[str]:
 
     warnings: list[str] = []
     registry = registry_user_needs(dhf_dir)
-    satisfied: set[str] = set()
-    for doc, refs in satisfies_by_context(dhf_dir).items():
-        satisfied |= refs
-        for ref in sorted(refs - registry):
-            warnings.append(f"{doc.name} satisfies unknown user need {ref}")
-    for need in sorted(registry - satisfied):
-        warnings.append(f"user need {need} is addressed by no design document (no `satisfies`)")
+    inputs = design_inputs(dhf_dir)
+    traced = {need for di in inputs for need in di["traces_to"]}
+    for need in sorted(registry - traced):
+        warnings.append(f"user need {need} is traced to by no design input")
 
     di_ids = design_input_ids(dhf_dir)
-    for di in design_inputs(dhf_dir):
+    for di in inputs:
         for ref in sorted(set(di["traces_to"]) - registry):
             warnings.append(f"design input {di['id']} traces_to unknown user need {ref}")
     for doc, refs in realises_by_context(dhf_dir).items():

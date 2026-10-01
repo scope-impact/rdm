@@ -33,7 +33,7 @@ def test_a_duplicated_id_fails_the_design_gate_and_shows_in_the_graph(tmp_path: 
     or in several — fails the design gate naming every declaring document; a
     reference is not a declaration; the graph counts declarations and its
     shapes report a repeat."""
-    # Unique ids: the check passes; references (traces_to, satisfies, realises) do not count.
+    # Unique ids: the check passes; references (traces_to, realises) do not count.
     dhf = _dhf(tmp_path / "unique", extra_frontmatter="realises: [DI-1]\n")
     assert _ids_check(dhf).ok and run_design_gate(dhf).passed
 
@@ -48,7 +48,7 @@ def test_a_duplicated_id_fails_the_design_gate_and_shows_in_the_graph(tmp_path: 
     # A design input declared in two documents: each named.
     dhf = _dhf(tmp_path / "two-docs")
     (dhf / "documents" / "design" / "other.md").write_text(
-        "---\nid: SDS-2\nkind: design\ncontext: other\nsatisfies: [UN-1]\ndesign_inputs:\n"
+        "---\nid: SDS-2\nkind: design\ncontext: other\ndesign_inputs:\n"
         "  - {id: DI-2, text: 'again', traces_to: [UN-1]}\n---\n# Other\n")
     assert _ids_check(dhf).reasons == [f"DI-2 is declared 2 times: {DESIGN}, documents/design/other.md"]
 

@@ -38,11 +38,9 @@ from rdm.record.sdd import (
     parse_frontmatter,
     realises_by_context,
     registry_user_needs,
-    satisfies_for,
     user_need_texts,
 )
 
-DESIGN_REVIEW_DOC = "design_review.md"  # the review the design gate requires (rdm.gates.design_gate)
 MATRIX_DOC = "traceability_matrix.md"  # the generated traceability matrix (rdm.record.bundle)
 
 NS = "https://github.com/scope-impact/rdm/ns#"
@@ -164,19 +162,13 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         if un in texts:
             ds.add(need, rdm("text"), texts[un], g)
 
-    review_path = find_dhf_doc(dhf, DESIGN_REVIEW_DOC)
-    review = doc_by_path.get(_rel(review_path, root)) if review_path else None
     declared_in: dict[str, ox.NamedNode] = {}
     for path in find_design_docs(dhf):
         context = context_of(path)
         ctx = ds.thing(ds.node("context", context), rdm("BoundedContext"), context, g)
-        for un in sorted(satisfies_for(path)):
-            ds.add(ctx, rdm("satisfies"), ds.node("need", un), g)
         doc = doc_by_path.get(_rel(path, root))
         if doc is not None:
             ds.add(doc, rdm("describes"), ctx, g)
-            if review is not None:  # DI-52: the review the design gate requires
-                ds.add(doc, rdm("reviewedIn"), review, g)
             front = parse_frontmatter(path.read_text(encoding="utf-8"))
             for item in front.get("design_inputs") or []:
                 if isinstance(item, dict) and str(item.get("id", "")).strip():

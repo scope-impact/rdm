@@ -34,7 +34,7 @@ def _dhf(tmp_path: Path, *, needs=("UN-1", "UN-2"), inputs=(("DI-1", "UN-1"), ("
     (docs / "vv.md").write_text(f"---\nid: VVP-1\nuser_needs:\n{registry}---\n# Plan\n")
     rows = "".join(f"  - id: {di}\n    text: '{di} text'\n    traces_to: [{un}]\n" for di, un in inputs)
     (docs / "design" / "core.md").write_text(
-        f"---\nid: SDS-1\nkind: design\ncontext: core\nsatisfies: [{', '.join(needs)}]\n"
+        f"---\nid: SDS-1\nkind: design\ncontext: core\n"
         f"{extra_frontmatter}design_inputs:\n{rows}---\n# Core\n")
     (docs / "design_review.md").write_text("---\nid: DR-1\n---\n# Review\nApproved.\n")
     (repo / "tests").mkdir()
@@ -114,13 +114,9 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
     # Warnings: untagged input, undeclared references, a stray tag sharing the DI prefix.
     wdhf = _dhf(tmp_path / "warn", inputs=(("DI-1", "UN-1"), ("DI-2", "UN-9")), tagged=("DI-1", "DI-99", "US-1"),
                 extra_frontmatter="realises: [DI-77]\n")
-    (wdhf / "documents" / "design" / "core.md").write_text(
-        (wdhf / "documents" / "design" / "core.md").read_text().replace("satisfies: [UN-1, UN-2]",
-                                                                           "satisfies: [UN-1, UN-2, UN-8]"))
     warnings = {(r.label, r.message) for r in validate(project(wdhf)) if r.severity == "Warning"}
     assert ("DI-2", "design input has no tagged test file") in warnings
     assert ("DI-2", "design input traces to an undeclared user need") in warnings
-    assert ("core", "context satisfies an undeclared user need") in warnings
     assert ("core", "context realises an undeclared design input") in warnings
     assert ("tests/test_core.py", "test tag DI-99 names no declared design input") in warnings
     assert not any("US-1" in message for _, message in warnings)  # unrelated prefix: noise, not reported

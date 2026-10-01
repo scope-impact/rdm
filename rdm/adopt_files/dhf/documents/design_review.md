@@ -24,8 +24,7 @@ of the authoring of the reviewed design stage.
 ## Items reviewed
 
 TODO — e.g.: each design input is unambiguous and individually verifiable by an
-automated test; each user need is addressed by at least one context via
-`satisfies`; verification and validation evidence are distinguished.
+automated test; each user need is traced to by at least one design input; verification and validation evidence are distinguished.
 
 ## Verifying-test review (per design input)
 

@@ -179,7 +179,8 @@ def trace(record: Record, ident: str) -> dict:
     return {"user_need": {
         "id": ident, "text": text,
         "contexts": sorted(r["c"] for r in _select(
-            store, f"SELECT ?c WHERE {{ ?x rdm:satisfies <{node}> ; rdfs:label ?c }}")),
+            store, f"SELECT DISTINCT ?c WHERE {{ ?i rdm:tracesTo <{node}> . "
+                   f"{{ ?i rdm:ownedBy ?x }} UNION {{ ?x rdm:realises ?i }} ?x rdfs:label ?c }}")),
         "design_inputs": sorted((_input(store, i) for i in inputs),
                                 key=lambda d: int(d["id"].split("-")[1])),
     }}

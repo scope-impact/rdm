@@ -31,9 +31,8 @@ def _dhf(tmp_path: Path) -> Path:
     (docs / "verification_and_validation_plan.md").write_text(
         "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: a need}\n---\n\nplan\n"
     )
-    write_design_doc(docs / "design", "core", satisfies=("UN-001",),
-                     design_inputs=(("DI-1", ["UN-001"]),))
-    write_design_doc(docs / "design", "edge", satisfies=("UN-001",), realises=("DI-1",))
+    write_design_doc(docs / "design", "core", design_inputs=(("DI-1", ["UN-001"]),))
+    write_design_doc(docs / "design", "edge", realises=("DI-1",))
     return tmp_path / "dhf"
 
 

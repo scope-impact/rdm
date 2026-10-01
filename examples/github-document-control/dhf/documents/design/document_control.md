@@ -2,7 +2,6 @@
 id: SDS-DC-001
 kind: design
 context: document_control
-satisfies: [UN-001, UN-002, UN-003, UN-004, UN-005]
 design_inputs:
   - id: DI-1
     text: "Changes to the default branch shall require a pull request with at least one code-owner approval, verified commit signatures, passing status checks, and protection against history rewriting and branch deletion, enforced by a repository ruleset kept as configuration code."

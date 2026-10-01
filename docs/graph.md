@@ -173,7 +173,7 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 |---|---|
 | `rdm:DesignInput` | a design input; a subclass of `oslc_rm:Requirement` (OSLC Requirements Management) |
 | `rdm:UserNeed`, `rdm:BoundedContext`, `rdm:Document` | the other record entities |
-| `rdm:tracesTo`, `rdm:ownedBy`, `rdm:satisfies`, `rdm:realises`, `rdm:declaredIn` | how they relate |
+| `rdm:tracesTo`, `rdm:ownedBy`, `rdm:realises`, `rdm:declaredIn` | how they relate (a context's needs: `?i rdm:ownedBy ?c ; rdm:tracesTo ?need`) |
 | `rdm:TestFile` `rdm:verifies` / `rdm:TestRun` `rdm:exercises`, `rdm:status` | tests and results |
 | `dcterms:identifier`, `dcterms:title`, `rdm:revision` | document metadata (Dublin Core) |
 | `prov:wasGeneratedBy`, `prov:Activity`, `prov:Agent`, `prov:endedAtTime` | commits and authors (PROV-O) |
@@ -211,9 +211,10 @@ it, otherwise the merge. `rdm:landedIn` points at that commit and
 `rdm:landedBy` at its author. A change still on a branch has neither, and
 `rdm graph validate` warns about it.
 
-User needs link to the document that declares them (`rdm:declaredIn`),
-risks to the risk-policy document (`rdm:evaluatedAgainst`), and design
-documents to the design review (`rdm:reviewedIn`).
+User needs link to the document that declares them (`rdm:declaredIn`), and
+risks to the risk-policy document (`rdm:evaluatedAgainst`). Design documents
+are not linked to the design review: the record does not say which review
+covered which document, so such an edge would claim what nobody checked.
 
 Three more links come from frontmatter you write once (DI-58):
 
@@ -306,7 +307,7 @@ rdm graph validate --allure-results dhf/allure-results --checklist part11_docume
 | Violation | a checklist clause no document references |
 | Violation | malformed checklist data (a clause without a key or a standard; a non-clause member) |
 | Warning | a design input with no tagged test file |
-| Warning | a `tracesTo` / `satisfies` / `realises` naming an undeclared need or input |
+| Warning | a `tracesTo` / `realises` naming an undeclared need or input |
 | Warning | a test tag sharing the design-input prefix but naming no declared input |
 
 It exits 1 on any violation. The coded gates (`rdm story release-gate`,

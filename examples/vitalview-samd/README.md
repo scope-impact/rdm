@@ -15,10 +15,10 @@ docs/
   verification_and_validation_plan.md   ← user_needs registry (UN-001..003) + V&V approach
   architecture.md                       ← system design (bounded contexts), NO need listing
   design/                               ← one `kind: design` doc per context: inputs (what) + output (how)
-    auth.md          satisfies: [UN-002, UN-003]   owns DI-4,  realises DI-3
-    ingestion.md     satisfies: [UN-001, UN-002]   realises DI-1, DI-3
-    alerting.md      satisfies: [UN-001]           owns DI-1, DI-2
-    dashboard.md     satisfies: [UN-001, UN-002]   owns DI-3,  realises DI-1, DI-2
+    auth.md          owns DI-4,        realises DI-3
+    ingestion.md                       realises DI-1, DI-3
+    alerting.md      owns DI-1, DI-2
+    dashboard.md     owns DI-3,        realises DI-1, DI-2
 personas/            ← AI-persona specs (clinician journeys), reference user needs
 persona-results/     ← sample formative usability evidence (*-persona.json)
 ```
@@ -41,7 +41,8 @@ The evidence JSON is **produced by the `usability-persona` skill**
 (`.claude/skills/usability-persona/`), not hand-authored.
 
 User needs (the validated journeys) are defined once in the V&V plan; each
-bounded-context SDD references the user needs it contributes to via `satisfies`;
+design input traces to the user needs it refines (`traces_to`), so a context
+serves the needs its inputs trace to;
 acceptance criteria are verified by `@allure`-tagged tests; the journeys are
 validated (summatively, by humans) and exercised formatively by AI personas.
 See `docs/example-vitalview-decomposition.md`.

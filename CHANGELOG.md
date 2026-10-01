@@ -8,6 +8,17 @@
   declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
   attachment (DI-57).
 
+### Changed — a context's user needs are derived
+- `satisfies` is gone from design documents: the needs a context serves follow
+  from its design inputs' `traces_to` (owned or realised). The design gate's
+  coverage warning reads the inputs, `rdm story new-input` no longer edits a
+  context list, and the graph has no `rdm:satisfies` edge. A legacy key is
+  ignored (DI-1, DI-22).
+
+### Removed — `rdm:reviewedIn`
+- Every design document was linked to the one design review because the gate
+  requires a review to exist, not because the review covered it (DI-52).
+
 ### Added — no island documents
 - The architecture declares the bounded contexts and their parts
   (`contexts:`), a document names the documents it relies on

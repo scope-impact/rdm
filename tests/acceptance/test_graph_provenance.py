@@ -58,7 +58,7 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
     with clause("A change on a feature branch, merged into main by someone else"):
         _git(repo, "author", "checkout", "-q", "-b", "feature")
         (dhf / "documents" / "design" / "ui.md").write_text(
-            "---\nid: SDS-UI\nkind: design\ncontext: ui\nsatisfies: [UN-1]\ndesign_inputs: []\n---\n# UI\n")
+            "---\nid: SDS-UI\nkind: design\ncontext: ui\ndesign_inputs: []\n---\n# UI\n")
         _git(repo, "author", "add", "-A")
         _git(repo, "author", "commit", "-q", "-m", "ui design")
         change = _git(repo, "author", "rev-parse", "HEAD")
@@ -103,7 +103,7 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
 @allure.label("output", "rdm/graph/project.py")
 def test_needs_risks_and_design_documents_link_to_their_documents(tmp_path: Path) -> None:
     """DI-52: each user need to the document that declares it, each risk to the
-    document holding the risk policy, each design document to the design review."""
+    document holding the risk policy; no design document claims a review."""
     dhf = _dhf(tmp_path / "x")
     (dhf / "documents" / "risk").mkdir()
     (dhf / "documents" / "risk" / "rmp.md").write_text(
@@ -114,7 +114,8 @@ def test_needs_risks_and_design_documents_link_to_their_documents(tmp_path: Path
     assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-1")
     assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-2")
     assert ("evaluatedAgainst", doc + "RMP-9") in _facts(quads, "urn:dhf:proj:risk/RISK-L-1")
-    assert ("reviewedIn", doc + "DR-1") in _facts(quads, doc + "SDS-1")
+    with clause("A design document is not linked to the design review: the record does not say which covered it"):
+        assert not any(o == doc + "DR-1" for _, o in _facts(quads, doc + "SDS-1"))
     with clause("Without a policy, a risk links to none"):
         (dhf / "documents" / "risk" / "rmp.md").unlink()
         assert not any(p == "evaluatedAgainst" for p, _ in _facts(project(dhf), "urn:dhf:proj:risk/RISK-L-1"))

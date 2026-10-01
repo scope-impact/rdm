@@ -48,7 +48,7 @@ context boundaries). "Product need" vocabulary is not used.
 |----------|------|----------|
 | **user need** (validated, cross-cutting) | the journey / intended use; the **validation** anchor | defined once in the **V&V plan** frontmatter (`verification_and_validation_plan.md`, `user_needs: [{id, text}]`) — *not* in the architecture document, which holds design only |
 | **design input** (verified) | a verifiable requirement refining a user need; the **verification** anchor (§820.30(f): output meets input) | declared once, in the **design document of the context that owns it** (`kind: design`, `design_inputs: [{id, text, traces_to: [UN-…]}]`) — same document as the design output |
-| **`satisfies`** / **`realises`** references | which user needs a context contributes to / which shared design input it helps realise | each per-context **design document** frontmatter (`satisfies: [UN-…]`, `realises: [DI-…]`) |
+| **`realises`** references | which shared design input, owned by another context, a context helps realise | each per-context **design document** frontmatter (`realises: [DI-…]`). The user needs a context serves are not declared: they follow from its inputs' `traces_to` (and those it realises) |
 | **acceptance criteria** = the test | each design input's verifying test ("live BDD") | the context's tests, tagged `@allure.story("DI-…")` |
 
 Rules:
@@ -68,9 +68,9 @@ Rules:
 1. **Ingest**
    - `record/sdd.py` — read the user-needs registry (V&V plan frontmatter
      `user_needs`); discover all per-context design documents by `kind: design`
-     and read each one's `satisfies`, `design_inputs`, and `realises`.
+     and read each one's `design_inputs` and `realises`.
    - `record/allure.py` — read an Allure results directory → per-user-need
-     verification status (aggregated across the SDDs that satisfy it).
+     verification status (aggregated across the design inputs that trace to it).
    - git/PR → approvals + change history: the design gate reads git
      directly; the graph projects each design document's latest commit.
 2. **Reconcile / trace** (`trace.py`) — join user-need IDs ↔ Allure tags across
@@ -83,7 +83,7 @@ Rules:
    | untested | declared user need, no Allure test (coverage gap) |
    | orphan | Allure tag with no matching user need |
 
-   Verification is aggregated across every SDD that satisfies the need;
+   Verification is aggregated across every design input that traces to the need;
    **validation** (human evidence on the journey) is tracked separately.
 3. **Gate** (`design_gate.py`) — design document(s)/review present + complete +
    approved (committed) in git; baseline drift re-opens the gate. The

@@ -74,7 +74,6 @@ def _mini_dhf(tmp_path: Path) -> Path:
         "id: SDS-A-001\n"
         "kind: design\n"
         "context: alarms\n"
-        "satisfies: [UN-001]\n"
         "design_inputs:\n"
         "  - id: DI-1\n"
         '    text: "existing input"\n'
@@ -86,7 +85,7 @@ def _mini_dhf(tmp_path: Path) -> Path:
         "id: SDS-T-001\n"
         "kind: design\n"
         "context: trends\n"
-        "satisfies:\n"          # block-style list: the other YAML form in the wild
+        "satisfies:\n"          # a legacy key from before needs were derived: left alone
         "  - UN-001\n"
         "design_inputs:\n"
         "  - id: DI-3\n"
@@ -123,10 +122,9 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
         assert "DI-4" in alarms_text
         assert "DI-4" not in (dhf / "documents" / "design" / "trends.md").read_text()
 
-    # The newly referenced user need joins the owning context's satisfies list
-    # (UN-002 was not there; UN-001 stays).
-    with clause("The newly referenced user need joins the owning context's satisfies list (UN-002 was not there;…"):
-        assert "satisfies: [UN-001, UN-002]" in alarms_text
+    # The user need goes on the input alone: no context-level list is added.
+    with clause("The user need goes on the input alone: no context-level satisfies list is written"):
+        assert "satisfies" not in alarms_text
 
     # Emits a stub acceptance test tagged with the new id that FAILS until
     # implemented (honest red at the release gate), and prints the checklist.
@@ -137,12 +135,10 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
         assert result == pytest.ExitCode.TESTS_FAILED
         assert "checklist" in out and "DI-4" in out
 
-    # A BLOCK-style satisfies list is edited in place — the item is appended to
-    # the existing list, never emitted as a second `satisfies:` key (a duplicate
-    # key silently shadows the first when the YAML is next parsed). The
-    # requirement text is embedded safely: quotes, a backslash, and a
-    # triple-quote must corrupt neither the frontmatter nor the stub test.
-    with clause("A BLOCK-style satisfies list is edited in place — the item is appended to the existing list,…"):
+    # A legacy `satisfies` key is left exactly as it was. The requirement text
+    # is embedded safely: quotes, a backslash, and a triple-quote must corrupt
+    # neither the frontmatter nor the stub test.
+    with clause("A legacy satisfies key is left as it was; hostile requirement text round-trips safely"):
         import ast
 
         import yaml
@@ -153,9 +149,8 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
             dhf_dir=dhf, context="trends", text=hostile, traces_to="UN-002"
         ) == 0
         trends_text = (dhf / "documents" / "design" / "trends.md").read_text()
-        assert trends_text.count("satisfies:") == 1              # no duplicate key
         frontmatter = yaml.safe_load(trends_text.split("---")[1])
-        assert frontmatter["satisfies"] == ["UN-001", "UN-002"]  # appended to the block
+        assert frontmatter["satisfies"] == ["UN-001"]            # legacy key untouched
         declared = {di["id"]: di for di in design_inputs(dhf)}
         assert declared["DI-5"]["text"] == hostile               # YAML round-trips exactly
         trends_stub = tmp_path / "tests" / "acceptance" / "test_trends.py"
@@ -169,7 +164,7 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     # never a second `design_inputs:` key.
     with clause("A context declaring `design_inputs: []` gets its list filled in place, never a second…"):
         (dhf / "documents" / "design" / "empty.md").write_text(
-            "---\nid: SDS-EMPTY\nkind: design\ncontext: empty\nsatisfies: [UN-001]\n"
+            "---\nid: SDS-EMPTY\nkind: design\ncontext: empty\n"
             "design_inputs: []\n---\n# Empty\n")
         assert story_new_input_command(
             dhf_dir=dhf, context="empty", text="RDM shall fill.", traces_to="UN-001"

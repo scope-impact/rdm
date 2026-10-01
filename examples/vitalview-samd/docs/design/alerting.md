@@ -2,7 +2,6 @@
 id: SDS-ALERT-001
 kind: design
 context: alerting
-satisfies: [UN-001]
 design_inputs:
   - id: DI-1
     text: "VitalView shall raise a prioritised alert within the specified latency when ingested vitals breach a clinician-configured threshold."

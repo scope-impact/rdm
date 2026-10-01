@@ -2,7 +2,6 @@
 id: SDS-INGEST-001
 kind: design
 context: ingestion
-satisfies: [UN-001, UN-002]
 design_inputs: []        # owns none; feeds inputs owned by other contexts
 realises: [DI-1, DI-3]
 ---

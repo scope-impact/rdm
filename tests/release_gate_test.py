@@ -33,8 +33,7 @@ def _project(
     docs = repo / "dhf" / "documents"
     docs.mkdir(parents=True)
     _git(repo, "init")
-    write_design_doc(docs / "design", "core", satisfies=tuple(user_needs),
-                     design_inputs=tuple(inputs))
+    write_design_doc(docs / "design", "core", design_inputs=tuple(inputs))
     (docs / "design_review.md").write_text(COMPLETE)
     needs = "\n".join(f"  - {{id: {n}, text: {n}}}" for n in user_needs)
     (docs / "verification_and_validation_plan.md").write_text(

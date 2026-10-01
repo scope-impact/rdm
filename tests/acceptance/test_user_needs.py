@@ -62,8 +62,7 @@ def _approved_dhf(
     _git(repo, "init")
     if inputs is None:
         inputs = [(f"DI-{i + 1}", [n]) for i, n in enumerate(needs)]
-    write_design_doc(docs / "design", "core", satisfies=tuple(needs),
-                     design_inputs=tuple(inputs))
+    write_design_doc(docs / "design", "core", design_inputs=tuple(inputs))
     (docs / "design_review.md").write_text(COMPLETE)
     _vv_plan(docs, needs)
     _git(repo, "add", "-A")
@@ -115,7 +114,7 @@ def test_design_gate_requires_approval(tmp_path: Path) -> None:
         udocs = repo / "dhf" / "documents" / "design"
         udocs.mkdir(parents=True)
         _git(repo, "init")
-        write_design_doc(udocs, "core", satisfies=("UN-002",), design_inputs=(("DI-2", ["UN-002"]),))
+        write_design_doc(udocs, "core", design_inputs=(("DI-2", ["UN-002"]),))
         uncommitted = check_design_docs(repo / "dhf")
         assert uncommitted and uncommitted[0].complete and not uncommitted[0].ok
 
@@ -165,8 +164,7 @@ def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
     with clause("Render clause: build_verification assembles the matrix — each design input carries its real…"):
         docs = tmp_path / "dhf" / "documents"
         docs.mkdir(parents=True)
-        write_design_doc(docs / "design", "core", satisfies=("UN-001",),
-                         design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))
+        write_design_doc(docs / "design", "core", design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))
         _vv_plan(docs, ["UN-001"])
         matrix_results = tmp_path / "allure-matrix"
         _allure_result(matrix_results, "p", "passed", "DI-1")

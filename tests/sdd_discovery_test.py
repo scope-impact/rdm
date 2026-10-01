@@ -1,4 +1,4 @@
-"""Tests for design-doc discovery (kind: design) and satisfies/registry reconciliation."""
+"""Tests for design-doc discovery (kind: design), design inputs and the user-need registry."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from rdm.record.sdd import (
     find_design_docs,
     realises_by_context,
     registry_user_needs,
-    satisfies_for,
 )
 from tests.util import write_design_doc
 
@@ -24,8 +23,8 @@ class TestFindDesignDocs:
     def test_matches_kind_design_anywhere(self, tmp_path: Path) -> None:
         dhf = tmp_path / "dhf"
         docs = dhf / "documents"
-        write_design_doc(docs / "design", "auth", satisfies=("UN-002",))
-        write_design_doc(docs, "alerting", satisfies=("UN-001",))  # any path, any name
+        write_design_doc(docs / "design", "auth")
+        write_design_doc(docs, "alerting")  # any path, any name
         _doc(docs / "architecture.md", "id: ARCH-001")            # no kind -> NOT a design doc
         _doc(docs / "verification_and_validation_plan.md", "user_needs: [UN-001]")
 
@@ -44,11 +43,6 @@ class TestFindDesignDocs:
         assert find_design_docs(dhf) == []
 
 
-class TestSatisfies:
-    def test_satisfies_for_reads_list(self, tmp_path: Path) -> None:
-        p = write_design_doc(tmp_path / "dhf" / "design", "auth", satisfies=("UN-002", "UN-003"))
-        assert satisfies_for(p) == {"UN-002", "UN-003"}
-
 class TestDesignInputs:
     def test_union_across_docs_with_first_id_winning(self, tmp_path: Path) -> None:
         docs = tmp_path / "dhf" / "design"
@@ -59,7 +53,7 @@ class TestDesignInputs:
     def test_realises_collected(self, tmp_path: Path) -> None:
         docs = tmp_path / "dhf" / "design"
         write_design_doc(docs, "record", design_inputs=(("DI-1", ["UN-001"]),))
-        rendering = write_design_doc(docs, "rendering", satisfies=("UN-001",), realises=("DI-1",))
+        rendering = write_design_doc(docs, "rendering", realises=("DI-1",))
         refs = realises_by_context(tmp_path / "dhf")
         assert refs[rendering] == {"DI-1"}
 
@@ -71,5 +65,5 @@ class TestRegistry:
             dhf / "documents" / "verification_and_validation_plan.md",
             "user_needs:\n  - {id: UN-001, text: a}\n  - {id: UN-002, text: b}",
         )
-        write_design_doc(dhf / "documents" / "design", "auth", satisfies=("UN-001",))
+        write_design_doc(dhf / "documents" / "design", "auth")
         assert registry_user_needs(dhf) == {"UN-001", "UN-002"}

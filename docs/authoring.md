@@ -76,5 +76,5 @@ title: "…"
 ---
 ```
 
-Design documents additionally carry `kind: design`, `context`, `satisfies`,
-and `design_inputs` — see [Design controls](design-controls.md).
+Design documents additionally carry `kind: design`, `context` and
+`design_inputs` (each with the needs it `traces_to`) — see [Design controls](design-controls.md).

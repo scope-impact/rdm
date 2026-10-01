@@ -34,7 +34,6 @@ def write_design_doc(
     docs_dir: Path,
     context: str,
     *,
-    satisfies: tuple[str, ...] = (),
     design_inputs: tuple[tuple[str, list[str]], ...] = (),
     realises: tuple[str, ...] = (),
 ) -> Path:
@@ -55,7 +54,7 @@ def write_design_doc(
     path = docs_dir / f"{context}.md"
     path.write_text(
         f"---\nid: SDS-{context}\nkind: design\ncontext: {context}\n"
-        f"satisfies: [{', '.join(satisfies)}]\n{di_block}"
+        f"{di_block}"
         f"realises: [{', '.join(realises)}]\n---\n\ndesign\n"
     )
     return path

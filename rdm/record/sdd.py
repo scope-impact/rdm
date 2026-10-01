@@ -9,8 +9,9 @@ and the **design output** prose (§820.30(d), the "how"). Discovery keys on the
 can be named for the context they describe.
 
 The user-need registry (the validation anchor) lives once in the V&V plan
-(``user_needs``); each design document references the needs it ``satisfies`` and
-declares the design inputs that refine them. This module has no dependency on the
+(``user_needs``); each design document declares the design inputs that refine
+them, each naming the needs it ``traces_to`` — so the needs a context serves
+follow from its inputs and are never declared separately. This module has no dependency on the
 story-audit / pydantic layer so the record pipeline stays lightweight.
 """
 
@@ -101,20 +102,6 @@ def context_of(path: Path) -> str:
     context = str(_frontmatter_of(path).get("context", "")).strip()
     return context or path.stem
 
-
-def satisfies_for(doc_path: Path) -> set[str]:
-    """Return the user-need IDs a single design document ``satisfies``."""
-    if not doc_path.exists():
-        return set()
-    value = _frontmatter_of(doc_path).get("satisfies")
-    if not isinstance(value, list):
-        return set()
-    return {str(v).strip() for v in value if str(v).strip()}
-
-
-def satisfies_by_context(dhf_dir: Path) -> dict[Path, set[str]]:
-    """Map each design document to the user-need IDs it ``satisfies``."""
-    return {doc: satisfies_for(doc) for doc in find_design_docs(dhf_dir)}
 
 
 def registry_user_needs(dhf_dir: Path) -> set[str]:

@@ -8,8 +8,8 @@ context: system
 
 VitalView is a clinician-facing web application (SaMD). This document describes
 its cross-context **design**. It holds design only — the **user needs** live in
-the V&V plan (`verification_and_validation_plan.md`); each context SDD declares
-the user needs it contributes to via `satisfies`.
+the V&V plan (`verification_and_validation_plan.md`); a context serves the
+needs its design inputs trace to.
 
 ## Bounded contexts (one design document each)
 

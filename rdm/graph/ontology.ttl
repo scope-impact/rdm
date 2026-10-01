@@ -74,10 +74,7 @@ rdm:text a owl:DatatypeProperty ;
 
 rdm:tracesTo a owl:ObjectProperty ;
     rdfs:label "traces to" ; rdfs:domain rdm:DesignInput ; rdfs:range rdm:UserNeed ;
-    rdfs:comment "The user need a design input refines." .
-
-rdm:satisfies a owl:ObjectProperty ;
-    rdfs:label "satisfies" ; rdfs:domain rdm:BoundedContext ; rdfs:range rdm:UserNeed .
+    rdfs:comment "The user need a design input refines. The needs a context serves follow from it: ?i rdm:tracesTo ?need ; rdm:ownedBy ?context." .
 
 rdm:ownedBy a owl:ObjectProperty ;
     rdfs:label "owned by" ; rdfs:domain rdm:DesignInput ; rdfs:range rdm:BoundedContext .
@@ -113,8 +110,6 @@ rdm:landedIn a owl:ObjectProperty ; rdfs:label "landed in" ; rdfs:domain rdm:Doc
     rdfs:comment "The first-parent commit of the default branch that brought the document's latest change in (a merge, squash or direct commit). Git records who landed a change, not who reviewed it." .
 rdm:landedBy a owl:ObjectProperty ; rdfs:label "landed by" ; rdfs:domain rdm:Document ; rdfs:range prov:Agent ;
     rdfs:comment "The author of the landing commit." .
-rdm:reviewedIn a owl:ObjectProperty ; rdfs:label "reviewed in" ; rdfs:domain rdm:Document ; rdfs:range rdm:Document ;
-    rdfs:comment "The design review the design gate requires for this design document." .
 rdm:evaluatedAgainst a owl:ObjectProperty ; rdfs:label "evaluated against" ; rdfs:range rdm:Document ;
     rdfs:comment "The document holding the risk policy the risk was evaluated against." .
 

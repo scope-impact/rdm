@@ -8,9 +8,9 @@ kind: design
 # Discovery keys on `kind: design` (never on filename), so author one such
 # document per bounded context and name it for the context. `rdm story
 # design-gate` reconciles the design inputs below against the @allure.story("DI-…")
-# tags in tests/, and `satisfies` against the user-need registry in the V&V plan.
+# tags in tests/, and each input's `traces_to` against the user-need registry in
+# the V&V plan. The needs this context serves follow from those `traces_to`.
 context: example-context
-satisfies: []            # user-need IDs (from the V&V plan) this context serves
 design_inputs:           # the verifiable requirements this context OWNS
   - id: DI-1
     text: "TODO: state a verifiable requirement the design must satisfy."
