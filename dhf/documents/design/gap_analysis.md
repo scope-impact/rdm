@@ -3,6 +3,8 @@ id: SDS-GAP-001
 kind: design
 context: gap_analysis
 satisfies: [UN-006]
+# DI-25 holds this procedure to the Part 11 checklist (DI-58: a document link).
+references: [DC-001]
 design_inputs:
   - id: DI-10
     text: "RDM shall report the checklist references (keys) absent from a set of documents, exiting non-zero when any required reference is missing."

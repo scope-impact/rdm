@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 16
+revision: 17
 title: Design Review — RDM
 ---
 
@@ -491,6 +491,34 @@ input); DI-57 (`rdm.pytest_plugin`), in the verification context.
   run details DI-53..56 added (labels, steps, attachments, fixtures, test
   cases). DI-39 now leaves out, with an excluded class, the nodes that hang
   only from it.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 16 — No island documents, second pass
+
+**Scope reviewed:** DI-58, in the graph context; `contexts:` in the
+architecture, `references:` in the architecture and the gap-analysis design
+document.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Found by browsing the graph, not by a gate: the architecture (SDS-SYS-001),
+  the traceability matrix (TM-001) and document control (DC-001, with its
+  Part 11 clauses) were islands.
+- The links come from the record, not from prose: the architecture declares
+  its contexts and their parts in frontmatter; a document lists the documents
+  it relies on in `references:`. The matrix is the one exception — it is
+  generated, so its sources are the design documents and the user-need
+  registry, by construction.
+- The context list now exists twice, as data and as the descriptive table.
+  The shape catches a design document whose context the data omits; keeping
+  the table's prose in step stays the reviewer's job.
+- A reference to a document the record does not hold fails validation: a
+  dangling reference is a broken record, not a style issue.
 
 ## Findings and actions
 
