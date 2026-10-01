@@ -40,8 +40,9 @@ analysis — is kept as skills in
   does not mean the test proves the input — the pull-request reviewer judges
   that (`rdm story mutation-probe` helps them check).
 - Checklists are written by hand. Nothing turns a regulation into a checklist.
-- The risk gate checks a register's form, not its truth: whether a control holds
-  in the code, and whether a residual is as low as practicable, are the reviewer's.
+- The risk gate checks a register's form, not its truth: whether a control is
+  effective, and whether a residual is as low as practicable, are the reviewer's.
+  It ships no risk matrix: acceptability criteria are the project's to declare.
 - A built store (`rdm graph build --store`, `serve`) is as current as its last
   build; the agent server (`rdm graph mcp`) reads the record afresh on every call.
 
@@ -147,6 +148,11 @@ uv run pytest tests
 
 ### Unreleased
 
+- Risk evaluation per the requirements skill (Design Review 10): no default
+  matrix — a register needs a declared `risk_policy` with per-level
+  acceptability; a residual is not evaluated until its controls are verified;
+  `category` safety/security with `stride` and `linked`; optional residual
+  severity; `status: proposed` warns.
 - `rdm story mutation-probe` runs the test once unmutated and refuses a test that
   does not pass: an already-failing test was reported KILLED under any mutation (DI-34).
 - **Risk register** (UN-016, DI-43/44/45): risks as frontmatter in `kind: risk`

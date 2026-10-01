@@ -445,9 +445,11 @@ def run_release_gate(
 
 
     # The risk register's mechanical rules (DI-44).
-    from rdm.record.risk import blocking as risk_blocking
+    from rdm.record.risk import findings as risk_findings
 
-    result.blocking += risk_blocking(dhf_dir, di_ids)
+    risk_blocking, risk_warnings = risk_findings(dhf_dir, di_ids, set(report.verified))
+    result.blocking += risk_blocking
+    result.warnings += risk_warnings
 
     # A user need with no design input is an unaddressed (hence unverified) need.
     addressed = {un for di in inputs for un in di["traces_to"]}

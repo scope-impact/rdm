@@ -28,7 +28,7 @@ from urllib.parse import quote
 
 import pyoxigraph as ox
 
-from rdm.record.allure import find_tests_dir, parse_results, scan_source_tags
+from rdm.record.allure import find_tests_dir, parse_results, reconcile, scan_source_tags
 from rdm.record.sdd import (
     context_of,
     design_inputs,
@@ -223,19 +223,20 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
         ds.add(ds.node("doc", doc_id), _term(_PROV + "wasGeneratedBy"), commit, g)
 
 
-def _risks(ds: _Dataset, dhf: Path, root: Path) -> None:
-    """The risk register (DI-45): each risk's chain, scores, computed levels,
-    controls and acceptance. A malformed matrix leaves levels out, so the
-    shapes report every risk as unscorable, as the release gate blocks."""
+def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
+    """The risk register (DI-45): each risk's branch, chain, scores, evaluated
+    levels, residual decision, status, controls and acceptance. Without a
+    usable policy the levels are left out, so the shapes report every risk as
+    unevaluated, as the release gate blocks."""
     from collections import Counter
 
-    from rdm.record.risk import Matrix, read_matrix, risks
+    from rdm.record.risk import read_policy, residual_decision, risks
 
     try:
-        matrix = read_matrix(dhf)
+        policy = read_policy(dhf)
     except ValueError:
-        matrix = Matrix((), (), {})
-    register = [r for r in risks(dhf, matrix) if r.id]
+        policy = None
+    register = [r for r in risks(dhf, policy) if r.id]
     declared = Counter(r.id for r in register)
     doc_ids = {entry["path"]: entry["id"] for entry in controlled_documents(dhf, root)}
     g = "risks"
@@ -243,15 +244,20 @@ def _risks(ds: _Dataset, dhf: Path, root: Path) -> None:
         node = ds.thing(ds.node("risk", r.id), rdm("Risk"), r.id, g)
         ds.add(node, _term(_DCT + "identifier"), r.id, g)
         ds.add(node, rdm("declarationCount"), ox.Literal(str(declared[r.id]), datatype=_term(_XSD + "integer")), g)
-        for prop, value in (("hazard", r.hazard), ("situation", r.situation), ("harm", r.harm),
-                            ("severity", r.severity), ("probability", r.probability), ("level", r.level),
-                            ("recordedLevel", r.recorded_level), ("residualProbability", r.residual_probability),
-                            ("residualLevel", r.residual_level), ("acceptedBy", r.accepted_by),
-                            ("acceptanceRationale", r.acceptance_rationale)):
+        ds.add(node, rdm("residualDecision"), residual_decision(r, policy, verified), g)
+        for prop, value in (("category", r.category), ("stride", r.stride), ("hazard", r.hazard),
+                            ("situation", r.situation), ("harm", r.harm), ("severity", r.severity),
+                            ("probability", r.probability), ("level", r.level),
+                            ("recordedLevel", r.recorded_level), ("residualSeverity", r.residual_severity),
+                            ("residualProbability", r.residual_probability), ("residualLevel", r.residual_level),
+                            ("acceptedBy", r.accepted_by), ("acceptanceRationale", r.acceptance_rationale),
+                            ("riskStatus", r.status)):
             if value:
                 ds.add(node, rdm(prop), value, g)
         for control in r.controls:
             ds.add(node, rdm("controlledBy"), ds.node("input", control), g)
+        for link in r.linked:
+            ds.add(node, rdm("linkedTo"), ds.node("risk", link), g)
         doc_id = doc_ids.get(_rel(dhf.parent / r.document, root))
         if doc_id:
             ds.add(node, rdm("declaredIn"), ds.node("doc", doc_id), g)
@@ -285,7 +291,10 @@ def project(
         _executions(ds, Path(allure_results_dir))
     if _repo_root(dhf.parent) is not None:
         _git(ds, dhf, root)
-    _risks(ds, dhf, root)
+    verified: set[str] = set()
+    if allure_results_dir is not None and Path(allure_results_dir).exists():
+        verified = set(reconcile({di["id"] for di in design_inputs(dhf)}, Path(allure_results_dir)).verified)
+    _risks(ds, dhf, root, verified)
     if checklists:
         from rdm.graph.checklists import checklist_quads, reference_quads
 

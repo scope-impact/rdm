@@ -119,14 +119,24 @@ rdm:harm a owl:DatatypeProperty ; rdfs:label "harm" ; rdfs:domain rdm:Risk .
 rdm:severity a owl:DatatypeProperty ; rdfs:label "severity" ; rdfs:domain rdm:Risk .
 rdm:probability a owl:DatatypeProperty ; rdfs:label "probability" ; rdfs:domain rdm:Risk .
 rdm:level a owl:DatatypeProperty ; rdfs:label "level" ; rdfs:domain rdm:Risk ;
-    rdfs:comment "The risk matrix's level for severity × probability (computed, never typed)." .
+    rdfs:comment "The risk policy's level for severity × probability (evaluated, never typed)." .
 rdm:recordedLevel a owl:DatatypeProperty ; rdfs:label "recorded level" ; rdfs:domain rdm:Risk ;
     rdfs:comment "The level the register states, if it states one." .
 rdm:residualProbability a owl:DatatypeProperty ; rdfs:label "residual probability" ; rdfs:domain rdm:Risk .
 rdm:residualLevel a owl:DatatypeProperty ; rdfs:label "residual level" ; rdfs:domain rdm:Risk ;
-    rdfs:comment "The matrix level after controls; the initial level when nothing controls the risk." .
+    rdfs:comment "The policy level after controls; the initial level when nothing controls the risk." .
 rdm:acceptedBy a owl:DatatypeProperty ; rdfs:label "accepted by" ; rdfs:domain rdm:Risk .
 rdm:acceptanceRationale a owl:DatatypeProperty ; rdfs:label "acceptance rationale" ; rdfs:domain rdm:Risk .
+rdm:category a owl:DatatypeProperty ; rdfs:label "category" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "safety or security: the branch the risk was analysed on." .
+rdm:stride a owl:DatatypeProperty ; rdfs:label "STRIDE category" ; rdfs:domain rdm:Risk .
+rdm:linkedTo a owl:ObjectProperty ; rdfs:label "linked to" ; rdfs:domain rdm:Risk ; rdfs:range rdm:Risk ;
+    rdfs:comment "Another risk this one bears on (a security threat and the safety risk it can cause)." .
+rdm:residualSeverity a owl:DatatypeProperty ; rdfs:label "residual severity" ; rdfs:domain rdm:Risk .
+rdm:residualDecision a owl:DatatypeProperty ; rdfs:label "residual decision" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "acceptable, accepted, needs acceptance, unacceptable, or not evaluated (a control lacks a passing test)." .
+rdm:riskStatus a owl:DatatypeProperty ; rdfs:label "status" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "proposed (no person has approved the rating yet) or approved." .
 rdm:declarationCount a owl:DatatypeProperty ; rdfs:label "declaration count" ; rdfs:domain rdm:Risk ;
     rdfs:comment "How many register entries declare this risk id." .
 

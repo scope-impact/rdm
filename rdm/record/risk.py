@@ -2,14 +2,15 @@
 The risk register (DI-43) and its release rules (DI-44).
 
 Risks are frontmatter in ``kind: risk`` documents, as design inputs are in
-``kind: design`` ones: hazard → situation → harm, severity × probability,
-controls (design input ids), residual probability, acceptance. Levels are
-looked up in the risk matrix — the default four-by-four, or a ``risk_matrix``
-declared in a DHF document's frontmatter — never typed in by hand.
+``kind: design`` ones: a safety or security (STRIDE) risk, hazard → situation
+→ harm, severity × probability, controls (design input ids), residual,
+acceptance, status. Risks are evaluated only against a ``risk_policy`` the
+project declares — there is no default, because acceptability criteria are
+the project's, set before any individual decision.
 
-Only what a machine can check is checked here. Whether a control is real in
-the code, and whether a residual is as low as reasonably practicable, are the
-reviewer's (see the risk-analysis skill).
+Only what a machine can check is checked here. Whether a control is
+effective, and whether a residual is as low as reasonably practicable, are
+the reviewer's (see the requirements and risk-analysis skills).
 """
 
 from __future__ import annotations
@@ -21,39 +22,39 @@ from pathlib import Path
 from rdm.record.sdd import _frontmatter_of
 
 RISK_KIND = "risk"
-LEVELS = ("Low", "Medium", "High", "Block")
+CATEGORIES = ("safety", "security")
+STRIDE = ("Spoofing", "Tampering", "Repudiation", "Information disclosure", "Denial of service",
+          "Elevation of privilege")
+ACCEPTABILITY = ("acceptable", "justify", "unacceptable")
+STATUSES = ("proposed", "approved")
+# Residual decisions (DI-45); only the first two let a release through.
+ACCEPTABLE, ACCEPTED, NEEDS_ACCEPTANCE, UNACCEPTABLE, NOT_EVALUATED = (
+    "acceptable", "accepted", "needs acceptance", "unacceptable", "not evaluated")
 
 
 @dataclass(frozen=True)
-class Matrix:
+class Policy:
     severities: tuple[str, ...]      # rows
     probabilities: tuple[str, ...]   # columns
     levels: dict                     # severity -> tuple of levels, one per probability
-    source: str = "default"
+    acceptability: dict              # level -> acceptable | justify | unacceptable
+    source: str
+    status: str = "approved"
 
     def level(self, severity: str | None, probability: str | None) -> str | None:
-        """The matrix level for a pair, or None when either is not in the matrix."""
+        """The policy's level for a pair, or None when either is not defined."""
         if severity not in self.levels or probability not in self.probabilities:
             return None
         return self.levels[severity][self.probabilities.index(probability)]
-
-
-DEFAULT_MATRIX = Matrix(
-    severities=("Critical", "Serious", "Minor", "Negligible"),
-    probabilities=("Rare", "Unlikely", "Possible", "Likely"),
-    levels={
-        "Critical": ("Medium", "High", "High", "Block"),
-        "Serious": ("Low", "Medium", "High", "High"),
-        "Minor": ("Low", "Low", "Medium", "Medium"),
-        "Negligible": ("Low", "Low", "Low", "Low"),
-    },
-)
 
 
 @dataclass
 class Risk:
     id: str
     document: str
+    category: str = ""
+    stride: str = ""
+    linked: list[str] = field(default_factory=list)
     hazard: str = ""
     situation: str = ""
     harm: str = ""
@@ -61,11 +62,13 @@ class Risk:
     probability: str | None = None
     recorded_level: str | None = None
     controls: list[str] = field(default_factory=list)
+    residual_severity: str | None = None      # defaults to severity
     residual_probability: str | None = None
     accepted_by: str = ""
     acceptance_rationale: str = ""
-    level: str | None = None            # computed from the matrix
-    residual_level: str | None = None   # computed; the initial level when nothing controls it
+    status: str = "approved"
+    level: str | None = None            # evaluated against the policy
+    residual_level: str | None = None   # evaluated; the initial level when nothing controls it
 
 
 def _docs(dhf_dir: Path):
@@ -73,43 +76,45 @@ def _docs(dhf_dir: Path):
         yield md, _frontmatter_of(md)
 
 
-def read_matrix(dhf_dir: Path) -> Matrix:
-    """The project's ``risk_matrix`` (the first declared, by path), else the default.
-    Raises ``ValueError`` naming the document when a declared matrix is malformed."""
-    for md, front in _docs(dhf_dir):
-        value = front.get("risk_matrix")
-        if value is None:
-            continue
-        where = md.relative_to(dhf_dir)
-        if not isinstance(value, dict):
-            raise ValueError(f"risk_matrix in {where} is not a mapping")
-        severities = tuple(str(s) for s in value.get("severities") or [])
-        probabilities = tuple(str(p) for p in value.get("probabilities") or [])
-        rows = value.get("levels") or {}
-        if not severities or not probabilities or not isinstance(rows, dict):
-            raise ValueError(f"risk_matrix in {where} needs severities, probabilities and levels")
-        levels = {}
-        for severity in severities:
-            row = tuple(str(v) for v in rows.get(severity) or [])
-            if len(row) != len(probabilities):
-                raise ValueError(f"risk_matrix in {where}: the {severity} row needs one level per probability")
-            unknown = sorted(set(row) - set(LEVELS))
-            if unknown:
-                raise ValueError(f"risk_matrix in {where}: unknown level(s) {', '.join(unknown)} "
-                                 f"(use {', '.join(LEVELS)})")
-            levels[severity] = row
-        return Matrix(severities, probabilities, levels, source=str(where))
-    return DEFAULT_MATRIX
-
-
 def _text(value) -> str:
     return "" if value is None else str(value).strip()
 
 
-def risks(dhf_dir: Path, matrix: Matrix | None = None) -> list[Risk]:
-    """Every risk entry in the register, in document order, each scored."""
+def read_policy(dhf_dir: Path) -> Policy | None:
+    """The declared ``risk_policy`` (the first, by path), or None when there is
+    none. Raises ``ValueError`` naming the document when it is malformed."""
+    for md, front in _docs(dhf_dir):
+        value = front.get("risk_policy")
+        if value is None:
+            continue
+        where = str(md.relative_to(dhf_dir))
+        if not isinstance(value, dict):
+            raise ValueError(f"risk_policy in {where} is not a mapping")
+        severities = tuple(_text(s) for s in value.get("severities") or [])
+        probabilities = tuple(_text(p) for p in value.get("probabilities") or [])
+        rows, verdicts = value.get("levels"), value.get("acceptability")
+        if not severities or not probabilities or not isinstance(rows, dict) or not isinstance(verdicts, dict):
+            raise ValueError(f"risk_policy in {where} needs severities, probabilities, levels and acceptability")
+        levels = {}
+        for severity in severities:
+            row = tuple(_text(v) for v in rows.get(severity) or [])
+            if len(row) != len(probabilities):
+                raise ValueError(f"risk_policy in {where}: the {severity} row needs one level per probability")
+            levels[severity] = row
+        acceptability = {_text(k): _text(v) for k, v in verdicts.items()}
+        for level in sorted({lv for row in levels.values() for lv in row}):
+            if acceptability.get(level) not in ACCEPTABILITY:
+                raise ValueError(f"risk_policy in {where}: level {level} needs an acceptability of "
+                                 f"{', '.join(ACCEPTABILITY)}")
+        status = _text(front.get("status")) or "approved"
+        return Policy(severities, probabilities, levels, acceptability, where, status)
+    return None
+
+
+def risks(dhf_dir: Path, policy: Policy | None = None) -> list[Risk]:
+    """Every risk entry in the register, in document order, evaluated against
+    ``policy`` (no levels without one)."""
     dhf_dir = Path(dhf_dir)
-    matrix = matrix or read_matrix(dhf_dir)
     found: list[Risk] = []
     for md, front in _docs(dhf_dir):
         if front.get("kind") != RISK_KIND or not isinstance(front.get("risks"), list):
@@ -121,58 +126,105 @@ def risks(dhf_dir: Path, matrix: Matrix | None = None) -> list[Risk]:
             acceptance = item.get("acceptance") if isinstance(item.get("acceptance"), dict) else {}
             risk = Risk(
                 id=_text(item.get("id")), document=str(md.relative_to(dhf_dir.parent)),
+                category=_text(item.get("category")), stride=_text(item.get("stride")),
+                linked=[_text(r) for r in item.get("linked") or [] if _text(r)],
                 hazard=_text(item.get("hazard")), situation=_text(item.get("situation")),
                 harm=_text(item.get("harm")),
                 severity=_text(item.get("severity")) or None, probability=_text(item.get("probability")) or None,
                 recorded_level=_text(item.get("level")) or None,
                 controls=[_text(c) for c in item.get("controls") or [] if _text(c)],
+                residual_severity=_text(residual.get("severity")) or None,
                 residual_probability=_text(residual.get("probability")) or None,
                 accepted_by=_text(acceptance.get("by")), acceptance_rationale=_text(acceptance.get("rationale")),
+                status=_text(item.get("status")) or _text(front.get("status")) or "approved",
             )
-            risk.level = matrix.level(risk.severity, risk.probability)
-            if risk.residual_probability:
-                risk.residual_level = matrix.level(risk.severity, risk.residual_probability)
-            elif not risk.controls:
-                risk.residual_level = risk.level
+            if policy is not None:
+                risk.level = policy.level(risk.severity, risk.probability)
+                if risk.residual_probability:
+                    risk.residual_level = policy.level(risk.residual_severity or risk.severity,
+                                                       risk.residual_probability)
+                elif not risk.controls:
+                    risk.residual_level = risk.level
             found.append(risk)
     return found
 
 
-def blocking(dhf_dir: Path, design_input_ids: set[str]) -> list[str]:
-    """The release gate's risk findings (DI-44), one message per problem."""
+def residual_decision(risk: Risk, policy: Policy | None, verified: set[str]) -> str:
+    """Whether the residual (the initial risk, when nothing controls it) lets a
+    release through: never evaluated before every control is verified."""
+    if policy is None or risk.residual_level is None:
+        return NOT_EVALUATED
+    if any(control not in verified for control in risk.controls):
+        return NOT_EVALUATED
+    verdict = policy.acceptability.get(risk.residual_level)
+    if verdict == "acceptable":
+        return ACCEPTABLE
+    if verdict == "justify":
+        return ACCEPTED if risk.accepted_by and risk.acceptance_rationale else NEEDS_ACCEPTANCE
+    return UNACCEPTABLE
+
+
+def findings(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tuple[list[str], list[str]]:
+    """The release gate's risk findings (DI-44): (blocking, warnings)."""
     try:
-        matrix = read_matrix(dhf_dir)
+        policy = read_policy(dhf_dir)
     except ValueError as error:
-        return [str(error)]
-    register = risks(dhf_dir, matrix)
-    messages: list[str] = []
-    for risk_id, count in sorted(Counter(r.id for r in register if r.id).items()):
+        return [str(error)], []
+    register = risks(dhf_dir, policy)
+    if not register:
+        return [], []
+    blocking: list[str] = []
+    warnings: list[str] = []
+    if policy is None:
+        blocking.append("the risk register has risks but no risk_policy is declared "
+                        "(acceptability criteria missing)")
+    elif policy.status != "approved":
+        warnings.append(f"the risk policy in {policy.source} is {policy.status}: a person has not approved it")
+    ids = Counter(r.id for r in register if r.id)
+    for risk_id, count in sorted(ids.items()):
         if count > 1:
-            messages.append(f"risk {risk_id} is declared {count} times")
+            blocking.append(f"risk {risk_id} is declared {count} times")
     for r in register:
-        name = f"risk {r.id}" if r.id else f"a risk in {r.document} with no id"
         if not r.id:
-            messages.append(f"a risk in {r.document} has no id")
+            blocking.append(f"a risk in {r.document} has no id")
+        name = f"risk {r.id}" if r.id else f"a risk in {r.document} with no id"
         for part in ("hazard", "situation", "harm"):
             if not getattr(r, part):
-                messages.append(f"{name} has no {part}")
-        if r.level is None:
-            messages.append(f"{name}: severity {r.severity!r} × probability {r.probability!r} "
-                            f"is not in the risk matrix ({matrix.source})")
+                blocking.append(f"{name} has no {part}")
+        if r.category not in CATEGORIES:
+            blocking.append(f"{name} needs a category of safety or security (got {r.category or 'none'})")
+        elif r.category == "security" and r.stride not in STRIDE:
+            blocking.append(f"{name} is a security risk with no STRIDE category ({', '.join(STRIDE)})")
+        for link in r.linked:
+            if link not in ids:
+                blocking.append(f"{name} links {link}, which is not a declared risk")
+        if policy is None:
+            blocking.append(f"{name} cannot be evaluated: no risk policy")
+        elif r.level is None:
+            blocking.append(f"{name}: severity {r.severity!r} × probability {r.probability!r} "
+                            f"is not defined by the risk policy ({policy.source})")
         elif r.recorded_level and r.recorded_level != r.level:
-            messages.append(f"{name} records level {r.recorded_level}; the matrix says {r.level}")
-        if r.level in LEVELS[1:] and not r.controls:
-            messages.append(f"{name} is {r.level} and nothing controls it")
+            blocking.append(f"{name} records level {r.recorded_level}; the risk policy says {r.level}")
         for control in r.controls:
             if control not in design_input_ids:
-                messages.append(f"{name} names control {control}, which is not a declared design input")
+                blocking.append(f"{name} names control {control}, which is not a declared design input")
         if r.controls and not r.residual_probability:
-            messages.append(f"{name} has controls but no residual score")
-        elif r.residual_probability and r.level is not None and r.residual_level is None:
-            messages.append(f"{name}: residual probability {r.residual_probability!r} is not in the risk matrix")
-        if r.residual_level == "Block":
-            messages.append(f"{name} has a residual level of Block")
-        elif r.residual_level in ("Medium", "High") and not (r.accepted_by and r.acceptance_rationale):
-            messages.append(f"{name} has a residual level of {r.residual_level} with no acceptance "
+            blocking.append(f"{name} has controls but no residual score")
+        elif policy is not None and r.level is not None and r.residual_probability and r.residual_level is None:
+            blocking.append(f"{name}: residual {r.residual_severity or r.severity!r} × "
+                            f"{r.residual_probability!r} is not defined by the risk policy")
+        unverified = [c for c in r.controls if c in design_input_ids and c not in verified]
+        if unverified and r.residual_level is not None:
+            blocking.append(f"{name}: residual not evaluated — control {', '.join(unverified)} "
+                            "has no passing test")
+        decision = residual_decision(r, policy, verified)
+        if decision == UNACCEPTABLE:
+            blocking.append(f"{name} has an unacceptable residual level of {r.residual_level}")
+        elif decision == NEEDS_ACCEPTANCE:
+            blocking.append(f"{name} has a residual level of {r.residual_level} that needs an acceptance "
                             "(who accepted it and why)")
-    return messages
+        if r.status not in STATUSES:
+            blocking.append(f"{name} has an unknown status {r.status!r} (proposed or approved)")
+        elif r.status == "proposed":
+            warnings.append(f"{name} is proposed: a person has not approved its rating")
+    return blocking, warnings

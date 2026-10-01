@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Risk evaluation per the requirements skill (Design Review 10): no default
+  matrix — a register needs a declared `risk_policy` with per-level
+  acceptability; a residual is not evaluated until its controls are verified;
+  `category` safety/security with `stride` and `linked`; optional residual
+  severity; `status: proposed` warns.
 - `rdm story mutation-probe` runs the test once unmutated and refuses a test that
   does not pass: an already-failing test was reported KILLED under any mutation (DI-34).
 - Risk register (UN-016, DI-43/44/45): risks as frontmatter in `kind: risk`

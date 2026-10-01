@@ -44,8 +44,9 @@ analysis — live in
 - A green release gate means every design input has a passing tagged test, not
   that the test proves the input. The pull-request reviewer judges that.
 - Checklists are written by hand. Nothing turns a regulation into a checklist.
-- The risk gate checks a register's form, not its truth: whether a control holds
-  in the code, and whether a residual is as low as practicable, are the reviewer's.
+- The risk gate checks a register's form, not its truth: whether a control is
+  effective, and whether a residual is as low as practicable, are the reviewer's.
+  It ships no risk matrix: acceptability criteria are the project's to declare.
 - A built store (`rdm graph build --store`, `serve`) is as current as its last
   build; the agent server (`rdm graph mcp`) reads the record afresh on every call.
 

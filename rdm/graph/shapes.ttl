@@ -112,33 +112,41 @@ rdm:TestTagShape a sh:NodeShape ;
         """ ;
     ] .
 
-# The risk register's release rules (DI-44, DI-45): the same findings the
-# release gate blocks on.
+# The risk register's release rules (DI-44, DI-45): the same risks the
+# release gate blocks. The residual decision is computed by the gate's own
+# function (rdm/record/risk.py), so the two cannot drift.
 rdm:RiskShape a sh:NodeShape ;
     sh:targetClass rdm:Risk ;
     sh:property [ sh:path rdm:hazard ; sh:minCount 1 ; sh:message "risk has no hazard" ] ;
     sh:property [ sh:path rdm:situation ; sh:minCount 1 ; sh:message "risk has no situation" ] ;
     sh:property [ sh:path rdm:harm ; sh:minCount 1 ; sh:message "risk has no harm" ] ;
+    sh:property [ sh:path rdm:category ; sh:minCount 1 ; sh:in ( "safety" "security" ) ;
+                  sh:message "risk needs a category of safety or security" ] ;
     sh:property [ sh:path rdm:declarationCount ; sh:maxInclusive 1 ;
                   sh:message "risk id is declared more than once" ] ;
     sh:property [ sh:path rdm:level ; sh:minCount 1 ;
-                  sh:message "risk's severity × probability is not in the risk matrix" ] ;
+                  sh:message "risk is not evaluated: its severity × probability is not defined by a risk policy" ] ;
     sh:property [ sh:path rdm:controlledBy ; sh:class rdm:DesignInput ;
                   sh:message "risk names a control that is not a declared design input" ] ;
-    sh:property [ sh:path rdm:residualLevel ; sh:not [ sh:hasValue "Block" ] ;
-                  sh:message "risk has a residual level of Block" ] ;
+    sh:property [ sh:path rdm:linkedTo ; sh:class rdm:Risk ;
+                  sh:message "risk links a risk that is not declared" ] ;
+    sh:property [ sh:path rdm:riskStatus ; sh:in ( "proposed" "approved" ) ;
+                  sh:message "risk has an unknown status (proposed or approved)" ] ;
+    sh:property [ sh:path rdm:residualDecision ; sh:in ( "acceptable" "accepted" ) ;
+                  sh:message "risk's residual decision does not allow a release" ] ;
     sh:sparql [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "risk records level {?recorded}; the matrix says {?level}" ;
-        sh:select """SELECT $this ?recorded ?level WHERE {
-            $this rdm:recordedLevel ?recorded ; rdm:level ?level . FILTER (?recorded != ?level) }""" ;
+        sh:message "security risk has no STRIDE category" ;
+        sh:select """SELECT $this WHERE {
+            $this rdm:category "security" .
+            FILTER NOT EXISTS { $this rdm:stride ?s . FILTER (?s IN ("Spoofing", "Tampering", "Repudiation",
+                "Information disclosure", "Denial of service", "Elevation of privilege")) } }""" ;
     ] ;
     sh:sparql [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "risk is {?level} and nothing controls it" ;
-        sh:select """SELECT $this ?level WHERE {
-            $this rdm:level ?level . FILTER (?level IN ("Medium", "High", "Block"))
-            FILTER NOT EXISTS { $this rdm:controlledBy ?c } }""" ;
+        sh:message "risk records level {?recorded}; the risk policy says {?level}" ;
+        sh:select """SELECT $this ?recorded ?level WHERE {
+            $this rdm:recordedLevel ?recorded ; rdm:level ?level . FILTER (?recorded != ?level) }""" ;
     ] ;
     sh:sparql [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
@@ -146,21 +154,12 @@ rdm:RiskShape a sh:NodeShape ;
         sh:select """SELECT $this WHERE {
             FILTER EXISTS { $this rdm:controlledBy ?c }
             FILTER NOT EXISTS { $this rdm:residualProbability ?p } }""" ;
-    ] ;
-    sh:sparql [
-        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "risk's residual probability is not in the risk matrix" ;
-        sh:select """SELECT $this WHERE {
-            $this rdm:residualProbability ?p ; rdm:level ?l .
-            FILTER NOT EXISTS { $this rdm:residualLevel ?r } }""" ;
-    ] ;
-    sh:sparql [
-        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "risk has a residual level of {?residual} with no acceptance (who accepted it and why)" ;
-        sh:select """SELECT $this ?residual WHERE {
-            $this rdm:residualLevel ?residual . FILTER (?residual IN ("Medium", "High"))
-            FILTER NOT EXISTS { $this rdm:acceptedBy ?by ; rdm:acceptanceRationale ?why } }""" ;
     ] .
+
+rdm:ProposedRiskShape a sh:NodeShape ;
+    sh:targetClass rdm:Risk ;
+    sh:property [ sh:path rdm:riskStatus ; sh:not [ sh:hasValue "proposed" ] ; sh:severity sh:Warning ;
+                  sh:message "risk is proposed: a person has not approved its rating" ] .
 
 rdm: sh:declare
     [ sh:prefix "rdm" ; sh:namespace "https://github.com/scope-impact/rdm/ns#"^^xsd:anyURI ] ,

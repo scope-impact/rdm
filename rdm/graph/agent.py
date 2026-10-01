@@ -20,8 +20,9 @@ from rdm.graph.project import ONTOLOGY_FILE, project
 
 ROW_LIMIT = 200
 _ID = re.compile(r"^(UN|DI)-\d+$")
-_RISK_FIELDS = ("hazard", "situation", "harm", "severity", "probability", "level", "residualProbability",
-                "residualLevel", "acceptedBy", "acceptanceRationale")
+_RISK_FIELDS = ("category", "stride", "hazard", "situation", "harm", "severity", "probability", "level",
+                "residualSeverity", "residualProbability", "residualLevel", "residualDecision", "acceptedBy",
+                "acceptanceRationale", "riskStatus")
 _UPDATE = re.compile(r"(?i)\b(INSERT|DELETE|LOAD|CLEAR|CREATE|DROP|COPY|MOVE|ADD)\b")
 
 
@@ -122,6 +123,8 @@ def _risk(store: ox.Store, node: str) -> dict:
         with_prefixes(f"ASK {{ <{i}> a rdm:DesignInput }}"), use_default_graph_as_union=True))]
     return {
         "id": values.get("identifier"), **{name: values.get(name) for name in _RISK_FIELDS},
+        "linked": sorted(r["id"] for r in _select(
+            store, f"SELECT ?id WHERE {{ <{node}> rdm:linkedTo/rdfs:label ?id }}")),
         "controls": sorted((_input(store, i) for i in declared), key=lambda d: int(d["id"].split("-")[1])),
         "undeclared_controls": sorted(i.rsplit("/", 1)[-1] for i in controls if i not in declared),
     }
