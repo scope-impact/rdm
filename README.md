@@ -24,7 +24,7 @@ is typed into a database by hand.
 | --- | --- | --- |
 | **Record** | User needs, design inputs (one design document per bounded context), checklists, tests tagged `@allure.story("DI-n")`. Markdown + git. Changed only by a reviewed pull request — the approval is the merge. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story audit` |
 | **Gates** | Machine checks: no implementation before the design is approved, no release until every input has a passing test and every need is addressed, no clause a checklist requires left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
-| **Graph** | The record built into an RDF graph (Oxigraph): needs, inputs, contexts, documents, tests, results, commits, checklist clauses. **Read-only** — rebuilt from the record, never edited. The interface for agents and for exploring. | `rdm graph build \| query \| validate \| serve \| explorer-file` |
+| **Graph** | The record built into an RDF graph (Oxigraph): needs, inputs, contexts, documents, tests, results, commits, checklist clauses. **Read-only** — rebuilt from the record, never edited. Agents read it through an MCP server; people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
 | **Documents** | Regulatory documents (PDF/DOCX) rendered from the record: Markdown templates + YAML data → Pandoc/Typst. | `rdm render`, `make pdfs` |
 
 How agents should work with it — writing design inputs, test-first, risk
@@ -40,9 +40,8 @@ analysis — is kept as skills in
   that (`rdm story mutation-probe` helps them check).
 - Checklists are written by hand. Nothing turns a regulation into a checklist.
 - No risk management (ISO 14971) yet.
-- Agents reach the graph through the CLI and SPARQL only; there is no
-  dedicated agent interface yet.
-- The graph is as current as its last build.
+- A built store (`rdm graph build --store`, `serve`) is as current as its last
+  build; the agent server (`rdm graph mcp`) reads the record afresh on every call.
 
 ## Quick Start
 
@@ -146,6 +145,10 @@ uv run pytest tests
 
 ### Unreleased
 
+- **Read-only agent interface** (`rdm graph mcp`, UN-015, DI-41/42): an MCP
+  stdio server with `schema`, `query`, `trace` and `validate`, each answering
+  from a fresh projection; no write tool, SPARQL Update refused, rows capped.
+  User needs now carry their text in the graph (DI-35; Design Review 8).
 - **Tag discovery**: Python test tags are read from decorators and `pytestmark` only, never from
   strings or comments (DI-40): fixture files written by a test no longer count
   as coverage. Every acceptance command passes `--clean-alluredir`, so repeated

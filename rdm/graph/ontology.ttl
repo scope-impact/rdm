@@ -70,7 +70,7 @@ prov:Agent rdfs:label "Agent" .
 # --- Properties -------------------------------------------------------------
 
 rdm:text a owl:DatatypeProperty ;
-    rdfs:label "text" ; rdfs:domain rdm:DesignInput ; rdfs:range xsd:string .
+    rdfs:label "text" ; rdfs:comment "What a user need or design input says." ; rdfs:range xsd:string .
 
 rdm:tracesTo a owl:ObjectProperty ;
     rdfs:label "traces to" ; rdfs:domain rdm:DesignInput ; rdfs:range rdm:UserNeed ;

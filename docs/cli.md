@@ -41,6 +41,7 @@ Common flag: `--dhf DIR` (default `dhf/`).
 | `query 'SPARQL' [--store DIR] [--format tsv\|csv\|json]` | SELECT / ASK / CONSTRUCT over the store, or over an in-memory projection of `--dhf` |
 | `explorer-file -o FILE [--store DIR] [--exclude CLASS]… [--endpoint URL]` | write the whole record as an AWS Graph Explorer graph file (*Load graph from file*) |
 | `serve [--store DIR] [--bind HOST:PORT]` | SPARQL 1.1 endpoint (union default graph, CORS) for AWS Graph Explorer and other SPARQL clients |
+| `mcp [--allure-results DIR] [--checklist NAME\|FILE]…` | serve the record to agents as a read-only MCP server over stdio: `schema`, `query`, `trace`, `validate`, each from a fresh projection |
 
 See [The record as a graph](graph.md).
 

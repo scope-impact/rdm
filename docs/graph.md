@@ -259,6 +259,42 @@ rdm graph validate --shapes team-rules.ttl
                  sh:message "every controlled document needs a title" ] .
 ```
 
+## For agents (MCP, read-only)
+
+`rdm graph mcp` serves the record to an agent as a
+[Model Context Protocol](https://modelcontextprotocol.io) server over stdio,
+which most agent harnesses speak. Register it once; for Claude Code, in the
+project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "rdm": {
+      "command": "rdm",
+      "args": ["graph", "mcp", "--dhf", "dhf", "--allure-results", "dhf/allure-results"]
+    }
+  }
+}
+```
+
+Other harnesses take the same command and arguments in their own MCP
+settings.
+
+| Tool | Answers |
+| --- | --- |
+| `trace` | a `UN-n` or `DI-n`: its text, contexts, owning document and last commit, the needs it refines, its tagged test files and their runs |
+| `query` | any read-only SPARQL (SELECT, ASK, CONSTRUCT, DESCRIBE), prefixes predeclared, capped at 200 rows by default with `truncated` saying when |
+| `schema` | the vocabulary and prefixes, so the agent can write its own queries |
+| `validate` | the gate shapes' results: violations and warnings |
+
+Every call projects the record afresh (a fraction of a second), so an agent
+editing a branch sees its own edits on the next call — there is no store to
+rebuild.
+
+It cannot change anything. There is no write tool, and `query` refuses SPARQL
+Update. An agent that wants to change the record does what a person does:
+edits the Markdown and tests, and opens a pull request for review.
+
 ## Open world
 
 The graph states only what the record states. A missing `rdm:verifies` edge

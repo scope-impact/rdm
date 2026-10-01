@@ -37,6 +37,7 @@ from rdm.record.sdd import (
     realises_by_context,
     registry_user_needs,
     satisfies_for,
+    user_need_texts,
 )
 
 NS = "https://github.com/scope-impact/rdm/ns#"
@@ -129,8 +130,12 @@ def controlled_documents(dhf: Path, root: Path) -> list[dict]:
 
 def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "record"
+    texts = user_need_texts(dhf)
     for un in sorted(registry_user_needs(dhf)):
-        ds.thing(ds.node("need", un), rdm("UserNeed"), un, g)
+        need = ds.thing(ds.node("need", un), rdm("UserNeed"), un, g)
+        ds.add(need, _term(_DCT + "identifier"), un, g)
+        if un in texts:
+            ds.add(need, rdm("text"), texts[un], g)
 
     # Controlled documents (frontmatter id), keyed by that id.
     doc_by_path = {}

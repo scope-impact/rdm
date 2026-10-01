@@ -105,7 +105,14 @@ def handle_graph_command(args):
             dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
             checklists=args.checklist, extra_shapes=[Path(s) for s in args.shapes or []],
         )
-    print("Unknown graph subcommand. Use: build, query, serve, validate, or explorer-file")
+    if args.graph_command == 'mcp':
+        try:
+            from rdm.graph.agent import mcp_command
+        except ImportError:
+            return graph_cli._missing_extra()
+        return mcp_command(dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
+                           checklists=args.checklist)
+    print("Unknown graph subcommand. Use: build, query, serve, validate, explorer-file, or mcp")
     return 1
 
 
@@ -447,7 +454,8 @@ def parse_arguments(arguments):
 def _add_graph_parser(subparsers):
     """`rdm graph`: the design record projected into RDF (needs extra: graph)."""
     graph_parser = subparsers.add_parser(
-        'graph', help='the design record as a linked-data (RDF) graph: build, query, validate, serve, explorer-file')
+        'graph',
+        help='the design record as a linked-data (RDF) graph: build, query, validate, serve, explorer-file, mcp')
     graph_sub = graph_parser.add_subparsers(dest='graph_command', metavar='<subcommand>')
 
     build = graph_sub.add_parser('build', help='project the record into RDF (sorted N-Quads and/or an Oxigraph store)')
@@ -484,6 +492,13 @@ def _add_graph_parser(subparsers):
                                              '(default: http://localhost:7878)')
     explorer.add_argument('--exclude', action='append',
                           help='leave out a class and its links, e.g. TestRun; repeatable')
+
+    agent = graph_sub.add_parser(
+        'mcp',
+        help='serve the record to agents, read-only, as an MCP server over stdio (schema, query, trace, validate)')
+    agent.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    agent.add_argument('--allure-results', help='Allure results dir (adds test runs to trace and validate)')
+    agent.add_argument('--checklist', action='append', help='checklist(s) to include; repeatable')
 
     serve = graph_sub.add_parser('serve', help='serve the store as a SPARQL 1.1 endpoint (for AWS Graph Explorer)')
     serve.add_argument('--store', help='store directory (default: .rdm/graph)')

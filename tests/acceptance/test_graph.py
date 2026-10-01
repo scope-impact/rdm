@@ -94,7 +94,8 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
     di1, ctx = "<urn:dhf:acme:input/DI-1>", "<urn:dhf:acme:context/alarms>"
 
     # Record graph: needs, contexts, inputs (text, needs, owner, realiser, doc), documents.
-    assert _ask(s, f"GRAPH {rec} {{ <urn:dhf:acme:need/UN-001> a rdm:UserNeed }}")
+    assert _ask(s, f"GRAPH {rec} {{ <urn:dhf:acme:need/UN-001> a rdm:UserNeed ; dcterms:identifier \"UN-001\" ; "
+                   f"rdm:text \"a need\" }}")
     assert _ask(s, f"GRAPH {rec} {{ {ctx} a rdm:BoundedContext ; rdm:satisfies <urn:dhf:acme:need/UN-002> }}")
     assert _ask(s, f'GRAPH {rec} {{ {di1} a rdm:DesignInput ; rdm:text "The device shall alarm." ; '
                    f'rdm:tracesTo <urn:dhf:acme:need/UN-001> ; rdm:ownedBy {ctx} ; '

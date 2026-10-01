@@ -137,6 +137,17 @@ def registry_user_needs(dhf_dir: Path) -> set[str]:
     return ids
 
 
+def user_need_texts(dhf_dir: Path) -> dict[str, str]:
+    """Each registered user need's text, where its ``{id, text}`` entry gives one."""
+    texts: dict[str, str] = {}
+    for md in sorted(dhf_dir.rglob("*.md")):
+        value = _frontmatter_of(md).get("user_needs")
+        for item in value if isinstance(value, list) else []:
+            if isinstance(item, dict) and str(item.get("id", "")).strip() and item.get("text"):
+                texts.setdefault(str(item["id"]).strip(), str(item["text"]).strip())
+    return texts
+
+
 def design_inputs(dhf_dir: Path) -> list[dict]:
     """Return the design inputs declared across all per-context design docs.
 

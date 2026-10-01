@@ -18,7 +18,7 @@ is typed into a database by hand.
 | --- | --- | --- |
 | **Record** | User needs, design inputs (one design document per bounded context), checklists, tagged tests. Markdown + git, changed only by a reviewed pull request. | [Design controls](design-controls.md), [agent workflow](agent-workflow.md) |
 | **Gates** | Machine checks on the record: design approved before implementation, every input verified and every need addressed before release, every required clause referenced. | [The gates](design-controls.md#the-gates), [gap analysis](gap-analysis.md) |
-| **Graph** | The record built into a read-only RDF graph — the interface for agents and for exploring. Rebuilt from the record, never edited. | [The record as a graph](graph.md) |
+| **Graph** | The record built into a read-only RDF graph. Agents read it through an MCP server (`rdm graph mcp`); people browse it. Rebuilt from the record, never edited. | [The record as a graph](graph.md) |
 | **Documents** | Regulatory documents rendered from the record (PDF/DOCX). | [Authoring and rendering](authoring.md) |
 
 ```mermaid
@@ -44,9 +44,8 @@ analysis — live in
   that the test proves the input. The pull-request reviewer judges that.
 - Checklists are written by hand. Nothing turns a regulation into a checklist.
 - No risk management (ISO 14971) yet.
-- Agents reach the graph through the CLI and SPARQL only; there is no
-  dedicated agent interface yet.
-- The graph is as current as its last build.
+- A built store (`rdm graph build --store`, `serve`) is as current as its last
+  build; the agent server (`rdm graph mcp`) reads the record afresh on every call.
 
 ## Where to start
 

@@ -1,0 +1,208 @@
+"""
+The design record for agents, read-only (DI-41, DI-42).
+
+Four tools — ``schema``, ``query``, ``trace``, ``validate`` — as plain
+functions, and ``rdm graph mcp`` serving them over MCP stdio. Every call
+projects the record afresh, so an agent never reads a stale graph. Nothing
+here writes: there is no write tool, and ``query`` refuses SPARQL Update. An
+agent that wants a change edits the record and opens a pull request.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pyoxigraph as ox
+
+from rdm.graph.cli import PREFIXES, with_prefixes
+from rdm.graph.project import ONTOLOGY_FILE, project
+
+ROW_LIMIT = 200
+_ID = re.compile(r"^(UN|DI)-\d+$")
+_UPDATE = re.compile(r"(?i)\b(INSERT|DELETE|LOAD|CLEAR|CREATE|DROP|COPY|MOVE|ADD)\b")
+
+
+class ReadOnlyError(ValueError):
+    """Raised for anything that is not a read-only SPARQL query."""
+
+
+class Record:
+    """Where the record lives; each call reads it again."""
+
+    def __init__(self, dhf: Path, allure_results: Path | None = None, checklists: list[str] | None = None):
+        self.dhf, self.allure_results, self.checklists = Path(dhf), allure_results, checklists
+
+    def quads(self) -> list[ox.Quad]:
+        return project(self.dhf, self.allure_results, checklists=self.checklists)
+
+    def store(self) -> ox.Store:
+        store = ox.Store()
+        store.extend(self.quads())
+        return store
+
+
+def _value(term) -> str | None:
+    return None if term is None else term.value
+
+
+def schema() -> dict:
+    """The vocabulary (Turtle) and the prefixes every query may use undeclared."""
+    return {"prefixes": PREFIXES, "ontology": ONTOLOGY_FILE.read_text(encoding="utf-8"),
+            "graphs": "record, tests, executions, git, checklists, references, ontology "
+                      "(queried as one union; GRAPH ?g { … } still works)"}
+
+
+def query(record: Record, sparql: str, limit: int = ROW_LIMIT) -> dict:
+    """Answer a read-only SPARQL query: SELECT rows, an ASK boolean, or
+    CONSTRUCT/DESCRIBE triples — at most ``limit`` rows, flagged if cut."""
+    text = with_prefixes(sparql)
+    try:
+        result = record.store().query(text, use_default_graph_as_union=True)
+    except SyntaxError as error:
+        if _UPDATE.search(sparql):
+            raise ReadOnlyError("SPARQL Update is not accepted: the graph is read-only. "
+                                "Change the record and open a pull request.") from error
+        raise ReadOnlyError(f"not a SPARQL query (SELECT, ASK, CONSTRUCT, DESCRIBE): {error}") from error
+    if isinstance(result, ox.QueryBoolean):
+        return {"boolean": bool(result)}
+    rows, truncated = [], False
+    if isinstance(result, ox.QuerySolutions):
+        variables = [v.value for v in result.variables]
+        for solution in result:
+            if len(rows) == limit:
+                truncated = True
+                break
+            rows.append({v: _value(solution[v]) for v in variables})
+        return {"variables": variables, "rows": rows, "truncated": truncated}
+    for triple in result:  # CONSTRUCT / DESCRIBE
+        if len(rows) == limit:
+            truncated = True
+            break
+        rows.append([triple.subject.value, triple.predicate.value, triple.object.value])
+    return {"triples": rows, "truncated": truncated}
+
+
+def _select(store: ox.Store, sparql: str) -> list[dict]:
+    result = store.query(with_prefixes(sparql), use_default_graph_as_union=True)
+    variables = [v.value for v in result.variables]
+    return [{v: _value(s[v]) for v in variables} for s in result]
+
+
+def _input(store: ox.Store, node: str) -> dict:
+    one = _select(store, f"""SELECT ?id ?text ?context ?doc ?path ?commit WHERE {{
+        <{node}> dcterms:identifier ?id ; rdm:text ?text .
+        OPTIONAL {{ <{node}> rdm:ownedBy/rdfs:label ?context }}
+        OPTIONAL {{ <{node}> rdm:declaredIn ?d . ?d rdfs:label ?doc ; rdm:path ?path .
+                   OPTIONAL {{ ?d prov:wasGeneratedBy/rdfs:label ?commit }} }} }}""")[0]
+    return {
+        "id": one["id"], "text": one["text"], "context": one["context"],
+        "document": one["doc"] and {"id": one["doc"], "path": one["path"], "last_commit": one["commit"]},
+        "needs": sorted(r["id"] for r in _select(
+            store, f"SELECT ?id WHERE {{ <{node}> rdm:tracesTo/rdfs:label ?id }}")),
+        "realised_by": sorted(r["c"] for r in _select(
+            store, f"SELECT ?c WHERE {{ ?x rdm:realises <{node}> ; rdfs:label ?c }}")),
+        "tests": sorted(r["path"] for r in _select(
+            store, f"SELECT ?path WHERE {{ ?t rdm:verifies <{node}> ; rdfs:label ?path }}")),
+        "runs": sorted(({"test": r["name"], "status": r["status"]} for r in _select(
+            store, f"SELECT ?name ?status WHERE {{ ?r rdm:exercises <{node}> ; rdfs:label ?name ; "
+                   f"rdm:status ?status }}")), key=lambda r: (r["test"], r["status"])),
+    }
+
+
+def trace(record: Record, ident: str) -> dict:
+    """One user need (with its contexts and every input refining it) or one
+    design input, each input with its document, tests and runs."""
+    ident = ident.strip().upper()
+    if not _ID.match(ident):
+        raise ValueError(f"expected a user need (UN-n) or design input (DI-n) id, got {ident!r}")
+    store = record.store()
+    kind = "UserNeed" if ident.startswith("UN") else "DesignInput"
+    found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:{kind} ; dcterms:identifier "{ident}" }}')
+    if not found:
+        raise ValueError(f"{ident} is not declared in the record")
+    node = found[0]["n"]
+    if kind == "DesignInput":
+        return {"design_input": _input(store, node)}
+    text = _select(store, f"SELECT ?text WHERE {{ OPTIONAL {{ <{node}> rdm:text ?text }} }}")[0]["text"]
+    inputs = [r["i"] for r in _select(store, f"SELECT ?i WHERE {{ ?i rdm:tracesTo <{node}> }} ORDER BY ?i")]
+    return {"user_need": {
+        "id": ident, "text": text,
+        "contexts": sorted(r["c"] for r in _select(
+            store, f"SELECT ?c WHERE {{ ?x rdm:satisfies <{node}> ; rdfs:label ?c }}")),
+        "design_inputs": sorted((_input(store, i) for i in inputs),
+                                key=lambda d: int(d["id"].split("-")[1])),
+    }}
+
+
+def validate(record: Record) -> dict:
+    """The gate shapes' results over the current record."""
+    from rdm.graph.validate import validate as run_shapes
+
+    results = run_shapes(record.quads())
+    return {"violations": sum(r.severity == "Violation" for r in results),
+            "warnings": sum(r.severity == "Warning" for r in results),
+            "results": [{"severity": r.severity, "focus": r.label, "message": r.message} for r in results]}
+
+
+INSTRUCTIONS = (
+    "The design record of this project (user needs, design inputs, bounded contexts, documents, "
+    "tagged tests, test runs, commits, checklist clauses) as a read-only RDF graph, rebuilt from the "
+    "record on every call. Start with `trace` for a UN-n or DI-n; call `schema` before writing SPARQL "
+    "for `query`; `validate` runs the gate rules. Nothing here changes the record: to change it, edit "
+    "the Markdown and tests and open a pull request."
+)
+
+
+def server(record: Record):
+    """The MCP server over ``record``: four read-only tools."""
+    from mcp.server.mcpserver import MCPServer
+    from mcp.server.mcpserver.exceptions import ToolError
+    from mcp_types import ToolAnnotations
+
+    app = MCPServer(name="rdm", instructions=INSTRUCTIONS)
+    read_only = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
+
+    @app.tool(name="schema", annotations=read_only,
+              description="RDM's graph vocabulary (Turtle), the prefixes queries may use undeclared, "
+                          "and the named graphs.")
+    def _schema() -> dict:
+        return schema()
+
+    @app.tool(name="query", annotations=read_only,
+              description=f"Run a read-only SPARQL query (SELECT, ASK, CONSTRUCT, DESCRIBE) over the record. "
+                          f"Results are capped at `limit` rows (default {ROW_LIMIT}); `truncated` says if cut. "
+                          f"SPARQL Update is refused.")
+    def _query(sparql: str, limit: int = ROW_LIMIT) -> dict:
+        try:
+            return query(record, sparql, max(1, min(limit, 5000)))
+        except ReadOnlyError as error:
+            raise ToolError(str(error)) from error
+
+    @app.tool(name="trace", annotations=read_only,
+              description="Trace a user need (UN-n) or design input (DI-n): its text, contexts, owning document "
+                          "and last commit, the needs it refines, its tagged test files and their runs.")
+    def _trace(id: str) -> dict:
+        try:
+            return trace(record, id)
+        except ValueError as error:
+            raise ToolError(str(error)) from error
+
+    @app.tool(name="validate", annotations=read_only,
+              description="Run the gate rules (SHACL shapes) over the record: violations block a release, "
+                          "warnings do not.")
+    def _validate() -> dict:
+        return validate(record)
+
+    return app
+
+
+def mcp_command(dhf_dir: Path | None = None, allure_results_dir: Path | None = None,
+                checklists: list[str] | None = None) -> int:
+    """Run `rdm graph mcp`: serve the record over MCP stdio until the client disconnects."""
+    dhf = Path(dhf_dir or "dhf")
+    if not dhf.exists():
+        print(f"Error: DHF directory not found: {dhf}", file=__import__("sys").stderr)
+        return 2
+    server(Record(dhf, allure_results_dir, checklists)).run("stdio")
+    return 0

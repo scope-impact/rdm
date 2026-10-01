@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Read-only agent interface (`rdm graph mcp`, UN-015, DI-41/42): an MCP
+  stdio server with `schema`, `query`, `trace` and `validate`, each answering
+  from a fresh projection; no write tool, SPARQL Update refused, rows capped.
+  User needs now carry their text in the graph (DI-35; Design Review 8).
 - Python test tags are read from decorators and `pytestmark` only, never from
   strings or comments (DI-40): fixture files written by a test no longer count
   as coverage. Every acceptance command passes `--clean-alluredir`, so repeated
