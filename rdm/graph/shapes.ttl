@@ -180,6 +180,29 @@ rdm:ProposedRiskShape a sh:NodeShape ;
     sh:property [ sh:path rdm:riskStatus ; sh:not [ sh:hasValue "proposed" ] ; sh:severity sh:Warning ;
                   sh:message "risk is proposed: a person has not approved its rating" ] .
 
+rdm:ContextDeclaredShape a sh:NodeShape ;
+    sh:targetClass rdm:BoundedContext ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "bounded context has a design document but no document declares it (contexts frontmatter)" ;
+        sh:select """SELECT $this WHERE {
+            ?doc rdm:describes $this .
+            FILTER NOT EXISTS { $this rdm:declaredIn ?d }
+            FILTER EXISTS { ?other a rdm:BoundedContext ; rdm:declaredIn ?any } }""" ;
+    ] .
+
+rdm:DocumentReferenceShape a sh:NodeShape ;
+    sh:targetClass rdm:Document ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "references a document the record does not hold" ;
+        sh:select """SELECT $this ?value WHERE {
+            $this dcterms:references ?value .
+            FILTER(STRSTARTS(STR(?value), CONCAT(STRBEFORE(STR($this), ":doc/"), ":doc/")))
+            FILTER NOT EXISTS { ?value a rdm:Document } }""" ;
+    ] .
+
 rdm: sh:declare
     [ sh:prefix "rdm" ; sh:namespace "https://github.com/scope-impact/rdm/ns#"^^xsd:anyURI ] ,
     [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] .

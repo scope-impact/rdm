@@ -89,6 +89,10 @@ rdm:realises a owl:ObjectProperty ;
 rdm:declaredIn a owl:ObjectProperty ;
     rdfs:label "declared in" ; rdfs:range rdm:Document .
 
+rdm:part a owl:DatatypeProperty ;
+    rdfs:label "part" ; rdfs:domain rdm:BoundedContext ;
+    rdfs:comment "The part of the product (Record, Gates, Graph, Documents...) the architecture assigns a context to (DI-58)." .
+
 rdm:describes a owl:ObjectProperty ;
     rdfs:label "describes" ; rdfs:domain rdm:Document ; rdfs:range rdm:BoundedContext .
 
@@ -207,7 +211,9 @@ rdm:edition a owl:DatatypeProperty ;
     rdfs:comment "The edition a clause key is qualified with (62304:5.2.2.j@2015 -> 2015)." .
 
 dcterms:references rdfs:label "references" ;
-    rdfs:comment "A controlled document claims a clause with a [[KEY]] reference tag." .
+    rdfs:comment "A controlled document claims a clause with a [[KEY]] reference tag, or names a controlled document it relies on in its references frontmatter (DI-58)." .
+prov:wasDerivedFrom rdfs:label "was derived from" ;
+    rdfs:comment "The generated traceability matrix and the documents it is generated from (DI-58)." .
 skos:notation rdfs:label "key" .
 skos:definition rdfs:label "description" .
 skos:inScheme rdfs:label "standard" .

@@ -8,6 +8,13 @@
   declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
   attachment (DI-57).
 
+### Added — no island documents
+- The architecture declares the bounded contexts and their parts
+  (`contexts:`), a document names the documents it relies on
+  (`references:`), and the traceability matrix links to its sources; a
+  context the architecture omits warns, a dangling reference fails
+  `rdm graph validate` (DI-58).
+
 ### Fixed — Graph Explorer
 - `rdm graph explorer-file --exclude TestRun` left a run's details (steps,
   attachments, labels, fixtures, test cases) as about a thousand islands; they

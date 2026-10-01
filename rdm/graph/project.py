@@ -43,6 +43,7 @@ from rdm.record.sdd import (
 )
 
 DESIGN_REVIEW_DOC = "design_review.md"  # the review the design gate requires (rdm.gates.design_gate)
+MATRIX_DOC = "traceability_matrix.md"  # the generated traceability matrix (rdm.record.bundle)
 
 NS = "https://github.com/scope-impact/rdm/ns#"
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
@@ -143,6 +144,7 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
             ds.add(doc, rdm("revision"), str(entry["revision"]), g)
         ds.add(doc, rdm("path"), entry["path"], g)
         doc_by_path[entry["path"]] = doc
+        _document_links(ds, doc, parse_frontmatter(entry["file"].read_text(encoding="utf-8", errors="ignore")), g)
 
     texts = user_need_texts(dhf)
     declared = declarations(dhf)
@@ -193,6 +195,35 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
             ds.add(node, rdm("tracesTo"), ds.node("need", un), g)
         if di["id"] in declared_in:
             ds.add(node, rdm("declaredIn"), declared_in[di["id"]], g)
+
+    # DI-58: the traceability matrix is generated from the design documents
+    # and the documents declaring the user needs.
+    matrix_path = find_dhf_doc(dhf, MATRIX_DOC)
+    matrix = doc_by_path.get(_rel(matrix_path, root)) if matrix_path else None
+    if matrix is not None:
+        sources = {doc_by_path.get(_rel(path, root)) for path in find_design_docs(dhf)}
+        sources |= {doc_by_path.get(_rel(dhf / where, root)) for un in registry_user_needs(dhf)
+                    for where in declared.get(un, [])[:1]}
+        for source in sorted((s for s in sources if s is not None), key=lambda n: n.value):
+            ds.add(matrix, _term(_PROV + "wasDerivedFrom"), source, g)
+
+
+def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> None:
+    """DI-58: the bounded contexts a document's ``contexts`` frontmatter
+    declares (each with its part), and the controlled documents its
+    ``references`` frontmatter names."""
+    for item in front.get("contexts") or []:
+        context = str(item.get("id", "") if isinstance(item, dict) else item).strip()
+        if not context:
+            continue
+        ctx = ds.thing(ds.node("context", context), rdm("BoundedContext"), context, g)
+        ds.add(ctx, rdm("declaredIn"), doc, g)
+        if isinstance(item, dict) and str(item.get("part", "")).strip():
+            ds.add(ctx, rdm("part"), str(item["part"]).strip(), g)
+    references = front.get("references") or []
+    for ref in [references] if isinstance(references, str) else references:
+        if str(ref).strip():
+            ds.add(doc, _term(_DCT + "references"), ds.node("doc", str(ref).strip()), g)
 
 
 def _tests(ds: _Dataset, dhf: Path, root: Path) -> None:

@@ -213,8 +213,30 @@ it, otherwise the merge. `rdm:landedIn` points at that commit and
 
 User needs link to the document that declares them (`rdm:declaredIn`),
 risks to the risk-policy document (`rdm:evaluatedAgainst`), and design
-documents to the design review (`rdm:reviewedIn`), so no part of the record
-is an island.
+documents to the design review (`rdm:reviewedIn`).
+
+Three more links come from frontmatter you write once (DI-58):
+
+```yaml
+# architecture.md — the bounded contexts, each with its part
+contexts:
+  - {id: record, part: Record}
+  - {id: gating, part: Gates}
+# any controlled document — the controlled documents it relies on
+references: [DC-001]
+```
+
+- each context `rdm:declaredIn` the architecture, with `rdm:part`; once any
+  document declares contexts, `rdm graph validate` warns about a context
+  whose design document it does not declare;
+- `dcterms:references` from a document to each document it names; naming a
+  document the record does not hold is a violation;
+- the generated traceability matrix `prov:wasDerivedFrom` the design
+  documents and the document declaring the user needs.
+
+So no part of the record is an island: in RDM's own graph, the core view
+(`--exclude TestRun --exclude Activity --exclude Agent`) is one connected
+graph.
 
 ## Checklists are data
 
