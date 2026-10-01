@@ -37,6 +37,8 @@ from tests.util import write_design_doc
 # Tagging requires allure-pytest; skip cleanly if it is not installed.
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import attach, clause  # noqa: E402
+
 
 def _vv_plan(docs: Path, needs: list[str]) -> None:
     items = "\n".join(f"  - {{id: {n}, text: {n}}}" for n in needs)
@@ -121,12 +123,21 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
     dhf = _approved_dhf(tmp_path, ["UN-003"])  # DI-1 traces to UN-003
     empty = tmp_path / "none"
     empty.mkdir()
-    assert not run_release_gate(dhf, empty).passed  # untested -> blocked
+    with clause("an untested design input blocks"):
+        gate = run_release_gate(dhf, empty)
+        attach("release gate blocking", gate.blocking)
+        assert not gate.passed
     results = tmp_path / "allure"
-    _allure_result(results, "a", "failed", "DI-1")
-    assert not run_release_gate(dhf, results).passed  # failing -> blocked
-    _allure_result(results, "a", "passed", "DI-1")
-    assert run_release_gate(dhf, results).passed  # verified -> passes
+    with clause("a failing design input blocks"):
+        _allure_result(results, "a", "failed", "DI-1")
+        gate = run_release_gate(dhf, results)
+        attach("release gate blocking", gate.blocking)
+        assert not gate.passed
+    with clause("a verified design input passes"):
+        _allure_result(results, "a", "passed", "DI-1")
+        gate = run_release_gate(dhf, results)
+        attach("release gate blocking", gate.blocking)
+        assert gate.passed
 
 
 @allure.story("DI-4")

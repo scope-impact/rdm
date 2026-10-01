@@ -17,6 +17,8 @@ from rdm.gates.design_gate import run_release_gate
 from tests.util import git_run
 
 allure = pytest.importorskip("allure")
+
+from tests.acceptance.evidence import attach, clause  # noqa: E402
 pytest.importorskip("pyshacl")
 
 from rdm.graph.project import project  # noqa: E402
@@ -80,9 +82,12 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
                              {"DI-1": ["passed"], "DI-2": ["passed"]}, {"UN-3"}),
     }
     for name, (shape, runs, expected) in scenarios.items():
-        dhf = _dhf(tmp_path / name, **shape)
-        results = _results(tmp_path / name, runs)
-        assert _blocked_by_shapes(dhf, results) == _blocked_by_gate(dhf, results) == expected, name
+        with clause(f"shapes block what the release gate blocks: {name}"):
+            dhf = _dhf(tmp_path / name, **shape)
+            results = _results(tmp_path / name, runs)
+            by_shapes, by_gate = _blocked_by_shapes(dhf, results), _blocked_by_gate(dhf, results)
+            attach("blocked", {"shapes": sorted(by_shapes), "release gate": sorted(by_gate)})
+            assert by_shapes == by_gate == expected, name
 
     # Messages per rule (violations).
     dhf = _dhf(tmp_path / "msgs", needs=("UN-1", "UN-2", "UN-3"))

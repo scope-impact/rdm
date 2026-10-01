@@ -149,7 +149,7 @@ The endpoint's default graph is the union of all of them.
 |---|---|
 | `urn:dhf:<project>:graph/record` | user needs, bounded contexts, design inputs, controlled documents |
 | `…graph/tests` | verification tags found in test sources |
-| `…graph/executions` | Allure results (only with `--allure-results`) |
+| `…graph/executions` | Allure results (only with `--allure-results`): each run's status, steps (`rdm:step`, nested, in order) and attachments (`rdm:attachment`) |
 | `…graph/git` | each design document's latest commit and its author, and the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`) |
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |

@@ -158,7 +158,15 @@ keeping the tag and labelling the output:
 @allure.label("output", "rdm/<impl>.py")   # which design output this exercises
 def test_<behavior>(...):
     """DI-n: <the requirement in one line>."""
+    with clause("<clause 1 of the DI text>"):        # tests/acceptance/evidence.py
+        result = ...
+        attach("<what was checked>", result)       # kept in the Allure results
+        assert ...
 ```
+
+A step per clause makes a failure name its clause; an attachment keeps what
+the assertion looked at. Both land in the Allure results, which the release
+bundle retains and the graph projects (`trace` lists them).
 
 **Done when:** `uv run pytest tests/acceptance -q` passes.
 

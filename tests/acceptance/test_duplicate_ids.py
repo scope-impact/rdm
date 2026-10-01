@@ -17,6 +17,8 @@ from tests.acceptance.test_graph_shapes import _dhf, _results
 
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import attach, clause  # noqa: E402
+
 DESIGN = "documents/design/core.md"
 
 
@@ -36,10 +38,12 @@ def test_a_duplicated_id_fails_the_design_gate_and_shows_in_the_graph(tmp_path: 
     assert _ids_check(dhf).ok and run_design_gate(dhf).passed
 
     # A design input declared twice in one document: both declarations named.
-    dhf = _dhf(tmp_path / "same-doc", inputs=(("DI-1", "UN-1"), ("DI-2", "UN-2"), ("DI-1", "UN-2")))
-    check = _ids_check(dhf)
-    assert not check.ok and not run_design_gate(dhf).passed
-    assert check.reasons == [f"DI-1 is declared 2 times: {DESIGN}, {DESIGN}"]
+    with clause("a design input declared twice in one document fails the design gate"):
+        dhf = _dhf(tmp_path / "same-doc", inputs=(("DI-1", "UN-1"), ("DI-2", "UN-2"), ("DI-1", "UN-2")))
+        check = _ids_check(dhf)
+        attach("design gate reasons", check.reasons)
+        assert not check.ok and not run_design_gate(dhf).passed
+        assert check.reasons == [f"DI-1 is declared 2 times: {DESIGN}, {DESIGN}"]
 
     # A design input declared in two documents: each named.
     dhf = _dhf(tmp_path / "two-docs")

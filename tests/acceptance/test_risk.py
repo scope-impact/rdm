@@ -18,6 +18,8 @@ from tests.acceptance.test_graph_shapes import _dhf, _results
 
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import attach, clause  # noqa: E402
+
 POLICY = {
     "severities": ["Critical", "Serious", "Minor", "Negligible"],
     "probabilities": ["Rare", "Unlikely", "Possible", "Likely"],
@@ -187,14 +189,17 @@ RESIDUAL_CASES = {"unverified-control", "uncontrolled-unacceptable", "uncontroll
 def _check_cases(tmp_path: Path, names) -> None:
     for name in names:
         entries, with_policy, expected = CASES[name]
-        _, gate = _gate(tmp_path, name, entries, with_policy)
-        found = [m for m in gate.blocking if "risk" in m]
-        if isinstance(expected, set):
-            assert set(found) == expected, (name, found)
-        else:
-            assert len(found) == 1 and expected in found[0], (name, found)
-        for message in found:  # each per-risk message names the risk, for the graph's agreement test
-            assert re.search(r"RISK-[A-Z]+-\d", message) or "no risk_policy is declared" in message, message
+        with clause(f"case {name}"):
+            _, gate = _gate(tmp_path, name, entries, with_policy)
+            found = [m for m in gate.blocking if "risk" in m]
+            attach("register", entries)
+            attach("risk findings", found)
+            if isinstance(expected, set):
+                assert set(found) == expected, (name, found)
+            else:
+                assert len(found) == 1 and expected in found[0], (name, found)
+            for message in found:  # each per-risk message names the risk, for the graph's agreement test
+                assert re.search(r"RISK-[A-Z]+-\d", message) or "no risk_policy is declared" in message, message
 
 
 @allure.story("DI-44")

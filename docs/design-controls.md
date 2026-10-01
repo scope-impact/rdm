@@ -110,8 +110,15 @@ stays a record, never a hand-maintained table.
 rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence/
 ```
 Writes the retained release evidence set — verification data, the rendered
-traceability matrix, and a manifest — ready to
-attach to a release tag so the evidence outlives CI artifact retention.
+traceability matrix, the executed Allure results with every attachment and
+container they reference, and a manifest — ready to attach to a release tag
+so the evidence outlives CI artifact retention. Upload it as a CI artifact and
+the pipeline records its digest.
+
+Give the evidence something to hold: an `allure.step` per clause of the
+design input, and `allure.attach` for what the assertion checked. The graph
+carries both (`rdm:step`, `rdm:attachment`), and `trace` lists them with each
+run.
 
 ## Validation evidence (formative)
 

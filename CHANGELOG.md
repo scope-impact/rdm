@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added — test evidence
+- `rdm story evidence-bundle` keeps the executed Allure results, with every
+  attachment and container they reference, in `allure-results/` (DI-30).
+- The graph carries each test run's steps and attachments, and `trace` lists
+  them with each run (DI-53).
+
 ### Fixed — security
 - `rdm graph serve` ran Oxigraph read-write with CORS open: a cross-origin
   `CLEAR ALL` emptied the store. It now serves read-only (DI-36).
