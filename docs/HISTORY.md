@@ -10,7 +10,7 @@
 - `rdm story mutation-probe` runs the test once unmutated and refuses a test that
   does not pass: an already-failing test was reported KILLED under any mutation (DI-34).
 - Risk register (UN-016, DI-43/44/45): risks as frontmatter in `kind: risk`
-  documents, scored from the default or a declared `risk_matrix`, each control a
+  documents, evaluated against a declared `risk_policy`, each control a
   design input; the release gate and the graph shapes block a broken, unscored,
   uncontrolled or unaccepted risk; `trace` takes risk ids. RDM's own tool-risk
   register is `dhf/documents/risk/` (Design Review 9). `rdm story new-input` no

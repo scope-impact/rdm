@@ -39,8 +39,8 @@ ids, and user needs). When changing RDM, you are working inside that DHF's
 scope:
 
 - **The record** — one `kind: design` document per bounded context under
-  `dhf/documents/design/` (record, gating, verification, validation, rendering),
-  each owning its `design_inputs`; user needs in the V&V plan; the design review
+  `dhf/documents/design/` (one per context; `architecture.md` lists them),
+  each owning its `design_inputs`; the risk policy and register in `dhf/documents/risk/`; user needs in the V&V plan; the design review
   in `dhf/documents/design_review.md`. Never hand-edit the traceability
   matrix — it is generated.
 - **Acceptance criteria are tests** — each design input DI-n is verified by a
@@ -88,7 +88,8 @@ assigns each bounded context to a part. Agent skills live in scope-impact/agent-
 - `rdm/gaps.py` — Gap analysis: validates documents against regulatory checklists (IEC 62304, ISO 13485, etc.). Built-in checklists in `rdm/checklists/`.
 - `rdm/md_extensions/` — Markdown post-processing: section numbering, vocabulary expansion.
 - `rdm/init_files/` — Scaffold templates for `rdm init` (Makefile, config.yml, document templates, Dockerfile).
-- `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | serve`, extra `graph`): named graphs per source, embedded Oxigraph store, SPARQL endpoint for AWS Graph Explorer. See `docs/graph.md`.
+- `rdm/record/` — Reads the record: design/V&V frontmatter (`sdd.py`), Allure results (`allure.py`), verification (`verify.py`), the risk register and policy (`risk.py`).
+- `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | validate | serve | explorer-file | mcp`, extra `graph`): named graphs per source, embedded Oxigraph store, SHACL gate shapes, SPARQL endpoint for AWS Graph Explorer, and a read-only MCP server for agents (`agent.py`, registered in `.mcp.json`). See `docs/graph.md`.
 
 ### Optional modules (extras)
 

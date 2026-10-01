@@ -1,4 +1,5 @@
-"""`rdm graph build | query | serve` (DI-35, DI-36)."""
+"""`rdm graph build | query | serve | explorer-file` (DI-35, DI-36, DI-39); `validate` and `mcp` live in
+``validate.py`` and ``agent.py``."""
 
 from __future__ import annotations
 

@@ -29,6 +29,10 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.record.persona
 
+### `rdm.record.risk`
+
+::: rdm.record.risk
+
 ## The record as a graph (`rdm graph`)
 
 ### `rdm.graph.project`
@@ -46,6 +50,10 @@ The reconciliation engine that compiles the DHF from the system of record.
 ### `rdm.graph.explorer`
 
 ::: rdm.graph.explorer
+
+### `rdm.graph.agent`
+
+::: rdm.graph.agent
 
 ### `rdm.graph.cli`
 

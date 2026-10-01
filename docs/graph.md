@@ -2,10 +2,11 @@
 
 `rdm graph` projects the design record into RDF — user needs, bounded
 contexts, design inputs, controlled documents, test tags, test results, git
-commits, and the regulatory checklists your documents are held to — so you can
-query it with SPARQL, check it against the gate rules as SHACL shapes, and
-browse it visually in
-[AWS Graph Explorer](https://github.com/aws/graph-explorer).
+commits, the risk register, and the regulatory checklists your documents are
+held to — so you can query it with SPARQL, check it against the gate rules as
+SHACL shapes, browse it visually in
+[AWS Graph Explorer](https://github.com/aws/graph-explorer), and let agents
+read it through a read-only MCP server.
 
 The Markdown record stays the only thing you edit. The graph is derived: it is
 rebuilt from the record on every run, and Graph Explorer only browses it. To

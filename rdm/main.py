@@ -71,7 +71,7 @@ def cli(raw_arguments):
 
 
 def handle_graph_command(args):
-    """Handle `rdm graph build | query | serve` (the record as a linked-data graph)."""
+    """Handle `rdm graph build | query | validate | serve | explorer-file | mcp` (the record as a graph)."""
     from rdm.graph import cli as graph_cli
 
     def _path(value):

@@ -137,3 +137,6 @@ The merged, reviewed PR completes the approval record.
 | release-gate: *DI-n untested* | write/tag the test, re-run the acceptance suite |
 | release-gate: *DI-n failed* | fix the implementation (or the test) |
 | release-gate: *user need addressed by no design input* | add a DI with `traces_to`, or remove the need |
+| release-gate: *no risk_policy is declared* | declare a `risk_policy` with your acceptability criteria; an agent's draft is `status: proposed` |
+| release-gate: *risk … residual not evaluated* | make the controlling design input's tagged test pass |
+| release-gate: *risk … needs an acceptance* / *unacceptable residual* | add or strengthen a control, or record who accepted the residual and why |

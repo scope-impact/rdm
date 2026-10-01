@@ -7,9 +7,9 @@ RDM inside this DHF's scope is `AGENT_WORKFLOW.md` (this directory).
 
 Scope note: RDM is not a medical device, so this DHF deliberately implements
 the **design-controls slice** (design inputs, review, verification, validation,
-traceability — the §820.30-shaped record) and not the full IEC 62304 lifecycle
-document set (risk management file, SOUP register, maintenance and
-problem-resolution plans, …). Running `rdm gap 62304_2015_class_b` over these
+traceability — the §820.30-shaped record) plus a register of RDM's own tool
+risks, and not the full IEC 62304 lifecycle document set (a complete risk
+management file, SOUP register, maintenance and problem-resolution plans, …). Running `rdm gap 62304_2015_class_b` over these
 documents is expected to report those items as missing.
 
 ## Layout (the record)
@@ -24,6 +24,9 @@ documents/
   traceability_matrix.md             matrix TEMPLATE (rendered from generated data; never hand-edited)
   design/                            one `kind: design` doc per bounded context:
     <context>.md                       the design inputs it owns (what) + design output (how)
+  risk/
+    policy.md                          risk acceptability policy (RMP-001, proposed)
+    tool_risks.md                      `kind: risk` register of RDM's tool risks (RMF-001, proposed)
 ```
 
 The live inventory — which contexts exist, which design inputs each owns, and

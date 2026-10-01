@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+### Changed — RDM as four parts
+- README, docs home and navigation describe RDM as Record, Gates, Graph and
+  Documents, with a plain "what it does not do" list; the intended use is in
+  the V&V plan (Design Review 6).
+
+### Added — read-only agent interface
+- `rdm graph mcp`: an MCP stdio server with `schema`, `query`, `trace` and
+  `validate`, each answering from a fresh projection of the record; no write
+  tool, SPARQL Update refused, rows capped (UN-015, DI-41, DI-42).
+  `.mcp.json` registers it for this repository.
+
+### Added — risk register
+- Risks as frontmatter in `kind: risk` documents: safety or security (with a
+  STRIDE category), hazard → situation → harm, severity, probability,
+  controls (design inputs), residual, acceptance, `status: proposed |
+  approved` (UN-016, DI-43).
+- No default matrix: risks are evaluated only against a declared
+  `risk_policy` with per-level acceptability (`acceptable`, `justify`,
+  `unacceptable`).
+- The release gate blocks missing criteria, a broken chain, an undefined or
+  mis-scored risk, an undeclared or unverified control, and an unacceptable
+  or unaccepted residual; proposed ratings warn (DI-44).
+- Risks in the graph (`risks` named graph, `rdm:controlledBy`, residual
+  decision), risk shapes in agreement with the gate, risk ids in `trace`
+  (DI-45). Design Reviews 9 and 10.
+
+### Fixed
+- Python test tags are read from decorators and `pytestmark` only, never
+  from strings or comments (DI-40); every acceptance command passes
+  `--clean-alluredir`, so repeated runs no longer double the results.
+- `rdm story mutation-probe` runs the test once unmutated and refuses a test
+  that does not pass — an already-failing test was reported KILLED (DI-34).
+- `rdm story new-input` fills an empty `design_inputs: []` in place instead of
+  writing a second key, and wraps its stub test's docstring (DI-22).
+- User needs carry their text in the graph (DI-35).
+
 ### Added — the design record as a linked-data graph
 - `rdm graph build | query | serve` (optional extra `graph`): projects the
   record into RDF named graphs (record, tests, executions, git, ontology),

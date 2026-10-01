@@ -22,7 +22,7 @@
 | `new-input --context C --text T --traces-to UN[,UN…]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test, checklist; `--list` shows contexts / taken ids / user needs |
 | `design-gate` | design docs + review present, complete, approved (committed); warnings for DI↔tag mismatches |
 | `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix |
-| `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed |
+| `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed + every risk evaluated, controlled and acceptable ([risk register](risk.md)) |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
 | `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, manifest |
 | `mutation-probe --file F --find A --replace B --test T` | reviewer tool: break one line on purpose, run one test, report KILLED (caught) / SURVIVED (missed), always restore; never gates |

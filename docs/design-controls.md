@@ -53,7 +53,9 @@ rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
 The hard gate: design approved **and** every design input verified by a
 passing tagged test **and** every user need addressed by at least one
-input.
+input **and**, when the DHF has a risk register, every risk evaluated against
+the declared risk policy, controlled by verified design inputs, and
+residually acceptable or accepted — see [Risk register](risk.md).
 
 ## Polyglot products
 
