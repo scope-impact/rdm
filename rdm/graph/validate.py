@@ -9,6 +9,7 @@ authoritative — an acceptance test holds the shapes to agreement with them.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import pyoxigraph as ox
@@ -37,15 +38,25 @@ def _rdflib_graph(quads: list[ox.Quad]):
     return rdflib.Graph().parse(data=text, format="nt")
 
 
+@lru_cache(maxsize=1)
+def _gate_shapes():
+    """RDM's gate shapes, parsed once per process."""
+    import rdflib
+
+    return rdflib.Graph().parse(SHAPES_FILE, format="turtle")
+
+
 def validate(quads: list[ox.Quad], extra_shapes: list[Path] | None = None) -> list[Result]:
     """Every SHACL result for the graph, most severe first."""
     import pyshacl
     import rdflib
 
     data = _rdflib_graph(quads)
-    shapes = rdflib.Graph().parse(SHAPES_FILE, format="turtle")
-    for path in extra_shapes or []:
-        shapes.parse(str(path))
+    shapes = _gate_shapes()
+    if extra_shapes:
+        shapes = shapes + rdflib.Graph()  # a copy: the parsed gate shapes are shared
+        for path in extra_shapes:
+            shapes.parse(str(path))
     _, report, _ = pyshacl.validate(data, shacl_graph=shapes, inference="none", allow_warnings=True)
 
     sh = rdflib.Namespace(_SH)

@@ -40,6 +40,7 @@ from rdm.record.sdd import (
     context_of,
     design_input_ids,
     design_inputs,
+    duplicate_declarations,
     find_design_docs,
     realises_by_context,
     registry_user_needs,
@@ -272,7 +273,7 @@ def _traceability_warnings(dhf_dir: Path) -> list[str]:
 
     for di in sorted(di_ids - tagged_ids):
         warnings.append(
-            f"design input {di} has no @allure.story/feature tag in tests"
+            f"design input {di} has no @allure.story tag in tests"
         )
 
     for tag in relevant_orphans(sorted(tagged_ids - di_ids), di_ids):
@@ -307,12 +308,17 @@ def check_unique_ids(dhf_dir: Path) -> ArtifactCheck:
     """Every user-need and design-input id declared once (DI-46). The record
     reader keeps an id's first declaration, so a second would silently drop
     out of every gate and the graph."""
-    from rdm.record.sdd import duplicate_declarations
-
     reasons = [f"{ident} is declared {len(docs)} times: {', '.join(docs)}"
                for ident, docs in sorted(duplicate_declarations(dhf_dir).items())]
     return ArtifactCheck(name="Requirement ids", path=Path(dhf_dir), exists=True,
                          complete=not reasons, reasons=reasons, uncommitted=False)
+
+
+def _design_artifacts(dhf_dir: Path) -> list[ArtifactCheck]:
+    """The design gate's pass/fail checks: design documents, the design review,
+    ids declared once."""
+    return [*check_design_docs(dhf_dir), check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review"),
+            check_unique_ids(dhf_dir)]
 
 
 def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> GateResult:
@@ -323,11 +329,7 @@ def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> Ga
     back to scanning the test sources for ``@allure`` tags.
     """
     result = GateResult()
-    result.artifacts.extend(check_design_docs(dhf_dir))
-    result.artifacts.append(
-        check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review")
-    )
-    result.artifacts.append(check_unique_ids(dhf_dir))
+    result.artifacts.extend(_design_artifacts(dhf_dir))
     result.task_warnings = _coverage_warnings(dhf_dir)
 
     if allure_results_dir is not None and Path(allure_results_dir).exists():
@@ -431,7 +433,9 @@ def run_release_gate(
 
     Orphan Allure tags (no matching design input) are warnings, not blockers.
     """
-    design = run_design_gate(dhf_dir, allure_results_dir)
+    # Only the design gate's pass/fail checks: its warnings would reconcile the
+    # results a second time, and the release gate reports its own.
+    design = GateResult(artifacts=_design_artifacts(dhf_dir))
     result = ReleaseResult(design=design)
 
     if not design.passed:

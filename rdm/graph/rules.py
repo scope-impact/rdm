@@ -10,24 +10,31 @@ returns their results in one named graph, kept apart from the record's.
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import pyoxigraph as ox
 
-from rdm.graph.project import NS, ONTOLOGY_FILE
-
-_PREFIXES = f"PREFIX rdm: <{NS}>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+from rdm.graph.cli import with_prefixes
+from rdm.graph.project import ONTOLOGY_FILE
 
 
 def rules() -> list[dict]:
     """Every rule the vocabulary declares: its IRI, label, comment, the
     relation it derives and its CONSTRUCT."""
+    return [dict(rule) for rule in _declared_rules()]
+
+
+@lru_cache(maxsize=1)
+def _declared_rules() -> tuple[dict, ...]:
+    """The vocabulary's rules, read once per process (the vocabulary ships with RDM)."""
     store = ox.Store()
     store.load(path=str(ONTOLOGY_FILE), format=ox.RdfFormat.TURTLE)
-    rows = store.query(_PREFIXES + """SELECT ?rule ?label ?comment ?derives ?construct WHERE {
+    rows = store.query(with_prefixes("""SELECT ?rule ?label ?comment ?derives ?construct WHERE {
         ?rule a rdm:Rule ; rdfs:label ?label ; rdm:derives ?derives ; rdm:construct ?construct .
-        OPTIONAL { ?rule rdfs:comment ?comment } } ORDER BY ?rule""")
-    return [{"rule": r["rule"].value, "label": r["label"].value, "derives": r["derives"].value,
+        OPTIONAL { ?rule rdfs:comment ?comment } } ORDER BY ?rule"""))
+    return tuple({"rule": r["rule"].value, "label": r["label"].value, "derives": r["derives"].value,
              "comment": r["comment"].value if r["comment"] is not None else "",
-             "construct": r["construct"].value} for r in rows]
+             "construct": r["construct"].value} for r in rows)
 
 
 def infer(quads: list[ox.Quad], graph: ox.NamedNode) -> list[ox.Quad]:
@@ -36,7 +43,7 @@ def infer(quads: list[ox.Quad], graph: ox.NamedNode) -> list[ox.Quad]:
     store = ox.Store()
     store.extend(quads)
     derived: list[ox.Quad] = []
-    for rule in rules():
-        for triple in store.query(_PREFIXES + rule["construct"], use_default_graph_as_union=True):
+    for rule in _declared_rules():
+        for triple in store.query(with_prefixes(rule["construct"]), use_default_graph_as_union=True):
             derived.append(ox.Quad(triple.subject, triple.predicate, triple.object, graph))
     return derived

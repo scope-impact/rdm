@@ -22,6 +22,7 @@ judgments stay in the gates.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 import subprocess
 from pathlib import Path
 from urllib.parse import quote
@@ -30,8 +31,10 @@ import pyoxigraph as ox
 
 from rdm.record.allure import find_tests_dir, reconcile, scan_source_tests
 from rdm.record.sdd import (
+    MATRIX_DOC,
     context_of,
     declarations,
+    design_input_ids,
     design_inputs,
     find_dhf_doc,
     find_design_docs,
@@ -41,7 +44,6 @@ from rdm.record.sdd import (
     user_need_texts,
 )
 
-MATRIX_DOC = "traceability_matrix.md"  # the matrix template, an output: not projected (DI-58)
 
 NS = "https://github.com/scope-impact/rdm/ns#"
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
@@ -115,9 +117,14 @@ def _rel(path: Path, root: Path) -> str:
 
 def controlled_documents(dhf: Path, root: Path) -> list[dict]:
     """Every Markdown file under the DHF with a frontmatter ``id``: its id,
-    title, revision and repository-relative path, sorted by id."""
+    title, revision, repository-relative path and frontmatter, sorted by id.
+    The traceability-matrix template is left out: it is an output, rendered
+    from the record, not part of it (DI-58)."""
+    matrix = find_dhf_doc(Path(dhf), MATRIX_DOC)
     entries = []
     for md in sorted(Path(dhf).rglob("*.md")):
+        if md == matrix:
+            continue
         try:
             front = parse_frontmatter(md.read_text(encoding="utf-8", errors="ignore"))
         except OSError:
@@ -125,7 +132,8 @@ def controlled_documents(dhf: Path, root: Path) -> list[dict]:
         doc_id = str(front.get("id", "")).strip()
         if doc_id:
             entries.append({"id": doc_id, "title": str(front.get("title", "")).strip(),
-                            "revision": front.get("revision"), "path": _rel(md, root), "file": md})
+                            "revision": front.get("revision"), "path": _rel(md, root), "file": md,
+                            "front": front})
     return sorted(entries, key=lambda e: (e["id"], e["path"]))
 
 
@@ -133,10 +141,7 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "record"
     # Controlled documents (frontmatter id), keyed by that id.
     doc_by_path = {}
-    matrix = find_dhf_doc(dhf, MATRIX_DOC)  # DI-58: an output, rendered from the record
     for entry in controlled_documents(dhf, root):
-        if matrix is not None and entry["file"] == matrix:
-            continue
         doc = ds.thing(ds.node("doc", entry["id"]), rdm("Document"), entry["id"], g)
         ds.add(doc, _term(_DCT + "identifier"), entry["id"], g)
         if entry.get("title"):
@@ -145,10 +150,14 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
             ds.add(doc, rdm("revision"), str(entry["revision"]), g)
         ds.add(doc, rdm("path"), entry["path"], g)
         doc_by_path[entry["path"]] = doc
-        _document_links(ds, doc, parse_frontmatter(entry["file"].read_text(encoding="utf-8", errors="ignore")), g)
+        _document_links(ds, doc, entry["front"], g)
 
     texts = user_need_texts(dhf)
     declared = declarations(dhf)
+
+    def declaring(ident):  # DI-52: the document that declares an id (the first, if several)
+        first = declared.get(ident, [])[:1]
+        return doc_by_path.get(_rel(dhf / first[0], root)) if first else None
 
     def count(node, ident):  # DI-46: how many times the record declares this id
         ds.add(node, rdm("declarationCount"),
@@ -158,24 +167,17 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         need = ds.thing(ds.node("need", un), rdm("UserNeed"), un, g)
         ds.add(need, _term(_DCT + "identifier"), un, g)
         count(need, un)
-        for where in declared.get(un, [])[:1]:  # DI-52: the document that declares it
-            declaring = doc_by_path.get(_rel(dhf / where, root))
-            if declaring is not None:
-                ds.add(need, rdm("declaredIn"), declaring, g)
+        if declaring(un) is not None:
+            ds.add(need, rdm("declaredIn"), declaring(un), g)
         if un in texts:
             ds.add(need, rdm("text"), texts[un], g)
 
-    declared_in: dict[str, ox.NamedNode] = {}
     for path in find_design_docs(dhf):
         context = context_of(path)
         ctx = ds.thing(ds.node("context", context), rdm("BoundedContext"), context, g)
         doc = doc_by_path.get(_rel(path, root))
         if doc is not None:
             ds.add(doc, rdm("describes"), ctx, g)
-            front = parse_frontmatter(path.read_text(encoding="utf-8"))
-            for item in front.get("design_inputs") or []:
-                if isinstance(item, dict) and str(item.get("id", "")).strip():
-                    declared_in.setdefault(str(item["id"]).strip(), doc)
     for path, refs in realises_by_context(dhf).items():
         for ref in sorted(refs):
             ds.add(ds.node("context", context_of(path)), rdm("realises"), ds.node("input", ref), g)
@@ -188,8 +190,8 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         ds.add(node, rdm("ownedBy"), ds.node("context", di["context"]), g)
         for un in di["traces_to"]:
             ds.add(node, rdm("tracesTo"), ds.node("need", un), g)
-        if di["id"] in declared_in:
-            ds.add(node, rdm("declaredIn"), declared_in[di["id"]], g)
+        if declaring(di["id"]) is not None:
+            ds.add(node, rdm("declaredIn"), declaring(di["id"]), g)
 
 
 def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> None:
@@ -260,9 +262,16 @@ def default_branch(root: Path) -> str | None:
     return None
 
 
+@lru_cache(maxsize=4096)
+def _commit_facts(root: Path, sha: str) -> tuple[str, str, str, str]:
+    """A commit's full sha, author, time and subject. A commit never changes, so
+    one git call per commit serves every projection that names it."""
+    return tuple(_git_out(root, "log", "-1", "--format=%H%x1f%an%x1f%aI%x1f%s", sha).split("\x1f", 3))
+
+
 def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, ox.NamedNode]:
     """A commit node with its time and author (prov:Agent)."""
-    sha, author, when, subject = _git_out(root, "log", "-1", "--format=%H%x1f%an%x1f%aI%x1f%s", sha).split("\x1f", 3)
+    sha, author, when, subject = _commit_facts(root, sha)
     commit = ds.thing(ds.node("commit", sha), _term(_PROV + "Activity"), f"{sha[:7]} {subject}", g)
     ds.add(commit, rdm("sha"), sha, g)
     ds.add(commit, _term(_PROV + "endedAtTime"), ox.Literal(when, datatype=_term(_XSD + "dateTime")), g)
@@ -287,12 +296,9 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
     if head:  # DI-60: the commit the record was built at
         record = ds.thing(_term(ds.base + "record"), rdm("Record"), ds.base.split(":")[2], g)
         ds.add(record, rdm("atCommit"), _commit(ds, root, head, g)[0], g)
-    matrix = find_dhf_doc(dhf, MATRIX_DOC)
     branch = default_branch(root)
     first_parent = set((_git_out(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
     for entry in controlled_documents(dhf, root):  # DI-35, DI-51: every controlled document
-        if matrix is not None and entry["file"] == matrix:
-            continue
         doc_id = entry["id"]
         sha = _git_out(root, "log", "-1", "--format=%H", "--", entry["path"])
         if not sha:
@@ -362,12 +368,6 @@ def _ontology(ds: _Dataset) -> None:
         ds.quads.append(ox.Quad(triple.subject, triple.predicate, triple.object, ds.graph("ontology")))
 
 
-def default_project(dhf: Path) -> str:
-    """The DHF's repository name (or its parent directory's)."""
-    root = _repo_root(Path(dhf).resolve().parent)
-    return (root or Path(dhf).resolve().parent).name
-
-
 def project(
     dhf_dir: Path,
     allure_results_dir: Path | None = None,
@@ -380,17 +380,18 @@ def project(
     ``infer`` adds what the vocabulary's rules derive, in the inferred graph
     (DI-62)."""
     dhf = Path(dhf_dir).resolve()
-    root = _repo_root(dhf.parent) or dhf.parent
-    ds = _Dataset(project_name or default_project(dhf))
+    repo = _repo_root(dhf.parent)
+    root = repo or dhf.parent
+    results = Path(allure_results_dir) if allure_results_dir is not None and Path(allure_results_dir).exists() else None
+    ds = _Dataset(project_name or (repo or dhf.parent).name)
     _record(ds, dhf, root)
     tests = _tests(ds, dhf, root)
-    if allure_results_dir is not None and Path(allure_results_dir).exists():
-        _executions(ds, Path(allure_results_dir), tests)
-    if _repo_root(dhf.parent) is not None:
-        _git(ds, dhf, root)
     verified: set[str] = set()
-    if allure_results_dir is not None and Path(allure_results_dir).exists():
-        verified = set(reconcile({di["id"] for di in design_inputs(dhf)}, Path(allure_results_dir)).verified)
+    if results is not None:
+        _executions(ds, results, tests)
+        verified = set(reconcile(design_input_ids(dhf), results).verified)
+    if repo is not None:
+        _git(ds, dhf, root)
     _risks(ds, dhf, root, verified)
     if checklists:
         from rdm.graph.checklists import checklist_quads, reference_quads

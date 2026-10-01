@@ -14,9 +14,11 @@ from datetime import datetime, timezone
 
 import pyoxigraph as ox
 
+from rdm.graph.allure import GRAPH as EXECUTIONS_GRAPH
+
 _TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 DEFAULT_ENDPOINT = "http://localhost:7878"
-_EXECUTIONS = "graph/executions"  # the test-run results (rdm/graph/allure.py)
+_EXECUTIONS = "graph/" + EXECUTIONS_GRAPH  # the test-run results
 
 
 def _local(iri: str) -> str:

@@ -21,7 +21,7 @@ from pathlib import Path
 import pyoxigraph as ox
 
 from rdm.graph.project import _DCT, _ID, _PROV, _XSD, _Dataset, _term, rdm
-from rdm.record.allure import USER_NEED_LABELS
+from rdm.record.allure import DESIGN_INPUT_LABELS
 
 GRAPH = "executions"
 
@@ -94,7 +94,7 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode])
             ds.add(run, rdm("testedAt"), commit, GRAPH)
         elif name == "worktree" and value == "dirty":
             ds.add(run, rdm("uncommittedChanges"), ox.Literal("true", datatype=_term(_XSD + "boolean")), GRAPH)
-        elif name in USER_NEED_LABELS and _ID.match(value):
+        elif name in DESIGN_INPUT_LABELS and _ID.match(value):
             ds.add(run, rdm("exercises"), ds.node("input", value), GRAPH)
         elif name == "output" and value:  # DI-56: the code the run exercises
             source = ds.thing(ds.node("source", value), rdm("SourceFile"), value, GRAPH)

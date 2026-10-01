@@ -29,7 +29,7 @@ ALLURE_PATTERN = re.compile(r'@allure\.(story)\(["\']([^"\']+)["\']\)')
 
 # The Allure label that names a design input (the result-file counterpart of
 # ALLURE_PATTERN).
-USER_NEED_LABELS = ("story",)
+DESIGN_INPUT_LABELS = ("story",)
 
 # Allure statuses.
 _FAILING = {"failed", "broken"}
@@ -95,7 +95,7 @@ def _build_result(data: dict, filename: str) -> TestResult:
         value = str(label.get("value", "")).strip()
         if not value:
             continue
-        if label.get("name") in USER_NEED_LABELS:
+        if label.get("name") in DESIGN_INPUT_LABELS:
             ids.append(value)
         elif label.get("name") == "output":
             outputs.append(value)
@@ -274,11 +274,22 @@ def _tag_ids_in(path: Path, content: str) -> list[str]:
 def _allure_tag(node: ast.AST) -> str | None:
     """The id in ``allure.story("ID")``, else None."""
     if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-            and node.func.attr in USER_NEED_LABELS
+            and node.func.attr in DESIGN_INPUT_LABELS
             and isinstance(node.func.value, ast.Name) and node.func.value.id == "allure"
             and node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)):
         return node.args[0].value
     return None
+
+
+def _module_marks(tree: ast.Module) -> list[str]:
+    """The tags of a module-level ``pytestmark = allure.story(...) | [ ... ]``."""
+    tags: list[str] = []
+    for node in tree.body:
+        if (isinstance(node, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets)):
+            marks = node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value]
+            tags.extend(tag for tag in map(_allure_tag, marks) if tag)
+    return tags
 
 
 def _python_tag_ids(content: str) -> list[str]:
@@ -290,12 +301,7 @@ def _python_tag_ids(content: str) -> list[str]:
         tree = ast.parse(content)
     except (SyntaxError, ValueError):
         return [m.group(2) for m in ALLURE_PATTERN.finditer(content)]
-    ids: list[str] = []
-    for node in tree.body:  # module-level pytestmark = allure.story(...) | [ ... ]
-        if (isinstance(node, ast.Assign)
-                and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets)):
-            marks = node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value]
-            ids.extend(tag for tag in map(_allure_tag, marks) if tag)
+    ids = _module_marks(tree)
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             ids.extend(tag for tag in map(_allure_tag, node.decorator_list) if tag)
@@ -311,12 +317,7 @@ def _python_tests(content: str) -> list[tuple[str, list[str]]] | None:
         tree = ast.parse(content)
     except (SyntaxError, ValueError):
         return None
-    module: list[str] = []
-    for node in tree.body:
-        if (isinstance(node, ast.Assign)
-                and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets)):
-            marks = node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value]
-            module.extend(tag for tag in map(_allure_tag, marks) if tag)
+    module = _module_marks(tree)
 
     def tags_of(node) -> list[str]:
         return [tag for tag in map(_allure_tag, node.decorator_list) if tag]

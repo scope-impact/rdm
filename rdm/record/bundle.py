@@ -16,7 +16,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from rdm.record.sdd import find_dhf_doc
+from rdm.record.sdd import MATRIX_DOC, find_dhf_doc
 from rdm.record.verify import write_verification_file
 
 
@@ -63,8 +63,8 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
     data = write_verification_file(dhf_dir, allure_results_dir, verification_path)
 
     # 2. The rendered traceability matrix (generated, never hand-edited).
-    matrix_path = out_dir / "traceability_matrix.md"
-    template = find_dhf_doc(dhf_dir, "traceability_matrix.md")
+    matrix_path = out_dir / MATRIX_DOC
+    template = find_dhf_doc(dhf_dir, MATRIX_DOC)
     if template is not None:
         import jinja2
         import yaml

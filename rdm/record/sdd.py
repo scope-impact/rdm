@@ -17,9 +17,15 @@ story-audit / pydantic layer so the record pipeline stays lightweight.
 
 from __future__ import annotations
 
+import copy
+from functools import lru_cache
 from pathlib import Path
 
 import yaml
+
+# The traceability-matrix template: an output, rendered from the record, never
+# part of it (DI-58) — the graph leaves it out, the evidence bundle renders it.
+MATRIX_DOC = "traceability_matrix.md"
 
 # Frontmatter marker that identifies a per-context design document. Discovery
 # keys on this, not on filename/folder, so docs are named for their context.
@@ -47,8 +53,18 @@ def parse_frontmatter(text: str) -> dict:
     parts = text.split("---", 2)
     if len(parts) < 3:
         return {}
+    return copy.deepcopy(_load_yaml(parts[1]))  # a copy: callers may change what they get
+
+
+# libyaml when installed (about 10x faster); one parse per distinct block, since
+# a projection or a gate run reads the same documents through many helpers.
+_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
+@lru_cache(maxsize=1024)
+def _load_yaml(block: str) -> dict:
     try:
-        data = yaml.safe_load(parts[1])
+        data = yaml.load(block, Loader=_LOADER)
     except yaml.YAMLError:
         return {}
     return data if isinstance(data, dict) else {}
@@ -127,7 +143,7 @@ def declarations(dhf_dir: Path) -> dict[str, list[str]]:
         entries = list(front.get("user_needs") or [])
         if front.get("kind") == DESIGN_KIND:
             entries += list(front.get("design_inputs") or [])
-        for item in entries if isinstance(entries, list) else []:
+        for item in entries:
             ident = str(item.get("id", "") if isinstance(item, dict) else item).strip()
             if ident:
                 found.setdefault(ident, []).append(where)
@@ -162,9 +178,11 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
     inputs: list[dict] = []
     seen: set[str] = set()
     for doc in find_design_docs(dhf_dir):
-        value = _frontmatter_of(doc).get("design_inputs")
+        front = _frontmatter_of(doc)
+        value = front.get("design_inputs")
         if not isinstance(value, list):
             continue
+        context = str(front.get("context", "")).strip() or doc.stem  # as context_of, without a re-read
         for item in value:
             if not isinstance(item, dict):
                 continue
@@ -178,7 +196,7 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
                     "id": di_id,
                     "text": str(item.get("text", "")).strip(),
                     "traces_to": [str(t).strip() for t in traces if str(t).strip()],
-                    "context": context_of(doc),
+                    "context": context,
                 }
             )
     return inputs
