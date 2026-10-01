@@ -73,7 +73,15 @@ uv run pytest tests/acceptance --alluredir=dhf/allure-results
 uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 uv run rdm story faithfulness --dhf dhf
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+uv run rdm story gate-selftest   # fault-injects a synthetic DHF: proves the release gate blocks
 ```
+
+Record integrity (DI-34/DI-37): every `rdm story verdict` appends to the
+hash-chained `dhf/journal.jsonl` (check with `rdm story journal --verify`;
+never hand-edit it). Rewording a design input fails the design gate until you
+run `uv run rdm story lock` and commit the updated `dhf/design_inputs.lock.json`
+alongside it. A formatting/comment-only test edit (class A) can be re-pinned
+with `rdm story verdict DI-n --carry-forward`; anything else needs a reviewer.
 
 ## Architecture
 

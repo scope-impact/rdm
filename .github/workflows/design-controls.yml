@@ -33,6 +33,9 @@ jobs:
       - name: Release gate (verified + faithful + every user need addressed)
         run: uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 
+      - name: Gate self-test (fault-inject a synthetic DHF; every fault must be blocked)
+        run: uv run rdm story gate-selftest
+
       # ---- Allure report (the living document) ---------------------------------
       # Additive: the gates above already consume the raw *-result.json. These
       # steps render the browsable Allure HTML report + trends and publish it as a

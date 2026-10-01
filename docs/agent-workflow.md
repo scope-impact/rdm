@@ -12,7 +12,9 @@ evidence:
 
 Every link is enforced: a pre-commit hook blocks implementation commits until
 the design record is approved, and CI runs five gates (design-gate →
-acceptance tests → verify → faithfulness → release-gate) on every push. The
+acceptance tests → verify → faithfulness → release-gate) on every push, then
+a fault-injection self-test of the release gate itself (`rdm story
+gate-selftest`). The
 distinctive link is the **faithfulness verdict**: because an agent may have
 written the requirement, the code, *and* the test, an *independent* reviewer
 must prove — with executed mutation probes, clause by clause — that the test

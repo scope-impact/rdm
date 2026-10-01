@@ -141,8 +141,9 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
     """Return the design inputs declared across all per-context design docs.
 
     Each design document owns its design inputs in a ``design_inputs``
-    frontmatter list of ``{id, text, traces_to}`` (``traces_to`` is the user
-    need(s) the input refines). The union across documents is the verification
+    frontmatter list of ``{id, text, traces_to, depends_on}`` (``traces_to`` is
+    the user need(s) the input refines; the optional ``depends_on`` names
+    upstream design inputs, DI-35). The union across documents is the verification
     anchor (tests verify each input via ``@allure.story("DI-…")``). If two
     documents declare the same id, the first by sorted path wins.
     """
@@ -160,11 +161,16 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
                 continue
             seen.add(di_id)
             traces = item.get("traces_to") or []
+            depends = item.get("depends_on") or []
+            if not isinstance(depends, list):
+                depends = [depends]
             inputs.append(
                 {
                     "id": di_id,
                     "text": str(item.get("text", "")).strip(),
                     "traces_to": [str(t).strip() for t in traces if str(t).strip()],
+                    # Upstream design inputs this one builds on (DI-35).
+                    "depends_on": [str(d).strip() for d in depends if str(d).strip()],
                     "context": context_of(doc),
                 }
             )

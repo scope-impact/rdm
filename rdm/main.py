@@ -172,7 +172,24 @@ def handle_story_command(args):
                 faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
                 hash_scope=args.hash_scope,
                 probe=args.probe,
+                carry_forward=args.carry_forward,
             )
+
+        elif args.story_command == 'journal':
+            from rdm.record.journal import journal_command
+            return journal_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                verify=args.verify,
+                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
+            )
+
+        elif args.story_command == 'lock':
+            from rdm.record.anchor import lock_command
+            return lock_command(dhf_dir=Path(args.dhf) if args.dhf else None)
+
+        elif args.story_command == 'gate-selftest':
+            from rdm.story_audit.gate_selftest import gate_selftest_command
+            return gate_selftest_command()
 
         elif args.story_command == 'persona':
             from rdm.record.persona_cmd import persona_command
@@ -208,7 +225,7 @@ def handle_story_command(args):
             print(
                 "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
                 "backlog-validate, design-gate, verify, release-gate, faithfulness, "
-                "verdict, mutation-probe, trace, new-input, or persona"
+                "verdict, mutation-probe, trace, new-input, journal, lock, gate-selftest, or persona"
             )
             return 1
 
@@ -385,12 +402,15 @@ def parse_arguments(arguments):
     verdict_help = 'record an independent faithfulness verdict for a design input (hash-pinned to its test)'
     verdict_parser = story_subparsers.add_parser('verdict', help=verdict_help)
     verdict_parser.add_argument('target', help='the design-input id (DI-…) being reviewed')
-    verdict_parser.add_argument('--verdict', required=True,
-                                choices=['faithful', 'partial', 'unfaithful', 'weak'])
-    verdict_parser.add_argument('--reviewer', required=True,
+    verdict_parser.add_argument('--verdict', choices=['faithful', 'partial', 'unfaithful', 'weak'],
+                                help='the verdict (required unless --carry-forward)')
+    verdict_parser.add_argument('--reviewer',
                                 help='who reviewed (must be independent of the test author)')
-    verdict_parser.add_argument('--rationale', required=True,
+    verdict_parser.add_argument('--rationale',
                                 help='per-clause reasoning incl. the failing mutation(s)')
+    verdict_parser.add_argument('--carry-forward', action='store_true',
+                                help='re-pin a stale verdict without review; class A '
+                                     '(formatting/comment-only) changes only')
     verdict_parser.add_argument('--reviewed-tests', help='comma-separated test names examined')
     verdict_parser.add_argument('--uncovered', help='semicolon-separated requirement clauses NOT covered')
     verdict_parser.add_argument('--hash-scope', choices=['module', 'function'], default='module',
@@ -399,6 +419,23 @@ def parse_arguments(arguments):
                                 help='executed mutation probe as JSON with file/find/replace/test; repeatable')
     verdict_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     verdict_parser.add_argument('--faithfulness', help='Verdicts dir (default: <dhf>/faithfulness)')
+
+    # rdm story journal
+    journal_parser = story_subparsers.add_parser(
+        'journal', help='list or verify the DHF\'s hash-chained event journal')
+    journal_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    journal_parser.add_argument('--verify', action='store_true',
+                                help='recompute the hash chain; fail at the first broken event')
+    journal_parser.add_argument('--faithfulness', help='Verdicts dir (default: <dhf>/faithfulness)')
+
+    # rdm story lock
+    lock_parser = story_subparsers.add_parser(
+        'lock', help='lock every design input\'s wording (content fingerprint); retire removed ids')
+    lock_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+
+    # rdm story gate-selftest
+    story_subparsers.add_parser(
+        'gate-selftest', help='fault-inject a synthetic DHF and prove the release gate blocks every fault')
 
     # rdm story trace
     trace_help = 'show the traceability slice for a user need or design input (forward + backward)'

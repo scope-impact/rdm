@@ -112,6 +112,12 @@ intended output in that document's `## Design Inputs` / `## Design Outputs`
 prose. A context that helps realise an input owned elsewhere lists it under
 `realises` — an input is declared once, never duplicated.
 
+If the input builds on another one, add `depends_on: [DI-m]` to its
+frontmatter entry: a later rewording of DI-m then re-opens this input's
+review too (DI-35). Run `uv run rdm story lock` so the new id's wording is
+recorded in `dhf/design_inputs.lock.json` (DI-37); commit the lock with the
+docs.
+
 **Done when:** `uv run rdm story trace DI-n` shows your input, its need, and
 its owning context.
 
@@ -182,6 +188,17 @@ uv run rdm story verdict DI-n --dhf dhf --verdict faithful \
 ```
 If a clause is uncovered, record `partial` with `--uncovered` — the honest loop
 is *gap found → author strengthens the test → re-review*, not a generous verdict.
+Record surviving probes too (`--probe '{…,"result":"SURVIVED"}'`): the next
+verdict carries them, and the uncovered clauses, as `prior_findings`, and
+`rdm story faithfulness --stale` shows them to the next reviewer (DI-39).
+
+Every recorded verdict is appended to the hash-chained `dhf/journal.jsonl`
+(DI-34) — commit it with the verdict; never edit it by hand.
+
+A stale verdict is classified (DI-36): **A** formatting/comment/docstring-only,
+**B** test changed, **C** requirement changed, **D** unclassifiable (older
+verdict). Only class A may be re-pinned without review:
+`uv run rdm story verdict DI-n --dhf dhf --carry-forward`.
 
 **Done when:** `uv run rdm story faithfulness --dhf dhf` prints `PASSED`.
 
@@ -193,6 +210,7 @@ uv run pytest tests/acceptance --alluredir=dhf/allure-results
 uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 uv run rdm story faithfulness --dhf dhf
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+uv run rdm story gate-selftest
 ```
 Plus the general suite: `uv run pytest tests`, `uv run ruff check .`, and
 `uv run --extra docs mkdocs build --strict` if docs changed.
@@ -252,3 +270,8 @@ prove one clause.
 | faithfulness: *partial / unfaithful / weak* | a clause is not genuinely covered | strengthen the test, then re-review |
 | release-gate: *user need addressed by no design input* | a UN nothing traces to | add a DI with `traces_to`, or remove the need |
 | *orphan tag* (warning) | `@allure.story` id matches no declared DI | declare the DI or fix the tag |
+| design-gate: *DI-n was reworded since it was locked* | DI text changed without acknowledging it | `uv run rdm story lock`, commit the lock with the doc |
+| design-gate: *DI-n reuses a retired id* | an id was removed, then declared again | allocate a new id (`new-input` does) |
+| release-gate: *journal fails verification at seq N* | `journal.jsonl` or a verdict file was edited outside `rdm story verdict` | restore from git; re-record the verdict |
+| faithfulness: *stale [class A]* | formatting/comment-only change | `rdm story verdict DI-n --carry-forward` |
+| gate-selftest: *MISSED* | the release gate no longer catches a fault class | a gate regression — fix the gate, never the self-test |

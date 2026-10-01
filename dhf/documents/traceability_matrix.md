@@ -32,7 +32,7 @@ rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verifica
 | Design Input | Status | Passed | Failed | Skipped | Verifying tests | Output |
 | --- | --- | --- | --- | --- | --- | --- |
 {%- for di in group.design_inputs %}
-| {{ di.design_input }} | {{ di.status }} | {{ di.passed }} | {{ di.failed }} | {{ di.skipped }} | {{ di.tests|join(', ') if di.tests else '—' }} | {{ di.outputs|join(', ') if di.outputs else '—' }} |
+| {{ di.design_input }}{% if di.fingerprint %} <small>`{{ di.fingerprint }}`</small>{% endif %} | {{ di.status }} | {{ di.passed }} | {{ di.failed }} | {{ di.skipped }} | {{ di.tests|join(', ') if di.tests else '—' }} | {{ di.outputs|join(', ') if di.outputs else '—' }} |
 {%- endfor %}
 {% endfor %}
 

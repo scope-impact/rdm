@@ -14,6 +14,7 @@ from pathlib import Path
 import yaml
 
 from rdm.record import allure
+from rdm.record.anchor import fingerprint
 from rdm.record.sdd import design_inputs, registry_user_needs
 
 
@@ -33,6 +34,8 @@ def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
         return {
             "design_input": di["id"],
             "text": di["text"],
+            # Content anchor: pins the exact wording verified (DI-37).
+            "fingerprint": fingerprint(di["text"]),
             "status": verification.status,
             "passed": verification.passed,
             "failed": verification.failed,

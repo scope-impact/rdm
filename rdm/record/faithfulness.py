@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.record.allure import scan_source_tags, scan_tagged_sources
+from rdm.record.fingerprint import source_fingerprint, text_fingerprint
 from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # Faithfulness statuses.
@@ -56,6 +57,19 @@ SCOPE_MODULE = "module"
 DEFAULT_SCOPE = SCOPE_MODULE
 _SCOPES = (SCOPE_FUNCTION, SCOPE_MODULE)
 
+# Change classes of a stale verdict (DI-36), from the normalized fingerprints
+# recorded with the verdict: only class A may be carried forward unreviewed.
+CLASS_TRIVIAL = "A"       # formatting / comment / docstring-only change
+CLASS_TEST = "B"          # the verifying-test source changed
+CLASS_REQUIREMENT = "C"   # the requirement text (or an upstream input's) changed
+CLASS_UNKNOWN = "D"       # no fingerprints on record: cannot classify
+CLASS_LABELS = {
+    CLASS_TRIVIAL: "formatting/comment-only change",
+    CLASS_TEST: "verifying-test change",
+    CLASS_REQUIREMENT: "requirement-text change",
+    CLASS_UNKNOWN: "unclassifiable: no fingerprints on record",
+}
+
 
 @dataclass
 class Verdict:
@@ -74,6 +88,11 @@ class Verdict:
     # Requirement clauses the reviewer found NOT covered by the test. A non-empty
     # list means the test is at best partial, even if `verdict` says faithful.
     uncovered_clauses: list[str] = field(default_factory=list)
+    # Normalized fingerprints at review time (DI-36); "" on older verdicts.
+    text_fingerprint: str = ""
+    tests_fingerprint: str = ""
+    # Findings carried over from earlier verdicts (DI-39).
+    prior_findings: list[dict] = field(default_factory=list)
     source: str = ""
 
 
@@ -90,6 +109,11 @@ class DesignInputFaithfulness:
     hash_scope: str = ""
     probes: list[dict] = field(default_factory=list)
     uncovered_clauses: list[str] = field(default_factory=list)
+    text_fingerprint: str = ""
+    tests_fingerprint: str = ""
+    prior_findings: list[dict] = field(default_factory=list)
+    # A/B/C/D for a stale verdict (DI-36); "" otherwise.
+    change_class: str = ""
 
 
 @dataclass
@@ -130,15 +154,42 @@ def hash_for(di_text: str, test_sources: list[str]) -> str:
     return f"sha256:{digest}"
 
 
-def current_hashes(
-    design_inputs: list[dict], tests_dir: Path | None, scope: str = SCOPE_FUNCTION
-) -> dict[str, str]:
-    """The hash each declared design input's verdict must match to be current.
+def upstream_closure(di_id: str, by_id: dict[str, dict]) -> list[str]:
+    """Every declared input ``di_id`` transitively ``depends_on`` (DI-35).
 
-    ``function`` scope hashes the tagged test functions' source segments;
-    ``module`` scope hashes the full source of every file containing a tagged
-    test for the input (so helper/fixture edits also invalidate the verdict).
+    Sorted, excluding ``di_id`` itself; undeclared ids are skipped (the design
+    gate warns on them) and cycles terminate.
     """
+    seen: set[str] = set()
+    pending = list((by_id.get(di_id) or {}).get("depends_on") or [])
+    while pending:
+        dep = pending.pop()
+        if dep in seen or dep == di_id or dep not in by_id:
+            continue
+        seen.add(dep)
+        pending.extend(by_id[dep].get("depends_on") or [])
+    return sorted(seen)
+
+
+def pinned_text(di: dict, by_id: dict[str, dict]) -> str:
+    """The requirement text a verdict is pinned to: the input's own text plus,
+    when it ``depends_on`` others, the text of its whole upstream closure.
+
+    An input without dependencies pins exactly its own text, so DI-35 causes
+    no retroactive staleness.
+    """
+    text = di.get("text", "")
+    upstream = upstream_closure(di["id"], by_id)
+    if not upstream:
+        return text
+    lines = [f"{u}: {str(by_id[u].get('text', '')).strip()}" for u in upstream]
+    return text.strip() + "\n--depends_on--\n" + "\n".join(lines)
+
+
+def verifying_sources(
+    design_inputs: list[dict], tests_dir: Path | None, scope: str = SCOPE_FUNCTION
+) -> dict[str, list[str]]:
+    """The verifying-test source(s) each design input's pin covers, at ``scope``."""
     if scope == SCOPE_MODULE:
         files_by_id = scan_source_tags(tests_dir) if tests_dir else {}
         sources = {}
@@ -152,7 +203,45 @@ def current_hashes(
             sources[di_id] = texts
     else:
         sources = scan_tagged_sources(tests_dir)
-    return {di["id"]: hash_for(di.get("text", ""), sources.get(di["id"], [])) for di in design_inputs}
+    return sources
+
+
+def current_hashes(
+    design_inputs: list[dict], tests_dir: Path | None, scope: str = SCOPE_FUNCTION
+) -> dict[str, str]:
+    """The hash each declared design input's verdict must match to be current.
+
+    ``function`` scope hashes the tagged test functions' source segments;
+    ``module`` scope hashes the full source of every file containing a tagged
+    test for the input (so helper/fixture edits also invalidate the verdict).
+    A dependent input's hash also covers its upstream closure's text (DI-35).
+    """
+    sources = verifying_sources(design_inputs, tests_dir, scope)
+    by_id = {di["id"]: di for di in design_inputs}
+    return {di["id"]: hash_for(pinned_text(di, by_id), sources.get(di["id"], [])) for di in design_inputs}
+
+
+def current_fingerprints(
+    design_inputs: list[dict], tests_dir: Path | None, scope: str = SCOPE_FUNCTION
+) -> dict[str, tuple[str, str]]:
+    """Normalized ``(text, tests)`` fingerprints per design input (DI-36)."""
+    sources = verifying_sources(design_inputs, tests_dir, scope)
+    by_id = {di["id"]: di for di in design_inputs}
+    return {
+        di["id"]: (text_fingerprint(pinned_text(di, by_id)), source_fingerprint(sources.get(di["id"], [])))
+        for di in design_inputs
+    }
+
+
+def classify_change(recorded: tuple[str, str], current: tuple[str, str]) -> str:
+    """Class of the change behind a stale verdict: requirement beats test."""
+    if not recorded[0] or not recorded[1]:
+        return CLASS_UNKNOWN
+    if recorded[0] != current[0]:
+        return CLASS_REQUIREMENT
+    if recorded[1] != current[1]:
+        return CLASS_TEST
+    return CLASS_TRIVIAL
 
 
 def parse_verdicts(verdicts_dir: Path) -> list[Verdict]:
@@ -163,6 +252,7 @@ def parse_verdicts(verdicts_dir: Path) -> list[Verdict]:
             return None
         uncovered = data.get("uncovered_clauses") or []
         probes = data.get("probes") or []
+        prior = data.get("prior_findings") or []
         return Verdict(
             design_input=di,
             verdict=str(data.get("verdict", "")).strip().lower(),
@@ -172,6 +262,9 @@ def parse_verdicts(verdicts_dir: Path) -> list[Verdict]:
             hash_scope=str(data.get("hash_scope", "")).strip().lower(),
             probes=[p for p in probes if isinstance(p, dict)],
             uncovered_clauses=[str(c).strip() for c in uncovered if str(c).strip()],
+            text_fingerprint=str(data.get("text_fingerprint", "")).strip(),
+            tests_fingerprint=str(data.get("tests_fingerprint", "")).strip(),
+            prior_findings=[p for p in prior if isinstance(p, dict)] if isinstance(prior, list) else [],
             source=filename,
         )
 
@@ -208,6 +301,9 @@ def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | N
         agg.hash_scope = v.hash_scope if v.hash_scope in _SCOPES else SCOPE_FUNCTION
         agg.probes = v.probes
         agg.uncovered_clauses = v.uncovered_clauses
+        agg.text_fingerprint = v.text_fingerprint
+        agg.tests_fingerprint = v.tests_fingerprint
+        agg.prior_findings = v.prior_findings
 
     def _status(agg: DesignInputFaithfulness) -> str:
         if not agg.verdict:
@@ -233,6 +329,17 @@ def reconcile(design_inputs: list[dict], verdicts_dir: Path, tests_dir: Path | N
         fold=_fold,
         status=_status,
     )
+    # Classify each stale verdict by what changed (DI-36), at its own scope.
+    fingerprints: dict[str, dict] = {}
+    for agg in by_id.values():
+        if agg.status != STALE:
+            continue
+        if agg.hash_scope not in fingerprints:
+            fingerprints[agg.hash_scope] = current_fingerprints(design_inputs, tests_dir, agg.hash_scope)
+        agg.change_class = classify_change(
+            (agg.text_fingerprint, agg.tests_fingerprint),
+            fingerprints[agg.hash_scope].get(agg.design_input, ("", "")),
+        )
     return FaithfulnessReport(
         by_id=by_id,
         orphan_ids=orphan_ids,

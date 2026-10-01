@@ -33,6 +33,18 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.record.persona
 
+### `rdm.record.fingerprint`
+
+::: rdm.record.fingerprint
+
+### `rdm.record.journal`
+
+::: rdm.record.journal
+
+### `rdm.record.anchor`
+
+::: rdm.record.anchor
+
 ## Design-controls gates (`rdm story`)
 
 The gates and traceability commands layered on the record core.
@@ -48,6 +60,10 @@ The gates and traceability commands layered on the record core.
 ### `rdm.story_audit.new_input`
 
 ::: rdm.story_audit.new_input
+
+### `rdm.story_audit.gate_selftest`
+
+::: rdm.story_audit.gate_selftest
 
 ## Scaffolding
 

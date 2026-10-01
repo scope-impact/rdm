@@ -35,7 +35,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record import allure, faithfulness
+from rdm.record import allure, anchor, faithfulness, journal
 from rdm.record.reconcile import relevant_orphans
 from rdm.record.sdd import (
     context_of,
@@ -235,7 +235,32 @@ def _coverage_warnings(dhf_dir: Path) -> list[str]:
     for doc, refs in realises_by_context(dhf_dir).items():
         for ref in sorted(refs - di_ids):
             warnings.append(f"{doc.name} realises unknown design input {ref}")
+    for di in design_inputs(dhf_dir):
+        for ref in sorted(set(di.get("depends_on") or []) - di_ids):
+            warnings.append(f"design input {di['id']} depends_on unknown design input {ref}")
     return warnings
+
+
+def check_design_input_lock(dhf_dir: Path) -> tuple[ArtifactCheck | None, list[str]]:
+    """Compare the declared design inputs with the design-input lock (DI-37).
+
+    Returns ``(None, [])`` when no lock exists (the check is opt-in by
+    presence). Otherwise an artifact check that fails on a reworded input or a
+    reused retired id, plus warnings for declared ids not yet locked.
+    """
+    found = anchor.lock_findings(dhf_dir, design_inputs(dhf_dir))
+    if found is None:
+        return None, []
+    failures = found.failures
+    check = ArtifactCheck(
+        name="Design-input lock",
+        path=anchor.lock_path(dhf_dir),
+        exists=True,
+        complete=not failures,
+        reasons=failures,
+        uncommitted=False,
+    )
+    return check, found.warnings
 
 
 def _verification_messages(report) -> list[str]:
@@ -269,6 +294,9 @@ def _faithfulness_messages(report: faithfulness.FaithfulnessReport) -> list[str]
     messages += [
         f"design input {uid} faithfulness review is STALE: its verifying test "
         "changed since the review (re-review the test against the input)"
+        + (f" [class {report.by_id[uid].change_class}: "
+           f"{faithfulness.CLASS_LABELS[report.by_id[uid].change_class]}]"
+           if report.by_id[uid].change_class else "")
         for uid in report.stale
     ]
     messages += [
@@ -374,6 +402,10 @@ def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> Ga
         check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review")
     )
     result.task_warnings = _coverage_warnings(dhf_dir)
+    lock_check, lock_warnings = check_design_input_lock(dhf_dir)
+    if lock_check is not None:
+        result.artifacts.append(lock_check)
+    result.task_warnings += lock_warnings
 
     if allure_results_dir is not None and Path(allure_results_dir).exists():
         result.verification_warnings = _verification_warnings(dhf_dir, Path(allure_results_dir))
@@ -506,6 +538,13 @@ def run_release_gate(
     )
     result.faithful = faith.faithful
     result.blocking += _faithfulness_messages(faith)
+
+    # The record's own event sequence must be intact (DI-34).
+    chain = journal.verify_journal(
+        journal.journal_path(dhf_dir), faithfulness_dir_for(dhf_dir, faithfulness_dir)
+    )
+    if not chain.ok:
+        result.blocking.append(f"journal fails verification at seq {chain.broken_seq}: {chain.reason}")
     result.warnings += [
         f"faithfulness verdict for {tag} matches no declared design input"
         for tag in relevant_orphans(faith.orphan_ids, di_ids)
@@ -629,6 +668,19 @@ def replay_probes(report) -> tuple[int, int, list[str]]:
     return replayed, killed, failures
 
 
+def _prior_findings_lines(prior: list[dict]) -> list[str]:
+    """Human-readable negative knowledge for the review worklist (DI-39)."""
+    lines: list[str] = []
+    for entry in prior:
+        who = f"{entry.get('verdict', '?')} verdict by {entry.get('reviewer') or 'unknown reviewer'}"
+        for probe in entry.get("surviving_probes") or []:
+            lines.append(f"prior finding ({who}): probe {probe.get('result', 'SURVIVED')} -- "
+                         f"{probe.get('file')}: {probe.get('find')!r} -> {probe.get('replace')!r}")
+        for clause in entry.get("uncovered_clauses") or []:
+            lines.append(f"prior finding ({who}): uncovered clause -- {clause}")
+    return lines
+
+
 def story_faithfulness_command(
     dhf_dir: Path | None = None,
     faithfulness_dir: Path | None = None,
@@ -663,9 +715,14 @@ def story_faithfulness_command(
             continue
         shown += 1
         print(f"  {_FAITHFULNESS_MARKS.get(agg.status, '[????]')} {di_id}: {agg.status}"
+              + (f" (class {agg.change_class}: {faithfulness.CLASS_LABELS[agg.change_class]})"
+                 if agg.change_class else "")
               + (f" -- {agg.reviewer}" if agg.reviewer else ""))
         if agg.status != faithfulness.FAITHFUL and agg.rationale:
             print(f"            {agg.rationale}")
+        if stale_only:
+            for line in _prior_findings_lines(agg.prior_findings):
+                print(f"            {line}")
     if stale_only and shown == 0:
         print("  (none -- every design input is faithful)")
 
@@ -729,6 +786,7 @@ def build_trace(
         return {
             "design_input": di["id"],
             "text": di["text"],
+            "fingerprint": anchor.fingerprint(di["text"]),
             "traces_to": di["traces_to"],
             "owned_by": di["context"],
             "realised_by": sorted(realised.get(di["id"], [])),
@@ -780,6 +838,7 @@ def story_trace_command(
     else:
         print(f"Design input {trace['design_input']}")
         print(f"  text:        {trace['text']}")
+        print(f"  fingerprint: {trace['fingerprint']}")
         print(f"  traces_to:   {', '.join(trace['traces_to']) or '— (cross-cutting constraint)'}")
         print(f"  owned by:    {trace['owned_by']}")
         if trace["realised_by"]:
@@ -809,6 +868,7 @@ def record_verdict(
     faithfulness_dir: Path | None = None,
     hash_scope: str = faithfulness.DEFAULT_SCOPE,
     probes: list[dict] | None = None,
+    carried_forward: dict | None = None,
 ) -> Path | None:
     """Write a faithfulness verdict for one design input, hash-pinned to the
     CURRENT verifying-test source (so it is valid for exactly the test reviewed,
@@ -816,16 +876,23 @@ def record_verdict(
     covers (module scope by default -- helper edits re-open the review);
     ``probes`` records the reviewer's executed mutations so the review can be
     replayed. Returns the path, or ``None`` if the id is not a declared design
-    input.
+    input. Every recorded verdict is appended to the DHF journal (DI-34);
+    ``carried_forward`` marks a class-A re-pin (DI-36, see
+    ``carry_forward_verdict``).
     """
     inputs = design_inputs(dhf_dir)
     if design_input_id not in {di["id"] for di in inputs}:
         return None
+    tests_dir = allure.find_tests_dir(dhf_dir)
     test_hash = faithfulness.current_hashes(
-        inputs, allure.find_tests_dir(dhf_dir), scope=hash_scope
+        inputs, tests_dir, scope=hash_scope
     ).get(design_input_id, "")
+    text_fp, tests_fp = faithfulness.current_fingerprints(inputs, tests_dir, hash_scope).get(
+        design_input_id, ("", "")
+    )
     out_dir = faithfulness_dir_for(dhf_dir, faithfulness_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{design_input_id}-faithfulness.json"
     record = {
         "design_input": design_input_id,
         "verdict": verdict,
@@ -836,10 +903,96 @@ def record_verdict(
         "reviewed_tests": reviewed_tests or [],
         "probes": probes or [],
         "uncovered_clauses": uncovered_clauses or [],
+        # Normalized fingerprints so a later staleness can be classified (DI-36).
+        "text_fingerprint": text_fp,
+        "tests_fingerprint": tests_fp,
+        # Negative knowledge from the verdicts this one replaces (DI-39).
+        "prior_findings": _carried_findings(out),
     }
-    out = out_dir / f"{design_input_id}-faithfulness.json"
+    if carried_forward:
+        record["carried_forward"] = carried_forward
     out.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    payload = {
+        "design_input": design_input_id,
+        "verdict": verdict,
+        "reviewer": reviewer,
+        "test_hash": test_hash,
+        "hash_scope": hash_scope,
+        "verdict_sha256": journal.file_sha256(out),
+    }
+    if carried_forward:
+        payload["carried_forward"] = carried_forward
+    journal.append_event(dhf_dir, "verdict", payload)
     return out
+
+
+def _carried_findings(previous_path: Path) -> list[dict]:
+    """The earlier verdict's prior findings plus its own (DI-39).
+
+    Its own findings are the probes that did not kill (survived/equivalent)
+    and the clauses it found uncovered; an earlier verdict without either
+    contributes only what it had already carried.
+    """
+    if not previous_path.exists():
+        return []
+    try:
+        previous = json.loads(previous_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(previous, dict):
+        return []
+    carried = [p for p in previous.get("prior_findings") or [] if isinstance(p, dict)]
+    surviving = [
+        p for p in previous.get("probes") or []
+        if isinstance(p, dict) and str(p.get("result", "")).strip().upper() != "KILLED"
+    ]
+    uncovered = [str(c) for c in previous.get("uncovered_clauses") or [] if str(c).strip()]
+    if surviving or uncovered:
+        carried.append({
+            "verdict": previous.get("verdict", ""),
+            "reviewer": previous.get("reviewer", ""),
+            "test_hash": previous.get("test_hash", ""),
+            "surviving_probes": surviving,
+            "uncovered_clauses": uncovered,
+        })
+    return carried
+
+
+def carry_forward_verdict(
+    dhf_dir: Path, design_input_id: str, faithfulness_dir: Path | None = None
+) -> tuple[Path | None, str]:
+    """Re-pin a stale verdict without a new review -- class A changes only (DI-36).
+
+    Returns ``(path, "")`` on success, or ``(None, reason)`` when refused: the
+    input is undeclared, has no verdict, is not stale, or its change is not a
+    formatting/comment-only (class A) change.
+    """
+    report = run_faithfulness_gate(dhf_dir, faithfulness_dir)
+    agg = report.by_id.get(design_input_id)
+    if agg is None:
+        return None, f"{design_input_id} is not a declared design input"
+    if agg.status != faithfulness.STALE:
+        return None, f"{design_input_id} is {agg.status}, not stale -- nothing to carry forward"
+    if agg.change_class != faithfulness.CLASS_TRIVIAL:
+        return None, (f"{design_input_id} changed with class {agg.change_class} "
+                      f"({faithfulness.CLASS_LABELS[agg.change_class]}); only class A "
+                      "(formatting/comment-only) may be carried forward -- it needs a new review")
+    previous = json.loads(
+        (faithfulness_dir_for(dhf_dir, faithfulness_dir) / f"{design_input_id}-faithfulness.json")
+        .read_text(encoding="utf-8")
+    )
+    out = record_verdict(
+        dhf_dir, design_input_id, previous.get("verdict", ""),
+        reviewer=previous.get("reviewer", ""),
+        rationale=previous.get("rationale", ""),
+        reviewed_tests=previous.get("reviewed_tests") or [],
+        uncovered_clauses=previous.get("uncovered_clauses") or [],
+        faithfulness_dir=faithfulness_dir,
+        hash_scope=agg.hash_scope,
+        probes=previous.get("probes") or [],
+        carried_forward={"class": faithfulness.CLASS_TRIVIAL, "from_hash": agg.reviewed_hash},
+    )
+    return out, ""
 
 
 def story_verdict_command(
@@ -853,6 +1006,7 @@ def story_verdict_command(
     faithfulness_dir: Path | None = None,
     hash_scope: str = faithfulness.DEFAULT_SCOPE,
     probe: list[str] | None = None,
+    carry_forward: bool = False,
 ) -> int:
     """Run `rdm story verdict <DI-id> …`: record an independent faithfulness verdict.
 
@@ -863,8 +1017,18 @@ def story_verdict_command(
     if not dhf.exists():
         print(f"Error: DHF directory not found: {dhf}")
         return 2
+    if carry_forward:
+        out, reason = carry_forward_verdict(dhf, target, faithfulness_dir)
+        if out is None:
+            print(f"Error: carry-forward refused: {reason}")
+            return 1
+        print(f"wrote {out} (carried forward: class A, formatting/comment-only change)")
+        return 0
     if verdict not in _VERDICT_VALUES:
         print(f"Error: --verdict must be one of: {', '.join(_VERDICT_VALUES)}")
+        return 2
+    if not (reviewer or "").strip() or not (rationale or "").strip():
+        print("Error: --reviewer and --rationale are required to record a verdict")
         return 2
     tests = [t.strip() for t in (reviewed_tests or "").split(",") if t.strip()]
     clauses = [c.strip() for c in (uncovered or "").split(";") if c.strip()]

@@ -22,9 +22,12 @@
 | `new-input --context C --text T --traces-to UN[,UN…]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test, checklist; `--list` shows contexts / taken ids / user needs |
 | `design-gate` | design docs + review present, complete, approved (committed); warnings for DI↔tag mismatches |
 | `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix |
-| `faithfulness [--stale] [--replay]` | every design input has a current, independent verdict (hash-pinned; test edits go `stale`); `--stale` lists only the worklist, `--replay` re-executes recorded killing probes and fails on survivors |
-| `release-gate --allure-results DIR` | hard gate: approved + all inputs verified + all faithful + every user need addressed |
-| `verdict DI-n --verdict V --reviewer R --rationale …` | record a faithfulness verdict (`faithful`/`partial`/`unfaithful`/`weak`; `--uncovered` for partial; `--probe` JSON per executed mutation, repeatable; `--hash-scope module\|function`, default module) |
+| `faithfulness [--stale] [--replay]` | every design input has a current, independent verdict (hash-pinned; test edits go `stale`, classified A formatting-only / B test / C requirement / D unclassifiable); `--stale` lists only the worklist with each input's prior findings, `--replay` re-executes recorded killing probes and fails on survivors |
+| `release-gate --allure-results DIR` | hard gate: approved + all inputs verified + all faithful + every user need addressed + intact journal |
+| `gate-selftest` | fault-inject a synthetic DHF: the clean baseline must pass and each fault class must be blocked by name (precision + recall of the release gate) |
+| `verdict DI-n --verdict V --reviewer R --rationale …` | record a faithfulness verdict (`faithful`/`partial`/`unfaithful`/`weak`; `--uncovered` for partial; `--probe` JSON per executed mutation, repeatable; `--hash-scope module\|function`, default module; `--carry-forward` re-pins a class-A stale verdict without review; earlier findings are kept as `prior_findings`; every verdict is journaled) |
+| `journal [--verify]` | list the DHF's hash-chained event journal (`journal.jsonl`); `--verify` recomputes the chain and fails at the first broken event |
+| `lock` | write `design_inputs.lock.json` (each input's content fingerprint; removed ids kept as retired) — the design gate then fails on unacknowledged rewording or id reuse |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
 | `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, verdicts, manifest |
 | `mutation-probe --file F --find A --replace B --test T` | prove a test catches a defect: apply a one-line mutation, run the test, report KILLED/SURVIVED, always restore |
