@@ -16,6 +16,7 @@ so hand-authored formatting and comments in the design document survive.
 from __future__ import annotations
 
 import re
+import textwrap
 from pathlib import Path
 
 from rdm.record.allure import find_tests_dir
@@ -58,7 +59,7 @@ STUB_TEST = '''
 @allure.story("{di_id}")
 @allure.label("output", "TODO")
 def test_{fn_suffix}_not_implemented() -> None:
-    """{di_id}: {text}"""
+    """{doc}"""
     pytest.fail("{di_id} acceptance test not implemented -- replace this stub with real assertions")
 '''
 
@@ -203,7 +204,9 @@ def update_satisfies(doc_path: Path, refs: list[str]) -> list[str]:
 def write_stub_test(test_file: Path, di_id: str, text: str, context: str) -> None:
     """Append a failing stub test tagged with the new design-input id."""
     fn_suffix = di_id.lower().replace("-", "_")
-    stub = STUB_TEST.format(di_id=di_id, fn_suffix=fn_suffix, text=_docstring_escape(text))
+    # Wrapped, so a long requirement does not fail the project's line-length lint.
+    doc = "\n    ".join(textwrap.wrap(f"{di_id}: {_docstring_escape(text)}", 88))
+    stub = STUB_TEST.format(di_id=di_id, fn_suffix=fn_suffix, doc=doc)
     if test_file.exists():
         with test_file.open("a", encoding="utf-8") as handle:
             handle.write(stub)

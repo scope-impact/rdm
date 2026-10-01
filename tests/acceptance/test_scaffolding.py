@@ -140,7 +140,8 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
 
     import yaml
 
-    hostile = 'The "trend" shall use \\ paths and tolerate """ in prose.'
+    hostile = ('The "trend" shall use \\ paths and tolerate """ in prose, and keep doing so for every '
+               'trend a clinician opens, however long the requirement that says so happens to run.')
     assert story_new_input_command(
         dhf_dir=dhf, context="trends", text=hostile, traces_to="UN-002"
     ) == 0
@@ -151,7 +152,10 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     declared = {di["id"]: di for di in design_inputs(dhf)}
     assert declared["DI-5"]["text"] == hostile               # YAML round-trips exactly
     trends_stub = tmp_path / "tests" / "acceptance" / "test_trends.py"
-    ast.parse(trends_stub.read_text())                       # stub is valid Python
+    module = ast.parse(trends_stub.read_text())              # stub is valid Python
+    assert all(len(line) <= 100 for line in trends_stub.read_text().splitlines())  # wrapped for lint
+    stub_fn = next(n for n in module.body if isinstance(n, ast.FunctionDef) and "5" in n.name)
+    assert " ".join(ast.get_docstring(stub_fn).split()) == "DI-5: " + " ".join(hostile.split())
     assert '@allure.story("DI-5")' in trends_stub.read_text()
 
     # A context declaring `design_inputs: []` gets its list filled in place,
