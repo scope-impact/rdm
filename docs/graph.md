@@ -93,7 +93,8 @@ The endpoint's default graph is the union of all of them.
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
 | `…graph/references` | documents' `[[KEY]]` tags, linked to the clauses they name |
-| `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties |
+| `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties, and the rules for derived relations |
+| `…graph/inferred` | what the rules derive (only with `--infer`, and always for the agent server); never stated by the record |
 
 Instances are named `urn:dhf:<project>:<kind>/<id>`, for example
 `urn:dhf:rdm:input/DI-3`. `<project>` defaults to the repository name, so
@@ -245,6 +246,39 @@ covers its parent (`[[62304:5.6.2.a]]` covers `62304:5.6.2`), a longer sibling
 never matches a shorter key, and only `[[…]]` blocks count. So a clause no
 document references in the graph is exactly an item `rdm gap` reports
 missing.
+
+## Derived relations: rules, not facts
+
+The graph stores only what the record states. A relation that follows from
+others is not stored a second time — two copies of one fact drift — but it is
+declared in the vocabulary with the rule that derives it, so a consumer can
+apply the rule instead of finding nothing:
+
+```turtle
+rdm:ServesRule a rdm:Rule ;
+    rdfs:comment "A bounded context serves the user needs that the design inputs it owns or realises trace to." ;
+    rdm:derives rdm:serves ;
+    rdm:construct """CONSTRUCT { ?context rdm:serves ?need } WHERE {
+        { ?input rdm:ownedBy ?context } UNION { ?context rdm:realises ?input }
+        ?input rdm:tracesTo ?need }""" .
+```
+
+```bash
+rdm graph build --infer --store .rdm/graph     # add the derived facts
+rdm graph query --infer 'SELECT ?c ?n WHERE { ?c rdm:serves ?n }'
+```
+
+With `--infer` the results go to their own named graph, `…graph/inferred`, so
+a fact the record states and a fact a rule derived are never confused: in a
+regulated record a derived link is not evidence. The agent server always
+infers, and its `schema` lists every rule. Without `--infer`, nothing is
+added and the rule is still there to read.
+
+Why this way: pruning what can be derived is only safe for a consumer that
+knows the rules. In Fatemi, Ravanbakhsh and Poole's experiment
+([arXiv:1812.03235](https://arxiv.org/abs/1812.03235)), a model given the
+rules over a graph stripped of rule-implied triples beat both a plain model
+and rule inference alone — and the plain model, not given the rules, did worst.
 
 ## Open world
 

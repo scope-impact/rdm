@@ -45,7 +45,7 @@ class Record:
         self.dhf, self.allure_results, self.checklists = Path(dhf), allure_results, checklists
 
     def quads(self) -> list[ox.Quad]:
-        return project(self.dhf, self.allure_results, checklists=self.checklists)
+        return project(self.dhf, self.allure_results, checklists=self.checklists, infer=True)  # DI-62
 
     def store(self) -> ox.Store:
         store = ox.Store()
@@ -58,9 +58,14 @@ def _value(term) -> str | None:
 
 
 def schema() -> dict:
-    """The vocabulary (Turtle) and the prefixes every query may use undeclared."""
+    """The vocabulary (Turtle), the prefixes every query may use undeclared, and
+    the rules for the relations the graph derives rather than stores (DI-62)."""
+    from rdm.graph.rules import rules
+
     return {"prefixes": PREFIXES, "ontology": ONTOLOGY_FILE.read_text(encoding="utf-8"),
-            "graphs": "record, tests, executions, git, checklists, references, ontology "
+            "rules": rules(),
+            "graphs": "record, tests, executions, git, risks, checklists, references, ontology, and "
+                      "inferred: what the rules derive, never stated by the record "
                       "(queried as one union; GRAPH ?g { … } still works)"}
 
 

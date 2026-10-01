@@ -76,12 +76,13 @@ def handle_graph_command(args):
         return graph_cli.graph_build_command(
             dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
             output=_path(args.output), store=_path(args.store), project_name=args.project,
-            checklists=args.checklist,
+            checklists=args.checklist, infer=args.infer,
         )
     if args.graph_command == 'query':
         return graph_cli.graph_query_command(
             args.sparql, store=_path(args.store), dhf_dir=_path(args.dhf),
             allure_results_dir=_path(args.allure_results), fmt=args.format, checklists=args.checklist,
+            infer=args.infer,
         )
     if args.graph_command == 'serve':
         return graph_cli.graph_serve_command(store=_path(args.store), bind=args.bind)
@@ -334,6 +335,8 @@ def _add_graph_parser(subparsers):
     build.add_argument('--project', help='project name in instance IRIs (default: the repository name)')
     build.add_argument('--checklist', action='append',
                        help='add a checklist: built-in name (rdm gap --list) or a .txt/RDF file; repeatable')
+    build.add_argument('--infer', action='store_true',
+                       help="add what the vocabulary's rules derive, in a separate inferred graph")
 
     query = graph_sub.add_parser('query', help='answer a SPARQL query (SELECT/ASK/CONSTRUCT)')
     query.add_argument('sparql', help='the SPARQL query text')
@@ -342,6 +345,8 @@ def _add_graph_parser(subparsers):
     query.add_argument('--allure-results', help='Allure results dir (for the in-memory projection)')
     query.add_argument('--format', choices=['tsv', 'csv', 'json'], default='tsv', help='SELECT result format')
     query.add_argument('--checklist', action='append', help='checklist(s) for the in-memory projection; repeatable')
+    query.add_argument('--infer', action='store_true',
+                       help="include what the vocabulary's rules derive (in-memory projection only)")
 
     validate = graph_sub.add_parser('validate', help='check the graph against the SHACL gate shapes (+ your own)')
     validate.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')

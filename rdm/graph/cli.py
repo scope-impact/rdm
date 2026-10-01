@@ -44,6 +44,7 @@ def graph_build_command(
     store: Path | None = None,
     project_name: str | None = None,
     checklists: list[str] | None = None,
+    infer: bool = False,
 ) -> int:
     """Project the record; write sorted N-Quads and/or (re)build a store."""
     try:
@@ -55,7 +56,7 @@ def graph_build_command(
         print(f"Error: DHF directory not found: {dhf}")
         return 2
     try:
-        quads = project(dhf, allure_results_dir, project_name, checklists)
+        quads = project(dhf, allure_results_dir, project_name, checklists, infer=infer)
     except FileNotFoundError as error:
         print(f"Error: {error}")
         return 2
@@ -79,6 +80,7 @@ def graph_query_command(
     allure_results_dir: Path | None = None,
     fmt: str = "tsv",
     checklists: list[str] | None = None,
+    infer: bool = False,
 ) -> int:
     """Answer a SPARQL query over a store, or over a fresh in-memory projection."""
     try:
@@ -98,7 +100,7 @@ def graph_query_command(
             print(f"Error: DHF directory not found: {dhf}")
             return 2
         db = ox.Store()
-        db.extend(project(dhf, allure_results_dir, checklists=checklists))
+        db.extend(project(dhf, allure_results_dir, checklists=checklists, infer=infer))
     try:
         # Named graphs are queried as one dataset, as `rdm graph serve` does.
         result = db.query(with_prefixes(sparql), use_default_graph_as_union=True)

@@ -8,6 +8,13 @@
   declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
   attachment (DI-57).
 
+### Added — rules for derived relations
+- Each relation the graph derives rather than stores is declared in the
+  vocabulary with its SPARQL CONSTRUCT (`rdm:Rule`); the first,
+  `rdm:serves`, gives a context's user needs. The agent server's `schema`
+  lists the rules and its queries see the results; `rdm graph build --infer`
+  and `query --infer` add them to a separate inferred graph (DI-62).
+
 ### Added — evidence tied to its version and its test
 - `rdm.pytest_plugin` labels each tagged run with the commit under test and a
   dirty working tree (DI-59); the graph links run → commit and the record →

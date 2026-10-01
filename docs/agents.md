@@ -34,8 +34,11 @@ settings.
 | --- | --- |
 | `trace` | a `UN-n`, `DI-n` or risk id: text, contexts, owning document and last commit, needs refined, tagged tests and runs, risks controlled; for a risk, its chain, scores and controlling inputs ([risk register](risk.md)) |
 | `query` | any read-only SPARQL (SELECT, ASK, CONSTRUCT, DESCRIBE), prefixes predeclared, capped at 200 rows by default with `truncated` saying when |
-| `schema` | the vocabulary and prefixes, so the agent can write its own queries |
+| `schema` | the vocabulary, prefixes and the rules for derived relations, so the agent can write its own queries |
 | `validate` | the gate shapes' results: violations and warnings |
+
+Queries see the derived relations too (for example `rdm:serves`), in the
+separate inferred graph ([derived relations](graph.md#derived-relations-rules-not-facts)).
 
 Every call projects the record afresh (a fraction of a second), so an agent
 editing a branch sees its own edits on the next call — there is no store to

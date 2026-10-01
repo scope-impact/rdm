@@ -373,9 +373,12 @@ def project(
     allure_results_dir: Path | None = None,
     project_name: str | None = None,
     checklists: list[str] | None = None,
+    infer: bool = False,
 ) -> list[ox.Quad]:
     """The record as quads, de-duplicated, in a stable order. ``checklists``
-    (built-in names or files) adds the checklists and references graphs."""
+    (built-in names or files) adds the checklists and references graphs;
+    ``infer`` adds what the vocabulary's rules derive, in the inferred graph
+    (DI-62)."""
     dhf = Path(dhf_dir).resolve()
     root = _repo_root(dhf.parent) or dhf.parent
     ds = _Dataset(project_name or default_project(dhf))
@@ -397,6 +400,10 @@ def project(
         ds.quads.extend(reference_quads(controlled_documents(dhf, root), lambda doc_id: ds.node("doc", doc_id),
                                         clauses, ds.graph("references")))
     _ontology(ds)
+    if infer:
+        from rdm.graph.rules import infer as derive
+
+        ds.quads.extend(derive(ds.quads, ds.graph("inferred")))
     unique = {str(q): q for q in ds.quads}
     return [unique[k] for k in sorted(unique)]
 

@@ -50,10 +50,14 @@ flowchart LR
 
 ## Derived, never declared
 
+Where a derived fact is a relation in the graph, the vocabulary declares it
+with the rule that derives it, and `--infer` adds it in a separate graph
+([derived relations](graph.md#derived-relations-rules-not-facts)).
+
 | Fact | Derived from |
 | --- | --- |
 | a design input's owning context | the design document that declares it |
-| the user needs a context serves | its design inputs' `traces_to`, and those it `realises` |
+| the user needs a context serves (`rdm:serves`) | its design inputs' `traces_to`, and those it `realises` — `rdm:ServesRule` |
 | the tests a file defines | the tagged functions in it |
 | which test a run ran | the run's full name, matched to the test function |
 | the commit a run tested | the `commit` label `rdm.pytest_plugin` writes at run time |
