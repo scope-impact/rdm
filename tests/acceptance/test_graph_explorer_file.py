@@ -33,6 +33,9 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
     type statements, chosen classes left out on request, the endpoint as the
     connection, in Graph Explorer's graph-export envelope."""
     dhf, results = _record(tmp_path)
+    run = results / "r1-result.json"  # a run with evidence: a step and an attachment
+    run.write_text(json.dumps({**json.loads(run.read_text()), "steps": [{"name": "alarm sounds", "status": "passed"}],
+                               "attachments": [{"name": "log", "source": "l-attachment.txt"}]}))
     lists = tmp_path / "mini.txt"
     lists.write_text("STD:1 a clause\n")
     quads = project(dhf, results, checklists=[str(lists)])
@@ -73,21 +76,21 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
         trimmed = explorer_graph(quads, exclude=["TestRun"])["data"]
         assert "urn:dhf:acme:run/r1-result" not in trimmed["vertices"]
         assert not any("run/r1-result" in e for e in trimmed["edges"])
-        # the run's story label hung only from the run: it goes with it
-        run_details = {v for v in vertices if v.startswith("urn:dhf:acme:label/")}
-        assert run_details
+        # the run's step and attachment hung only from the run: they go with it
+        run_details = {v for v in vertices if v.startswith(("urn:dhf:acme:step/", "urn:dhf:acme:attachment/"))}
+        assert len(run_details) == 2
         assert set(trimmed["vertices"]) == vertices - {"urn:dhf:acme:run/r1-result"} - run_details
         # a record node with no links at all is a record island, and stays
         lone_need = ox.Quad(ox.NamedNode("urn:dhf:acme:need/UN-LONE"), ox.NamedNode(TYPE),
                             ox.NamedNode(NS + "UserNeed"), ox.NamedNode("urn:dhf:acme:graph/record"))
         island = explorer_graph(quads + [lone_need], exclude=["TestRun"])["data"]
         assert "urn:dhf:acme:need/UN-LONE" in island["vertices"]
-        # leaving out labels keeps the run: it links to the record (run -> design input)
-        assert "urn:dhf:acme:run/r1-result" in explorer_graph(quads, exclude=["ResultLabel"])["data"]["vertices"]
+        # leaving out steps keeps the run: it links to the record (run -> design input)
+        assert "urn:dhf:acme:run/r1-result" in explorer_graph(quads, exclude=["Step"])["data"]["vertices"]
         # with nothing left out, nothing is pruned: a lone run detail stays
-        lone = ox.Quad(ox.NamedNode("urn:dhf:acme:label/lone"), ox.NamedNode(TYPE), ox.NamedNode(NS + "ResultLabel"),
+        lone = ox.Quad(ox.NamedNode("urn:dhf:acme:step/lone"), ox.NamedNode(TYPE), ox.NamedNode(NS + "Step"),
                        ox.NamedNode("urn:dhf:acme:graph/executions"))
-        assert "urn:dhf:acme:label/lone" in explorer_graph(quads + [lone])["data"]["vertices"]
+        assert "urn:dhf:acme:step/lone" in explorer_graph(quads + [lone])["data"]["vertices"]
 
     with clause("The command writes it, from a fresh projection or from a built store"):
         out = tmp_path / "acme.graph.json"

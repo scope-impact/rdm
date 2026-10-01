@@ -1,8 +1,9 @@
-"""Acceptance tests for Allure results as RDF (DI-54, DI-55, DI-56, see dhf/).
+"""Acceptance tests for Allure results as RDF (DI-54, DI-56, see dhf/).
 
 Tagged `@allure.story`, over the real projection and the agent's trace, from a
 crafted Allure results directory: two executions of one test (one failed),
-parameters, labels, links, and a container with before and after fixtures.
+parameters, labels, links, and a container with before and after fixtures —
+the last three of which the graph deliberately leaves out.
 Skips cleanly if allure-pytest or the `graph` extra is not installed.
 """
 
@@ -23,7 +24,6 @@ from tests.acceptance.test_graph import _record  # noqa: E402
 
 RDM = "https://github.com/scope-impact/rdm/ns#"
 PROV = "http://www.w3.org/ns/prov#"
-LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 P = "urn:dhf:acme:"
 
 
@@ -60,8 +60,8 @@ def _facts(quads, node: str) -> set[tuple[str, str]]:
 @allure.story("DI-54")
 @allure.label("output", "rdm/graph/allure.py")
 def test_results_are_projected_in_full(tmp_path: Path) -> None:
-    """DI-54: uuid, full name, times, status message and trace, parameters,
-    every label as name and value, links; runs of one test share a test case."""
+    """DI-54: uuid, full name, times, status message and trace, parameters;
+    not labels as nodes, links, a test case per history id, or fixtures."""
     dhf, results = _record(tmp_path)
     _results(results)
     quads = project(dhf, results)
@@ -79,38 +79,17 @@ def test_results_are_projected_in_full(tmp_path: Path) -> None:
         param = _facts(quads, P + "parameter/a-result/1")
         assert ("parameter", P + "parameter/a-result/1") in a
         assert {("name", "volume"), ("value", "80")} <= param
-    with clause("every label, as name and value"):
-        labels = {(dict(_facts(quads, o))["name"], dict(_facts(quads, o))["value"]) for p, o in a if p == "hasLabel"}
-        assert labels == {("story", "DI-1"), ("output", "src/alarms.py"), ("suite", "alarms")}
-    with clause("links that are IRIs, as rdfs:seeAlso"):
-        assert ("http://www.w3.org/2000/01/rdf-schema#seeAlso", "https://tracker.example/ALM-7") in a
-        assert not any(o == "not a url" for _, o in a)
-    with clause("runs of one test share its test case"):
-        case = P + "testcase/h-alarm"
-        assert ("runOf", case) in a and ("runOf", case) in b
-        assert (LABEL, "tests.test_alarms#test_alarm") in _facts(quads, case)
-
-
-@allure.story("DI-55")
-@allure.label("output", "rdm/graph/allure.py")
-def test_container_fixtures_link_to_the_runs_they_served(tmp_path: Path) -> None:
-    """DI-55: each before and after fixture, with name, status, times, steps and
-    attachments, linked to the runs it set up or tore down."""
-    dhf, results = _record(tmp_path)
-    _results(results)
-    quads = project(dhf, results)
-    before, after = _facts(quads, P + "fixture/c-container/before/1"), _facts(quads, P + "fixture/c-container/after/1")
-    attach("before fixture", sorted(before))
-    with clause("a before fixture with its name, status, times, steps and attachments"):
-        assert {("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", RDM + "Fixture"), (LABEL, "tmp_path"),
-                ("phase", "before"), ("status", "passed"), ("prov:startedAtTime", "2026-09-21T14:13:19.000Z"),
-                ("attachment", P + "attachment/s-attachment.txt"),
-                ("step", P + "step/c-container/before/1/1")} <= before
-    with clause("it sets up the runs it served, and only those that exist"):
-        assert {o for p, o in before if p == "setsUp"} == {P + "run/a-result", P + "run/b-result"}
-    with clause("an after fixture tears them down"):
-        assert ("phase", "after") in after
-        assert {o for p, o in after if p == "tearsDown"} == {P + "run/a-result", P + "run/b-result"}
+    with clause("not projected: labels as nodes, links, a test case per history id, container fixtures"):
+        predicates = {q.predicate.value for q in quads}
+        nodes = {q.subject.value for q in quads}
+        assert not predicates & {RDM + "hasLabel", RDM + "runOf", RDM + "setsUp", RDM + "tearsDown",
+                                 "http://www.w3.org/2000/01/rdf-schema#seeAlso"}
+        assert not any(n.startswith((P + "label/", P + "testcase/", P + "fixture/")) for n in nodes)
+        executions = [q for q in quads if q.graph_name.value.endswith("graph/executions")]
+        assert not any("tracker.example" in q.object.value or q.object.value == "alarms" for q in executions)
+        assert not any("c-container" in n or "s-attachment" in n for n in nodes)  # nothing from the container
+    with clause("story and output labels still link the run to its design input and its code"):
+        assert ("exercises", P + "input/DI-1") in a and ("exercisesOutput", P + "source/src/alarms.py") in a
 
 
 @allure.story("DI-56")

@@ -1,16 +1,14 @@
 """
-Allure results as RDF (DI-53..DI-56).
+Allure results as RDF (DI-53, DI-54, DI-56).
 
 Each ``*-result.json`` becomes an ``rdm:TestRun`` (a ``prov:Activity``) with
-everything Allure recorded about it: uuid, full name, start and end times,
-status and its message and trace, parameters, every label (as a name/value
-pair, so an unknown label needs no vocabulary change), links, steps and
-attachments. Runs of one test across executions share an ``rdm:TestCase``
-(Allure's history id). ``output`` labels link a run to the source files it
-exercises; ``story`` labels to the design inputs it verifies.
-Each ``*-container.json`` contributes its before and after fixtures, linked
-to the runs they served. Attachment content stays in the files; the graph
-holds the reference.
+what counts as evidence: uuid, full name, start and end times, status and its
+message and trace, parameters, steps and attachments. ``story`` labels link a
+run to the design inputs it verifies, ``output`` labels to the source files it
+exercises. Nothing else is projected (Design Review 18): other labels, links,
+test cases and container fixtures repeat the record or say nothing about
+design controls; the raw results keep them, in the evidence bundle.
+Attachment content stays in the files; the graph holds the reference.
 """
 
 from __future__ import annotations
@@ -21,7 +19,7 @@ from pathlib import Path
 
 import pyoxigraph as ox
 
-from rdm.graph.project import _DCT, _ID, _PROV, _RDFS, _XSD, _Dataset, _term, rdm
+from rdm.graph.project import _DCT, _ID, _PROV, _XSD, _Dataset, _term, rdm
 from rdm.record.allure import USER_NEED_LABELS
 
 GRAPH = "executions"
@@ -44,7 +42,7 @@ def _times(ds: _Dataset, node: ox.NamedNode, raw: dict) -> None:
 
 
 def _evidence(ds: _Dataset, owner: ox.NamedNode, raw: dict, scope: str, key: str = "") -> None:
-    """Attachments and (recursively) steps of a run, step or fixture (DI-53)."""
+    """Attachments and (recursively) steps of a run or step (DI-53)."""
     for item in raw.get("attachments") or []:
         if isinstance(item, dict) and item.get("source"):
             source = str(item["source"])
@@ -66,7 +64,7 @@ def _evidence(ds: _Dataset, owner: ox.NamedNode, raw: dict, scope: str, key: str
         _evidence(ds, node, step, scope, position)
 
 
-def _result(ds: _Dataset, path: Path, raw: dict) -> tuple[str, ox.NamedNode]:
+def _result(ds: _Dataset, path: Path, raw: dict) -> None:
     stem = path.stem
     run = ds.thing(ds.node("run", stem), rdm("TestRun"), str(raw.get("name") or stem), GRAPH)
     ds.add(run, rdm("status"), str(raw.get("status", "unknown")), GRAPH)
@@ -79,10 +77,6 @@ def _result(ds: _Dataset, path: Path, raw: dict) -> tuple[str, ox.NamedNode]:
     for key, prop in (("message", "statusMessage"), ("trace", "statusTrace")):
         if details.get(key):
             ds.add(run, rdm(prop), str(details[key]), GRAPH)
-    if raw.get("historyId"):  # one test case across executions
-        case = ds.thing(ds.node("testcase", str(raw["historyId"])), rdm("TestCase"),
-                        str(raw.get("fullName") or raw.get("name") or raw["historyId"]), GRAPH)
-        ds.add(run, rdm("runOf"), case, GRAPH)
     for n, param in enumerate(raw.get("parameters") or [], 1):
         if isinstance(param, dict) and param.get("name"):
             node = ds.thing(ds.node("parameter", f"{stem}/{n}"), rdm("Parameter"),
@@ -90,28 +84,17 @@ def _result(ds: _Dataset, path: Path, raw: dict) -> tuple[str, ox.NamedNode]:
             ds.add(node, rdm("name"), str(param["name"]), GRAPH)
             ds.add(node, rdm("value"), str(param.get("value", "")), GRAPH)
             ds.add(run, rdm("parameter"), node, GRAPH)
-    for n, label in enumerate(raw.get("labels") or [], 1):
+    for label in raw.get("labels") or []:
         if not isinstance(label, dict) or not label.get("name"):
             continue
         name, value = str(label["name"]), str(label.get("value", "")).strip()
-        node = ds.thing(ds.node("label", f"{stem}/{n}"), rdm("ResultLabel"), f"{name}={value}", GRAPH)
-        ds.add(node, rdm("name"), name, GRAPH)
-        ds.add(node, rdm("value"), value, GRAPH)
-        ds.add(run, rdm("hasLabel"), node, GRAPH)
         if name in USER_NEED_LABELS and _ID.match(value):
             ds.add(run, rdm("exercises"), ds.node("input", value), GRAPH)
         elif name == "output" and value:  # DI-56: the code the run exercises
             source = ds.thing(ds.node("source", value), rdm("SourceFile"), value, GRAPH)
             ds.add(source, rdm("path"), value, GRAPH)
             ds.add(run, rdm("exercisesOutput"), source, GRAPH)
-    for link in raw.get("links") or []:
-        if isinstance(link, dict) and link.get("url"):
-            try:
-                ds.add(run, _term(_RDFS + "seeAlso"), ox.NamedNode(str(link["url"])), GRAPH)
-            except ValueError:
-                continue  # not an IRI: nothing to point at
     _evidence(ds, run, raw, stem)
-    return str(raw.get("uuid") or ""), run
 
 
 def _load(path: Path) -> dict | None:
@@ -123,30 +106,8 @@ def _load(path: Path) -> dict | None:
 
 
 def project_results(ds: _Dataset, results_dir: Path) -> None:
-    """Every result and container in an Allure results directory, as quads."""
-    results_dir = Path(results_dir)
-    runs: dict[str, ox.NamedNode] = {}
-    for path in sorted(results_dir.glob("*-result.json")):
+    """Every result in an Allure results directory, as quads."""
+    for path in sorted(Path(results_dir).glob("*-result.json")):
         raw = _load(path)
         if raw is not None:
-            uuid, run = _result(ds, path, raw)
-            if uuid:
-                runs[uuid] = run
-    for path in sorted(results_dir.glob("*-container.json")):  # DI-55: fixtures
-        raw = _load(path)
-        if raw is None:
-            continue
-        served = [runs[c] for c in raw.get("children") or [] if c in runs]
-        for phase, key, link in (("before", "befores", "setsUp"), ("after", "afters", "tearsDown")):
-            for n, fixture in enumerate(raw.get(key) or [], 1):
-                if not isinstance(fixture, dict):
-                    continue
-                scope = f"{path.stem}/{phase}/{n}"
-                node = ds.thing(ds.node("fixture", scope), rdm("Fixture"), str(fixture.get("name") or scope), GRAPH)
-                ds.add(node, rdm("phase"), phase, GRAPH)
-                if fixture.get("status"):
-                    ds.add(node, rdm("status"), str(fixture["status"]), GRAPH)
-                _times(ds, node, fixture)
-                _evidence(ds, node, fixture, scope)
-                for run in served:
-                    ds.add(node, rdm(link), run, GRAPH)
+            _result(ds, path, raw)

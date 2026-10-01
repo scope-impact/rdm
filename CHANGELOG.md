@@ -8,6 +8,15 @@
   declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
   attachment (DI-57).
 
+### Removed — noise from the graph
+- Allure labels as nodes (565 in RDM's own graph), links (`rdfs:seeAlso`),
+  test cases (`rdm:runOf`) and container fixtures (DI-55, retired) are no
+  longer projected: they repeated the record or said nothing about design
+  controls. `story` and `output` labels still become `rdm:exercises` and
+  `rdm:exercisesOutput`; the raw results stay in the evidence bundle (DI-54).
+- The traceability matrix template is not projected, and its
+  `prov:wasDerivedFrom` edges are gone (DI-58).
+
 ### Changed — a context's user needs are derived
 - `satisfies` is gone from design documents: the needs a context serves follow
   from its design inputs' `traces_to` (owned or realised). The design gate's
@@ -22,8 +31,7 @@
 ### Added — no island documents
 - The architecture declares the bounded contexts and their parts
   (`contexts:`), a document names the documents it relies on
-  (`references:`), and the traceability matrix links to its sources; a
-  context the architecture omits warns, a dangling reference fails
+  (`references:`); a context the architecture omits warns, a dangling reference fails
   `rdm graph validate` (DI-58).
 
 ### Fixed — Graph Explorer
@@ -37,11 +45,9 @@
   (DI-31, DI-40).
 
 ### Added — Allure results as RDF
-- `rdm/graph/allure.py`: each result in full — uuid, full name, times, status
-  message and trace, parameters, labels, links, and a test case shared by the
-  runs of one test (DI-54); container fixtures linked to the runs they served
-  (DI-55); output labels linking runs to source files, listed by `trace`
-  (DI-56).
+- `rdm/graph/allure.py`: each result's uuid, full name, times, status
+  message and trace, and parameters (DI-54); output labels linking runs to
+  source files, listed by `trace` (DI-56).
 
 ### Added — test evidence
 - `rdm story evidence-bundle` keeps the executed Allure results, with every

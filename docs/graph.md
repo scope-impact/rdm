@@ -92,8 +92,7 @@ Graph Explorer keeps these settings in the browser, so you set them once:
 
 Graph Explorer v3.2.2's *Search → Query* panel runs a `SELECT` against the
 endpoint and lists the rows (paste the query, **Submit**) — for example every
-risk with its controls, their verifying tests and runs, or the Markdown each
-run links to (`?run rdfs:seeAlso ?markdown`, from the plugin's links, DI-57).
+risk with its controls, their verifying tests and runs.
 It cannot draw those rows, and it asks for `CONSTRUCT` results as JSON, which
 a standard SPARQL endpoint rejects: build pictures from search and expansion
 or a graph file (below), and use `rdm graph query` for scripted questions.
@@ -141,9 +140,8 @@ rdm graph explorer-file --store .rdm/graph -o rdm-core.graph.json \
 The file lists every node and every link between nodes; Graph Explorer
 fetches labels and properties from the endpoint (`--endpoint`, default
 `http://localhost:7878`). `--exclude` also leaves out what hangs only from the
-excluded nodes — without test runs, their steps, attachments, labels,
-parameters, fixtures and test cases go too, so the core view of RDM's own
-record is about 140 nodes and 330 links rather than a thousand islands. Expect a cluster per bounded context — its design
+excluded nodes — without test runs, their steps, attachments and parameters
+go too, so the core view holds the record and nothing that floats. Expect a cluster per bounded context — its design
 inputs, their needs, documents and tests — and one per checklist.
 
 ## What is in the graph
@@ -155,7 +153,7 @@ The endpoint's default graph is the union of all of them.
 |---|---|
 | `urn:dhf:<project>:graph/record` | user needs, bounded contexts, design inputs, controlled documents |
 | `…graph/tests` | verification tags found in test sources |
-| `…graph/executions` | Allure results in full (only with `--allure-results`): each run's status, times, failure message and trace, parameters, labels, links, steps and attachments; the test case its runs share; container fixtures; and the source files it exercises |
+| `…graph/executions` | Allure results (only with `--allure-results`): each run's status, times, failure message and trace, parameters, steps and attachments, the design inputs it exercises and the source files it exercises |
 | `…graph/git` | each design document's latest commit and its author, and the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`) |
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
@@ -182,19 +180,19 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 
 ## Test results, in full
 
-`--allure-results` brings in everything Allure recorded, not just pass or fail:
+`--allure-results` brings in what each run says as evidence, not just pass or
+fail — and leaves out what the record already holds or what says nothing about
+design controls:
 
 | In Allure | In the graph |
 | --- | --- |
 | a result file | an `rdm:TestRun` (a `prov:Activity`) with `dcterms:identifier` (uuid), `rdm:fullName`, `rdm:status`, `prov:startedAtTime` / `prov:endedAtTime` |
 | `statusDetails` | `rdm:statusMessage`, `rdm:statusTrace` |
-| `historyId` | `rdm:runOf` an `rdm:TestCase` the runs of one test share, across executions |
-| `labels` | `rdm:hasLabel`, each a name and a value; `story` also as `rdm:exercises` (the design input); `epic` and `feature` are the user need and bounded context the plugin adds (DI-57) |
+| a `story` label | `rdm:exercises` the design input |
 | an `output` label | `rdm:exercisesOutput` an `rdm:SourceFile` — the code the run exercises |
 | `parameters` | `rdm:parameter`, each a name and a value |
-| `links` | `rdfs:seeAlso` |
 | `steps`, `attachments` | `rdm:step` (nested, ordered), `rdm:attachment` (name, media type, file) |
-| a container's `befores` / `afters` | an `rdm:Fixture` that `rdm:setsUp` / `rdm:tearsDown` its runs |
+| other labels, `links`, `historyId`, containers | not projected: `epic` / `feature` and the links are written from the record (DI-57), the rest is runner metadata, a test case is one-to-one with its run, and fixtures (`tmp_path`, `capsys`) say nothing about a design input. The raw files stay in the evidence bundle. |
 
 So the chain runs all the way to code — design input → test → run → source
 file — from labels the tests already carry, and `trace` lists a design
@@ -231,9 +229,10 @@ references: [DC-001]
   document declares contexts, `rdm graph validate` warns about a context
   whose design document it does not declare;
 - `dcterms:references` from a document to each document it names; naming a
-  document the record does not hold is a violation;
-- the generated traceability matrix `prov:wasDerivedFrom` the design
-  documents and the document declaring the user needs.
+  document the record does not hold is a violation.
+
+The traceability matrix template is not in the graph: it is an output,
+rendered from what the graph already holds.
 
 So no part of the record is an island: in RDM's own graph, the core view
 (`--exclude TestRun --exclude Activity --exclude Agent`) is one connected

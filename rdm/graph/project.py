@@ -41,7 +41,7 @@ from rdm.record.sdd import (
     user_need_texts,
 )
 
-MATRIX_DOC = "traceability_matrix.md"  # the generated traceability matrix (rdm.record.bundle)
+MATRIX_DOC = "traceability_matrix.md"  # the matrix template, an output: not projected (DI-58)
 
 NS = "https://github.com/scope-impact/rdm/ns#"
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
@@ -133,7 +133,10 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "record"
     # Controlled documents (frontmatter id), keyed by that id.
     doc_by_path = {}
+    matrix = find_dhf_doc(dhf, MATRIX_DOC)  # DI-58: an output, rendered from the record
     for entry in controlled_documents(dhf, root):
+        if matrix is not None and entry["file"] == matrix:
+            continue
         doc = ds.thing(ds.node("doc", entry["id"]), rdm("Document"), entry["id"], g)
         ds.add(doc, _term(_DCT + "identifier"), entry["id"], g)
         if entry.get("title"):
@@ -187,17 +190,6 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
             ds.add(node, rdm("tracesTo"), ds.node("need", un), g)
         if di["id"] in declared_in:
             ds.add(node, rdm("declaredIn"), declared_in[di["id"]], g)
-
-    # DI-58: the traceability matrix is generated from the design documents
-    # and the documents declaring the user needs.
-    matrix_path = find_dhf_doc(dhf, MATRIX_DOC)
-    matrix = doc_by_path.get(_rel(matrix_path, root)) if matrix_path else None
-    if matrix is not None:
-        sources = {doc_by_path.get(_rel(path, root)) for path in find_design_docs(dhf)}
-        sources |= {doc_by_path.get(_rel(dhf / where, root)) for un in registry_user_needs(dhf)
-                    for where in declared.get(un, [])[:1]}
-        for source in sorted((s for s in sources if s is not None), key=lambda n: n.value):
-            ds.add(matrix, _term(_PROV + "wasDerivedFrom"), source, g)
 
 
 def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> None:

@@ -27,7 +27,7 @@ DANGLING = "references a document the record does not hold"
 
 def _dhf(tmp_path: Path, architecture: str | None) -> Path:
     """Needs in a V&V plan, two contexts with design documents, a document
-    control procedure, a generated matrix, and (optionally) an architecture."""
+    control procedure, the matrix template, and (optionally) an architecture."""
     docs = tmp_path / "acme" / "dhf" / "documents"
     (docs / "design").mkdir(parents=True)
     (docs / "vv.md").write_text("---\nid: VVP-1\nuser_needs:\n  - {id: UN-001, text: a need}\n---\n")
@@ -51,7 +51,7 @@ def _ask(store, body: str) -> bool:
 @allure.label("output", "rdm/graph/shapes.ttl")
 def test_documents_link_from_the_record(tmp_path: Path) -> None:
     """DI-58: contexts link to the document declaring them (with their part),
-    documents to the documents they reference, the matrix to its sources; a
+    documents to the documents they reference, not the matrix template; a
     warning for an undeclared context once any is declared; a violation for a
     reference to a document the record does not hold."""
     dhf = _dhf(tmp_path / "declared", "---\nid: ARCH-1\ncontexts:\n  - {id: alarms, part: Record}\n"
@@ -70,10 +70,9 @@ def test_documents_link_from_the_record(tmp_path: Path) -> None:
         assert not _ask(store, "<urn:dhf:acme:context/ui> rdm:declaredIn ?d")
     with clause("each controlled document links to the controlled documents its references frontmatter names"):
         assert _ask(store, f"{doc('ARCH-1')} dcterms:references {doc('DC-1')} . {doc('DC-1')} a rdm:Document")
-    with clause("the traceability matrix links to the design documents and the user-need registry"):
-        sources = {row["s"].value for row in store.query(
-            PREFIXES + f"SELECT ?s WHERE {{ {doc('TM-1')} prov:wasDerivedFrom ?s }}", use_default_graph_as_union=True)}
-        assert sources == {f"urn:dhf:acme:doc/{d}" for d in ("SDS-ALARMS", "SDS-UI", "VVP-1")}
+    with clause("the traceability matrix template, an output, is not projected"):
+        assert not any("doc/TM-1" in q.subject.value or "doc/TM-1" in q.object.value for q in quads)
+        assert _ask(store, f"{doc('DC-1')} a rdm:Document")  # other controlled documents still are
     with clause("a shape warns on a context no document declares, once any document declares contexts"):
         warned = {r.label for r in report if r.message == UNDECLARED}
         assert warned == {"ui"} and all(r.severity == "Warning" for r in report if r.message == UNDECLARED)
