@@ -50,8 +50,8 @@ def cli(raw_arguments):
     elif args.command == 'gap' and args.coverage:
         # In coverage mode, checklist + files can all be checklists or source
         # files: a checklist is a .txt path or a built-in checklist name.
-        from rdm.gaps import _builtin_checklist_dictionary
-        builtins = _builtin_checklist_dictionary()
+        from rdm.gaps import builtin_checklists
+        builtins = builtin_checklists()
         all_files = ([args.checklist] if args.checklist else []) + args.files
         checklists = [f for f in all_files if f.endswith('.txt') or f in builtins]
         sources = [f for f in all_files if not (f.endswith('.txt') or f in builtins)]

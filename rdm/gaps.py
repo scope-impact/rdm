@@ -3,18 +3,51 @@ import os
 import re
 
 
+# --- The public API: what `rdm gap` reads and matches, for other callers (the
+# graph's checklists and references, DI-37 and DI-48) to use instead of the
+# private helpers below, so the two cannot drift apart.
+
+def builtin_checklists():
+    """Each built-in checklist's name (``rdm gap --list``) and file."""
+    return _builtin_checklist_dictionary()
+
+
+def parse_checklist(text, directory):
+    """One checklist file's entries — items and ``include`` lines, not
+    followed — as ``rdm gap`` reads them; ``directory`` resolves includes."""
+    return list(_flat_file_parser(text, directory))
+
+
+def include_path(name, builtins, directory):
+    """The file an ``include`` names: a built-in checklist, else a path
+    relative to the including file's directory."""
+    return _full_file_path(name, builtins, directory)
+
+
+def find_keys(content, keys):
+    """The checklist keys a document's ``[[…]]`` tags reference, matched as
+    ``rdm gap`` matches them."""
+    return set(_find_keys_in_content(content, keys))
+
+
+def missing_references(checklist_file, source_files):
+    """The items of a checklist (a built-in name or a file, includes followed)
+    that no source file references — exactly what ``rdm gap`` reports — and
+    the checklist as read."""
+    builtins = _builtin_checklist_dictionary()
+    full_path = os.path.realpath(_full_file_path(checklist_file, builtins))
+    checklist = _read_checklists(_checklist_generator([full_path]), {full_path}, builtins)
+    return list(_find_failing_checklist_items(_source_generator(source_files), checklist)), checklist
+
+
 def audit_for_gaps(checklist_file, source_files, coverage=False, verbose=False):
     if coverage:
         return coverage_report(checklist_file, source_files, verbose)
     if checklist_file is None:
         print("WARNING: no check list!")
         return 1
-    builtins = _builtin_checklist_dictionary()
-    full_path_checklist_file = os.path.realpath(_full_file_path(checklist_file, builtins))
-    already_included = {full_path_checklist_file}
-    checklist = _read_checklists(_checklist_generator([full_path_checklist_file]), already_included, builtins)
+    failing_checklist_items, checklist = missing_references(checklist_file, source_files)
     _print_sources(checklist, source_files)
-    failing_checklist_items = list(_find_failing_checklist_items(_source_generator(source_files), checklist))
     if failing_checklist_items:
         _report_failures(failing_checklist_items)
         return 3

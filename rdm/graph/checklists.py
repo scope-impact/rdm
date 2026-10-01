@@ -69,7 +69,7 @@ def _parents(key: str):
 
 def resolve(spec: str) -> Path:
     """A built-in checklist name, or a path to a checklist file."""
-    builtins = gaps._builtin_checklist_dictionary()
+    builtins = gaps.builtin_checklists()
     if spec in builtins:
         return Path(builtins[spec])
     path = Path(spec)
@@ -81,12 +81,12 @@ def resolve(spec: str) -> Path:
 
 def _read_text_checklist(path: Path) -> tuple[list[dict], list[Path]]:
     """One checklist file's own items and the files it includes (not flattened)."""
-    builtins = gaps._builtin_checklist_dictionary()
+    builtins = gaps.builtin_checklists()
     directory = os.path.dirname(os.path.realpath(path))
     items, includes = [], []
-    for entry in gaps._flat_file_parser(path.read_text(encoding="utf-8"), directory):
+    for entry in gaps.parse_checklist(path.read_text(encoding="utf-8"), directory):
         if "include" in entry:
-            includes.append(Path(gaps._full_file_path(entry["include"], builtins, entry["path"])))
+            includes.append(Path(gaps.include_path(entry["include"], builtins, entry["path"])))
         else:
             items.append(entry)
     return items, includes
@@ -192,6 +192,6 @@ def reference_quads(documents: list[dict], doc_node, clauses: dict[str, ox.Named
     quads = []
     for doc in documents:
         text = Path(doc["file"]).read_text(encoding="utf-8", errors="ignore")
-        for key in sorted(set(gaps._find_keys_in_content(text, set(clauses)))):
+        for key in sorted(gaps.find_keys(text, set(clauses))):
             quads.append(ox.Quad(doc_node(doc["id"]), references, clauses[key], graph))
     return quads

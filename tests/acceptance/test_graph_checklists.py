@@ -141,11 +141,8 @@ def test_reference_tags_become_links_matched_as_rdm_gap_matches(tmp_path: Path) 
         PREFIXES + "SELECT ?k WHERE { ?c a rdm:Clause ; skos:notation ?k . "
                    "FILTER NOT EXISTS { ?d dcterms:references ?c } }", use_default_graph_as_union=True)}
     documents = [str(p) for p in sorted((dhf / "documents").rglob("*.md"))]
-    builtins = gaps._builtin_checklist_dictionary()
     missing = set()
-    for spec in (str(text_list), builtins["part11_document_control"]):
-        checklist = gaps._read_checklists(gaps._checklist_generator([spec]), set(), builtins)
-        missing |= {item["reference"] for item in
-                    gaps._find_failing_checklist_items(gaps._source_generator(documents), checklist)}
+    for spec in (str(text_list), "part11_document_control"):
+        missing |= {item["reference"] for item in gaps.missing_references(spec, documents)[0]}
     assert unreferenced - {"RDFX:1"} == missing
     assert "STD:4" in missing and "STD:1.2" not in missing
