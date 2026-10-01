@@ -305,6 +305,9 @@ shapes, agent trace); RDM's own tool-risk register (RMF-001).
 
 - Fixed in passing: `rdm story new-input` wrote a second `design_inputs:`
   key under an empty `[]` (DI-22), and its stub tests failed line-length lint.
+- Addendum: DI-34 now runs the test once unmutated first. A test already
+  failing was reported KILLED under any mutation — found while probing
+  DI-44's test before it passed, the false proof the probe exists to rule out.
 - Open: halla-health's registers use the cluster-file Markdown format, which
   the planning-side parser reads; moving them into the record format is work
   on halla-health, not RDM.
