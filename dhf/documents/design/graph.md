@@ -57,6 +57,9 @@ design_inputs:
   - id: DI-61
     text: "The graph shall record each tagged test — a Python test function or method, including those a module-level mark tags, or the whole file where tags are read by pattern — defined in its test file and verifying the design inputs its tags name, link each test run to the test it ran through the result's full name, and, when runs are linked to tests, a shape shall warn on a tagged test with no run and on a run that exercises a design input its test does not claim."
     traces_to: [UN-014, UN-004]
+  - id: DI-62
+    text: "RDM shall declare in its vocabulary each relation the graph derives rather than stores, with the rule that derives it as a SPARQL CONSTRUCT — first, that a bounded context serves the user needs its owned and realised design inputs trace to; the agent server's schema shall list the rules, and when asked to infer, the projection shall add the derived facts in a separate inferred named graph and nowhere else."
+    traces_to: [UN-014, UN-015]
 ---
 
 # Graph — Software Design
@@ -240,6 +243,18 @@ source: the graph is derived, rebuilt on demand, and never edited.
   results carry no Python full name, is not reported) and on a run exercising
   a design input its test does not claim (the source and the results
   disagree). Refines UN-014 and UN-004.
+- **DI-62 (derived, not stored — and the consumer is told how)** — the graph
+  stores only what the record states; a fact that follows from others is not
+  also stored (Design Review 17 removed `satisfies` for that reason). But a
+  consumer that does not know the rule gets nothing back and, the world being
+  open, no hint why. So each derived relation is declared in the vocabulary
+  with the rule that derives it, as a SPARQL CONSTRUCT (`rdm:Rule`,
+  `rdm:derives`, `rdm:construct`) — the first, `rdm:serves`: a bounded
+  context serves the user needs its owned and realised design inputs trace
+  to. The agent server's `schema` lists the rules, and its queries see their
+  results. `--infer` adds the derived facts to a separate
+  `…graph/inferred` named graph, so a fact the record states and a fact a
+  rule derived are never confused. Refines UN-014 and UN-015.
 
 Retired (Design Review 18): DI-55 — container fixtures (`tmp_path`,
 `capsys`…) say nothing about a design input, and Allure's set-up and

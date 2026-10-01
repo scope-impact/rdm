@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 20
+revision: 21
 title: Design Review — RDM
 ---
 
@@ -603,6 +603,36 @@ documents').
 - Only design documents had a commit and a landing; the V&V plan, the risk
   documents, the design review and the other controlled documents now do too
   (DI-35, DI-51). More documents will show as not yet landed until merge.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 20 — Rules for what the graph derives
+
+**Scope reviewed:** DI-62, in the graph context.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Fatemi, Ravanbakhsh and Poole (AAAI 2019, arXiv:1812.03235) removed every
+  triple a background rule implies and found that a model given the rules
+  beat both plain embeddings and rule inference alone, while the plain
+  model, not given them, did worst. The lesson for a slim graph: pruning is
+  safe only for a consumer that knows the rules.
+- RDM's derived relations lived in a comment, the docs and the code of
+  `trace`. An agent writing its own SPARQL could not know them. DI-62 makes
+  each rule data in the vocabulary, lists it in the agent server's
+  `schema`, and can materialise it.
+- Inferred facts go to their own named graph. In a regulated record a
+  derived link is not evidence; keeping it apart keeps that visible.
+- The paper's rules are single-relation subsumptions; `rdm:serves` is a
+  two-step chain, which the paper names as future work. The analogy supports
+  the direction, not the specific rule.
+- No learned model enters the record. An agent may use the rules to answer
+  and to suggest; a suggestion becomes part of the record only through a
+  reviewed pull request.
 
 ## Findings and actions
 
