@@ -15,6 +15,8 @@ from pathlib import Path
 import pytest
 
 allure = pytest.importorskip("allure")
+
+from tests.acceptance.evidence import clause  # noqa: E402
 pytest.importorskip("pyoxigraph")
 mcp = pytest.importorskip("mcp")
 
@@ -64,42 +66,43 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
     out = _session(dhf, results, steps)
     assert out["names"] == ["query", "schema", "trace", "validate"]
 
-    # schema: the vocabulary and the predeclared prefixes.
-    error, schema = out["schema"]
-    assert not error and "rdm:DesignInput" in schema["ontology"]
-    assert schema["prefixes"]["rdm"] == "https://github.com/scope-impact/rdm/ns#"
+    with clause("schema: the vocabulary and the predeclared prefixes"):
+        error, schema = out["schema"]
+        assert not error and "rdm:DesignInput" in schema["ontology"]
+        assert schema["prefixes"]["rdm"] == "https://github.com/scope-impact/rdm/ns#"
 
-    # query: SPARQL with the prefixes predeclared.
-    error, rows = out["query"]
-    assert not error and [r["id"] for r in rows["rows"]] == ["DI-1", "DI-2"] and rows["truncated"] is False
+    with clause("query: SPARQL with the prefixes predeclared"):
+        error, rows = out["query"]
+        assert not error and [r["id"] for r in rows["rows"]] == ["DI-1", "DI-2"] and rows["truncated"] is False
 
     # trace a design input: text, need, owning context and document, realising
     # context, tagged test file, and its run.
-    error, di = out["trace_di"]
-    di = di["design_input"]
-    assert not error and di["id"] == "DI-1" and di["text"] == "The device shall alarm."
-    assert di["needs"] == ["UN-001"] and di["context"] == "alarms" and di["realised_by"] == ["ui"]
-    assert di["document"]["id"] == "SDS-ALM-001" and di["document"]["path"] == "dhf/documents/design/alarms.md"
-    assert di["document"]["last_commit"].endswith("approve design")
-    assert di["tests"] == ["tests/test_alarms.py"]
-    assert di["runs"] == [{"test": "test_alarm", "status": "passed", "steps": [], "attachments": []}]
+    with clause("trace a design input: text, need, owning context and document, realising context, tagged test…"):
+        error, di = out["trace_di"]
+        di = di["design_input"]
+        assert not error and di["id"] == "DI-1" and di["text"] == "The device shall alarm."
+        assert di["needs"] == ["UN-001"] and di["context"] == "alarms" and di["realised_by"] == ["ui"]
+        assert di["document"]["id"] == "SDS-ALM-001" and di["document"]["path"] == "dhf/documents/design/alarms.md"
+        assert di["document"]["last_commit"].endswith("approve design")
+        assert di["tests"] == ["tests/test_alarms.py"]
+        assert di["runs"] == [{"test": "test_alarm", "status": "passed", "steps": [], "attachments": []}]
 
-    # trace a user need (id case-insensitive): its text, contexts and inputs.
-    error, un = out["trace_un"]
-    un = un["user_need"]
-    assert not error and un["id"] == "UN-001" and un["text"] == "a need"
-    assert un["contexts"] == ["alarms", "ui"] and [d["id"] for d in un["design_inputs"]] == ["DI-1"]
+    with clause("trace a user need (id case-insensitive): its text, contexts and inputs"):
+        error, un = out["trace_un"]
+        un = un["user_need"]
+        assert not error and un["id"] == "UN-001" and un["text"] == "a need"
+        assert un["contexts"] == ["alarms", "ui"] and [d["id"] for d in un["design_inputs"]] == ["DI-1"]
 
-    # validate: the gate shapes' results (DI-2 has no passing run).
-    error, report = out["validate"]
-    assert not error and report["violations"] >= 1
-    assert {"severity": "Violation", "focus": "DI-2",
-            "message": "design input is not verified by any passing test run"} in report["results"]
+    with clause("validate: the gate shapes' results (DI-2 has no passing run)"):
+        error, report = out["validate"]
+        assert not error and report["violations"] >= 1
+        assert {"severity": "Violation", "focus": "DI-2",
+                "message": "design input is not verified by any passing test run"} in report["results"]
 
-    # Fresh per call: the edit made during the session is what the next call reads.
-    assert out["after_edit"][1]["design_input"]["text"] == "The device shall alarm loudly."
-    error, message = out["unknown"]
-    assert error and "DI-99 is not declared in the record" in message
+    with clause("Fresh per call: the edit made during the session is what the next call reads"):
+        assert out["after_edit"][1]["design_input"]["text"] == "The device shall alarm loudly."
+        error, message = out["unknown"]
+        assert error and "DI-99 is not declared in the record" in message
 
 
 @allure.story("DI-42")
@@ -137,37 +140,38 @@ def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
         return out
 
     out = _session(dhf, results, steps)
-    # Exactly the four read tools, all declared read-only and non-destructive.
-    assert sorted(out["tools"]) == [(n, True, None) for n in ("query", "schema", "trace", "validate")]
+    with clause("Exactly the four read tools, all declared read-only and non-destructive"):
+        assert sorted(out["tools"]) == [(n, True, None) for n in ("query", "schema", "trace", "validate")]
 
-    # Every form of SPARQL Update is refused, and nothing changed.
-    for error, message in out["updates"]:
-        assert error and "SPARQL Update is not accepted: the graph is read-only" in message
-    error, message = out["garbage"]
-    assert error and "not a SPARQL query" in message
+    with clause("Every form of SPARQL Update is refused, and nothing changed"):
+        for error, message in out["updates"]:
+            assert error and "SPARQL Update is not accepted: the graph is read-only" in message
+        error, message = out["garbage"]
+        assert error and "not a SPARQL query" in message
     # No network: SERVICE is refused (any case, IRI or variable endpoint), while
     # the word inside a literal is just text.
-    for error, message in out["services"]:
-        assert error and "SERVICE is not accepted: the agent server does not reach the network" in message
-    assert out["service_word"] == (False, {"boolean": True})
-    # trace takes only id-shaped input.
-    for error, message in out["bad_ids"]:
-        assert error and "is not an id" in message
-    assert out["n0"][1]["rows"] == out["n1"][1]["rows"]
-    assert {p: p.read_bytes() for p in dhf.rglob("*") if p.is_file()} == before
+    with clause("No network: SERVICE is refused (any case, IRI or variable endpoint), while the word inside a…"):
+        for error, message in out["services"]:
+            assert error and "SERVICE is not accepted: the agent server does not reach the network" in message
+        assert out["service_word"] == (False, {"boolean": True})
+    with clause("trace takes only id-shaped input"):
+        for error, message in out["bad_ids"]:
+            assert error and "is not an id" in message
+        assert out["n0"][1]["rows"] == out["n1"][1]["rows"]
+        assert {p: p.read_bytes() for p in dhf.rglob("*") if p.is_file()} == before
 
-    # The read forms all work.
-    assert out["ask"][1] == {"boolean": True}
-    assert sorted(t[0] for t in out["construct"][1]["triples"]) == [
-        "urn:dhf:acme:need/UN-001", "urn:dhf:acme:need/UN-002"]
-    assert any(t[0] == "urn:dhf:acme:need/UN-001" for t in out["describe"][1]["triples"])
+    with clause("The read forms all work"):
+        assert out["ask"][1] == {"boolean": True}
+        assert sorted(t[0] for t in out["construct"][1]["triples"]) == [
+            "urn:dhf:acme:need/UN-001", "urn:dhf:acme:need/UN-002"]
+        assert any(t[0] == "urn:dhf:acme:need/UN-001" for t in out["describe"][1]["triples"])
 
-    # Rows are capped and the cut is reported; under the cap, nothing is flagged.
-    capped = out["capped"][1]
-    assert len(capped["rows"]) == 3 and capped["truncated"] is True
-    many = "SELECT * WHERE { ?s ?p ?o . ?need a rdm:UserNeed }"  # every statement, twice
-    assert 2 * int(out["n0"][1]["rows"][0]["n"]) > ROW_LIMIT
-    default = query(Record(dhf, results), many)
-    assert len(default["rows"]) == ROW_LIMIT and default["truncated"] is True
-    small = query(Record(dhf, results), "SELECT ?s WHERE { ?s a rdm:UserNeed }")
-    assert len(small["rows"]) == 2 and small["truncated"] is False
+    with clause("Rows are capped and the cut is reported; under the cap, nothing is flagged"):
+        capped = out["capped"][1]
+        assert len(capped["rows"]) == 3 and capped["truncated"] is True
+        many = "SELECT * WHERE { ?s ?p ?o . ?need a rdm:UserNeed }"  # every statement, twice
+        assert 2 * int(out["n0"][1]["rows"][0]["n"]) > ROW_LIMIT
+        default = query(Record(dhf, results), many)
+        assert len(default["rows"]) == ROW_LIMIT and default["truncated"] is True
+        small = query(Record(dhf, results), "SELECT ?s WHERE { ?s a rdm:UserNeed }")
+        assert len(small["rows"]) == 2 and small["truncated"] is False

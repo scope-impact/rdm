@@ -15,6 +15,8 @@ from rdm.record.allure import scan_source_tags
 
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import clause  # noqa: E402
+
 FIXTURE_WRITER = '''import allure
 
 FIXTURE = """
@@ -57,15 +59,15 @@ def test_python_tags_come_from_decorators_only(tmp_path: Path) -> None:
     tags = scan_source_tags(tests)
     files = {tag: sorted(Path(f).name for f in paths) for tag, paths in tags.items()}
 
-    # Decorators on functions, async methods and classes; module pytestmark (list or single).
-    assert files["DI-1"] == ["test_writer.py"]
-    assert files["DI-2"] == ["test_writer.py"]
-    assert files["DI-3"] == ["test_writer.py"]
-    assert files["DI-4"] == files["DI-5"] == ["test_marked.py"]
-    assert files["DI-10"] == ["test_single_mark.py"]
-    # Text inside strings and comments claims nothing.
-    for tag in ("DI-6", "DI-7", "DI-8", "DI-9"):
-        assert tag not in files, tag
-    # A file that does not parse still has its decorator-pattern tags read.
-    assert files["DI-11"] == ["test_broken.py"]
-    assert set(files) == {"DI-1", "DI-2", "DI-3", "DI-4", "DI-5", "DI-10", "DI-11"}
+    with clause("Decorators on functions, async methods and classes; module pytestmark (list or single)"):
+        assert files["DI-1"] == ["test_writer.py"]
+        assert files["DI-2"] == ["test_writer.py"]
+        assert files["DI-3"] == ["test_writer.py"]
+        assert files["DI-4"] == files["DI-5"] == ["test_marked.py"]
+        assert files["DI-10"] == ["test_single_mark.py"]
+    with clause("Text inside strings and comments claims nothing"):
+        for tag in ("DI-6", "DI-7", "DI-8", "DI-9"):
+            assert tag not in files, tag
+    with clause("A file that does not parse still has its decorator-pattern tags read"):
+        assert files["DI-11"] == ["test_broken.py"]
+        assert set(files) == {"DI-1", "DI-2", "DI-3", "DI-4", "DI-5", "DI-10", "DI-11"}

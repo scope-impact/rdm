@@ -18,6 +18,8 @@ from tests.util import git_run
 
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import clause  # noqa: E402
+
 
 def _validated_record(tmp_path: Path) -> tuple[Path, Path]:
     """A minimal passing record: two user needs, one DI each, verified."""
@@ -58,32 +60,31 @@ def test_release_gate_names_unvalidated_user_needs(tmp_path: Path) -> None:
     warns (never blocks) for each need without an APPROVED record."""
     dhf, results = _validated_record(tmp_path)
 
-    # No validation records at all: every need is named, as a warning only.
-    gate = run_release_gate(dhf, results)
-    validation_warnings = [w for w in gate.warnings if "validation record" in w]
-    assert any("UN-001" in w for w in validation_warnings)
-    assert any("UN-002" in w for w in validation_warnings)
-    assert gate.passed  # warnings never block
+    with clause("No validation records at all: every need is named, as a warning only"):
+        gate = run_release_gate(dhf, results)
+        validation_warnings = [w for w in gate.warnings if "validation record" in w]
+        assert any("UN-001" in w for w in validation_warnings)
+        assert any("UN-002" in w for w in validation_warnings)
+        assert gate.passed  # warnings never block
 
-    # An APPROVED record for UN-001 clears its warning; a non-approved
-    # disposition for UN-002 does not.
-    validation = dhf / "validation"
-    validation.mkdir()
-    (validation / "UN-001-validation.json").write_text(json.dumps(
-        {"user_need": "UN-001", "disposition": "approved",
-         "reviewer": "maintainer (summative)", "summary": "journey reviewed"}
-    ))
-    (validation / "UN-002-validation.json").write_text(json.dumps(
-        {"user_need": "UN-002", "disposition": "pending", "reviewer": "maintainer"}
-    ))
-    gate = run_release_gate(dhf, results)
-    validation_warnings = [w for w in gate.warnings if "validation record" in w]
-    assert not any("UN-001" in w for w in validation_warnings)
-    assert any("UN-002" in w for w in validation_warnings)
-    assert gate.passed
+    with clause("An APPROVED record for UN-001 clears its warning; a non-approved disposition for UN-002 does not"):
+        validation = dhf / "validation"
+        validation.mkdir()
+        (validation / "UN-001-validation.json").write_text(json.dumps(
+            {"user_need": "UN-001", "disposition": "approved",
+             "reviewer": "maintainer (summative)", "summary": "journey reviewed"}
+        ))
+        (validation / "UN-002-validation.json").write_text(json.dumps(
+            {"user_need": "UN-002", "disposition": "pending", "reviewer": "maintainer"}
+        ))
+        gate = run_release_gate(dhf, results)
+        validation_warnings = [w for w in gate.warnings if "validation record" in w]
+        assert not any("UN-001" in w for w in validation_warnings)
+        assert any("UN-002" in w for w in validation_warnings)
+        assert gate.passed
 
-    # The ingest itself: records keyed by user need, disposition and reviewer read.
-    records = parse_validation_records(validation)
-    assert records["UN-001"]["disposition"] == "approved"
-    assert records["UN-001"]["reviewer"] == "maintainer (summative)"
-    assert unvalidated_user_needs(dhf) == ["UN-002"]
+    with clause("The ingest itself: records keyed by user need, disposition and reviewer read"):
+        records = parse_validation_records(validation)
+        assert records["UN-001"]["disposition"] == "approved"
+        assert records["UN-001"]["reviewer"] == "maintainer (summative)"
+        assert unvalidated_user_needs(dhf) == ["UN-002"]

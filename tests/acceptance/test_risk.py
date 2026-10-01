@@ -136,49 +136,50 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
     ], status="proposed")
     (dhf / "documents" / "notes.md").write_text("---\nid: N-1\nrisks: [{id: RISK-NOT-1}]\n---\n")  # not kind: risk
 
-    # No policy declared: everything is read, nothing is evaluated.
-    assert read_policy(dhf) is None
-    unevaluated = {r.id: r for r in risks(dhf)}
-    assert set(unevaluated) == {"RISK-A-1", "RISK-A-2", "RISK-A-3"}
-    assert all(r.level is None and r.residual_level is None for r in unevaluated.values())
+    with clause("No policy declared: everything is read, nothing is evaluated"):
+        assert read_policy(dhf) is None
+        unevaluated = {r.id: r for r in risks(dhf)}
+        assert set(unevaluated) == {"RISK-A-1", "RISK-A-2", "RISK-A-3"}
+        assert all(r.level is None and r.residual_level is None for r in unevaluated.values())
 
-    a = unevaluated["RISK-A-1"]
-    assert (a.category, a.stride, a.linked) == ("security", "Spoofing", ["RISK-A-2"])
-    assert (a.hazard, a.situation, a.harm, a.severity, a.probability) == ("Hz", "Si", "Ha", "Serious", "Possible")
-    assert a.recorded_level == "High" and a.controls == ["DI-1", "DI-2"]
-    assert (a.residual_severity, a.residual_probability) == (None, "Unlikely")
-    assert (a.accepted_by, a.acceptance_rationale) == ("QA lead", "ALARP")
-    assert a.status == "approved" and unevaluated["RISK-A-2"].status == "proposed"  # the document's status
-    assert a.document == "dhf/documents/risk/risks.md"
+        a = unevaluated["RISK-A-1"]
+        assert (a.category, a.stride, a.linked) == ("security", "Spoofing", ["RISK-A-2"])
+        assert (a.hazard, a.situation, a.harm, a.severity, a.probability) == ("Hz", "Si", "Ha", "Serious", "Possible")
+        assert a.recorded_level == "High" and a.controls == ["DI-1", "DI-2"]
+        assert (a.residual_severity, a.residual_probability) == (None, "Unlikely")
+        assert (a.accepted_by, a.acceptance_rationale) == ("QA lead", "ALARP")
+        assert a.status == "approved" and unevaluated["RISK-A-2"].status == "proposed"  # the document's status
+        assert a.document == "dhf/documents/risk/risks.md"
 
     # With a declared policy: levels from its cells; residual severity defaults
     # to the initial one, and is used where recorded.
-    _policy(dhf, status="proposed")
-    policy = read_policy(dhf)
-    assert policy.source == "documents/risk/policy.md" and policy.status == "proposed"
-    assert policy.acceptability["Medium"] == "justify"
-    found = {r.id: r for r in risks(dhf, policy)}
-    assert (found["RISK-A-1"].level, found["RISK-A-1"].residual_level) == ("High", "Medium")  # Serious × Unlikely
-    assert (found["RISK-A-2"].level, found["RISK-A-2"].residual_level) == ("High", "Medium")  # Minor × Possible
-    assert (found["RISK-A-3"].level, found["RISK-A-3"].residual_level) == ("Low", "Low")      # uncontrolled
+    with clause("With a declared policy: levels from its cells; residual severity defaults to the initial one,…"):
+        _policy(dhf, status="proposed")
+        policy = read_policy(dhf)
+        assert policy.source == "documents/risk/policy.md" and policy.status == "proposed"
+        assert policy.acceptability["Medium"] == "justify"
+        found = {r.id: r for r in risks(dhf, policy)}
+        assert (found["RISK-A-1"].level, found["RISK-A-1"].residual_level) == ("High", "Medium")  # Serious × Unlikely
+        assert (found["RISK-A-2"].level, found["RISK-A-2"].residual_level) == ("High", "Medium")  # Minor × Possible
+        assert (found["RISK-A-3"].level, found["RISK-A-3"].residual_level) == ("Low", "Low")      # uncontrolled
 
-    # Level names are the project's own.
-    _policy(dhf, {"severities": ["Bad", "Mild"], "probabilities": ["Seldom", "Often"],
-                  "levels": {"Bad": ["Amber", "Red"], "Mild": ["Green", "Amber"]},
-                  "acceptability": {"Green": "acceptable", "Amber": "justify", "Red": "unacceptable"}})
-    _register(dhf, [_risk("RISK-B-1", severity="Bad", probability="Often", residual={"probability": "Seldom"})])
-    custom = risks(dhf, read_policy(dhf))[0]
-    assert (custom.level, custom.residual_level) == ("Red", "Amber")
+    with clause("Level names are the project's own"):
+        _policy(dhf, {"severities": ["Bad", "Mild"], "probabilities": ["Seldom", "Often"],
+                      "levels": {"Bad": ["Amber", "Red"], "Mild": ["Green", "Amber"]},
+                      "acceptability": {"Green": "acceptable", "Amber": "justify", "Red": "unacceptable"}})
+        _register(dhf, [_risk("RISK-B-1", severity="Bad", probability="Often", residual={"probability": "Seldom"})])
+        custom = risks(dhf, read_policy(dhf))[0]
+        assert (custom.level, custom.residual_level) == ("Red", "Amber")
 
-    # A malformed policy is refused, naming where it is.
-    for bad in ({"severities": ["Bad"], "probabilities": ["Often"], "levels": {"Bad": ["Red"]}},  # no acceptability
-                {"severities": ["Bad"], "probabilities": ["Often", "Seldom"], "levels": {"Bad": ["Red"]},
-                 "acceptability": {"Red": "unacceptable"}},
-                {"severities": ["Bad"], "probabilities": ["Often"], "levels": {"Bad": ["Red"]},
-                 "acceptability": {"Red": "fine"}}):
-        _policy(dhf, bad)
-        with pytest.raises(ValueError, match="documents/risk/policy.md"):
-            read_policy(dhf)
+    with clause("A malformed policy is refused, naming where it is"):
+        for bad in ({"severities": ["Bad"], "probabilities": ["Often"], "levels": {"Bad": ["Red"]}},  # no acceptability
+                    {"severities": ["Bad"], "probabilities": ["Often", "Seldom"], "levels": {"Bad": ["Red"]},
+                     "acceptability": {"Red": "unacceptable"}},
+                    {"severities": ["Bad"], "probabilities": ["Often"], "levels": {"Bad": ["Red"]},
+                     "acceptability": {"Red": "fine"}}):
+            _policy(dhf, bad)
+            with pytest.raises(ValueError, match="documents/risk/policy.md"):
+                read_policy(dhf)
 
 
 # The cases DI-50 owns (the residual decision and status); the rest are DI-44's.
@@ -210,18 +211,18 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
     controls with no residual each block; a sound register passes."""
     _check_cases(tmp_path, [n for n in CASES if n not in RESIDUAL_CASES])
 
-    # No register, no risk findings — the policy is required only when there are risks.
-    dhf = _dhf(tmp_path / "none")
-    assert not [m for m in run_release_gate(dhf, _results(tmp_path / "none", {"DI-1": ["passed"],
-                                                                              "DI-2": ["passed"]})).blocking
-                if "risk" in m]
+    with clause("No register, no risk findings — the policy is required only when there are risks"):
+        dhf = _dhf(tmp_path / "none")
+        assert not [m for m in run_release_gate(dhf, _results(tmp_path / "none", {"DI-1": ["passed"],
+                                                                                  "DI-2": ["passed"]})).blocking
+                    if "risk" in m]
 
-    # A risk with no id is named by its document; a malformed policy blocks with its reason.
-    dhf, gate = _gate(tmp_path, "anonymous", [_risk(None)])
-    assert "a risk in dhf/documents/risk/risks.md has no id" in gate.blocking
-    (dhf / "documents" / "risk" / "policy.md").write_text("---\nid: RMP\nrisk_policy: [1, 2]\n---\n")
-    gate = run_release_gate(dhf, _results(tmp_path / "anonymous", {"DI-1": ["passed"]}))
-    assert any("risk_policy in documents/risk/policy.md" in m for m in gate.blocking)
+    with clause("A risk with no id is named by its document; a malformed policy blocks with its reason"):
+        dhf, gate = _gate(tmp_path, "anonymous", [_risk(None)])
+        assert "a risk in dhf/documents/risk/risks.md has no id" in gate.blocking
+        (dhf / "documents" / "risk" / "policy.md").write_text("---\nid: RMP\nrisk_policy: [1, 2]\n---\n")
+        gate = run_release_gate(dhf, _results(tmp_path / "anonymous", {"DI-1": ["passed"]}))
+        assert any("risk_policy in documents/risk/policy.md" in m for m in gate.blocking)
 
 
 @allure.story("DI-50")
@@ -232,11 +233,11 @@ def test_release_gate_blocks_on_the_residual_rules(tmp_path: Path) -> None:
     acceptance each block, as does an unknown status; proposed ratings warn."""
     _check_cases(tmp_path, sorted(RESIDUAL_CASES))
 
-    # Proposed ratings — on a risk, or on the policy — warn and do not block.
-    dhf, _ = _gate(tmp_path, "proposed", [_risk("RISK-W-1", status="proposed"), _risk("RISK-W-2")])
-    _policy(dhf, status="proposed")
-    gate = run_release_gate(dhf, _results(tmp_path / "proposed", {"DI-1": ["passed"], "DI-2": ["passed"]}))
-    assert gate.passed, gate.blocking
-    assert "risk RISK-W-1 is proposed: a person has not approved its rating" in gate.warnings
-    assert "the risk policy in documents/risk/policy.md is proposed: a person has not approved it" in gate.warnings
-    assert not any("RISK-W-2" in w for w in gate.warnings)
+    with clause("Proposed ratings — on a risk, or on the policy — warn and do not block"):
+        dhf, _ = _gate(tmp_path, "proposed", [_risk("RISK-W-1", status="proposed"), _risk("RISK-W-2")])
+        _policy(dhf, status="proposed")
+        gate = run_release_gate(dhf, _results(tmp_path / "proposed", {"DI-1": ["passed"], "DI-2": ["passed"]}))
+        assert gate.passed, gate.blocking
+        assert "risk RISK-W-1 is proposed: a person has not approved its rating" in gate.warnings
+        assert "the risk policy in documents/risk/policy.md is proposed: a person has not approved it" in gate.warnings
+        assert not any("RISK-W-2" in w for w in gate.warnings)

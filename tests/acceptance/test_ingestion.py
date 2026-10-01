@@ -21,6 +21,8 @@ from rdm.util import load_yaml
 
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import clause  # noqa: E402
+
 _TEST_DATA = Path(__file__).resolve().parents[1] / "test_data"
 _GTEST_XML = _TEST_DATA / "test_detail.xml"
 _QTTEST_XML = _TEST_DATA / "integration.xml"
@@ -33,8 +35,8 @@ def test_collects_delimited_code_snippets() -> None:
     assert collect_from_lines(["RDOC greeting", "hello", "world", "ENDRDOC"]) == {
         "greeting": "hello\nworld"
     }
-    # No markers → no snippets.
-    assert collect_from_lines(["just some prose", "no markers here"]) == {}
+    with clause("No markers → no snippets"):
+        assert collect_from_lines(["just some prose", "no markers here"]) == {}
 
 
 @allure.story("DI-17")
@@ -47,12 +49,12 @@ def test_translates_foreign_test_results(tmp_path: Path) -> None:
     assert results["SomeModule.Cherry"]["result"] == "pass"
     assert results["HasOneFailure.BadOne"]["result"] == "fail"
 
-    # A different format (qttest) is also supported, not just gtest.
-    qt_out = tmp_path / "qt.yml"
-    translate_test_results("qttest", str(_QTTEST_XML), str(qt_out))
-    qt = load_yaml(str(qt_out))
-    assert qt["some_module.SomeName::someTestCase"]["result"] == "pass"
+    with clause("A different format (qttest) is also supported, not just gtest"):
+        qt_out = tmp_path / "qt.yml"
+        translate_test_results("qttest", str(_QTTEST_XML), str(qt_out))
+        qt = load_yaml(str(qt_out))
+        assert qt["some_module.SomeName::someTestCase"]["result"] == "pass"
 
-    # An unknown format is rejected.
-    with pytest.raises(ValueError):
-        translate_test_results("nonsense-format", str(_GTEST_XML), str(out))
+    with clause("An unknown format is rejected"):
+        with pytest.raises(ValueError):
+            translate_test_results("nonsense-format", str(_GTEST_XML), str(out))

@@ -81,40 +81,42 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
     with allure.step("Reconcile the declared design inputs against Allure results"):
         data = build_verification(dhf, results)
     assert data["summary"]["total"] == 1
-    # Rows are design inputs, grouped under the user need they trace to.
-    assert data["groups"][0]["user_need"] == "UN-001"
-    assert data["groups"][0]["design_inputs"][0]["design_input"] == "DI-1"
+    with clause("Rows are design inputs, grouped under the user need they trace to"):
+        assert data["groups"][0]["user_need"] == "UN-001"
+        assert data["groups"][0]["design_inputs"][0]["design_input"] == "DI-1"
     # ...with NO project-management dependency: the record core must not import
     # the planning layer (a violation would show as a source-level import).
-    import rdm.record as _record_pkg
-    _record_dir = Path(_record_pkg.__file__).parent
-    assert not any(
-        "project_management" in p.read_text(encoding="utf-8")
-        for p in _record_dir.glob("*.py")
-    )
+    with clause("...with NO project-management dependency: the record core must not import the planning layer (a…"):
+        import rdm.record as _record_pkg
+        _record_dir = Path(_record_pkg.__file__).parent
+        assert not any(
+            "project_management" in p.read_text(encoding="utf-8")
+            for p in _record_dir.glob("*.py")
+        )
 
 
 @allure.story("DI-2")
 def test_design_gate_requires_approval(tmp_path: Path) -> None:
     """DI-2: block transition until design docs are complete and approved."""
-    # Incomplete (placeholder) design doc -> not complete.
-    docs = tmp_path / "dhf" / "documents" / "design"
-    docs.mkdir(parents=True)
-    (docs / "core.md").write_text("---\nkind: design\ncontext: core\n---\nTODO: fill me\nENDTODO\n")
-    assert not check_design_docs(tmp_path / "dhf")[0].complete
-    # Approved (committed clean) -> ok.
-    dhf = _approved_dhf(tmp_path, ["UN-002"])
-    assert all(c.ok for c in check_design_docs(dhf))
+    with clause("Incomplete (placeholder) design doc -> not complete"):
+        docs = tmp_path / "dhf" / "documents" / "design"
+        docs.mkdir(parents=True)
+        (docs / "core.md").write_text("---\nkind: design\ncontext: core\n---\nTODO: fill me\nENDTODO\n")
+        assert not check_design_docs(tmp_path / "dhf")[0].complete
+    with clause("Approved (committed clean) -> ok"):
+        dhf = _approved_dhf(tmp_path, ["UN-002"])
+        assert all(c.ok for c in check_design_docs(dhf))
     # A COMPLETE but uncommitted doc is NOT approved -> not ok (this is the
     # "edit re-opens the gate" clause: approval is the committed revision, so an
     # unapproved working-tree change must fail even though the content is fine).
-    repo = tmp_path / "uncommitted"
-    udocs = repo / "dhf" / "documents" / "design"
-    udocs.mkdir(parents=True)
-    _git(repo, "init")
-    write_design_doc(udocs, "core", satisfies=("UN-002",), design_inputs=(("DI-2", ["UN-002"]),))
-    uncommitted = check_design_docs(repo / "dhf")
-    assert uncommitted and uncommitted[0].complete and not uncommitted[0].ok
+    with clause("A COMPLETE but uncommitted doc is NOT approved -> not ok (this is the \"edit re-opens the gate\"…"):
+        repo = tmp_path / "uncommitted"
+        udocs = repo / "dhf" / "documents" / "design"
+        udocs.mkdir(parents=True)
+        _git(repo, "init")
+        write_design_doc(udocs, "core", satisfies=("UN-002",), design_inputs=(("DI-2", ["UN-002"]),))
+        uncommitted = check_design_docs(repo / "dhf")
+        assert uncommitted and uncommitted[0].complete and not uncommitted[0].ok
 
 
 @allure.story("DI-3")
@@ -144,31 +146,32 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
 def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
     """DI-4: results reconcile to a status (reconcile clause) AND assemble into the
     traceability matrix grouped under the user need (render clause)."""
-    # Reconcile clause: executed results classify into verified/failed/untested.
-    results = tmp_path / "allure"
-    _allure_result(results, "ok", "passed", "DI-A")
-    _allure_result(results, "bad", "failed", "DI-B")
-    report = allure_ingest.reconcile({"DI-A", "DI-B", "DI-C"}, results)
-    assert report.verified == ["DI-A"]
-    assert report.failed == ["DI-B"]
-    assert report.untested == ["DI-C"]
+    with clause("Reconcile clause: executed results classify into verified/failed/untested"):
+        results = tmp_path / "allure"
+        _allure_result(results, "ok", "passed", "DI-A")
+        _allure_result(results, "bad", "failed", "DI-B")
+        report = allure_ingest.reconcile({"DI-A", "DI-B", "DI-C"}, results)
+        assert report.verified == ["DI-A"]
+        assert report.failed == ["DI-B"]
+        assert report.untested == ["DI-C"]
 
     # Render clause: build_verification assembles the matrix — each design input
     # carries its real status, grouped under the user need it traces to. The
     # mixed pass/fail row set means a "always verified" assembly bug is caught.
-    docs = tmp_path / "dhf" / "documents"
-    docs.mkdir(parents=True)
-    write_design_doc(docs / "design", "core", satisfies=("UN-001",),
-                     design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))
-    _vv_plan(docs, ["UN-001"])
-    matrix_results = tmp_path / "allure-matrix"
-    _allure_result(matrix_results, "p", "passed", "DI-1")
-    _allure_result(matrix_results, "f", "failed", "DI-2")
-    data = build_verification(tmp_path / "dhf", matrix_results)
-    rows = {di["design_input"]: di["status"]
-            for group in data["groups"] for di in group["design_inputs"]}
-    assert rows == {"DI-1": "verified", "DI-2": "failed"}
-    assert data["groups"][0]["user_need"] == "UN-001"
+    with clause("Render clause: build_verification assembles the matrix — each design input carries its real…"):
+        docs = tmp_path / "dhf" / "documents"
+        docs.mkdir(parents=True)
+        write_design_doc(docs / "design", "core", satisfies=("UN-001",),
+                         design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))
+        _vv_plan(docs, ["UN-001"])
+        matrix_results = tmp_path / "allure-matrix"
+        _allure_result(matrix_results, "p", "passed", "DI-1")
+        _allure_result(matrix_results, "f", "failed", "DI-2")
+        data = build_verification(tmp_path / "dhf", matrix_results)
+        rows = {di["design_input"]: di["status"]
+                for group in data["groups"] for di in group["design_inputs"]}
+        assert rows == {"DI-1": "verified", "DI-2": "failed"}
+        assert data["groups"][0]["user_need"] == "UN-001"
 
 
 @allure.story("DI-5")

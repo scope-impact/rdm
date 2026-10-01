@@ -16,6 +16,8 @@ from rdm.record.bundle import evidence_bundle
 
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import clause  # noqa: E402
+
 
 def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
     """A minimal DHF with one verified design input, a matrix template, and a
@@ -69,20 +71,20 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
 
     manifest = evidence_bundle(dhf, results, out)
 
-    # Verification data, from the executed results.
-    assert (out / "verification.yml").is_file()
+    with clause("Verification data, from the executed results"):
+        assert (out / "verification.yml").is_file()
 
-    # The matrix is RENDERED (data in, template markers out).
-    matrix = (out / "traceability_matrix.md").read_text()
-    assert "total=1 verified=1" in matrix
-    assert "row:DI-1:verified" in matrix
-    assert "{%" not in matrix
+    with clause("The matrix is RENDERED (data in, template markers out)"):
+        matrix = (out / "traceability_matrix.md").read_text()
+        assert "total=1 verified=1" in matrix
+        assert "row:DI-1:verified" in matrix
+        assert "{%" not in matrix
 
-    # The manifest describes exactly what was bundled.
-    on_disk = json.loads((out / "manifest.json").read_text())
-    assert on_disk == manifest
-    assert manifest["design_inputs"] == 1 and manifest["verified"] == 1
-    assert "faithfulness_verdicts" not in manifest
+    with clause("The manifest describes exactly what was bundled"):
+        on_disk = json.loads((out / "manifest.json").read_text())
+        assert on_disk == manifest
+        assert manifest["design_inputs"] == 1 and manifest["verified"] == 1
+        assert "faithfulness_verdicts" not in manifest
     # The executed results ride along: results, containers, and every attachment
     # they reference (on the test, its steps, or a fixture) -- nothing else.
     bundled = {"allure-results/" + n for n in

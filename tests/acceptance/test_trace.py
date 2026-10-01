@@ -20,6 +20,8 @@ from tests.util import write_design_doc
 
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import clause  # noqa: E402
+
 
 def _dhf(tmp_path: Path) -> Path:
     """A small DHF: one user need refined by a design input owned by 'core' and
@@ -41,26 +43,27 @@ def test_trace_user_need_and_design_input(tmp_path: Path) -> None:
     """DI-18: trace forward (need → inputs) and backward (input → need/owner/realisers)."""
     dhf = _dhf(tmp_path)
 
-    # Forward: the user need lists the design inputs that refine it.
-    fwd = build_trace(dhf, "UN-001")
-    assert fwd["kind"] == "user_need"
-    assert [di["design_input"] for di in fwd["design_inputs"]] == ["DI-1"]
-    assert fwd["design_inputs"][0]["owned_by"] == "core"
+    with clause("Forward: the user need lists the design inputs that refine it"):
+        fwd = build_trace(dhf, "UN-001")
+        assert fwd["kind"] == "user_need"
+        assert [di["design_input"] for di in fwd["design_inputs"]] == ["DI-1"]
+        assert fwd["design_inputs"][0]["owned_by"] == "core"
 
-    # Backward: the design input names its need, owner, and realisers.
-    back = build_trace(dhf, "DI-1")
-    assert back["kind"] == "design_input"
-    assert back["traces_to"] == ["UN-001"]
-    assert back["owned_by"] == "core"
-    assert back["realised_by"] == ["edge"]
+    with clause("Backward: the design input names its need, owner, and realisers"):
+        back = build_trace(dhf, "DI-1")
+        assert back["kind"] == "design_input"
+        assert back["traces_to"] == ["UN-001"]
+        assert back["owned_by"] == "core"
+        assert back["realised_by"] == ["edge"]
 
-    # Unknown target is reported, not crashed.
-    assert "error" in build_trace(dhf, "DI-404")
+    with clause("Unknown target is reported, not crashed"):
+        assert "error" in build_trace(dhf, "DI-404")
 
     # With executed results, the slice carries the design input's STATUS and the
     # verifying TESTS (the clause that was previously untested).
-    results = tmp_path / "allure"
-    _allure_result(results, "the_test", "passed", "DI-1")
-    enriched = build_trace(dhf, "DI-1", allure_results_dir=results)
-    assert enriched["status"] == "verified"
-    assert enriched["tests"] == ["the_test"]
+    with clause("With executed results, the slice carries the design input's STATUS and the verifying TESTS (the…"):
+        results = tmp_path / "allure"
+        _allure_result(results, "the_test", "passed", "DI-1")
+        enriched = build_trace(dhf, "DI-1", allure_results_dir=results)
+        assert enriched["status"] == "verified"
+        assert enriched["tests"] == ["the_test"]

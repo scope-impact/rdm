@@ -136,23 +136,23 @@ def test_graph_validate_reports_and_exits_on_violations(tmp_path: Path, capsys) 
     dhf = _dhf(tmp_path / "msgs", needs=("UN-1", "UN-2", "UN-3"))
     results = _results(tmp_path / "msgs", {"DI-1": ["failed"]})
 
-    # The command: per-result lines, exit 1 on a violation, 0 otherwise.
-    ok = _dhf(tmp_path / "ok")
-    ok_results = _results(tmp_path / "ok", {"DI-1": ["passed"], "DI-2": ["passed"]})
-    capsys.readouterr()
-    assert validate_command(dhf_dir=ok, allure_results_dir=ok_results) == 0
-    assert "Graph validation PASSED" in capsys.readouterr().out
-    assert validate_command(dhf_dir=dhf, allure_results_dir=results) == 1
-    out = capsys.readouterr().out
-    assert "[VIOLATION] UN-3: user need is addressed by no design input" in out
+    with clause("The command: per-result lines, exit 1 on a violation, 0 otherwise"):
+        ok = _dhf(tmp_path / "ok")
+        ok_results = _results(tmp_path / "ok", {"DI-1": ["passed"], "DI-2": ["passed"]})
+        capsys.readouterr()
+        assert validate_command(dhf_dir=ok, allure_results_dir=ok_results) == 0
+        assert "Graph validation PASSED" in capsys.readouterr().out
+        assert validate_command(dhf_dir=dhf, allure_results_dir=results) == 1
+        out = capsys.readouterr().out
+        assert "[VIOLATION] UN-3: user need is addressed by no design input" in out
 
-    # User-supplied shapes add rules as data.
-    extra = tmp_path / "team.ttl"
-    extra.write_text(
-        "@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix rdm: <https://github.com/scope-impact/rdm/ns#> .\n"
-        "@prefix dcterms: <http://purl.org/dc/terms/> .\n"
-        "[] a sh:NodeShape ; sh:targetClass rdm:DesignInput ; sh:property [ sh:path dcterms:title ; "
-        "sh:minCount 1 ; sh:message \"design input needs a title\" ] .\n")
-    assert validate_command(dhf_dir=ok, allure_results_dir=ok_results, extra_shapes=[extra]) == 1
-    assert "[VIOLATION] DI-1: design input needs a title" in capsys.readouterr().out
-    assert validate_command(dhf_dir=ok, extra_shapes=[tmp_path / "missing.ttl"]) == 2
+    with clause("User-supplied shapes add rules as data"):
+        extra = tmp_path / "team.ttl"
+        extra.write_text(
+            "@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix rdm: <https://github.com/scope-impact/rdm/ns#> .\n"
+            "@prefix dcterms: <http://purl.org/dc/terms/> .\n"
+            "[] a sh:NodeShape ; sh:targetClass rdm:DesignInput ; sh:property [ sh:path dcterms:title ; "
+            "sh:minCount 1 ; sh:message \"design input needs a title\" ] .\n")
+        assert validate_command(dhf_dir=ok, allure_results_dir=ok_results, extra_shapes=[extra]) == 1
+        assert "[VIOLATION] DI-1: design input needs a title" in capsys.readouterr().out
+        assert validate_command(dhf_dir=ok, extra_shapes=[tmp_path / "missing.ttl"]) == 2

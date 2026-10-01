@@ -13,6 +13,8 @@ from pathlib import Path
 import pytest
 
 allure = pytest.importorskip("allure")
+
+from tests.acceptance.evidence import clause  # noqa: E402
 pytest.importorskip("pyoxigraph")
 
 from rdm.graph.agent import Record, trace  # noqa: E402
@@ -48,26 +50,26 @@ def test_runs_carry_their_steps_and_attachments(tmp_path: Path) -> None:
         return {(q.predicate.value.replace(RDM, ""), q.object.value) for q in quads if q.subject.value == node}
 
     run, step = "urn:dhf:acme:run/r1-result", "urn:dhf:acme:step/r1-result/"
-    # Steps, in order and nested, with name and status.
-    assert {("step", step + "1"), ("step", step + "2")} <= facts(run)
-    label = "http://www.w3.org/2000/01/rdf-schema#label"
-    assert {("position", "1"), ("status", "passed"), (label, "clause 1: alarms sound"),
-            ("step", step + "1.1")} <= facts(step + "1")
-    assert ("position", "1.1") in facts(step + "1.1") and ("step", step + "1.1") not in facts(run)
-    # Attachments on the run and on a step: name, media type, file.
-    out, wave = "urn:dhf:acme:attachment/out-attachment.txt", "urn:dhf:acme:attachment/wave-attachment.png"
-    assert ("attachment", out) in facts(run) and ("attachment", wave) in facts(step + "1")
-    assert {("path", "wave-attachment.png"), ("http://purl.org/dc/terms/format", "image/png"),
-            (label, "waveform")} <= facts(wave)
+    with clause("Steps, in order and nested, with name and status"):
+        assert {("step", step + "1"), ("step", step + "2")} <= facts(run)
+        label = "http://www.w3.org/2000/01/rdf-schema#label"
+        assert {("position", "1"), ("status", "passed"), (label, "clause 1: alarms sound"),
+                ("step", step + "1.1")} <= facts(step + "1")
+        assert ("position", "1.1") in facts(step + "1.1") and ("step", step + "1.1") not in facts(run)
+    with clause("Attachments on the run and on a step: name, media type, file"):
+        out, wave = "urn:dhf:acme:attachment/out-attachment.txt", "urn:dhf:acme:attachment/wave-attachment.png"
+        assert ("attachment", out) in facts(run) and ("attachment", wave) in facts(step + "1")
+        assert {("path", "wave-attachment.png"), ("http://purl.org/dc/terms/format", "image/png"),
+                (label, "waveform")} <= facts(wave)
 
-    # trace lists them with the run, nested and ordered.
-    runs = trace(Record(dhf, results), "DI-1")["design_input"]["runs"]
-    assert runs == [{
-        "test": "test_alarm", "status": "passed",
-        "attachments": [{"name": "gate output", "type": "text/plain", "file": "out-attachment.txt"}],
-        "steps": [
-            {"name": "clause 1: alarms sound", "status": "passed",
-             "attachments": [{"name": "waveform", "type": "image/png", "file": "wave-attachment.png"}],
-             "steps": [{"name": "volume above threshold", "status": "passed", "steps": [], "attachments": []}]},
-            {"name": "clause 2: alarms log", "status": "passed", "steps": [], "attachments": []},
-        ]}]
+    with clause("trace lists them with the run, nested and ordered"):
+        runs = trace(Record(dhf, results), "DI-1")["design_input"]["runs"]
+        assert runs == [{
+            "test": "test_alarm", "status": "passed",
+            "attachments": [{"name": "gate output", "type": "text/plain", "file": "out-attachment.txt"}],
+            "steps": [
+                {"name": "clause 1: alarms sound", "status": "passed",
+                 "attachments": [{"name": "waveform", "type": "image/png", "file": "wave-attachment.png"}],
+                 "steps": [{"name": "volume above threshold", "status": "passed", "steps": [], "attachments": []}]},
+                {"name": "clause 2: alarms log", "status": "passed", "steps": [], "attachments": []},
+            ]}]
