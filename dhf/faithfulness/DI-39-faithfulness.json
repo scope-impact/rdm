@@ -1,9 +1,9 @@
 {
   "design_input": "DI-39",
   "verdict": "faithful",
-  "reviewer": "claude-reviewer (independent of author)",
-  "rationale": "Clauses: (1) recording over an earlier verdict preserves its surviving probes: exact prior_findings entry with surviving_probes==[SURVIVED probe]; KILLED by record_verdict writing prior_findings=[] and by not filtering out KILLED probes; (2) ...and its uncovered clauses: KILLED by dropping uncovered; (3) together with findings it had already carried (accumulation, incl. through a verdict that added none): alice survives carol's re-pin and alice+dave accumulate; KILLED by not carrying previous prior_findings and by appending an entry for a verdict with no findings (if True); (4) entries name the earlier verdict and reviewer: exact verdict/reviewer/test_hash asserted; KILLED by blanking reviewer and by blanking verdict; (5) --stale worklist prints each listed input's prior findings: exact 'prior finding (partial verdict by alice): probe SURVIVED -- ...' and uncovered-clause lines for alice and dave, killing probe absent; KILLED by suppressing the print and by reconcile not loading prior_findings; (6) prior findings never block a release by themselves: release-gate blocking == [] with two prior findings on a faithful verdict; KILLED by treating prior findings as partial in reconcile and by adding prior-finding inputs to the release gate's blocking list. All clauses covered.",
-  "test_hash": "sha256:68a506aec0e30754983366d67838f48f2ab9fdd02edc5571e6ba117cdfd79330",
+  "reviewer": "claude-reviewer-2 (independent of author)",
+  "rationale": "Re-review reason: depends_on declared (DI-39 -> DI-20, DI-27); DI-39 text and test unchanged. Upstream context: DI-20 is the recorder through which a verdict is recorded 'over an earlier one' -- the test drives successive real record_verdict calls; DI-27 gives probes their structured KILLED/SURVIVED result, which is what separates negative knowledge from evidence -- the test records a SURVIVED and a KILLED probe and requires only the survivor to be carried (and the killing probe absent from the worklist). All 11 recorded probes re-executed one at a time via rdm story mutation-probe, all still KILLED. Clauses: (1) recording over an earlier verdict preserves its surviving probes -- record_verdict writing prior_findings=[] KILLED; not filtering out KILLED probes KILLED; (2) ...and its uncovered clauses -- dropping uncovered KILLED; (3) together with findings it had already carried (accumulation, incl. through a verdict that added none) -- not carrying previous prior_findings KILLED, appending an entry for a verdict with no findings (`if True`) KILLED; (4) entries name the earlier verdict and reviewer -- blanking reviewer KILLED, blanking verdict KILLED; (5) the --stale worklist prints each listed input's prior findings -- suppressing the print KILLED, reconcile not loading prior_findings KILLED; (6) prior findings never by themselves block a release -- treating prior findings as partial in reconcile KILLED, adding prior-finding inputs to the release gate's blocking list KILLED. All clauses covered.",
+  "test_hash": "sha256:a07b42d95b5765e2b0f85ae81cd457b9a90a6ce4379e93b024668d71a56e40da",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_prior_findings_carry_forward_and_reach_the_worklist"
@@ -88,7 +88,7 @@
     }
   ],
   "uncovered_clauses": [],
-  "text_fingerprint": "sha256:8a4f6f5e53c9096d9a710f513fe16e54651c5ec0711b74e2bcfe71c6a2848f76",
+  "text_fingerprint": "sha256:eb58884d2a0c898596fcffadd23b245660d9f8fb85f2eba4dfa3b06e9679d0d0",
   "tests_fingerprint": "sha256:ba5054bdc44f2e88d90c16c3ed849e9fbc197dd0d5cc0a68f5754189d6817664",
   "prior_findings": []
 }

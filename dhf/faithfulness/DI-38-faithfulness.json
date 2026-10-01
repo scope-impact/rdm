@@ -1,9 +1,9 @@
 {
   "design_input": "DI-38",
   "verdict": "faithful",
-  "reviewer": "claude-reviewer (independent of author)",
-  "rationale": "Re-review after test strengthening. Clauses: (1) synthetic fully-passing DHF in a scratch git repo: KILLED by removing git init; (2) release gate passes the clean baseline: baseline_blocking==[] asserted, false-positive path exits 1; KILLED by ignoring baseline_blocking in passed; (3) injects each of the 10 named fault classes and confirms the gate blocks each: KILLED by dropping the broken-journal fault and by a no-op journal injector; (4) in isolation: every fault's blocking list must equal exactly its allowed blockers (fault + unavoidable consequences); now KILLED (all three previously SURVIVED): extra untested-DI-1 fault inside the stale injector, uncommitted design-doc edit inside the unfaithful injector, and weakening the by-name catch to bool(blocking) (killed by the 'mislabelled fault' case that must report MISSED); also KILLED by piggy-backing a failing test on the orphan-need injector; (5) reports caught or missed per fault: KILLED by always printing [CAUGHT]; (6) non-zero exit on blocked baseline: covered as in (2); (7) non-zero exit on any escaped fault: KILLED by ignoring missed in passed. CLI dispatch is now smoke-tested by the untagged tests/story_record_cli_test.py (not part of this verdict). All clauses covered.",
-  "test_hash": "sha256:6fa9eddce60d9bb4bf57b0fe2e26124e95c83b0c319b9616833cdfea51e0b708",
+  "reviewer": "claude-reviewer-2 (independent of author)",
+  "rationale": "Re-review reason: depends_on declared (DI-38 -> DI-3, DI-19, DI-34, DI-37); DI-38 text and test unchanged. Upstream context: the fault classes are exactly the blocking conditions those inputs define -- untested/failing (DI-3), unreviewed/unfaithful/partial/stale (DI-19), broken journal (DI-34), reworded locked input (DI-37) -- and the test pins each fault to the exact release-gate message of its upstream rule (_ISOLATED_BLOCKERS), so a selftest that injected something other than the upstream-defined fault would fail. All 10 recorded probes re-executed one at a time via rdm story mutation-probe on rdm/story_audit/gate_selftest.py, all still KILLED, plus 2 new probes for the DI-3 and DI-37 injectors (KILLED). Clauses: (1) synthetic fully-passing DHF in a scratch git repo -- removing git init KILLED; (2) release gate passes the clean baseline -- ignoring baseline_blocking in passed KILLED; (3) injects each of the 10 named fault classes and confirms the gate blocks each -- dropping the broken-journal fault KILLED, no-op journal injector KILLED, new: the DI-3 failing-test injector writing a passed result KILLED, new: the DI-37 reword injector rewriting identical text KILLED; (4) in isolation -- extra untested-DI-1 inside the stale injector KILLED, uncommitted edit inside the unfaithful injector KILLED, failing test piggy-backed on the orphan-need injector KILLED, weakening by-name catch to bool(blocking) KILLED ('mislabelled fault' must be MISSED); (5) reports caught or missed per fault -- always printing [CAUGHT] KILLED; (6) non-zero exit on a blocked baseline -- covered as (2); (7) non-zero exit on any escaped fault -- ignoring missed in passed KILLED. CLI dispatch smoke-tested by the untagged tests/story_record_cli_test.py (not part of this verdict). All clauses covered.",
+  "test_hash": "sha256:ecfaef9f7ac10558dfc5d0954df666de828bc6d49957074dbcae9c5d523a554f",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_gate_selftest_proves_precision_and_recall"
@@ -78,10 +78,24 @@
       "replace": "",
       "test": "test_gate_selftest_proves_precision_and_recall",
       "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "def _failing(fx: Fixture) -> None:\n    _write_result(fx.results, \"DI-2\", status=\"failed\")",
+      "replace": "def _failing(fx: Fixture) -> None:\n    _write_result(fx.results, \"DI-2\", status=\"passed\")",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/gate_selftest.py",
+      "find": "_DESIGN_DOC.replace(\"add two numbers\", \"add two or more numbers\")",
+      "replace": "_DESIGN_DOC.replace(\"add two numbers\", \"add two numbers\")",
+      "test": "test_gate_selftest_proves_precision_and_recall",
+      "result": "KILLED"
     }
   ],
   "uncovered_clauses": [],
-  "text_fingerprint": "sha256:7a5442df70a9dea61b71fef1e3d92d0aa4e7a2e6e9bc074d44ec77e4402363a6",
+  "text_fingerprint": "sha256:70a5420d1b8f26676f67a281f18d56079e51ca0415ad9cf890bfccabb11f96c7",
   "tests_fingerprint": "sha256:7b624066ce8010af9cbb5fda00b7f3344f9b3276c52a0ce4471290417e1ea813",
   "prior_findings": [
     {

@@ -1,9 +1,9 @@
 {
   "design_input": "DI-28",
   "verdict": "faithful",
-  "reviewer": "claude-reviewer (independent of author)",
-  "rationale": "Re-pin after the PR #40 edits to tests/acceptance/test_gating.py (module-scope pin; git diff HEAD~2 confirms only test_verdicts_carry_replayable_probes changed -- this test's assertions are untouched) and the reconcile() refactor to lazy per-scope hash computation (_expected helper). The prior scope-consistency probe's find-text (the eager `SCOPE_FUNCTION: current_hashes(design_inputs, tests_dir, SCOPE_FUNCTION),` map entry) no longer occurs; redesigned against the current source: `expected[scope] = current_hashes(design_inputs, tests_dir, scope)` -> always SCOPE_MODULE, re-executed KILLED (a function-pinned verdict judged against module hashes must go stale exactly where the test demands FAITHFUL). Spot-check re-executed: module-hashing-empty-text mutant KILLED. Prior review carried forward: probes via rdm story mutation-probe, all KILLED. Clauses: (1) each verdict records its hash scope, module by default: faithfulness `DEFAULT_SCOPE = SCOPE_MODULE` -> `SCOPE_FUNCTION` KILLED (hash_scope == 'module' in the JSON record + the helper edit must stale the default pin); (2) module scope pins the FULL source files containing the verifying tests: module hashing `texts.append(Path(path).read_text(...))` -> `texts.append(\"\")` KILLED (a helper-only edit must change the module hash); (3) function scope selectable and (4) staleness judged per verdict at its recorded scope: reconcile computing every scope's expected hashes at SCOPE_MODULE (the redesigned _expected mutant above) KILLED, and -- from the prior review, against the then-current source -- the recorder pinning at module regardless of the selected scope (design_gate record_verdict `scope=hash_scope` -> `scope=faithfulness.SCOPE_MODULE`) KILLED; together these prove a hash_scope='function' verdict is pinned AND judged at function scope; (5) legacy verdicts (no hash_scope field) honored as function-scoped: fold fallback `else SCOPE_FUNCTION` -> `else SCOPE_MODULE` KILLED (the hand-written legacy record must stay FAITHFUL). Documented surviving/equivalent mutants (prior review, still applicable): the _status-branch legacy fallback mutant survives as dead code (_fold normalizes the scope first - equivalent); `if scope == SCOPE_MODULE:` -> `if True:` survives because the test computes the legacy hash with the same current_hashes call (tautological w.r.t. hashing internals) and because the second _edit_helper() is a no-op (the first edit already rewrote its search string), so the function-pin-survives-helper-edit intent is pinned only via the scope-consistency kills above - the DI's declared clauses are all covered.",
-  "test_hash": "sha256:55624378f0730c097257f9d56c3b26788974ac39c884f4c437fa3f3287afe355",
+  "reviewer": "claude-reviewer-2 (independent of author)",
+  "rationale": "Re-review reason: depends_on declared (DI-28 -> DI-20); DI-28 text and test unchanged. Upstream context: DI-20 (record a verdict hash-pinned to the current verifying-test source) is the pin whose scope DI-28 parameterizes -- the test drives the real record_verdict over a real tagged test file, so scope is exercised through the recorder, not only the reconciler. All 4 recorded probes re-executed one at a time via rdm story mutation-probe, all still KILLED, plus 2 new recorder-side probes (KILLED). Clauses: (1) each verdict records its hash scope -- record field `\"hash_scope\": hash_scope` -> `\"module\"` KILLED (new: a function-selected verdict recorded as module goes stale on the helper edit); (2) module scope by default -- `DEFAULT_SCOPE = SCOPE_MODULE` -> `SCOPE_FUNCTION` KILLED; (3) module scope = the full source files containing the verifying tests -- module hashing `texts.append(Path(path).read_text(...))` -> `texts.append(\"\")` KILLED (an untagged-helper edit must stale the default pin); (4) function scope selectable -- recorder pinning at module regardless of the selected scope (`scope=hash_scope` -> `scope=faithfulness.SCOPE_MODULE` in record_verdict) KILLED (new; the function pin must survive the helper edit); (5) staleness judged per verdict at its recorded scope -- reconcile `expected[scope] = current_hashes(..., scope)` -> `SCOPE_MODULE` KILLED; (6) legacy verdicts (no hash_scope) honored as function-scoped -- fold fallback `else SCOPE_FUNCTION` -> `else SCOPE_MODULE` KILLED (hand-written legacy record must stay FAITHFUL). Known limitation carried from prior reviews (not a DI clause gap): the second _edit_helper() call is a no-op because the first already rewrote its search string, so 'function pin survives a helper edit' compares against an already-edited file; the function-scope clauses are nonetheless pinned by the kills in (1) and (4). All clauses covered.",
+  "test_hash": "sha256:85c196ac625d151e8c967378ca22ac97e36c44ca312ccad95294a9d706e69209",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_verdict_hash_scope_module_default_function_selectable"
@@ -36,7 +36,24 @@
       "replace": "        agg.hash_scope = v.hash_scope if v.hash_scope in _SCOPES else SCOPE_MODULE",
       "test": "test_verdict_hash_scope_module_default_function_selectable",
       "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        inputs, tests_dir, scope=hash_scope\n    ).get(design_input_id, \"\")",
+      "replace": "        inputs, tests_dir, scope=faithfulness.SCOPE_MODULE\n    ).get(design_input_id, \"\")",
+      "test": "test_verdict_hash_scope_module_default_function_selectable",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "        \"hash_scope\": hash_scope,\n        \"reviewed_tests\"",
+      "replace": "        \"hash_scope\": \"module\",\n        \"reviewed_tests\"",
+      "test": "test_verdict_hash_scope_module_default_function_selectable",
+      "result": "KILLED"
     }
   ],
-  "uncovered_clauses": []
+  "uncovered_clauses": [],
+  "text_fingerprint": "sha256:1d1a1700b6c073261696bcf623aeb6cf2ec75c3cc0d9e8558d8985c48e625201",
+  "tests_fingerprint": "sha256:79aec4d139771bdd4256d3308f4d7d199936b76ea4f77197d24a47d51b451421",
+  "prior_findings": []
 }

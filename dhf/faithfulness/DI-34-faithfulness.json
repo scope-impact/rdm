@@ -1,9 +1,9 @@
 {
   "design_input": "DI-34",
   "verdict": "faithful",
-  "reviewer": "claude-reviewer (independent of author)",
-  "rationale": "Clauses: (1) journal.jsonl in DHF: assert journal_path==dhf/journal.jsonl; (2) append-only: KILLED by open(\"a\")->open(\"w\"); (3) one event per recorded verdict: assert 2->3 events + payload.design_input/verdict_sha256; KILLED by deleting journal.append_event in record_verdict; (4) seq/timestamp/type/payload/prev_hash fields: exact key-set + seq==index+1 asserts; KILLED by dropping the timestamp field and by prev_hash always GENESIS; (5) own SHA-256 over body and prev hash: test recomputes canonical hash incl. prev_hash; KILLED by excluding prev_hash from _event_hash body; (6) verify detects edited event: KILLED by disabling event_hash check; (7) deleted/inserted/reordered: seq and prev_hash checks are redundant defenses \u2014 disabling either alone SURVIVED (the other still catches, by design), disabling both KILLED; (8) reports first broken seq: exact broken_seq asserted per case and 'Journal FAILED at seq 2' via journal_command; KILLED by off-by-one expected_seq+1; (9) release gate blocks on failing journal (and passes on intact): KILLED by `if False:` on chain.ok check in run_release_gate. Extra: tail-truncation cross-check vs verdict files KILLED by disabling verdict_sha256 comparison. All clauses covered. Note (cross-cutting, not counted as a DI clause gap): the argparse dispatch in rdm/main.py is not exercised (mutating it to return 0 SURVIVED); the test drives the command function directly, which is the repo-wide acceptance-test convention.",
-  "test_hash": "sha256:d90870acc4ed909cdfd45ba485ce6f07f9d68a6542a24453d61702fc0c9b94df",
+  "reviewer": "claude-reviewer-2 (independent of author)",
+  "rationale": "Re-review reason: depends_on declared (DI-34 -> DI-20); DI-34 text and test unchanged. Upstream context: DI-20 (the command that records a verdict) is the event source -- \"one event each time a verdict is recorded\" is exercised through the real record_verdict, not a direct append_event call. All 13 recorded probes re-executed one at a time via rdm story mutation-probe; results identical to the prior review (10 KILLED, 3 SURVIVED as documented). Clauses: (1) journal.jsonl in the DHF -- journal_path == dhf/journal.jsonl asserted; (2) append-only -- open(\"a\") -> open(\"w\") KILLED; (3) one event per recorded verdict (via DI-20's recorder) -- deleting journal.append_event in record_verdict KILLED (2->3 events, payload design_input/verdict_sha256); (4) seq/timestamp/type/payload/prev_hash fields -- dropping timestamp KILLED, prev_hash always GENESIS KILLED; (5) own SHA-256 over body and prev hash -- excluding prev_hash from the _event_hash body KILLED; (6) verify detects an edited event -- disabling the event_hash check KILLED; (7) deleted/inserted/reordered -- seq and prev_hash checks are redundant defenses: disabling either alone SURVIVED (the other still catches, by design -- equivalent for the observable clause), deleting the seq check block wholesale KILLED; (8) reports the first broken seq -- off-by-one in the reported seq KILLED (exact broken_seq per case and 'Journal FAILED at seq 2'); (9) release gate blocks on a failing journal -- `if not chain.ok` -> `if False` KILLED; extra: tail-truncation cross-check vs verdict files KILLED. rdm/main.py argparse dispatch (`return journal_command(` -> `return 0 ...`) SURVIVED -- not a DI clause gap; acceptance tests drive the command function (repo convention). All clauses covered.",
+  "test_hash": "sha256:46889bc6a1d322788e35d8d9be975d956d58f05112e71473a201985000a68ce9",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_journal_is_hash_chained_verifiable_and_gates_release"
@@ -102,7 +102,7 @@
     }
   ],
   "uncovered_clauses": [],
-  "text_fingerprint": "sha256:10b2ff7e60ec83a5e29e3db1c5859502524de1df2327627b938f75dc0821e1cd",
+  "text_fingerprint": "sha256:a599966bbb3f1a00c25c6ffca0bc0ae92c9cfe041e2f76f6abf1ed5dd780e8dc",
   "tests_fingerprint": "sha256:f55f154a44cf3e6f9871219fc4bca0a6094ea39d6c35274192ff4959490f37bd",
   "prior_findings": [
     {
@@ -121,6 +121,35 @@
           "file": "rdm/record/journal.py",
           "find": "        if event.get(\"prev_hash\") != prev:",
           "replace": "        if False:",
+          "test": "test_journal_is_hash_chained_verifiable_and_gates_release",
+          "result": "SURVIVED"
+        }
+      ],
+      "uncovered_clauses": []
+    },
+    {
+      "verdict": "faithful",
+      "reviewer": "claude-reviewer (independent of author)",
+      "test_hash": "sha256:d90870acc4ed909cdfd45ba485ce6f07f9d68a6542a24453d61702fc0c9b94df",
+      "surviving_probes": [
+        {
+          "file": "rdm/record/journal.py",
+          "find": "        if event.get(\"seq\") != expected_seq:",
+          "replace": "        if False:",
+          "test": "test_journal_is_hash_chained_verifiable_and_gates_release",
+          "result": "SURVIVED"
+        },
+        {
+          "file": "rdm/record/journal.py",
+          "find": "        if event.get(\"prev_hash\") != prev:",
+          "replace": "        if False:",
+          "test": "test_journal_is_hash_chained_verifiable_and_gates_release",
+          "result": "SURVIVED"
+        },
+        {
+          "file": "rdm/main.py",
+          "find": "            return journal_command(",
+          "replace": "            return 0 if True else journal_command(",
           "test": "test_journal_is_hash_chained_verifiable_and_gates_release",
           "result": "SURVIVED"
         }

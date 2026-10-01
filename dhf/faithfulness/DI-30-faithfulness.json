@@ -1,9 +1,9 @@
 {
   "design_input": "DI-30",
   "verdict": "faithful",
-  "reviewer": "claude (independent of author)",
-  "rationale": "Probes via rdm story mutation-probe on rdm/record/bundle.py, all KILLED. Clauses: (1) the verification data is in the bundle: writing it under a different name (`verification_path = out_dir / \"verification.yml\"` -> `\"verification-data.yml\"`) KILLED ((out/'verification.yml').is_file() plus the manifest files set); (2) the traceability matrix is RENDERED from that data: rendering with an empty context (`context = {\"verification\": ...}` -> `{}`) KILLED ('total=1 verified=1', 'row:DI-1:verified', and no '{%' template markers may remain); (3) the faithfulness verdicts travel with the bundle: `shutil.copy2(verdict, verdicts_out / verdict.name)` -> `pass` KILLED (verdict file present + manifest files set); (4) a manifest describing the bundle: emptying its files list (the rglob condition `if p.is_file() and p.name != \"manifest.json\"` -> `if False`) KILLED by the exact files-set equality, with on-disk manifest == returned manifest and the design_inputs/verified/faithfulness_verdicts counts asserted; (5) written to an output directory for retention: every assertion reads back from the out/ directory.",
-  "test_hash": "sha256:8fdcd76fb2da0323fdeb50b2a43481361b434be3adc801a73d40df529a0c115a",
+  "reviewer": "claude-reviewer-2 (independent of author)",
+  "rationale": "Re-review reason: depends_on declared (DI-30 -> DI-4, DI-19); DI-30 text and test unchanged. Upstream context: DI-4 (reconcile Allure tags, render the matrix from executed results) defines the verification data and matrix the bundle must carry; DI-19 (independent verdicts) defines the verdict files it must retain. All 4 recorded probes re-executed one at a time via rdm story mutation-probe on rdm/record/bundle.py, all still KILLED, plus 1 new probe (KILLED). Clauses: (1) the verification data is in the bundle -- `verification_path = out_dir / \"verification.yml\"` -> `\"verification-data.yml\"` KILLED; (1b) NEW, per DI-4: that data is reconciled from the EXECUTED results -- feeding write_verification_file the (result-less) out_dir instead of allure_results_dir KILLED (verified=1 / 'row:DI-1:verified' / manifest verified==1); (2) the traceability matrix is rendered from that data -- render context `{\"verification\": ...}` -> `{}` KILLED ('total=1 verified=1', no '{%' left); (3) the faithfulness verdicts travel with the bundle -- `shutil.copy2(...)` -> pass KILLED; (4) a manifest describing the bundle -- rglob filter -> `if False` KILLED by the exact files-set equality, with on-disk == returned manifest and the design_inputs/verified/faithfulness_verdicts counts asserted; (5) written to an output directory for retention -- every assertion reads back from out/. All clauses covered.",
+  "test_hash": "sha256:eb2efe2f0756c812b66e1fc6a69ee12c24a20eb4cacec7a7416a0b0a93616aa0",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_evidence_bundle_writes_the_retained_release_set"
@@ -36,7 +36,17 @@
       "replace": "    verification_path = out_dir / \"verification-data.yml\"",
       "test": "test_evidence_bundle_writes_the_retained_release_set",
       "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/bundle.py",
+      "find": "    data = write_verification_file(dhf_dir, allure_results_dir, verification_path)",
+      "replace": "    data = write_verification_file(dhf_dir, out_dir, verification_path)",
+      "test": "test_evidence_bundle_writes_the_retained_release_set",
+      "result": "KILLED"
     }
   ],
-  "uncovered_clauses": []
+  "uncovered_clauses": [],
+  "text_fingerprint": "sha256:630614ba73ed96e1098aef7ee5d16e10737ddcdb433fa5c89fbb3e7167ae8aca",
+  "tests_fingerprint": "sha256:2bfae22d46402f4eeee82dc3d534f2fa97861e91478aeb45dd4f4ded555a36db",
+  "prior_findings": []
 }

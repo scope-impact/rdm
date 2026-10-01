@@ -1,9 +1,9 @@
 {
   "design_input": "DI-36",
-  "verdict": "faithful",
-  "reviewer": "claude-reviewer (independent of author)",
-  "rationale": "Re-review after second strengthening. Clauses: (1) new verdicts record normalized fingerprints: KILLED by empty text_fingerprint; (2) text ignores whitespace: KILLED by raw normalize_text; (3) test source ignores whitespace, comments, docstrings - Python: KILLED by skipping _strip_docstrings; non-Python (JS fixture): KILLED by removing the line-comment filter, dropping '//', disabling leading /* */ blocks, never closing a block, keeping block-interior lines as code; and ONLY comments (code on comment-adjacent lines still counts): now KILLED (all three SURVIVED last round) - widening '#' to any '#'-leading line (own-line #private edit must be class B), dropping code after '*/' on a one-line leading block, and on the closing line of a multi-line block; also KILLED by reverting to the old fail-open regex treating '*'-leading lines as comments. SURVIVED: `after = line` instead of the text after '/*' - an equivalent mutant (the code after the first '*/' is identical unless a line opens with the degenerate '/*/'); (4) classify A/B/C/D: KILLED by swapping C/B precedence and by disabling the D branch; (5) class shown in report: KILLED by suppressing the suffix; (6)-(7) carry-forward re-pins class A and records class/from_hash: KILLED by carried_forward=None; (8) refuses every other class: KILLED by admitting B, by admitting C, by admitting D. All clauses covered.",
-  "test_hash": "sha256:a83138f085c9124f3b14b24e06592043fd7245fe89c495acf7eb14ea9ba9054a",
+  "verdict": "partial",
+  "reviewer": "claude-reviewer-2 (independent of author)",
+  "rationale": "Re-review reason: depends_on declared (DI-36 -> DI-28, DI-20); DI-36 text and test unchanged. Upstream context: DI-20 is the recorder that must write the fingerprints (exercised through the real record_verdict / carry_forward_verdict); DI-28 makes fingerprints scope-dependent (module default) -- new probe: record_verdict fingerprinting at SCOPE_FUNCTION regardless of hash_scope KILLED. Also checked against DI-35 (pins cover upstream text), which DI-36 does not declare but which decides what a stale verdict's 'requirement-text change' is. All 20 recorded probes re-executed one at a time via rdm story mutation-probe; results identical to the prior review (19 KILLED, 1 SURVIVED documented equivalent), plus 2 new probes. Clauses: (1) new verdicts record normalized fingerprints -- empty text_fingerprint KILLED; recorder fingerprinting at the wrong scope KILLED (new); (2) text ignores whitespace -- raw normalize_text KILLED; (3) test source ignores whitespace/comments/docstrings: Python -- skipping _strip_docstrings KILLED; non-Python -- removing the line-comment filter, dropping '//', disabling leading /* */ blocks, never closing a block, keeping block-interior lines KILLED; ONLY comments -- widening '#' to any '#'-leading line, dropping code after '*/' (one-line and multi-line closers), old fail-open '*'-leading regex all KILLED; `after = line` instead of the text after '/*' SURVIVED (equivalent unless a line opens with the degenerate '/*/'); (4) classify A/B/C/D -- swapping C/B precedence KILLED, disabling D KILLED; (4b) a stale verdict caused by an UPSTREAM (depends_on) requirement-text change classifies as C -- NOT COVERED: current_fingerprints fingerprinting the input's own text instead of pinned_text(di, by_id) SURVIVED, because no fixture input declares depends_on; under that mutant every verdict re-opened by an upstream reword (exactly the ten re-opened by this dogfood commit) would classify as A and `rdm story verdict --carry-forward` would re-pin it with no review; (5) class shown in the report -- suppressing the suffix KILLED; (6)-(7) carry-forward re-pins class A and records class/from_hash -- carried_forward=None KILLED; (8) refuses every other class -- admitting B, C, D each KILLED. Verdict partial on (4b). Fix: add a dependent input to the fixture, reword its upstream, and assert class C and a refused carry-forward (and consider declaring DI-36 depends_on DI-35 in the record).",
+  "test_hash": "sha256:6bedcf7c88c20c0ec7de2ca0972c8584f25486be381acc0ff9ead3318ef16007",
   "hash_scope": "module",
   "reviewed_tests": [
     "test_stale_verdicts_are_classified_and_only_class_a_carries_forward"
@@ -148,10 +148,26 @@
       "replace": "        carried_forward=None,",
       "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
       "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/faithfulness.py",
+      "find": "        di[\"id\"]: (text_fingerprint(pinned_text(di, by_id)), source_fingerprint(sources.get(di[\"id\"], [])))",
+      "replace": "        di[\"id\"]: (text_fingerprint(di[\"text\"]), source_fingerprint(sources.get(di[\"id\"], [])))",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "SURVIVED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    text_fp, tests_fp = faithfulness.current_fingerprints(inputs, tests_dir, hash_scope).get(",
+      "replace": "    text_fp, tests_fp = faithfulness.current_fingerprints(inputs, tests_dir, faithfulness.SCOPE_FUNCTION).get(",
+      "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+      "result": "KILLED"
     }
   ],
-  "uncovered_clauses": [],
-  "text_fingerprint": "sha256:f81c46972b68d04fc4a5fad0e9bd41d2bc1b8b5c59bc6d1c83bc72a74cb13918",
+  "uncovered_clauses": [
+    "a verdict made stale by an upstream (depends_on) requirement-text change classifies as C, not A, so carry-forward refuses it: current_fingerprints fingerprinting only the input's own text (not pinned_text) survives, since no fixture input declares depends_on"
+  ],
+  "text_fingerprint": "sha256:6ae244ac06b070b218fd2063618bc769ddd3c1a192cbaa164a53b5e29f96ebf1",
   "tests_fingerprint": "sha256:d6c89d55d0d78a2efea79350d893c51c7d9be9222b15cec5764453e8362afb53",
   "prior_findings": [
     {
@@ -201,6 +217,21 @@
       "uncovered_clauses": [
         "non-Python fingerprint ignores only comments (code on a line starting with #private, or following a closing */ of a line-leading block comment, is never edited in the test, so fail-open mutants of those paths survive)"
       ]
+    },
+    {
+      "verdict": "faithful",
+      "reviewer": "claude-reviewer (independent of author)",
+      "test_hash": "sha256:a83138f085c9124f3b14b24e06592043fd7245fe89c495acf7eb14ea9ba9054a",
+      "surviving_probes": [
+        {
+          "file": "rdm/record/fingerprint.py",
+          "find": "            after = line.split(\"/*\", 1)[1]",
+          "replace": "            after = line",
+          "test": "test_stale_verdicts_are_classified_and_only_class_a_carries_forward",
+          "result": "SURVIVED"
+        }
+      ],
+      "uncovered_clauses": []
     }
   ]
 }

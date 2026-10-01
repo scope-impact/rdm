@@ -1,11 +1,60 @@
 {
   "design_input": "DI-20",
   "verdict": "faithful",
-  "reviewer": "claude (independent review pass)",
-  "rationale": "clauses: records-hash-pinned(\u2713 asserts the written verdict reconciles faithful via the current source hash \u2014 a wrong/empty hash would read stale), rejects-undeclared(\u2713 record_verdict returns None for DI-404)",
-  "test_hash": "sha256:ca6f687f65bbf365deba890f1c9320dacdf071ac5087932c8e1eeead957982fa",
+  "reviewer": "claude-reviewer-2 (independent of author)",
+  "rationale": "Re-review reason: depends_on declared (DI-20 -> DI-19); DI-20 text and test unchanged. Upstream context: DI-19 (require an independent verdict, blocking on unreviewed/unfaithful/partial/stale) is what makes the pin meaningful -- a pin that does not track the live test source would let a stale verdict read faithful. Prior verdict recorded no probes; all probes below newly executed one at a time via rdm story mutation-probe. Clauses: (1) a command to record a verdict for a design input -- record_verdict (the logic behind rdm story verdict) writes the file, asserted out.is_file(); argparse dispatch not exercised (repo-wide acceptance convention; CLI smoke-tested elsewhere, untagged); (2) hash-pinned to the CURRENT verifying-test source -- own test: `test_hash = current_hashes(...)` -> `test_hash = \"\"` KILLED (the freshly written verdict must reconcile FAITHFUL). BUT the own test's tests/ dir is deliberately empty, so the pin never covers any real test source there: `tests_dir = None` in record_verdict SURVIVED and hash_for dropping test sources (`parts = [di_text.strip()]`) SURVIVED against the own test. The clause is genuinely covered by DI-28's tagged test test_verdict_hash_scope_module_default_function_selectable, which calls the same record_verdict over a real tagged test and requires a later test edit to stale it: both mutants KILLED there (recorded below with that test as selector, so replay re-checks the cross-coverage); (3) rejects an undeclared design input -- `if design_input_id not in {...}: return None` -> `if False:` KILLED (record_verdict('DI-404') must return None). All clauses covered (clause 2 via the DI-28 test, stated explicitly). Recommendation: put a tagged test file in the DI-20 fixture so its own test proves the source pin. Hash scope kept as function (legacy verdict had no hash_scope, honored as function-scoped per DI-28).",
+  "test_hash": "sha256:22e6b8bfb5c4f70dc3143a7be3ea75e4a3515d69be529421a64eb36f18fed7dd",
+  "hash_scope": "function",
   "reviewed_tests": [
-    "test_records_verdict_hash_pinned_and_rejects_unknown"
+    "test_records_verdict_hash_pinned_and_rejects_unknown",
+    "test_verdict_hash_scope_module_default_function_selectable"
   ],
-  "uncovered_clauses": []
+  "probes": [
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    test_hash = faithfulness.current_hashes(\n        inputs, tests_dir, scope=hash_scope\n    ).get(design_input_id, \"\")",
+      "replace": "    test_hash = \"\"",
+      "test": "test_records_verdict_hash_pinned_and_rejects_unknown",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    tests_dir = allure.find_tests_dir(dhf_dir)\n    test_hash",
+      "replace": "    tests_dir = None\n    test_hash",
+      "test": "test_records_verdict_hash_pinned_and_rejects_unknown",
+      "result": "SURVIVED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    if design_input_id not in {di[\"id\"] for di in inputs}:\n        return None\n    tests_dir",
+      "replace": "    if False:\n        return None\n    tests_dir",
+      "test": "test_records_verdict_hash_pinned_and_rejects_unknown",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/faithfulness.py",
+      "find": "    parts = [di_text.strip(), *sorted(s.strip() for s in test_sources)]",
+      "replace": "    parts = [di_text.strip()]",
+      "test": "test_records_verdict_hash_pinned_and_rejects_unknown",
+      "result": "SURVIVED"
+    },
+    {
+      "file": "rdm/story_audit/design_gate.py",
+      "find": "    tests_dir = allure.find_tests_dir(dhf_dir)\n    test_hash",
+      "replace": "    tests_dir = None\n    test_hash",
+      "test": "test_verdict_hash_scope_module_default_function_selectable",
+      "result": "KILLED"
+    },
+    {
+      "file": "rdm/record/faithfulness.py",
+      "find": "    parts = [di_text.strip(), *sorted(s.strip() for s in test_sources)]",
+      "replace": "    parts = [di_text.strip()]",
+      "test": "test_verdict_hash_scope_module_default_function_selectable",
+      "result": "KILLED"
+    }
+  ],
+  "uncovered_clauses": [],
+  "text_fingerprint": "sha256:85b52cedc24876bc2fea100b3061e42b7d1461065f1bb569aaf1f0dc5c052b27",
+  "tests_fingerprint": "sha256:a865864cd9cbb5a2232520c92c6c5e33c07c5dd8cb1fbea171e49fc83e5a2254",
+  "prior_findings": []
 }
