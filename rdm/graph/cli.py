@@ -20,6 +20,7 @@ PREFIXES = {
     "dcterms": "http://purl.org/dc/terms/",
     "prov": "http://www.w3.org/ns/prov#",
     "oslc_rm": "http://open-services.net/ns/rm#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
 }
 
 
@@ -41,6 +42,7 @@ def graph_build_command(
     output: Path | None = None,
     store: Path | None = None,
     project_name: str | None = None,
+    checklists: list[str] | None = None,
 ) -> int:
     """Project the record; write sorted N-Quads and/or (re)build a store."""
     try:
@@ -51,7 +53,11 @@ def graph_build_command(
     if not dhf.exists():
         print(f"Error: DHF directory not found: {dhf}")
         return 2
-    quads = project(dhf, allure_results_dir, project_name)
+    try:
+        quads = project(dhf, allure_results_dir, project_name, checklists)
+    except FileNotFoundError as error:
+        print(f"Error: {error}")
+        return 2
     if output is None and store is None:
         sys.stdout.write(nquads(quads))
         return 0
@@ -71,6 +77,7 @@ def graph_query_command(
     dhf_dir: Path | None = None,
     allure_results_dir: Path | None = None,
     fmt: str = "tsv",
+    checklists: list[str] | None = None,
 ) -> int:
     """Answer a SPARQL query over a store, or over a fresh in-memory projection."""
     try:
@@ -90,7 +97,7 @@ def graph_query_command(
             print(f"Error: DHF directory not found: {dhf}")
             return 2
         db = ox.Store()
-        db.extend(project(dhf, allure_results_dir))
+        db.extend(project(dhf, allure_results_dir, checklists=checklists))
     try:
         # Named graphs are queried as one dataset, as `rdm graph serve` does.
         result = db.query(with_prefixes(sparql), use_default_graph_as_union=True)

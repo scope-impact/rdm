@@ -36,7 +36,8 @@ Common flag: `--dhf DIR` (default `dhf/`).
 
 | Command | What it does |
 |---|---|
-| `build [--allure-results DIR] [-o FILE] [--store DIR] [--project NAME]` | project the record into RDF named graphs; sorted N-Quads to a file or stdout, and/or a rebuilt Oxigraph store |
+| `build [--allure-results DIR] [--checklist NAME\|FILE]… [-o FILE] [--store DIR] [--project NAME]` | project the record (and any checklists, as data) into RDF named graphs; sorted N-Quads to a file or stdout, and/or a rebuilt Oxigraph store |
+| `validate [--allure-results DIR] [--checklist NAME\|FILE]… [--shapes FILE]…` | check the graph against the SHACL gate shapes (plus your own); exit 1 on a violation |
 | `query 'SPARQL' [--store DIR] [--format tsv\|csv\|json]` | SELECT / ASK / CONSTRUCT over the store, or over an in-memory projection of `--dhf` |
 | `serve [--store DIR] [--bind HOST:PORT]` | SPARQL 1.1 endpoint (union default graph, CORS) for AWS Graph Explorer and other SPARQL clients |
 

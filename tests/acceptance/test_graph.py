@@ -76,7 +76,9 @@ def _store(quads) -> "ox.Store":
 
 
 def _ask(store, body: str) -> bool:
-    return bool(store.query(PREFIXES + "ASK { " + body + " }"))
+    # Patterns without a GRAPH clause match across all named graphs, as
+    # `rdm graph query` and the served endpoint do.
+    return bool(store.query(PREFIXES + "ASK { " + body + " }", use_default_graph_as_union=True))
 
 
 @allure.story("DI-35")

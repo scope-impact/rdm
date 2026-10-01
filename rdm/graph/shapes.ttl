@@ -1,0 +1,117 @@
+@prefix rdm:     <https://github.com/scope-impact/rdm/ns#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+
+# The gate rules as SHACL (DI-38): closed-world checks over the open-world
+# graph. sh:Violation = release-blocking (mirrors `rdm story release-gate` and
+# `rdm gap`); sh:Warning = what the design gate reports as a warning.
+# Teams add their own rules as more shape files: `rdm graph validate --shapes`.
+
+# --- Release gate -----------------------------------------------------------
+
+rdm:UserNeedAddressedShape a sh:NodeShape ;
+    sh:targetClass rdm:UserNeed ;
+    sh:property [
+        sh:path [ sh:inversePath rdm:tracesTo ] ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "user need is addressed by no design input" ;
+    ] .
+
+rdm:DesignInputVerifiedShape a sh:NodeShape ;
+    sh:targetClass rdm:DesignInput ;
+    # At least one passing run...
+    sh:property [
+        sh:path [ sh:inversePath rdm:exercises ] ;
+        sh:qualifiedValueShape [ sh:property [ sh:path rdm:status ; sh:hasValue "passed" ] ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "design input is not verified by any passing test run" ;
+    ] ;
+    # ...and no failed or broken one.
+    sh:property [
+        sh:path [ sh:inversePath rdm:exercises ] ;
+        sh:qualifiedValueShape [ sh:property [ sh:path rdm:status ; sh:in ( "failed" "broken" ) ] ] ;
+        sh:qualifiedMaxCount 0 ;
+        sh:severity sh:Violation ;
+        sh:message "design input has a failed or broken test run" ;
+    ] .
+
+# --- Gap analysis (rdm gap) -------------------------------------------------
+
+rdm:ClauseReferencedShape a sh:NodeShape ;
+    sh:targetClass rdm:Clause ;
+    sh:property [
+        sh:path [ sh:inversePath dcterms:references ] ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "checklist clause is referenced by no document" ;
+    ] .
+
+# Checklist data itself, whichever file it came from (.txt or RDF).
+rdm:ClauseDataShape a sh:NodeShape ;
+    sh:targetClass rdm:Clause ;
+    sh:property [ sh:path skos:notation ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+                  sh:severity sh:Violation ; sh:message "clause needs exactly one key (skos:notation)" ] ;
+    sh:property [ sh:path skos:inScheme ; sh:minCount 1 ; sh:class skos:ConceptScheme ;
+                  sh:severity sh:Violation ; sh:message "clause needs a standard (skos:inScheme a skos:ConceptScheme)" ] .
+
+rdm:ChecklistDataShape a sh:NodeShape ;
+    sh:targetClass rdm:Checklist ;
+    sh:property [ sh:path skos:member ; sh:class rdm:Clause ;
+                  sh:severity sh:Violation ; sh:message "checklist member is not a clause" ] ;
+    sh:property [ sh:path rdm:includes ; sh:class rdm:Checklist ;
+                  sh:severity sh:Violation ; sh:message "checklist includes something that is not a checklist" ] .
+
+# --- Design gate warnings ---------------------------------------------------
+
+rdm:DesignInputTaggedShape a sh:NodeShape ;
+    sh:targetClass rdm:DesignInput ;
+    sh:property [
+        sh:path [ sh:inversePath rdm:verifies ] ;
+        sh:minCount 1 ;
+        sh:severity sh:Warning ;
+        sh:message "design input has no tagged test file" ;
+    ] ;
+    sh:property [
+        sh:path rdm:tracesTo ; sh:class rdm:UserNeed ;
+        sh:severity sh:Warning ; sh:message "design input traces to an undeclared user need" ;
+    ] .
+
+rdm:ContextReferencesShape a sh:NodeShape ;
+    sh:targetClass rdm:BoundedContext ;
+    sh:property [ sh:path rdm:satisfies ; sh:class rdm:UserNeed ;
+                  sh:severity sh:Warning ; sh:message "context satisfies an undeclared user need" ] ;
+    sh:property [ sh:path rdm:realises ; sh:class rdm:DesignInput ;
+                  sh:severity sh:Warning ; sh:message "context realises an undeclared design input" ] .
+
+# Like the design gate, only tags that share an id prefix with a declared
+# design input are reported (a stray US-001 in a fixture string is noise).
+rdm:TestTagShape a sh:NodeShape ;
+    sh:targetClass rdm:TestFile ;
+    # A SPARQL constraint takes its severity from the shape (pySHACL ignores
+    # it on the constraint node).
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "test tag {?tag} names no declared design input" ;
+        sh:prefixes rdm: ;
+        sh:select """
+            SELECT $this ?tag WHERE {
+                $this rdm:verifies ?input .
+                FILTER NOT EXISTS { ?input a rdm:DesignInput }
+                BIND (REPLACE(STR(?input), "^.*/", "") AS ?tag)
+                FILTER EXISTS {
+                    ?declared a rdm:DesignInput ; dcterms:identifier ?id .
+                    FILTER (STRBEFORE(?id, "-") = STRBEFORE(?tag, "-"))
+                }
+            }
+        """ ;
+    ] .
+
+rdm: sh:declare
+    [ sh:prefix "rdm" ; sh:namespace "https://github.com/scope-impact/rdm/ns#"^^xsd:anyURI ] ,
+    [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] .

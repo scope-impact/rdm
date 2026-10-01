@@ -7,6 +7,11 @@
   record into RDF named graphs (record, tests, executions, git, ontology),
   stores it in an embedded Oxigraph database, answers SPARQL, and serves a
   SPARQL 1.1 endpoint for AWS Graph Explorer. DI-35, DI-36, user need UN-014.
+- Checklists and `[[KEY]]` reference tags in the graph, as SKOS data: a new
+  standard or checklist is a `.txt` or RDF file, never a code change; matched
+  with `rdm gap`'s own reader and matcher (DI-37).
+- `rdm graph validate`: the gate rules as SHACL shapes (plus `--shapes` for
+  your own), held by test to agreement with the release gate (DI-38).
 
 ### Changed — `rdm story mutation-probe` is a standalone reviewer tool
 - Same command and restore guarantees, now recorded as DI-34 (user need

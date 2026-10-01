@@ -10,6 +10,8 @@ a query can always tell where a fact came from:
 - ``tests``      — verification tags found in test sources
 - ``executions`` — Allure results, when given
 - ``git``        — each design document's latest commit
+- ``checklists`` — requested regulatory checklists, as data (DI-37)
+- ``references`` — documents' ``[[…]]`` tags linked to the clauses they name
 - ``ontology``   — RDM's vocabulary (``ontology.ttl``), so browsers can label things
 
 Open world: the graph asserts only what the record says. A missing
@@ -39,7 +41,7 @@ from rdm.record.sdd import (
 
 NS = "https://github.com/scope-impact/rdm/ns#"
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
-GRAPHS = ("record", "tests", "executions", "git", "ontology")
+GRAPHS = ("record", "tests", "executions", "git", "checklists", "references", "ontology")
 
 _RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 _RDFS = "http://www.w3.org/2000/01/rdf-schema#"
@@ -227,8 +229,14 @@ def default_project(dhf: Path) -> str:
     return (root or Path(dhf).resolve().parent).name
 
 
-def project(dhf_dir: Path, allure_results_dir: Path | None = None, project_name: str | None = None) -> list[ox.Quad]:
-    """The record as quads, de-duplicated, in a stable order."""
+def project(
+    dhf_dir: Path,
+    allure_results_dir: Path | None = None,
+    project_name: str | None = None,
+    checklists: list[str] | None = None,
+) -> list[ox.Quad]:
+    """The record as quads, de-duplicated, in a stable order. ``checklists``
+    (built-in names or files) adds the checklists and references graphs."""
     dhf = Path(dhf_dir).resolve()
     root = _repo_root(dhf.parent) or dhf.parent
     ds = _Dataset(project_name or default_project(dhf))
@@ -238,6 +246,13 @@ def project(dhf_dir: Path, allure_results_dir: Path | None = None, project_name:
         _executions(ds, Path(allure_results_dir))
     if _repo_root(dhf.parent) is not None:
         _git(ds, dhf, root)
+    if checklists:
+        from rdm.graph.checklists import checklist_quads, reference_quads
+
+        quads, keys = checklist_quads(list(checklists), ds.graph("checklists"))
+        ds.quads.extend(quads)
+        ds.quads.extend(reference_quads(controlled_documents(dhf, root), lambda doc_id: ds.node("doc", doc_id),
+                                        keys, ds.graph("references")))
     _ontology(ds)
     unique = {str(q): q for q in ds.quads}
     return [unique[k] for k in sorted(unique)]

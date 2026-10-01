@@ -81,15 +81,25 @@ def handle_graph_command(args):
         return graph_cli.graph_build_command(
             dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
             output=_path(args.output), store=_path(args.store), project_name=args.project,
+            checklists=args.checklist,
         )
     if args.graph_command == 'query':
         return graph_cli.graph_query_command(
             args.sparql, store=_path(args.store), dhf_dir=_path(args.dhf),
-            allure_results_dir=_path(args.allure_results), fmt=args.format,
+            allure_results_dir=_path(args.allure_results), fmt=args.format, checklists=args.checklist,
         )
     if args.graph_command == 'serve':
         return graph_cli.graph_serve_command(store=_path(args.store), bind=args.bind)
-    print("Unknown graph subcommand. Use: build, query, or serve")
+    if args.graph_command == 'validate':
+        try:
+            from rdm.graph.validate import validate_command
+        except ImportError:
+            return graph_cli._missing_extra()
+        return validate_command(
+            dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
+            checklists=args.checklist, extra_shapes=[Path(s) for s in args.shapes or []],
+        )
+    print("Unknown graph subcommand. Use: build, query, serve, or validate")
     return 1
 
 
@@ -440,6 +450,8 @@ def _add_graph_parser(subparsers):
     build.add_argument('-o', '--output', help='write sorted N-Quads here (default: stdout, unless --store)')
     build.add_argument('--store', help='(re)build an Oxigraph store in this directory, e.g. .rdm/graph')
     build.add_argument('--project', help='project name in instance IRIs (default: the repository name)')
+    build.add_argument('--checklist', action='append',
+                       help='add a checklist: built-in name (rdm gap --list) or a .txt/RDF file; repeatable')
 
     query = graph_sub.add_parser('query', help='answer a SPARQL query (SELECT/ASK/CONSTRUCT)')
     query.add_argument('sparql', help='the SPARQL query text')
@@ -447,6 +459,13 @@ def _add_graph_parser(subparsers):
     query.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     query.add_argument('--allure-results', help='Allure results dir (for the in-memory projection)')
     query.add_argument('--format', choices=['tsv', 'csv', 'json'], default='tsv', help='SELECT result format')
+    query.add_argument('--checklist', action='append', help='checklist(s) for the in-memory projection; repeatable')
+
+    validate = graph_sub.add_parser('validate', help='check the graph against the SHACL gate shapes (+ your own)')
+    validate.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    validate.add_argument('--allure-results', help='Allure results dir (needed for the verification shapes)')
+    validate.add_argument('--checklist', action='append', help='checklist(s) to hold the documents to; repeatable')
+    validate.add_argument('--shapes', action='append', help='an additional SHACL shapes file; repeatable')
 
     serve = graph_sub.add_parser('serve', help='serve the store as a SPARQL 1.1 endpoint (for AWS Graph Explorer)')
     serve.add_argument('--store', help='store directory (default: .rdm/graph)')

@@ -1,8 +1,10 @@
 # The design record as a graph
 
 `rdm graph` projects the design record into RDF — user needs, bounded
-contexts, design inputs, controlled documents, test tags, test results and git
-commits — so you can query it with SPARQL and browse it visually in
+contexts, design inputs, controlled documents, test tags, test results, git
+commits, and the regulatory checklists your documents are held to — so you can
+query it with SPARQL, check it against the gate rules as SHACL shapes, and
+browse it visually in
 [AWS Graph Explorer](https://github.com/aws/graph-explorer).
 
 The Markdown record stays the only thing you edit. The graph is derived: it is
@@ -10,14 +12,16 @@ rebuilt from the record on every run, and Graph Explorer only browses it. To
 change something, edit the Markdown and rebuild.
 
 ```bash
-pip install 'rdm[graph]'     # pyoxigraph + the oxigraph CLI
+pip install 'rdm[graph]'     # pyoxigraph, the oxigraph CLI, pyshacl
 ```
 
 ## Build, query, serve
 
 ```bash
-# Project the record (add --allure-results to include test runs)
-rdm graph build --dhf dhf --allure-results dhf/allure-results --store .rdm/graph
+# Project the record (add --allure-results to include test runs,
+# --checklist to include the checklists your documents are held to)
+rdm graph build --dhf dhf --allure-results dhf/allure-results \
+  --checklist part11_document_control --store .rdm/graph
 rdm graph build --dhf dhf -o dhf.nq          # or: sorted N-Quads, diffable
 
 # Ask questions (rdm:, rdf:, rdfs:, xsd:, dcterms:, prov:, oslc_rm: are predeclared)
@@ -72,6 +76,8 @@ The endpoint's default graph is the union of all of them.
 | `…graph/tests` | verification tags found in test sources |
 | `…graph/executions` | Allure results (only with `--allure-results`) |
 | `…graph/git` | each design document's latest commit and its author |
+| `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
+| `…graph/references` | documents' `[[KEY]]` tags, linked to the clauses they name |
 | `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties |
 
 Instances are named `urn:dhf:<project>:<kind>/<id>`, for example
@@ -89,6 +95,100 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | `rdm:TestFile` `rdm:verifies` / `rdm:TestRun` `rdm:exercises`, `rdm:status` | tests and results |
 | `dcterms:identifier`, `dcterms:title`, `rdm:revision` | document metadata (Dublin Core) |
 | `prov:wasGeneratedBy`, `prov:Activity`, `prov:Agent`, `prov:endedAtTime` | commits and authors (PROV-O) |
+| `rdm:Clause` ⊂ `skos:Concept`, `rdm:Checklist` ⊂ `skos:Collection`, `skos:ConceptScheme` | clauses, checklists, standards (SKOS) |
+| `dcterms:references` | a document claims a clause with a `[[KEY]]` tag |
+
+## Checklists are data
+
+A standard, its clauses and the checklists that select them are instances,
+never classes, so a new standard is a new file and nothing else:
+
+| Concept | In the graph | Example |
+|---|---|---|
+| Standard | `skos:ConceptScheme`, named by the key prefix | `urn:rdm:standard:62304` |
+| Clause | `rdm:Clause` with `skos:notation` (key), `skos:definition`, `skos:inScheme`, `skos:broader` (nearest listed dotted parent), `rdm:edition` | `urn:rdm:clause:62304:5.6.2` |
+| Checklist | `rdm:Checklist` with `skos:member` (its own items) and `rdm:includes` (its includes) | `urn:rdm:checklist:62304_2015_class_b` |
+
+A checklist's full contents are `rdm:includes*/skos:member`. Includes are
+kept as links, not flattened. Clause, standard and checklist IRIs carry no
+project name, so graphs from several repositories share one node per clause:
+
+```sparql
+# Which documents, in which projects, claim each Part 11 clause?
+SELECT ?key ?doc WHERE {
+  <urn:rdm:checklist:part11_document_control> rdm:includes*/skos:member ?c .
+  ?c skos:notation ?key .
+  OPTIONAL { ?d dcterms:references ?c . BIND (STR(?d) AS ?doc) }
+} ORDER BY ?key
+```
+
+To add a checklist, pass any of these to `--checklist`:
+
+- a built-in name (`rdm gap --list`);
+- a `.txt` file in [`rdm gap`'s checklist format](checklist-format.md);
+- an RDF file (`.ttl`, `.nt`, `.jsonld`, …) using the terms above, which is
+  loaded as-is, so it can carry more than the text format, such as a
+  standard's full title:
+
+```turtle
+@prefix rdm:  <https://github.com/scope-impact/rdm/ns#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<urn:rdm:standard:IEC81001-5-1> a skos:ConceptScheme ;
+    skos:prefLabel "IEC 81001-5-1:2021 Health software security" .
+<urn:rdm:clause:IEC81001-5-1:5.1.1> a rdm:Clause ;
+    skos:notation "IEC81001-5-1:5.1.1" ;
+    skos:definition "secure software development process" ;
+    skos:inScheme <urn:rdm:standard:IEC81001-5-1> .
+<urn:rdm:checklist:security> a rdm:Checklist ;
+    skos:member <urn:rdm:clause:IEC81001-5-1:5.1.1> .
+```
+
+References are matched with `rdm gap`'s own key matcher: a descendant key
+covers its parent (`[[62304:5.6.2.a]]` covers `62304:5.6.2`), a longer sibling
+never matches a shorter key, and only `[[…]]` blocks count. So a clause no
+document references in the graph is exactly an item `rdm gap` reports
+missing.
+
+## Validate against the gate rules (SHACL)
+
+`rdm graph validate` checks the graph against the gate rules, written as SHACL
+shapes in `rdm/graph/shapes.ttl`:
+
+```bash
+rdm graph validate --allure-results dhf/allure-results --checklist part11_document_control
+```
+
+| Severity | Rule |
+|---|---|
+| Violation | a user need no design input traces to |
+| Violation | a design input with no passing test run, or with a failed / broken one |
+| Violation | a checklist clause no document references |
+| Violation | malformed checklist data (a clause without a key or a standard; a non-clause member) |
+| Warning | a design input with no tagged test file |
+| Warning | a `tracesTo` / `satisfies` / `realises` naming an undeclared need or input |
+| Warning | a test tag sharing the design-input prefix but naming no declared input |
+
+It exits 1 on any violation. The coded gates (`rdm story release-gate`,
+`rdm gap`) remain authoritative; an acceptance test holds the shapes to
+blocking exactly the same design inputs and user needs.
+
+Add your own rules as more shape files, with no code change:
+
+```bash
+rdm graph validate --shapes team-rules.ttl
+```
+
+```turtle
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix rdm: <https://github.com/scope-impact/rdm/ns#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+[] a sh:NodeShape ;
+   sh:targetClass rdm:Document ;
+   sh:property [ sh:path dcterms:title ; sh:minCount 1 ;
+                 sh:message "every controlled document needs a title" ] .
+```
 
 ## Open world
 
