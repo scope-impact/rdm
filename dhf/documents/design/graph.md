@@ -17,6 +17,9 @@ design_inputs:
   - id: DI-38
     text: "RDM shall ship SHACL shapes expressing the gate rules over the graph — every user need is addressed by a design input, every design input has a passing test run and no failing or broken one, and every checklist clause is referenced by a document as violations; a design input with no tagged test file, a reference to an undeclared user need or design input, and a test tag naming no declared design input as warnings — and rdm graph validate shall run them, plus any user-supplied shape files, over the projected graph, reporting each result with its severity, focus node and message and exiting non-zero on any violation; the shapes shall block exactly the design inputs and user needs the release gate blocks."
     traces_to: [UN-014, UN-003]
+  - id: DI-39
+    text: "RDM shall write the projected graph as an AWS Graph Explorer graph file: every node of the record and every link between two such nodes, leaving out the vocabulary and type statements, optionally leaving out the nodes of chosen classes together with their links, and naming the served SPARQL endpoint as the file's connection, so that the whole traceability graph opens in Graph Explorer in one step."
+    traces_to: [UN-014]
 ---
 
 # Graph — Software Design
@@ -82,6 +85,17 @@ source: the graph is derived, rebuilt on demand, and never edited.
   not instead of them: an acceptance test holds them to agreement with
   `rdm story release-gate` and `rdm gap`. Whether shapes eventually replace
   the coded gates is RDM-004.06's question. Refines UN-014 and UN-003.
+- **DI-39 (Graph Explorer file)** — Graph Explorer loads a saved graph from
+  a small JSON file (`meta.kind = "graph-export"`, `data.vertices` = node
+  IRIs, `data.edges` = `subject-[predicate]->object`, `data.connection` = the
+  endpoint) and fetches everything else itself. `rdm graph explorer-file -o
+  rdm.graph.json` writes that file for the whole record — every instance
+  node and every link between two of them, without the vocabulary or
+  `rdf:type` statements — so the full traceability graph opens with *Load
+  graph from file* instead of a hundred manual expansions. `--exclude
+  TestRun` (repeatable) leaves out a class's nodes and their links to
+  declutter; `--endpoint` names the served endpoint (default
+  `http://localhost:7878`). Refines UN-014.
 
 ## Design Outputs
 
@@ -107,6 +121,7 @@ for serving):
   reusing `rdm/gaps.py`'s reader and matcher.
 - `rdm/graph/shapes.ttl` + `rdm/graph/validate.py` — the gate shapes and the
   pySHACL runner (DI-38).
-- `rdm/graph/cli.py` — `rdm graph build | query | serve | validate`.
+- `rdm/graph/explorer.py` — the Graph Explorer graph file (DI-39).
+- `rdm/graph/cli.py` — `rdm graph build | query | serve | validate | explorer-file`.
 
-Acceptance criteria are verified by `@allure.story("DI-35" / "DI-36" / "DI-37" / "DI-38")` tests.
+Acceptance criteria are verified by `@allure.story("DI-35" / "DI-36" / "DI-37" / "DI-38" / "DI-39")` tests.
