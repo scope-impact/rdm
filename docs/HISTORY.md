@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Findings from the graph's own analysis (Design Review 12): `rdm graph serve`
+  is read-only; the agent server refuses `SERVICE` and non-id `trace` input
+  (DI-36, DI-42; RISK-TOOL-006/007). The graph records who landed each design
+  document's change (DI-51) and links needs, risks and design documents to
+  their documents (DI-52). Four oversized design inputs are split: DI-47..50.
 - One data model (Design Review 11): DuckDB, the planning tooling
   (`rdm story audit | sync | backlog-validate | check-ids | validate`, `rdm pm`,
   `rdm pull`) and the `story-audit`, `analytics`, `github` and `plan` extras are

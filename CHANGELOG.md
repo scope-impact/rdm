@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Fixed — security
+- `rdm graph serve` ran Oxigraph read-write with CORS open: a cross-origin
+  `CLEAR ALL` emptied the store. It now serves read-only (DI-36).
+- The agent server's `query` refuses `SERVICE`, which made HTTP requests, and
+  `trace` takes only id-shaped input (DI-42). Recorded as RISK-TOOL-006/007.
+
+### Added — graph
+- Who landed each design document's latest change on the default branch
+  (`rdm:landedIn`, `rdm:landedBy`), with a warning while it has not (DI-51).
+- User needs, risks and design documents link to the documents that declare,
+  evaluate and review them (DI-52).
+
+### Changed
+- DI-34, DI-37, DI-38 and DI-44 are split into DI-47..50, one clause group and
+  one test each (Design Review 12).
+
 ### Removed — DuckDB and the planning tooling
 - `rdm story audit`, `sync`, `backlog-validate`, `check-ids`, `validate`;
   `rdm pm sync`; `rdm pull`; the `duckdb` query in templates; the

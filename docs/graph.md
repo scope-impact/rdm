@@ -29,7 +29,7 @@ rdm graph build --dhf dhf -o dhf.nq          # or: sorted N-Quads, diffable
 rdm graph query --store .rdm/graph \
   'SELECT ?id ?text WHERE { ?i a rdm:DesignInput ; dcterms:identifier ?id ; rdm:text ?text } ORDER BY ?id'
 
-# Serve it as a SPARQL 1.1 endpoint at http://localhost:7878/sparql
+# Serve it, read-only, as a SPARQL 1.1 endpoint at http://localhost:7878/sparql
 rdm graph serve --store .rdm/graph --bind 0.0.0.0:7878
 ```
 
@@ -37,6 +37,11 @@ rdm graph serve --store .rdm/graph --bind 0.0.0.0:7878
 database. Each build clears it first, so a removed design input never lingers.
 Without `--store`, `rdm graph query` builds an in-memory projection on the fly.
 Add `.rdm/` to `.gitignore`; the store is generated, like Allure results.
+
+The endpoint is read-only (`oxigraph serve-read-only`). It allows requests
+from any origin so Graph Explorer can reach it, which is exactly why it must
+not accept updates: any web page you have open could otherwise clear or forge
+the graph you are reviewing.
 
 ## Browse it in AWS Graph Explorer
 
@@ -145,7 +150,7 @@ The endpoint's default graph is the union of all of them.
 | `urn:dhf:<project>:graph/record` | user needs, bounded contexts, design inputs, controlled documents |
 | `…graph/tests` | verification tags found in test sources |
 | `…graph/executions` | Allure results (only with `--allure-results`) |
-| `…graph/git` | each design document's latest commit and its author |
+| `…graph/git` | each design document's latest commit and its author, and the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`) |
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
 | `…graph/references` | documents' `[[KEY]]` tags, linked to the clauses they name |
@@ -168,6 +173,21 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | `prov:wasGeneratedBy`, `prov:Activity`, `prov:Agent`, `prov:endedAtTime` | commits and authors (PROV-O) |
 | `rdm:Clause` ⊂ `skos:Concept`, `rdm:Checklist` ⊂ `skos:Collection`, `skos:ConceptScheme` | clauses, checklists, standards (SKOS) |
 | `dcterms:references` | a document claims a clause with a `[[KEY]]` tag |
+
+## Who landed a change
+
+Git records who *landed* a change on the default branch, not who *reviewed*
+it — only the forge (GitHub) knows reviewers. So for each design document the
+graph records the commit that brought its latest change onto the default
+branch: the commit itself when it was committed or squashed straight onto
+it, otherwise the merge. `rdm:landedIn` points at that commit and
+`rdm:landedBy` at its author. A change still on a branch has neither, and
+`rdm graph validate` warns about it.
+
+User needs link to the document that declares them (`rdm:declaredIn`),
+risks to the risk-policy document (`rdm:evaluatedAgainst`), and design
+documents to the design review (`rdm:reviewedIn`), so no part of the record
+is an island.
 
 ## Checklists are data
 
@@ -293,7 +313,9 @@ Every call projects the record afresh (a fraction of a second), so an agent
 editing a branch sees its own edits on the next call — there is no store to
 rebuild.
 
-It cannot change anything. There is no write tool, and `query` refuses SPARQL
+It cannot change anything or reach the network. There is no write tool,
+`query` refuses `SERVICE` (a federated query would make the server send HTTP
+requests), `trace` takes only an id, and `query` refuses SPARQL
 Update. An agent that wants to change the record does what a person does:
 edits the Markdown and tests, and opens a pull request for review.
 
