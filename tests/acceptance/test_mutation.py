@@ -101,10 +101,10 @@ def test_mutation_probe_only_a_genuine_test_failure_is_a_kill(tmp_path: Path, mo
     assert "no tests matched" in outcome and "exit 5" in outcome
 
 
-@allure.story("DI-34")
+@allure.story("DI-47")
 @allure.label("output", "rdm/gates/mutation.py")
 def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
-    """DI-34 (defense in depth): the original is journaled before mutating and
+    """DI-47: the original is journaled before mutating and
     an interrupted probe is recovered on the next probe; SIGTERM mid-window
     still restores; every write advances the file's mtime to a fresh whole
     second so stale bytecode can never be served to a same-second,

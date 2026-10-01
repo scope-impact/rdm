@@ -73,15 +73,13 @@ def _ask(store, body: str) -> bool:
 
 @allure.story("DI-37")
 @allure.label("output", "rdm/graph/checklists.py")
-def test_checklists_are_data_and_references_match_rdm_gap(tmp_path: Path) -> None:
+def test_checklists_are_data(tmp_path: Path) -> None:
     """DI-37: checklists (text or RDF, includes resolved, built-ins by name)
-    become SKOS collections of clauses in a checklists graph; documents' [[…]]
-    tags become dcterms:references in a references graph; unreferenced clauses
-    are exactly what rdm gap reports missing."""
+    become SKOS collections of clauses in a checklists graph."""
     dhf, text_list, rdf_list = _fixture(tmp_path)
     quads = project(dhf, checklists=[str(text_list), str(rdf_list), "part11_document_control"])
     s = _store(quads)
-    cl, refs = "<urn:dhf:proj:graph/checklists>", "<urn:dhf:proj:graph/references>"
+    cl = "<urn:dhf:proj:graph/checklists>"
     parent, child = "<urn:rdm:checklist:parent>", "<urn:rdm:checklist:child>"
 
     # A checklist is a collection: its OWN items as members, includes as links,
@@ -112,6 +110,18 @@ def test_checklists_are_data_and_references_match_rdm_gap(tmp_path: Path) -> Non
     assert _ask(s, f'GRAPH {cl} {{ {_clause("RDFX:1")} rdfs:label "RDFX:1" . '
                    f'<urn:rdm:standard:RDFX> rdfs:label "RDF-native standard" . '
                    f'<urn:rdm:checklist:native> rdfs:label "native" }}')
+
+
+
+@allure.story("DI-48")
+@allure.label("output", "rdm/graph/checklists.py")
+def test_reference_tags_become_links_matched_as_rdm_gap_matches(tmp_path: Path) -> None:
+    """DI-48: documents' [[…]] tags become dcterms:references in a references
+    graph, matched as rdm gap matches; unreferenced clauses are exactly what
+    rdm gap reports missing."""
+    dhf, text_list, rdf_list = _fixture(tmp_path)
+    s = _store(project(dhf, checklists=[str(text_list), str(rdf_list), "part11_document_control"]))
+    refs = "<urn:dhf:proj:graph/references>"
 
     # References: [[…]] tags only, matched as rdm gap matches (a descendant
     # covers its parent; an annotation tail is allowed; bare mentions are not tags).

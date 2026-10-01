@@ -65,11 +65,10 @@ def _blocked_by_shapes(dhf: Path, results: Path) -> set[str]:
 
 @allure.story("DI-38")
 @allure.label("output", "rdm/graph/shapes.ttl")
-def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path, capsys) -> None:
+def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
     """DI-38: violations for unaddressed needs, unverified/failing inputs and
     unreferenced clauses; warnings for untagged inputs, undeclared references
-    and stray tags; `rdm graph validate` reports and exits accordingly; and the
-    shapes block exactly what the release gate blocks."""
+    and stray tags; and the shapes block exactly what the release gate blocks."""
     # Agreement with the release gate, scenario by scenario.
     scenarios = {
         "all-pass": ({}, {"DI-1": ["passed"], "DI-2": ["passed"]}, set()),
@@ -121,6 +120,16 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path, capsys) -> None
     assert ("tests/test_core.py", "test tag DI-99 names no declared design input") in warnings
     assert not any("US-1" in message for _, message in warnings)  # unrelated prefix: noise, not reported
     assert not any(label == "DI-1" for label, _ in warnings)
+
+
+
+@allure.story("DI-49")
+@allure.label("output", "rdm/graph/validate.py")
+def test_graph_validate_reports_and_exits_on_violations(tmp_path: Path, capsys) -> None:
+    """DI-49: rdm graph validate prints each result with severity, focus and
+    message, exits 1 on a violation and 0 otherwise, and runs user shape files."""
+    dhf = _dhf(tmp_path / "msgs", needs=("UN-1", "UN-2", "UN-3"))
+    results = _results(tmp_path / "msgs", {"DI-1": ["failed"]})
 
     # The command: per-result lines, exit 1 on a violation, 0 otherwise.
     ok = _dhf(tmp_path / "ok")

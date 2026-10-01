@@ -179,14 +179,14 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
             read_policy(dhf)
 
 
-@allure.story("DI-44")
-@allure.label("output", "rdm/record/risk.py")
-def test_release_gate_blocks_on_the_risk_rules(tmp_path: Path) -> None:
-    """DI-44: missing criteria, duplicate or missing ids, a broken chain or
-    branch, an undefined or mis-scored risk, an undeclared or unverified
-    control, a missing residual, an unacceptable or unaccepted residual and an
-    unknown status each block; proposed ratings warn; a sound register passes."""
-    for name, (entries, with_policy, expected) in CASES.items():
+# The cases DI-50 owns (the residual decision and status); the rest are DI-44's.
+RESIDUAL_CASES = {"unverified-control", "uncontrolled-unacceptable", "uncontrolled-unaccepted", "block-residual",
+                  "unaccepted-medium", "half-accepted-high", "bad-status"}
+
+
+def _check_cases(tmp_path: Path, names) -> None:
+    for name in names:
+        entries, with_policy, expected = CASES[name]
         _, gate = _gate(tmp_path, name, entries, with_policy)
         found = [m for m in gate.blocking if "risk" in m]
         if isinstance(expected, set):
@@ -196,14 +196,14 @@ def test_release_gate_blocks_on_the_risk_rules(tmp_path: Path) -> None:
         for message in found:  # each per-risk message names the risk, for the graph's agreement test
             assert re.search(r"RISK-[A-Z]+-\d", message) or "no risk_policy is declared" in message, message
 
-    # Proposed ratings — on a risk, or on the policy — warn and do not block.
-    dhf, _ = _gate(tmp_path, "proposed", [_risk("RISK-W-1", status="proposed"), _risk("RISK-W-2")])
-    _policy(dhf, status="proposed")
-    gate = run_release_gate(dhf, _results(tmp_path / "proposed", {"DI-1": ["passed"], "DI-2": ["passed"]}))
-    assert gate.passed, gate.blocking
-    assert "risk RISK-W-1 is proposed: a person has not approved its rating" in gate.warnings
-    assert "the risk policy in documents/risk/policy.md is proposed: a person has not approved it" in gate.warnings
-    assert not any("RISK-W-2" in w for w in gate.warnings)
+
+@allure.story("DI-44")
+@allure.label("output", "rdm/record/risk.py")
+def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
+    """DI-44: missing criteria, duplicate or missing ids, a broken chain or
+    branch, an undefined or mis-scored risk, an undeclared control, and
+    controls with no residual each block; a sound register passes."""
+    _check_cases(tmp_path, [n for n in CASES if n not in RESIDUAL_CASES])
 
     # No register, no risk findings — the policy is required only when there are risks.
     dhf = _dhf(tmp_path / "none")
@@ -217,3 +217,21 @@ def test_release_gate_blocks_on_the_risk_rules(tmp_path: Path) -> None:
     (dhf / "documents" / "risk" / "policy.md").write_text("---\nid: RMP\nrisk_policy: [1, 2]\n---\n")
     gate = run_release_gate(dhf, _results(tmp_path / "anonymous", {"DI-1": ["passed"]}))
     assert any("risk_policy in documents/risk/policy.md" in m for m in gate.blocking)
+
+
+@allure.story("DI-50")
+@allure.label("output", "rdm/record/risk.py")
+def test_release_gate_blocks_on_the_residual_rules(tmp_path: Path) -> None:
+    """DI-50: a residual not evaluated (a control without a passing test), an
+    unacceptable residual, and a justify-level residual without a full
+    acceptance each block, as does an unknown status; proposed ratings warn."""
+    _check_cases(tmp_path, sorted(RESIDUAL_CASES))
+
+    # Proposed ratings — on a risk, or on the policy — warn and do not block.
+    dhf, _ = _gate(tmp_path, "proposed", [_risk("RISK-W-1", status="proposed"), _risk("RISK-W-2")])
+    _policy(dhf, status="proposed")
+    gate = run_release_gate(dhf, _results(tmp_path / "proposed", {"DI-1": ["passed"], "DI-2": ["passed"]}))
+    assert gate.passed, gate.blocking
+    assert "risk RISK-W-1 is proposed: a person has not approved its rating" in gate.warnings
+    assert "the risk policy in documents/risk/policy.md is proposed: a person has not approved it" in gate.warnings
+    assert not any("RISK-W-2" in w for w in gate.warnings)
