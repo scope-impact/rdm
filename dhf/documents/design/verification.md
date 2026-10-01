@@ -37,6 +37,10 @@ This context owns:
   release's retained evidence set to an output directory: the verification
   data, the rendered traceability matrix, and a manifest describing the bundle — the DHR-shaped artifact set a team
   attaches to a release tag. Refines UN-012.
+  Amended (Design Review 13): the bundle also keeps the executed Allure
+  results themselves — every result, the attachments and containers they
+  reference — so the evidence behind each verdict outlives CI. Integrity is
+  the pipeline's: GitHub's artifact upload records the artifact's digest.
 - **DI-34 (mutation probe, reviewer tool)** — `rdm story mutation-probe
   --file F --find A --replace B --test T` breaks one line on purpose, runs one
   test, and reports KILLED (the test caught it) or SURVIVED (it did not). It is

@@ -2,7 +2,7 @@
 id: SDS-GRAPH-001
 kind: design
 context: graph
-satisfies: [UN-014, UN-006, UN-003, UN-015, UN-016]
+satisfies: [UN-014, UN-006, UN-003, UN-015, UN-016, UN-004]
 design_inputs:
   - id: DI-35
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each design document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
@@ -40,6 +40,9 @@ design_inputs:
   - id: DI-52
     text: "The graph shall link each user need to the document that declares it, each risk to the document holding the risk policy it was evaluated against, and each design document to the design review the design gate requires."
     traces_to: [UN-014, UN-015]
+  - id: DI-53
+    text: "The graph shall carry each test run's steps — name, status and order, nested under their parent step — and its attachments, on the run or on a step — name, media type and file — and the agent server's trace shall list them with each run."
+    traces_to: [UN-014, UN-015, UN-004]
 ---
 
 # Graph — Software Design
@@ -163,6 +166,13 @@ source: the graph is derived, rebuilt on demand, and never edited.
   evaluated against (`rdm:evaluatedAgainst`), and design documents to the
   design review the design gate requires (`rdm:reviewedIn`). Refines UN-014
   and UN-015.
+
+- **DI-53 (evidence in the graph)** — a passed run says nothing about what
+  was checked. Each test run carries its Allure steps (`rdm:step`, in order,
+  nested under their parent) and attachments (`rdm:attachment`: name, media
+  type, the file in the results), and `trace` lists them, so a reviewer or
+  agent goes from a design input to the evidence itself. Refines UN-014,
+  UN-015 and UN-004.
 
 ## Design Outputs
 

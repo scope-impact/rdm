@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 12
+revision: 13
 title: Design Review — RDM
 ---
 
@@ -409,6 +409,30 @@ RISK-TOOL-007.
 
 - Open: the reviewer of record lives on the forge (GitHub); projecting it
   is a later design input.
+
+# Design Review 13 — Test evidence
+
+**Scope reviewed:** DI-30 amended (raw results in the release bundle) and
+DI-53 (steps and attachments in the graph and in `trace`).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The evidence of record was a status: no test attached anything, results
+  had no steps, and the bundle kept RDM's summary, not the results. Once CI
+  artifacts expired, nothing an auditor could open remained.
+- The bundle now retains the results and their attachments. No hashes of
+  its own: the GitHub artifact upload already records a digest.
+- Steps and attachments are projected, not judged: no gate requires an
+  attachment, since a test can prove a clause without one and a rule would
+  invite empty attachments. The graph shows which runs carry evidence.
+- RDM's own acceptance tests record a step per clause and attach what they
+  checked, starting with the gate and risk tests.
+
+## Findings and actions
+
+- None open from this review.
 
 # Approval
 
