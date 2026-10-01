@@ -48,8 +48,12 @@ _JS_COSMETIC = (
 # Behavioral edits on lines a naive comment filter would drop: a `*`
 # continuation line and a JS `#private` field.
 _JS_STAR_CHANGE = _JS.replace("    * 2;", "    * 3;")
-_JS_PRIVATE = _JS.replace('test("doubles"', 'class K { #limit = 1; }\ntest("doubles"')
+# The private field on its own line: a line *starting* with `#` is code here.
+_JS_PRIVATE = _JS.replace('test("doubles"', 'class K {\n#limit = 1;\n}\ntest("doubles"')
 _JS_PRIVATE_CHANGE = _JS_PRIVATE.replace("#limit = 1;", "#limit = 2;")
+# Code after a block comment closes, on a one-line and on a multi-line block.
+_JS_INLINE_BLOCK = _JS.replace("  expect(doubled).toBe(4);", "  /* note */ expect(doubled).toBe(4);")
+_JS_MULTI_BLOCK = _JS.replace("  expect(doubled).toBe(4);", "  /*\n   note\n  */ expect(doubled).toBe(4);")
 
 
 def _verdict(fx) -> dict:
@@ -128,6 +132,10 @@ def test_stale_verdicts_are_classified_and_only_class_a_carries_forward(tmp_path
     assert js_class("js-b", _JS, _JS.replace("toBe(4)", "toBe(5)")) == f.CLASS_TEST
     assert js_class("js-star", _JS, _JS_STAR_CHANGE) == f.CLASS_TEST
     assert js_class("js-private", _JS_PRIVATE, _JS_PRIVATE_CHANGE) == f.CLASS_TEST
+    assert js_class("js-inline", _JS_INLINE_BLOCK, _JS_INLINE_BLOCK.replace("toBe(4)", "toBe(5)")) == f.CLASS_TEST
+    assert js_class("js-multi", _JS_MULTI_BLOCK, _JS_MULTI_BLOCK.replace("toBe(4)", "toBe(5)")) == f.CLASS_TEST
+    # ... while the comments themselves remain cosmetic.
+    assert js_class("js-inline-a", _JS_INLINE_BLOCK, _JS_INLINE_BLOCK.replace("note", "remark")) == f.CLASS_TRIVIAL
 
     # Clause: class D -- a verdict with no fingerprints on record.
     fx = build_fixture(tmp_path / "d")
