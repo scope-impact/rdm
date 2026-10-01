@@ -180,6 +180,8 @@ uv run pytest tests
 
 ### Unreleased
 
+- Allure is for acceptance tests only: each acceptance run attaches the text of
+  the design input it verifies; unit tests carry no Allure, held by a guard test.
 - Allure results as RDF (Design Review 14, `rdm/graph/allure.py`): each run in
   full — times, failure details, parameters, labels, links (DI-54); container
   fixtures (DI-55); output labels link runs to source files, and `trace` lists a

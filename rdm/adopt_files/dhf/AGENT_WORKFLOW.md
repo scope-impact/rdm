@@ -116,6 +116,10 @@ rdm story mutation-probe --file <impl> --find '<code for a clause>' \
 ```
 The merged, reviewed PR completes the approval record.
 
+**Allure belongs to acceptance tests.** Tag, step and attach only in the
+end-to-end acceptance tests that verify design inputs; unit tests carry no
+Allure tags, so nothing else can be counted as verification.
+
 **Merge with a merge commit — never squash or rebase.** A squash folds the
 record-first commits (design document, then implementation) into one, so the
 history no longer shows the design was approved before the code; a rebase

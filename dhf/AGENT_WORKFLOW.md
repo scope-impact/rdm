@@ -165,7 +165,10 @@ def test_<behavior>(...):
 ```
 
 A step per clause makes a failure name its clause; an attachment keeps what
-the assertion looked at. Both land in the Allure results, which the release
+the assertion looked at, and every run also attaches the text of the design
+input it verifies (`tests/acceptance/conftest.py`). This is for acceptance
+(end-to-end) tests only: unit tests carry no Allure tags, steps or
+attachments. Both land in the Allure results, which the release
 bundle retains and the graph projects (`trace` lists them).
 
 **Done when:** `uv run pytest tests/acceptance -q` passes.
@@ -234,6 +237,7 @@ now the PR reviewer's to catch.
 | Never hand-edit the traceability matrix | it is generated from executed results; edits would be fiction |
 | Never approve a PR you authored | self-review over-rates; independence is the entire point of the PR review |
 | Design docs commit before implementation | the commit is the approval; the hook and CI enforce the order |
+| Allure tags, steps and attachments go in acceptance tests only | unit tests are not evidence of record; `tests/allure_scope_test.py` holds the line |
 | Merge PRs with a merge commit, never squash or rebase | a squash erases the design-before-code order the record-first commits prove |
 | A DI is declared once; other contexts use `realises` | duplicated requirements drift apart |
 | `dhf/allure-results/`, `dhf/data/` are generated, gitignored | evidence is produced by running, not by committing |

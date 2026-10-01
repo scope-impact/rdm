@@ -116,7 +116,10 @@ so the evidence outlives CI artifact retention. Upload it as a CI artifact and
 the pipeline records its digest.
 
 Give the evidence something to hold: an `allure.step` per clause of the
-design input, and `allure.attach` for what the assertion checked. The graph
+design input, and `allure.attach` for what the assertion checked. Keep Allure
+to the acceptance (end-to-end) tests that verify design inputs; unit tests
+carry no tags, steps or attachments, so nothing but an acceptance test can be
+counted as verification. The graph
 carries both (`rdm:step`, `rdm:attachment`), and `trace` lists them with each
 run.
 
