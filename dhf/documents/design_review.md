@@ -191,7 +191,11 @@ Graph Explorer).
 
 - Open: whether this projection is the answer to RDM-004.06 (types as data)
   is decided on that ticket, not here.
-- Not in scope: backlog/plan graph, SHACL shapes, OWL reasoning.
+- Not in scope: backlog/plan graph, OWL reasoning.
+- Addendum: DI-37 adds the gap-analysis half of the record (checklist clauses
+  and `[[…]]` reference tags, matched by `rdm gap`'s own code) and DI-38 the
+  gate rules as SHACL shapes (pySHACL), held by test to agreement with the
+  release gate and `rdm gap`. The coded gates remain authoritative.
 
 # Approval
 
