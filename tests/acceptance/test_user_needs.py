@@ -96,6 +96,7 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
 
 
 @allure.story("DI-2")
+@allure.label("output", "rdm/gates/design_gate.py")
 def test_design_gate_requires_approval(tmp_path: Path) -> None:
     """DI-2: block transition until design docs are complete and approved."""
     with clause("Incomplete (placeholder) design doc -> not complete"):
@@ -120,6 +121,7 @@ def test_design_gate_requires_approval(tmp_path: Path) -> None:
 
 
 @allure.story("DI-3")
+@allure.label("output", "rdm/gates/design_gate.py")
 def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
     """DI-3: block release until every design input is verified by a passing test."""
     dhf = _approved_dhf(tmp_path, ["UN-003"])  # DI-1 traces to UN-003
@@ -143,6 +145,8 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
 
 
 @allure.story("DI-4")
+@allure.label("output", "rdm/record/allure.py")
+@allure.label("output", "rdm/record/verify.py")
 def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
     """DI-4: results reconcile to a status (reconcile clause) AND assemble into the
     traceability matrix grouped under the user need (render clause)."""
@@ -175,6 +179,7 @@ def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
 
 
 @allure.story("DI-5")
+@allure.label("output", "rdm/record/persona.py")
 def test_formative_usability_classified(tmp_path: Path) -> None:
     """DI-5: usability can be exercised formatively against a user need.
 
