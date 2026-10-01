@@ -13,6 +13,7 @@ The chain it holds:
 ```
 regulation → checklist → clause ← document
 user need → design input → tagged test → result → commit
+risk → control (a design input) → tagged test → result
 ```
 
 Every link is a file you write or a fact a tool records. Nothing in the chain
@@ -22,8 +23,8 @@ is typed into a database by hand.
 
 | Part | What it is | Commands |
 | --- | --- | --- |
-| **Record** | User needs, design inputs (one design document per bounded context), checklists, tests tagged `@allure.story("DI-n")`. Markdown + git. Changed only by a reviewed pull request — the approval is the merge. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story audit` |
-| **Gates** | Machine checks: no implementation before the design is approved, no release until every input has a passing test and every need is addressed, no clause a checklist requires left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
+| **Record** | User needs, design inputs (one design document per bounded context), the risk register, checklists, tests tagged `@allure.story("DI-n")`. Markdown + git. Changed only by a reviewed pull request — the approval is the merge. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story audit` |
+| **Gates** | Machine checks: no implementation before the design is approved, no release until every input has a passing test, every need is addressed and every risk is scored, controlled and acceptable, no clause a checklist requires left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
 | **Graph** | The record built into an RDF graph (Oxigraph): needs, inputs, contexts, documents, tests, results, commits, checklist clauses. **Read-only** — rebuilt from the record, never edited. Agents read it through an MCP server; people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
 | **Documents** | Regulatory documents (PDF/DOCX) rendered from the record: Markdown templates + YAML data → Pandoc/Typst. | `rdm render`, `make pdfs` |
 
@@ -39,7 +40,8 @@ analysis — is kept as skills in
   does not mean the test proves the input — the pull-request reviewer judges
   that (`rdm story mutation-probe` helps them check).
 - Checklists are written by hand. Nothing turns a regulation into a checklist.
-- No risk management (ISO 14971) yet.
+- The risk gate checks a register's form, not its truth: whether a control holds
+  in the code, and whether a residual is as low as practicable, are the reviewer's.
 - A built store (`rdm graph build --store`, `serve`) is as current as its last
   build; the agent server (`rdm graph mcp`) reads the record afresh on every call.
 
@@ -145,6 +147,12 @@ uv run pytest tests
 
 ### Unreleased
 
+- **Risk register** (UN-016, DI-43/44/45): risks as frontmatter in `kind: risk`
+  documents, scored from the default or a declared `risk_matrix`, each control a
+  design input; the release gate and the graph shapes block a broken, unscored,
+  uncontrolled or unaccepted risk; `trace` takes risk ids. RDM's own tool-risk
+  register is `dhf/documents/risk/` (Design Review 9). `rdm story new-input` no
+  longer duplicates an empty `design_inputs: []` and wraps its stub docstring.
 - **Read-only agent interface** (`rdm graph mcp`, UN-015, DI-41/42): an MCP
   stdio server with `schema`, `query`, `trace` and `validate`, each answering
   from a fresh projection; no write tool, SPARQL Update refused, rows capped.

@@ -42,7 +42,7 @@ from rdm.record.sdd import (
 
 NS = "https://github.com/scope-impact/rdm/ns#"
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
-GRAPHS = ("record", "tests", "executions", "git", "checklists", "references", "ontology")
+GRAPHS = ("record", "tests", "executions", "git", "risks", "checklists", "references", "ontology")
 
 _RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 _RDFS = "http://www.w3.org/2000/01/rdf-schema#"
@@ -223,6 +223,40 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
         ds.add(ds.node("doc", doc_id), _term(_PROV + "wasGeneratedBy"), commit, g)
 
 
+def _risks(ds: _Dataset, dhf: Path, root: Path) -> None:
+    """The risk register (DI-45): each risk's chain, scores, computed levels,
+    controls and acceptance. A malformed matrix leaves levels out, so the
+    shapes report every risk as unscorable, as the release gate blocks."""
+    from collections import Counter
+
+    from rdm.record.risk import Matrix, read_matrix, risks
+
+    try:
+        matrix = read_matrix(dhf)
+    except ValueError:
+        matrix = Matrix((), (), {})
+    register = [r for r in risks(dhf, matrix) if r.id]
+    declared = Counter(r.id for r in register)
+    doc_ids = {entry["path"]: entry["id"] for entry in controlled_documents(dhf, root)}
+    g = "risks"
+    for r in register:
+        node = ds.thing(ds.node("risk", r.id), rdm("Risk"), r.id, g)
+        ds.add(node, _term(_DCT + "identifier"), r.id, g)
+        ds.add(node, rdm("declarationCount"), ox.Literal(str(declared[r.id]), datatype=_term(_XSD + "integer")), g)
+        for prop, value in (("hazard", r.hazard), ("situation", r.situation), ("harm", r.harm),
+                            ("severity", r.severity), ("probability", r.probability), ("level", r.level),
+                            ("recordedLevel", r.recorded_level), ("residualProbability", r.residual_probability),
+                            ("residualLevel", r.residual_level), ("acceptedBy", r.accepted_by),
+                            ("acceptanceRationale", r.acceptance_rationale)):
+            if value:
+                ds.add(node, rdm(prop), value, g)
+        for control in r.controls:
+            ds.add(node, rdm("controlledBy"), ds.node("input", control), g)
+        doc_id = doc_ids.get(_rel(dhf.parent / r.document, root))
+        if doc_id:
+            ds.add(node, rdm("declaredIn"), ds.node("doc", doc_id), g)
+
+
 def _ontology(ds: _Dataset) -> None:
     for triple in ox.parse(path=str(ONTOLOGY_FILE), format=ox.RdfFormat.TURTLE):
         ds.quads.append(ox.Quad(triple.subject, triple.predicate, triple.object, ds.graph("ontology")))
@@ -251,6 +285,7 @@ def project(
         _executions(ds, Path(allure_results_dir))
     if _repo_root(dhf.parent) is not None:
         _git(ds, dhf, root)
+    _risks(ds, dhf, root)
     if checklists:
         from rdm.graph.checklists import checklist_quads, reference_quads
 

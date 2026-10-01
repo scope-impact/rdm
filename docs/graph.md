@@ -145,6 +145,7 @@ The endpoint's default graph is the union of all of them.
 | `…graph/tests` | verification tags found in test sources |
 | `…graph/executions` | Allure results (only with `--allure-results`) |
 | `…graph/git` | each design document's latest commit and its author |
+| `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
 | `…graph/references` | documents' `[[KEY]]` tags, linked to the clauses they name |
 | `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties |
@@ -282,7 +283,7 @@ settings.
 
 | Tool | Answers |
 | --- | --- |
-| `trace` | a `UN-n` or `DI-n`: its text, contexts, owning document and last commit, the needs it refines, its tagged test files and their runs |
+| `trace` | a `UN-n`, `DI-n` or risk id: text, contexts, owning document and last commit, needs refined, tagged tests and runs, risks controlled; for a risk, its chain, scores and controlling inputs ([risk register](risk.md)) |
 | `query` | any read-only SPARQL (SELECT, ASK, CONSTRUCT, DESCRIBE), prefixes predeclared, capped at 200 rows by default with `truncated` saying when |
 | `schema` | the vocabulary and prefixes, so the agent can write its own queries |
 | `validate` | the gate shapes' results: violations and warnings |

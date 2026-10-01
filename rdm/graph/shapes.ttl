@@ -112,6 +112,56 @@ rdm:TestTagShape a sh:NodeShape ;
         """ ;
     ] .
 
+# The risk register's release rules (DI-44, DI-45): the same findings the
+# release gate blocks on.
+rdm:RiskShape a sh:NodeShape ;
+    sh:targetClass rdm:Risk ;
+    sh:property [ sh:path rdm:hazard ; sh:minCount 1 ; sh:message "risk has no hazard" ] ;
+    sh:property [ sh:path rdm:situation ; sh:minCount 1 ; sh:message "risk has no situation" ] ;
+    sh:property [ sh:path rdm:harm ; sh:minCount 1 ; sh:message "risk has no harm" ] ;
+    sh:property [ sh:path rdm:declarationCount ; sh:maxInclusive 1 ;
+                  sh:message "risk id is declared more than once" ] ;
+    sh:property [ sh:path rdm:level ; sh:minCount 1 ;
+                  sh:message "risk's severity × probability is not in the risk matrix" ] ;
+    sh:property [ sh:path rdm:controlledBy ; sh:class rdm:DesignInput ;
+                  sh:message "risk names a control that is not a declared design input" ] ;
+    sh:property [ sh:path rdm:residualLevel ; sh:not [ sh:hasValue "Block" ] ;
+                  sh:message "risk has a residual level of Block" ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "risk records level {?recorded}; the matrix says {?level}" ;
+        sh:select """SELECT $this ?recorded ?level WHERE {
+            $this rdm:recordedLevel ?recorded ; rdm:level ?level . FILTER (?recorded != ?level) }""" ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "risk is {?level} and nothing controls it" ;
+        sh:select """SELECT $this ?level WHERE {
+            $this rdm:level ?level . FILTER (?level IN ("Medium", "High", "Block"))
+            FILTER NOT EXISTS { $this rdm:controlledBy ?c } }""" ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "risk has controls but no residual score" ;
+        sh:select """SELECT $this WHERE {
+            FILTER EXISTS { $this rdm:controlledBy ?c }
+            FILTER NOT EXISTS { $this rdm:residualProbability ?p } }""" ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "risk's residual probability is not in the risk matrix" ;
+        sh:select """SELECT $this WHERE {
+            $this rdm:residualProbability ?p ; rdm:level ?l .
+            FILTER NOT EXISTS { $this rdm:residualLevel ?r } }""" ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "risk has a residual level of {?residual} with no acceptance (who accepted it and why)" ;
+        sh:select """SELECT $this ?residual WHERE {
+            $this rdm:residualLevel ?residual . FILTER (?residual IN ("Medium", "High"))
+            FILTER NOT EXISTS { $this rdm:acceptedBy ?by ; rdm:acceptanceRationale ?why } }""" ;
+    ] .
+
 rdm: sh:declare
     [ sh:prefix "rdm" ; sh:namespace "https://github.com/scope-impact/rdm/ns#"^^xsd:anyURI ] ,
     [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] .

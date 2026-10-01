@@ -20,6 +20,8 @@ from rdm.graph.project import ONTOLOGY_FILE, project
 
 ROW_LIMIT = 200
 _ID = re.compile(r"^(UN|DI)-\d+$")
+_RISK_FIELDS = ("hazard", "situation", "harm", "severity", "probability", "level", "residualProbability",
+                "residualLevel", "acceptedBy", "acceptanceRationale")
 _UPDATE = re.compile(r"(?i)\b(INSERT|DELETE|LOAD|CLEAR|CREATE|DROP|COPY|MOVE|ADD)\b")
 
 
@@ -104,19 +106,38 @@ def _input(store: ox.Store, node: str) -> dict:
             store, f"SELECT ?c WHERE {{ ?x rdm:realises <{node}> ; rdfs:label ?c }}")),
         "tests": sorted(r["path"] for r in _select(
             store, f"SELECT ?path WHERE {{ ?t rdm:verifies <{node}> ; rdfs:label ?path }}")),
+        "risks": sorted(r["id"] for r in _select(
+            store, f"SELECT ?id WHERE {{ ?r rdm:controlledBy <{node}> ; dcterms:identifier ?id }}")),
         "runs": sorted(({"test": r["name"], "status": r["status"]} for r in _select(
             store, f"SELECT ?name ?status WHERE {{ ?r rdm:exercises <{node}> ; rdfs:label ?name ; "
                    f"rdm:status ?status }}")), key=lambda r: (r["test"], r["status"])),
     }
 
 
+def _risk(store: ox.Store, node: str) -> dict:
+    values = {r["p"]: r["v"] for r in _select(
+        store, f"SELECT ?p ?v WHERE {{ <{node}> ?prop ?v . BIND(REPLACE(STR(?prop), '^.*[#/]', '') AS ?p) }}")}
+    controls = [r["i"] for r in _select(store, f"SELECT ?i WHERE {{ <{node}> rdm:controlledBy ?i }}")]
+    declared = [i for i in controls if bool(store.query(
+        with_prefixes(f"ASK {{ <{i}> a rdm:DesignInput }}"), use_default_graph_as_union=True))]
+    return {
+        "id": values.get("identifier"), **{name: values.get(name) for name in _RISK_FIELDS},
+        "controls": sorted((_input(store, i) for i in declared), key=lambda d: int(d["id"].split("-")[1])),
+        "undeclared_controls": sorted(i.rsplit("/", 1)[-1] for i in controls if i not in declared),
+    }
+
+
 def trace(record: Record, ident: str) -> dict:
-    """One user need (with its contexts and every input refining it) or one
-    design input, each input with its document, tests and runs."""
+    """One user need (with its contexts and every input refining it), one
+    design input (with its document, tests, runs and the risks it controls),
+    or one risk (with its scores and each controlling input)."""
     ident = ident.strip().upper()
-    if not _ID.match(ident):
-        raise ValueError(f"expected a user need (UN-n) or design input (DI-n) id, got {ident!r}")
     store = record.store()
+    if not _ID.match(ident):
+        found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:Risk ; dcterms:identifier "{ident}" }}')
+        if not found:
+            raise ValueError(f"{ident} is not a declared user need (UN-n), design input (DI-n) or risk")
+        return {"risk": _risk(store, found[0]["n"])}
     kind = "UserNeed" if ident.startswith("UN") else "DesignInput"
     found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:{kind} ; dcterms:identifier "{ident}" }}')
     if not found:
@@ -147,8 +168,8 @@ def validate(record: Record) -> dict:
 
 INSTRUCTIONS = (
     "The design record of this project (user needs, design inputs, bounded contexts, documents, "
-    "tagged tests, test runs, commits, checklist clauses) as a read-only RDF graph, rebuilt from the "
-    "record on every call. Start with `trace` for a UN-n or DI-n; call `schema` before writing SPARQL "
+    "tagged tests, test runs, commits, risks, checklist clauses) as a read-only RDF graph, rebuilt from the "
+    "record on every call. Start with `trace` for a UN-n, DI-n or risk id; call `schema` before writing SPARQL "
     "for `query`; `validate` runs the gate rules. Nothing here changes the record: to change it, edit "
     "the Markdown and tests and open a pull request."
 )
@@ -180,8 +201,9 @@ def server(record: Record):
             raise ToolError(str(error)) from error
 
     @app.tool(name="trace", annotations=read_only,
-              description="Trace a user need (UN-n) or design input (DI-n): its text, contexts, owning document "
-                          "and last commit, the needs it refines, its tagged test files and their runs.")
+              description="Trace a user need (UN-n), design input (DI-n) or risk id: text, contexts, owning document "
+                          "and last commit, needs refined, tagged tests and runs, risks controlled; for a risk, "
+                          "its chain, scores, levels, acceptance and each controlling design input.")
     def _trace(id: str) -> dict:
         try:
             return trace(record, id)

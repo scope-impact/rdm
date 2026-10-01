@@ -69,6 +69,7 @@ nav:
   - Record:
       - Design controls and traceability: design-controls.md
       - Agent workflow (the change procedure): agent-workflow.md
+      - Risk register: risk.md
       - Plan vs. record: plan-vs-record.md
   - Gates:
       - Gap analysis (checklists): gap-analysis.md

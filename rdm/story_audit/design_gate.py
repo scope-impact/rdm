@@ -414,7 +414,9 @@ def run_release_gate(
       2. at least one design input is declared,
       3. every declared design input is *verified* by a passing Allure test --
          any failed or untested design input blocks the release, and
-      4. every user need is addressed by at least one design input.
+      4. every user need is addressed by at least one design input, and
+      5. every risk in the register is scored, controlled, and residually
+         acceptable or accepted (DI-44).
 
     Whether a passing test genuinely verifies its input is judged by the
     human review of the pull request that changed it.
@@ -441,6 +443,11 @@ def run_release_gate(
     result.verified = report.verified
     result.blocking += _verification_messages(report)
 
+
+    # The risk register's mechanical rules (DI-44).
+    from rdm.record.risk import blocking as risk_blocking
+
+    result.blocking += risk_blocking(dhf_dir, di_ids)
 
     # A user need with no design input is an unaddressed (hence unverified) need.
     addressed = {un for di in inputs for un in di["traces_to"]}
@@ -506,7 +513,8 @@ def story_release_gate_command(
     if result.passed:
         print(
             "Release gate PASSED: design controls are approved, every design input "
-            "is verified by a passing test, and every user need is addressed."
+            "is verified by a passing test, every user need is addressed, and every risk is scored, "
+            "controlled and acceptable."
         )
         return 0
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Risk register (UN-016, DI-43/44/45): risks as frontmatter in `kind: risk`
+  documents, scored from the default or a declared `risk_matrix`, each control a
+  design input; the release gate and the graph shapes block a broken, unscored,
+  uncontrolled or unaccepted risk; `trace` takes risk ids. RDM's own tool-risk
+  register is `dhf/documents/risk/` (Design Review 9). `rdm story new-input` no
+  longer duplicates an empty `design_inputs: []` and wraps its stub docstring.
 - Read-only agent interface (`rdm graph mcp`, UN-015, DI-41/42): an MCP
   stdio server with `schema`, `query`, `trace` and `validate`, each answering
   from a fresh projection; no write tool, SPARQL Update refused, rows capped.

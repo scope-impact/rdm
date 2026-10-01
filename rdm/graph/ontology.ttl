@@ -105,6 +105,31 @@ rdm:verifies a owl:ObjectProperty ;
 rdm:exercises a owl:ObjectProperty ;
     rdfs:label "exercises" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:DesignInput .
 
+rdm:Risk a owl:Class ;
+    rdfs:label "Risk" ;
+    rdfs:comment "One risk of the register: hazard, situation, harm, scored severity × probability, its controls and residual (DI-45)." .
+
+rdm:controlledBy a owl:ObjectProperty ;
+    rdfs:label "controlled by" ; rdfs:domain rdm:Risk ; rdfs:range rdm:DesignInput ;
+    rdfs:comment "A design input that implements a control of this risk." .
+
+rdm:hazard a owl:DatatypeProperty ; rdfs:label "hazard" ; rdfs:domain rdm:Risk .
+rdm:situation a owl:DatatypeProperty ; rdfs:label "situation" ; rdfs:domain rdm:Risk .
+rdm:harm a owl:DatatypeProperty ; rdfs:label "harm" ; rdfs:domain rdm:Risk .
+rdm:severity a owl:DatatypeProperty ; rdfs:label "severity" ; rdfs:domain rdm:Risk .
+rdm:probability a owl:DatatypeProperty ; rdfs:label "probability" ; rdfs:domain rdm:Risk .
+rdm:level a owl:DatatypeProperty ; rdfs:label "level" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "The risk matrix's level for severity × probability (computed, never typed)." .
+rdm:recordedLevel a owl:DatatypeProperty ; rdfs:label "recorded level" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "The level the register states, if it states one." .
+rdm:residualProbability a owl:DatatypeProperty ; rdfs:label "residual probability" ; rdfs:domain rdm:Risk .
+rdm:residualLevel a owl:DatatypeProperty ; rdfs:label "residual level" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "The matrix level after controls; the initial level when nothing controls the risk." .
+rdm:acceptedBy a owl:DatatypeProperty ; rdfs:label "accepted by" ; rdfs:domain rdm:Risk .
+rdm:acceptanceRationale a owl:DatatypeProperty ; rdfs:label "acceptance rationale" ; rdfs:domain rdm:Risk .
+rdm:declarationCount a owl:DatatypeProperty ; rdfs:label "declaration count" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "How many register entries declare this risk id." .
+
 rdm:status a owl:DatatypeProperty ;
     rdfs:label "status" ; rdfs:domain rdm:TestRun ;
     rdfs:comment "The executed result as Allure reported it (passed, failed, broken, skipped)." .
