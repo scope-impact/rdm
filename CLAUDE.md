@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development
 
 ```bash
-uv sync --all-extras          # Install all dependencies (dev, github, story-audit)
+uv sync --all-extras          # Install all dependencies (dev, graph, docs, validation)
 uv run pytest tests            # Run all tests
 uv run pytest tests/render_test.py::test_invert_dependencies  # Run single test
 uv run ruff check .            # Lint
@@ -84,7 +84,7 @@ assigns each bounded context to a part. Agent skills live in scope-impact/agent-
 ### Key modules
 
 - `rdm/main.py` — CLI entry point (`rdm` command). Argparse subcommands dispatch to feature modules.
-- `rdm/render.py` — Jinja2 template engine with two-pass rendering, DuckDB query support, and custom filters (`invert_dependencies`, `join_to`, `md_indent`).
+- `rdm/render.py` — Jinja2 template engine with two-pass rendering and custom filters (`invert_dependencies`, `join_to`, `md_indent`).
 - `rdm/gaps.py` — Gap analysis: validates documents against regulatory checklists (IEC 62304, ISO 13485, etc.). Built-in checklists in `rdm/checklists/`.
 - `rdm/md_extensions/` — Markdown post-processing: section numbering, vocabulary expansion.
 - `rdm/init_files/` — Scaffold templates for `rdm init` (Makefile, config.yml, document templates, Dockerfile).

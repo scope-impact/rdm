@@ -9,7 +9,6 @@ from rdm.record.sdd import (
     find_design_docs,
     realises_by_context,
     registry_user_needs,
-    satisfied_user_needs,
     satisfies_for,
 )
 from tests.util import write_design_doc
@@ -49,14 +48,6 @@ class TestSatisfies:
     def test_satisfies_for_reads_list(self, tmp_path: Path) -> None:
         p = write_design_doc(tmp_path / "dhf" / "design", "auth", satisfies=("UN-002", "UN-003"))
         assert satisfies_for(p) == {"UN-002", "UN-003"}
-
-    def test_satisfied_union_across_docs(self, tmp_path: Path) -> None:
-        docs = tmp_path / "dhf" / "design"
-        write_design_doc(docs, "auth", satisfies=("UN-002", "UN-003"))
-        write_design_doc(docs, "alerting", satisfies=("UN-001",))
-        write_design_doc(docs, "dashboard", satisfies=("UN-001", "UN-002"))
-        assert satisfied_user_needs(tmp_path / "dhf") == {"UN-001", "UN-002", "UN-003"}
-
 
 class TestDesignInputs:
     def test_union_across_docs_with_first_id_winning(self, tmp_path: Path) -> None:

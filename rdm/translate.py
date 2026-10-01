@@ -26,9 +26,3 @@ def translate_test_results(format, input, output):
         raise ValueError("Unknown translation format: " + format)
 
 
-def translate_gtest(input):
-    return flattened_gtest_results(xml_load(input))
-
-
-def translate_qttest(input):
-    return flattened_qttest_results(xml_load(input))

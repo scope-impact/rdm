@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 import sys
 from collections import OrderedDict
@@ -45,27 +44,8 @@ def print_error(message):
     print(RED_ANSI + message + END_COLOR_ANSI, file=sys.stderr)
 
 
-def print_warning(message):
-    print(YELLOW_ANSI + message + END_COLOR_ANSI, file=sys.stderr)
-
-
 def print_info(message):
     print(message, file=sys.stderr)
-
-
-def remove_carriage_return(string):
-    return string.replace('\r', '').strip()
-
-
-def copy_directory(dir_source, dir_dest):
-    if not os.path.exists(dir_dest):
-        os.makedirs(dir_dest)
-    for item in os.listdir(dir_source):
-        item_source = os.path.join(dir_source, item)
-        item_dest = os.path.join(dir_dest, item)
-        # check if these hooks already exist, ask user, maybe rename existing one
-        shutil.copy2(item_source, item_dest)
-        subprocess.call(['chmod', '+x', item_dest])
 
 
 def context_from_data_files(data_filenames):
@@ -92,15 +72,6 @@ def and_list_str(items):
         return items[0] + ' and ' + items[1]
     else:
         return ', '.join(items[:-2] + [and_list_str(items[-2:])])
-
-
-def use_auto_section_numbering(context):
-    filter_specifcation_list = context.get('system', {}).get('post_filters', [])
-    return 'auto_section_numbers' in filter_specifcation_list
-
-
-def empty_formatter(spacing, tag, content):
-    return ''
 
 
 def load_class(class_descriptor):

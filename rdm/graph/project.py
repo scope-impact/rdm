@@ -43,8 +43,6 @@ from rdm.record.sdd import (
 
 NS = "https://github.com/scope-impact/rdm/ns#"
 ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
-GRAPHS = ("record", "tests", "executions", "git", "risks", "checklists", "references", "ontology")
-
 _RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 _RDFS = "http://www.w3.org/2000/01/rdf-schema#"
 _XSD = "http://www.w3.org/2001/XMLSchema#"

@@ -117,14 +117,6 @@ def satisfies_by_context(dhf_dir: Path) -> dict[Path, set[str]]:
     return {doc: satisfies_for(doc) for doc in find_design_docs(dhf_dir)}
 
 
-def satisfied_user_needs(dhf_dir: Path) -> set[str]:
-    """Union of user needs addressed (via ``satisfies``) across design docs."""
-    ids: set[str] = set()
-    for refs in satisfies_by_context(dhf_dir).values():
-        ids |= refs
-    return ids
-
-
 def registry_user_needs(dhf_dir: Path) -> set[str]:
     """Union of ``user_needs`` declared in any document frontmatter under the DHF.
 

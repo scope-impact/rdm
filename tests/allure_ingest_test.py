@@ -137,21 +137,6 @@ class TestYamlTestDiscovery:
         assert "dns" not in refs
         assert set(refs) == {"DI-5"}
 
-    def test_a_tagged_yaml_suite_is_not_an_orphan(self, tmp_path: Path) -> None:
-        """claims_a_tag recognises the Ansible tag syntax, so the file is not orphaned."""
-        from rdm.record.allure import claims_a_tag
-
-        path = self._suite(tmp_path / "tests") / "foundation_dns_test.yml"
-        assert claims_a_tag(path, path.read_text())
-
-    def test_untagged_yaml_suite_is_an_orphan(self, tmp_path: Path) -> None:
-        """A YAML test claiming no tag at all is still reported as an orphan."""
-        from rdm.record.allure import claims_a_tag
-
-        path = tmp_path / "bare_test.yml"
-        path.write_text("---\n- name: asserts nothing traceable\n  ansible.builtin.debug:\n    msg: hi\n")
-        assert not claims_a_tag(path, path.read_text())
-
     def test_a_file_claiming_one_id_many_times_counts_once(self, tmp_path: Path) -> None:
         """An Ansible suite tags every task in a context with the same design input.
 

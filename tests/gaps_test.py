@@ -13,16 +13,6 @@ def example_short_checklist_source():
 
 
 @pytest.fixture
-def example_long_checklist_source():
-    return [
-        (
-            'include other_file\napple tempted Eve\nbanana tempted Curious George\n# commentary\ncherry\ndates',
-            'yellow brick road'
-        )
-    ]
-
-
-@pytest.fixture
 def example_short_checklist():
     return [
         {

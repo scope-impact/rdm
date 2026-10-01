@@ -234,16 +234,6 @@ TAG_ID_PATTERN = re.compile(r"[A-Z]{2,}(?:-[A-Z]+)?-\d+")
 # block/YAML-list form -- so the whole list is captured and split downstream.
 YAML_TAG_PATTERN = re.compile(r"^\s*tags:\s*(?:\[([^\]]*)\]|(\S.*))?$", re.M)
 
-# What each ecosystem's tag syntax looks like, for telling a test file that
-# claims nothing (an orphan) from one whose claim we simply cannot parse.
-TAG_SYNTAX_MARKERS = {
-    ".py": ("@allure",),
-    ".yml": ("tags:",),
-    ".yaml": ("tags:",),
-}
-_DEFAULT_TAG_MARKERS = ("allure.story", "allure.feature", "@Story", "@Feature")
-
-
 def iter_test_files(tests_dir: Path):
     """Every conventional test file under ``tests_dir``, one ecosystem at a time.
 
@@ -258,16 +248,6 @@ def iter_test_files(tests_dir: Path):
                 seen.add(path)
                 yield path
 
-
-
-def claims_a_tag(path: Path, content: str) -> bool:
-    """Whether the file carries its ecosystem's tag syntax at all.
-
-    Used only to decide orphan status, so it asks the weaker question than
-    ``_tag_ids_in``: not "which ids" but "does this file even try to claim one".
-    """
-    markers = TAG_SYNTAX_MARKERS.get(path.suffix, _DEFAULT_TAG_MARKERS)
-    return any(marker in content for marker in markers)
 
 
 def _tag_ids_in(path: Path, content: str) -> list[str]:
