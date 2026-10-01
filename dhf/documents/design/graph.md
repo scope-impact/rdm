@@ -43,6 +43,15 @@ design_inputs:
   - id: DI-53
     text: "The graph shall carry each test run's steps — name, status and order, nested under their parent step — and its attachments, on the run or on a step — name, media type and file — and the agent server's trace shall list them with each run."
     traces_to: [UN-014, UN-015, UN-004]
+  - id: DI-54
+    text: "RDM shall project each executed Allure result in full — its uuid, full name, start and end times, status message and trace, parameters, every label as a name and a value, and its links — and shall link the runs of one test across executions through the result's history id."
+    traces_to: [UN-014, UN-004]
+  - id: DI-55
+    text: "RDM shall project the fixtures that Allure containers record — each before or after fixture with its name, status, times, steps and attachments — linked to the test runs it set up or tore down."
+    traces_to: [UN-014]
+  - id: DI-56
+    text: "RDM shall link each test run to the source files its output labels name, and the agent server's trace shall list, for a design input, the source files its runs exercise."
+    traces_to: [UN-014, UN-015]
 ---
 
 # Graph — Software Design
@@ -174,6 +183,23 @@ source: the graph is derived, rebuilt on demand, and never edited.
   agent goes from a design input to the evidence itself. Refines UN-014,
   UN-015 and UN-004.
 
+- **DI-54 (Allure results, in full)** — the executions graph held a run's
+  name, status, tags, steps and attachments; the rest of each result was
+  dropped. Now each run also carries its uuid, full name, start and end
+  times (PROV-O `startedAtTime` / `endedAtTime`), failure message and trace,
+  parameters, every label (`rdm:hasLabel`: name, value) and its links
+  (`rdfs:seeAlso`). Runs of one test across executions share a test-case
+  node (`rdm:runOf`, keyed by Allure's history id). Refines UN-014, UN-004.
+- **DI-55 (fixtures)** — Allure writes set-up and tear-down into container
+  files. Each before or after fixture becomes an `rdm:Fixture` with its
+  name, status, times, steps and attachments, linked to the runs it served
+  (`rdm:setsUp` / `rdm:tearsDown`). Refines UN-014.
+- **DI-56 (runs to code)** — a test's `@allure.label("output", "rdm/…")`
+  already names the code it exercises. Each run links to those files
+  (`rdm:exercisesOutput` → `rdm:SourceFile`), and `trace` lists a design
+  input's source files: design input → test → run → code, with nothing new
+  to author. Refines UN-014, UN-015.
+
 ## Design Outputs
 
 `rdm/graph/` (optional extra `graph`: `pyoxigraph`, plus the `oxigraph` CLI
@@ -200,6 +226,7 @@ for serving):
   pySHACL runner (DI-38).
 - `rdm/graph/explorer.py` — the Graph Explorer graph file (DI-39).
 - risks: projected from `rdm/record/risk.py` into the `risks` named graph (DI-45).
+- `rdm/graph/allure.py` — Allure results, containers and attachments → RDF (DI-53..56).
 - `rdm/graph/agent.py` — the read-only agent tools and the MCP server (DI-41, DI-42; `mcp` SDK in the `graph` extra).
 - `rdm/graph/cli.py` — `rdm graph build | query | serve | validate | explorer-file | mcp`.
 

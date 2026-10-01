@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 13
+revision: 14
 title: Design Review — RDM
 ---
 
@@ -429,6 +429,31 @@ DI-53 (steps and attachments in the graph and in `trace`).
   invite empty attachments. The graph shows which runs carry evidence.
 - RDM's own acceptance tests record a step per clause and attach what they
   checked, starting with the gate and risk tests.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 14 — Allure results as RDF
+
+**Scope reviewed:** DI-54 (results in full), DI-55 (fixtures), DI-56 (runs
+to code) in the graph context; the execution projection moves to its own
+module, `rdm/graph/allure.py`.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Allure has no RDF vocabulary. Runs stay `rdm:TestRun ⊂ prov:Activity`,
+  with PROV-O times; labels are kept as name/value pairs rather than one
+  property per label name, so an unknown label needs no vocabulary change.
+- Attachment content stays in the files the bundle retains; the graph holds
+  the reference, not the bytes.
+- DI-56 closes the code end of the chain the record already carries: the
+  `output` label is on 40 of RDM's 44 runs.
+- Split into three design inputs so none outgrows one test.
+- Alongside, not a design input: RDM's own acceptance tests record a step
+  per clause, from the clause comments they already carry.
 
 ## Findings and actions
 
