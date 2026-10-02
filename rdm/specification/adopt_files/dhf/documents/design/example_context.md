@@ -52,6 +52,20 @@ each step along a relationship the model already declares, and draw it with
 
 ![Scenario: TODO-scenario](../../c4/views/D_TODO-context_TODO-scenario.svg)
 
+## Commands and events
+
+What this context does, in the record's domain language (`CONTEXT.md`,
+"Domain model"): each row reads *the actor issues the command, resulting in
+its success event or a fail event, which affects the entity*. A fail event
+names the business rule broken, after a slash. Keep it to the commands a
+reviewer needs.
+
+| Actor | Command | Success event | Fail events | Entity |
+|-------|---------|---------------|-------------|--------|
+
+TODO one row per command. Then the reactions, if any: "whenever this event,
+then that command".
+
 ## Dependencies
 
 TODO the contexts this one depends on, and those that depend on it, against
