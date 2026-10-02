@@ -125,6 +125,21 @@ gates container into the components of `rdm`):
 
 ![Scenario: one run of the reusable gates](../../c4/views/D_release_pipeline.svg)
 
+## Commands and events
+
+Each row reads: the actor issues the command, resulting in its success
+event or one of its fail events (the business rule it broke, after the
+slash), which affects the entity. A gate concludes every event its rules
+produce. The names are the vocabulary of the record (`CONTEXT.md`,
+"Domain model"); the tools print them as prose today.
+
+| Actor | Command | Success event | Fail events | Entity |
+|-------|---------|---------------|-------------|--------|
+| CI or contributor | Verify (`rdm story verify`) | Verification Written (each design input verified · failed · untested) | Not Written / DHF Missing · Results Missing | Verification data |
+| CI or contributor | Decide release (`rdm story release-gate`) | Release Permitted | Release Blocked / Design Control Unmet · No Design Inputs · Input Failed · Input Untested · Need Unaddressed · Risk Finding; warned / Need Unvalidated · Risk Proposed · Orphan Tag | Release |
+| The design gate, given results | Check executed results | — | warned / Input Failed · Input Untested · Orphan Tag | Verification data |
+| Contributor or agent | Trace (`rdm story trace`) | read only: a read model, no event | — | — |
+
 ## Dependencies
 
 Layer 4 of the dependency rule. Depends on `test_evidence` (the Allure

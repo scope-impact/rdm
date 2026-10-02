@@ -1134,6 +1134,46 @@ glossary. No design input changed.
 - The `realises`, DI-30 ownership and DI-44, DI-59, DI-65 wording questions
   above, for a later review.
 
+# Design Review 35 — Commands and events: the domain model
+
+**Scope reviewed:** the glossary's new *Domain model* terms; every design
+document's new *Commands and events*; the SDD template. No design input
+changed.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- RDM's tactical vocabulary follows the PensionBee DDD workshop
+  (EventStorming, entities, repositories, command handlers, policies): an
+  actor issues a command, resulting in a success event or a fail event that
+  names the business rule it broke, which affects an entity (`CONTEXT.md`,
+  "Domain model"). Two departures, each for a reason:
+  - A gate concludes every event its rules produce, not the first, and its
+    verdict is a conclusion over all of them: a reviewer fixes the reasons
+    together, and a warning does not withhold a permission.
+  - The workshop's *policy* is RDM's **reaction**: RDM's only policy is the
+    risk policy, and one word must not mean two things in the record.
+- The design input has a lifecycle the record now names: declared, approved
+  (committed), verified (a passing tagged test), released; an edit re-opens
+  approval.
+- Each design document gains *Commands and events*: its commands, their
+  success and fail events, the entity each affects, and its reactions. The
+  fail events are the rules the code checks today, named; the tools still
+  print prose. Publishing and the knowledge graph hold read models only,
+  which is why they sit in the top layer.
+- The EventStorming that produced these found two questions this review
+  leaves open: the change itself (proposed, reviewed, approved, merged) has
+  no context, its approval living in the pull request; and the release
+  decision is recomputed on every run, never recorded as an event.
+
+## Findings and actions
+
+- Name the events in the code, context by context, starting with the
+  release gate: each rule returns a named event with the message printed
+  today (a later change, its own review).
+- The two open questions above, for a later review.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

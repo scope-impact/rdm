@@ -114,6 +114,18 @@ effect is recorded apart — the residual is all the controls folded
 together. Design Review 9 kept the register this small; each can grow later
 without changing a register written to this format.
 
+## Commands and events
+
+Each row reads: the actor issues the command, resulting in its success
+event or one of its fail events (the business rule it broke, after the
+slash), which affects the entity. A gate concludes every event its rules
+produce. The names are the vocabulary of the record (`CONTEXT.md`,
+"Domain model"); the tools print them as prose today.
+
+| Actor | Command | Success event | Fail events | Entity |
+|-------|---------|---------------|-------------|--------|
+| The release gate | Assess risks | Risk Evaluated (residual acceptable, or accepted) | Risk Not Evaluated / No Policy · Policy Malformed · Id Missing · Duplicate Id · Hazard, Situation Or Harm Missing · Category Missing · STRIDE Missing · Unknown Link · Score Not In Policy · Level Mismatch · Unknown Control · Residual Unscored · Control Unverified · Residual Unacceptable · Acceptance Missing · Unknown Status; warned / Policy Not Approved · Risk Proposed | Risk register |
+
 ## Dependencies
 
 Layer 1 of the dependency rule, a leaf: it depends only on the shared

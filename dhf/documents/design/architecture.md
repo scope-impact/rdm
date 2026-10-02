@@ -111,6 +111,19 @@ Assumptions and open questions:
   imports; a relative import is not seen, so a dependency made only by one
   would go unwarned once DI-68 is built.
 
+## Commands and events
+
+Each row reads: the actor issues the command, resulting in its success
+event or one of its fail events (the business rule it broke, after the
+slash), which affects the entity. A gate concludes every event its rules
+produce. The names are the vocabulary of the record (`CONTEXT.md`,
+"Domain model"); the tools print them as prose today.
+
+| Actor | Command | Success event | Fail events | Entity |
+|-------|---------|---------------|-------------|--------|
+| Contributor | Draw architecture views (`rdm c4 draw`) | Views Drawn | Not Drawn / No Workspace · Tool Missing · Export Failed · View Not Drawn | Architecture workspace |
+| The design gate | Check views current | Views Current | Views Stale / Not Drawn · Model Unreadable · Not Current · Image Missing · Image Of No View | Architecture workspace |
+
 ## Dependencies
 
 Layer 1 of the dependency rule, a leaf: the Architecture model uses nothing

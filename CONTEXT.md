@@ -378,3 +378,65 @@ _Avoid_: lint, constraint (unqualified)
 A fact a rule infers, kept apart from what the record states and never stated
 by it.
 _Avoid_: computed field, cache
+
+## Domain model
+
+The tactical terms each design document's *Commands and events* use, after
+the PensionBee DDD workshop: an actor issues a command, resulting in one of
+its events, which affects an entity.
+
+**Command**:
+An intent to change something or to reach a verdict, issued by an actor:
+declare a design input, commit the design record, decide a release. A command
+a user types (`rdm story release-gate`) is an interface, named only where a
+reviewer needs it.
+_Avoid_: action, request, function
+
+**Domain event**:
+A fact a command produced, named in the past tense: *Design Input Declared*,
+*Release Permitted*. A **success event** is the command's intended outcome; a
+**fail event** names the business rule that refused it, after a slash:
+*Release Blocked / Input Untested*. A gate concludes every event its rules
+produce, not the first: a verdict such as *Release Permitted* is a conclusion
+over all of them, and a warning does not withhold it.
+_Avoid_: message, log line, error (for a fail event), notification
+
+**Business rule**:
+What a command checks before its success event may happen; each one broken is
+named by a fail event. The rules of a gate are its checks.
+_Avoid_: invariant (in prose), validation, guard
+
+**Actor**:
+Whoever issues a command: a contributor (a person or an agent), a reviewer,
+CI. A command with no actor is a reaction's.
+_Avoid_: user (unqualified), role
+
+**Entity**:
+A thing of the domain with an id and a lifecycle: a user need (UN-nnn), a
+design input (DI-n), a risk, a design document, a test result. An
+**aggregate** is the entity whose rules must hold as one: a design document
+and the design inputs it owns, the risk register and its risk policy, and
+the record as a whole for the rules that cross documents (an id declared
+once, a design input never restated).
+_Avoid_: object, record (for one entity), model
+
+**Design input lifecycle**:
+*Declared* (in an uncommitted design document) → *approved* (committed) →
+*verified* (a passing tagged test) → *released* (the release gate permits the
+commit). An edit to its design document re-opens approval until the edit is
+committed.
+_Avoid_: status (unqualified), draft, done
+
+**Reaction**:
+"Whenever this event, then that command", with no actor of its own: whenever
+a design input is declared, a stub test is written; whenever a commit is made,
+the design gate runs (the hook); whenever a branch is pushed, the gates run
+(CI).
+_Avoid_: policy (RDM's only policy is the risk policy), trigger, handler
+
+**Read model**:
+A view built from events and the record for someone to read, never changed
+directly: the traceability matrix, the verification data, the verification
+report, the knowledge graph. Publishing and the knowledge graph hold only
+read models.
+_Avoid_: report (unqualified), dashboard, cache

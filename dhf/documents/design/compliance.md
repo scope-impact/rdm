@@ -110,6 +110,19 @@ Assumptions and open questions:
 - Verbose coverage names at most ten missing clauses per checklist and
   counts the rest; the gap report names them all.
 
+## Commands and events
+
+Each row reads: the actor issues the command, resulting in its success
+event or one of its fail events (the business rule it broke, after the
+slash), which affects the entity. A gate concludes every event its rules
+produce. The names are the vocabulary of the record (`CONTEXT.md`,
+"Domain model"); the tools print them as prose today.
+
+| Actor | Command | Success event | Fail events | Entity |
+|-------|---------|---------------|-------------|--------|
+| Contributor or auditor | Analyse gaps (`rdm gap`) | Checklist Covered | Clauses Missing / Item Unreferenced · No Checklist | Checklist |
+| Contributor or auditor | Report coverage (`rdm gap --coverage`) | Coverage Reported | Not Reported / No Valid Checklist | Checklist |
+
 ## Dependencies
 
 Compliance is a leaf, at layer 1 of the dependency rule beside risk and

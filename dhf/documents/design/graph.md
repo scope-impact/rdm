@@ -186,6 +186,23 @@ Open questions:
 - `schema`'s list of named graphs and the Agent server's instructions do not
   name the architecture and code graphs (DI-67), though queries see them.
 
+## Commands and events
+
+Each row reads: the actor issues the command, resulting in its success
+event or one of its fail events (the business rule it broke, after the
+slash), which affects the entity. A gate concludes every event its rules
+produce. The names are the vocabulary of the record (`CONTEXT.md`,
+"Domain model"); the tools print them as prose today.
+
+| Actor | Command | Success event | Fail events | Entity |
+|-------|---------|---------------|-------------|--------|
+| Contributor or CI | Build graph (`rdm graph build`) | Graph Built | Not Built / Extra Missing · DHF Missing | Knowledge graph |
+| CI or agent | Validate graph (`rdm graph validate`) | Graph Valid | Graph Invalid / Gate Rule Violated · Shapes Missing; warned / Gate Rule Warning | Knowledge graph |
+| Agent or auditor | Query or trace (`rdm graph query`, the MCP server) | read only: a read model, no event | Refused / Invalid SPARQL · Update Refused · Service Refused | Knowledge graph |
+
+The knowledge graph is a read model of the whole record: no command here
+changes a fact of the record.
+
 ## Dependencies
 
 A read model at the top layer (5) of the dependency rule: it depends on the
