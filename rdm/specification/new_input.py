@@ -31,7 +31,7 @@ _DI_NUMBER = re.compile(r"^DI-(\d+)$")
 
 CHECKLIST = """\
 Remaining traceability checklist (see {workflow}):
-  1. Describe {di_id} in the '## Design Inputs' / '## Design Outputs' prose of {doc}
+  1. Describe how {di_id} is met in the '## Design Outputs' of {doc}, by id (never restate it)
   2. Commit the design docs FIRST -- that commit is the approval (design gate)
   3. Implement the design output
   4. Replace the stub body in {test_file} with real assertions
