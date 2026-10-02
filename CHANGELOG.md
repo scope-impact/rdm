@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Changed — the worked example follows current RDM
+- `examples/github-document-control/` runs RDM's reusable gates, pinned to
+  `v1.2.0`, and the Part 11 gap analysis on every pull request, and its ruleset
+  requires exactly those checks (DI-9): it used to require two checks no
+  workflow reported, which would have blocked every merge.
+- Its release is published only if the release gate passes at the tag, with the
+  verification report attached (DI-10); the SOP is at revision 2.
+- Its tests record named verification steps with what each checked, and RDM's
+  pytest plugin labels each run from the example's own record. Design Review 2
+  also reviews DI-6..DI-8, which had none.
+
 ### Added — document control and traceability
 - The `part11_document_control` built-in checklist and RDM's own Part 11-mapped
   document-control statement, held by an acceptance test.

@@ -1,0 +1,5 @@
+# Generated: a test run counts untracked files as uncommitted changes, so
+# results and release copies stay out of the worktree's status.
+dhf/allure-results/
+dhf/data/verification.yml
+release/

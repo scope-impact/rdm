@@ -1,6 +1,6 @@
 ---
 id: SOP-DC-001
-revision: 1
+revision: 2
 title: "Document Control Procedure — git as the document control system"
 ---
 
@@ -93,9 +93,11 @@ alongside the commits they sign.
 ## Permitted sequencing
 
 Rulesets enforce the required order of steps [[P11:11.10f]]: no direct pushes
-to `main`; a pull request must exist, required status checks (rendering, gap
-analysis) must pass, and a code-owner approval must be current (stale reviews
-are dismissed on new pushes) before merging is possible.
+to `main`; a pull request must exist, the required status checks must pass
+(`design-controls / gates`: the design gate, the acceptance tests, verification,
+the release gate and graph validation; `part11-gap-analysis`: this procedure
+against the Part 11 checklist), and a code-owner approval must be current
+(stale reviews are dismissed on new pushes) before merging is possible.
 
 ## Copies
 
@@ -103,6 +105,8 @@ Accurate and complete copies [[P11:11.10b]] are produced in human-readable and
 electronic form: the release workflow renders each controlled document to PDF
 via `rdm render` and attaches the artifacts to the GitHub Release; `git
 archive <tag>` reproduces the complete electronic document set for any release.
+A release is published only if the release gate passes at its tag, and carries
+the verification report of that commit.
 
 ## Retention and retrieval
 
@@ -116,8 +120,9 @@ retention period for released document sets is defined in the quality manual.
 
 The system is validated for its intended use [[P11:11.10a]]: the controls
 above are **configuration as code** (`github/` in this example — rulesets,
-CODEOWNERS, release workflow), and each is verified by an automated acceptance
-test in `tests/acceptance/`, executed on every change. Altered records are
+CODEOWNERS, workflows), and each is verified by an automated acceptance
+test in `tests/acceptance/`, executed on every change by the design-controls
+workflow with RDM pinned to a released version. Altered records are
 discernible by construction: any content change produces a different SHA, and
 unsigned or history-rewriting changes are rejected by ruleset. GitHub itself is
 a qualified external service provider (supplier evaluation per the purchasing
@@ -142,7 +147,7 @@ follow the same pull-request approval path they describe.
 | --- | --- | --- |
 | Design history file (DHF) | §820.30(j) | `dhf/` — design inputs, review, verification evidence |
 | Device master record (DMR) | §820.181 | the controlled specification set at the approved tip, enumerated by `documents/device_master_record_index.md` (rendered from repository data) |
-| Device history record (DHR) | §820.184 | per release: the `device-history-record.json` manifest (tag, commit SHA, releasing actor, timestamp, artifact list) attached to the GitHub Release with the copies |
+| Device history record (DHR) | §820.184 | per release: the `device-history-record.json` manifest (tag, commit SHA, releasing actor, timestamp, artifact list) attached to the GitHub Release with the copies and the verification report |
 
 The DMR for a given release is the index and its listed documents at the
 release tag; the DHR proves each released set was produced from that exact
