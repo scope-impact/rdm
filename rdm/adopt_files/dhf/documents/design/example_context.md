@@ -13,6 +13,10 @@ design_inputs: []
 
 # TODO-context — Software Design
 
+<!-- Keep it agile: write what a reviewer needs to approve the change, no more.
+     A section with nothing to say is one line ("None."), never padding. Edit
+     this document in the same pull request as the change it describes. -->
+
 ## Purpose
 
 TODO one paragraph: what this bounded context owns, and the language it
@@ -45,6 +49,16 @@ workspace (`rdm c4 draw`):
 TODO the relationships that matter, in words: what each component uses and
 why, in the direction of the arrow. Then the assumptions and open questions,
 if any.
+
+### Dynamic view (only when needed)
+
+Optional. Add one only when the order of interactions matters and the
+component view cannot show it: one important runtime scenario, not one per
+feature. Declare it in the workspace as `dynamic <container> "D_<context>_<scenario>"`,
+each step along a relationship the model already declares, and draw it with
+`rdm c4 draw`. Delete this section when there is none.
+
+![Scenario: TODO-scenario](../../c4/views/D_TODO-context_TODO-scenario.svg)
 
 ## Dependencies
 

@@ -150,6 +150,13 @@ container or component. Its image is drawn from the workspace and stamped with
 it; it is never edited.
 _Avoid_: diagram (for the model), picture
 
+**Dynamic view**:
+An architecture view of one important runtime scenario: the same elements,
+their interactions numbered in order, each step along a relationship the model
+declares. Added only when the order matters and a component view cannot show
+it, never one per feature.
+_Avoid_: sequence diagram (it is drawn as numbered steps, not lifelines), flow
+
 **Architecture**:
 The bounded context that owns the architecture workspace, its views, and the
 conformance of the code and the record to it. The system architecture document
