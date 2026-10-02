@@ -27,105 +27,173 @@ design_inputs:
 
 # Publishing — Software Design
 
-> **Interim (Design Review 30).** This context was formed from `rendering`, `ingestion`, `record`, `verification`. Its
-> design inputs moved here unchanged; the prose below is carried over verbatim
-> from those documents, by section, until it is rewritten for this context.
+## Purpose
+
+Publishing renders the design record into controlled documents: a
+*template* (a controlled document's source, with placeholders) filled with
+*data* generated from the record, then post-processed Markdown, and from it
+PDF and DOCX. It owns the template engine and its filters, the Markdown
+post-processing, the code snippets a document embeds, the device-master-record
+(DMR) index data and the verification report. Its language is template, data
+and rendered document; a rendered document is output, never source. It is a
+read model: it reads the record through the contexts below it, never changes
+it, and nothing it renders is fed back into it.
 
 ## Design Inputs
 
-Renders the design record into controlled documents: templates filled with data generated from the record, then Markdown, PDF and DOCX.
-
-- **DI-7 (template rendering)** — render a Markdown template against a supplied
-  data context with Jinja2, so a generated data file (e.g. `verification.yml`)
-  populates the document.
-- **DI-8 (traceability filters)** — provide `invert_dependencies`, `join_to`,
-  and `md_indent`, the filters that build traceability tables.
+- **DI-7 (template rendering)** — render a Markdown template against a
+  supplied data context with Jinja2, so a generated data file (e.g.
+  `verification.yml`) populates the document. What the data says belongs to
+  the context that generates it. Refines UN-001.
+- **DI-8 (traceability filters)** — provide `invert_dependencies`, `join_to`
+  and `md_indent`, the filters that build traceability tables. They shape
+  data inside a template and compute no verification status. Refines UN-001.
 - **DI-9 (markdown post-processing)** — auto-number sections, expand declared
   vocabulary/acronyms, and exclude auditor-only `[[…]]` notes from released
-  output.
+  output. A project enables each in its configuration. Refines UN-001.
 - **DI-16 (code-snippet collection)** — extract `RDOC … ENDRDOC` delimited
-  snippets from source files, keyed by name, so live code is embedded in docs.
+  snippets from source files, keyed by name, so live code is embedded in
+  documents rather than copied into them. The template decides where a
+  snippet appears. Refines UN-001.
 - **DI-29 (DMR index data)** — `rdm story dmr` generates device-master-record
   index data from the controlled documents' own frontmatter (one entry per
   document: id, title, path, revision), so the DMR index is derived from the
-  record rather than hand-maintained — the same generated-not-transcribed rule
-  the traceability matrix follows. Refines UN-012.
+  record rather than hand-maintained — the same generated-not-transcribed
+  rule the traceability matrix follows. The index document that renders it
+  is the project's. Refines UN-012.
 - **DI-64 (verification report, PDF)** — the matrix says *that* a design
-  input is verified; the report shows *what was run* to say so, written for
-  the person who has to judge it without having run anything: an auditor, a
-  notified body, the pull-request reviewer. It speaks the record's language
-  (`CONTEXT.md`): a design input is an acceptance criterion, baseline or
-  risk-based; a test verifies it through its verification steps; a design input
-  allocated to a risk is a *control for* it, never shown as making the risk
-  controlled until the risk's residual is evaluated acceptable. `rdm story evidence-report`
-  renders it from the record and the Allure results it is given. Its order is
-  the order of their questions:
-  - **what is this, and can I rely on it** — the repository, the record's
-    commit, the commits tested, who or what ran the tests and where (DI-65),
-    the RDM version, one SHA-256 over the result files; and an *evidence
-    status*: release-grade only when every design input has a passing run,
-    none failed, and every run tested the record's commit with a clean
-    worktree. Otherwise it is not, and each reason is named. Beside it, the
-    state of the risk register: how many ratings are still proposals, and how
-    many risks have no evaluated residual;
-  - **what went wrong** — failed, broken or skipped runs, and design inputs
-    with no run, up front;
-  - **what traces to what** — one table: user need, design input, the risks
-    it is a control for (from the risk register), its tests, their result;
-  - **the evidence** — per design input, then per run: the test's file and
-    function, the result, date and duration, each step as a verification
-    step with its own result, failure message and trace, and the
-    attachments the test made (text inline up to a limit, images embedded,
-    other files by SHA-256). The commit and worktree appear on a run only
-    where they differ from the header;
-  - **how to check it** — an appendix of every result file and its SHA-256,
-    against the retained bundle.
-  What would only repeat the report or bury it is left out: labels the report
-  already shows (story, epic, feature, output, commit, worktree) and runner
-  internals (host, thread, framework, language, suite, package), and the
-  Allure severity label, which reads as a harm's severity and is not one; pytest's
-  captured stdout and stderr, and the plugin's copy of the requirement, are
-  listed by name and SHA-256, not printed. The data reaches the Typst layout
-  as a JSON file, never spliced into markup, so no text from a test can change
-  the document. It compiles with the `typst` package (extra `report`) or a
-  `typst` executable (the RDM image has one). The evidence bundle and the
-  reusable gates workflow include it. Refines UN-012.
+  input is verified; the report shows *what was run* to say so, for a reader
+  who did not run anything: an auditor, a notified body, the pull-request
+  reviewer. It speaks the record's language: a design input is a baseline or
+  risk-based acceptance criterion, a test verifies it through verification
+  steps, and a design input allocated to a risk is a *control for* it, never
+  shown as making the risk controlled until its residual is evaluated
+  acceptable. Its order is the reader's questions: what this is and whether
+  it can be relied on (provenance, DI-65's executor and environment, the
+  evidence status and each reason it is not release-grade, the risk
+  register's proposals and unevaluated residuals); what went wrong (the
+  anomalies); what traces to what; the evidence per design input and run;
+  and how to check it (every result file's SHA-256). Left out: labels the
+  report already shows, runner internals, and the Allure severity label,
+  which reads as a harm's severity and is not one; captured output and the
+  plugin's copy of the requirement are listed by name and SHA-256 only. The
+  report decides nothing; the release gate does. Refines UN-012.
 
-The rest of `ingestion`'s design is carried over in [test_evidence](test_evidence.md).
+## Design Outputs
 
-The rest of `record`'s design is carried over in [specification](specification.md).
+- **Renderer** (`rdm/render.py`, `rdm render <template> <config> <data…>`)
+  — meets DI-7 and DI-8. A Jinja2 environment with strict undefined values
+  (a placeholder with no data fails the render), templates loaded from the
+  working directory, and the three filters registered. The data context is
+  keyed by each data file's basename (`context_from_data_files` in
+  `rdm/util.py`; two files with one basename are an error), so
+  `data/verification.yml` is `verification` in the template. When a
+  template reads the first pass's output (`first_pass_output`,
+  `rdm/first_pass_output.py`), it is rendered a second time with that output
+  available. The extensions listed under `md_extensions` in the project's
+  `config.yml` are loaded, and their filters run over the rendered lines.
+- **Markdown extensions** (`rdm/md_extensions/`) — meet DI-9.
+  `SectionNumberExtension` prefixes each heading with its section number;
+  `VocabularyExtension` gives the template the words of the first-pass
+  output (`first_pass_output.words`, `has`, `has_ignore_case`, the
+  `present_in` filter), so a glossary or acronym list includes only the
+  terms the document uses; `AuditNoteExclusionExtension` removes each
+  `[[…]]` note, and the space before it, from the output. The `config.yml`
+  that `rdm init` lays down enables only the vocabulary extension.
+- **Code snippets** (`rdm/collect.py`, `rdm collect <files…>`) — meets
+  DI-16. A snippet runs from the line holding `RDOC <key>` to the `ENDRDOC`
+  in the same column, its lines kept from that column. An empty or repeated
+  key in one file, an `ENDRDOC` in another column, or a missing `ENDRDOC` is
+  an error naming the file and line. The snippets are written as YAML, a
+  data file the Renderer reads like any other.
+- **DMR index** (`rdm/record/dmr.py`, `rdm story dmr <dir> -o <out.yml>`) —
+  meets DI-29. One entry per Markdown file in the directory with a
+  frontmatter `id`, sorted by id, under `entries`, with a header saying the
+  file is generated. A file with no `id` is skipped with a warning; no
+  controlled document at all is an error.
+- **Verification report** (`rdm/record/report.py`, `rdm story
+  evidence-report --dhf … --allure-results … -o <pdf>`) — meets DI-64.
+  `build_report()` takes each design input's status from the release
+  context's verification data, the runs from the Allure reader, the risks
+  and residual decisions from the risk register, and the record's commit
+  from git. It names each reason the evidence is not release-grade (a design
+  input not verified; a failed or broken run; a run with uncommitted changes
+  or no commit; runs of another commit than the record's; no record commit)
+  and lists the anomalies (no run, a run that did not pass, a missing
+  attachment, an orphan tag). `render_pdf()` writes the data as JSON beside
+  the layout and compiles it with the `typst` package (extra `report`) or a
+  `typst` executable; with neither, the command fails and says so.
+- **Report layout** (`rdm/record/verification_report.typ`) — meets DI-64.
+  Reads `report.json` and sets every value as text, never markup, so nothing
+  a test printed can change the document.
+- **PDF action** (`action.yml`) — runs the project's `make pdfs` in the RDM
+  image of the release it is pinned to and uploads the PDFs: the part of
+  DI-63 (release) that renders the documents with the image of the same
+  revision.
 
-The rest of `verification`'s design is carried over in [release](release.md).
+**Realised here:** the rendering side of **DI-1** (specification) — the
+needs and design inputs read from frontmatter are what the documents
+render — and of **DI-4** (release) — the traceability matrix is the
+Renderer filling its template with `verification.yml`.
 
-## Design Inputs (context notes) — from `rendering`
+**Realised elsewhere:** DI-64's last clause by the release context — the
+evidence bundle writes the report (or records in its manifest why not) and
+the reusable gates workflow includes it through the bundle. The project
+Makefile that runs Pandoc and Typst is a specification template
+(`rdm/init_files/`).
 
-This context owns the rendering requirements (the engine that compiles the DHF
-from data + templates), all refining UN-001:
-
-It also **realises** the rendering side of inputs owned elsewhere (via
-`realises`): **DI-1** (record ingest, owned by `record`) and **DI-4**
-(traceability, owned by `verification`).
-
-## Design Outputs — from `rendering`
-
-Compiles the DHF from data and templates.
-
-- `rdm/render.py` — two-pass Jinja2 engine; the `invert_dependencies`, `join_to`,
-  `md_indent` filters; context keyed by data-file basename, so a generated
-  `verification.yml` renders into a traceability matrix.
-- `rdm/md_extensions/` — section numbering, vocabulary expansion, auditor-note
-  exclusion.
-- `rdm/c4.py` — `rdm c4 draw`: the workspace's model and its views, drawn
-  and stamped (DI-70).
-- Output: Markdown → PDF/DOCX via Pandoc/Typst.
-
-Contributes to **UN-001** (compile the DHF from the system of record). The owned
-inputs are verified by `@allure.story("DI-7" / "DI-8" / "DI-9" / "DI-70")` acceptance tests;
-the realised inputs by their owners' tests plus RDM's existing render unit tests.
+Verified by tagged tests in `tests/acceptance/`: DI-7, DI-8, DI-9 in
+`test_rendering.py`; DI-16 in `test_ingestion.py`; DI-29 in
+`test_record.py`; DI-64 in `test_verification_report.py`.
 
 ## Components (C3)
 
-The components of the `publishing` context, drawn from the architecture
-workspace (`rdm c4 draw`).
-
 ![Components: publishing](../../c4/views/C3_publishing.svg)
+
+| Component | Responsibility | Technology | Code |
+|-----------|----------------|------------|------|
+| Renderer | Templates and data to Markdown | Python, Jinja2 | `rdm/render.py` |
+| Markdown extensions | Section numbers, vocabulary, audit notes | Python | `rdm/md_extensions/` |
+| Code snippets | Collects tagged code snippets | Python | `rdm/collect.py` |
+| DMR index | The device-master-record index from frontmatter | Python | `rdm/record/dmr.py` |
+| Verification report | The PDF of every run behind each design input | Python | `rdm/record/report.py` |
+| Report layout | The report's page layout | Typst | `rdm/record/verification_report.typ` |
+| PDF action | Renders the documents in the image | GitHub Actions | `action.yml` |
+
+The PDF action is in the Reusable gates container; the others are in `rdm`.
+
+- The Verification report *builds on* Verification data (release), *reads
+  results with* the Allure reader (test evidence), *reads risks with* the
+  Risk register (risk), *reads results and git with* the Record kernel, and
+  *lays out with* the Report layout.
+- The DMR index *reads frontmatter with* the Record kernel.
+- The Renderer and the Markdown extensions *use* the Utilities.
+- The Evidence bundle (release) *writes* the Verification report and
+  *renders the matrix with* the Renderer: arrows into publishing from below
+  it (see Dependencies).
+
+Open questions:
+
+- The Renderer loads the extensions by name from configuration, so no
+  relationship is drawn between them, and `rdm/first_pass_output.py`, which
+  they share, is in no component.
+- The PDF action's use of the Documents image is not drawn.
+- A snippet key repeated across two files is not an error: the later file's
+  snippet silently replaces the earlier one.
+- The DMR index reads only the files directly in the given directory, not
+  its subdirectories (such as `documents/design/`).
+
+## Dependencies
+
+Publishing is a read model at the top of the dependency rule. It depends,
+downward, on **specification** and the shared kernel (the Record kernel,
+the Utilities), **test_evidence** (the Allure reader), **risk** (the Risk
+register) and **release** (Verification data).
+
+Nothing should depend on it, but **release** does: the Evidence bundle
+(`rdm/record/bundle.py`) imports `rdm.record.report.write_report` and
+`rdm.render.render_template_to_file`. The change that removes it: the
+bundle receives the rendered matrix and report as files, or as functions
+the composition root (`rdm/main.py`) passes in, so release imports nothing
+from publishing. `rdm/main.py` importing publishing is the composition root
+and keeps the rule.
