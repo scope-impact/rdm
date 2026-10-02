@@ -27,9 +27,9 @@ def test_renders_template_against_data_context() -> None:
     """DI-7: a Markdown template renders against a supplied data context."""
     out = render_from_string(
         "Device: {{ device.name }} v{{ device.version }}",
-        context={"device": {"name": "VitalView", "version": "1.2"}},
+        context={"device": {"name": "Acme Monitor", "version": "1.2"}},
     )
-    assert "Device: VitalView v1.2" in out
+    assert "Device: Acme Monitor v1.2" in out
 
 
 @allure.story("DI-8")

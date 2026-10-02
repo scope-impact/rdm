@@ -86,6 +86,6 @@ with the rule that derives it, and `--infer` adds it in a separate graph
   Pass and fail are the gates' to decide.
 
 The decision behind needs and contexts is
-[ADR 0001](adr-0001-bounded-context-user-needs.md); a worked example is
-[VitalView](example-vitalview-decomposition.md). How each entity and link
+[ADR 0001](adr-0001-bounded-context-user-needs.md); the worked example is
+RDM's own record in `dhf/` ([how RDM controls itself](dogfood.md)). How each entity and link
 appears in RDF is in [The record as a graph](graph.md).

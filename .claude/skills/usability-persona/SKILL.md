@@ -15,7 +15,7 @@ one user need, then record the run as formative evidence.
 
 ## Inputs
 
-- A **persona spec** (e.g. `examples/vitalview-samd/personas/clinician-UN-001.yml`):
+- A **persona spec** (e.g. `personas/clinician-UN-001.yml`):
   `persona`, `profile`, `user_need` (the UN-id), `goal`, `success` criteria.
 - The **app URL** under test.
 - The **results directory** to write evidence into (the one `rdm story persona`

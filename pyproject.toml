@@ -34,7 +34,7 @@ dependencies = [
 [project.optional-dependencies]
 # Playwright for the usability-persona skill (AI-persona usability validation).
 # Browsers are provided by the environment; if the preinstalled browser version
-# differs, launch with executable_path (see examples/.../app/run_persona_demo.py).
+# differs, launch with executable_path.
 validation = ["playwright==1.63.0"]
 # The design record as a linked-data graph (DI-35/36): an embedded RDF store
 # (pyoxigraph) and the oxigraph CLI that serves it as a SPARQL endpoint for
