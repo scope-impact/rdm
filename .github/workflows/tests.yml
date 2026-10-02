@@ -33,3 +33,13 @@ jobs:
         run: uv run ruff check .
       - name: Tests
         run: uv run pytest tests
+      # The worked example runs with this RDM, so it cannot fall behind it.
+      - name: The worked example's gates
+        working-directory: examples/github-document-control
+        run: |
+          uv run rdm story design-gate --dhf dhf
+          uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+          uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+          uv run rdm gap checklists/part11_document_control.txt dhf/documents/procedures/document_control_procedure.md
+          uv run rdm graph validate --dhf dhf --allure-results dhf/allure-results \
+            --checklist checklists/part11_document_control.txt --shapes dhf/shapes/document_control.ttl
