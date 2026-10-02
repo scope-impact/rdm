@@ -89,11 +89,16 @@ kill. The restore is defended in depth: the original is journaled beside
 the file before the mutation, so a probe killed outright is recovered on
 the next probe of that file; a termination signal unwinds through the
 restore; and every write makes the file look newer to Python's bytecode
-cache, so a same-size mutant is never served stale.
+cache, so a same-size mutant is never served stale. The file is restored to
+its exact bytes, line endings included, and a leftover journal is restored
+only while the file still holds that probe's mutant: an edit made since is
+kept.
 
 **Test result translation** (`rdm translate`) chooses a format, or detects
 it, and writes each test's name, result and failure message as result
-data; the gtest flattener also reads xunit. The data feeds document
+data; the gtest flattener also reads xunit. A test that failed or errored
+is a fail, one skipped or disabled a skip, and only the rest a pass; a
+qttest function fails when any of its incidents does. The data feeds document
 templates; nothing reconciles it against design inputs.
 
 The relationships that matter, in the direction of the arrow: the pytest

@@ -1379,6 +1379,32 @@ smaller graph faults found by the same test are fixed with them: the sorted
 N-Quads split a statement at a Unicode line separator in a literal, and the
 trace of a user need failed on a design input id with a letter part.
 
+# Design Review 47 — Evidence that says what happened
+
+**Scope reviewed:** the evidence bundle and report (DI-30, DI-64), the
+Markdown post-processing (DI-9), result translation (DI-17), the mutation
+probe (DI-47). No design input changed.
+
+**Disposition:** Approved.
+
+The exploratory test found evidence that did not say what happened:
+
+- The report and the bundle followed a symbolic link in the results
+  directory, so a link to any file on the machine was printed in the PDF and
+  copied into the bundle as a result. Neither reads a link now.
+- The bundle kept only the files the results name, so the report's digest
+  over every result file could not be checked from it; it keeps every plain
+  file. Written over an earlier bundle it mixed the two runs; it replaces
+  them. A missing attachment is listed in the manifest, not dropped, and a
+  report that cannot be laid out leaves the reason, not a crash.
+- Audit-note exclusion and section numbering changed code: `[[ -f x ]]` in
+  a shell block was removed and `#` comments numbered. Code is left as
+  written; a note may span lines of a paragraph.
+- `rdm translate` reported an errored or skipped xunit test as a pass, and a
+  qttest function by its last incident only.
+- The mutation probe rewrote a file's line endings while reporting it
+  restored, and a leftover journal overwrote edits made since.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

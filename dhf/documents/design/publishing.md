@@ -77,7 +77,11 @@ The rules a reviewer needs to judge the design:
   numbering prefixes each heading with its number. The vocabulary extension
   gives the template the words of the first pass, so a glossary or acronym
   list includes only the terms the document uses. Audit-note exclusion
-  removes each `[[…]]` note, and the space before it, from the output. A
+  removes each `[[…]]` note, and the space before it, from the output; a
+  note may run over several lines of one paragraph, and one left open at the
+  paragraph's end is kept as text. Neither extension touches code: fenced
+  blocks (``` or ~~~) and inline code are left as written, and only an ATX
+  heading (`#` to `######`, then a space) is numbered. A
   project laid down by `rdm init` enables only the vocabulary extension.
 - **Snippets.** A snippet runs from its opening marker to the closing marker
   in the same column, its lines kept from that column. An empty or repeated
@@ -100,12 +104,15 @@ The rules a reviewer needs to judge the design:
   layout sets every value as text, never markup, nothing a test printed can
   change the document.
 - **Evidence bundle.** It holds the verification data, the rendered
-  traceability matrix (when the record has its template), the executed
-  results with every attachment they name and the run's executor and
-  environment files (only plain files of the results directory), so the
-  report's digest over them can be checked after CI's retention ends, the
-  verification report or the reason it was not rendered,
-  and a manifest of the counts and files. It lives here because it renders:
+  traceability matrix (when the record has its template), every plain file
+  of the results directory (the results, their attachments, the run's
+  executor and environment; never a symbolic link or anything outside it),
+  so the report's digest over them can be checked after CI's retention
+  ends, the verification report or the reason it was not rendered, and a
+  manifest of the counts, the files this bundle wrote, and each attachment
+  a result names that is missing. A bundle written where one was before
+  replaces the earlier results, never mixes them. Neither the bundle nor the
+  report reads a symbolic link in the results directory. It lives here because it renders:
   the matrix with the Renderer, the report with the Verification report.
 
 The relationships that matter, in the direction of the arrow:
