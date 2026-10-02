@@ -107,7 +107,7 @@ class TestYamlTestDiscovery:
             "    zone: \"{{ lookup('file', 'main.tf') }}\"\n"
             "  tags: [DI-5]\n"
             "\n"
-            '- name: "DI-5 clause 1: the module provisions a public zone"\n'
+            '- name: "DI-5 step 1: the module provisions a public zone"\n'
             "  ansible.builtin.assert:\n"
             "    that:\n"
             "      - zone is regex('aws_route53_zone')\n"

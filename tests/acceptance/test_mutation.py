@@ -24,7 +24,7 @@ from rdm.gates.mutation import (
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 def _runner(src: Path, original: str, mutated: str, seen: list | None = None):
@@ -48,26 +48,28 @@ def test_mutation_probe_applies_reports_and_restores(tmp_path: Path) -> None:
 
     # A runner that "catches" the mutation (tests FAIL) → killed. It also records
     # what the file looked like *while it ran*, proving the mutation was applied.
-    with clause("A runner that \"catches\" the mutation (tests FAIL) → killed. It also records what the file looked…"):
+    with verification_step("A runner that \"catches\" the mutation (tests FAIL) → killed. It also records what the "
+                           "file looked…"):
         seen: list[str] = []
         res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", _runner(src, original, TESTS_FAILED, seen))
         assert seen == [original, "VALUE = 2\n"]        # run unmutated first, then with the mutation live
         assert res["killed"] and not res["survived"]     # caught
         assert res["restored"] and src.read_text() == original  # always reverted
 
-    with clause("A runner that does NOT catch it (tests pass) → survived (a test hole)"):
+    with verification_step("A runner that does NOT catch it (tests pass) → survived (a test hole)"):
         res2 = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", lambda: TESTS_PASSED)
         assert res2["survived"] and not res2["killed"]
         assert src.read_text() == original
 
-    with clause("An ambiguous mutation site (text not unique) is rejected; file untouched"):
+    with verification_step("An ambiguous mutation site (text not unique) is rejected; file untouched"):
         src.write_text("x = 1\nx = 1\n")
         assert "error" in run_mutation_probe(src, "x = 1", "x = 2", lambda: TESTS_FAILED)
         assert src.read_text() == "x = 1\nx = 1\n"
 
     # A test that does not pass unmutated is refused: it would "catch" any
     # mutation. Error, never KILLED, and the mutation is never applied.
-    with clause("A test that does not pass unmutated is refused: it would \"catch\" any mutation. Error, never…"):
+    with verification_step("A test that does not pass unmutated is refused: it would \"catch\" any mutation. Error, "
+                           "never…"):
         src.write_text(original)
         seen = []
         res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", lambda: seen.append(src.read_text()) or TESTS_FAILED)
@@ -86,7 +88,7 @@ def test_mutation_probe_only_a_genuine_test_failure_is_a_kill(tmp_path: Path, mo
     original = "VALUE = 1\n"
     src.write_text(original)
 
-    with clause("A runner that did not execute cleanly → error, NOT killed; still restored"):
+    with verification_step("A runner that did not execute cleanly → error, NOT killed; still restored"):
         res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2",
                                  _runner(src, original, "no tests matched the selector (exit 5)"))
         assert "error" in res and "no tests matched" in res["error"]
@@ -97,7 +99,8 @@ def test_mutation_probe_only_a_genuine_test_failure_is_a_kill(tmp_path: Path, mo
     # suite would PASS, a selector matching nothing must come back as an error
     # (pytest exit 5: no tests collected), not as a failure — the old
     # `returncode != 0` logic counted exactly this as KILLED.
-    with clause("The real pytest runner maps exit codes the same way: in a directory whose suite would PASS, a…"):
+    with verification_step("The real pytest runner maps exit codes the same way: in a directory whose suite would "
+                           "PASS, a…"):
         (tmp_path / "test_trivial.py").write_text("def test_ok():\n    assert True\n")
         monkeypatch.chdir(tmp_path)
         assert _pytest_runner("test_ok")() == TESTS_PASSED
@@ -124,7 +127,8 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
 
     # The journal exists (holding the original) exactly while the probe runs,
     # and is gone after a normal probe.
-    with clause("The journal exists (holding the original) exactly while the probe runs, and is gone after a…"):
+    with verification_step("The journal exists (holding the original) exactly while the probe runs, and is gone "
+                           "after a…"):
         src.write_text(original)
         seen = {}
 
@@ -140,7 +144,8 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
 
     # An INTERRUPTED probe (process killed mid-window: file mutated, journal
     # left behind) is recovered by the next probe of that file.
-    with clause("An INTERRUPTED probe (process killed mid-window: file mutated, journal left behind) is recovered…"):
+    with verification_step("An INTERRUPTED probe (process killed mid-window: file mutated, journal left behind) is "
+                           "recovered…"):
         src.write_text("VALUE = 2\n")                    # the crash left the mutant live
         journal.write_text(original)                     # ...and the journal behind
         res = run_mutation_probe(src, "VALUE = 1", "VALUE = 2", _runner(src, original, TESTS_FAILED))
@@ -150,7 +155,8 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
 
     # SIGTERM during the probe window restores in-process (a shell timeout
     # sends TERM first — the incident this guards against).
-    with clause("SIGTERM during the probe window restores in-process (a shell timeout sends TERM first — the…"):
+    with verification_step("SIGTERM during the probe window restores in-process (a shell timeout sends TERM first — "
+                           "the…"):
         src.write_text(original)
 
         def terminating_runner() -> str:
@@ -171,7 +177,8 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     # every write. Pinning the file's mtime into the future first makes this
     # deterministic: a clock-based bump (the disproven nanosecond scheme)
     # would move the mtime BACKWARD here and fail, in any timing.
-    with clause("Every write advances the mtime to a FRESH WHOLE SECOND (the pyc-staleness defense). CPython's…"):
+    with verification_step("Every write advances the mtime to a FRESH WHOLE SECOND (the pyc-staleness defense). "
+                           "CPython's…"):
         import os
 
         future = int(src.stat().st_mtime) + 100

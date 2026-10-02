@@ -15,7 +15,7 @@ from rdm.record.dmr import dmr_command
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 @allure.story("DI-29")
@@ -40,7 +40,7 @@ def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) ->
         {"id": "SOP-1", "title": "The SOP", "path": "documents/sop.md", "revision": 2},
     ]
 
-    with clause("The output is marked generated, and regenerating is deterministic"):
+    with verification_step("The output is marked generated, and regenerating is deterministic"):
         first = out.read_text()
         assert "GENERATED" in first
         assert dmr_command(docs, out) == 0
@@ -79,7 +79,7 @@ def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
     )
     (tests / "notes.txt").write_text('allure.story("DI-9") mentioned in prose\n')
 
-    with clause("Every language's story tag is discovered; features and the non-test file are not"):
+    with verification_step("Every language's story tag is discovered; features and the non-test file are not"):
         tags = scan_source_tags(tests)
         assert set(tags) == {"DI-1", "DI-2", "DI-3"}
         assert tags["DI-2"] == [str(tests / "alarms.test.ts")]

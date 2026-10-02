@@ -13,8 +13,8 @@ in the design document of the bounded context that owns them). Each design
 input is an acceptance criterion: a `shall` requirement on the system or one
 of its bounded contexts, *baseline* when it follows from a user need alone,
 *risk-based* when a risk allocates it as a control. Each is verified by an
-acceptance test tagged `@allure.story("DI-n")`, whose verification steps check
-its clauses. The merge of the reviewed pull request is the approval. See [the data model](data-model.md) for every entity and link.
+acceptance test tagged `@allure.story("DI-n")`, accepted as a whole: the test's
+verification steps are its own checks, not criteria. The merge of the reviewed pull request is the approval. See [the data model](data-model.md) for every entity and link.
 
 ```yaml
 # dhf/documents/verification_and_validation_plan.md
@@ -64,8 +64,10 @@ def test_alarm_within_two_seconds(device):
         assert alarm.latency_s <= 2
 ```
 
-- **One step per clause** of the design input's text, so a failure names the
-  clause it broke.
+- **One verification step for each thing the design input requires**
+  (`with verification_step("…")`), so a failure says what it was checking. The
+  steps belong to the test, not to the acceptance criterion; if a part must be
+  accepted on its own, make it a separate design input.
 - **Attach what you checked**, so the evidence shows more than "passed".
 - **Only the story names a design input.** Feature and epic are not tags you
   write (below).

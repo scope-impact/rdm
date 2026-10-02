@@ -47,8 +47,11 @@ scope:
   input DI-n is a system or subsystem `shall` requirement: *baseline* when it
   follows from a user need, *risk-based* when a risk's `controls:` allocates it.
   It is verified by a test tagged `@allure.story("DI-n")` in
-  `tests/acceptance/`, one verification step per clause. Adding/changing a
-  design input means adding/adjusting its tagged test ("live BDD").
+  `tests/acceptance/`, accepted as a whole. The test's verification steps
+  (`with verification_step(...)`) are the test's own checks, never acceptance
+  criteria: what must be accepted separately is a separate design input.
+  Adding/changing a design input means adding/adjusting its tagged test
+  ("live BDD"). "Clause" means a checklist clause only.
 - **Vocabulary** — `CONTEXT.md` is the glossary (user need, design input,
   bounded context, verification step, risk control, effective, proposal…).
   Use its terms and avoid the ones it lists under _Avoid_; when a term is

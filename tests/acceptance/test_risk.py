@@ -18,7 +18,7 @@ from tests.acceptance.test_graph_shapes import _dhf, _results
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 POLICY = {
     "severities": ["Critical", "Serious", "Minor", "Negligible"],
@@ -136,7 +136,7 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
     ], status="proposed")
     (dhf / "documents" / "notes.md").write_text("---\nid: N-1\nrisks: [{id: RISK-NOT-1}]\n---\n")  # not kind: risk
 
-    with clause("No policy declared: everything is read, nothing is evaluated"):
+    with verification_step("No policy declared: everything is read, nothing is evaluated"):
         assert read_policy(dhf) is None
         unevaluated = {r.id: r for r in risks(dhf)}
         assert set(unevaluated) == {"RISK-A-1", "RISK-A-2", "RISK-A-3"}
@@ -153,7 +153,8 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
 
     # With a declared policy: levels from its cells; residual severity defaults
     # to the initial one, and is used where recorded.
-    with clause("With a declared policy: levels from its cells; residual severity defaults to the initial one,…"):
+    with verification_step("With a declared policy: levels from its cells; residual severity defaults to the "
+                           "initial one,…"):
         _policy(dhf, status="proposed")
         policy = read_policy(dhf)
         assert policy.source == "documents/risk/policy.md" and policy.status == "proposed"
@@ -163,7 +164,7 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
         assert (found["RISK-A-2"].level, found["RISK-A-2"].residual_level) == ("High", "Medium")  # Minor × Possible
         assert (found["RISK-A-3"].level, found["RISK-A-3"].residual_level) == ("Low", "Low")      # uncontrolled
 
-    with clause("Level names are the project's own"):
+    with verification_step("Level names are the project's own"):
         _policy(dhf, {"severities": ["Bad", "Mild"], "probabilities": ["Seldom", "Often"],
                       "levels": {"Bad": ["Amber", "Red"], "Mild": ["Green", "Amber"]},
                       "acceptability": {"Green": "acceptable", "Amber": "justify", "Red": "unacceptable"}})
@@ -171,7 +172,7 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
         custom = risks(dhf, read_policy(dhf))[0]
         assert (custom.level, custom.residual_level) == ("Red", "Amber")
 
-    with clause("A malformed policy is refused, naming where it is"):
+    with verification_step("A malformed policy is refused, naming where it is"):
         for bad in ({"severities": ["Bad"], "probabilities": ["Often"], "levels": {"Bad": ["Red"]}},  # no acceptability
                     {"severities": ["Bad"], "probabilities": ["Often", "Seldom"], "levels": {"Bad": ["Red"]},
                      "acceptability": {"Red": "unacceptable"}},
@@ -190,7 +191,7 @@ RESIDUAL_CASES = {"unverified-control", "uncontrolled-unacceptable", "uncontroll
 def _check_cases(tmp_path: Path, names) -> None:
     for name in names:
         entries, with_policy, expected = CASES[name]
-        with clause(f"case {name}"):
+        with verification_step(f"case {name}"):
             _, gate = _gate(tmp_path, name, entries, with_policy)
             found = [m for m in gate.blocking if "risk" in m]
             attach("register", entries)
@@ -211,13 +212,13 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
     controls with no residual each block; a sound register passes."""
     _check_cases(tmp_path, [n for n in CASES if n not in RESIDUAL_CASES])
 
-    with clause("No register, no risk findings — the policy is required only when there are risks"):
+    with verification_step("No register, no risk findings — the policy is required only when there are risks"):
         dhf = _dhf(tmp_path / "none")
         assert not [m for m in run_release_gate(dhf, _results(tmp_path / "none", {"DI-1": ["passed"],
                                                                                   "DI-2": ["passed"]})).blocking
                     if "risk" in m]
 
-    with clause("A risk with no id is named by its document; a malformed policy blocks with its reason"):
+    with verification_step("A risk with no id is named by its document; a malformed policy blocks with its reason"):
         dhf, gate = _gate(tmp_path, "anonymous", [_risk(None)])
         assert "a risk in dhf/documents/risk/risks.md has no id" in gate.blocking
         (dhf / "documents" / "risk" / "policy.md").write_text("---\nid: RMP\nrisk_policy: [1, 2]\n---\n")
@@ -233,7 +234,7 @@ def test_release_gate_blocks_on_the_residual_rules(tmp_path: Path) -> None:
     acceptance each block, as does an unknown status; proposed ratings warn."""
     _check_cases(tmp_path, sorted(RESIDUAL_CASES))
 
-    with clause("Proposed ratings — on a risk, or on the policy — warn and do not block"):
+    with verification_step("Proposed ratings — on a risk, or on the policy — warn and do not block"):
         dhf, _ = _gate(tmp_path, "proposed", [_risk("RISK-W-1", status="proposed"), _risk("RISK-W-2")])
         _policy(dhf, status="proposed")
         gate = run_release_gate(dhf, _results(tmp_path / "proposed", {"DI-1": ["passed"], "DI-2": ["passed"]}))

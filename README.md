@@ -200,11 +200,11 @@ uv run pytest tests
 - Allure results as RDF (Design Review 14, `rdm/graph/allure.py`): each run in
   full — times, failure details, parameters, labels, links (DI-54); container
   fixtures (DI-55); output labels link runs to source files, and `trace` lists a
-  design input's code (DI-56). The acceptance suite records a step per clause.
+  design input's code (DI-56). The acceptance suite records named verification steps.
 - Test evidence (Design Review 13): the release bundle keeps the executed Allure
   results with their attachments and containers (DI-30); the graph and `trace`
   carry each run's steps and attachments (DI-53); RDM's gate and risk tests
-  record a step per clause and attach what they checked.
+  record named verification steps and attach what they checked.
 - Findings from the graph's own analysis (Design Review 12): `rdm graph serve`
   is read-only; the agent server refuses `SERVICE` and non-id `trace` input
   (DI-36, DI-42; RISK-TOOL-006/007). The graph records who landed each design

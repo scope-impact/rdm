@@ -25,7 +25,7 @@ allure = pytest.importorskip("allure")
 from rdm.adopt import adopt  # noqa: E402
 from rdm.main import parse_arguments  # noqa: E402
 from rdm.version import __version__  # noqa: E402
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "gates.yml"
@@ -136,7 +136,7 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
     dhf = _releasable(repo)
     (tmp_path / "runner").mkdir()
 
-    with clause("the gates action runs the design gate, verify, the release gate, graph validation "
+    with verification_step("the gates action runs the design gate, verify, the release gate, graph validation "
                 "and the evidence bundle on a record, and uploads the bundle"):
         ran = _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
         attach("steps run", ran)
@@ -144,19 +144,19 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
                        "Release evidence bundle", "actions/upload-artifact"]
         assert (dhf / "data" / "verification.yml").is_file()
         assert any((tmp_path / "runner" / "rdm-evidence").iterdir())
-    with clause("the checklists named are held against the documents in graph validation"):
+    with verification_step("the checklists named are held against the documents in graph validation"):
         with pytest.raises(AssertionError, match=r"Graph validation:(?s:.*)P11:11\.10a: checklist clause"):
             _run_action(action, {"install-rdm": "false", "checklists": "part11_document_control"},
                         repo, tmp_path / "runner")
-    with clause("with the release gate off and no results yet, only the design gate runs"):
+    with verification_step("with the release gate off and no results yet, only the design gate runs"):
         shutil.rmtree(dhf / "allure-results")
         assert _run_action(action, {"install-rdm": "false", "release-gate": "false", "graph-validate": "false"},
                            repo, tmp_path / "runner") == ["Design gate"]
-    with clause("a gate that fails fails the action"):
+    with verification_step("a gate that fails fails the action"):
         (dhf / "documents" / "design_review.md").unlink()
         with pytest.raises(AssertionError, match="Design gate"):
             _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
-    with clause("every rdm command the workflow and the actions run is one RDM's CLI accepts"):
+    with verification_step("every rdm command the workflow and the actions run is one RDM's CLI accepts"):
         commands = [c for path in (GATES, WORKFLOW, PDF_ACTION) for c in _rdm_commands(path.read_text())]
         attach("rdm commands", [" ".join(c) for c in commands])
         assert {tuple(c[:2]) for c in commands} >= {("story", "design-gate"), ("story", "verify"),
@@ -165,7 +165,7 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         for command in commands:
             if command != ["--version"]:
                 parse_arguments(command)
-    with clause("the action installs RDM from its own revision, the workflow from the revision the "
+    with verification_step("the action installs RDM from its own revision, the workflow from the revision the "
                 "caller pinned, and nothing installs rdm from a package index"):
         install = next(s["run"] for s in action["runs"]["steps"] if s.get("name", "").startswith("Install RDM"))
         assert '"rdm[graph,report] @ file://' in install and "$GITHUB_ACTION_PATH/../.." in install
@@ -178,11 +178,11 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         for path in (GATES, WORKFLOW, PDF_ACTION, DOGFOOD):
             assert not re.search(r"install\b[^\n]*\s(?:rdm|'rdm'|\"rdm\")(?:[\s=<>\[]|$)", path.read_text(),
                                  re.M), path
-    with clause("the reusable workflow runs the caller's acceptance tests before the gates"):
+    with verification_step("the reusable workflow runs the caller's acceptance tests before the gates"):
         names = [s.get("name", s.get("uses")) for s in steps]
         assert names.index("Acceptance tests -> Allure results") < names.index("Gates")
         assert "pytest tests/acceptance" in workflow["on"]["workflow_call"]["inputs"]["test-command"]["default"]
-    with clause("the PDF action renders with the image of the release it is pinned to, else latest"):
+    with verification_step("the PDF action renders with the image of the release it is pinned to, else latest"):
         script = _yaml(PDF_ACTION)["runs"]["steps"][0]["run"]
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
@@ -196,7 +196,7 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
             return re.search(r"ghcr\.io/scope-impact/rdm:(\S+)\s+pdfs", out.stdout).group(1)
         assert [image("v1.2.0"), image("v1"), image("main"), image("0123abc"), image("v1.2.0", "edge")] == [
             "1.2.0", "1", "latest", "latest", "edge"]
-    with clause("the workflow rdm adopt lays down calls the reusable workflow pinned to the installed "
+    with verification_step("the workflow rdm adopt lays down calls the reusable workflow pinned to the installed "
                 "RDM's version, with inputs the workflow declares"):
         target = tmp_path / "adopter"
         target.mkdir()
@@ -207,7 +207,7 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         assert job["uses"] == f"scope-impact/rdm/.github/workflows/gates.yml@v{__version__}"
         assert job["with"]["rdm-ref"] == f"v{__version__}"
         assert set(job["with"]) <= set(workflow["on"]["workflow_call"]["inputs"])
-    with clause("RDM's own CI calls the same workflow, pinned to the commit under test"):
+    with verification_step("RDM's own CI calls the same workflow, pinned to the commit under test"):
         own = _yaml(DOGFOOD)["jobs"]["design-controls"]
         assert own["uses"] == "./.github/workflows/gates.yml" and own["with"]["rdm-ref"] == "${{ github.sha }}"
         assert set(own["with"]) <= set(workflow["on"]["workflow_call"]["inputs"])

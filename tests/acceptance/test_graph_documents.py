@@ -15,7 +15,7 @@ ox = pytest.importorskip("pyoxigraph")
 
 from rdm.graph.project import project  # noqa: E402
 from rdm.graph.validate import validate  # noqa: E402
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 PREFIXES = """PREFIX rdm: <https://github.com/scope-impact/rdm/ns#>
 PREFIX dcterms: <http://purl.org/dc/terms/>
@@ -65,25 +65,27 @@ def test_documents_link_from_the_record(tmp_path: Path) -> None:
     report = validate(quads)
     attach("validation results", [(r.severity, r.label, r.message) for r in report])
 
-    with clause("each bounded context links to the document whose contexts frontmatter declares it, with its part"):
+    with verification_step("each bounded context links to the document whose contexts frontmatter declares it, with "
+                           "its part"):
         assert _ask(store, f'<urn:dhf:acme:context/alarms> rdm:declaredIn {doc("ARCH-1")} ; rdm:part "Record"')
         assert not _ask(store, "<urn:dhf:acme:context/ui> rdm:declaredIn ?d")
-    with clause("each controlled document links to the controlled documents its references frontmatter names"):
+    with verification_step("each controlled document links to the controlled documents its references frontmatter "
+                           "names"):
         assert _ask(store, f"{doc('ARCH-1')} dcterms:references {doc('DC-1')} . {doc('DC-1')} a rdm:Document")
-    with clause("the traceability matrix template, an output, is not projected"):
+    with verification_step("the traceability matrix template, an output, is not projected"):
         assert not any("doc/TM-1" in q.subject.value or "doc/TM-1" in q.object.value for q in quads)
         assert _ask(store, f"{doc('DC-1')} a rdm:Document")  # other controlled documents still are
-    with clause("a shape warns on a context no document declares, once any document declares contexts"):
+    with verification_step("a shape warns on a context no document declares, once any document declares contexts"):
         warned = {r.label for r in report if r.message == UNDECLARED}
         assert warned == {"ui"} and all(r.severity == "Warning" for r in report if r.message == UNDECLARED)
         quiet = validate(project(_dhf(tmp_path / "none", None)))
         assert not [r for r in quiet if r.message == UNDECLARED]
-    with clause("validation fails on a reference to a document the record does not hold"):
+    with verification_step("validation fails on a reference to a document the record does not hold"):
         assert _ask(store, f"{doc('DC-1')} dcterms:references <urn:rdm:clause:STD:1>")  # a clause, not a document
         dangling = [r for r in report if r.message == DANGLING]
         assert [(r.severity, r.label) for r in dangling] == [("Violation", "ARCH-1")]
 
-    with clause("a context may be declared by id alone; a single reference may be a string"):
+    with verification_step("a context may be declared by id alone; a single reference may be a string"):
         plain = project(_dhf(tmp_path / "plain", "---\nid: ARCH-1\ncontexts: [alarms, ui]\nreferences: DC-1\n---\n"))
         s = ox.Store()
         s.extend(plain)

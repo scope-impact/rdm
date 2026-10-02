@@ -18,7 +18,7 @@ from tests.util import git_run
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 def _validated_record(tmp_path: Path) -> tuple[Path, Path]:
@@ -60,14 +60,15 @@ def test_release_gate_names_unvalidated_user_needs(tmp_path: Path) -> None:
     warns (never blocks) for each need without an APPROVED record."""
     dhf, results = _validated_record(tmp_path)
 
-    with clause("No validation records at all: every need is named, as a warning only"):
+    with verification_step("No validation records at all: every need is named, as a warning only"):
         gate = run_release_gate(dhf, results)
         validation_warnings = [w for w in gate.warnings if "validation record" in w]
         assert any("UN-001" in w for w in validation_warnings)
         assert any("UN-002" in w for w in validation_warnings)
         assert gate.passed  # warnings never block
 
-    with clause("An APPROVED record for UN-001 clears its warning; a non-approved disposition for UN-002 does not"):
+    with verification_step("An APPROVED record for UN-001 clears its warning; a non-approved disposition for UN-002 "
+                           "does not"):
         validation = dhf / "validation"
         validation.mkdir()
         (validation / "UN-001-validation.json").write_text(json.dumps(
@@ -83,7 +84,7 @@ def test_release_gate_names_unvalidated_user_needs(tmp_path: Path) -> None:
         assert any("UN-002" in w for w in validation_warnings)
         assert gate.passed
 
-    with clause("The ingest itself: records keyed by user need, disposition and reviewer read"):
+    with verification_step("The ingest itself: records keyed by user need, disposition and reviewer read"):
         records = parse_validation_records(validation)
         assert records["UN-001"]["disposition"] == "approved"
         assert records["UN-001"]["reviewer"] == "maintainer (summative)"

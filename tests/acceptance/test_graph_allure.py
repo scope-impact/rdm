@@ -19,7 +19,7 @@ pytest.importorskip("pyoxigraph")
 
 from rdm.graph.agent import Record, trace  # noqa: E402
 from rdm.graph.project import project  # noqa: E402
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_graph import _record  # noqa: E402
 
 RDM = "https://github.com/scope-impact/rdm/ns#"
@@ -67,19 +67,19 @@ def test_results_are_projected_in_full(tmp_path: Path) -> None:
     quads = project(dhf, results)
     a, b = _facts(quads, P + "run/a-result"), _facts(quads, P + "run/b-result")
     attach("run a", sorted(a))
-    with clause("identity, name and times"):
+    with verification_step("identity, name and times"):
         assert {("http://purl.org/dc/terms/identifier", "u-a"), ("fullName", "tests.test_alarms#test_alarm"),
                 ("prov:startedAtTime", "2026-09-21T14:13:20.000Z"),
                 ("prov:endedAtTime", "2026-09-21T14:13:21.500Z")} <= a
-    with clause("status message and trace of a failed run"):
+    with verification_step("status message and trace of a failed run"):
         assert {("status", "failed"), ("statusMessage", "AssertionError: too quiet"),
                 ("statusTrace", "Traceback ...\nAssertionError")} <= b
         assert not any(p.startswith("status") and p != "status" for p, _ in a)
-    with clause("parameters, as name and value"):
+    with verification_step("parameters, as name and value"):
         param = _facts(quads, P + "parameter/a-result/1")
         assert ("parameter", P + "parameter/a-result/1") in a
         assert {("name", "volume"), ("value", "80")} <= param
-    with clause("not projected: labels as nodes, links, a test case per history id, container fixtures"):
+    with verification_step("not projected: labels as nodes, links, a test case per history id, container fixtures"):
         predicates = {q.predicate.value for q in quads}
         nodes = {q.subject.value for q in quads}
         assert not predicates & {RDM + "hasLabel", RDM + "setsUp", RDM + "tearsDown",
@@ -88,7 +88,7 @@ def test_results_are_projected_in_full(tmp_path: Path) -> None:
         executions = [q for q in quads if q.graph_name.value.endswith("graph/executions")]
         assert not any("tracker.example" in q.object.value or q.object.value == "alarms" for q in executions)
         assert not any("c-container" in n or "s-attachment" in n for n in nodes)  # nothing from the container
-    with clause("story and output labels still link the run to its design input and its code"):
+    with verification_step("story and output labels still link the run to its design input and its code"):
         assert ("exercises", P + "input/DI-1") in a and ("exercisesOutput", P + "source/src/alarms.py") in a
 
 
@@ -100,12 +100,12 @@ def test_runs_link_to_the_code_they_exercise(tmp_path: Path) -> None:
     dhf, results = _record(tmp_path)
     _results(results)
     quads = project(dhf, results)
-    with clause("a run links to each source file its output labels name"):
+    with verification_step("a run links to each source file its output labels name"):
         assert {o for p, o in _facts(quads, P + "run/b-result") if p == "exercisesOutput"} == {
             P + "source/src/alarms.py", P + "source/src/speaker.py"}
         assert {("path", "src/alarms.py"), ("http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
                                             RDM + "SourceFile")} <= _facts(quads, P + "source/src/alarms.py")
-    with clause("trace lists the design input's source files"):
+    with verification_step("trace lists the design input's source files"):
         traced = trace(Record(dhf, results), "DI-1")["design_input"]
         attach("trace DI-1", traced)
         assert traced["code"] == ["src/alarms.py", "src/speaker.py"]

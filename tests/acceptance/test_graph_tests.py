@@ -18,7 +18,7 @@ pytest.importorskip("pyshacl")
 
 from rdm.graph.project import project  # noqa: E402
 from rdm.graph.validate import validate  # noqa: E402
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.util import git_run, write_design_doc  # noqa: E402
 
 RDM = "https://github.com/scope-impact/rdm/ns#"
@@ -101,25 +101,25 @@ def test_tests_are_functions_and_runs_find_them(tmp_path: Path) -> None:
         node = P + "test/" + test.replace("::", "%3A%3A")
         return {o.rsplit("/", 1)[1] for s, p, o in facts if s == node and p == "verifies"}
 
-    with clause("a Python test function or method, with its own, its class's and the module mark's tags"):
+    with verification_step("a Python test function or method, with its own, its class's and the module mark's tags"):
         assert verifies("tests/test_alarms.py::test_alarm") == {"DI-1", "DI-3"}
         assert verifies("tests/test_alarms.py::test_quiet") == {"DI-3"}
         assert verifies("tests/test_alarms.py::TestGroup::test_member") == {"DI-2", "DI-3"}
         assert verifies("tests/test_alarms.py::TestGroup::test_own") == {"DI-2", "DI-3", "DI-4"}
         assert not verifies("tests/test_alarms.py::helper")  # not a test: the module mark does not reach it
-    with clause("the whole file is the test where tags are read by pattern"):
+    with verification_step("the whole file is the test where tags are read by pattern"):
         assert verifies("tests/alarm.test.js") == {"DI-5"}
-    with clause("each test is defined in its test file"):
+    with verification_step("each test is defined in its test file"):
         test = P + "test/tests/test_alarms.py%3A%3Atest_alarm"
         assert (test, "definedIn", P + "testfile/tests/test_alarms.py") in facts
         assert (P + "testfile/tests/test_alarms.py", "path", "tests/test_alarms.py") in facts
-    with clause("a run links to the test it ran through the result's full name"):
+    with verification_step("a run links to the test it ran through the result's full name"):
         assert (P + "run/a-result", "runOf", test) in facts
         assert (P + "run/m-result", "runOf", P + "test/tests/test_alarms.py%3A%3ATestGroup%3A%3Atest_member") in facts
         assert not any(s == P + "run/x-result" and p == "runOf" for s, p, _ in facts)  # no such test
-    with clause("a shape warns on a tagged test with no run, once other tests in its file ran"):
+    with verification_step("a shape warns on a tagged test with no run, once other tests in its file ran"):
         assert {r.label for r in report if r.message == NO_RUN} == {
             "tests/test_alarms.py::test_quiet", "tests/test_alarms.py::TestGroup::test_own"}
-    with clause("a shape warns on a run exercising a design input its test does not claim"):
+    with verification_step("a shape warns on a run exercising a design input its test does not claim"):
         assert {r.label for r in report if r.message == UNCLAIMED} == {"m"}
         assert all(r.severity == "Warning" for r in report if r.message in (NO_RUN, UNCLAIMED))

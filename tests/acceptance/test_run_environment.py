@@ -22,7 +22,7 @@ import pytest
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 GITHUB = {"GITHUB_ACTIONS": "true", "GITHUB_SERVER_URL": "https://github.com", "GITHUB_REPOSITORY": "acme/device",
           "GITHUB_RUN_ID": "7001", "GITHUB_RUN_ATTEMPT": "2", "GITHUB_RUN_NUMBER": "42",
@@ -70,18 +70,18 @@ def test_the_results_record_who_ran_the_tests_and_where(tmp_path: Path) -> None:
     executor, properties = _run(repo, tmp_path / "ci", GITHUB)
     attach("executor.json (CI)", executor)
     attach("environment.properties (CI)", properties)
-    with clause("on GitHub Actions, executor.json names the CI system, the run and its URL"):
+    with verification_step("on GitHub Actions, executor.json names the CI system, the run and its URL"):
         assert executor == {"name": "GitHub Actions", "type": "github", "buildOrder": "42",
                             "buildName": "Design controls #42",
                             "buildUrl": "https://github.com/acme/device/actions/runs/7001/attempts/2"}
-    with clause("environment.properties: the OS, the Python, pytest, allure-pytest and RDM versions"):
+    with verification_step("environment.properties: the OS, the Python, pytest, allure-pytest and RDM versions"):
         assert properties["os"] == f"{platform.system()} {platform.release()} ({platform.machine()})"
         assert properties["python"] == f"{platform.python_implementation()} {platform.python_version()}"
         assert (properties["pytest"], properties["allure-pytest"], properties["rdm"]) == (
             version("pytest"), version("allure-pytest"), version("rdm"))
-    with clause("the commit under test and the worktree state"):
+    with verification_step("the commit under test and the worktree state"):
         assert (properties["commit"], properties["worktree"]) == (head, "clean")
-    with clause("the CI actor and workflow"):
+    with verification_step("the CI actor and workflow"):
         assert (properties["ci.actor"], properties["ci.workflow"], properties["ci.event"],
                 properties["ci.runner"]) == ("octocat", "Design controls", "pull_request", "Linux X64")
         assert "user" not in properties
@@ -89,13 +89,13 @@ def test_the_results_record_who_ran_the_tests_and_where(tmp_path: Path) -> None:
     (repo / "notes.txt").write_text("uncommitted\n")
     executor, properties = _run(repo, tmp_path / "local", {})
     attach("executor.json (local)", executor)
-    with clause("locally, executor.json names a local run with its user and host"):
+    with verification_step("locally, executor.json names a local run with its user and host"):
         assert executor == {"name": "local", "type": "local",
                             "buildName": f"{getpass.getuser()}@{socket.gethostname()}"}
         assert properties["user"] == getpass.getuser() and not any(k.startswith("ci.") for k in properties)
-    with clause("uncommitted changes are recorded as such"):
+    with verification_step("uncommitted changes are recorded as such"):
         assert (properties["commit"], properties["worktree"]) == (head, "dirty")
-    with clause("the files sit beside the results of the run's tests, which Allure reads with them"):
+    with verification_step("the files sit beside the results of the run's tests, which Allure reads with them"):
         assert len(list((tmp_path / "local").glob("*-result.json"))) == 2
         assert (tmp_path / "local" / "executor.json").is_file()
         assert (tmp_path / "local" / "environment.properties").is_file()

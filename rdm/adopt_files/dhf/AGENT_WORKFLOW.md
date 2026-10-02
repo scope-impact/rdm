@@ -91,7 +91,8 @@ the doc — the gate re-opens until the edit is committed. That's the feature.
 
 ### 5 — make the test real (PROOF)
 Replace the scaffolded stub's failing body with real assertions against the
-real code path — **one assertion per clause** — keeping the tag:
+real code path — **one verification step for each thing the DI requires** (the
+steps belong to the test, never to the acceptance criterion) — keeping the tag:
 ```python
 @allure.story("DI-n")
 @allure.label("output", "src/<impl>")

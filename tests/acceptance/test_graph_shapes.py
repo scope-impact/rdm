@@ -18,7 +18,7 @@ from tests.util import git_run
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 pytest.importorskip("pyshacl")
 
 from rdm.graph.project import project  # noqa: E402
@@ -82,7 +82,7 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
                              {"DI-1": ["passed"], "DI-2": ["passed"]}, {"UN-3"}),
     }
     for name, (shape, runs, expected) in scenarios.items():
-        with clause(f"shapes block what the release gate blocks: {name}"):
+        with verification_step(f"shapes block what the release gate blocks: {name}"):
             dhf = _dhf(tmp_path / name, **shape)
             results = _results(tmp_path / name, runs)
             by_shapes, by_gate = _blocked_by_shapes(dhf, results), _blocked_by_gate(dhf, results)
@@ -132,7 +132,7 @@ def test_graph_validate_reports_and_exits_on_violations(tmp_path: Path, capsys) 
     dhf = _dhf(tmp_path / "msgs", needs=("UN-1", "UN-2", "UN-3"))
     results = _results(tmp_path / "msgs", {"DI-1": ["failed"]})
 
-    with clause("The command: per-result lines, exit 1 on a violation, 0 otherwise"):
+    with verification_step("The command: per-result lines, exit 1 on a violation, 0 otherwise"):
         ok = _dhf(tmp_path / "ok")
         ok_results = _results(tmp_path / "ok", {"DI-1": ["passed"], "DI-2": ["passed"]})
         capsys.readouterr()
@@ -142,7 +142,7 @@ def test_graph_validate_reports_and_exits_on_violations(tmp_path: Path, capsys) 
         out = capsys.readouterr().out
         assert "[VIOLATION] UN-3: user need is addressed by no design input" in out
 
-    with clause("User-supplied shapes add rules as data"):
+    with verification_step("User-supplied shapes add rules as data"):
         extra = tmp_path / "team.ttl"
         extra.write_text(
             "@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix rdm: <https://github.com/scope-impact/rdm/ns#> .\n"

@@ -35,7 +35,7 @@ Remaining traceability checklist (see {workflow}):
   2. Commit the design docs FIRST -- that commit is the approval (design gate)
   3. Implement the design output
   4. Replace the stub body in {test_file} with real assertions
-     (one per requirement clause; keep the @allure.story tag)
+     (one verification step for each thing it requires; keep the @allure.story tag)
   5. Run the gates as CI does (design-gate, acceptance suite, verify,
      release-gate) and regenerate the traceability matrix
   6. Open a pull request: its independent review is the verification review\
@@ -43,8 +43,9 @@ Remaining traceability checklist (see {workflow}):
 
 STUB_HEADER = '''"""Acceptance tests for the {context} context's design inputs (see dhf/).
 
-Each test verifies a design input (an acceptance criterion), one verification
-step per clause ("live BDD"), tagged `@allure.story("DI-...")`. Skips cleanly
+Each test verifies a design input (an acceptance criterion) as a whole ("live
+BDD"), tagged `@allure.story("DI-...")`; its verification steps are its own
+checks, never criteria. Skips cleanly
 if allure-pytest is not installed.
 """
 

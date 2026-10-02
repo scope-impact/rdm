@@ -73,8 +73,9 @@ with the rule that derives it, and `--infer` adds it in a separate graph
   design gate. A user need is *referenced* by many design inputs; a design
   input is *owned* by one context and may be *realised* by others.
 - **The design input is the acceptance criterion; the test verifies it.** A
-  design input is verified by a passing run of a test tagged with its id, one
-  verification step per clause — "live BDD", with no separate Gherkin layer.
+  design input is verified, as a whole, by a passing run of a test tagged with
+  its id — "live BDD", with no separate Gherkin layer. The test's verification
+  steps are its own checks, never criteria.
   Only the `story` tag names a design input. A design input a risk allocates as
   a control is a *risk-based* criterion; it counts once it is verified and the
   risk's residual is acceptable. The words are the [glossary](glossary.md)'s.

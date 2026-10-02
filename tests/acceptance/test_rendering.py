@@ -18,7 +18,7 @@ from tests.util import render_from_string
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 @allure.story("DI-7")
@@ -36,12 +36,12 @@ def test_renders_template_against_data_context() -> None:
 @allure.label("output", "rdm/render.py")
 def test_traceability_filters() -> None:
     """DI-8: the invert_dependencies / join_to / md_indent filters behave."""
-    with clause("invert_dependencies: edge A→B inverts to B being depended-on by {A}"):
+    with verification_step("invert_dependencies: edge A→B inverts to B being depended-on by {A}"):
         assert invert_dependencies([{"id": "A", "deps": ["B"]}], "id", "deps") == [("B", {"A"})]
-    with clause("join_to: resolve foreign keys against a table by primary key"):
+    with verification_step("join_to: resolve foreign keys against a table by primary key"):
         table = [{"id": "r1", "v": 1}, {"id": "r2", "v": 2}]
         assert join_to(["r2"], table) == [{"id": "r2", "v": 2}]
-    with clause("md_indent: shift headings deeper by header_shift"):
+    with verification_step("md_indent: shift headings deeper by header_shift"):
         assert md_indent("# Title", header_shift=1) == "## Title"
 
 

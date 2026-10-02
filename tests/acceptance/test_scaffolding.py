@@ -22,7 +22,7 @@ from rdm.gates.new_input import story_new_input_command
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 @allure.story("DI-15")
@@ -34,12 +34,12 @@ def test_init_scaffolds_a_project(tmp_path: Path) -> None:
     project = tmp_path / "regulatory"  # must not pre-exist (copytree)
     init(str(project))
 
-    with clause("the build skeleton"):
+    with verification_step("the build skeleton"):
         assert (project / "Makefile").is_file()
         assert (project / "config.yml").is_file()
         assert (project / "documents").is_dir()
 
-    with clause("the design-controls templates ship, so new projects inherit the model"):
+    with verification_step("the design-controls templates ship, so new projects inherit the model"):
         docs = project / "documents"
         assert (docs / "software_design_specification.md").is_file()  # the kind:design template
         assert (docs / "design_review.md").is_file()
@@ -51,7 +51,7 @@ def test_init_scaffolds_a_project(tmp_path: Path) -> None:
     # denominator the gates read), and the agent runbook lands at the root —
     # an init project must not discover at gate time that its registry has
     # no home.
-    with clause("the record-first control surface matches the adopt scaffold: the V&V plan carries a…"):
+    with verification_step("the record-first control surface matches the adopt scaffold: the V&V plan carries a…"):
         vv_plan = (docs / "verification_and_validation_plan.md").read_text()
         frontmatter = yaml.safe_load(vv_plan.split("---")[1])
         assert frontmatter["user_needs"] == []              # present, empty, parseable
@@ -112,7 +112,8 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     # Allocates the next UNUSED id: max(DI-1, DI-3) + 1, not first-gap or count.
     # The entry lands in the CHOSEN context's design_inputs frontmatter (and not
     # in the other context's), traced to the user need.
-    with clause("Allocates the next UNUSED id: max(DI-1, DI-3) + 1, not first-gap or count. The entry lands in…"):
+    with verification_step("Allocates the next UNUSED id: max(DI-1, DI-3) + 1, not first-gap or count. The entry "
+                           "lands in…"):
         declared = {di["id"]: di for di in design_inputs(dhf)}
         assert set(declared) == {"DI-1", "DI-3", "DI-4"}
         assert declared["DI-4"]["text"] == "RDM shall beep."
@@ -123,12 +124,13 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
         assert "DI-4" not in (dhf / "documents" / "design" / "trends.md").read_text()
 
     # The user need goes on the input alone: no context-level list is added.
-    with clause("The user need goes on the input alone: no context-level satisfies list is written"):
+    with verification_step("The user need goes on the input alone: no context-level satisfies list is written"):
         assert "satisfies" not in alarms_text
 
     # Emits a stub acceptance test tagged with the new id that FAILS until
     # implemented (honest red at the release gate), and prints the checklist.
-    with clause("Emits a stub acceptance test tagged with the new id that FAILS until implemented (honest red at…"):
+    with verification_step("Emits a stub acceptance test tagged with the new id that FAILS until implemented "
+                           "(honest red at…"):
         stub = tmp_path / "tests" / "acceptance" / "test_alarms.py"
         assert '@allure.story("DI-4")' in stub.read_text()
         result = pytest.main(["-q", "--no-header", "-p", "no:cacheprovider", str(stub)])
@@ -138,7 +140,7 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
     # A legacy `satisfies` key is left exactly as it was. The requirement text
     # is embedded safely: quotes, a backslash, and a triple-quote must corrupt
     # neither the frontmatter nor the stub test.
-    with clause("A legacy satisfies key is left as it was; hostile requirement text round-trips safely"):
+    with verification_step("A legacy satisfies key is left as it was; hostile requirement text round-trips safely"):
         import ast
 
         import yaml
@@ -162,7 +164,7 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
 
     # A context declaring `design_inputs: []` gets its list filled in place,
     # never a second `design_inputs:` key.
-    with clause("A context declaring `design_inputs: []` gets its list filled in place, never a second…"):
+    with verification_step("A context declaring `design_inputs: []` gets its list filled in place, never a second…"):
         (dhf / "documents" / "design" / "empty.md").write_text(
             "---\nid: SDS-EMPTY\nkind: design\ncontext: empty\n"
             "design_inputs: []\n---\n# Empty\n")
@@ -173,7 +175,7 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
         assert empty_text.count("design_inputs:") == 1
         assert [d["id"] for d in yaml.safe_load(empty_text.split("---")[1])["design_inputs"]] == ["DI-6"]
 
-    with clause("Rejects an unknown context and an unknown user need (nothing scaffolded)"):
+    with verification_step("Rejects an unknown context and an unknown user need (nothing scaffolded)"):
         assert story_new_input_command(
             dhf_dir=dhf, context="nope", text="x", traces_to="UN-001"
         ) != 0
@@ -203,14 +205,14 @@ def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> No
     assert adopt_command(str(repo)) == 0
     out = capsys.readouterr().out
 
-    with clause("The control surface lands: DHF skeleton"):
+    with verification_step("The control surface lands: DHF skeleton"):
         docs = repo / "dhf" / "documents"
         assert (docs / "verification_and_validation_plan.md").is_file()   # V&V plan
         design_template = docs / "design" / "example_context.md"
         assert "kind: design" in design_template.read_text()              # context template
         assert (docs / "design_review.md").is_file()                      # design review
         assert (docs / "traceability_matrix.md").is_file()                # matrix template
-    with clause("...the runbook, the hook, the bootstrap, and the CI workflow"):
+    with verification_step("...the runbook, the hook, the bootstrap, and the CI workflow"):
         assert (repo / "dhf" / "AGENT_WORKFLOW.md").is_file()
         hook = repo / ".githooks" / "pre-commit"
         assert "design-gate" in hook.read_text() and os.access(hook, os.X_OK)
@@ -220,12 +222,12 @@ def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> No
         workflow = (repo / ".github" / "workflows" / "design-controls.yml").read_text()
         assert "scope-impact/rdm/.github/workflows/gates.yml@v" in workflow
 
-    with clause("Pre-existing files are skipped, never overwritten — and reported"):
+    with verification_step("Pre-existing files are skipped, never overwritten — and reported"):
         assert (repo / "dhf" / "README.md").read_text() == sentinel
         assert "dhf/README.md" in out and "Skipped" in out
         assert (repo / "src" / "app.py").read_text() == "print('legacy')\n"
 
-    with clause("Re-running is safe: everything now exists, so nothing is copied"):
+    with verification_step("Re-running is safe: everything now exists, so nothing is copied"):
         assert adopt_command(str(repo)) == 0
         rerun_out = capsys.readouterr().out
         assert "Laid down:" not in rerun_out

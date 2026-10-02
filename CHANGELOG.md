@@ -6,9 +6,11 @@
 - `CONTEXT.md` is the glossary, in the domain-modeling skill's format, and the
   docs site shows it (Glossary). A design input *is* the acceptance criterion,
   a system or subsystem `shall` requirement: *baseline* from a user need,
-  *risk-based* when a risk allocates it as a control. The test verifies it, one
-  verification step per clause. "Risk control" replaces "measure"; "verified"
-  is kept apart from "effective".
+  *risk-based* when a risk allocates it as a control. The test verifies it as a
+  whole; its verification steps are the test's own checks, never acceptance
+  criteria, and the test helper is `verification_step(...)`. "Clause" means a
+  checklist clause only. "Risk control" replaces "measure"; "verified" is kept
+  apart from "effective".
 - The verification report heads test steps "Verification steps", marks each
   design input baseline or risk-based, shows each risk it is a control for with
   that risk's status and residual decision (a residual on a proposed rating

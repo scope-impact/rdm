@@ -41,7 +41,7 @@ rdm story trace DI-40                    # one design input's slice
    made before any code, and the pre-commit hook blocks implementation
    commits until it exists.
 2. **The test.** The scaffolded stub fails until it is replaced by real
-   assertions, one step per clause.
+   assertions, in named verification steps.
 3. **A reviewer's check.** Each behaviour's test is probed with
    `rdm story mutation-probe`: break one line, expect the test to fail.
 4. **The gates, as CI runs them**, on every push:

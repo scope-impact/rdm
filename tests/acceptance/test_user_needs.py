@@ -37,7 +37,7 @@ from tests.util import write_design_doc
 # Tagging requires allure-pytest; skip cleanly if it is not installed.
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 
 def _vv_plan(docs: Path, needs: list[str]) -> None:
@@ -80,12 +80,13 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
     with allure.step("Reconcile the declared design inputs against Allure results"):
         data = build_verification(dhf, results)
     assert data["summary"]["total"] == 1
-    with clause("Rows are design inputs, grouped under the user need they trace to"):
+    with verification_step("Rows are design inputs, grouped under the user need they trace to"):
         assert data["groups"][0]["user_need"] == "UN-001"
         assert data["groups"][0]["design_inputs"][0]["design_input"] == "DI-1"
     # ...with NO project-management dependency: the record core must not import
     # the planning layer (a violation would show as a source-level import).
-    with clause("...with NO project-management dependency: the record core must not import the planning layer (a…"):
+    with verification_step("...with NO project-management dependency: the record core must not import the planning "
+                           "layer (a…"):
         import rdm.record as _record_pkg
         _record_dir = Path(_record_pkg.__file__).parent
         assert not any(
@@ -98,18 +99,19 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
 @allure.label("output", "rdm/gates/design_gate.py")
 def test_design_gate_requires_approval(tmp_path: Path) -> None:
     """DI-2: block transition until design docs are complete and approved."""
-    with clause("Incomplete (placeholder) design doc -> not complete"):
+    with verification_step("Incomplete (placeholder) design doc -> not complete"):
         docs = tmp_path / "dhf" / "documents" / "design"
         docs.mkdir(parents=True)
         (docs / "core.md").write_text("---\nkind: design\ncontext: core\n---\nTODO: fill me\nENDTODO\n")
         assert not check_design_docs(tmp_path / "dhf")[0].complete
-    with clause("Approved (committed clean) -> ok"):
+    with verification_step("Approved (committed clean) -> ok"):
         dhf = _approved_dhf(tmp_path, ["UN-002"])
         assert all(c.ok for c in check_design_docs(dhf))
     # A COMPLETE but uncommitted doc is NOT approved -> not ok (this is the
     # "edit re-opens the gate" clause: approval is the committed revision, so an
     # unapproved working-tree change must fail even though the content is fine).
-    with clause("A COMPLETE but uncommitted doc is NOT approved -> not ok (this is the \"edit re-opens the gate\"…"):
+    with verification_step("A COMPLETE but uncommitted doc is NOT approved -> not ok (this is the \"edit re-opens "
+                           "the gate\"…"):
         repo = tmp_path / "uncommitted"
         udocs = repo / "dhf" / "documents" / "design"
         udocs.mkdir(parents=True)
@@ -126,17 +128,17 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
     dhf = _approved_dhf(tmp_path, ["UN-003"])  # DI-1 traces to UN-003
     empty = tmp_path / "none"
     empty.mkdir()
-    with clause("an untested design input blocks"):
+    with verification_step("an untested design input blocks"):
         gate = run_release_gate(dhf, empty)
         attach("release gate blocking", gate.blocking)
         assert not gate.passed
     results = tmp_path / "allure"
-    with clause("a failing design input blocks"):
+    with verification_step("a failing design input blocks"):
         _allure_result(results, "a", "failed", "DI-1")
         gate = run_release_gate(dhf, results)
         attach("release gate blocking", gate.blocking)
         assert not gate.passed
-    with clause("a verified design input passes"):
+    with verification_step("a verified design input passes"):
         _allure_result(results, "a", "passed", "DI-1")
         gate = run_release_gate(dhf, results)
         attach("release gate blocking", gate.blocking)
@@ -149,7 +151,7 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
 def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
     """DI-4: results reconcile to a status (reconcile clause) AND assemble into the
     traceability matrix grouped under the user need (render clause)."""
-    with clause("Reconcile clause: executed results classify into verified/failed/untested"):
+    with verification_step("Reconcile clause: executed results classify into verified/failed/untested"):
         results = tmp_path / "allure"
         _allure_result(results, "ok", "passed", "DI-A")
         _allure_result(results, "bad", "failed", "DI-B")
@@ -161,7 +163,8 @@ def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
     # Render clause: build_verification assembles the matrix — each design input
     # carries its real status, grouped under the user need it traces to. The
     # mixed pass/fail row set means a "always verified" assembly bug is caught.
-    with clause("Render clause: build_verification assembles the matrix — each design input carries its real…"):
+    with verification_step("Render clause: build_verification assembles the matrix — each design input carries its "
+                           "real…"):
         docs = tmp_path / "dhf" / "documents"
         docs.mkdir(parents=True)
         write_design_doc(docs / "design", "core", design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))

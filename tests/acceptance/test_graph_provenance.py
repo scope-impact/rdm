@@ -17,7 +17,7 @@ import yaml
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 pytest.importorskip("pyshacl")
 
 from rdm.graph.project import project  # noqa: E402
@@ -55,7 +55,7 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
     _git(repo, "t", "branch", "-M", "main")
     direct = _git(repo, "t", "rev-parse", "HEAD")
 
-    with clause("A change on a feature branch, merged into main by someone else"):
+    with verification_step("A change on a feature branch, merged into main by someone else"):
         _git(repo, "author", "checkout", "-q", "-b", "feature")
         (dhf / "documents" / "design" / "ui.md").write_text(
             "---\nid: SDS-UI\nkind: design\ncontext: ui\ndesign_inputs: []\n---\n# UI\n")
@@ -65,12 +65,12 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
         _git(repo, "merger", "checkout", "-q", "main")
         _git(repo, "merger", "merge", "-q", "--no-ff", "-m", "Merge feature", "feature")
         merge = _git(repo, "merger", "rev-parse", "HEAD")
-    with clause("Later work on main: the landing is still the merge, not the newest commit"):
+    with verification_step("Later work on main: the landing is still the merge, not the newest commit"):
         (repo / "NOTES.md").write_text("later\n")
         _git(repo, "later", "add", "-A")
         _git(repo, "later", "commit", "-q", "-m", "later work")
 
-    with clause("A change on a branch that has not landed"):
+    with verification_step("A change on a branch that has not landed"):
         _git(repo, "wip", "checkout", "-q", "-b", "wip")
         core = dhf / "documents" / "design" / "core.md"
         core.write_text(core.read_text().replace("# Core", "# Core, revised"))
@@ -79,25 +79,27 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
         quads = project(dhf)
         ui, core_doc = _facts(quads, "urn:dhf:proj:doc/SDS-UI"), _facts(quads, "urn:dhf:proj:doc/SDS-1")
 
-    with clause("Merged: authored on the branch, landed by the merge and its author"):
+    with verification_step("Merged: authored on the branch, landed by the merge and its author"):
         assert ("prov:wasGeneratedBy", f"urn:dhf:proj:commit/{change}") in ui
         assert ("landedIn", f"urn:dhf:proj:commit/{merge}") in ui
         assert {_label(quads, o) for p, o in ui if p == "landedBy"} == {"merger"}
-    with clause("Not landed: no landing facts, and the warning names it"):
+    with verification_step("Not landed: no landing facts, and the warning names it"):
         assert not any(p.startswith("landed") for p, _ in core_doc)
         warned = {r.label for r in validate(quads) if r.message == NOT_LANDED}
         assert warned == {"SDS-1"}
 
     # Back on main, the core document's latest change is the direct commit: it
     # landed in itself, by its own author.
-    with clause("Back on main, the core document's latest change is the direct commit: it landed in itself, by…"):
+    with verification_step("Back on main, the core document's latest change is the direct commit: it landed in "
+                           "itself, by…"):
         _git(repo, "t", "checkout", "-q", "main")
         quads = project(dhf)
         core_doc = _facts(quads, "urn:dhf:proj:doc/SDS-1")
         assert ("landedIn", f"urn:dhf:proj:commit/{direct}") in core_doc
         assert {_label(quads, o) for p, o in core_doc if p == "landedBy"} == {"t"}
         assert not {r.label for r in validate(quads) if r.message == NOT_LANDED}
-    with clause("Every controlled document, not only design documents: the V&V plan has its commit and landing"):
+    with verification_step("Every controlled document, not only design documents: the V&V plan has its commit and "
+                           "landing"):
         vvp = _facts(quads, "urn:dhf:proj:doc/VVP-1")
         assert ("prov:wasGeneratedBy", f"urn:dhf:proj:commit/{direct}") in vvp
         assert ("landedIn", f"urn:dhf:proj:commit/{direct}") in vvp
@@ -118,8 +120,9 @@ def test_needs_risks_and_design_documents_link_to_their_documents(tmp_path: Path
     assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-1")
     assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-2")
     assert ("evaluatedAgainst", doc + "RMP-9") in _facts(quads, "urn:dhf:proj:risk/RISK-L-1")
-    with clause("A design document is not linked to the design review: the record does not say which covered it"):
+    with verification_step("A design document is not linked to the design review: the record does not say which "
+                           "covered it"):
         assert not any(o == doc + "DR-1" for _, o in _facts(quads, doc + "SDS-1"))
-    with clause("Without a policy, a risk links to none"):
+    with verification_step("Without a policy, a risk links to none"):
         (dhf / "documents" / "risk" / "rmp.md").unlink()
         assert not any(p == "evaluatedAgainst" for p, _ in _facts(project(dhf), "urn:dhf:proj:risk/RISK-L-1"))

@@ -16,7 +16,7 @@ from rdm.record.bundle import evidence_bundle
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
@@ -47,7 +47,7 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
         {"name": "t1", "status": "passed",
          "labels": [{"name": "story", "value": "DI-1"}],
          "attachments": [{"name": "gate output", "source": "a1-attachment.txt", "type": "text/plain"}],
-         "steps": [{"name": "clause 1", "status": "passed",
+         "steps": [{"name": "step 1", "status": "passed",
                     "attachments": [{"name": "graph", "source": "a2-attachment.json", "type": "application/json"}]}]}
     ))
     (results / "a1-attachment.txt").write_text("Release gate PASSED\n")
@@ -71,16 +71,16 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
 
     manifest = evidence_bundle(dhf, results, out)
 
-    with clause("Verification data, from the executed results"):
+    with verification_step("Verification data, from the executed results"):
         assert (out / "verification.yml").is_file()
 
-    with clause("The matrix is RENDERED (data in, template markers out)"):
+    with verification_step("The matrix is RENDERED (data in, template markers out)"):
         matrix = (out / "traceability_matrix.md").read_text()
         assert "total=1 verified=1" in matrix
         assert "row:DI-1:verified" in matrix
         assert "{%" not in matrix
 
-    with clause("The manifest describes exactly what was bundled"):
+    with verification_step("The manifest describes exactly what was bundled"):
         on_disk = json.loads((out / "manifest.json").read_text())
         assert on_disk == manifest
         assert manifest["design_inputs"] == 1 and manifest["verified"] == 1

@@ -75,14 +75,14 @@ judgment belongs to the pull-request reviewer, who must not be the change's
 author: the repository's rules require an approving review, and CI runs the
 gates on every change. The reviewer reads each affected design input against
 its tagged test and asks whether the test would fail if the behaviour broke —
-a tautology, a mocked-out code path, or two of three clauses covered is a
-reason to request changes.
+a tautology, a mocked-out code path, or a test that checks two of the three
+things the design input requires is a reason to request changes.
 
-To back that judgment with an executed check, break the clause on purpose and
-see whether the test notices:
+To back that judgment with an executed check, break one of those things on
+purpose and see whether the test notices:
 
 ```bash
-rdm story mutation-probe --file <impl> --find '<code for a clause>' \
+rdm story mutation-probe --file <impl> --find '<code it requires>' \
   --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
 ```
 

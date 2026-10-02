@@ -14,7 +14,7 @@ import pytest
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 ox = pytest.importorskip("pyoxigraph")
 
 from rdm.graph import cli as graph_cli  # noqa: E402
@@ -41,11 +41,11 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
     quads = project(dhf, results, checklists=[str(lists)])
     graph = explorer_graph(quads, endpoint="http://example:7878")
 
-    with clause("Graph Explorer's envelope and connection"):
+    with verification_step("Graph Explorer's envelope and connection"):
         assert graph["meta"]["kind"] == "graph-export" and graph["meta"]["version"] == "1.0"
         assert graph["data"]["connection"] == {"dbUrl": "http://example:7878", "queryEngine": "sparql"}
 
-    with clause("Every node of the record -- of every kind -- and nothing from the vocabulary"):
+    with verification_step("Every node of the record -- of every kind -- and nothing from the vocabulary"):
         vertices = set(graph["data"]["vertices"])
         for node in ("urn:dhf:acme:need/UN-001", "urn:dhf:acme:input/DI-1", "urn:dhf:acme:context/alarms",
                      "urn:dhf:acme:doc/SDS-ALM-001", "urn:dhf:acme:testfile/tests/test_alarms.py",
@@ -57,7 +57,8 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
 
     # Every link between two record nodes, in Graph Explorer's edge-id form;
     # no rdf:type statements and no link to anything outside the node set.
-    with clause("Every link between two record nodes, in Graph Explorer's edge-id form; no rdf:type statements…"):
+    with verification_step("Every link between two record nodes, in Graph Explorer's edge-id form; no rdf:type "
+                           "statements…"):
         edges = set(graph["data"]["edges"])
         assert f"urn:dhf:acme:input/DI-1-[{NS}tracesTo]->urn:dhf:acme:need/UN-001" in edges
         assert f"urn:dhf:acme:run/r1-result-[{NS}exercises]->urn:dhf:acme:input/DI-1" in edges
@@ -72,7 +73,7 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
                           and not q.predicate.value.endswith("#type")}
         assert len(edges) == len(expected_links)
 
-    with clause("Leaving out a class drops its nodes and their links, the nodes that hang only from them, "
+    with verification_step("Leaving out a class drops its nodes and their links, the nodes that hang only from them, "
                 "and only those"):
         trimmed = explorer_graph(quads, exclude=["TestRun"])["data"]
         assert "urn:dhf:acme:run/r1-result" not in trimmed["vertices"]
@@ -93,7 +94,7 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
                        ox.NamedNode("urn:dhf:acme:graph/executions"))
         assert "urn:dhf:acme:step/lone" in explorer_graph(quads + [lone])["data"]["vertices"]
 
-    with clause("The command writes it, from a fresh projection or from a built store"):
+    with verification_step("The command writes it, from a fresh projection or from a built store"):
         out = tmp_path / "acme.graph.json"
         assert graph_cli.graph_explorer_file_command(out, dhf_dir=dhf, allure_results_dir=results,
                                                      checklists=[str(lists)]) == 0

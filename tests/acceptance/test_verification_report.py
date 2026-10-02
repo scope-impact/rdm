@@ -28,7 +28,7 @@ from rdm.main import cli  # noqa: E402
 from rdm.record.bundle import evidence_bundle  # noqa: E402
 from rdm.record.report import TEXT_LINES, ReportUnavailable, build_report, render_pdf  # noqa: E402
 from rdm.version import __version__  # noqa: E402
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 OTHER = "f" * 40
 INJECTION = '#panic("injected") ] #set page(width: 1cm)'
@@ -148,7 +148,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     _passing(clean_results, clean_commit)
     clean = build_report(clean_dhf, clean_results)
 
-    with clause("the header names the repository, the record's commit, the commits tested, the executor and "
+    with verification_step("the header names the repository, the record's commit, the commits tested, the executor and "
                 "environment, the RDM version and one SHA-256 over the result files"):
         attach("header", {k: v for k, v in clean.items() if k not in ("design_inputs", "files")})
         assert clean["repository"] == "https://github.com/acme/device"
@@ -161,7 +161,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         for path in sorted(clean_results.iterdir()):
             digest.update(path.name.encode() + b"\0" + hashlib.sha256(path.read_bytes()).hexdigest().encode() + b"\n")
         assert clean["results_sha256"] == digest.hexdigest()
-    with clause("the evidence is release-grade when every input passed at the record's commit, clean"):
+    with verification_step("the evidence is release-grade when every input passed at the record's commit, clean"):
         assert (clean["release_grade"], clean["reasons"], clean["anomalies"]) == (True, [], [])
         clean_text = _text(render_pdf(clean, clean_results, tmp_path / "clean.pdf"))
         assert "Release-grade evidence" in clean_text and "Not release-grade" not in clean_text
@@ -176,7 +176,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     _problems(results)
     report = build_report(dhf, results)
     by_id = {di["id"]: di for di in report["design_inputs"]}
-    with clause("otherwise it is not release-grade, and each reason is named"):
+    with verification_step("otherwise it is not release-grade, and each reason is named"):
         attach("reasons", report["reasons"])
         assert report["release_grade"] is False
         assert report["reasons"] == [
@@ -187,7 +187,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             f"runs tested 1 other commit(s) than the record's ({commit[:12]}): {OTHER[:12]}",
         ]
         assert report["executor"] is None and report["environment"] == {}
-    with clause("the anomalies: failed and skipped runs, design inputs with no run, missing attachments, "
+    with verification_step("the anomalies: failed and skipped runs, design inputs with no run, missing attachments, "
                 "orphan tags"):
         assert [(a["subject"], a["kind"]) for a in report["anomalies"]] == [
             ("DI-2 · tests/acceptance/test_alarm.py::test_silence", "failed"),
@@ -196,12 +196,13 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             ("DI-10", "no run"),
             ("DI-9", "orphan tag"),
         ]
-    with clause("traceability: each design input in id order with its user needs, the risks it is a control "
+    with verification_step("traceability: each design input in id order with its user needs, the risks it is a control "
                 "for, and its tests"):
         assert [di["id"] for di in report["design_inputs"]] == ["DI-1", "DI-2", "DI-3", "DI-10"]
         assert by_id["DI-1"]["traces_to"] == ["UN-001", "UN-002"] and by_id["DI-1"]["context"] == "alarms"
         assert [r["id"] for r in by_id["DI-1"]["control_for"]] == ["RISK-7"] and by_id["DI-3"]["control_for"] == []
-    with clause("each design input is a baseline or a risk-based acceptance criterion; each risk it is a control "
+    with verification_step("each design input is a baseline or a risk-based acceptance criterion; each risk it is a "
+                           "control "
                 "for shows its status and residual decision, and the register's state is summarised"):
         assert [di["criterion"] for di in report["design_inputs"]] == [
             "risk-based", "risk-based", "baseline", "baseline"]
@@ -211,21 +212,24 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert report["risk_register"] == {"risks": 3, "proposed": 3, "not_evaluated": 1, "policy": "proposed"}
         assert [di["status"] for di in report["design_inputs"]] == ["verified", "failed", "untested", "untested"]
     run, failed = by_id["DI-1"]["runs"][0], by_id["DI-2"]["runs"][0]
-    with clause("each run: its test's file and function, result, date and duration, failure message and trace"):
+    with verification_step("each run: its test's file and function, result, date and duration, failure message and "
+                           "trace"):
         assert run["test"] == "tests/acceptance/test_alarm.py::test_alarm_sounds"
         assert (run["start"], run["duration"]) == ("2026-01-01 00:00:00 UTC", "1.50 s")
         assert (failed["status"], failed["message"], failed["trace"]) == (
             "failed", "AssertionError: still sounding\nsecond line", "Traceback: line 42")
-    with clause("labels other than those the report already shows, no runner internals and no Allure severity; "
+    with verification_step("labels other than those the report already shows, no runner internals and no Allure "
+                           "severity; "
                 "its links"):
         assert run["labels"] == []
         assert run["links"] == [{"name": "DI-1 in alarms.md", "url": "https://example.org/alarms.md"}]
-    with clause("each step is a verification step, nested, with its own result"):
+    with verification_step("each step is a verification step, nested, with its own result"):
         assert [(s["name"], s["status"]) for s in run["steps"]] == [
             ("the alarm sounds within a second", "passed"), ("the screen shows the alarm", "passed")]
         assert run["steps"][0]["steps"][0]["name"] == "the tone is 1 kHz"
         assert (failed["steps"][0]["status"], failed["steps"][0]["message"]) == ("failed", "the alarm kept sounding")
-    with clause("attachments the test made: text inline up to a limit, images embedded, other files by SHA-256; "
+    with verification_step("attachments the test made: text inline up to a limit, images embedded, other files by "
+                           "SHA-256; "
                 "captured output and the copy of the requirement listed by SHA-256 only"):
         kinds = {a["name"]: a for a in run["attachments"] + run["steps"][0]["attachments"]
                  + run["steps"][1]["attachments"]}
@@ -239,7 +243,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     pdf = render_pdf(report, results, tmp_path / "report.pdf")
     text = _text(pdf)
     attach("report text", text)
-    with clause("the PDF shows all of it in that order, with the image embedded and the noise left out"):
+    with verification_step("the PDF shows all of it in that order, with the image embedded and the noise left out"):
         order = ["Not release-grade evidence", "Anomalies", "Traceability", "The device shall sound an alarm.",
                  "Verification steps", "Appendix A"]
         assert [text.index(marker) for marker in order] == sorted(text.index(marker) for marker in order)
@@ -259,15 +263,15 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert "1 residual(s) not evaluated" in text
         assert "Risks controlled" not in text
         assert sum(len(page.images) for page in pypdf.PdfReader(pdf).pages) == 1
-    with clause("the appendix lists every result file with its SHA-256"):
+    with verification_step("the appendix lists every result file with its SHA-256"):
         appendix = text[text.index("Appendix A"):]
         for path in results.iterdir():
             assert hashlib.sha256(path.read_bytes()).hexdigest() in appendix, path.name
-    with clause("text from a test reaches the page as text: markup in it is shown, not run"):
+    with verification_step("text from a test reaches the page as text: markup in it is shown, not run"):
         assert '#panic("injected")' in text and "#set page(width: 1cm)" in text
         assert {round(float(p.mediabox.width)) for p in pypdf.PdfReader(pdf).pages} == {595}  # A4, unchanged
 
-    with clause("without the typst package a typst executable is used, and with neither the report says so"):
+    with verification_step("without the typst package a typst executable is used, and with neither the report says so"):
         monkeypatch.setitem(sys.modules, "typst", None)
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
@@ -281,7 +285,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             render_pdf(report, results, tmp_path / "none.pdf")
         assert evidence_bundle(dhf, results, tmp_path / "bare")["verification_report"].startswith("not rendered")
         monkeypatch.undo()
-    with clause("the evidence bundle includes the report, and rdm story evidence-report writes it"):
+    with verification_step("the evidence bundle includes the report, and rdm story evidence-report writes it"):
         manifest = evidence_bundle(dhf, results, tmp_path / "bundle")
         assert manifest["verification_report"] == "verification_report.pdf"
         assert "verification_report.pdf" in manifest["files"]

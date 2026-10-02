@@ -18,7 +18,7 @@ pytest.importorskip("pyshacl")
 
 from rdm.graph.project import project  # noqa: E402
 from rdm.graph.validate import validate  # noqa: E402
-from tests.acceptance.evidence import attach, clause  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_graph import _record  # noqa: E402
 from tests.util import git_run  # noqa: E402
 
@@ -64,17 +64,17 @@ def test_runs_are_tied_to_the_commit_they_tested(tmp_path: Path) -> None:
     report = validate(quads)
     attach("validation results", sorted((r.label, r.message) for r in report if r.message in (UNVERSIONED, STALE)))
 
-    with clause("each run links to the commit its commit label names"):
+    with verification_step("each run links to the commit its commit label names"):
         assert (P + "run/current-result", "testedAt", P + f"commit/{head}") in facts
         assert (P + "run/stale-result", "testedAt", P + f"commit/{old}") in facts
         assert not any(s == P + "run/unversioned-result" and p == "testedAt" for s, p, _ in facts)
-    with clause("the record carries the commit it was built at"):
+    with verification_step("the record carries the commit it was built at"):
         assert (P + "record", "atCommit", P + f"commit/{head}") in facts
-    with clause("a run of uncommitted changes is marked, a clean one is not"):
+    with verification_step("a run of uncommitted changes is marked, a clean one is not"):
         assert (P + "run/dirty-result", "uncommittedChanges", "true") in facts
         assert not any(s == P + "run/current-result" and p == "uncommittedChanges" for s, p, _ in facts)
-    with clause("a shape warns on a run tied to no commit"):
+    with verification_step("a shape warns on a run tied to no commit"):
         assert {r.label for r in report if r.message == UNVERSIONED} == {"unversioned"}
-    with clause("a shape warns on a run that tested another commit than the record's"):
+    with verification_step("a shape warns on a run that tested another commit than the record's"):
         assert {r.label for r in report if r.message == STALE} == {"stale"}
         assert all(r.severity == "Warning" for r in report if r.message in (UNVERSIONED, STALE))

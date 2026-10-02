@@ -1,11 +1,14 @@
-"""Evidence for acceptance tests: one Allure step per clause, and what was checked attached.
+"""Evidence for acceptance tests: verification steps, and what each checked attached.
 
-    with clause("unacceptable residual blocks"):
+    with verification_step("unacceptable residual blocks"):
         gate = run_release_gate(dhf, results)
         attach("release gate blocking", gate.blocking)
         assert ...
 
-A step names the clause a failure belongs to; an attachment keeps what the
+A verification step is one named check within a test (an Allure step), with
+its own result. It belongs to the test, never to the acceptance criterion: the
+design input the test is tagged with is accepted as a whole (CONTEXT.md). The
+step's name says what a failure was checking; an attachment keeps what the
 assertion looked at, in the Allure results the release bundle retains (DI-30)
 and the graph projects (DI-53).
 """
@@ -16,7 +19,7 @@ import json
 
 import allure
 
-clause = allure.step
+verification_step = allure.step
 
 
 def attach(name: str, content) -> None:

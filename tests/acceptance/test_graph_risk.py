@@ -14,7 +14,7 @@ import pytest
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 pytest.importorskip("pyshacl")
 
 from rdm.graph.agent import Record, trace  # noqa: E402
@@ -70,7 +70,7 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
     assert [(r.label, r.message) for r in risk_warnings] == [
         ("RISK-F-1", "risk RISK-F-1 is proposed: a person has not approved its rating")]
 
-    with clause("The residual decision is \"not evaluated\" until every control has a passing test"):
+    with verification_step("The residual decision is \"not evaluated\" until every control has a passing test"):
         (tmp_path / "facts-red").mkdir()
         assert _decision(project(dhf, _results(tmp_path / "facts-red", {"DI-1": ["passed"], "DI-2": ["failed"]})),
                          "RISK-F-1") == "not evaluated"
@@ -78,7 +78,8 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
 
     # Trace: a risk by id (case-insensitive) with each controlling input, and
     # a design input with the risks it controls.
-    with clause("Trace: a risk by id (case-insensitive) with each controlling input, and a design input with the…"):
+    with verification_step("Trace: a risk by id (case-insensitive) with each controlling input, and a design input "
+                           "with the…"):
         record = Record(dhf, results)
         traced = trace(record, "risk-f-1")["risk"]
         assert (traced["id"], traced["category"], traced["stride"], traced["linked"]) == (
@@ -91,7 +92,7 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
         with pytest.raises(ValueError, match="RISK-NOPE-1 is not a declared"):
             trace(record, "RISK-NOPE-1")
 
-    with clause("The shapes block exactly the risks the release gate blocks, case by case"):
+    with verification_step("The shapes block exactly the risks the release gate blocks, case by case"):
         for name, (entries, with_policy, _) in CASES.items():
             case_dhf, gate = _gate(tmp_path / "agree", name, entries, with_policy)
             results = tmp_path / "agree" / name / "allure"
@@ -99,7 +100,8 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
             by_shapes = {r.label for r in validate(project(case_dhf, results))
                          if r.severity == "Violation" and r.focus.startswith("urn:dhf:proj:risk/")}
             assert by_shapes == by_gate, (name, by_shapes, by_gate)
-    with clause("A malformed risk policy: the gate blocks, and the shapes block every risk with its message"):
+    with verification_step("A malformed risk policy: the gate blocks, and the shapes block every risk with its "
+                           "message"):
         case_dhf, gate = _gate(tmp_path / "agree", "bad-policy", [_risk("RISK-B-1"), _risk("RISK-B-2")])
         _policy(case_dhf, {"severities": ["Minor"]})
         gate = run_release_gate(case_dhf, tmp_path / "agree" / "bad-policy" / "allure")
@@ -108,7 +110,7 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
         flagged = {(r.label, r.message) for r in report
                    if r.severity == "Violation" and r.focus.startswith("urn:dhf:proj:risk/")}
         assert flagged == {(rid, problem) for rid in ("RISK-B-1", "RISK-B-2")}
-    with clause("A risk with no id: the gate blocks it, and so do the shapes, on a stand-in node"):
+    with verification_step("A risk with no id: the gate blocks it, and so do the shapes, on a stand-in node"):
         case_dhf, gate = _gate(tmp_path / "agree", "no-id", [_risk(None), _risk("RISK-N-1")])
         assert "a risk in dhf/documents/risk/risks.md has no id" in gate.blocking
         flagged = [r for r in validate(project(case_dhf, tmp_path / "agree" / "no-id" / "allure"))

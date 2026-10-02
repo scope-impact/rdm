@@ -24,7 +24,7 @@ from tests.util import git_run
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import clause  # noqa: E402
+from tests.acceptance.evidence import verification_step  # noqa: E402
 ox = pytest.importorskip("pyoxigraph")
 
 from rdm.graph import cli as graph_cli  # noqa: E402
@@ -96,7 +96,7 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
     rec, tst, exe, git, ont = (f"<{G}{n}>" for n in ("record", "tests", "executions", "git", "ontology"))
     di1, ctx = "<urn:dhf:acme:input/DI-1>", "<urn:dhf:acme:context/alarms>"
 
-    with clause("Record graph: needs, contexts, inputs (text, needs, owner, realiser, doc), documents"):
+    with verification_step("Record graph: needs, contexts, inputs (text, needs, owner, realiser, doc), documents"):
         assert _ask(s, f"GRAPH {rec} {{ <urn:dhf:acme:need/UN-001> a rdm:UserNeed ; dcterms:identifier \"UN-001\" ; "
                        f"rdm:text \"a need\" }}")
         assert _ask(s, f"GRAPH {rec} {{ {ctx} a rdm:BoundedContext }}")
@@ -111,29 +111,29 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
         assert _ask(s, f'GRAPH {rec} {{ <urn:dhf:acme:doc/SDS-ALM-001> a rdm:Document ; '
                        f'dcterms:identifier "SDS-ALM-001" ; dcterms:title "Alarms design" ; rdm:revision "3" }}')
 
-    with clause("Tests graph: the tag, as a tag -- DI-2 has none, and nothing says it is \"unverified\""):
+    with verification_step("Tests graph: the tag, as a tag -- DI-2 has none, and nothing says it is \"unverified\""):
         assert _ask(s, f"GRAPH {tst} {{ ?t a rdm:Test ; rdm:verifies {di1} ; rdm:definedIn ?f . "
                        f"?f a rdm:TestFile ; rdm:path \"tests/test_alarms.py\" }}")
         assert not _ask(s, "?f rdm:verifies <urn:dhf:acme:input/DI-2>")
 
-    with clause("Executions graph, only when results are given"):
+    with verification_step("Executions graph, only when results are given"):
         assert _ask(s, f'GRAPH {exe} {{ ?r a rdm:TestRun ; rdm:exercises {di1} ; rdm:status "passed" }}')
         assert not _ask(_store(project(dhf)), "?r a rdm:TestRun")
 
-    with clause("Git graph: the design doc's latest commit, its time and author"):
+    with verification_step("Git graph: the design doc's latest commit, its time and author"):
         head = subprocess.run(["git", "-C", str(dhf.parent), "rev-parse", "HEAD"],
                               capture_output=True, text=True, check=True).stdout.strip()
         assert _ask(s, f'GRAPH {git} {{ <urn:dhf:acme:doc/SDS-ALM-001> prov:wasGeneratedBy ?c . '
                        f'?c a prov:Activity ; rdm:sha "{head}" ; prov:endedAtTime ?t ; '
                        f'prov:wasAssociatedWith ?a . ?a a prov:Agent ; rdfs:label ?name }}')
 
-    with clause("Every typed node carries a label"):
+    with verification_step("Every typed node carries a label"):
         assert not _ask(s, "GRAPH ?g { ?n a ?type } FILTER NOT EXISTS { GRAPH ?h { ?n rdfs:label ?l } }")
 
-    with clause("Ontology graph: RDM's vocabulary, reusing OSLC RM"):
+    with verification_step("Ontology graph: RDM's vocabulary, reusing OSLC RM"):
         assert _ask(s, f"GRAPH {ont} {{ rdm:DesignInput rdfs:subClassOf oslc_rm:Requirement }}")
 
-    with clause("Sorted N-Quads, byte-identical for an unchanged record"):
+    with verification_step("Sorted N-Quads, byte-identical for an unchanged record"):
         text = nquads(quads)
         assert text.splitlines() == sorted(text.splitlines())
         assert nquads(list(reversed(quads))) == text  # sorted regardless of input order
@@ -156,19 +156,19 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
     location = tmp_path / "store"
     assert graph_cli.graph_build_command(dhf_dir=dhf, allure_results_dir=results, store=location) == 0
 
-    with clause("Query over the store (standard prefixes need no declaration; no GRAPH clause)"):
+    with verification_step("Query over the store (standard prefixes need no declaration; no GRAPH clause)"):
         capsys.readouterr()
         sparql = "SELECT ?id WHERE { ?i a rdm:DesignInput ; dcterms:identifier ?id } ORDER BY ?id"
         assert graph_cli.graph_query_command(sparql, store=location) == 0
         assert capsys.readouterr().out.splitlines() == ["?id", '"DI-1"', '"DI-2"']
 
-    with clause("Rebuild after DI-2 is removed: replaced, not merged"):
+    with verification_step("Rebuild after DI-2 is removed: replaced, not merged"):
         dhf2, _ = _record(tmp_path / "v2", extra_input=False)
         assert build_store(location, project(dhf2, project_name="acme")) > 0
         assert graph_cli.graph_query_command(sparql, store=location) == 0
         assert capsys.readouterr().out.splitlines() == ["?id", '"DI-1"']
 
-    with clause("In-memory projection when no store is given; ASK and CONSTRUCT too"):
+    with verification_step("In-memory projection when no store is given; ASK and CONSTRUCT too"):
         assert graph_cli.graph_query_command(sparql, dhf_dir=dhf) == 0
         assert capsys.readouterr().out.splitlines() == ["?id", '"DI-1"', '"DI-2"']
         assert graph_cli.graph_query_command("ASK { ?r rdm:exercises ?i }", store=location) == 0
@@ -177,7 +177,7 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
             "CONSTRUCT { ?i rdm:tracesTo ?n } WHERE { ?i rdm:tracesTo ?n }", dhf_dir=dhf) == 0
         assert "<urn:dhf:acme:input/DI-1> <https://github.com/scope-impact/rdm/ns#tracesTo>" in capsys.readouterr().out
 
-    with clause("Serve: union default graph + CORS, over a real `oxigraph serve`"):
+    with verification_step("Serve: union default graph + CORS, over a real `oxigraph serve`"):
         if shutil.which("oxigraph") is None:
             pytest.skip("oxigraph CLI not installed")
         port = _free_port()
@@ -213,9 +213,9 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
         finally:
             server.terminate()
             server.wait(timeout=10)
-    with clause("No GRAPH clause, yet the named-graph facts are visible: the union default graph"):
+    with verification_step("No GRAPH clause, yet the named-graph facts are visible: the union default graph"):
         assert body.split() == ["l", "UN-001", "UN-002"]
         assert cors == "*"
 
-    with clause("A missing store is refused, not created"):
+    with verification_step("A missing store is refused, not created"):
         assert graph_cli.graph_serve_command(store=tmp_path / "nope") == 2
