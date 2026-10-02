@@ -63,9 +63,12 @@ C4Component
   title Components: validation
   Container_Boundary(rdm_cli, "rdm") {
     Component(formative_usability, "Formative usability", "Python", "Persona runs as formative evidence", $link="rdm/record/persona.py")
+    Component(persona_command, "Persona command", "Python", "rdm story persona", $link="rdm/record/persona_cmd.py")
     Component(validation_records, "Validation records", "Python", "Approved validation records per user need", $link="rdm/record/validation.py")
   }
   Component_Ext(record_readers, "Record readers", "Python")
   Rel(formative_usability, record_readers, "loads runs with")
+  Rel(persona_command, formative_usability, "classifies runs with")
+  Rel(persona_command, record_readers, "reads the V&V plan with")
   Rel(validation_records, record_readers, "reads the record with")
 ```

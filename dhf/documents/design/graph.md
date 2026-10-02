@@ -347,6 +347,7 @@ C4Component
   }
   Component_Ext(record_readers, "Record readers", "Python")
   Component_Ext(risk_register, "Risk register", "Python")
+  Component_Ext(gap_analysis, "Gap analysis", "Python")
   Rel(projection, record_readers, "reads the record, results and git with")
   Rel(projection, risk_register, "reads risks and findings with")
   Rel(projection, vocabulary, "declares terms and rules in")
@@ -356,4 +357,6 @@ C4Component
   Rel(shacl_validation, gate_shapes, "checks with")
   Rel(agent_server, projection, "queries")
   Rel(agent_server, shacl_validation, "validates with")
+  Rel(agent_server, record_readers, "checks ids with")
+  Rel(projection, gap_analysis, "matches checklist references with")
 ```
