@@ -82,12 +82,12 @@ def test_sop_addresses_every_part11_checklist_item(tmp_path: Path) -> None:
     coverage — and the check is falsifiable (a stripped SOP fails it)."""
     attach("part11_document_control.txt", CHECKLIST.read_text())
     with verification_step("the gap analysis reports no missing checklist item"):
-        assert audit_for_gaps(str(CHECKLIST), [str(SOP)], coverage=False) == 0
+        assert audit_for_gaps(str(CHECKLIST), [str(SOP)]) == 0
     with verification_step("removing one Part 11 reference makes the gap analysis fail"):
         stripped = tmp_path / "sop_missing_audit_trail.md"
         shutil.copy(SOP, stripped)
         stripped.write_text(stripped.read_text().replace("[[P11:11.10e]]", ""))
-        assert audit_for_gaps(str(CHECKLIST), [str(stripped)], coverage=False) == 3
+        assert audit_for_gaps(str(CHECKLIST), [str(stripped)]) == 3
     with verification_step("the graph rule finds an SOP that cites no clause, and none here"):
         copy = _copy_dhf(tmp_path)
         sop = copy / SOP.relative_to(DHF)

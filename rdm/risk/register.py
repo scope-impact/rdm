@@ -19,7 +19,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.kernel.frontmatter import frontmatter_of
+from rdm.kernel.frontmatter import documents
 
 RISK_KIND = "risk"
 CATEGORIES = ("safety", "security")
@@ -34,12 +34,17 @@ ACCEPTABLE, ACCEPTED, NEEDS_ACCEPTANCE, UNACCEPTABLE, NOT_EVALUATED = (
 
 @dataclass(frozen=True)
 class Policy:
-    severities: tuple[str, ...]      # rows
     probabilities: tuple[str, ...]   # columns
-    levels: dict                     # severity -> tuple of levels, one per probability
+    levels: dict                     # severity (a row) -> tuple of levels, one per probability
     acceptability: dict              # level -> acceptable | justify | unacceptable
     source: str
     status: str = "approved"
+
+    @property
+    def approved(self) -> bool:
+        """Whether a person approved the acceptability criteria: any other
+        status leaves the ratings made under them a proposal."""
+        return self.status == "approved"
 
     def level(self, severity: str | None, probability: str | None) -> str | None:
         """The policy's level for a pair, or None when either is not defined."""
@@ -71,11 +76,6 @@ class Risk:
     residual_level: str | None = None   # evaluated; the initial level when nothing controls it
 
 
-def _docs(dhf_dir: Path):
-    for md in sorted(Path(dhf_dir).rglob("*.md")):
-        yield md, frontmatter_of(md)
-
-
 def _text(value) -> str:
     return "" if value is None else str(value).strip()
 
@@ -83,7 +83,7 @@ def _text(value) -> str:
 def read_policy(dhf_dir: Path) -> Policy | None:
     """The declared ``risk_policy`` (the first, by path), or None when there is
     none. Raises ``ValueError`` naming the document when it is malformed."""
-    for md, front in _docs(dhf_dir):
+    for md, front in documents(dhf_dir):
         value = front.get("risk_policy")
         if value is None:
             continue
@@ -107,8 +107,17 @@ def read_policy(dhf_dir: Path) -> Policy | None:
                 raise ValueError(f"risk_policy in {where}: level {level} needs an acceptability of "
                                  f"{', '.join(ACCEPTABILITY)}")
         status = _text(front.get("status")) or "approved"
-        return Policy(severities, probabilities, levels, acceptability, where, status)
+        return Policy(probabilities, levels, acceptability, where, status)
     return None
+
+
+def policy_or_none(dhf_dir: Path) -> Policy | None:
+    """The policy, or None when there is none or it is malformed: for readers
+    that only show the register (the release gate reports a malformed one)."""
+    try:
+        return read_policy(dhf_dir)
+    except ValueError:
+        return None
 
 
 def risks(dhf_dir: Path, policy: Policy | None = None) -> list[Risk]:
@@ -116,7 +125,7 @@ def risks(dhf_dir: Path, policy: Policy | None = None) -> list[Risk]:
     ``policy`` (no levels without one)."""
     dhf_dir = Path(dhf_dir)
     found: list[Risk] = []
-    for md, front in _docs(dhf_dir):
+    for md, front in documents(dhf_dir):
         if front.get("kind") != RISK_KIND or not isinstance(front.get("risks"), list):
             continue
         for item in front["risks"]:
@@ -190,7 +199,7 @@ def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tup
     if policy is None:
         found.append(Finding("the risk register has risks but no risk_policy is declared "
                              "(acceptability criteria missing)"))
-    elif policy.status != "approved":
+    elif not policy.approved:
         found.append(Finding(f"the risk policy in {policy.source} is {policy.status}: a person has not approved it",
                              blocking=False))
     ids = Counter(r.id for r in register if r.id)

@@ -322,12 +322,9 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
     disagree. A finding about the register as a whole goes on every risk."""
     from collections import Counter
 
-    from rdm.risk.register import assess, read_policy, residual_decision
+    from rdm.risk.register import assess, policy_or_none, residual_decision
 
-    try:
-        policy = read_policy(dhf)
-    except ValueError:
-        policy = None
+    policy = policy_or_none(dhf)
     register, found = assess(dhf, design_input_ids(dhf), verified)
     declared = Counter(r.id for r in register if r.id)
     doc_ids = {entry["path"]: entry["id"] for entry in controlled_documents(dhf, root)}

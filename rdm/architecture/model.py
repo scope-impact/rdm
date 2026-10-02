@@ -71,6 +71,12 @@ class Model:
     def components(self) -> list[Element]:
         return [e for e in self.elements.values() if e.kind == "component"]
 
+    @property
+    def code_components(self) -> list[Element]:
+        """The components that own code in this repository: the ones a source
+        file can belong to."""
+        return [c for c in self.components if not c.external and c.link]
+
 
 def workspace_digest(dhf_dir: Path) -> str | None:
     workspace = Path(dhf_dir) / WORKSPACE
@@ -100,14 +106,22 @@ def _walk(items: list[dict] | None, kind: str, parent: str | None, model: Model,
             _walk(item.get(key), child, alias, model, edges)
 
 
+def _load(dhf_dir: Path) -> dict | None:
+    """The drawn workspace JSON, or None when there is none or it does not parse."""
+    try:
+        workspace = json.loads((Path(dhf_dir) / MODEL).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return workspace if isinstance(workspace, dict) else None
+
+
 def read_model(dhf_dir: Path, root: Path | None = None) -> Model:
     """The C4 model of the DHF's architecture workspace (empty when it has none)."""
     dhf_dir = Path(dhf_dir)
     root = Path(root) if root is not None else dhf_dir.parent
-    path = dhf_dir / MODEL
-    if not path.is_file():
-        return Model()
-    workspace = json.loads(path.read_text(encoding="utf-8"))
+    workspace = _load(dhf_dir)
+    if workspace is None:
+        return Model()  # none drawn, or not readable: the design gate reports it stale
     try:
         document = (dhf_dir / WORKSPACE).resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
@@ -135,12 +149,10 @@ def stale(dhf_dir: Path) -> list[str]:
     current = workspace_digest(dhf_dir)
     if current is None:
         return []
-    model_file = dhf_dir / MODEL
-    if not model_file.is_file():
+    if not (dhf_dir / MODEL).is_file():
         return [f"{MODEL} is not drawn: run rdm c4 draw"]
-    try:
-        workspace = json.loads(model_file.read_text(encoding="utf-8"))
-    except ValueError:
+    workspace = _load(dhf_dir)
+    if workspace is None:
         return [f"{MODEL} is not valid JSON: run rdm c4 draw"]
     problems = []
     if (workspace.get(STAMP_KEY) or {}).get("workspace_sha256") != current:
@@ -181,22 +193,28 @@ def _module_file(root: Path, module: str) -> str | None:
     return None
 
 
-def _imported_files(root: Path, path: Path) -> set[str]:
+def imported_files(root: Path, path: Path) -> set[str]:
+    """The repo-relative files a Python file imports, anywhere in it, relative
+    imports included. ``from package import name`` imports the submodule
+    ``name`` when there is one, else the package (``name`` is in it): the one
+    reading the graph and the dependency rule's test share."""
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except (OSError, SyntaxError, ValueError):
         return set()
+    package = path.relative_to(root).with_suffix("").parts[:-1]
     found = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            modules = [alias.name for alias in node.names]
-        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
-            modules = [node.module] + [f"{node.module}.{alias.name}" for alias in node.names]
+            files = [_module_file(root, alias.name) for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            base = ".".join(package[: len(package) - node.level + 1]) if node.level else ""
+            stem = ".".join(p for p in (base, node.module or "") if p)
+            files = [_module_file(root, f"{stem}.{alias.name}") or _module_file(root, stem)
+                     for alias in node.names]
         else:
             continue
-        for module in modules:
-            if (file := _module_file(root, module)) is not None:
-                found.add(file)
+        found.update(f for f in files if f is not None)
     return found
 
 
@@ -205,7 +223,7 @@ def component_dependencies(model: Model, root: Path) -> dict[tuple[str, str], tu
     ``(source alias, target alias) -> (importing file, imported file)``, one
     example per pair."""
     root = Path(root)
-    components = [c for c in model.components if not c.external and c.link]
+    components = model.code_components
     dependencies: dict[tuple[str, str], tuple[str, str]] = {}
     for component in components:
         target = root / component.link
@@ -214,7 +232,7 @@ def component_dependencies(model: Model, root: Path) -> dict[tuple[str, str], tu
             rel = file.relative_to(root).as_posix()
             if component_of(rel, components) is not component:
                 continue  # a more specific component owns this file
-            for imported in sorted(_imported_files(root, file)):
+            for imported in sorted(imported_files(root, file)):
                 other = component_of(imported, components)
                 if other is not None and other is not component:
                     dependencies.setdefault((component.alias, other.alias), (rel, imported))

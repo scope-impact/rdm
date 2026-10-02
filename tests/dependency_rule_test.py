@@ -11,12 +11,11 @@ the code against the record, never against a copy of it.
 
 from __future__ import annotations
 
-import ast
 from pathlib import Path
 
 import yaml
 
-from rdm.architecture.model import component_of, read_model
+from rdm.architecture.model import component_of, imported_files, read_model
 
 ROOT = Path(__file__).parents[1]
 DHF = ROOT / "dhf"
@@ -26,40 +25,12 @@ def _architecture() -> dict:
     return yaml.safe_load((DHF / "documents" / "architecture.md").read_text().split("---", 2)[1])
 
 
-def _module_file(module: str) -> str | None:
-    base = ROOT / Path(*module.split("."))
-    for candidate in (base.with_suffix(".py"), base / "__init__.py"):
-        if candidate.is_file():
-            return candidate.relative_to(ROOT).as_posix()
-    return None
-
-
-def _imports(path: Path) -> set[str]:
-    """The rdm modules a file imports, anywhere in it, as repo-relative files."""
-    package = path.relative_to(ROOT).with_suffix("").parts[:-1]
-    found = set()
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if isinstance(node, ast.Import):
-            modules = [alias.name for alias in node.names]
-        elif isinstance(node, ast.ImportFrom):
-            base = ".".join(package[: len(package) - node.level + 1]) if node.level else ""
-            stem = ".".join(p for p in (base, node.module or "") if p)
-            modules = [stem] + [f"{stem}.{alias.name}" for alias in node.names]
-        else:
-            continue
-        for module in modules:
-            file = _module_file(module) if module.startswith("rdm") else None
-            if file is not None and file != "rdm/__init__.py":  # `from rdm import x` names x, not rdm
-                found.add(file)
-    return found
-
-
 def _owners() -> tuple[dict[str, str], list[str]]:
     """Each module's context ('kernel' and 'root' for the two that are not
     contexts), and the modules no component names."""
     arch = _architecture()
     kernel, root = arch["kernel"], arch["composition_root"]
-    components = [c for c in read_model(DHF, ROOT).components if c.link]
+    components = read_model(DHF, ROOT).code_components
     owners, unowned = {}, []
     for path in sorted((ROOT / "rdm").rglob("*.py")):
         rel = path.relative_to(ROOT).as_posix()
@@ -91,7 +62,7 @@ def test_no_import_breaks_the_dependency_rule() -> None:
     owners, _ = _owners()
     breaks = []
     for src, src_ctx in owners.items():
-        for dst in sorted(_imports(ROOT / src)):
+        for dst in sorted(imported_files(ROOT, ROOT / src)):
             dst_ctx = owners.get(dst)
             if src_ctx == "root" or dst_ctx in (None, "kernel", src_ctx):
                 continue

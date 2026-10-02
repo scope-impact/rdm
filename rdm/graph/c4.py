@@ -58,7 +58,7 @@ def project_architecture(ds, dhf: Path, root: Path, rdm) -> None:
         if r.technology:
             ds.add(rel, rdm("technology"), r.technology, g)
 
-    components = [c for c in model.components if c.link]
+    components = model.code_components
     source_file, path = rdm("SourceFile"), rdm("path")
     files = {q.subject for q in ds.quads if q.predicate == _TYPE and q.object == source_file}
     for subject, value in sorted({(q.subject, q.object.value) for q in ds.quads

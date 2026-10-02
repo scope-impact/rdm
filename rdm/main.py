@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from rdm.compliance.gaps import audit_for_gaps, list_default_checklists
+from rdm.compliance.gaps import audit_for_gaps, coverage_report, list_default_checklists
 from rdm.publishing.collect import collect_from_files
 from rdm.specification.hooks import install_hooks
 from rdm.specification.init import init
@@ -58,9 +58,9 @@ def cli(raw_arguments):
         all_files = ([args.checklist] if args.checklist else []) + args.files
         checklists = [f for f in all_files if f.endswith('.txt') or f in builtins]
         sources = [f for f in all_files if not (f.endswith('.txt') or f in builtins)]
-        exit_code = audit_for_gaps(checklists, sources, True, args.verbose)
+        exit_code = coverage_report(checklists, sources, args.verbose)
     elif args.command == 'gap':
-        exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
+        exit_code = audit_for_gaps(args.checklist, args.files, args.verbose)
     elif args.command == 'c4' and args.c4_command == 'draw':
         from rdm.architecture.draw import draw_command
         exit_code = draw_command(args)

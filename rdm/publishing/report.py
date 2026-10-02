@@ -46,7 +46,7 @@ from rdm.specification.tags import find_tests_dir, scan_source_tests
 from rdm.kernel.git import head, repo_root, repository_url
 from rdm.kernel.ids import sort_key
 from rdm.kernel.reconcile import load_json_records
-from rdm.risk.register import NOT_EVALUATED, read_policy, residual_decision, risks
+from rdm.risk.register import NOT_EVALUATED, policy_or_none, residual_decision, risks
 from rdm.specification.sdd import design_inputs
 from rdm.release.verify import build_verification
 from rdm.kernel.version import __version__
@@ -233,19 +233,16 @@ def _assess(inputs: list[dict], commits: list[str], record_commit: str | None,
 def _register(dhf_dir: Path, verified: set[str]) -> tuple[list[dict], dict[str, list[dict]], str]:
     """Each risk's status and residual decision, the risks each design input is
     a control for, and the acceptability criteria's state."""
-    try:
-        policy = read_policy(dhf_dir)
-    except ValueError:
-        policy = None  # a malformed policy: the release gate reports it; here no residual is evaluated
+    policy = policy_or_none(dhf_dir)  # malformed: the release gate reports it; no residual is evaluated
     register, control_for = [], {}
     for risk in risks(dhf_dir, policy):
         # A rating under unapproved acceptability criteria is itself a proposal.
-        status = "proposed" if policy is not None and policy.status == "proposed" else risk.status
+        status = "proposed" if policy is not None and not policy.approved else risk.status
         entry = {"id": risk.id, "status": status, "residual": residual_decision(risk, policy, verified)}
         register.append(entry)
         for control in risk.controls:
             control_for.setdefault(control, []).append(entry)
-    state = "none declared" if policy is None else ("proposed" if policy.status == "proposed" else "approved")
+    state = "none declared" if policy is None else ("approved" if policy.approved else policy.status)
     return register, control_for, state
 
 

@@ -1,6 +1,6 @@
-import glob
 import os
 import re
+from pathlib import Path
 
 
 # --- The public API: what `rdm gap` reads and matches, for other callers (the
@@ -9,7 +9,7 @@ import re
 
 def builtin_checklists():
     """Each built-in checklist's name (``rdm gap --list``) and file."""
-    return _builtin_checklist_dictionary()
+    return {path.stem: str(path) for path in (Path(__file__).parent / "checklists").glob("*.txt")}
 
 
 def parse_checklist(text, directory):
@@ -34,15 +34,16 @@ def missing_references(checklist_file, source_files):
     """The items of a checklist (a built-in name or a file, includes followed)
     that no source file references — exactly what ``rdm gap`` reports — and
     the checklist as read."""
-    builtins = _builtin_checklist_dictionary()
+    return _missing(checklist_file, list(_source_generator(source_files)), builtin_checklists())
+
+
+def _missing(checklist_file, contents, builtins):
     full_path = os.path.realpath(_full_file_path(checklist_file, builtins))
     checklist = _read_checklists(_checklist_generator([full_path]), {full_path}, builtins)
-    return list(_find_failing_checklist_items(_source_generator(source_files), checklist)), checklist
+    return list(_find_failing_checklist_items(contents, checklist)), checklist
 
 
-def audit_for_gaps(checklist_file, source_files, coverage=False, verbose=False):
-    if coverage:
-        return coverage_report(checklist_file, source_files, verbose)
+def audit_for_gaps(checklist_file, source_files, verbose=False):
     if checklist_file is None:
         print("WARNING: no check list!")
         return 1
@@ -62,26 +63,19 @@ def coverage_report(checklist_files, source_files, verbose=False):
         print("WARNING: no checklists specified!")
         return 1
 
-    builtins = _builtin_checklist_dictionary()
+    builtins = builtin_checklists()
+    contents = list(_source_generator(source_files))  # read once, matched per checklist
     results = []
-
-    # Handle single file or list
-    if isinstance(checklist_files, str):
-        checklist_files = [checklist_files]
-
     for checklist_file in checklist_files:
-        full_path = os.path.realpath(_full_file_path(checklist_file, builtins))
-        if not os.path.exists(full_path):
+        if not os.path.exists(os.path.realpath(_full_file_path(checklist_file, builtins))):
             continue
-        already_included = {full_path}
-        checklist = _read_checklists(_checklist_generator([full_path]), already_included, builtins)
+        failing, checklist = _missing(checklist_file, contents, builtins)
         total = len(checklist)
         if total == 0:
             continue
-        failing = list(_find_failing_checklist_items(_source_generator(source_files), checklist))
         missing = len(failing)
         covered = total - missing
-        pct = int(covered * 100 / total) if total else 0
+        pct = int(covered * 100 / total)
         name = os.path.basename(checklist_file).replace('_checklist.txt', '').upper()
         results.append((name, total, missing, covered, pct, failing))
 
@@ -132,51 +126,27 @@ def _full_file_path(file_name, builtins, path=None):
 
 
 def list_default_checklists():
-    for file_name in _builtin_checklist():
-        print(file_name)
+    for name in sorted(builtin_checklists()):
+        print(name)
 
 
-def _builtin_checklist():
-    return sorted(
-        [os.path.splitext(os.path.basename(file_name))[0] for file_name in _builtin_checklist_full_file_name()])
-
-
-def _builtin_checklist_dictionary():
-    return {
-        os.path.splitext(os.path.basename(file_name))[0]: file_name
-        for file_name in _builtin_checklist_full_file_name()
-    }
-
-
-def _builtin_checklist_full_file_name():
-    path = _builtin_checklist_folder() + '/*.txt'
-    return [file_name for file_name in glob.glob(path)]
-
-
-def _builtin_checklist_folder():
-    return os.path.dirname(os.path.abspath(__file__)) + '/checklists'
-
-
-def _find_failing_checklist_items(source_generator, checklist):
-    checklist_keys = set(_extract_keys_from_checklist(checklist))
-    found_keys = set(_find_keys_in_sources(source_generator, checklist_keys))
-    missing_keys = checklist_keys.difference(found_keys)
-    for item in checklist:
-        reference = item.get('reference')
-        if reference and reference in missing_keys:
-            yield item
+def _find_failing_checklist_items(contents, checklist):
+    # Every item left after _read_checklists is a reference (includes are followed).
+    keys = {item['reference'] for item in checklist}
+    found = {key for content in contents for key in _find_keys_in_content(content, keys)}
+    return (item for item in checklist if item['reference'] not in found)
 
 
 def _checklist_generator(checklist_files):
     for checklist_file in checklist_files:
-        with open(checklist_file) as file:
+        with open(checklist_file, encoding='utf-8') as file:
             dir_path = os.path.dirname(os.path.realpath(checklist_file))
             yield (file.read(), dir_path)
 
 
 def _source_generator(source_files):
     for source_file in source_files:
-        with open(source_file) as file:
+        with open(source_file, encoding='utf-8', errors='ignore') as file:
             yield file.read()
 
 
@@ -229,18 +199,6 @@ def _split_out_include_files(checklist, builtins):
     return include_files, reduced_checklist
 
 
-def _extract_keys_from_checklist(checklist):
-    for item in checklist:
-        key = item.get('reference')
-        if key:
-            yield key
-
-
-def _find_keys_in_sources(source_generator, checklist_keys):
-    for content in source_generator:
-        yield from _find_keys_in_content(content, checklist_keys)
-
-
 # A reference lives inside a [[ ... ]] block (possibly as prose naming several
 # keys). Keys are matched with key-alphabet boundaries so a shorter key never
 # matches inside a longer sibling (X-1 inside X-12) and a colon-qualified key
@@ -253,11 +211,20 @@ def _find_keys_in_sources(source_generator, checklist_keys):
 _REFERENCE_BLOCK_PATTERN = re.compile(r'\[\[(.+?)\]\]', re.DOTALL)
 _KEY_CHARS = 'A-Za-z0-9._:\\-'
 _KEY_CHARS_NO_DOT_NO_COLON = 'A-Za-z0-9_\\-'
+_KEY_RUN = re.compile('[{}]+'.format(_KEY_CHARS))
 
 
 def _find_keys_in_content(content, checklist_keys):
     referenced = ' '.join(match.group(1) for match in _REFERENCE_BLOCK_PATTERN.finditer(content))
+    if not referenced:
+        return
+    # A key can only match at the start of a run of key characters (the
+    # lookbehind), so a key made of key characters that begins no run is
+    # skipped without building its pattern -- most keys, in most documents.
+    prefixes = {run[:i] for run in _KEY_RUN.findall(referenced) for i in range(1, len(run) + 1)}
     for key in checklist_keys:
+        if key not in prefixes and _KEY_RUN.fullmatch(key):
+            continue
         pattern = '(?<![{before}]){key}(?![{after}])(?!:[{before}])'.format(
             before=_KEY_CHARS, after=_KEY_CHARS_NO_DOT_NO_COLON, key=re.escape(key))
         if re.search(pattern, referenced):
