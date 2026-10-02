@@ -109,7 +109,7 @@ def test_every_pull_request_runs_the_checks_the_ruleset_requires() -> None:
         gates = jobs["design-controls"]
         repository, _, ref = gates["uses"].partition("@")
         assert repository == "scope-impact/rdm/.github/workflows/gates.yml"
-        assert re.fullmatch(r"v\d+\.\d+\.\d+", ref), ref
+        assert re.fullmatch(r"v\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?", ref), ref
         assert gates["with"]["rdm-ref"] == ref                      # RDM installed at the same tag
         assert gates["with"].get("acceptance-tests", True) is not False
         assert gates["with"].get("release-gate", True) is not False

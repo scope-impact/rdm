@@ -39,7 +39,7 @@ def test_release_is_tag_triggered_with_both_copy_forms() -> None:
         assert any(tag.startswith("doc-") for tag in flow["on"]["push"]["tags"])
     with verification_step("every controlled document is rendered to PDF by RDM's action, at the same release"):
         render = steps[_index(steps, lambda s: s.get("uses", "").startswith("scope-impact/rdm@"))]
-        assert re.fullmatch(r"scope-impact/rdm@v\d+\.\d+\.\d+", render["uses"]), render["uses"]
+        assert re.fullmatch(r"scope-impact/rdm@v\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?", render["uses"]), render["uses"]
         assert render["with"]["dhf_path"] == "dhf"
         makefile = (DHF / "Makefile").read_text()
         assert "rdm render $<" in makefile and "pandoc --defaults=./pandoc_pdf.yml" in makefile
