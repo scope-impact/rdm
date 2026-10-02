@@ -65,3 +65,12 @@ def test_markdown_post_processing() -> None:
         config={"md_extensions": ["rdm.md_extensions.VocabularyExtension"]},
     )
     assert "[apple][banana]" in vocab
+
+
+@allure.story("DI-70")
+@allure.label("output", "TODO")
+def test_di_70_not_implemented() -> None:
+    """DI-70: RDM shall render each Mermaid diagram in a controlled document as an image in the
+    document it renders, drawn by Mermaid's own renderer at a pinned version, and shall fail
+    the render, naming the document, when a diagram cannot be drawn."""
+    pytest.fail("DI-70 acceptance test not implemented -- replace this stub with real assertions")
