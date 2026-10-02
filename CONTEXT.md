@@ -396,7 +396,9 @@ _Avoid_: action, request, function
 A fact a command produced, named in the past tense: *Design Input Declared*,
 *Release Permitted*. A **success event** is the command's intended outcome; a
 **fail event** names the business rule that refused it, after a slash:
-*Release Blocked / Input Untested*. A gate concludes every event its rules
+*Release Blocked / Input Untested*. A **warning** names its rule the same way,
+with *Warned* before the slash (*Release Warned / Orphan Tag*), and never
+fails a command. A gate concludes every event its rules
 produce, not the first: a verdict such as *Release Permitted* is a conclusion
 over all of them, and a warning does not withhold it.
 _Avoid_: message, log line, error (for a fail event), notification
