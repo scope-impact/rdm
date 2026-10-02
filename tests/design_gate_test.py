@@ -12,7 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from rdm.specification.design_gate import (
+    APPROVED,
     DESIGN_REVIEW_DOC,
+    PLACEHOLDERS,
     check_doc_path,
     run_design_gate,
     story_design_gate_command,
@@ -95,7 +97,10 @@ class TestRunDesignGate:
 
     def test_gate_fails_when_design_doc_incomplete(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path, design_text="---\nkind: design\ncontext: core\n---\nTODO\nENDTODO\n")
-        assert not run_design_gate(dhf).passed
+        result = run_design_gate(dhf)
+        assert not result.passed
+        assert PLACEHOLDERS in [e.name for e in result.events if e.blocking]  # a named fail event, no verdict
+        assert APPROVED not in [e.name for e in result.events]
 
 
 class TestStoryDesignGateCommand:
@@ -143,13 +148,13 @@ class TestDesignInputAllureReconciliation:
     def test_design_input_without_tag_is_warned(self, tmp_path: Path) -> None:
         dhf = _proj(tmp_path, ["DI-1", "DI-2"], ["DI-1"])
         result = run_design_gate(dhf)
-        assert any("DI-2" in w for w in result.traceability_warnings)
-        assert not any("DI-1" in w for w in result.traceability_warnings)
+        assert any("DI-2" in w.message for w in result.traceability_warnings)
+        assert not any("DI-1" in w.message for w in result.traceability_warnings)
 
     def test_orphan_tag_sharing_prefix_is_warned(self, tmp_path: Path) -> None:
         dhf = _proj(tmp_path, ["DI-1"], ["DI-1", "DI-999"])
         result = run_design_gate(dhf)
-        assert any("DI-999" in w for w in result.traceability_warnings)
+        assert any("DI-999" in w.message for w in result.traceability_warnings)
 
 
 
@@ -178,7 +183,7 @@ def test_coverage_warnings_read_the_design_inputs(tmp_path: Path) -> None:
     write_design_doc(docs / "design", "core", design_inputs=(("DI-1", ["UN-1"]), ("DI-2", ["UN-9"])))
     legacy = docs / "design" / "core.md"
     legacy.write_text(legacy.read_text().replace("kind: design\n", "kind: design\nsatisfies: [UN-2]\n", 1))
-    warnings = _coverage_warnings(tmp_path / "dhf")
+    warnings = [w.message for w in _coverage_warnings(tmp_path / "dhf")]
     assert "user need UN-2 is traced to by no design input" in warnings
     assert not any("UN-1" in w for w in warnings)
     assert "design input DI-2 traces_to unknown user need UN-9" in warnings

@@ -33,9 +33,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.specification import tags
-from rdm.kernel.ids import relevant_orphans
+from rdm.kernel.events import Event
 from rdm.kernel.git import git
+from rdm.kernel.ids import relevant_orphans
+from rdm.specification import tags
 from rdm.specification.sdd import (
     context_of,
     design_input_ids,
@@ -56,6 +57,24 @@ DESIGN_REVIEW_DOC = "design_review.md"
 # placeholders. These markers come from the init templates.
 PLACEHOLDER_MARKERS = ("TODO", "ENDTODO")
 
+# Events (specification.md, "Commands and events"): the checks fail with these,
+# and warn with the Warned ones; Approved is the verdict when none fails.
+APPROVED = "Design Controls Approved"
+UNCOMMITTED = "Design Controls Not Approved / Uncommitted"
+EMPTY = "Design Controls Not Approved / Empty Document"
+PLACEHOLDERS = "Design Controls Not Approved / Placeholders"
+DOCUMENT_MISSING = "Design Controls Not Approved / Document Missing"
+NO_DESIGN_DOCUMENT = "Design Controls Not Approved / No Design Document"
+DUPLICATE_ID = "Design Controls Not Approved / Duplicate Id"
+VIEWS_STALE = "Design Controls Not Approved / Views Stale"
+NEED_UNTRACED = "Design Controls Warned / Need Untraced"
+UNKNOWN_NEED = "Design Controls Warned / Unknown Need"
+UNKNOWN_REALISED_INPUT = "Design Controls Warned / Unknown Realised Input"
+NO_DESIGN_DOCUMENT_WARNED = "Design Controls Warned / No Design Document"
+NO_TESTS = "Design Controls Warned / No Tests"
+INPUT_UNTAGGED = "Design Controls Warned / Input Untagged"
+ORPHAN_TAG = "Design Controls Warned / Orphan Tag"
+
 
 @dataclass
 class ArtifactCheck:
@@ -64,7 +83,7 @@ class ArtifactCheck:
     name: str
     path: Path
     complete: bool  # present, non-empty, no placeholders
-    reasons: list[str] = field(default_factory=list)
+    events: list[Event] = field(default_factory=list)  # the rules it broke
     # Version-control state of the document:
     #   True  -> has uncommitted changes (current revision is not yet approved)
     #   False -> clean and tracked (the committed revision is the approved one)
@@ -79,15 +98,19 @@ class ArtifactCheck:
         # is surfaced as a warning by the command instead.
         return self.complete and self.uncommitted is not True
 
+    @property
+    def reasons(self) -> list[str]:
+        return [e.message for e in self.events]
+
 
 @dataclass
 class GateResult:
     """Aggregate result of the design gate."""
 
     artifacts: list[ArtifactCheck] = field(default_factory=list)
-    task_warnings: list[str] = field(default_factory=list)
-    traceability_warnings: list[str] = field(default_factory=list)
-    verification_warnings: list[str] = field(default_factory=list)
+    task_warnings: list[Event] = field(default_factory=list)
+    traceability_warnings: list[Event] = field(default_factory=list)
+    verification_warnings: list[Event] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
@@ -95,6 +118,13 @@ class GateResult:
         # gate runs before implementation, so the verifying tests (and their
         # Allure tags) legitimately may not exist yet.
         return all(a.ok for a in self.artifacts)
+
+    @property
+    def events(self) -> list[Event]:
+        """Every event of the gate, with its verdict first when it passes."""
+        verdict = [Event(APPROVED, "the design controls are approved")] if self.passed else []
+        return [*verdict, *(e for a in self.artifacts for e in a.events),
+                *self.task_warnings, *self.traceability_warnings, *self.verification_warnings]
 
 
 NO_DESIGN_DOC = "no design document (`kind: design`) found under the DHF"
@@ -123,16 +153,16 @@ def has_uncommitted_changes(path: Path) -> bool | None:
     return None if status is None else bool(status)
 
 
-def _approval(path: Path, reasons: list[str]) -> bool | None:
-    """The version-control state of ``path``; an unapproved one adds its reason."""
+def _approval(path: Path, events: list[Event]) -> bool | None:
+    """The version-control state of ``path``; an unapproved one adds its event."""
     uncommitted = has_uncommitted_changes(path)
     if uncommitted is True:
-        reasons.append(UNAPPROVED)
+        events.append(Event(UNCOMMITTED, UNAPPROVED))
     return uncommitted
 
 
-def _missing(name: str, path: Path, reason: str) -> ArtifactCheck:
-    return ArtifactCheck(name=name, path=path, complete=False, reasons=[reason])
+def _missing(name: str, path: Path, event: Event) -> ArtifactCheck:
+    return ArtifactCheck(name=name, path=path, complete=False, events=[event])
 
 
 def check_doc_path(path: Path, name: str) -> ArtifactCheck:
@@ -142,19 +172,19 @@ def check_doc_path(path: Path, name: str) -> ArtifactCheck:
     changes is not yet approved (see `has_uncommitted_changes`).
     """
     text = path.read_text(encoding="utf-8")
-    reasons: list[str] = []
+    events: list[Event] = []
 
     if not text.strip():
-        reasons.append("document is empty")
+        events.append(Event(EMPTY, "document is empty"))
 
     leftover = [m for m in PLACEHOLDER_MARKERS if m in text]
     if leftover:
-        reasons.append(
+        events.append(Event(PLACEHOLDERS,
             f"contains unresolved placeholders ({', '.join(sorted(set(leftover)))}); "
             "fill in and remove TODO/ENDTODO blocks"
-        )
+        ))
 
-    uncommitted = _approval(path, reasons)
+    uncommitted = _approval(path, events)
 
     return ArtifactCheck(
         name=name,
@@ -162,7 +192,7 @@ def check_doc_path(path: Path, name: str) -> ArtifactCheck:
         # `complete` reflects document content; approval (uncommitted) is tracked
         # separately so the two failure modes are reported distinctly.
         complete=not leftover and bool(text.strip()),
-        reasons=reasons,
+        events=events,
         uncommitted=uncommitted,
     )
 
@@ -171,7 +201,8 @@ def check_artifact(dhf_dir: Path, basename: str, name: str) -> ArtifactCheck:
     """Check a required design-control document, located by basename."""
     path = _find_doc(dhf_dir, basename)
     if path is None:
-        return _missing(name, dhf_dir / "documents" / basename, f"{basename} not found under {dhf_dir}")
+        return _missing(name, dhf_dir / "documents" / basename,
+                        Event(DOCUMENT_MISSING, f"{basename} not found under {dhf_dir}"))
     return check_doc_path(path, name)
 
 
@@ -183,11 +214,12 @@ def check_design_docs(dhf_dir: Path) -> list[ArtifactCheck]:
     """
     docs = find_design_docs(dhf_dir)
     if not docs:
-        return [_missing("Software Design Description", dhf_dir / "documents" / "design", NO_DESIGN_DOC)]
+        return [_missing("Software Design Description", dhf_dir / "documents" / "design",
+                         Event(NO_DESIGN_DOCUMENT, NO_DESIGN_DOC))]
     return [check_doc_path(doc, f"Software Design Description ({context_of(doc)})") for doc in docs]
 
 
-def _coverage_warnings(dhf_dir: Path) -> list[str]:
+def _coverage_warnings(dhf_dir: Path) -> list[Event]:
     """Reconcile the user-need registry against the design docs' references.
 
     Warns (warnings only) when a registered user need is traced to by no design
@@ -196,26 +228,26 @@ def _coverage_warnings(dhf_dir: Path) -> list[str]:
     """
     docs = find_design_docs(dhf_dir)
     if not docs:
-        return [NO_DESIGN_DOC]
+        return [Event(NO_DESIGN_DOCUMENT_WARNED, NO_DESIGN_DOC)]
 
-    warnings: list[str] = []
+    warnings: list[Event] = []
     registry = registry_user_needs(dhf_dir)
     inputs = design_inputs(dhf_dir)
     traced = {need for di in inputs for need in di["traces_to"]}
     for need in sorted(registry - traced):
-        warnings.append(f"user need {need} is traced to by no design input")
+        warnings.append(Event(NEED_UNTRACED, f"user need {need} is traced to by no design input"))
 
     di_ids = {di["id"] for di in inputs}
     for di in inputs:
         for ref in sorted(set(di["traces_to"]) - registry):
-            warnings.append(f"design input {di['id']} traces_to unknown user need {ref}")
+            warnings.append(Event(UNKNOWN_NEED, f"design input {di['id']} traces_to unknown user need {ref}"))
     for doc, refs in realises_by_context(dhf_dir).items():
         for ref in sorted(refs - di_ids):
-            warnings.append(f"{doc.name} realises unknown design input {ref}")
+            warnings.append(Event(UNKNOWN_REALISED_INPUT, f"{doc.name} realises unknown design input {ref}"))
     return warnings
 
 
-def _traceability_warnings(dhf_dir: Path) -> list[str]:
+def _traceability_warnings(dhf_dir: Path) -> list[Event]:
     """Reconcile design-input IDs against @allure tags found in the tests.
 
     Reports design inputs with no verifying test, and Allure tags that share a
@@ -229,25 +261,15 @@ def _traceability_warnings(dhf_dir: Path) -> list[str]:
 
     tests_dir = tags.find_tests_dir(dhf_dir)
     if tests_dir is None:
-        return [
-            "no tests/ directory found to reconcile Allure tags against the "
-            f"{len(di_ids)} design input(s)"
-        ]
+        return [Event(NO_TESTS, "no tests/ directory found to reconcile Allure tags against the "
+                                f"{len(di_ids)} design input(s)")]
 
     tagged = tags.scan_source_tags(tests_dir)
     tagged_ids = set(tagged)
-    warnings: list[str] = []
-
-    for di in sorted(di_ids - tagged_ids):
-        warnings.append(
-            f"design input {di} has no @allure.story tag in tests"
-        )
-
-    for tag in relevant_orphans(tagged_ids, di_ids):
-        warnings.append(
-            f"Allure tag {tag} matches no design input ({', '.join(tagged[tag][:2])})"
-        )
-
+    warnings = [Event(INPUT_UNTAGGED, f"design input {di} has no @allure.story tag in tests")
+                for di in sorted(di_ids - tagged_ids)]
+    warnings += [Event(ORPHAN_TAG, f"Allure tag {tag} matches no design input ({', '.join(tagged[tag][:2])})")
+                 for tag in relevant_orphans(tagged_ids, di_ids)]
     return warnings
 
 
@@ -255,10 +277,10 @@ def check_unique_ids(dhf_dir: Path) -> ArtifactCheck:
     """Every user-need and design-input id declared once (DI-46). The record
     reader keeps an id's first declaration, so a second would silently drop
     out of every gate and the graph."""
-    reasons = [f"{ident} is declared {len(docs)} times: {', '.join(docs)}"
-               for ident, docs in sorted(duplicate_declarations(dhf_dir).items())]
+    events = [Event(DUPLICATE_ID, f"{ident} is declared {len(docs)} times: {', '.join(docs)}")
+              for ident, docs in sorted(duplicate_declarations(dhf_dir).items())]
     return ArtifactCheck(name="Requirement ids", path=Path(dhf_dir),
-                         complete=not reasons, reasons=reasons, uncommitted=False)
+                         complete=not events, events=events, uncommitted=False)
 
 
 def check_architecture_views(dhf_dir: Path) -> list[ArtifactCheck]:
@@ -270,11 +292,11 @@ def check_architecture_views(dhf_dir: Path) -> list[ArtifactCheck]:
     workspace = Path(dhf_dir) / WORKSPACE
     if not workspace.is_file():
         return []
-    reasons = stale(dhf_dir)
-    complete = not reasons
-    uncommitted = _approval(workspace.parent, reasons)
+    events = [Event(VIEWS_STALE, reason) for reason in stale(dhf_dir)]
+    complete = not events
+    uncommitted = _approval(workspace.parent, events)
     return [ArtifactCheck(name="Architecture views", path=workspace, complete=complete,
-                          reasons=reasons, uncommitted=uncommitted)]
+                          events=events, uncommitted=uncommitted)]
 
 
 def design_artifacts(dhf_dir: Path) -> list[ArtifactCheck]:
@@ -336,7 +358,7 @@ def story_design_gate_command(dhf_dir: Path | None = None, verification_warnings
         if warnings:
             print(f"\n{heading}:")
             for warning in warnings:
-                print(f"  [WARN] {warning}")
+                print(f"  [WARN] {warning.message}")
 
     print()
     if result.passed:

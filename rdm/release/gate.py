@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.evidence import allure
+from rdm.kernel.events import Event
 from rdm.kernel.ids import relevant_orphans
 from rdm.risk.register import Finding, assess
 from rdm.specification.design_gate import ArtifactCheck, GateResult, design_artifacts
@@ -40,16 +41,6 @@ RISK_FINDING = "Release Blocked / Risk Finding"
 RISK_WARNING = "Release Warned / Risk Finding"
 NEED_UNVALIDATED = "Release Warned / Need Unvalidated"
 ORPHAN_TAG = "Release Warned / Orphan Tag"
-
-
-@dataclass(frozen=True)
-class Event:
-    name: str
-    message: str
-
-    @property
-    def blocking(self) -> bool:
-        return self.name.startswith("Release Blocked")
 
 
 # State
@@ -158,13 +149,14 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
                          verified=state.report.verified if state.report else [], events=derive(state))
 
 
-def verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[str]:
+def verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[Event]:
     """The design gate's warnings when it is given results: the same rules the
-    release gate blocks on."""
+    release gate blocks on, as warnings of the design controls."""
     ids = design_input_ids(dhf_dir)
     if not ids:
         return []
-    return [e.message for e in result_events(allure.reconcile(ids, allure_results_dir), ids)]
+    return [Event(f"Design Controls Warned / {e.name.split(' / ')[1]}", e.message)
+            for e in result_events(allure.reconcile(ids, allure_results_dir), ids)]
 
 
 def story_release_gate_command(
