@@ -25,7 +25,7 @@ design_inputs:
     text: "rdm.pytest_plugin shall label each run of a test tagged with a declared design input with the commit under test, and mark the run when the working tree had uncommitted changes."
     traces_to: [UN-004, UN-003]
   - id: DI-64
-    text: "RDM shall render a verification report to PDF from the record and the Allure results it is given: for each design input, its text, its owning context and the user needs it traces to; for each run of a test tagged with it, the commit tested and whether the worktree was dirty, start and stop times, the status and any failure message, every step with its own status, and every attachment, text shown inline, images embedded, any other file named with its SHA-256; headed by the verification summary, the RDM version and one SHA-256 over the result files it was built from. The evidence bundle and the reusable gates workflow shall include the report."
+    text: "RDM shall render a verification report to PDF from the record and the Allure results it is given: for each design input, its text, its owning context and the user needs it traces to; for each run of a test tagged with it, the commit tested and whether the worktree was dirty, start and stop times, the status and any failure message, every label and link it carries, every step with its own status, and every attachment, text shown inline, images embedded, any other file named with its SHA-256; headed by the verification summary, the RDM version and one SHA-256 over the result files it was built from. The evidence bundle and the reusable gates workflow shall include the report."
     traces_to: [UN-012]
 ---
 
@@ -56,12 +56,15 @@ This context owns:
   given, one section per design input (its text, owning context and user
   needs) and in it every run of a test tagged with it: the commit tested and
   whether the worktree was dirty (the labels `rdm.pytest_plugin` writes),
-  start and stop times, status and failure message, each step (the clauses of
-  the test) with its own status, and every attachment: text inline, images
+  start and stop times, status and failure message, every label and link the
+  run carries (epic, feature, severity, `output`, the links to the declaring
+  documents, and any a test adds), each step (the clauses of the test) with
+  its own status, and every attachment: text inline, images
   embedded, anything else named with its SHA-256. The header carries the
   verification summary, the RDM version and one SHA-256 over the result files,
   so the PDF names the exact evidence it was built from. It is compiled with
-  Typst in-process (the `report` extra): the data is passed as JSON, never
+  Typst (the `report` extra, or a `typst` executable such as the one in the
+  RDM image): the data is passed as a JSON file the layout reads, never
   spliced into markup, so no text from a test can change the document's
   layout. The evidence bundle and the reusable gates workflow include it.
   Refines UN-012.
