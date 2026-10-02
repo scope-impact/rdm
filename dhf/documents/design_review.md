@@ -846,3 +846,32 @@ glossary's architecture terms; RDM's own C1, C2 and C3 diagrams; three
 
 Recorded in version control (the merged, reviewed PR), per the design-input
 approval model. No sign-off table is duplicated here.
+
+# Design Review 28 — Mermaid diagrams in rendered documents
+
+**Scope reviewed:** DI-70 (`design/rendering.md`).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The C4 views are Mermaid in Markdown. GitHub and the docs site draw them in
+  the reader's browser, but the PDF pipeline (render → Pandoc → Typst) had no
+  step for them, so a PDF printed their source as a code block. Nothing in CI
+  had drawn a Mermaid diagram before: the docs site leaves it to the browser.
+- Options weighed: Mermaid's own renderer in a headless browser (exact, about
+  300 MB more image), a rendering service (sends the record out of the
+  repository: rejected), Graphviz from the parsed C4 model (small, C4 only,
+  looks different). Chosen: Mermaid's own renderer, so an auditor's PDF shows
+  the diagram the reviewer saw on GitHub.
+- The step is an RDM Markdown extension, not a Pandoc filter, so it is
+  verified in RDM's test suite (which runs without Pandoc) and runs wherever
+  `rdm render` does; the RDM image pins Node and the renderer, and the PDF
+  workflow renders a diagram end to end.
+- A diagram that cannot be drawn fails the render: shipping its source in a
+  controlled PDF would pass silently. The renderer runs Mermaid's strict
+  security level; the browser draws only the diagram text from the record.
+
+## Findings and actions
+
+- None open.
