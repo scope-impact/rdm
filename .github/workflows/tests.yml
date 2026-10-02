@@ -13,10 +13,6 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -24,10 +20,15 @@ jobs:
           persist-credentials: false
       - name: Install uv
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      # The latest stable CPython, whichever that is on the day.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        id: python
+        with:
+          python-version: '3.x'
       - name: Install dependencies
-        run: uv sync --all-extras --python ${{ matrix.python-version }}
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
+        run: uv sync --all-extras --python "$PYTHON"
       - name: Lint
         run: uv run ruff check .
       - name: Tests
