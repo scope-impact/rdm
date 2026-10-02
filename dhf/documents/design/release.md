@@ -56,7 +56,8 @@ repositories' pipelines call.
 
 **Release gate.** It blocks a release when the design gate's pass/fail
 checks fail; when no design input is declared; when a design input failed
-or is untested in the given results; when the risk register's release rules
+or is untested in the given results; when a result file in them cannot be
+read (it could hold a failed run); when the risk register's release rules
 report a blocking finding; and when a user need is addressed by no design
 input. It warns, never blocks, on a user need with no approved validation
 record, and on a test tag that matches no design input. The same
@@ -133,7 +134,7 @@ fail event (the rule broken, after the slash), which affects the entity.
 | Actor | Command | Success event | Fail events | Entity |
 |-------|---------|---------------|-------------|--------|
 | CI or contributor | Verify | Verification Written | — (each input verified, failed or untested) | Verification data |
-| CI or contributor | Decide release | Release Permitted | Release Blocked / Design Control Unmet · Input Untested · Need Unaddressed · Risk Finding | Release |
+| CI or contributor | Decide release | Release Permitted | Release Blocked / Design Control Unmet · Input Untested · Unreadable Result · Need Unaddressed · Risk Finding | Release |
 
 ## Dependencies
 

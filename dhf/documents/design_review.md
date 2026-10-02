@@ -1314,6 +1314,27 @@ version's release tag instead: a final version unchanged, an alpha, beta or
 release candidate as `-alpha`, `-beta` or `-rc`, with its number when it is
 not 0.
 
+# Design Review 44 — What cannot be read fails the gate
+
+**Scope reviewed:** the design gate (DI-2) and the release gate (DI-3)
+over a record or results they cannot read. No design input changed.
+
+**Disposition:** Approved.
+
+An exploratory test of every RDM command found both gates passing over what
+they could not read. A frontmatter block was cut at the first `---` anywhere
+in it, and one that was not YAML read as empty: one unquoted colon, a `---`
+in a text, or a byte-order mark dropped a design document or the whole risk
+register, and both gates passed. A result file that did not parse was
+skipped: a truncated result of a failed run let the release pass.
+
+- Frontmatter runs from a `---` line to the next `---` line (a byte-order
+  mark ignored). The design gate fails, naming the document, when a Markdown
+  document of the DHF has frontmatter that is not YAML, not a mapping, or has
+  no closing fence (event *Unreadable Frontmatter*).
+- The release gate blocks when a result file in the results it is given
+  cannot be read as a JSON object (event *Unreadable Result*).
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
