@@ -17,6 +17,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+from rdm.evidence.allure import ENVIRONMENT_FILE, EXECUTOR_FILE
 from rdm.publishing.report import REPORT_PDF, ReportUnavailable, write_report
 from rdm.specification.sdd import MATRIX_DOC, find_dhf_doc
 from rdm.release.verify import write_verification_file
@@ -38,9 +39,10 @@ def _attachment_sources(node) -> set[str]:
 
 
 def copy_results(results_dir: Path, dest: Path) -> list[str]:
-    """Copy the results, containers and referenced attachments; return their names."""
+    """Copy the results, containers, referenced attachments and the run's
+    executor and environment (the report's provenance); return their names."""
     dest.mkdir(parents=True, exist_ok=True)
-    names: set[str] = set()
+    names: set[str] = {EXECUTOR_FILE, ENVIRONMENT_FILE}
     for path in sorted(results_dir.glob("*-result.json")) + sorted(results_dir.glob("*-container.json")):
         names.add(path.name)
         try:

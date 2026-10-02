@@ -57,6 +57,8 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
             {"name": "setup log", "source": "a3-attachment.txt", "type": "text/plain"}]}]}))
     (results / "a3-attachment.txt").write_text("set up\n")
     (results / "stray-attachment.txt").write_text("not referenced by any result\n")
+    (results / "executor.json").write_text('{"name": "local", "type": "local"}')  # the plugin's (DI-65)
+    (results / "environment.properties").write_text("python=CPython 3.13\n")
     return dhf, results
 
 
@@ -85,10 +87,12 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
         assert on_disk == manifest
         assert manifest["design_inputs"] == 1 and manifest["verified"] == 1
         assert "faithfulness_verdicts" not in manifest
-    # The executed results ride along: results, containers, and every attachment
-    # they reference (on the test, its steps, or a fixture) -- nothing else.
+    # The executed results ride along: results, containers, every attachment they
+    # reference (on the test, its steps, or a fixture), and the run's executor and
+    # environment, which the report's provenance names -- nothing else.
     bundled = {"allure-results/" + n for n in
-               ("t1-result.json", "c1-container.json", "a1-attachment.txt", "a2-attachment.json", "a3-attachment.txt")}
+               ("t1-result.json", "c1-container.json", "a1-attachment.txt", "a2-attachment.json", "a3-attachment.txt",
+                "executor.json", "environment.properties")}
     # The verification report (DI-64) is in it when Typst is available, and the manifest says which.
     report = {"verification_report.pdf"} if manifest["verification_report"] == "verification_report.pdf" else set()
     assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"} | bundled | report
