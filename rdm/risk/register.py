@@ -19,6 +19,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from rdm.kernel.events import Event
 from rdm.kernel.frontmatter import documents
 
 RISK_KIND = "risk"
@@ -173,14 +174,33 @@ def residual_decision(risk: Risk, policy: Policy | None, verified: set[str]) -> 
     return UNACCEPTABLE
 
 
-@dataclass(frozen=True)
-class Finding:
-    """One result of the risk rules: its message, whether it blocks a release,
-    and the risk it is about (an index into the register; None for the
-    register as a whole)."""
+# Events (risk.md, "Commands and events"): each rule broken, and the two warnings.
+_NOT_EVALUATED = "Risk Not Evaluated / "
+POLICY_MALFORMED = _NOT_EVALUATED + "Policy Malformed"
+NO_POLICY = _NOT_EVALUATED + "No Policy"
+ID_MISSING = _NOT_EVALUATED + "Id Missing"
+DUPLICATE_ID = _NOT_EVALUATED + "Duplicate Id"
+INCOMPLETE = _NOT_EVALUATED + "Incomplete"
+CATEGORY_MISSING = _NOT_EVALUATED + "Category Missing"
+STRIDE_MISSING = _NOT_EVALUATED + "STRIDE Missing"
+UNKNOWN_LINK = _NOT_EVALUATED + "Unknown Link"
+SCORE_NOT_IN_POLICY = _NOT_EVALUATED + "Score Not In Policy"
+LEVEL_MISMATCH = _NOT_EVALUATED + "Level Mismatch"
+UNKNOWN_CONTROL = _NOT_EVALUATED + "Unknown Control"
+RESIDUAL_UNSCORED = _NOT_EVALUATED + "Residual Unscored"
+CONTROL_UNVERIFIED = _NOT_EVALUATED + "Control Unverified"
+RESIDUAL_UNACCEPTABLE = _NOT_EVALUATED + "Residual Unacceptable"
+ACCEPTANCE_MISSING = _NOT_EVALUATED + "Acceptance Missing"
+UNKNOWN_STATUS = _NOT_EVALUATED + "Unknown Status"
+POLICY_NOT_APPROVED = "Risk Warned / Policy Not Approved"
+RISK_PROPOSED = "Risk Warned / Risk Proposed"
 
-    message: str
-    blocking: bool = True
+
+@dataclass(frozen=True)
+class Finding(Event):
+    """One event of the risk rules, about one risk (an index into the
+    register) or, with None, the register as a whole."""
+
     risk: int | None = None
 
 
@@ -191,67 +211,68 @@ def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tup
     try:
         policy = read_policy(dhf_dir)
     except ValueError as error:
-        return risks(dhf_dir, None), [Finding(str(error))]
+        return risks(dhf_dir, None), [Finding(POLICY_MALFORMED, str(error))]
     register = risks(dhf_dir, policy)
     if not register:
         return register, []
     found: list[Finding] = []
     if policy is None:
-        found.append(Finding("the risk register has risks but no risk_policy is declared "
+        found.append(Finding(NO_POLICY, "the risk register has risks but no risk_policy is declared "
                              "(acceptability criteria missing)"))
     elif not policy.approved:
-        found.append(Finding(f"the risk policy in {policy.source} is {policy.status}: a person has not approved it",
-                             blocking=False))
+        found.append(Finding(POLICY_NOT_APPROVED,
+                             f"the risk policy in {policy.source} is {policy.status}: a person has not approved it"))
     ids = Counter(r.id for r in register if r.id)
     reported: set[str] = set()  # each duplicated id once
     for index, r in enumerate(register):
-        def block(message: str, index: int = index) -> None:
-            found.append(Finding(message, risk=index))
+        def block(event: str, message: str, index: int = index) -> None:
+            found.append(Finding(event, message, risk=index))
 
         if not r.id:
-            block(f"a risk in {r.document} has no id")
+            block(ID_MISSING, f"a risk in {r.document} has no id")
         elif ids[r.id] > 1 and r.id not in reported:
             reported.add(r.id)
-            block(f"risk {r.id} is declared {ids[r.id]} times")
+            block(DUPLICATE_ID, f"risk {r.id} is declared {ids[r.id]} times")
         name = f"risk {r.id}" if r.id else f"a risk in {r.document} with no id"
         for part in ("hazard", "situation", "harm"):
             if not getattr(r, part):
-                block(f"{name} has no {part}")
+                block(INCOMPLETE, f"{name} has no {part}")
         if r.category not in CATEGORIES:
-            block(f"{name} needs a category of safety or security (got {r.category or 'none'})")
+            block(CATEGORY_MISSING, f"{name} needs a category of safety or security (got {r.category or 'none'})")
         elif r.category == "security" and r.stride not in STRIDE:
-            block(f"{name} is a security risk with no STRIDE category ({', '.join(STRIDE)})")
+            block(STRIDE_MISSING, f"{name} is a security risk with no STRIDE category ({', '.join(STRIDE)})")
         for link in r.linked:
             if link not in ids:
-                block(f"{name} links {link}, which is not a declared risk")
+                block(UNKNOWN_LINK, f"{name} links {link}, which is not a declared risk")
         if policy is None:
-            block(f"{name} cannot be evaluated: no risk policy")
+            block(NO_POLICY, f"{name} cannot be evaluated: no risk policy")
         elif r.level is None:
-            block(f"{name}: severity {r.severity!r} × probability {r.probability!r} "
+            block(SCORE_NOT_IN_POLICY, f"{name}: severity {r.severity!r} × probability {r.probability!r} "
                   f"is not defined by the risk policy ({policy.source})")
         elif r.recorded_level and r.recorded_level != r.level:
-            block(f"{name} records level {r.recorded_level}; the risk policy says {r.level}")
+            block(LEVEL_MISMATCH, f"{name} records level {r.recorded_level}; the risk policy says {r.level}")
         for control in r.controls:
             if control not in design_input_ids:
-                block(f"{name} names control {control}, which is not a declared design input")
+                block(UNKNOWN_CONTROL, f"{name} names control {control}, which is not a declared design input")
         if r.controls and not r.residual_probability:
-            block(f"{name} has controls but no residual score")
+            block(RESIDUAL_UNSCORED, f"{name} has controls but no residual score")
         elif policy is not None and r.level is not None and r.residual_probability and r.residual_level is None:
-            block(f"{name}: residual {r.residual_severity or r.severity!r} × "
+            block(SCORE_NOT_IN_POLICY, f"{name}: residual {r.residual_severity or r.severity!r} × "
                   f"{r.residual_probability!r} is not defined by the risk policy")
         unverified = [c for c in r.controls if c in design_input_ids and c not in verified]
         if unverified and r.residual_level is not None:
-            block(f"{name}: residual not evaluated — control {', '.join(unverified)} has no passing test")
+            block(CONTROL_UNVERIFIED,
+                  f"{name}: residual not evaluated — control {', '.join(unverified)} has no passing test")
         decision = residual_decision(r, policy, verified)
         if decision == UNACCEPTABLE:
-            block(f"{name} has an unacceptable residual level of {r.residual_level}")
+            block(RESIDUAL_UNACCEPTABLE, f"{name} has an unacceptable residual level of {r.residual_level}")
         elif decision == NEEDS_ACCEPTANCE:
-            block(f"{name} has a residual level of {r.residual_level} that needs an acceptance "
+            block(ACCEPTANCE_MISSING, f"{name} has a residual level of {r.residual_level} that needs an acceptance "
                   "(who accepted it and why)")
         if r.status not in STATUSES:
-            block(f"{name} has an unknown status {r.status!r} (proposed or approved)")
+            block(UNKNOWN_STATUS, f"{name} has an unknown status {r.status!r} (proposed or approved)")
         elif r.status == "proposed":
-            found.append(Finding(f"{name} is proposed: a person has not approved its rating",
-                                 blocking=False, risk=index))
+            found.append(Finding(RISK_PROPOSED, f"{name} is proposed: a person has not approved its rating",
+                                 risk=index))
     return register, found
 
