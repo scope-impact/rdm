@@ -1,0 +1,1080 @@
+{
+  "configuration": {},
+  "description": "git keeps the record; GitHub provides the service.",
+  "documentation": {},
+  "id": 0,
+  "model": {
+    "people": [
+      {
+        "description": "Writes and revises the controlled documents",
+        "id": "1",
+        "name": "Author",
+        "properties": {
+          "structurizr.dsl.identifier": "author"
+        },
+        "relationships": [
+          {
+            "description": "writes and revises",
+            "destinationId": "10",
+            "id": "21",
+            "sourceId": "1",
+            "tags": "Relationship"
+          },
+          {
+            "description": "writes and revises",
+            "destinationId": "5",
+            "id": "22",
+            "linkedRelationshipId": "21",
+            "sourceId": "1"
+          },
+          {
+            "description": "writes and revises",
+            "destinationId": "4",
+            "id": "23",
+            "linkedRelationshipId": "21",
+            "sourceId": "1"
+          },
+          {
+            "description": "opens pull requests on",
+            "destinationId": "19",
+            "id": "24",
+            "sourceId": "1",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Person"
+      },
+      {
+        "description": "A code owner: approves each change to a controlled document",
+        "id": "2",
+        "name": "Quality reviewer",
+        "properties": {
+          "structurizr.dsl.identifier": "reviewer"
+        },
+        "relationships": [
+          {
+            "description": "approves pull requests on",
+            "destinationId": "19",
+            "id": "25",
+            "sourceId": "2",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Person"
+      },
+      {
+        "description": "Tags a release of the approved document set",
+        "id": "3",
+        "name": "Releaser",
+        "properties": {
+          "structurizr.dsl.identifier": "releaser"
+        },
+        "relationships": [
+          {
+            "description": "tags a release on",
+            "destinationId": "19",
+            "id": "26",
+            "sourceId": "3",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Person"
+      }
+    ],
+    "softwareSystems": [
+      {
+        "containers": [
+          {
+            "components": [
+              {
+                "description": "What a change must pass to reach the default branch: reviews, signed commits, required checks, linear history",
+                "documentation": {},
+                "group": "approval",
+                "id": "6",
+                "name": "Branch ruleset",
+                "properties": {
+                  "code": ".github/rulesets/controlled-documents.json",
+                  "structurizr.dsl.identifier": "ruleset"
+                },
+                "relationships": [
+                  {
+                    "description": "requires review from",
+                    "destinationId": "7",
+                    "id": "34",
+                    "sourceId": "6",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "requires the checks of",
+                    "destinationId": "16",
+                    "id": "35",
+                    "sourceId": "6",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "requires the checks of",
+                    "destinationId": "15",
+                    "id": "36",
+                    "linkedRelationshipId": "35",
+                    "sourceId": "6"
+                  }
+                ],
+                "tags": "Element,Component,context:approval",
+                "technology": "GitHub ruleset (JSON)"
+              },
+              {
+                "description": "Routes every controlled path to the quality team for review",
+                "documentation": {},
+                "group": "approval",
+                "id": "7",
+                "name": "Code owners",
+                "properties": {
+                  "code": ".github/CODEOWNERS",
+                  "structurizr.dsl.identifier": "code_owners"
+                },
+                "tags": "Element,Component,context:approval",
+                "technology": "CODEOWNERS"
+              },
+              {
+                "description": "Only merge commits; branches deleted on merge",
+                "documentation": {},
+                "group": "approval",
+                "id": "8",
+                "name": "Merge settings",
+                "properties": {
+                  "code": ".github/settings.json",
+                  "structurizr.dsl.identifier": "merge_settings"
+                },
+                "tags": "Element,Component,context:approval",
+                "technology": "GitHub settings (JSON)"
+              },
+              {
+                "description": "Applies the ruleset and merge settings, and checks them for drift",
+                "documentation": {},
+                "group": "approval",
+                "id": "9",
+                "name": "Settings applier",
+                "properties": {
+                  "code": "setup.sh",
+                  "structurizr.dsl.identifier": "settings_applier"
+                },
+                "relationships": [
+                  {
+                    "description": "applies and drift-checks",
+                    "destinationId": "6",
+                    "id": "39",
+                    "sourceId": "9",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "applies and drift-checks",
+                    "destinationId": "8",
+                    "id": "40",
+                    "sourceId": "9",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "configures the repository on",
+                    "destinationId": "19",
+                    "id": "41",
+                    "sourceId": "9",
+                    "tags": "Relationship",
+                    "technology": "gh api"
+                  }
+                ],
+                "tags": "Element,Component,context:approval",
+                "technology": "shell, gh"
+              },
+              {
+                "description": "SOP-DC-001: identity, revision history, the Part 11 controls it cites",
+                "documentation": {},
+                "group": "records",
+                "id": "10",
+                "name": "Document control procedure",
+                "properties": {
+                  "code": "dhf/documents/procedures/document_control_procedure.md",
+                  "structurizr.dsl.identifier": "sop"
+                },
+                "relationships": [
+                  {
+                    "description": "embeds the revision history from",
+                    "destinationId": "12",
+                    "id": "54",
+                    "sourceId": "10",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:records",
+                "technology": "Markdown, Jinja2"
+              },
+              {
+                "description": "The current approved specification set, from generated index data",
+                "documentation": {},
+                "group": "records",
+                "id": "11",
+                "name": "Device master record index",
+                "properties": {
+                  "code": "dhf/documents/procedures/device_master_record_index.md",
+                  "structurizr.dsl.identifier": "dmr_index"
+                },
+                "relationships": [
+                  {
+                    "description": "lists the documents from",
+                    "destinationId": "12",
+                    "id": "55",
+                    "sourceId": "11",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:records",
+                "technology": "Markdown, Jinja2"
+              },
+              {
+                "description": "The revision history and the index data the documents embed",
+                "documentation": {},
+                "group": "records",
+                "id": "12",
+                "name": "Record data",
+                "properties": {
+                  "code": "dhf/data/",
+                  "structurizr.dsl.identifier": "record_data"
+                },
+                "tags": "Element,Component,context:records",
+                "technology": "YAML"
+              },
+              {
+                "description": "The Part 11 controls a controlled document must reference",
+                "documentation": {},
+                "group": "records",
+                "id": "13",
+                "name": "Part 11 checklist",
+                "properties": {
+                  "code": "checklists/part11_document_control.txt",
+                  "structurizr.dsl.identifier": "part11"
+                },
+                "tags": "Element,Component,context:records",
+                "technology": "text"
+              },
+              {
+                "description": "Renders the documents from their templates and data to PDF",
+                "documentation": {},
+                "group": "records",
+                "id": "14",
+                "name": "Rendering",
+                "properties": {
+                  "code": "dhf/Makefile",
+                  "structurizr.dsl.identifier": "rendering"
+                },
+                "relationships": [
+                  {
+                    "description": "renders",
+                    "destinationId": "10",
+                    "id": "56",
+                    "sourceId": "14",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "renders",
+                    "destinationId": "11",
+                    "id": "57",
+                    "sourceId": "14",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "renders the templates with",
+                    "destinationId": "20",
+                    "id": "58",
+                    "sourceId": "14",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:records",
+                "technology": "make, Pandoc, Typst"
+              }
+            ],
+            "description": "The git repository: the documents, their data and the repository's own configuration",
+            "documentation": {},
+            "id": "5",
+            "name": "Controlled record",
+            "properties": {
+              "structurizr.dsl.identifier": "repo"
+            },
+            "relationships": [
+              {
+                "description": "requires the checks of",
+                "destinationId": "16",
+                "id": "37",
+                "linkedRelationshipId": "35",
+                "sourceId": "5"
+              },
+              {
+                "description": "requires the checks of",
+                "destinationId": "15",
+                "id": "38",
+                "linkedRelationshipId": "35",
+                "sourceId": "5"
+              },
+              {
+                "description": "configures the repository on",
+                "destinationId": "19",
+                "id": "42",
+                "linkedRelationshipId": "41",
+                "sourceId": "5",
+                "technology": "gh api"
+              },
+              {
+                "description": "renders the templates with",
+                "destinationId": "20",
+                "id": "59",
+                "linkedRelationshipId": "58",
+                "sourceId": "5"
+              }
+            ],
+            "tags": "Element,Container,Database",
+            "technology": "git"
+          },
+          {
+            "components": [
+              {
+                "description": "Runs RDM's gates and the record checks on every pull request: the required checks",
+                "documentation": {},
+                "group": "approval",
+                "id": "16",
+                "name": "Design-controls workflow",
+                "properties": {
+                  "code": ".github/workflows/design-controls.yml",
+                  "structurizr.dsl.identifier": "design_controls"
+                },
+                "relationships": [
+                  {
+                    "description": "runs the design gate, verify and the release gate of",
+                    "destinationId": "20",
+                    "id": "48",
+                    "sourceId": "16",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "holds the documents to",
+                    "destinationId": "13",
+                    "id": "51",
+                    "sourceId": "16",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "holds the documents to",
+                    "destinationId": "5",
+                    "id": "52",
+                    "linkedRelationshipId": "51",
+                    "sourceId": "16"
+                  }
+                ],
+                "tags": "Element,Component,context:approval",
+                "technology": "GitHub Actions"
+              },
+              {
+                "description": "Checks the live repository settings against the declared ones, daily",
+                "documentation": {},
+                "group": "approval",
+                "id": "17",
+                "name": "Drift audit",
+                "properties": {
+                  "code": ".github/workflows/drift-audit.yml",
+                  "structurizr.dsl.identifier": "drift_audit"
+                },
+                "relationships": [
+                  {
+                    "description": "checks for drift with",
+                    "destinationId": "9",
+                    "id": "44",
+                    "sourceId": "17",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "checks for drift with",
+                    "destinationId": "5",
+                    "id": "45",
+                    "linkedRelationshipId": "44",
+                    "sourceId": "17"
+                  }
+                ],
+                "tags": "Element,Component,context:approval",
+                "technology": "GitHub Actions"
+              },
+              {
+                "description": "On a tag: verifies the release, renders the copies, writes the device history record, publishes the release",
+                "documentation": {},
+                "group": "release",
+                "id": "18",
+                "name": "Release workflow",
+                "properties": {
+                  "code": ".github/workflows/release-documents.yml",
+                  "structurizr.dsl.identifier": "release_workflow"
+                },
+                "relationships": [
+                  {
+                    "description": "verifies the release with the same gates as",
+                    "destinationId": "16",
+                    "id": "60",
+                    "sourceId": "18",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "renders the copies with",
+                    "destinationId": "14",
+                    "id": "61",
+                    "sourceId": "18",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "renders the copies with",
+                    "destinationId": "5",
+                    "id": "62",
+                    "linkedRelationshipId": "61",
+                    "sourceId": "18"
+                  },
+                  {
+                    "description": "writes the evidence bundle with",
+                    "destinationId": "20",
+                    "id": "64",
+                    "sourceId": "18",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "publishes the release, copies and device history record to",
+                    "destinationId": "19",
+                    "id": "65",
+                    "sourceId": "18",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:release",
+                "technology": "GitHub Actions"
+              }
+            ],
+            "description": "What GitHub runs for the repository",
+            "documentation": {},
+            "id": "15",
+            "name": "Workflows",
+            "properties": {
+              "structurizr.dsl.identifier": "workflows"
+            },
+            "relationships": [
+              {
+                "description": "checks for drift with",
+                "destinationId": "9",
+                "id": "46",
+                "linkedRelationshipId": "44",
+                "sourceId": "15"
+              },
+              {
+                "description": "checks for drift with",
+                "destinationId": "5",
+                "id": "47",
+                "linkedRelationshipId": "44",
+                "sourceId": "15"
+              },
+              {
+                "description": "runs the design gate, verify and the release gate of",
+                "destinationId": "20",
+                "id": "49",
+                "linkedRelationshipId": "48",
+                "sourceId": "15"
+              },
+              {
+                "description": "holds the documents to",
+                "destinationId": "13",
+                "id": "53",
+                "linkedRelationshipId": "51",
+                "sourceId": "15"
+              },
+              {
+                "description": "renders the copies with",
+                "destinationId": "14",
+                "id": "63",
+                "linkedRelationshipId": "61",
+                "sourceId": "15"
+              },
+              {
+                "description": "publishes the release, copies and device history record to",
+                "destinationId": "19",
+                "id": "66",
+                "linkedRelationshipId": "65",
+                "sourceId": "15"
+              }
+            ],
+            "tags": "Element,Container",
+            "technology": "GitHub Actions"
+          }
+        ],
+        "description": "The repository and its GitHub configuration: the record and what a change must pass",
+        "documentation": {},
+        "id": "4",
+        "name": "Document control system",
+        "properties": {
+          "structurizr.dsl.identifier": "dc_system"
+        },
+        "relationships": [
+          {
+            "description": "configures the repository on",
+            "destinationId": "19",
+            "id": "43",
+            "linkedRelationshipId": "41",
+            "sourceId": "4",
+            "technology": "gh api"
+          },
+          {
+            "description": "runs the design gate, verify and the release gate of",
+            "destinationId": "20",
+            "id": "50",
+            "linkedRelationshipId": "48",
+            "sourceId": "4"
+          }
+        ],
+        "tags": "Element,Software System"
+      },
+      {
+        "description": "Pull requests, rulesets, Actions and releases",
+        "documentation": {},
+        "id": "19",
+        "name": "GitHub",
+        "properties": {
+          "structurizr.dsl.identifier": "forge"
+        },
+        "relationships": [
+          {
+            "description": "enforces",
+            "destinationId": "6",
+            "id": "27",
+            "sourceId": "19",
+            "tags": "Relationship"
+          },
+          {
+            "description": "enforces",
+            "destinationId": "5",
+            "id": "28",
+            "linkedRelationshipId": "27",
+            "sourceId": "19"
+          },
+          {
+            "description": "enforces",
+            "destinationId": "4",
+            "id": "29",
+            "linkedRelationshipId": "27",
+            "sourceId": "19"
+          },
+          {
+            "description": "runs on every pull request",
+            "destinationId": "16",
+            "id": "30",
+            "sourceId": "19",
+            "tags": "Relationship"
+          },
+          {
+            "description": "runs on every pull request",
+            "destinationId": "15",
+            "id": "31",
+            "linkedRelationshipId": "30",
+            "sourceId": "19"
+          },
+          {
+            "description": "runs daily",
+            "destinationId": "17",
+            "id": "32",
+            "sourceId": "19",
+            "tags": "Relationship"
+          },
+          {
+            "description": "runs on a release tag",
+            "destinationId": "18",
+            "id": "33",
+            "sourceId": "19",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Software System,External"
+      },
+      {
+        "description": "The design-control gates, gap analysis and rendering, pinned to a release",
+        "documentation": {},
+        "id": "20",
+        "name": "RDM",
+        "properties": {
+          "structurizr.dsl.identifier": "rdm"
+        },
+        "tags": "Element,Software System,External"
+      }
+    ]
+  },
+  "name": "Document control",
+  "properties": {
+    "structurizr.inspection.error": "46",
+    "structurizr.inspection.ignore": "0",
+    "structurizr.inspection.info": "0",
+    "structurizr.inspection.warning": "0"
+  },
+  "rdm": {
+    "workspace_sha256": "79d7bfa2028e02b69a4073152f3da26cb97c8ff66e148ca24be448c511af3f0c"
+  },
+  "views": {
+    "componentViews": [
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "6",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "7",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "8",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "9",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "13",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "16",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "17",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "19",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_approval",
+        "name": "Component View: Document control system - Controlled record",
+        "order": 3,
+        "relationships": [
+          {
+            "id": "27"
+          },
+          {
+            "id": "30"
+          },
+          {
+            "id": "32"
+          },
+          {
+            "id": "34"
+          },
+          {
+            "id": "35"
+          },
+          {
+            "id": "39"
+          },
+          {
+            "id": "40"
+          },
+          {
+            "id": "41"
+          },
+          {
+            "id": "44"
+          },
+          {
+            "id": "48"
+          },
+          {
+            "id": "51"
+          }
+        ],
+        "title": "Approval: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "10",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "11",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "12",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "13",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "14",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "16",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "18",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_records",
+        "name": "Component View: Document control system - Controlled record",
+        "order": 4,
+        "relationships": [
+          {
+            "id": "21"
+          },
+          {
+            "id": "48"
+          },
+          {
+            "id": "51"
+          },
+          {
+            "id": "54"
+          },
+          {
+            "id": "55"
+          },
+          {
+            "id": "56"
+          },
+          {
+            "id": "57"
+          },
+          {
+            "id": "58"
+          },
+          {
+            "id": "60"
+          },
+          {
+            "id": "61"
+          },
+          {
+            "id": "64"
+          }
+        ],
+        "title": "Records: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "14",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "16",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "18",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "19",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_release",
+        "name": "Component View: Document control system - Controlled record",
+        "order": 5,
+        "relationships": [
+          {
+            "id": "30"
+          },
+          {
+            "id": "33"
+          },
+          {
+            "id": "48"
+          },
+          {
+            "id": "58"
+          },
+          {
+            "id": "60"
+          },
+          {
+            "id": "61"
+          },
+          {
+            "id": "64"
+          },
+          {
+            "id": "65"
+          }
+        ],
+        "title": "Release: components (C3)"
+      }
+    ],
+    "configuration": {
+      "branding": {},
+      "styles": {
+        "elements": [
+          {
+            "background": "#85bbf0",
+            "color": "#000000",
+            "tag": "Component"
+          },
+          {
+            "background": "#438dd5",
+            "color": "#ffffff",
+            "tag": "Container"
+          },
+          {
+            "shape": "Cylinder",
+            "tag": "Database"
+          },
+          {
+            "background": "#999999",
+            "color": "#ffffff",
+            "tag": "External"
+          },
+          {
+            "background": "#08427b",
+            "color": "#ffffff",
+            "shape": "Person",
+            "tag": "Person"
+          },
+          {
+            "background": "#1168bd",
+            "color": "#ffffff",
+            "tag": "Software System"
+          }
+        ]
+      },
+      "terminology": {}
+    },
+    "containerViews": [
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "5",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "15",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "19",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalSoftwareSystemBoundariesVisible": false,
+        "key": "C2",
+        "name": "Container View: Document control system",
+        "order": 2,
+        "relationships": [
+          {
+            "id": "22"
+          },
+          {
+            "id": "24"
+          },
+          {
+            "id": "28"
+          },
+          {
+            "id": "31"
+          },
+          {
+            "id": "38"
+          },
+          {
+            "id": "42"
+          },
+          {
+            "id": "47"
+          },
+          {
+            "id": "49"
+          },
+          {
+            "id": "59"
+          },
+          {
+            "id": "66"
+          }
+        ],
+        "softwareSystemId": "4",
+        "title": "Document control: containers (C2)"
+      }
+    ],
+    "systemContextViews": [
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "2",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "3",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "4",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "19",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "enterpriseBoundaryVisible": true,
+        "key": "C1",
+        "name": "System Context View: Document control system",
+        "order": 1,
+        "relationships": [
+          {
+            "id": "23"
+          },
+          {
+            "id": "24"
+          },
+          {
+            "id": "25"
+          },
+          {
+            "id": "26"
+          },
+          {
+            "id": "29"
+          },
+          {
+            "id": "43"
+          },
+          {
+            "id": "50"
+          }
+        ],
+        "softwareSystemId": "4",
+        "title": "Document control: system context (C1)"
+      }
+    ]
+  }
+}

@@ -118,6 +118,28 @@ changed.
 
 - None open.
 
+# Design Review 5 — the design outputs are the architecture
+
+**Scope reviewed:** the system architecture; the three design documents; the
+new architecture workspace (`dhf/c4/`). No design input changed.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The design outputs were lists of files. They are now the architecture, in
+  the C4 model: one workspace (`dhf/c4/workspace.dsl`) with a component for
+  each control, document and workflow, grouped by context, each naming what
+  implements it; each design document shows its context's component view
+  and a table of what each component is responsible for and which design
+  inputs it meets. The documents name components, not files.
+- The workspace's views are drawn and stamped by `rdm c4 draw`; the design
+  gate fails when one is stale.
+
+## Findings and actions
+
+- None open.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR) — no duplicate sign-off

@@ -19,6 +19,15 @@ history, immutability, signatures) and **GitHub** provides the service
 is SOP-DC-001. This document holds design only: the user needs live in the V&V
 plan, and a context serves the needs its design inputs trace to.
 
+The architecture is one C4 model, the workspace
+[`c4/workspace.dsl`](../c4/workspace.dsl); each view is drawn from it
+(`rdm c4 draw`): the system context and the containers here, and each
+context's components in its design document.
+
+![System context: document control](../c4/views/C1.svg)
+
+![Containers: document control](../c4/views/C2.svg)
+
 | Context | Part | Owns | Design document |
 | --- | --- | --- | --- |
 | `approval` | Configuration | what a change must pass to reach the default branch: the ruleset, CODEOWNERS, merge settings, the required checks, the drift audit | `design/approval.md` |
