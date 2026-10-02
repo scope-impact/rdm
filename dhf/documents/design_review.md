@@ -1297,6 +1297,23 @@ pytest plugin writes (Allure's executor and environment) too.
 The workspace declares the evidence bundle's use of the Allure reader, whose
 names for those files it takes; the views are redrawn.
 
+# Design Review 43 — RDM 2.0.0-alpha, and the version adoption pins
+
+**Scope reviewed:** how `rdm adopt` stamps the installed version (DI-24,
+DI-63). No design input changed.
+
+**Disposition:** Approved.
+
+RDM's next release is 2.0.0-alpha: the record's restructure into bounded
+contexts, the domain events and the C4 architecture change its module paths.
+The package version is PEP 440's `2.0.0a0`, but the release is tagged
+`v2.0.0-alpha` and its image `2.0.0-alpha` (the semantic-version form the
+image workflow and the PDF action use). Stamped as installed, the workflow
+`rdm adopt` lays down would pin a tag that does not exist. Adoption stamps the
+version's release tag instead: a final version unchanged, an alpha, beta or
+release candidate as `-alpha`, `-beta` or `-rc`, with its number when it is
+not 0.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
