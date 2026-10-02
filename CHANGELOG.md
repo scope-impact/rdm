@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added — document control and traceability
+- The `part11_document_control` built-in checklist and RDM's own Part 11-mapped
+  document-control statement, held by an acceptance test.
+- The `examples/github-document-control/` example: git as document control with
+  GitHub as the provider — rulesets and settings as code, pull-request approval
+  as the Part 11 signature, DMR/DHR analogs, a drift-audit script, its own gated
+  DHF.
+- Sound gap matching: a reference counts only inside `[[ … ]]`, by exact key
+  with a descendant covering its parent; prose mentions and sibling keys no
+  longer count.
+- Polyglot traceability: JS/TS and Java test tags are found for linkage.
+- `rdm hooks` installs the design-gate hook only (`--with-issue-hooks` adds the
+  legacy pair).
+
 ### Changed — one vocabulary with the requirements skill
 - `CONTEXT.md` is the glossary, in the domain-modeling skill's format, and the
   docs site shows it (Glossary). A design input *is* the acceptance criterion,
@@ -279,3 +293,22 @@ development (`dhf/`, `.github/workflows/design-controls.yml`).
 
 ### Changed
 - `[plan]` extra; planning tooling (Backlog.md / GitHub) is fenced as non-record.
+
+## 1.1.0
+
+- Story Audit module (`rdm[story-audit]`): Backlog.md parser, schema
+  validation, traceability audit and duplicate-id detection (removed since).
+- Bidirectional GitHub sync (`rdm[github]`): Backlog.md tasks to GitHub
+  Issues, Milestones and Projects v2, pull requests into DuckDB (removed since).
+- The VitalView example: a software-only medical device worked example for the
+  record-first model (removed since; RDM's own `dhf/` is the worked example).
+- Alias-based status normalization with fix hints in the validator.
+- Codebase simplification; CLAUDE.md for Claude Code; PyGithub 2.8.1, Ruff 0.14.13.
+
+## 1.0.0
+
+- Installation with `uv tool install` straight from GitHub.
+- Typst instead of LaTeX for PDF generation.
+- A lightweight Docker image (Alpine, Pandoc 3.6, Typst 0.12).
+- The GitHub Action for PDFs (`scope-impact/rdm@v1`).
+- Fixed cross-references in the `software_plan.md` template.

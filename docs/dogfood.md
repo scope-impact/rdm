@@ -6,6 +6,26 @@ in this repository, and every change to RDM goes through the same loop RDM
 asks of a device team: record first, then a tagged test, then the gates, then
 a reviewed pull request.
 
+## `docs/` and `dhf/`
+
+`docs/` explains RDM to its users; `dhf/` is the controlled record of how RDM
+itself is designed and verified. One explains, the other decides.
+
+| | `docs/` | `dhf/` |
+|---|---|---|
+| **What it is** | RDM's user documentation: this site, plus an API reference generated from the docstrings | RDM's own design history file: the regulated record RDM develops itself under |
+| **Who it's for** | People and agents using RDM on their own product | Whoever governs RDM's development: authors, reviewers, an auditor, and RDM's gates |
+| **What's in it** | How RDM works, the data model, the gates, the graph, agents, how-tos, the CLI reference, research notes, the glossary (included from `CONTEXT.md`) | The V&V plan with the user needs (UN-nnn); one design document per bounded context with its design inputs (DI-n) and C3 view; the architecture (C1/C2); the risk policy and register; the design reviews; document control; the agent workflow; generated data (Allure results, `verification.yml`) |
+| **Controlled?** | No: ordinary docs, changed by a normal reviewed pull request | Yes: the design gate requires it complete and committed before code; the release gate requires every design input in it verified |
+| **Checked by** | `mkdocs build --strict` (links, navigation) | The design gate, the release gate, `rdm graph validate`, and the tests tagged with its ids |
+| **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the verification report and the evidence bundle |
+| **Published** | As this site | Not as pages; this site shows one generated view of it, the traceability matrix, from a live test run at each build |
+
+Nothing flows from `docs/` into the record. Where a docs page restates what
+the record decides, the record wins: docs link to the record rather than
+repeat it. A product that adopts RDM gets its own `dhf/` (`rdm adopt` or
+`rdm init`), not RDM's `docs/`.
+
 ## What is in RDM's record
 
 ```
