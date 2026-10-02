@@ -1,6 +1,6 @@
 import pytest
 
-from rdm.collect import collect_from_lines
+from rdm.publishing.collect import collect_from_lines
 
 
 def test_no_snippets_in_empty_file():

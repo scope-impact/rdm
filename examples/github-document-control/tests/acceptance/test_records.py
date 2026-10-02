@@ -15,7 +15,7 @@ from dc_support import (  # noqa: E402
     CHECKLIST, DHF, DMR_INDEX, EXAMPLE, PROCEDURES, SHAPES, SOP, attach, frontmatter, rdm, render, verification_step,
 )
 
-from rdm.gaps import audit_for_gaps  # noqa: E402
+from rdm.compliance.gaps import audit_for_gaps  # noqa: E402
 
 
 def _graph_rules(dhf: Path) -> str:

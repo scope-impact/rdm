@@ -1,7 +1,7 @@
 import os
 import shutil
 from importlib.resources import files, as_file
-from rdm.util import print_info, repo_root
+from rdm.kernel.util import print_info, repo_root
 
 # The design-controls gate: installed by default (DI-26). The remaining hooks
 # enforce an issue-reference commit convention some teams use; they are

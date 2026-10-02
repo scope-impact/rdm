@@ -17,9 +17,9 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from rdm.record.report import REPORT_PDF, ReportUnavailable, write_report
-from rdm.record.sdd import MATRIX_DOC, find_dhf_doc
-from rdm.record.verify import write_verification_file
+from rdm.publishing.report import REPORT_PDF, ReportUnavailable, write_report
+from rdm.specification.sdd import MATRIX_DOC, find_dhf_doc
+from rdm.release.verify import write_verification_file
 
 
 def _attachment_sources(node) -> set[str]:
@@ -71,8 +71,8 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
         import jinja2
         import yaml
 
-        from rdm.render import render_template_to_file
-        from rdm.util import load_yaml
+        from rdm.publishing.render import render_template_to_file
+        from rdm.kernel.util import load_yaml
 
         config_file = dhf_dir / "config.yml"
         config = load_yaml(config_file) if config_file.exists() else {}

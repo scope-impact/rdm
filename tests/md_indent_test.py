@@ -1,4 +1,4 @@
-from rdm.render import md_indent
+from rdm.publishing.render import md_indent
 import pytest
 
 

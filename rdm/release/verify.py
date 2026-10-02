@@ -13,8 +13,8 @@ from pathlib import Path
 
 import yaml
 
-from rdm.record import allure
-from rdm.record.sdd import design_inputs, registry_user_needs
+from rdm.evidence import allure
+from rdm.specification.sdd import design_inputs, registry_user_needs
 
 
 def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:

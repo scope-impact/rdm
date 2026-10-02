@@ -19,7 +19,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record.sdd import _frontmatter_of
+from rdm.kernel.frontmatter import frontmatter_of
 
 RISK_KIND = "risk"
 CATEGORIES = ("safety", "security")
@@ -73,7 +73,7 @@ class Risk:
 
 def _docs(dhf_dir: Path):
     for md in sorted(Path(dhf_dir).rglob("*.md")):
-        yield md, _frontmatter_of(md)
+        yield md, frontmatter_of(md)
 
 
 def _text(value) -> str:

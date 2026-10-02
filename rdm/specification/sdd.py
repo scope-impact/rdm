@@ -17,11 +17,9 @@ story-audit / pydantic layer so the record pipeline stays lightweight.
 
 from __future__ import annotations
 
-import copy
-from functools import lru_cache
 from pathlib import Path
 
-import yaml
+from rdm.kernel.frontmatter import frontmatter_of
 
 # The traceability-matrix template: an output, rendered from the record, never
 # part of it (DI-58) — the graph leaves it out, the evidence bundle renders it.
@@ -46,38 +44,6 @@ def find_dhf_doc(dhf_dir: Path, basename: str) -> Path | None:
     return matches[0] if matches else None
 
 
-def parse_frontmatter(text: str) -> dict:
-    """Parse a YAML frontmatter block delimited by leading ``---`` fences."""
-    if not text.lstrip().startswith("---"):
-        return {}
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return {}
-    return copy.deepcopy(_load_yaml(parts[1]))  # a copy: callers may change what they get
-
-
-# libyaml when installed (about 10x faster); one parse per distinct block, since
-# a projection or a gate run reads the same documents through many helpers.
-_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
-
-
-@lru_cache(maxsize=1024)
-def _load_yaml(block: str) -> dict:
-    try:
-        data = yaml.load(block, Loader=_LOADER)
-    except yaml.YAMLError:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _frontmatter_of(path: Path) -> dict:
-    """Frontmatter of a document, or ``{}`` if unreadable/absent."""
-    try:
-        return parse_frontmatter(path.read_text(encoding="utf-8"))
-    except OSError:
-        return {}
-
-
 def user_needs_from_doc(doc_path: Path) -> set[str]:
     """Return user-need IDs from a document's frontmatter ``user_needs`` list.
 
@@ -87,7 +53,7 @@ def user_needs_from_doc(doc_path: Path) -> set[str]:
     """
     if not doc_path.exists():
         return set()
-    value = _frontmatter_of(doc_path).get("user_needs")
+    value = frontmatter_of(doc_path).get("user_needs")
     if not isinstance(value, list):
         return set()
     ids: set[str] = set()
@@ -108,14 +74,14 @@ def find_design_docs(dhf_dir: Path) -> list[Path]:
     """
     found: list[Path] = []
     for md in dhf_dir.rglob("*.md"):
-        if _frontmatter_of(md).get("kind") == DESIGN_KIND:
+        if frontmatter_of(md).get("kind") == DESIGN_KIND:
             found.append(md)
     return sorted(found)
 
 
 def context_of(path: Path) -> str:
     """The bounded-context name a design document declares (or its filename)."""
-    context = str(_frontmatter_of(path).get("context", "")).strip()
+    context = str(frontmatter_of(path).get("context", "")).strip()
     return context or path.stem
 
 
@@ -138,7 +104,7 @@ def declarations(dhf_dir: Path) -> dict[str, list[str]]:
     twice in one document lists that document twice (DI-46)."""
     found: dict[str, list[str]] = {}
     for md in sorted(Path(dhf_dir).rglob("*.md")):
-        front = _frontmatter_of(md)
+        front = frontmatter_of(md)
         where = str(md.relative_to(dhf_dir))
         entries = list(front.get("user_needs") or [])
         if front.get("kind") == DESIGN_KIND:
@@ -159,7 +125,7 @@ def user_need_texts(dhf_dir: Path) -> dict[str, str]:
     """Each registered user need's text, where its ``{id, text}`` entry gives one."""
     texts: dict[str, str] = {}
     for md in sorted(dhf_dir.rglob("*.md")):
-        value = _frontmatter_of(md).get("user_needs")
+        value = frontmatter_of(md).get("user_needs")
         for item in value if isinstance(value, list) else []:
             if isinstance(item, dict) and str(item.get("id", "")).strip() and item.get("text"):
                 texts.setdefault(str(item["id"]).strip(), str(item["text"]).strip())
@@ -178,7 +144,7 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
     inputs: list[dict] = []
     seen: set[str] = set()
     for doc in find_design_docs(dhf_dir):
-        front = _frontmatter_of(doc)
+        front = frontmatter_of(doc)
         value = front.get("design_inputs")
         if not isinstance(value, list):
             continue
@@ -216,7 +182,7 @@ def realises_by_context(dhf_dir: Path) -> dict[Path, set[str]]:
     """
     refs: dict[Path, set[str]] = {}
     for doc in find_design_docs(dhf_dir):
-        value = _frontmatter_of(doc).get("realises")
+        value = frontmatter_of(doc).get("realises")
         if isinstance(value, list):
             refs[doc] = {str(v).strip() for v in value if str(v).strip()}
         else:

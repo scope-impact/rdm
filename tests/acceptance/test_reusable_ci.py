@@ -21,9 +21,9 @@ import yaml
 
 allure = pytest.importorskip("allure")
 
-from rdm.adopt import adopt  # noqa: E402
+from rdm.specification.adopt import adopt  # noqa: E402
 from rdm.main import parse_arguments  # noqa: E402
-from rdm.version import __version__  # noqa: E402
+from rdm.kernel.version import __version__  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.util import git_run, write_allure_result  # noqa: E402
 
@@ -129,8 +129,8 @@ def _rdm_commands(text: str) -> list[list[str]]:
 @allure.label("output", ".github/workflows/gates.yml")
 @allure.label("output", "actions/gates/action.yml")
 @allure.label("output", "action.yml")
-@allure.label("output", "rdm/adopt.py")
-@allure.label("output", "rdm/adopt_files/.github/workflows/design-controls.yml")
+@allure.label("output", "rdm/specification/adopt.py")
+@allure.label("output", "rdm/specification/adopt_files/.github/workflows/design-controls.yml")
 def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
     """DI-63: a reusable workflow (tests, then the gates) and a composite gates
     action install RDM from the pinned revision; the PDF action renders with

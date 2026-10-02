@@ -15,7 +15,7 @@ from pathlib import Path
 
 import yaml
 
-from rdm.record.sdd import parse_frontmatter
+from rdm.kernel.frontmatter import parse_frontmatter
 
 
 def dmr_entries(documents_dir: Path, relative_to: Path | None = None) -> list[dict]:

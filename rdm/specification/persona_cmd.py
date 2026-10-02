@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rdm.record import persona
-from rdm.record.sdd import user_needs_from_doc
+from rdm.specification import persona
+from rdm.specification.sdd import user_needs_from_doc
 
 _DISCLAIMER = (
     "NOTE: AI-persona runs are FORMATIVE evidence only -- they surface usability "

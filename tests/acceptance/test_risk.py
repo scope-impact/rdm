@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from rdm.record.risk import read_policy, risks
-from rdm.gates.design_gate import run_release_gate
+from rdm.risk.register import read_policy, risks
+from rdm.release.gate import run_release_gate
 from tests.acceptance.test_graph_shapes import _dhf, _results
 
 allure = pytest.importorskip("allure")
@@ -117,7 +117,7 @@ def _gate(tmp_path: Path, name: str, entries: list[dict], with_policy: bool = Tr
 
 
 @allure.story("DI-43")
-@allure.label("output", "rdm/record/risk.py")
+@allure.label("output", "rdm/risk/register.py")
 def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Path) -> None:
     """DI-43: every field of a risk is read from kind: risk frontmatter;
     levels come only from a declared risk policy (no default); residual
@@ -205,7 +205,7 @@ def _check_cases(tmp_path: Path, names) -> None:
 
 
 @allure.story("DI-44")
-@allure.label("output", "rdm/record/risk.py")
+@allure.label("output", "rdm/risk/register.py")
 def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
     """DI-44: missing criteria, duplicate or missing ids, a broken chain or
     branch, an undefined or mis-scored risk, an undeclared control, and
@@ -227,7 +227,7 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
 
 
 @allure.story("DI-50")
-@allure.label("output", "rdm/record/risk.py")
+@allure.label("output", "rdm/risk/register.py")
 def test_release_gate_blocks_on_the_residual_rules(tmp_path: Path) -> None:
     """DI-50: a residual not evaluated (a control without a passing test), an
     unacceptable residual, and a justify-level residual without a full

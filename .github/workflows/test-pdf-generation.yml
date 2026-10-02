@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'rdm/init_files/**'
+      - 'rdm/specification/init_files/**'
       - 'rdm/**/*.py'
       - 'pyproject.toml'
       - 'uv.lock'
@@ -12,7 +12,7 @@ on:
       - '.github/workflows/test-pdf-generation.yml'
   pull_request:
     paths:
-      - 'rdm/init_files/**'
+      - 'rdm/specification/init_files/**'
       - 'rdm/**/*.py'
       - 'pyproject.toml'
       - 'uv.lock'

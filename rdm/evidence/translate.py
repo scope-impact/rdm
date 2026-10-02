@@ -1,5 +1,5 @@
-from rdm.util import write_yaml
-from rdm.test_formatters.xml_util import (
+from rdm.kernel.util import write_yaml
+from rdm.evidence.test_formatters.xml_util import (
     flattened_gtest_results,
     xml_load,
     flattened_qttest_results,

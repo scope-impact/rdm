@@ -1,7 +1,7 @@
 from jinja2 import nodes
 from jinja2.ext import Extension
 
-from rdm.util import post_processing_filter_list
+from rdm.kernel.util import post_processing_filter_list
 
 
 class RdmExtension(Extension):

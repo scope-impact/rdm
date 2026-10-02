@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rdm.gates.design_gate import run_release_gate, story_release_gate_command
+from rdm.release.gate import run_release_gate, story_release_gate_command
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _result

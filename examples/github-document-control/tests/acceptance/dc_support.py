@@ -21,8 +21,8 @@ import allure
 import jinja2
 import yaml
 
-from rdm.render import render_template_to_file
-from rdm.util import context_from_data_files, load_yaml
+from rdm.publishing.render import render_template_to_file
+from rdm.kernel.util import context_from_data_files, load_yaml
 
 verification_step = allure.step
 

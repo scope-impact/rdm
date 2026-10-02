@@ -3,7 +3,7 @@ import pytest
 import subprocess
 
 from git import Repo
-from rdm.hooks import install_hooks
+from rdm.specification.hooks import install_hooks
 
 
 @pytest.fixture

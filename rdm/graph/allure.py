@@ -20,8 +20,9 @@ from pathlib import Path
 import pyoxigraph as ox
 
 from rdm.graph.project import _DCT, _PROV, _XSD, _Dataset, _term, rdm
-from rdm.record.allure import COMMIT_LABEL, DESIGN_INPUT_LABELS, WORKTREE_LABEL, run_version
-from rdm.record.ids import is_id
+from rdm.evidence.allure import COMMIT_LABEL, WORKTREE_LABEL, run_version
+from rdm.specification.tags import DESIGN_INPUT_LABELS
+from rdm.kernel.ids import is_id
 
 GRAPH = "executions"
 

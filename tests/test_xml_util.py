@@ -2,7 +2,9 @@ import os
 
 import pytest
 
-from rdm.test_formatters.xml_util import xml_load, flattened_gtest_results, flattened_qttest_results, auto_translator
+from rdm.evidence.test_formatters.xml_util import (
+    auto_translator, flattened_gtest_results, flattened_qttest_results, xml_load,
+)
 
 
 def _full_path_of_test_file(name):

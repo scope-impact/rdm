@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rdm.record.sdd import (
+from rdm.specification.sdd import (
     design_input_ids,
     find_design_docs,
     realises_by_context,

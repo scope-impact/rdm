@@ -4,7 +4,7 @@ drawn files are current (DI-70).
 
 The architecture is one Structurizr workspace, ``<dhf>/c4/workspace.dsl``: the
 model (people, software systems, containers, components grouped by bounded
-context) and its views. ``rdm c4 draw`` (rdm/c4.py) exports it as
+context) and its views. ``rdm c4 draw`` (rdm/architecture/draw.py) exports it as
 ``<dhf>/c4/workspace.json`` and draws each view to ``<dhf>/c4/views/<view>.svg``,
 each stamped with the workspace's SHA-256. This module reads the JSON, so
 reading needs neither Java nor a parser, and checks the stamps, so checking

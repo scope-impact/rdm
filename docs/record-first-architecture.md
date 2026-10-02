@@ -120,13 +120,16 @@ what) wrote the change.
 
 ## Where the code lives
 
-| Part | Modules |
+| Part | Packages (one per bounded context) |
 | --- | --- |
-| Record — read it | `rdm/record/` — design and V&V frontmatter (`sdd.py`), Allure results (`allure.py`), verification (`verify.py`), the risk register (`risk.py`), release evidence (`bundle.py`, `dmr.py`), usability evidence (`persona.py`, `validation.py`) |
-| Record — scaffold it | `rdm/init.py`, `rdm/adopt.py`, `rdm/gates/new_input.py`; `rdm/pytest_plugin.py` labels each test run from the record |
-| Gates | `rdm/gates/design_gate.py` (design and release gates), `rdm/gaps.py` (gap analysis), `rdm/gates/mutation.py` (the reviewer's probe) |
-| Graph | `rdm/graph/` — projection (`project.py`, `allure.py`, `checklists.py`), vocabulary and gate shapes (`ontology.ttl`, `shapes.ttl`), SHACL validation, Graph Explorer file, the MCP server (`agent.py`) |
-| Documents | `rdm/render.py`, `rdm/md_extensions/`, `rdm/init_files/` |
+| Record | `rdm/specification/` — the record reader (`sdd.py`), test tags (`tags.py`), the design gate, `init`, `adopt`, `new-input`, validation records and persona runs; `rdm/risk/` — the risk register; `rdm/architecture/` — the C4 model and `rdm c4 draw`; `rdm/evidence/` — Allure results, `translate`, the mutation probe; `rdm/pytest_plugin.py` labels each test run from the record |
+| Gates | `rdm/release/` — the release gate and trace, the verification data; `rdm/compliance/` — gap analysis and the built-in checklists |
+| Graph | `rdm/graph/` — projection (`project.py`, `allure.py`, `checklists.py`, `c4.py`), vocabulary and gate shapes (`ontology.ttl`, `shapes.ttl`), SHACL validation, Graph Explorer file, the MCP server (`agent.py`) |
+| Documents | `rdm/publishing/` — `render.py`, snippets, the DMR index, the verification report, the evidence bundle; `rdm/md_extensions/` |
+
+Below every context, the shared kernel (`rdm/kernel/`); above, the composition
+root (`rdm/main.py`). A context imports only the contexts below it, and a test
+holds the code to it.
 
 RDM's own architecture document assigns each bounded context to one of these
 parts ([`dhf/documents/architecture.md`](https://github.com/scope-impact/rdm/blob/main/dhf/documents/architecture.md)).

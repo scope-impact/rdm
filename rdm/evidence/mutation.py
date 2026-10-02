@@ -7,7 +7,7 @@ the test has a hole), then ALWAYS restore the file. A reviewer's tool (DI-34):
 it turns a pull-request reviewer's claim ("this test would fail if X were
 broken") into an executed check. It records nothing and gates nothing.
 
-    rdm story mutation-probe --file rdm/gaps.py \
+    rdm story mutation-probe --file rdm/compliance/gaps.py \
         --find 'include_files, reduced = _split_out_include_files(...)' \
         --replace 'include_files, reduced = set(), raw' \
         --test test_ships_composable_builtin_checklists

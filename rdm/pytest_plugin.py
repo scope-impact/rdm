@@ -38,8 +38,8 @@ from pathlib import Path
 
 import pytest
 
-from rdm.record.allure import COMMIT_LABEL, DIRTY, REQUIREMENT_ATTACHMENT, WORKTREE_LABEL, write_run_facts
-from rdm.record.git import git, head, repository_url
+from rdm.evidence.allure import COMMIT_LABEL, DIRTY, REQUIREMENT_ATTACHMENT, WORKTREE_LABEL, write_run_facts
+from rdm.kernel.git import git, head, repository_url
 
 
 def pytest_addoption(parser):
@@ -51,8 +51,8 @@ def pytest_addoption(parser):
 def _record(dhf: str) -> dict:
     """Design inputs, the documents that declare each id (repo-relative), and
     the risks each input controls."""
-    from rdm.record.risk import risks
-    from rdm.record.sdd import declarations, design_inputs
+    from rdm.risk.register import risks
+    from rdm.specification.sdd import declarations, design_inputs
 
     path = Path(dhf)
     root = Path(git(path, "rev-parse", "--show-toplevel") or path.parent).resolve()

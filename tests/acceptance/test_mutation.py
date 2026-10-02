@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm.gates.mutation import (
+from rdm.evidence.mutation import (
     TESTS_FAILED,
     TESTS_PASSED,
     _pytest_runner,
@@ -37,7 +37,7 @@ def _runner(src: Path, original: str, mutated: str, seen: list | None = None):
 
 
 @allure.story("DI-34")
-@allure.label("output", "rdm/gates/mutation.py")
+@allure.label("output", "rdm/evidence/mutation.py")
 def test_mutation_probe_applies_reports_and_restores(tmp_path: Path) -> None:
     """DI-34: the probe applies the mutation while the test runs, reports
     killed/survived from the result, always restores the file, and rejects an
@@ -80,7 +80,7 @@ def test_mutation_probe_applies_reports_and_restores(tmp_path: Path) -> None:
 
 
 @allure.story("DI-34")
-@allure.label("output", "rdm/gates/mutation.py")
+@allure.label("output", "rdm/evidence/mutation.py")
 def test_mutation_probe_only_a_genuine_test_failure_is_a_kill(tmp_path: Path, monkeypatch) -> None:
     """DI-34: a run that errors or collects no tests is reported as an error,
     never as a kill — a typo'd selector must not manufacture killing evidence."""
@@ -110,7 +110,7 @@ def test_mutation_probe_only_a_genuine_test_failure_is_a_kill(tmp_path: Path, mo
 
 
 @allure.story("DI-47")
-@allure.label("output", "rdm/gates/mutation.py")
+@allure.label("output", "rdm/evidence/mutation.py")
 def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     """DI-47: the original is journaled before mutating and
     an interrupted probe is recovered on the next probe; SIGTERM mid-window
@@ -119,7 +119,7 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
     size-preserving mutation."""
     import signal
 
-    from rdm.gates.mutation import JOURNAL_SUFFIX, recover_interrupted_probe
+    from rdm.evidence.mutation import JOURNAL_SUFFIX, recover_interrupted_probe
 
     src = tmp_path / "m.py"
     journal = tmp_path / ("m.py" + JOURNAL_SUFFIX)

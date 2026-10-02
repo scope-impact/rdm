@@ -2,7 +2,7 @@
 
 Each test ("live BDD") verifies a gap-analysis design
 input, tagged with `@allure.story` and its DI id, exercising the real
-`rdm/gaps.py` engine.
+`rdm/compliance/gaps.py` engine.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm.gaps import audit_for_gaps, coverage_report, list_default_checklists
+from rdm.compliance.gaps import audit_for_gaps, coverage_report, list_default_checklists
 
 allure = pytest.importorskip("allure")
 
@@ -23,7 +23,7 @@ from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 @allure.story("DI-10")
-@allure.label("output", "rdm/gaps.py")
+@allure.label("output", "rdm/compliance/gaps.py")
 def test_reports_missing_checklist_references(tmp_path: Path) -> None:
     """DI-10: a missing required reference makes the audit exit non-zero; a fully
     covered document exits zero. A reference is a delimited [[KEY]] — a bare
@@ -72,7 +72,7 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
 
 
 @allure.story("DI-11")
-@allure.label("output", "rdm/checklists/")
+@allure.label("output", "rdm/compliance/checklists/")
 def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
     """DI-11: the standard checklists ship, and a built-in name resolves its
     includes when audited."""
@@ -98,7 +98,7 @@ def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
 
 
 @allure.story("DI-12")
-@allure.label("output", "rdm/gaps.py")
+@allure.label("output", "rdm/compliance/gaps.py")
 def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> None:
     """DI-12: coverage is tabulated per checklist; verbose names the missing items."""
     checklist = tmp_path / "iso_checklist.txt"

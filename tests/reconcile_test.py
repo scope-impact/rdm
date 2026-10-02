@@ -1,11 +1,11 @@
-"""Tests for the generic reconciliation core (rdm.record.reconcile)."""
+"""Tests for the generic reconciliation core (rdm.kernel.reconcile)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from rdm.record.ids import relevant_orphans
-from rdm.record.reconcile import aggregate_by_id, ids_with_status
+from rdm.kernel.ids import relevant_orphans
+from rdm.kernel.reconcile import aggregate_by_id, ids_with_status
 
 
 @dataclass

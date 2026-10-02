@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
+from rdm.kernel.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
 # A run whose outcome is one of these counts as a failed attempt at the journey.
 _FAILURE_OUTCOMES = {"failure", "failed", "blocked", "abandoned"}

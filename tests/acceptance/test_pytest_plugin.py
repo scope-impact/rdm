@@ -18,7 +18,7 @@ import yaml
 
 allure = pytest.importorskip("allure")
 
-from rdm.record.git import web_url  # noqa: E402
+from rdm.kernel.git import web_url  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_risk import POLICY  # noqa: E402
 from tests.util import git_run  # noqa: E402

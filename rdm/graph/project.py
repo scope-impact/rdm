@@ -32,10 +32,12 @@ import pyoxigraph as ox
 
 from rdm.graph.c4 import project_architecture
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
-from rdm.record.allure import find_tests_dir, full_name, reconcile, scan_source_tests
-from rdm.record.git import git, repo_root
-from rdm.record.ids import is_id, relevant_orphans
-from rdm.record.sdd import (
+from rdm.evidence.allure import full_name, reconcile
+from rdm.specification.tags import find_tests_dir, scan_source_tests
+from rdm.kernel.frontmatter import parse_frontmatter
+from rdm.kernel.git import git, repo_root
+from rdm.kernel.ids import is_id, relevant_orphans
+from rdm.specification.sdd import (
     MATRIX_DOC,
     context_of,
     declarations,
@@ -43,7 +45,6 @@ from rdm.record.sdd import (
     design_inputs,
     find_dhf_doc,
     find_design_docs,
-    parse_frontmatter,
     realises_by_context,
     registry_user_needs,
     user_need_texts,
@@ -324,7 +325,7 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
     disagree. A finding about the register as a whole goes on every risk."""
     from collections import Counter
 
-    from rdm.record.risk import assess, read_policy, residual_decision
+    from rdm.risk.register import assess, read_policy, residual_decision
 
     try:
         policy = read_policy(dhf)

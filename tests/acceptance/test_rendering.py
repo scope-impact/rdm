@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm.render import invert_dependencies, join_to, md_indent
+from rdm.publishing.render import invert_dependencies, join_to, md_indent
 from tests.util import render_from_string
 
 allure = pytest.importorskip("allure")
@@ -28,7 +28,7 @@ ROOT = Path(__file__).parents[2]
 
 
 @allure.story("DI-7")
-@allure.label("output", "rdm/render.py")
+@allure.label("output", "rdm/publishing/render.py")
 def test_renders_template_against_data_context() -> None:
     """DI-7: a Markdown template renders against a supplied data context."""
     out = render_from_string(
@@ -39,7 +39,7 @@ def test_renders_template_against_data_context() -> None:
 
 
 @allure.story("DI-8")
-@allure.label("output", "rdm/render.py")
+@allure.label("output", "rdm/publishing/render.py")
 def test_traceability_filters() -> None:
     """DI-8: the invert_dependencies / join_to / md_indent filters behave."""
     with verification_step("invert_dependencies: edge A→B inverts to B being depended-on by {A}"):
@@ -112,18 +112,18 @@ def _tool(tmp_path: Path, name: str, source: str) -> Path:
 
 
 @allure.story("DI-70")
-@allure.label("output", "rdm/c4.py")
-@allure.label("output", "rdm/record/c4.py")
-@allure.label("output", "rdm/gates/design_gate.py")
+@allure.label("output", "rdm/architecture/draw.py")
+@allure.label("output", "rdm/architecture/model.py")
+@allure.label("output", "rdm/specification/design_gate.py")
 def test_architecture_views_are_drawn_from_the_workspace_and_kept_current(tmp_path, monkeypatch) -> None:
     """DI-70: each view of the architecture workspace is drawn to an image in
     the record, stamped with the workspace it was drawn from, and the design
     gate fails when the model or a view's image was not drawn from the current
     workspace, or a view has no image."""
-    from rdm.c4 import DrawError, draw
-    from rdm.record.c4 import stale
-    from rdm.record.c4 import workspace_digest as digest
-    from rdm.gates.design_gate import check_architecture_views, run_design_gate
+    from rdm.architecture.draw import DrawError, draw
+    from rdm.architecture.model import stale
+    from rdm.architecture.model import workspace_digest as digest
+    from rdm.specification.design_gate import check_architecture_views, run_design_gate
 
     dhf = tmp_path / "dhf"
     (dhf / "c4" / "views").mkdir(parents=True)

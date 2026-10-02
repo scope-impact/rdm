@@ -1,7 +1,7 @@
 import io
 from collections import OrderedDict
 
-from rdm.util import and_list_str, write_yaml
+from rdm.kernel.util import and_list_str, write_yaml
 
 
 def test_and_list_str():

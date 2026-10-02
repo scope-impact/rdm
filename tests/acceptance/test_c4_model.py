@@ -18,7 +18,7 @@ import yaml
 
 allure = pytest.importorskip("allure")
 
-from rdm.record.c4 import read_model  # noqa: E402
+from rdm.architecture.model import read_model  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 ROOT = Path(__file__).parents[2]
@@ -63,7 +63,7 @@ WORKSPACE = {
 
 
 @allure.story("DI-66")
-@allure.label("output", "rdm/record/c4.py")
+@allure.label("output", "rdm/architecture/model.py")
 def test_the_c4_model_is_read_from_the_architecture_workspace(tmp_path: Path) -> None:
     """DI-66: RDM reads the C4 model from the architecture workspace's export:
     every element with its identifier, name, technology, description and

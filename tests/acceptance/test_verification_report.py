@@ -24,9 +24,9 @@ pytest.importorskip("typst")
 pypdf = pytest.importorskip("pypdf")
 
 from rdm.main import cli  # noqa: E402
-from rdm.record.bundle import evidence_bundle  # noqa: E402
-from rdm.record.report import TEXT_LINES, ReportUnavailable, build_report, render_pdf  # noqa: E402
-from rdm.version import __version__  # noqa: E402
+from rdm.publishing.bundle import evidence_bundle  # noqa: E402
+from rdm.publishing.report import TEXT_LINES, ReportUnavailable, build_report, render_pdf  # noqa: E402
+from rdm.kernel.version import __version__  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.util import git_run  # noqa: E402
 
@@ -134,9 +134,9 @@ def _text(pdf: Path) -> str:
 
 
 @allure.story("DI-64")
-@allure.label("output", "rdm/record/report.py")
-@allure.label("output", "rdm/record/verification_report.typ")
-@allure.label("output", "rdm/record/bundle.py")
+@allure.label("output", "rdm/publishing/report.py")
+@allure.label("output", "rdm/publishing/verification_report.typ")
+@allure.label("output", "rdm/publishing/bundle.py")
 def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monkeypatch) -> None:
     """DI-64: identification, evidence status, anomalies and traceability first;
     then per design input every run with its verification steps and the

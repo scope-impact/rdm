@@ -80,7 +80,7 @@ def _result(results: Path, name: str, full_name: str, *stories: str) -> None:
 
 
 @allure.story("DI-61")
-@allure.label("output", "rdm/record/allure.py")
+@allure.label("output", "rdm/evidence/allure.py")
 @allure.label("output", "rdm/graph/project.py")
 @allure.label("output", "rdm/graph/shapes.ttl")
 def test_tests_are_functions_and_runs_find_them(tmp_path: Path) -> None:

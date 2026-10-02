@@ -5,13 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from rdm.record.allure import (
-    FAILED,
-    UNTESTED,
-    VERIFIED,
-    parse_results,
-    reconcile,
-)
+from rdm.evidence.allure import FAILED, UNTESTED, VERIFIED, parse_results, reconcile
 from tests.util import write_allure_result as _result
 
 
@@ -117,21 +111,21 @@ class TestYamlTestDiscovery:
 
     def test_yaml_test_file_is_discovered(self, tmp_path: Path) -> None:
         """A *_test.yml file counts as a test file."""
-        from rdm.record.allure import iter_test_files
+        from rdm.specification.tags import iter_test_files
 
         found = {p.name for p in iter_test_files(self._suite(tmp_path / "tests"))}
         assert "foundation_dns_test.yml" in found
 
     def test_ansible_task_tags_resolve_to_design_inputs(self, tmp_path: Path) -> None:
         """`tags: [DI-5]` is the tag syntax, so DI-5 is the claimed id."""
-        from rdm.record.allure import scan_source_tags
+        from rdm.specification.tags import scan_source_tags
 
         refs = scan_source_tags(self._suite(tmp_path / "tests"))
         assert "DI-5" in refs
 
     def test_ordinary_ansible_tags_are_not_mistaken_for_ids(self, tmp_path: Path) -> None:
         """`dns` is a plain Ansible tag and must not enter the id universe."""
-        from rdm.record.allure import scan_source_tags
+        from rdm.specification.tags import scan_source_tags
 
         refs = scan_source_tags(self._suite(tmp_path / "tests"))
         assert "dns" not in refs
@@ -143,7 +137,7 @@ class TestYamlTestDiscovery:
         Callers report these as a file count ("tagged (n file(s))"), so counting
         occurrences made one file with thirteen DI-1 tags read as thirteen files.
         """
-        from rdm.record.allure import scan_source_tags
+        from rdm.specification.tags import scan_source_tags
 
         refs = scan_source_tags(self._suite(tmp_path / "tests"))
         assert refs["DI-5"] == [str(tmp_path / "tests" / "foundation_dns_test.yml")]
@@ -156,7 +150,7 @@ class TestYamlTestDiscovery:
         globs alone found none of them and the live tier could not be
         discovered at all.
         """
-        from rdm.record.allure import iter_test_files
+        from rdm.specification.tags import iter_test_files
 
         tests_dir = tmp_path / "tests" / "roles" / "gitops" / "tasks"
         tests_dir.mkdir(parents=True)
@@ -180,7 +174,7 @@ class TestYamlTestDiscovery:
         halla_health_app carries 162 Dart test files under `test/`; looking only
         for the plural made the whole suite read as absent.
         """
-        from rdm.record.allure import find_tests_dir
+        from rdm.specification.tags import find_tests_dir
 
         (tmp_path / "dhf").mkdir()
         (tmp_path / "test").mkdir()
@@ -188,7 +182,7 @@ class TestYamlTestDiscovery:
 
     def test_plural_test_directory_still_wins(self, tmp_path: Path) -> None:
         """Where both exist, `tests/` is preferred — it is rdm's own convention."""
-        from rdm.record.allure import find_tests_dir
+        from rdm.specification.tags import find_tests_dir
 
         (tmp_path / "dhf").mkdir()
         (tmp_path / "test").mkdir()
@@ -197,7 +191,7 @@ class TestYamlTestDiscovery:
 
     def test_dart_test_files_are_discovered(self, tmp_path: Path) -> None:
         """`*_test.dart` is a test file."""
-        from rdm.record.allure import iter_test_files
+        from rdm.specification.tags import iter_test_files
 
         d = tmp_path / "test" / "providers"
         d.mkdir(parents=True)

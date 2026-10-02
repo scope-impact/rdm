@@ -17,7 +17,7 @@ import pytest
 
 from tests.util import git_run as _git
 
-HOOK = Path(__file__).resolve().parents[1] / "rdm" / "hook_files" / "pre-commit"
+HOOK = Path(__file__).resolve().parents[1] / "rdm" / "specification" / "hook_files" / "pre-commit"
 
 
 def _run_hook(repo: Path, **env_overrides: str) -> int:

@@ -12,7 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from rdm.gates.design_gate import run_design_gate, run_release_gate
+from rdm.specification.design_gate import run_design_gate
+from rdm.release.gate import run_release_gate
 from tests.acceptance.test_graph_shapes import _dhf, _results
 
 allure = pytest.importorskip("allure")
@@ -27,7 +28,7 @@ def _ids_check(dhf: Path):
 
 
 @allure.story("DI-46")
-@allure.label("output", "rdm/gates/design_gate.py")
+@allure.label("output", "rdm/specification/design_gate.py")
 def test_a_duplicated_id_fails_the_design_gate_and_shows_in_the_graph(tmp_path: Path) -> None:
     """DI-46: a user-need or design-input id declared twice — in one document
     or in several — fails the design gate naming every declaring document; a

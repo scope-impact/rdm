@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm.record.allure import scan_source_tags
+from rdm.specification.tags import scan_source_tags
 
 allure = pytest.importorskip("allure")
 
@@ -41,7 +41,7 @@ class TestGroup:
 
 
 @allure.story("DI-40")
-@allure.label("output", "rdm/record/allure.py")
+@allure.label("output", "rdm/evidence/allure.py")
 def test_python_tags_come_from_decorators_only(tmp_path: Path) -> None:
     """DI-40: tags from allure story decorators on functions (sync and async)
     and classes and from a module-level pytestmark; none from strings,

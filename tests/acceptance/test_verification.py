@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm.record.bundle import evidence_bundle
+from rdm.publishing.bundle import evidence_bundle
 
 allure = pytest.importorskip("allure")
 
@@ -61,7 +61,7 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
 
 
 @allure.story("DI-30")
-@allure.label("output", "rdm/record/bundle.py")
+@allure.label("output", "rdm/publishing/bundle.py")
 def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None:
     """DI-30: the bundle contains the verification data, the rendered matrix,
     the executed results with their attachments and containers, and a manifest

@@ -14,13 +14,13 @@ from pathlib import Path
 
 import pytest
 
-from rdm.hooks import install_hooks
+from rdm.specification.hooks import install_hooks
 
 allure = pytest.importorskip("allure")
 
 
 @allure.story("DI-26")
-@allure.label("output", "rdm/hooks.py")
+@allure.label("output", "rdm/specification/hooks.py")
 def test_hooks_installs_design_gate_only_by_default(tmp_path: Path) -> None:
     """DI-26: default install is the design-gate pre-commit hook only; the
     issue-reference hooks land solely with the explicit flag."""

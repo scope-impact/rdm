@@ -19,8 +19,8 @@ import re
 import textwrap
 from pathlib import Path
 
-from rdm.record.allure import find_tests_dir
-from rdm.record.sdd import (
+from rdm.specification.tags import find_tests_dir
+from rdm.specification.sdd import (
     context_of,
     design_input_ids,
     find_design_docs,

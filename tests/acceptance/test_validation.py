@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from rdm.record.validation import parse_validation_records, unvalidated_user_needs
-from rdm.gates.design_gate import run_release_gate
+from rdm.specification.validation import parse_validation_records, unvalidated_user_needs
+from rdm.release.gate import run_release_gate
 from tests.util import git_run
 
 allure = pytest.importorskip("allure")
@@ -54,7 +54,7 @@ def _validated_record(tmp_path: Path) -> tuple[Path, Path]:
 
 
 @allure.story("DI-33")
-@allure.label("output", "rdm/record/validation.py")
+@allure.label("output", "rdm/specification/validation.py")
 def test_release_gate_names_unvalidated_user_needs(tmp_path: Path) -> None:
     """DI-33: validation records are ingested per user need; the release gate
     warns (never blocks) for each need without an APPROVED record."""

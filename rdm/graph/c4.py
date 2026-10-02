@@ -3,7 +3,7 @@
 Two named graphs, one per source, so a query can tell what the architecture
 claims from what the code does:
 
-- ``architecture`` — the workspace's model (rdm/record/c4.py): each person,
+- ``architecture`` — the workspace's model (rdm/architecture/model.py): each person,
   software system, container and component, typed, with its name, technology,
   description and external flag, and the element that contains it; each
   component's bounded context and code; each relationship as a node with its
@@ -20,7 +20,7 @@ from pathlib import Path
 import pyoxigraph as ox
 
 from rdm.graph.ns import DCTERMS, RDF, XSD
-from rdm.record.c4 import component_dependencies, component_of, read_model
+from rdm.architecture.model import component_dependencies, component_of, read_model
 
 _TYPE = ox.NamedNode(RDF + "type")
 _BOOLEAN = ox.NamedNode(XSD + "boolean")

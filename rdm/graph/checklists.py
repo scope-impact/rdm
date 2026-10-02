@@ -27,7 +27,7 @@ import pyoxigraph as ox
 
 from rdm.graph.ns import DCTERMS, SKOS
 
-from rdm import gaps
+from rdm.compliance import gaps
 
 _SKOS, _DCT = SKOS, DCTERMS
 _RDF_SUFFIXES = {

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from rdm.record.persona import CLEAN, FAILED, ISSUES, parse_runs, reconcile
+from rdm.specification.persona import CLEAN, FAILED, ISSUES, parse_runs, reconcile
 
 
 def _run(results: Path, name: str, user_need: str, outcome: str, issues: int = 0) -> None:
@@ -68,7 +68,7 @@ class TestReconcile:
 
 
 def test_user_needs_from_vv_plan_doc(tmp_path: Path) -> None:
-    from rdm.record.sdd import user_needs_from_doc
+    from rdm.specification.sdd import user_needs_from_doc
 
     plan = tmp_path / "vv.md"
     plan.write_text(

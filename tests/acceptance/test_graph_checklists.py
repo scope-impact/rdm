@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm import gaps
+from rdm.compliance import gaps
 
 allure = pytest.importorskip("allure")
 ox = pytest.importorskip("pyoxigraph")

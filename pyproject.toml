@@ -91,25 +91,24 @@ exclude = ["contrib*", "docs*", "tests*"]
 
 [tool.setuptools.package-data]
 rdm = [
-    "base/*",
     "graph/*.ttl",
-    "record/*.typ",
-    "checklists/*",
-    "init_files/.gitignore",
-    "init_files/*",
-    "init_files/data/*",
-    "init_files/images/*",
-    "init_files/images/uimockups/*",
-    "init_files/documents/*",
-    "init_files/documents/510k/*",
-    "hook_files/*",
-    "adopt_files/.claude/*",
-    "adopt_files/.github/workflows/*",
-    "adopt_files/.githooks/*",
-    "adopt_files/dhf/*",
-    "adopt_files/dhf/documents/*",
-    "adopt_files/dhf/documents/design/*",
-    "adopt_files/scripts/*"
+    "publishing/*.typ",
+    "compliance/checklists/*",
+    "specification/init_files/.gitignore",
+    "specification/init_files/*",
+    "specification/init_files/data/*",
+    "specification/init_files/images/*",
+    "specification/init_files/images/uimockups/*",
+    "specification/init_files/documents/*",
+    "specification/init_files/documents/510k/*",
+    "specification/hook_files/*",
+    "specification/adopt_files/.claude/*",
+    "specification/adopt_files/.github/workflows/*",
+    "specification/adopt_files/.githooks/*",
+    "specification/adopt_files/dhf/*",
+    "specification/adopt_files/dhf/documents/*",
+    "specification/adopt_files/dhf/documents/design/*",
+    "specification/adopt_files/scripts/*"
 ]
 
 [tool.ruff]

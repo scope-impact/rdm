@@ -2,7 +2,7 @@
 from jinja2 import TemplateSyntaxError
 from pytest import raises
 
-from rdm.render import invert_dependencies, join_to
+from rdm.publishing.render import invert_dependencies, join_to
 from tests.util import render_from_string
 
 

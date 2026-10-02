@@ -8,41 +8,49 @@ gates need no extra; the graph needs the `graph` extra.
 
 The reconciliation engine that compiles the DHF from the system of record.
 
-### `rdm.record.reconcile`
+### `rdm.kernel.reconcile`
 
-::: rdm.record.reconcile
+::: rdm.kernel.reconcile
 
-### `rdm.record.sdd`
+### `rdm.specification.sdd`
 
-::: rdm.record.sdd
+::: rdm.specification.sdd
 
-### `rdm.record.allure`
+### `rdm.specification.tags`
 
-::: rdm.record.allure
+::: rdm.specification.tags
 
-### `rdm.record.verify`
+### `rdm.kernel.frontmatter`
 
-::: rdm.record.verify
+::: rdm.kernel.frontmatter
 
-### `rdm.record.report`
+### `rdm.evidence.allure`
 
-::: rdm.record.report
+::: rdm.evidence.allure
 
-### `rdm.record.persona`
+### `rdm.release.verify`
 
-::: rdm.record.persona
+::: rdm.release.verify
 
-### `rdm.record.risk`
+### `rdm.publishing.report`
 
-::: rdm.record.risk
+::: rdm.publishing.report
 
-### `rdm.record.ids`
+### `rdm.specification.persona`
 
-::: rdm.record.ids
+::: rdm.specification.persona
 
-### `rdm.record.git`
+### `rdm.risk.register`
 
-::: rdm.record.git
+::: rdm.risk.register
+
+### `rdm.kernel.ids`
+
+::: rdm.kernel.ids
+
+### `rdm.kernel.git`
+
+::: rdm.kernel.git
 
 ## The record as a graph (`rdm graph`)
 
@@ -83,20 +91,24 @@ The reconciliation engine that compiles the DHF from the system of record.
 The design gate, release gate, design-input scaffolding and the mutation
 probe, over the record core.
 
-### `rdm.gates.design_gate`
+### `rdm.specification.design_gate`
 
-::: rdm.gates.design_gate
+::: rdm.specification.design_gate
 
-### `rdm.gates.mutation`
+### `rdm.release.gate`
 
-::: rdm.gates.mutation
+::: rdm.release.gate
 
-### `rdm.gates.new_input`
+### `rdm.evidence.mutation`
 
-::: rdm.gates.new_input
+::: rdm.evidence.mutation
+
+### `rdm.specification.new_input`
+
+::: rdm.specification.new_input
 
 ## Scaffolding
 
-### `rdm.adopt`
+### `rdm.specification.adopt`
 
-::: rdm.adopt
+::: rdm.specification.adopt

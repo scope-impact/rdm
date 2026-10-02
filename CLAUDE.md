@@ -94,13 +94,16 @@ assigns each bounded context to a part. Agent skills live in scope-impact/agent-
 
 ### Key modules
 
-- `rdm/main.py` — CLI entry point (`rdm` command). Argparse subcommands dispatch to feature modules.
-- `rdm/render.py` — Jinja2 template engine with two-pass rendering and custom filters (`invert_dependencies`, `join_to`, `md_indent`).
-- `rdm/gaps.py` — Gap analysis: validates documents against regulatory checklists (IEC 62304, ISO 13485, etc.). Built-in checklists in `rdm/checklists/`.
-- `rdm/md_extensions/` — Markdown post-processing: section numbering, vocabulary expansion.
-- `rdm/init_files/` — Scaffold templates for `rdm init` (Makefile, config.yml, document templates, Dockerfile).
-- `rdm/gates/` — Design gate (including duplicate ids), release gate, `new-input` scaffolding, mutation probe — core, no extra.
-- `rdm/record/` — Reads the record: design/V&V frontmatter (`sdd.py`), Allure results (`allure.py`), verification (`verify.py`), the risk register and policy (`risk.py`).
+One package per bounded context (`dhf/documents/architecture.md` gives each its
+layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
+
+- `rdm/main.py` — the composition root: the `rdm` command; argparse subcommands dispatch to the contexts.
+- `rdm/kernel/` — the shared kernel: YAML and files (`util.py`), ids, git, frontmatter, the reconcile helpers.
+- `rdm/specification/` — the core: the record reader (`sdd.py`), test tags (`tags.py`), the design gate (including duplicate ids), `new-input`, hooks, `init`/`adopt` and their templates, validation records, persona runs.
+- `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`), `translate`, the mutation probe; the plugin labels each run from the record.
+- `rdm/risk/`, `rdm/architecture/`, `rdm/compliance/` — the leaves: the risk register; the C4 model and `rdm c4 draw`; gap analysis and the built-in checklists.
+- `rdm/release/` — the release gate and trace (`gate.py`), the verification data (`verify.py`).
+- `rdm/publishing/` and `rdm/md_extensions/` — templates and data to Markdown (`render.py`, two-pass, filters `invert_dependencies`, `join_to`, `md_indent`), snippets, the DMR index, the verification report, the evidence bundle; Markdown post-processing.
 - `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | validate | serve | explorer-file | mcp`, extra `graph`): named graphs per source, embedded Oxigraph store, SHACL gate shapes, SPARQL endpoint for AWS Graph Explorer, and a read-only MCP server for agents (`agent.py`, registered in `.mcp.json`). See `docs/graph.md`.
 
 ### Optional extras

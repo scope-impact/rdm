@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rdm.record.allure import scan_source_tags as allure_tag_ids
-from rdm.gates.design_gate import (
+from rdm.specification.tags import scan_source_tags as allure_tag_ids
+from rdm.specification.design_gate import (
     DESIGN_REVIEW_DOC,
     check_artifact,
     check_design_docs,
@@ -181,6 +181,29 @@ class TestStoryDesignGateCommand:
         assert story_design_gate_command(dhf_dir=dhf) == 1
 
 
+class TestDesignGateWithResults:
+    """`rdm story design-gate --allure-results`: release reads the results, and
+    the composition root shows its warnings in the design gate's output."""
+
+    def test_executed_results_replace_the_tag_warnings(self, tmp_path: Path, capsys) -> None:
+        import json
+
+        from rdm.main import cli
+
+        dhf = _make_dhf(tmp_path, design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))
+        results = tmp_path / "allure-results"
+        results.mkdir()
+        (results / "r-result.json").write_text(json.dumps(
+            {"name": "test_one", "status": "failed", "labels": [{"name": "story", "value": "DI-1"}]}))
+
+        assert cli(["story", "design-gate", "--dhf", str(dhf), "--allure-results", str(results)]) == 0
+        out = capsys.readouterr().out
+        assert "Verification warnings" in out
+        assert "design input DI-1 FAILED verification (1 failing test(s))" in out
+        assert "design input DI-2 not verified by any passing Allure test" in out
+        assert "no @allure.story tag" not in out  # the tag warnings give way to the results
+
+
 class TestVersionControlApproval:
     """Approval is the version-control record, so uncommitted == not approved."""
 
@@ -272,7 +295,7 @@ class TestInstalledTemplates:
     """The init templates must ship the gate's required documents."""
 
     def test_templates_exist_in_init_files(self) -> None:
-        docs = Path(__file__).resolve().parents[1] / "rdm" / "init_files" / "documents"
+        docs = Path(__file__).resolve().parents[1] / "rdm" / "specification" / "init_files" / "documents"
         assert (docs / DESIGN_REVIEW_DOC).exists()
         # The combined per-context design document (kind: design) ships too.
         sdd = docs / "software_design_specification.md"
@@ -283,7 +306,7 @@ class TestInstalledTemplates:
 def test_coverage_warnings_read_the_design_inputs(tmp_path: Path) -> None:
     """A user need is covered when a design input traces to it; a legacy
     ``satisfies`` list on a design document no longer counts."""
-    from rdm.gates.design_gate import _coverage_warnings
+    from rdm.specification.design_gate import _coverage_warnings
 
     docs = tmp_path / "dhf" / "documents"
     docs.mkdir(parents=True)

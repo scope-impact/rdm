@@ -21,8 +21,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rdm.record.reconcile import load_json_records
-from rdm.record.sdd import registry_user_needs
+from rdm.kernel.reconcile import load_json_records
+from rdm.specification.sdd import registry_user_needs
 
 APPROVED = "approved"
 

@@ -1,6 +1,6 @@
 import pytest
 
-from rdm.first_pass_output import FirstPassOutput
+from rdm.publishing.first_pass_output import FirstPassOutput
 
 
 class TestFirstPassOutput:

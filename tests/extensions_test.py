@@ -1,7 +1,7 @@
 import pytest
 from jinja2.ext import Extension
 
-from rdm.util import load_class, extract_module_and_class
+from rdm.kernel.util import load_class, extract_module_and_class
 
 
 def test_load_class():

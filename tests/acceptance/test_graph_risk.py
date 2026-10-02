@@ -21,7 +21,7 @@ from rdm.graph.agent import Record, trace  # noqa: E402
 from rdm.graph.project import project  # noqa: E402
 from rdm.graph.validate import validate  # noqa: E402
 from tests.acceptance.test_graph_shapes import _dhf, _results  # noqa: E402
-from rdm.gates.design_gate import run_release_gate  # noqa: E402
+from rdm.release.gate import run_release_gate  # noqa: E402
 from tests.acceptance.test_risk import ACCEPT, CASES, _gate, _policy, _register, _risk  # noqa: E402
 
 RDM = "https://github.com/scope-impact/rdm/ns#"

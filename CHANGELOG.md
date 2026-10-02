@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Changed — one package per bounded context (Design Review 32)
+- RDM's code is in one package per context: `rdm.specification`,
+  `rdm.evidence`, `rdm.risk`, `rdm.architecture`, `rdm.compliance`,
+  `rdm.release`, `rdm.publishing` and `rdm.graph`, over a shared kernel
+  (`rdm.kernel`). A test holds the code to the dependency rule of the
+  architecture: a context imports only the contexts below it.
+- The `rdm` command, `rdm.pytest_plugin` (for a project's `conftest.py`) and
+  `rdm.md_extensions` (named in a project's `config.yml`) keep their paths.
+  Other modules moved; code that imported them directly (`rdm.render`,
+  `rdm.util`, `rdm.record.*`, `rdm.gates.*`) imports them from their package
+  (`rdm.publishing.render`, `rdm.kernel.util`, …).
+- The test tags (`rdm.specification.tags`), the release gate and trace
+  (`rdm.release.gate`) and the frontmatter parser (`rdm.kernel.frontmatter`)
+  are modules of their own.
+
 ### Added — the architecture in the graph (DI-67)
 - The graph has two more named graphs: `architecture`, the C4 model (every
   element typed, contained and described; each component's bounded context and

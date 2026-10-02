@@ -18,7 +18,7 @@ import shutil
 from importlib.resources import as_file, files
 from pathlib import Path
 
-from rdm.version import __version__
+from rdm.kernel.version import __version__
 
 # Paths that must be executable at the destination.
 _EXECUTABLE = {"scripts/agent-bootstrap.sh", ".githooks/pre-commit"}
@@ -61,7 +61,7 @@ def adopt(target: Path) -> tuple[list[str], list[str]]:
     copied: list[str] = []
     skipped: list[str] = []
 
-    adopt_ref = files("rdm") / "adopt_files"
+    adopt_ref = files("rdm.specification") / "adopt_files"
     with as_file(adopt_ref) as adopt_root:
         root = Path(adopt_root)
         for src in sorted(root.rglob("*")):
@@ -73,7 +73,7 @@ def adopt(target: Path) -> tuple[list[str], list[str]]:
     # The pre-commit design gate is copied from hook_files at adopt time so the
     # gate has one source of truth. Only the design gate is installed -- the
     # issue-reference hooks that `rdm hooks` also ships stay opt-in.
-    hook_ref = files("rdm") / "hook_files" / "pre-commit"
+    hook_ref = files("rdm.specification") / "hook_files" / "pre-commit"
     with as_file(hook_ref) as hook_src:
         _copy_if_absent(Path(hook_src), target / ".githooks" / "pre-commit",
                         ".githooks/pre-commit", copied, skipped)

@@ -39,23 +39,17 @@ import time
 from importlib.resources import files
 from pathlib import Path
 
-from rdm.record.allure import (
-    FAILING,
-    REQUIREMENT_ATTACHMENT,
-    design_input_tags,
-    find_tests_dir,
-    full_name,
-    read_run_facts,
-    run_version,
-    scan_source_tests,
+from rdm.evidence.allure import (
+    FAILING, REQUIREMENT_ATTACHMENT, design_input_tags, full_name, read_run_facts, run_version,
 )
-from rdm.record.git import head, repo_root, repository_url
-from rdm.record.ids import sort_key
-from rdm.record.reconcile import load_json_records
-from rdm.record.risk import NOT_EVALUATED, read_policy, residual_decision, risks
-from rdm.record.sdd import design_inputs
-from rdm.record.verify import build_verification
-from rdm.version import __version__
+from rdm.specification.tags import find_tests_dir, scan_source_tests
+from rdm.kernel.git import head, repo_root, repository_url
+from rdm.kernel.ids import sort_key
+from rdm.kernel.reconcile import load_json_records
+from rdm.risk.register import NOT_EVALUATED, read_policy, residual_decision, risks
+from rdm.specification.sdd import design_inputs
+from rdm.release.verify import build_verification
+from rdm.kernel.version import __version__
 
 LAYOUT = "verification_report.typ"
 REPORT_PDF = "verification_report.pdf"
@@ -337,7 +331,7 @@ def render_pdf(report: dict, results_dir: Path, output: Path) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)
-        (workdir / LAYOUT).write_text((files("rdm.record") / LAYOUT).read_text(encoding="utf-8"), encoding="utf-8")
+        (workdir / LAYOUT).write_text((files("rdm.publishing") / LAYOUT).read_text(encoding="utf-8"), encoding="utf-8")
         (workdir / "attachments").mkdir()
         for di in report["design_inputs"]:
             for run in di["runs"]:

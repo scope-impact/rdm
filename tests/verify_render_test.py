@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from rdm.record.verify import build_verification, write_verification_file
+from rdm.release.verify import build_verification, write_verification_file
 from tests.util import write_allure_result as _result
 from tests.util import write_design_doc
 
@@ -80,9 +80,9 @@ def test_matrix_template_renders_with_verification_context(tmp_path: Path) -> No
     # The shipped template must render the matrix when given verification data.
     import jinja2
 
-    from rdm.render import render_template_to_string
+    from rdm.publishing.render import render_template_to_string
 
-    template_dir = Path(__file__).resolve().parents[1] / "rdm" / "init_files" / "documents"
+    template_dir = Path(__file__).resolve().parents[1] / "rdm" / "specification" / "init_files" / "documents"
     verification = {
         "summary": {"verified": 1, "failed": 1, "untested": 0, "total": 2, "results_found": 2},
         "groups": [

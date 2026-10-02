@@ -5,7 +5,7 @@ from pathlib import Path
 import jinja2
 from jinja2 import FunctionLoader
 
-from rdm.render import render_template_to_string
+from rdm.publishing.render import render_template_to_string
 
 # A complete (placeholder-free) design document for gate fixtures.
 COMPLETE_DOC = "# Doc\n\nApproved and complete.\n"

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm.gates.design_gate import build_trace
+from rdm.release.gate import build_trace
 from tests.util import write_allure_result as _allure_result
 from tests.util import write_design_doc
 
@@ -37,7 +37,7 @@ def _dhf(tmp_path: Path) -> Path:
 
 
 @allure.story("DI-18")
-@allure.label("output", "rdm/gates/design_gate.py")
+@allure.label("output", "rdm/release/gate.py")
 def test_trace_user_need_and_design_input(tmp_path: Path) -> None:
     """DI-18: trace forward (need → inputs) and backward (input → need/owner/realisers)."""
     dhf = _dhf(tmp_path)

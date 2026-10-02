@@ -25,10 +25,11 @@ from pathlib import Path
 
 import pytest
 
-from rdm.record import allure as allure_ingest
-from rdm.record import persona
-from rdm.record.verify import build_verification
-from rdm.gates.design_gate import check_design_docs, run_release_gate
+from rdm.evidence import allure as allure_ingest
+from rdm.specification import persona
+from rdm.release.verify import build_verification
+from rdm.specification.design_gate import check_design_docs
+from rdm.release.gate import run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _allure_result
@@ -87,16 +88,17 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
     # the planning layer (a violation would show as a source-level import).
     with verification_step("...with NO project-management dependency: the record core must not import the planning "
                            "layer (a…"):
-        import rdm.record as _record_pkg
-        _record_dir = Path(_record_pkg.__file__).parent
+        import rdm.kernel
+        import rdm.specification
         assert not any(
             "project_management" in p.read_text(encoding="utf-8")
-            for p in _record_dir.glob("*.py")
+            for package in (rdm.specification, rdm.kernel)
+            for p in Path(package.__file__).parent.glob("*.py")
         )
 
 
 @allure.story("DI-2")
-@allure.label("output", "rdm/gates/design_gate.py")
+@allure.label("output", "rdm/specification/design_gate.py")
 def test_design_gate_requires_approval(tmp_path: Path) -> None:
     """DI-2: block transition until design docs are complete and approved."""
     with verification_step("Incomplete (placeholder) design doc -> not complete"):
@@ -122,7 +124,7 @@ def test_design_gate_requires_approval(tmp_path: Path) -> None:
 
 
 @allure.story("DI-3")
-@allure.label("output", "rdm/gates/design_gate.py")
+@allure.label("output", "rdm/release/gate.py")
 def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
     """DI-3: block release until every design input is verified by a passing test."""
     dhf = _approved_dhf(tmp_path, ["UN-003"])  # DI-1 traces to UN-003
@@ -146,8 +148,8 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
 
 
 @allure.story("DI-4")
-@allure.label("output", "rdm/record/allure.py")
-@allure.label("output", "rdm/record/verify.py")
+@allure.label("output", "rdm/evidence/allure.py")
+@allure.label("output", "rdm/release/verify.py")
 def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
     """DI-4: results reconcile to a status (reconcile clause) AND assemble into the
     traceability matrix grouped under the user need (render clause)."""
@@ -180,7 +182,7 @@ def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
 
 
 @allure.story("DI-5")
-@allure.label("output", "rdm/record/persona.py")
+@allure.label("output", "rdm/specification/persona.py")
 def test_formative_usability_classified(tmp_path: Path) -> None:
     """DI-5: usability can be exercised formatively against a user need.
 

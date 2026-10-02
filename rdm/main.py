@@ -5,14 +5,14 @@ from pathlib import Path
 
 import yaml
 
-from rdm.gaps import audit_for_gaps, list_default_checklists
-from rdm.collect import collect_from_files
-from rdm.hooks import install_hooks
-from rdm.init import init
-from rdm.render import render_template_to_file
-from rdm.translate import translate_test_results, XML_FORMATS
-from rdm.util import context_from_data_files, print_error, load_yaml
-from rdm.version import __version__
+from rdm.compliance.gaps import audit_for_gaps, list_default_checklists
+from rdm.publishing.collect import collect_from_files
+from rdm.specification.hooks import install_hooks
+from rdm.specification.init import init
+from rdm.publishing.render import render_template_to_file
+from rdm.evidence.translate import translate_test_results, XML_FORMATS
+from rdm.kernel.util import context_from_data_files, print_error, load_yaml
+from rdm.kernel.version import __version__
 
 
 def main():
@@ -36,7 +36,7 @@ def cli(raw_arguments):
     elif args.command == 'init':
         init(args.output)
     elif args.command == 'adopt':
-        from rdm.adopt import adopt_command
+        from rdm.specification.adopt import adopt_command
         exit_code = adopt_command(args.target)
     elif args.command == 'hooks':
         install_hooks(args.dest, with_issue_hooks=args.with_issue_hooks)
@@ -50,7 +50,7 @@ def cli(raw_arguments):
     elif args.command == 'gap' and args.coverage:
         # In coverage mode, checklist + files can all be checklists or source
         # files: a checklist is a .txt path or a built-in checklist name.
-        from rdm.gaps import builtin_checklists
+        from rdm.compliance.gaps import builtin_checklists
         builtins = builtin_checklists()
         all_files = ([args.checklist] if args.checklist else []) + args.files
         checklists = [f for f in all_files if f.endswith('.txt') or f in builtins]
@@ -59,7 +59,7 @@ def cli(raw_arguments):
     elif args.command == 'gap':
         exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
     elif args.command == 'c4' and args.c4_command == 'draw':
-        from rdm.c4 import draw_command
+        from rdm.architecture.draw import draw_command
         exit_code = draw_command(args)
     elif args.command == 'c4':
         parse_arguments(['c4', '-h'])
@@ -121,14 +121,19 @@ def handle_story_command(args):
     """Handle the story subcommand and its sub-subcommands."""
     try:
         if args.story_command == 'design-gate':
-            from rdm.gates.design_gate import story_design_gate_command
-            return story_design_gate_command(
-                dhf_dir=Path(args.dhf) if args.dhf else None,
-                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
-            )
+            from rdm.specification.design_gate import story_design_gate_command
+            results = Path(args.allure_results) if args.allure_results else None
+            warnings = None
+            if results is not None and results.exists():  # release reads results; the design gate shows its warnings
+                from rdm.release.gate import verification_warnings
+
+                def warnings(dhf):
+                    return verification_warnings(dhf, results)
+            return story_design_gate_command(dhf_dir=Path(args.dhf) if args.dhf else None,
+                                             verification_warnings=warnings)
 
         elif args.story_command == 'verify':
-            from rdm.record.verify import verify_command
+            from rdm.release.verify import verify_command
             return verify_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
@@ -136,14 +141,14 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'release-gate':
-            from rdm.gates.design_gate import story_release_gate_command
+            from rdm.release.gate import story_release_gate_command
             return story_release_gate_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
             )
 
         elif args.story_command == 'mutation-probe':
-            from rdm.gates.mutation import story_mutation_probe_command
+            from rdm.evidence.mutation import story_mutation_probe_command
             return story_mutation_probe_command(
                 file=args.file,
                 find=args.find,
@@ -152,7 +157,7 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'trace':
-            from rdm.gates.design_gate import story_trace_command
+            from rdm.release.gate import story_trace_command
             return story_trace_command(
                 target=args.target,
                 dhf_dir=Path(args.dhf) if args.dhf else None,
@@ -160,18 +165,18 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'persona':
-            from rdm.record.persona_cmd import persona_command
+            from rdm.specification.persona_cmd import persona_command
             return persona_command(
                 vv_plan=Path(args.vv_plan) if args.vv_plan else None,
                 persona_results=Path(args.persona_results) if args.persona_results else None,
             )
 
         elif args.story_command == 'dmr':
-            from rdm.record.dmr import dmr_command
+            from rdm.publishing.dmr import dmr_command
             return dmr_command(Path(args.documents_dir), Path(args.output))
 
         elif args.story_command == 'evidence-bundle':
-            from rdm.record.bundle import evidence_bundle_command
+            from rdm.publishing.bundle import evidence_bundle_command
             return evidence_bundle_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
@@ -179,7 +184,7 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'evidence-report':
-            from rdm.record.report import evidence_report_command
+            from rdm.publishing.report import evidence_report_command
             return evidence_report_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
@@ -187,7 +192,7 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'new-input':
-            from rdm.gates.new_input import story_new_input_command
+            from rdm.specification.new_input import story_new_input_command
             return story_new_input_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 context=args.context,

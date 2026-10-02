@@ -1,6 +1,6 @@
 import pytest
 
-from rdm.gaps import _find_keys_in_sources, _find_keys_in_content, \
+from rdm.compliance.gaps import _find_keys_in_sources, _find_keys_in_content, \
     _read_raw_checklists, _split_out_include_files, _extract_keys_from_checklist, _find_failing_checklist_items, \
     _next_number, _next_non_number, _components, SectionalAnalysis, coverage_report
 

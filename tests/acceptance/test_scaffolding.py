@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pytest
 
-from rdm.init import init
-from rdm.record.sdd import design_inputs
-from rdm.gates.new_input import story_new_input_command
+from rdm.specification.init import init
+from rdm.specification.sdd import design_inputs
+from rdm.specification.new_input import story_new_input_command
 
 allure = pytest.importorskip("allure")
 
@@ -26,7 +26,7 @@ from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 @allure.story("DI-15")
-@allure.label("output", "rdm/init.py")
+@allure.label("output", "rdm/specification/init.py")
 def test_init_scaffolds_a_project(tmp_path: Path) -> None:
     """DI-15: `rdm init` lays down the templates, Makefile, and render config."""
     import yaml
@@ -98,7 +98,7 @@ def _mini_dhf(tmp_path: Path) -> Path:
 
 
 @allure.story("DI-22")
-@allure.label("output", "rdm/gates/new_input.py")
+@allure.label("output", "rdm/specification/new_input.py")
 def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> None:
     """DI-22: next unused id allocated, frontmatter entry inserted, failing tagged
     stub test emitted, checklist printed; unknown context/user need rejected."""
@@ -186,14 +186,14 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
 
 
 @allure.story("DI-24")
-@allure.label("output", "rdm/adopt.py")
+@allure.label("output", "rdm/specification/adopt.py")
 def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> None:
     """DI-24: one command lays down the DHF skeleton, runbook, design-gate hook,
     session bootstrap, and CI workflow into an existing repo, skipping (never
     overwriting) anything that already exists."""
     import os
 
-    from rdm.adopt import adopt_command
+    from rdm.specification.adopt import adopt_command
 
     repo = tmp_path / "legacy"
     (repo / "src").mkdir(parents=True)

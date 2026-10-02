@@ -7,7 +7,7 @@ The architecture is one Structurizr workspace, ``<dhf>/c4/workspace.dsl``
 Graphviz to ``<dhf>/c4/views/<view>.svg`` (what the design documents show, so
 GitHub, the docs site and a PDF show one picture, and no browser draws it).
 Every drawn file is stamped with the SHA-256 of the workspace; reading the
-model and checking the stamps is the record's (rdm/record/c4.py), and needs
+model and checking the stamps is the record's (rdm/architecture/model.py), and needs
 none of the tools below.
 
 Drawing needs Java, Structurizr's CLI (``RDM_STRUCTURIZR``, or
@@ -25,7 +25,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from rdm.record.c4 import MODEL, STAMP_KEY, SVG_STAMP, VIEWS, WORKSPACE, view_keys, workspace_digest
+from rdm.architecture.model import MODEL, STAMP_KEY, SVG_STAMP, VIEWS, WORKSPACE, view_keys, workspace_digest
 
 # Structurizr's DOT export leaves a bare & in its HTML labels (e.g. "V&V"), which
 # Graphviz rejects as malformed; escape it until the exporter does.

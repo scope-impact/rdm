@@ -18,7 +18,7 @@ import pyoxigraph as ox
 
 from rdm.graph.cli import PREFIXES, with_prefixes
 from rdm.graph.project import ONTOLOGY_FILE, project
-from rdm.record.ids import is_id, sort_key
+from rdm.kernel.ids import is_id, sort_key
 
 ROW_LIMIT = 200
 _RISK_FIELDS = ("category", "stride", "hazard", "situation", "harm", "severity", "probability", "level",

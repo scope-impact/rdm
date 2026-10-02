@@ -2,7 +2,7 @@
 
 The tests ("live BDD") that verify DI-16 (code-snippet collection) and DI-17
 (foreign test-result translation), tagged `@allure.story`, over the real
-`rdm/collect.py` and `rdm/translate.py`.
+`rdm/publishing/collect.py` and `rdm/evidence/translate.py`.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results
 
@@ -15,9 +15,9 @@ from pathlib import Path
 
 import pytest
 
-from rdm.collect import collect_from_lines
-from rdm.translate import translate_test_results
-from rdm.util import load_yaml
+from rdm.publishing.collect import collect_from_lines
+from rdm.evidence.translate import translate_test_results
+from rdm.kernel.util import load_yaml
 
 allure = pytest.importorskip("allure")
 
@@ -29,7 +29,7 @@ _QTTEST_XML = _TEST_DATA / "integration.xml"
 
 
 @allure.story("DI-16")
-@allure.label("output", "rdm/collect.py")
+@allure.label("output", "rdm/publishing/collect.py")
 def test_collects_delimited_code_snippets() -> None:
     """DI-16: RDOC/ENDRDOC-delimited snippets are extracted, keyed by name."""
     assert collect_from_lines(["RDOC greeting", "hello", "world", "ENDRDOC"]) == {
@@ -40,7 +40,7 @@ def test_collects_delimited_code_snippets() -> None:
 
 
 @allure.story("DI-17")
-@allure.label("output", "rdm/translate.py")
+@allure.label("output", "rdm/evidence/translate.py")
 def test_translates_foreign_test_results(tmp_path: Path) -> None:
     """DI-17: a gtest XML translates into RDM result data; unknown format rejected."""
     out = tmp_path / "results.yml"
