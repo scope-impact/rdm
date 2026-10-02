@@ -41,6 +41,13 @@ ref twice: after the `@`, and as `rdm-ref`. The workflow checks out RDM at
 `rdm-ref` and installs RDM, `pytest` and `allure-pytest` from that checkout.
 To upgrade, change both refs together.
 
+A tag can be moved; a commit sha cannot. For the strictest pin, use the
+release's commit sha in both places, with the tag as a comment:
+`gates.yml@<sha> # v1.2.0`. Dependabot's `github-actions` ecosystem keeps both
+the sha and the comment current. RDM pins its own third-party actions that way.
+The workflow asks only for `contents: read`. Inputs reach its scripts through
+environment variables, never spliced into the script text.
+
 | Input | Default | |
 | --- | --- | --- |
 | `rdm-ref` | — (required) | the RDM tag or sha the workflow is pinned to |

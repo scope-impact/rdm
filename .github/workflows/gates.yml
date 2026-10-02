@@ -69,13 +69,15 @@ permissions:
 jobs:
   gates:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0   # the design gate and the graph read the history
+          persist-credentials: false
 
       - name: Check out RDM at the pinned revision
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ inputs.rdm-repository }}
           ref: ${{ inputs.rdm-ref }}
@@ -85,24 +87,30 @@ jobs:
       - name: Keep the RDM checkout out of the repository's worktree state
         run: echo /.rdm/ >> .git/info/exclude
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ inputs.python-version }}
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
 
       - name: Install RDM from the pinned revision
         run: |
           uv pip install --system "./.rdm[graph]" pytest allure-pytest
           rdm --version
 
+      # Inputs reach the scripts as environment variables, never spliced into
+      # the script text.
       - name: Install the repository's dependencies
         if: inputs.install-command != ''
-        run: ${{ inputs.install-command }}
+        env:
+          COMMAND: ${{ inputs.install-command }}
+        run: bash -e -c "$COMMAND"
 
       - name: Acceptance tests -> Allure results
         if: inputs.acceptance-tests
-        run: ${{ inputs.test-command }}
+        env:
+          COMMAND: ${{ inputs.test-command }}
+        run: bash -e -c "$COMMAND"
 
       - name: Gates
         uses: ./.rdm/actions/gates
@@ -117,18 +125,20 @@ jobs:
 
       - name: Set up Java (Allure CLI runtime)
         if: always() && inputs.allure-report
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Allure report
         if: always() && inputs.allure-report && hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
-        run: npx --yes allure-commandline@2.46.1 generate "${{ inputs.allure-results }}" --clean -o allure-report
+        env:
+          RESULTS: ${{ inputs.allure-results }}
+        run: npx --yes allure-commandline@2.46.1 generate "$RESULTS" --clean -o allure-report
 
       - name: Upload the Allure report
         if: always() && inputs.allure-report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: allure-report
           path: allure-report
@@ -136,7 +146,7 @@ jobs:
 
       - name: Upload the verification record
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: verification-record
           path: |

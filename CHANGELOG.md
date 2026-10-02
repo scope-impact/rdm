@@ -14,6 +14,10 @@
 - CI: tests on Python 3.10–3.13 on every push and pull request; a
   multi-arch Docker image (amd64, arm64) with provenance and SBOM; Dependabot
   for uv; a pinned Allure CLI.
+- CI hardening: every action pinned to a full commit sha (its release as a
+  comment, for Dependabot), `contents: read` by default, no persisted checkout
+  credentials, job timeouts, inputs passed to scripts through the environment,
+  and the Pages lock held by deployments only.
 
 ### Changed — dependencies upgraded
 - Docker image: Ubuntu 26.04 LTS instead of Alpine, Pandoc 3.6.1 → 3.12,

@@ -96,21 +96,26 @@ def _run_action(action: dict, inputs: dict[str, str], cwd: Path, temp: Path) -> 
                 assert Path(path).is_dir() and any(Path(path).iterdir()), path
             ran.append(step["uses"].split("@")[0])
             continue
-        script = EXPR.sub(lambda m: _value(m.group(1), inputs, env), step["run"])
-        done = subprocess.run(["bash", "-e", "-c", script], cwd=cwd, env=env, capture_output=True, text=True)
+        assert not EXPR.search(step["run"]), f"{step['name']}: an expression spliced into the script"
+        step_env = env | {k: EXPR.sub(lambda m: _value(m.group(1), inputs, env), v)
+                          for k, v in step.get("env", {}).items()}
+        done = subprocess.run(["bash", "-e", "-c", step["run"]], cwd=cwd, env=step_env,
+                              capture_output=True, text=True)
         assert done.returncode == 0, f"{step['name']}:\n{done.stdout}\n{done.stderr}"
         ran.append(step["name"])
     return ran
 
 
 def _rdm_commands(text: str) -> list[list[str]]:
-    """Each `rdm …` invocation in a workflow's scripts, shell-split, `$…` dropped."""
+    """Each `rdm …` invocation in a workflow's scripts, shell-split: a variable
+    stands for one word, an array expansion (`${a[@]}`) for none."""
     text = EXPR.sub("X", text.replace("\\\n", " "))
     commands = []
     for line in text.splitlines():
         match = re.search(r"(?:^|[\s;&|])rdm\s+([^;&|#]+)", line)
         if match and not line.lstrip().startswith(("#", "name:", "description:")):
-            words = [w for w in shlex.split(match.group(1)) if not w.startswith("$")]
+            words = [w if not w.startswith("$") else "X" for w in shlex.split(match.group(1))
+                     if not re.fullmatch(r"\$\{\w+\[@\]\}", w)]
             commands.append(words)
     return commands
 
@@ -183,11 +188,10 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         bin_dir.mkdir()
         (bin_dir / "docker").write_text('#!/bin/sh\necho "$@"\n')
         (bin_dir / "docker").chmod(0o755)
-        script = EXPR.sub(lambda m: {"inputs.dhf_path": "dhf", "github.workspace": "/w"}[m.group(1)], script)
 
         def image(ref: str, version: str = "") -> str:
-            env = os.environ | {"ACTION_REF": ref, "VERSION": version, "PATH": f"{bin_dir}{os.pathsep}"
-                                f"{os.environ['PATH']}"}
+            env = os.environ | {"ACTION_REF": ref, "VERSION": version, "DHF": "dhf", "GITHUB_WORKSPACE": "/w",
+                                "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
             out = subprocess.run(["bash", "-e", "-c", script], env=env, capture_output=True, text=True, check=True)
             return re.search(r"ghcr\.io/scope-impact/rdm:(\S+)\s+pdfs", out.stdout).group(1)
         assert [image("v1.2.0"), image("v1"), image("main"), image("0123abc"), image("v1.2.0", "edge")] == [
