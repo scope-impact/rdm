@@ -1282,6 +1282,19 @@ code disagree. Each is resolved in the record, not by quieting a shape:
   verification data on the shared kernel, and the pytest plugin on the test
   tags. The workspace declares them; its views are redrawn.
 
+# Design Review 42 — The evidence bundle keeps the run's executor and environment
+
+**Scope reviewed:** the evidence bundle's contents (DI-30). No design input
+changed.
+
+**Disposition:** Approved.
+
+The verification report states the executor and environment the results
+record and one SHA-256 over every result file, but the bundle kept only the
+results, containers and attachments: once CI's retention ended, its claims
+about the run could not be checked. The bundle keeps the two run files the
+pytest plugin writes (Allure's executor and environment) too.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

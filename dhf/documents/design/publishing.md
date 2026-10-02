@@ -101,8 +101,10 @@ The rules a reviewer needs to judge the design:
   change the document.
 - **Evidence bundle.** It holds the verification data, the rendered
   traceability matrix (when the record has its template), the executed
-  results with every attachment they name (only plain files of the results
-  directory), the verification report or the reason it was not rendered,
+  results with every attachment they name and the run's executor and
+  environment files (only plain files of the results directory), so the
+  report's digest over them can be checked after CI's retention ends, the
+  verification report or the reason it was not rendered,
   and a manifest of the counts and files. It lives here because it renders:
   the matrix with the Renderer, the report with the Verification report.
 
