@@ -330,33 +330,8 @@ Acceptance criteria are verified by `@allure.story("DI-35" / "DI-36" / "DI-37" /
 
 ## Components (C3)
 
-The components of the `graph` context, each naming the code that
-implements it; a component of another context is shown external, where this
-one depends on it.
+The components of the `graph` context, drawn from the architecture
+workspace; a component of another context is shown where this one depends
+on it. Each component names its code in the workspace.
 
-```mermaid
-C4Component
-  title Components: graph
-  Container_Boundary(rdm_cli, "rdm") {
-    Component(projection, "Projection", "Python, pyoxigraph", "The record into RDF: named graphs, rules, the graph commands", $link="rdm/graph/")
-    Component(vocabulary, "Vocabulary", "Turtle", "Classes, properties and the rules that derive relations", $link="rdm/graph/ontology.ttl")
-    Component(gate_shapes, "Gate shapes", "SHACL", "The gate rules as shapes", $link="rdm/graph/shapes.ttl")
-    Component(shacl_validation, "SHACL validation", "Python, pySHACL", "rdm graph validate", $link="rdm/graph/validate.py")
-    Component(explorer_file, "Explorer file", "Python", "A file for Graph Explorer", $link="rdm/graph/explorer.py")
-    Component(agent_server, "Agent server", "Python, MCP", "Read-only schema, query, trace and validate for agents", $link="rdm/graph/agent.py")
-  }
-  Component_Ext(record_readers, "Record readers", "Python")
-  Component_Ext(risk_register, "Risk register", "Python")
-  Component_Ext(gap_analysis, "Gap analysis", "Python")
-  Rel(projection, record_readers, "reads the record, results and git with")
-  Rel(projection, risk_register, "reads risks and findings with")
-  Rel(projection, vocabulary, "declares terms and rules in")
-  Rel(projection, explorer_file, "writes the explorer file with")
-  Rel(explorer_file, projection, "reads the projected graph from")
-  Rel(shacl_validation, projection, "validates the graph of")
-  Rel(shacl_validation, gate_shapes, "checks with")
-  Rel(agent_server, projection, "queries")
-  Rel(agent_server, shacl_validation, "validates with")
-  Rel(agent_server, record_readers, "checks ids with")
-  Rel(projection, gap_analysis, "matches checklist references with")
-```
+![Components: graph](../../c4/views/C3_graph.svg)

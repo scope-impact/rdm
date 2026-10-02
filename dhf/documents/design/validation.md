@@ -54,21 +54,8 @@ need, not the design input.
 
 ## Components (C3)
 
-The components of the `validation` context, each naming the code that
-implements it; a component of another context is shown external, where this
-one depends on it.
+The components of the `validation` context, drawn from the architecture
+workspace; a component of another context is shown where this one depends
+on it. Each component names its code in the workspace.
 
-```mermaid
-C4Component
-  title Components: validation
-  Container_Boundary(rdm_cli, "rdm") {
-    Component(formative_usability, "Formative usability", "Python", "Persona runs as formative evidence", $link="rdm/record/persona.py")
-    Component(persona_command, "Persona command", "Python", "rdm story persona", $link="rdm/record/persona_cmd.py")
-    Component(validation_records, "Validation records", "Python", "Approved validation records per user need", $link="rdm/record/validation.py")
-  }
-  Component_Ext(record_readers, "Record readers", "Python")
-  Rel(formative_usability, record_readers, "loads runs with")
-  Rel(persona_command, formative_usability, "classifies runs with")
-  Rel(persona_command, record_readers, "reads the V&V plan with")
-  Rel(validation_records, record_readers, "reads the record with")
-```
+![Components: validation](../../c4/views/C3_validation.svg)

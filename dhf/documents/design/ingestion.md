@@ -45,19 +45,8 @@ controlled record, and RDM no longer pulls it (Design Review 11).
 
 ## Components (C3)
 
-The components of the `ingestion` context, each naming the code that
-implements it; a component of another context is shown external, where this
-one depends on it.
+The components of the `ingestion` context, drawn from the architecture
+workspace; a component of another context is shown where this one depends
+on it. Each component names its code in the workspace.
 
-```mermaid
-C4Component
-  title Components: ingestion
-  Container_Boundary(rdm_cli, "rdm") {
-    Component(snippets, "Code snippets", "Python", "Collects tagged code snippets", $link="rdm/collect.py")
-    Component(test_translation, "Test result translation", "Python", "Translates foreign test results", $link="rdm/translate.py")
-    Component(result_formatters, "Result formatters", "Python", "JUnit and other result formats", $link="rdm/test_formatters/")
-  }
-  Component_Ext(utilities, "Utilities", "Python")
-  Rel(test_translation, result_formatters, "parses with")
-  Rel(test_translation, utilities, "uses")
-```
+![Components: ingestion](../../c4/views/C3_ingestion.svg)

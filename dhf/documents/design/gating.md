@@ -75,26 +75,8 @@ tests.
 
 ## Components (C3)
 
-The components of the `gating` context, each naming the code that
-implements it; a component of another context is shown external, where this
-one depends on it.
+The components of the `gating` context, drawn from the architecture
+workspace; a component of another context is shown where this one depends
+on it. Each component names its code in the workspace.
 
-```mermaid
-C4Component
-  title Components: gating
-  Container_Boundary(rdm_cli, "rdm") {
-    Component(design_gate, "Design and release gates", "Python", "Design gate, release gate, duplicate ids, trace", $link="rdm/gates/design_gate.py")
-    Component(hooks, "Hooks installer", "Python", "rdm hooks", $link="rdm/hooks.py")
-    Component(precommit_hook, "Pre-commit hook", "shell", "Runs the design gate before a commit", $link="rdm/hook_files/")
-  }
-  Component_Ext(record_readers, "Record readers", "Python")
-  Component_Ext(risk_register, "Risk register", "Python")
-  Component_Ext(validation_records, "Validation records", "Python")
-  Component_Ext(utilities, "Utilities", "Python")
-  Rel(design_gate, record_readers, "reads the record with")
-  Rel(design_gate, risk_register, "applies the risk rules of")
-  Rel(design_gate, validation_records, "reads validation records with")
-  Rel(hooks, precommit_hook, "installs")
-  Rel(hooks, utilities, "uses")
-  Rel(precommit_hook, design_gate, "runs")
-```
+![Components: gating](../../c4/views/C3_gating.svg)

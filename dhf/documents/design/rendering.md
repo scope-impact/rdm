@@ -68,18 +68,8 @@ the realised inputs by their owners' tests plus RDM's existing render unit tests
 
 ## Components (C3)
 
-The components of the `rendering` context, each naming the code that
-implements it; a component of another context is shown external, where this
-one depends on it.
+The components of the `rendering` context, drawn from the architecture
+workspace; a component of another context is shown where this one depends
+on it. Each component names its code in the workspace.
 
-```mermaid
-C4Component
-  title Components: rendering
-  Container_Boundary(rdm_cli, "rdm") {
-    Component(renderer, "Renderer", "Python, Jinja2", "Templates and data to Markdown", $link="rdm/render.py")
-    Component(markdown_extensions, "Markdown extensions", "Python", "Section numbers, vocabulary, audit notes, Mermaid diagrams", $link="rdm/md_extensions/")
-    Component(utilities, "Utilities", "Python", "Shared YAML and file helpers", $link="rdm/util.py")
-  }
-  Rel(renderer, utilities, "uses")
-  Rel(markdown_extensions, utilities, "uses")
-```
+![Components: rendering](../../c4/views/C3_rendering.svg)

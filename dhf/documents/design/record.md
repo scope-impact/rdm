@@ -87,16 +87,8 @@ are no planning outputs to mark. Acceptance criteria are verified by
 
 ## Components (C3)
 
-The components of the `record` context, each naming the code that
-implements it; a component of another context is shown external, where this
-one depends on it.
+The components of the `record` context, drawn from the architecture
+workspace; a component of another context is shown where this one depends
+on it. Each component names its code in the workspace.
 
-```mermaid
-C4Component
-  title Components: record
-  Container_Boundary(rdm_cli, "rdm") {
-    Component(record_readers, "Record readers", "Python", "Design, V&V and risk frontmatter, Allure results, the C4 model, git", $link="rdm/record/")
-    Component(dmr_index, "DMR index", "Python", "The device-master-record index from frontmatter", $link="rdm/record/dmr.py")
-  }
-  Rel(dmr_index, record_readers, "reads frontmatter with")
-```
+![Components: record](../../c4/views/C3_record.svg)

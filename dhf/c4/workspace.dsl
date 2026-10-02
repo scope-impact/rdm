@@ -131,7 +131,7 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:rendering"
           }
-          markdown_extensions = component "Markdown extensions" "Section numbers, vocabulary, audit notes, Mermaid diagrams" "Python" {
+          markdown_extensions = component "Markdown extensions" "Section numbers, vocabulary, audit notes" "Python" {
             properties {
               "code" "rdm/md_extensions/"
             }

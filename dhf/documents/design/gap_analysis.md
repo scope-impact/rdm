@@ -71,16 +71,8 @@ lower-level coverage.
 
 ## Components (C3)
 
-The components of the `gap_analysis` context, each naming the code that
-implements it; a component of another context is shown external, where this
-one depends on it.
+The components of the `gap_analysis` context, drawn from the architecture
+workspace; a component of another context is shown where this one depends
+on it. Each component names its code in the workspace.
 
-```mermaid
-C4Component
-  title Components: gap_analysis
-  Container_Boundary(rdm_cli, "rdm") {
-    Component(gap_analysis, "Gap analysis", "Python", "Documents against checklists", $link="rdm/gaps.py")
-    Component(checklists, "Checklists", "text", "The built-in checklists", $link="rdm/checklists/")
-  }
-  Rel(gap_analysis, checklists, "reads")
-```
+![Components: gap_analysis](../../c4/views/C3_gap_analysis.svg)

@@ -141,28 +141,8 @@ RDM's own.
 
 ## Components (C3)
 
-The components of the `scaffolding` context, each naming the code that
-implements it; a component of another context is shown external, where this
-one depends on it.
+The components of the `scaffolding` context, drawn from the architecture
+workspace; a component of another context is shown where this one depends
+on it. Each component names its code in the workspace.
 
-```mermaid
-C4Component
-  title Components: scaffolding
-  Container_Boundary(rdm_cli, "rdm") {
-    Component(project_scaffold, "Project scaffold", "Python", "rdm init", $link="rdm/init.py")
-    Component(project_templates, "Project templates", "Markdown, YAML, Typst", "What rdm init lays down", $link="rdm/init_files/")
-    Component(adoption, "Adoption", "Python", "rdm adopt", $link="rdm/adopt.py")
-    Component(adoption_templates, "Adoption templates", "Markdown, YAML", "What rdm adopt lays down", $link="rdm/adopt_files/")
-    Component(new_input, "New design input", "Python", "rdm story new-input", $link="rdm/gates/new_input.py")
-  }
-  Container_Boundary(gates_ci, "Reusable gates") {
-    Component(reusable_workflow, "Reusable workflow", "GitHub Actions", "Tests, then the gates, for any repository", $link=".github/workflows/gates.yml")
-    Component(gates_action, "Gates action", "GitHub Actions", "The gates as steps", $link="actions/gates/")
-    Component(pdf_action, "PDF action", "GitHub Actions", "Renders the documents in the image", $link="action.yml")
-  }
-  Component_Ext(record_readers, "Record readers", "Python")
-  Rel(project_scaffold, project_templates, "copies")
-  Rel(adoption, adoption_templates, "copies")
-  Rel(new_input, record_readers, "reads the design documents with")
-  Rel(reusable_workflow, gates_action, "runs the gates with")
-```
+![Components: scaffolding](../../c4/views/C3_scaffolding.svg)
