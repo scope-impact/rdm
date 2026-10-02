@@ -1405,6 +1405,30 @@ The exploratory test found evidence that did not say what happened:
 - The mutation probe rewrote a file's line endings while reporting it
   restored, and a leftover journal overwrote edits made since.
 
+# Design Review 48 — The rest of what the exploratory test found
+
+**Scope reviewed:** architecture freshness (DI-70), `rdm story new-input`
+(DI-22), the pre-commit hook (DI-2), formative usability (DI-5), the record
+reader (DI-1), gap analysis (DI-10, DI-12). No design input changed.
+
+**Disposition:** Approved.
+
+- An edit to a file the workspace `!include`s left the views reported
+  current: the digest covered the workspace file alone. It covers its
+  includes.
+- `new-input` corrupted a design document whose list was not indented, or
+  added a second `design_inputs` key to a flow list, dropping the context.
+  It reads its edit back and refuses, leaving the document as it was, unless
+  it holds the same inputs plus the new one.
+- The pre-commit hook gated eight file types, so a Go, Java, Rust or C
+  change went through a red gate, and no file whose name git quotes. It
+  gates the common languages, and names as written.
+- A persona run with an unknown or no outcome counted as completed.
+- A user need traced as one value was read one character at a time.
+- A stray `[[` made every later mention in the document a reference, and the
+  built-in FDA cybersecurity checklist listed V.A.1.b.ii twice and
+  V.A.1.b.iii never.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

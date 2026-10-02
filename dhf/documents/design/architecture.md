@@ -60,7 +60,9 @@ judge them:
   broader one. The code dependencies between components are found from the
   imports between their files, with one example pair of files kept for each
   pair of components.
-- **Freshness is read from the stamps alone.** The drawn files are stale
+- **Freshness is read from the stamps alone.** The workspace's digest is
+  over the workspace and every local file it `!include`s, so an edit to an
+  included file makes the drawn files stale too. The drawn files are stale
   when the exported model is missing, unreadable or stamped with another
   workspace's digest; when a view has no image, or its image is stamped for
   another view or another workspace; or when an image is no view's. Reading

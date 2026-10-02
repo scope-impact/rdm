@@ -56,7 +56,9 @@ and the documents to check, and applies these rules:
   `include <name>` names a built-in checklist or a file relative to the
   including one. Each file is read once, so an include cycle ends.
 - *Matching a reference.* Only text inside `[[ … ]]` blocks counts; a bare
-  mention of a key elsewhere is not a reference. A key matches only at
+  mention of a key elsewhere is not a reference. A block never runs past a
+  blank line, so a stray `[[` does not turn the next paragraphs' mentions
+  into references. Each built-in checklist's keys are unique. A key matches only at
   key-alphabet boundaries, so a shorter key is never satisfied by a longer
   sibling (`X-1` inside `X-12`) and a colon-qualified key never satisfies
   its prefix (`FDA-SW` inside `FDA-SW:sdmp`). Two allowances are deliberate:
