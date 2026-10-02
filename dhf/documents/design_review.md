@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 23
+revision: 24
 title: Design Review — RDM
 ---
 
@@ -681,6 +681,31 @@ DI-45's prose updated for how the risk shapes now agree with the gate.
   are the gates that were pinned — the property a regulated pipeline needs.
 - The release gate stays switchable: a freshly adopted record has no design
   input yet, and the gate would fail on that alone.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 23 — The verification report
+
+**Scope reviewed:** DI-64, in the verification context.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The release evidence (DI-30) keeps every Allure result and attachment, but
+  only as JSON and files; the matrix reduces each design input to counts. What
+  a test checked (its clause steps), on which commit, and what it attached,
+  reaches no document a reviewer or an auditor reads.
+- DI-64 renders that as a PDF: per design input, every run of its tests with
+  the commit, the worktree state, times, status, failure message, each step's
+  status and every attachment. The header names the results by one SHA-256, so
+  the document is tied to the exact evidence behind it.
+- Typst is compiled in-process from the `typst` package, so CI needs no
+  Pandoc; the data goes in as JSON rather than markup, so test output cannot
+  alter the layout. The package is about 77 MB installed, so it is an extra
+  (`report`), not core; without it the bundle says why it has no PDF.
 
 ## Findings and actions
 

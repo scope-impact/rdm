@@ -24,6 +24,9 @@ design_inputs:
   - id: DI-59
     text: "rdm.pytest_plugin shall label each run of a test tagged with a declared design input with the commit under test, and mark the run when the working tree had uncommitted changes."
     traces_to: [UN-004, UN-003]
+  - id: DI-64
+    text: "RDM shall render a verification report to PDF from the record and the Allure results it is given: for each design input, its text, its owning context and the user needs it traces to; for each run of a test tagged with it, the commit tested and whether the worktree was dirty, start and stop times, the status and any failure message, every step with its own status, and every attachment, text shown inline, images embedded, any other file named with its SHA-256; headed by the verification summary, the RDM version and one SHA-256 over the result files it was built from. The evidence bundle and the reusable gates workflow shall include the report."
+    traces_to: [UN-012]
 ---
 
 # Verification — Software Design
@@ -46,6 +49,22 @@ This context owns:
   results themselves — every result, the attachments and containers they
   reference — so the evidence behind each verdict outlives CI. Integrity is
   the pipeline's: GitHub's artifact upload records the artifact's digest.
+- **DI-64 (verification report, PDF)** — the matrix says *that* a design
+  input is verified; the report shows *what was run* to say so, as a document
+  a reviewer or an auditor reads without opening JSON. `rdm story
+  evidence-report` renders, from the record and the Allure results it is
+  given, one section per design input (its text, owning context and user
+  needs) and in it every run of a test tagged with it: the commit tested and
+  whether the worktree was dirty (the labels `rdm.pytest_plugin` writes),
+  start and stop times, status and failure message, each step (the clauses of
+  the test) with its own status, and every attachment: text inline, images
+  embedded, anything else named with its SHA-256. The header carries the
+  verification summary, the RDM version and one SHA-256 over the result files,
+  so the PDF names the exact evidence it was built from. It is compiled with
+  Typst in-process (the `report` extra): the data is passed as JSON, never
+  spliced into markup, so no text from a test can change the document's
+  layout. The evidence bundle and the reusable gates workflow include it.
+  Refines UN-012.
 - **DI-34 (mutation probe, reviewer tool)** — `rdm story mutation-probe
   --file F --find A --replace B --test T` breaks one line on purpose, runs one
   test, and reports KILLED (the test caught it) or SURVIVED (it did not). It is
@@ -93,9 +112,16 @@ Turns executed test results into verification status and a traceable matrix.
   DHF renders into a traceability matrix (design inputs grouped under the user
   need they trace to; generated, not hand-maintained).
 - `rdm/gates/mutation.py` + `rdm story mutation-probe` — DI-34.
+- `rdm/record/report.py` + `rdm story evidence-report` — DI-64: `build_report()`
+  gathers the report data from the record and the results;
+  `rdm/record/verification_report.typ` lays it out; `render_pdf()` compiles it
+  with the `typst` package (extra `report`). `evidence_bundle()` writes
+  `verification_report.pdf` next to the matrix when the extra is installed,
+  and records in the manifest why not otherwise.
 - `build_trace` + `rdm story trace <id>` — the read-only audit query: forward
   (user need → design inputs) and backward (design input → need, owner,
   realisers, verifying tests, status).
 
 Contributes to **UN-003** (the release gate consumes this output) and **UN-004**.
-Acceptance criteria are verified by `@allure.story("DI-4" / "DI-18")` tests.
+Acceptance criteria are verified by `@allure.story("DI-4" / "DI-18")` tests; DI-64 by
+`tests/acceptance/test_verification_report.py`.
