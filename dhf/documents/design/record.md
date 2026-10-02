@@ -18,7 +18,7 @@ design_inputs:
     text: "RDM shall read a Python test file's verification tags only from allure story decorators on its test functions and classes and from a module-level pytestmark — never from strings or comments — so a test that writes fixture files is not counted as verifying the ids those files name; a file that does not parse falls back to the decorator pattern. Only the story names a design input: feature and epic carry the bounded context and the user needs."
     traces_to: [UN-004]
   - id: DI-66
-    text: "RDM shall read the C4 model from the Mermaid C4 diagrams in the record (C4Context and C4Container in the architecture document, C4Component and C4 code views in each bounded context's design document): every person, software system, container and component with its alias, name, technology, description and whether it is external; the boundary that contains it; the document and bounded context that declare it; every relationship with its direction, label and technology; and the code a component names with $link, a file or a directory."
+    text: "RDM shall read the C4 model from the Mermaid C4 diagrams in the record (C4Context and C4Container in the architecture document, C4Component, and C4Dynamic and C4Deployment views, in each bounded context's design document): every person, software system, container and component with its alias, name, technology, description and whether it is external; the boundary that contains it; the document and bounded context that declare it; every relationship with its direction, label and technology; and the code a component names with $link, a file or a directory."
     traces_to: [UN-017]
 ---
 
@@ -58,8 +58,10 @@ This context owns the design inputs declared in the frontmatter:
 - **DI-66 (the C4 model, read from the record's diagrams)** — the
   architecture is kept where the design is: the system context (C1) and the
   containers (C2) in the architecture document, each bounded context's
-  components (C3, and code views where useful) in its own design document,
-  all as Mermaid C4 blocks. RDM reads them into one model: people, software
+  components (C3, with dynamic and deployment views where useful) in its own
+  design document, all as Mermaid C4 blocks. The code level (C4) is the code a
+  component names with `$link`: Mermaid has no code diagram, and the code is
+  the authority on itself. RDM reads them into one model: people, software
   systems, containers and components (alias, name, technology, description,
   external or not), the boundary each sits in, the document and context that
   declare it, every relationship (direction, label, technology), and the code
