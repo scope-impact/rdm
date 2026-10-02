@@ -73,53 +73,56 @@ def test_markdown_post_processing() -> None:
     assert "[apple][banana]" in vocab
 
 
-FAKE_STRUCTURIZR = """#!{python}
+FAKE_VIEWS = ("C1", "C3_core")
+FAKE_STRUCTURIZR = """
 import json, sys
 from pathlib import Path
 args = sys.argv[1:]
 workspace, fmt, out = (args[args.index(flag) + 1] for flag in ("-w", "-f", "-o"))
 if "BROKEN" in Path(workspace).read_text():
     sys.exit("Error: unexpected token at line 3")
-views = ["C1", "C3_core"]
+views = %r
 Path(out).mkdir(parents=True)
 if fmt == "json":
-    Path(out, "workspace.json").write_text(json.dumps({{
-        "name": "Device", "properties": {{"structurizr.dsl": "d29ya3NwYWNl"}},
-        "model": {{"people": [{{"id": "1", "name": "Clinician"}}]}},
-        "views": {{"systemContextViews": [{{"key": "C1"}}], "componentViews": [{{"key": "C3_core"}}]}}}}))
+    Path(out, "workspace.json").write_text(json.dumps({
+        "name": "Device", "properties": {"structurizr.dsl": "d29ya3NwYWNl"},
+        "model": {"people": [{"id": "1", "name": "Clinician"}]},
+        "views": {"systemContextViews": [{"key": views[0]}], "componentViews": [{"key": views[1]}]}}))
 else:
     for key in views:
-        Path(out, "structurizr-" + key + ".dot").write_text(
-            'digraph {{ 1 [label=<<font>Design, V&V and risk</font>>] }}')
-"""
+        Path(out, "structurizr-" + key + ".dot").write_text('digraph { 1 [label=<<font>Design, V&V and risk</font>>] }')
+""" % (FAKE_VIEWS,)
 
-FAKE_DOT = """#!{python}
+FAKE_DOT = """
 import re, sys
-source = open(sys.argv[-1]).read()
+source = sys.stdin.read()
 if re.search(r"&(?!(?:[a-zA-Z]+|#[0-9]+);)", source):
     sys.exit("Error: not well-formed (invalid token)")
-print('<?xml version="1.0" encoding="UTF-8"?>')
 label = source.split("<font>")[1].split("</font>")[0]
+print('<?xml version="1.0" encoding="UTF-8"?>')
 print("<svg xmlns='http://www.w3.org/2000/svg'><text>" + label + "</text></svg>")
 """
 
 
 def _tool(tmp_path: Path, name: str, source: str) -> Path:
     tool = tmp_path / name
-    tool.write_text(source.format(python=sys.executable))
+    tool.write_text(f"#!{sys.executable}" + source)
     tool.chmod(0o755)
     return tool
 
 
 @allure.story("DI-70")
 @allure.label("output", "rdm/c4.py")
+@allure.label("output", "rdm/record/c4.py")
 @allure.label("output", "rdm/gates/design_gate.py")
 def test_architecture_views_are_drawn_from_the_workspace_and_kept_current(tmp_path, monkeypatch) -> None:
     """DI-70: each view of the architecture workspace is drawn to an image in
     the record, stamped with the workspace it was drawn from, and the design
     gate fails when the model or a view's image was not drawn from the current
     workspace, or a view has no image."""
-    from rdm.c4 import DrawError, digest, draw, stale
+    from rdm.c4 import DrawError, draw
+    from rdm.record.c4 import stale
+    from rdm.record.c4 import workspace_digest as digest
     from rdm.gates.design_gate import check_architecture_views, run_design_gate
 
     dhf = tmp_path / "dhf"

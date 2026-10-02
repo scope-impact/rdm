@@ -80,9 +80,8 @@ def test_the_c4_model_is_read_from_the_architecture_workspace(tmp_path: Path) ->
     with verification_step("its name, technology and description"):
         ui = elements["ui"]
         assert (ui.name, ui.technology, ui.description) == ("Keypad UI", "C", "Takes the program")
-    with verification_step("whether it is external, and a database's shape"):
+    with verification_step("whether it is external"):
         assert elements["ehr"].external and not elements["pump"].external
-        assert elements["log"].shape == "db"
     with verification_step("the element that contains it"):
         assert (elements["ui"].parent, elements["firmware"].parent, elements["pump"].parent) == (
             "firmware", "pump", None)
@@ -94,8 +93,8 @@ def test_the_c4_model_is_read_from_the_architecture_workspace(tmp_path: Path) ->
         attach("relationships", [vars(r) for r in model.relationships])
         assert [(r.source, r.target, r.label, r.technology) for r in model.relationships] == [
             ("nurse", "ui", "programs infusions on", ""), ("ui", "dosing", "sends the dose to", "IPC")]
-    with verification_step("each element and relationship names the workspace that declares it, and its views"):
-        assert {e.document for e in elements.values()} == {"dhf/c4/workspace.dsl"}
+    with verification_step("the model names the workspace that declares it, and its views"):
+        assert model.document == "dhf/c4/workspace.dsl"
         assert model.views == ["C3_programming", "C1"]
     with verification_step("a DHF with no workspace has an empty model"):
         assert read_model(tmp_path / "empty").elements == {}

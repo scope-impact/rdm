@@ -98,6 +98,10 @@ class GateResult:
         return all(a.ok for a in self.artifacts)
 
 
+UNAPPROVED = ("has uncommitted changes; the current revision is not approved in "
+              "version control (commit and merge via a reviewed PR to record approval)")
+
+
 def has_uncommitted_changes(path: Path) -> bool | None:
     """Return the version-control state of a file.
 
@@ -140,10 +144,7 @@ def check_doc_path(path: Path, name: str) -> ArtifactCheck:
 
     uncommitted = has_uncommitted_changes(path)
     if uncommitted is True:
-        reasons.append(
-            "has uncommitted changes; the current revision is not approved in "
-            "version control (commit and merge via a reviewed PR to record approval)"
-        )
+        reasons.append(UNAPPROVED)
 
     return ArtifactCheck(
         name=name,
@@ -301,19 +302,20 @@ def check_unique_ids(dhf_dir: Path) -> ArtifactCheck:
 
 
 def check_architecture_views(dhf_dir: Path) -> list[ArtifactCheck]:
-    """The architecture workspace, approved, and its model and view images
-    drawn from it as it is now (DI-70); none when the DHF has no workspace."""
-    from rdm.c4 import WORKSPACE, stale
+    """The architecture workspace and what is drawn from it, current (DI-70) and
+    approved (committed, the drawn files with it); none when the DHF has no
+    workspace."""
+    from rdm.record.c4 import WORKSPACE, stale
 
     workspace = Path(dhf_dir) / WORKSPACE
     if not workspace.is_file():
         return []
-    stale_reasons = stale(dhf_dir)
-    reasons = list(stale_reasons)
-    uncommitted = has_uncommitted_changes(workspace)
-    if uncommitted:
-        reasons.append("has uncommitted changes; the current revision is not approved in version control")
-    return [ArtifactCheck(name="Architecture views", path=workspace, exists=True, complete=not stale_reasons,
+    reasons = stale(dhf_dir)
+    complete = not reasons
+    uncommitted = has_uncommitted_changes(workspace.parent)
+    if uncommitted is True:
+        reasons.append(UNAPPROVED)
+    return [ArtifactCheck(name="Architecture views", path=workspace, exists=True, complete=complete,
                           reasons=reasons, uncommitted=uncommitted)]
 
 
