@@ -9,7 +9,7 @@ an empty record does not fail the release gate.
 | Gate | Blocks | Runs |
 | --- | --- | --- |
 | **Design gate** — `rdm story design-gate` | implementation before the design is approved: design documents and design review present, complete, committed; every user-need and design-input id declared once | pre-commit hook; CI |
-| **Release gate** — `rdm story release-gate` | a release unless every design input is verified by a passing tagged test, every user need is addressed, and every risk is evaluated, controlled and acceptable | CI |
+| **Release gate** — `rdm story release-gate` | a release unless every design input is verified by a passing tagged test, every user need is addressed, and every risk is evaluated, its risk controls verified and its residual acceptable | CI |
 | **Gap analysis** — `rdm gap` | documents that do not reference every clause a checklist requires | on demand; add it to CI |
 | **Graph validation** — `rdm graph validate` | the same rules, as SHACL shapes over the graph, plus warnings the coded gates do not give | on demand; add it to CI |
 
@@ -128,12 +128,17 @@ body, the pull-request reviewer. It follows their questions, in order:
    release-grade* and names each reason.
 2. **What went wrong.** Failed, broken and skipped runs, design inputs with no
    run, missing attachments, and tags that name no design input.
+   Beside it, the **risk register**: how many ratings are still proposals no
+   person approved, and how many residuals are not evaluated.
 3. **What traces to what.** One table: design input, user needs, the risks it
-   controls (from the risk register), its tests, the result, and the page.
-4. **The evidence.** Per design input — its text, context, user needs, risks
-   and outputs — each run: the test's file and function, result, date and
-   duration, failure message and trace, its links, and its steps as numbered
-   **acceptance criteria** with their own results. Under each, the attachments
+   is a control for (from the risk register), its tests, the result, and the
+   page.
+4. **The evidence.** Per design input — its text; whether it is a *baseline*
+   or a *risk-based* acceptance criterion; its bounded context, user needs and
+   outputs; each risk it is a control for, with that risk's status and residual
+   decision — each run: the test's file and function, result, date and
+   duration, failure message and trace, its links, and its numbered
+   **verification steps** with their own results. Under each, the attachments
    the test made: text inline (the first 60 lines), images embedded, other
    files by SHA-256. A run's commit and worktree appear only where they differ
    from the header.
@@ -141,8 +146,14 @@ body, the pull-request reviewer. It follows their questions, in order:
    how the header's SHA-256 is computed from them, so the report can be held
    against the retained evidence bundle.
 
+It speaks the [glossary](glossary.md)'s language: a design input *is* the
+acceptance criterion and the test verifies it; a design input is a control
+*for* a risk and the risk is never shown as controlled until its residual is
+evaluated acceptable; a residual on a proposed rating says so.
+
 Left out, because it repeats the report or buries it: labels shown elsewhere
-(story, epic, feature, output, commit, worktree), runner internals (host,
+(story, epic, feature, output, commit, worktree), Allure's severity label
+(which reads as a harm's severity and is not one), runner internals (host,
 thread, framework, language, suite, package), and pytest's captured stdout and
 stderr and the plugin's copy of the requirement, which are listed by
 checksum. All of it stays in the results and the bundle.

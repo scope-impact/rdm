@@ -50,7 +50,7 @@ linked graph.
 | Part | What it is | Commands |
 | --- | --- | --- |
 | **Record** | User needs, design inputs (one design document per bounded context), the risk register, checklists, tests tagged `@allure.story("DI-n")`. Markdown + git. Changed only by a reviewed pull request — the approval is the merge. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story trace` |
-| **Gates** | Machine checks: no implementation before the design is approved, no release until every input has a passing test, every need is addressed and every risk is scored, controlled and acceptable, no clause a checklist requires left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
+| **Gates** | Machine checks: no implementation before the design is approved, no release until every input has a passing test, every need is addressed and every risk is evaluated with its risk controls verified and its residual acceptable, no clause a checklist requires left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
 | **Graph** | The record built into an RDF graph (Oxigraph): needs, inputs, contexts, documents, tests, results, commits, risks, checklist clauses. **Read-only** — rebuilt from the record, never edited. Agents read it through an MCP server; people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
 | **Documents** | Regulatory documents (PDF/DOCX) rendered from the record: Markdown templates + YAML data → Pandoc/Typst. | `rdm render`, `make pdfs` |
 

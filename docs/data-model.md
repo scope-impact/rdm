@@ -72,9 +72,12 @@ with the rule that derives it, and `--infer` adds it in a separate graph
 - **Defined once.** A user-need or design-input id declared twice fails the
   design gate. A user need is *referenced* by many design inputs; a design
   input is *owned* by one context and may be *realised* by others.
-- **The test is the acceptance criterion.** A design input is verified by a
-  passing run of a test tagged with its id — "live BDD", with no separate
-  Gherkin layer. Only the `story` tag names a design input.
+- **The design input is the acceptance criterion; the test verifies it.** A
+  design input is verified by a passing run of a test tagged with its id, one
+  verification step per clause — "live BDD", with no separate Gherkin layer.
+  Only the `story` tag names a design input. A design input a risk allocates as
+  a control is a *risk-based* criterion; it counts once it is verified and the
+  risk's residual is acceptable. The words are the [glossary](glossary.md)'s.
 - **Approval is the merge.** No sign-off table is kept in the documents; the
   reviewed pull request is the approval record.
 - **Absent is unknown, not false.** The graph states only what the record

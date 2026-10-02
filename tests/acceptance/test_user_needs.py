@@ -1,8 +1,8 @@
 """Acceptance tests for RDM's own design inputs (see dhf/).
 
-Each test *is* the acceptance criterion ("live BDD"): the test is the behaviour,
-the `@allure.story` tag (DI-n) is the traceability link to the design input it
-verifies, and the optional `@allure.label("output", "...")` records the design
+Each test verifies a design input, the acceptance criterion ("live BDD"): its
+verification steps check the clauses, the `@allure.story` tag (DI-n) is the
+traceability link to the design input it verifies, and the optional `@allure.label("output", "...")` records the design
 output exercised. There is no Gherkin / feature file / step glue — the reviewed
 spec lives in the registries (the per-context design docs, the V&V plan) and the living doc
 is the Allure report. An `allure.step(...)` narrative is available but optional

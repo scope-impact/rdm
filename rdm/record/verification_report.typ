@@ -4,6 +4,9 @@
 //
 // Order follows the reader who did not run the tests: what is this and can I
 // rely on it; what went wrong; what traces to what; the evidence; how to check.
+// Words are the record's (CONTEXT.md): a design input is an acceptance
+// criterion, baseline or risk-based; a test verifies it in verification steps;
+// a design input is a control *for* a risk, never shown as making it controlled.
 #let d = json("report.json")
 
 #set document(title: d.title)
@@ -27,10 +30,12 @@
 
 #let ok = green.darken(35%)
 #let bad = red.darken(25%)
-#let tone(s) = if s in ("passed", "verified") { ok } else if s in ("failed", "broken") { bad } else { luma(80) }
+#let tone(s) = if s in ("passed", "verified", "acceptable", "accepted", "approved") { ok } else if s in (
+  "failed", "broken", "unacceptable", "needs acceptance") { bad } else { luma(80) }
 #let badge(s) = box(inset: (x: 3pt, y: 1.5pt), radius: 2pt, fill: tone(s).lighten(85%),
   text(7.5pt, fill: tone(s), weight: "bold", upper(s)))
 #let muted(body) = text(fill: luma(100), body)
+#let risk-ref(r) = [#r.id #badge(r.status) residual #badge(r.residual)#if r.status == "proposed" and r.residual != "not evaluated" [ #muted[(on a proposed rating)]]]
 #let either(value, fallback) = if value == none { muted(fallback) } else { value }
 #let short(sha) = raw(sha.slice(0, 12))
 #let field-table(..rows) = table(
@@ -124,6 +129,18 @@ request; this report is its evidence.
   }
 })
 
+#let reg = d.risk_register
+#block(width: 100%, inset: 6pt, radius: 3pt, stroke: 0.6pt + luma(170), {
+  text(weight: "bold", [Risk register])
+  linebreak()
+  if reg.risks == 0 [No risks are declared.] else [
+    #reg.risks risk(s); acceptability criteria #badge(reg.policy).
+    #if reg.proposed > 0 [#text(fill: bad)[#reg.proposed rating(s) are proposals no person has approved.]]
+    #if reg.not_evaluated > 0 [#reg.not_evaluated residual(s) not evaluated.]
+    A risk-based acceptance criterion counts only once it is verified and its risk's residual is acceptable.
+  ]
+})
+
 #table(
   columns: 5, stroke: 0.4pt + luma(200), inset: 4pt,
   ..("Verified", "Failed", "Untested", "Design inputs", "Test results").map(h => text(weight: "bold", h)),
@@ -148,11 +165,11 @@ request; this report is its evidence.
 
 #table(
   columns: (auto, auto, auto, 1fr, auto, auto), stroke: 0.4pt + luma(200), inset: 4pt,
-  ..("Design input", "User needs", "Risks", "Tests", "Result", "Page").map(h => text(weight: "bold", h)),
+  ..("Design input", "User needs", "Control for", "Tests", "Result", "Page").map(h => text(weight: "bold", h)),
   ..d.design_inputs.map(di => (
     link(di-label(di.id), di.id),
     di.traces_to.join(", "),
-    either(if di.risks.len() > 0 { di.risks.join(", ") }, "—"),
+    either(if di.control_for.len() > 0 { di.control_for.map(r => r.id).join(", ") }, "—"),
     either(if di.runs.len() > 0 { di.runs.map(r => ident(r.test.split("::").last())).join(linebreak()) }, "none"),
     badge(di.status),
     page-of(di.id),
@@ -166,9 +183,11 @@ request; this report is its evidence.
   [#heading(level: 2, [#di.id #h(4pt) #badge(di.status)])#di-label(di.id)]
   block(inset: (left: 8pt), stroke: (left: 2pt + luma(180)), di.text)
   field-table(
-    ("Context", di.context),
+    ("Acceptance criterion", if di.criterion == "risk-based" [risk-based: a risk control] else [baseline: from its user needs]),
+    ("Bounded context", di.context),
     ("User needs", either(if di.traces_to.len() > 0 { di.traces_to.join(", ") }, "none")),
-    ("Risks controlled", either(if di.risks.len() > 0 { di.risks.join(", ") }, "none")),
+    if di.control_for.len() > 0 { ("Control for", di.control_for.map(risk-ref).join(linebreak())) },
+    ("Verification method", [automated test tagged #di.id]),
     ("Design outputs", either(if di.outputs.len() > 0 { di.outputs.map(raw).join(", ") }, "none declared")),
   )
   if di.runs.len() == 0 { block(text(fill: bad, [No run of a test tagged #di.id.])) }
@@ -184,7 +203,7 @@ request; this report is its evidence.
     )
     failure(r.message, r.trace)
     if r.steps.len() > 0 {
-      block(above: 8pt, below: 2pt, text(weight: "bold", "Acceptance criteria"))
+      block(above: 8pt, below: 2pt, text(weight: "bold", "Verification steps"))
       for (i, s) in r.steps.enumerate() { criterion(s, str(i + 1)) }
     }
     if shown(r.attachments).len() > 0 {
@@ -213,13 +232,21 @@ show this report describes that evidence.
 
 == Appendix B — how this report is produced
 
+- A design input is an acceptance criterion: a `shall` requirement on the
+  system or one of its bounded contexts. It is *baseline* when it follows from
+  its user needs alone, and *risk-based* when it is allocated as a control for a
+  risk; a risk-based criterion counts only once it is verified and that risk's
+  residual is evaluated acceptable.
 - A design input is *verified* when a test tagged with it (`@allure.story`) has
-  a passing run and none failed. Its acceptance criteria are the test's steps.
+  a passing run and none failed. The test's steps are its verification steps.
+- A risk control that is verified is not thereby *effective*: that needs the
+  risk evaluated again with an acceptable residual, shown beside each risk. A
+  rating no person has approved is shown as a proposal.
 - The design inputs, their user needs and contexts, and the risks they control
   are read from the design record at the record commit above; the runs, from
   the Allure results.
 - Labels this report already shows (story, epic, feature, output, commit,
-  worktree) and runner internals (host, thread, framework, language, suite,
+  worktree), Allure's severity label (not a harm's severity), and runner internals (host, thread, framework, language, suite,
   package) are not repeated per run. pytest's captured output and the copy of
   the requirement the test run records are listed by checksum, not printed;
   both are in the results.

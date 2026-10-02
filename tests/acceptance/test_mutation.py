@@ -1,6 +1,6 @@
 """Acceptance test for the mutation-probe design input (see dhf/).
 
-Acceptance criterion ("live BDD") for DI-34, tagged `@allure.story`, over the
+The test ("live BDD") that verifies DI-34, tagged `@allure.story`, over the
 real `run_mutation_probe`. Uses an injected stub runner so the probe's mechanics
 (apply / observe / restore) are tested without nesting pytest.
 

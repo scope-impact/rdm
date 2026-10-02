@@ -43,9 +43,17 @@ scope:
   each owning its `design_inputs`; the risk policy and register in `dhf/documents/risk/`; user needs in the V&V plan; the design review
   in `dhf/documents/design_review.md`. Never hand-edit the traceability
   matrix — it is generated.
-- **Acceptance criteria are tests** — each design input DI-n is verified by a
-  test tagged `@allure.story("DI-n")` in `tests/acceptance/`. Add/changing a
+- **Design inputs are the acceptance criteria; tests verify them** — a design
+  input DI-n is a system or subsystem `shall` requirement: *baseline* when it
+  follows from a user need, *risk-based* when a risk's `controls:` allocates it.
+  It is verified by a test tagged `@allure.story("DI-n")` in
+  `tests/acceptance/`, one verification step per clause. Adding/changing a
   design input means adding/adjusting its tagged test ("live BDD").
+- **Vocabulary** — `CONTEXT.md` is the glossary (user need, design input,
+  bounded context, verification step, risk control, effective, proposal…).
+  Use its terms and avoid the ones it lists under _Avoid_; when a term is
+  resolved or changes, update `CONTEXT.md` in the same change (the
+  domain-modeling skill).
 - **Local gate** — the design-gate pre-commit hook is committed in `.githooks/`
   and activated automatically at session start (`.claude/settings.json` runs
   `scripts/agent-bootstrap.sh`, which also syncs dependencies). Manual

@@ -18,8 +18,10 @@ version:
   user needs), then commit the design docs **before** the implementation —
   the commit is the approval, and the gate blocks implementation commits
   until it exists.
-- The tagged test (`@allure.story("DI-n")`, `tests/acceptance/`) **is** the
-  acceptance criterion. Whether it actually proves the DI is judged by the
+- The design input is the acceptance criterion; the tagged test
+  (`@allure.story("DI-n")`, `tests/acceptance/`) **verifies** it, one
+  verification step per clause (vocabulary: `CONTEXT.md`). Whether it actually
+  proves the DI is judged by the
   **independent** pull-request reviewer — never the test's author.
 - Never hand-edit `dhf/documents/traceability_matrix.md` — it is generated
   from executed results.

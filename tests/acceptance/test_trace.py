@@ -1,6 +1,6 @@
 """Acceptance test for the trace-query design input (see dhf/).
 
-Acceptance criterion ("live BDD") for DI-18, tagged `@allure.story`, over the
+The test ("live BDD") that verifies DI-18, tagged `@allure.story`, over the
 real `build_trace` — the read-only traceability audit query.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results

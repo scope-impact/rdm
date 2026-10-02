@@ -1,6 +1,6 @@
 """Acceptance tests for the gap-analysis context's design inputs (see dhf/).
 
-Each test is the acceptance criterion ("live BDD") for a gap-analysis design
+Each test ("live BDD") verifies a gap-analysis design
 input, tagged with `@allure.story` and its DI id, exercising the real
 `rdm/gaps.py` engine.
 

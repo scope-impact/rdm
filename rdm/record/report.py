@@ -2,17 +2,22 @@
 The verification report (DI-64): what was run to verify each design input, as a PDF.
 
 Written for the person who judges the evidence without having run it: an
-auditor, a notified body, the pull-request reviewer. It answers their
+auditor, a notified body, the pull-request reviewer, in the record's language
+(``CONTEXT.md``): a design input is an acceptance criterion, baseline or
+risk-based; a test verifies it through its verification steps; a design input
+allocated to a risk is a control *for* it, and the risk is not shown as
+controlled until its residual is evaluated acceptable. It answers the reader's
 questions in their order:
 
 1. what is this, and can I rely on it — the repository, the record's commit,
    the commits tested, the executor and environment (DI-65), one SHA-256 over
    the results, and an evidence status: release-grade, or each reason not;
+   beside it, the risk register's state (proposals, residuals not evaluated);
 2. what went wrong — the anomalies;
-3. what traces to what — user need, design input, risks controlled, tests,
-   result;
-4. the evidence — per design input, each run with its acceptance criteria
-   (the test's steps) and the attachments the test made;
+3. what traces to what — user need, design input, the risks it is a control
+   for, tests, result;
+4. the evidence — per design input, each run with its verification steps and
+   the attachments the test made;
 5. how to check it — every result file and its SHA-256.
 
 What would only repeat the report or bury it is left out: labels it already
@@ -36,7 +41,7 @@ from pathlib import Path
 
 from rdm.record.allure import DESIGN_INPUT_LABELS
 from rdm.record.git import git, repo_root, web_url
-from rdm.record.risk import risks
+from rdm.record.risk import NOT_EVALUATED, read_policy, residual_decision, risks
 from rdm.record.sdd import design_inputs
 from rdm.record.verify import build_verification
 from rdm.version import __version__
@@ -50,7 +55,8 @@ TEXT_LINES, TEXT_CHARS = 60, 6000
 # pytest's captured output: listed by checksum, not printed.
 CAPTURED = {"stdout", "stderr", "log"}
 # Labels the report already shows elsewhere, and runner internals: not repeated per run.
-SHOWN_LABELS = {"story", "epic", "feature", "output", "commit", "worktree"}
+# Allure's severity is left out too: beside a risk it reads as a harm's severity, and it is not one.
+SHOWN_LABELS = {"story", "epic", "feature", "output", "commit", "worktree", "severity"}
 RUNNER_LABELS = {"host", "thread", "framework", "language", "suite", "parentSuite", "subSuite", "package"}
 FAILED_STATUSES = {"failed", "broken"}
 
@@ -250,10 +256,20 @@ def build_report(dhf_dir: Path, results_dir: Path) -> dict:
     dhf_dir, results_dir = Path(dhf_dir), Path(results_dir)
     verification = build_verification(dhf_dir, results_dir)
     rows = {row["design_input"]: row for group in verification["groups"] for row in group["design_inputs"]}
-    controlled: dict[str, list[str]] = {}
-    for risk in risks(dhf_dir):
+    try:
+        policy = read_policy(dhf_dir)
+    except ValueError:
+        policy = None  # a malformed policy: the release gate reports it; here no residual is evaluated
+    verified = {row["design_input"] for row in rows.values() if row["status"] == "verified"}
+    register = []
+    control_for: dict[str, list[dict]] = {}
+    for risk in risks(dhf_dir, policy):
+        proposal = risk.status == "proposed" or (policy is not None and policy.status == "proposed")
+        entry = {"id": risk.id, "status": "proposed" if proposal else "approved",
+                 "residual": residual_decision(risk, policy, verified)}
+        register.append(entry)
         for control in risk.controls:
-            controlled.setdefault(control, []).append(risk.id)
+            control_for.setdefault(control, []).append(entry)
 
     runs: dict[str, list[dict]] = {}
     for result in _results(results_dir):
@@ -269,7 +285,8 @@ def build_report(dhf_dir: Path, results_dir: Path) -> dict:
         "text": di["text"],
         "context": di["context"],
         "traces_to": di["traces_to"],
-        "risks": sorted(controlled.get(di["id"], []), key=_id_order),
+        "criterion": "risk-based" if di["id"] in control_for else "baseline",
+        "control_for": sorted(control_for.get(di["id"], []), key=lambda r: _id_order(r["id"])),
         "status": rows[di["id"]]["status"],
         "outputs": rows[di["id"]]["outputs"],
         "runs": runs.get(di["id"], []),
@@ -291,6 +308,13 @@ def build_report(dhf_dir: Path, results_dir: Path) -> dict:
         "results_dir": str(results_dir),
         "results_sha256": results_sha256(results_dir),
         "release_grade": not reasons,
+        "risk_register": {
+            "risks": len(register),
+            "proposed": sum(r["status"] == "proposed" for r in register),
+            "not_evaluated": sum(r["residual"] == NOT_EVALUATED for r in register),
+            "policy": "none declared" if policy is None else ("proposed" if policy.status == "proposed"
+                                                              else "approved"),
+        },
         "reasons": reasons,
         "anomalies": anomalies,
         "summary": verification["summary"],

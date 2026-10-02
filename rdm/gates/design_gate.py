@@ -513,8 +513,8 @@ def story_release_gate_command(
     if result.passed:
         print(
             "Release gate PASSED: design controls are approved, every design input "
-            "is verified by a passing test, every user need is addressed, and every risk is scored, "
-            "controlled and acceptable."
+            "is verified by a passing test, every user need is addressed, and every risk is evaluated, "
+            "with its risk controls verified and its residual acceptable."
         )
         return 0
 

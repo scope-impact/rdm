@@ -41,7 +41,7 @@ flowchart LR
         RISK["Risk<br>risk register"]
     end
     subgraph proof["PROOF"]
-        TEST["Acceptance test<br><code>@allure.story</code><br><i>the test is the criterion</i>"]
+        TEST["Acceptance test<br><code>@allure.story</code><br><i>verifies the criterion</i>"]
         RUN["Test run<br>at a commit"]
         PR["Pull-request review<br><i>passing ≠ proving</i>"]
     end

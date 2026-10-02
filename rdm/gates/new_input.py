@@ -43,8 +43,9 @@ Remaining traceability checklist (see {workflow}):
 
 STUB_HEADER = '''"""Acceptance tests for the {context} context's design inputs (see dhf/).
 
-Each test is the acceptance criterion ("live BDD") for a design input, tagged
-`@allure.story("DI-...")`. Skips cleanly if allure-pytest is not installed.
+Each test verifies a design input (an acceptance criterion), one verification
+step per clause ("live BDD"), tagged `@allure.story("DI-...")`. Skips cleanly
+if allure-pytest is not installed.
 """
 
 from __future__ import annotations

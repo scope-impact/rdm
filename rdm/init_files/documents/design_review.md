@@ -46,7 +46,7 @@ TODO: Confirm each item was examined during the review. Replace with review-spec
 
 - Design inputs are complete, unambiguous, and verifiable.
 - Design inputs do not conflict with one another.
-- Each design input `traces_to` a user need in the V&V plan registry, and the test tagged `@allure.story("<id>")` is its acceptance criterion (these are the sources of truth).
+- Each design input `traces_to` a user need in the V&V plan registry, and is verified by the test tagged `@allure.story("<id>")` (the design input is the acceptance criterion; these are the sources of truth).
 - Risks associated with the design inputs have been considered ({{ workflow.risk_management_file }}).
 - Open issues and action items have been captured below.
 

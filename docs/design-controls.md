@@ -1,7 +1,8 @@
 # Design inputs and tests
 
-How to write the record: declare a design input, write the test that is its
-acceptance criterion, and let RDM label the test runs from the record. The
+How to write the record: declare a design input (an acceptance criterion),
+write the test that verifies it, and let RDM label the test runs from the
+record. The words are the [glossary](glossary.md)'s. The
 step-by-step change procedure is [Changing the record](agent-workflow.md);
 what the gates then check is [The gates](gates.md).
 
@@ -9,9 +10,11 @@ what the gates then check is [The gates](gates.md).
 
 User needs (`UN-nnn`, in the V&V plan) are refined by design inputs (`DI-n`,
 in the design document of the bounded context that owns them). Each design
-input is verified by an acceptance test tagged `@allure.story("DI-n")` — the
-test *is* the acceptance criterion. The merge of the reviewed pull request is
-the approval. See [the data model](data-model.md) for every entity and link.
+input is an acceptance criterion: a `shall` requirement on the system or one
+of its bounded contexts, *baseline* when it follows from a user need alone,
+*risk-based* when a risk allocates it as a control. Each is verified by an
+acceptance test tagged `@allure.story("DI-n")`, whose verification steps check
+its clauses. The merge of the reviewed pull request is the approval. See [the data model](data-model.md) for every entity and link.
 
 ```yaml
 # dhf/documents/verification_and_validation_plan.md
@@ -98,7 +101,7 @@ Enable it for the acceptance suite only — import its hook in that suite's
 from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
 ```
 
-## Running the acceptance criteria
+## Running the acceptance tests
 
 ```bash
 pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results

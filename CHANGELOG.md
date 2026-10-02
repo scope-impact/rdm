@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Changed — one vocabulary with the requirements skill
+- `CONTEXT.md` is the glossary, in the domain-modeling skill's format, and the
+  docs site shows it (Glossary). A design input *is* the acceptance criterion,
+  a system or subsystem `shall` requirement: *baseline* from a user need,
+  *risk-based* when a risk allocates it as a control. The test verifies it, one
+  verification step per clause. "Risk control" replaces "measure"; "verified"
+  is kept apart from "effective".
+- The verification report heads test steps "Verification steps", marks each
+  design input baseline or risk-based, shows each risk it is a control for with
+  that risk's status and residual decision (a residual on a proposed rating
+  says so), summarises the risk register on page 1, and leaves out Allure's
+  severity label. The release gate's message no longer calls risks
+  "controlled".
+
 ### Added — the verification report
 - `rdm story evidence-report` renders a PDF for an auditor (DI-64):
   identification (repository, record commit, commits tested, executor and

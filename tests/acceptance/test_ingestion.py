@@ -1,6 +1,6 @@
 """Acceptance tests for the ingestion context's design inputs (see dhf/).
 
-Acceptance criteria ("live BDD") for DI-16 (code-snippet collection) and DI-17
+The tests ("live BDD") that verify DI-16 (code-snippet collection) and DI-17
 (foreign test-result translation), tagged `@allure.story`, over the real
 `rdm/collect.py` and `rdm/translate.py`.
 

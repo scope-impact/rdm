@@ -1,6 +1,6 @@
 """Acceptance tests for the git/GitHub document-control example (see ../dhf/).
 
-Each test is the acceptance criterion ("live BDD") for a design input declared
+Each test verifies a design input (an acceptance criterion, "live BDD") declared
 in ``dhf/documents/design/document_control.md``, tagged with `@allure.story`.
 They verify the REAL configuration code and the REAL controlled document —
 not fixtures — so a drift in the ruleset, workflow, CODEOWNERS, or SOP fails

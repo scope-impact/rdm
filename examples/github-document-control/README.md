@@ -38,7 +38,7 @@ flowchart LR
 | `github/CODEOWNERS` | routes controlled paths to the quality team (the authorized signers) |
 | `github/workflows/release-documents.yml` | tag-triggered release: renders PDF copies + attaches a `git archive` electronic set (§11.10(b)/(c)) |
 | `dhf/` | the record: user needs, design inputs DI-1..5, design review, matrix template |
-| `tests/acceptance/` | the acceptance criteria — they inspect the *real* configuration and render the *real* SOP |
+| `tests/acceptance/` | the tests that verify the design inputs — they inspect the *real* configuration and render the *real* SOP |
 
 > `github/` is deliberately not `.github/` so this example's workflow doesn't
 > run in the RDM repository — copy its contents to `.github/` when using this

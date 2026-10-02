@@ -41,7 +41,7 @@ Each user need is refined into **design inputs** (declared in the per-context
 design documents, `kind: design`), realised by
 the contributing contexts. Verification is anchored on the design input
 (§820.30(f): output meets input): each is verified by an `@allure.story("DI-…")`
-test — the test *is* the acceptance criterion ("live BDD"). A user need is met
+test that verifies it (the design input is the acceptance criterion, "live BDD"). A user need is met
 when validated **and** every design input that `traces_to` it is verified,
 **aggregated across every context that realises it** — `UN-001` is not fully
 verified until DI-1 and DI-2 (across `ingestion`, `alerting`, *and* `dashboard`)
@@ -66,5 +66,5 @@ pass.
 ## A user need is *met* when
 
 it is **validated** (human summative evidence accepted) **and** fully
-**verified** (all acceptance criteria pass across contexts). That is the
+**verified** (every design input that traces to it verified, across contexts). That is the
 release-gate condition.

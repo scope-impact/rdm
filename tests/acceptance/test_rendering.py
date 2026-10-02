@@ -1,6 +1,6 @@
 """Acceptance tests for the rendering context's design inputs (see dhf/).
 
-Each test is the acceptance criterion ("live BDD") for a rendering design input,
+Each test ("live BDD") verifies a rendering design input,
 tagged with `@allure.story` and its DI id. They exercise the real render engine / filters /
 markdown extensions, so a passing tag is evidence the requirement is met.
 

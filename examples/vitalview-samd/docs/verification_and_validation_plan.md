@@ -3,7 +3,7 @@ id: VVP-001
 title: Verification and Validation Plan
 # User-need registry (per ADR 0001): the validated, cross-cutting clinician
 # journeys, defined ONCE here. Design inputs trace to these via
-# `traces_to`. Verification = acceptance criteria (Allure), aggregated across
+# `traces_to`. Verification = the tests of those design inputs (Allure), aggregated across
 # every design input that traces to the need. Validation = human summative study per need
 # (with AI-persona runs as formative, supporting evidence).
 user_needs:
@@ -32,8 +32,8 @@ Each user need is refined into **design inputs** (declared in the per-context
 design documents, `kind: design`), owned and realised
 by bounded contexts. Verification is anchored on the
 design inputs (§820.30(f): output meets input): each is verified by an
-`@allure.story("DI-…")` test — the test *is* the acceptance criterion ("live
-BDD"). A user need is met when it is validated and every design input that
+`@allure.story("DI-…")` test (the design input is the acceptance criterion;
+the test verifies it, "live BDD"). A user need is met when it is validated and every design input that
 `traces_to` it is verified, aggregated across those contexts.
 
 # Validation approach

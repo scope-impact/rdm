@@ -60,7 +60,13 @@ def _record(tmp_path: Path, inputs: str) -> tuple[Path, str]:
         "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: 'a need'}\n  - {id: UN-002, text: 'another'}\n---\n")
     (docs / "design" / "alarms.md").write_text(
         f"---\nid: SDS-ALM-001\nkind: design\ncontext: alarms\ndesign_inputs:\n{inputs}---\n")
-    (docs / "risks.md").write_text("---\nid: RR-001\nkind: risk\nrisks:\n  - {id: RISK-7, controls: [DI-1]}\n---\n")
+    (docs / "risks.md").write_text(
+        "---\nid: RR-001\nkind: risk\nstatus: proposed\nrisk_policy:\n  severities: [Minor, Major]\n"
+        "  probabilities: [Rare, Often]\n  levels: {Minor: [Low, Low], Major: [Low, High]}\n"
+        "  acceptability: {Low: acceptable, High: unacceptable}\nrisks:\n"
+        "  - {id: RISK-7, severity: Major, probability: Often, controls: [DI-1], residual: {probability: Rare}}\n"
+        "  - {id: RISK-8, severity: Minor, probability: Rare}\n"
+        "  - {id: RISK-9, severity: Major, probability: Often, controls: [DI-2], residual: {probability: Rare}}\n---\n")
     _git(repo, "init", "-q")
     _git(repo, "remote", "add", "origin", "git@github.com:acme/device.git")
     _git(repo, "add", "-A")
@@ -133,7 +139,7 @@ def _text(pdf: Path) -> str:
 @allure.label("output", "rdm/record/bundle.py")
 def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monkeypatch) -> None:
     """DI-64: identification, evidence status, anomalies and traceability first;
-    then per design input every run with its acceptance criteria and the
+    then per design input every run with its verification steps and the
     attachments the test made; then every result file by SHA-256."""
     clean_dhf, clean_commit = _record(tmp_path / "clean", DI_1)
     clean_results = tmp_path / "clean-results"
@@ -190,11 +196,19 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             ("DI-10", "no run"),
             ("DI-9", "orphan tag"),
         ]
-    with clause("traceability: each design input in id order with its user needs, the risks it controls "
-                "and its tests"):
+    with clause("traceability: each design input in id order with its user needs, the risks it is a control "
+                "for, and its tests"):
         assert [di["id"] for di in report["design_inputs"]] == ["DI-1", "DI-2", "DI-3", "DI-10"]
-        assert by_id["DI-1"]["traces_to"] == ["UN-001", "UN-002"] and by_id["DI-1"]["risks"] == ["RISK-7"]
-        assert by_id["DI-1"]["context"] == "alarms" and by_id["DI-2"]["risks"] == []
+        assert by_id["DI-1"]["traces_to"] == ["UN-001", "UN-002"] and by_id["DI-1"]["context"] == "alarms"
+        assert [r["id"] for r in by_id["DI-1"]["control_for"]] == ["RISK-7"] and by_id["DI-3"]["control_for"] == []
+    with clause("each design input is a baseline or a risk-based acceptance criterion; each risk it is a control "
+                "for shows its status and residual decision, and the register's state is summarised"):
+        assert [di["criterion"] for di in report["design_inputs"]] == [
+            "risk-based", "risk-based", "baseline", "baseline"]
+        assert by_id["DI-1"]["control_for"] == [{"id": "RISK-7", "status": "proposed", "residual": "acceptable"}]
+        # DI-2 failed: the residual of the risk it is a control for is not evaluated.
+        assert by_id["DI-2"]["control_for"] == [{"id": "RISK-9", "status": "proposed", "residual": "not evaluated"}]
+        assert report["risk_register"] == {"risks": 3, "proposed": 3, "not_evaluated": 1, "policy": "proposed"}
         assert [di["status"] for di in report["design_inputs"]] == ["verified", "failed", "untested", "untested"]
     run, failed = by_id["DI-1"]["runs"][0], by_id["DI-2"]["runs"][0]
     with clause("each run: its test's file and function, result, date and duration, failure message and trace"):
@@ -202,10 +216,11 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert (run["start"], run["duration"]) == ("2026-01-01 00:00:00 UTC", "1.50 s")
         assert (failed["status"], failed["message"], failed["trace"]) == (
             "failed", "AssertionError: still sounding\nsecond line", "Traceback: line 42")
-    with clause("labels other than those the report already shows, and no runner internals; its links"):
-        assert run["labels"] == [{"name": "severity", "value": "critical"}]
+    with clause("labels other than those the report already shows, no runner internals and no Allure severity; "
+                "its links"):
+        assert run["labels"] == []
         assert run["links"] == [{"name": "DI-1 in alarms.md", "url": "https://example.org/alarms.md"}]
-    with clause("each step is an acceptance criterion, nested, with its own result"):
+    with clause("each step is a verification step, nested, with its own result"):
         assert [(s["name"], s["status"]) for s in run["steps"]] == [
             ("the alarm sounds within a second", "passed"), ("the screen shows the alarm", "passed")]
         assert run["steps"][0]["steps"][0]["name"] == "the tone is 1 kHz"
@@ -226,11 +241,11 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     attach("report text", text)
     with clause("the PDF shows all of it in that order, with the image embedded and the noise left out"):
         order = ["Not release-grade evidence", "Anomalies", "Traceability", "The device shall sound an alarm.",
-                 "Acceptance criteria", "Appendix A"]
+                 "Verification steps", "Appendix A"]
         assert [text.index(marker) for marker in order] == sorted(text.index(marker) for marker in order)
         for expected in ("3 design input(s) not verified", "RISK-7", "2026-01-01 00:00:00 UTC", "1.50 s",
                          "uncommitted changes", "not the record", "the tone is 1 kHz",
-                         "AssertionError: still sounding", "the alarm kept sounding", "severity: critical",
+                         "AssertionError: still sounding", "the alarm kept sounding",
                          "DI-1 in alarms.md", "alarm raised at 12:00", "line 0",
                          f"First lines shown of {TEXT_LINES + 20}",
                          hashlib.sha256(b"\x00\x01binary").hexdigest(), "not found in the results",
@@ -238,6 +253,11 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             assert expected in text, expected
         assert f"line {TEXT_LINES + 5}" not in text and "captured noise" not in text
         assert "Not printed: requirement DI-1" in text and "runner-vm-17" not in text and "4242-MainThread" not in text
+        assert "severity: critical" not in text and "Acceptance criteria" not in text
+        assert "risk-based: a risk control" in text and "baseline: from its user needs" in text
+        assert "3 rating(s) are proposals no person has approved" in text and "on a proposed rating" in text
+        assert "1 residual(s) not evaluated" in text
+        assert "Risks controlled" not in text
         assert sum(len(page.images) for page in pypdf.PdfReader(pdf).pages) == 1
     with clause("the appendix lists every result file with its SHA-256"):
         appendix = text[text.index("Appendix A"):]

@@ -1,6 +1,6 @@
 """Acceptance tests for the scaffolding context's design inputs (see dhf/).
 
-The acceptance criteria ("live BDD") for DI-15 (`rdm init`) and DI-22
+The tests ("live BDD") that verify DI-15 (`rdm init`) and DI-22
 (`rdm story new-input`), tagged `@allure.story`, exercising the real
 scaffolders. Lightweight on purpose: the end-to-end "the scaffold builds a
 release" check lives in `fresh_release_test.py` (it needs Pandoc/make), not here.

@@ -1,5 +1,9 @@
 # ADR 0001 — User needs across bounded contexts
 
+> **Vocabulary note (Design Review 25).** Where this ADR says the test *is* the
+> acceptance criterion, read: the design input is the acceptance criterion and
+> its tagged test verifies it ([glossary](glossary.md)). The decision is unchanged.
+
 > Status: Proposed (design only; supersedes the earlier "product need" draft —
 > that vocabulary is dropped).
 >
