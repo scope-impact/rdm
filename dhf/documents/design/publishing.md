@@ -3,7 +3,7 @@ id: SDS-REN-001
 kind: design
 context: publishing
 # Implements part of inputs other contexts own.
-realises: [DI-1, DI-4, DI-30]
+realises: [DI-1, DI-4, DI-30, DI-63]
 design_inputs:
   - id: DI-7
     text: "RDM shall render a Markdown template against a supplied data context with Jinja2, so generated data populates the document."

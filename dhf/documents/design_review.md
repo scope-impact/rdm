@@ -1262,6 +1262,26 @@ orphan tags. No design input changed.
 - DI-69: the agent server's trace of a design input names the components
   whose code its runs exercise, each with its container and context.
 
+# Design Review 41 — What the C4 shapes found in RDM's own record
+
+**Scope reviewed:** three design documents' `realises`; three relationships
+of the architecture workspace. No design input changed.
+
+**Disposition:** Approved.
+
+DI-68's shapes, run over RDM's own record, warned where the record and the
+code disagree. Each is resolved in the record, not by quieting a shape:
+
+- The runs verifying DI-31, DI-40 and DI-61 exercise the Allure reader: it
+  holds the one label that names a design input and matches a run to its
+  test by full name. `test_evidence` realises part of each.
+- The run verifying DI-63 exercises the PDF action and the workflow `rdm
+  adopt` lays down: `publishing` and `specification` each realise part of
+  it, as Design Review 34 found.
+- Three imports had no relationship declared: the new-input command and the
+  verification data on the shared kernel, and the pytest plugin on the test
+  tags. The workspace declares them; its views are redrawn.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

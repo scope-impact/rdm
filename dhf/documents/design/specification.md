@@ -3,7 +3,7 @@ id: SDS-SPEC-001
 kind: design
 context: specification
 # Implements part of inputs other contexts own.
-realises: [DI-61, DI-70]
+realises: [DI-61, DI-63, DI-70]
 design_inputs:
   - id: DI-1
     text: "RDM shall read the user-need registry and the design inputs that trace to it from frontmatter and ingest Allure results, with no project-management dependency."
