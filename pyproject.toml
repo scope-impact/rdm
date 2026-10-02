@@ -28,14 +28,14 @@ requires-python = ">=3.10"
 dependencies = [
     "jinja2==3.1.6",
     "pyyaml==6.0.3",
-    "gitpython==3.1.46"
+    "gitpython==3.2.0"
 ]
 
 [project.optional-dependencies]
 # Playwright for the usability-persona skill (AI-persona usability validation).
 # Browsers are provided by the environment; if the preinstalled browser version
 # differs, launch with executable_path (see examples/.../app/run_persona_demo.py).
-validation = ["playwright==1.60.0"]
+validation = ["playwright==1.63.0"]
 # The design record as a linked-data graph (DI-35/36): an embedded RDF store
 # (pyoxigraph) and the oxigraph CLI that serves it as a SPARQL endpoint for
 # graph browsers such as AWS Graph Explorer; pyshacl runs the gate shapes
@@ -48,22 +48,22 @@ graph = ["pyoxigraph==0.5.11", "oxigraph==0.5.11", "pyshacl==0.40.1", "mcp==2.2.
 #   uv run --extra docs mkdocs serve      # live preview
 docs = [
     "mkdocs==1.6.1",
-    "mkdocs-material==9.6.21",
-    "mkdocstrings[python]==0.30.1",
-    "ruff==0.14.13",  # mkdocstrings uses it to format rendered signatures
+    "mkdocs-material==9.7.7",
+    "mkdocstrings[python]==1.0.6",
+    "ruff==0.16.10",  # mkdocstrings uses it to format rendered signatures
 ]
 dev = [
-    "pytest==9.0.2",
-    "ruff==0.14.13",
+    "pytest==9.1.1",
+    "ruff==0.16.10",
     "check-manifest==0.51",
     "mkdocs==1.6.1",
-    "mkdocs-material==9.6.21",
-    "mkdocstrings[python]==0.30.1",
+    "mkdocs-material==9.7.7",
+    "mkdocstrings[python]==1.0.6",
     "mock==5.2.0",
-    "docutils==0.21.2",
-    "coverage==7.13.1",
-    "playwright==1.60.0",
-    "allure-pytest==2.16.0",
+    "docutils==0.23",
+    "coverage==7.16.2",
+    "playwright==1.63.0",
+    "allure-pytest==2.16.2",
     "pyoxigraph==0.5.11",
     "oxigraph==0.5.11",
     "pyshacl==0.40.1",
