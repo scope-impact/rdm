@@ -34,7 +34,7 @@ from rdm.graph.c4 import project_architecture
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
 from rdm.evidence.allure import full_name, reconcile
 from rdm.specification.tags import find_tests_dir, scan_source_tests
-from rdm.kernel.frontmatter import parse_frontmatter
+from rdm.kernel.frontmatter import frontmatter_of
 from rdm.kernel.git import git, repo_root
 from rdm.kernel.ids import is_id, relevant_orphans
 from rdm.specification.sdd import (
@@ -115,10 +115,7 @@ def controlled_documents(dhf: Path, root: Path) -> list[dict]:
     for md in sorted(Path(dhf).rglob("*.md")):
         if md == matrix:
             continue
-        try:
-            front = parse_frontmatter(md.read_text(encoding="utf-8", errors="ignore"))
-        except OSError:
-            continue
+        front = frontmatter_of(md)
         doc_id = str(front.get("id", "")).strip()
         if doc_id:
             entries.append({"id": doc_id, "title": str(front.get("title", "")).strip(),
@@ -223,7 +220,7 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
         ds.add(test, rdm("definedIn"), test_file, "tests")
         for tag in tags:
             ds.add(test, rdm("verifies"), ds.node("input", tag), "tests")
-        for tag in relevant_orphans(sorted(set(tags) - declared), declared):  # as the design gate reports them
+        for tag in relevant_orphans(tags, declared):  # as the design gate reports them
             ds.add(test, rdm("undeclaredTag"), tag, "tests")
         if (key := full_name(rel, name)) is not None:
             by_full_name[key] = test

@@ -3,8 +3,8 @@ Generic reconciliation core: given declared user-need IDs and observations
 keyed by ID, bucket the observations per ID, derive a status per bucket, and
 report the orphan IDs (referenced but not declared).
 
-Both the Allure verification reconciler (``record.allure``) and the persona
-formative reconciler (``record.persona``) are this one shape with a different
+Both the Allure verification reconciler (``rdm.evidence.allure``) and the persona
+formative reconciler (``rdm.specification.persona``) are this one shape with a different
 aggregate type and status policy. Dependency-free (no pydantic)
 so it stays usable from the lightweight record layer.
 """
@@ -77,11 +77,6 @@ def aggregate_by_id(
     return aggregated, sorted(referenced - declared_ids)
 
 
-def ids_with_status(by_id: dict, status: str) -> list[str]:
-    """Sorted IDs whose aggregate has the given status."""
-    return sorted(uid for uid, agg in by_id.items() if agg.status == status)
-
-
 class StatusReportMixin:
     """Provides ``_ids_with`` for reports whose ``by_id`` maps declared IDs to
     aggregates carrying a ``status`` attribute. The IDs may be user needs, design
@@ -90,4 +85,4 @@ class StatusReportMixin:
     by_id: dict
 
     def _ids_with(self, status: str) -> list[str]:
-        return ids_with_status(self.by_id, status)
+        return sorted(uid for uid, agg in self.by_id.items() if agg.status == status)

@@ -17,12 +17,12 @@ def is_id(text: str) -> bool:
     return ID.fullmatch(text) is not None
 
 
-def relevant_orphans(orphans: Iterable[str], declared_ids: set[str]) -> list[str]:
-    """Tags naming no declared id worth reporting: those sharing an id prefix
-    with a declared one, to avoid noise from unrelated tags (e.g. FT-001,
-    US-001)."""
+def relevant_orphans(referenced: Iterable[str], declared_ids: set[str]) -> list[str]:
+    """The referenced ids no declared id names, worth reporting: those sharing
+    an id prefix with a declared one, to avoid noise from unrelated tags (e.g.
+    FT-001, US-001). Sorted; the one rule every gate and the graph report by."""
     prefixes = {uid.split("-")[0] for uid in declared_ids}
-    return [tag for tag in orphans if tag.split("-")[0] in prefixes]
+    return sorted(tag for tag in set(referenced) - set(declared_ids) if tag.split("-")[0] in prefixes)
 
 
 def sort_key(ident: str) -> tuple:

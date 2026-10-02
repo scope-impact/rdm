@@ -1,11 +1,17 @@
 import collections
+from importlib import import_module
 
 import jinja2
 from jinja2.environment import TemplateStream
 
 from rdm.publishing.first_pass_output import FirstPassOutput
-from rdm.kernel.util import load_class, post_processing_filter_list
+from rdm.md_extensions.base import post_processing_filter_list
 
+
+
+def load_class(class_descriptor):
+    module_name, _, class_name = class_descriptor.rpartition('.')
+    return getattr(import_module(module_name), class_name)
 
 def invert_dependencies(objects, id_key, dependencies_key):
     # TODO: add docstring

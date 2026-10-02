@@ -35,8 +35,9 @@ def _load_yaml(block: str) -> dict:
 
 
 def frontmatter_of(path: Path) -> dict:
-    """Frontmatter of a document, or ``{}`` if unreadable/absent."""
+    """Frontmatter of a document, or ``{}`` if unreadable/absent. Bytes that
+    are not UTF-8 are dropped, so one stray byte never hides a document."""
     try:
-        return parse_frontmatter(path.read_text(encoding="utf-8"))
+        return parse_frontmatter(path.read_text(encoding="utf-8", errors="ignore"))
     except OSError:
         return {}

@@ -1,13 +1,20 @@
 import os
 import shutil
+import sys
 from importlib.resources import files, as_file
-from rdm.kernel.util import print_info, repo_root
+from pathlib import Path
+
+from rdm.kernel.git import repo_root
 
 # The design-controls gate: installed by default (DI-26). The remaining hooks
 # enforce an issue-reference commit convention some teams use; they are
 # installed only on request.
 DESIGN_GATE_HOOKS = ('pre-commit',)
 ISSUE_HOOKS = ('commit-msg', 'prepare-commit-msg')
+
+
+def _info(message):
+    print(message, file=sys.stderr)
 
 
 def install_hooks(dest=None, with_issue_hooks=False):
@@ -18,14 +25,16 @@ def install_hooks(dest=None, with_issue_hooks=False):
 
     with as_file(hook_files_ref) as hooks_source:
         if dest is None:
-            root = repo_root()
+            root = repo_root(Path.cwd())
+            if root is None:
+                raise ValueError('not inside a git repository: give the hooks directory')
             dest = os.path.join(root, '.git/hooks')
 
-        print_info('Installing hooks into {}'.format(dest))
+        _info('Installing hooks into {}'.format(dest))
         os.makedirs(dest, exist_ok=True)
         for name in names:
             source = os.path.join(str(hooks_source), name)
             target = os.path.join(dest, name)
             shutil.copy2(source, target)
             os.chmod(target, os.stat(target).st_mode | 0o755)
-        print_info('Successfully installed hooks: {}'.format(', '.join(names)))
+        _info('Successfully installed hooks: {}'.format(', '.join(names)))

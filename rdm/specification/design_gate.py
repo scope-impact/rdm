@@ -248,7 +248,7 @@ def _traceability_warnings(dhf_dir: Path) -> list[str]:
             f"design input {di} has no @allure.story tag in tests"
         )
 
-    for tag in relevant_orphans(sorted(tagged_ids - di_ids), di_ids):
+    for tag in relevant_orphans(tagged_ids, di_ids):
         warnings.append(
             f"Allure tag {tag} matches no design input ({', '.join(tagged[tag][:2])})"
         )

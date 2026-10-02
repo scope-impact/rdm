@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -11,9 +12,22 @@ from rdm.specification.hooks import install_hooks
 from rdm.specification.init import init
 from rdm.publishing.render import render_template_to_file
 from rdm.evidence.translate import translate_test_results, XML_FORMATS
-from rdm.kernel.util import context_from_data_files, print_error, load_yaml
+from rdm.kernel.util import load_yaml
 from rdm.kernel.version import __version__
 
+
+def print_error(message):
+    print('\033[31m' + message + '\033[0m', file=sys.stderr)
+
+
+def context_from_data_files(data_filenames):
+    context = {}
+    for data_filename in data_filenames:
+        key, _ = os.path.splitext(os.path.basename(data_filename))
+        if key in context:
+            raise ValueError('There is already data attached to the key "{}"'.format(key))
+        context[key] = load_yaml(data_filename)
+    return context
 
 def main():
     try:

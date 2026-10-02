@@ -15,7 +15,7 @@ from pathlib import Path
 
 import yaml
 
-from rdm.kernel.frontmatter import parse_frontmatter
+from rdm.kernel.frontmatter import frontmatter_of
 
 
 def dmr_entries(documents_dir: Path, relative_to: Path | None = None) -> list[dict]:
@@ -27,7 +27,7 @@ def dmr_entries(documents_dir: Path, relative_to: Path | None = None) -> list[di
     base = relative_to or documents_dir.parent
     entries: list[dict] = []
     for md in sorted(documents_dir.glob("*.md")):
-        frontmatter = parse_frontmatter(md.read_text(encoding="utf-8", errors="ignore"))
+        frontmatter = frontmatter_of(md)
         doc_id = str(frontmatter.get("id", "")).strip()
         if not doc_id:
             print(f"Warning: {md.name} has no frontmatter id -- not a controlled document, skipped",
