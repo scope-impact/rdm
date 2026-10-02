@@ -299,7 +299,7 @@ workspace "RDM" "The design record of regulated software." {
         }
       }
       graph_store = container "Graph store" "The record projected into RDF" "Oxigraph" "Database"
-      sparql_endpoint = container "SPARQL endpoint" "Serves the store read-only" "Oxigraph server"
+      sparql_endpoint = container "SPARQL endpoint" "rdm graph serve: the store, read-only, refusing updates and SERVICE" "Python, pyoxigraph"
       documents_image = container "Documents image" "Renders the documents to PDF" "Docker: Ubuntu, Pandoc, Typst"
     }
     product_repo = softwareSystem "Product repository" "git: the Markdown record, the tests and their Allure results" "External"

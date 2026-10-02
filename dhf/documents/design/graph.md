@@ -8,7 +8,7 @@ design_inputs:
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each controlled document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
     traces_to: [UN-014]
   - id: DI-36
-    text: "RDM shall load the projected dataset into a persistent Oxigraph store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a read-only SPARQL 1.1 HTTP endpoint, refusing updates, whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer."
+    text: "RDM shall load the projected dataset into a persistent Oxigraph store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a read-only SPARQL 1.1 HTTP endpoint whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer; the endpoint and the query command shall refuse SPARQL Update and federated SERVICE calls, so neither changes the store or reaches the network."
     traces_to: [UN-014]
   - id: DI-37
     text: "RDM shall add regulatory checklists to the graph on request, as data: each checklist — in rdm gap's text format, resolving includes and built-in names as rdm gap does, or an RDF file — becomes a SKOS collection of its own items that links the checklists it includes, and each item a clause with its key, description, standard (named by the key prefix) and nearest listed parent clause."
@@ -119,7 +119,9 @@ How the components relate, in the direction of the arrows:
   executions graph's name from the Projection, never a second read of the
   record. It builds the graph store, which the SPARQL endpoint serves
   read-only to AWS Graph Explorer, its default graph the union of the named
-  graphs.
+  graphs. The endpoint is RDM's own (`rdm graph serve`), reading the store
+  afresh for each query, so it serves the last build and refuses what the
+  Agent server refuses.
 - **SHACL validation** validates the Projection's graph and checks it with
   the Gate shapes.
 - The **Agent server** projects the record afresh with the Projection on each
@@ -160,9 +162,10 @@ The behaviour a reviewer needs to judge the design:
   `rdm:TestRun`, `rdm:Risk`, the C4 classes, `rdm:tracesTo`, `rdm:ownedBy`,
   `rdm:realises`, `rdm:verifies`, `rdm:exercises`, …) are minted only where
   none fits.
-- **What is refused.** The Agent server's `query` refuses SPARQL Update,
-  any `SERVICE` call outside literals, IRIs and comments, and anything that
-  does not parse as a query; its row limit is capped. Every tool is
+- **What is refused.** The Agent server's `query`, the SPARQL endpoint and
+  `rdm graph query` refuse SPARQL Update, any `SERVICE` call outside
+  literals, IRIs and comments (a comment ends at either line break), and
+  anything that does not parse as a query; the Agent server's its row limit is capped. Every tool is
   annotated read-only and idempotent. `trace` answers a user need, a design
   input (with its risks, runs, steps, attachments and source files) or a
   risk, and nothing that is not id-shaped. SHACL validation exits 1 on a

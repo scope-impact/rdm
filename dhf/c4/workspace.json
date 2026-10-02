@@ -1524,7 +1524,7 @@
             "technology": "Oxigraph"
           },
           {
-            "description": "Serves the store read-only",
+            "description": "rdm graph serve: the store, read-only, refusing updates and SERVICE",
             "documentation": {},
             "id": "52",
             "name": "SPARQL endpoint",
@@ -1541,7 +1541,7 @@
               }
             ],
             "tags": "Element,Container",
-            "technology": "Oxigraph server"
+            "technology": "Python, pyoxigraph"
           },
           {
             "description": "Renders the documents to PDF",
@@ -1693,7 +1693,7 @@
     "structurizr.inspection.warning": "0"
   },
   "rdm": {
-    "workspace_sha256": "9db0b926c844e9f164881b49c266f15a621e088ee81cada3fc5696bb2758b723"
+    "workspace_sha256": "e5f2c92eddcc9a5982571fedb7853eea47b0dc8a7157143d8e871aefc56b3c5f"
   },
   "views": {
     "componentViews": [

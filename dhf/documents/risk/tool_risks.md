@@ -73,12 +73,12 @@ risks:
     category: security
     stride: Information disclosure
     status: proposed
-    hazard: "An agent's read-only query can make the agent server send network requests."
-    situation: "A prompt-injected agent sends a query with a SERVICE clause naming an internal or external address."
+    hazard: "A read-only query can make RDM send network requests."
+    situation: "A prompt-injected agent, or a web page posting to the served endpoint, sends a query with a SERVICE clause naming an internal or external address."
     harm: "The server probes or reaches services from the user's machine, outside the review the record is under."
     severity: Serious
     probability: Unlikely
-    controls: [DI-42]
+    controls: [DI-42, DI-36]
     residual: {probability: Rare}
 ---
 

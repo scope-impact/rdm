@@ -1355,6 +1355,30 @@ block:
 - A policy whose severities are numbers was refused as malformed, and a
   control or link written as one value was read one character at a time.
 
+# Design Review 46 — Nothing served reaches the network
+
+**Scope reviewed:** the store, query and endpoint (DI-36 amended), the agent
+server's refusals (DI-42), RISK-TOOL-007, the SPARQL endpoint container.
+
+**Disposition:** Approved.
+
+The exploratory test found three ways a read-only query reached the network:
+
+- `rdm graph serve` ran `oxigraph serve-read-only`, which executes `SERVICE`
+  calls. With CORS open, any web page the user has open could make it fetch
+  internal addresses and read the answer. The endpoint is now RDM's own,
+  refusing what the agent server refuses; it reads the store for each query,
+  so it serves the last build and stops with its command.
+- The agent server's guard ended a comment at a line feed only; SPARQL also
+  ends one at a carriage return, so `# x\rSERVICE <…>` got through. A
+  comment ends at either.
+- `rdm graph query` ran `SERVICE` calls too. It refuses them and updates.
+
+RISK-TOOL-007 covers both ways in, and DI-36 is its second control. Two
+smaller graph faults found by the same test are fixed with them: the sorted
+N-Quads split a statement at a Unicode line separator in a literal, and the
+trace of a user need failed on a design input id with a letter part.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
