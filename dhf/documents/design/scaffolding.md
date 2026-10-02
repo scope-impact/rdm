@@ -112,3 +112,29 @@ down the expected files. The heavier end-to-end check (the scaffold *builds* a
 release and passes the gap checklists) is covered by `fresh_release_test.py`,
 which runs `make` + `rdm gap` and needs Pandoc, so it stays in the main suite
 rather than the design-controls job.
+
+For **DI-63** — the reusable CI:
+
+- `.github/workflows/gates.yml` (`on: workflow_call`) — checks out the caller,
+  then RDM at the required `rdm-ref` input (a reusable workflow cannot see
+  the ref it was called at, so the caller writes it twice), installs RDM,
+  `pytest` and `allure-pytest` from that checkout, runs the caller's
+  `install-command` and `test-command`, then the gates action from the same
+  checkout, and uploads the Allure report and the verification record.
+- `actions/gates/action.yml` — the gate steps, written once: installs
+  `rdm[graph]` from `$GITHUB_ACTION_PATH/../..` (unless `install-rdm: false`),
+  then the design gate, `verify` and the evidence bundle (only when there are
+  Allure results), the release gate (`release-gate`) and graph validation
+  (`graph-validate`, `checklists`).
+- `action.yml` — the image tag defaults to the action's ref without its `v`
+  when the ref is a release, else `latest`.
+- `rdm/adopt.py` substitutes the installed version into
+  `rdm/adopt_files/.github/workflows/design-controls.yml`, which starts with
+  `acceptance-tests: false` and `release-gate: false`.
+
+Acceptance criterion is verified by `@allure.story("DI-63")` in
+`tests/acceptance/test_reusable_ci.py`. The test runs the gates action's own
+steps against a committed record (passing, failing, phased), checks that every
+`rdm` command in the workflow and the actions parses with RDM's CLI, runs the
+PDF action's tag logic with a stub `docker`, and reads the adopted workflow and
+RDM's own.
