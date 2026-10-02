@@ -50,10 +50,41 @@ jobs:
       - name: Build wheel for Docker
         run: uv build --wheel --out-dir test-dhf/dist
 
-      - name: Generate PDFs
+      - name: Build the RDM image
+        run: docker build -t rdm:test test-dhf
+
+      # DI-70: a diagram is drawn by Mermaid's official image, beside the RDM
+      # image, exactly as the PDF action draws it.
+      - name: Add a document with a Mermaid diagram
         run: |
-          cd test-dhf
-          docker compose run --rm rdm make pdfs
+          cat > test-dhf/documents/system_context.md <<'MD'
+          ---
+          id: SC-001
+          title: System context
+          ---
+
+          # System context
+
+          ```mermaid
+          C4Context
+            Person(author, "Regulatory author", "Writes the record")
+            System(rdm, "RDM", "Keeps the design record")
+            Rel(author, rdm, "renders documents with")
+          ```
+          MD
+
+      - name: Generate PDFs
+        env:
+          RDM_IMAGE: rdm:test
+        run: bash rdm/init_files/render-pdfs.sh test-dhf pdfs
+
+      - name: The diagram is an image in the PDF, not its source
+        run: |
+          sudo apt-get install -y --no-install-recommends poppler-utils > /dev/null
+          text="$(pdftotext test-dhf/release/system_context.pdf -)"
+          grep -q "Regulatory author" <<< "$text"
+          if grep -q "C4Context" <<< "$text"; then echo "ERROR: the diagram's source is in the PDF"; exit 1; fi
+          ls test-dhf/tmp/mermaid/*.svg
 
       - name: Verify PDFs were created
         run: |

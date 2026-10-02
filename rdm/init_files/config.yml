@@ -1,6 +1,7 @@
 md_extensions:
   #- 'rdm.md_extensions.SectionNumberExtension'
   - 'rdm.md_extensions.VocabularyExtension'
+  - 'rdm.md_extensions.MermaidExtension'   # diagrams as images (render-pdfs.sh)
     #- 'rdm.md_extensions.AuditNoteExclusionExtension'
 
 reviews_required: True

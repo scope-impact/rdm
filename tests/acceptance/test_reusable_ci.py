@@ -194,11 +194,15 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         (bin_dir / "docker").write_text('#!/bin/sh\necho "$@"\n')
         (bin_dir / "docker").chmod(0o755)
 
+        workspace = tmp_path / "workspace"
+        (workspace / "dhf").mkdir(parents=True)
+
         def image(ref: str, version: str = "") -> str:
-            env = os.environ | {"ACTION_REF": ref, "VERSION": version, "DHF": "dhf", "GITHUB_WORKSPACE": "/w",
+            env = os.environ | {"ACTION_REF": ref, "VERSION": version, "DHF": "dhf",
+                                "GITHUB_WORKSPACE": str(workspace), "GITHUB_ACTION_PATH": str(ROOT),
                                 "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
             out = subprocess.run(["bash", "-e", "-c", script], env=env, capture_output=True, text=True, check=True)
-            return re.search(r"ghcr\.io/scope-impact/rdm:(\S+)\s+pdfs", out.stdout).group(1)
+            return re.search(r"ghcr\.io/scope-impact/rdm:(\S+)\s+-B pdfs", out.stdout).group(1)
         assert [image("v1.2.0"), image("v1"), image("main"), image("0123abc"), image("v1.2.0", "edge")] == [
             "1.2.0", "1", "latest", "latest", "edge"]
     with verification_step("the workflow rdm adopt lays down calls the reusable workflow pinned to the installed "

@@ -26,17 +26,16 @@ runs:
         VERSION: ${{ inputs.version }}
         ACTION_REF: ${{ github.action_ref }}
         DHF: ${{ inputs.dhf_path }}
+      # Mermaid diagrams are drawn by Mermaid's official image beside the RDM
+      # image (DI-70): the script runs the render, the draw, and the render again.
       run: |
         if [ -z "$VERSION" ]; then
           if [[ "$ACTION_REF" =~ ^v[0-9] ]]; then VERSION="${ACTION_REF#v}"; else VERSION=latest; fi
         fi
-        echo "RDM image: ghcr.io/scope-impact/rdm:$VERSION"
-        docker run --rm \
-          -v "$GITHUB_WORKSPACE:/project" \
-          -w "/project/$DHF" \
-          --entrypoint make \
-          "ghcr.io/scope-impact/rdm:$VERSION" \
-          pdfs
+        export RDM_IMAGE="ghcr.io/scope-impact/rdm:$VERSION"
+        echo "RDM image: $RDM_IMAGE"
+        cd "$GITHUB_WORKSPACE"
+        bash "$GITHUB_ACTION_PATH/rdm/init_files/render-pdfs.sh" "$DHF" pdfs
 
     - name: Upload PDFs
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

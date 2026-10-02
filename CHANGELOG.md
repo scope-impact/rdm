@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added — Mermaid diagrams in rendered documents (DI-70)
+- A Mermaid block, such as a C4 view, becomes an image in the PDF, drawn by
+  Mermaid's own renderer; before, a PDF printed its source. The renderer is
+  Mermaid's official image, pinned by version and digest and run beside the
+  RDM image, which carries no browser.
+- `rdm.md_extensions.MermaidExtension` (on in `rdm init`'s config) names each
+  image by a hash of its diagram and fails the render, naming the document,
+  for a diagram that cannot be drawn. `render-pdfs.sh` writes the diagrams,
+  draws them and renders again; the PDF action runs it.
+
 ### Fixed — PDF titles
 - A rendered PDF's cover and running header showed the document's first heading
   (usually "Purpose") instead of its `title:`: `pandoc_pdf.yml` shifted every
