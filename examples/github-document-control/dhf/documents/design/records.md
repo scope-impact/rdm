@@ -27,26 +27,6 @@ history, the procedure's Part 11 coverage, and the device master record that
 indexes them. They live in `dhf/documents/procedures/` and render with
 `make pdfs`.
 
-## Design Inputs
-
-- **DI-2 (document identity)** — id + revision in frontmatter makes the
-  current approved revision identifiable. Refines UN-001.
-- **DI-4 (generated history)** — the revision-history table in a rendered
-  document comes from repository data (§11.10(e) altitude: the record is
-  generated, not transcribed). Refines UN-001.
-- **DI-5 (Part 11 coverage)** — the SOP must reference every checklist item;
-  its test runs `rdm gap` and requires exit zero. Refines UN-004.
-- **DI-7 (device master record)** — the DMR (§820.181 analog) is the current
-  approved specification set: a controlled index document rendered from
-  index data (`data/dmr.yml`) that `rdm story dmr` generates from the
-  procedures' frontmatter, so the index cannot disagree with the documents
-  it lists, listing each controlled document with its
-  identity and revision. Being itself a controlled document, it flows through
-  the same approval path it indexes. Refines UN-005.
-
-It also **realises** DI-3, owned by `release`: the human-readable copies are
-these documents rendered by the DHF's Makefile.
-
 ## Design Outputs
 
 - `dhf/documents/procedures/document_control_procedure.md` — the SOP:

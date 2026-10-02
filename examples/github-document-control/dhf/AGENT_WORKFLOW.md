@@ -73,9 +73,10 @@ because the release gate blocks any need nothing traces to.
 rdm story new-input --dhf dhf --context <ctx> \
   --text "The system shall <clause>, <clause>, …" --traces-to UN-nnn
 ```
-Then describe it in that context document's `## Design Inputs` /
-`## Design Outputs` prose. Write the text as testable clauses — the test and
-its reviewer judge it clause by clause.
+Write the text as testable clauses — the test and its reviewer judge it
+clause by clause. The frontmatter is the input's only statement: describe how
+it is met in that context document's `## Design Outputs`, naming it by id,
+and never restate it in the body.
 
 ### 3 — commit the design docs FIRST (the approval)
 ```bash

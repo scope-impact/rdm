@@ -100,6 +100,24 @@ risk policy and register (`risk/`); the validation records (`validation/`).
 - The validation records are pending. None is approved, because no
   summative review has taken place; the release gate warns for each.
 
+# Design Review 4 — a design input is stated once
+
+**Scope reviewed:** the three design documents' bodies. No design input
+changed.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Each design document restated its design inputs in a `## Design Inputs`
+  section beside the frontmatter that declares them. The frontmatter is now
+  the only statement; the section is removed, and each document's design
+  outputs still name every input it owns, by id.
+
+## Findings and actions
+
+- None open.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR) — no duplicate sign-off

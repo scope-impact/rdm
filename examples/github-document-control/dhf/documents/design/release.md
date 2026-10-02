@@ -22,22 +22,6 @@ A release: the copies, the device history record, and the verification
 evidence of the released commit, published only when that commit is
 verified.
 
-## Design Inputs
-
-- **DI-3 (release copies)** — tag-triggered release with rendered PDF copies
-  and a `git archive` electronic set (§11.10(b)/(c)). Refines UN-003.
-- **DI-8 (device history record)** — the DHR (§820.184 analog) is the record
-  of each release: the release workflow writes a manifest (tag, commit SHA,
-  releasing actor, timestamp, artifact list) and attaches it to the GitHub
-  Release with the copies — so every released document set carries the record
-  of who released what, when, from which exact revision. Refines UN-005.
-- **DI-10 (verified releases)** — a release is evidence as well as copies: the
-  release workflow runs the acceptance tests at the tag, refuses to publish
-  unless the release gate passes, and attaches the evidence bundle (Allure results, verification data, the
-  traceability matrix, a manifest) and its verification report (every design
-  input with the runs that verify it, at the released commit) to the release. The DHR (DI-8) then names a release whose verification is attached
-  to it. Refines UN-003, UN-005.
-
 ## Design Outputs
 
 - `.github/workflows/release-documents.yml` — tag-triggered release (DI-3),
