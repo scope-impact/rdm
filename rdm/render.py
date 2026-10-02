@@ -66,7 +66,6 @@ def render_template_to_string(config, template_filename, context, loaders=None):
 
 def generate_template_output(config, template_filename, context, loaders=None):
     environment = _create_jinja_environment(config, loaders)
-    environment.rdm_document = template_filename  # for an extension's error messages
     first_pass_output = FirstPassOutput()
     environment.globals['first_pass_output'] = first_pass_output
     output_line_list = generate_template_output_lines(environment, template_filename, context)
@@ -74,7 +73,6 @@ def generate_template_output(config, template_filename, context, loaders=None):
         jinja2.clear_caches()
         first_pass_output_filled = FirstPassOutput(output_line_list)
         second_pass_environment = _create_jinja_environment(config, loaders)
-        second_pass_environment.rdm_document = template_filename
         second_pass_environment.globals['first_pass_output'] = first_pass_output_filled
         output_line_list = generate_template_output_lines(second_pass_environment, template_filename, context)
     return iter(output_line_list)

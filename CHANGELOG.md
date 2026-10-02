@@ -2,15 +2,17 @@
 
 ## Unreleased
 
-### Added — Mermaid diagrams in rendered documents (DI-70)
-- A Mermaid block, such as a C4 view, becomes an image in the PDF, drawn by
-  Mermaid's own renderer; before, a PDF printed its source. The renderer is
-  Mermaid's official image, pinned by version and digest and run beside the
-  RDM image, which carries no browser.
-- `rdm.md_extensions.MermaidExtension` (on in `rdm init`'s config) names each
-  image by a hash of its diagram and fails the render, naming the document,
-  for a diagram that cannot be drawn. `render-pdfs.sh` writes the diagrams,
-  draws them and renders again; the PDF action runs it.
+### Added — the architecture as one workspace, its views as images (DI-66, DI-70)
+- The C4 architecture is one Structurizr workspace, `dhf/c4/workspace.dsl`:
+  the model, each component's bounded context as its group and its code as a
+  property, and the views. RDM reads the model from its JSON export, with no
+  parser and no Java.
+- `rdm c4 draw` exports the model and draws each view with Graphviz to
+  `dhf/c4/views/<view>.svg`, stamped with the workspace's hash; documents show
+  their views as images, so GitHub, the docs site and PDFs show one picture,
+  and no browser draws it. The design gate fails on a stale drawn file.
+- RDM's own architecture moved from twelve Mermaid diagrams to the workspace.
+  The Mermaid rendering tried first (Design Review 28) is retired.
 
 ### Fixed — PDF titles
 - A rendered PDF's cover and running header showed the document's first heading

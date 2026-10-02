@@ -17,6 +17,7 @@ extract-media: ./tmp/media/
 resource-path:
   - .
   - ./documents
+  - ./documents/design   # a design document's images, e.g. ../../c4/views/*.svg
   - ./tmp/media/
 
 # Data files (Jinja-style variables)

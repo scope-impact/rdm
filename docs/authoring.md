@@ -32,30 +32,38 @@ title: "My controlled document"
 {%- endfor %}
 ```
 
-## Mermaid diagrams
+## Architecture (C4)
 
-A ` ```mermaid ` block, such as a C4 view, becomes an image in the rendered
-document when `config.yml` lists `rdm.md_extensions.MermaidExtension` (as
-`rdm init`'s does). The image is drawn by Mermaid's own renderer, so the PDF
-shows what GitHub and the docs site show. A diagram that cannot be drawn fails
-the render with the document's name; it never ships as source.
+The architecture is one [Structurizr](https://docs.structurizr.com/dsl)
+workspace, `dhf/c4/workspace.dsl`: the C4 model (people, software systems,
+containers, and components grouped by bounded context) and its views (the
+system context and containers, and one component view per bounded context).
+Each component names its code with a `code` property, a file or a directory:
 
-The renderer is Mermaid's official image, pinned by version and digest, run
-beside the RDM image rather than inside it, so the RDM image carries no
-browser. `render-pdfs.sh` (laid down by `rdm init`, and what RDM's PDF action
-runs) does the three steps on shared files:
-
-```bash
-dhf/render-pdfs.sh dhf pdfs   # from the repository root; needs Docker
+```
+group "graph" {
+  projection = component "Projection" "The record into RDF" "Python" {
+    properties {
+      "code" "rdm/graph/"
+    }
+  }
+}
 ```
 
-1. render the Markdown with `RDM_MERMAID_COLLECT=1`, which writes each undrawn
-   diagram to `dhf/tmp/mermaid/<hash>.mmd`;
-2. draw each one with Mermaid's image;
-3. render again: every diagram is now its image, named by a hash of its text.
+`rdm c4 draw` exports the model to `dhf/c4/workspace.json` (what RDM reads)
+and draws each view with Graphviz to `dhf/c4/views/<view>.svg`; every drawn
+file is stamped with the workspace's hash. Commit them with the workspace. A
+document shows its view as an ordinary image, so GitHub, the docs site and a
+rendered PDF all show the same picture:
 
-With `mmdc` installed (`npm install -g @mermaid-js/mermaid-cli`), `rdm render`
-draws a diagram itself, in one step.
+```markdown
+![Components: graph](../../c4/views/C3_graph.svg)
+```
+
+The design gate fails when a drawn file is not the current workspace's, a view
+has no image, or an image has no view. Drawing needs Java, Structurizr's CLI
+(`RDM_STRUCTURIZR`, or `structurizr.sh` on the PATH) and Graphviz; checking
+needs only the stamps.
 
 ## Template helpers
 

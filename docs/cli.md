@@ -19,7 +19,7 @@
 | Command | What it does |
 |---|---|
 | `new-input --context C --text T --traces-to UN[,UN…]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test, checklist; `--list` shows contexts / taken ids / user needs |
-| `design-gate` | design docs + review present, complete, approved (committed); every user-need and design-input id declared once; warnings for DI↔tag mismatches |
+| `design-gate` | design docs + review present, complete, approved (committed); every user-need and design-input id declared once; the architecture's views drawn from the current workspace; warnings for DI↔tag mismatches |
 | `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix |
 | `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed + every risk evaluated, its risk controls verified and its residual acceptable ([risk register](risk.md)) |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
@@ -30,6 +30,12 @@
 | `persona --vv-plan F --persona-results DIR` | reconcile formative AI-persona usability runs against the user-need registry (never gates) |
 
 Common flag: `--dhf DIR` (default `dhf/`).
+
+## The architecture — `rdm c4 …`
+
+| Command | What it does |
+| --- | --- |
+| `draw [--dhf DIR]` | export the architecture workspace (`<dhf>/c4/workspace.dsl`): its model to `c4/workspace.json`, each view drawn by Graphviz to `c4/views/<view>.svg`, all stamped with the workspace's hash (needs Java, Structurizr's CLI and Graphviz; the design gate fails on a stale one) |
 
 ## The record as a graph — `rdm graph …` (extra: `graph`)
 

@@ -108,7 +108,6 @@ Verify and the evidence bundle run only when there are Allure results.
 ```
 
 The action runs `make pdfs` in `ghcr.io/scope-impact/rdm` and uploads the
-PDFs; Mermaid diagrams are drawn first by Mermaid's official image, pinned
-(see [Mermaid diagrams](authoring.md#mermaid-diagrams)). The image tag follows the action's ref: `@v1.2.0` renders with image
+PDFs. The image tag follows the action's ref: `@v1.2.0` renders with image
 `1.2.0` and `@v1` with image `1`. A branch or a sha falls back to `latest`.
 Set `version` to choose the image yourself.

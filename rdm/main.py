@@ -58,6 +58,11 @@ def cli(raw_arguments):
         exit_code = audit_for_gaps(checklists, sources, True, args.verbose)
     elif args.command == 'gap':
         exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
+    elif args.command == 'c4' and args.c4_command == 'draw':
+        from rdm.c4 import draw_command
+        exit_code = draw_command(args)
+    elif args.command == 'c4':
+        parse_arguments(['c4', '-h'])
     elif args.command == 'story':
         exit_code = handle_story_command(args)
     elif args.command == 'graph':
@@ -331,6 +336,13 @@ def parse_arguments(arguments):
     persona_parser.add_argument('--persona-results', help='Path to a directory of *-persona.json run files')
 
     _add_graph_parser(subparsers)
+
+    # rdm c4: the architecture workspace (DI-66, DI-70)
+    c4_parser = subparsers.add_parser('c4', help='the architecture workspace: draw its model and views')
+    c4_sub = c4_parser.add_subparsers(dest='c4_command', metavar='<subcommand>')
+    c4_draw = c4_sub.add_parser('draw', help="export the workspace's model and draw each view, stamped "
+                                             "(needs Java, Structurizr's CLI and Graphviz)")
+    c4_draw.add_argument('--dhf', default='dhf', help='Path to DHF directory (default: dhf/)')
 
     return parser.parse_args(arguments)
 

@@ -300,11 +300,28 @@ def check_unique_ids(dhf_dir: Path) -> ArtifactCheck:
                          complete=not reasons, reasons=reasons, uncommitted=False)
 
 
+def check_architecture_views(dhf_dir: Path) -> list[ArtifactCheck]:
+    """The architecture workspace, approved, and its model and view images
+    drawn from it as it is now (DI-70); none when the DHF has no workspace."""
+    from rdm.c4 import WORKSPACE, stale
+
+    workspace = Path(dhf_dir) / WORKSPACE
+    if not workspace.is_file():
+        return []
+    stale_reasons = stale(dhf_dir)
+    reasons = list(stale_reasons)
+    uncommitted = has_uncommitted_changes(workspace)
+    if uncommitted:
+        reasons.append("has uncommitted changes; the current revision is not approved in version control")
+    return [ArtifactCheck(name="Architecture views", path=workspace, exists=True, complete=not stale_reasons,
+                          reasons=reasons, uncommitted=uncommitted)]
+
+
 def _design_artifacts(dhf_dir: Path) -> list[ArtifactCheck]:
     """The design gate's pass/fail checks: design documents, the design review,
-    ids declared once."""
+    ids declared once, the architecture's drawn views."""
     return [*check_design_docs(dhf_dir), check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review"),
-            check_unique_ids(dhf_dir)]
+            check_unique_ids(dhf_dir), *check_architecture_views(dhf_dir)]
 
 
 def run_design_gate(dhf_dir: Path, allure_results_dir: Path | None = None) -> GateResult:

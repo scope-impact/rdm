@@ -12,14 +12,11 @@ Skips cleanly if allure-pytest is not installed.
 from __future__ import annotations
 
 import json
-import re
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from rdm.md_extensions.mermaid import MermaidError
 from rdm.render import invert_dependencies, join_to, md_indent
 from tests.util import render_from_string
 
@@ -76,96 +73,100 @@ def test_markdown_post_processing() -> None:
     assert "[apple][banana]" in vocab
 
 
-FAKE_MMDC = """\
+FAKE_STRUCTURIZR = """#!{python}
 import json, sys
+from pathlib import Path
 args = sys.argv[1:]
-src, out, config = (args[args.index(flag) + 1] for flag in ("-i", "-o", "-c"))
-with open(sys.argv[0] + ".log", "a") as log:
-    log.write(json.dumps({"args": args, "config": json.load(open(config))}) + "\\n")
-diagram = open(src).read()
-if "BROKEN" in diagram:  # a renderer can fail after writing part of an image
-    open(out, "w").write("<svg")
-    sys.exit("Parse error on line 2: BROKEN")
-open(out, "w").write("<svg xmlns='http://www.w3.org/2000/svg'><text>" + diagram.split()[0] + "</text></svg>")
+workspace, fmt, out = (args[args.index(flag) + 1] for flag in ("-w", "-f", "-o"))
+if "BROKEN" in Path(workspace).read_text():
+    sys.exit("Error: unexpected token at line 3")
+views = ["C1", "C3_core"]
+Path(out).mkdir(parents=True)
+if fmt == "json":
+    Path(out, "workspace.json").write_text(json.dumps({{
+        "name": "Device", "properties": {{"structurizr.dsl": "d29ya3NwYWNl"}},
+        "model": {{"people": [{{"id": "1", "name": "Clinician"}}]}},
+        "views": {{"systemContextViews": [{{"key": "C1"}}], "componentViews": [{{"key": "C3_core"}}]}}}}))
+else:
+    for key in views:
+        Path(out, "structurizr-" + key + ".dot").write_text(
+            'digraph {{ 1 [label=<<font>Design, V&V and risk</font>>] }}')
 """
 
-DIAGRAM = "C4Context\n  Person(author, \"Author\")\n"
-DOCUMENT = "# Architecture\n\n```mermaid\n" + DIAGRAM + "```\n\nAfter the diagram.\n"
-CONFIG = {"md_extensions": ["rdm.md_extensions.MermaidExtension"]}
+FAKE_DOT = """#!{python}
+import re, sys
+source = open(sys.argv[-1]).read()
+if re.search(r"&(?!(?:[a-zA-Z]+|#[0-9]+);)", source):
+    sys.exit("Error: not well-formed (invalid token)")
+print('<?xml version="1.0" encoding="UTF-8"?>')
+label = source.split("<font>")[1].split("</font>")[0]
+print("<svg xmlns='http://www.w3.org/2000/svg'><text>" + label + "</text></svg>")
+"""
 
 
-def _fake_mmdc(tmp_path, monkeypatch) -> Path:
-    fake = tmp_path / "mmdc.py"
-    fake.write_text(FAKE_MMDC)
-    monkeypatch.setenv("RDM_MERMAID_CLI", f"{sys.executable} {fake}")
-    return fake
-
-
-def _calls(fake: Path) -> list[dict]:
-    log = Path(str(fake) + ".log")
-    return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+def _tool(tmp_path: Path, name: str, source: str) -> Path:
+    tool = tmp_path / name
+    tool.write_text(source.format(python=sys.executable))
+    tool.chmod(0o755)
+    return tool
 
 
 @allure.story("DI-70")
-@allure.label("output", "rdm/md_extensions/mermaid.py")
-@allure.label("output", "rdm/init_files/render-pdfs.sh")
-def test_mermaid_diagrams_render_as_images_drawn_by_mermaid(tmp_path, monkeypatch) -> None:
-    """DI-70: each Mermaid diagram becomes an image drawn by Mermaid's own
-    renderer at a pinned version, and a diagram that cannot be drawn fails the
-    render, naming the document."""
-    monkeypatch.setenv("RDM_MERMAID_DIR", str(tmp_path / "drawn"))
-    monkeypatch.delenv("RDM_MERMAID_COLLECT", raising=False)
-    fake = _fake_mmdc(tmp_path, monkeypatch)
+@allure.label("output", "rdm/c4.py")
+@allure.label("output", "rdm/gates/design_gate.py")
+def test_architecture_views_are_drawn_from_the_workspace_and_kept_current(tmp_path, monkeypatch) -> None:
+    """DI-70: each view of the architecture workspace is drawn to an image in
+    the record, stamped with the workspace it was drawn from, and the design
+    gate fails when the model or a view's image was not drawn from the current
+    workspace, or a view has no image."""
+    from rdm.c4 import DrawError, digest, draw, stale
+    from rdm.gates.design_gate import check_architecture_views, run_design_gate
 
-    with verification_step("a Mermaid block becomes an image, drawn by the renderer with Mermaid's strict config"):
-        out = render_from_string(DOCUMENT, config=CONFIG)
-        attach("rendered", out)
-        images = re.findall(r"!\[\]\((.+?\.svg)\)", out)
-        assert len(images) == 1 and "```mermaid" not in out and "After the diagram." in out
-        assert Path(images[0]).read_text().startswith("<svg") and "C4Context" in Path(images[0]).read_text()
-        call = _calls(fake)[0]
-        attach("renderer call", call)
-        assert call["config"]["securityLevel"] == "strict" and call["args"][-2:] == ["-b", "white"]
-    with verification_step("an unchanged diagram is not drawn again"):
-        assert render_from_string(DOCUMENT, config=CONFIG) == out
-        assert len(_calls(fake)) == 1
+    dhf = tmp_path / "dhf"
+    (dhf / "c4" / "views").mkdir(parents=True)
+    (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n  }\n}\n')
+    (dhf / "c4" / "views" / "C3_retired.svg").write_text("<svg/>")
+    monkeypatch.setenv("RDM_STRUCTURIZR", str(_tool(tmp_path, "structurizr.sh", FAKE_STRUCTURIZR)))
+    monkeypatch.setenv("RDM_DOT", str(_tool(tmp_path, "dot", FAKE_DOT)))
 
-    shared = tmp_path / "shared"
-    monkeypatch.setenv("RDM_MERMAID_DIR", str(shared))
-    with verification_step("collect mode leaves the diagram and the config for Mermaid's image, drawing nothing"):
-        monkeypatch.setenv("RDM_MERMAID_COLLECT", "1")
-        render_from_string(DOCUMENT, config=CONFIG)
-        sources = sorted(shared.glob("*.mmd"))
-        assert len(sources) == 1 and sources[0].read_text() == DIAGRAM
-        assert json.loads((shared / "config.json").read_text())["securityLevel"] == "strict"
-        assert len(_calls(fake)) == 1
-    with verification_step("drawn beside the render, as render-pdfs.sh does, the image is what the render uses"):
-        source = sources[0]
-        subprocess.run([sys.executable, str(fake), "-c", "config.json", "-b", "white", "-i", source.name,
-                        "-o", source.with_suffix(".svg").name], cwd=shared, check=True)
-        monkeypatch.delenv("RDM_MERMAID_COLLECT")
-        monkeypatch.setenv("RDM_MERMAID_CLI", str(tmp_path / "no-such-renderer"))
-        out = render_from_string(DOCUMENT, config=CONFIG)
-        assert f"![]({source.with_suffix('.svg').as_posix()})" in out
+    with verification_step("rdm c4 draw writes the model and an image of each view, each stamped with the workspace"):
+        assert draw(dhf) == ["C3_core", "C1"]
+        model = json.loads((dhf / "c4" / "workspace.json").read_text())
+        attach("workspace.json", model)
+        assert model["rdm"]["workspace_sha256"] == digest(dhf)
+        assert "structurizr.dsl" not in model["properties"]  # not the workspace again, base64
+        for key in ("C1", "C3_core"):
+            svg = (dhf / "c4" / "views" / f"{key}.svg").read_text()
+            assert f"<!-- rdm c4 draw: view {key}, workspace sha256:{digest(dhf)} -->" in svg.splitlines()[1]
+    with verification_step("a bare & in Structurizr's DOT is escaped, so Graphviz draws the view"):
+        assert "Design, V&amp;V and risk" in (dhf / "c4" / "views" / "C1.svg").read_text()
+    with verification_step("the image of a view the workspace no longer has is removed"):
+        assert not (dhf / "c4" / "views" / "C3_retired.svg").exists()
+    with verification_step("drawn from the current workspace, nothing is stale and the gate's check passes"):
+        assert stale(dhf) == [] and check_architecture_views(dhf)[0].ok
 
-    with verification_step("a diagram not drawn, with no renderer, fails the render naming the document"):
-        monkeypatch.setenv("RDM_MERMAID_DIR", str(tmp_path / "empty"))
-        with pytest.raises(MermaidError) as missing:
-            render_from_string(DOCUMENT, config=CONFIG, template_name="architecture.md")
-        attach("error, not drawn", str(missing.value))
-        assert str(missing.value).startswith("architecture.md: Mermaid diagram `C4Context` is not drawn")
-    with verification_step("a diagram the renderer rejects fails the render naming the document"):
-        _fake_mmdc(tmp_path, monkeypatch)
-        broken = DOCUMENT.replace(DIAGRAM, "C4Context\n  BROKEN\n")
-        with pytest.raises(MermaidError) as rejected:
-            render_from_string(broken, config=CONFIG, template_name="design/graph.md")
-        attach("error, rejected", str(rejected.value))
-        assert "design/graph.md: Mermaid diagram `C4Context` could not be drawn: Parse error" in str(rejected.value)
+    with verification_step("a workspace changed and not redrawn fails the design gate"):
+        (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n    a = person "A"\n  }\n}\n')
+        reasons = stale(dhf)
+        attach("stale, workspace changed", reasons)
+        assert "c4/workspace.json was not drawn from the current workspace.dsl: run rdm c4 draw" in reasons
+        assert "view C1's image was not drawn from the current workspace.dsl: run rdm c4 draw" in reasons
+        assert not check_architecture_views(dhf)[0].ok
+        gate = {a.name: a for a in run_design_gate(dhf).artifacts}
+        assert not gate["Architecture views"].ok and gate["Architecture views"].reasons == reasons
+    with verification_step("a view with no image, or an image of no view, fails the design gate"):
+        draw(dhf)
+        (dhf / "c4" / "views" / "C1.svg").unlink()
+        (dhf / "c4" / "views" / "C9.svg").write_text("<svg/>")
+        reasons = stale(dhf)
+        attach("stale, images", reasons)
+        assert "view C1 has no image: run rdm c4 draw" in reasons
+        assert "c4/views/C9.svg is the image of no view: run rdm c4 draw" in reasons
+    with verification_step("a workspace Structurizr rejects is not drawn, and says why"):
+        (dhf / "c4" / "workspace.dsl").write_text("workspace {\n  BROKEN\n}\n")
+        with pytest.raises(DrawError, match="could not export json: Error: unexpected token at line 3"):
+            draw(dhf)
 
-    with verification_step("Mermaid's image is pinned by version and digest and draws with the render's config"):
-        script = (ROOT / "rdm/init_files/render-pdfs.sh").read_text()
-        attach("render-pdfs.sh", script)
-        assert re.search(r"mermaid-cli/mermaid-cli:\d+\.\d+\.\d+@sha256:[0-9a-f]{64}", script)
-        assert "-e RDM_MERMAID_COLLECT=1" in script and "-c config.json -b white" in script
-        assert "render-pdfs.sh" in (ROOT / "action.yml").read_text()
-        assert "rdm.md_extensions.MermaidExtension" in (ROOT / "rdm/init_files/config.yml").read_text()
+    with verification_step("RDM's own model and views are drawn from its workspace as it is now"):
+        assert stale(ROOT / "dhf") == []
+        assert check_architecture_views(ROOT / "dhf")

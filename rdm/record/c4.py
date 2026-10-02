@@ -1,71 +1,46 @@
 """
-The C4 model, read from the record's Mermaid C4 diagrams (DI-66).
+The C4 model, read from the architecture workspace (DI-66).
 
-The architecture lives where the design does: the system context (C1) and
-the containers (C2) in the architecture document, each bounded context's
-components (C3, with dynamic and deployment views where useful) in its own
-design document, all as ```mermaid blocks. This module reads every view into
-one model. One alias is one element across views; an element drawn ``_Ext``
-in a view is shown there, not declared. The code level is the code a
-component names with ``$link`` (a file or a directory): Mermaid has no code
-diagram, and the code is the authority on itself.
+The architecture is one Structurizr workspace, ``<dhf>/c4/workspace.dsl``: the
+model (people, software systems, containers, components grouped by bounded
+context) and its views. ``rdm c4 draw`` exports it as ``<dhf>/c4/workspace.json``
+(DI-70), and this module reads that JSON, so reading needs neither Java nor a
+parser. One identifier is one element. The code level is the code a component
+names with its ``code`` property (a file or a directory): the code is the
+authority on itself.
 
-Mermaid is the notation, not the model; the graph (rdm/graph) is where the
-model is checked against the record and the code (DI-67, DI-68).
+The graph (rdm/graph) is where the model is checked against the record and the
+code (DI-67, DI-68).
 """
 
 from __future__ import annotations
 
 import ast
-import re
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.record.sdd import context_of, parse_frontmatter
-
-# A view's first statement: its C4 level.
-LEVELS = {"C4Context": "context", "C4Container": "container", "C4Component": "component",
-          "C4Dynamic": "dynamic", "C4Deployment": "deployment"}
-
-# Element functions: (kind, positional fields after alias and name).
-_ELEMENTS = {}
-for _base, _kind, _fields in (("Person", "person", ("description",)), ("System", "system", ("description",)),
-                              ("Container", "container", ("technology", "description")),
-                              ("Component", "component", ("technology", "description"))):
-    for _shape in ("", "Db", "Queue"):
-        if _base == "Person" and _shape:
-            continue
-        for _ext in ("", "_Ext"):
-            _ELEMENTS[_base + _shape + _ext] = (_kind, _shape.lower(), bool(_ext), _fields)
-
-# Boundary functions: the kind of element the boundary is (None: a grouping).
-_BOUNDARIES = {"System_Boundary": "system", "Container_Boundary": "container",
-               "Enterprise_Boundary": None, "Boundary": None}
-# Deployment nodes group container instances without changing what contains them.
-_NODES = {"Deployment_Node", "Node", "Node_L", "Node_R"}
-_RELATIONS = {"Rel", "BiRel", "Rel_U", "Rel_Up", "Rel_D", "Rel_Down", "Rel_L", "Rel_Left", "Rel_R", "Rel_Right",
-              "Rel_Back"}
-
-_FENCE = re.compile(r"^```mermaid[^\n]*\n(.*?)^```", re.M | re.S)
-_CALL = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*(\{)?\s*$")
+MODEL = Path("c4") / "workspace.json"
+_KINDS = (("people", "person"), ("softwareSystems", "system"), ("containers", "container"),
+          ("components", "component"))
+_IDENTIFIER = "structurizr.dsl.identifier"
 
 
 @dataclass
 class Element:
-    """A person, software system, container or component, as one view declares it."""
+    """A person, software system, container or component of the workspace."""
 
-    alias: str
+    alias: str                   # the workspace's identifier for it
     kind: str                    # person | system | container | component
     name: str = ""
     technology: str = ""
     description: str = ""
     external: bool = False
     shape: str = ""              # "" | db | queue
-    link: str = ""               # the code a component names ($link)
-    parent: str | None = None    # the boundary element (system or container) it sits in
-    document: str = ""           # repo-relative path of the declaring document
-    context: str = ""            # the bounded context of that document
-    level: str = ""              # the view's level
+    link: str = ""               # the code a component names (its "code" property)
+    parent: str | None = None    # the system or container it sits in
+    document: str = ""           # repo-relative path of the workspace
+    context: str = ""            # a component's bounded context: its group
 
 
 @dataclass
@@ -75,141 +50,78 @@ class Relationship:
     label: str = ""
     technology: str = ""
     document: str = ""
-    level: str = ""
 
 
 @dataclass
 class Model:
-    """The architecture the record's views declare together."""
+    """The architecture the workspace declares."""
 
-    elements: dict[str, Element] = field(default_factory=dict)    # alias -> its declaration
-    mentions: list[Element] = field(default_factory=list)         # every drawing, external ones too
-    boundaries: list[Element] = field(default_factory=list)       # every boundary drawn (its kind and parent)
+    elements: dict[str, Element] = field(default_factory=dict)    # alias -> the element
     relationships: list[Relationship] = field(default_factory=list)
-    declared_by: dict[str, list[str]] = field(default_factory=dict)  # alias -> documents declaring it (not _Ext)
+    views: list[str] = field(default_factory=list)                 # every view's key
 
     @property
     def components(self) -> list[Element]:
         return [e for e in self.elements.values() if e.kind == "component"]
 
 
-def _arguments(text: str) -> tuple[list[str], dict[str, str]]:
-    """A call's positional and ``$key=value`` arguments; quotes keep commas."""
-    parts, current, quoted = [], "", False
-    for char in text:
-        if char == '"':
-            quoted = not quoted
-            current += char
-        elif char == "," and not quoted:
-            parts.append(current)
-            current = ""
-        else:
-            current += char
-    parts.append(current)
-    positional, named = [], {}
-    for part in (p.strip() for p in parts):
-        if not part:
-            continue
-        match = re.fullmatch(r'\$(\w+)\s*=\s*(.*)', part)
-        if match:
-            named[match.group(1)] = match.group(2).strip().strip('"')
-        else:
-            positional.append(part.strip('"'))
-    return positional, named
+def _tags(item: dict) -> set[str]:
+    return {t.strip() for t in str(item.get("tags") or "").split(",") if t.strip()}
 
 
-def parse_views(text: str) -> list[tuple[str, list[tuple[str, list[str], dict[str, str], list[str]]]]]:
-    """Each Mermaid C4 view in ``text``: its level and its statements, as
-    ``(function, positional, named, enclosing boundaries)``."""
-    views = []
-    for block in _FENCE.findall(text):
-        lines = [line.split("%%", 1)[0].rstrip() for line in block.splitlines()]
-        lines = [line for line in lines if line.strip()]
-        if not lines or lines[0].strip() not in LEVELS:
-            continue
-        statements, stack = [], []
-        for line in lines[1:]:
-            if line.strip() == "}":
-                if stack:
-                    stack.pop()
-                continue
-            match = _CALL.match(line)
-            if not match:
-                continue
-            function, (positional, named), opens = match.group(1), _arguments(match.group(2)), match.group(3)
-            statements.append((function, positional, named, list(stack)))
-            if opens:
-                stack.append(f"{function}:{positional[0] if positional else ''}")
-        views.append((LEVELS[lines[0].strip()], statements))
-    return views
-
-
-def _parent(stack: list[str], kinds: set[str]) -> str | None:
-    """The innermost enclosing boundary that is a system or container."""
-    for entry in reversed(stack):
-        function, _, alias = entry.partition(":")
-        if _BOUNDARIES.get(function) in kinds:
-            return alias
-    return None
-
-
-def read_document(path: Path, document: str, context: str, model: Model) -> None:
-    """Add the views of one Markdown document to ``model``."""
-    for level, statements in parse_views(path.read_text(encoding="utf-8")):
-        for function, positional, named, stack in statements:
-            if function in _ELEMENTS and positional:
-                kind, shape, external, fields = _ELEMENTS[function]
-                values = dict(zip(fields, positional[2:]))
-                element = Element(
-                    alias=positional[0], kind=kind, name=positional[1] if len(positional) > 1 else positional[0],
-                    technology=named.get("techn", values.get("technology", "")),
-                    description=named.get("descr", values.get("description", "")),
-                    external=external, shape=shape, link=named.get("link", "").strip(),
-                    parent=_parent(stack, {"container"} if kind == "component" else {"system"}),
-                    document=document, context=context, level=level)
-                model.mentions.append(element)
-                if not external:
-                    model.declared_by.setdefault(element.alias, [])
-                    if document not in model.declared_by[element.alias]:
-                        model.declared_by[element.alias].append(document)
-                current = model.elements.get(element.alias)
-                if current is None or (current.external and not external):
-                    model.elements[element.alias] = element
-            elif function in _BOUNDARIES and positional:
-                model.boundaries.append(Element(
-                    alias=positional[0], kind=_BOUNDARIES[function] or "group",
-                    name=positional[1] if len(positional) > 1 else positional[0],
-                    parent=_parent(stack, {"system"}), document=document, context=context, level=level))
-            elif function in _RELATIONS and len(positional) >= 2:
-                source, target = positional[0], positional[1]
-                if function == "Rel_Back":
-                    source, target = target, source
-                label = positional[2] if len(positional) > 2 else named.get("label", "")
-                technology = positional[3] if len(positional) > 3 else named.get("techn", "")
-                model.relationships.append(Relationship(source, target, label, technology, document, level))
-                if function == "BiRel":
-                    model.relationships.append(Relationship(target, source, label, technology, document, level))
+def _walk(items: list[dict], kind_index: int, parent: str | None, ids: dict, out: list) -> None:
+    """Every element below ``items`` (people, systems, their containers, their
+    components), each with its parent's alias."""
+    key, kind = _KINDS[kind_index]
+    for item in items or []:
+        props = item.get("properties") or {}
+        alias = props.get(_IDENTIFIER) or str(item.get("id"))
+        ids[str(item.get("id"))] = alias
+        tags = _tags(item)
+        out.append((item, Element(
+            alias=alias, kind=kind, name=str(item.get("name") or ""), technology=str(item.get("technology") or ""),
+            description=str(item.get("description") or ""), external="External" in tags,
+            shape="db" if "Database" in tags else "queue" if "Queue" in tags else "",
+            link=str(props.get("code") or ""), parent=parent, context=str(item.get("group") or ""))))
+        for child_index in range(kind_index + 1, len(_KINDS)):
+            child_key = _KINDS[child_index][0]
+            if item.get(child_key):
+                _walk(item[child_key], child_index, alias, ids, out)
 
 
 def read_model(dhf_dir: Path, root: Path | None = None) -> Model:
-    """The C4 model every document of the DHF declares, in path order."""
+    """The C4 model of the DHF's architecture workspace (empty when it has none)."""
+    from rdm.c4 import view_keys
+
     dhf_dir = Path(dhf_dir)
     root = Path(root) if root is not None else dhf_dir.parent
+    path = dhf_dir / MODEL
     model = Model()
-    for path in sorted(dhf_dir.rglob("*.md")):
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        if "```mermaid" not in text:
-            continue
-        front = parse_frontmatter(text)
-        context = str(front.get("context") or "").strip() or context_of(path)
-        try:
-            document = path.resolve().relative_to(root.resolve()).as_posix()
-        except ValueError:
-            document = path.as_posix()
-        read_document(path, document, context, model)
+    if not path.is_file():
+        return model
+    workspace = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        document = (dhf_dir / "c4" / "workspace.dsl").resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        document = (dhf_dir / "c4" / "workspace.dsl").as_posix()
+    data = workspace.get("model") or {}
+    ids: dict[str, str] = {}
+    found: list[tuple[dict, Element]] = []
+    _walk(data.get("people"), 0, None, ids, found)
+    _walk(data.get("softwareSystems"), 1, None, ids, found)
+    for item, element in found:
+        element.document = document
+        model.elements[element.alias] = element
+    for item, element in found:
+        for rel in item.get("relationships") or []:
+            if rel.get("linkedRelationshipId"):
+                continue  # implied by a relationship below it, not declared
+            target = ids.get(str(rel.get("destinationId")))
+            if target is not None:
+                model.relationships.append(Relationship(
+                    source=element.alias, target=target, label=str(rel.get("description") or ""),
+                    technology=str(rel.get("technology") or ""), document=document))
+    model.views = view_keys(workspace)
     return model
 
 

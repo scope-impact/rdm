@@ -5,5 +5,7 @@ table-of-contents: true
 toc-depth: 2
 resource-path:
 - .
+- ./documents
+- ./documents/design   # a design document's images, e.g. ../../c4/views/*.svg
 metadata-file:
 - ./data/device.yml
