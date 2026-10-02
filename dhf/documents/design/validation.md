@@ -28,7 +28,7 @@ This context owns:
   human-evidenced and its absence must be visible without pretending a
   machine can supply it. Refines UN-005.
 
-> **Design property (not a DI clause):** this evidence is *formative only* and
+> **Design property (not a design input):** this evidence is *formative only* and
 > **never gates release** — the persona reconciler is structurally absent from
 > the release gate (a negative/structural property, not mutation-testable; see
 > the gating context, where the release gate consults only verification).

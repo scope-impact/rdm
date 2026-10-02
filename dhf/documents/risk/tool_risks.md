@@ -48,9 +48,9 @@ risks:
   - id: RISK-TOOL-005
     category: safety
     status: proposed
-    hazard: "A tagged test passes without exercising every clause of its design input."
-    situation: "A test asserts two of a design input's three clauses, and the pull-request reviewer does not notice."
-    harm: "The design input is reported verified while one clause is untested, and the gap ships."
+    hazard: "A tagged test passes without checking everything its design input requires."
+    situation: "A test checks two of the three things a design input requires, and the pull-request reviewer does not notice."
+    harm: "The design input is reported verified while one thing it requires is unchecked, and the gap ships."
     severity: Serious
     probability: Possible
     controls: [DI-34]
