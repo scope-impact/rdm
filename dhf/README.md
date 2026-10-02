@@ -46,8 +46,8 @@ rdm story trace UN-… | DI-…             # one need's / input's slice
   the user need they refine. A context can `realises` an input owned elsewhere.
 - **Verification** = each design input (an acceptance criterion: a `shall`
   requirement, baseline or risk-based) is verified by its
-  `@allure.story("DI-…")` test, whose verification steps check its clauses
-  ("live BDD"), aggregated across contexts. Vocabulary: `CONTEXT.md`.
+  `@allure.story("DI-…")` test ("live BDD"), aggregated across contexts. The
+  test's verification steps belong to the test, not to the criterion. Vocabulary: `CONTEXT.md`.
 - **Independent verification** = the human-reviewed pull request: a reviewer
   other than the author judges whether each tagged test actually verifies its
   input. Git is the controlled record of that review.

@@ -15,9 +15,9 @@ _Avoid_: user story, feature, epic
 **Design input**:
 A uniquely identified `shall` requirement on the system or one of its
 subsystems, owned by one bounded context and traced to the user need it refines.
-It is an acceptance criterion: the requirements skill's "acceptance criterion"
-and "subsystem `shall` requirement" are both design inputs.
-_Avoid_: spec item, story, ticket, the test
+It is one acceptance criterion, accepted or not as a whole; what must be
+accepted separately is a separate design input.
+_Avoid_: spec item, story, ticket, the test, sub-criterion
 
 **Baseline acceptance criterion**:
 A design input that follows from a user need alone and mentions no risk.
@@ -51,9 +51,11 @@ acceptance criterion; it is not the criterion.
 _Avoid_: acceptance criterion, scenario, spec
 
 **Verification step**:
-One checked clause of a test, with its own result; a test is the ordered set of
-its verification steps.
-_Avoid_: acceptance criterion, assertion, sub-test
+One named check within a test, with its own result; a test is the ordered set
+of its verification steps. It belongs to the test, never to the acceptance
+criterion: a failed step fails the test, and the design input stays one
+criterion however many steps check it.
+_Avoid_: acceptance criterion, clause, sub-criterion, assertion
 
 **Test run**:
 One execution of a test, at one commit, by one executor.
@@ -73,6 +75,11 @@ _Avoid_: green build, passing CI
 Said of a user need whose intended users, in its intended use, were shown to
 reach its result.
 _Avoid_: verified, accepted
+
+**Checklist clause**:
+One requirement of a standard, as a checklist lists it, named by its key. A
+controlled document references it; nothing in a test does.
+_Avoid_: clause (unqualified), requirement, criterion
 
 ## Risk
 

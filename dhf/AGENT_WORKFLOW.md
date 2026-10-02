@@ -102,14 +102,15 @@ file's validation-approach table.
 
 ### Step 2 — declare the design input (the WHAT)
 
-**Why:** the design input is the verifiable requirement — the sentence the test
-will be judged against, clause by clause. Write it as testable clauses; vague
-inputs produce unreviewable tests.
+**Why:** the design input is the verifiable requirement, the acceptance
+criterion the test will be judged against as a whole. Write each thing it
+requires so a test can check it; vague inputs produce unreviewable tests. What
+must be accepted on its own is a separate design input.
 
 **Do:**
 ```bash
 uv run rdm story new-input --dhf dhf \
-  --context <ctx> --text "RDM shall <clause>, <clause>, …" --traces-to UN-nnn
+  --context <ctx> --text "RDM shall <what it must do>, …" --traces-to UN-nnn
 ```
 This allocates the next `DI-n`, inserts it into that context's `design_inputs`
 frontmatter, writes a stub tagged test (it *fails on purpose* — see step 5),
@@ -145,13 +146,15 @@ committed. That friction is the feature: the record stays true.
 ### Step 5 — make the test real (the PROOF)
 
 **Why:** the design input is the acceptance criterion and the tagged test
-verifies it, one verification step per clause ("live BDD") — there is no
-separate spec to drift out of date. The scaffolded stub fails on purpose so
+verifies it ("live BDD") — there is no separate spec to drift out of date. The
+test's verification steps are its own: one for each thing the design input
+requires, but never criteria of their own (a part that must be accepted
+separately is a separate design input). The scaffolded stub fails on purpose so
 the release gate stays honestly red until real proof exists; a stub that
 passed would be a lie the pipeline could not see.
 
 **Do:** replace the stub body in `tests/acceptance/` with real assertions
-against the real code path — **one assertion per clause of the DI text** —
+against the real code path — **one verification step for each thing the DI text requires** —
 keeping the tag and labelling the output:
 
 ```python
@@ -159,14 +162,15 @@ keeping the tag and labelling the output:
 @allure.label("output", "rdm/<impl>.py")   # which design output this exercises
 def test_<behavior>(...):
     """DI-n: <the requirement in one line>."""
-    with clause("<clause 1 of the DI text>"):        # tests/acceptance/evidence.py
+    with verification_step("<what this step checks>"):   # tests/acceptance/evidence.py
         result = ...
         attach("<what was checked>", result)       # kept in the Allure results
         assert ...
 ```
 
-A step per clause makes a failure name its clause; an attachment keeps what
-the assertion looked at. Declare only the story: `rdm.pytest_plugin` (hooked in
+A named verification step makes a failure say what it checked; an attachment
+keeps what the assertion looked at. The steps belong to the test, never to the
+criterion. Declare only the story: `rdm.pytest_plugin` (hooked in
 `tests/acceptance/conftest.py`) labels every run from the record with Allure's
 API — epic (user need), feature (context), links to the Markdown that declares
 it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the design input's text
@@ -197,11 +201,12 @@ dhf/config.yml dhf/data/verification.yml` — generated output, never hand-edite
 Ordinary git from here. The pull request **is** the independent verification:
 a reviewer other than the author reads each DI's text against its tagged test
 and asks whether the test would fail if the behavior broke — a tautology, a
-mocked-out code path, or 2 of 3 clauses covered is a reason to request
-changes. To check rather than eyeball, break a clause and run its test:
+mocked-out code path, or a test that checks two of the three things the DI
+requires is a reason to request changes. To check rather than eyeball, break
+one of them and run its test:
 
 ```bash
-uv run rdm story mutation-probe --file <impl> --find '<code for a clause>' \
+uv run rdm story mutation-probe --file <impl> --find '<code it requires>' \
   --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
 ```
 
@@ -222,7 +227,7 @@ the repo to inspect:
 | Step | What happened | Where to look |
 |---|---|---|
 | 1 | UN-010 registered ("a contributor is guided to author a fully traced design input") | `verification_and_validation_plan.md` frontmatter |
-| 2 | DI-22 declared in the scaffolding context, 6-clause requirement text | `dhf/documents/design/scaffolding.md` |
+| 2 | DI-22 declared in the scaffolding context, its text requiring six behaviours | `dhf/documents/design/scaffolding.md` |
 | 3 | Design docs committed *before* any code | commit `Approve design record: UN-010, DI-22, …` |
 | 4–5 | Implementation + tagged test | `rdm/gates/new_input.py`, `tests/acceptance/test_scaffolding.py` |
 | 6–7 | All gates green, pushed, PR reviewed | CI run on the PR |
@@ -231,7 +236,7 @@ History: at the time, an independent review step (the since-retired
 faithfulness gate, Design Review 4) found that the test passed with a
 one-context fixture even though a mutant ignoring `--context` survived; the
 author strengthened the fixture to two contexts (commit `Strengthen the DI-22
-test …`). That kind of gap — a passing test that does not prove a clause — is
+test …`). That kind of gap — a passing test that does not prove what its DI requires — is
 now the PR reviewer's to catch.
 
 ## Hard rules

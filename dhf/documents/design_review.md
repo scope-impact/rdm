@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 26
+revision: 27
 title: Design Review — RDM
 ---
 
@@ -769,6 +769,35 @@ verification approach, and DI-64 (amended).
   criteria", showed "risks controlled" for allocated controls, showed the
   Allure severity label as if it were a harm's severity, and did not show the
   risk register's state. It is amended to the glossary.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 26 — Verification steps are not acceptance criteria
+
+**Scope reviewed:** the vocabulary (`CONTEXT.md`), the V&V plan's verification
+approach, the agent workflow.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Applying the domain-modeling skill to Design Review 25: "clause" meant two
+  things — a standard's requirement in a checklist (`62304:5.2.2`), and a part
+  of a design input that a test step checks — and the test helper named every
+  step `clause(...)`. So a step read as a piece of the acceptance criterion,
+  which the product owner rules out: a test step is not an acceptance
+  criterion.
+- Resolved: a design input is one acceptance criterion, accepted or not as a
+  whole; what must be accepted separately is a separate design input (the rule
+  already applied when DI-47..50 were split). A verification step belongs to the
+  test: a named check with its own result, never a criterion or part of one.
+  "Clause" is reserved for a checklist clause.
+- Consequences, outside the record: the test helper becomes
+  `verification_step(...)`; the docs, the agent workflow and `rdm story
+  new-input`'s help stop calling the parts of a design input "clauses".
+  Earlier design reviews keep their wording as the record of their time.
 
 ## Findings and actions
 

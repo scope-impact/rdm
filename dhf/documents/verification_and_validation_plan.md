@@ -68,9 +68,10 @@ design inputs (§820.30(f): output meets input). A design input is an
 acceptance criterion, a `shall` requirement on RDM or one of its bounded
 contexts: *baseline* when it follows from a user need alone, *risk-based* when
 it is allocated as a risk control. Each is verified by an automated test in
-RDM's `tests/`, tagged `@allure.story("DI-…")`, whose verification steps check
-its clauses ("live BDD": the test verifies the criterion, with no separate spec
-to drift). A user need is met when it is validated and every design input that
+RDM's `tests/`, tagged `@allure.story("DI-…")` ("live BDD": the test verifies
+the criterion, with no separate spec to drift). The test's verification steps
+are its own, not criteria: a design input is accepted as a whole, and what must
+be accepted separately is a separate design input. A user need is met when it is validated and every design input that
 `traces_to` it is verified, wherever those inputs are owned; a risk-based
 criterion counts once it is verified and its risk's residual is acceptable.
 `rdm story release-gate` enforces this.
