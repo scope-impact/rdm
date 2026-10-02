@@ -60,6 +60,15 @@ design_inputs:
   - id: DI-62
     text: "RDM shall declare in its vocabulary each relation the graph derives rather than stores, with the rule that derives it as a SPARQL CONSTRUCT — first, that a bounded context serves the user needs its owned and realised design inputs trace to; the agent server's schema shall list the rules, and when asked to infer, the projection shall add the derived facts in a separate inferred named graph and nowhere else."
     traces_to: [UN-014, UN-015]
+  - id: DI-67
+    text: "RDM shall project the C4 model into the graph: each element typed person, software system, container or component, with its name, technology, description and external flag; the element that contains it; the bounded context that owns each component; each relationship with its source, target, label and technology; each component's code; the component every projected source file belongs to (the longest matching code path); and, for Python, an import from one component's code into another's as a dependency between the two."
+    traces_to: [UN-017, UN-014]
+  - id: DI-68
+    text: "RDM shall warn, never block, through the graph's gate shapes, when the C4 model and the record disagree: a design output in no component's code; a test run that exercises a component of a context that neither owns nor realises the design input it verifies; a dependency between two components with no relationship declared from the one to the other; a component in no container, or in a boundary that is not a container of the container diagram; a bounded context of the architecture with no component; a component whose code path does not exist; a relationship with no label; and an alias declared as non-external in two documents."
+    traces_to: [UN-017]
+  - id: DI-69
+    text: "RDM's agent server shall show, in the trace of a design input, the components whose code its tests exercise, each with its container and owning bounded context."
+    traces_to: [UN-017, UN-015]
 ---
 
 # Graph — Software Design
@@ -264,6 +273,29 @@ Retired (Design Review 18): DI-55 — container fixtures (`tmp_path`,
 tear-down halves became two fixtures each. The containers stay in the
 evidence bundle (DI-30).
 
+- **DI-67 (the C4 model in the graph)** — the elements become typed nodes
+  (person, software system, container, component) with what the diagrams say
+  of them, contained in their boundary; each component belongs to the
+  bounded context whose design document declares it; relationships are nodes
+  with source, target, label and technology. Each projected source file
+  belongs to the component whose code path is its longest match (a file or a
+  directory), and a Python import from one component's code into another's is
+  projected as a dependency: the coupling the code actually has, beside the
+  coupling the diagrams claim. Refines UN-017, UN-014.
+- **DI-68 (conformance, as warnings)** — the gate shapes compare the model
+  with the record and the code: code a test exercises that no component
+  names; a test that exercises another context's component than the one that
+  owns or realises its input; a dependency in the code with no relationship
+  declared for it; a component outside any container, or inside a boundary
+  the container view does not have; a context with no component; a code path
+  that does not exist; an unlabelled relationship; an element declared by two
+  documents. Every one is a warning: an architecture disagreement is a
+  question for the reviewer, never a release block. Refines UN-017.
+- **DI-69 (a design input's components)** — `trace` of a design input names
+  the components its tests exercise, with their container and owning
+  context, so an agent sees where an input is built without reading the code.
+  Refines UN-017, UN-015.
+
 ## Design Outputs
 
 `rdm/graph/` (optional extra `graph`: `pyoxigraph`, plus the `oxigraph` CLI
@@ -295,3 +327,33 @@ for serving):
 - `rdm/graph/cli.py` — `rdm graph build | query | serve | validate | explorer-file | mcp`.
 
 Acceptance criteria are verified by `@allure.story("DI-35" / "DI-36" / "DI-37" / "DI-38" / "DI-39" / "DI-41" / "DI-42" / "DI-45")` tests.
+
+## Components (C3)
+
+The components of the `graph` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: graph
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(projection, "Projection", "Python, pyoxigraph", "The record into RDF: named graphs, rules, the graph commands", $link="rdm/graph/")
+    Component(vocabulary, "Vocabulary", "Turtle", "Classes, properties and the rules that derive relations", $link="rdm/graph/ontology.ttl")
+    Component(gate_shapes, "Gate shapes", "SHACL", "The gate rules as shapes", $link="rdm/graph/shapes.ttl")
+    Component(shacl_validation, "SHACL validation", "Python, pySHACL", "rdm graph validate", $link="rdm/graph/validate.py")
+    Component(explorer_file, "Explorer file", "Python", "A file for Graph Explorer", $link="rdm/graph/explorer.py")
+    Component(agent_server, "Agent server", "Python, MCP", "Read-only schema, query, trace and validate for agents", $link="rdm/graph/agent.py")
+  }
+  Component_Ext(record_readers, "Record readers", "Python")
+  Component_Ext(risk_register, "Risk register", "Python")
+  Rel(projection, record_readers, "reads the record, results and git with")
+  Rel(projection, risk_register, "reads risks and findings with")
+  Rel(projection, vocabulary, "declares terms and rules in")
+  Rel(projection, explorer_file, "writes the explorer file with")
+  Rel(explorer_file, projection, "reads the projected graph from")
+  Rel(shacl_validation, projection, "validates the graph of")
+  Rel(shacl_validation, gate_shapes, "checks with")
+  Rel(agent_server, projection, "queries")
+  Rel(agent_server, shacl_validation, "validates with")
+```

@@ -42,3 +42,22 @@ Acceptance criteria are verified by `@allure.story("DI-16" / "DI-17")` tests;
 
 Planning data (issues, pull requests, task boards) is not part of the
 controlled record, and RDM no longer pulls it (Design Review 11).
+
+## Components (C3)
+
+The components of the `ingestion` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: ingestion
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(snippets, "Code snippets", "Python", "Collects tagged code snippets", $link="rdm/collect.py")
+    Component(test_translation, "Test result translation", "Python", "Translates foreign test results", $link="rdm/translate.py")
+    Component(result_formatters, "Result formatters", "Python", "JUnit and other result formats", $link="rdm/test_formatters/")
+  }
+  Component_Ext(utilities, "Utilities", "Python")
+  Rel(test_translation, result_formatters, "parses with")
+  Rel(test_translation, utilities, "uses")
+```

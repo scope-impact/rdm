@@ -29,9 +29,11 @@ verified and the residual risk of the risk it controls is acceptable.
 _Avoid_: safety requirement, mitigation requirement
 
 **Bounded context**:
-The unit of design that owns design inputs; what the requirements skill calls a
-subsystem. Exactly one design document describes each.
-_Avoid_: module, component, service
+The unit of design that owns design inputs and the components that implement
+them; what the requirements skill calls a subsystem. Exactly one design
+document describes each. In the architecture it is a boundary around
+components, which may sit in more than one container.
+_Avoid_: module, component, service, container
 
 **Realising context**:
 A bounded context that implements part of a design input another context owns.
@@ -42,6 +44,38 @@ _Avoid_: co-owner, contributor
 A checklist item on a planning task. Planning, never the record: it is not a
 design input and nothing verifies it.
 _Avoid_: acceptance criterion (unqualified), requirement
+
+## Architecture
+
+**Software system**:
+The product in scope, or a significant external system it depends on; the
+top level of the C4 model.
+_Avoid_: application, platform, project
+
+**Container**:
+Something that runs or stores data within a software system: an application,
+a command-line process, a data store, a queue. Not a Docker image unless the
+image is the thing that runs.
+_Avoid_: service, module, deployment, image
+
+**Component**:
+A logical building block inside exactly one container, owned by one bounded
+context and naming the code that implements it.
+_Avoid_: module, class, bounded context, service
+
+**Person**:
+A human role that uses the software system.
+_Avoid_: user (unqualified), actor, account
+
+**Relationship**:
+A directed dependency between two architecture elements, labelled with what
+the source does to the target.
+_Avoid_: link, connection, arrow
+
+**Architecture view**:
+One C4 diagram at one level: system context, container, component or code.
+The diagrams are its source; the model is what they declare together.
+_Avoid_: diagram (for the model), picture
 
 ## Verification and validation
 

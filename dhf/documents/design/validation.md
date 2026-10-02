@@ -51,3 +51,21 @@ and never gates release; the human summative study remains the validation record
 Acceptance criteria are verified by `@allure.story("DI-5")` tests. Note the
 persona ingest stays **user-need keyed** — validation is anchored on the user
 need, not the design input.
+
+## Components (C3)
+
+The components of the `validation` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: validation
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(formative_usability, "Formative usability", "Python", "Persona runs as formative evidence", $link="rdm/record/persona.py")
+    Component(validation_records, "Validation records", "Python", "Approved validation records per user need", $link="rdm/record/validation.py")
+  }
+  Component_Ext(record_readers, "Record readers", "Python")
+  Rel(formative_usability, record_readers, "loads runs with")
+  Rel(validation_records, record_readers, "reads the record with")
+```

@@ -68,3 +68,19 @@ documents contain the references a chosen standard requires):
 Acceptance criteria are verified by `@allure.story("DI-10" / "DI-11" / "DI-12"
 / "DI-25")` tests; RDM's existing `gaps_test.py` unit tests remain as
 lower-level coverage.
+
+## Components (C3)
+
+The components of the `gap_analysis` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: gap_analysis
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(gap_analysis, "Gap analysis", "Python", "Documents against checklists", $link="rdm/gaps.py")
+    Component(checklists, "Checklists", "text", "The built-in checklists", $link="rdm/checklists/")
+  }
+  Rel(gap_analysis, checklists, "reads")
+```

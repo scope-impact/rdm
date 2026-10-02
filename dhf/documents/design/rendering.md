@@ -49,3 +49,21 @@ Compiles the DHF from data and templates.
 Contributes to **UN-001** (compile the DHF from the system of record). The owned
 inputs are verified by `@allure.story("DI-7" / "DI-8" / "DI-9")` acceptance tests;
 the realised inputs by their owners' tests plus RDM's existing render unit tests.
+
+## Components (C3)
+
+The components of the `rendering` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: rendering
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(renderer, "Renderer", "Python, Jinja2", "Templates and data to Markdown", $link="rdm/render.py")
+    Component(markdown_extensions, "Markdown extensions", "Python", "Section numbers, vocabulary, audit notes", $link="rdm/md_extensions/")
+    Component(utilities, "Utilities", "Python", "Shared YAML and file helpers", $link="rdm/util.py")
+  }
+  Rel(renderer, utilities, "uses")
+  Rel(markdown_extensions, utilities, "uses")
+```

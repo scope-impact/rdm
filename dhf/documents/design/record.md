@@ -2,6 +2,8 @@
 id: SDS-REC-001
 kind: design
 context: record
+# Implements part of inputs other contexts own (Design Review 27).
+realises: [DI-4, DI-61]
 design_inputs:
   - id: DI-1
     text: "RDM shall read the user-need registry and the design inputs that trace to it from frontmatter and ingest Allure results, with no project-management dependency."
@@ -15,6 +17,9 @@ design_inputs:
   - id: DI-40
     text: "RDM shall read a Python test file's verification tags only from allure story decorators on its test functions and classes and from a module-level pytestmark — never from strings or comments — so a test that writes fixture files is not counted as verifying the ids those files name; a file that does not parse falls back to the decorator pattern. Only the story names a design input: feature and epic carry the bounded context and the user needs."
     traces_to: [UN-004]
+  - id: DI-66
+    text: "RDM shall read the C4 model from the Mermaid C4 diagrams in the record (C4Context and C4Container in the architecture document, C4Component and C4 code views in each bounded context's design document): every person, software system, container and component with its alias, name, technology, description and whether it is external; the boundary that contains it; the document and bounded context that declare it; every relationship with its direction, label and technology; and the code a component names with $link, a file or a directory."
+    traces_to: [UN-017]
 ---
 
 # Record — Software Design
@@ -50,6 +55,19 @@ This context owns the design inputs declared in the frontmatter:
   UN-004. Amended (Design Review 15): only `story` names a design input;
   `feature` and `epic` carry the context and the user needs (DI-57).
 
+- **DI-66 (the C4 model, read from the record's diagrams)** — the
+  architecture is kept where the design is: the system context (C1) and the
+  containers (C2) in the architecture document, each bounded context's
+  components (C3, and code views where useful) in its own design document,
+  all as Mermaid C4 blocks. RDM reads them into one model: people, software
+  systems, containers and components (alias, name, technology, description,
+  external or not), the boundary each sits in, the document and context that
+  declare it, every relationship (direction, label, technology), and the code
+  a component names with `$link`. One alias is one element across views; an
+  element drawn `_Ext` in a view is shown, not declared, there. Mermaid is
+  the notation, not the model: the model is what the views declare together.
+  Refines UN-017.
+
 ## Design Outputs
 
 Ingests the system of record so the rest of RDM can compile and gate the DHF.
@@ -67,3 +85,19 @@ The layer is dependency-light: no pydantic, DuckDB or RDF dependency.
 Retired (Design Review 11): DI-6 — RDM ships no planning tooling, so there
 are no planning outputs to mark. Acceptance criteria are verified by
 `@allure.story("DI-1")` tests.
+
+## Components (C3)
+
+The components of the `record` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: record
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(record_readers, "Record readers", "Python", "Design, V&V and risk frontmatter, Allure results, the C4 model, git", $link="rdm/record/")
+    Component(dmr_index, "DMR index", "Python", "The device-master-record index from frontmatter", $link="rdm/record/dmr.py")
+  }
+  Rel(dmr_index, record_readers, "reads frontmatter with")
+```

@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 27
+revision: 28
 title: Design Review — RDM
 ---
 
@@ -798,6 +798,45 @@ approach, the agent workflow.
   `verification_step(...)`; the docs, the agent workflow and `rdm story
   new-input`'s help stop calling the parts of a design input "clauses".
   Earlier design reviews keep their wording as the record of their time.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 27 — The architecture as C4, checked against the code
+
+**Scope reviewed:** UN-017; DI-66 (record), DI-67, DI-68, DI-69 (graph); the
+glossary's architecture terms; RDM's own C1, C2 and C3 diagrams; three
+`realises` entries.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The product owner's convention: the architecture document holds C1 and C2,
+  each design document its context's C3 (and C4 where needed), as Mermaid C4
+  in Markdown. The c4-diagrams skill (scope-impact/agent-skills) is the method
+  for drawing them; RDM reads them, never draws them.
+- Following the skill: containers are things that run or store data; a
+  component sits in exactly one container; bounded contexts are boundaries
+  around components and may cut across containers (RDM's pytest plugin runs
+  in the acceptance test run, its reusable CI in GitHub Actions); the model is
+  traced to code through `$link`, and to the code's real coupling through its
+  imports rather than through names.
+- Conformance findings are warnings: a disagreement between diagram and code
+  is the reviewer's question; neither is assumed right.
+- Drawing RDM's own C3 from the evidence (each test run's `output` labels and
+  the import graph) showed three inputs implemented partly in another
+  context: DI-18 (verification) in the gating context's `design_gate.py`, and
+  DI-4 (verification) and DI-61 (graph) in the record context's Allure
+  reader. Recorded as `realises`: gating realises DI-18; record realises DI-4
+  and DI-61.
+- The glossary gains software system, container, component, person,
+  relationship and architecture view; "component" stays a word to avoid for a
+  bounded context itself.
+- Mermaid's C4 layout overlaps some relationship labels on the denser views
+  (rendered and inspected); the views stay readable as source, and the model
+  in the graph is what is checked.
 
 ## Findings and actions
 

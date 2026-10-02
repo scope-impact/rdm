@@ -163,3 +163,40 @@ Turns executed test results into verification status and a traceable matrix.
 Contributes to **UN-003** (the release gate consumes this output) and **UN-004**.
 Acceptance criteria are verified by `@allure.story("DI-4" / "DI-18")` tests; DI-64 by
 `tests/acceptance/test_verification_report.py`; DI-65 by `tests/acceptance/test_run_environment.py`.
+
+## Components (C3)
+
+The components of the `verification` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: verification
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(verification_data, "Verification data", "Python", "Design inputs against results: verification.yml", $link="rdm/record/verify.py")
+    Component(mutation_probe, "Mutation probe", "Python", "Breaks a line, runs one test, restores", $link="rdm/gates/mutation.py")
+    Component(evidence_bundle, "Evidence bundle", "Python", "The retained release evidence", $link="rdm/record/bundle.py")
+    Component(verification_report, "Verification report", "Python", "The PDF of every run behind each design input", $link="rdm/record/report.py")
+    Component(report_layout, "Report layout", "Typst", "The report's page layout", $link="rdm/record/verification_report.typ")
+  }
+  Container_Boundary(test_run, "Acceptance test run") {
+    Component(pytest_plugin, "pytest plugin", "Python, pytest", "Labels each run from the record; the run's executor and environment", $link="rdm/pytest_plugin.py")
+  }
+  Component_Ext(record_readers, "Record readers", "Python")
+  Component_Ext(risk_register, "Risk register", "Python")
+  Component_Ext(renderer, "Renderer", "Python")
+  Component_Ext(utilities, "Utilities", "Python")
+  Rel(verification_data, record_readers, "reads the record and results with")
+  Rel(evidence_bundle, verification_data, "writes")
+  Rel(evidence_bundle, verification_report, "writes")
+  Rel(evidence_bundle, record_readers, "finds the matrix with")
+  Rel(evidence_bundle, renderer, "renders the matrix with")
+  Rel(evidence_bundle, utilities, "uses")
+  Rel(verification_report, verification_data, "builds on")
+  Rel(verification_report, record_readers, "reads results and git with")
+  Rel(verification_report, risk_register, "reads risks with")
+  Rel(verification_report, report_layout, "lays out with")
+  Rel(pytest_plugin, record_readers, "reads the record with")
+  Rel(pytest_plugin, risk_register, "reads risks with")
+```

@@ -76,3 +76,19 @@ reasonably practicable, stay human judgements.
   to its blocking list and warnings.
 
 Acceptance criteria are verified by `@allure.story("DI-43" / "DI-44")` tests.
+
+## Components (C3)
+
+The components of the `risk` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: risk
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(risk_register, "Risk register", "Python", "Risks scored from the policy; the release rules", $link="rdm/record/risk.py")
+  }
+  Component_Ext(record_readers, "Record readers", "Python")
+  Rel(risk_register, record_readers, "reads frontmatter with")
+```

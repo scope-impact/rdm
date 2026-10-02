@@ -2,6 +2,8 @@
 id: SDS-GATE-001
 kind: design
 context: gating
+# Implements part of inputs other contexts own (Design Review 27).
+realises: [DI-18]
 design_inputs:
   - id: DI-2
     text: "RDM shall block the transition into implementation until design input and review are present, complete, and approved (committed) in git; a later edit re-opens the gate."
@@ -70,3 +72,29 @@ Enforces design controls and verified coverage.
 
 Acceptance criteria are verified by `@allure.story("DI-2" / "DI-3" / "DI-26" / "DI-46")`
 tests.
+
+## Components (C3)
+
+The components of the `gating` context, each naming the code that
+implements it; a component of another context is shown external, where this
+one depends on it.
+
+```mermaid
+C4Component
+  title Components: gating
+  Container_Boundary(rdm_cli, "rdm") {
+    Component(design_gate, "Design and release gates", "Python", "Design gate, release gate, duplicate ids, trace", $link="rdm/gates/design_gate.py")
+    Component(hooks, "Hooks installer", "Python", "rdm hooks", $link="rdm/hooks.py")
+    Component(precommit_hook, "Pre-commit hook", "shell", "Runs the design gate before a commit", $link="rdm/hook_files/")
+  }
+  Component_Ext(record_readers, "Record readers", "Python")
+  Component_Ext(risk_register, "Risk register", "Python")
+  Component_Ext(validation_records, "Validation records", "Python")
+  Component_Ext(utilities, "Utilities", "Python")
+  Rel(design_gate, record_readers, "reads the record with")
+  Rel(design_gate, risk_register, "applies the risk rules of")
+  Rel(design_gate, validation_records, "reads validation records with")
+  Rel(hooks, precommit_hook, "installs")
+  Rel(hooks, utilities, "uses")
+  Rel(precommit_hook, design_gate, "runs")
+```

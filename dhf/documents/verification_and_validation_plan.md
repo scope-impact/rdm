@@ -36,6 +36,8 @@ user_needs:
     text: "An agent, in any harness, can read the design record — query it, trace a need or input to its tests and results, and check it against the gate rules — and cannot change it."
   - id: UN-016
     text: "A team can keep its risk register in the record, with each risk scored from its own matrix and each control traced to a verified design input, and cannot release while a risk is unscored, uncontrolled, or residually unacceptable without a named acceptance."
+  - id: UN-017
+    text: "A team can keep its architecture in the record as C4 diagrams (system context and containers for the system, components for each bounded context) and is warned wherever the code, the tests and the diagrams disagree."
 ---
 
 # Purpose
@@ -92,5 +94,6 @@ criterion counts once it is verified and its risk's residual is acceptable.
 | UN-014 | maintainer review that the projected graph agrees with the record it was built from (needs, inputs, contexts, documents, tests, results, commits) and is explorable in a graph browser | dogfooding: RDM's own DHF projected, queried, and browsed in AWS Graph Explorer |
 | UN-015 | maintainer review that an agent harness connected to the server answers traceability questions about RDM's own record correctly and has no way to change it | dogfooding: agent sessions on RDM itself using `rdm graph mcp` |
 | UN-016 | maintainer review that the gate's risk findings match a manual review of the same register with the risk-analysis method | dogfooding: RDM's own tool-risk register (`dhf/documents/risk/`) held to the release gate |
+| UN-017 | maintainer review that RDM's own C4 diagrams, rendered, match the code they name, and that each conformance warning on them points at a real disagreement | dogfooding: RDM's own architecture and design documents carry C1–C3, held to `rdm graph validate` |
 
 Formative evidence never gates release.
