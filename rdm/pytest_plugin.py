@@ -39,7 +39,8 @@ from pathlib import Path
 import pytest
 
 from rdm.evidence.allure import COMMIT_LABEL, DIRTY, REQUIREMENT_ATTACHMENT, WORKTREE_LABEL, write_run_facts
-from rdm.kernel.git import git, head, repository_url
+from rdm.kernel.git import head, repo_root, repository_url
+from rdm.specification.tags import DESIGN_INPUT_LABELS
 
 
 def pytest_addoption(parser):
@@ -55,7 +56,7 @@ def _record(dhf: str) -> dict:
     from rdm.specification.sdd import declarations, design_inputs
 
     path = Path(dhf)
-    root = Path(git(path, "rev-parse", "--show-toplevel") or path.parent).resolve()
+    root = (repo_root(path) or path.parent).resolve()
     commit, dirty = head(root)
 
     def rel(doc: Path) -> str:
@@ -79,14 +80,13 @@ def _record(dhf: str) -> dict:
 def story_ids(item) -> list[str]:
     """The design inputs a test is tagged with: allure-pytest keeps its labels
     as ``allure_label`` marks on the test function."""
-    marks = list(getattr(getattr(item, "function", None), "pytestmark", []))
-    marks += [m for m in item.iter_markers(name="allure_label") if m not in marks]
-    ids = [str(v) for m in marks if m.name == "allure_label" and str(m.kwargs.get("label_type")) in
-           ("story", "LabelType.STORY") for v in m.args]
+    ids = [str(v) for m in item.iter_markers(name="allure_label")
+           if str(getattr(m.kwargs.get("label_type"), "value", m.kwargs.get("label_type"))) in DESIGN_INPUT_LABELS
+           for v in m.args]
     return list(dict.fromkeys(ids))
 
 
-def _documents(record: dict, di: str, requirement: dict) -> list[tuple[str, str]]:
+def _documents(record: dict, di: str) -> list[tuple[str, str]]:
     """(link name, repo-relative Markdown path), one per document that
     declares the input: its design document, the V&V plan (or wherever) its
     user needs are declared, and the risk document of each risk it controls.
@@ -95,7 +95,7 @@ def _documents(record: dict, di: str, requirement: dict) -> list[tuple[str, str]
     if not (record["web"] and record["commit"]):
         return []
     found = [(di, doc) for doc in record["declared"].get(di, [])]
-    found += [(need, doc) for need in requirement["traces_to"] for doc in record["declared"].get(need, [])]
+    found += [(need, doc) for need in record["inputs"][di]["traces_to"] for doc in record["declared"].get(need, [])]
     found += [(risk, doc) for risk, doc in record["controls"].get(di, [])]
     ids: dict[str, list[str]] = {}
     for id_, doc in found:
@@ -161,30 +161,38 @@ def _record_run(config, record: dict | None) -> None:
 def pytest_runtest_call(item):
     """Label in the call phase, so the labels and the attachment belong to the
     test result (in set-up they would land on a fixture)."""
+    _label(item)
+    yield
+
+
+def _label(item) -> None:
+    """Label a tagged test's result from the record (DI-57, DI-59, DI-65)."""
     try:
         import allure
     except ImportError:
-        allure = None
-    ids = story_ids(item) if allure is not None else []
-    if ids:
-        dhf = item.config.getoption("--rdm-dhf", default=None) or str(Path(str(item.config.rootpath)) / "dhf")
-        record = _record(str(Path(dhf).resolve())) if Path(dhf).is_dir() else None
-        declared = [di for di in ids if record and di in record["inputs"]]
-        _record_run(item.config, record)
-        if declared and record["commit"]:  # DI-59: the version this run is evidence for
-            allure.dynamic.label(COMMIT_LABEL, record["commit"])
-            if record["dirty"]:
-                allure.dynamic.label(WORKTREE_LABEL, DIRTY)
-        for di in declared:
-            requirement = record["inputs"][di]
-            for need in requirement["traces_to"]:
-                allure.dynamic.epic(need)
-            allure.dynamic.feature(requirement["context"])
-            for name, doc in _documents(record, di, requirement):
-                allure.dynamic.link(f"{record['web']}/blob/{record['commit']}/{doc}", name=name)
-            if di in record["controls"]:
-                allure.dynamic.severity(allure.severity_level.CRITICAL)
-            allure.attach(f"{di} ({requirement['context']}): {requirement['text']}\n"
-                          f"Traces to: {', '.join(requirement['traces_to']) or '—'}\n",
-                          name=REQUIREMENT_ATTACHMENT.format(di), attachment_type=allure.attachment_type.TEXT)
-    yield
+        return
+    ids = story_ids(item)
+    if not ids:
+        return
+    dhf = Path(item.config.getoption("--rdm-dhf", default=None) or item.config.rootpath / "dhf")
+    record = _record(str(dhf.resolve())) if dhf.is_dir() else None
+    _record_run(item.config, record)
+    if record is None:
+        return
+    declared = [di for di in ids if di in record["inputs"]]
+    if declared and record["commit"]:  # DI-59: the version this run is evidence for
+        allure.dynamic.label(COMMIT_LABEL, record["commit"])
+        if record["dirty"]:
+            allure.dynamic.label(WORKTREE_LABEL, DIRTY)
+    for di in declared:
+        requirement = record["inputs"][di]
+        for need in requirement["traces_to"]:
+            allure.dynamic.epic(need)
+        allure.dynamic.feature(requirement["context"])
+        for name, doc in _documents(record, di):
+            allure.dynamic.link(f"{record['web']}/blob/{record['commit']}/{doc}", name=name)
+        if di in record["controls"]:
+            allure.dynamic.severity(allure.severity_level.CRITICAL)
+        allure.attach(f"{di} ({requirement['context']}): {requirement['text']}\n"
+                      f"Traces to: {', '.join(requirement['traces_to']) or '—'}\n",
+                      name=REQUIREMENT_ATTACHMENT.format(di), attachment_type=allure.attachment_type.TEXT)

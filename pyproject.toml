@@ -122,5 +122,7 @@ select = ["E", "W", "F"]
 universal = true
 
 [tool.pytest.ini_options]
+# The example is its own project, run from its own directory (CI does).
+testpaths = ["tests"]
 norecursedirs = [".venv", "build", "dist"]
 

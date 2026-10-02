@@ -1,12 +1,12 @@
 """
-Ingest Allure results into per-user-need verification status.
+Ingest Allure results into per-design-input verification status.
 
 Allure writes one ``*-result.json`` file per executed test into a results
 directory. Each result carries a ``status`` and a list of ``labels``; the
 ``@allure.story("ID")`` decorator appears as a label named ``story``
 (``feature`` and ``epic`` carry the bounded context and user needs, DI-57).
 This module maps those IDs to an aggregated
-verification status so the DHF can report whether each SDD user need was
+verification status so the DHF can report whether each design input was
 actually *verified* (executed and passed), not merely referenced by a tag.
 
 This is the executed-evidence counterpart to the test tags
@@ -26,12 +26,13 @@ from rdm.specification.tags import DESIGN_INPUT_LABELS
 
 # Allure statuses.
 FAILING = {"failed", "broken"}
-_FAILING = FAILING
-_PASSING = {"passed"}
+PASSED = "passed"
+RESULT_SUFFIX = "-result.json"  # one Allure result file per executed test
 
 # What rdm.pytest_plugin writes into a run's labels and results, and every
 # reader (the graph, the verification report) reads back (DI-57, DI-59, DI-65).
 COMMIT_LABEL = "commit"            # the commit under test
+OUTPUT_LABEL = "output"            # a design output the test exercises
 WORKTREE_LABEL = "worktree"        # "dirty" when it had uncommitted changes
 DIRTY = "dirty"
 REQUIREMENT_ATTACHMENT = "requirement {}"   # the plugin's copy of a design input's text
@@ -51,17 +52,16 @@ class TestResult:
 
     name: str
     status: str
-    user_need_ids: list[str] = field(default_factory=list)
-    source: str = ""
+    design_input_ids: list[str] = field(default_factory=list)
     # Design output(s) the test exercises, from @allure.label("output", ...).
     outputs: list[str] = field(default_factory=list)
 
 
 @dataclass
-class UserNeedVerification:
-    """Aggregated verification status for one declared ID (a design input)."""
+class DesignInputVerification:
+    """Aggregated verification status for one declared design input."""
 
-    user_need_id: str
+    design_input_id: str
     status: str = UNTESTED
     passed: int = 0
     failed: int = 0
@@ -72,7 +72,7 @@ class UserNeedVerification:
 
 @dataclass
 class VerificationReport(StatusReportMixin):
-    by_id: dict[str, UserNeedVerification] = field(default_factory=dict)
+    by_id: dict[str, DesignInputVerification] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     results_found: int = 0
 
@@ -146,44 +146,43 @@ def read_run_facts(results_dir: Path) -> tuple[dict | None, dict[str, str]]:
 def _build_result(data: dict, filename: str) -> TestResult:
     """Build one ``TestResult`` from a parsed Allure result file."""
     return TestResult(
-        name=str(data.get("name", "")),
+        name=str(data.get("name") or filename),
         status=str(data.get("status", "unknown")),
-        user_need_ids=design_input_tags(data),
-        source=filename,
-        outputs=labelled(data, "output"),
+        design_input_ids=design_input_tags(data),
+        outputs=labelled(data, OUTPUT_LABEL),
     )
 
 
 def parse_results(results_dir: Path) -> list[TestResult]:
     """Parse all ``*-result.json`` files in an Allure results directory."""
-    return load_json_records(results_dir, "-result.json", _build_result)
+    return load_json_records(results_dir, RESULT_SUFFIX, _build_result)
 
 
 def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
-    """Aggregate Allure results into a verification status per SDD user need.
+    """Aggregate Allure results into a verification status per design input.
 
-    Status rules per user need:
+    Status rules per design input:
       - ``failed``   if any covering test failed or is broken,
       - ``verified`` else if any covering test passed,
       - ``untested`` if no covering test ran (or only skipped/unknown).
 
-    IDs referenced by tests but not declared in the SDD are returned as orphans.
+    IDs referenced by tests but not declared are returned as orphans.
     """
     results = parse_results(Path(results_dir))
 
-    def _fold(verification: UserNeedVerification, result: TestResult) -> None:
-        verification.tests.append(result.name or result.source)
+    def _fold(verification: DesignInputVerification, result: TestResult) -> None:
+        verification.tests.append(result.name)
         for output in result.outputs:
             if output not in verification.outputs:
                 verification.outputs.append(output)
-        if result.status in _FAILING:
+        if result.status in FAILING:
             verification.failed += 1
-        elif result.status in _PASSING:
+        elif result.status == PASSED:
             verification.passed += 1
         else:
             verification.skipped += 1
 
-    def _status(verification: UserNeedVerification) -> str:
+    def _status(verification: DesignInputVerification) -> str:
         if verification.failed:
             return FAILED
         if verification.passed:
@@ -193,8 +192,8 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
     by_id, orphan_ids = aggregate_by_id(
         sdd_ids,
         results,
-        ids_of=lambda result: result.user_need_ids,
-        new=UserNeedVerification,
+        ids_of=lambda result: result.design_input_ids,
+        new=DesignInputVerification,
         fold=_fold,
         status=_status,
     )

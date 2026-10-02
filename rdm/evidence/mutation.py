@@ -171,7 +171,8 @@ def _pytest_runner(test_selector: str) -> Callable[[], str]:
     those the mutation was never actually exercised, so the outcome is an error
     description, never a kill (DI-34).
 
-    Stale-bytecode defense lives in the probe's writes (unique-ns mtime bumps),
+    Stale-bytecode defense lives in the probe's writes (whole-second mtime
+    advances, see ``_advance_mtime``),
     so the repo's warm ``__pycache__`` stays usable -- no cold-cache rerun per
     probe (the slowdown that caused the timeout incident)."""
     def run() -> str:
@@ -205,13 +206,13 @@ def story_mutation_probe_command(
         print(f"Error: file not found: {path}")
         return 2
     result = run_mutation_probe(path, find, replace, _pytest_runner(test))
+    if result.get("recovered"):
+        print(f"NOTE: recovered {path} from an interrupted earlier probe (journal restored).")
+    if not result.get("restored", True):  # reported on an errored run too
+        print(f"WARNING: {path} may not have been restored — check version control.")
     if "error" in result:
         print(f"Error: {result['error']}")
         return 2
-    if result.get("recovered"):
-        print(f"NOTE: recovered {path} from an interrupted earlier probe (journal restored).")
-    if not result["restored"]:
-        print(f"WARNING: {path} may not have been restored — check version control.")
     if result["killed"]:
         print(f"KILLED: `{test}` failed under the mutation — it verifies this behaviour. ✓")
         return 0
