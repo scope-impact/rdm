@@ -2,17 +2,23 @@
 id: SDS-SYS-001
 title: RDM System Architecture
 context: system
-# The bounded contexts, each with the part it belongs to (DI-58). Each has one
-# design document, design/<context>.md; the table below describes them.
+# The bounded contexts, each with the part it belongs to (DI-58), and its
+# layer in the dependency rule: a context imports only contexts of a lower
+# layer, and the shared kernel. Each has one design document,
+# design/<context>.md; the table below describes them.
 contexts:
-  - {id: specification, part: Record}
-  - {id: risk, part: Record}
-  - {id: architecture, part: Record}
-  - {id: test_evidence, part: Record}
-  - {id: release, part: Gates}
-  - {id: compliance, part: Gates}
-  - {id: graph, part: Graph}
-  - {id: publishing, part: Documents}
+  - {id: specification, part: Record, layer: 2}
+  - {id: risk, part: Record, layer: 1}
+  - {id: architecture, part: Record, layer: 1}
+  - {id: test_evidence, part: Record, layer: 3}
+  - {id: release, part: Gates, layer: 4}
+  - {id: compliance, part: Gates, layer: 1}
+  - {id: graph, part: Graph, layer: 5}
+  - {id: publishing, part: Documents, layer: 5}
+# Below every context: any context may import it, and it imports none.
+kernel: rdm/kernel/
+# Wires the command line to every context; in no context.
+composition_root: rdm/main.py
 # The record is controlled as DC-001 states.
 references: [DC-001]
 ---
@@ -64,66 +70,50 @@ does (`CONTEXT.md`): the stages of a design input's life (declared, approved,
 verified, released) are not contexts. Restructured in Design Review 30 from
 ten contexts named for what their code did or for a workflow stage.
 
-| Part | Context | Design document | Its language | Code today → target package |
-|------|---------|-----------------|--------------|-----------------------------|
-| Record | `specification` (core) | `design/specification.md` | user need, design input, tagged test, design review, approved, design gate | `rdm/record/sdd.py`, tag scanning in `rdm/record/allure.py`, `rdm/gates/design_gate.py` (less the release gate), `new_input.py`, `hooks.py`, `hook_files/`, `init.py`, `adopt.py`, `validation.py`, `persona*.py` → `rdm/specification/` |
-| Record | `risk` | `design/risk.md` | hazard, harm, severity, probability, control, residual | `rdm/record/risk.py` → `rdm/risk/` |
-| Record | `architecture` | `design/architecture.md` | person, software system, container, component, relationship, view | `rdm/record/c4.py`, `rdm/c4.py` → `rdm/architecture/` |
-| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's and xunit's words stop here | results in `rdm/record/allure.py`, `pytest_plugin.py`, `translate.py`, `test_formatters/`, `gates/mutation.py` → `rdm/evidence/` |
-| Gates | `release` | `design/release.md` | verified, release-grade evidence, release gate, evidence bundle | `run_release_gate` and trace in `design_gate.py`, `record/verify.py`, `record/bundle.py`, the reusable CI → `rdm/release/` |
-| Gates | `compliance` | `design/compliance.md` | standard, checklist, checklist clause, gap, coverage | `rdm/gaps.py`, `rdm/checklists/` → `rdm/compliance/` |
-| Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule, derived relation | `rdm/graph/` (unchanged) |
-| Documents | `publishing` | `design/publishing.md` | template, data, rendered document | `render.py`, `md_extensions/`, `collect.py`, `record/dmr.py`, `record/report.py` + layout, the PDF action → `rdm/publishing/` |
+| Part | Context | Design document | Its language | Package |
+|------|---------|-----------------|--------------|---------|
+| Record | `specification` (core) | `design/specification.md` | user need, design input, tagged test, design review, approved, design gate | `rdm/specification/`: the record reader, test tags, design gate, `new-input`, hooks, `init`, `adopt`, validation records, persona runs |
+| Record | `risk` | `design/risk.md` | hazard, harm, severity, probability, control, residual | `rdm/risk/` |
+| Record | `architecture` | `design/architecture.md` | person, software system, container, component, relationship, view | `rdm/architecture/`: the model reader, `rdm c4 draw` |
+| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's and xunit's words stop here | `rdm/evidence/`: Allure results, `translate`, the mutation probe; and `rdm/pytest_plugin.py` |
+| Gates | `release` | `design/release.md` | verified, release gate, trace slice | `rdm/release/`: the release gate, the verification data; and the reusable CI |
+| Gates | `compliance` | `design/compliance.md` | standard, checklist, checklist clause, gap, coverage | `rdm/compliance/` |
+| Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule, derived relation | `rdm/graph/` |
+| Documents | `publishing` | `design/publishing.md` | template, data, rendered document, evidence bundle | `rdm/publishing/`: render, snippets, DMR index, the verification report, the evidence bundle; and `rdm/md_extensions/` and the PDF action |
 
-Not contexts: the **shared kernel** (`rdm/util.py`, `rdm/record/ids.py`,
-`git.py`, `reconcile.py`, frontmatter parsing → `rdm/kernel/`), drawn in
-`specification` until it moves; and **onboarding** (`init`, `adopt`), the
-commands that create the record, which belong to `specification` as its
-application layer. `rdm/main.py` is the composition root that wires the
-command line to every context.
+Not contexts: the **shared kernel** (`rdm/kernel/`: YAML and file helpers,
+ids, git, frontmatter, the reconcile helpers), below every context; and the
+**composition root** (`rdm/main.py`), which wires the command line to every
+context. Onboarding (`init`, `adopt`) is the specification's application
+layer. Three paths users name stay where they are: `rdm/main.py` (the `rdm`
+command), `rdm/pytest_plugin.py` (imported by a project's `conftest.py`) and
+`rdm/md_extensions/` (named in a project's `config.yml`).
 
 ## Dependency rule
 
-A context depends only on contexts below it; nothing imports upward, and
-the read models at the top are imported by nothing.
+A context imports only contexts of a lower layer, and the shared kernel;
+nothing imports a context of the top layer. The layers are in the
+frontmatter, and a test fails on any import that breaks the rule, and on any
+module that no component of the workspace names
+(`tests/dependency_rule_test.py`).
 
 ```
-   publishing · graph            read models: read every context, feed none back
-         │
-      release                    decides: verified status, risk and validation → release
-         │
-   test_evidence · risk · architecture · compliance
-         │                       each conforms to the specification's ids
-   specification                 the core: needs, inputs, tagged tests, review, design gate
-         │
-   shared kernel                 util · ids · git · frontmatter · reconcile
+ 5  publishing · graph              read models: read every context, feed none back
+ 4  release                         decides: verified status, risk and validation → release
+ 3  test_evidence                   translates test results into runs of the record's tests
+ 2  specification                   the core: needs, inputs, tagged tests, review, design gate
+ 1  architecture · risk · compliance   leaves: their own languages, nothing but the kernel
+ 0  shared kernel                   util · ids · git · frontmatter · reconcile
 ```
 
-The code does not keep this rule yet. The imports between components
-(`rdm/record/c4.py`, from the workspace) show two cycles, and both have
-one cause:
-
-- `specification` ↔ `test_evidence`: the release gate and the trace live
-  in `design_gate.py`, and `allure.py` holds both the test tags (the
-  specification's) and the results (the evidence's);
-- `specification` ↔ `risk`: the release gate reads risk findings, and
-  `risk.py` borrows the specification reader's frontmatter parser.
-
-Moving the release gate and the trace to `release`, splitting `allure.py`
-into tags and results, and moving the frontmatter parser to the kernel
-removes both. Three more imports break the rule without a cycle
-(found by the design documents' rewrite, Design Review 31):
-
-- `specification` → `architecture`: the design gate checks the views are
-  fresh with the architecture model. The composition root can hand the gate
-  that check instead;
-- `test_evidence` → `risk`: the pytest plugin labels each run with the risks
-  its input controls. Either `risk` sits below `test_evidence`, or the plugin
-  is given the controls;
-- `release` → `publishing`: the evidence bundle renders the matrix and the
-  verification report itself. The composition root can pass it the rendered
-  files. The workspace draws today's code paths; each move updates a
-component's `code` path, not its context.
+The leaves sit below the core because the core uses them and they use
+nothing: the design gate checks the architecture views are fresh, the
+release gate applies the risk rules, and none of the three reads a design
+input. The evidence bundle renders the matrix and the verification report,
+so it is publishing's, and realises release's DI-30. The design gate's
+warnings about executed results are release's: release reads results to
+decide, so the composition root hands its warnings to the design gate's
+output, and the specification never reads results.
 
 ## Flow
 

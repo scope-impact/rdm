@@ -98,20 +98,17 @@ results into result data, and gives the reviewer the mutation probe.
   Actions run, number and URL; or `local` with user@host) and
   `environment.properties` (also the CI event, ref and runner, or the local
   user).
-- **Allure reader** (`rdm/record/allure.py`) — the labels and file names
+- **Allure reader** (`rdm/evidence/allure.py`) — the labels and file names
   the plugin writes and every reader reads back; `parse_results` (each
   `*-result.json` as a run: name, status, design inputs, `output` labels),
   `run_version`, `read_run_facts`, `full_name` (Allure's name for a Python
   test, to match a run to its source). `reconcile()` gives each design
   input *failed* when any run failed or broke, else *verified* when any
   passed, else *untested*, and returns stories naming no declared input as
-  orphans. The file also holds the specification's tag scanning
-  (`find_tests_dir`, `scan_source_tags`, `scan_source_tests`: what a test
-  *claims* to verify, DI-31, DI-40, DI-61). The planned split moves that
-  part, with the `story` label name that defines a tag, to
-  `rdm/specification/`; the results, run facts and `reconcile()` stay here
-  and move to `rdm/evidence/`.
-- **Mutation probe** (`rdm/gates/mutation.py`) — DI-34, DI-47. It refuses
+  orphans. What a test *claims* to verify (its tags in the source) is the
+  specification's (`rdm/specification/tags.py`); this reader handles only
+  what a run *did*.
+- **Mutation probe** (`rdm/evidence/mutation.py`) — DI-34, DI-47. It refuses
   a `--find` that does not occur exactly once, runs `pytest -q -k <test>`
   unmutated (an error unless it passes), mutates, runs again. Exit 1 is a
   kill, 0 a survival, anything else (5: no test matched) an error; the
@@ -121,7 +118,7 @@ results into result data, and gives the reviewer the mutation probe.
   restore when the probe runs in the main thread; every write stamps a
   whole-second mtime strictly later than the last, so CPython's
   `(mtime, size)` bytecode key cannot serve a same-size mutant stale.
-- **Test result translation** (`rdm/translate.py`, `rdm translate`) and
+- **Test result translation** (`rdm/evidence/translate.py`, `rdm translate`) and
   **Result formatters** (`rdm/test_formatters/xml_util.py`) — DI-17.
   `translate_test_results` dispatches over `XML_TRANSLATORS` (`auto`,
   `gtest`, `qttest`, `xunit`, the gtest flattener reading xunit) and writes
@@ -140,50 +137,30 @@ report). No other context realises part of this context's inputs.
 
 | Component | Responsibility | Technology | Code |
 |-----------|----------------|------------|------|
-| Allure reader | Allure results, and the test tags in test sources | Python | `rdm/record/allure.py` |
-| Mutation probe | Breaks a line, runs one test, restores | Python | `rdm/gates/mutation.py` |
-| Test result translation | Translates foreign test results | Python | `rdm/translate.py` |
-| Result formatters | JUnit and other result formats | Python | `rdm/test_formatters/` |
+| Allure reader | Allure results into test runs and a status per design input; run labels and facts | Python | `rdm/evidence/allure.py` |
+| Mutation probe | Breaks a line, runs one test, restores | Python | `rdm/evidence/mutation.py` |
+| Test result translation | Translates foreign test results | Python | `rdm/evidence/translate.py` |
+| Result formatters | JUnit and other result formats | Python | `rdm/evidence/test_formatters/` |
 | pytest plugin | Labels each run from the record; the run's executor and environment | Python, pytest | `rdm/pytest_plugin.py` |
 
 The pytest plugin runs in the Acceptance test run; the rest in `rdm`. The
-pytest plugin *reads the record with* the record kernel, *reads risks with*
+pytest plugin *reads the record with* the record reader, *reads risks with*
 the risk register (which inputs each risk controls) and *writes run labels
-and facts with* the Allure reader. The Allure reader *finds the repository
-and checks ids with* the record kernel. Test result translation *parses
-with* the result formatters and *uses* the utilities. Inward, the design and
-release gates, new design input, verification data, the verification
-report and the projection read results or test tags with the Allure reader.
-The mutation probe imports nothing of RDM and runs pytest as a subprocess,
-so it has no relationship.
-
-Open question: until `allure.py` is split, the arrows that read test tags
-(from the design gate, new design input and the projection) point here
-rather than at the specification.
+and facts with* the Allure reader. The Allure reader and Test result
+translation use the shared kernel; translation *parses with* the result
+formatters. Inward, the release gate, verification data, the verification
+report and the projection read results with the Allure reader. The mutation
+probe imports nothing of RDM and *runs one test, unmutated then mutated, in*
+the acceptance test run, as a pytest subprocess.
 
 ## Dependencies
 
-This context sits above `specification` and the shared kernel, beside
-`risk`, `architecture` and `compliance`. It depends on the kernel
-(`rdm/record/git.py`, `ids.py`, `reconcile.py`, `rdm/util.py`), on
-`specification` (the plugin reads design inputs and declarations with
-`rdm/record/sdd.py`) and on `risk` (below). `release`
-(`rdm/record/verify.py`), `publishing` (`rdm/record/report.py`) and `graph`
-(`rdm/graph/project.py`, `rdm/graph/allure.py`) depend on it, as the rule
-allows.
-
-Two imports break the rule:
-
-- `specification` → `test_evidence`: `rdm/gates/design_gate.py` calls
-  `reconcile()` for the release gate and the trace, and it and
-  `rdm/gates/new_input.py` take the tag scanning from `allure.py`. Moving
-  the release gate and trace to `release` and splitting `allure.py` removes
-  it, and the cycle with it.
-- `test_evidence` → `risk`, between peers: the plugin imports
-  `rdm/record/risk.py` for each input's controlling risks. Removing it
-  needs a decision — place `risk` below `test_evidence` in the system
-  architecture, or have the plugin receive the controls instead of
-  importing the risk reader.
+Layer 3 of the dependency rule. Depends on `specification` (the pytest
+plugin reads the design inputs and declarations), `risk` (the plugin labels
+each run with the risks its design input controls) and the shared kernel,
+all below it. Depended on by `release` (the release gate, the verification
+data), `publishing` (the verification report) and `graph` (the projection).
+No import breaks the rule.
 
 ## Out of scope
 

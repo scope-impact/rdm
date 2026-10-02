@@ -361,7 +361,7 @@ components the Projection reads (see Dependencies).
 - SHACL validation validates the Projection's graph and checks it with the
   Gate shapes.
 - The Agent server queries the Projection, validates with SHACL validation,
-  and checks `trace` input is an id with the Record kernel.
+  and checks `trace` input is an id with the shared kernel.
 - At the container level, the Projection builds the graph store that the
   SPARQL endpoint serves to AWS Graph Explorer; the agent harness calls the
   Agent server over MCP stdio. The Agent server never uses that store: it
@@ -382,21 +382,20 @@ A read model at the top of the dependency rule: it depends on the contexts
 below it, and nothing but the composition root (`rdm/main.py`) imports it.
 It projects:
 
-- **specification**, through the Record kernel (`rdm/record/sdd.py`,
-  `ids.py`, `git.py`): needs, inputs, contexts, documents, declarations, ids,
-  git history;
-- **test evidence**, through the Allure reader (`rdm/record/allure.py`):
-  test tags, results and labels, and the verified set (`reconcile`);
-- **risk**, through the Risk register (`rdm/record/risk.py`): the register,
+- **specification**, through the record reader and the test tags
+  (`rdm/specification/sdd.py`, `tags.py`): needs, inputs, contexts,
+  documents, declarations, tagged tests;
+- **test evidence**, through the Allure reader (`rdm/evidence/allure.py`):
+  results and labels, and the verified set (`reconcile`);
+- **risk**, through the Risk register (`rdm/risk/register.py`): the register,
   the policy, the residual decision and the release gate's findings;
-- **architecture**, through the Architecture model (`rdm/record/c4.py`):
+- **architecture**, through the Architecture model (`rdm/architecture/model.py`):
   the C4 model, each file's component, the imports between components;
-- **compliance**, through Gap analysis (`rdm/gaps.py`): the checklist
+- **compliance**, through Gap analysis (`rdm/compliance/gaps.py`): the checklist
   reader, the built-in checklists and the key matcher.
 
-It reads neither release nor publishing. No import breaks the rule; when
-the planned moves split `allure.py` and move the reconcile helpers to the
-shared kernel, only the Projection's import paths change.
+and the shared kernel (ids, git history). It reads neither release nor
+publishing. No import breaks the rule.
 
 ## Out of scope
 

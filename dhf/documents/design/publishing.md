@@ -3,7 +3,7 @@ id: SDS-REN-001
 kind: design
 context: publishing
 # Implements part of inputs other contexts own.
-realises: [DI-1, DI-4]
+realises: [DI-1, DI-4, DI-30]
 design_inputs:
   - id: DI-7
     text: "RDM shall render a Markdown template against a supplied data context with Jinja2, so generated data populates the document."
@@ -81,17 +81,19 @@ it, and nothing it renders is fed back into it.
 
 ## Design Outputs
 
-- **Renderer** (`rdm/render.py`, `rdm render <template> <config> <data…>`)
+- **Renderer** (`rdm/publishing/render.py`, `rdm render <template> <config> <data…>`)
   — meets DI-7 and DI-8. A Jinja2 environment with strict undefined values
   (a placeholder with no data fails the render), templates loaded from the
   working directory, and the three filters registered. The data context is
   keyed by each data file's basename (`context_from_data_files` in
-  `rdm/util.py`; two files with one basename are an error), so
+  `rdm/kernel/util.py`; two files with one basename are an error), so
   `data/verification.yml` is `verification` in the template. When a
   template reads the first pass's output (`first_pass_output`,
-  `rdm/first_pass_output.py`), it is rendered a second time with that output
+  `rdm/publishing/first_pass_output.py`), it is rendered a second time with that output
   available. The extensions listed under `md_extensions` in the project's
   `config.yml` are loaded, and their filters run over the rendered lines.
+- **First-pass output** (`rdm/publishing/first_pass_output.py`) — the words a
+  first render produced, which the second pass tests against (DI-9).
 - **Markdown extensions** (`rdm/md_extensions/`) — meet DI-9.
   `SectionNumberExtension` prefixes each heading with its section number;
   `VocabularyExtension` gives the template the words of the first-pass
@@ -100,18 +102,18 @@ it, and nothing it renders is fed back into it.
   terms the document uses; `AuditNoteExclusionExtension` removes each
   `[[…]]` note, and the space before it, from the output. The `config.yml`
   that `rdm init` lays down enables only the vocabulary extension.
-- **Code snippets** (`rdm/collect.py`, `rdm collect <files…>`) — meets
+- **Code snippets** (`rdm/publishing/collect.py`, `rdm collect <files…>`) — meets
   DI-16. A snippet runs from the line holding `RDOC <key>` to the `ENDRDOC`
   in the same column, its lines kept from that column. An empty or repeated
   key in one file, an `ENDRDOC` in another column, or a missing `ENDRDOC` is
   an error naming the file and line. The snippets are written as YAML, a
   data file the Renderer reads like any other.
-- **DMR index** (`rdm/record/dmr.py`, `rdm story dmr <dir> -o <out.yml>`) —
+- **DMR index** (`rdm/publishing/dmr.py`, `rdm story dmr <dir> -o <out.yml>`) —
   meets DI-29. One entry per Markdown file in the directory with a
   frontmatter `id`, sorted by id, under `entries`, with a header saying the
   file is generated. A file with no `id` is skipped with a warning; no
   controlled document at all is an error.
-- **Verification report** (`rdm/record/report.py`, `rdm story
+- **Verification report** (`rdm/publishing/report.py`, `rdm story
   evidence-report --dhf … --allure-results … -o <pdf>`) — meets DI-64.
   `build_report()` takes each design input's status from the release
   context's verification data, the runs from the Allure reader, the risks
@@ -123,9 +125,17 @@ it, and nothing it renders is fed back into it.
   attachment, an orphan tag). `render_pdf()` writes the data as JSON beside
   the layout and compiles it with the `typst` package (extra `report`) or a
   `typst` executable; with neither, the command fails and says so.
-- **Report layout** (`rdm/record/verification_report.typ`) — meets DI-64.
+- **Report layout** (`rdm/publishing/verification_report.typ`) — meets DI-64.
   Reads `report.json` and sets every value as text, never markup, so nothing
   a test printed can change the document.
+- **Evidence bundle** (`rdm/publishing/bundle.py`, `rdm story
+  evidence-bundle`) — realises `release`'s DI-30: writes `verification.yml`,
+  the rendered matrix (when the record has the template), `allure-results/`
+  (every result and container and each attachment they name, plain files of
+  the results directory only), the verification report PDF or the reason it
+  was not rendered, and `manifest.json` listing the counts and files. It is
+  here because it renders: the matrix with the Renderer, the report with the
+  Verification report.
 - **PDF action** (`action.yml`) — runs the project's `make pdfs` in the RDM
   image of the release it is pinned to and uploads the PDFs: the part of
   DI-63 (release) that renders the documents with the image of the same
@@ -140,7 +150,7 @@ Renderer filling its template with `verification.yml`.
 evidence bundle writes the report (or records in its manifest why not) and
 the reusable gates workflow includes it through the bundle. The project
 Makefile that runs Pandoc and Typst is a specification template
-(`rdm/init_files/`).
+(`rdm/specification/init_files/`).
 
 Verified by tagged tests in `tests/acceptance/`: DI-7, DI-8, DI-9 in
 `test_rendering.py`; DI-16 in `test_ingestion.py`; DI-29 in
@@ -152,22 +162,30 @@ Verified by tagged tests in `tests/acceptance/`: DI-7, DI-8, DI-9 in
 
 | Component | Responsibility | Technology | Code |
 |-----------|----------------|------------|------|
-| Renderer | Templates and data to Markdown | Python, Jinja2 | `rdm/render.py` |
+| Renderer | Templates and data to Markdown | Python, Jinja2 | `rdm/publishing/render.py` |
 | Markdown extensions | Section numbers, vocabulary, audit notes | Python | `rdm/md_extensions/` |
-| Code snippets | Collects tagged code snippets | Python | `rdm/collect.py` |
-| DMR index | The device-master-record index from frontmatter | Python | `rdm/record/dmr.py` |
-| Verification report | The PDF of every run behind each design input | Python | `rdm/record/report.py` |
-| Report layout | The report's page layout | Typst | `rdm/record/verification_report.typ` |
+| Code snippets | Collects tagged code snippets | Python | `rdm/publishing/collect.py` |
+| DMR index | The device-master-record index from frontmatter | Python | `rdm/publishing/dmr.py` |
+| Verification report | The PDF of every run behind each design input | Python | `rdm/publishing/report.py` |
+| Report layout | The report's page layout | Typst | `rdm/publishing/verification_report.typ` |
+| First-pass output | The words a first render produced, for the second pass to test against | Python | `rdm/publishing/first_pass_output.py` |
+| Evidence bundle | The retained release evidence | Python | `rdm/publishing/bundle.py` |
 | PDF action | Renders the documents in the image | GitHub Actions | `action.yml` |
 
 The PDF action is in the Reusable gates container; the others are in `rdm`.
 
 - The Verification report *builds on* Verification data (release), *reads
   results with* the Allure reader (test evidence), *reads risks with* the
-  Risk register (risk), *reads results and git with* the Record kernel, and
+  Risk register (risk), *reads git with* the shared kernel, and
   *lays out with* the Report layout.
-- The DMR index *reads frontmatter with* the Record kernel.
-- The Renderer and the Markdown extensions *use* the Utilities.
+- The DMR index *reads frontmatter with* the record reader
+  (specification).
+- The Renderer keeps the first pass's words in the First-pass output and
+  post-processes the rendered Markdown with the Markdown extensions, which
+  give the template the first pass's words; both use the shared kernel.
+- The Evidence bundle writes `verification.yml` with the Verification data
+  (release), the report PDF with the Verification report, and renders the
+  matrix with the Renderer.
 - The Evidence bundle (release) *writes* the Verification report and
   *renders the matrix with* the Renderer: arrows into publishing from below
   it (see Dependencies).
@@ -175,7 +193,7 @@ The PDF action is in the Reusable gates container; the others are in `rdm`.
 Open questions:
 
 - The Renderer loads the extensions by name from configuration, so no
-  relationship is drawn between them, and `rdm/first_pass_output.py`, which
+  relationship is drawn between them, and `rdm/publishing/first_pass_output.py`, which
   they share, is in no component.
 - The PDF action's use of the Documents image is not drawn.
 - A snippet key repeated across two files is not an error: the later file's
@@ -194,15 +212,8 @@ words (so a glossary includes only the terms a document uses).
 
 ## Dependencies
 
-Publishing is a read model at the top of the dependency rule. It depends,
-downward, on **specification** and the shared kernel (the Record kernel,
-the Utilities), **test_evidence** (the Allure reader), **risk** (the Risk
-register) and **release** (Verification data).
-
-Nothing should depend on it, but **release** does: the Evidence bundle
-(`rdm/record/bundle.py`) imports `rdm.record.report.write_report` and
-`rdm.render.render_template_to_file`. The change that removes it: the
-bundle receives the rendered matrix and report as files, or as functions
-the composition root (`rdm/main.py`) passes in, so release imports nothing
-from publishing. `rdm/main.py` importing publishing is the composition root
-and keeps the rule.
+Layer 5 of the dependency rule, a read model: it depends on every context it
+publishes from — `release` (the verification data), `test_evidence` (the
+Allure reader), `specification` (the record reader), `risk` (the risk
+register) — and the shared kernel. Nothing imports it but the composition
+root. No import breaks the rule.

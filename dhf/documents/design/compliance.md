@@ -67,7 +67,7 @@ its only inputs are checklists and documents.
 
 ## Design Outputs
 
-**Gap analysis** (`rdm/gaps.py`), run as `rdm gap` from the composition root
+**Gap analysis** (`rdm/compliance/gaps.py`), run as `rdm gap` from the composition root
 `rdm/main.py`:
 
 - `audit_for_gaps(checklist, sources, …)` reads a checklist (a built-in name
@@ -93,7 +93,7 @@ its only inputs are checklists and documents.
   graph uses instead of the private helpers, so the graph's clauses and
   reference links (DI-37, DI-48) cannot drift from what `rdm gap` reports.
 
-**Checklists** (`rdm/checklists/`): seventeen built-in text checklists —
+**Checklists** (`rdm/compliance/checklists/`): seventeen built-in text checklists —
 IEC 62304 (base lists for class A/B/C, each including the class below,
 and the 2006 and 2015 editions of each class, each including that edition's
 class below and the class's base list), ISO 14971 2007 and
@@ -120,8 +120,8 @@ lower-level unit tests of the matcher and the sort order.
 
 | Component | Responsibility | Technology | Code |
 |-----------|----------------|------------|------|
-| Gap analysis | Documents against checklists | Python | `rdm/gaps.py` |
-| Checklists | The built-in checklists | text | `rdm/checklists/` |
+| Gap analysis | Documents against checklists | Python | `rdm/compliance/gaps.py` |
+| Checklists | The built-in checklists | text | `rdm/compliance/checklists/` |
 
 Gap analysis **reads** the Checklists: it resolves a built-in name to its
 file and follows the includes between them. The view also shows the graph's
@@ -144,7 +144,7 @@ Assumptions and open questions:
 
 ## Dependencies
 
-Compliance is a leaf: `rdm/gaps.py` imports only the Python standard library,
+Compliance is a leaf: `rdm/compliance/gaps.py` imports only the Python standard library,
 and no other context. It sits beside test evidence, risk and architecture
 above the specification in the dependency rule, and needs nothing from the
 specification either, since it works on any documents, not on design inputs.

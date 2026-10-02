@@ -111,10 +111,21 @@ process RDM as a whole implements), requirements module
 
 **Release**:
 The bounded context that decides whether a release may go ahead: the release
-gate over verified status, risk and validation, and the evidence a release
-keeps. It reads the specification, test evidence and risk; none of them reads
-it.
+gate over verified status, risk and validation. It reads the specification,
+test evidence and risk; none of them reads it. The evidence a release keeps
+is published by publishing.
 _Avoid_: deployment, CI (for the context)
+
+**Shared kernel**:
+The helpers every bounded context may use and that use none: YAML and files,
+ids, git, frontmatter, the reconcile helpers. Not a context: it has no
+language of its own and owns no design input.
+_Avoid_: utils, common, core (the core is the design specification)
+
+**Composition root**:
+The one place that wires the command line to every context (`rdm/main.py`).
+It is in no context, so it may import any.
+_Avoid_: main module, glue
 
 ## Architecture
 

@@ -88,7 +88,7 @@ and checks what a machine can check.
 
 ## Design Outputs
 
-- **Risk register** (`rdm/record/risk.py`) meets DI-43, DI-44 and DI-50,
+- **Risk register** (`rdm/risk/register.py`) meets DI-43, DI-44 and DI-50,
   and is the one place the risk rules are written:
   - `read_policy` reads the first `risk_policy` by path, or none; a
     malformed one raises an error naming its document. The policy's status
@@ -126,18 +126,16 @@ The design inputs are verified by the tests tagged `@allure.story("DI-43")`,
 
 | Component | Responsibility | Technology | Code |
 |-----------|----------------|------------|------|
-| Risk register | Reads the risk policy and the register, evaluates each risk against the policy, and writes the release rules as findings | Python | `rdm/record/risk.py` |
+| Risk register | Reads the risk policy and the register, evaluates each risk against the policy, and writes the release rules as findings | Python | `rdm/risk/register.py` |
 
 The view also shows the components of other contexts that use the register,
 and the one it uses:
 
-- Risk register **reads frontmatter with** the Record kernel
-  (`specification`): it parses each document's frontmatter with the
-  specification reader's `_frontmatter_of`. It takes the declared design
-  input ids and the verified ones as arguments, so it reads no other part
-  of the specification.
-- Design and release gates (`specification`) **applies the risk rules of**
-  the Risk register: the release gate reports its findings.
+- Risk register parses each document's frontmatter with the shared
+  kernel's parser. It takes the declared design input ids and the verified
+  ones as arguments, so it reads nothing of the specification.
+- The release gate (`release`) **reports the risk findings of** the Risk
+  register.
 - Projection (`graph`) **reads risks and findings with** the Risk register:
   the policy, the register, each residual decision and the findings.
 - Verification report (`publishing`) **reads risks with** the Risk
@@ -153,35 +151,11 @@ without changing a register written to this format.
 
 ## Dependencies
 
-Under the dependency rule `risk` sits beside `test_evidence`,
-`architecture` and `compliance`, above `specification` and the shared
-kernel, and below `release`.
-
-- **Depends on:** `specification`, for the frontmatter parser
-  (`rdm.record.sdd._frontmatter_of`). The direction is allowed, but the
-  parser is the shared kernel's in all but location and is private to the
-  specification reader; moving frontmatter parsing to the kernel
-  (`rdm/kernel/`) makes `risk` depend on the kernel only.
-- **Depended on by:** `release` (the release gate, whose code is still
-  in `specification`'s component — see below), `graph` (the
-  projection) and `publishing` (the verification report) — all above it,
-  as the rule allows — and by `test_evidence` (the pytest plugin), a
-  context at the same level.
-
-Imports that break the rule:
-
-- `specification` → `risk`: the release gate, in
-  `rdm/gates/design_gate.py`, imports `findings`, and `risk` imports the
-  specification's frontmatter parser — one of the two cycles
-  `architecture.md` names. Moving the release gate to `release` removes the
-  upward import, and moving the parser to the kernel removes the other
-  half.
-- `test_evidence` → `risk`: the pytest plugin imports `risks` to label each
-  run with the risks its design input controls. The rule allows imports
-  only from below, so a peer import breaks it. Removing it means the
-  plugin labels runs with the record's ids only and the read models
-  (graph, publishing), which already read the register, join each run to
-  its risks.
+Layer 1 of the dependency rule, a leaf: it imports only the shared kernel
+(the frontmatter parser), and no design input, so the contexts that use it
+sit above it — `test_evidence` (the pytest plugin), `release` (the release
+gate), `publishing` (the verification report) and `graph` (the projection).
+No import breaks the rule.
 
 ## Out of scope
 

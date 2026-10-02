@@ -1025,6 +1025,49 @@ the one Design Review 30 approved).
   (DI-10, DI-12); `rdm translate` misreads an empty `Environment` element
   (DI-17); the agent's schema omits the architecture and code graphs (DI-41).
 
+# Design Review 32 — One package per context, and the rule enforced
+
+**Scope reviewed:** the system architecture's layers and dependency rule;
+each component's code path in the workspace; the design documents' design
+outputs, components and dependencies; `realises` in four documents; the
+glossary. No design input's text changed.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Each context's code moves into its own package (`rdm/specification/`,
+  `rdm/evidence/`, `rdm/risk/`, `rdm/architecture/`, `rdm/compliance/`,
+  `rdm/release/`, `rdm/publishing/`; `rdm/graph/` as it is), and the shared
+  helpers into `rdm/kernel/`. Three paths users name stay: `rdm/main.py`,
+  `rdm/pytest_plugin.py` and `rdm/md_extensions/`, so no compatibility shim
+  is needed.
+- The dependency rule is revised to fit the code and stated as layers in the
+  system architecture's frontmatter: the shared kernel; architecture, risk
+  and compliance (leaves); the specification; test evidence; release;
+  publishing and the knowledge graph. A test reads the layers and the
+  workspace's components and fails on any upward import and on any module
+  no component names (`tests/dependency_rule_test.py`), written first, red
+  on the code as it stood.
+- Three splits remove the breaks the rule found: the test tags leave the
+  Allure module for the specification; the release gate, the trace and the
+  design gate's results warnings leave the design gate's module for release
+  (the composition root hands the warnings to the design gate's output); the
+  frontmatter parser leaves the specification reader for the kernel. The
+  evidence bundle renders, so it is publishing's and realises release's
+  DI-30.
+- `realises` follows the code: `specification` keeps DI-61 and DI-70 and no
+  longer realises the release gate's inputs; `release` realises DI-33, DI-44
+  and DI-50; `publishing` adds DI-30.
+- The rewrite runs test-first and keeps the evidence: every acceptance test
+  keeps its tag and its behaviour, so each design input is verified as
+  before; unit tests that cover nothing the others do not are removed, at a
+  line and branch coverage no lower than before (86.1%).
+
+## Findings and actions
+
+- None open.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

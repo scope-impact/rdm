@@ -14,81 +14,87 @@ workspace "RDM" "The design record of regulated software." {
     rdm_system = softwareSystem "RDM" "Keeps the design record of regulated software, gates it, renders it and builds it into a read-only graph" {
       rdm_cli = container "rdm" "The command line: gates, rendering, graph build, query and validate, and the agent server" "Python" {
         group "specification" {
-          record_readers = component "Record kernel" "Design and V&V frontmatter, ids, git, the shared reconcile helpers" "Python" {
+          kernel = component "Shared kernel" "Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers" "Python" {
             properties {
-              "code" "rdm/record/"
+              "code" "rdm/kernel/"
             }
             tags "context:specification"
           }
-          utilities = component "Utilities" "Shared YAML, message and repository-root helpers (the shared kernel)" "Python" {
+          record_reader = component "Record reader" "User needs, design inputs, realises and declarations, from the design documents' and V&V plan's frontmatter" "Python" {
             properties {
-              "code" "rdm/util.py"
+              "code" "rdm/specification/sdd.py"
             }
             tags "context:specification"
           }
-          design_gate = component "Design and release gates" "Design gate and duplicate ids; the release gate and trace until they move to release" "Python" {
+          test_tags = component "Test tags" "The design-input tags in test sources, in every language RDM reads" "Python" {
             properties {
-              "code" "rdm/gates/design_gate.py"
+              "code" "rdm/specification/tags.py"
+            }
+            tags "context:specification"
+          }
+          design_gate = component "Design gate" "The record complete, approved and declared once; the architecture views fresh" "Python" {
+            properties {
+              "code" "rdm/specification/design_gate.py"
             }
             tags "context:specification"
           }
           hooks = component "Hooks installer" "rdm hooks" "Python" {
             properties {
-              "code" "rdm/hooks.py"
+              "code" "rdm/specification/hooks.py"
             }
             tags "context:specification"
           }
           precommit_hook = component "Pre-commit hook" "Runs the design gate before a commit" "shell" {
             properties {
-              "code" "rdm/hook_files/"
+              "code" "rdm/specification/hook_files/"
             }
             tags "context:specification"
           }
           new_input = component "New design input" "rdm story new-input" "Python" {
             properties {
-              "code" "rdm/gates/new_input.py"
+              "code" "rdm/specification/new_input.py"
             }
             tags "context:specification"
           }
           project_scaffold = component "Project scaffold" "rdm init" "Python" {
             properties {
-              "code" "rdm/init.py"
+              "code" "rdm/specification/init.py"
             }
             tags "context:specification"
           }
           project_templates = component "Project templates" "What rdm init lays down" "Markdown, YAML, Typst" {
             properties {
-              "code" "rdm/init_files/"
+              "code" "rdm/specification/init_files/"
             }
             tags "context:specification"
           }
           adoption = component "Adoption" "rdm adopt" "Python" {
             properties {
-              "code" "rdm/adopt.py"
+              "code" "rdm/specification/adopt.py"
             }
             tags "context:specification"
           }
           adoption_templates = component "Adoption templates" "What rdm adopt lays down" "Markdown, YAML" {
             properties {
-              "code" "rdm/adopt_files/"
+              "code" "rdm/specification/adopt_files/"
             }
             tags "context:specification"
           }
           validation_records = component "Validation records" "Approved validation records per user need" "Python" {
             properties {
-              "code" "rdm/record/validation.py"
+              "code" "rdm/specification/validation.py"
             }
             tags "context:specification"
           }
           formative_usability = component "Formative usability" "Persona runs as formative evidence" "Python" {
             properties {
-              "code" "rdm/record/persona.py"
+              "code" "rdm/specification/persona.py"
             }
             tags "context:specification"
           }
           persona_command = component "Persona command" "rdm story persona" "Python" {
             properties {
-              "code" "rdm/record/persona_cmd.py"
+              "code" "rdm/specification/persona_cmd.py"
             }
             tags "context:specification"
           }
@@ -96,39 +102,39 @@ workspace "RDM" "The design record of regulated software." {
         group "release" {
           verification_data = component "Verification data" "Design inputs against results: verification.yml" "Python" {
             properties {
-              "code" "rdm/record/verify.py"
+              "code" "rdm/release/verify.py"
             }
             tags "context:release"
           }
-          evidence_bundle = component "Evidence bundle" "The retained release evidence" "Python" {
+          release_gate = component "Release gate" "The release decision; the design gate's results warnings; the trace slice" "Python" {
             properties {
-              "code" "rdm/record/bundle.py"
+              "code" "rdm/release/gate.py"
             }
             tags "context:release"
           }
         }
         group "test_evidence" {
-          allure_reader = component "Allure reader" "Allure results into test runs and a status per design input; run labels and facts; the test tags in test sources until the split" "Python" {
+          allure_reader = component "Allure reader" "Allure results into test runs and a status per design input; run labels and facts" "Python" {
             properties {
-              "code" "rdm/record/allure.py"
+              "code" "rdm/evidence/allure.py"
             }
             tags "context:test_evidence"
           }
           mutation_probe = component "Mutation probe" "rdm story mutation-probe: runs one test unmutated, then mutated, and always restores the file" "Python" {
             properties {
-              "code" "rdm/gates/mutation.py"
+              "code" "rdm/evidence/mutation.py"
             }
             tags "context:test_evidence"
           }
           test_translation = component "Test result translation" "rdm translate: foreign XML results to a YAML data file; rejects an unknown format" "Python" {
             properties {
-              "code" "rdm/translate.py"
+              "code" "rdm/evidence/translate.py"
             }
             tags "context:test_evidence"
           }
           result_formatters = component "Result formatters" "Flattens gtest, xunit and qttest XML into result data" "Python" {
             properties {
-              "code" "rdm/test_formatters/"
+              "code" "rdm/evidence/test_formatters/"
             }
             tags "context:test_evidence"
           }
@@ -136,7 +142,7 @@ workspace "RDM" "The design record of regulated software." {
         group "risk" {
           risk_register = component "Risk register" "The risk register evaluated against the declared risk policy; the risk rules as findings" "Python" {
             properties {
-              "code" "rdm/record/risk.py"
+              "code" "rdm/risk/register.py"
             }
             tags "context:risk"
           }
@@ -144,13 +150,13 @@ workspace "RDM" "The design record of regulated software." {
         group "architecture" {
           architecture_model = component "Architecture model" "The C4 model, read from the workspace's export; view freshness" "Python" {
             properties {
-              "code" "rdm/record/c4.py"
+              "code" "rdm/architecture/model.py"
             }
             tags "context:architecture"
           }
           architecture_drawing = component "Architecture drawing" "rdm c4 draw: Structurizr export, Graphviz views, stamps" "Python, Structurizr, Graphviz" {
             properties {
-              "code" "rdm/c4.py"
+              "code" "rdm/architecture/draw.py"
             }
             tags "context:architecture"
           }
@@ -158,13 +164,13 @@ workspace "RDM" "The design record of regulated software." {
         group "compliance" {
           gap_analysis = component "Gap analysis" "Finds the checklist clauses no document references, and reports coverage" "Python" {
             properties {
-              "code" "rdm/gaps.py"
+              "code" "rdm/compliance/gaps.py"
             }
             tags "context:compliance"
           }
           checklists = component "Checklists" "The built-in checklists: IEC 62304, ISO 14971, FDA-SW/CYBER/HFE, 21 CFR Part 11" "text" {
             properties {
-              "code" "rdm/checklists/"
+              "code" "rdm/compliance/checklists/"
             }
             tags "context:compliance"
           }
@@ -172,7 +178,7 @@ workspace "RDM" "The design record of regulated software." {
         group "publishing" {
           renderer = component "Renderer" "Templates and data to Markdown" "Python, Jinja2" {
             properties {
-              "code" "rdm/render.py"
+              "code" "rdm/publishing/render.py"
             }
             tags "context:publishing"
           }
@@ -184,31 +190,37 @@ workspace "RDM" "The design record of regulated software." {
           }
           first_pass_output = component "First-pass output" "The words a first render produced, for the second pass to test against" "Python" {
             properties {
-              "code" "rdm/first_pass_output.py"
+              "code" "rdm/publishing/first_pass_output.py"
+            }
+            tags "context:publishing"
+          }
+          evidence_bundle = component "Evidence bundle" "The retained release evidence" "Python" {
+            properties {
+              "code" "rdm/publishing/bundle.py"
             }
             tags "context:publishing"
           }
           snippets = component "Code snippets" "RDOC/ENDRDOC snippets from source files, as YAML data" "Python" {
             properties {
-              "code" "rdm/collect.py"
+              "code" "rdm/publishing/collect.py"
             }
             tags "context:publishing"
           }
           dmr_index = component "DMR index" "The device-master-record index from frontmatter" "Python" {
             properties {
-              "code" "rdm/record/dmr.py"
+              "code" "rdm/publishing/dmr.py"
             }
             tags "context:publishing"
           }
           verification_report = component "Verification report" "rdm story evidence-report: the PDF of every run behind each design input" "Python" {
             properties {
-              "code" "rdm/record/report.py"
+              "code" "rdm/publishing/report.py"
             }
             tags "context:publishing"
           }
           report_layout = component "Report layout" "The report's page layout" "Typst" {
             properties {
-              "code" "rdm/record/verification_report.typ"
+              "code" "rdm/publishing/verification_report.typ"
             }
             tags "context:publishing"
           }
@@ -314,13 +326,13 @@ workspace "RDM" "The design record of regulated software." {
     gates_ci -> rdm_cli "installs and runs"
     documents_image -> rdm_cli "renders with"
     gap_analysis -> checklists "resolves built-in names and follows includes in"
-    design_gate -> record_readers "reads the record with"
+    design_gate -> kernel "reads the record with"
     design_gate -> risk_register "reports the risk findings of"
     design_gate -> validation_records "reads validation records with"
     hooks -> precommit_hook "installs"
-    hooks -> utilities "uses"
+    hooks -> kernel "uses"
     precommit_hook -> design_gate "runs"
-    projection -> record_readers "reads the record, results and git with"
+    projection -> kernel "reads the record, results and git with"
     projection -> risk_register "reads risks and findings with"
     projection -> vocabulary "declares terms and rules in"
     projection -> explorer_file "writes the explorer file with"
@@ -329,35 +341,34 @@ workspace "RDM" "The design record of regulated software." {
     shacl_validation -> gate_shapes "checks with"
     agent_server -> projection "projects the record afresh on each call with"
     agent_server -> shacl_validation "validates with"
-    agent_server -> record_readers "checks ids with"
+    agent_server -> kernel "checks ids with"
     projection -> gap_analysis "reads checklists and matches checklist references with"
     test_translation -> result_formatters "parses with"
-    test_translation -> utilities "uses"
-    dmr_index -> record_readers "reads frontmatter with"
-    renderer -> utilities "uses"
-    markdown_extensions -> utilities "uses"
-    risk_register -> record_readers "reads frontmatter with"
+    test_translation -> kernel "uses"
+    dmr_index -> kernel "reads frontmatter with"
+    renderer -> kernel "uses"
+    markdown_extensions -> kernel "uses"
+    risk_register -> kernel "reads frontmatter with"
     project_scaffold -> project_templates "copies"
     adoption -> adoption_templates "copies"
-    new_input -> record_readers "reads the design documents with"
+    new_input -> kernel "reads the design documents with"
     reusable_workflow -> gates_action "runs the gates with"
-    formative_usability -> record_readers "loads runs with"
+    formative_usability -> kernel "loads runs with"
     persona_command -> formative_usability "classifies runs with"
-    persona_command -> record_readers "reads the V&V plan with"
-    validation_records -> record_readers "reads the record with"
-    verification_data -> record_readers "reads the record and results with"
+    persona_command -> kernel "reads the V&V plan with"
+    validation_records -> kernel "reads the record with"
+    verification_data -> kernel "reads the record and results with"
     evidence_bundle -> verification_data "writes verification.yml with"
     evidence_bundle -> verification_report "writes the report PDF with"
-    evidence_bundle -> record_readers "finds the matrix with"
+    evidence_bundle -> kernel "finds the matrix with"
     evidence_bundle -> renderer "renders the matrix with"
-    evidence_bundle -> utilities "loads the render config with"
     verification_report -> verification_data "builds on"
-    verification_report -> record_readers "reads results and git with"
+    verification_report -> kernel "reads results and git with"
     verification_report -> risk_register "reads risk status and residual decisions with"
     verification_report -> report_layout "lays out with"
-    pytest_plugin -> record_readers "reads the record with"
+    pytest_plugin -> kernel "reads the record with"
     pytest_plugin -> risk_register "finds the risks each design input controls with"
-    allure_reader -> record_readers "finds the repository and checks ids with"
+    allure_reader -> kernel "finds the repository and checks ids with"
     architecture_drawing -> architecture_model "takes the paths, view keys, stamp format and workspace digest from"
     design_gate -> allure_reader "finds tagged tests and reconciles results with"
     design_gate -> architecture_model "checks the views are fresh with"
@@ -398,41 +409,29 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_specification" {
       title "Design specification: components (C3)"
-      include record_readers utilities design_gate hooks precommit_hook new_input project_scaffold project_templates adoption adoption_templates validation_records formative_usability persona_command allure_reader architecture_model gates_action risk_register
+      include kernel record_reader test_tags design_gate hooks precommit_hook new_input project_scaffold project_templates adoption adoption_templates validation_records formative_usability persona_command allure_reader architecture_model gates_action risk_register
       autolayout tb
     }
     component rdm_cli "C3_release" {
       title "Release: components (C3)"
-      include verification_data evidence_bundle reusable_workflow gates_action allure_reader design_gate record_readers renderer risk_register shacl_validation test_run utilities verification_report
-      exclude "allure_reader -> record_readers"
-      exclude "renderer -> utilities"
+      include verification_data release_gate reusable_workflow gates_action allure_reader design_gate evidence_bundle shacl_validation test_run verification_report
+      exclude "design_gate -> allure_reader"
+      exclude "evidence_bundle -> verification_report"
       exclude "verification_report -> allure_reader"
-      exclude "verification_report -> record_readers"
-      exclude "verification_report -> risk_register"
       autolayout tb
     }
     component rdm_cli "C3_test_evidence" {
       title "Test evidence: components (C3)"
-      include allure_reader mutation_probe test_translation result_formatters pytest_plugin design_gate new_input projection record_readers risk_register test_run utilities verification_data verification_report
-      exclude "design_gate -> record_readers"
+      include allure_reader mutation_probe test_translation result_formatters pytest_plugin design_gate new_input projection risk_register test_run verification_data verification_report
       exclude "design_gate -> risk_register"
-      exclude "new_input -> record_readers"
-      exclude "projection -> record_readers"
       exclude "projection -> risk_register"
-      exclude "risk_register -> record_readers"
-      exclude "verification_data -> record_readers"
-      exclude "verification_report -> record_readers"
       exclude "verification_report -> risk_register"
       exclude "verification_report -> verification_data"
       autolayout tb
     }
     component rdm_cli "C3_risk" {
       title "Risk: components (C3)"
-      include risk_register design_gate projection pytest_plugin record_readers verification_report
-      exclude "design_gate -> record_readers"
-      exclude "projection -> record_readers"
-      exclude "pytest_plugin -> record_readers"
-      exclude "verification_report -> record_readers"
+      include risk_register design_gate projection pytest_plugin verification_report
       autolayout tb
     }
     component rdm_cli "C3_architecture" {
@@ -447,27 +446,20 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_publishing" {
       title "Publishing: components (C3)"
-      include renderer markdown_extensions first_pass_output snippets dmr_index verification_report report_layout pdf_action allure_reader documents_image evidence_bundle record_readers risk_register utilities verification_data
-      exclude "allure_reader -> record_readers"
-      exclude "evidence_bundle -> record_readers"
-      exclude "evidence_bundle -> utilities"
+      include renderer markdown_extensions first_pass_output snippets dmr_index verification_report report_layout pdf_action allure_reader documents_image evidence_bundle risk_register verification_data
       exclude "evidence_bundle -> verification_data"
-      exclude "risk_register -> record_readers"
       exclude "verification_data -> allure_reader"
-      exclude "verification_data -> record_readers"
       autolayout tb
     }
     component rdm_cli "C3_graph" {
       title "Knowledge graph: components (C3)"
-      include projection vocabulary gate_shapes shacl_validation explorer_file agent_server agent_harness allure_reader architecture_model gap_analysis gates_action graph_store record_readers risk_register
-      exclude "allure_reader -> record_readers"
-      exclude "risk_register -> record_readers"
+      include projection vocabulary gate_shapes shacl_validation explorer_file agent_server agent_harness allure_reader architecture_model gap_analysis gates_action graph_store risk_register
       autolayout tb
     }
     dynamic rdm_cli "D_specification_commit" {
       title "Design specification: a commit meets the design gate (dynamic)"
       precommit_hook -> design_gate "runs"
-      design_gate -> record_readers "reads the design documents and the review with"
+      design_gate -> kernel "reads the design documents and the review with"
       design_gate -> architecture_model "checks the views are fresh with"
       design_gate -> allure_reader "finds tagged tests with"
       autolayout lr
@@ -483,7 +475,7 @@ workspace "RDM" "The design record of regulated software." {
     }
     dynamic rdm_cli "D_publishing_render" {
       title "Publishing: rendering a document (dynamic)"
-      renderer -> utilities "loads the data files as the context with"
+      renderer -> kernel "loads the data files as the context with"
       renderer -> first_pass_output "keeps the first pass's words in"
       renderer -> markdown_extensions "post-processes the rendered Markdown with"
       markdown_extensions -> first_pass_output "gives the template the first pass's words from"

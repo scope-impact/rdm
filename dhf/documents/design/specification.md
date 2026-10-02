@@ -3,7 +3,7 @@ id: SDS-SPEC-001
 kind: design
 context: specification
 # Implements part of inputs other contexts own.
-realises: [DI-3, DI-18, DI-44, DI-50, DI-61, DI-70]
+realises: [DI-61, DI-70]
 design_inputs:
   - id: DI-1
     text: "RDM shall read the user-need registry and the design inputs that trace to it from frontmatter and ingest Allure results, with no project-management dependency."
@@ -52,9 +52,9 @@ every id once. It speaks the glossary's user need, design input, design
 document, tagged test, design review, approved and design gate, and, for
 validation, validated (validation records, formative persona evidence). Every
 other context conforms to its ids. Two things that are not contexts are drawn
-here: the shared kernel (Record kernel, Utilities) until it moves to its own
-package, and onboarding (`rdm init`, `rdm adopt`), the commands that create
-the record, which is this context's application layer.
+here: the shared kernel (`rdm/kernel/`), below every context, and onboarding
+(`rdm init`, `rdm adopt`), the commands that create the record, which is this
+context's application layer.
 
 ## Design Inputs
 
@@ -143,113 +143,105 @@ YAML workflow, now removed). These ids are not reused.
 
 ## Design Outputs
 
-- **Record kernel** (`sdd.py`, `ids.py`, `git.py`, `reconcile.py` in
-  `rdm/record/`) — DI-1, DI-46. `sdd.py` finds design documents by their
-  `kind: design` marker, never by file name; reads `user_needs`,
-  `design_inputs` and `realises`; keeps an id's first declaration by sorted
-  path; and lists every declaration (`duplicate_declarations`). `ids.py` is
-  the id grammar, `git.py` the one way to ask git, `reconcile.py` the shared
-  bucketing of observations by declared id. No pydantic, DuckDB or RDF
-  dependency.
-- **Utilities** (`rdm/util.py`) — shared YAML, message and repository-root
-  helpers; shared kernel, no input of its own.
-- **Design and release gates** (`rdm/gates/design_gate.py`) — DI-2, DI-46.
-  The design gate fails unless at least one design document and the design
-  review exist, hold no placeholder markers and are committed clean (an
-  uncommitted edit re-opens it; outside git, approval is reported as
-  unverifiable); and fails on an id declared twice. It warns on a user need
-  nothing traces to, an unknown `traces_to` or `realises` id, and a design
-  input with no tag (or, with `--allure-results`, no passing run). It also
-  fails on stale or uncommitted architecture views: this context's part of
-  `architecture`'s DI-70. The module still holds the release gate and the
-  trace (`rdm story trace`), which belong to `release`; until they move,
-  this context realises part of `release`'s DI-3 and DI-18 and of `risk`'s
-  DI-44 and DI-50 (it applies the risk register's `findings`). The release
-  gate also gives DI-33's warning.
+- **Shared kernel** (`rdm/kernel/`) — not a context: the YAML, message and
+  repository-root helpers (`util.py`), the id grammar (`ids.py`), the one way
+  to ask git (`git.py`), the frontmatter parser (`frontmatter.py`), the
+  shared bucketing of observations by declared id (`reconcile.py`) and the
+  version. No pydantic, DuckDB or RDF dependency.
+- **Record reader** (`rdm/specification/sdd.py`) — DI-1, DI-46. Finds
+  design documents by their `kind: design` marker, never by file name; reads
+  `user_needs`, `design_inputs` and `realises`; keeps an id's first
+  declaration by sorted path; and lists every declaration
+  (`duplicate_declarations`).
+- **Test tags** (`rdm/specification/tags.py`) — DI-1, DI-31, DI-40.
+  `find_tests_dir` finds `tests/` or `test/` no higher than the DHF's
+  repository root; `scan_source_tags` maps each story id to the files
+  claiming it — Python from the syntax tree, JavaScript, TypeScript and Java
+  by pattern, and YAML task `tags`. `scan_source_tests` gives `graph` each
+  tagged test by name: this context's part of `graph`'s DI-61.
+- **Design gate** (`rdm/specification/design_gate.py`) — DI-2, DI-46. Fails
+  unless at least one design document and the design review exist, hold no
+  placeholder markers and are committed clean (an uncommitted edit re-opens
+  it; outside git, approval is reported as unverifiable); fails on an id
+  declared twice; and fails on stale or uncommitted architecture views, this
+  context's part of `architecture`'s DI-70. It warns on a user need nothing
+  traces to, an unknown `traces_to` or `realises` id, and a design input with
+  no tag. With `--allure-results`, the warnings about executed results are
+  `release`'s, handed to the gate's output by the composition root: the
+  specification never reads results.
 - **Pre-commit hook** (`rdm/hook_files/pre-commit`) — DI-2. Blocks a commit
   that stages implementation files (source, template or configuration
   extensions outside the DHF and `backlog/`) unless the design gate passes.
   A commit of only the design documents passes — that commit is the
   approval. A missing `rdm` blocks; `RDM_SKIP_DESIGN_GATE=1` bypasses.
-- **Hooks installer** (`rdm/hooks.py`) — DI-26. Copies the pre-commit hook
+- **Hooks installer** (`rdm/specification/hooks.py`) — DI-26. Copies the pre-commit hook
   into `.git/hooks` (or a given directory), the issue-reference hooks only
   with `--with-issue-hooks`.
-- **New design input** (`rdm/gates/new_input.py`) — DI-22. Reads the DHF
-  through the Record kernel, so it and the gates share one view of the
+- **New design input** (`rdm/specification/new_input.py`) — DI-22. Reads the DHF
+  through the record reader, so it and the gates share one view of the
   record; inserts the entry by a targeted line edit (never a YAML re-dump,
   so comments survive); writes the stub to
   `tests/acceptance/test_<context>.py` unless `--test-file` is given;
   `--list` prints contexts, taken ids, the next id and the user needs.
-- **Project scaffold**, **Project templates** (`rdm/init.py`,
-  `rdm/init_files/`) — DI-15. Copies the tree (templates including the
+- **Project scaffold**, **Project templates** (`rdm/specification/init.py`,
+  `rdm/specification/init_files/`) — DI-15. Copies the tree (templates including the
   design-controls set, `Makefile`, `config.yml`, Dockerfile, Pandoc and Typst
   configuration, `data/`, `images/`) into a new directory, `dhf` by default,
   and the runbook from the adoption templates, so both scaffolds share one.
-- **Adoption**, **Adoption templates** (`rdm/adopt.py`, `rdm/adopt_files/`)
+- **Adoption**, **Adoption templates** (`rdm/specification/adopt.py`, `rdm/specification/adopt_files/`)
   — DI-24. Creates each missing file of the tree, keeps the hook and the
   bootstrap executable, writes the installed version for `{rdm_version}`,
   reports what it skipped, and prints the next steps. The pre-commit hook is
-  copied from `rdm/hook_files/` so the gate has one source. The CI workflow
+  copied from `rdm/specification/hook_files/` so the gate has one source. The CI workflow
   it lays down calls `release`'s reusable workflow (DI-63).
-- **Validation records** (`rdm/record/validation.py`) — DI-33. Reads
+- **Validation records** (`rdm/specification/validation.py`) — DI-33. Reads
   `<dhf>/validation/*-validation.json` by user need; only `approved` counts.
-- **Formative usability** (`rdm/record/persona.py`) — DI-5. Reconciles
+- **Formative usability** (`rdm/specification/persona.py`) — DI-5. Reconciles
   `*-persona.json` runs against the registry: `failed` if any run could not
   finish, else `issues` if problems were seen, else `clean`; `not_run` when
   none tried. `clean` is not validated.
-- **Persona command** (`rdm/record/persona_cmd.py`) — DI-5. `rdm story
+- **Persona command** (`rdm/specification/persona_cmd.py`) — DI-5. `rdm story
   persona` prints the status per need from the V&V plan's registry and
   always exits 0 on a successful run. The runs come from the
   `usability-persona` skill in `.claude/skills/`, outside the `rdm` package.
-- **Test-tag scanning** (in `rdm/record/allure.py`) — DI-1, DI-31, DI-40.
-  The tags belong here, but they share a module with the results ingest, so
-  the workspace draws the module as the Allure reader in `test_evidence`
-  until `allure.py` is split. `find_tests_dir` finds `tests/` or `test/` no
-  higher than the DHF's repository root; `scan_source_tags` maps each story
-  id to the files claiming it — Python from the syntax tree, JavaScript,
-  TypeScript and Java by pattern, and YAML task `tags`. `scan_source_tests`
-  gives `graph` each tagged test by name: this context's part of `graph`'s
-  DI-61.
-
 ## Components (C3)
 
 ![Components: specification](../../c4/views/C3_specification.svg)
 
 | Component | Responsibility | Technology | Code |
 |-----------|----------------|------------|------|
-| Record kernel | Design and V&V frontmatter, ids, git, the shared reconcile helpers | Python | `rdm/record/` |
-| Utilities | Shared YAML and file helpers (the shared kernel) | Python | `rdm/util.py` |
-| Design and release gates | Design gate and duplicate ids; the release gate and trace until they move to release | Python | `rdm/gates/design_gate.py` |
-| Hooks installer | `rdm hooks` | Python | `rdm/hooks.py` |
-| Pre-commit hook | Runs the design gate before a commit | shell | `rdm/hook_files/` |
-| New design input | `rdm story new-input` | Python | `rdm/gates/new_input.py` |
-| Project scaffold | `rdm init` | Python | `rdm/init.py` |
-| Project templates | What `rdm init` lays down | Markdown, YAML, Typst | `rdm/init_files/` |
-| Adoption | `rdm adopt` | Python | `rdm/adopt.py` |
-| Adoption templates | What `rdm adopt` lays down | Markdown, YAML | `rdm/adopt_files/` |
-| Validation records | Approved validation records per user need | Python | `rdm/record/validation.py` |
-| Formative usability | Persona runs as formative evidence | Python | `rdm/record/persona.py` |
-| Persona command | `rdm story persona` | Python | `rdm/record/persona_cmd.py` |
+| Shared kernel | Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers | Python | `rdm/kernel/` |
+| Record reader | User needs, design inputs, realises and declarations, from the frontmatter | Python | `rdm/specification/sdd.py` |
+| Test tags | The design-input tags in test sources, in every language RDM reads | Python | `rdm/specification/tags.py` |
+| Design gate | The record complete, approved and declared once; the architecture views fresh | Python | `rdm/specification/design_gate.py` |
+| Hooks installer | `rdm hooks` | Python | `rdm/specification/hooks.py` |
+| Pre-commit hook | Runs the design gate before a commit | shell | `rdm/specification/hook_files/` |
+| New design input | `rdm story new-input` | Python | `rdm/specification/new_input.py` |
+| Project scaffold | `rdm init` | Python | `rdm/specification/init.py` |
+| Project templates | What `rdm init` lays down | Markdown, YAML, Typst | `rdm/specification/init_files/` |
+| Adoption | `rdm adopt` | Python | `rdm/specification/adopt.py` |
+| Adoption templates | What `rdm adopt` lays down | Markdown, YAML | `rdm/specification/adopt_files/` |
+| Validation records | Approved validation records per user need | Python | `rdm/specification/validation.py` |
+| Formative usability | Persona runs as formative evidence | Python | `rdm/specification/persona.py` |
+| Persona command | `rdm story persona` | Python | `rdm/specification/persona_cmd.py` |
 
-The view also draws the Allure reader (`test_evidence`), the architecture
-model (`architecture`) and the risk register (`risk`), which these use.
+The view also draws the architecture model (`architecture`), which the design
+gate uses, and the components of other contexts that use this one's.
 
 - The pre-commit hook runs the design gate; the hooks installer installs the
-  hook and uses Utilities.
-- The design and release gates read the record with the Record kernel, find
-  tagged tests and reconcile results with the Allure reader, and check the
-  views are fresh with the architecture model; the release gate in them
-  reads validation records and applies the risk rules of the risk register.
-- New design input reads the design documents with the Record kernel and
-  finds the test suite with the Allure reader.
-- Project scaffold and adoption copy their templates.
-- Persona command classifies runs with formative usability; it, formative
-  usability and validation records read through the Record kernel.
+  hook.
+- The design gate reads the record with the record reader, finds the tagged
+  tests with the test tags, and checks the views are fresh with the
+  architecture model.
+- New design input reads the design documents with the record reader and
+  finds the test suite with the test tags.
+- Project scaffold and adoption copy their templates; scaffold also copies the
+  runbook from the adoption templates, and adoption the pre-commit hook.
+- Persona command classifies runs with formative usability and reads the V&V
+  plan with the record reader; validation records read the registry with it.
 
-Open questions: the Record kernel's code path is all of `rdm/record/`,
-which also holds other contexts' components; the view does not show that
-`rdm init` copies the runbook from the adoption templates or that
-`rdm adopt` copies the pre-commit hook.
+The shared kernel is drawn here but is not this context's: every context may
+use it, and the arrows into it are left out of the other views.
 
 ### Dynamic view
 
@@ -262,29 +254,13 @@ stops the commit.
 
 ## Dependencies
 
-Depends on the shared kernel, which it draws. Depended on by every other
-context: `risk` (`risk.py` uses the private `sdd._frontmatter_of`),
-`test_evidence` (the pytest plugin reads the design inputs), `release`
-(`verify.py`, `bundle.py`), `publishing` (`dmr.py`, `report.py`) and `graph`
-(`project.py`). `rdm/main.py`, the composition root, wires its commands.
-
-Imports that break the rule, and what removes them:
-
-- `design_gate.py` → `rdm.record.risk` and the results half of
-  `rdm.record.allure` (`reconcile`), for the release gate, the trace and the
-  design gate's `--allure-results` warnings. Moving the release gate and the
-  trace to `release` removes the risk import; the results warnings must move
-  with them, or the results import stays.
-- `design_gate.py`, `new_input.py` → the tag scanning in `rdm.record.allure`
-  (`scan_source_tags`, `find_tests_dir`): this context's code in a module
-  drawn in `test_evidence`. Splitting `allure.py` into tags and results
-  removes it.
-- `design_gate.py` → `rdm.record.c4` (`architecture`), for view freshness
-  (DI-70): upward, though no cycle, and not named in `architecture.md`.
-  Letting `architecture` provide the check the design gate calls through the
-  kernel, or moving the freshness test into the kernel, removes it.
-- `risk.py` → `sdd._frontmatter_of`: right direction, private helper. Moving
-  the frontmatter parser to the kernel removes the coupling.
+Layer 2 of the dependency rule. Depends on the shared kernel and on the
+leaves below it: `architecture` (the design gate's view check). Depended on
+by `test_evidence` (the pytest plugin reads the design inputs), `release`
+(the release gate, the verification data), `publishing` (the DMR index, the
+report, the evidence bundle) and `graph` (the projection). `rdm/main.py`, the
+composition root, wires its commands, and hands the design gate `release`'s
+results warnings. It reads no results and no risk register.
 
 ## Out of scope
 

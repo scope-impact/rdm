@@ -73,7 +73,7 @@ architecture document describes the system; this context keeps its C4 model.
 
 ## Design Outputs
 
-**Architecture model** (`rdm/record/c4.py`) meets DI-66 and the checking
+**Architecture model** (`rdm/architecture/model.py`) meets DI-66 and the checking
 half of DI-70. It needs only the Python standard library.
 
 - `read_model(dhf, root)` reads `c4/workspace.json` into a `Model`: every
@@ -103,7 +103,7 @@ half of DI-70. It needs only the Python standard library.
   serve the knowledge graph's projection of the model (DI-67), and are the
   code dependencies DI-68's warnings will be checked against.
 
-**Architecture drawing** (`rdm/c4.py`, `rdm c4 draw`) meets the drawing
+**Architecture drawing** (`rdm/architecture/draw.py`, `rdm c4 draw`) meets the drawing
 half of DI-70. It runs Structurizr's CLI (`RDM_STRUCTURIZR`, or
 `structurizr.sh` / `structurizr` on the PATH) twice side by side, exporting
 the workspace as JSON and as DOT, and Graphviz's `dot` (`RDM_DOT`, or on the
@@ -130,7 +130,7 @@ named graphs that the knowledge graph already projects.
 
 This context realises no other context's input. Parts of its own are
 realised elsewhere: the design gate (`specification`,
-`rdm/gates/design_gate.py`, `check_architecture_views`) realises DI-70's
+`rdm/specification/design_gate.py`, `check_architecture_views`) realises DI-70's
 failing check, adding the stale reasons from `stale` and failing the
 architecture views when the workspace or its drawn files are uncommitted;
 the knowledge graph will realise DI-68. The knowledge graph projects the
@@ -148,8 +148,8 @@ Graphviz, which also checks that RDM's own views are current.
 
 | Component | Responsibility | Technology | Code |
 |-----------|----------------|------------|------|
-| Architecture model | The C4 model, read from the workspace's export; view freshness | Python | `rdm/record/c4.py` |
-| Architecture drawing | `rdm c4 draw`: Structurizr export, Graphviz views, stamps | Python, Structurizr, Graphviz | `rdm/c4.py` |
+| Architecture model | The C4 model, read from the workspace's export; view freshness | Python | `rdm/architecture/model.py` |
+| Architecture drawing | `rdm c4 draw`: Structurizr export, Graphviz views, stamps | Python, Structurizr, Graphviz | `rdm/architecture/draw.py` |
 
 Both components sit in the `rdm` container. The relationships, in the
 direction of the arrow:
@@ -167,30 +167,17 @@ Assumptions and open questions:
 - Structurizr's CLI, Java and Graphviz are tools on the drawing machine, not
   elements of the model; the view does not show them, nor that the drawing
   writes the export and the images into the product repository.
-- `rdm/record/c4.py` lies inside the Record kernel's code (`rdm/record/`);
-  the longest-match rule assigns it to the Architecture model. The target
-  package is `rdm/architecture/`, which moves its code path, not its context.
+- Components name their code by path, so the longest-match rule assigns
+  every module to one component; a test fails on a module no component
+  names (the dependency rule, `tests/dependency_rule_test.py`).
 - Code dependencies are found for Python only, and only for absolute
   imports; a relative import is not seen.
 
 ## Dependencies
 
-This context depends on no other context: the Architecture model imports
-only the Python standard library, and the Architecture drawing imports only
-the Architecture model. That keeps the dependency rule (it sits beside
-`test_evidence`, `risk` and `compliance`, above the specification).
-
-Depending on it:
-
-- `graph` (`rdm/graph/c4.py` imports `read_model`, `component_of` and
-  `component_dependencies`): a read model above it, as the rule allows.
-- `rdm/main.py`, the composition root, imports `rdm/c4.py` for
-  `rdm c4 draw`: allowed.
-- `specification` (`rdm/gates/design_gate.py` imports `WORKSPACE` and
-  `stale` from `rdm/record/c4.py`): this breaks the rule, since the
-  specification is the core and depends on no other context. It is not a
-  cycle, because this context imports nothing of the specification. The
-  change that removes it: move `check_architecture_views` into this context
-  and have the composition root hand it to the design gate as one of the
-  gate's checks, so the specification declares the gate and this context
-  supplies its check.
+Layer 1 of the dependency rule, a leaf: the Architecture model imports only
+the Python standard library, and the Architecture drawing only the
+Architecture model. Depended on by `specification` (the design gate checks
+the views are fresh), `graph` (the C4 projection: `read_model`,
+`component_of`, `component_dependencies`) and the composition root (`rdm c4
+draw`). No import breaks the rule.
