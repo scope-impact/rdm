@@ -1222,6 +1222,24 @@ orphan tags. No design input changed.
   one with *Warned* before the slash a warning (`CONTEXT.md`, "Domain
   event").
 
+# Design Review 39 — The risk rules name their events
+
+**Scope reviewed:** the risk register's rules. No design input changed.
+
+**Disposition:** Approved.
+
+- Each risk rule returns a named event with the message it reports today:
+  *Risk Not Evaluated / No Policy*, */ Incomplete*, */ Control Unverified*,
+  */ Residual Unacceptable* and the rest of the rules in the code, and
+  *Risk Warned / Policy Not Approved* and */ Risk Proposed* for the two
+  warnings. A finding stays an event about one risk, or about the register as
+  a whole. What blocks, what warns, and the messages the release gate and the
+  graph's shapes report are unchanged.
+- The naming stops at the rules that decide: the design gate, the release
+  gate and the risk register. The other commands' fail events are
+  invocation errors already named in each design document's *Commands and
+  events*; naming them in the code would add no decision.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
