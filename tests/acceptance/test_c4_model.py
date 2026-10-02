@@ -105,11 +105,14 @@ def test_the_c4_model_is_read_from_the_architecture_workspace(tmp_path: Path) ->
         assert read_model(tmp_path / "empty").elements == {}
 
     with verification_step("RDM's own architecture reads whole: every component in a declared context, with its "
-                           "code, and a component view for each context"):
+                           "code, a component view for each context, and dynamic views named for one"):
         own = read_model(ROOT / "dhf")
         components = own.components
         attach("RDM components", sorted(f"{c.context}: {c.alias} -> {c.link}" for c in components))
         declared = {c["id"] for c in frontmatter(ROOT / "dhf" / "documents" / "architecture.md")["contexts"]}
         assert len(components) >= 30
         assert all(c.link for c in components) and {c.context for c in components} == declared
-        assert set(own.views) == {"C1", "C2"} | {f"C3_{context}" for context in declared}
+        static = {"C1", "C2"} | {f"C3_{context}" for context in declared}
+        assert static <= set(own.views)
+        dynamic = set(own.views) - static
+        assert all(any(key.startswith(f"D_{context}_") for context in declared) for key in dynamic), dynamic
