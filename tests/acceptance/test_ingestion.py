@@ -55,6 +55,25 @@ def test_translates_foreign_test_results(tmp_path: Path) -> None:
         qt = load_yaml(str(qt_out))
         assert qt["some_module.SomeName::someTestCase"]["result"] == "pass"
 
+    with verification_step("an errored or skipped xunit case is not a pass; a case is read once, the worse kept"):
+        xunit = tmp_path / "xunit.xml"
+        xunit.write_text(
+            '<testsuites><testsuite name="S">'
+            '<testcase name="errored"><error message="boom"/></testcase>'
+            '<testcase name="skipped"><skipped/></testcase>'
+            '<testcase name="twice"><failure message="first"/></testcase><testcase name="twice"/>'
+            '<testsuite name="Inner"><testcase name="nested"/></testsuite>'
+            '</testsuite></testsuites>')
+        translate_test_results("xunit", str(xunit), str(out))
+        assert {k: v["result"] for k, v in load_yaml(str(out)).items()} == {
+            "S.errored": "fail", "S.skipped": "skip", "S.twice": "fail", "Inner.nested": "pass"}
+    with verification_step("a qttest function fails when any incident does, whatever comes after"):
+        qt = tmp_path / "qt2.xml"
+        qt.write_text('<TestCase name="C"><Environment/><TestFunction name="f">'
+                      '<Incident type="fail"><Description>row 1</Description></Incident>'
+                      '<Incident type="pass"/></TestFunction></TestCase>')
+        translate_test_results("auto", str(qt), str(out))
+        assert load_yaml(str(out)) == {"C.f": {"name": "C.f", "result": "fail", "message": "row 1"}}
     with verification_step("An unknown format is rejected"):
         with pytest.raises(ValueError):
             translate_test_results("nonsense-format", str(_GTEST_XML), str(out))

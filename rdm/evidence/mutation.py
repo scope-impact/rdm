@@ -47,10 +47,15 @@ TESTS_FAILED = "failed"
 # original for crash recovery. Left behind only if the probe process died
 # mid-window; the next probe of the same file restores from it first.
 JOURNAL_SUFFIX = ".rdm-probe-orig"
+MUTANT_SUFFIX = ".rdm-probe-mutant"  # the mutant written, so recovery can tell it from a later edit
 
 
 def _journal_path(file_path: Path) -> Path:
     return file_path.with_name(file_path.name + JOURNAL_SUFFIX)
+
+
+def _mutant_path(file_path: Path) -> Path:
+    return file_path.with_name(file_path.name + MUTANT_SUFFIX)
 
 
 def recover_interrupted_probe(file_path: Path) -> bool:
@@ -59,12 +64,18 @@ def recover_interrupted_probe(file_path: Path) -> bool:
     Returns True when a recovery happened. Called automatically at the start
     of every probe; safe to call any time.
     """
-    journal = _journal_path(file_path)
+    journal, mutant = _journal_path(file_path), _mutant_path(file_path)
     if not journal.exists():
+        mutant.unlink(missing_ok=True)
         return False
-    _write(file_path, journal.read_text(encoding="utf-8"))
+    # Restore only while the file still holds the probe's mutant: an edit made
+    # since the probe died is the person's, and is kept.
+    holds_mutant = not mutant.exists() or file_path.read_bytes() == mutant.read_bytes()
+    if holds_mutant:
+        _write(file_path, journal.read_bytes())
     journal.unlink()
-    return True
+    mutant.unlink(missing_ok=True)
+    return holds_mutant
 
 
 def _advance_mtime(file_path: Path, previous: int) -> None:
@@ -78,11 +89,12 @@ def _advance_mtime(file_path: Path, previous: int) -> None:
     os.utime(file_path, (fresh, fresh))
 
 
-def _write(file_path: Path, content: str) -> None:
-    # The pre-write mtime must be captured BEFORE write_text restamps the
-    # file with the current clock, or monotonicity is lost.
+def _write(file_path: Path, content: bytes) -> None:
+    # Bytes, so line endings and encoding are kept exactly. The pre-write
+    # mtime must be captured BEFORE the write restamps the file with the
+    # current clock, or monotonicity is lost.
     previous = int(file_path.stat().st_mtime)
-    file_path.write_text(content, encoding="utf-8")
+    file_path.write_bytes(content)
     _advance_mtime(file_path, previous)
 
 
@@ -125,10 +137,14 @@ def run_mutation_probe(
     leftover journal from an interrupted earlier probe was restored first.
     """
     recovered = recover_interrupted_probe(file_path)
-    original = file_path.read_text(encoding="utf-8")
-    occurrences = original.count(find)
+    original = file_path.read_bytes()
+    text = original.decode("utf-8")
+    if "\r\n" in text:  # the file's own line endings, for a find or replace written with \n
+        find, replace = (t.replace("\r\n", "\n").replace("\n", "\r\n") for t in (find, replace))
+    occurrences = text.count(find)
     if occurrences != 1:
-        return {"error": f"`find` text occurs {occurrences} time(s) in {file_path} (need exactly 1)"}
+        return {"error": f"`find` text occurs {occurrences} time(s) in {file_path} (need exactly 1)",
+                "recovered": recovered}
 
     # A test that does not pass unmutated would "catch" any mutation: run it
     # first, and refuse to report a result from it (DI-34).
@@ -139,16 +155,19 @@ def run_mutation_probe(
         return {"error": f"{why} — fix it first; a probe of it would prove nothing",
                 "restored": True, "recovered": recovered}
 
-    journal = _journal_path(file_path)
-    journal.write_text(original, encoding="utf-8")
+    journal, mutant = _journal_path(file_path), _mutant_path(file_path)
+    mutated = text.replace(find, replace, 1).encode("utf-8")
+    journal.write_bytes(original)
+    mutant.write_bytes(mutated)
     with _restore_on_sigterm():
         try:
-            _write(file_path, original.replace(find, replace, 1))
+            _write(file_path, mutated)
             outcome = run_tests()
         finally:
             _write(file_path, original)  # always revert
             journal.unlink(missing_ok=True)
-    restored = file_path.read_text(encoding="utf-8") == original
+            mutant.unlink(missing_ok=True)
+    restored = file_path.read_bytes() == original
     if outcome not in (TESTS_PASSED, TESTS_FAILED):
         return {"error": f"test run did not execute cleanly: {outcome}",
                 "restored": restored, "recovered": recovered}

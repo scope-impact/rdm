@@ -295,3 +295,15 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert cli(["story", "evidence-report", "--dhf", str(dhf), "--allure-results", str(results),
                     "-o", str(out)]) == 0
         assert out.read_bytes().startswith(b"%PDF")
+    with verification_step("a symbolic link in the results is never read: its attachment missing, its file unhashed"):
+        secret = tmp_path / "outside.txt"
+        secret.write_text("a file outside the results\n")
+        (results / "link-attachment.txt").symlink_to(secret)
+        (results / "e-result.json").write_text(json.dumps({
+            "name": "test_link", "status": "passed", "labels": [{"name": "story", "value": "DI-1"}],
+            "attachments": [{"name": "linked", "source": "link-attachment.txt", "type": "text/plain"}]}))
+        linked = build_report(dhf, results)
+        names = {f["name"] for f in linked["files"]}
+        assert "link-attachment.txt" not in names and "e-result.json" in names
+        runs = [r for di in linked["design_inputs"] for r in di["runs"] if r["test"] == "test_link"]
+        assert [a["kind"] for a in runs[0]["attachments"]] == ["missing"]

@@ -152,6 +152,21 @@ def test_mutation_probe_restore_survives_interruption(tmp_path: Path) -> None:
         assert res["recovered"] and res["killed"]        # recovered, then probed normally
         assert src.read_text() == original and not journal.exists()
         assert recover_interrupted_probe(src) is False   # nothing left to recover
+    with verification_step("A leftover journal is restored only while the file holds that probe's mutant"):
+        from rdm.evidence.mutation import MUTANT_SUFFIX
+        src.write_text("VALUE = 3\n")                    # edited since the probe died
+        journal.write_text(original)
+        (tmp_path / ("m.py" + MUTANT_SUFFIX)).write_text("VALUE = 2\n")
+        assert recover_interrupted_probe(src) is False
+        assert src.read_text() == "VALUE = 3\n" and not journal.exists()
+        assert not (tmp_path / ("m.py" + MUTANT_SUFFIX)).exists()
+    with verification_step("The file is restored to its exact bytes, its line endings included"):
+        crlf = b"VALUE = 1\r\nOTHER = 0\r\n"
+        src.write_bytes(crlf)
+        res = run_mutation_probe(src, "VALUE = 1\nOTHER", "VALUE = 2\nOTHER",
+                                 lambda: TESTS_PASSED if src.read_bytes() == crlf else TESTS_FAILED)
+        assert res["killed"] and res["restored"] and src.read_bytes() == crlf
+        src.write_text(original)
 
     # SIGTERM during the probe window restores in-process (a shell timeout
     # sends TERM first — the incident this guards against).

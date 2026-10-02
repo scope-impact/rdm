@@ -72,6 +72,19 @@ def test_markdown_post_processing() -> None:
     )
     assert "[apple][banana]" in vocab
 
+    both = {"md_extensions": ["rdm.md_extensions.SectionNumberExtension",
+                              "rdm.md_extensions.AuditNoteExclusionExtension"]}
+    with verification_step("code is left as written: no note removed, no comment numbered"):
+        code = "```bash\nif [[ -f x ]]; then\n# a comment\n```\n~~~\n# also code\n~~~\nUse `[[1, 2]]` here.\n"
+        assert render_from_string(code, config=both) == code
+    with verification_step("only an ATX heading is numbered"):
+        assert render_from_string("#hashtag\n#\n# Top\n## Sub", config=both) == "#hashtag\n#\n# 1 Top\n## 1.1 Sub\n"
+    with verification_step("a note over two lines of a paragraph, or nested, is removed whole"):
+        notes = "A [[auditor\nonly]] B.\nC [[outer [[inner]] tail]] D.\n"
+        assert render_from_string(notes, config=both) == "A B.\nC D.\n"
+    with verification_step("a note still open at the paragraph's end is kept as text"):
+        assert render_from_string("Stray [[ here\n\nNext.", config=both) == "Stray [[ here\n\nNext.\n"
+
 
 FAKE_VIEWS = ("C1", "C3_core")
 FAKE_STRUCTURIZR = """

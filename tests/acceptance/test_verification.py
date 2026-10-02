@@ -46,7 +46,9 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
     (results / "t1-result.json").write_text(json.dumps(
         {"name": "t1", "status": "passed",
          "labels": [{"name": "story", "value": "DI-1"}],
-         "attachments": [{"name": "gate output", "source": "a1-attachment.txt", "type": "text/plain"}],
+         "attachments": [{"name": "gate output", "source": "a1-attachment.txt", "type": "text/plain"},
+                         {"name": "linked", "source": "linked-attachment.txt", "type": "text/plain"},
+                         {"name": "lost", "source": "gone-attachment.txt", "type": "text/plain"}],
          "steps": [{"name": "step 1", "status": "passed",
                     "attachments": [{"name": "graph", "source": "a2-attachment.json", "type": "application/json"}]}]}
     ))
@@ -57,6 +59,7 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
             {"name": "setup log", "source": "a3-attachment.txt", "type": "text/plain"}]}]}))
     (results / "a3-attachment.txt").write_text("set up\n")
     (results / "stray-attachment.txt").write_text("not referenced by any result\n")
+    (results / "linked-attachment.txt").symlink_to(tmp_path / "dhf" / "config.yml")  # a file outside the results
     (results / "executor.json").write_text('{"name": "local", "type": "local"}')  # the plugin's (DI-65)
     (results / "environment.properties").write_text("python=CPython 3.13\n")
     return dhf, results
@@ -87,14 +90,32 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
         assert on_disk == manifest
         assert manifest["design_inputs"] == 1 and manifest["verified"] == 1
         assert "faithfulness_verdicts" not in manifest
-    # The executed results ride along: results, containers, every attachment they
-    # reference (on the test, its steps, or a fixture), and the run's executor and
-    # environment, which the report's provenance names -- nothing else.
+    # The executed results ride along: every plain file of the results directory
+    # (results, containers, attachments, the run's executor and environment), so
+    # the report's digest over them can be checked from the bundle.
     bundled = {"allure-results/" + n for n in
                ("t1-result.json", "c1-container.json", "a1-attachment.txt", "a2-attachment.json", "a3-attachment.txt",
-                "executor.json", "environment.properties")}
+                "executor.json", "environment.properties", "stray-attachment.txt")}
     # The verification report (DI-64) is in it when Typst is available, and the manifest says which.
     report = {"verification_report.pdf"} if manifest["verification_report"] == "verification_report.pdf" else set()
     assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"} | bundled | report
     assert (out / "allure-results" / "a1-attachment.txt").read_text() == "Release gate PASSED\n"
-    assert not (out / "allure-results" / "stray-attachment.txt").exists()
+    with verification_step("a symbolic link in the results is never followed; a missing attachment is listed"):
+        assert not (out / "allure-results" / "linked-attachment.txt").exists()
+        assert manifest["missing_attachments"] == ["gone-attachment.txt", "linked-attachment.txt"]
+    with verification_step("the report's digest over the results can be checked from the bundle"):
+        from rdm.publishing.report import build_report, results_sha256
+        assert results_sha256(out / "allure-results") == build_report(dhf, results)["results_sha256"]
+    with verification_step("a bundle written over an earlier one replaces its results, never mixes them"):
+        (results / "stray-attachment.txt").unlink()
+        manifest = evidence_bundle(dhf, results, out)
+        assert not (out / "allure-results" / "stray-attachment.txt").exists()
+        assert "allure-results/stray-attachment.txt" not in manifest["files"]
+    with verification_step("a result the report cannot lay out leaves the reason, not a crash"):
+        (results / "t2-result.json").write_text(json.dumps(
+            {"name": "t2", "status": "passed", "labels": [{"name": "story", "value": "DI-1"}],
+             "statusDetails": "not a mapping", "steps": [None], "attachments": [None]}))
+        manifest = evidence_bundle(dhf, results, out)
+        assert (out / "manifest.json").is_file()
+        assert manifest["verification_report"] in ("verification_report.pdf",) or \
+            manifest["verification_report"].startswith("not rendered: ")

@@ -71,9 +71,9 @@ class ReportUnavailable(RuntimeError):
 
 
 def result_files(results_dir: Path) -> list[dict]:
-    """Every file in the results directory, in name order, with its size and SHA-256."""
+    """Every plain file in the results directory (never a symbolic link), in name order, with its size and SHA-256."""
     entries = []
-    for path in sorted(p for p in Path(results_dir).iterdir() if p.is_file()):
+    for path in sorted(p for p in Path(results_dir).iterdir() if p.is_file() and not p.is_symlink()):
         data = path.read_bytes()
         entries.append({"name": path.name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
     return entries
