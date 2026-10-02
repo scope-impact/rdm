@@ -181,7 +181,7 @@
 #show: template.with(
   $if(id)$id: "$id$",$endif$
   $if(revision)$revision: "$revision$",$endif$
-  $if(title)$title: "$title$",$endif$
+  $if(title)$title: [$title$],$endif$
   $if(date)$date: "$date$",$endif$
   $if(status)$status: "$status$",$endif$
 )

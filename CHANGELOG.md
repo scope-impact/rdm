@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed — PDF titles
+- A rendered PDF's cover and running header showed the document's first heading
+  (usually "Purpose") instead of its `title:`: `pandoc_pdf.yml` shifted every
+  heading up a level, which made the first one the title. Headings now keep
+  their level and are numbered from 1.
+- A title's em dash printed as `---`: the template quoted Pandoc's Typst markup
+  as a string. It now passes the title as content.
+
 ### Changed — the worked example uses all of RDM
 - `examples/github-document-control/` is laid out as `rdm init` and
   `rdm adopt` lay a project out (`.github/`, `dhf/` with its Makefile,
