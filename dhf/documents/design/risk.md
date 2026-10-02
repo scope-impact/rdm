@@ -31,62 +31,27 @@ skills' (user need → safety and STRIDE branches; hazard → situation → harm
 evaluate, control, verify, evaluate again). This context keeps the register
 and checks what a machine can check.
 
-## Design Inputs
-
-- **DI-43 (read and evaluate the register)** — risks are frontmatter in
-  `kind: risk` documents anywhere under the DHF, as design inputs are in
-  `kind: design` ones:
-
-  ```yaml
-  risks:
-    - id: RISK-TOOL-001
-      category: safety             # or security, with stride:
-      linked: [RISK-TOOL-002]      # optional: risks it bears on
-      hazard: "What could go wrong, and the sequence of events"
-      situation: "The hazardous situation"
-      harm: "Who is hurt, and how"
-      severity: Serious            # from the harm
-      probability: Possible        # from the situation
-      level: Medium                # optional; must be the policy's level
-      controls: [DI-40]            # each control is a design input
-      residual: {probability: Rare}  # severity optional: the initial's
-      acceptance: {by: "...", rationale: "..."}
-      status: proposed             # until a person approves the rating
-  ```
-
-  Risk evaluation needs risk acceptability criteria set before the
-  decision, so there is **no default**: a project declares one
-  `risk_policy` (severities, probabilities, a level for each pair, and per
-  level `acceptable`, `justify` or `unacceptable`) in a DHF document's
-  frontmatter. Level names are the project's own. A risk control is a
-  design input, so the chain is risk → design input → tagged test → result.
-  A residual may record a severity where a control limits the harm itself
-  (ISO 14971 allows it); without one the initial severity carries over.
-  Scoped here because the register and its criteria speak this context's
-  language; the gate that applies the rules is DI-44's. It leaves out how
-  the register is rendered or projected (publishing, graph). Amended
-  (Design Review 10): no default policy, acceptability as policy data,
-  safety and security branches, residual severity allowed. Refines UN-016.
-- **DI-44 (release gate)** — the mechanical half of a risk review:
-  criteria present; ids unique and present; chain, category and STRIDE
-  complete; links to declared risks; scores defined by the policy and a
-  recorded level equal to the policy's; controls declared, with a residual
-  score. A register with no risks needs no policy. Scoped here because the
-  rules are rules about the register; the release gate only reports them.
-  It leaves out the residual rules (DI-50) and every judgement a machine
-  cannot make (see Out of scope). Amended (Design Review 10); narrowed
-  (Design Review 12), with the residual rules split into DI-50. Refines
-  UN-016 and UN-003.
-- **DI-50 (residual rules)** — split from DI-44 (Design Review 12): a
-  residual is *not evaluated*, never assumed, until every risk control's
-  design input has a passing test; the residual (the initial risk when
-  nothing controls it) blocks when the policy calls it unacceptable; a
-  `justify` residual needs an acceptance naming who accepted it and why. A
-  proposed risk or policy is a warning, as a missing validation record is:
-  a person has not yet approved those ratings. A risk with no `status` takes
-  its document's. Refines UN-016 and UN-003.
-
 ## Design Outputs
+
+Risks are frontmatter in `kind: risk` documents, evaluated against the declared
+risk policy:
+
+```yaml
+risks:
+  - id: RISK-TOOL-001
+    category: safety             # or security, with stride:
+    linked: [RISK-TOOL-002]      # optional: risks it bears on
+    hazard: "What could go wrong, and the sequence of events"
+    situation: "The hazardous situation"
+    harm: "Who is hurt, and how"
+    severity: Serious            # from the harm
+    probability: Possible        # from the situation
+    level: Medium                # optional; must be the policy's level
+    controls: [DI-40]            # each control is a design input
+    residual: {probability: Rare}  # severity optional: the initial's
+    acceptance: {by: "...", rationale: "..."}
+    status: proposed             # until a person approves the rating
+```
 
 - **Risk register** (`rdm/risk/register.py`) meets DI-43, DI-44 and DI-50,
   and is the one place the risk rules are written:

@@ -37,46 +37,6 @@ needs; the *traceability matrix* is generated, never edited; the *evidence
 bundle* is what a release keeps. It reads the specification, test evidence
 and risk; none of them reads it.
 
-## Design Inputs
-
-- **DI-3 (release gate)** — block release unless every declared design input
-  is verified by a passing test. Whether the test proves its input is left to
-  the independent review of the pull request; no verdict is recorded.
-  Refines UN-003.
-- **DI-4 (traceability)** — reconcile against Allure tags and render a
-  traceability matrix from executed results, not hand-maintained tables.
-  Owned here for the verification data the gate and the bundle read; reading
-  the results (`test_evidence`) and rendering the template (`publishing`) are
-  realised elsewhere. Refines UN-004.
-- **DI-18 (trace query)** — report the traceability slice for a given user
-  need (→ its design inputs) or design input (→ its need(s), owner/realisers,
-  verifying tests, and status), via `rdm story trace`. Read-only. Refines
-  UN-004.
-- **DI-30 (release evidence bundle)** — `rdm story evidence-bundle` writes the
-  release's retained evidence set to an output directory: the verification
-  data, the rendered traceability matrix, and a manifest describing the
-  bundle — the DHR-shaped set a team attaches to a release tag. Refines
-  UN-012.
-  Amended (Design Review 13): the bundle also keeps the executed Allure
-  results themselves — every result, the attachments and containers they
-  reference — so the evidence behind each verdict outlives CI. Integrity is
-  the pipeline's: GitHub's artifact upload records the artifact's digest.
-- **DI-63 (the gates, reusable from another repository)** — the CI `rdm
-  adopt` used to lay down ran `pip install rdm`, which fetches an unrelated
-  package of the same name, and every team copied steps that then drifted
-  from RDM's own. Now RDM's CI is the reusable unit:
-  `scope-impact/rdm/.github/workflows/gates.yml@<ref>` runs the caller's
-  acceptance tests, then the design gate, `verify`, the release gate
-  (optional while a record has no design input yet), `rdm graph validate`
-  (with any checklists) and the evidence bundle, uploaded as an artifact;
-  `scope-impact/rdm/actions/gates@<ref>` runs the same gates inside a
-  workflow of one's own; `scope-impact/rdm@<ref>` renders the documents in
-  the image published for that revision. RDM is installed from the pinned
-  revision itself — never by name from a package index — so the gates that
-  ran are exactly the ones pinned. The workflow `rdm adopt` lays down calls
-  the reusable workflow at `v<installed RDM version>`; RDM's own CI calls
-  it too, so every push to RDM exercises it. Refines UN-011 and UN-003.
-
 ## Design Outputs
 
 - **Release gate** (`rdm/release/gate.py`, `rdm story release-gate`) — DI-3.

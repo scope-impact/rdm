@@ -1068,6 +1068,32 @@ glossary. No design input's text changed.
 
 - None open.
 
+# Design Review 33 — A design input is stated once
+
+**Scope reviewed:** every design document's body; the SDD template; the
+agent workflow. No design input changed.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Each design document restated its design inputs in a `## Design Inputs`
+  section beside the frontmatter that declares them: two statements of one
+  requirement, free to drift. The frontmatter is now the only statement. The
+  section is removed from all eight documents and from the template; the
+  body names an input by id where its design outputs say how it is met.
+  Each document's design outputs name every input it owns.
+- What the sections held besides the requirement moves where it belongs: the
+  risk register's format to the risk context's design outputs; DI-69's
+  status (not built) to the knowledge graph's. Each input's amendment and
+  split history is in the design reviews that made them.
+- The agent workflow says to describe the output, by id, and never to
+  restate the input.
+
+## Findings and actions
+
+- None open.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

@@ -30,47 +30,6 @@ workspace** (`dhf/c4/workspace.dsl`) is written by people and is the source
 of every view; a bounded context is a group of components in it. The system
 architecture document describes the system; this context keeps its C4 model.
 
-## Design Inputs
-
-- **DI-66 (the C4 model, read from the architecture workspace)** — the
-  architecture is one Structurizr workspace, `dhf/c4/workspace.dsl`: the
-  model (people, software systems, containers, components grouped by bounded
-  context) and its views (the system context and the containers for the
-  system, one component view for each bounded context). Each component names
-  its code with a `code` property, a file or a directory, so the code level is
-  the code itself. RDM reads the model from the workspace's JSON export,
-  `dhf/c4/workspace.json`, which `rdm c4 draw` writes beside it (DI-70), so
-  reading needs neither Java nor a parser. One identifier is one element; the
-  workspace, not the views, declares it. It is scoped here because the model
-  is this context's subject; projecting the model into the knowledge graph is
-  the graph's DI-67, and checking the model against the record is DI-68.
-  Amended (Design Review 29): the model was read from Mermaid C4 diagrams in
-  the design documents. Refines UN-017.
-- **DI-68 (conformance, as warnings)** — the graph's gate shapes compare the
-  model with the record and the code: code a test exercises that no
-  component names; a test that exercises another context's component than
-  the one that owns or realises its input; a dependency in the code with no
-  relationship declared for it; a group that is not a bounded context, or a
-  context with no component; a context whose design document does not show
-  its view; a code path that does not exist; a relationship with no
-  description. Every one is a warning: an architecture disagreement is a
-  question for the reviewer, never a release block. It is scoped here because
-  what counts as a disagreement is a statement about the C4 model; the
-  mechanism that reports it is the knowledge graph's. Refines UN-017.
-- **DI-70 (architecture views as images)** — `rdm c4 draw` exports the
-  workspace with Structurizr's CLI: its model as `dhf/c4/workspace.json`,
-  and each view as DOT, drawn by Graphviz to `dhf/c4/views/<view>.svg`. Each
-  design document shows its view as an ordinary image, so GitHub, the docs
-  site and a rendered PDF show the same picture, and no browser draws it.
-  The drawn files are committed, each stamped with the SHA-256 of the
-  workspace; the design gate fails when a stamp is not the current
-  workspace's, when a view has no image, or when an image has no view, so a
-  stale view cannot be committed. Checking needs only the stamps: Java and
-  Graphviz are needed only to draw. It leaves out how a view is laid out
-  (Graphviz's automatic layout, from the workspace's `autolayout`). Amended
-  (Design Review 29): DI-70 rendered Mermaid diagrams with Mermaid's
-  renderer. Refines UN-017 and UN-001.
-
 ## Design Outputs
 
 **Architecture model** (`rdm/architecture/model.py`) meets DI-66 and the checking

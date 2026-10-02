@@ -41,46 +41,6 @@ labels each run of a tagged test from the record at test time, reads the
 results back into a status per design input, translates foreign XML
 results into result data, and gives the reviewer the mutation probe.
 
-## Design Inputs
-
-- **DI-17 (foreign test-result translation)** — translate gtest, xunit and
-  qttest XML into RDM's result data; reject an unknown format. A
-  translated result names a test suite and case, not a design input: it is
-  data for a document, not a test run that verifies an input. Refines
-  UN-001.
-- **DI-34 (mutation probe, reviewer tool)** — `rdm story mutation-probe
-  --file F --find A --replace B --test T` breaks one line on purpose, runs
-  one test, and reports KILLED (the test caught it) or SURVIVED (it did
-  not): how a pull-request reviewer turns "this test would catch a broken
-  X" from a claim into an executed check. The test runs unmutated first,
-  and must pass. Only a genuine test failure is a kill; a run that errors
-  or collects nothing is an error, so a mistyped selector cannot
-  manufacture evidence. It records nothing and gates nothing — the
-  reviewer's judgment, on the pull request, is the record. Restored from
-  the retired DI-21 without its verdict coupling. Refines UN-013.
-- **DI-47 (the probe always restores)** — split from DI-34 (Design Review
-  12) so the restore guarantees have their own test: the original is
-  journaled beside the file, an interrupted probe is recovered on the next
-  probe of that file, a termination signal restores, and every write
-  invalidates the bytecode cache. Refines UN-013.
-- **DI-57 (the Allure hierarchy, from the record)** — Allure organises
-  results as epic → feature → story; the record is user need → bounded
-  context → design input. A test carries one hand-written tag,
-  `@allure.story("DI-n")` (the specification's); the pytest plugin adds the
-  rest at run time from the record, so the labels cannot drift from it.
-  Refines UN-004 and UN-010.
-- **DI-59 (the commit under test)** — the plugin labels each run of a
-  tagged test with `commit` and, with uncommitted changes,
-  `worktree=dirty`, so the evidence says which version it is evidence for.
-  The graph side is DI-60, owned by the knowledge graph. Refines UN-004 and
-  UN-003.
-- **DI-65 (who ran the tests, and where)** — IEC 62304 §9.8 asks a test
-  record for the configuration, the tools and the identity of the tester.
-  The plugin writes Allure's own `executor.json` and
-  `environment.properties` into the results directory once per run, so the
-  Allure report shows them and the verification report reads them. Refines
-  UN-004 and UN-012.
-
 ## Design Outputs
 
 - **pytest plugin** (`rdm/pytest_plugin.py`) — DI-57, DI-59, DI-65.

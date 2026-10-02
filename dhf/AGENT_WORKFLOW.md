@@ -114,9 +114,9 @@ uv run rdm story new-input --dhf dhf \
 ```
 This allocates the next `DI-n`, inserts it into that context's `design_inputs`
 frontmatter, writes a stub tagged test (it *fails on purpose* — see step 5),
-and prints your remaining checklist. Then, by hand, describe the input and the
-intended output in that document's `## Design Inputs` / `## Design Outputs`
-prose. A context that helps realise an input owned elsewhere lists it under
+and prints your remaining checklist. Then, by hand, describe the intended
+output in that document's `## Design Outputs`, naming the input by id. The
+frontmatter is the input's only statement: the body never restates it. A context that helps realise an input owned elsewhere lists it under
 `realises` — an input is declared once, never duplicated.
 
 **Done when:** `uv run rdm story trace DI-n` shows your input, its need, and

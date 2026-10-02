@@ -33,38 +33,6 @@ context performs (`rdm gap`); the context itself is named for its domain,
 compliance with a standard. It knows nothing of design inputs, tests or risks:
 its only inputs are checklists and documents.
 
-## Design Inputs
-
-- **DI-10 (gap detection)** — report the checklist references missing from a
-  set of documents; exit non-zero when any are absent. A reference is a key
-  inside a `[[ … ]]` block, matched exactly (a bare prose mention or a longer
-  sibling key never counts), with two deliberate allowances: a dotted
-  *descendant* covers its parent (`[[62304:5.6.2.a]]` addresses
-  `62304:5.6.2`), and a key may be followed by a `: annotation` tail
-  (`[[FDA-SW:sdmp: pointer note]]` — the idiom the shipped `rdm init`
-  templates use) without breaking the match, while a longer colon-qualified
-  key still never satisfies its prefix. It leaves out whether the cited text
-  actually meets the clause: that is the reviewer's judgement. Refines UN-006.
-- **DI-11 (built-in composable checklists)** — ship the standard checklists
-  and resolve `include` directives so e.g. `62304_2015_class_b` composes the
-  base + class-A lists. Scoped here because the checklists are this context's
-  data; it leaves out writing a checklist from a regulation, which is not yet
-  in scope (see the system architecture). Refines UN-006.
-- **DI-12 (coverage report)** — report total / missing / covered / percent
-  per checklist, naming the missing items in verbose mode. It measures
-  references only, as DI-10 does. Refines UN-006.
-- **DI-25 (Part 11 checklist + RDM's own document-control claim)** — ship the
-  21 CFR Part 11 document-control checklist (the electronic-records /
-  electronic-signatures controls applicable to a git-based document control
-  system) as a built-in, and make RDM's own claim executable: RDM keeps its
-  entire record — this DHF included — in git with GitHub as the service
-  provider, and its document-control statement (DC-001,
-  `dhf/documents/document_control.md`) must pass gap analysis against the
-  shipped checklist. The dogfood direction matters: the same checklist any
-  downstream project can audit with is the one RDM's own record is held to.
-  The controls themselves (review, access, audit trail) are git's and
-  GitHub's, stated in DC-001, not code of this context. Refines UN-006.
-
 ## Design Outputs
 
 **Gap analysis** (`rdm/compliance/gaps.py`), run as `rdm gap` from the composition root

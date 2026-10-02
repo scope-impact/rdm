@@ -39,46 +39,6 @@ and rendered document; a rendered document is output, never source. It is a
 read model: it reads the record through the contexts below it, never changes
 it, and nothing it renders is fed back into it.
 
-## Design Inputs
-
-- **DI-7 (template rendering)** — render a Markdown template against a
-  supplied data context with Jinja2, so a generated data file (e.g.
-  `verification.yml`) populates the document. What the data says belongs to
-  the context that generates it. Refines UN-001.
-- **DI-8 (traceability filters)** — provide `invert_dependencies`, `join_to`
-  and `md_indent`, the filters that build traceability tables. They shape
-  data inside a template and compute no verification status. Refines UN-001.
-- **DI-9 (markdown post-processing)** — auto-number sections, expand declared
-  vocabulary/acronyms, and exclude auditor-only `[[…]]` notes from released
-  output. A project enables each in its configuration. Refines UN-001.
-- **DI-16 (code-snippet collection)** — extract `RDOC … ENDRDOC` delimited
-  snippets from source files, keyed by name, so live code is embedded in
-  documents rather than copied into them. The template decides where a
-  snippet appears. Refines UN-001.
-- **DI-29 (DMR index data)** — `rdm story dmr` generates device-master-record
-  index data from the controlled documents' own frontmatter (one entry per
-  document: id, title, path, revision), so the DMR index is derived from the
-  record rather than hand-maintained — the same generated-not-transcribed
-  rule the traceability matrix follows. The index document that renders it
-  is the project's. Refines UN-012.
-- **DI-64 (verification report, PDF)** — the matrix says *that* a design
-  input is verified; the report shows *what was run* to say so, for a reader
-  who did not run anything: an auditor, a notified body, the pull-request
-  reviewer. It speaks the record's language: a design input is a baseline or
-  risk-based acceptance criterion, a test verifies it through verification
-  steps, and a design input allocated to a risk is a *control for* it, never
-  shown as making the risk controlled until its residual is evaluated
-  acceptable. Its order is the reader's questions: what this is and whether
-  it can be relied on (provenance, DI-65's executor and environment, the
-  evidence status and each reason it is not release-grade, the risk
-  register's proposals and unevaluated residuals); what went wrong (the
-  anomalies); what traces to what; the evidence per design input and run;
-  and how to check it (every result file's SHA-256). Left out: labels the
-  report already shows, runner internals, and the Allure severity label,
-  which reads as a harm's severity and is not one; captured output and the
-  plugin's copy of the requirement are listed by name and SHA-256 only. The
-  report decides nothing; the release gate does. Refines UN-012.
-
 ## Design Outputs
 
 - **Renderer** (`rdm/publishing/render.py`, `rdm render <template> <config> <data…>`)
