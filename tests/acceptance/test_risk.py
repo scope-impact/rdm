@@ -73,6 +73,9 @@ CASES = {
     "no-hazard": ([_risk("RISK-C-1", hazard="")], True, {"risk RISK-C-1 has no hazard"}),
     "no-situation": ([_risk("RISK-C-2", situation=None)], True, {"risk RISK-C-2 has no situation"}),
     "no-harm": ([_risk("RISK-C-3", harm=" ")], True, {"risk RISK-C-3 has no harm"}),
+    # Only text says what the hazard, situation or harm is.
+    "untyped-parts": ([_risk("RISK-C-4", hazard=[], situation={}, harm=0)], True,
+                      {"risk RISK-C-4 has no hazard", "risk RISK-C-4 has no situation", "risk RISK-C-4 has no harm"}),
     "no-category": ([_risk("RISK-B-1", category=None)], True, "needs a category of safety or security"),
     "bad-category": ([_risk("RISK-B-2", category="ops")], True, "needs a category of safety or security (got ops)"),
     "no-stride": ([_risk("RISK-B-3", category="security")], True, "is a security risk with no STRIDE category"),
@@ -89,6 +92,14 @@ CASES = {
                                   {"risk RISK-U-1 has an unacceptable residual level of Block"}),
     "uncontrolled-unaccepted": ([_risk("RISK-U-3", probability="Unlikely", controls=None, residual=None)], True,
                                 "has a residual level of Medium that needs an acceptance"),
+    # Only a control reduces a risk: a residual declared with none is not the residual.
+    "uncontrolled-claimed-residual": ([_risk("RISK-U-4", severity="Critical", probability="Likely", controls=None,
+                                             residual={"severity": "Negligible", "probability": "Rare"})], True,
+                                      {"risk RISK-U-4 has an unacceptable residual level of Block"}),
+    # A control or a link written as one value is that one value.
+    "scalar-control": ([_risk("RISK-U-5", controls="DI-77", linked="RISK-NOPE-9")], True,
+                       {"risk RISK-U-5 names control DI-77, which is not a declared design input",
+                        "risk RISK-U-5 links RISK-NOPE-9, which is not a declared risk"}),
     "undeclared-control": ([_risk("RISK-U-2", controls=["DI-1", "DI-77"])], True,
                            {"risk RISK-U-2 names control DI-77, which is not a declared design input"}),
     "no-residual": ([_risk("RISK-R-1", residual=None)], True, {"risk RISK-R-1 has controls but no residual score"}),
@@ -184,7 +195,8 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
 
 
 # The cases DI-50 owns (the residual decision and status); the rest are DI-44's.
-RESIDUAL_CASES = {"unverified-control", "uncontrolled-unacceptable", "uncontrolled-unaccepted", "block-residual",
+RESIDUAL_CASES = {"unverified-control", "uncontrolled-unacceptable", "uncontrolled-claimed-residual",
+                  "uncontrolled-unaccepted", "block-residual",
                   "unaccepted-medium", "half-accepted-high", "bad-status"}
 
 
@@ -224,6 +236,32 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
         (dhf / "documents" / "risk" / "policy.md").write_text("---\nid: RMP\nrisk_policy: [1, 2]\n---\n")
         gate = run_release_gate(dhf, _results(tmp_path / "anonymous", {"DI-1": ["passed"]}))
         assert any("risk_policy in documents/risk/policy.md" in m for m in gate.blocking)
+
+    with verification_step("A risk document whose risks are not a list of risks blocks, named; its kind in any case"):
+        for name, front in (("mapping", {"risks": {"RISK-M-1": _risk("RISK-M-1")}}),
+                            ("strings", {"risks": ["RISK-M-2"]}),
+                            ("capital-kind", {"kind": "Risk", "risks": [
+                                _risk("RISK-M-3", severity="Critical", probability="Likely", controls=None,
+                                      residual=None)]})):
+            dhf = _dhf(tmp_path / name)
+            _policy(dhf)
+            path = dhf / "documents" / "risk" / "risks.md"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("---\n" + yaml.safe_dump({"id": "RMF", "kind": "risk", **front}) + "---\n")
+            gate = run_release_gate(dhf, _results(tmp_path / name, {"DI-1": ["passed"]}))
+            attach(f"{name} findings", gate.blocking)
+            assert not gate.passed and any("documents/risk/risks.md" in m or "RISK-M-3" in m
+                                           for m in gate.blocking if "risk" in m)
+
+    with verification_step("A policy whose severities are numbers is read"):
+        numeric = {"severities": [1, 2], "probabilities": ["Rare", "Likely"],
+                   "levels": {1: ["Low", "Low"], 2: ["Low", "High"]}, "acceptability": {"Low": "acceptable",
+                                                                                      "High": "unacceptable"}}
+        dhf = _dhf(tmp_path / "numeric")
+        _policy(dhf, numeric)
+        _register(dhf, [_risk("RISK-N-1", severity=2, probability="Likely", residual={"probability": "Rare"})])
+        gate = run_release_gate(dhf, _results(tmp_path / "numeric", {"DI-1": ["passed"], "DI-2": ["passed"]}))
+        assert gate.passed, gate.blocking
 
 
 @allure.story("DI-50")
