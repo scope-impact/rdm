@@ -102,9 +102,9 @@ rdm:TestTagShape a sh:NodeShape ;
 
 # The risk register's release rules (DI-44, DI-45): the same risks the
 # release gate blocks. The residual decision is computed by the gate's own
-# function (rdm/record/risk.py), so the two cannot drift.
+# function (rdm/risk/register.py), so the two cannot drift.
 rdm:RiskShape a sh:NodeShape ;
-    # The risk rules are written once, in rdm/record/risk.py; the projection
+    # The risk rules are written once, in rdm/risk/register.py; the projection
     # carries the release gate's findings on each risk (DI-45), so the shapes
     # block exactly what the gate blocks.
     sh:targetClass rdm:Risk ;

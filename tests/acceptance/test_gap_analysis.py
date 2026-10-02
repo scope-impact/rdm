@@ -115,7 +115,7 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
 
 
 @allure.story("DI-25")
-@allure.label("output", "rdm/checklists/part11_document_control.txt")
+@allure.label("output", "rdm/compliance/checklists/part11_document_control.txt")
 def test_rdm_claims_git_as_its_own_document_control(tmp_path: Path, capsys) -> None:
     """DI-25: the Part 11 document-control checklist ships as a built-in, and
     RDM's own document-control statement passes gap analysis against it."""

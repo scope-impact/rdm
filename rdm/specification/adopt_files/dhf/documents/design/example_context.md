@@ -26,24 +26,21 @@ is drawn where the language changes, not where a workflow stage does.
 
 ## Design Outputs
 
-TODO the implementation that meets the inputs, by component (named as in the
-architecture workspace): what each does and which inputs it meets, by id
-(DI-n) — never restating an input, which the frontmatter states. Name the
-parts of other contexts' inputs this context realises (`realises`).
-
-## Components (C3)
-
-TODO the component view of this context, drawn from the architecture
-workspace (`rdm c4 draw`):
+The design outputs are this context's architecture, in the C4 model of the
+architecture workspace (`rdm c4 draw`): its components, what each is
+responsible for, and how they relate. They name components, never source
+files or functions — the workspace maps each component to its code.
 
 ![Components: TODO-context](../../c4/views/C3_TODO-context.svg)
 
-| Component | Responsibility | Technology | Code |
-|-----------|----------------|------------|------|
+| Component | Responsibility | Meets |
+|-----------|----------------|-------|
 
-TODO the relationships that matter, in words: what each component uses and
-why, in the direction of the arrow. Then the assumptions and open questions,
-if any.
+TODO one row per component of this context: its responsibility, and the
+design inputs it meets, by id. Then the relationships that matter, in words —
+what each component uses and why, in the direction of the arrow — and the
+parts of other contexts' inputs this context realises (`realises`). Then the
+assumptions and open questions, if any.
 
 ### Dynamic view (only when needed)
 
@@ -59,5 +56,4 @@ each step along a relationship the model already declares, and draw it with
 
 TODO the contexts this one depends on, and those that depend on it, against
 the dependency rule of the system architecture (a context imports only the
-contexts below it). Name any import that breaks the rule and the change that
-removes it.
+contexts below it).

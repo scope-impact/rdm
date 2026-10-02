@@ -27,7 +27,7 @@ updates:
 
   # Docker base images
   - package-ecosystem: "docker"
-    directory: "/rdm/init_files"
+    directory: "/rdm/specification/init_files"
     schedule:
       interval: "monthly"
     commit-message:
