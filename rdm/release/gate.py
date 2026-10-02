@@ -36,6 +36,7 @@ DESIGN_CONTROL_UNMET = "Release Blocked / Design Control Unmet"
 NO_DESIGN_INPUTS = "Release Blocked / No Design Inputs"
 INPUT_FAILED = "Release Blocked / Input Failed"
 INPUT_UNTESTED = "Release Blocked / Input Untested"
+UNREADABLE_RESULT = "Release Blocked / Unreadable Result"
 NEED_UNADDRESSED = "Release Blocked / Need Unaddressed"
 RISK_FINDING = "Release Blocked / Risk Finding"
 RISK_WARNING = "Release Warned / Risk Finding"
@@ -82,6 +83,8 @@ def result_events(report: allure.VerificationReport, ids: set[str]) -> list[Even
               for i in report.failed]
     events += [Event(INPUT_UNTESTED, f"design input {i} not verified by any passing Allure test")
                for i in report.untested]
+    events += [Event(UNREADABLE_RESULT, f"result file {name} cannot be read: it could hold a failed run")
+               for name in report.unreadable]
     events += [Event(ORPHAN_TAG, f"Allure result tag {tag} matches no design input")
                for tag in relevant_orphans(report.orphan_ids, ids)]
     return events
@@ -91,7 +94,8 @@ def derive(state: State) -> list[Event]:
     """Every event the rules produce, and the verdict over them:
       1. the design gate passes;
       2. at least one design input is declared;
-      3. every design input is verified by a passing test;
+      3. every design input is verified by a passing test, and every result
+         file can be read;
       4. every user need is addressed by a design input;
       5. no blocking finding of the risk rules (DI-44).
     A user need with no approved validation record (DI-33), a proposed risk

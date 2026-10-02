@@ -28,8 +28,9 @@ import pytest
 from rdm.evidence import allure as allure_ingest
 from rdm.specification import persona
 from rdm.release.verify import build_verification
-from rdm.specification.design_gate import check_design_docs
-from rdm.release.gate import run_release_gate
+from rdm.specification.design_gate import UNREADABLE_FRONTMATTER, check_design_docs, run_design_gate
+from rdm.specification.sdd import design_input_ids
+from rdm.release.gate import INPUT_FAILED, UNREADABLE_RESULT, run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _allure_result
@@ -121,6 +122,23 @@ def test_design_gate_requires_approval(tmp_path: Path) -> None:
         write_design_doc(udocs, "core", design_inputs=(("DI-2", ["UN-002"]),))
         uncommitted = check_design_docs(repo / "dhf")
         assert uncommitted and uncommitted[0].complete and not uncommitted[0].ok
+    with verification_step("a `---` inside a frontmatter value, or a byte-order mark, does not cut the document"):
+        doc = dhf / "documents" / "design" / "core.md"
+        text = doc.read_text().replace(" requirement,", " --- requirement,", 1)
+        doc.write_text("\ufeff" + text)
+        assert design_input_ids(dhf) == {"DI-1"}
+    with verification_step("a Markdown document whose frontmatter cannot be read fails the gate, named"):
+        for name, block in (("not-yaml", "id: X\ntext: shall: alarm\n  bad"), ("not-a-mapping", "- a\n- b"),
+                            ("unclosed", "id: X\n")):
+            broken = dhf / "documents" / f"{name}.md"
+            broken.write_text(f"---\n{block}\n" + ("" if name == "unclosed" else "---\n") + "\nbody\n")
+            _git(dhf.parent, "add", "-A")
+            _git(dhf.parent, "commit", "-m", name)
+            gate = run_design_gate(dhf)
+            attach(f"design gate on {name}", [str(e) for e in gate.events if e.blocking])
+            assert not gate.passed and any(e.name == UNREADABLE_FRONTMATTER and name in e.message
+                                           for e in gate.events)
+            broken.unlink()
 
 
 @allure.story("DI-3")
@@ -145,6 +163,19 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
         gate = run_release_gate(dhf, results)
         attach("release gate blocking", gate.blocking)
         assert gate.passed
+    with verification_step("a result file that cannot be read blocks: it could hold a failed run"):
+        for bad in ('{"status": "failed", "labels": [{"name": "story", "value": "DI-1"', "[]"):
+            (results / "b-result.json").write_text(bad)
+            gate = run_release_gate(dhf, results)
+            attach("release gate blocking", gate.blocking)
+            assert not gate.passed and any(e.name == UNREADABLE_RESULT for e in gate.events)
+        (results / "b-result.json").write_bytes(b'{"name": "\xff"}')
+        assert not run_release_gate(dhf, results).passed
+    with verification_step("a result with a byte-order mark is read, and its failed run counts"):
+        failed = '{"status": "failed", "labels": [{"name": "story", "value": "DI-1"}]}'
+        (results / "b-result.json").write_text("\ufeff" + failed)
+        gate = run_release_gate(dhf, results)
+        assert not gate.passed and [e.name for e in gate.events if e.blocking] == [INPUT_FAILED]
 
 
 @allure.story("DI-4")

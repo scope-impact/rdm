@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.kernel.events import Event
+from rdm.kernel.frontmatter import unreadable_documents
 from rdm.kernel.git import git
 from rdm.kernel.ids import relevant_orphans
 from rdm.specification import tags
@@ -66,6 +67,7 @@ PLACEHOLDERS = "Design Controls Not Approved / Placeholders"
 DOCUMENT_MISSING = "Design Controls Not Approved / Document Missing"
 NO_DESIGN_DOCUMENT = "Design Controls Not Approved / No Design Document"
 DUPLICATE_ID = "Design Controls Not Approved / Duplicate Id"
+UNREADABLE_FRONTMATTER = "Design Controls Not Approved / Unreadable Frontmatter"
 VIEWS_STALE = "Design Controls Not Approved / Views Stale"
 NEED_UNTRACED = "Design Controls Warned / Need Untraced"
 UNKNOWN_NEED = "Design Controls Warned / Unknown Need"
@@ -283,6 +285,15 @@ def check_unique_ids(dhf_dir: Path) -> ArtifactCheck:
                          complete=not events, events=events, uncommitted=False)
 
 
+def check_frontmatter(dhf_dir: Path) -> ArtifactCheck:
+    """Every Markdown document of the DHF has frontmatter that can be read: one
+    that cannot would drop out of every gate and the graph unseen."""
+    events = [Event(UNREADABLE_FRONTMATTER, f"{md.relative_to(dhf_dir)}: {problem}")
+              for md, problem in unreadable_documents(Path(dhf_dir))]
+    return ArtifactCheck(name="Frontmatter", path=Path(dhf_dir),
+                         complete=not events, events=events, uncommitted=False)
+
+
 def check_architecture_views(dhf_dir: Path) -> list[ArtifactCheck]:
     """The architecture workspace and what is drawn from it, current (DI-70) and
     approved (committed, the drawn files with it); none when the DHF has no
@@ -303,7 +314,7 @@ def design_artifacts(dhf_dir: Path) -> list[ArtifactCheck]:
     """The design gate's pass/fail checks: design documents, the design review,
     ids declared once, the architecture's drawn views."""
     return [*check_design_docs(dhf_dir), check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review"),
-            check_unique_ids(dhf_dir), *check_architecture_views(dhf_dir)]
+            check_unique_ids(dhf_dir), check_frontmatter(dhf_dir), *check_architecture_views(dhf_dir)]
 
 
 def run_design_gate(dhf_dir: Path, verification_warnings=None) -> GateResult:

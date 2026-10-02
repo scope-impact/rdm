@@ -18,23 +18,27 @@ from typing import Callable, Iterable, TypeVar
 A = TypeVar("A")
 
 
-def load_json_records(directory: Path, suffix: str, build: Callable[[dict, str], object | None]) -> list:
+def load_json_records(directory: Path, suffix: str, build: Callable[[dict, str], object | None],
+                      unreadable: list[str] | None = None) -> list:
     """Load ``*<suffix>`` JSON files from a directory into records.
 
     Centralizes the glob + safe-decode + dict-check skeleton shared by every
     record ingester (Allure results, persona runs, validation records). For
     each well-formed object, ``build(data, filename)`` returns a record (or
-    ``None`` to skip it). A missing directory yields an empty list.
+    ``None`` to skip it). A missing directory yields an empty list. The name of
+    each file that is not a JSON object is added to ``unreadable`` when given.
     """
     records: list = []
     if not directory.exists():
         return records
     for path in sorted(directory.glob(f"*{suffix}")):
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):  # ValueError: JSON and Unicode decoding alike
+            data = None
         if not isinstance(data, dict):
+            if unreadable is not None:
+                unreadable.append(path.name)
             continue
         record = build(data, path.name)
         if record is not None:

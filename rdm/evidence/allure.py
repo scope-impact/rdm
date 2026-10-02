@@ -75,6 +75,7 @@ class VerificationReport(StatusReportMixin):
     by_id: dict[str, DesignInputVerification] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     results_found: int = 0
+    unreadable: list[str] = field(default_factory=list)  # result files that are not a JSON object
 
     @property
     def verified(self) -> list[str]:
@@ -153,9 +154,10 @@ def _build_result(data: dict, filename: str) -> TestResult:
     )
 
 
-def parse_results(results_dir: Path) -> list[TestResult]:
-    """Parse all ``*-result.json`` files in an Allure results directory."""
-    return load_json_records(results_dir, RESULT_SUFFIX, _build_result)
+def parse_results(results_dir: Path, unreadable: list[str] | None = None) -> list[TestResult]:
+    """Parse all ``*-result.json`` files in an Allure results directory; the
+    names of those that cannot be read are added to ``unreadable``."""
+    return load_json_records(results_dir, RESULT_SUFFIX, _build_result, unreadable)
 
 
 def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
@@ -168,7 +170,8 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
 
     IDs referenced by tests but not declared are returned as orphans.
     """
-    results = parse_results(Path(results_dir))
+    unreadable: list[str] = []
+    results = parse_results(Path(results_dir), unreadable)
 
     def _fold(verification: DesignInputVerification, result: TestResult) -> None:
         verification.tests.append(result.name)
@@ -201,6 +204,7 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
         by_id=by_id,
         orphan_ids=orphan_ids,
         results_found=len(results),
+        unreadable=unreadable,
     )
 
 
