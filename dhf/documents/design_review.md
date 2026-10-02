@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 24
+revision: 25
 title: Design Review — RDM
 ---
 
@@ -706,6 +706,35 @@ DI-45's prose updated for how the risk shapes now agree with the gate.
   Pandoc; the data goes in as JSON rather than markup, so test output cannot
   alter the layout. The package is about 77 MB installed, so it is an extra
   (`report`), not core; without it the bundle says why it has no PDF.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 24 — The verification report, for an auditor
+
+**Scope reviewed:** DI-64 (amended) and DI-65, in the verification context.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The first report, read as an auditor reads a test record (IEC 62304 §5.7
+  and §9.8, 21 CFR 820.30(f), ISO 14971 §7.2): it did not say who or what ran
+  the tests or in what environment; whether the evidence is fit for a release
+  was spread over 54 runs; failures had to be found by paging; risk controls
+  were not shown; and there was no index and no way to check a file against
+  the retained bundle.
+- It also printed what does not help that reader: runner internals (host,
+  thread, framework, language, suite, package), labels repeating the header,
+  the commit and worktree on every run, pages of captured stdout, and the
+  plugin's copy of the requirement text.
+- DI-64 is amended to put the reader's questions first — what is this and
+  can I rely on it, what went wrong, what traces to what — then the evidence
+  per design input, then an appendix of file checksums. The left-out data is
+  kept in the bundle; captured output is listed by checksum.
+- DI-65 has `rdm.pytest_plugin` record the executor and environment in
+  Allure's own files, so the Allure report shows them as well.
 
 ## Findings and actions
 
