@@ -364,43 +364,53 @@ workspace "RDM" "The design record of regulated software." {
   }
   views {
     systemContext rdm_system "C1" {
+      title "RDM: system context (C1)"
       include *
       include reviewer
       autolayout tb
     }
     container rdm_system "C2" {
+      title "RDM: containers (C2)"
       include *
       autolayout tb
     }
     component rdm_cli "C3_specification" {
+      title "Design specification: components (C3)"
       include record_readers utilities design_gate hooks precommit_hook new_input project_scaffold project_templates adoption adoption_templates validation_records formative_usability persona_command allure_reader architecture_model risk_register
       autolayout tb
     }
     component rdm_cli "C3_release" {
+      title "Release: components (C3)"
       include verification_data evidence_bundle reusable_workflow gates_action allure_reader record_readers renderer utilities verification_report
       autolayout tb
     }
     component rdm_cli "C3_test_evidence" {
+      title "Test evidence: components (C3)"
       include allure_reader mutation_probe test_translation result_formatters pytest_plugin design_gate new_input projection record_readers risk_register utilities verification_data verification_report
       autolayout tb
     }
     component rdm_cli "C3_risk" {
+      title "Risk: components (C3)"
       include risk_register design_gate projection pytest_plugin record_readers verification_report
       autolayout tb
     }
     component rdm_cli "C3_architecture" {
+      title "Architecture: components (C3)"
       include architecture_model architecture_drawing design_gate projection
       autolayout tb
     }
     component rdm_cli "C3_compliance" {
+      title "Compliance: components (C3)"
       include gap_analysis checklists projection
       autolayout tb
     }
     component rdm_cli "C3_publishing" {
+      title "Publishing: components (C3)"
       include renderer markdown_extensions snippets dmr_index verification_report report_layout pdf_action allure_reader evidence_bundle record_readers risk_register utilities verification_data
       autolayout tb
     }
     component rdm_cli "C3_graph" {
+      title "Knowledge graph: components (C3)"
       include projection vocabulary gate_shapes shacl_validation explorer_file agent_server allure_reader architecture_model gap_analysis record_readers risk_register
       autolayout tb
     }
