@@ -1335,6 +1335,26 @@ skipped: a truncated result of a failed run let the release pass.
 - The release gate blocks when a result file in the results it is given
   cannot be read as a JSON object (event *Unreadable Result*).
 
+# Design Review 45 — The risk rules over what a register really says
+
+**Scope reviewed:** the risk register's rules (DI-44 amended, DI-50).
+
+**Disposition:** Approved.
+
+The exploratory test found the risk rules passing registers they should
+block:
+
+- A risk with no controls that declared a lower residual was evaluated at
+  that residual, so a Critical × Likely risk passed. Only a control reduces
+  a risk: with none, the residual is the initial risk (DI-50's own words).
+- A risk document whose `risks` was not a list of mappings, or whose kind was
+  written `Risk`, was left out with no finding. DI-44 now blocks on it
+  (*Malformed Register*), and the kind is read in any case.
+- A hazard, situation or harm written as a list, a mapping or a number
+  counted as given; only text counts.
+- A policy whose severities are numbers was refused as malformed, and a
+  control or link written as one value was read one character at a time.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

@@ -7,7 +7,7 @@ design_inputs:
     text: "RDM shall read the risk register from the frontmatter of kind: risk documents — for each risk its id, category (safety or security), STRIDE category for a security risk, linked risks, hazard, situation, harm, severity, probability, controls (design input ids), residual severity and probability (severity defaults to the initial one), acceptance (who and why) and status (proposed or approved) — and evaluate each risk only against a risk policy the project declares (severities, probabilities, a level for each pair, and for each level whether it is acceptable, acceptable only with a recorded justification, or unacceptable), shipping no default policy."
     traces_to: [UN-016]
   - id: DI-44
-    text: "The release gate shall block when the register has risks and no risk policy is declared, and on a risk id declared twice or missing, an empty hazard, situation or harm, a missing or unknown category, a security risk without a STRIDE category, a link to an undeclared risk, a severity or probability the policy does not define, a recorded level other than the policy's, a control that is not a declared design input, or controls with no residual score."
+    text: "The release gate shall block when the register has risks and no risk policy is declared, and on a risk document whose risks are not a list of risks, a risk id declared twice or missing, an empty hazard, situation or harm, a missing or unknown category, a security risk without a STRIDE category, a link to an undeclared risk, a severity or probability the policy does not define, a recorded level other than the policy's, a control that is not a declared design input, or controls with no residual score."
     traces_to: [UN-016, UN-003]
   - id: DI-50
     text: "The release gate shall block a risk whose residual is not evaluated because a control has no passing test, whose residual — the initial risk when nothing controls it — the policy calls unacceptable, or that the policy accepts only with justification and no acceptance saying who accepted it and why; a proposed risk or policy shall be a warning."
@@ -73,14 +73,20 @@ The rules the Risk register applies, which a reviewer needs to judge it:
   document, and the register is not checked further until it is fixed. The
   policy's status is its document's; an unapproved policy is a warning.
 - **Evaluation.** With no policy no risk is evaluated, and a register with
-  risks blocks. A risk with no controls and no residual score keeps its
-  initial risk as its residual risk. A risk's status is its own, else its
+  risks blocks. A risk with no controls keeps its initial risk as its
+  residual risk, whatever residual it declares: only a control reduces a
+  risk. A hazard, situation or harm is text; anything else is empty. A
+  control or a link written as one value, not a list, is that one value.
+  The policy's severities may be numbers as well as names. A risk's status is its own, else its
   document's.
 - **The residual decision** is one of: *not evaluated* (no policy, no
   residual level, or a control without a passing test), *acceptable*,
   *accepted* (a level the policy accepts only with justification, with who
   accepted it and why), *needs acceptance*, or *unacceptable*. Only
   acceptable and accepted let a release through.
+- **The register.** A document of kind `risk` (in any case) holds its risks
+  as a list of mappings; any other shape is a blocking finding naming the
+  document, never a register silently left out.
 - **The findings** are every refusal of DI-44 and DI-50, and also a risk
   whose status is neither proposed nor approved, which blocks. A proposed
   risk or policy is a warning. The Risk register is the one place these
@@ -121,7 +127,7 @@ fail event (the rule broken, after the slash), which affects the entity.
 
 | Actor | Command | Success event | Fail events | Entity |
 |-------|---------|---------------|-------------|--------|
-| The release gate | Assess risks | Risk Evaluated | Not Evaluated / No Policy · Incomplete · Control Unverified · Residual Unacceptable | Risk register |
+| The release gate | Assess risks | Risk Evaluated | Not Evaluated / No Policy · Malformed Register · Incomplete · Control Unverified · Residual Unacceptable | Risk register |
 
 ## Dependencies
 
