@@ -1183,6 +1183,29 @@ Each table keeps the commands a reviewer needs and at most four fail events
 per command, the rules a reviewer thinks in. The full list of rules stays
 where it is checked: the code and its tests.
 
+# Design Review 37 — The release gate names its events
+
+**Scope reviewed:** the release gate's design; the verification data's
+orphan tags. No design input changed.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The release gate is the first command to name its events in the code
+  (Design Review 35's action), in the workshop's shape: it fetches the state
+  it needs once, derives every event by its rules, and returns them. Each
+  rule returns a named event (*Release Blocked / Input Untested* and the rest
+  of `release.md`'s *Commands and events*) carrying the message printed
+  today; the verdict, *Release Permitted*, is a conclusion over all of them.
+  What the gate blocks and what it prints are unchanged.
+- The rules take the fetched state, never files, so each can be tested
+  without building a DHF.
+- The verification data lists only the orphan tags the gates report (those
+  sharing a declared id's prefix): it listed every undeclared tag, so the
+  traceability matrix and the verification report could flag a tag the gates
+  ignore.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
