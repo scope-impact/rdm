@@ -1,13 +1,18 @@
 name: 'RDM PDF Generator'
-description: 'Generate regulatory PDFs with RDM + Pandoc + Typst'
+description: >-
+  Render a repository's regulatory documents to PDF with RDM, Pandoc and
+  Typst, in the RDM image of the release this action is pinned to (DI-63).
 
 inputs:
   dhf_path:
     description: 'Path to DHF directory'
     default: 'dhf'
   version:
-    description: 'RDM image version'
-    default: 'latest'
+    description: >-
+      RDM image tag. Defaults to the release this action is pinned to
+      (uses: scope-impact/rdm@v1.2.0 renders with image 1.2.0), and to
+      latest when it is pinned to a branch or a sha.
+    default: ''
   artifact_name:
     description: 'Name for the uploaded artifact'
     default: 'regulatory-documents'
@@ -17,12 +22,19 @@ runs:
   steps:
     - name: Generate PDFs
       shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        ACTION_REF: ${{ github.action_ref }}
       run: |
+        if [ -z "$VERSION" ]; then
+          if [[ "$ACTION_REF" =~ ^v[0-9] ]]; then VERSION="${ACTION_REF#v}"; else VERSION=latest; fi
+        fi
+        echo "RDM image: ghcr.io/scope-impact/rdm:$VERSION"
         docker run --rm \
           -v "${{ github.workspace }}:/project" \
           -w "/project/${{ inputs.dhf_path }}" \
           --entrypoint make \
-          ghcr.io/scope-impact/rdm:${{ inputs.version }} \
+          "ghcr.io/scope-impact/rdm:$VERSION" \
           pdfs
 
     - name: Upload PDFs

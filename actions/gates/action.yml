@@ -1,0 +1,91 @@
+name: 'RDM gates'
+description: >-
+  Run RDM's design controls on a repository's record: design gate, verify,
+  release gate, graph validation and the release evidence bundle (DI-63).
+  RDM is installed from the revision this action is pinned to, never by name
+  from a package index.
+
+inputs:
+  dhf:
+    description: 'Path to the design history file'
+    default: 'dhf'
+  allure-results:
+    description: 'Allure results of the acceptance tests (run them before this action)'
+    default: 'dhf/allure-results'
+  release-gate:
+    description: 'Run the release gate (false while the record has no design input yet)'
+    default: 'true'
+  graph-validate:
+    description: 'Run rdm graph validate (the gate rules as SHACL, with graph-only warnings)'
+    default: 'true'
+  checklists:
+    description: 'Checklists the documents are held to, space-separated (built-in names or files)'
+    default: ''
+  evidence-bundle:
+    description: 'Write the release evidence bundle and upload it as an artifact'
+    default: 'true'
+  artifact-name:
+    description: 'Name of the uploaded evidence artifact'
+    default: 'rdm-evidence'
+  install-rdm:
+    description: "Install RDM from this action's revision (false when the caller already did, from the same revision)"
+    default: 'true'
+  python-version:
+    description: 'Python that runs RDM'
+    default: '3.12'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: astral-sh/setup-uv@v7
+      if: inputs.install-rdm == 'true'
+
+    - name: Install RDM from this action's revision
+      if: inputs.install-rdm == 'true'
+      shell: bash
+      run: |
+        uv tool install --python "${{ inputs.python-version }}" \
+          "rdm[graph] @ file://$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        rdm --version
+
+    - name: Design gate
+      shell: bash
+      run: rdm story design-gate --dhf "${{ inputs.dhf }}"
+
+    - name: Verification data
+      if: hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.dhf }}/data"
+        rdm story verify --dhf "${{ inputs.dhf }}" --allure-results "${{ inputs.allure-results }}" \
+          -o "${{ inputs.dhf }}/data/verification.yml"
+
+    - name: Release gate
+      if: inputs.release-gate == 'true'
+      shell: bash
+      run: rdm story release-gate --dhf "${{ inputs.dhf }}" --allure-results "${{ inputs.allure-results }}"
+
+    - name: Graph validation
+      if: inputs.graph-validate == 'true'
+      shell: bash
+      run: |
+        args=()
+        for checklist in ${{ inputs.checklists }}; do args+=(--checklist "$checklist"); done
+        results=()
+        [ -d "${{ inputs.allure-results }}" ] && results=(--allure-results "${{ inputs.allure-results }}")
+        rdm graph validate --dhf "${{ inputs.dhf }}" "${results[@]}" "${args[@]}"
+
+    - name: Release evidence bundle
+      if: inputs.evidence-bundle == 'true' && hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
+      shell: bash
+      run: |
+        rdm story evidence-bundle --dhf "${{ inputs.dhf }}" --allure-results "${{ inputs.allure-results }}" \
+          -o "${{ runner.temp }}/rdm-evidence"
+
+    - name: Upload the evidence bundle
+      if: inputs.evidence-bundle == 'true' && hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/rdm-evidence
+        if-no-files-found: error

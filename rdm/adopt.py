@@ -18,8 +18,14 @@ import shutil
 from importlib.resources import as_file, files
 from pathlib import Path
 
+from rdm.version import __version__
+
 # Paths that must be executable at the destination.
 _EXECUTABLE = {"scripts/agent-bootstrap.sh", ".githooks/pre-commit"}
+
+# The CI workflow calls RDM's reusable gates pinned to this RDM's version
+# (DI-63): the record is gated by the release that adopted it.
+_PINNED = {".github/workflows/design-controls.yml"}
 
 NEXT_STEPS = """\
 Next steps (see dhf/AGENT_WORKFLOW.md for the full loop):
@@ -29,8 +35,8 @@ Next steps (see dhf/AGENT_WORKFLOW.md for the full loop):
      context and fill it in -- the design gate stays red until the record is
      written and committed (that commit is the approval)
   4. Declare your first design input: rdm story new-input --dhf dhf --list
-  5. Uncomment the remaining CI steps in .github/workflows/design-controls.yml
-     once that first design input is verified\
+  5. Set acceptance-tests and release-gate to true in
+     .github/workflows/design-controls.yml once that first design input is verified\
 """
 
 
@@ -42,6 +48,8 @@ def _copy_if_absent(src: Path, dest: Path, rel: str,
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
+    if rel in _PINNED:
+        dest.write_text(src.read_text().replace("{rdm_version}", __version__))
     if rel in _EXECUTABLE:
         dest.chmod(dest.stat().st_mode | 0o755)
     copied.append(rel)

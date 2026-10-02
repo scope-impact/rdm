@@ -217,7 +217,8 @@ def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> No
         bootstrap = repo / "scripts" / "agent-bootstrap.sh"
         assert os.access(bootstrap, os.X_OK)
         assert "agent-bootstrap" in (repo / ".claude" / "settings.json").read_text()
-        assert "rdm story design-gate" in (repo / ".github" / "workflows" / "design-controls.yml").read_text()
+        workflow = (repo / ".github" / "workflows" / "design-controls.yml").read_text()
+        assert "scope-impact/rdm/.github/workflows/gates.yml@v" in workflow
 
     with clause("Pre-existing files are skipped, never overwritten — and reported"):
         assert (repo / "dhf" / "README.md").read_text() == sentinel

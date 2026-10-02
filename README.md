@@ -138,14 +138,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: scope-impact/rdm@v1
+      - uses: scope-impact/rdm@v1.2.0
 ```
 
 | Input | Description | Default |
 | --- | --- | --- |
 | `dhf_path` | Path to the DHF directory | `dhf` |
-| `version` | RDM Docker image version | `latest` |
+| `version` | RDM Docker image version | the action's release (`@v1.2.0` → `1.2.0`), else `latest` |
 | `artifact_name` | Name for the uploaded artifact | `regulatory-documents` |
+
+The gates are reusable too: call
+`scope-impact/rdm/.github/workflows/gates.yml@v1.2.0` (tests, design gate,
+verify, release gate, graph validation, evidence bundle), or add
+`scope-impact/rdm/actions/gates@v1.2.0` after your own tests. Both install RDM
+from the pinned revision. See [the gates in your CI](docs/reusable-ci.md).
 
 ## Dependencies
 

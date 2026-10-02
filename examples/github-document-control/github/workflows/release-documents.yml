@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
       - name: Install rdm + pandoc
         run: |
-          pip install rdm
+          pip install "rdm @ git+https://github.com/scope-impact/rdm@v1.2.0"   # not PyPI's rdm, another project
           sudo apt-get update && sudo apt-get install -y pandoc
       - name: Render controlled documents (human-readable copies)
         run: |

@@ -6,11 +6,18 @@ on:
     paths:
       - 'rdm/init_files/**'
       - 'rdm/**/*.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'action.yml'
       - '.github/workflows/test-pdf-generation.yml'
   pull_request:
     paths:
       - 'rdm/init_files/**'
       - 'rdm/**/*.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'action.yml'
+      - '.github/workflows/test-pdf-generation.yml'
   workflow_dispatch:
 
 env:

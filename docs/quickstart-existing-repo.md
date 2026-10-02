@@ -17,7 +17,7 @@ What lands:
 | `dhf/AGENT_WORKFLOW.md` | the end-to-end change procedure (humans and AI agents) |
 | `.githooks/pre-commit` | the local design gate: implementation commits are blocked until the design record is approved |
 | `.claude/settings.json` + `scripts/agent-bootstrap.sh` | agent sessions activate the gate automatically |
-| `.github/workflows/design-controls.yml` | CI: design gate active immediately; the remaining gates ship commented until your first design input lands |
+| `.github/workflows/design-controls.yml` | CI: calls RDM's [reusable gates workflow](reusable-ci.md) pinned to this RDM's release; the design gate runs immediately, the tests and the release gate once you set `acceptance-tests` and `release-gate` to `true` |
 
 The templates deliberately contain placeholder markers, so the design gate
 stays **red until you write and commit your actual record** — that is the

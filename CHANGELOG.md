@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added — RDM's gates as reusable CI
+- A reusable workflow (`.github/workflows/gates.yml`) runs a repository's
+  acceptance tests, then the design gate, verify, the release gate, graph
+  validation and the evidence bundle. A composite action (`actions/gates`)
+  runs the same gates in a workflow of your own. Both install RDM from the
+  pinned revision, not a package index (DI-63).
+- The workflow `rdm adopt` lays down calls the reusable workflow pinned to the
+  installed RDM's version. RDM's own CI calls it pinned to the commit under test.
+- The PDF action renders with the image of the release it is pinned to.
+- CI: tests on Python 3.10–3.13 for pushes to main and for pull requests; a
+  multi-arch Docker image (amd64, arm64) with provenance and SBOM; Dependabot
+  for uv; a pinned Allure CLI.
+
 ### Changed — dependencies upgraded
 - Docker image: Ubuntu 26.04 LTS instead of Alpine, Pandoc 3.6.1 → 3.12,
   Typst 0.12.0 → 0.15.1, Inter 4.0 → 4.1; RDM installed with the `graph`

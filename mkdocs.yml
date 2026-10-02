@@ -78,6 +78,7 @@ nav:
   - Gates:
       - The gates: gates.md
       - Gap analysis: gap-analysis.md
+      - The gates in your CI: reusable-ci.md
       - Checklist format: checklist-format.md
       - Usability validation (formative): ai-persona-usability-validation.md
   - Graph:
