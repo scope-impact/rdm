@@ -26,13 +26,15 @@ rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verifica
 
 # Traceability matrix
 
+Runs: passed / failed / skipped.
+
 {% for group in verification.groups %}
 ## {{ group.user_need }}
 
-| Design Input | Status | Passed | Failed | Skipped | Verifying tests | Output |
-| --- | --- | --- | --- | --- | --- | --- |
+| Input | Status | Runs | Verifying tests | Output |
+| ------------ | ------------ | ---------- | ------------------------------------ | ---------------------------- |
 {%- for di in group.design_inputs %}
-| {{ di.design_input }} | {{ di.status }} | {{ di.passed }} | {{ di.failed }} | {{ di.skipped }} | {{ di.tests|join(', ') if di.tests else '—' }} | {{ di.outputs|join(', ') if di.outputs else '—' }} |
+| {{ di.design_input }} | {{ di.status }} | {{ di.passed }}/{{ di.failed }}/{{ di.skipped }} | {{ di.tests|join(', ') if di.tests else '—' }} | {{ di.outputs|join(', ') if di.outputs else '—' }} |
 {%- endfor %}
 {% endfor %}
 

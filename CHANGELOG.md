@@ -9,6 +9,14 @@
   their level and are numbered from 1.
 - A title's em dash printed as `---`: the template quoted Pandoc's Typst markup
   as a string. It now passes the title as content.
+- A long table ran over the footer, its last rows printed on top of each other:
+  Pandoc wraps a table in a figure, which does not break across pages. Tables
+  now continue on the next page.
+- Inline code was boxed, so a long path or name could not wrap and ran into the
+  next table column; identifiers and paths now also break after `/` and `_`.
+- The cover title is no longer justified, which spread a short line wide.
+- The traceability matrix has five columns, with most of the width for the
+  tests and outputs (in `rdm adopt`'s template and the example as well).
 
 ### Changed — the worked example uses all of RDM
 - `examples/github-document-control/` is laid out as `rdm init` and

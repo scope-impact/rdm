@@ -106,14 +106,12 @@
   }
 
   // Inline code
-  show raw.where(block: false): it => {
-    box(
-      fill: light,
-      inset: (x: 0.3em, y: 0.1em),
-      radius: 2pt,
-      it
-    )
-  }
+  // highlight, not box: a box cannot break, so a long path or name ran into the
+  // next table column
+  show raw.where(block: false): it => highlight(fill: light, extent: 0.15em, radius: 2pt, it)
+
+  // Identifiers and paths may break after / and _ (test names, file paths in tables)
+  show regex("[/_]"): it => it + sym.zws
 
   // Tables
   set table(
@@ -129,6 +127,9 @@
   // Override Pandoc's centered figure wrapper for tables
   show figure.where(kind: table): set figure(placement: none)
   show figure.where(kind: table): set align(left)
+  // A figure does not break across pages by default, so a long table ran over
+  // the footer; let it continue on the next page
+  show figure.where(kind: table): set block(breakable: true)
 
   // Lists
   set list(marker: text(fill: accent)[•])
@@ -141,7 +142,7 @@
     #v(6cm)
 
     // Title
-    #text(size: 32pt, weight: "bold", fill: scope)[#title]
+    #par(justify: false, text(size: 32pt, weight: "bold", fill: scope)[#title])
 
     #v(1.5cm)
 
