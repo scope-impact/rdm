@@ -19,6 +19,7 @@ import re
 import textwrap
 from pathlib import Path
 
+from rdm.kernel.ids import sort_key
 from rdm.specification.tags import find_tests_dir
 from rdm.specification.sdd import (
     context_of,
@@ -75,12 +76,8 @@ def _workflow_pointer(dhf_dir: Path) -> str:
 
 def next_design_input_id(dhf_dir: Path) -> str:
     """Allocate the next unused DI-n across every design document in the DHF."""
-    highest = 0
-    for di_id in design_input_ids(dhf_dir):
-        match = _DI_NUMBER.match(di_id)
-        if match:
-            highest = max(highest, int(match.group(1)))
-    return f"DI-{highest + 1}"
+    numbers = (_DI_NUMBER.match(di_id) for di_id in design_input_ids(dhf_dir))
+    return f"DI-{max((int(m.group(1)) for m in numbers if m), default=0) + 1}"
 
 
 def docs_by_context(dhf_dir: Path) -> dict[str, Path]:
@@ -90,7 +87,7 @@ def docs_by_context(dhf_dir: Path) -> dict[str, Path]:
 
 def _yaml_quote(text: str) -> str:
     """Double-quote a string for inline YAML."""
-    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    return f'"{_docstring_escape(text)}"'
 
 
 def _docstring_escape(text: str) -> str:
@@ -171,11 +168,7 @@ def write_stub_test(test_file: Path, di_id: str, text: str, context: str) -> Non
 def _print_inventory(dhf_dir: Path) -> None:
     """Read-only discovery: contexts, taken DI ids, next free id, user needs."""
     contexts = docs_by_context(dhf_dir)
-    def _number(di_id: str) -> int:
-        match = _DI_NUMBER.match(di_id)
-        return int(match.group(1)) if match else 0
-
-    taken = sorted(design_input_ids(dhf_dir), key=_number)
+    taken = sorted(design_input_ids(dhf_dir), key=sort_key)
     print(f"DHF: {dhf_dir}\n")
     print("Contexts (kind: design):")
     for name, doc in sorted(contexts.items()):
@@ -235,6 +228,6 @@ def story_new_input_command(
     print(f"  design input -> {doc}")
     print(f"  stub test    -> {test_file}  (fails until implemented, by design)")
     print()
-    print(CHECKLIST.format(di_id=di_id, doc=doc.name, test_file=test_file, dhf=dhf.name,
+    print(CHECKLIST.format(di_id=di_id, doc=doc.name, test_file=test_file,
                            workflow=_workflow_pointer(dhf)))
     return 0

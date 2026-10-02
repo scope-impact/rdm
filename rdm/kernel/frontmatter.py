@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 from functools import lru_cache
 from pathlib import Path
+from typing import Iterator
 
 import yaml
 
@@ -41,3 +42,10 @@ def frontmatter_of(path: Path) -> dict:
         return parse_frontmatter(path.read_text(encoding="utf-8", errors="ignore"))
     except OSError:
         return {}
+
+
+def documents(dhf_dir: Path) -> Iterator[tuple[Path, dict]]:
+    """Every Markdown document under a DHF, in path order, with its frontmatter:
+    the one walk of the record every reader shares."""
+    for md in sorted(Path(dhf_dir).rglob("*.md")):
+        yield md, frontmatter_of(md)

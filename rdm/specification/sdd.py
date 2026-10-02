@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rdm.kernel.frontmatter import frontmatter_of
+from rdm.kernel.frontmatter import documents, frontmatter_of
 
 # The traceability-matrix template: an output, rendered from the record, never
 # part of it (DI-58) — the graph leaves it out, the evidence bundle renders it.
@@ -44,6 +44,15 @@ def find_dhf_doc(dhf_dir: Path, basename: str) -> Path | None:
     return matches[0] if matches else None
 
 
+def _entry_id(item) -> str:
+    """The id of a frontmatter list entry: an ``{id: ...}`` mapping or a bare id."""
+    return str(item.get("id", "") if isinstance(item, dict) else item).strip()
+
+
+def _context(front: dict, path: Path) -> str:
+    return str(front.get("context", "")).strip() or path.stem
+
+
 def user_needs_from_doc(doc_path: Path) -> set[str]:
     """Return user-need IDs from a document's frontmatter ``user_needs`` list.
 
@@ -51,18 +60,12 @@ def user_needs_from_doc(doc_path: Path) -> set[str]:
     from any document's frontmatter. Accepts both ``{id, text}`` mappings and
     bare string IDs.
     """
-    if not doc_path.exists():
-        return set()
-    value = frontmatter_of(doc_path).get("user_needs")
-    if not isinstance(value, list):
-        return set()
-    ids: set[str] = set()
-    for item in value:
-        if isinstance(item, dict) and str(item.get("id", "")).strip():
-            ids.add(str(item["id"]).strip())
-        elif not isinstance(item, dict) and str(item).strip():
-            ids.add(str(item).strip())
-    return ids
+    return _user_needs(frontmatter_of(doc_path))
+
+
+def _user_needs(front: dict) -> set[str]:
+    value = front.get("user_needs")
+    return {i for i in map(_entry_id, value) if i} if isinstance(value, list) else set()
 
 
 def find_design_docs(dhf_dir: Path) -> list[Path]:
@@ -72,18 +75,12 @@ def find_design_docs(dhf_dir: Path) -> list[Path]:
     ``kind: design``. There is one such document per bounded context; it holds
     both the design inputs it owns and the design-output prose.
     """
-    found: list[Path] = []
-    for md in dhf_dir.rglob("*.md"):
-        if frontmatter_of(md).get("kind") == DESIGN_KIND:
-            found.append(md)
-    return sorted(found)
+    return [md for md, front in documents(dhf_dir) if front.get("kind") == DESIGN_KIND]
 
 
 def context_of(path: Path) -> str:
     """The bounded-context name a design document declares (or its filename)."""
-    context = str(frontmatter_of(path).get("context", "")).strip()
-    return context or path.stem
-
+    return _context(frontmatter_of(path), path)
 
 
 def registry_user_needs(dhf_dir: Path) -> set[str]:
@@ -92,10 +89,7 @@ def registry_user_needs(dhf_dir: Path) -> set[str]:
     Per ADR 0001 the registry lives in the V&V plan, but this finds it wherever
     it is authored.
     """
-    ids: set[str] = set()
-    for md in dhf_dir.rglob("*.md"):
-        ids |= user_needs_from_doc(md)
-    return ids
+    return set().union(*(_user_needs(front) for _, front in documents(dhf_dir)))
 
 
 def declarations(dhf_dir: Path) -> dict[str, list[str]]:
@@ -103,15 +97,13 @@ def declarations(dhf_dir: Path) -> dict[str, list[str]]:
     DHF) of each declaration — one entry per declaration, so an id declared
     twice in one document lists that document twice (DI-46)."""
     found: dict[str, list[str]] = {}
-    for md in sorted(Path(dhf_dir).rglob("*.md")):
-        front = frontmatter_of(md)
+    for md, front in documents(dhf_dir):
         where = str(md.relative_to(dhf_dir))
         entries = list(front.get("user_needs") or [])
         if front.get("kind") == DESIGN_KIND:
             entries += list(front.get("design_inputs") or [])
         for item in entries:
-            ident = str(item.get("id", "") if isinstance(item, dict) else item).strip()
-            if ident:
+            if ident := _entry_id(item):
                 found.setdefault(ident, []).append(where)
     return found
 
@@ -124,11 +116,11 @@ def duplicate_declarations(dhf_dir: Path) -> dict[str, list[str]]:
 def user_need_texts(dhf_dir: Path) -> dict[str, str]:
     """Each registered user need's text, where its ``{id, text}`` entry gives one."""
     texts: dict[str, str] = {}
-    for md in sorted(dhf_dir.rglob("*.md")):
-        value = frontmatter_of(md).get("user_needs")
+    for _, front in documents(dhf_dir):
+        value = front.get("user_needs")
         for item in value if isinstance(value, list) else []:
-            if isinstance(item, dict) and str(item.get("id", "")).strip() and item.get("text"):
-                texts.setdefault(str(item["id"]).strip(), str(item["text"]).strip())
+            if isinstance(item, dict) and _entry_id(item) and item.get("text"):
+                texts.setdefault(_entry_id(item), str(item["text"]).strip())
     return texts
 
 
@@ -143,16 +135,15 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
     """
     inputs: list[dict] = []
     seen: set[str] = set()
-    for doc in find_design_docs(dhf_dir):
-        front = frontmatter_of(doc)
+    for doc, front in documents(dhf_dir):
         value = front.get("design_inputs")
-        if not isinstance(value, list):
+        if front.get("kind") != DESIGN_KIND or not isinstance(value, list):
             continue
-        context = str(front.get("context", "")).strip() or doc.stem  # as context_of, without a re-read
+        context = _context(front, doc)
         for item in value:
             if not isinstance(item, dict):
                 continue
-            di_id = str(item.get("id", "")).strip()
+            di_id = _entry_id(item)
             if not di_id or di_id in seen:
                 continue
             seen.add(di_id)
@@ -181,10 +172,8 @@ def realises_by_context(dhf_dir: Path) -> dict[Path, set[str]]:
     introduces a new input on its own.
     """
     refs: dict[Path, set[str]] = {}
-    for doc in find_design_docs(dhf_dir):
-        value = frontmatter_of(doc).get("realises")
-        if isinstance(value, list):
-            refs[doc] = {str(v).strip() for v in value if str(v).strip()}
-        else:
-            refs[doc] = set()
+    for doc, front in documents(dhf_dir):
+        if front.get("kind") == DESIGN_KIND:
+            value = front.get("realises")
+            refs[doc] = {i for i in map(_entry_id, value) if i} if isinstance(value, list) else set()
     return refs

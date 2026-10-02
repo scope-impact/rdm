@@ -39,7 +39,6 @@ class PersonaRun:
     user_need: str
     outcome: str
     usability_issues: list[dict] = field(default_factory=list)
-    source: str = ""
 
 
 @dataclass
@@ -51,7 +50,6 @@ class NeedValidation:
     runs: int = 0
     failures: int = 0
     issues: list[dict] = field(default_factory=list)
-    personas: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -89,7 +87,6 @@ def _build_run(data: dict, filename: str) -> PersonaRun | None:
         user_need=uid,
         outcome=str(data.get("outcome", "")).lower(),
         usability_issues=[i for i in issues if isinstance(i, dict)],
-        source=filename,
     )
 
 
@@ -110,8 +107,6 @@ def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
 
     def _fold(need: NeedValidation, run: PersonaRun) -> None:
         need.runs += 1
-        if run.persona and run.persona not in need.personas:
-            need.personas.append(run.persona)
         need.issues.extend(run.usability_issues)
         if run.outcome in _FAILURE_OUTCOMES:
             need.failures += 1

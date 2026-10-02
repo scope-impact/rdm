@@ -9,15 +9,18 @@ Whether the test then *passed* is test evidence (``rdm.evidence.allure``).
 from __future__ import annotations
 
 import ast
+import fnmatch
+import os
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from rdm.kernel.git import repo_root
 from rdm.kernel.ids import is_id
 
 # Matches @allure.story("ID"): only the story names a design input. Single
-# home for the pattern; group(2) is the ID.
-ALLURE_PATTERN = re.compile(r'@allure\.(story)\(["\']([^"\']+)["\']\)')
+# home for the pattern; group(1) is the ID.
+ALLURE_PATTERN = re.compile(r'@allure\.story\(["\']([^"\']+)["\']\)')
 
 # The Allure label that names a design input (the result-file counterpart of
 # ALLURE_PATTERN).
@@ -81,30 +84,38 @@ TEST_FILE_GLOBS = (
 # (no decorator @), and Java annotations `@Story("…")`. Only the story names a
 # design input; a feature carries the bounded context (DI-57).
 POLYGLOT_TAG_PATTERNS = (
-    re.compile(r'(?<!@)\ballure\.(story)\(\s*["\']([^"\']+)["\']'),
-    re.compile(r'@(Story)\(\s*"([^"]+)"'),
+    re.compile(r'(?<!@)\ballure\.story\(\s*["\']([^"\']+)["\']'),
+    re.compile(r'@Story\(\s*"([^"]+)"'),
 )
-
-# What a design-input / story id looks like. Kept deliberately narrow so
-# ordinary Ansible tags (`bootstrap`, `security`) are not mistaken for ids.
 
 # Ansible carries the id in the task's own tag list -- `tags: [DI-5]`, or a
 # block/YAML-list form -- so the whole list is captured and split downstream.
 YAML_TAG_PATTERN = re.compile(r"^\s*tags:\s*(?:\[([^\]]*)\]|(\S.*))?$", re.M)
 
+# One walk, every glob at once (the globs stay the source of truth).
+_TEST_FILE = re.compile("|".join(fnmatch.translate(g) for g in TEST_FILE_GLOBS))
+
+
 def iter_test_files(tests_dir: Path):
-    """Every conventional test file under ``tests_dir``, one ecosystem at a time.
+    """Every conventional test file under ``tests_dir``, in one walk.
 
     The single source of truth for "what counts as a test file" -- callers must
     not re-glob, because a second, narrower glob elsewhere is how the audit came
     to disagree with the Allure ingest about which files exist.
     """
-    seen: set[Path] = set()
-    for pattern in TEST_FILE_GLOBS:
-        for path in tests_dir.rglob(pattern):
-            if path not in seen:
-                seen.add(path)
-                yield path
+    for directory, _, names in os.walk(tests_dir):
+        for name in names:
+            if _TEST_FILE.fullmatch(name):
+                yield Path(directory) / name
+
+
+def _sources(tests_dir: Path):
+    """Each test file and its text, in path order; an unreadable one is skipped."""
+    for test_file in sorted(iter_test_files(tests_dir)):
+        try:
+            yield test_file, test_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
 
 
 
@@ -123,7 +134,7 @@ def _tag_ids_in(path: Path, content: str) -> list[str]:
         return ids
     ids: list[str] = []
     for pattern in POLYGLOT_TAG_PATTERNS:
-        ids.extend(m.group(2) for m in pattern.finditer(content))
+        ids.extend(m.group(1) for m in pattern.finditer(content))
     return ids
 
 
@@ -153,15 +164,41 @@ def _python_tag_ids(content: str) -> list[str]:
     and classes, and a module-level ``pytestmark`` -- never text inside strings
     or comments, so a test that writes fixture files does not claim their ids.
     A file that does not parse falls back to the decorator pattern."""
-    try:
-        tree = ast.parse(content)
-    except (SyntaxError, ValueError):
-        return [m.group(2) for m in ALLURE_PATTERN.finditer(content)]
+    tree = _parse(content)
+    if tree is None:
+        return [m.group(1) for m in ALLURE_PATTERN.finditer(content)]
     ids = _module_marks(tree)
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            ids.extend(tag for tag in map(_allure_tag, node.decorator_list) if tag)
+    for node in _definitions(tree):
+        ids.extend(tag for tag in map(_allure_tag, node.decorator_list) if tag)
     return ids
+
+
+@lru_cache(maxsize=1024)
+def _parse(content: str) -> ast.Module | None:
+    """A test file's syntax tree, parsed once per distinct text however many
+    readers ask (the gate, the graph, the report); None if it does not parse.
+    Callers only read it."""
+    try:
+        return ast.parse(content)
+    except (SyntaxError, ValueError):
+        return None
+
+
+_DEFINITIONS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+
+
+def _definitions(tree: ast.Module):
+    """Every function and class definition, at any depth. Only statements can
+    hold one, so expressions -- most of a file's nodes -- are never visited."""
+    stack = list(tree.body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, _DEFINITIONS):
+            yield node
+        for name in ("body", "orelse", "finalbody", "handlers", "cases"):
+            children = getattr(node, name, None)
+            if isinstance(children, list):
+                stack.extend(children)
 
 
 def _python_tests(content: str) -> list[tuple[str, list[str]]] | None:
@@ -169,9 +206,8 @@ def _python_tests(content: str) -> list[tuple[str, list[str]]] | None:
     (``test_x`` or ``TestClass::test_x``) and its tags — its own decorators,
     its class's, and a module-level ``pytestmark``'s, which reaches every
     ``test*`` function and ``Test*`` method. None when the file does not parse."""
-    try:
-        tree = ast.parse(content)
-    except (SyntaxError, ValueError):
+    tree = _parse(content)
+    if tree is None:
         return None
     module = _module_marks(tree)
 
@@ -199,11 +235,7 @@ def scan_source_tests(tests_dir: Path) -> list[tuple[Path, str | None, list[str]
     tags are read by pattern (another language, or Python that does not
     parse) — then the file is the test."""
     found: list[tuple[Path, str | None, list[str]]] = []
-    for test_file in sorted(iter_test_files(tests_dir)):
-        try:
-            content = test_file.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
+    for test_file, content in _sources(tests_dir):
         tests = _python_tests(content) if test_file.suffix == ".py" else None
         if tests is not None:
             found.extend((test_file, name, tags) for name, tags in tests)
@@ -222,11 +254,7 @@ def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
     Python decorators, JS/TS allure calls, and Java annotations (DI-31).
     """
     refs: dict[str, list[str]] = {}
-    for test_file in sorted(iter_test_files(tests_dir)):
-        try:
-            content = test_file.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
+    for test_file, content in _sources(tests_dir):
         # One entry per file, not per tag occurrence: a file may claim the same
         # id many times -- an Ansible suite tags every task in a context with
         # the design input it exercises -- and callers report these as a file

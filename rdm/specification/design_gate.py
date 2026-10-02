@@ -63,8 +63,7 @@ class ArtifactCheck:
 
     name: str
     path: Path
-    exists: bool
-    complete: bool
+    complete: bool  # present, non-empty, no placeholders
     reasons: list[str] = field(default_factory=list)
     # Version-control state of the document:
     #   True  -> has uncommitted changes (current revision is not yet approved)
@@ -78,7 +77,7 @@ class ArtifactCheck:
         # A document with uncommitted changes has not been approved, so it
         # fails the gate. An undeterminable state (None) does not fail here; it
         # is surfaced as a warning by the command instead.
-        return self.exists and self.complete and self.uncommitted is not True
+        return self.complete and self.uncommitted is not True
 
 
 @dataclass
@@ -97,6 +96,8 @@ class GateResult:
         # Allure tags) legitimately may not exist yet.
         return all(a.ok for a in self.artifacts)
 
+
+NO_DESIGN_DOC = "no design document (`kind: design`) found under the DHF"
 
 UNAPPROVED = ("has uncommitted changes; the current revision is not approved in "
               "version control (commit and merge via a reviewed PR to record approval)")
@@ -117,10 +118,21 @@ def has_uncommitted_changes(path: Path) -> bool | None:
     Note: a file excluded by .gitignore reports as clean; design documents are
     expected to be tracked, so this edge case is not treated specially.
     """
-    if git(path.parent, "rev-parse", "--is-inside-work-tree") != "true":
-        return None
+    # git status fails (None) outside a work tree, so it needs no prior check.
     status = git(path.parent, "status", "--porcelain", "--", str(path))
     return None if status is None else bool(status)
+
+
+def _approval(path: Path, reasons: list[str]) -> bool | None:
+    """The version-control state of ``path``; an unapproved one adds its reason."""
+    uncommitted = has_uncommitted_changes(path)
+    if uncommitted is True:
+        reasons.append(UNAPPROVED)
+    return uncommitted
+
+
+def _missing(name: str, path: Path, reason: str) -> ArtifactCheck:
+    return ArtifactCheck(name=name, path=path, complete=False, reasons=[reason])
 
 
 def check_doc_path(path: Path, name: str) -> ArtifactCheck:
@@ -142,14 +154,11 @@ def check_doc_path(path: Path, name: str) -> ArtifactCheck:
             "fill in and remove TODO/ENDTODO blocks"
         )
 
-    uncommitted = has_uncommitted_changes(path)
-    if uncommitted is True:
-        reasons.append(UNAPPROVED)
+    uncommitted = _approval(path, reasons)
 
     return ArtifactCheck(
         name=name,
         path=path,
-        exists=True,
         # `complete` reflects document content; approval (uncommitted) is tracked
         # separately so the two failure modes are reported distinctly.
         complete=not leftover and bool(text.strip()),
@@ -162,13 +171,7 @@ def check_artifact(dhf_dir: Path, basename: str, name: str) -> ArtifactCheck:
     """Check a required design-control document, located by basename."""
     path = _find_doc(dhf_dir, basename)
     if path is None:
-        return ArtifactCheck(
-            name=name,
-            path=dhf_dir / "documents" / basename,
-            exists=False,
-            complete=False,
-            reasons=[f"{basename} not found under {dhf_dir}"],
-        )
+        return _missing(name, dhf_dir / "documents" / basename, f"{basename} not found under {dhf_dir}")
     return check_doc_path(path, name)
 
 
@@ -180,15 +183,7 @@ def check_design_docs(dhf_dir: Path) -> list[ArtifactCheck]:
     """
     docs = find_design_docs(dhf_dir)
     if not docs:
-        return [
-            ArtifactCheck(
-                name="Software Design Description",
-                path=dhf_dir / "documents" / "design",
-                exists=False,
-                complete=False,
-                reasons=["no design document (`kind: design`) found under the DHF"],
-            )
-        ]
+        return [_missing("Software Design Description", dhf_dir / "documents" / "design", NO_DESIGN_DOC)]
     return [check_doc_path(doc, f"Software Design Description ({context_of(doc)})") for doc in docs]
 
 
@@ -201,7 +196,7 @@ def _coverage_warnings(dhf_dir: Path) -> list[str]:
     """
     docs = find_design_docs(dhf_dir)
     if not docs:
-        return ["no design document (`kind: design`) found under the DHF"]
+        return [NO_DESIGN_DOC]
 
     warnings: list[str] = []
     registry = registry_user_needs(dhf_dir)
@@ -210,7 +205,7 @@ def _coverage_warnings(dhf_dir: Path) -> list[str]:
     for need in sorted(registry - traced):
         warnings.append(f"user need {need} is traced to by no design input")
 
-    di_ids = design_input_ids(dhf_dir)
+    di_ids = {di["id"] for di in inputs}
     for di in inputs:
         for ref in sorted(set(di["traces_to"]) - registry):
             warnings.append(f"design input {di['id']} traces_to unknown user need {ref}")
@@ -262,7 +257,7 @@ def check_unique_ids(dhf_dir: Path) -> ArtifactCheck:
     out of every gate and the graph."""
     reasons = [f"{ident} is declared {len(docs)} times: {', '.join(docs)}"
                for ident, docs in sorted(duplicate_declarations(dhf_dir).items())]
-    return ArtifactCheck(name="Requirement ids", path=Path(dhf_dir), exists=True,
+    return ArtifactCheck(name="Requirement ids", path=Path(dhf_dir),
                          complete=not reasons, reasons=reasons, uncommitted=False)
 
 
@@ -277,10 +272,8 @@ def check_architecture_views(dhf_dir: Path) -> list[ArtifactCheck]:
         return []
     reasons = stale(dhf_dir)
     complete = not reasons
-    uncommitted = has_uncommitted_changes(workspace.parent)
-    if uncommitted is True:
-        reasons.append(UNAPPROVED)
-    return [ArtifactCheck(name="Architecture views", path=workspace, exists=True, complete=complete,
+    uncommitted = _approval(workspace.parent, reasons)
+    return [ArtifactCheck(name="Architecture views", path=workspace, complete=complete,
                           reasons=reasons, uncommitted=uncommitted)]
 
 
@@ -335,20 +328,15 @@ def story_design_gate_command(dhf_dir: Path | None = None, verification_warnings
             for reason in artifact.reasons:
                 print(f"           - {reason}")
 
-    if result.task_warnings:
-        print("\nTraceability warnings (sources of truth):")
-        for warning in result.task_warnings:
-            print(f"  [WARN] {warning}")
-
-    if result.traceability_warnings:
-        print("\nTraceability warnings (SDD user needs <-> Allure tags):")
-        for warning in result.traceability_warnings:
-            print(f"  [WARN] {warning}")
-
-    if result.verification_warnings:
-        print("\nVerification warnings (SDD user needs <-> Allure results):")
-        for warning in result.verification_warnings:
-            print(f"  [WARN] {warning}")
+    for heading, warnings in (
+        ("Traceability warnings (sources of truth)", result.task_warnings),
+        ("Traceability warnings (SDD user needs <-> Allure tags)", result.traceability_warnings),
+        ("Verification warnings (SDD user needs <-> Allure results)", result.verification_warnings),
+    ):
+        if warnings:
+            print(f"\n{heading}:")
+            for warning in warnings:
+                print(f"  [WARN] {warning}")
 
     print()
     if result.passed:
