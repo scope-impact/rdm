@@ -11,7 +11,7 @@
 - The workflow `rdm adopt` lays down calls the reusable workflow pinned to the
   installed RDM's version. RDM's own CI calls it pinned to the commit under test.
 - The PDF action renders with the image of the release it is pinned to.
-- CI: tests on Python 3.10–3.13 for pushes to main and for pull requests; a
+- CI: tests on Python 3.10–3.13 on every push and pull request; a
   multi-arch Docker image (amd64, arm64) with provenance and SBOM; Dependabot
   for uv; a pinned Allure CLI.
 
