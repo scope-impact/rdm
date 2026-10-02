@@ -70,7 +70,6 @@ nav:
       - The data model: data-model.md
       - Glossary: glossary.md
       - Plan vs. record: plan-vs-record.md
-      - Worked example — VitalView: example-vitalview-decomposition.md
   - Get started:
       - Installation: installation.md
       - New project (rdm init): quickstart-new-project.md
