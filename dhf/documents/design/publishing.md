@@ -183,6 +183,15 @@ Open questions:
 - The DMR index reads only the files directly in the given directory, not
   its subdirectories (such as `documents/design/`).
 
+### Dynamic view
+
+The two passes of a render: the Renderer loads the data files as the
+template's context, keeps the words of the first pass, and post-processes the
+Markdown with the extensions, which give the second pass the first pass's
+words (so a glossary includes only the terms a document uses).
+
+![Scenario: rendering a document](../../c4/views/D_publishing_render.svg)
+
 ## Dependencies
 
 Publishing is a read model at the top of the dependency rule. It depends,

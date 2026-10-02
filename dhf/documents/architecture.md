@@ -44,7 +44,8 @@ Who uses RDM and what it depends on. The architecture is one C4 model, the
 workspace [`c4/workspace.dsl`](../c4/workspace.dsl); each view is drawn from
 it (`rdm c4 draw`): the system context and the containers here, and each
 bounded context's components (C3) in its own design document. RDM reads the
-model (DI-66) and warns where code, tests and the model disagree (DI-68).
+model (DI-66); warning where code, tests and the model disagree (DI-68) is
+not built yet.
 
 ![System context: RDM](../c4/views/C1.svg)
 
@@ -110,7 +111,18 @@ one cause:
 
 Moving the release gate and the trace to `release`, splitting `allure.py`
 into tags and results, and moving the frontmatter parser to the kernel
-removes both. The workspace draws today's code paths; each move updates a
+removes both. Three more imports break the rule without a cycle
+(found by the design documents' rewrite, Design Review 31):
+
+- `specification` → `architecture`: the design gate checks the views are
+  fresh with the architecture model. The composition root can hand the gate
+  that check instead;
+- `test_evidence` → `risk`: the pytest plugin labels each run with the risks
+  its input controls. Either `risk` sits below `test_evidence`, or the plugin
+  is given the controls;
+- `release` → `publishing`: the evidence bundle renders the matrix and the
+  verification report itself. The composition root can pass it the rendered
+  files. The workspace draws today's code paths; each move updates a
 component's `code` path, not its context.
 
 ## Flow

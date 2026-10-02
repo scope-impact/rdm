@@ -970,6 +970,61 @@ controls and the verification are unaffected.
 - The code is to be moved to keep the dependency rule (release gate, Allure
   reader, frontmatter parser first).
 
+# Design Review 31 — Every design document to one template
+
+**Scope reviewed:** the eight design documents; the SDD template
+(`rdm/adopt_files/dhf/documents/design/example_context.md`); the
+architecture workspace and its views; the system architecture's dependency
+rule; the glossary. No design input changed (every document's frontmatter is
+the one Design Review 30 approved).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- The template, kept agile (what a reviewer needs to approve a change, no
+  padding): Purpose in the context's language; Design Inputs; Design Outputs
+  by component; Components (C3) — the view, a component table, the
+  relationships in words, assumptions and open questions, as the C4 guide
+  asks; Dependencies against the dependency rule; and a dynamic view only
+  where a runtime scenario's order matters and a component view cannot show
+  it. Every design document now follows it; the interim prose of Design
+  Review 30 is gone.
+- Each document was rewritten against the code, and where the old prose
+  disagreed, the code won: DI-31 and DI-40 read only `story` tags; the design
+  gate also fails on duplicate ids and stale views; `rdm graph serve` runs the
+  read-only server; the gates action installs `rdm[graph,report]`; the
+  vocabulary extension gives a template the first pass's words rather than
+  expanding anything; DI-68 and DI-69 are stated as not yet built.
+- The workspace: component descriptions and relationship labels sharpened;
+  eighteen relationships the code or the pipeline showed were missing are
+  declared; `rdm/first_pass_output.py`, in no component, is one; each
+  component view shows its context's components and their neighbours, without
+  the neighbours' arrows among themselves; three dynamic views
+  (`D_specification_commit`, `D_release_pipeline`, `D_publishing_render`),
+  each step along a declared relationship. Every view was drawn and inspected.
+- The glossary's release gate said more than the gate does: it does not
+  require release-grade evidence and only warns on an unvalidated user need.
+  Corrected; Dynamic view added; Effective says what stays a person's
+  judgement.
+- The dependency rule names three more imports that break it (the design
+  gate's view check, the plugin's risk labels, the evidence bundle's
+  rendering), each with the change that removes it; the system architecture
+  no longer says DI-68 warns.
+
+## Findings and actions
+
+- Proposed for a later review, not made here: `realises` additions the
+  rewrite surfaced (architecture → DI-67, risk → DI-45, publishing and
+  specification → DI-63, release → DI-64, test_evidence → DI-1, graph →
+  DI-46); amending DI-50 (a risk with an unknown status blocks, as tested)
+  and DI-9 (what the vocabulary extension does).
+- Defects found in the code, to be fixed under their design inputs: the ISO
+  14971 2019 checklist has no clauses (DI-11); an audit against an empty
+  checklist exits 0, and `--coverage` skips a missing checklist path silently
+  (DI-10, DI-12); `rdm translate` misreads an empty `Environment` element
+  (DI-17); the agent's schema omits the architecture and code graphs (DI-41).
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

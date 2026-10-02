@@ -251,6 +251,15 @@ which also holds other contexts' components; the view does not show that
 `rdm init` copies the runbook from the adoption templates or that
 `rdm adopt` copies the pre-commit hook.
 
+### Dynamic view
+
+The order matters for a contributor: git runs the pre-commit hook, which runs
+the design gate; the gate reads the design documents and the review, checks
+the architecture views are fresh, and finds the tagged tests. Any one failing
+stops the commit.
+
+![Scenario: a commit meets the design gate](../../c4/views/D_specification_commit.svg)
+
 ## Dependencies
 
 Depends on the shared kernel, which it draws. Depended on by every other

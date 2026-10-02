@@ -158,14 +158,17 @@ Open questions:
   need validated; the code blocks on neither (a missing validation record is
   a warning). Whether it should is open.
 
-### Dynamic view (only when needed)
+### Dynamic view
 
 The order of a pipeline run matters: the acceptance tests write the Allure
 results; the design gate runs; `verify` writes the verification data; the
 release gate decides; graph validation runs; the evidence bundle is written
 last, from the same results, and uploaded. The component view shows what
-uses what, not this order. It is not drawn yet: the Gates action declares no
-relationship to the components it runs.
+uses what, not this order. The view below draws it at the container level,
+where the order is decided (a dynamic view's steps cannot cross from the
+Reusable gates container into `rdm`'s components):
+
+![Scenario: one run of the reusable gates](../../c4/views/D_release_pipeline.svg)
 
 ## Dependencies
 

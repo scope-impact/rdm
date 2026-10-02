@@ -94,8 +94,12 @@ approved, and every id in it is declared once.
 _Avoid_: pre-commit check, lint
 
 **Release gate**:
-The check that blocks a release until there is release-grade evidence, every
-risk is acceptable and every user need is validated.
+The check that blocks a release until the design gate passes, every design
+input is verified, every user need is refined by a design input, and the risk
+rules raise no blocking finding. It warns, never blocks, on a user need with no
+approved validation record. Whether the runs are release-grade evidence is
+shown by the verification report and the knowledge graph, not decided by the
+gate.
 _Avoid_: CI, green build
 
 **Design specification**:
@@ -298,7 +302,8 @@ _Avoid_: measure effect, reduction, impact
 **Effective**:
 Said of a risk control that is verified and whose risk has been evaluated again
 with an acceptable residual. A passing test alone makes a control verified, not
-effective.
+effective. The record shows both facts; judging that the control does what it
+is meant to stays a person's.
 _Avoid_: controlled, mitigated, done
 
 **Initial risk / residual risk**:
