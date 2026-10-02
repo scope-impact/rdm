@@ -53,7 +53,7 @@
 
   // Typography
   set text(
-    font: ("Inter Variable", "Noto Sans"),
+    font: ("Inter", "Noto Sans"),
     size: 11pt,
     fill: scope,
   )

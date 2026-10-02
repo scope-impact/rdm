@@ -149,7 +149,7 @@ jobs:
 
 ## Dependencies
 
-**Docker (recommended):** Just Docker. The image includes Pandoc 3.6, Typst 0.12, and required fonts.
+**Docker (recommended):** Just Docker. The image (Ubuntu 26.04 LTS) includes Pandoc 3.12, Typst 0.15, the required fonts, and RDM with the `graph` extra — `rdm graph build | validate | serve | mcp` work inside it.
 
 **Native:**
 - Python 3.10+

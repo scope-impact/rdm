@@ -43,6 +43,6 @@ variables:
 
   # Typography
   fontsize: 11pt
-  mainfont: "Inter Variable"
-  sansfont: "Inter Variable"
+  mainfont: "Inter"
+  sansfont: "Inter"
   monofont: "JetBrains Mono"

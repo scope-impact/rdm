@@ -1,72 +1,74 @@
 # ============================================================================
 # Regulatory Documentation Build Image
-# Pandoc + Typst | Minimal & Fast
+# RDM (with the graph extra) + Pandoc + Typst, on Ubuntu LTS
 # ============================================================================
 
-FROM alpine:3.23 AS builder
+# Pinned to an LTS release, never `latest`: the base changes only when we
+# choose. Ubuntu (glibc) also gets the ordinary Linux wheels, including the
+# oxigraph server `rdm graph serve` runs, which has no Alpine (musl) build.
+ARG UBUNTU_VERSION=26.04
 
-# Versions
-ARG PANDOC_VERSION=3.6.1
-ARG TYPST_VERSION=0.12.0
+FROM ubuntu:${UBUNTU_VERSION} AS builder
 
-# Architecture detection (Docker provides TARGETARCH automatically)
+ARG PANDOC_VERSION=3.12
+ARG TYPST_VERSION=0.15.1
+ARG INTER_VERSION=4.1
+ARG JETBRAINS_MONO_VERSION=2.304
+# Docker provides TARGETARCH (amd64 or arm64).
 ARG TARGETARCH
 
-# Install Pandoc (supports amd64, arm64)
-RUN PANDOC_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") && \
-    wget -qO- "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-${PANDOC_ARCH}.tar.gz" \
-    | tar xzf - --strip-components=1 -C /usr/local
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip xz-utils \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Typst (supports amd64, arm64)
+RUN PANDOC_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") && \
+    curl -fsSL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-${PANDOC_ARCH}.tar.gz" \
+    | tar xzf - --strip-components=2 -C /usr/local/bin "pandoc-${PANDOC_VERSION}/bin/pandoc"
+
 RUN TYPST_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64") && \
-    wget -qO- "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${TYPST_ARCH}-unknown-linux-musl.tar.xz" \
-    | tar xJf - --strip-components=1 -C /usr/local/bin
+    curl -fsSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${TYPST_ARCH}-unknown-linux-musl.tar.xz" \
+    | tar xJf - --strip-components=1 -C /usr/local/bin "typst-${TYPST_ARCH}-unknown-linux-musl/typst"
+
+RUN mkdir -p /fonts/inter /fonts/jetbrains-mono && \
+    curl -fsSL -o /tmp/inter.zip "https://github.com/rsms/inter/releases/download/v${INTER_VERSION}/Inter-${INTER_VERSION}.zip" && \
+    unzip -q /tmp/inter.zip -d /tmp/inter && find /tmp/inter -name "Inter*.ttf" -exec cp {} /fonts/inter/ \; && \
+    curl -fsSL -o /tmp/jbmono.zip "https://github.com/JetBrains/JetBrainsMono/releases/download/v${JETBRAINS_MONO_VERSION}/JetBrainsMono-${JETBRAINS_MONO_VERSION}.zip" && \
+    unzip -q /tmp/jbmono.zip -d /tmp/jbmono && cp /tmp/jbmono/fonts/ttf/*.ttf /fonts/jetbrains-mono/
 
 # ============================================================================
 # Final image
 # ============================================================================
 
-FROM alpine:3.23
+FROM ubuntu:${UBUNTU_VERSION}
 
-# Runtime dependencies
-RUN apk add --no-cache \
-    font-noto \
-    font-noto-emoji \
-    fontconfig \
-    make \
-    python3 \
-    py3-pip \
-    py3-jinja2 \
-    py3-yaml
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        fontconfig \
+        fonts-noto-core \
+        fonts-noto-color-emoji \
+        git \
+        make \
+        python3 \
+        python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy binaries from builder
-COPY --from=builder /usr/local/bin/pandoc /usr/local/bin/
-COPY --from=builder /usr/local/bin/typst /usr/local/bin/
+COPY --from=builder /usr/local/bin/pandoc /usr/local/bin/typst /usr/local/bin/
+COPY --from=builder /fonts/ /usr/share/fonts/truetype/
+RUN fc-cache -f && pandoc --version && typst --version
 
-# Install Inter font
-RUN mkdir -p /usr/share/fonts/inter && \
-    wget -qO /tmp/inter.zip "https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip" && \
-    unzip -q /tmp/inter.zip -d /tmp/inter && \
-    mv /tmp/inter/Inter*.ttf /usr/share/fonts/inter/ 2>/dev/null || \
-    mv /tmp/inter/InterVariable*.ttf /usr/share/fonts/inter/ 2>/dev/null || true && \
-    rm -rf /tmp/inter /tmp/inter.zip
-
-# Install JetBrains Mono font (for code blocks)
-RUN mkdir -p /usr/share/fonts/jetbrains-mono && \
-    wget -qO /tmp/jbmono.zip "https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip" && \
-    unzip -q /tmp/jbmono.zip -d /tmp/jbmono && \
-    mv /tmp/jbmono/fonts/ttf/*.ttf /usr/share/fonts/jetbrains-mono/ && \
-    rm -rf /tmp/jbmono /tmp/jbmono.zip && \
-    fc-cache -f
-
-# Verify installations
-RUN pandoc --version && typst --version
-
-# Install RDM from pre-built wheel
+# RDM, from the wheel built next to this Dockerfile, with the graph extra
+# (build, query, validate, serve, mcp), in its own virtualenv: Ubuntu's
+# system Python does not take pip installs.
 COPY dist/*.whl /tmp/
-RUN pip install --no-cache-dir --break-system-packages /tmp/*.whl && \
+RUN python3 -m venv /opt/rdm && \
+    /opt/rdm/bin/pip install --no-cache-dir "$(ls /tmp/*.whl)[graph]" && \
     rm -f /tmp/*.whl
+ENV PATH="/opt/rdm/bin:${PATH}"
+
+# The project is mounted, so its owner differs from the container's user;
+# rdm reads git history (approvals, commits) from it.
+RUN git config --system --add safe.directory '*' && rdm --version && oxigraph --version
 
 WORKDIR /dhf
+EXPOSE 7878
 
 CMD ["make"]

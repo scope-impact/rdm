@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed — dependencies upgraded
+- Docker image: Ubuntu 26.04 LTS instead of Alpine, Pandoc 3.6.1 → 3.12,
+  Typst 0.12.0 → 0.15.1, Inter 4.0 → 4.1; RDM installed with the `graph`
+  extra, so the graph commands, including `rdm graph serve` (whose oxigraph
+  server has no Alpine build), run in the image.
+- The PDF template names the font family `Inter`: Typst 0.15 no longer lists
+  the variable font as `Inter Variable`, so it fell back to the default font.
+- Python dependencies upgraded to their latest releases.
+
 ### Added — Allure labels from the record
 - `rdm.pytest_plugin` labels each acceptance run with Allure's API: epic (user
   need), feature (bounded context), links to the Markdown documents that
