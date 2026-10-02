@@ -91,15 +91,15 @@ This context realises no other context's input. Parts of its own are
 realised elsewhere: the design gate (`specification`) realises DI-70's
 failing check, failing on every stale reason the Architecture model gives,
 and on a workspace or drawn files that are uncommitted; the knowledge graph
-(`graph`) will realise DI-68 through its gate shapes, over the architecture
-and code it already projects from the Architecture model for DI-67, which
-`graph` owns.
+(`graph`) realises DI-68 through its gate shapes, warnings only, over the
+architecture and code it projects from the Architecture model for DI-67,
+which `graph` owns, and two facts it projects for them: a component's code
+path that does not exist, and the views each design document shows.
 
-**DI-68 is not built yet.** Its tagged test is a failing stub, and the
-graph's gate shapes hold no shape for it. DI-66 and DI-70 are each verified
-by their tagged acceptance test, which also checks RDM's own workspace:
-DI-66's reads it whole, and DI-70's, with stand-ins for Structurizr and
-Graphviz, checks that RDM's own views are current.
+DI-66, DI-68 and DI-70 are each verified by their tagged acceptance test,
+which also checks RDM's own record: DI-66's reads its workspace whole,
+DI-70's, with stand-ins for Structurizr and Graphviz, checks that its views
+are current, and DI-68's that its own C4 model and record agree.
 
 Assumptions and open questions:
 
@@ -107,9 +107,7 @@ Assumptions and open questions:
   machine, not elements of the model, and the view does not show them.
 - Every module is named by some component's code; a test fails on a module
   no component names (the dependency rule).
-- Code dependencies are found for Python only, and only for absolute
-  imports; a relative import is not seen, so a dependency made only by one
-  would go unwarned once DI-68 is built.
+- Code dependencies are found for Python only, relative imports included.
 
 ## Commands and events
 

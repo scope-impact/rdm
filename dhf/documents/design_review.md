@@ -1240,6 +1240,28 @@ orphan tags. No design input changed.
   invocation errors already named in each design document's *Commands and
   events*; naming them in the code would add no decision.
 
+# Design Review 40 — The C4 model checked against the record; components in the trace
+
+**Scope reviewed:** how DI-68 and DI-69 are met. No design input changed.
+
+**Disposition:** Approved.
+
+- DI-68 (architecture) is realised by the graph's gate shapes, each a
+  warning, never a violation: a design output (a source file a run
+  exercises) in no component's code; a run exercising a component of a
+  context that neither owns nor realises the design input it verifies; a
+  code dependency with no relationship declared from the one component to
+  the other; a component group that is not a bounded context the
+  architecture declares, and a declared bounded context with no component;
+  a context's design document that does not show its component view; a
+  component whose code path does not exist; a relationship with no
+  description. The graph's design document declares it in `realises`.
+- Two facts are projected for the shapes, since a shape sees only the
+  graph: a component's code path that does not exist, and the views each
+  design document shows (each `c4/views/<key>.svg` image it holds).
+- DI-69: the agent server's trace of a design input names the components
+  whose code its runs exercise, each with its container and context.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

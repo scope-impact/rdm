@@ -2,6 +2,7 @@
 id: SDS-GRAPH-001
 kind: design
 context: graph
+realises: [DI-68]
 design_inputs:
   - id: DI-35
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each controlled document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
@@ -100,7 +101,7 @@ workspace maps each component to its code.
 |-----------|----------------|-------|
 | Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists and inferred facts on request | DI-35, DI-36, DI-37, DI-45, DI-48, DI-51, DI-52, DI-53, DI-54, DI-56, DI-58, DI-60, DI-61, DI-62, DI-67 |
 | Vocabulary | The classes and properties of the graph, and each derived relation with the rule that derives it; projected as the ontology graph | DI-35, DI-62 |
-| Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61 |
+| Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61, DI-68 |
 | SHACL validation | `rdm graph validate`: runs the shipped and any user-supplied shapes over the union of the named graphs, reports each result most severe first, and fails on any violation | DI-49, DI-58 |
 | Explorer file | Writes the record as an AWS Graph Explorer file, optionally leaving out chosen classes and what hangs only from them | DI-39 |
 | Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53, DI-56, DI-62, DI-69 |
@@ -169,15 +170,18 @@ The behaviour a reviewer needs to judge the design:
 
 Realised for other contexts: the Projection and the Gate shapes implement
 the graph's part of DI-46 (specification): each user need's and design
-input's declaration count, and a shape on a repeated declaration. DI-68
-(architecture) is to be met by gate shapes here; none exists yet. The
-frontmatter declares no `realises` for either. Realised by others: the
+input's declaration count, and a shape on a repeated declaration. The Gate
+shapes also realise DI-68 (architecture): a warning, never a violation, for
+each way the C4 model and the record disagree, over the architecture and
+code graphs and two facts the Projection adds for them (a component's code
+path that does not exist; the views a design document shows). The
+frontmatter declares DI-68 in `realises`, not yet DI-46. Realised by others: the
 specification realises part of DI-61 (the scan of the test sources), and
 the pytest plugin writes the commit labels DI-60 projects (DI-59).
 
-Not built: the Agent server's `trace` does not yet name the components a
-design input's tests exercise (DI-69); its tagged test is a failing
-placeholder.
+The Agent server's `trace` of a design input names the components whose
+code its tests' runs exercise, each with its container and owning bounded
+context (DI-69).
 
 Open questions:
 
