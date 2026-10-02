@@ -1206,6 +1206,22 @@ orphan tags. No design input changed.
   traceability matrix and the verification report could flag a tag the gates
   ignore.
 
+# Design Review 38 — The design gate names its events
+
+**Scope reviewed:** the design gate's design. No design input changed.
+
+**Disposition:** Approved.
+
+- The design gate names its events as the release gate does (Design
+  Review 37): each check returns *Design Controls Not Approved / Uncommitted*,
+  */ Placeholders*, */ Duplicate Id*, */ Views Stale* and the rest, each with
+  the message printed today, and each warning a *Design Controls Warned / …*
+  event; *Design Controls Approved* is the conclusion when none fails. What
+  the gate fails, warns and prints is unchanged.
+- One event type serves every context: a name with a slash is a fail event,
+  one with *Warned* before the slash a warning (`CONTEXT.md`, "Domain
+  event").
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
