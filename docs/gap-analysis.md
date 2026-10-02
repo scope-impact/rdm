@@ -52,5 +52,5 @@ dangling clause:
 ```
 
 The [worked example](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
-uses exactly this as an acceptance criterion (its DI-5), including a
-falsifiability test that proves the audit actually detects gaps.
+verifies its DI-5 with exactly this, including a falsifiability check that
+proves the audit actually detects gaps.

@@ -2,7 +2,9 @@ name: Release controlled documents
 
 # 21 CFR 11.10(b): accurate and complete copies in human-readable (PDF) and
 # electronic (git archive at the tag) form, attached to the GitHub Release.
-# Copy this file to .github/workflows/ in a real repository.
+# Published only if the release gate passes at the tag, with the verification
+# report attached (DI-10). Copy this file to .github/workflows/ in a real
+# repository.
 on:
   push:
     tags:
@@ -20,11 +22,16 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.x"
       - name: Install rdm + pandoc
         run: |
-          pip install "rdm @ git+https://github.com/scope-impact/rdm@v1.2.0"   # not PyPI's rdm, another project
+          pip install "rdm[report] @ git+https://github.com/scope-impact/rdm@v1.2.0" pytest allure-pytest   # not PyPI's rdm, another project
           sudo apt-get update && sudo apt-get install -y pandoc
+      # DI-10: no release unless the released commit is verified.
+      - name: Verify the released commit
+        run: |
+          pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+          rdm story release-gate --dhf dhf --allure-results dhf/allure-results
       - name: Render controlled documents (human-readable copies)
         run: |
           mkdir -p release
@@ -32,6 +39,8 @@ jobs:
             rdm render "$doc" config.yml data/history.yml data/dmr.yml > "release/$(basename "$doc")"
             pandoc "release/$(basename "$doc")" -o "release/$(basename "$doc" .md).pdf"
           done
+      - name: Verification report (every design input and the runs that verify it, at this commit)
+        run: rdm story evidence-report --dhf dhf --allure-results dhf/allure-results -o release/verification-report.pdf
       - name: Electronic copy (complete document set at this tag)
         run: git archive --format=zip --output=release/document-set-${{ github.ref_name }}.zip ${{ github.ref_name }}
       # 21 CFR 820.184 analog: the device history record for this release —

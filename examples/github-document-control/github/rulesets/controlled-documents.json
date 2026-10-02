@@ -27,7 +27,7 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
-          { "context": "render-documents" },
+          { "context": "design-controls / gates" },
           { "context": "part11-gap-analysis" }
         ]
       }

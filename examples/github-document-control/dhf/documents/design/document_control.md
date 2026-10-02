@@ -27,6 +27,12 @@ design_inputs:
   - id: DI-8
     text: "Each document release shall produce a device history record: a manifest recording the tag, commit SHA, releasing actor, timestamp, and artifact list, attached to the release alongside the copies."
     traces_to: [UN-005]
+  - id: DI-9
+    text: "Every pull request to the default branch shall run the design controls (the design gate, the acceptance tests, verification, the release gate and graph validation) through RDM's reusable gates pinned to a released revision, and the Part 11 gap analysis, and the ruleset shall require exactly the checks that workflow reports."
+    traces_to: [UN-002, UN-004]
+  - id: DI-10
+    text: "A document release shall be published only if the release gate passes on the released commit, and shall attach the verification report of that commit with the copies."
+    traces_to: [UN-003, UN-005]
 ---
 
 # Document control — Design
@@ -47,7 +53,7 @@ single procedure):
   document comes from repository data (§11.10(e) altitude: the record is
   generated, not transcribed). Refines UN-001.
 - **DI-5 (Part 11 coverage)** — the SOP must reference every checklist item;
-  `rdm gap` exit-zero is the acceptance criterion. Refines UN-004.
+  its test runs `rdm gap` and requires exit zero. Refines UN-004.
 - **DI-6 (merge behavior as code)** — repository settings that shape the
   record are configuration code too: only merge commits (the SHA that was
   reviewed is the SHA preserved in history — the §11.70 linking argument),
@@ -67,13 +73,29 @@ single procedure):
   releasing actor, timestamp, artifact list) and attaches it to the GitHub
   Release with the copies — so every released document set carries the record
   of who released what, when, from which exact revision. Refines UN-005.
+- **DI-9 (the checks the ruleset requires)** — DI-1 requires passing status
+  checks; DI-9 says which. The design-controls workflow calls RDM's reusable
+  gates (`scope-impact/rdm/.github/workflows/gates.yml`) at a released tag, so
+  every change is verified by the same pinned RDM, and runs `rdm gap` over the
+  SOP. The ruleset requires the two checks that workflow reports, by their
+  exact names: a required check no workflow reports blocks every merge, and a
+  check the ruleset does not require can be bypassed. Refines UN-002, UN-004.
+- **DI-10 (verified releases)** — a release is evidence as well as copies: the
+  release workflow runs the acceptance tests at the tag, refuses to publish
+  unless the release gate passes, and attaches the verification report (every
+  design input with the runs that verify it, at the released commit) to the
+  release. The DHR (DI-8) then names a release whose verification is attached
+  to it. Refines UN-003, UN-005.
 
 ## Design Outputs
 
 - `github/rulesets/controlled-documents.json` — the branch ruleset (DI-1).
 - `github/CODEOWNERS` — routes controlled paths to the quality team (DI-1).
+- `github/workflows/design-controls.yml` — the design controls and the Part 11
+  gap analysis on every pull request (DI-9).
 - `github/workflows/release-documents.yml` — tag-triggered release (DI-3);
-  writes and attaches the device-history-record manifest (DI-8).
+  writes and attaches the device-history-record manifest (DI-8); gated by the
+  release gate, with the verification report attached (DI-10).
 - `github/settings.json` + `setup.sh` — repository merge behavior as code,
   applied and drift-checked alongside the ruleset (DI-6).
 - `documents/document_control_procedure.md` — the SOP: frontmatter identity
@@ -82,5 +104,5 @@ single procedure):
   rendered from data (DI-7).
 - `checklists/part11_document_control.txt` — the audited Part 11 subset (DI-5).
 
-Acceptance criteria are verified by `@allure.story("DI-1"…"DI-8")` tests in
-`tests/acceptance/test_document_control.py`.
+Each design input is one acceptance criterion, verified by a test tagged
+`@allure.story("DI-n")` in `tests/acceptance/test_document_control.py`.

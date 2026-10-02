@@ -7,3 +7,7 @@ entries:
     date: "2026-07-04"
     author: "Example Author"
     change: "Initial approved release of the document control procedure."
+  - revision: 2
+    date: "2026-10-02"
+    author: "Example Author"
+    change: "Required checks named; releases gated by the release gate and carry the verification report."
