@@ -21,8 +21,9 @@ from pathlib import Path
 
 from rdm.kernel.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
-# A run whose outcome is one of these counts as a failed attempt at the journey.
-_FAILURE_OUTCOMES = {"failure", "failed", "blocked", "abandoned"}
+# Only a run that says it completed did: any other outcome, or none, is a
+# failed attempt at the journey.
+_COMPLETED_OUTCOMES = {"completed", "complete", "success", "succeeded", "passed"}
 
 # Per-user-need formative status.
 NOT_RUN = "not_run"          # no persona attempted this user need
@@ -108,7 +109,7 @@ def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
     def _fold(need: NeedValidation, run: PersonaRun) -> None:
         need.runs += 1
         need.issues.extend(run.usability_issues)
-        if run.outcome in _FAILURE_OUTCOMES:
+        if run.outcome not in _COMPLETED_OUTCOMES:
             need.failures += 1
 
     def _status(need: NeedValidation) -> str:

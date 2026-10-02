@@ -175,6 +175,22 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
         assert empty_text.count("design_inputs:") == 1
         assert [d["id"] for d in yaml.safe_load(empty_text.split("---")[1])["design_inputs"]] == ["DI-6"]
 
+    with verification_step("A list written at the key's own indentation is extended in its own style"):
+        shapes = _mini_dhf(tmp_path / "shapes")
+        flat = shapes / "documents" / "design" / "flat.md"
+        flat.write_text("---\nid: SDS-F\nkind: design\ncontext: flat\ndesign_inputs:\n- id: DI-20\n"
+                        "  text: x\n  traces_to: [UN-001]\nstatus: draft\n---\n")
+        assert story_new_input_command(dhf_dir=shapes, context="flat", text="RDM shall flatten.",
+                                       traces_to="UN-001") == 0
+        assert [di["id"] for di in design_inputs(shapes) if di["context"] == "flat"] == ["DI-20", "DI-21"]
+        assert "status: draft" in flat.read_text()
+    with verification_step("A list the edit cannot extend safely is refused, and the document is left as it was"):
+        flow = shapes / "documents" / "design" / "flow.md"
+        written = "---\nid: SDS-W\nkind: design\ncontext: flow\ndesign_inputs: [{id: DI-30, text: y}]\n---\n"
+        flow.write_text(written)
+        capsys.readouterr()
+        assert story_new_input_command(dhf_dir=shapes, context="flow", text="RDM shall flow.", traces_to="UN-001") == 2
+        assert "cannot add DI-31" in capsys.readouterr().out and flow.read_text() == written
     with verification_step("Rejects an unknown context and an unknown user need (nothing scaffolded)"):
         assert story_new_input_command(
             dhf_dir=dhf, context="nope", text="x", traces_to="UN-001"

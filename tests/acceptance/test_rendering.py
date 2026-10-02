@@ -170,6 +170,13 @@ def test_architecture_views_are_drawn_from_the_workspace_and_kept_current(tmp_pa
         assert not check_architecture_views(dhf)[0].ok
         gate = {a.name: a for a in run_design_gate(dhf).artifacts}
         assert not gate["Architecture views"].ok and gate["Architecture views"].reasons == reasons
+    with verification_step("a file the workspace includes, changed and not redrawn, fails the design gate"):
+        (dhf / "c4" / "model.dsl").write_text('a = person "A"\n')
+        (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n    !include model.dsl\n  }\n}\n')
+        draw(dhf)
+        assert stale(dhf) == []
+        (dhf / "c4" / "model.dsl").write_text('a = person "B"\n')
+        assert "c4/workspace.json was not drawn from the current workspace.dsl: run rdm c4 draw" in stale(dhf)
     with verification_step("a view with no image, or an image of no view, fails the design gate"):
         draw(dhf)
         (dhf / "c4" / "views" / "C1.svg").unlink()

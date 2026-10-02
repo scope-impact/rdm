@@ -148,6 +148,7 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
                 continue
             seen.add(di_id)
             traces = item.get("traces_to") or []
+            traces = traces if isinstance(traces, list) else [traces]  # one need, written as one value
             inputs.append(
                 {
                     "id": di_id,

@@ -19,6 +19,7 @@ import re
 import textwrap
 from pathlib import Path
 
+from rdm.kernel.frontmatter import parse_frontmatter
 from rdm.kernel.ids import sort_key
 from rdm.specification.tags import find_tests_dir
 from rdm.specification.sdd import (
@@ -113,16 +114,18 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
     just before the closing frontmatter fence. Raises ``ValueError`` when the
     document has no frontmatter block.
     """
-    lines = doc_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    original = doc_path.read_text(encoding="utf-8")
+    lines = original.splitlines(keepends=True)
     close = _frontmatter_close(lines)
     if close is None:
         raise ValueError(f"{doc_path} has no frontmatter block to declare design inputs in")
 
-    entry = (
-        f"  - id: {di_id}\n"
-        f"    text: {_yaml_quote(text)}\n"
-        f"    traces_to: [{', '.join(traces_to)}]\n"
-    )
+    def entry_at(indent: str) -> str:
+        return (f"{indent}- id: {di_id}\n"
+                f"{indent}  text: {_yaml_quote(text)}\n"
+                f"{indent}  traces_to: [{', '.join(traces_to)}]\n")
+
+    entry = entry_at("  ")
 
     key_index = None
     for i in range(1, close):
@@ -140,15 +143,28 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
     else:
         # The list ends at the next non-indented, non-blank line (a sibling
         # top-level key) or at the closing fence.
-        end = close
+        end, indent = close, "  "
         for i in range(key_index + 1, close):
             stripped = lines[i].rstrip("\n")
-            if stripped and not stripped.startswith((" ", "\t")):
+            if stripped.lstrip().startswith("- ") and i == key_index + 1:
+                indent = stripped[:len(stripped) - len(stripped.lstrip())]  # the list's own indentation
+            if stripped and not stripped.startswith((" ", "\t")) and not (indent == "" and stripped.startswith("-")):
                 end = i
                 break
-        lines.insert(end, entry)
+        lines.insert(end, entry_at(indent))
 
-    doc_path.write_text("".join(lines), encoding="utf-8")
+    edited = "".join(lines)
+    # Read the edit back: the document must declare what it did, plus the new
+    # input; otherwise refuse rather than write a document the gates misread.
+    before, after = parse_frontmatter(original), parse_frontmatter(edited)
+    was = before.get("design_inputs") or []
+    if (not isinstance(was, list) or after.get("design_inputs") != [*was, {
+            "id": di_id, "text": text, "traces_to": traces_to}]
+            or {k: v for k, v in after.items() if k != "design_inputs"}
+            != {k: v for k, v in before.items() if k != "design_inputs"}):
+        raise ValueError(f"cannot add {di_id} to {doc_path} without changing what it declares "
+                         "(its design_inputs list is in a form this edit does not handle): add it by hand")
+    doc_path.write_text(edited, encoding="utf-8")
 
 
 def write_stub_test(test_file: Path, di_id: str, text: str, context: str) -> None:
@@ -217,7 +233,11 @@ def story_new_input_command(
 
     di_id = next_design_input_id(dhf)
     doc = contexts[context]
-    insert_design_input(doc, di_id, text, refs)
+    try:
+        insert_design_input(doc, di_id, text, refs)
+    except ValueError as error:
+        print(f"Error: {error}")
+        return 2
 
     if test_file is None:
         tests_dir = find_tests_dir(dhf) or (dhf.parent / "tests")

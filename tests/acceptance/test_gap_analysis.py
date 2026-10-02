@@ -38,6 +38,10 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
     covered = tmp_path / "full.md"
     covered.write_text("Covers [[X-1]] and [[X-2]].\n")
     assert audit_for_gaps(str(checklist), [str(covered)]) == 0  # complete → zero
+    with verification_step("a stray [[ does not turn the next paragraphs' mentions into references"):
+        stray = tmp_path / "stray.md"
+        stray.write_text("Covers [[X-1]]. A stray [[ here.\n\nX-2 is only mentioned. ]]\n")
+        assert audit_for_gaps(str(checklist), [str(stray)]) == 3
 
     with verification_step("A bare mention is not a reference: \"we do not address X-2\" must not count as covering "
                            "X-2"):
@@ -109,6 +113,12 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
     assert coverage_report([str(checklist)], [str(source)]) == 0
     assert "| ISO | 3 | 1 | 2 | 66% |" in capsys.readouterr().out
 
+    with verification_step("every built-in checklist's keys are unique"):
+        from rdm.compliance.gaps import builtin_checklists, parse_checklist
+        for name, path in builtin_checklists().items():
+            entries = parse_checklist(Path(path).read_text(encoding="utf-8"), Path(path).parent)
+            keys = [e["reference"] for e in entries if "reference" in e]
+            assert len(keys) == len(set(keys)), name
     with verification_step("Verbose mode names the missing reference"):
         coverage_report([str(checklist)], [str(source)], verbose=True)
         assert "ISO-2" in capsys.readouterr().out

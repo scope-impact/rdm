@@ -20,6 +20,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -78,9 +79,34 @@ class Model:
         return [c for c in self.components if not c.external and c.link]
 
 
+_INCLUDE = re.compile(r"^\s*!include\s+(\S+)", re.MULTILINE)
+
+
+def _included(path: Path, seen: set[Path]) -> list[Path]:
+    """Every local file ``path`` includes, at any depth: a file, or every file
+    of a directory. A URL is not a file of the record."""
+    found = []
+    for target in _INCLUDE.findall(path.read_text(encoding="utf-8", errors="replace")):
+        if "://" in target:
+            continue
+        named = (path.parent / target.strip("\"'")).resolve()
+        for file in sorted(named.rglob("*")) if named.is_dir() else [named]:
+            if file.is_file() and file not in seen:
+                seen.add(file)
+                found += [file, *_included(file, seen)]
+    return found
+
+
 def workspace_digest(dhf_dir: Path) -> str | None:
+    """The SHA-256 of the workspace, and of every local file it includes."""
     workspace = Path(dhf_dir) / WORKSPACE
-    return hashlib.sha256(workspace.read_bytes()).hexdigest() if workspace.is_file() else None
+    if not workspace.is_file():
+        return None
+    digest = hashlib.sha256(workspace.read_bytes())
+    for file in _included(workspace, {workspace.resolve()}):
+        name = Path(os.path.relpath(file, workspace.parent.resolve())).as_posix()
+        digest.update(b"\0" + name.encode() + b"\0" + file.read_bytes())
+    return digest.hexdigest()
 
 
 def view_keys(workspace: dict) -> list[str]:

@@ -29,7 +29,7 @@ from rdm.evidence import allure as allure_ingest
 from rdm.specification import persona
 from rdm.release.verify import build_verification
 from rdm.specification.design_gate import UNREADABLE_FRONTMATTER, check_design_docs, run_design_gate
-from rdm.specification.sdd import design_input_ids
+from rdm.specification.sdd import design_input_ids, design_inputs
 from rdm.release.gate import INPUT_FAILED, UNREADABLE_RESULT, run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
@@ -85,6 +85,10 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
     with verification_step("Rows are design inputs, grouped under the user need they trace to"):
         assert data["groups"][0]["user_need"] == "UN-001"
         assert data["groups"][0]["design_inputs"][0]["design_input"] == "DI-1"
+    with verification_step("a user need traced as one value, not a list, is that one need"):
+        doc = dhf / "documents" / "design" / "core.md"
+        doc.write_text(doc.read_text().replace("traces_to: [UN-001]", "traces_to: UN-001"))
+        assert [di["traces_to"] for di in design_inputs(dhf)] == [["UN-001"]]
     # ...with NO project-management dependency: the record core must not import
     # the planning layer (a violation would show as a source-level import).
     with verification_step("...with NO project-management dependency: the record core must not import the planning "
@@ -228,5 +232,12 @@ def test_formative_usability_classified(tmp_path: Path) -> None:
     )
     report = persona.reconcile({"UN-001"}, runs)
     assert report.by_id["UN-001"].status == persona.ISSUES
+    with verification_step("a run that does not say it completed did not: an unknown or missing outcome fails"):
+        for i, outcome in enumerate(("error", None)):
+            other = tmp_path / f"runs-{i}"
+            other.mkdir()
+            (other / "q-persona.json").write_text(json.dumps(
+                {"persona": "nurse", "user_need": "UN-001", **({"outcome": outcome} if outcome else {})}))
+            assert persona.reconcile({"UN-001"}, other).by_id["UN-001"].status == persona.FAILED
 
 

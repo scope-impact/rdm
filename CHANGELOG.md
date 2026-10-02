@@ -6,6 +6,30 @@ A major version: the code is one package per bounded context, so module paths
 changed (below). The package version is `2.0.0a0`; the release is tagged
 `v2.0.0-alpha` and its image `2.0.0-alpha`.
 
+### Fixed — what an exploratory test of every command found (Design Reviews 44–48)
+- **Gates over what they cannot read.** Frontmatter is read from a `---` line
+  to the next, a byte-order mark ignored; the design gate fails on a document
+  whose frontmatter is not YAML, not a mapping or unclosed (*Unreadable
+  Frontmatter*), and the release gate blocks on a result file it cannot read
+  (*Unreadable Result*). Before, either silently dropped out and the gates
+  passed.
+- **Risk.** Only a control reduces a risk; a risk document whose risks are not
+  a list blocks (*Malformed Register*); only text is a hazard, situation or
+  harm; numbered severities are read.
+- **Graph.** `rdm graph serve` is RDM's own read-only endpoint: it refuses
+  SPARQL Update and `SERVICE`, serves the last build, and needs no oxigraph
+  CLI (no longer a dependency). `rdm graph query` refuses them too, and the
+  agent server's guard ends a comment at a carriage return as well.
+- **Evidence.** The report and bundle never read a symbolic link; the bundle
+  keeps every plain result file, replaces an earlier bundle, and lists missing
+  attachments. Audit notes and section numbers leave code alone. `rdm
+  translate` counts errored and skipped cases as such. The mutation probe
+  restores exact bytes and never overwrites a later edit from its journal.
+- **Specification and architecture.** View freshness covers `!include`d
+  files; `new-input` refuses an edit it would misread; the pre-commit hook
+  gates the common languages and non-ASCII names; a persona run that does not
+  say it completed did not; the FDA cybersecurity checklist's V.A.1.b.iii key.
+
 ### Changed — adoption pins the release tag (Design Review 43)
 - The CI workflow `rdm adopt` lays down pins the installed version's release
   tag: a pre-release such as `2.0.0a0` as `v2.0.0-alpha`, the tag the release

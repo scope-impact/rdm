@@ -208,7 +208,9 @@ def _split_out_include_files(checklist, builtins):
 # ([[FDA-SW:sdmp: pointer note]] — the idiom the shipped `rdm init` templates
 # use), since a colon followed by a non-key character cannot begin a longer
 # key. A bare mention outside any [[ ]] block is not a reference.
-_REFERENCE_BLOCK_PATTERN = re.compile(r'\[\[(.+?)\]\]', re.DOTALL)
+# A block never runs past a blank line, so a stray [[ cannot turn later
+# paragraphs' mentions into references.
+_REFERENCE_BLOCK_PATTERN = re.compile(r'\[\[((?:(?!\n[ \t]*\n).)+?)\]\]', re.DOTALL)
 _KEY_CHARS = 'A-Za-z0-9._:\\-'
 _KEY_CHARS_NO_DOT_NO_COLON = 'A-Za-z0-9_\\-'
 _KEY_RUN = re.compile('[{}]+'.format(_KEY_CHARS))
