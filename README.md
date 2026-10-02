@@ -5,322 +5,145 @@
 # RDM
 
 RDM keeps the design record of regulated software — medical-device software
-under IEC 62304 first — as Markdown and tests in git, checks it, and makes it
-one queryable graph that people and agents read from.
+under IEC 62304 first — as Markdown and tests in git. It checks the record,
+renders regulatory documents from it, and builds it into one read-only graph
+that people and agents query.
 
 The chain it holds:
 
 ```
 regulation → checklist → clause ← document
-user need → design input → tagged test → result → source file
-risk → control (a design input) → tagged test → result
+user need → design input → tagged test → run → source file
+risk → risk control (a design input) → tagged test → run
 design document → the commit that landed it
 ```
 
-Every link is a file you write or a fact a tool records. Nothing in the chain
-is typed into a database by hand.
-
-## Why
-
-RDM started as a tool for people writing regulatory documents. It is being
-extended so agents can work on regulated software with the same
-traceability: a knowledge core that holds the whole design record —
-regulations and the checklists drawn from them, design documents in bounded
-contexts, user needs, design inputs, tests, results and risks — as one
-linked graph.
-
-- **One source of truth, changed only by authorized people.** The record is
-  Markdown and tests in git. People and agents propose changes as pull
-  requests, and a reviewer who is not the author approves them. The graph
-  and every document are rebuilt from the record and never edited.
-- **Any harness.** Agents read the record through an MCP server, which
-  Claude Code, Warp and many open-source harnesses speak. A harness that can
-  only run commands can use `rdm graph query` instead.
-- **Any graph database.** The graph is RDF in standard vocabularies (OSLC
-  RM, Dublin Core, PROV-O, SKOS), so any RDF store can load it. Oxigraph is
-  the one RDM embeds.
-- **Skills are the method; RDM is the check.** How to write requirements,
-  analyse risk and develop test-first lives in
-  [scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).
-  A skill decides what to write; RDM checks that what was written is
-  complete, traced and verified.
+Every link is a file you write or a fact a tool records; nothing is typed into
+a database. The record changes only through a pull request that someone other
+than its author approves. The graph and every document are rebuilt from it and
+never edited.
 
 ## The four parts
 
 | Part | What it is | Commands |
 | --- | --- | --- |
-| **Record** | User needs, design inputs (one design document per bounded context), the risk register, checklists, tests tagged `@allure.story("DI-n")`. Markdown + git. Changed only by a reviewed pull request — the approval is the merge. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story trace` |
-| **Gates** | Machine checks: no implementation before the design is approved, no release until every input has a passing test, every need is addressed and every risk is evaluated with its risk controls verified and its residual acceptable, no clause a checklist requires left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
-| **Graph** | The record built into an RDF graph (Oxigraph): needs, inputs, contexts, documents, tests, results, commits, risks, checklist clauses. **Read-only** — rebuilt from the record, never edited. Agents read it through an MCP server; people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
-| **Documents** | Regulatory documents (PDF/DOCX) rendered from the record: Markdown templates + YAML data → Pandoc/Typst. | `rdm render`, `make pdfs` |
+| **Record** | User needs; design inputs, one design document per bounded context; the risk register; checklists; tests tagged `@allure.story("DI-n")`. Markdown and git. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story trace` |
+| **Gates** | No implementation before the design is approved. No release until every design input has a passing test, every need is addressed, and every risk is evaluated with its risk controls verified. No required checklist clause left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
+| **Graph** | The record as RDF: needs, inputs, contexts, documents, tests, runs, commits, risks, clauses. Read-only; agents read it over MCP, people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
+| **Documents** | Regulatory documents rendered from the record: templates and YAML data → Markdown → PDF/DOCX. | `rdm render`, `make pdfs` |
+
+Two choices shape it:
+
+- **Any harness, any store.** Agents read the record through an MCP server
+  (`rdm graph mcp`); a harness that can only run commands uses
+  `rdm graph query`. The graph is RDF in standard vocabularies (OSLC RM, Dublin
+  Core, PROV-O, SKOS), so any RDF store can load it.
+- **Skills are the method; RDM is the check.** How to write requirements,
+  analyse risk and develop test-first lives in
+  [scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).
+  A skill decides what to write; RDM checks that it is complete, traced and
+  verified.
 
 ## What it does not do
 
 - It does not make a device compliant. It keeps the evidence straight; a
-  regulator judges the evidence, not the tool.
-- A green release gate means every design input has a passing tagged test. It
-  does not mean the test proves the input — the pull-request reviewer judges
-  that (`rdm story mutation-probe` helps them check).
-- Checklists are written by hand. Nothing turns a regulation into a checklist.
-- The risk gate checks a register's form, not its truth: whether a control is
-  effective, and whether a residual is as low as practicable, are the reviewer's.
-  It ships no risk matrix: acceptability criteria are the project's to declare.
-- A built store (`rdm graph build --store`, `serve`) is as current as its last
-  build; the agent server (`rdm graph mcp`) reads the record afresh on every call.
+  regulator judges the evidence.
+- A green release gate means every design input has a passing tagged test, not
+  that the test proves it. The pull-request reviewer judges that
+  (`rdm story mutation-probe` helps).
+- Checklists are written by hand; nothing turns a regulation into one.
+- The risk gate checks a register's form, not its truth: whether a risk control
+  is effective is the reviewer's call. It ships no risk matrix; acceptability
+  criteria are the project's to declare.
+
+## Install
+
+```sh
+uv tool install git+https://github.com/scope-impact/rdm
+```
+
+Python 3.10+ and [uv](https://github.com/astral-sh/uv). PyPI's `rdm` is another
+project; install from this repository, and upgrade with `uv tool upgrade rdm`.
+Rendering documents needs Pandoc 2.14+, Typst and Make: use the Docker image
+(Ubuntu 26.04 LTS, Pandoc 3.12, Typst 0.15, the fonts, and RDM with the graph
+extra) or install them natively (`brew install pandoc typst`).
+
+## Quick start
+
+```sh
+rdm init                     # a new project: a DHF skeleton and document templates in dhf/
+rdm adopt .                  # or an existing repository: never overwrites a file
+
+rdm story new-input --list   # contexts, taken ids, user needs
+rdm story new-input --context <context> --traces-to UN-001 --text "The device shall …"
+
+# The gates, as CI runs them (the tests need pytest and allure-pytest)
+rdm story design-gate --dhf dhf
+pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+
+cd dhf && make pdfs          # or, with Docker: docker compose run rdm make pdfs
+```
+
+## In CI
+
+```yaml
+jobs:
+  design-controls:
+    uses: scope-impact/rdm/.github/workflows/gates.yml@v1.2.0
+    with:
+      rdm-ref: v1.2.0        # the same ref as after the @
+```
+
+This runs your acceptance tests, then the design gate, verify, the release
+gate, graph validation and the evidence bundle, with RDM installed from the
+pinned revision; `rdm adopt` lays this workflow down. For PDFs, add a step
+`uses: scope-impact/rdm@v1.2.0`. Inputs and options are in
+[the gates in your CI](docs/reusable-ci.md).
+
+## Documentation
+
+[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/): how RDM
+works and its data model, getting started, one section per part, how RDM
+controls itself (with a traceability matrix generated from a live test run),
+and the CLI and API reference.
+
+| | `docs/` | `dhf/` |
+|---|---|---|
+| **What it is** | RDM's user documentation, the site above | RDM's own design history file: the record RDM develops itself under |
+| **Controlled?** | No: ordinary docs | Yes: the design gate and the release gate hold it |
+| **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the evidence |
+
+`docs/` explains; `dhf/` decides. The full comparison is in
+[how RDM controls itself](docs/dogfood.md).
+
+## Development
+
+```sh
+git clone https://github.com/scope-impact/rdm.git && cd rdm
+uv sync --all-extras
+uv run pytest tests
+```
+
+RDM is developed under its own design controls: every change follows
+[`dhf/AGENT_WORKFLOW.md`](dhf/AGENT_WORKFLOW.md) — the record first, then the
+tagged test, then the code — and [CLAUDE.md](CLAUDE.md) lists the gates to run
+as CI does. The vocabulary is [CONTEXT.md](CONTEXT.md).
 
 ## Direction
 
 Not built yet, in rough order:
 
 - Turning a regulation into a checklist mapped to its standard's clauses.
-- `rdm graph push` to an external graph database, with the vocabulary and
-  gate shapes versioned so another store reads them the same way.
-- Several projects in one graph. Clause identifiers are already shared
-  across repositories, so one query can ask which projects claim a clause.
-
-## Quick Start
-
-### Docker (Recommended)
-
-```sh
-# Install rdm CLI
-uv tool install git+https://github.com/scope-impact/rdm
-
-# Scaffold project and build documents
-rdm init
-cd dhf
-docker compose run rdm make pdfs
-```
-
-### Native Installation
-
-```sh
-# Install rdm CLI
-uv tool install git+https://github.com/scope-impact/rdm
-
-# Install dependencies (macOS)
-brew install pandoc typst
-
-# Scaffold project and build documents
-rdm init
-cd dhf
-make pdfs
-```
-
-### Existing repository (brownfield)
-
-```sh
-# Lay down record-first design controls WITHOUT touching existing files:
-# DHF skeleton, agent runbook, design-gate pre-commit hook, session
-# bootstrap, and CI gates. Never overwrites; re-running is a no-op.
-rdm adopt .
-```
-
-### Update
-
-```sh
-uv tool upgrade rdm
-```
-
-## GitHub Action
-
-```yaml
-# .github/workflows/pdfs.yml
-name: Generate PDFs
-
-on:
-  push:
-    paths: ['dhf/**']
-  workflow_dispatch:
-
-jobs:
-  pdfs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: scope-impact/rdm@v1.2.0
-```
-
-| Input | Description | Default |
-| --- | --- | --- |
-| `dhf_path` | Path to the DHF directory | `dhf` |
-| `version` | RDM Docker image version | the action's release (`@v1.2.0` → `1.2.0`), else `latest` |
-| `artifact_name` | Name for the uploaded artifact | `regulatory-documents` |
-
-The gates are reusable too: call
-`scope-impact/rdm/.github/workflows/gates.yml@v1.2.0` (tests, design gate,
-verify, release gate, graph validation, evidence bundle), or add
-`scope-impact/rdm/actions/gates@v1.2.0` after your own tests. Both install RDM
-from the pinned revision. See [the gates in your CI](docs/reusable-ci.md).
-
-## Dependencies
-
-**Docker (recommended):** Just Docker. The image (Ubuntu 26.04 LTS) includes Pandoc 3.12, Typst 0.15, the required fonts, and RDM with the `graph` extra — `rdm graph build | validate | serve | mcp` work inside it.
-
-**Native:**
-- Python 3.10+
-- [uv](https://github.com/astral-sh/uv)
-- [Pandoc](https://pandoc.org/) 2.14+
-- [Typst](https://typst.app/)
-- Make
-
-## Documentation
-
-[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/), laid out
-like the product:
-
-- **The big picture** — how RDM works, and the data model: what is written,
-  what is derived.
-- **Get started** — install, `rdm init`, `rdm adopt`.
-- **Record · Gates · Graph · Documents** — one section per part: writing
-  design inputs and tests, the gates, the graph (SHACL, Graph Explorer, the
-  agent server), rendering.
-- **RDM on RDM** — how RDM controls itself, with the traceability matrix
-  generated from a live acceptance run at every docs build.
-- **Reference** — CLI, API, FAQ, decisions.
-
-RDM is developed under its own design controls: its record is `dhf/`, and every
-change goes through `dhf/AGENT_WORKFLOW.md`.
-
-### `docs/` and `dhf/`
-
-`docs/` explains RDM to its users; `dhf/` is the controlled record of how RDM
-itself is designed and verified. One explains, the other decides.
-
-| | `docs/` | `dhf/` |
-|---|---|---|
-| **What it is** | RDM's user documentation: the MkDocs site, plus an API reference generated from the docstrings | RDM's own design history file: the regulated record RDM develops itself under |
-| **Who it's for** | People and agents using RDM on their own product | Whoever governs RDM's development: authors, reviewers, an auditor, and RDM's gates |
-| **What's in it** | How RDM works, the data model, the gates, the graph, agents, how-tos, the CLI reference, research notes, the glossary (included from `CONTEXT.md`) | The V&V plan with the user needs (UN-nnn); one design document per bounded context with its design inputs (DI-n) and C3 view; the architecture (C1/C2); the risk policy and register; the design reviews; document control; the agent workflow; generated data (Allure results, `verification.yml`) |
-| **Controlled?** | No: ordinary docs, changed by a normal reviewed pull request | Yes: the design gate requires it complete and committed before code; the release gate requires every design input in it verified |
-| **Checked by** | `mkdocs build --strict` (links, navigation) | The design gate, the release gate, `rdm graph validate`, and the tests tagged with its ids |
-| **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the verification report and the evidence bundle |
-| **Published** | As the documentation site | Not as pages; the site shows one generated view of it, the traceability matrix, from a live test run at each build |
-
-`docs/dogfood.md` describes how RDM uses `dhf/` on itself, and the matrix page
-is generated from it; nothing flows the other way. Where a docs page restates
-what the record decides, the record wins: docs link to the record rather than
-repeat it. A product that adopts RDM gets its own `dhf/` (`rdm adopt` or
-`rdm init`), not RDM's `docs/`.
-
-## Development
-
-```sh
-git clone https://github.com/scope-impact/rdm.git
-cd rdm
-uv sync --all-extras
-uv run pytest tests
-```
+- `rdm graph push` to an external graph database, with the vocabulary and gate
+  shapes versioned so another store reads them the same way.
+- Several projects in one graph; clause identifiers are already shared across
+  repositories.
 
 ## Changes
 
-### Unreleased
-
-- Allure is for acceptance tests only: each acceptance run attaches the text of
-  the design input it verifies; unit tests carry no Allure, held by a guard test.
-- Allure results as RDF (Design Review 14, `rdm/graph/allure.py`): each run in
-  full — times, failure details, parameters, labels, links (DI-54); container
-  fixtures (DI-55); output labels link runs to source files, and `trace` lists a
-  design input's code (DI-56). The acceptance suite records named verification steps.
-- Test evidence (Design Review 13): the release bundle keeps the executed Allure
-  results with their attachments and containers (DI-30); the graph and `trace`
-  carry each run's steps and attachments (DI-53); RDM's gate and risk tests
-  record named verification steps and attach what they checked.
-- Findings from the graph's own analysis (Design Review 12): `rdm graph serve`
-  is read-only; the agent server refuses `SERVICE` and non-id `trace` input
-  (DI-36, DI-42; RISK-TOOL-006/007). The graph records who landed each design
-  document's change (DI-51) and links needs, risks and design documents to
-  their documents (DI-52). Four oversized design inputs are split: DI-47..50.
-- **One data model** (Design Review 11): DuckDB, the planning tooling
-  (`rdm story audit | sync | backlog-validate | check-ids | validate`, `rdm pm`,
-  `rdm pull`) and the `story-audit`, `analytics`, `github` and `plan` extras are
-  removed; the gates move to `rdm/gates/` and need no extra. A duplicated
-  user-need or design-input id now fails the design gate (DI-46).
-- Risk evaluation per the requirements skill (Design Review 10): no default
-  matrix — a register needs a declared `risk_policy` with per-level
-  acceptability; a residual is not evaluated until its controls are verified;
-  `category` safety/security with `stride` and `linked`; optional residual
-  severity; `status: proposed` warns.
-- `rdm story mutation-probe` runs the test once unmutated and refuses a test that
-  does not pass: an already-failing test was reported KILLED under any mutation (DI-34).
-- **Risk register** (UN-016, DI-43/44/45): risks as frontmatter in `kind: risk`
-  documents, evaluated against a declared `risk_policy`, each control a
-  design input; the release gate and the graph shapes block a broken, unscored,
-  uncontrolled or unaccepted risk; `trace` takes risk ids. RDM's own tool-risk
-  register is `dhf/documents/risk/` (Design Review 9). `rdm story new-input` no
-  longer duplicates an empty `design_inputs: []` and wraps its stub docstring.
-- **Read-only agent interface** (`rdm graph mcp`, UN-015, DI-41/42): an MCP
-  stdio server with `schema`, `query`, `trace` and `validate`, each answering
-  from a fresh projection; no write tool, SPARQL Update refused, rows capped.
-  User needs now carry their text in the graph (DI-35; Design Review 8).
-- **Tag discovery**: Python test tags are read from decorators and `pytestmark` only, never from
-  strings or comments (DI-40): fixture files written by a test no longer count
-  as coverage. Every acceptance command passes `--clean-alluredir`, so repeated
-  runs and docs builds no longer double the results (Design Review 7).
-- **Four parts**: RDM restated as Record, Gates, Graph and Documents (README,
-  docs, intended use, architecture — Design Review 6); agent skills maintained
-  in scope-impact/agent-skills
-- **The record as a graph** (`rdm graph build | query | serve`, extra
-  `graph`): the DHF and its regulatory checklists projected into RDF named
-  graphs (OSLC RM, Dublin Core, PROV-O and SKOS vocabulary; checklists as
-  data), queried with SPARQL over an embedded Oxigraph store, checked against
-  the gate rules as SHACL shapes (`rdm graph validate`), and browsable in AWS
-  Graph Explorer — derived from the Markdown, never edited
-- **Agent-era design controls, end to end**: canonical change procedure
-  (`dhf/AGENT_WORKFLOW.md`), always-on local design gate (committed
-  `.githooks/` + session bootstrap), and CI gates
-- **`rdm adopt`**: bring an existing repository under record-first design
-  controls from one command (never overwrites)
-- **`rdm story new-input`**: scaffold a traced design input (frontmatter
-  entry, failing tagged stub test, checklist)
-- **Record-first-aware `rdm story audit`**: design-input tag coverage in the
-  report and score
-- **`part11_document_control` built-in checklist** + RDM's own Part 11-mapped
-  document-control statement, enforced by an acceptance test
-- **Worked example** `examples/github-document-control/`: git as document
-  control with GitHub as provider — rulesets/settings as code, PR approval as
-  the Part 11 e-signature, DMR/DHR analogs, drift-audit script, its own
-  gated DHF
-- **Docs site**: user manual (quickstarts, guides, CLI reference), Mermaid
-  diagrams, and build-time-generated verification evidence
-- **Sound gap matching**: references count only inside `[[ … ]]` blocks,
-  exact keys with descendant-covers-parent hierarchy — prose mentions and
-  sibling keys no longer count as coverage
-- **`rdm story dmr`** and **`rdm story evidence-bundle`**: DMR index data
-  generated from frontmatter; the retained release evidence set (matrix,
-  verification data, Allure results, verification report, manifest)
-- **`rdm story evidence-report`**: the verification report as PDF — every run
-  behind each design input, with its commit, steps, labels, links and
-  attachments (extra `report`)
-- `rdm hooks` defaults to the design-gate hook only (`--with-issue-hooks`
-  opts into the legacy pair); `new-input` scaffolds an input with its `traces_to`
-- **Polyglot traceability**: JS/TS and Java test tags discovered for
-  linkage and audit; legacy YAML workflow deprecated
-- **Faithfulness gate retired**: `rdm story faithfulness` and `verdict`
-  removed (DI-19/20/21/27/28, UN-009); `mutation-probe` kept as a standalone
-  reviewer tool (DI-34) — its hash-pinned
-  verdicts re-opened reviews on edits that changed no requirement;
-  independent verification is now the human-reviewed pull request
-- Fixes: `rdm gap --coverage` with built-in checklist names; tag-scanner
-  false positive; root-container test skip
-
-### v1.1.0
-
-- **Story Audit module** (`rdm[story-audit]`): Backlog.md parser, schema validation, traceability audit, and duplicate ID detection
-- **Bidirectional GitHub Sync** (`rdm[github]`): Push Backlog.md tasks to GitHub Issues/Milestones/Projects v2, pull PRs into DuckDB for analytics
-- **VitalView example**: Software-only medical device (SaMD) worked example for the record-first model (user needs, bounded-context SDDs, AI-persona usability validation)
-- Alias-based status normalization with actionable fix hints in validator
-- Codebase simplification: removed dead code, deduplicated logic, fixed inefficiencies
-- Added CLAUDE.md for Claude Code development guidance
-- Dependency bumps: PyGithub 2.8.1, Ruff 0.14.13
-
-### v1.0.0
-
-- Installation via `uv tool install` directly from GitHub
-- Migrated from LaTeX to Typst for PDF generation
-- New lightweight Docker image (Alpine + Pandoc 3.6 + Typst 0.12)
-- Added GitHub Action for CI/CD (`scope-impact/rdm@v1`)
-- Fixed broken cross-references in software_plan.md template
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## Origin and license
 

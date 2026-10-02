@@ -44,6 +44,8 @@ rdm graph serve --store .rdm/graph --bind 0.0.0.0:7878
 database. Each build clears it first, so a removed design input never lingers.
 Without `--store`, `rdm graph query` builds an in-memory projection on the fly.
 Add `.rdm/` to `.gitignore`; the store is generated, like Allure results.
+A built store, and the endpoint serving it, is as current as its last build;
+the agent server (`rdm graph mcp`) projects the record afresh on every call.
 
 The endpoint is read-only (`oxigraph serve-read-only`). It allows requests
 from any origin so Graph Explorer can reach it, which is exactly why it must
