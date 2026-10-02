@@ -3,7 +3,7 @@ id: SDS-GATE-001
 kind: design
 context: gating
 # Implements part of inputs other contexts own (Design Review 27).
-realises: [DI-18]
+realises: [DI-18, DI-70]
 design_inputs:
   - id: DI-2
     text: "RDM shall block the transition into implementation until design input and review are present, complete, and approved (committed) in git; a later edit re-opens the gate."

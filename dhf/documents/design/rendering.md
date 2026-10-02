@@ -13,8 +13,8 @@ design_inputs:
     text: "RDM shall post-process rendered Markdown: auto-number sections, expand declared vocabulary, and exclude auditor-only notes from released output."
     traces_to: [UN-001]
   - id: DI-70
-    text: "RDM shall render each Mermaid diagram in a controlled document as an image in the document it renders, drawn by Mermaid's own renderer at a pinned version, and shall fail the render, naming the document, when a diagram cannot be drawn."
-    traces_to: [UN-001]
+    text: "RDM shall draw each view of the architecture workspace to an image in the record, stamped with the workspace it was drawn from, and the design gate shall fail when the workspace's exported model or any view's image was not drawn from the current workspace, or a view has no image."
+    traces_to: [UN-017, UN-001]
 realises: [DI-1, DI-4]   # also renders the record-ingest + traceability outputs
 ---
 
@@ -33,17 +33,17 @@ from data + templates), all refining UN-001:
 - **DI-9 (markdown post-processing)** — auto-number sections, expand declared
   vocabulary/acronyms, and exclude auditor-only `[[…]]` notes from released
   output.
-- **DI-70 (Mermaid diagrams)** — a ` ```mermaid ` block in a controlled document
-  (the C4 views among them) becomes an image in the rendered document, drawn by
-  Mermaid's own renderer, so the PDF shows the diagram GitHub and the docs site
-  show. The renderer is Mermaid's official image (`mermaid-cli`), pinned by
-  version and digest and run as its own container: the RDM image carries no
-  browser. Rendering is three steps on shared files: the render writes each
-  diagram, named by a hash of its text, to `tmp/mermaid/`; the Mermaid
-  container draws each one; the render runs again and every block becomes its
-  image. Where `mmdc` is installed the render draws a diagram itself, in one
-  step. A diagram not drawn, or one the renderer rejects, fails the render
-  with the document's name, rather than shipping its source as a code block.
+- **DI-70 (architecture views as images)** — `rdm c4 draw` exports the
+  workspace (`dhf/c4/workspace.dsl`) with Structurizr's CLI: its model as
+  `dhf/c4/workspace.json`, and each view as DOT, drawn by Graphviz to
+  `dhf/c4/views/<view>.svg`. Each design document shows its view as an
+  ordinary image, so GitHub, the docs site and a rendered PDF show the same
+  picture, and no browser draws it. The drawn files are committed, each
+  stamped with the SHA-256 of the workspace; the design gate fails when a
+  stamp is not the current workspace's, when a view has no image, or when an
+  image has no view, so a stale diagram cannot be committed. Checking needs
+  only the stamps: Java and Graphviz are needed only to draw. Amended (Design
+  Review 29): DI-70 rendered Mermaid diagrams with Mermaid's renderer.
 
 It also **realises** the rendering side of inputs owned elsewhere (via
 `realises`): **DI-1** (record ingest, owned by `record`) and **DI-4**
@@ -57,9 +57,9 @@ Compiles the DHF from data and templates.
   `md_indent` filters; context keyed by data-file basename, so a generated
   `verification.yml` renders into a traceability matrix.
 - `rdm/md_extensions/` — section numbering, vocabulary expansion, auditor-note
-  exclusion, Mermaid diagrams as images (`mermaid.py`, DI-70).
-- `action.yml` — the PDF action: writes the diagrams, draws them with the
-  pinned Mermaid image, then renders (DI-70).
+  exclusion.
+- `rdm/c4.py` — `rdm c4 draw`: the workspace's model and its views, drawn
+  and stamped (DI-70).
 - Output: Markdown → PDF/DOCX via Pandoc/Typst.
 
 Contributes to **UN-001** (compile the DHF from the system of record). The owned

@@ -880,6 +880,45 @@ glossary's architecture terms; RDM's own C1, C2 and C3 diagrams; three
 
 - None open.
 
+# Design Review 29 — The architecture as one workspace, its views as images
+
+**Scope reviewed:** DI-66, DI-68 and DI-70 amended; the C4 views of
+`architecture.md` and every design document; the glossary (`CONTEXT.md`).
+
+**Disposition:** Approved. Supersedes the Mermaid design of Design Reviews 27
+and 28.
+
+## Items reviewed
+
+- The C4 views were Mermaid in each document. Reading them needed a grammar
+  (Mermaid's own, vendored, under Node) and a link workaround, and drawing
+  them in a PDF needed a browser: Mermaid's official image, 3.5 GB. A trial
+  converted RDM's 12 views into one Structurizr workspace: its JSON export
+  carries the whole model (each component's bounded context as its group and
+  its code as a property), and Graphviz draws its DOT export, all 12 views in
+  a third of a second, with no browser.
+- The architecture is now one workspace (`dhf/c4/workspace.dsl`), the source;
+  `rdm c4 draw` writes its model as JSON and each view as an image, and each
+  document shows its view as an image. GitHub, the docs site and a PDF show
+  the same picture. The drawn files are committed and stamped with the
+  workspace's hash, and the design gate fails on a stale or missing one, so
+  derived files in git cannot drift from their source. Java and Graphviz are
+  needed to draw, not to check.
+- Trade-offs accepted: the record's architecture is more lines than the
+  Mermaid views were (each component's code is a three-line property); a
+  pull request shows the workspace's text and the redrawn image, not an
+  inline diagram; the Graphviz drawings are plainer than Mermaid's.
+- Found in the trial and handled in `rdm c4 draw`: Structurizr's DOT export
+  leaves `&` unescaped (it broke 7 of the 12 views); a view that includes `*`
+  leaves out an element related only indirectly (the system context lost the
+  reviewer), so views include what they must show.
+- Retired: the Mermaid extension and the PDF action's Mermaid steps (DI-70 as
+  first written); the hand-written Mermaid reader.
+
+## Findings and actions
+
+- None open.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

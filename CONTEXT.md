@@ -72,9 +72,15 @@ A directed dependency between two architecture elements, labelled with what
 the source does to the target.
 _Avoid_: link, connection, arrow
 
+**Architecture workspace**:
+The one Structurizr workspace (`dhf/c4/workspace.dsl`) that holds the C4 model
+and its views. It is written by people and is the source of every view.
+_Avoid_: diagram (for the model), architecture file
+
 **Architecture view**:
-One C4 diagram at one level: system context, container, component or code.
-The diagrams are its source; the model is what they declare together.
+One view of the architecture workspace at one level: system context,
+container or component. Its image is drawn from the workspace and stamped with
+it; it is never edited.
 _Avoid_: diagram (for the model), picture
 
 ## Verification and validation
