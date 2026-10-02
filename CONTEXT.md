@@ -67,6 +67,14 @@ The one controlled document per bounded context that declares the design
 inputs it owns and describes how the context meets them.
 _Avoid_: spec, SDD (unqualified)
 
+**Design output**:
+The architecture that meets a bounded context's design inputs: its components
+and their relationships in the C4 model (the component view), and a dynamic
+view where the order of interactions matters. It names components, never
+source files or functions: the architecture workspace maps each component to
+its code.
+_Avoid_: implementation notes, module list, code walkthrough
+
 **Controlled document**:
 A document with an id and a revision whose every change goes through review.
 _Avoid_: doc, file
