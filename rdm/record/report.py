@@ -35,12 +35,23 @@ import json
 import shutil
 import subprocess
 import tempfile
-from datetime import datetime, timezone
+import time
 from importlib.resources import files
 from pathlib import Path
 
-from rdm.record.allure import DESIGN_INPUT_LABELS
-from rdm.record.git import git, repo_root, web_url
+from rdm.record.allure import (
+    FAILING,
+    REQUIREMENT_ATTACHMENT,
+    design_input_tags,
+    find_tests_dir,
+    full_name,
+    read_run_facts,
+    run_version,
+    scan_source_tests,
+)
+from rdm.record.git import head, repo_root, repository_url
+from rdm.record.ids import sort_key
+from rdm.record.reconcile import load_json_records
 from rdm.record.risk import NOT_EVALUATED, read_policy, residual_decision, risks
 from rdm.record.sdd import design_inputs
 from rdm.record.verify import build_verification
@@ -52,41 +63,45 @@ TEXT_TYPES = {"application/json", "application/xml", "application/yaml", "applic
 IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/svg+xml", "image/webp"}
 # A text attachment longer than this is cut; the full file is in the bundle, by checksum.
 TEXT_LINES, TEXT_CHARS = 60, 6000
-# pytest's captured output: listed by checksum, not printed.
+# pytest's captured output (allure-pytest's names): listed by checksum, not printed.
 CAPTURED = {"stdout", "stderr", "log"}
-# Labels the report already shows elsewhere, and runner internals: not repeated per run.
-# Allure's severity is left out too: beside a risk it reads as a harm's severity, and it is not one.
+# Labels the report already shows elsewhere, Allure's severity (beside a risk it
+# reads as a harm's severity, and it is not one), and runner internals: not
+# repeated per run. The layout lists them in its appendix.
 SHOWN_LABELS = {"story", "epic", "feature", "output", "commit", "worktree", "severity"}
 RUNNER_LABELS = {"host", "thread", "framework", "language", "suite", "parentSuite", "subSuite", "package"}
-FAILED_STATUSES = {"failed", "broken"}
 
 
 class ReportUnavailable(RuntimeError):
     """Neither the ``typst`` package nor a ``typst`` executable is available."""
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def result_files(results_dir: Path) -> list[dict]:
     """Every file in the results directory, in name order, with its size and SHA-256."""
-    return [{"name": p.name, "bytes": p.stat().st_size, "sha256": _sha256(p)}
-            for p in sorted(Path(results_dir).iterdir()) if p.is_file()]
+    entries = []
+    for path in sorted(p for p in Path(results_dir).iterdir() if p.is_file()):
+        data = path.read_bytes()
+        entries.append({"name": path.name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+    return entries
+
+
+def digest(entries: list[dict]) -> str:
+    """One SHA-256 over result files' names and SHA-256s, in name order."""
+    total = hashlib.sha256()
+    for entry in entries:
+        total.update(entry["name"].encode() + b"\0" + entry["sha256"].encode() + b"\n")
+    return total.hexdigest()
 
 
 def results_sha256(results_dir: Path) -> str:
-    """One SHA-256 over every file in the results directory: names and contents, in name order."""
-    digest = hashlib.sha256()
-    for entry in result_files(results_dir):
-        digest.update(entry["name"].encode() + b"\0" + entry["sha256"].encode() + b"\n")
-    return digest.hexdigest()
+    """One SHA-256 over every file in the results directory."""
+    return digest(result_files(results_dir))
 
 
 def _time(ms) -> str | None:
     if not isinstance(ms, (int, float)):
         return None
-    return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(ms / 1000))
 
 
 def _duration(start, stop) -> str | None:
@@ -95,26 +110,32 @@ def _duration(start, stop) -> str | None:
     return f"{(stop - start) / 1000:.2f} s"
 
 
-def _attachment(item: dict, results_dir: Path, requirement: set[str]) -> dict:
-    name, kind = str(item.get("name") or item.get("source") or ""), str(item.get("type") or "")
-    source = str(item.get("source") or "")
-    path = results_dir / source
-    if not source or Path(source).name != source or not path.is_file():
-        return {"name": name, "type": kind, "source": source, "kind": "missing", "sha256": None}
-    entry = {"name": name, "type": kind, "source": source, "sha256": _sha256(path), "bytes": path.stat().st_size}
-    if name in CAPTURED:
-        return entry | {"kind": "captured"}
-    if name in requirement:
-        return entry | {"kind": "requirement"}
-    if kind.startswith("text/") or kind in TEXT_TYPES:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        lines = text.splitlines()
-        shown = "\n".join(lines[:TEXT_LINES])[:TEXT_CHARS]
-        return entry | {"kind": "text", "text": shown, "truncated": shown != "\n".join(lines),
-                        "lines": len(lines)}
-    if kind in IMAGE_TYPES:
-        return entry | {"kind": "image"}
-    return entry | {"kind": "file"}
+class _Reader:
+    """Reads one results directory once: every file is hashed once, and an
+    attachment's content is decoded from the bytes already read."""
+
+    def __init__(self, results_dir: Path):
+        self.dir = results_dir
+        self.files = result_files(results_dir)
+        self.by_name = {entry["name"]: entry for entry in self.files}
+
+    def attachment(self, item: dict, requirement: set[str]) -> dict:
+        name, kind = str(item.get("name") or item.get("source") or ""), str(item.get("type") or "")
+        source = str(item.get("source") or "")
+        entry = self.by_name.get(source) if source and Path(source).name == source else None
+        if entry is None:
+            return {"name": name, "type": kind, "source": source, "kind": "missing", "sha256": None}
+        found = {"name": name, "type": kind, "source": source, "sha256": entry["sha256"], "bytes": entry["bytes"]}
+        if name in CAPTURED:
+            return found | {"kind": "captured"}
+        if name in requirement:
+            return found | {"kind": "requirement"}
+        if kind.startswith("text/") or kind in TEXT_TYPES:
+            lines = (self.dir / source).read_text(encoding="utf-8", errors="replace").splitlines()
+            shown = "\n".join(lines[:TEXT_LINES])[:TEXT_CHARS]
+            return found | {"kind": "text", "text": shown, "truncated": shown != "\n".join(lines),
+                            "lines": len(lines)}
+        return found | {"kind": "image" if kind in IMAGE_TYPES else "file"}
 
 
 def _details(node: dict) -> tuple[str | None, str | None]:
@@ -122,85 +143,54 @@ def _details(node: dict) -> tuple[str | None, str | None]:
     return (details.get("message") or None), (details.get("trace") or None)
 
 
-def _step(step: dict, results_dir: Path, requirement: set[str]) -> dict:
+def _step(step: dict, reader: _Reader, requirement: set[str]) -> dict:
     message, trace = _details(step)
     return {
         "name": str(step.get("name", "")),
         "status": str(step.get("status", "unknown")),
         "message": message,
         "trace": trace,
-        "attachments": [_attachment(a, results_dir, requirement) for a in step.get("attachments") or []],
-        "steps": [_step(s, results_dir, requirement) for s in step.get("steps") or []],
+        "attachments": [reader.attachment(a, requirement) for a in step.get("attachments") or []],
+        "steps": [_step(s, reader, requirement) for s in step.get("steps") or []],
     }
 
 
-def _test_id(full_name: str, name: str) -> str:
-    """``tests.acceptance.test_x#test_y`` → ``tests/acceptance/test_x.py::test_y``."""
-    module, _, function = full_name.partition("#")
-    return f"{module.replace('.', '/')}.py::{function}" if module and function else (full_name or name)
+def _test_ids(dhf_dir: Path, root: Path | None) -> dict[str, str]:
+    """The source test each Allure ``fullName`` names, as ``file::name``."""
+    tests_dir = find_tests_dir(dhf_dir)
+    if tests_dir is None:
+        return {}
+    base = root or tests_dir.parent
+    ids = {}
+    for file, name, _tags in scan_source_tests(tests_dir):
+        rel = Path(file).resolve().relative_to(base.resolve()).as_posix()
+        if (key := full_name(rel, name)) is not None:
+            ids[key] = f"{rel}::{name}"
+    return ids
 
 
-def _run(result: dict, results_dir: Path, tagged: set[str]) -> dict:
+def _run(result: dict, reader: _Reader, tagged: list[str], test_ids: dict[str, str]) -> dict:
     labels = [{"name": str(label.get("name", "")), "value": str(label.get("value", ""))}
               for label in result.get("labels") or [] if isinstance(label, dict)]
-    first: dict[str, str] = {}
-    for label in labels:
-        first.setdefault(label["name"], label["value"])
+    commit, dirty = run_version(result)
     message, trace = _details(result)
-    requirement = {f"requirement {di}" for di in tagged}
+    requirement = {REQUIREMENT_ATTACHMENT.format(di) for di in tagged}
+    name = str(result.get("fullName") or result.get("name") or "")
     return {
-        "test": _test_id(str(result.get("fullName", "")), str(result.get("name", ""))),
+        "test": test_ids.get(name, name),
         "status": str(result.get("status", "unknown")),
         "message": message,
         "trace": trace,
         "start": _time(result.get("start")),
         "duration": _duration(result.get("start"), result.get("stop")),
-        "commit": first.get("commit"),
-        "dirty": first.get("worktree") == "dirty",
+        "commit": commit,
+        "dirty": dirty,
         "labels": [label for label in labels if label["name"] not in SHOWN_LABELS | RUNNER_LABELS],
         "links": [{"name": str(link.get("name") or link.get("url", "")), "url": str(link.get("url", ""))}
                   for link in result.get("links") or [] if isinstance(link, dict)],
-        "steps": [_step(s, results_dir, requirement) for s in result.get("steps") or []],
-        "attachments": [_attachment(a, results_dir, requirement) for a in result.get("attachments") or []],
+        "steps": [_step(s, reader, requirement) for s in result.get("steps") or []],
+        "attachments": [reader.attachment(a, requirement) for a in result.get("attachments") or []],
     }
-
-
-def _results(results_dir: Path) -> list[dict]:
-    loaded = []
-    for path in sorted(results_dir.glob("*-result.json")):
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            continue
-        if isinstance(data, dict):
-            loaded.append(data)
-    return sorted(loaded, key=lambda r: (r.get("start") or 0, str(r.get("fullName", ""))))
-
-
-def _id_order(ident: str) -> tuple:
-    """DI-2 before DI-10: the id's prefix, then its number."""
-    prefix, _, number = ident.rpartition("-")
-    return (prefix, int(number)) if number.isdigit() else (ident, 0)
-
-
-def _properties(path: Path) -> dict[str, str]:
-    """A .properties file, as Allure's environment.properties is written."""
-    if not path.is_file():
-        return {}
-    facts = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip() and not line.lstrip().startswith(("#", "!")) and "=" in line:
-            key, _, value = line.partition("=")
-            facts[key.strip()] = value.strip()
-    return facts
-
-
-def _executor(results_dir: Path) -> dict | None:
-    try:
-        data = json.loads((results_dir / "executor.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return {k: str(data[k]) for k in ("name", "buildName", "buildUrl") if data.get(k)} or None
 
 
 def _all_attachments(node: dict):
@@ -209,41 +199,36 @@ def _all_attachments(node: dict):
         yield from _all_attachments(step)
 
 
-def _assess(inputs: list[dict], record_commit: str | None, orphans: list[str]) -> tuple[list[str], list[dict]]:
+def _assess(inputs: list[dict], commits: list[str], record_commit: str | None,
+            orphans: list[str]) -> tuple[list[str], list[dict]]:
     """The reasons the evidence is not release-grade (none: it is), and the anomalies."""
     runs = [run for di in inputs for run in di["runs"]]
     reasons = []
     unverified = [di["id"] for di in inputs if di["status"] != "verified"]
     if unverified:
         reasons.append(f"{len(unverified)} design input(s) not verified: {', '.join(unverified)}")
-    failed = sorted({run["test"] for run in runs if run["status"] in FAILED_STATUSES})
-    if failed:
-        reasons.append(f"{len(failed)} test(s) failed or broke")
-    dirty = sorted({run["test"] for run in runs if run["dirty"]})
-    if dirty:
-        reasons.append(f"{len(dirty)} test(s) ran with uncommitted changes in the worktree")
-    unversioned = sorted({run["test"] for run in runs if not run["commit"]})
-    if unversioned:
-        reasons.append(f"{len(unversioned)} test(s) recorded no commit")
+    for counts, message in ((lambda r: r["status"] in FAILING, "test(s) failed or broke"),
+                            (lambda r: r["dirty"], "test(s) ran with uncommitted changes in the worktree"),
+                            (lambda r: not r["commit"], "test(s) recorded no commit")):
+        if n := len({run["test"] for run in runs if counts(run)}):
+            reasons.append(f"{n} {message}")
     if record_commit is None:
         reasons.append("the record's commit is unknown (not a git repository)")
-    else:
-        other = sorted({run["commit"] for run in runs if run["commit"] and run["commit"] != record_commit})
-        if other:
-            reasons.append(f"runs tested {len(other)} other commit(s) than the record's "
-                           f"({record_commit[:12]}): {', '.join(c[:12] for c in other)}")
+    elif other := [c for c in commits if c != record_commit]:
+        reasons.append(f"runs tested {len(other)} other commit(s) than the record's "
+                       f"({record_commit[:12]}): {', '.join(c[:12] for c in other)}")
 
     anomalies = []
     for di in inputs:
         if not di["runs"]:
             anomalies.append({"subject": di["id"], "kind": "no run", "detail": "no run of a test tagged with it"})
         for run in di["runs"]:
+            subject = f"{di['id']} · {run['test']}"
             if run["status"] != "passed":
-                anomalies.append({"subject": f"{di['id']} · {run['test']}", "kind": run["status"],
-                                  "detail": run["message"] or ""})
+                anomalies.append({"subject": subject, "kind": run["status"], "detail": run["message"] or ""})
             for attachment in _all_attachments(run):
                 if attachment["kind"] == "missing":
-                    anomalies.append({"subject": f"{di['id']} · {run['test']}", "kind": "missing attachment",
+                    anomalies.append({"subject": subject, "kind": "missing attachment",
                                       "detail": attachment["source"] or attachment["name"]})
     for orphan in orphans:
         anomalies.append({"subject": orphan, "kind": "orphan tag",
@@ -251,32 +236,43 @@ def _assess(inputs: list[dict], record_commit: str | None, orphans: list[str]) -
     return reasons, anomalies
 
 
-def build_report(dhf_dir: Path, results_dir: Path) -> dict:
-    """The report's data: provenance, evidence status, anomalies, traceability, and the runs."""
-    dhf_dir, results_dir = Path(dhf_dir), Path(results_dir)
-    verification = build_verification(dhf_dir, results_dir)
-    rows = {row["design_input"]: row for group in verification["groups"] for row in group["design_inputs"]}
+def _register(dhf_dir: Path, verified: set[str]) -> tuple[list[dict], dict[str, list[dict]], str]:
+    """Each risk's status and residual decision, the risks each design input is
+    a control for, and the acceptability criteria's state."""
     try:
         policy = read_policy(dhf_dir)
     except ValueError:
         policy = None  # a malformed policy: the release gate reports it; here no residual is evaluated
-    verified = {row["design_input"] for row in rows.values() if row["status"] == "verified"}
-    register = []
-    control_for: dict[str, list[dict]] = {}
+    register, control_for = [], {}
     for risk in risks(dhf_dir, policy):
-        proposal = risk.status == "proposed" or (policy is not None and policy.status == "proposed")
-        entry = {"id": risk.id, "status": "proposed" if proposal else "approved",
-                 "residual": residual_decision(risk, policy, verified)}
+        # A rating under unapproved acceptability criteria is itself a proposal.
+        status = "proposed" if policy is not None and policy.status == "proposed" else risk.status
+        entry = {"id": risk.id, "status": status, "residual": residual_decision(risk, policy, verified)}
         register.append(entry)
         for control in risk.controls:
             control_for.setdefault(control, []).append(entry)
+    state = "none declared" if policy is None else ("proposed" if policy.status == "proposed" else "approved")
+    return register, control_for, state
 
+
+def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = None) -> dict:
+    """The report's data: provenance, evidence status, anomalies, traceability,
+    and the runs. ``verification`` is :func:`build_verification`'s result, when
+    the caller already has it."""
+    dhf_dir, results_dir = Path(dhf_dir), Path(results_dir)
+    verification = verification or build_verification(dhf_dir, results_dir)
+    status = {row["design_input"]: row for group in verification["groups"] for row in group["design_inputs"]}
+    register, control_for, policy_state = _register(
+        dhf_dir, {di for di, row in status.items() if row["status"] == "verified"})
+
+    root = repo_root(dhf_dir)
+    reader = _Reader(results_dir)
+    test_ids = _test_ids(dhf_dir, root)
     runs: dict[str, list[dict]] = {}
-    for result in _results(results_dir):
-        tagged = {str(label.get("value", "")).strip() for label in result.get("labels") or []
-                  if isinstance(label, dict) and label.get("name") in DESIGN_INPUT_LABELS}
-        if tagged:
-            run = _run(result, results_dir, tagged)
+    results = load_json_records(results_dir, "-result.json", lambda data, _name: data)
+    for result in sorted(results, key=lambda r: (r.get("start") or 0, str(r.get("fullName", "")))):
+        if tagged := design_input_tags(result):
+            run = _run(result, reader, tagged, test_ids)
             for di in tagged:
                 runs.setdefault(di, []).append(run)
 
@@ -285,41 +281,39 @@ def build_report(dhf_dir: Path, results_dir: Path) -> dict:
         "text": di["text"],
         "context": di["context"],
         "traces_to": di["traces_to"],
-        "criterion": "risk-based" if di["id"] in control_for else "baseline",
-        "control_for": sorted(control_for.get(di["id"], []), key=lambda r: _id_order(r["id"])),
-        "status": rows[di["id"]]["status"],
-        "outputs": rows[di["id"]]["outputs"],
+        "control_for": sorted(control_for.get(di["id"], []), key=lambda r: sort_key(r["id"])),
+        "status": status[di["id"]]["status"],
+        "outputs": status[di["id"]]["outputs"],
         "runs": runs.get(di["id"], []),
-    } for di in sorted(design_inputs(dhf_dir), key=lambda di: _id_order(di["id"]))]
+    } for di in sorted(design_inputs(dhf_dir), key=lambda di: sort_key(di["id"]))]
 
-    root = repo_root(dhf_dir)
-    record_commit = git(root, "rev-parse", "HEAD") if root else None
-    reasons, anomalies = _assess(inputs, record_commit, verification["orphans"])
-    repository = web_url(git(root, "remote", "get-url", "origin")) if root else None
+    record_commit = head(root)[0] if root else None
+    commits = sorted({run["commit"] for di in inputs for run in di["runs"] if run["commit"]})
+    reasons, anomalies = _assess(inputs, commits, record_commit, verification["orphans"])
+    executor, environment = read_run_facts(results_dir)
     return {
-        "title": "Verification report",
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "generated_at": _time(time.time() * 1000),
         "rdm_version": __version__,
-        "repository": repository or (root.name if root else dhf_dir.resolve().name),
+        "repository": (repository_url(root) if root else None) or (root or dhf_dir.resolve()).name,
         "record_commit": record_commit,
-        "commits": sorted({run["commit"] for di in inputs for run in di["runs"] if run["commit"]}),
-        "executor": _executor(results_dir),
-        "environment": _properties(results_dir / "environment.properties"),
+        "commits": commits,
+        "executor": executor,
+        "environment": environment,
         "results_dir": str(results_dir),
-        "results_sha256": results_sha256(results_dir),
+        "results_sha256": digest(reader.files),
         "release_grade": not reasons,
+        "reasons": reasons,
         "risk_register": {
             "risks": len(register),
             "proposed": sum(r["status"] == "proposed" for r in register),
             "not_evaluated": sum(r["residual"] == NOT_EVALUATED for r in register),
-            "policy": "none declared" if policy is None else ("proposed" if policy.status == "proposed"
-                                                              else "approved"),
+            "policy": policy_state,
         },
-        "reasons": reasons,
         "anomalies": anomalies,
         "summary": verification["summary"],
+        "left_out": {"shown": sorted(SHOWN_LABELS), "runner": sorted(RUNNER_LABELS)},
         "design_inputs": inputs,
-        "files": result_files(results_dir),
+        "files": reader.files,
     }
 
 
@@ -355,9 +349,9 @@ def render_pdf(report: dict, results_dir: Path, output: Path) -> Path:
     return output
 
 
-def write_report(dhf_dir: Path, results_dir: Path, output: Path) -> dict:
+def write_report(dhf_dir: Path, results_dir: Path, output: Path, verification: dict | None = None) -> dict:
     """Build the report data and render it to ``output``; return the data."""
-    report = build_report(dhf_dir, results_dir)
+    report = build_report(dhf_dir, results_dir, verification)
     render_pdf(report, Path(results_dir), output)
     return report
 

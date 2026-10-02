@@ -29,7 +29,7 @@ from urllib.parse import quote
 import pyoxigraph as ox
 
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
-from rdm.record.allure import find_tests_dir, reconcile, scan_source_tests
+from rdm.record.allure import find_tests_dir, full_name, reconcile, scan_source_tests
 from rdm.record.git import git, repo_root
 from rdm.record.ids import is_id, relevant_orphans
 from rdm.record.sdd import (
@@ -221,10 +221,8 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
             ds.add(test, rdm("verifies"), ds.node("input", tag), "tests")
         for tag in relevant_orphans(sorted(set(tags) - declared), declared):  # as the design gate reports them
             ds.add(test, rdm("undeclaredTag"), tag, "tests")
-        if name and rel.endswith(".py"):
-            *owner, function = name.split("::")
-            module = rel[:-3].replace("/", ".")
-            by_full_name[".".join([module, *owner]) + "#" + function] = test
+        if (key := full_name(rel, name)) is not None:
+            by_full_name[key] = test
     return by_full_name
 
 

@@ -29,7 +29,6 @@ pytest root. Use it for acceptance tests only: unit tests carry no Allure.
 from __future__ import annotations
 
 import getpass
-import json
 import os
 import platform
 import socket
@@ -39,7 +38,8 @@ from pathlib import Path
 
 import pytest
 
-from rdm.record.git import git, web_url  # noqa: F401 (web_url: part of this module's API)
+from rdm.record.allure import COMMIT_LABEL, DIRTY, REQUIREMENT_ATTACHMENT, WORKTREE_LABEL, write_run_facts
+from rdm.record.git import git, head, repository_url
 
 
 def pytest_addoption(parser):
@@ -56,6 +56,7 @@ def _record(dhf: str) -> dict:
 
     path = Path(dhf)
     root = Path(git(path, "rev-parse", "--show-toplevel") or path.parent).resolve()
+    commit, dirty = head(root)
 
     def rel(doc: Path) -> str:
         return doc.resolve().relative_to(root).as_posix()
@@ -69,9 +70,9 @@ def _record(dhf: str) -> dict:
         "declared": {id_: list(dict.fromkeys(rel(path / d) for d in docs))
                      for id_, docs in declarations(path).items()},
         "controls": controls,
-        "web": web_url(git(root, "remote", "get-url", "origin")),
-        "commit": git(root, "rev-parse", "HEAD"),
-        "dirty": bool(git(root, "status", "--porcelain")),
+        "web": repository_url(root),
+        "commit": commit,
+        "dirty": dirty,
     }
 
 
@@ -128,14 +129,15 @@ def executor(env=os.environ) -> dict:
 
 def environment(record: dict | None, env=os.environ) -> dict[str, str]:
     """Allure's environment.properties: the configuration and tools of the run."""
+    record = record or {}
     facts = {
         "os": f"{platform.system()} {platform.release()} ({platform.machine()})",
         "python": f"{platform.python_implementation()} {platform.python_version()}",
         "pytest": _version("pytest"),
         "allure-pytest": _version("allure-pytest"),
         "rdm": _version("rdm"),
-        "commit": (record or {}).get("commit") or "unknown",
-        "worktree": "dirty" if (record or {}).get("dirty") else "clean",
+        "commit": record.get("commit") or "unknown",
+        "worktree": DIRTY if record.get("dirty") else "clean",
     }
     if env.get("GITHUB_ACTIONS") == "true":
         facts |= {"ci.actor": env.get("GITHUB_ACTOR", ""), "ci.workflow": env.get("GITHUB_WORKFLOW", ""),
@@ -152,11 +154,7 @@ def _record_run(config, record: dict | None) -> None:
     if not results or config.stash.get(_RUN_RECORDED, False):
         return
     config.stash[_RUN_RECORDED] = True
-    out = Path(results)
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "executor.json").write_text(json.dumps(executor(), indent=2), encoding="utf-8")
-    (out / "environment.properties").write_text(
-        "".join(f"{key}={value}\n" for key, value in environment(record).items()), encoding="utf-8")
+    write_run_facts(Path(results), executor(), environment(record))
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -174,9 +172,9 @@ def pytest_runtest_call(item):
         declared = [di for di in ids if record and di in record["inputs"]]
         _record_run(item.config, record)
         if declared and record["commit"]:  # DI-59: the version this run is evidence for
-            allure.dynamic.label("commit", record["commit"])
+            allure.dynamic.label(COMMIT_LABEL, record["commit"])
             if record["dirty"]:
-                allure.dynamic.label("worktree", "dirty")
+                allure.dynamic.label(WORKTREE_LABEL, DIRTY)
         for di in declared:
             requirement = record["inputs"][di]
             for need in requirement["traces_to"]:
@@ -188,5 +186,5 @@ def pytest_runtest_call(item):
                 allure.dynamic.severity(allure.severity_level.CRITICAL)
             allure.attach(f"{di} ({requirement['context']}): {requirement['text']}\n"
                           f"Traces to: {', '.join(requirement['traces_to']) or '—'}\n",
-                          name=f"requirement {di}", attachment_type=allure.attachment_type.TEXT)
+                          name=REQUIREMENT_ATTACHMENT.format(di), attachment_type=allure.attachment_type.TEXT)
     yield

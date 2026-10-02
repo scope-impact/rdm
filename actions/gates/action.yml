@@ -52,6 +52,15 @@ runs:
           "rdm[graph,report] @ file://$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
         rdm --version
 
+    - name: Find the Allure results
+      id: results
+      shell: bash
+      env:
+        RESULTS: ${{ inputs.allure-results }}
+      run: |
+        if compgen -G "$RESULTS/*-result.json" > /dev/null; then found=true; else found=false; fi
+        echo "found=$found" >> "$GITHUB_OUTPUT"
+
     - name: Design gate
       shell: bash
       env:
@@ -59,7 +68,7 @@ runs:
       run: rdm story design-gate --dhf "$DHF"
 
     - name: Verification data
-      if: hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
+      if: steps.results.outputs.found == 'true'
       shell: bash
       env:
         DHF: ${{ inputs.dhf }}
@@ -91,7 +100,7 @@ runs:
         rdm graph validate --dhf "$DHF" "${args[@]}"
 
     - name: Release evidence bundle
-      if: inputs.evidence-bundle == 'true' && hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
+      if: inputs.evidence-bundle == 'true' && steps.results.outputs.found == 'true'
       shell: bash
       env:
         DHF: ${{ inputs.dhf }}
@@ -99,7 +108,7 @@ runs:
       run: rdm story evidence-bundle --dhf "$DHF" --allure-results "$RESULTS" -o "$RUNNER_TEMP/rdm-evidence"
 
     - name: Upload the evidence bundle
-      if: inputs.evidence-bundle == 'true' && hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
+      if: inputs.evidence-bundle == 'true' && steps.results.outputs.found == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ inputs.artifact-name }}

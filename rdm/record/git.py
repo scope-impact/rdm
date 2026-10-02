@@ -36,3 +36,14 @@ def web_url(remote: str | None) -> str | None:
     match = re.match(r"^(?:git@|ssh://git@)([^:/]+)[:/](.+?)(?:\.git)?/?$", remote) or \
         re.match(r"^https?://(?:[^@/]+@)?([^/]+)/(.+?)(?:\.git)?/?$", remote)
     return f"https://{match.group(1)}/{match.group(2)}" if match else None
+
+
+def repository_url(root: Path) -> str | None:
+    """The browsable URL of the repository's ``origin``, if it has one."""
+    return web_url(git(root, "remote", "get-url", "origin"))
+
+
+def head(root: Path) -> tuple[str | None, bool]:
+    """The commit checked out in ``root`` (None outside git) and whether the
+    worktree has uncommitted changes."""
+    return git(root, "rev-parse", "HEAD"), bool(git(root, "status", "--porcelain"))

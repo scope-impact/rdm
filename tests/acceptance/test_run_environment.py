@@ -23,6 +23,7 @@ import pytest
 allure = pytest.importorskip("allure")
 
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
+from tests.util import git_run  # noqa: E402
 
 GITHUB = {"GITHUB_ACTIONS": "true", "GITHUB_SERVER_URL": "https://github.com", "GITHUB_REPOSITORY": "acme/device",
           "GITHUB_RUN_ID": "7001", "GITHUB_RUN_ATTEMPT": "2", "GITHUB_RUN_NUMBER": "42",
@@ -40,11 +41,9 @@ def _project(tmp_path: Path) -> tuple[Path, str]:
         "  - {id: DI-1, text: 'The device shall alarm.', traces_to: [UN-001]}\n---\n")
     (repo / "test_alarm.py").write_text('import allure\n\n\n@allure.story("DI-1")\ndef test_alarm():\n    pass\n\n\n'
                                         '@allure.story("DI-1")\ndef test_alarm_again():\n    pass\n')
-    for args in (["init", "-q"], ["add", "-A"], ["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "r"]):
-        subprocess.run(["git", "-C", str(repo), *args], check=True)
-    head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], check=True, capture_output=True,
-                          text=True).stdout.strip()
-    return repo, head
+    for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "r"]):
+        git_run(repo, *args)
+    return repo, git_run(repo, "rev-parse", "HEAD")
 
 
 def _run(repo: Path, results: Path, env: dict[str, str]) -> tuple[dict, dict[str, str]]:

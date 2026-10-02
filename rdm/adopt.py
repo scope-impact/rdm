@@ -23,9 +23,9 @@ from rdm.version import __version__
 # Paths that must be executable at the destination.
 _EXECUTABLE = {"scripts/agent-bootstrap.sh", ".githooks/pre-commit"}
 
-# The CI workflow calls RDM's reusable gates pinned to this RDM's version
-# (DI-63): the record is gated by the release that adopted it.
-_PINNED = {".github/workflows/design-controls.yml"}
+# A template that names RDM's own version is pinned to the RDM that adopts:
+# the CI workflow calls RDM's reusable gates at this release (DI-63).
+_VERSION_TOKEN = "{rdm_version}"
 
 NEXT_STEPS = """\
 Next steps (see dhf/AGENT_WORKFLOW.md for the full loop):
@@ -47,9 +47,10 @@ def _copy_if_absent(src: Path, dest: Path, rel: str,
         skipped.append(rel)
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dest)
-    if rel in _PINNED:
-        dest.write_text(src.read_text().replace("{rdm_version}", __version__))
+    shutil.copy2(src, dest)  # the mode too: hooks and scripts stay executable
+    text = src.read_bytes()
+    if _VERSION_TOKEN.encode() in text:
+        dest.write_bytes(text.replace(_VERSION_TOKEN.encode(), __version__.encode()))
     if rel in _EXECUTABLE:
         dest.chmod(dest.stat().st_mode | 0o755)
     copied.append(rel)

@@ -23,3 +23,10 @@ def relevant_orphans(orphans: Iterable[str], declared_ids: set[str]) -> list[str
     US-001)."""
     prefixes = {uid.split("-")[0] for uid in declared_ids}
     return [tag for tag in orphans if tag.split("-")[0] in prefixes]
+
+
+def sort_key(ident: str) -> tuple:
+    """Sort record ids by prefix, then number: DI-2 before DI-10, and
+    RISK-TOOL-001 with its kind."""
+    prefix, _, number = ident.rpartition("-")
+    return (prefix, int(number)) if number.isdigit() else (ident, 0)

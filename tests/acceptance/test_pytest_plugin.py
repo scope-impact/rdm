@@ -18,7 +18,7 @@ import yaml
 
 allure = pytest.importorskip("allure")
 
-from rdm.pytest_plugin import web_url  # noqa: E402
+from rdm.record.git import web_url  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_risk import POLICY  # noqa: E402
 from tests.util import git_run  # noqa: E402
@@ -85,7 +85,7 @@ def test_runs_are_labelled_from_the_record(tmp_path: Path) -> None:
         assert _labels(alarm, "feature") == ["alarms"] and _labels(alarm, "story") == ["DI-1"]
     blob = f"https://github.com/acme/device/blob/{commit}/sw/dhf/documents"
     with verification_step("links to the Markdown that declares it — design document, V&V plan per user need, "
-                "risk document per risk it controls — one per document, at the tested commit"):
+                           "risk document per risk it controls — one per document, at the tested commit"):
         assert alarm["links"] == [
             {"type": "link", "name": "DI-1 in sw/dhf/documents/design/alarms.md", "url": f"{blob}/design/alarms.md"},
             {"type": "link", "name": "UN-1, UN-2 in sw/dhf/documents/vv.md", "url": f"{blob}/vv.md"},

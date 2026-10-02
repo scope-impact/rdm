@@ -74,7 +74,7 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
         assert len(edges) == len(expected_links)
 
     with verification_step("Leaving out a class drops its nodes and their links, the nodes that hang only from them, "
-                "and only those"):
+                           "and only those"):
         trimmed = explorer_graph(quads, exclude=["TestRun"])["data"]
         assert "urn:dhf:acme:run/r1-result" not in trimmed["vertices"]
         assert not any("run/r1-result" in e for e in trimmed["edges"])

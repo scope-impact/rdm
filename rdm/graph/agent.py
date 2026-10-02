@@ -18,7 +18,7 @@ import pyoxigraph as ox
 
 from rdm.graph.cli import PREFIXES, with_prefixes
 from rdm.graph.project import ONTOLOGY_FILE, project
-from rdm.record.ids import is_id
+from rdm.record.ids import is_id, sort_key
 
 ROW_LIMIT = 200
 _RISK_FIELDS = ("category", "stride", "hazard", "situation", "harm", "severity", "probability", "level",
@@ -154,7 +154,7 @@ def _risk(store: ox.Store, node: str) -> dict:
         "id": values.get("identifier"), **{name: values.get(name) for name in _RISK_FIELDS},
         "linked": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ <{node}> rdm:linkedTo/rdfs:label ?id }}")),
-        "controls": sorted((_input(store, i) for i in declared), key=lambda d: int(d["id"].split("-")[1])),
+        "controls": sorted((_input(store, i) for i in declared), key=lambda d: sort_key(d["id"])),
         "undeclared_controls": sorted(i.rsplit("/", 1)[-1] for i in controls if i not in declared),
     }
 

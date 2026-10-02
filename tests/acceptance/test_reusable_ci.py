@@ -8,7 +8,6 @@ the YAML GitHub reads. Skips cleanly if allure-pytest is not installed.
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import shlex
@@ -26,6 +25,7 @@ from rdm.adopt import adopt  # noqa: E402
 from rdm.main import parse_arguments  # noqa: E402
 from rdm.version import __version__  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
+from tests.util import git_run, write_allure_result  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "gates.yml"
@@ -46,27 +46,24 @@ def _releasable(repo: Path) -> Path:
         "---\nid: SDS-ALM-001\nkind: design\ncontext: alarms\ndesign_inputs:\n"
         "  - {id: DI-1, text: 'The device shall alarm.', traces_to: [UN-001]}\n---\n# Alarms\n")
     (docs / "design_review.md").write_text("---\nid: DR-001\n---\n# Review\nApproved.\n")
-    (repo / "dhf" / "allure-results").mkdir()
-    (repo / "dhf" / "allure-results" / "r1-result.json").write_text(json.dumps(
-        {"name": "test_alarm", "status": "passed", "labels": [{"name": "story", "value": "DI-1"}]}))
-    for args in (["init", "-q"], ["add", "-A"], ["-c", "user.name=a", "-c", "user.email=a@b", "commit", "-qm", "r"]):
-        subprocess.run(["git", "-C", str(repo), *args], check=True)
+    write_allure_result(repo / "dhf" / "allure-results", "r1", "passed", "DI-1")
+    for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "r"]):
+        git_run(repo, *args)
     return repo / "dhf"
 
 
 def _yaml(path: Path) -> dict:
     data = yaml.safe_load(path.read_text())
-    data["on"] = data.pop(True, data.get("on"))  # YAML 1.1 reads the key `on` as True
+    if True in data:  # YAML 1.1 reads a workflow's key `on` as True
+        data["on"] = data.pop(True)
     return data
 
 
-def _value(expr: str, inputs: dict[str, str], env: dict[str, str]) -> str:
+def _value(expr: str, inputs: dict[str, str], env: dict[str, str], outputs: dict[str, dict[str, str]]) -> str:
     """The few expressions the gates action uses, evaluated as Actions does."""
     expr = expr.strip()
-    hashed = re.fullmatch(r"hashFiles\(format\('\{0\}(.*)', inputs\.([\w-]+)\)\)", expr)
-    if hashed:
-        pattern = inputs[hashed.group(2)] + hashed.group(1)
-        return "hash" if list(Path(env["PWD"]).glob(pattern)) else ""
+    if step := re.fullmatch(r"steps\.([\w-]+)\.outputs\.([\w-]+)", expr):
+        return outputs.get(step.group(1), {}).get(step.group(2), "")
     if expr.startswith("inputs."):
         return inputs[expr.removeprefix("inputs.")]
     if expr == "runner.temp":
@@ -74,10 +71,10 @@ def _value(expr: str, inputs: dict[str, str], env: dict[str, str]) -> str:
     raise AssertionError(f"expression the test does not know: {expr}")
 
 
-def _condition(cond: str, inputs: dict[str, str], env: dict[str, str]) -> bool:
+def _condition(cond: str, inputs: dict[str, str], env: dict[str, str], outputs: dict[str, dict[str, str]]) -> bool:
     def term(t: str) -> bool:
         left, op, right = re.fullmatch(r"(.+?)\s*(==|!=)\s*'(.*)'", t.strip()).groups()
-        return (_value(left, inputs, env) == right) == (op == "==")
+        return (_value(left, inputs, env, outputs) == right) == (op == "==")
     return all(term(t) for t in cond.split("&&"))
 
 
@@ -86,22 +83,30 @@ def _run_action(action: dict, inputs: dict[str, str], cwd: Path, temp: Path) -> 
     inputs = {k: str(v.get("default", "")) for k, v in action["inputs"].items()} | inputs
     env = os.environ | {"PWD": str(cwd), "RUNNER_TEMP": str(temp),
                         "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"}
+    outputs: dict[str, dict[str, str]] = {}
+
+    def expand(text: str) -> str:
+        return EXPR.sub(lambda m: _value(m.group(1), inputs, env, outputs), text)
+
     ran = []
     for step in action["runs"]["steps"]:
-        if "if" in step and not _condition(step["if"], inputs, env):
+        if "if" in step and not _condition(step["if"], inputs, env, outputs):
             continue
         if "uses" in step:  # actions/upload-artifact: what it uploads must exist
             if "path" in step.get("with", {}):
-                path = EXPR.sub(lambda m: _value(m.group(1), inputs, env), step["with"]["path"])
+                path = expand(step["with"]["path"])
                 assert Path(path).is_dir() and any(Path(path).iterdir()), path
             ran.append(step["uses"].split("@")[0])
             continue
         assert not EXPR.search(step["run"]), f"{step['name']}: an expression spliced into the script"
-        step_env = env | {k: EXPR.sub(lambda m: _value(m.group(1), inputs, env), v)
-                          for k, v in step.get("env", {}).items()}
+        output_file = temp / "github-output"
+        output_file.write_text("")
+        step_env = env | {k: expand(v) for k, v in step.get("env", {}).items()} | {"GITHUB_OUTPUT": str(output_file)}
         done = subprocess.run(["bash", "-e", "-c", step["run"]], cwd=cwd, env=step_env,
                               capture_output=True, text=True)
         assert done.returncode == 0, f"{step['name']}:\n{done.stdout}\n{done.stderr}"
+        if "id" in step:
+            outputs[step["id"]] = dict(line.split("=", 1) for line in output_file.read_text().splitlines() if line)
         ran.append(step["name"])
     return ran
 
@@ -137,11 +142,11 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
     (tmp_path / "runner").mkdir()
 
     with verification_step("the gates action runs the design gate, verify, the release gate, graph validation "
-                "and the evidence bundle on a record, and uploads the bundle"):
+                           "and the evidence bundle on a record, and uploads the bundle"):
         ran = _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
         attach("steps run", ran)
-        assert ran == ["Design gate", "Verification data", "Release gate", "Graph validation",
-                       "Release evidence bundle", "actions/upload-artifact"]
+        assert ran == ["Find the Allure results", "Design gate", "Verification data", "Release gate",
+                       "Graph validation", "Release evidence bundle", "actions/upload-artifact"]
         assert (dhf / "data" / "verification.yml").is_file()
         assert any((tmp_path / "runner" / "rdm-evidence").iterdir())
     with verification_step("the checklists named are held against the documents in graph validation"):
@@ -151,7 +156,7 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
     with verification_step("with the release gate off and no results yet, only the design gate runs"):
         shutil.rmtree(dhf / "allure-results")
         assert _run_action(action, {"install-rdm": "false", "release-gate": "false", "graph-validate": "false"},
-                           repo, tmp_path / "runner") == ["Design gate"]
+                           repo, tmp_path / "runner") == ["Find the Allure results", "Design gate"]
     with verification_step("a gate that fails fails the action"):
         (dhf / "documents" / "design_review.md").unlink()
         with pytest.raises(AssertionError, match="Design gate"):
@@ -166,7 +171,7 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
             if command != ["--version"]:
                 parse_arguments(command)
     with verification_step("the action installs RDM from its own revision, the workflow from the revision the "
-                "caller pinned, and nothing installs rdm from a package index"):
+                           "caller pinned, and nothing installs rdm from a package index"):
         install = next(s["run"] for s in action["runs"]["steps"] if s.get("name", "").startswith("Install RDM"))
         assert '"rdm[graph,report] @ file://' in install and "$GITHUB_ACTION_PATH/../.." in install
         steps = workflow["jobs"]["gates"]["steps"]
@@ -197,7 +202,7 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         assert [image("v1.2.0"), image("v1"), image("main"), image("0123abc"), image("v1.2.0", "edge")] == [
             "1.2.0", "1", "latest", "latest", "edge"]
     with verification_step("the workflow rdm adopt lays down calls the reusable workflow pinned to the installed "
-                "RDM's version, with inputs the workflow declares"):
+                           "RDM's version, with inputs the workflow declares"):
         target = tmp_path / "adopter"
         target.mkdir()
         adopt(target)

@@ -11,14 +11,15 @@ from rdm.render import render_template_to_string
 COMPLETE_DOC = "# Doc\n\nApproved and complete.\n"
 
 
-def git_run(repo: Path, *args: str) -> None:
-    """Run a git command in `repo` with a fixed test identity."""
-    subprocess.run(
+def git_run(repo: Path, *args: str) -> str:
+    """Run a git command in `repo` with a fixed test identity; return its output."""
+    return subprocess.run(
         ["git", "-c", "user.email=t@t", "-c", "user.name=t", *args],
         cwd=repo,
         check=True,
         capture_output=True,
-    )
+        text=True,
+    ).stdout.strip()
 
 
 def write_allure_result(results_dir: Path, name: str, status: str, *story_ids: str) -> None:

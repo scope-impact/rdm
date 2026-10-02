@@ -14,14 +14,13 @@ Attachment content stays in the files; the graph holds the reference.
 from __future__ import annotations
 
 import json
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pyoxigraph as ox
 
 from rdm.graph.project import _DCT, _PROV, _XSD, _Dataset, _term, rdm
-from rdm.record.allure import DESIGN_INPUT_LABELS
+from rdm.record.allure import COMMIT_LABEL, DESIGN_INPUT_LABELS, WORKTREE_LABEL, run_version
 from rdm.record.ids import is_id
 
 GRAPH = "executions"
@@ -86,16 +85,19 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode])
             ds.add(node, rdm("name"), str(param["name"]), GRAPH)
             ds.add(node, rdm("value"), str(param.get("value", "")), GRAPH)
             ds.add(run, rdm("parameter"), node, GRAPH)
+    tested, dirty = run_version(raw)  # DI-60: the version tested
+    if tested:
+        commit = ds.thing(ds.node("commit", tested), _term(_PROV + "Activity"), tested[:7], GRAPH)
+        ds.add(run, rdm("testedAt"), commit, GRAPH)
+    if dirty:
+        ds.add(run, rdm("uncommittedChanges"), ox.Literal("true", datatype=_term(_XSD + "boolean")), GRAPH)
     for label in raw.get("labels") or []:
         if not isinstance(label, dict) or not label.get("name"):
             continue
         name, value = str(label["name"]), str(label.get("value", "")).strip()
-        if name == "commit" and re.fullmatch(r"[0-9a-f]{7,40}", value):  # DI-60: the version tested
-            commit = ds.thing(ds.node("commit", value), _term(_PROV + "Activity"), value[:7], GRAPH)
-            ds.add(run, rdm("testedAt"), commit, GRAPH)
-        elif name == "worktree" and value == "dirty":
-            ds.add(run, rdm("uncommittedChanges"), ox.Literal("true", datatype=_term(_XSD + "boolean")), GRAPH)
-        elif name in DESIGN_INPUT_LABELS and is_id(value):
+        if name in (COMMIT_LABEL, WORKTREE_LABEL):
+            continue
+        if name in DESIGN_INPUT_LABELS and is_id(value):
             ds.add(run, rdm("exercises"), ds.node("input", value), GRAPH)
         elif name == "output" and value:  # DI-56: the code the run exercises
             source = ds.thing(ds.node("source", value), rdm("SourceFile"), value, GRAPH)

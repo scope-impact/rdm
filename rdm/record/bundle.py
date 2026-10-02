@@ -17,6 +17,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+from rdm.record.report import REPORT_PDF, ReportUnavailable, write_report
 from rdm.record.sdd import MATRIX_DOC, find_dhf_doc
 from rdm.record.verify import write_verification_file
 
@@ -86,9 +87,8 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
     copy_results(Path(allure_results_dir), out_dir / "allure-results")
 
     # 4. The verification report: the runs behind each verdict, as a PDF (DI-64).
-    from rdm.record.report import REPORT_PDF, ReportUnavailable, write_report
     try:
-        write_report(dhf_dir, Path(allure_results_dir), out_dir / REPORT_PDF)
+        write_report(dhf_dir, Path(allure_results_dir), out_dir / REPORT_PDF, verification=data)
         report = REPORT_PDF
     except ReportUnavailable as error:
         report = f"not rendered: {error}"

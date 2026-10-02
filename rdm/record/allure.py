@@ -17,6 +17,7 @@ result says whether that test actually *passed*.
 from __future__ import annotations
 
 import ast
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,8 +35,19 @@ ALLURE_PATTERN = re.compile(r'@allure\.(story)\(["\']([^"\']+)["\']\)')
 DESIGN_INPUT_LABELS = ("story",)
 
 # Allure statuses.
-_FAILING = {"failed", "broken"}
+FAILING = {"failed", "broken"}
+_FAILING = FAILING
 _PASSING = {"passed"}
+
+# What rdm.pytest_plugin writes into a run's labels and results, and every
+# reader (the graph, the verification report) reads back (DI-57, DI-59, DI-65).
+COMMIT_LABEL = "commit"            # the commit under test
+WORKTREE_LABEL = "worktree"        # "dirty" when it had uncommitted changes
+DIRTY = "dirty"
+REQUIREMENT_ATTACHMENT = "requirement {}"   # the plugin's copy of a design input's text
+EXECUTOR_FILE = "executor.json"             # Allure's: who or what ran the tests
+ENVIRONMENT_FILE = "environment.properties"  # Allure's: the configuration and tools
+_COMMIT_SHA = re.compile(r"[0-9a-f]{7,40}")
 
 # Verification status values.
 VERIFIED = "verified"
@@ -87,26 +99,68 @@ class VerificationReport(StatusReportMixin):
         return self._ids_with(UNTESTED)
 
 
+def labelled(data: dict, name: str) -> list[str]:
+    """The non-empty values of one label on an Allure result, in order."""
+    return [value for label in data.get("labels") or [] if isinstance(label, dict) and label.get("name") == name
+            and (value := str(label.get("value", "")).strip())]
+
+
+def design_input_tags(data: dict) -> list[str]:
+    """The design inputs an Allure result is tagged with (its story labels)."""
+    return [value for name in DESIGN_INPUT_LABELS for value in labelled(data, name)]
+
+
+def run_version(data: dict) -> tuple[str | None, bool]:
+    """The commit an Allure result tested (None when it recorded none, or a
+    value that is no commit) and whether the worktree had uncommitted changes."""
+    commits = [c for c in labelled(data, COMMIT_LABEL) if _COMMIT_SHA.fullmatch(c)]
+    return (commits[0] if commits else None), DIRTY in labelled(data, WORKTREE_LABEL)
+
+
+def full_name(rel: str, name: str | None) -> str | None:
+    """The ``fullName`` Allure gives a run of the Python test ``name`` in the
+    repo-relative file ``rel``: ``tests.x.TestClass#test_y`` for
+    ``tests/x.py`` and ``TestClass::test_y``."""
+    if not name or not rel.endswith(".py"):
+        return None
+    *owner, function = name.split("::")
+    return ".".join([rel[:-3].replace("/", "."), *owner]) + "#" + function
+
+
+def write_run_facts(results_dir: Path, executor: dict, environment: dict[str, str]) -> None:
+    """Write Allure's executor.json and environment.properties (DI-65)."""
+    results_dir.mkdir(parents=True, exist_ok=True)
+    (results_dir / EXECUTOR_FILE).write_text(json.dumps(executor, indent=2), encoding="utf-8")
+    lines = (f"{key}={' '.join(str(value).split())}\n" for key, value in environment.items())  # one line each
+    (results_dir / ENVIRONMENT_FILE).write_text("".join(lines), encoding="utf-8")
+
+
+def read_run_facts(results_dir: Path) -> tuple[dict | None, dict[str, str]]:
+    """The executor and environment a results directory records, as written by
+    :func:`write_run_facts` (or by any Allure integration)."""
+    try:
+        executor = json.loads((results_dir / EXECUTOR_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        executor = None
+    if not isinstance(executor, dict):
+        executor = None
+    environment: dict[str, str] = {}
+    path = results_dir / ENVIRONMENT_FILE
+    for line in path.read_text(encoding="utf-8").splitlines() if path.is_file() else []:
+        if line.strip() and not line.lstrip().startswith(("#", "!")) and "=" in line:
+            key, _, value = line.partition("=")
+            environment[key.strip()] = value.strip()
+    return executor, environment
+
+
 def _build_result(data: dict, filename: str) -> TestResult:
     """Build one ``TestResult`` from a parsed Allure result file."""
-    ids: list[str] = []
-    outputs: list[str] = []
-    for label in data.get("labels", []) or []:
-        if not isinstance(label, dict):
-            continue
-        value = str(label.get("value", "")).strip()
-        if not value:
-            continue
-        if label.get("name") in DESIGN_INPUT_LABELS:
-            ids.append(value)
-        elif label.get("name") == "output":
-            outputs.append(value)
     return TestResult(
         name=str(data.get("name", "")),
         status=str(data.get("status", "unknown")),
-        user_need_ids=ids,
+        user_need_ids=design_input_tags(data),
         source=filename,
-        outputs=outputs,
+        outputs=labelled(data, "output"),
     )
 
 

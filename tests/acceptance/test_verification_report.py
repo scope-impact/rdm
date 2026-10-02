@@ -13,7 +13,6 @@ from __future__ import annotations
 import hashlib
 import json
 import struct
-import subprocess
 import sys
 import zlib
 from pathlib import Path
@@ -29,6 +28,7 @@ from rdm.record.bundle import evidence_bundle  # noqa: E402
 from rdm.record.report import TEXT_LINES, ReportUnavailable, build_report, render_pdf  # noqa: E402
 from rdm.version import __version__  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
+from tests.util import git_run  # noqa: E402
 
 OTHER = "f" * 40
 INJECTION = '#panic("injected") ] #set page(width: 1cm)'
@@ -44,11 +44,6 @@ def _png() -> bytes:
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 2, 2, 8, 2, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(b"\x00" + b"\xff\x00\x00" * 2 + b"\x00" + b"\x00\x00\xff" * 2))
             + chunk(b"IEND", b""))
-
-
-def _git(repo: Path, *args: str) -> str:
-    return subprocess.run(["git", "-C", str(repo), "-c", "user.name=a", "-c", "user.email=a@b", *args],
-                          check=True, capture_output=True, text=True).stdout.strip()
 
 
 def _record(tmp_path: Path, inputs: str) -> tuple[Path, str]:
@@ -67,11 +62,15 @@ def _record(tmp_path: Path, inputs: str) -> tuple[Path, str]:
         "  - {id: RISK-7, severity: Major, probability: Often, controls: [DI-1], residual: {probability: Rare}}\n"
         "  - {id: RISK-8, severity: Minor, probability: Rare}\n"
         "  - {id: RISK-9, severity: Major, probability: Often, controls: [DI-2], residual: {probability: Rare}}\n---\n")
-    _git(repo, "init", "-q")
-    _git(repo, "remote", "add", "origin", "git@github.com:acme/device.git")
-    _git(repo, "add", "-A")
-    _git(repo, "commit", "-qm", "record")
-    return repo / "dhf", _git(repo, "rev-parse", "HEAD")
+    (repo / "tests" / "acceptance").mkdir(parents=True)
+    (repo / "tests" / "acceptance" / "test_alarm.py").write_text(
+        'import allure\n\n\n@allure.story("DI-1")\ndef test_alarm_sounds():\n    pass\n\n\n'
+        'class TestAcknowledge:\n    @allure.story("DI-2")\n    def test_silence(self):\n        pass\n\n\n'
+        '@allure.story("DI-3")\ndef test_clock():\n    pass\n')
+    for args in (["init", "-q"], ["remote", "add", "origin", "git@github.com:acme/device.git"], ["add", "-A"],
+                 ["commit", "-qm", "record"]):
+        git_run(repo, *args)
+    return repo / "dhf", git_run(repo, "rev-parse", "HEAD")
 
 
 def _environment(results: Path) -> None:
@@ -115,7 +114,8 @@ def _passing(results: Path, commit: str, dirty: bool = False) -> None:
 
 def _problems(results: Path) -> None:
     (results / "b-result.json").write_text(json.dumps({
-        "name": "test_silence", "fullName": "tests.acceptance.test_alarm#test_silence", "status": "failed",
+        "name": "test_silence", "fullName": "tests.acceptance.test_alarm.TestAcknowledge#test_silence",
+        "status": "failed",
         "start": 1767225602000, "stop": 1767225603000,
         "labels": [{"name": "story", "value": "DI-2"}, {"name": "commit", "value": OTHER}],
         "statusDetails": {"message": "AssertionError: still sounding\nsecond line", "trace": "Traceback: line 42"},
@@ -149,11 +149,11 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     clean = build_report(clean_dhf, clean_results)
 
     with verification_step("the header names the repository, the record's commit, the commits tested, the executor and "
-                "environment, the RDM version and one SHA-256 over the result files"):
+                           "environment, the RDM version and one SHA-256 over the result files"):
         attach("header", {k: v for k, v in clean.items() if k not in ("design_inputs", "files")})
         assert clean["repository"] == "https://github.com/acme/device"
         assert clean["record_commit"] == clean_commit and clean["commits"] == [clean_commit]
-        assert clean["executor"] == {"name": "GitHub Actions", "buildName": "Design controls #42",
+        assert clean["executor"] == {"name": "GitHub Actions", "type": "github", "buildName": "Design controls #42",
                                      "buildUrl": "https://github.com/acme/device/actions/runs/7/attempts/1"}
         assert clean["environment"] == {"os": "Linux 6.8 (x86_64)", "python": "CPython 3.13.1", "ci.actor": "octocat"}
         assert clean["rdm_version"] == __version__
@@ -188,24 +188,24 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         ]
         assert report["executor"] is None and report["environment"] == {}
     with verification_step("the anomalies: failed and skipped runs, design inputs with no run, missing attachments, "
-                "orphan tags"):
+                           "orphan tags"):
         assert [(a["subject"], a["kind"]) for a in report["anomalies"]] == [
-            ("DI-2 · tests/acceptance/test_alarm.py::test_silence", "failed"),
-            ("DI-2 · tests/acceptance/test_alarm.py::test_silence", "missing attachment"),
+            ("DI-2 · tests/acceptance/test_alarm.py::TestAcknowledge::test_silence", "failed"),
+            ("DI-2 · tests/acceptance/test_alarm.py::TestAcknowledge::test_silence", "missing attachment"),
             ("DI-3 · tests/acceptance/test_alarm.py::test_clock", "skipped"),
             ("DI-10", "no run"),
             ("DI-9", "orphan tag"),
         ]
     with verification_step("traceability: each design input in id order with its user needs, the risks it is a control "
-                "for, and its tests"):
+                           "for, and its tests"):
         assert [di["id"] for di in report["design_inputs"]] == ["DI-1", "DI-2", "DI-3", "DI-10"]
         assert by_id["DI-1"]["traces_to"] == ["UN-001", "UN-002"] and by_id["DI-1"]["context"] == "alarms"
         assert [r["id"] for r in by_id["DI-1"]["control_for"]] == ["RISK-7"] and by_id["DI-3"]["control_for"] == []
     with verification_step("each design input is a baseline or a risk-based acceptance criterion; each risk it is a "
                            "control "
-                "for shows its status and residual decision, and the register's state is summarised"):
-        assert [di["criterion"] for di in report["design_inputs"]] == [
-            "risk-based", "risk-based", "baseline", "baseline"]
+                           "for shows its status and residual decision, and the register's state is summarised"):
+        # risk-based: a risk allocates it as a control; baseline: none does
+        assert [bool(di["control_for"]) for di in report["design_inputs"]] == [True, True, False, False]
         assert by_id["DI-1"]["control_for"] == [{"id": "RISK-7", "status": "proposed", "residual": "acceptable"}]
         # DI-2 failed: the residual of the risk it is a control for is not evaluated.
         assert by_id["DI-2"]["control_for"] == [{"id": "RISK-9", "status": "proposed", "residual": "not evaluated"}]
@@ -215,12 +215,13 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     with verification_step("each run: its test's file and function, result, date and duration, failure message and "
                            "trace"):
         assert run["test"] == "tests/acceptance/test_alarm.py::test_alarm_sounds"
+        assert failed["test"] == "tests/acceptance/test_alarm.py::TestAcknowledge::test_silence"  # a method
         assert (run["start"], run["duration"]) == ("2026-01-01 00:00:00 UTC", "1.50 s")
         assert (failed["status"], failed["message"], failed["trace"]) == (
             "failed", "AssertionError: still sounding\nsecond line", "Traceback: line 42")
     with verification_step("labels other than those the report already shows, no runner internals and no Allure "
                            "severity; "
-                "its links"):
+                           "its links"):
         assert run["labels"] == []
         assert run["links"] == [{"name": "DI-1 in alarms.md", "url": "https://example.org/alarms.md"}]
     with verification_step("each step is a verification step, nested, with its own result"):
@@ -230,7 +231,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert (failed["steps"][0]["status"], failed["steps"][0]["message"]) == ("failed", "the alarm kept sounding")
     with verification_step("attachments the test made: text inline up to a limit, images embedded, other files by "
                            "SHA-256; "
-                "captured output and the copy of the requirement listed by SHA-256 only"):
+                           "captured output and the copy of the requirement listed by SHA-256 only"):
         kinds = {a["name"]: a for a in run["attachments"] + run["steps"][0]["attachments"]
                  + run["steps"][1]["attachments"]}
         assert {name: a["kind"] for name, a in kinds.items()} == {
