@@ -67,6 +67,39 @@ without a review of their own, and the new DI-9 and DI-10
 - Vocabulary follows RDM's glossary: a design input is the acceptance
   criterion; its test's verification steps are the test's own checks.
 
+# Design Review 3 — three bounded contexts, the risk register, the drift audit
+
+**Scope reviewed:** the architecture (`architecture.md`); the design split into
+`approval`, `records` and `release`; DI-7 and DI-10 amended; the new DI-11; the
+risk policy and register (`risk/`); the validation records (`validation/`).
+
+**Disposition:** Approved, with the risk policy and register as proposals.
+
+## Items reviewed
+
+- One design document described the whole system. The design inputs now sit
+  with the context that owns them: `approval` (DI-1, DI-6, DI-9, DI-11),
+  `records` (DI-2, DI-4, DI-5, DI-7) and `release` (DI-3, DI-8, DI-10). No
+  design input changed id, and only DI-7 and DI-10 changed text. Where a
+  context implements part of an input another owns, it says so under
+  `realises`.
+- DI-7: the DMR index data is generated from the procedures' frontmatter
+  (`rdm story dmr`) instead of kept by hand, so the index cannot disagree with
+  what it lists.
+- DI-10: a release attaches the whole evidence bundle (results, verification
+  data, matrix, manifest), with the verification report in it.
+- DI-11: the configuration DI-1 and DI-6 declare is enforced by GitHub, where
+  an administrator can change it without review; a daily drift audit finds
+  that. It is the risk control for RISK-DC-002.
+- The risk register (RMF-001) analyses six risks, three of them STRIDE threats
+  linked to the safety risk they lead to. Each risk control is a design input,
+  so each risk-based acceptance criterion is verified by its test. RISK-DC-006
+  stays at Medium after its control and is accepted with a reason. The policy
+  and the register are **proposed**: a proposal written for this example,
+  shown as such until the quality owner approves it.
+- The validation records are pending. None is approved, because no
+  summative review has taken place; the release gate warns for each.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR) — no duplicate sign-off
