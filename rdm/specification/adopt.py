@@ -18,7 +18,7 @@ import shutil
 from importlib.resources import as_file, files
 from pathlib import Path
 
-from rdm.kernel.version import __version__
+from rdm.kernel.version import release_version
 
 # Paths that must be executable at the destination.
 _EXECUTABLE = {"scripts/agent-bootstrap.sh", ".githooks/pre-commit"}
@@ -50,7 +50,7 @@ def _copy_if_absent(src: Path, dest: Path, rel: str,
     shutil.copy2(src, dest)  # the mode too: hooks and scripts stay executable
     text = src.read_bytes()
     if _VERSION_TOKEN.encode() in text:
-        dest.write_bytes(text.replace(_VERSION_TOKEN.encode(), __version__.encode()))
+        dest.write_bytes(text.replace(_VERSION_TOKEN.encode(), release_version().encode()))
     if rel in _EXECUTABLE:
         dest.chmod(dest.stat().st_mode | 0o755)
     copied.append(rel)

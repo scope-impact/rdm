@@ -4,9 +4,9 @@ name: RDM gates
 #
 #   jobs:
 #     design-controls:
-#       uses: scope-impact/rdm/.github/workflows/gates.yml@v1.2.0
+#       uses: scope-impact/rdm/.github/workflows/gates.yml@v2.0.0-alpha
 #       with:
-#         rdm-ref: v1.2.0        # the same revision as after the @
+#         rdm-ref: v2.0.0-alpha        # the same revision as after the @
 #
 # Runs the caller's acceptance tests, then the design gate, verify, the
 # release gate, graph validation and the release evidence bundle, with RDM

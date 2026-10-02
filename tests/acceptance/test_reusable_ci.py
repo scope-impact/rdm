@@ -23,7 +23,7 @@ allure = pytest.importorskip("allure")
 
 from rdm.specification.adopt import adopt  # noqa: E402
 from rdm.main import parse_arguments  # noqa: E402
-from rdm.kernel.version import __version__  # noqa: E402
+from rdm.kernel.version import release_version  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.util import git_run, write_allure_result  # noqa: E402
 
@@ -199,8 +199,8 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
                                 "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
             out = subprocess.run(["bash", "-e", "-c", script], env=env, capture_output=True, text=True, check=True)
             return re.search(r"ghcr\.io/scope-impact/rdm:(\S+)\s+pdfs", out.stdout).group(1)
-        assert [image("v1.2.0"), image("v1"), image("main"), image("0123abc"), image("v1.2.0", "edge")] == [
-            "1.2.0", "1", "latest", "latest", "edge"]
+        assert [image("v2.0.0-alpha"), image("v1.2.0"), image("v1"), image("main"), image("0123abc"),
+                image("v1.2.0", "edge")] == ["2.0.0-alpha", "1.2.0", "1", "latest", "latest", "edge"]
     with verification_step("the workflow rdm adopt lays down calls the reusable workflow pinned to the installed "
                            "RDM's version, with inputs the workflow declares"):
         target = tmp_path / "adopter"
@@ -209,8 +209,10 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         laid = _yaml(target / ".github" / "workflows" / "design-controls.yml")
         attach("adopted workflow", (target / ".github" / "workflows" / "design-controls.yml").read_text())
         job = laid["jobs"]["design-controls"]
-        assert job["uses"] == f"scope-impact/rdm/.github/workflows/gates.yml@v{__version__}"
-        assert job["with"]["rdm-ref"] == f"v{__version__}"
+        assert [release_version(v) for v in ("2.0.0a0", "2.0.0b2", "2.0.0rc1", "1.2.0")] == [
+            "2.0.0-alpha", "2.0.0-beta.2", "2.0.0-rc.1", "1.2.0"]
+        assert job["uses"] == f"scope-impact/rdm/.github/workflows/gates.yml@v{release_version()}"
+        assert job["with"]["rdm-ref"] == f"v{release_version()}"
         assert set(job["with"]) <= set(workflow["on"]["workflow_call"]["inputs"])
     with verification_step("RDM's own CI calls the same workflow, pinned to the commit under test"):
         own = _yaml(DOGFOOD)["jobs"]["design-controls"]

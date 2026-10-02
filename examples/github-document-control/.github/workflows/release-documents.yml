@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: "3.x"
       - name: Install rdm
-        run: pip install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm@v1.2.0" pytest allure-pytest   # not PyPI's rdm, another project
+        run: pip install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha" pytest allure-pytest   # not PyPI's rdm, another project
       # DI-10: no release unless the released commit is verified.
       - name: Verify the released commit
         run: |
@@ -46,7 +46,7 @@ jobs:
       # Every controlled document, the traceability matrix among them, rendered
       # to PDF by the DHF's Makefile in the RDM image of the same release.
       - name: Render the controlled documents (human-readable copies)
-        uses: scope-impact/rdm@v1.2.0
+        uses: scope-impact/rdm@v2.0.0-alpha
         with:
           dhf_path: dhf
           artifact_name: controlled-documents

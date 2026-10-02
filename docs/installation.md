@@ -4,15 +4,15 @@ RDM is a Python CLI (Python 3.10+). Install it from its repository, pinned to
 a release; PyPI's `rdm` is another project.
 
 ```bash
-pip install "rdm @ git+https://github.com/scope-impact/rdm@v1.2.0"         # core: record, gates (rdm story …), gap, render, init, adopt
-pip install "rdm[graph] @ git+https://github.com/scope-impact/rdm@v1.2.0"  # + the record as an RDF graph and the agent server (rdm graph …)
-pip install "rdm[report] @ git+https://github.com/scope-impact/rdm@v1.2.0" # + the verification report as PDF (rdm story evidence-report)
+pip install "rdm @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha"         # core: record, gates (rdm story …), gap, render, init, adopt
+pip install "rdm[graph] @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha"  # + the record as an RDF graph and the agent server (rdm graph …)
+pip install "rdm[report] @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha" # + the verification report as PDF (rdm story evidence-report)
 ```
 
 With [uv](https://docs.astral.sh/uv/) inside a project:
 
 ```bash
-uv add "rdm @ git+https://github.com/scope-impact/rdm@v1.2.0"
+uv add "rdm @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha"
 ```
 
 In CI, call RDM's reusable workflow instead of installing it:

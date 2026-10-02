@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## 2.0.0-alpha
+
+A major version: the code is one package per bounded context, so module paths
+changed (below). The package version is `2.0.0a0`; the release is tagged
+`v2.0.0-alpha` and its image `2.0.0-alpha`.
+
+### Changed — adoption pins the release tag (Design Review 43)
+- The CI workflow `rdm adopt` lays down pins the installed version's release
+  tag: a pre-release such as `2.0.0a0` as `v2.0.0-alpha`, the tag the release
+  and its image carry.
 
 ### Changed — one package per bounded context (Design Review 32)
 - RDM's code is in one package per context: `rdm.specification`,

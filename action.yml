@@ -10,7 +10,7 @@ inputs:
   version:
     description: >-
       RDM image tag. Defaults to the release this action is pinned to
-      (uses: scope-impact/rdm@v1.2.0 renders with image 1.2.0), and to
+      (uses: scope-impact/rdm@v2.0.0-alpha renders with image 2.0.0-alpha), and to
       latest when it is pinned to a branch or a sha.
     default: ''
   artifact_name:

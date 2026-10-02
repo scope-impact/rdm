@@ -91,15 +91,15 @@ cd dhf && make pdfs          # or, with Docker: docker compose run rdm make pdfs
 ```yaml
 jobs:
   design-controls:
-    uses: scope-impact/rdm/.github/workflows/gates.yml@v1.2.0
+    uses: scope-impact/rdm/.github/workflows/gates.yml@v2.0.0-alpha
     with:
-      rdm-ref: v1.2.0        # the same ref as after the @
+      rdm-ref: v2.0.0-alpha        # the same ref as after the @
 ```
 
 This runs your acceptance tests, then the design gate, verify, the release
 gate, graph validation and the evidence bundle, with RDM installed from the
 pinned revision; `rdm adopt` lays this workflow down. For PDFs, add a step
-`uses: scope-impact/rdm@v1.2.0`. Inputs and options are in
+`uses: scope-impact/rdm@v2.0.0-alpha`. Inputs and options are in
 [the gates in your CI](docs/reusable-ci.md).
 
 ## Documentation

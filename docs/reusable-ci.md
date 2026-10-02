@@ -30,9 +30,9 @@ permissions:
 
 jobs:
   design-controls:
-    uses: scope-impact/rdm/.github/workflows/gates.yml@v1.2.0
+    uses: scope-impact/rdm/.github/workflows/gates.yml@v2.0.0-alpha
     with:
-      rdm-ref: v1.2.0                     # the same ref as after the @
+      rdm-ref: v2.0.0-alpha                     # the same ref as after the @
       install-command: pip install -e .   # your own dependencies, if the tests need them
 ```
 
@@ -43,7 +43,7 @@ To upgrade, change both refs together.
 
 A tag can be moved; a commit sha cannot. For the strictest pin, use the
 release's commit sha in both places, with the tag as a comment:
-`gates.yml@<sha> # v1.2.0`. Dependabot's `github-actions` ecosystem keeps both
+`gates.yml@<sha> # v2.0.0-alpha`. Dependabot's `github-actions` ecosystem keeps both
 the sha and the comment current. RDM pins its own third-party actions that way.
 The workflow asks only for `contents: read`. Inputs reach its scripts through
 environment variables, never spliced into the script text.
@@ -88,7 +88,7 @@ language), run them your way, then add the gates as a step:
         with:
           fetch-depth: 0
       # ... your own setup and tests, writing Allure results to dhf/allure-results
-      - uses: scope-impact/rdm/actions/gates@v1.2.0
+      - uses: scope-impact/rdm/actions/gates@v2.0.0-alpha
         with:
           checklists: 62304_2015_class_b
 ```
@@ -104,10 +104,10 @@ Verify and the evidence bundle run only when there are Allure results.
 
 ```yaml
       - uses: actions/checkout@v7
-      - uses: scope-impact/rdm@v1.2.0
+      - uses: scope-impact/rdm@v2.0.0-alpha
 ```
 
 The action runs `make pdfs` in `ghcr.io/scope-impact/rdm` and uploads the
-PDFs. The image tag follows the action's ref: `@v1.2.0` renders with image
-`1.2.0` and `@v1` with image `1`. A branch or a sha falls back to `latest`.
+PDFs. The image tag follows the action's ref: `@v2.0.0-alpha` renders with image
+`2.0.0-alpha` and `@v1` with image `1`. A branch or a sha falls back to `latest`.
 Set `version` to choose the image yourself.

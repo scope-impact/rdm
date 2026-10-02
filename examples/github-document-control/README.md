@@ -53,7 +53,7 @@ flowchart LR
 | `checklists/part11_document_control.txt` | the audited Part 11 subset (§11.10 a–k, §11.50, §11.70, §11.100) |
 | `.github/rulesets/controlled-documents.json` | branch ruleset: an independent code-owner approval, signed commits, the two required checks, no force-push or deletion |
 | `.github/settings.json`, `setup.sh` | merge commits only, so the reviewed SHA is the one in history; `setup.sh` applies the ruleset and settings, and `--check` audits them |
-| `.github/workflows/design-controls.yml` | every pull request: RDM's reusable gates pinned to `v1.2.0` (check `design-controls / gates`), and the gap analysis with this system's graph rules (check `record-checks`) |
+| `.github/workflows/design-controls.yml` | every pull request: RDM's reusable gates pinned to `v2.0.0-alpha` (check `design-controls / gates`), and the gap analysis with this system's graph rules (check `record-checks`) |
 | `.github/workflows/drift-audit.yml` | daily: `setup.sh --check`, failing on any difference from the checked-in configuration |
 | `.github/workflows/release-documents.yml` | on a `doc-*` tag: the tests and the release gate, the evidence bundle with its verification report, every document as PDF, a `git archive` of the set, and the device history record, all attached to the GitHub Release |
 | `tests/acceptance/` | one test file per context; each test reads the *real* configuration and renders the *real* documents, in named verification steps that attach what they checked |
