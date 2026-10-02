@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 
 import pytest
+import yaml
 
 allure = pytest.importorskip("allure")
 
@@ -21,6 +22,10 @@ from rdm.record.c4 import read_model  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 ROOT = Path(__file__).parents[2]
+
+
+def frontmatter(doc: Path) -> dict:
+    return yaml.safe_load(doc.read_text().split("---", 2)[1])
 
 
 def _element(ident: str, alias: str, name: str, **fields) -> dict:
@@ -99,9 +104,12 @@ def test_the_c4_model_is_read_from_the_architecture_workspace(tmp_path: Path) ->
     with verification_step("a DHF with no workspace has an empty model"):
         assert read_model(tmp_path / "empty").elements == {}
 
-    with verification_step("RDM's own architecture reads whole: every component in a context, with its code"):
+    with verification_step("RDM's own architecture reads whole: every component in a declared context, with its "
+                           "code, and a component view for each context"):
         own = read_model(ROOT / "dhf")
         components = own.components
         attach("RDM components", sorted(f"{c.context}: {c.alias} -> {c.link}" for c in components))
-        assert len(components) >= 30 and len(own.views) >= 12
-        assert all(c.context and c.link for c in components)
+        declared = {c["id"] for c in frontmatter(ROOT / "dhf" / "documents" / "architecture.md")["contexts"]}
+        assert len(components) >= 30
+        assert all(c.link for c in components) and {c.context for c in components} == declared
+        assert set(own.views) == {"C1", "C2"} | {f"C3_{context}" for context in declared}

@@ -182,8 +182,8 @@ Three more links come from frontmatter you write once (DI-58):
 ```yaml
 # architecture.md — the bounded contexts, each with its part
 contexts:
-  - {id: record, part: Record}
-  - {id: gating, part: Gates}
+  - {id: specification, part: Record}
+  - {id: release, part: Gates}
 # any controlled document — the controlled documents it relies on
 references: [DC-001]
 ```
