@@ -3,8 +3,8 @@
 # Apply (or audit) the document-control configuration on a GitHub repository:
 # the controlled-documents ruleset AND the repository merge settings.
 #
-#   ./setup.sh [owner/repo]           apply: push github/rulesets/*.json and
-#                                     github/settings.json to the repository
+#   ./setup.sh [owner/repo]           apply: push .github/rulesets/*.json and
+#                                     .github/settings.json to the repository
 #   ./setup.sh --check [owner/repo]   audit: compare the LIVE configuration
 #                                     against the checked-in JSON; exit 1 on drift
 #
@@ -15,8 +15,8 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-RULESET_FILE="$HERE/github/rulesets/controlled-documents.json"
-SETTINGS_FILE="$HERE/github/settings.json"
+RULESET_FILE="$HERE/.github/rulesets/controlled-documents.json"
+SETTINGS_FILE="$HERE/.github/settings.json"
 
 MODE=apply
 if [ "${1:-}" = "--check" ]; then

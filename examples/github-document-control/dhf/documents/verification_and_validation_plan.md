@@ -1,6 +1,7 @@
 ---
 id: VVP-001
 title: "Verification and Validation Plan — git/GitHub document control"
+references: [SDS-SYS-001, SOP-DC-001]
 # User-need registry: the validated journeys this document-control system
 # serves. Design inputs in the per-context design documents refine these.
 user_needs:
@@ -36,6 +37,17 @@ proving the SOP addresses every item of the Part 11 checklist.
 |-----------|-----------------------------|------------------------|
 | UN-001..003 | quality-owner review that a walked release (draft → PR → approval → tag → release artifacts) satisfies the journey | dogfooding: this example repository operates under its own procedure |
 | UN-004 | quality/regulatory review of the Part 11 mapping in SOP-DC-001 against the regulation text | `rdm gap` over SOP-DC-001 with the Part 11 checklist (automated) |
+
+The summative record of each user need is `dhf/validation/UN-nnn-validation.json`.
+Each is **pending** until the quality owner has done the review above; the
+release gate names every user need without an approved record, as a warning,
+because a machine cannot supply that judgment. A record is set to `approved`,
+with the reviewer and what was reviewed, only after the review took place.
+
+Formative evidence for UN-001 can come from an AI persona (an auditor) asked to
+find the current approved revision of a document, its approver and its history
+in the GitHub web UI of a deployed repository; `rdm story persona` reports such
+runs. This example has no deployed repository, so it records none.
 
 Formative evidence never gates release. This example is illustrative — it is
 not legal or regulatory advice, and summative Part 11 assessment for a real

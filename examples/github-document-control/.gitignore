@@ -1,5 +1,11 @@
 # Generated: a test run counts untracked files as uncommitted changes, so
-# results and release copies stay out of the worktree's status.
+# results, rendered copies and the graph store stay out of the worktree's status.
 dhf/allure-results/
 dhf/data/verification.yml
+dhf/release/
+dhf/tmp/
 release/
+release-evidence/
+.rdm/
+.pytest_cache/
+__pycache__/

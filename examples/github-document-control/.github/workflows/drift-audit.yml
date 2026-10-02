@@ -1,0 +1,28 @@
+name: Drift audit
+
+# DI-11: the ruleset and the merge settings are enforced by GitHub, where an
+# administrator can change them without a pull request. Every day, compare the
+# live configuration with the checked-in JSON; a difference fails the run, and
+# the failed run is the record. The token needs read access to the
+# repository's administration (rulesets, settings) and nothing else.
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare the live configuration with the checked-in JSON
+        env:
+          GH_TOKEN: ${{ secrets.DRIFT_AUDIT_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: ./setup.sh --check "$REPO"

@@ -1,6 +1,6 @@
 ---
 id: DMR-001
-revision: 1
+revision: 2
 title: "Device Master Record — index of the controlled specification set"
 ---
 
@@ -28,4 +28,6 @@ Generated from the repository record — do not edit the table by hand.
 
 This index is itself a controlled document: it carries identity and revision in
 frontmatter, changes only through the approved pull-request path, and is
-rendered from `data/dmr.yml` so the table is a record, not a transcription.
+rendered from `dhf/data/dmr.yml`, which `rdm story dmr` generates from the
+procedures' own frontmatter, so the table cannot disagree with the documents
+it lists.

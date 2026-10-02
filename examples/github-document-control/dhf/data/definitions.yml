@@ -1,0 +1,23 @@
+# Terms the controlled documents use. A document's Definitions section lists
+# only the terms it mentions (rdm's VocabularyExtension, first pass).
+CODEOWNERS: >-
+  The file that names, per path, the people or teams whose approval a pull
+  request changing that path requires; here, the authorized signers.
+DHF: >-
+  Design history file: the record of how the system was designed and
+  verified (21 CFR 820.30(j)); here, `dhf/`.
+DHR: >-
+  Device history record: the record of each release, its revision, who
+  released it and what it contained (21 CFR 820.184).
+DMR: >-
+  Device master record: the current approved specification set
+  (21 CFR 820.181).
+Ruleset: >-
+  A set of branch rules GitHub enforces on the default branch: required
+  review, signatures, status checks, no history rewriting.
+SHA: >-
+  The content-addressed identifier of a git commit; any change to the content
+  gives a different SHA.
+SOP: >-
+  Standard operating procedure: a controlled document saying how an activity
+  is done.

@@ -42,10 +42,14 @@ the best way:
 
 The worked example
 [`examples/github-document-control`](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
-is a complete record-first project built on this claim — GitHub rulesets as
-design outputs, PR approval as the Part 11 electronic signature, DMR/DHR
-analogs, and a drift-audit script — and `rdm adopt` lays the same control
-surface into any existing repository.
+is a complete record-first project built on this claim, laid out as `rdm init`
+and `rdm adopt` lay a project out: GitHub rulesets as design outputs, PR
+approval as the Part 11 electronic signature, DMR/DHR analogs, a daily drift
+audit, a risk register whose controls are its design inputs, RDM's reusable
+gates on every pull request, and releases that carry their verification
+evidence. Its README lists where it uses each part of RDM, and RDM's CI runs
+its gates. `rdm adopt` lays the same control surface into any existing
+repository.
 
 ## The evidence
 

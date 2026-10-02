@@ -11,3 +11,7 @@ entries:
     date: "2026-10-02"
     author: "Example Author"
     change: "Required checks named; releases gated by the release gate and carry the verification report."
+  - revision: 3
+    date: "2026-10-02"
+    author: "Example Author"
+    change: "Scope is the DHF's documents; the daily drift audit; the DHR attaches the evidence bundle; definitions."

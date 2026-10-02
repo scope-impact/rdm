@@ -1,0 +1,76 @@
+name: Release controlled documents
+
+# 21 CFR 11.10(b): accurate and complete copies in human-readable (PDF) and
+# electronic (git archive at the tag) form, attached to the GitHub Release
+# (DI-3). Published only if the release gate passes at the tag, with the
+# evidence bundle and its verification report attached (DI-10), and the device
+# history record listing all of it (DI-8).
+on:
+  push:
+    tags:
+      - "doc-*"
+
+jobs:
+  release-documents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0          # the graph and the report record each document's landing commit
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.x"
+      - name: Install rdm
+        run: pip install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm@v1.2.0" pytest allure-pytest   # not PyPI's rdm, another project
+      # DI-10: no release unless the released commit is verified.
+      - name: Verify the released commit
+        run: |
+          pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+          rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+          rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+      # Before rendering: RDM reads every Markdown file under dhf/, and the
+      # rendered copies land in dhf/release/.
+      - name: Evidence bundle and verification report
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
+          test -f release-evidence/verification_report.pdf   # a bundle without its report is not evidence
+          mkdir -p release
+          cp release-evidence/verification_report.pdf release/verification-report.pdf
+          (cd release-evidence && zip -qr "../release/evidence-$TAG.zip" .)
+      # Every controlled document, the traceability matrix among them, rendered
+      # to PDF by the DHF's Makefile in the RDM image of the same release.
+      - name: Render the controlled documents (human-readable copies)
+        uses: scope-impact/rdm@v1.2.0
+        with:
+          dhf_path: dhf
+          artifact_name: controlled-documents
+      - name: Collect the copies
+        run: |
+          mkdir -p release/copies
+          cp -r dhf/release/. release/copies/     # each document as PDF, with the rendered Markdown
+      - name: Electronic copy (complete document set at this tag)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: git archive --format=zip --output="release/document-set-$TAG.zip" "$TAG"
+      # 21 CFR 820.184 analog: the device history record for this release —
+      # who released what, when, from which exact revision, with which copies.
+      - name: Device history record (release manifest)
+        run: |
+          jq -n \
+            --arg tag "${{ github.ref_name }}" \
+            --arg commit_sha "${{ github.sha }}" \
+            --arg released_by "${{ github.actor }}" \
+            --arg released_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson artifacts "$(cd release && find . -type f | sort | jq -R . | jq -s .)" \
+            '{tag: $tag, commit_sha: $commit_sha, released_by: $released_by, released_at: $released_at, artifacts: $artifacts}' \
+            > release/device-history-record.json
+      - name: Attach copies, evidence and device history record to the GitHub Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          files: release/**/*
