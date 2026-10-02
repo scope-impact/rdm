@@ -138,6 +138,11 @@ def _input(store: ox.Store, node: str) -> dict:
             store, f"SELECT DISTINCT ?p WHERE {{ ?r rdm:exercises <{node}> ; rdm:exercisesOutput/rdm:path ?p }}")),
         "risks": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ ?r rdm:controlledBy <{node}> ; dcterms:identifier ?id }}")),
+        "components": sorted(_select(store, f"""SELECT DISTINCT ?component ?name ?container ?context WHERE {{
+            ?r rdm:exercises <{node}> ; rdm:exercisesOutput/rdm:inComponent ?c .
+            ?c dcterms:identifier ?component ; rdfs:label ?name .
+            OPTIONAL {{ ?c rdm:containedIn/rdfs:label ?container }}
+            OPTIONAL {{ ?c rdm:inContext/rdfs:label ?context }} }}"""), key=lambda c: c["component"]),
         "runs": sorted(({"test": r["name"], "status": r["status"], **_evidence(store, r["r"])} for r in _select(
             store, f"SELECT ?r ?name ?status WHERE {{ ?r rdm:exercises <{node}> ; rdfs:label ?name ; "
                    f"rdm:status ?status }}")), key=lambda r: (r["test"], r["status"])),

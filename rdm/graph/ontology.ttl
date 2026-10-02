@@ -269,7 +269,7 @@ rdm:containedIn a owl:ObjectProperty ; rdfs:label "contained in" ; rdfs:domain r
 rdm:inContext a owl:ObjectProperty ; rdfs:label "in context" ; rdfs:domain rdm:Component ;
     rdfs:range rdm:BoundedContext ; rdfs:comment "The bounded context a component belongs to: its group in the workspace." .
 rdm:code a owl:DatatypeProperty ; rdfs:label "code" ; rdfs:domain rdm:Component ;
-    rdfs:comment "The file or directory that implements a component, repo-relative." .
+    rdfs:comment "The file or directory that implements a component, relative to its project (the DHF's parent)." .
 rdm:inComponent a owl:ObjectProperty ; rdfs:label "in component" ; rdfs:domain rdm:SourceFile ;
     rdfs:range rdm:Component ; rdfs:comment "The component whose code path is the longest match for a source file." .
 rdm:source a owl:ObjectProperty ; rdfs:label "source" ; rdfs:range rdm:ArchitectureElement .
@@ -280,6 +280,10 @@ rdm:importedBy a owl:DatatypeProperty ; rdfs:label "imported by" ; rdfs:domain r
     rdfs:comment "A file of the source component that makes the import (one example)." .
 rdm:imports a owl:DatatypeProperty ; rdfs:label "imports" ; rdfs:domain rdm:Dependency ;
     rdfs:comment "The file of the target component it imports." .
+rdm:missingCode a owl:DatatypeProperty ; rdfs:label "missing code" ; rdfs:domain rdm:Component ;
+    rdfs:comment "A component's code path that does not exist in the repository." .
+rdm:showsView a owl:DatatypeProperty ; rdfs:label "shows view" ; rdfs:domain rdm:Document ;
+    rdfs:comment "The key of an architecture view whose image the document shows." .
 dcterms:description rdfs:label "description" .
 
 # --- Derived relations and the rules that derive them (DI-62) ---------------

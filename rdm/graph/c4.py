@@ -32,6 +32,9 @@ def project_architecture(ds, dhf: Path, root: Path, rdm) -> None:
     model = read_model(dhf, root)
     if not model.elements:
         return
+    # A component's code path is relative to its project, the DHF's parent:
+    # the repository root for most, not for a project nested in another one.
+    project = Path(dhf).parent
     g = "architecture"
     node = {alias: ds.node("element", alias) for alias in model.elements}
     for alias, e in model.elements.items():
@@ -48,6 +51,8 @@ def project_architecture(ds, dhf: Path, root: Path, rdm) -> None:
             ds.add(el, rdm("inContext"), ds.node("context", e.context), g)
         if e.link:
             ds.add(el, rdm("code"), e.link, g)
+            if not e.external and not (project / e.link).exists():  # DI-68: a shape sees only the graph
+                ds.add(el, rdm("missingCode"), e.link, g)
     for n, r in enumerate(model.relationships, 1):
         rel = ds.thing(ds.node("relationship", f"{r.source}/{r.target}/{n}"), rdm("Relationship"),
                        f"{r.source} {r.label or '->'} {r.target}", g)
@@ -67,7 +72,7 @@ def project_architecture(ds, dhf: Path, root: Path, rdm) -> None:
         if owner is not None:
             ds.add(subject, rdm("inComponent"), node[owner.alias], g)
 
-    for (source, target), (file, imported) in sorted(component_dependencies(model, root).items()):
+    for (source, target), (file, imported) in sorted(component_dependencies(model, project).items()):
         ds.add(node[source], rdm("dependsOn"), node[target], "code")
         dep = ds.node("dependency", f"{source}/{target}")
         ds.thing(dep, rdm("Dependency"), f"{source} imports {target}", "code")

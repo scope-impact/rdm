@@ -130,23 +130,109 @@ def test_the_c4_model_is_projected_into_the_graph(tmp_path: Path) -> None:
         assert len(_select(own, "SELECT ?s ?t WHERE { ?s rdm:dependsOn ?t }")) >= 20
 
 
+# The warnings DI-68's shapes give, by the start of their message.
+C4_WARNINGS = ("design output is in no component's code", "test run exercises a component of",
+               "code dependency with no relationship", "component's group", "bounded context has no component",
+               "bounded context's design document does not show", "component's code path", "relationship has no")
+
+
+def _c4_warnings(quads) -> set[tuple[str, str, str]]:
+    from rdm.graph.validate import validate
+
+    return {(r.severity, r.label, r.message) for r in validate(quads) if r.message.startswith(C4_WARNINGS)}
+
+
+def _agreeing(repo: Path) -> None:
+    """The acme record made to agree with its workspace: each design document
+    shows its component view, and an architecture document declares the two
+    contexts the components are grouped in."""
+    docs = repo / "dhf" / "documents"
+    for ctx in ("alarms", "ui"):
+        doc = docs / "design" / f"{ctx}.md"
+        doc.write_text(doc.read_text() + f"\n![Components: {ctx}](../../c4/views/C3_{ctx}.svg)\n")
+    (docs / "architecture.md").write_text("---\nid: SDS-SYS-001\ncontexts: [alarms, ui]\n---\n# Architecture\n")
+
+
 @allure.story("DI-68")
-@allure.label("output", "TODO")
-def test_di_68_not_implemented() -> None:
+@allure.label("output", "rdm/graph/shapes.ttl")
+@allure.label("output", "rdm/graph/c4.py")
+def test_the_c4_model_and_the_record_are_checked_against_each_other(tmp_path: Path) -> None:
     """DI-68: RDM shall warn, never block, through the graph's gate shapes, when the C4 model
     and the record disagree: a design output in no component's code; a test run that
     exercises a component of a context that neither owns nor realises the design input it
     verifies; a dependency between two components with no relationship declared from the one
-    to the other; a component in no container, or in a boundary that is not a container of
-    the container diagram; a bounded context of the architecture with no component; a
-    component whose code path does not exist; a relationship with no label; and an alias
-    declared as non-external in two documents."""
-    pytest.fail("DI-68 acceptance test not implemented -- replace this stub with real assertions")
+    to the other; a group of components that is not a bounded context of the architecture, or
+    a bounded context with no component; a bounded context whose design document does not show
+    its component view; a component whose code path does not exist; and a relationship with no
+    description."""
+    dhf, results = _record(tmp_path / "agree")
+    _results(results)
+    _workspace(dhf.parent)
+    _agreeing(dhf.parent)
+    with verification_step("a record that agrees with its C4 model gets no warning"):
+        assert _c4_warnings(project(dhf, results)) == set()  # run b exercises ui's code for DI-1, which ui realises
+
+    dhf, results = _record(tmp_path / "disagree")
+    _results(results)
+    _workspace(dhf.parent)
+    _agreeing(dhf.parent)
+    repo = dhf.parent
+    docs = dhf / "documents"
+    (docs / "design" / "ui.md").write_text((docs / "design" / "ui.md").read_text().split("![Components")[0])
+    (docs / "architecture.md").write_text("---\nid: SDS-SYS-001\ncontexts: [alarms, ui, billing]\n---\n")
+    (repo / "src" / "speaker.py").write_text("from src.alarms import beep\n")  # app now imports alarms
+    (repo / "src" / "log.py").write_text("")
+    workspace = repo / "dhf" / "c4" / "workspace.json"
+    model = json.loads(workspace.read_text())
+    firmware = model["model"]["softwareSystems"][0]["containers"][0]
+    firmware["components"] += [
+        {"id": "7", "name": "Logger", "group": "logging", "properties": {
+            "structurizr.dsl.identifier": "logger", "code": "src/log.py"}},
+        {"id": "8", "name": "Ghost", "group": "alarms", "properties": {
+            "structurizr.dsl.identifier": "ghost", "code": "src/ghost.py"}}]
+    model["model"]["people"][0]["relationships"].append({"id": "11", "sourceId": "1", "destinationId": "5"})
+    workspace.write_text(json.dumps(model))
+    common = {"fullName": "tests.test_alarms#test_alarm", "name": "test_alarm", "status": "passed"}
+    (results / "x-result.json").write_text(json.dumps({**common, "uuid": "u-x", "labels": [
+        {"name": "story", "value": "DI-2"}, {"name": "output", "value": "src/speaker.py"},
+        {"name": "output", "value": "lib/stray.py"}]}))
+    found = _c4_warnings(project(dhf, results))
+    attach("warnings", sorted(found))
+    with verification_step("each disagreement gets its warning, on what disagrees"):
+        assert {(label, message) for _, label, message in found} == {
+            ("lib/stray.py", "design output is in no component's code"),
+            ("test_alarm", "test run exercises a component of ui, which neither owns nor realises DI-2"),
+            ("app imports alarms", "code dependency with no relationship declared from the one component to the other"),
+            ("Logger", "component's group logging is not a bounded context the architecture declares"),
+            ("billing", "bounded context has no component in the architecture"),
+            ("ui", "bounded context's design document does not show its component view C3_ui"),
+            ("Ghost", "component's code path src/ghost.py does not exist"),
+            ("nurse -> app", "relationship has no description"),
+        }
+    with verification_step("every one is a warning, never a violation"):
+        assert {severity for severity, _, _ in found} == {"Warning"}
+
+    with verification_step("RDM's own C4 model and record agree"):
+        own = _c4_warnings(project(ROOT / "dhf", None))
+        attach("RDM's own", sorted(own))
+        assert own == set()
 
 
 @allure.story("DI-69")
-@allure.label("output", "TODO")
-def test_di_69_not_implemented() -> None:
+@allure.label("output", "rdm/graph/agent.py")
+def test_the_trace_names_the_components_a_design_input_exercises(tmp_path: Path) -> None:
     """DI-69: RDM's agent server shall show, in the trace of a design input, the components
     whose code its tests exercise, each with its container and owning bounded context."""
-    pytest.fail("DI-69 acceptance test not implemented -- replace this stub with real assertions")
+    from rdm.graph.agent import Record, trace
+
+    dhf, results = _record(tmp_path)
+    _results(results)
+    _workspace(dhf.parent)
+    with verification_step("each component its runs exercise, with its container and context"):
+        components = trace(Record(dhf, results), "DI-1")["design_input"]["components"]
+        attach("components of DI-1", components)
+        assert components == [
+            {"component": "alarms", "name": "Alarm logic", "container": "Firmware", "context": "alarms"},
+            {"component": "app", "name": "Device app", "container": "Firmware", "context": "ui"}]
+    with verification_step("an input no run exercises names none"):
+        assert trace(Record(dhf, results), "DI-2")["design_input"]["components"] == []

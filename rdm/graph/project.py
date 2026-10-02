@@ -165,6 +165,8 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         doc = doc_by_path.get(_rel(path, root))
         if doc is not None:
             ds.add(doc, rdm("describes"), ctx, g)
+            for view in sorted(set(_VIEW_IMAGE.findall(path.read_text(encoding="utf-8", errors="ignore")))):
+                ds.add(doc, rdm("showsView"), view, g)  # DI-68: does it show its component view
     for path, refs in realises_by_context(dhf).items():
         for ref in sorted(refs):
             ds.add(ds.node("context", context_of(path)), rdm("realises"), ds.node("input", ref), g)
@@ -180,6 +182,9 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         if declaring(di["id"]) is not None:
             ds.add(node, rdm("declaredIn"), declaring(di["id"]), g)
 
+
+# The image of an architecture view a document shows: c4/views/<key>.svg.
+_VIEW_IMAGE = re.compile(r"c4/views/([A-Za-z0-9_-]+)\.svg")
 
 def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> None:
     """DI-58: the bounded contexts a document's ``contexts`` frontmatter

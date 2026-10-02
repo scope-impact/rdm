@@ -72,7 +72,7 @@ def _approved_dhf(
 
 
 @allure.story("DI-1")
-@allure.label("output", "SDS-record")
+@allure.label("output", "rdm/specification/sdd.py")
 def test_compile_verification_from_the_record(tmp_path: Path) -> None:
     """DI-1: compile a DHF from the system of record (registry + results)."""
     dhf = _approved_dhf(tmp_path, ["UN-001"])  # DI-1 traces to UN-001

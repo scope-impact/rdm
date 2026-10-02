@@ -202,3 +202,86 @@ rdm:TestRanShape a sh:NodeShape ;
 rdm: sh:declare
     [ sh:prefix "rdm" ; sh:namespace "https://github.com/scope-impact/rdm/ns#"^^xsd:anyURI ] ,
     [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] .
+
+# --- The C4 model against the record (DI-68): warnings, never violations ----
+
+rdm:DesignOutputComponentShape a sh:NodeShape ;
+    sh:targetClass rdm:SourceFile ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "design output is in no component's code" ;
+        sh:select """SELECT $this WHERE {
+            ?run rdm:exercisesOutput $this .
+            FILTER NOT EXISTS { $this rdm:inComponent ?c }
+            FILTER EXISTS { ?any a rdm:Component } }""" ;
+    ] .
+
+rdm:RunContextShape a sh:NodeShape ;
+    sh:targetClass rdm:TestRun ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "test run exercises a component of {?context}, which neither owns nor realises {?input}" ;
+        sh:select """SELECT DISTINCT $this ?context ?input WHERE {
+            $this rdm:exercises ?di ; rdm:exercisesOutput/rdm:inComponent/rdm:inContext ?ctx .
+            BIND (REPLACE(STR(?ctx), "^.*[:/]context/", "") AS ?context) ?di rdfs:label ?input .
+            FILTER NOT EXISTS { ?di rdm:ownedBy ?ctx }
+            FILTER NOT EXISTS { ?ctx rdm:realises ?di } }""" ;
+    ] .
+
+rdm:DependencyDeclaredShape a sh:NodeShape ;
+    sh:targetClass rdm:Dependency ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "code dependency with no relationship declared from the one component to the other" ;
+        sh:select """SELECT $this WHERE {
+            $this rdm:source ?s ; rdm:target ?t .
+            FILTER NOT EXISTS { ?r a rdm:Relationship ; rdm:source ?s ; rdm:target ?t } }""" ;
+    ] .
+
+rdm:ComponentShape a sh:NodeShape ;
+    sh:targetClass rdm:Component ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "component's group {?group} is not a bounded context the architecture declares" ;
+        sh:select """SELECT $this ?group WHERE {
+            $this rdm:inContext ?ctx . BIND (REPLACE(STR(?ctx), "^.*[:/]context/", "") AS ?group)
+            FILTER NOT EXISTS { ?ctx rdm:declaredIn ?d }
+            FILTER EXISTS { ?declared rdm:declaredIn ?any ; a rdm:BoundedContext } }""" ;
+    ] , [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "component's code path {?path} does not exist" ;
+        sh:select """SELECT $this ?path WHERE { $this rdm:missingCode ?path }""" ;
+    ] .
+
+rdm:ContextArchitectureShape a sh:NodeShape ;
+    sh:targetClass rdm:BoundedContext ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "bounded context has no component in the architecture" ;
+        sh:select """SELECT $this WHERE {
+            $this rdm:declaredIn ?d .
+            FILTER NOT EXISTS { ?c rdm:inContext $this }
+            FILTER EXISTS { ?any a rdm:Component } }""" ;
+    ] , [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "bounded context's design document does not show its component view {?view}" ;
+        sh:select """SELECT $this ?view WHERE {
+            ?doc rdm:describes $this . $this rdfs:label ?name .
+            FILTER EXISTS { ?c rdm:inContext $this }
+            BIND (CONCAT("C3_", ?name) AS ?view)
+            FILTER NOT EXISTS { ?doc rdm:showsView ?view } }""" ;
+    ] .
+
+rdm:RelationshipShape a sh:NodeShape ;
+    sh:targetClass rdm:Relationship ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "relationship has no description" ;
+        sh:select """SELECT $this WHERE { FILTER NOT EXISTS { $this dcterms:description ?d } }""" ;
+    ] .
