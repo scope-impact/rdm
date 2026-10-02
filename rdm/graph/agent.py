@@ -10,13 +10,13 @@ agent that wants a change edits the record and opens a pull request.
 
 from __future__ import annotations
 
-import re
 import sys
 from pathlib import Path
 
 import pyoxigraph as ox
 
 from rdm.graph.cli import PREFIXES, with_prefixes
+from rdm.graph.ns import ReadOnlyError, read_only_query
 from rdm.graph.project import ONTOLOGY_FILE, project
 from rdm.kernel.ids import is_id, sort_key
 
@@ -24,20 +24,6 @@ ROW_LIMIT = 200
 _RISK_FIELDS = ("category", "stride", "hazard", "situation", "harm", "severity", "probability", "level",
                 "residualSeverity", "residualProbability", "residualLevel", "residualDecision", "acceptedBy",
                 "acceptanceRationale", "riskStatus")
-_UPDATE = re.compile(r"(?i)\b(INSERT|DELETE|LOAD|CLEAR|CREATE|DROP|COPY|MOVE|ADD)\b")
-_SERVICE = re.compile(r"(?i)\bSERVICE\b")
-# String literals, IRIs and comments, removed before looking for SERVICE so a
-# literal or an IRI that merely contains the word is not refused.
-_NOT_KEYWORDS = re.compile(
-    r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\''           # long literals
-    r'|"(?:[^"\\\n]|\\.)*"|\'(?:[^\'\\\n]|\\.)*\''   # short literals
-    r'|<[^<>\s]*>|#[^\n]*')                                # IRIs, comments
-
-
-class ReadOnlyError(ValueError):
-    """Raised for anything that is not a read-only SPARQL query."""
-
-
 class Record:
     """Where the record lives; each call reads it again."""
 
@@ -72,16 +58,7 @@ def schema() -> dict:
 def query(record: Record, sparql: str, limit: int = ROW_LIMIT) -> dict:
     """Answer a read-only SPARQL query: SELECT rows, an ASK boolean, or
     CONSTRUCT/DESCRIBE triples — at most ``limit`` rows, flagged if cut."""
-    if _SERVICE.search(_NOT_KEYWORDS.sub(" ", sparql)):
-        raise ReadOnlyError("SERVICE is not accepted: the agent server does not reach the network.")
-    text = with_prefixes(sparql)
-    try:
-        result = record.store().query(text, use_default_graph_as_union=True)
-    except SyntaxError as error:
-        if _UPDATE.search(sparql):
-            raise ReadOnlyError("SPARQL Update is not accepted: the graph is read-only. "
-                                "Change the record and open a pull request.") from error
-        raise ReadOnlyError(f"not a SPARQL query (SELECT, ASK, CONSTRUCT, DESCRIBE): {error}") from error
+    result = read_only_query(record.store(), sparql)
     if isinstance(result, ox.QueryBoolean):
         return {"boolean": bool(result)}
     rows, truncated = [], False
@@ -192,7 +169,7 @@ def trace(record: Record, ident: str) -> dict:
             store, f"SELECT DISTINCT ?c WHERE {{ ?i rdm:tracesTo <{node}> . "
                    f"{{ ?i rdm:ownedBy ?x }} UNION {{ ?x rdm:realises ?i }} ?x rdfs:label ?c }}")),
         "design_inputs": sorted((_input(store, i) for i in inputs),
-                                key=lambda d: int(d["id"].split("-")[1])),
+                                key=lambda d: sort_key(d["id"])),
     }}
 
 

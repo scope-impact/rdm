@@ -420,7 +420,8 @@ def project(
 def nquads(quads: list[ox.Quad]) -> str:
     """Sorted N-Quads: one statement per line, byte-identical for an unchanged record."""
     text = ox.serialize(quads, format=ox.RdfFormat.N_QUADS).decode("utf-8")
-    return "".join(line + "\n" for line in sorted(text.splitlines()) if line.strip())
+    # Split at line feeds only: a literal may hold U+2028 and other line separators.
+    return "".join(line + "\n" for line in sorted(text.split("\n")) if line.strip())
 
 
 def build_store(location: Path, quads: list[ox.Quad]) -> int:
@@ -431,5 +432,5 @@ def build_store(location: Path, quads: list[ox.Quad]) -> int:
     store.extend(quads)
     store.flush()
     count = len(store)
-    del store  # release the on-disk lock so `oxigraph serve` can open it
+    del store  # release the on-disk lock so `rdm graph serve` can open it
     return count

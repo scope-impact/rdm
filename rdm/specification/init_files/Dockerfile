@@ -4,8 +4,7 @@
 # ============================================================================
 
 # Pinned to an LTS release, never `latest`: the base changes only when we
-# choose. Ubuntu (glibc) also gets the ordinary Linux wheels, including the
-# oxigraph server `rdm graph serve` runs, which has no Alpine (musl) build.
+# choose. Ubuntu (glibc) also gets the ordinary Linux wheels.
 ARG UBUNTU_VERSION=26.04
 
 FROM ubuntu:${UBUNTU_VERSION} AS builder
@@ -66,7 +65,7 @@ ENV PATH="/opt/rdm/bin:${PATH}"
 
 # The project is mounted, so its owner differs from the container's user;
 # rdm reads git history (approvals, commits) from it.
-RUN git config --system --add safe.directory '*' && rdm --version && oxigraph --version
+RUN git config --system --add safe.directory '*' && rdm --version
 
 WORKDIR /dhf
 EXPOSE 7878

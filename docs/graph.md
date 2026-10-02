@@ -20,7 +20,7 @@ change something, edit the Markdown and rebuild.
 | [For agents](agents.md) | the read-only MCP server |
 
 ```bash
-pip install 'rdm[graph]'     # pyoxigraph, the oxigraph CLI, pyshacl
+pip install 'rdm[graph]'     # pyoxigraph, pyshacl, mcp
 ```
 
 ## Build, query, serve
@@ -47,10 +47,10 @@ Add `.rdm/` to `.gitignore`; the store is generated, like Allure results.
 A built store, and the endpoint serving it, is as current as its last build;
 the agent server (`rdm graph mcp`) projects the record afresh on every call.
 
-The endpoint is read-only (`oxigraph serve-read-only`). It allows requests
-from any origin so Graph Explorer can reach it, which is exactly why it must
-not accept updates: any web page you have open could otherwise clear or forge
-the graph you are reviewing.
+The endpoint is read-only. It allows requests from any origin so Graph
+Explorer can reach it, which is exactly why it accepts no update and no
+`SERVICE` call: any web page you have open could otherwise clear or forge the
+graph you are reviewing, or have it fetch addresses on your network.
 
 ## The whole chain in one query
 

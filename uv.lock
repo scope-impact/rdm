@@ -1220,20 +1220,6 @@ wheels = [
 ]
 
 [[package]]
-name = "oxigraph"
-version = "0.5.11"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/54/3f/ae687342cbed7a2a98b738c298c83f0784808f5865b2c5c9f26c5b7319de/oxigraph-0.5.11.tar.gz", hash = "sha256:136c7e4b1982c3c8b75f89e3f393d3c1315158c1e98b01a1e6e82d355a7aa153", size = 6538551, upload-time = "2026-09-02T20:04:32.973Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/ba/3bdf08869494764f001ca95e545264bd8b7dc8d63a2d63d2d0f6ca9496b7/oxigraph-0.5.11-py3-none-macosx_10_14_x86_64.whl", hash = "sha256:2f8aeec6c0d3b584c7071044e07ad915fccae1e6c73946d33d4ff0bac50c1dba", size = 6833238, upload-time = "2026-09-02T20:04:21.541Z" },
-    { url = "https://files.pythonhosted.org/packages/59/f2/8256999f167a987d10f080f218c7903d78a34713140c718c3c5777a7769d/oxigraph-0.5.11-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a6dcb57602921d19f7792cec2a02116ac1c43ed1abc102a3793ef7977827e9ed", size = 6317176, upload-time = "2026-09-02T20:04:23.48Z" },
-    { url = "https://files.pythonhosted.org/packages/84/77/714dcfae74c1cf40dfe14fcba511f352b19a64b1f4bb3193a43c1b2f5385/oxigraph-0.5.11-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:9bce08f8ee63207ca47d7e2d3bf64a4c9289208a48c945c0a432ff2471d2b0e9", size = 8094774, upload-time = "2026-09-02T20:04:25.298Z" },
-    { url = "https://files.pythonhosted.org/packages/ac/6e/b680e07ea109fefdd4579970496a0d9df80951abbc6ff8c5cf7a5ceecad6/oxigraph-0.5.11-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:d1b870a6ab77d69e6b45ff48f49694f8f4cbd65726498bfcc6143c31a3a81c5c", size = 8576525, upload-time = "2026-09-02T20:04:27.038Z" },
-    { url = "https://files.pythonhosted.org/packages/5d/8a/fc4c3246124dcfc18f3486e3c75f39f34ba642fc71892d02aad2cadf72a8/oxigraph-0.5.11-py3-none-win_amd64.whl", hash = "sha256:ffc8c48d2ad4ef4d7755f1883a42abf9dbbdb14160a8b622ed0083f5e9d174ec", size = 5838284, upload-time = "2026-09-02T20:04:29.232Z" },
-    { url = "https://files.pythonhosted.org/packages/da/a8/c889d59eb8c02dc1f55288992abc520584828d5df8e1dee2f88d852671dc/oxigraph-0.5.11-py3-none-win_arm64.whl", hash = "sha256:ee6b115f80a6df4d1437d09c16ef76c2550be3a835973d1bc0992242f639f7aa", size = 5503119, upload-time = "2026-09-02T20:04:31.009Z" },
-]
-
-[[package]]
 name = "packaging"
 version = "26.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1766,7 +1752,6 @@ dev = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "mock" },
-    { name = "oxigraph" },
     { name = "playwright" },
     { name = "pyoxigraph" },
     { name = "pypdf" },
@@ -1783,7 +1768,6 @@ docs = [
 ]
 graph = [
     { name = "mcp" },
-    { name = "oxigraph" },
     { name = "pyoxigraph" },
     { name = "pyshacl" },
 ]
@@ -1811,8 +1795,6 @@ requires-dist = [
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'dev'", specifier = "==1.0.6" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = "==1.0.6" },
     { name = "mock", marker = "extra == 'dev'", specifier = "==5.2.0" },
-    { name = "oxigraph", marker = "extra == 'dev'", specifier = "==0.5.11" },
-    { name = "oxigraph", marker = "extra == 'graph'", specifier = "==0.5.11" },
     { name = "playwright", marker = "extra == 'dev'", specifier = "==1.63.0" },
     { name = "playwright", marker = "extra == 'validation'", specifier = "==1.63.0" },
     { name = "pyoxigraph", marker = "extra == 'dev'", specifier = "==0.5.11" },

@@ -3,12 +3,10 @@
 
 from __future__ import annotations
 
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
-from rdm.graph.ns import PREFIXES, with_prefixes  # noqa: F401 (re-exported)
+from rdm.graph.ns import PREFIXES, ReadOnlyError, read_only_query, with_prefixes  # noqa: F401 (re-exported)
 
 DEFAULT_STORE = Path(".rdm/graph")
 
@@ -91,9 +89,9 @@ def graph_query_command(
         db.extend(quads)
     try:
         # Named graphs are queried as one dataset, as `rdm graph serve` does.
-        result = db.query(with_prefixes(sparql), use_default_graph_as_union=True)
-    except SyntaxError as error:
-        print(f"Error: invalid SPARQL: {error}")
+        result = read_only_query(db, sparql)
+    except ReadOnlyError as error:
+        print(f"Error: {error}")
         return 2
     if isinstance(result, ox.QueryBoolean):
         print("true" if bool(result) else "false")
@@ -106,30 +104,31 @@ def graph_query_command(
     return 0
 
 
-def serve_args(store: Path, bind: str) -> list[str]:
-    """The `oxigraph serve-read-only` invocation: union default graph + CORS, so
-    a graph browser (AWS Graph Explorer) sees every named graph without GRAPH
-    clauses. Read-only, because CORS lets any web page reach the endpoint: a
-    writable one could be cleared or forged from a page the user has open."""
-    binary = shutil.which("oxigraph") or "oxigraph"
-    return [binary, "serve-read-only", "--location", str(store), "--bind", bind, "--cors",
-            "--union-default-graph"]
-
-
 def graph_serve_command(store: Path | None = None, bind: str = "localhost:7878") -> int:
-    """Serve the store as a SPARQL 1.1 endpoint (blocks until interrupted)."""
+    """Serve the store as a read-only SPARQL endpoint (blocks until interrupted)."""
+    try:
+        from rdm.graph.endpoint import endpoint
+    except ImportError:
+        return _missing_extra()
     location = Path(store or DEFAULT_STORE)
     if not location.exists():
         print(f"Error: store not found: {location} (run `rdm graph build --store {location}` first)")
         return 2
-    args = serve_args(location, bind)
-    print(f"SPARQL endpoint: http://{bind}/sparql  (read-only, union default graph, CORS on)", file=sys.stderr)
+    host, _, port = bind.rpartition(":")
     try:
-        return subprocess.run(args).returncode
-    except FileNotFoundError:
-        return _missing_extra()
+        server = endpoint(location, host or "localhost", int(port))
+    except (ValueError, OSError) as error:
+        print(f"Error: cannot serve on {bind}: {error}")
+        return 2
+    print(f"SPARQL endpoint: http://{bind}/sparql  (read-only, no SERVICE, union default graph, CORS on)",
+          file=sys.stderr)
+    try:
+        server.serve_forever()
     except KeyboardInterrupt:
-        return 0
+        pass
+    finally:
+        server.server_close()
+    return 0
 
 
 def graph_explorer_file_command(

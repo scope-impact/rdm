@@ -2,17 +2,16 @@
 
 DI-35 (the record projected into named RDF graphs) and DI-36 (Oxigraph store,
 SPARQL query, SPARQL endpoint), tagged `@allure.story`, over the real
-projection, the `rdm graph` commands and a real `oxigraph serve`. Skips cleanly
+projection, the `rdm graph` commands and the served endpoint. Skips cleanly
 if allure-pytest or the `graph` extra is not installed.
 """
 
 from __future__ import annotations
 
 import json
-import shutil
 import socket
 import subprocess
-import time
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -138,12 +137,9 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
         assert text.splitlines() == sorted(text.splitlines())
         assert nquads(list(reversed(quads))) == text  # sorted regardless of input order
         assert nquads(project(dhf, results)) == text
-
-
-def _free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+    with verification_step("A literal holding a Unicode line separator stays one statement"):
+        odd = [ox.Quad(ox.NamedNode("urn:a"), ox.NamedNode("urn:b"), ox.Literal("one\u2028two\x85three"))]
+        assert list(ox.parse(nquads(odd).encode(), format=ox.RdfFormat.N_QUADS)) == odd
 
 
 @allure.story("DI-36")
@@ -177,45 +173,65 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
             "CONSTRUCT { ?i rdm:tracesTo ?n } WHERE { ?i rdm:tracesTo ?n }", dhf_dir=dhf) == 0
         assert "<urn:dhf:acme:input/DI-1> <https://github.com/scope-impact/rdm/ns#tracesTo>" in capsys.readouterr().out
 
-    with verification_step("Serve: union default graph + CORS, over a real `oxigraph serve`"):
-        if shutil.which("oxigraph") is None:
-            pytest.skip("oxigraph CLI not installed")
-        port = _free_port()
-        args = graph_cli.serve_args(location, f"127.0.0.1:{port}")
-        assert {"serve-read-only", "--union-default-graph", "--cors"} <= set(args) and str(location) in args
-        server = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        try:
-            url = f"http://127.0.0.1:{port}/sparql?" + urllib.parse.urlencode(
-                {"query": PREFIXES + "SELECT ?l WHERE { ?n a rdm:UserNeed ; rdfs:label ?l } ORDER BY ?l"})
-            for _ in range(60):
-                try:
-                    with urllib.request.urlopen(urllib.request.Request(
-                            url, headers={"Accept": "text/csv", "Origin": "http://localhost"}), timeout=2) as response:
-                        body = response.read().decode()
-                        cors = response.headers.get("Access-Control-Allow-Origin")
-                    break
-                except OSError:
-                    time.sleep(0.25)
-            else:
-                pytest.fail("oxigraph serve did not come up")
-            # Read-only: an update from another origin is refused, and the data stays.
+    with verification_step("Query refuses SPARQL Update and SERVICE: nothing changes, nothing reaches the network"):
+        for refused in ("CLEAR ALL", "SELECT * WHERE { SERVICE <http://127.0.0.1:9/x> { ?s ?p ?o } }"):
+            assert graph_cli.graph_query_command(refused, store=location) == 2
+        capsys.readouterr()
+
+    from rdm.graph.endpoint import endpoint
+
+    server = endpoint(location, "127.0.0.1", 0)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{port}"
+
+    def get(sparql: str, accept: str = "text/csv"):
+        url = f"{base}/sparql?" + urllib.parse.urlencode({"query": sparql})
+        return urllib.request.urlopen(urllib.request.Request(
+            url, headers={"Accept": accept, "Origin": "http://localhost"}), timeout=5)
+
+    def refused(request) -> int:
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request, timeout=5)
+        return error.value.code
+
+    labels = "SELECT ?l WHERE { ?n a rdm:DesignInput ; rdfs:label ?l } ORDER BY ?l"
+    try:
+        with verification_step("Serve: the union default graph, standard prefixes, CORS open"):
+            with get(labels) as response:
+                body = response.read().decode()
+                cors = response.headers.get("Access-Control-Allow-Origin")
+            assert body.split() == ["l", "DI-1"] and cors == "*"  # the v2 build: DI-2 removed
+            with get("ASK { ?s ?p ?o }", "application/sparql-results+json") as response:
+                assert json.loads(response.read())["boolean"] is True
+        with verification_step("Serve refuses an update from another origin, and the data stays"):
             update = urllib.request.Request(
-                f"http://127.0.0.1:{port}/update", method="POST",
-                data=urllib.parse.urlencode({"update": "CLEAR ALL"}).encode(),
-                headers={"Origin": "https://elsewhere.example",
-                         "Content-Type": "application/x-www-form-urlencoded"})
-            with pytest.raises(urllib.error.HTTPError) as refused:
-                urllib.request.urlopen(update, timeout=5)
-            assert refused.value.code >= 400
-            with urllib.request.urlopen(urllib.request.Request(
-                    url, headers={"Accept": "text/csv"}), timeout=5) as response:
-                assert response.read().decode().split() == ["l", "UN-001", "UN-002"]
-        finally:
-            server.terminate()
-            server.wait(timeout=10)
-    with verification_step("No GRAPH clause, yet the named-graph facts are visible: the union default graph"):
-        assert body.split() == ["l", "UN-001", "UN-002"]
-        assert cors == "*"
+                f"{base}/update", method="POST", data=urllib.parse.urlencode({"update": "CLEAR ALL"}).encode(),
+                headers={"Origin": "https://elsewhere.example", "Content-Type": "application/x-www-form-urlencoded"})
+            assert refused(update) == 403
+            with get(labels) as response:
+                assert response.read().decode().split() == ["l", "DI-1"]
+        with verification_step("Serve refuses SERVICE, a comment ended by a carriage return included"):
+            listener = socket.socket()
+            listener.bind(("127.0.0.1", 0))
+            listener.listen()
+            listener.settimeout(0.5)
+            target = f"http://127.0.0.1:{listener.getsockname()[1]}/x"
+            for sparql in (f"SELECT * WHERE {{ SERVICE <{target}> {{ ?s ?p ?o }} }}",
+                           f"SELECT * WHERE {{ # c\rSERVICE <{target}> {{ ?s ?p ?o }}\n}}"):
+                assert refused(urllib.request.Request(
+                    f"{base}/sparql?" + urllib.parse.urlencode({"query": sparql}))) == 400
+            with pytest.raises(OSError):  # nothing reached the listener
+                listener.accept()
+            listener.close()
+        with verification_step("Serve answers from the last build"):
+            assert build_store(location, project(dhf, results, project_name="acme")) > 0
+            with get(labels) as response:
+                assert response.read().decode().split() == ["l", "DI-1", "DI-2"]
+    finally:
+        server.shutdown()
+        server.server_close()
 
     with verification_step("A missing store is refused, not created"):
         assert graph_cli.graph_serve_command(store=tmp_path / "nope") == 2

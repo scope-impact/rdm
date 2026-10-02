@@ -129,6 +129,7 @@ def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
         out["services"] = [await call("query", {"sparql": q}) for q in (
             "SELECT * WHERE { SERVICE <http://127.0.0.1:9/sparql> { ?s ?p ?o } }",
             "select * where { ?s ?p ?o . service ?u { ?a ?b ?c } }",
+            "SELECT * WHERE { # a comment ended by a carriage return\rSERVICE <http://127.0.0.1:9/x> { ?s ?p ?o }\n}",
         )]
         out["service_word"] = await call("query", {"sparql": 'ASK { ?s ?p ?o FILTER(?o != "SERVICE") }'})
         out["bad_ids"] = [await call("trace", {"id": i}) for i in ('DI-1" } UNION { ?s ?p ?o', "DI 1", "")]
@@ -154,7 +155,7 @@ def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
     with verification_step("No network: SERVICE is refused (any case, IRI or variable endpoint), while the word "
                            "inside a…"):
         for error, message in out["services"]:
-            assert error and "SERVICE is not accepted: the agent server does not reach the network" in message
+            assert error and "SERVICE is not accepted: the graph does not reach the network" in message
         assert out["service_word"] == (False, {"boolean": True})
     with verification_step("trace takes only id-shaped input"):
         for error, message in out["bad_ids"]:
