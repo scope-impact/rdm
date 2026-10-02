@@ -1294,6 +1294,8 @@ record and one SHA-256 over every result file, but the bundle kept only the
 results, containers and attachments: once CI's retention ended, its claims
 about the run could not be checked. The bundle keeps the two run files the
 pytest plugin writes (Allure's executor and environment) too.
+The workspace declares the evidence bundle's use of the Allure reader, whose
+names for those files it takes; the views are redrawn.
 
 # Approval
 

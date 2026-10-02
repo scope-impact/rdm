@@ -378,6 +378,7 @@ workspace "RDM" "The design record of regulated software." {
     design_gate -> record_reader "reads the record with"
     dmr_index -> kernel "parses frontmatter with"
     evidence_bundle -> kernel "uses"
+    evidence_bundle -> allure_reader "keeps the run files named by"
     evidence_bundle -> record_reader "finds the matrix template with"
     formative_usability -> kernel "buckets observations by id with"
     hooks -> kernel "uses"
