@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 22
+revision: 23
 title: Design Review — RDM
 ---
 
@@ -657,6 +657,30 @@ DI-45's prose updated for how the risk shapes now agree with the gate.
   id patterns each get one home instead of several copies.
 - A projection reads each document once and asks git for every document's
   latest commit in one call; the projected graph is unchanged.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 22 — The gates as reusable CI
+
+**Scope reviewed:** DI-63, in the scaffolding context.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- A review of the repository's GitHub workflows found the CI `rdm adopt`
+  installs runs `pip install rdm`, which installs a different, older package
+  published under that name: an adopting team's first push goes red.
+- DI-63 makes RDM's own CI the reusable unit (a reusable workflow and a
+  composite gates action) and pins it by revision; the adopt template calls
+  it instead of copying steps. RDM's CI calls the same workflow, so the
+  reusable path is the tested path.
+- Installing from the pinned revision, not by name, means the gates that ran
+  are the gates that were pinned — the property a regulated pipeline needs.
+- The release gate stays switchable: a freshly adopted record has no design
+  input yet, and the gate would fail on that alone.
 
 ## Findings and actions
 

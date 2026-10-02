@@ -12,6 +12,9 @@ design_inputs:
   - id: DI-24
     text: "RDM shall bring an existing repository under design controls from one command: lay down the DHF skeleton (V&V plan, per-context design template, design review, traceability matrix), the agent workflow runbook, the design-gate pre-commit hook, a session bootstrap, and a CI gate workflow, skipping (never overwriting) any destination file that already exists."
     traces_to: [UN-011]
+  - id: DI-63
+    text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then the design gate, verify, the release gate, graph validation and the evidence bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the same revision. The CI workflow rdm adopt lays down shall call the reusable workflow pinned to the installed RDM's version."
+    traces_to: [UN-011, UN-003]
 ---
 
 # Scaffolding — Software Design
@@ -54,6 +57,22 @@ This context owns:
   is protecting, and re-running is safe (idempotent). The laid-down templates
   deliberately carry unresolved placeholder markers: the design gate stays red
   until the adopting team writes and commits its actual record.
+
+- **DI-63 (the gates, reusable from another repository)** — the CI `rdm
+  adopt` used to lay down ran `pip install rdm`, which fetches an unrelated
+  package of the same name, and every team copied steps that then drifted
+  from RDM's own. Now RDM's CI is the reusable unit:
+  `scope-impact/rdm/.github/workflows/gates.yml@<ref>` runs the caller's
+  acceptance tests, then the design gate, `verify`, the release gate
+  (optional while a record has no design input yet), `rdm graph validate`
+  (with any checklists) and the evidence bundle, uploaded as an artifact;
+  `scope-impact/rdm/actions/gates@<ref>` runs the same gates inside a
+  workflow of one's own; `scope-impact/rdm@<ref>` renders the documents in
+  the image published for that revision. RDM is installed from the pinned
+  revision itself — never by name from a package index — so the gates that
+  ran are exactly the ones pinned. The workflow `rdm adopt` lays down calls
+  the reusable workflow at `v<installed RDM version>`; RDM's own CI calls
+  it too, so every push to RDM exercises it. Refines UN-011 and UN-003.
 
 ## Design Outputs
 
