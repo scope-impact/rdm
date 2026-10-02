@@ -229,7 +229,7 @@ the repo to inspect:
 | 1 | UN-010 registered ("a contributor is guided to author a fully traced design input") | `verification_and_validation_plan.md` frontmatter |
 | 2 | DI-22 declared in the scaffolding context (since Design Review 30, `specification`), its text requiring six behaviours | `dhf/documents/design/specification.md` |
 | 3 | Design docs committed *before* any code | commit `Approve design record: UN-010, DI-22, …` |
-| 4–5 | Implementation + tagged test | `rdm/gates/new_input.py`, `tests/acceptance/test_scaffolding.py` |
+| 4–5 | Implementation + tagged test | `rdm/gates/new_input.py` (since Design Review 32, `rdm/specification/new_input.py`), `tests/acceptance/test_scaffolding.py` |
 | 6–7 | All gates green, pushed, PR reviewed | CI run on the PR |
 
 History: at the time, an independent review step (the since-retired

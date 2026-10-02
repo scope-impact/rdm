@@ -326,13 +326,8 @@ workspace "RDM" "The design record of regulated software." {
     gates_ci -> rdm_cli "installs and runs"
     documents_image -> rdm_cli "renders with"
     gap_analysis -> checklists "resolves built-in names and follows includes in"
-    design_gate -> kernel "reads the record with"
-    design_gate -> risk_register "reports the risk findings of"
-    design_gate -> validation_records "reads validation records with"
     hooks -> precommit_hook "installs"
-    hooks -> kernel "uses"
     precommit_hook -> design_gate "runs"
-    projection -> kernel "reads the record, results and git with"
     projection -> risk_register "reads risks and findings with"
     projection -> vocabulary "declares terms and rules in"
     projection -> explorer_file "writes the explorer file with"
@@ -341,38 +336,21 @@ workspace "RDM" "The design record of regulated software." {
     shacl_validation -> gate_shapes "checks with"
     agent_server -> projection "projects the record afresh on each call with"
     agent_server -> shacl_validation "validates with"
-    agent_server -> kernel "checks ids with"
     projection -> gap_analysis "reads checklists and matches checklist references with"
     test_translation -> result_formatters "parses with"
-    test_translation -> kernel "uses"
-    dmr_index -> kernel "reads frontmatter with"
-    renderer -> kernel "uses"
-    markdown_extensions -> kernel "uses"
-    risk_register -> kernel "reads frontmatter with"
     project_scaffold -> project_templates "copies"
     adoption -> adoption_templates "copies"
-    new_input -> kernel "reads the design documents with"
     reusable_workflow -> gates_action "runs the gates with"
-    formative_usability -> kernel "loads runs with"
     persona_command -> formative_usability "classifies runs with"
-    persona_command -> kernel "reads the V&V plan with"
-    validation_records -> kernel "reads the record with"
-    verification_data -> kernel "reads the record and results with"
     evidence_bundle -> verification_data "writes verification.yml with"
     evidence_bundle -> verification_report "writes the report PDF with"
-    evidence_bundle -> kernel "finds the matrix with"
     evidence_bundle -> renderer "renders the matrix with"
     verification_report -> verification_data "builds on"
-    verification_report -> kernel "reads results and git with"
     verification_report -> risk_register "reads risk status and residual decisions with"
     verification_report -> report_layout "lays out with"
-    pytest_plugin -> kernel "reads the record with"
     pytest_plugin -> risk_register "finds the risks each design input controls with"
-    allure_reader -> kernel "finds the repository and checks ids with"
     architecture_drawing -> architecture_model "takes the paths, view keys, stamp format and workspace digest from"
-    design_gate -> allure_reader "finds tagged tests and reconciles results with"
     design_gate -> architecture_model "checks the views are fresh with"
-    new_input -> allure_reader "finds the test suite (tag scanning) with"
     projection -> allure_reader "reads results and test tags with"
     projection -> architecture_model "reads the C4 model and code dependencies with"
     pytest_plugin -> allure_reader "writes run labels and facts with"
@@ -383,7 +361,6 @@ workspace "RDM" "The design record of regulated software." {
     renderer -> first_pass_output "keeps the first pass's words in"
     markdown_extensions -> first_pass_output "gives the template the first pass's words from"
     pdf_action -> documents_image "renders the documents in" "docker run make pdfs"
-    gates_action -> design_gate "runs the design gate and the release gate of"
     gates_action -> verification_data "writes verification.yml with"
     gates_action -> shacl_validation "validates the graph with"
     gates_action -> evidence_bundle "writes the evidence bundle with"
@@ -394,6 +371,46 @@ workspace "RDM" "The design record of regulated software." {
     agent_server -> vocabulary "returns the vocabulary and rules of"
     projection -> graph_store "builds"
     agent_harness -> agent_server "calls" "MCP over stdio"
+    adoption -> kernel "takes the version from"
+    agent_server -> kernel "checks ids with"
+    allure_reader -> kernel "buckets observations by id with"
+    design_gate -> kernel "asks git with and checks ids with"
+    design_gate -> record_reader "reads the record with"
+    dmr_index -> kernel "parses frontmatter with"
+    evidence_bundle -> kernel "uses"
+    evidence_bundle -> record_reader "finds the matrix template with"
+    formative_usability -> kernel "buckets observations by id with"
+    hooks -> kernel "uses"
+    markdown_extensions -> kernel "uses"
+    new_input -> record_reader "reads the design documents with"
+    persona_command -> record_reader "reads the V&V plan with"
+    projection -> kernel "asks git with and checks ids with and parses frontmatter with"
+    projection -> record_reader "reads the record with"
+    pytest_plugin -> kernel "asks git with"
+    pytest_plugin -> record_reader "reads the record with"
+    record_reader -> kernel "parses frontmatter with"
+    release_gate -> kernel "checks ids with"
+    release_gate -> record_reader "reads the record with"
+    renderer -> kernel "uses"
+    risk_register -> kernel "parses frontmatter with"
+    test_tags -> kernel "asks git with and checks ids with"
+    test_translation -> kernel "uses"
+    validation_records -> kernel "buckets observations by id with"
+    validation_records -> record_reader "reads the user-need registry with"
+    verification_data -> record_reader "reads the record with"
+    verification_report -> kernel "asks git with and buckets observations by id with and checks ids with and takes the version from"
+    verification_report -> record_reader "reads the record with"
+    allure_reader -> test_tags "takes the label that names a design input from"
+    design_gate -> test_tags "finds the tagged tests with"
+    new_input -> test_tags "finds the test suite with"
+    projection -> test_tags "reads the tagged tests with"
+    verification_report -> test_tags "reads the tagged tests with"
+    release_gate -> design_gate "runs the design gate's checks of"
+    release_gate -> allure_reader "reconciles results with"
+    release_gate -> risk_register "reports the risk findings of"
+    release_gate -> validation_records "reads validation records with"
+    gates_action -> design_gate "runs the design gate of"
+    gates_action -> release_gate "runs the release gate of"
   }
   views {
     systemContext rdm_system "C1" {
@@ -409,29 +426,51 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_specification" {
       title "Design specification: components (C3)"
-      include kernel record_reader test_tags design_gate hooks precommit_hook new_input project_scaffold project_templates adoption adoption_templates validation_records formative_usability persona_command allure_reader architecture_model gates_action risk_register
+      include record_reader test_tags design_gate hooks precommit_hook new_input project_scaffold project_templates adoption adoption_templates validation_records formative_usability persona_command allure_reader architecture_model evidence_bundle gates_action projection pytest_plugin release_gate verification_data verification_report
+      exclude "evidence_bundle -> verification_data"
+      exclude "evidence_bundle -> verification_report"
+      exclude "gates_action -> evidence_bundle"
+      exclude "gates_action -> release_gate"
+      exclude "gates_action -> verification_data"
+      exclude "projection -> allure_reader"
+      exclude "projection -> architecture_model"
+      exclude "pytest_plugin -> allure_reader"
+      exclude "release_gate -> allure_reader"
+      exclude "verification_data -> allure_reader"
+      exclude "verification_report -> allure_reader"
+      exclude "verification_report -> verification_data"
       autolayout tb
     }
     component rdm_cli "C3_release" {
       title "Release: components (C3)"
-      include verification_data release_gate reusable_workflow gates_action allure_reader design_gate evidence_bundle shacl_validation test_run verification_report
-      exclude "design_gate -> allure_reader"
+      include verification_data release_gate reusable_workflow gates_action allure_reader design_gate evidence_bundle record_reader risk_register shacl_validation test_run validation_records verification_report
+      exclude "design_gate -> record_reader"
+      exclude "evidence_bundle -> record_reader"
       exclude "evidence_bundle -> verification_report"
+      exclude "validation_records -> record_reader"
       exclude "verification_report -> allure_reader"
+      exclude "verification_report -> record_reader"
+      exclude "verification_report -> risk_register"
       autolayout tb
     }
     component rdm_cli "C3_test_evidence" {
       title "Test evidence: components (C3)"
-      include allure_reader mutation_probe test_translation result_formatters pytest_plugin design_gate new_input projection risk_register test_run verification_data verification_report
-      exclude "design_gate -> risk_register"
+      include allure_reader mutation_probe test_translation result_formatters pytest_plugin projection record_reader release_gate risk_register test_run test_tags verification_data verification_report
+      exclude "projection -> record_reader"
       exclude "projection -> risk_register"
+      exclude "projection -> test_tags"
+      exclude "release_gate -> record_reader"
+      exclude "release_gate -> risk_register"
+      exclude "verification_data -> record_reader"
+      exclude "verification_report -> record_reader"
       exclude "verification_report -> risk_register"
+      exclude "verification_report -> test_tags"
       exclude "verification_report -> verification_data"
       autolayout tb
     }
     component rdm_cli "C3_risk" {
       title "Risk: components (C3)"
-      include risk_register design_gate projection pytest_plugin verification_report
+      include risk_register projection pytest_plugin release_gate verification_report
       autolayout tb
     }
     component rdm_cli "C3_architecture" {
@@ -446,22 +485,25 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_publishing" {
       title "Publishing: components (C3)"
-      include renderer markdown_extensions first_pass_output snippets dmr_index verification_report report_layout pdf_action allure_reader documents_image evidence_bundle risk_register verification_data
-      exclude "evidence_bundle -> verification_data"
+      include renderer markdown_extensions first_pass_output evidence_bundle snippets dmr_index verification_report report_layout pdf_action allure_reader documents_image gates_action record_reader risk_register test_tags verification_data
+      exclude "allure_reader -> test_tags"
+      exclude "gates_action -> verification_data"
       exclude "verification_data -> allure_reader"
+      exclude "verification_data -> record_reader"
       autolayout tb
     }
     component rdm_cli "C3_graph" {
       title "Knowledge graph: components (C3)"
-      include projection vocabulary gate_shapes shacl_validation explorer_file agent_server agent_harness allure_reader architecture_model gap_analysis gates_action graph_store risk_register
+      include projection vocabulary gate_shapes shacl_validation explorer_file agent_server agent_harness allure_reader architecture_model gap_analysis gates_action graph_store record_reader risk_register test_tags
+      exclude "allure_reader -> test_tags"
       autolayout tb
     }
     dynamic rdm_cli "D_specification_commit" {
       title "Design specification: a commit meets the design gate (dynamic)"
       precommit_hook -> design_gate "runs"
-      design_gate -> kernel "reads the design documents and the review with"
+      design_gate -> record_reader "reads the design documents and the review with"
       design_gate -> architecture_model "checks the views are fresh with"
-      design_gate -> allure_reader "finds tagged tests with"
+      design_gate -> test_tags "finds tagged tests with"
       autolayout lr
     }
     dynamic rdm_system "D_release_pipeline" {
