@@ -96,7 +96,7 @@ class ArtifactCheck:
         # A document with uncommitted changes has not been approved, so it
         # fails the gate. An undeterminable state (None) does not fail here; it
         # is surfaced as a warning by the command instead.
-        return self.complete and self.uncommitted is not True
+        return not any(e.blocking for e in self.events)
 
     @property
     def reasons(self) -> list[str]:

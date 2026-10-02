@@ -49,8 +49,9 @@ def parse_validation_records(validation_dir: Path) -> dict[str, dict]:
     return {record["user_need"]: record for record in records}
 
 
-def unvalidated_user_needs(dhf_dir: Path) -> list[str]:
-    """Registered user needs without an approved validation record, sorted."""
+def unvalidated_user_needs(dhf_dir: Path, needs: set[str] | None = None) -> list[str]:
+    """Registered user needs (``needs``, when the caller has read them) without
+    an approved validation record, sorted."""
     records = parse_validation_records(validation_dir_for(dhf_dir))
     approved = {un for un, record in records.items() if record["disposition"] == APPROVED}
-    return sorted(registry_user_needs(Path(dhf_dir)) - approved)
+    return sorted((registry_user_needs(Path(dhf_dir)) if needs is None else needs) - approved)

@@ -17,6 +17,11 @@ class Event:
     message: str
 
     @property
+    def rule(self) -> str:
+        """The business rule a fail event or a warning names: after the slash."""
+        return self.name.partition(" / ")[2]
+
+    @property
     def warning(self) -> bool:
         return " Warned / " in self.name
 

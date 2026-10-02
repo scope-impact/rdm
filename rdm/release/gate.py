@@ -67,7 +67,7 @@ def fetch_state(dhf_dir: Path, results_dir: Path) -> State:
         state.needs = registry_user_needs(dhf_dir)
         state.report = allure.reconcile(ids, results_dir)
         _, state.risk_findings = assess(dhf_dir, ids, set(state.report.verified))
-        state.unvalidated = unvalidated_user_needs(dhf_dir)
+        state.unvalidated = unvalidated_user_needs(dhf_dir, state.needs)
     return state
 
 
@@ -139,7 +139,7 @@ class ReleaseResult:
 
     @property
     def warnings(self) -> list[str]:
-        return [e.message for e in self.events if not e.blocking and e.name != RELEASE_PERMITTED]
+        return [e.message for e in self.events if e.warning]
 
 
 def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
@@ -155,7 +155,7 @@ def verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[Event
     ids = design_input_ids(dhf_dir)
     if not ids:
         return []
-    return [Event(f"Design Controls Warned / {e.name.split(' / ')[1]}", e.message)
+    return [Event(f"Design Controls Warned / {e.rule}", e.message)
             for e in result_events(allure.reconcile(ids, allure_results_dir), ids)]
 
 
