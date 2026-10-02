@@ -14,7 +14,9 @@ record, with Allure's dynamic API:
 - ``severity``: critical when the input controls a risk;
 - an attachment with the input's text;
 - ``commit``: the commit under test, and ``worktree=dirty`` when the working
-  tree had uncommitted changes (DI-59).
+  tree had uncommitted changes (DI-59);
+- once per run, Allure's ``executor.json`` and ``environment.properties`` in
+  the results directory: who or what ran the tests, and where (DI-65).
 
 Enable it for a run with ``-p rdm.pytest_plugin``, or in the repository's
 top-level ``conftest.py`` with ``pytest_plugins = ["rdm.pytest_plugin"]``; to
@@ -26,27 +28,23 @@ pytest root. Use it for acceptance tests only: unit tests carry no Allure.
 
 from __future__ import annotations
 
-import re
+import getpass
+import json
+import os
+import platform
+import socket
 from functools import lru_cache
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import pytest
 
-from rdm.record.git import git
+from rdm.record.git import git, web_url  # noqa: F401 (web_url: part of this module's API)
 
 
 def pytest_addoption(parser):
     parser.addoption("--rdm-dhf", default=None,
                      help="RDM design history file the acceptance tests verify (default: dhf under the pytest root)")
-
-
-def web_url(remote: str | None) -> str | None:
-    """A browsable https URL for a GitHub, GitLab or similar remote."""
-    if not remote:
-        return None
-    match = re.match(r"^(?:git@|ssh://git@)([^:/]+)[:/](.+?)(?:\.git)?/?$", remote) or \
-        re.match(r"^https?://(?:[^@/]+@)?([^/]+)/(.+?)(?:\.git)?/?$", remote)
-    return f"https://{match.group(1)}/{match.group(2)}" if match else None
 
 
 @lru_cache(maxsize=4)
@@ -104,6 +102,63 @@ def _documents(record: dict, di: str, requirement: dict) -> list[tuple[str, str]
     return [(f"{', '.join(names)} in {doc}", doc) for doc, names in ids.items()]
 
 
+_RUN_RECORDED = pytest.StashKey[bool]()
+
+
+def _version(package: str) -> str:
+    try:
+        return version(package)
+    except PackageNotFoundError:
+        return "not installed"
+
+
+def executor(env=os.environ) -> dict:
+    """Allure's executor.json: the CI run that executed the tests, or a local run."""
+    if env.get("GITHUB_ACTIONS") == "true":
+        server, repo, run = env.get("GITHUB_SERVER_URL", "https://github.com"), env.get("GITHUB_REPOSITORY"), \
+            env.get("GITHUB_RUN_ID")
+        url = f"{server}/{repo}/actions/runs/{run}"
+        if env.get("GITHUB_RUN_ATTEMPT"):
+            url += f"/attempts/{env['GITHUB_RUN_ATTEMPT']}"
+        return {"name": "GitHub Actions", "type": "github", "buildOrder": env.get("GITHUB_RUN_NUMBER"),
+                "buildName": f"{env.get('GITHUB_WORKFLOW', 'workflow')} #{env.get('GITHUB_RUN_NUMBER', '?')}",
+                "buildUrl": url}
+    return {"name": "local", "type": "local", "buildName": f"{getpass.getuser()}@{socket.gethostname()}"}
+
+
+def environment(record: dict | None, env=os.environ) -> dict[str, str]:
+    """Allure's environment.properties: the configuration and tools of the run."""
+    facts = {
+        "os": f"{platform.system()} {platform.release()} ({platform.machine()})",
+        "python": f"{platform.python_implementation()} {platform.python_version()}",
+        "pytest": _version("pytest"),
+        "allure-pytest": _version("allure-pytest"),
+        "rdm": _version("rdm"),
+        "commit": (record or {}).get("commit") or "unknown",
+        "worktree": "dirty" if (record or {}).get("dirty") else "clean",
+    }
+    if env.get("GITHUB_ACTIONS") == "true":
+        facts |= {"ci.actor": env.get("GITHUB_ACTOR", ""), "ci.workflow": env.get("GITHUB_WORKFLOW", ""),
+                  "ci.event": env.get("GITHUB_EVENT_NAME", ""), "ci.ref": env.get("GITHUB_REF", ""),
+                  "ci.runner": f"{env.get('RUNNER_OS', '')} {env.get('RUNNER_ARCH', '')}".strip()}
+    else:
+        facts["user"] = getpass.getuser()
+    return facts
+
+
+def _record_run(config, record: dict | None) -> None:
+    """Write executor.json and environment.properties once per session (DI-65)."""
+    results = getattr(config.option, "allure_report_dir", None)
+    if not results or config.stash.get(_RUN_RECORDED, False):
+        return
+    config.stash[_RUN_RECORDED] = True
+    out = Path(results)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "executor.json").write_text(json.dumps(executor(), indent=2), encoding="utf-8")
+    (out / "environment.properties").write_text(
+        "".join(f"{key}={value}\n" for key, value in environment(record).items()), encoding="utf-8")
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item):
     """Label in the call phase, so the labels and the attachment belong to the
@@ -117,6 +172,7 @@ def pytest_runtest_call(item):
         dhf = item.config.getoption("--rdm-dhf", default=None) or str(Path(str(item.config.rootpath)) / "dhf")
         record = _record(str(Path(dhf).resolve())) if Path(dhf).is_dir() else None
         declared = [di for di in ids if record and di in record["inputs"]]
+        _record_run(item.config, record)
         if declared and record["commit"]:  # DI-59: the version this run is evidence for
             allure.dynamic.label("commit", record["commit"])
             if record["dirty"]:

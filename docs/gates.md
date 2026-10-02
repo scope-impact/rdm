@@ -114,26 +114,42 @@ document) from the documents' own frontmatter.
 ### The verification report
 
 The matrix says *that* a design input is verified. The verification report
-(`verification_report.pdf`, DI-64) shows *what was run* to say so, as a
-document a reviewer or an auditor reads without opening JSON:
+(`verification_report.pdf`, DI-64) shows *what was run* to say so, for the
+person who judges the evidence without having run it: an auditor, a notified
+body, the pull-request reviewer. It follows their questions, in order:
 
-- **header:** the verification summary, the RDM version, the commits tested,
-  and one SHA-256 over every file in the results directory, so the PDF names
-  the exact evidence it was built from;
-- **per design input,** in id order: its text, owning context, user needs and
-  outputs, then every run of a test tagged with it;
-- **per run:** the test, the commit it tested, whether the worktree had
-  uncommitted changes, start and stop times, status, failure message and
-  trace, every label (epic, feature, severity, `output`, and any the test
-  adds) and link;
-- **per step** (the clauses of the test), nested: its status, its failure
-  message, and its attachments;
-- **attachments:** text inline, images embedded, any other file named with its
-  SHA-256, and a missing one marked as missing.
+1. **What is this, and can I rely on it.** The repository, the record's
+   commit, the commits tested, who or what ran the tests and where (the CI run
+   with its link, or a local user and host; the OS and tool versions — written
+   by `rdm.pytest_plugin`, DI-65), the RDM version, and one SHA-256 over the
+   result files. Then the **evidence status**: *release-grade* only when every
+   design input has a passing run, none failed, and every run tested the
+   record's commit with no uncommitted changes. Otherwise it says *not
+   release-grade* and names each reason.
+2. **What went wrong.** Failed, broken and skipped runs, design inputs with no
+   run, missing attachments, and tags that name no design input.
+3. **What traces to what.** One table: design input, user needs, the risks it
+   controls (from the risk register), its tests, the result, and the page.
+4. **The evidence.** Per design input — its text, context, user needs, risks
+   and outputs — each run: the test's file and function, result, date and
+   duration, failure message and trace, its links, and its steps as numbered
+   **acceptance criteria** with their own results. Under each, the attachments
+   the test made: text inline (the first 60 lines), images embedded, other
+   files by SHA-256. A run's commit and worktree appear only where they differ
+   from the header.
+5. **How to check it.** An appendix of every result file and its SHA-256, and
+   how the header's SHA-256 is computed from them, so the report can be held
+   against the retained evidence bundle.
 
-A design input with no run says so in red. Text from a test (an attachment, a
-failure message) reaches the page as text: the data is handed to the Typst
-layout as JSON, never spliced into markup, so it cannot change the document.
+Left out, because it repeats the report or buries it: labels shown elsewhere
+(story, epic, feature, output, commit, worktree), runner internals (host,
+thread, framework, language, suite, package), and pytest's captured stdout and
+stderr and the plugin's copy of the requirement, which are listed by
+checksum. All of it stays in the results and the bundle.
+
+Text from a test (an attachment, a failure message) reaches the page as text:
+the data is handed to the Typst layout as JSON, never spliced into markup, so
+it cannot change the document.
 
 It needs Typst: install `rdm[report]` (the `typst` package, compiled
 in-process), or have a `typst` executable on `PATH`, as the RDM image does.

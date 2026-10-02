@@ -1,10 +1,11 @@
 """Acceptance test for the verification report (DI-64, see dhf/).
 
-Tagged `@allure.story("DI-64")`. A small record and hand-written Allure
-results (passing, failing and untested design inputs; nested steps; text,
-image, binary and missing attachments; an attempt to inject Typst markup) are
-rendered to PDF and read back. Skips cleanly if allure-pytest, typst or pypdf
-is not installed.
+Tagged `@allure.story("DI-64")`. A committed record and hand-written Allure
+results are rendered to PDF and read back: once clean (release-grade), once
+with every kind of problem an auditor must see (a failed run, a skipped one, a
+design input with no run, uncommitted changes, another commit, a missing
+attachment, an orphan tag, and an attempt to inject Typst markup). Skips
+cleanly if allure-pytest, typst or pypdf is not installed.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import struct
+import subprocess
 import sys
 import zlib
 from pathlib import Path
@@ -24,12 +26,16 @@ pypdf = pytest.importorskip("pypdf")
 
 from rdm.main import cli  # noqa: E402
 from rdm.record.bundle import evidence_bundle  # noqa: E402
-from rdm.record.report import ReportUnavailable, build_report, render_pdf, results_sha256  # noqa: E402
+from rdm.record.report import TEXT_LINES, ReportUnavailable, build_report, render_pdf  # noqa: E402
 from rdm.version import __version__  # noqa: E402
 from tests.acceptance.evidence import attach, clause  # noqa: E402
 
-COMMIT = "0123456789abcdef0123456789abcdef01234567"
+OTHER = "f" * 40
 INJECTION = '#panic("injected") ] #set page(width: 1cm)'
+DI_1 = "  - {id: DI-1, text: 'The device shall sound an alarm.', traces_to: [UN-001, UN-002]}\n"
+MORE = ("  - {id: DI-10, text: 'The device shall log every alarm.', traces_to: [UN-002]}\n"
+        "  - {id: DI-2, text: 'The device shall silence on acknowledge.', traces_to: [UN-001]}\n"
+        "  - {id: DI-3, text: 'The device shall show the time.', traces_to: [UN-001]}\n")
 
 
 def _png() -> bytes:
@@ -40,29 +46,51 @@ def _png() -> bytes:
             + chunk(b"IEND", b""))
 
 
-def _record(tmp_path: Path) -> tuple[Path, Path]:
-    dhf = tmp_path / "dhf"
-    (dhf / "documents" / "design").mkdir(parents=True)
-    (dhf / "documents" / "verification_and_validation_plan.md").write_text(
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(["git", "-C", str(repo), "-c", "user.name=a", "-c", "user.email=a@b", *args],
+                          check=True, capture_output=True, text=True).stdout.strip()
+
+
+def _record(tmp_path: Path, inputs: str) -> tuple[Path, str]:
+    """A committed record: two user needs, the given design inputs, a risk controlled by DI-1."""
+    repo = tmp_path / "device"
+    docs = repo / "dhf" / "documents"
+    (docs / "design").mkdir(parents=True)
+    (docs / "verification_and_validation_plan.md").write_text(
         "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: 'a need'}\n  - {id: UN-002, text: 'another'}\n---\n")
-    (dhf / "documents" / "design" / "alarms.md").write_text(
-        "---\nid: SDS-ALM-001\nkind: design\ncontext: alarms\ndesign_inputs:\n"
-        "  - {id: DI-10, text: 'The device shall log every alarm.', traces_to: [UN-002]}\n"
-        "  - {id: DI-2, text: 'The device shall silence on acknowledge.', traces_to: [UN-001]}\n"
-        "  - {id: DI-1, text: 'The device shall sound an alarm.', traces_to: [UN-001, UN-002]}\n---\n")
-    results = tmp_path / "allure-results"
-    results.mkdir()
+    (docs / "design" / "alarms.md").write_text(
+        f"---\nid: SDS-ALM-001\nkind: design\ncontext: alarms\ndesign_inputs:\n{inputs}---\n")
+    (docs / "risks.md").write_text("---\nid: RR-001\nkind: risk\nrisks:\n  - {id: RISK-7, controls: [DI-1]}\n---\n")
+    _git(repo, "init", "-q")
+    _git(repo, "remote", "add", "origin", "git@github.com:acme/device.git")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "record")
+    return repo / "dhf", _git(repo, "rev-parse", "HEAD")
+
+
+def _environment(results: Path) -> None:
+    (results / "executor.json").write_text(json.dumps(
+        {"name": "GitHub Actions", "type": "github", "buildName": "Design controls #42",
+         "buildUrl": "https://github.com/acme/device/actions/runs/7/attempts/1"}))
+    (results / "environment.properties").write_text("os=Linux 6.8 (x86_64)\npython=CPython 3.13.1\nci.actor=octocat\n")
+
+
+def _passing(results: Path, commit: str, dirty: bool = False) -> None:
+    (results / "requirement-attachment.txt").write_text("DI-1 (alarms): The device shall sound an alarm.")
+    (results / "stdout-attachment.txt").write_text("captured noise\n" * 50)
     (results / "log-attachment.txt").write_text(f"alarm raised at 12:00\n{INJECTION}\n")
-    (results / "requirement-attachment.txt").write_text("DI-1: The device shall sound an alarm.")
+    (results / "long-attachment.txt").write_text("".join(f"line {i}\n" for i in range(TEXT_LINES + 20)))
     (results / "screen-attachment.png").write_bytes(_png())
     (results / "dump-attachment.bin").write_bytes(b"\x00\x01binary")
-    labels = [{"name": "story", "value": "DI-1"}, {"name": "commit", "value": COMMIT},
-              {"name": "worktree", "value": "dirty"}, {"name": "epic", "value": "UN-001"},
-              {"name": "feature", "value": "alarms"}, {"name": "severity", "value": "critical"},
-              {"name": "output", "value": "src/alarm.py"}]
+    labels = [{"name": "story", "value": "DI-1"}, {"name": "commit", "value": commit},
+              {"name": "epic", "value": "UN-001"}, {"name": "feature", "value": "alarms"},
+              {"name": "severity", "value": "critical"}, {"name": "output", "value": "src/alarm.py"},
+              {"name": "host", "value": "runner-vm-17"}, {"name": "thread", "value": "4242-MainThread"}]
+    if dirty:
+        labels.append({"name": "worktree", "value": "dirty"})
     (results / "a-result.json").write_text(json.dumps({
-        "name": "test_alarm_sounds", "fullName": "tests.test_alarm#test_alarm_sounds", "status": "passed",
-        "start": 1767225600000, "stop": 1767225601500, "labels": labels,
+        "name": "test_alarm_sounds", "fullName": "tests.acceptance.test_alarm#test_alarm_sounds",
+        "status": "passed", "start": 1767225600000, "stop": 1767225601500, "labels": labels,
         "links": [{"type": "link", "name": "DI-1 in alarms.md", "url": "https://example.org/alarms.md"}],
         "steps": [
             {"name": "the alarm sounds within a second", "status": "passed",
@@ -73,19 +101,26 @@ def _record(tmp_path: Path) -> tuple[Path, Path]:
         ],
         "attachments": [
             {"name": "requirement DI-1", "source": "requirement-attachment.txt", "type": "text/plain"},
+            {"name": "stdout", "source": "stdout-attachment.txt", "type": "text/plain"},
+            {"name": "long log", "source": "long-attachment.txt", "type": "text/plain"},
             {"name": "memory dump", "source": "dump-attachment.bin", "type": "application/octet-stream"},
-            {"name": "lost trace", "source": "gone-attachment.txt", "type": "text/plain"},
         ]}))
+
+
+def _problems(results: Path) -> None:
     (results / "b-result.json").write_text(json.dumps({
-        "name": "test_silence", "fullName": "tests.test_alarm#test_silence", "status": "failed",
+        "name": "test_silence", "fullName": "tests.acceptance.test_alarm#test_silence", "status": "failed",
         "start": 1767225602000, "stop": 1767225603000,
-        "labels": [{"name": "story", "value": "DI-2"}, {"name": "commit", "value": COMMIT}],
-        "statusDetails": {"message": "AssertionError: still sounding", "trace": "Traceback: test_alarm.py:42"},
+        "labels": [{"name": "story", "value": "DI-2"}, {"name": "commit", "value": OTHER}],
+        "statusDetails": {"message": "AssertionError: still sounding\nsecond line", "trace": "Traceback: line 42"},
         "steps": [{"name": "acknowledging silences it", "status": "failed",
-                   "statusDetails": {"message": "the alarm kept sounding"}}]}))
+                   "statusDetails": {"message": "the alarm kept sounding"},
+                   "attachments": [{"name": "lost trace", "source": "gone-attachment.txt", "type": "text/plain"}]}]}))
     (results / "c-result.json").write_text(json.dumps({
+        "name": "test_clock", "fullName": "tests.acceptance.test_alarm#test_clock", "status": "skipped",
+        "start": 1767225604000, "stop": 1767225604100, "labels": [{"name": "story", "value": "DI-3"}]}))
+    (results / "d-result.json").write_text(json.dumps({
         "name": "test_stray", "status": "passed", "labels": [{"name": "story", "value": "DI-9"}]}))
-    return dhf, results
 
 
 def _text(pdf: Path) -> str:
@@ -96,67 +131,118 @@ def _text(pdf: Path) -> str:
 @allure.label("output", "rdm/record/report.py")
 @allure.label("output", "rdm/record/verification_report.typ")
 @allure.label("output", "rdm/record/bundle.py")
-def test_the_verification_report_shows_every_run_and_its_evidence(tmp_path: Path, monkeypatch) -> None:
-    """DI-64: per design input, every run of its tests with commit, worktree,
-    times, status, failure, labels, links, steps and attachments, rendered to
-    PDF under a header naming the results by SHA-256; in the evidence bundle."""
-    dhf, results = _record(tmp_path)
+def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monkeypatch) -> None:
+    """DI-64: identification, evidence status, anomalies and traceability first;
+    then per design input every run with its acceptance criteria and the
+    attachments the test made; then every result file by SHA-256."""
+    clean_dhf, clean_commit = _record(tmp_path / "clean", DI_1)
+    clean_results = tmp_path / "clean-results"
+    clean_results.mkdir()
+    _environment(clean_results)
+    _passing(clean_results, clean_commit)
+    clean = build_report(clean_dhf, clean_results)
+
+    with clause("the header names the repository, the record's commit, the commits tested, the executor and "
+                "environment, the RDM version and one SHA-256 over the result files"):
+        attach("header", {k: v for k, v in clean.items() if k not in ("design_inputs", "files")})
+        assert clean["repository"] == "https://github.com/acme/device"
+        assert clean["record_commit"] == clean_commit and clean["commits"] == [clean_commit]
+        assert clean["executor"] == {"name": "GitHub Actions", "buildName": "Design controls #42",
+                                     "buildUrl": "https://github.com/acme/device/actions/runs/7/attempts/1"}
+        assert clean["environment"] == {"os": "Linux 6.8 (x86_64)", "python": "CPython 3.13.1", "ci.actor": "octocat"}
+        assert clean["rdm_version"] == __version__
+        digest = hashlib.sha256()
+        for path in sorted(clean_results.iterdir()):
+            digest.update(path.name.encode() + b"\0" + hashlib.sha256(path.read_bytes()).hexdigest().encode() + b"\n")
+        assert clean["results_sha256"] == digest.hexdigest()
+    with clause("the evidence is release-grade when every input passed at the record's commit, clean"):
+        assert (clean["release_grade"], clean["reasons"], clean["anomalies"]) == (True, [], [])
+        clean_text = _text(render_pdf(clean, clean_results, tmp_path / "clean.pdf"))
+        assert "Release-grade evidence" in clean_text and "Not release-grade" not in clean_text
+        assert "Design controls #42" in clean_text and "CPython 3.13.1" in clean_text
+        # The run tested the record's commit: the commit is in the header twice, not repeated on the run.
+        assert clean_text.count(clean_commit) == 2 and "not the record" not in clean_text
+
+    dhf, commit = _record(tmp_path / "full", DI_1 + MORE)
+    results = tmp_path / "full-results"
+    results.mkdir()
+    _passing(results, commit, dirty=True)
+    _problems(results)
     report = build_report(dhf, results)
     by_id = {di["id"]: di for di in report["design_inputs"]}
-
-    with clause("each design input, in id order, with its text, owning context and user needs"):
-        assert [di["id"] for di in report["design_inputs"]] == ["DI-1", "DI-2", "DI-10"]
-        assert by_id["DI-1"]["text"] == "The device shall sound an alarm."
-        assert by_id["DI-1"]["context"] == "alarms" and by_id["DI-1"]["traces_to"] == ["UN-001", "UN-002"]
-        assert [di["status"] for di in report["design_inputs"]] == ["verified", "failed", "untested"]
-        assert by_id["DI-10"]["runs"] == [] and report["orphans"] == ["DI-9"]
+    with clause("otherwise it is not release-grade, and each reason is named"):
+        attach("reasons", report["reasons"])
+        assert report["release_grade"] is False
+        assert report["reasons"] == [
+            "3 design input(s) not verified: DI-2, DI-3, DI-10",
+            "1 test(s) failed or broke",
+            "1 test(s) ran with uncommitted changes in the worktree",
+            "1 test(s) recorded no commit",
+            f"runs tested 1 other commit(s) than the record's ({commit[:12]}): {OTHER[:12]}",
+        ]
+        assert report["executor"] is None and report["environment"] == {}
+    with clause("the anomalies: failed and skipped runs, design inputs with no run, missing attachments, "
+                "orphan tags"):
+        assert [(a["subject"], a["kind"]) for a in report["anomalies"]] == [
+            ("DI-2 · tests/acceptance/test_alarm.py::test_silence", "failed"),
+            ("DI-2 · tests/acceptance/test_alarm.py::test_silence", "missing attachment"),
+            ("DI-3 · tests/acceptance/test_alarm.py::test_clock", "skipped"),
+            ("DI-10", "no run"),
+            ("DI-9", "orphan tag"),
+        ]
+    with clause("traceability: each design input in id order with its user needs, the risks it controls "
+                "and its tests"):
+        assert [di["id"] for di in report["design_inputs"]] == ["DI-1", "DI-2", "DI-3", "DI-10"]
+        assert by_id["DI-1"]["traces_to"] == ["UN-001", "UN-002"] and by_id["DI-1"]["risks"] == ["RISK-7"]
+        assert by_id["DI-1"]["context"] == "alarms" and by_id["DI-2"]["risks"] == []
+        assert [di["status"] for di in report["design_inputs"]] == ["verified", "failed", "untested", "untested"]
     run, failed = by_id["DI-1"]["runs"][0], by_id["DI-2"]["runs"][0]
-    with clause("each run: the commit, the worktree state, start and stop times, status and failure message"):
-        attach("DI-1 run", {k: v for k, v in run.items() if k not in ("steps", "attachments")})
-        assert (run["commit"], run["dirty"], failed["dirty"]) == (COMMIT, True, False)
-        assert (run["start"], run["stop"]) == ("2026-01-01 00:00:00.000 UTC", "2026-01-01 00:00:01.500 UTC")
+    with clause("each run: its test's file and function, result, date and duration, failure message and trace"):
+        assert run["test"] == "tests/acceptance/test_alarm.py::test_alarm_sounds"
+        assert (run["start"], run["duration"]) == ("2026-01-01 00:00:00 UTC", "1.50 s")
         assert (failed["status"], failed["message"], failed["trace"]) == (
-            "failed", "AssertionError: still sounding", "Traceback: test_alarm.py:42")
-    with clause("every label and link the run carries"):
-        assert {(label["name"], label["value"]) for label in run["labels"]} >= {
-            ("epic", "UN-001"), ("feature", "alarms"), ("severity", "critical"), ("output", "src/alarm.py")}
-        assert run["links"] == [{"name": "DI-1 in alarms.md", "url": "https://example.org/alarms.md", "type": "link"}]
-    with clause("every step, nested, with its own status and failure message"):
+            "failed", "AssertionError: still sounding\nsecond line", "Traceback: line 42")
+    with clause("labels other than those the report already shows, and no runner internals; its links"):
+        assert run["labels"] == [{"name": "severity", "value": "critical"}]
+        assert run["links"] == [{"name": "DI-1 in alarms.md", "url": "https://example.org/alarms.md"}]
+    with clause("each step is an acceptance criterion, nested, with its own result"):
         assert [(s["name"], s["status"]) for s in run["steps"]] == [
             ("the alarm sounds within a second", "passed"), ("the screen shows the alarm", "passed")]
         assert run["steps"][0]["steps"][0]["name"] == "the tone is 1 kHz"
         assert (failed["steps"][0]["status"], failed["steps"][0]["message"]) == ("failed", "the alarm kept sounding")
-    with clause("every attachment: text inline, images embedded, other files by SHA-256, a missing one marked"):
+    with clause("attachments the test made: text inline up to a limit, images embedded, other files by SHA-256; "
+                "captured output and the copy of the requirement listed by SHA-256 only"):
         kinds = {a["name"]: a for a in run["attachments"] + run["steps"][0]["attachments"]
                  + run["steps"][1]["attachments"]}
-        assert kinds["alarm log"]["kind"] == "text" and "alarm raised at 12:00" in kinds["alarm log"]["text"]
-        assert kinds["screen"]["kind"] == "image"
-        assert (kinds["memory dump"]["kind"], kinds["memory dump"]["sha256"]) == (
-            "file", hashlib.sha256(b"\x00\x01binary").hexdigest())
-        assert kinds["lost trace"]["kind"] == "missing"
-    with clause("the header: the verification summary, the RDM version and one SHA-256 over the result files"):
-        digest = hashlib.sha256()
-        for path in sorted(results.iterdir()):
-            digest.update(path.name.encode() + b"\0" + hashlib.sha256(path.read_bytes()).hexdigest().encode() + b"\n")
-        assert report["results_sha256"] == digest.hexdigest() == results_sha256(results)
-        assert report["summary"] | {} == {"verified": 1, "failed": 1, "untested": 1, "total": 3, "results_found": 3}
-        assert report["rdm_version"] == __version__ and report["commits"] == [COMMIT]
-        (results / "dump-attachment.bin").write_bytes(b"tampered")
-        assert results_sha256(results) != report["results_sha256"]
-        (results / "dump-attachment.bin").write_bytes(b"\x00\x01binary")
+        assert {name: a["kind"] for name, a in kinds.items()} == {
+            "requirement DI-1": "requirement", "stdout": "captured", "long log": "text", "memory dump": "file",
+            "alarm log": "text", "screen": "image"}
+        assert kinds["long log"]["truncated"] and kinds["long log"]["text"].count("\n") == TEXT_LINES - 1
+        assert not kinds["alarm log"]["truncated"]
+        assert kinds["memory dump"]["sha256"] == hashlib.sha256(b"\x00\x01binary").hexdigest()
 
     pdf = render_pdf(report, results, tmp_path / "report.pdf")
     text = _text(pdf)
     attach("report text", text)
-    with clause("the PDF shows all of it, and embeds the image"):
-        for expected in ("The device shall sound an alarm.", COMMIT, "uncommitted changes", "2026-01-01 00:00:01.500",
-                         "the tone is 1 kHz", "AssertionError: still sounding", "the alarm kept sounding",
-                         "severity: critical", "DI-1 in alarms.md", "alarm raised at 12:00",
+    with clause("the PDF shows all of it in that order, with the image embedded and the noise left out"):
+        order = ["Not release-grade evidence", "Anomalies", "Traceability", "The device shall sound an alarm.",
+                 "Acceptance criteria", "Appendix A"]
+        assert [text.index(marker) for marker in order] == sorted(text.index(marker) for marker in order)
+        for expected in ("3 design input(s) not verified", "RISK-7", "2026-01-01 00:00:00 UTC", "1.50 s",
+                         "uncommitted changes", "not the record", "the tone is 1 kHz",
+                         "AssertionError: still sounding", "the alarm kept sounding", "severity: critical",
+                         "DI-1 in alarms.md", "alarm raised at 12:00", "line 0",
+                         f"First lines shown of {TEXT_LINES + 20}",
                          hashlib.sha256(b"\x00\x01binary").hexdigest(), "not found in the results",
-                         report["results_sha256"], __version__, "No run of a test tagged DI-10", "DI-9"):
+                         "No run of a test tagged DI-10", "not recorded (no executor.json", __version__):
             assert expected in text, expected
-        assert text.count(COMMIT) == 5  # the header; each of the two runs, in its Commit and Labels rows
+        assert f"line {TEXT_LINES + 5}" not in text and "captured noise" not in text
+        assert "Not printed: requirement DI-1" in text and "runner-vm-17" not in text and "4242-MainThread" not in text
         assert sum(len(page.images) for page in pypdf.PdfReader(pdf).pages) == 1
+    with clause("the appendix lists every result file with its SHA-256"):
+        appendix = text[text.index("Appendix A"):]
+        for path in results.iterdir():
+            assert hashlib.sha256(path.read_bytes()).hexdigest() in appendix, path.name
     with clause("text from a test reaches the page as text: markup in it is shown, not run"):
         assert '#panic("injected")' in text and "#set page(width: 1cm)" in text
         assert {round(float(p.mediabox.width)) for p in pypdf.PdfReader(pdf).pages} == {595}  # A4, unchanged

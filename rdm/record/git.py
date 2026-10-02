@@ -4,6 +4,7 @@ Git, as the record's controlled store: one way to ask it and to find it.
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -26,3 +27,12 @@ def repo_root(path: Path) -> Path | None:
         if (ancestor / ".git").exists():
             return ancestor
     return None
+
+
+def web_url(remote: str | None) -> str | None:
+    """A browsable https URL for a GitHub, GitLab or similar remote."""
+    if not remote:
+        return None
+    match = re.match(r"^(?:git@|ssh://git@)([^:/]+)[:/](.+?)(?:\.git)?/?$", remote) or \
+        re.match(r"^https?://(?:[^@/]+@)?([^/]+)/(.+?)(?:\.git)?/?$", remote)
+    return f"https://{match.group(1)}/{match.group(2)}" if match else None
