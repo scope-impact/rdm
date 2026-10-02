@@ -10,6 +10,8 @@ a query can always tell where a fact came from:
 - ``tests``      — verification tags found in test sources
 - ``executions`` — Allure results, when given
 - ``git``        — each design document's latest commit
+- ``architecture`` — the C4 model of the architecture workspace (DI-67)
+- ``code``       — Python imports between components' code (DI-67)
 - ``checklists`` — requested regulatory checklists, as data (DI-37)
 - ``references`` — documents' ``[[…]]`` tags linked to the clauses they name
 - ``ontology``   — RDM's vocabulary (``ontology.ttl``), so browsers can label things
@@ -28,6 +30,7 @@ from urllib.parse import quote
 
 import pyoxigraph as ox
 
+from rdm.graph.c4 import project_architecture
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
 from rdm.record.allure import find_tests_dir, full_name, reconcile, scan_source_tests
 from rdm.record.git import git, repo_root
@@ -397,6 +400,7 @@ def project(
     if repo is not None:
         _git(ds, dhf, root)
     _risks(ds, dhf, root, verified)
+    project_architecture(ds, dhf, root, rdm)  # after the runs: their source files belong to components
     if checklists:
         from rdm.graph.checklists import checklist_quads, reference_quads
 

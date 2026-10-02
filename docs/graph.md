@@ -93,6 +93,8 @@ The endpoint's default graph is the union of all of them.
 | `…graph/executions` | Allure results (only with `--allure-results`): each run's status, times, failure message and trace, parameters, steps and attachments, the design inputs it exercises and the source files it exercises |
 | `…graph/git` | each controlled document's latest commit and its author, the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`), and the commit the record was built at |
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
+| `…graph/architecture` | the C4 model of the [architecture workspace](authoring.md#architecture-c4): each person, software system, container and component with its name, technology, description, container and external flag; each component's bounded context and code; each relationship; and the component each source file in the graph belongs to |
+| `…graph/code` | Python imports from one component's code into another's, as dependencies between the components: the coupling the code actually has |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
 | `…graph/references` | documents' `[[KEY]]` tags, linked to the clauses they name |
 | `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties, and the rules for derived relations |
@@ -116,6 +118,8 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | `rdm:Clause` ⊂ `skos:Concept`, `rdm:Checklist` ⊂ `skos:Collection`, `skos:ConceptScheme` | clauses, checklists, standards (SKOS) |
 | `dcterms:references` | a document claims a clause with a `[[KEY]]` tag, or names a document it relies on |
 | `rdm:Risk`, `rdm:controlledBy`, `rdm:evaluatedAgainst` | the risk register ([risk register](risk.md)) |
+| `rdm:Person`, `rdm:SoftwareSystem`, `rdm:Container`, `rdm:Component` ⊂ `rdm:ArchitectureElement`; `rdm:containedIn`, `rdm:inContext`, `rdm:code`, `rdm:Relationship` | the C4 model (`?c a rdm:Component ; rdm:inContext ?ctx`) |
+| `rdm:inComponent`, `rdm:dependsOn`, `rdm:Dependency` | a source file's component; one component's code importing another's |
 | `rdm:landedIn`, `rdm:landedBy`, `rdm:atCommit` | the commit that landed a document's change; the commit the record was built at |
 
 ## Test results, in full

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added — the architecture in the graph (DI-67)
+- The graph has two more named graphs: `architecture`, the C4 model (every
+  element typed, contained and described; each component's bounded context and
+  code; each relationship; the component each source file a test run exercises
+  belongs to), and `code`, the Python imports between components' code. So a
+  query can follow a design input to its tests, the files they exercise, and
+  the components and contexts those files belong to.
+
 ### Added — the architecture as one workspace, its views as images (DI-66, DI-70)
 - The C4 architecture is one Structurizr workspace, `dhf/c4/workspace.dsl`:
   the model, each component's bounded context as its group and its code as a
