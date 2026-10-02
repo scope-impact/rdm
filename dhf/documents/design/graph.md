@@ -63,9 +63,6 @@ design_inputs:
   - id: DI-67
     text: "RDM shall project the C4 model into the graph: each element typed person, software system, container or component, with its name, technology, description and external flag; the element that contains it; the bounded context that owns each component; each relationship with its source, target, label and technology; each component's code; the component every projected source file belongs to (the longest matching code path); and, for Python, an import from one component's code into another's as a dependency between the two."
     traces_to: [UN-017, UN-014]
-  - id: DI-68
-    text: "RDM shall warn, never block, through the graph's gate shapes, when the C4 model and the record disagree: a design output in no component's code; a test run that exercises a component of a context that neither owns nor realises the design input it verifies; a dependency between two components with no relationship declared from the one to the other; a group of components that is not a bounded context of the architecture, or a bounded context with no component; a bounded context whose design document does not show its component view; a component whose code path does not exist; and a relationship with no description."
-    traces_to: [UN-017]
   - id: DI-69
     text: "RDM's agent server shall show, in the trace of a design input, the components whose code its tests exercise, each with its container and owning bounded context."
     traces_to: [UN-017, UN-015]
@@ -282,15 +279,6 @@ evidence bundle (DI-30).
   directory), and a Python import from one component's code into another's is
   projected as a dependency: the coupling the code actually has, beside the
   coupling the workspace claims. Refines UN-017, UN-014.
-- **DI-68 (conformance, as warnings)** — the gate shapes compare the model
-  with the record and the code: code a test exercises that no component
-  names; a test that exercises another context's component than the one that
-  owns or realises its input; a dependency in the code with no relationship
-  declared for it; a group that is not a bounded context, or a context with
-  no component; a context whose design document does not show its view; a
-  code path that does not exist; a relationship with no description. Every
-  one is a warning: an architecture disagreement is a
-  question for the reviewer, never a release block. Refines UN-017.
 - **DI-69 (a design input's components)** — `trace` of a design input names
   the components its tests exercise, with their container and owning
   context, so an agent sees where an input is built without reading the code.

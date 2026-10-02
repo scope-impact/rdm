@@ -1,8 +1,7 @@
 ---
 id: SDS-GAP-001
 kind: design
-context: gap_analysis
-# DI-25 holds this procedure to the Part 11 checklist (DI-58: a document link).
+context: compliance
 references: [DC-001]
 design_inputs:
   - id: DI-10
@@ -19,12 +18,15 @@ design_inputs:
     traces_to: [UN-006]
 ---
 
-# Gap analysis — Software Design
+# Compliance — Software Design
+
+> **Interim (Design Review 30).** This context was formed from `gap_analysis`. Its
+> design inputs moved here unchanged; the prose below is carried over verbatim
+> from those documents, by section, until it is rewritten for this context.
 
 ## Design Inputs
 
-This context owns the gap-analysis requirements, all refining UN-006 (check that
-documents contain the references a chosen standard requires):
+Holds standards as checklists and checks the controlled documents against them.
 
 - **DI-10 (gap detection)** — report the checklist references missing from a set
   of documents; exit non-zero when any are absent. A reference is a key inside
@@ -49,7 +51,12 @@ documents contain the references a chosen standard requires):
   shipped checklist. The dogfood direction matters: the same checklist any
   downstream project can audit with is the one RDM's own record is held to.
 
-## Design Outputs
+## Design Inputs (context notes) — from `gap_analysis`
+
+This context owns the gap-analysis requirements, all refining UN-006 (check that
+documents contain the references a chosen standard requires):
+
+## Design Outputs — from `gap_analysis`
 
 `rdm gap` and `rdm/gaps.py`:
 
@@ -71,8 +78,7 @@ lower-level coverage.
 
 ## Components (C3)
 
-The components of the `gap_analysis` context, drawn from the architecture
-workspace; a component of another context is shown where this one depends
-on it. Each component names its code in the workspace.
+The components of the `compliance` context, drawn from the architecture
+workspace (`rdm c4 draw`).
 
-![Components: gap_analysis](../../c4/views/C3_gap_analysis.svg)
+![Components: compliance](../../c4/views/C3_compliance.svg)

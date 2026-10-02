@@ -5,16 +5,14 @@ context: system
 # The bounded contexts, each with the part it belongs to (DI-58). Each has one
 # design document, design/<context>.md; the table below describes them.
 contexts:
-  - {id: record, part: Record}
-  - {id: ingestion, part: Record}
-  - {id: scaffolding, part: Record}
+  - {id: specification, part: Record}
   - {id: risk, part: Record}
-  - {id: gating, part: Gates}
-  - {id: verification, part: Gates}
-  - {id: gap_analysis, part: Gates}
-  - {id: validation, part: Gates}
+  - {id: architecture, part: Record}
+  - {id: test_evidence, part: Record}
+  - {id: release, part: Gates}
+  - {id: compliance, part: Gates}
   - {id: graph, part: Graph}
-  - {id: rendering, part: Documents}
+  - {id: publishing, part: Documents}
 # The record is controlled as DC-001 states.
 references: [DC-001]
 ---
@@ -33,7 +31,7 @@ design inputs trace to (`traces_to`), so that is never declared twice.
 |------|----------------|-----------------------|
 | **Record** | read and scaffold the record: needs, design inputs, checklists, tagged tests, results, git | scaffolding only (`init`, `adopt`, `new-input`); every other change is a reviewed commit |
 | **Gates** | pass/block decisions on the record | no |
-| **Graph** | the record as RDF, queried and validated; agents read it over MCP (`rdm graph mcp`) | no — rebuilt from the record, never edited |
+| **Graph** | the knowledge graph: the record as RDF, queried and validated; agents read it over MCP (`rdm graph mcp`) | no — rebuilt from the record, never edited |
 | **Documents** | regulatory documents rendered from the record | no |
 
 Only people and agents change the record, and only through a reviewed pull
@@ -60,24 +58,67 @@ acceptance test run, and the reusable CI in GitHub Actions.
 
 ## Bounded contexts (one design document each), by part
 
-| Part | Context | Design document | Modules |
-|------|---------|-----------------|---------|
-| Record | `record` | `design/record.md` | `rdm/record/` — design/V&V frontmatter, Allure results, git |
-| Record | `ingestion` | `design/ingestion.md` | `rdm/collect.py`, `rdm/translate.py` — code snippets, foreign test results |
-| Record | `scaffolding` | `design/scaffolding.md` | `rdm/init.py`, `rdm/adopt.py`, `rdm story new-input` |
-| Record | `risk` | `design/risk.md` | `rdm/record/risk.py` — the risk register, scored from the risk matrix; its release rules |
-| Gates | `gating` | `design/gating.md` | `rdm/gates/design_gate.py`, `rdm/hook_files/pre-commit` — design gate (including duplicate ids), release gate |
-| Gates | `verification` | `design/verification.md` | `rdm/record/verify.py`, `rdm/gates/mutation.py` — inputs vs results, traceability matrix, mutation probe |
-| Gates | `gap_analysis` | `design/gap_analysis.md` | `rdm/gaps.py`, `rdm/checklists/` — documents vs checklists |
-| Gates | `validation` | `design/validation.md` | `rdm/record/persona.py`, `rdm/record/validation.py` — formative usability evidence |
-| Graph | `graph` | `design/graph.md` | `rdm/graph/` — RDF projection, SHACL gate shapes, SPARQL, Graph Explorer file, read-only MCP server |
-| Documents | `rendering` | `design/rendering.md` | `rdm/render.py`, `rdm/md_extensions/` — templates + data → Markdown → PDF/DOCX |
+A bounded context is drawn where the language changes, not where the workflow
+does (`CONTEXT.md`): the stages of a design input's life (declared, approved,
+verified, released) are not contexts. Restructured in Design Review 30 from
+ten contexts named for what their code did or for a workflow stage.
+
+| Part | Context | Design document | Its language | Code today → target package |
+|------|---------|-----------------|--------------|-----------------------------|
+| Record | `specification` (core) | `design/specification.md` | user need, design input, tagged test, design review, approved, design gate | `rdm/record/sdd.py`, tag scanning in `rdm/record/allure.py`, `rdm/gates/design_gate.py` (less the release gate), `new_input.py`, `hooks.py`, `hook_files/`, `init.py`, `adopt.py`, `validation.py`, `persona*.py` → `rdm/specification/` |
+| Record | `risk` | `design/risk.md` | hazard, harm, severity, probability, control, residual | `rdm/record/risk.py` → `rdm/risk/` |
+| Record | `architecture` | `design/architecture.md` | person, software system, container, component, relationship, view | `rdm/record/c4.py`, `rdm/c4.py` → `rdm/architecture/` |
+| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's and xunit's words stop here | results in `rdm/record/allure.py`, `pytest_plugin.py`, `translate.py`, `test_formatters/`, `gates/mutation.py` → `rdm/evidence/` |
+| Gates | `release` | `design/release.md` | verified, release-grade evidence, release gate, evidence bundle | `run_release_gate` and trace in `design_gate.py`, `record/verify.py`, `record/bundle.py`, the reusable CI → `rdm/release/` |
+| Gates | `compliance` | `design/compliance.md` | standard, checklist, checklist clause, gap, coverage | `rdm/gaps.py`, `rdm/checklists/` → `rdm/compliance/` |
+| Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule, derived relation | `rdm/graph/` (unchanged) |
+| Documents | `publishing` | `design/publishing.md` | template, data, rendered document | `render.py`, `md_extensions/`, `collect.py`, `record/dmr.py`, `record/report.py` + layout, the PDF action → `rdm/publishing/` |
+
+Not contexts: the **shared kernel** (`rdm/util.py`, `rdm/record/ids.py`,
+`git.py`, `reconcile.py`, frontmatter parsing → `rdm/kernel/`), drawn in
+`specification` until it moves; and **onboarding** (`init`, `adopt`), the
+commands that create the record, which belong to `specification` as its
+application layer. `rdm/main.py` is the composition root that wires the
+command line to every context.
+
+## Dependency rule
+
+A context depends only on contexts below it; nothing imports upward, and
+the read models at the top are imported by nothing.
+
+```
+   publishing · graph            read models: read every context, feed none back
+         │
+      release                    decides: verified status, risk and validation → release
+         │
+   test_evidence · risk · architecture · compliance
+         │                       each conforms to the specification's ids
+   specification                 the core: needs, inputs, tagged tests, review, design gate
+         │
+   shared kernel                 util · ids · git · frontmatter · reconcile
+```
+
+The code does not keep this rule yet. The imports between components
+(`rdm/record/c4.py`, from the workspace) show two cycles, and both have
+one cause:
+
+- `specification` ↔ `test_evidence`: the release gate and the trace live
+  in `design_gate.py`, and `allure.py` holds both the test tags (the
+  specification's) and the results (the evidence's);
+- `specification` ↔ `risk`: the release gate reads risk findings, and
+  `risk.py` borrows the specification reader's frontmatter parser.
+
+Moving the release gate and the trace to `release`, splitting `allure.py`
+into tags and results, and moving the frontmatter parser to the kernel
+removes both. The workspace draws today's code paths; each move updates a
+component's `code` path, not its context.
 
 ## Flow
 
-Record → Gates decide (design gate before implementation, release gate before
-release, gap analysis against checklists) → Graph and Documents are derived
-from the same record. Agent skills (how to author design inputs, test-first,
+Specification → its evidence, risks and architecture → Release decides (the
+design gate before implementation, the release gate before release; gap
+analysis against checklists) → the knowledge graph and the documents are
+derived from the same record. Agent skills (how to author design inputs, test-first,
 risk analysis) are maintained outside RDM, in `scope-impact/agent-skills`.
 RDM ships no planning tooling: tasks and issues live in their own tools,
 outside the record (see `docs/plan-vs-record.md`).

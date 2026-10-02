@@ -3,7 +3,8 @@
 # This file is the source. `rdm c4 draw` exports the model to workspace.json
 # and draws each view to views/<view>.svg; both are stamped with this file's
 # hash, and the design gate fails when they are stale. Each component names its
-# code with a "code" property; each bounded context is a group of components.
+# code with a "code" property; each bounded context is a group of components
+# (the target contexts of Design Review 30, over today's code paths).
 workspace "RDM" "The design record of regulated software." {
   !identifiers flat
   model {
@@ -12,38 +13,198 @@ workspace "RDM" "The design record of regulated software." {
     reviewer = person "Reviewer" "Approves each change by reviewing its pull request"
     rdm_system = softwareSystem "RDM" "Keeps the design record of regulated software, gates it, renders it and builds it into a read-only graph" {
       rdm_cli = container "rdm" "The command line: gates, rendering, graph build, query and validate, and the agent server" "Python" {
-        group "gap_analysis" {
-          gap_analysis = component "Gap analysis" "Documents against checklists" "Python" {
+        group "specification" {
+          record_readers = component "Record kernel" "Design and V&V frontmatter, ids, git, the shared reconcile helpers" "Python" {
             properties {
-              "code" "rdm/gaps.py"
+              "code" "rdm/record/"
             }
-            tags "context:gap_analysis"
+            tags "context:specification"
           }
-          checklists = component "Checklists" "The built-in checklists" "text" {
+          utilities = component "Utilities" "Shared YAML and file helpers (the shared kernel)" "Python" {
             properties {
-              "code" "rdm/checklists/"
+              "code" "rdm/util.py"
             }
-            tags "context:gap_analysis"
+            tags "context:specification"
           }
-        }
-        group "gating" {
-          design_gate = component "Design and release gates" "Design gate, release gate, duplicate ids, trace" "Python" {
+          design_gate = component "Design and release gates" "Design gate and duplicate ids; the release gate and trace until they move to release" "Python" {
             properties {
               "code" "rdm/gates/design_gate.py"
             }
-            tags "context:gating"
+            tags "context:specification"
           }
           hooks = component "Hooks installer" "rdm hooks" "Python" {
             properties {
               "code" "rdm/hooks.py"
             }
-            tags "context:gating"
+            tags "context:specification"
           }
           precommit_hook = component "Pre-commit hook" "Runs the design gate before a commit" "shell" {
             properties {
               "code" "rdm/hook_files/"
             }
-            tags "context:gating"
+            tags "context:specification"
+          }
+          new_input = component "New design input" "rdm story new-input" "Python" {
+            properties {
+              "code" "rdm/gates/new_input.py"
+            }
+            tags "context:specification"
+          }
+          project_scaffold = component "Project scaffold" "rdm init" "Python" {
+            properties {
+              "code" "rdm/init.py"
+            }
+            tags "context:specification"
+          }
+          project_templates = component "Project templates" "What rdm init lays down" "Markdown, YAML, Typst" {
+            properties {
+              "code" "rdm/init_files/"
+            }
+            tags "context:specification"
+          }
+          adoption = component "Adoption" "rdm adopt" "Python" {
+            properties {
+              "code" "rdm/adopt.py"
+            }
+            tags "context:specification"
+          }
+          adoption_templates = component "Adoption templates" "What rdm adopt lays down" "Markdown, YAML" {
+            properties {
+              "code" "rdm/adopt_files/"
+            }
+            tags "context:specification"
+          }
+          validation_records = component "Validation records" "Approved validation records per user need" "Python" {
+            properties {
+              "code" "rdm/record/validation.py"
+            }
+            tags "context:specification"
+          }
+          formative_usability = component "Formative usability" "Persona runs as formative evidence" "Python" {
+            properties {
+              "code" "rdm/record/persona.py"
+            }
+            tags "context:specification"
+          }
+          persona_command = component "Persona command" "rdm story persona" "Python" {
+            properties {
+              "code" "rdm/record/persona_cmd.py"
+            }
+            tags "context:specification"
+          }
+        }
+        group "release" {
+          verification_data = component "Verification data" "Design inputs against results: verification.yml" "Python" {
+            properties {
+              "code" "rdm/record/verify.py"
+            }
+            tags "context:release"
+          }
+          evidence_bundle = component "Evidence bundle" "The retained release evidence" "Python" {
+            properties {
+              "code" "rdm/record/bundle.py"
+            }
+            tags "context:release"
+          }
+        }
+        group "test_evidence" {
+          allure_reader = component "Allure reader" "Allure results, and the test tags in test sources" "Python" {
+            properties {
+              "code" "rdm/record/allure.py"
+            }
+            tags "context:test_evidence"
+          }
+          mutation_probe = component "Mutation probe" "Breaks a line, runs one test, restores" "Python" {
+            properties {
+              "code" "rdm/gates/mutation.py"
+            }
+            tags "context:test_evidence"
+          }
+          test_translation = component "Test result translation" "Translates foreign test results" "Python" {
+            properties {
+              "code" "rdm/translate.py"
+            }
+            tags "context:test_evidence"
+          }
+          result_formatters = component "Result formatters" "JUnit and other result formats" "Python" {
+            properties {
+              "code" "rdm/test_formatters/"
+            }
+            tags "context:test_evidence"
+          }
+        }
+        group "risk" {
+          risk_register = component "Risk register" "Risks scored from the policy; the release rules" "Python" {
+            properties {
+              "code" "rdm/record/risk.py"
+            }
+            tags "context:risk"
+          }
+        }
+        group "architecture" {
+          architecture_model = component "Architecture model" "The C4 model, read from the workspace's export; view freshness" "Python" {
+            properties {
+              "code" "rdm/record/c4.py"
+            }
+            tags "context:architecture"
+          }
+          architecture_drawing = component "Architecture drawing" "rdm c4 draw: Structurizr export, Graphviz views, stamps" "Python, Structurizr, Graphviz" {
+            properties {
+              "code" "rdm/c4.py"
+            }
+            tags "context:architecture"
+          }
+        }
+        group "compliance" {
+          gap_analysis = component "Gap analysis" "Documents against checklists" "Python" {
+            properties {
+              "code" "rdm/gaps.py"
+            }
+            tags "context:compliance"
+          }
+          checklists = component "Checklists" "The built-in checklists" "text" {
+            properties {
+              "code" "rdm/checklists/"
+            }
+            tags "context:compliance"
+          }
+        }
+        group "publishing" {
+          renderer = component "Renderer" "Templates and data to Markdown" "Python, Jinja2" {
+            properties {
+              "code" "rdm/render.py"
+            }
+            tags "context:publishing"
+          }
+          markdown_extensions = component "Markdown extensions" "Section numbers, vocabulary, audit notes" "Python" {
+            properties {
+              "code" "rdm/md_extensions/"
+            }
+            tags "context:publishing"
+          }
+          snippets = component "Code snippets" "Collects tagged code snippets" "Python" {
+            properties {
+              "code" "rdm/collect.py"
+            }
+            tags "context:publishing"
+          }
+          dmr_index = component "DMR index" "The device-master-record index from frontmatter" "Python" {
+            properties {
+              "code" "rdm/record/dmr.py"
+            }
+            tags "context:publishing"
+          }
+          verification_report = component "Verification report" "The PDF of every run behind each design input" "Python" {
+            properties {
+              "code" "rdm/record/report.py"
+            }
+            tags "context:publishing"
+          }
+          report_layout = component "Report layout" "The report's page layout" "Typst" {
+            properties {
+              "code" "rdm/record/verification_report.typ"
+            }
+            tags "context:publishing"
           }
         }
         group "graph" {
@@ -84,182 +245,38 @@ workspace "RDM" "The design record of regulated software." {
             tags "context:graph"
           }
         }
-        group "ingestion" {
-          snippets = component "Code snippets" "Collects tagged code snippets" "Python" {
-            properties {
-              "code" "rdm/collect.py"
-            }
-            tags "context:ingestion"
-          }
-          test_translation = component "Test result translation" "Translates foreign test results" "Python" {
-            properties {
-              "code" "rdm/translate.py"
-            }
-            tags "context:ingestion"
-          }
-          result_formatters = component "Result formatters" "JUnit and other result formats" "Python" {
-            properties {
-              "code" "rdm/test_formatters/"
-            }
-            tags "context:ingestion"
-          }
-        }
-        group "record" {
-          record_readers = component "Record readers" "Design, V&V and risk frontmatter, Allure results, the C4 model, git" "Python" {
-            properties {
-              "code" "rdm/record/"
-            }
-            tags "context:record"
-          }
-          dmr_index = component "DMR index" "The device-master-record index from frontmatter" "Python" {
-            properties {
-              "code" "rdm/record/dmr.py"
-            }
-            tags "context:record"
-          }
-        }
-        group "rendering" {
-          utilities = component "Utilities" "Shared YAML and file helpers" "Python" {
-            properties {
-              "code" "rdm/util.py"
-            }
-            tags "context:rendering"
-          }
-          renderer = component "Renderer" "Templates and data to Markdown" "Python, Jinja2" {
-            properties {
-              "code" "rdm/render.py"
-            }
-            tags "context:rendering"
-          }
-          markdown_extensions = component "Markdown extensions" "Section numbers, vocabulary, audit notes" "Python" {
-            properties {
-              "code" "rdm/md_extensions/"
-            }
-            tags "context:rendering"
-          }
-        }
-        group "risk" {
-          risk_register = component "Risk register" "Risks scored from the policy; the release rules" "Python" {
-            properties {
-              "code" "rdm/record/risk.py"
-            }
-            tags "context:risk"
-          }
-        }
-        group "scaffolding" {
-          project_scaffold = component "Project scaffold" "rdm init" "Python" {
-            properties {
-              "code" "rdm/init.py"
-            }
-            tags "context:scaffolding"
-          }
-          project_templates = component "Project templates" "What rdm init lays down" "Markdown, YAML, Typst" {
-            properties {
-              "code" "rdm/init_files/"
-            }
-            tags "context:scaffolding"
-          }
-          adoption = component "Adoption" "rdm adopt" "Python" {
-            properties {
-              "code" "rdm/adopt.py"
-            }
-            tags "context:scaffolding"
-          }
-          adoption_templates = component "Adoption templates" "What rdm adopt lays down" "Markdown, YAML" {
-            properties {
-              "code" "rdm/adopt_files/"
-            }
-            tags "context:scaffolding"
-          }
-          new_input = component "New design input" "rdm story new-input" "Python" {
-            properties {
-              "code" "rdm/gates/new_input.py"
-            }
-            tags "context:scaffolding"
-          }
-        }
-        group "validation" {
-          validation_records = component "Validation records" "Approved validation records per user need" "Python" {
-            properties {
-              "code" "rdm/record/validation.py"
-            }
-            tags "context:validation"
-          }
-          formative_usability = component "Formative usability" "Persona runs as formative evidence" "Python" {
-            properties {
-              "code" "rdm/record/persona.py"
-            }
-            tags "context:validation"
-          }
-          persona_command = component "Persona command" "rdm story persona" "Python" {
-            properties {
-              "code" "rdm/record/persona_cmd.py"
-            }
-            tags "context:validation"
-          }
-        }
-        group "verification" {
-          verification_data = component "Verification data" "Design inputs against results: verification.yml" "Python" {
-            properties {
-              "code" "rdm/record/verify.py"
-            }
-            tags "context:verification"
-          }
-          mutation_probe = component "Mutation probe" "Breaks a line, runs one test, restores" "Python" {
-            properties {
-              "code" "rdm/gates/mutation.py"
-            }
-            tags "context:verification"
-          }
-          evidence_bundle = component "Evidence bundle" "The retained release evidence" "Python" {
-            properties {
-              "code" "rdm/record/bundle.py"
-            }
-            tags "context:verification"
-          }
-          verification_report = component "Verification report" "The PDF of every run behind each design input" "Python" {
-            properties {
-              "code" "rdm/record/report.py"
-            }
-            tags "context:verification"
-          }
-          report_layout = component "Report layout" "The report's page layout" "Typst" {
-            properties {
-              "code" "rdm/record/verification_report.typ"
-            }
-            tags "context:verification"
-          }
-        }
       }
       test_run = container "Acceptance test run" "Runs the tagged tests; RDM's plugin labels each run from the record" "pytest, allure-pytest" {
-        group "verification" {
+        group "test_evidence" {
           pytest_plugin = component "pytest plugin" "Labels each run from the record; the run's executor and environment" "Python, pytest" {
             properties {
               "code" "rdm/pytest_plugin.py"
             }
-            tags "context:verification"
+            tags "context:test_evidence"
           }
         }
       }
       gates_ci = container "Reusable gates" "The workflow and actions other repositories call" "GitHub Actions" {
-        group "scaffolding" {
+        group "release" {
           reusable_workflow = component "Reusable workflow" "Tests, then the gates, for any repository" "GitHub Actions" {
             properties {
               "code" ".github/workflows/gates.yml"
             }
-            tags "context:scaffolding"
+            tags "context:release"
           }
           gates_action = component "Gates action" "The gates as steps" "GitHub Actions" {
             properties {
               "code" "actions/gates/"
             }
-            tags "context:scaffolding"
+            tags "context:release"
           }
+        }
+        group "publishing" {
           pdf_action = component "PDF action" "Renders the documents in the image" "GitHub Actions" {
             properties {
               "code" "action.yml"
             }
-            tags "context:scaffolding"
+            tags "context:publishing"
           }
         }
       }
@@ -334,6 +351,16 @@ workspace "RDM" "The design record of regulated software." {
     verification_report -> report_layout "lays out with"
     pytest_plugin -> record_readers "reads the record with"
     pytest_plugin -> risk_register "reads risks with"
+    allure_reader -> record_readers "finds the repository and checks ids with"
+    architecture_drawing -> architecture_model "stamps views with the workspace digest of"
+    design_gate -> allure_reader "finds tagged tests and reconciles results with"
+    design_gate -> architecture_model "checks the views are fresh with"
+    new_input -> allure_reader "finds the test suite with"
+    projection -> allure_reader "reads results and test tags with"
+    projection -> architecture_model "reads the C4 model and code dependencies with"
+    pytest_plugin -> allure_reader "writes run labels and facts with"
+    verification_data -> allure_reader "reconciles results with"
+    verification_report -> allure_reader "reads results with"
   }
   views {
     systemContext rdm_system "C1" {
@@ -345,44 +372,36 @@ workspace "RDM" "The design record of regulated software." {
       include *
       autolayout tb
     }
-    component rdm_cli "C3_gap_analysis" {
-      include gap_analysis checklists
+    component rdm_cli "C3_specification" {
+      include record_readers utilities design_gate hooks precommit_hook new_input project_scaffold project_templates adoption adoption_templates validation_records formative_usability persona_command allure_reader architecture_model risk_register
       autolayout tb
     }
-    component rdm_cli "C3_gating" {
-      include design_gate hooks precommit_hook record_readers risk_register utilities validation_records
+    component rdm_cli "C3_release" {
+      include verification_data evidence_bundle reusable_workflow gates_action allure_reader record_readers renderer utilities verification_report
       autolayout tb
     }
-    component rdm_cli "C3_graph" {
-      include projection vocabulary gate_shapes shacl_validation explorer_file agent_server gap_analysis record_readers risk_register
-      autolayout tb
-    }
-    component rdm_cli "C3_ingestion" {
-      include snippets test_translation result_formatters utilities
-      autolayout tb
-    }
-    component rdm_cli "C3_record" {
-      include record_readers dmr_index
-      autolayout tb
-    }
-    component rdm_cli "C3_rendering" {
-      include utilities renderer markdown_extensions
+    component rdm_cli "C3_test_evidence" {
+      include allure_reader mutation_probe test_translation result_formatters pytest_plugin design_gate new_input projection record_readers risk_register utilities verification_data verification_report
       autolayout tb
     }
     component rdm_cli "C3_risk" {
-      include risk_register record_readers
+      include risk_register design_gate projection pytest_plugin record_readers verification_report
       autolayout tb
     }
-    component rdm_cli "C3_scaffolding" {
-      include project_scaffold project_templates adoption adoption_templates new_input reusable_workflow gates_action pdf_action record_readers
+    component rdm_cli "C3_architecture" {
+      include architecture_model architecture_drawing design_gate projection
       autolayout tb
     }
-    component rdm_cli "C3_validation" {
-      include validation_records formative_usability persona_command record_readers
+    component rdm_cli "C3_compliance" {
+      include gap_analysis checklists projection
       autolayout tb
     }
-    component rdm_cli "C3_verification" {
-      include verification_data mutation_probe evidence_bundle verification_report report_layout pytest_plugin record_readers renderer risk_register utilities
+    component rdm_cli "C3_publishing" {
+      include renderer markdown_extensions snippets dmr_index verification_report report_layout pdf_action allure_reader evidence_bundle record_readers risk_register utilities verification_data
+      autolayout tb
+    }
+    component rdm_cli "C3_graph" {
+      include projection vocabulary gate_shapes shacl_validation explorer_file agent_server allure_reader architecture_model gap_analysis record_readers risk_register
       autolayout tb
     }
     styles {

@@ -99,10 +99,18 @@ risk is acceptable and every user need is validated.
 _Avoid_: CI, green build
 
 **Design specification**:
-The core bounded context: user needs, design inputs, the design review, and
-the design input lifecycle with the design and release gates that guard it.
+The core bounded context: user needs, design inputs, tagged tests, the design
+review, and the design gate that guards them. It depends on no other context;
+every other context conforms to its ids.
 _Avoid_: design controls (for this context; the term names the regulatory
 process RDM as a whole implements), requirements module
+
+**Release**:
+The bounded context that decides whether a release may go ahead: the release
+gate over verified status, risk and validation, and the evidence a release
+keeps. It reads the specification, test evidence and risk; none of them reads
+it.
+_Avoid_: deployment, CI (for the context)
 
 ## Architecture
 

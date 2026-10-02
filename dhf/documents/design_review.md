@@ -919,6 +919,57 @@ and 28.
 
 - None open.
 
+# Design Review 30 — Bounded contexts drawn by language
+
+**Scope reviewed:** the bounded contexts of `architecture.md` (ten replaced
+by eight); every design document; the architecture workspace and its views;
+the glossary (`CONTEXT.md`). No design input changed: each moved unchanged,
+with its id, text and the user needs it refines, so its tests, the risks it
+controls and the verification are unaffected.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- Four analyses of the record agreed: the design inputs clustered by what
+  they do, matched against the contexts and against the user needs; an
+  EventStorming of the domain (events, commands, aggregates); and the imports
+  between components. Six of the ten contexts were named for what their code
+  did (`record` reads, `gating` blocks, `rendering` renders) or for a stage of
+  a design input's life (`verification`, `validation`), and `ingestion` held
+  two design inputs of other contexts' languages. The C4 design inputs sat in
+  four contexts; UN-003 (release blocked) in five.
+- The contexts are now drawn where the language changes (`CONTEXT.md`):
+  `specification` (core: DI-1, 2, 5, 15, 22, 24, 26, 31, 33, 40, 46),
+  `release` (DI-3, 4, 18, 30, 63), `test_evidence` (DI-17, 34, 47, 57, 59,
+  65), `architecture` (DI-66, 68, 70), `compliance` (was `gap_analysis`:
+  DI-10, 11, 12, 25), `publishing` (was `rendering`: DI-7, 8, 9, 16, 29, 64),
+  and `risk` and `graph` as they were, `graph` less DI-68. Retired documents:
+  `record`, `gating`, `scaffolding`, `validation`, `verification`,
+  `ingestion` (SDS-REC, -GATE, -SCAF, -VAL, -VER, -ING-001); new documents
+  SDS-SPEC, -REL, -EVID and -ARCH-001; `compliance` and `publishing` keep
+  their documents' ids.
+- `architecture.md` states a dependency rule (a context imports only those
+  below it) and each component's target package. The imports show the code
+  does not keep the rule yet: two cycles, both from the release gate living in
+  the design gate's module and from one Allure module holding both test tags
+  and results. Moving them is the code change that follows; until then
+  `specification` realises the release gate's parts (DI-3, 18, 44, 50).
+- The workspace regroups its components into the eight contexts over today's
+  code paths; the record readers are split, so the Allure reader and the
+  architecture model are components of their own, and `rdm c4 draw`
+  (previously in no component) is one. Ten relationships the code's imports
+  showed were missing are declared.
+- Each new design document carries its sources' prose verbatim, marked
+  interim, until it is rewritten for its context.
+
+## Findings and actions
+
+- The interim prose of each design document is to be rewritten for its
+  context.
+- The code is to be moved to keep the dependency rule (release gate, Allure
+  reader, frontmatter parser first).
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
