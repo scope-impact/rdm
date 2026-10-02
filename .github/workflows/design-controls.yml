@@ -4,10 +4,7 @@ name: Design controls (dogfood)
 # workflow other repositories call (DI-63), pinned to the commit under test.
 # A PR that leaves a design input unverified or breaks the design gate fails
 # here; whether the tests mean something is judged by the PR's human review.
-on:
-  push:
-    branches: [main]
-  pull_request:
+on: [push, pull_request]
 
 permissions:
   contents: read
