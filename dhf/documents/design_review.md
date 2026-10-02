@@ -854,15 +854,24 @@ glossary's architecture terms; RDM's own C1, C2 and C3 diagrams; three
   the reader's browser, but the PDF pipeline (render → Pandoc → Typst) had no
   step for them, so a PDF printed their source as a code block. Nothing in CI
   had drawn a Mermaid diagram before: the docs site leaves it to the browser.
-- Options weighed: Mermaid's own renderer in a headless browser (exact, about
-  300 MB more image), a rendering service (sends the record out of the
-  repository: rejected), Graphviz from the parsed C4 model (small, C4 only,
-  looks different). Chosen: Mermaid's own renderer, so an auditor's PDF shows
-  the diagram the reviewer saw on GitHub.
+- Options weighed: Mermaid's own renderer in a headless browser (exact), a
+  rendering service (sends the record out of the repository: rejected),
+  Graphviz from the parsed C4 model (small, C4 only, looks different), and
+  browser-free ports (`mermaidx`, `mmdr`: tried on RDM's C4 views, each draws
+  its own layout and one overprints text). Chosen: Mermaid's own renderer, so
+  an auditor's PDF shows the diagram the reviewer saw on GitHub.
+- Where it runs: Mermaid's official image, pinned by version and digest, as its
+  own container, not Node and Chrome inside the RDM image. Bundling made every
+  project pull a browser, diagrams or not, and RDM would maintain Chrome's
+  install (an attempt failed on npm 11 skipping install scripts); the official
+  image is maintained upstream for amd64 and arm64. It is large (3.5 GB
+  unpacked, two of its three browsers unused), and only projects with
+  diagrams pull it.
 - The step is an RDM Markdown extension, not a Pandoc filter, so it is
   verified in RDM's test suite (which runs without Pandoc) and runs wherever
-  `rdm render` does; the RDM image pins Node and the renderer, and the PDF
-  workflow renders a diagram end to end.
+  `rdm render` does. Diagrams are named by a hash of their text, so the render
+  and the Mermaid container agree on each file; the PDF action runs the three
+  steps, and the PDF workflow renders a diagram end to end.
 - A diagram that cannot be drawn fails the render: shipping its source in a
   controlled PDF would pass silently. The renderer runs Mermaid's strict
   security level; the browser draws only the diagram text from the record.

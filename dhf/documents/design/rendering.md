@@ -35,12 +35,15 @@ from data + templates), all refining UN-001:
   output.
 - **DI-70 (Mermaid diagrams)** — a ` ```mermaid ` block in a controlled document
   (the C4 views among them) becomes an image in the rendered document, drawn by
-  Mermaid's own command-line renderer (`@mermaid-js/mermaid-cli`, pinned in the
-  RDM image) in a headless browser, so the PDF shows the diagram GitHub and the
-  docs site show. Images are named by a hash of the diagram, so an unchanged
-  diagram is not drawn again. A diagram the renderer rejects fails the render
-  with the document's name, rather than shipping its source as a code block;
-  with no renderer installed, the render fails and says how to get one.
+  Mermaid's own renderer, so the PDF shows the diagram GitHub and the docs site
+  show. The renderer is Mermaid's official image (`mermaid-cli`), pinned by
+  version and digest and run as its own container: the RDM image carries no
+  browser. Rendering is three steps on shared files: the render writes each
+  diagram, named by a hash of its text, to `tmp/mermaid/`; the Mermaid
+  container draws each one; the render runs again and every block becomes its
+  image. Where `mmdc` is installed the render draws a diagram itself, in one
+  step. A diagram not drawn, or one the renderer rejects, fails the render
+  with the document's name, rather than shipping its source as a code block.
 
 It also **realises** the rendering side of inputs owned elsewhere (via
 `realises`): **DI-1** (record ingest, owned by `record`) and **DI-4**
@@ -55,8 +58,8 @@ Compiles the DHF from data and templates.
   `verification.yml` renders into a traceability matrix.
 - `rdm/md_extensions/` — section numbering, vocabulary expansion, auditor-note
   exclusion, Mermaid diagrams as images (`mermaid.py`, DI-70).
-- `rdm/init_files/Dockerfile` — the RDM image, with Node and Mermaid's renderer
-  at pinned versions (DI-70).
+- `action.yml` — the PDF action: writes the diagrams, draws them with the
+  pinned Mermaid image, then renders (DI-70).
 - Output: Markdown → PDF/DOCX via Pandoc/Typst.
 
 Contributes to **UN-001** (compile the DHF from the system of record). The owned
