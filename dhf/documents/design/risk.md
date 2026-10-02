@@ -33,8 +33,19 @@ and checks what a machine can check.
 
 ## Design Outputs
 
-Risks are frontmatter in `kind: risk` documents, evaluated against the declared
-risk policy:
+The design outputs are this context's architecture in the C4 model of the
+architecture workspace: its one component, what it is responsible for, and
+how the components of other contexts use it. They name components, never
+the code: the workspace maps each component to its code.
+
+![Components: risk](../../c4/views/C3_risk.svg)
+
+| Component | Responsibility | Meets |
+|-----------|----------------|-------|
+| Risk register | Reads the declared risk policy and the register, evaluates each risk's initial and residual risk against the policy, gives each risk its residual decision, and writes the risk rules as findings, each blocking or a warning and tied to the risk it is about | DI-43, DI-44, DI-50 |
+
+The register is the frontmatter of `kind: risk` documents — the record
+interface authors write, with one entry per risk:
 
 ```yaml
 risks:
@@ -53,61 +64,50 @@ risks:
     status: proposed             # until a person approves the rating
 ```
 
-- **Risk register** (`rdm/risk/register.py`) meets DI-43, DI-44 and DI-50,
-  and is the one place the risk rules are written:
-  - `read_policy` reads the first `risk_policy` by path, or none; a
-    malformed one raises an error naming its document. The policy's status
-    is its document's `status`.
-  - `risks(dhf, policy)` reads every `kind: risk` entry and evaluates its
-    initial and residual levels against the policy (none without one). A
-    risk with no controls and no residual score keeps the initial level as
-    its residual.
-  - `residual_decision` gives a risk's residual decision: *not evaluated*
-    (no policy, no residual level, or a control without a passing test),
-    *acceptable*, *accepted* (a `justify` level with who and why), *needs
-    acceptance*, or *unacceptable*. Only the first two let a release
-    through.
-  - `assess` returns the register and every finding of DI-44 and DI-50,
-    each blocking or a warning and tied to the risk it is about. A
-    malformed policy is one blocking finding and the register is not
-    checked further until it is fixed. A risk with a `status` other than
-    `proposed` or `approved` also blocks.
-  - `findings` splits those into the release gate's blocking messages and
-    warnings.
-- Realised elsewhere: the release gate (`run_release_gate`, today in the
-  **Design and release gates** component of `specification`, which declares
-  `realises: [DI-44, DI-50]`) adds the findings to its blocking list and its
-  warnings. The **Projection** (graph) carries the same findings into the
-  `risks` named graph for its shapes (DI-45, owned by `graph`), so the gate
-  and the shapes cannot disagree.
-- This context realises no input another context owns.
+The rules the Risk register applies, which a reviewer needs to judge it:
 
-The design inputs are verified by the tests tagged `@allure.story("DI-43")`,
-`"DI-44"` and `"DI-50"` in `tests/acceptance/test_risk.py`.
+- **The policy.** The project declares at most one risk policy (a
+  `risk_policy` in the frontmatter of a record document; the first by path
+  is the one read). A policy that does not give a level for every pair, or
+  an acceptability for every level, is one blocking finding naming its
+  document, and the register is not checked further until it is fixed. The
+  policy's status is its document's; an unapproved policy is a warning.
+- **Evaluation.** With no policy no risk is evaluated, and a register with
+  risks blocks. A risk with no controls and no residual score keeps its
+  initial risk as its residual risk. A risk's status is its own, else its
+  document's.
+- **The residual decision** is one of: *not evaluated* (no policy, no
+  residual level, or a control without a passing test), *acceptable*,
+  *accepted* (a level the policy accepts only with justification, with who
+  accepted it and why), *needs acceptance*, or *unacceptable*. Only
+  acceptable and accepted let a release through.
+- **The findings** are every refusal of DI-44 and DI-50, and also a risk
+  whose status is neither proposed nor approved, which blocks. A proposed
+  risk or policy is a warning. The Risk register is the one place these
+  rules are written.
 
-## Components (C3)
+Relationships, in the direction of the arrow:
 
-![Components: risk](../../c4/views/C3_risk.svg)
+- The **Release gate** (`release`) reports the risk findings of the Risk
+  register: it adds the blocking findings to its blocking list and the
+  warnings to its warnings. That is the part of DI-44 and DI-50 the release
+  context realises (`realises` in its design document).
+- The **Projection** (`graph`) reads risks and findings with the Risk
+  register — the policy, the register, each residual decision and the
+  findings — into the risks named graph for its gate shapes (DI-45, owned by
+  `graph`), so the release gate and the shapes cannot disagree.
+- The **Verification report** (`publishing`) reads risk status and residual
+  decisions with the Risk register, beside the design inputs that control
+  each risk.
+- The **pytest plugin** (`test_evidence`) finds the risks each design input
+  controls with the Risk register, to label its test runs.
 
-| Component | Responsibility | Technology | Code |
-|-----------|----------------|------------|------|
-| Risk register | Reads the risk policy and the register, evaluates each risk against the policy, and writes the release rules as findings | Python | `rdm/risk/register.py` |
+The Risk register is handed the declared design input ids and the verified
+ones; it reads nothing of the specification. It parses frontmatter with the
+shared kernel, which the specification's design document draws.
 
-The view also shows the components of other contexts that use the register,
-and the one it uses:
-
-- Risk register parses each document's frontmatter with the shared
-  kernel's parser. It takes the declared design input ids and the verified
-  ones as arguments, so it reads nothing of the specification.
-- The release gate (`release`) **reports the risk findings of** the Risk
-  register.
-- Projection (`graph`) **reads risks and findings with** the Risk register:
-  the policy, the register, each residual decision and the findings.
-- Verification report (`publishing`) **reads risks with** the Risk
-  register: each risk's status and residual decision, beside the design
-  inputs that control it.
-- pytest plugin (`test_evidence`) **reads risks with** the Risk register:
-  the risks each design input controls, to label its test runs.
+This context realises no input another context owns; the release context
+realises part of DI-44 and DI-50, as above.
 
 Assumption: one harm pathway per risk, with one probability; no control
 effect is recorded apart — the residual is all the controls folded
@@ -116,11 +116,10 @@ without changing a register written to this format.
 
 ## Dependencies
 
-Layer 1 of the dependency rule, a leaf: it imports only the shared kernel
-(the frontmatter parser), and no design input, so the contexts that use it
-sit above it — `test_evidence` (the pytest plugin), `release` (the release
-gate), `publishing` (the verification report) and `graph` (the projection).
-No import breaks the rule.
+Layer 1 of the dependency rule, a leaf: it depends only on the shared
+kernel, and on no other context. The contexts that use it sit above it:
+`test_evidence` (the pytest plugin), `release` (the release gate),
+`publishing` (the verification report) and `graph` (the projection).
 
 ## Out of scope
 

@@ -38,25 +38,25 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:specification"
           }
-          hooks = component "Hooks installer" "rdm hooks" "Python" {
+          hooks = component "Hooks installer" "rdm hooks: installs the design-gate pre-commit hook; the issue-reference hooks only on request" "Python" {
             properties {
               "code" "rdm/specification/hooks.py"
             }
             tags "context:specification"
           }
-          precommit_hook = component "Pre-commit hook" "Runs the design gate before a commit" "shell" {
+          precommit_hook = component "Pre-commit hook" "Runs the design gate before a commit that stages implementation files; blocks when the gate cannot run" "shell" {
             properties {
               "code" "rdm/specification/hook_files/"
             }
             tags "context:specification"
           }
-          new_input = component "New design input" "rdm story new-input" "Python" {
+          new_input = component "New design input" "rdm story new-input: allocates the next id, inserts it into a context's frontmatter, writes a failing stub test" "Python" {
             properties {
               "code" "rdm/specification/new_input.py"
             }
             tags "context:specification"
           }
-          project_scaffold = component "Project scaffold" "rdm init" "Python" {
+          project_scaffold = component "Project scaffold" "rdm init: lays down the project templates and the shared agent workflow runbook" "Python" {
             properties {
               "code" "rdm/specification/init.py"
             }
@@ -68,7 +68,7 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:specification"
           }
-          adoption = component "Adoption" "rdm adopt" "Python" {
+          adoption = component "Adoption" "rdm adopt: lays down each missing file of the adoption templates, never overwriting one" "Python" {
             properties {
               "code" "rdm/specification/adopt.py"
             }
@@ -92,7 +92,7 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:specification"
           }
-          persona_command = component "Persona command" "rdm story persona" "Python" {
+          persona_command = component "Persona command" "rdm story persona: the formative status of each user need; informational, never fails a successful run" "Python" {
             properties {
               "code" "rdm/specification/persona_cmd.py"
             }
@@ -100,13 +100,13 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "release" {
-          verification_data = component "Verification data" "Design inputs against results: verification.yml" "Python" {
+          verification_data = component "Verification data" "Every declared design input reconciled against the executed results: status, runs and tests per design input, by user need; generated, never edited" "Python" {
             properties {
               "code" "rdm/release/verify.py"
             }
             tags "context:release"
           }
-          release_gate = component "Release gate" "The release decision; the design gate's results warnings; the trace slice" "Python" {
+          release_gate = component "Release gate" "Blocks a release on design-gate failures, failed or untested design inputs, blocking risk findings or an unrefined user need; warns on unvalidated user needs and orphan tags; the design gate's results warnings; the trace slice" "Python" {
             properties {
               "code" "rdm/release/gate.py"
             }
@@ -114,13 +114,13 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "test_evidence" {
-          allure_reader = component "Allure reader" "Allure results into test runs and a status per design input; run labels and facts" "Python" {
+          allure_reader = component "Allure reader" "Allure results into test runs and a status per design input (failed, else verified, else untested; undeclared stories as orphans); run labels and facts" "Python" {
             properties {
               "code" "rdm/evidence/allure.py"
             }
             tags "context:test_evidence"
           }
-          mutation_probe = component "Mutation probe" "rdm story mutation-probe: runs one test unmutated, then mutated, and always restores the file" "Python" {
+          mutation_probe = component "Mutation probe" "rdm story mutation-probe: runs one test unmutated, then mutated; killed, survived or error; journals the original beside the file and always restores it" "Python" {
             properties {
               "code" "rdm/evidence/mutation.py"
             }
@@ -140,7 +140,7 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "risk" {
-          risk_register = component "Risk register" "The risk register evaluated against the declared risk policy; the risk rules as findings" "Python" {
+          risk_register = component "Risk register" "The risk register evaluated against the declared risk policy; the risk rules as findings, written only here; handed the declared and verified design input ids, it reads nothing of the specification" "Python" {
             properties {
               "code" "rdm/risk/register.py"
             }
@@ -148,13 +148,13 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "architecture" {
-          architecture_model = component "Architecture model" "The C4 model, read from the workspace's export; view freshness" "Python" {
+          architecture_model = component "Architecture model" "The C4 model, read from the workspace's export (declared relationships only); view freshness from the stamps; the component owning a file (longest code match) and the import dependencies between components" "Python" {
             properties {
               "code" "rdm/architecture/model.py"
             }
             tags "context:architecture"
           }
-          architecture_drawing = component "Architecture drawing" "rdm c4 draw: Structurizr export, Graphviz views, stamps" "Python, Structurizr, Graphviz" {
+          architecture_drawing = component "Architecture drawing" "rdm c4 draw: Structurizr export, Graphviz views, each stamped with the workspace digest; all or nothing, removes the image of a removed view" "Python, Structurizr, Graphviz" {
             properties {
               "code" "rdm/architecture/draw.py"
             }
@@ -162,13 +162,13 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "compliance" {
-          gap_analysis = component "Gap analysis" "Finds the checklist clauses no document references, and reports coverage" "Python" {
+          gap_analysis = component "Gap analysis" "Reads a checklist and its includes, finds the checklist clauses no document references, and reports the gaps or the coverage; offers its reader and key matcher to other contexts" "Python" {
             properties {
               "code" "rdm/compliance/gaps.py"
             }
             tags "context:compliance"
           }
-          checklists = component "Checklists" "The built-in checklists: IEC 62304, ISO 14971, FDA-SW/CYBER/HFE, 21 CFR Part 11" "text" {
+          checklists = component "Checklists" "The built-in checklists: IEC 62304 (base, 2006, 2015; classes A-C), ISO 14971 2007/2019, FDA-SW 2005/2021, FDA-CYBER 2018, FDA-HFE 2011, 21 CFR Part 11 document control" "text" {
             properties {
               "code" "rdm/compliance/checklists/"
             }
@@ -182,7 +182,7 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:publishing"
           }
-          markdown_extensions = component "Markdown extensions" "Section numbers, vocabulary, audit notes" "Python" {
+          markdown_extensions = component "Markdown extensions" "Section numbers, vocabulary and audit-note exclusion over the rendered lines; loaded by name from the project's config.yml" "Python" {
             properties {
               "code" "rdm/md_extensions/"
             }
@@ -200,7 +200,7 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:publishing"
           }
-          snippets = component "Code snippets" "RDOC/ENDRDOC snippets from source files, as YAML data" "Python" {
+          snippets = component "Code snippets" "rdm collect: RDOC/ENDRDOC snippets from source files, by key, as YAML data" "Python" {
             properties {
               "code" "rdm/publishing/collect.py"
             }
@@ -226,7 +226,7 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "graph" {
-          projection = component "Projection" "The record into RDF, one named graph per source; the store; rdm graph build, query, serve and explorer-file" "Python, pyoxigraph" {
+          projection = component "Projection" "The record into RDF, one named graph per source, de-duplicated and sorted; replaces the store on each build; rdm graph build, query, serve (read-only) and explorer-file" "Python, pyoxigraph" {
             properties {
               "code" "rdm/graph/"
             }
@@ -250,13 +250,13 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:graph"
           }
-          explorer_file = component "Explorer file" "rdm graph explorer-file: the record as an AWS Graph Explorer file" "Python" {
+          explorer_file = component "Explorer file" "rdm graph explorer-file: the record as an AWS Graph Explorer file, optionally without chosen classes and the nodes that hang only from them" "Python" {
             properties {
               "code" "rdm/graph/explorer.py"
             }
             tags "context:graph"
           }
-          agent_server = component "Agent server" "Read-only schema, query, trace and validate for agents" "Python, MCP" {
+          agent_server = component "Agent server" "rdm graph mcp: read-only, idempotent schema, query, trace and validate for agents, each projecting the record afresh; query rows capped" "Python, MCP" {
             properties {
               "code" "rdm/graph/agent.py"
             }
@@ -266,7 +266,7 @@ workspace "RDM" "The design record of regulated software." {
       }
       test_run = container "Acceptance test run" "Runs the tagged tests; RDM's plugin labels each run from the record" "pytest, allure-pytest" {
         group "test_evidence" {
-          pytest_plugin = component "pytest plugin" "Labels each run from the record; the run's executor and environment" "Python, pytest" {
+          pytest_plugin = component "pytest plugin" "Labels each run from the record; the run's executor and environment, written only when the run writes Allure results" "Python, pytest" {
             properties {
               "code" "rdm/pytest_plugin.py"
             }
@@ -276,13 +276,13 @@ workspace "RDM" "The design record of regulated software." {
       }
       gates_ci = container "Reusable gates" "The workflow and actions other repositories call" "GitHub Actions" {
         group "release" {
-          reusable_workflow = component "Reusable workflow" "Tests, then the gates, for any repository" "GitHub Actions" {
+          reusable_workflow = component "Reusable workflow" "Checks out the caller and RDM at the pinned revision, installs RDM from it, runs the acceptance tests, then the gates; uploads the Allure report and verification record" "GitHub Actions" {
             properties {
               "code" ".github/workflows/gates.yml"
             }
             tags "context:release"
           }
-          gates_action = component "Gates action" "The gates as steps" "GitHub Actions" {
+          gates_action = component "Gates action" "The gates as steps: design gate, verification data, release gate, graph validation, evidence bundle (uploaded); each switchable; inputs passed as environment variables" "GitHub Actions" {
             properties {
               "code" "actions/gates/"
             }

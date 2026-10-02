@@ -43,84 +43,89 @@ results into result data, and gives the reviewer the mutation probe.
 
 ## Design Outputs
 
-- **pytest plugin** (`rdm/pytest_plugin.py`) — DI-57, DI-59, DI-65.
-  Enabled with `-p rdm.pytest_plugin`, `pytest_plugins` in a top-level
-  conftest, or by importing its `pytest_runtest_call` hook into one suite's
-  conftest (RDM's acceptance suite does); the record is `--rdm-dhf`, else
-  `dhf` under the pytest root. In the call phase of a test whose story tag
-  is a declared design input, it adds an epic per user need, the context as
-  feature, a link per declaring document (design document, V&V plan, risk
-  document) pinned to the commit — only with a web remote and a commit —
-  critical severity when a risk's `controls:` names the input, the
-  attachment `requirement DI-n`, and the `commit` / `worktree` labels. A
-  tag that is no declared input gets nothing. On the first tagged test of a
-  session, and only with `--alluredir`, it writes `executor.json` (GitHub
-  Actions run, number and URL; or `local` with user@host) and
-  `environment.properties` (also the CI event, ref and runner, or the local
-  user).
-- **Allure reader** (`rdm/evidence/allure.py`) — the labels and file names
-  the plugin writes and every reader reads back; `parse_results` (each
-  `*-result.json` as a run: name, status, design inputs, `output` labels),
-  `run_version`, `read_run_facts`, `full_name` (Allure's name for a Python
-  test, to match a run to its source). `reconcile()` gives each design
-  input *failed* when any run failed or broke, else *verified* when any
-  passed, else *untested*, and returns stories naming no declared input as
-  orphans. What a test *claims* to verify (its tags in the source) is the
-  specification's (`rdm/specification/tags.py`); this reader handles only
-  what a run *did*.
-- **Mutation probe** (`rdm/evidence/mutation.py`) — DI-34, DI-47. It refuses
-  a `--find` that does not occur exactly once, runs `pytest -q -k <test>`
-  unmutated (an error unless it passes), mutates, runs again. Exit 1 is a
-  kill, 0 a survival, anything else (5: no test matched) an error; the
-  command exits 0, 1, 2 respectively. Restore in depth: the original is
-  journaled to `<file>.rdm-probe-orig` and recovered at the start of the
-  next probe of the file (survives SIGKILL); SIGTERM unwinds through the
-  restore when the probe runs in the main thread; every write stamps a
-  whole-second mtime strictly later than the last, so CPython's
-  `(mtime, size)` bytecode key cannot serve a same-size mutant stale.
-- **Test result translation** (`rdm/evidence/translate.py`, `rdm translate`) and
-  **Result formatters** (`rdm/test_formatters/xml_util.py`) — DI-17.
-  `translate_test_results` dispatches over `XML_TRANSLATORS` (`auto`,
-  `gtest`, `qttest`, `xunit`, the gtest flattener reading xunit) and writes
-  each test's name, result and failure message as YAML; an unknown format
-  raises `ValueError`. The YAML feeds document templates (`rdm init`'s
-  test-record data files); nothing reconciles it against design inputs.
-
-Realised here: `reconcile()` is this context's part of **DI-4** (owned by
-`release`), which builds the verification data on it. The labels and run
-facts written here are read back for DI-60 (graph) and DI-64 (verification
-report). No other context realises part of this context's inputs.
-
-## Components (C3)
+The design outputs are this context's components in the C4 model of the
+architecture workspace, what each is responsible for and how they relate.
+They name components, never code: the workspace maps each component to
+its code.
 
 ![Components: test_evidence](../../c4/views/C3_test_evidence.svg)
 
-| Component | Responsibility | Technology | Code |
-|-----------|----------------|------------|------|
-| Allure reader | Allure results into test runs and a status per design input; run labels and facts | Python | `rdm/evidence/allure.py` |
-| Mutation probe | Breaks a line, runs one test, restores | Python | `rdm/evidence/mutation.py` |
-| Test result translation | Translates foreign test results | Python | `rdm/evidence/translate.py` |
-| Result formatters | JUnit and other result formats | Python | `rdm/evidence/test_formatters/` |
-| pytest plugin | Labels each run from the record; the run's executor and environment | Python, pytest | `rdm/pytest_plugin.py` |
+| Component | Responsibility | Meets |
+|-----------|----------------|-------|
+| pytest plugin | Labels each run of a tagged test from the record at test time; records the run's commit, worktree state, executor and environment | DI-57, DI-59, DI-65 |
+| Allure reader | The labels and run facts in Allure's terms, written for the plugin and read back as test runs; a status per design input | DI-57, DI-59, DI-65; realises DI-4 |
+| Mutation probe | Runs one test unmutated, then with one line mutated, reports killed or survived, and always restores the file | DI-34, DI-47 |
+| Test result translation | Translates a foreign XML result file into result data; refuses an unknown format | DI-17 |
+| Result formatters | Flattens gtest, xunit and qttest XML into one result per test | DI-17 |
 
-The pytest plugin runs in the Acceptance test run; the rest in `rdm`. The
-pytest plugin *reads the record with* the record reader, *reads risks with*
-the risk register (which inputs each risk controls) and *writes run labels
-and facts with* the Allure reader. The Allure reader and Test result
-translation use the shared kernel; translation *parses with* the result
-formatters. Inward, the release gate, verification data, the verification
-report and the projection read results with the Allure reader. The mutation
-probe imports nothing of RDM and *runs one test, unmutated then mutated, in*
-the acceptance test run, as a pytest subprocess.
+**pytest plugin.** It runs inside the acceptance test run, not in `rdm`.
+It acts only on a test whose story tag is a design input the record
+declares; a tag that names no declared input gets nothing. For such a test
+it labels the run with what the record says at that moment: the input's
+user needs, its bounded context, links to the documents that declare it
+pinned to the tested commit (given only when the repository has a web
+remote and there is a commit), critical severity when a risk controls it,
+a copy of the input's text, and the commit and worktree state. It records
+the executor and environment once per session, and only when the run
+writes Allure results; a CI run is named with its run and URL, a local run
+with its user and host.
+
+**Allure reader.** It holds the one vocabulary of labels and result files
+that the plugin writes and every reader reads back, so the tools' words
+stop here. It reads each result as a test run (its name, result, the
+design inputs it names, and the outputs it labels) and matches a run to
+the test it came from. Its reconciliation gives each declared design
+input *failed* when any of its runs failed or broke, else *verified* when
+any passed, else *untested*; a story that names no declared input is an
+orphan. What a test *claims* to verify (its tags) is the specification's;
+this reader handles only what a run *did*.
+
+**Mutation probe.** A reviewer runs it (`rdm story mutation-probe`) to see
+whether one test catches a deliberate break; it never gates a release. It
+refuses a mutation site that does not occur exactly once, and refuses to
+mutate when the unmutated test does not pass. Only a genuine test failure
+is a kill; a run that errors or matches no test is an error, never a
+kill. The restore is defended in depth: the original is journaled beside
+the file before the mutation, so a probe killed outright is recovered on
+the next probe of that file; a termination signal unwinds through the
+restore; and every write makes the file look newer to Python's bytecode
+cache, so a same-size mutant is never served stale.
+
+**Test result translation** (`rdm translate`) chooses a format, or detects
+it, and writes each test's name, result and failure message as result
+data; the gtest flattener also reads xunit. The data feeds document
+templates; nothing reconciles it against design inputs.
+
+The relationships that matter, in the direction of the arrow: the pytest
+plugin *reads the record with* the record reader, *finds the risks each
+design input controls with* the risk register and *writes run labels and
+facts with* the Allure reader. The Allure reader *takes the label that
+names a design input from* the test tags. Test result translation *parses
+with* the result formatters. The mutation probe uses nothing of RDM: it
+*runs one test, unmutated then mutated, in* the acceptance test run, as a
+pytest subprocess. Inward, the release gate, the verification data, the
+verification report and the projection read results with the Allure
+reader.
+
+Realised here: the Allure reader's reconciliation is this context's part
+of **DI-4** (owned by `release`), which builds the verification data on
+it. The labels and run facts written here are read back for DI-60 (graph)
+and DI-64 (verification report). No other context realises part of this
+context's inputs.
+
+Assumption: the acceptance suite enables the plugin, either as a pytest
+plugin or through its configuration; a run without it is unlabelled and
+counts for no design input.
 
 ## Dependencies
 
 Layer 3 of the dependency rule. Depends on `specification` (the pytest
-plugin reads the design inputs and declarations), `risk` (the plugin labels
-each run with the risks its design input controls) and the shared kernel,
-all below it. Depended on by `release` (the release gate, the verification
-data), `publishing` (the verification report) and `graph` (the projection).
-No import breaks the rule.
+plugin reads the design inputs and declarations; the Allure reader takes
+the story label from the test tags), `risk` (the plugin labels each run
+with the risks its design input controls) and the shared kernel, all
+below it. Depended on by `release` (the release gate, the verification
+data), `publishing` (the verification report) and `graph` (the
+projection). No import breaks the rule.
 
 ## Out of scope
 

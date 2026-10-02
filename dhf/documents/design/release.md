@@ -28,100 +28,100 @@ design_inputs:
 
 `release` decides whether a release may go ahead and keeps the evidence it
 went ahead on: the release gate over the record's verified status, its risks
-and its user needs; the verification data and trace slice the gate and its
-reviewers read; the evidence bundle a release retains; and the reusable gates
-that run all of it in another repository's pipeline. Its language: a design
-input is *verified* (a passing run of a tagged test, no failed one); the
-*release gate* blocks a release; *release-grade evidence* is what a release
-needs; the *traceability matrix* is generated, never edited; the *evidence
-bundle* is what a release keeps. It reads the specification, test evidence
-and risk; none of them reads it.
+and its user needs; the verification data and the trace slice the gate and
+its reviewers read; and the reusable gates that run all of it in another
+repository's pipeline. Its language: a design input is *verified* (a passing
+run of a tagged test, no failed one); the *release gate* blocks a release;
+*release-grade evidence* is what a release needs; the *traceability matrix*
+is generated, never edited; the *evidence bundle* is what a release keeps.
+It reads the specification, test evidence and risk; none of them reads it.
 
 ## Design Outputs
 
-- **Release gate** (`rdm/release/gate.py`, `rdm story release-gate`) — DI-3.
-  It blocks when the design gate's pass/fail checks fail, when no design
-  input is declared, when a design input failed or is untested in the given
-  Allure results, when the risk register's release rules report a finding
-  (`risk`'s DI-44 and DI-50), and when a user need is addressed by no design
-  input. A user need with no approved validation record (`specification`'s
-  DI-33) and an Allure tag matching no design input are warnings. It does not
-  check the commit or worktree a run recorded; the verification report
-  (`publishing`) and, as a warning, the graph's gate shapes do. The same
-  module gives the design gate its warnings about executed results, which the
-  composition root hands to the design gate's output.
-- **Trace** (`build_trace`, `rdm story trace <id>`) — DI-18, in the same
-  module: a user need's design inputs, or a design input's text, user needs,
-  owner, realisers (from `realises`) and, with results, status and tests.
-- **Verification data** (`rdm/release/verify.py`, `rdm story verify`) — DI-4:
-  reconciles every declared design input against the Allure results into
-  `verification.yml` (status, run counts, tests and outputs per design
-  input, grouped by user need, with a summary and the orphan tags), the data
-  the traceability matrix template renders.
-- **Reusable workflow** (`.github/workflows/gates.yml`) — DI-63: checks out
-  the caller and RDM at the required `rdm-ref` (a reusable workflow cannot
-  see the ref it was called at, so the caller writes it twice), installs
-  `rdm[graph,report]`, `pytest` and `allure-pytest` from that checkout, runs
-  the caller's tests, then the Gates action, and uploads the Allure report
-  and the verification record.
-- **Gates action** (`actions/gates/`) — DI-63: the gate steps, written once:
-  installs `rdm[graph,report]` from its own revision unless told not to,
-  then the design gate, `verify`, the release gate, graph validation and the
-  evidence bundle (uploaded), each switchable by an input; `verify` and the
-  bundle run only when there are Allure results. Inputs reach the scripts
-  as environment variables, never spliced into the script text.
-
-This context realises parts of `specification`'s DI-33 and `risk`'s DI-44
-and DI-50: the release gate reports and applies them. Parts of its own are
-realised elsewhere: DI-4 by `test_evidence` and `publishing`, and DI-30 by
-`publishing`, whose evidence bundle writes the retained release evidence. The rest of
-DI-63 is in components of other contexts that do not declare it: the PDF
-action (`action.yml`, `publishing`) and the adopted `design-controls.yml`
-(`rdm/specification/adopt.py`, `specification`).
-
-The evidence bundle (DI-30), the verification report (DI-64) and the matrix
-rendering are in [publishing](publishing.md); the mutation probe and the pytest plugin in
-[test evidence](test_evidence.md).
-
-Verified by the tests tagged DI-3 and DI-4 in
-`tests/acceptance/test_user_needs.py`, DI-18 in `test_trace.py`, DI-30 in
-`test_verification.py` and DI-63 in `test_reusable_ci.py`.
-
-## Components (C3)
+The design outputs are this context's architecture in the C4 model of the
+architecture workspace: its components, what each is responsible for, and
+how they relate. They name components, never code: the workspace maps each
+component to the code that implements it. Two of the components run in the
+`rdm` container, two in the Reusable gates container that other
+repositories' pipelines call.
 
 ![Components: release](../../c4/views/C3_release.svg)
 
-| Component | Responsibility | Technology | Code |
-|-----------|----------------|------------|------|
-| Release gate | The release decision; the design gate's results warnings; the trace slice | Python | `rdm/release/gate.py` |
-| Verification data | Design inputs against results: `verification.yml` | Python | `rdm/release/verify.py` |
-| Reusable workflow | Tests, then the gates, for any repository | GitHub Actions | `.github/workflows/gates.yml` |
-| Gates action | The gates as steps | GitHub Actions | `actions/gates/` |
+| Component | Responsibility | Meets |
+|-----------|----------------|-------|
+| Release gate | The release decision over verified status, risk and validation; the design gate's warnings about executed results; the trace slice of a user need or design input | DI-3, DI-18; realises DI-33, DI-44, DI-50 |
+| Verification data | Every declared design input reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from | DI-4, DI-30 |
+| Reusable workflow | Runs a repository's acceptance tests, then the gates, with RDM installed from the revision the caller pinned | DI-63 |
+| Gates action | The gate steps, written once: design gate, verification data, release gate, graph validation and the evidence bundle | DI-63, DI-30 |
 
-- The release gate runs the design gate's checks, reads the record and the
-  validation records (`specification`), reconciles results with the Allure
-  reader (`test_evidence`) and reports the risk findings of the risk register
-  (`risk`).
+**Release gate.** It blocks a release when the design gate's pass/fail
+checks fail; when no design input is declared; when a design input failed
+or is untested in the given results; when the risk register's release rules
+report a blocking finding; and when a user need is addressed by no design
+input. It warns, never blocks, on a user need with no approved validation
+record, and on a test tag that matches no design input. The same
+reconciliation of executed results gives the design gate its warnings, which
+the composition root hands to the design gate's output, so the
+specification never reads results. The trace slice is a user need's design
+inputs, or a design input's text, user needs, owner and realising contexts
+and, when results are given, its status and tests.
+
+**Verification data.** For each declared design input: its status, run
+counts, tests and their outputs, grouped by user need, with a summary and
+the tags that match no design input. It is generated, never edited.
+
+**Reusable workflow and Gates action.** The caller pins the workflow and
+names the same revision again as an input, because a reusable workflow
+cannot see the revision it was called at. The workflow checks out the
+caller's repository with its history and RDM at that revision, installs RDM
+and the test tools from that checkout (never from a package index), runs the
+caller's acceptance tests, then the Gates action, and uploads the Allure
+report and the verification record. The Gates action installs RDM from its
+own revision unless the caller already has; each gate can be switched off
+for a record that is not yet ready for it; the verification data and the
+evidence bundle run only when there are results, and the bundle is uploaded
+for retention. Inputs reach the steps' scripts as environment variables,
+never spliced into the script text, so an input cannot inject shell.
+
+Relationships that matter, in the direction of the arrow:
+
+- The release gate runs the design gate's checks, reads the record with the
+  record reader and the validation records (`specification`), reconciles
+  results with the Allure reader (`test_evidence`) and reports the risk
+  findings of the risk register (`risk`).
 - Verification data reconciles results with the Allure reader and reads the
   record with the record reader.
-- The Reusable workflow runs the acceptance tests and then the gates with the
-  Gates action, which runs the design gate, `verify`, the release gate, graph
-  validation and the evidence bundle.
+- The Reusable workflow runs the acceptance test run and then the gates with
+  the Gates action, which runs the design gate, writes the verification data,
+  runs the release gate, validates the graph with SHACL validation (`graph`)
+  and writes the evidence bundle with the Evidence bundle (`publishing`).
+
+This context realises parts of `specification`'s DI-33 and `risk`'s DI-44
+and DI-50: the release gate reports and applies them. Parts of its own are
+realised elsewhere: DI-4 by `test_evidence` (the run labels behind the
+reconciliation) and `publishing` (the traceability matrix rendered from the
+verification data); DI-30 by `publishing`, whose Evidence bundle writes the
+retained release evidence; and the rest of DI-63 by the PDF action
+(`publishing`) and by the CI workflow `rdm adopt` lays down (the Adoption
+templates, `specification`). The verification report (DI-64) is also in
+[publishing](publishing.md); the mutation probe and the pytest plugin are in
+[test evidence](test_evidence.md). Each design input here is verified by the
+tests tagged with its id.
 
 Open question: the release gate does not decide whether the runs are
 release-grade evidence (the commit and worktree each run tested); the
-verification report and the knowledge graph show it. Whether the gate
-should is a question for a later review.
+verification report and, as a warning, the knowledge graph's gate shapes
+show it. Whether the gate should decide it is a question for a later review.
 
 ### Dynamic view
 
 The order of a pipeline run matters: the acceptance tests write the Allure
-results; the design gate runs; `verify` writes the verification data; the
-release gate decides; graph validation runs; the evidence bundle is written
-last, from the same results, and uploaded. The component view shows what
-uses what, not this order. The view below draws it at the container level,
-where the order is decided (a dynamic view's steps cannot cross from the
-Reusable gates container into `rdm`'s components):
+results; the design gate runs; the verification data is written; the release
+gate decides; graph validation runs; the evidence bundle is written last,
+from the same results, and uploaded. The component view shows what uses
+what, not this order. The view below draws it at the container level, where
+the order is decided (a dynamic view's steps cannot cross from the Reusable
+gates container into the components of `rdm`):
 
 ![Scenario: one run of the reusable gates](../../c4/views/D_release_pipeline.svg)
 
@@ -129,7 +129,10 @@ Reusable gates container into `rdm`'s components):
 
 Layer 4 of the dependency rule. Depends on `test_evidence` (the Allure
 reader), `specification` (the record reader, the design gate, the validation
-records), `risk` (the risk rules) and the shared kernel, all below it.
-Depended on by `publishing` (the verification report and the evidence bundle
-build on the verification data) and by the composition root, which hands the
-design gate this context's results warnings. No import breaks the rule.
+records) and `risk` (the risk register), all below it, and on the shared
+kernel. Depended on by `publishing` (the verification report and the
+evidence bundle build on the verification data) and by the composition
+root, which hands the design gate this context's warnings about executed
+results. The Gates action, in its own container, also runs `graph`'s SHACL
+validation and `publishing`'s evidence bundle as commands; that is a run,
+not an import, so the rule is not broken.

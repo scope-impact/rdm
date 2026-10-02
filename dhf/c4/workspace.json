@@ -180,7 +180,7 @@
                 "technology": "Python"
               },
               {
-                "description": "rdm hooks",
+                "description": "rdm hooks: installs the design-gate pre-commit hook; the issue-reference hooks only on request",
                 "documentation": {},
                 "group": "specification",
                 "id": "10",
@@ -209,7 +209,7 @@
                 "technology": "Python"
               },
               {
-                "description": "Runs the design gate before a commit",
+                "description": "Runs the design gate before a commit that stages implementation files; blocks when the gate cannot run",
                 "documentation": {},
                 "group": "specification",
                 "id": "11",
@@ -231,7 +231,7 @@
                 "technology": "shell"
               },
               {
-                "description": "rdm story new-input",
+                "description": "rdm story new-input: allocates the next id, inserts it into a context's frontmatter, writes a failing stub test",
                 "documentation": {},
                 "group": "specification",
                 "id": "12",
@@ -260,7 +260,7 @@
                 "technology": "Python"
               },
               {
-                "description": "rdm init",
+                "description": "rdm init: lays down the project templates and the shared agent workflow runbook",
                 "documentation": {},
                 "group": "specification",
                 "id": "13",
@@ -302,7 +302,7 @@
                 "technology": "Markdown, YAML, Typst"
               },
               {
-                "description": "rdm adopt",
+                "description": "rdm adopt: lays down each missing file of the adoption templates, never overwriting one",
                 "documentation": {},
                 "group": "specification",
                 "id": "15",
@@ -402,7 +402,7 @@
                 "technology": "Python"
               },
               {
-                "description": "rdm story persona",
+                "description": "rdm story persona: the formative status of each user need; informational, never fails a successful run",
                 "documentation": {},
                 "group": "specification",
                 "id": "19",
@@ -431,7 +431,7 @@
                 "technology": "Python"
               },
               {
-                "description": "Design inputs against results: verification.yml",
+                "description": "Every declared design input reconciled against the executed results: status, runs and tests per design input, by user need; generated, never edited",
                 "documentation": {},
                 "group": "release",
                 "id": "20",
@@ -460,7 +460,7 @@
                 "technology": "Python"
               },
               {
-                "description": "The release decision; the design gate's results warnings; the trace slice",
+                "description": "Blocks a release on design-gate failures, failed or untested design inputs, blocking risk findings or an unrefined user need; warns on unvalidated user needs and orphan tags; the design gate's results warnings; the trace slice",
                 "documentation": {},
                 "group": "release",
                 "id": "21",
@@ -517,7 +517,7 @@
                 "technology": "Python"
               },
               {
-                "description": "Allure results into test runs and a status per design input; run labels and facts",
+                "description": "Allure results into test runs and a status per design input (failed, else verified, else untested; undeclared stories as orphans); run labels and facts",
                 "documentation": {},
                 "group": "test_evidence",
                 "id": "22",
@@ -546,7 +546,7 @@
                 "technology": "Python"
               },
               {
-                "description": "rdm story mutation-probe: runs one test unmutated, then mutated, and always restores the file",
+                "description": "rdm story mutation-probe: runs one test unmutated, then mutated; killed, survived or error; journals the original beside the file and always restores it",
                 "documentation": {},
                 "group": "test_evidence",
                 "id": "23",
@@ -611,7 +611,7 @@
                 "technology": "Python"
               },
               {
-                "description": "The risk register evaluated against the declared risk policy; the risk rules as findings",
+                "description": "The risk register evaluated against the declared risk policy; the risk rules as findings, written only here; handed the declared and verified design input ids, it reads nothing of the specification",
                 "documentation": {},
                 "group": "risk",
                 "id": "26",
@@ -633,7 +633,7 @@
                 "technology": "Python"
               },
               {
-                "description": "The C4 model, read from the workspace's export; view freshness",
+                "description": "The C4 model, read from the workspace's export (declared relationships only); view freshness from the stamps; the component owning a file (longest code match) and the import dependencies between components",
                 "documentation": {},
                 "group": "architecture",
                 "id": "27",
@@ -646,7 +646,7 @@
                 "technology": "Python"
               },
               {
-                "description": "rdm c4 draw: Structurizr export, Graphviz views, stamps",
+                "description": "rdm c4 draw: Structurizr export, Graphviz views, each stamped with the workspace digest; all or nothing, removes the image of a removed view",
                 "documentation": {},
                 "group": "architecture",
                 "id": "28",
@@ -675,7 +675,7 @@
                 "technology": "Python, Structurizr, Graphviz"
               },
               {
-                "description": "Finds the checklist clauses no document references, and reports coverage",
+                "description": "Reads a checklist and its includes, finds the checklist clauses no document references, and reports the gaps or the coverage; offers its reader and key matcher to other contexts",
                 "documentation": {},
                 "group": "compliance",
                 "id": "29",
@@ -697,7 +697,7 @@
                 "technology": "Python"
               },
               {
-                "description": "The built-in checklists: IEC 62304, ISO 14971, FDA-SW/CYBER/HFE, 21 CFR Part 11",
+                "description": "The built-in checklists: IEC 62304 (base, 2006, 2015; classes A-C), ISO 14971 2007/2019, FDA-SW 2005/2021, FDA-CYBER 2018, FDA-HFE 2011, 21 CFR Part 11 document control",
                 "documentation": {},
                 "group": "compliance",
                 "id": "30",
@@ -746,7 +746,7 @@
                 "technology": "Python, Jinja2"
               },
               {
-                "description": "Section numbers, vocabulary, audit notes",
+                "description": "Section numbers, vocabulary and audit-note exclusion over the rendered lines; loaded by name from the project's config.yml",
                 "documentation": {},
                 "group": "publishing",
                 "id": "32",
@@ -838,7 +838,7 @@
                 "technology": "Python"
               },
               {
-                "description": "RDOC/ENDRDOC snippets from source files, as YAML data",
+                "description": "rdm collect: RDOC/ENDRDOC snippets from source files, by key, as YAML data",
                 "documentation": {},
                 "group": "publishing",
                 "id": "35",
@@ -950,7 +950,7 @@
                 "technology": "Typst"
               },
               {
-                "description": "The record into RDF, one named graph per source; the store; rdm graph build, query, serve and explorer-file",
+                "description": "The record into RDF, one named graph per source, de-duplicated and sorted; replaces the store on each build; rdm graph build, query, serve (read-only) and explorer-file",
                 "documentation": {},
                 "group": "graph",
                 "id": "39",
@@ -1090,7 +1090,7 @@
                 "technology": "Python, pySHACL"
               },
               {
-                "description": "rdm graph explorer-file: the record as an AWS Graph Explorer file",
+                "description": "rdm graph explorer-file: the record as an AWS Graph Explorer file, optionally without chosen classes and the nodes that hang only from them",
                 "documentation": {},
                 "group": "graph",
                 "id": "43",
@@ -1112,7 +1112,7 @@
                 "technology": "Python"
               },
               {
-                "description": "Read-only schema, query, trace and validate for agents",
+                "description": "rdm graph mcp: read-only, idempotent schema, query, trace and validate for agents, each projecting the record afresh; query rows capped",
                 "documentation": {},
                 "group": "graph",
                 "id": "44",
@@ -1192,7 +1192,7 @@
           {
             "components": [
               {
-                "description": "Labels each run from the record; the run's executor and environment",
+                "description": "Labels each run from the record; the run's executor and environment, written only when the run writes Allure results",
                 "documentation": {},
                 "group": "test_evidence",
                 "id": "46",
@@ -1299,7 +1299,7 @@
           {
             "components": [
               {
-                "description": "Tests, then the gates, for any repository",
+                "description": "Checks out the caller and RDM at the pinned revision, installs RDM from it, runs the acceptance tests, then the gates; uploads the Allure report and verification record",
                 "documentation": {},
                 "group": "release",
                 "id": "48",
@@ -1328,7 +1328,7 @@
                 "technology": "GitHub Actions"
               },
               {
-                "description": "The gates as steps",
+                "description": "The gates as steps: design gate, verification data, release gate, graph validation, evidence bundle (uploaded); each switchable; inputs passed as environment variables",
                 "documentation": {},
                 "group": "release",
                 "id": "49",
@@ -1658,7 +1658,7 @@
     "structurizr.inspection.warning": "0"
   },
   "rdm": {
-    "workspace_sha256": "fc0246e8b8da42d60cd2ac2dcf76379f8a6c6302363d7a29582aadc475f7f51e"
+    "workspace_sha256": "20b5ae7b011ede3fee3c122361ad5a031cfd45339e88d84b2a8c71d84c3364d6"
   },
   "views": {
     "componentViews": [

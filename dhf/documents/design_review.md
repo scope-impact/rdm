@@ -1094,6 +1094,46 @@ agent workflow. No design input changed.
 
 - None open.
 
+# Design Review 34 — The design outputs are the architecture
+
+**Scope reviewed:** every design document's design outputs; the SDD
+template; the architecture workspace's component descriptions; the
+glossary. No design input changed.
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- A design output is the architecture that meets a context's design inputs,
+  in the C4 model: its component view, and a dynamic view where the order
+  of interactions matters (`CONTEXT.md`, "Design output"). It names
+  components, never source files or functions: the architecture workspace
+  maps each component to its code. Each design document's outputs are now
+  its component view, a table of each component's responsibility and the
+  design inputs it meets, the relationships in words, and its dynamic views;
+  every input of every document is met by a named component.
+- Detail that described the code rather than the design (paths, functions,
+  flags, file layouts, walkthroughs) is cut; what a reviewer needs of it
+  moves into the components' descriptions in the workspace, where the views
+  show it.
+- The rewrite found what the code and the record do not yet say alike; each
+  is a question for a later review, not changed here:
+  - `realises` that the outputs show but the frontmatter does not declare:
+    `graph` realises part of DI-46; `test_evidence` the Allure ingest of
+    DI-1; `publishing` (the PDF action) and `specification` (adopt's
+    workflow) parts of DI-63; `release` (through its gates action) part of
+    DI-64.
+  - DI-30 (the evidence bundle) is owned by `release` and built by
+    `publishing`'s component.
+  - DI-44 does not say that a risk with an unknown status blocks, though the
+    code and its test do; DI-59 and DI-65 name a source module in their
+    text.
+
+## Findings and actions
+
+- The `realises`, DI-30 ownership and DI-44, DI-59, DI-65 wording questions
+  above, for a later review.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

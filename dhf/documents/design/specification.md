@@ -45,101 +45,43 @@ design_inputs:
 ## Purpose
 
 The core bounded context: the user needs, the design inputs that refine them
-(each owned by one context and naming the needs it `traces_to`), the tagged
+(each owned by one context and naming the needs it traces to), the tagged
 tests that claim to verify them, the design review, and the design gate that
 blocks implementation until the record is complete, approved and declares
 every id once. It speaks the glossary's user need, design input, design
 document, tagged test, design review, approved and design gate, and, for
-validation, validated (validation records, formative persona evidence). Every
-other context conforms to its ids. Two things that are not contexts are drawn
-here: the shared kernel (`rdm/kernel/`), below every context, and onboarding
-(`rdm init`, `rdm adopt`), the commands that create the record, which is this
+validation, validated (validation records, formative persona evidence).
+Every other context conforms to its ids. Onboarding (`rdm init`, `rdm
+adopt`), the commands that create the record, is not a context: it is this
 context's application layer.
 
 ## Design Outputs
 
-- **Shared kernel** (`rdm/kernel/`) — not a context: the YAML, message and
-  repository-root helpers (`util.py`), the id grammar (`ids.py`), the one way
-  to ask git (`git.py`), the frontmatter parser (`frontmatter.py`), the
-  shared bucketing of observations by declared id (`reconcile.py`) and the
-  version. No pydantic, DuckDB or RDF dependency.
-- **Record reader** (`rdm/specification/sdd.py`) — DI-1, DI-46. Finds
-  design documents by their `kind: design` marker, never by file name; reads
-  `user_needs`, `design_inputs` and `realises`; keeps an id's first
-  declaration by sorted path; and lists every declaration
-  (`duplicate_declarations`).
-- **Test tags** (`rdm/specification/tags.py`) — DI-1, DI-31, DI-40.
-  `find_tests_dir` finds `tests/` or `test/` no higher than the DHF's
-  repository root; `scan_source_tags` maps each story id to the files
-  claiming it — Python from the syntax tree, JavaScript, TypeScript and Java
-  by pattern, and YAML task `tags`. `scan_source_tests` gives `graph` each
-  tagged test by name: this context's part of `graph`'s DI-61.
-- **Design gate** (`rdm/specification/design_gate.py`) — DI-2, DI-46. Fails
-  unless at least one design document and the design review exist, hold no
-  placeholder markers and are committed clean (an uncommitted edit re-opens
-  it; outside git, approval is reported as unverifiable); fails on an id
-  declared twice; and fails on stale or uncommitted architecture views, this
-  context's part of `architecture`'s DI-70. It warns on a user need nothing
-  traces to, an unknown `traces_to` or `realises` id, and a design input with
-  no tag. With `--allure-results`, the warnings about executed results are
-  `release`'s, handed to the gate's output by the composition root: the
-  specification never reads results.
-- **Pre-commit hook** (`rdm/hook_files/pre-commit`) — DI-2. Blocks a commit
-  that stages implementation files (source, template or configuration
-  extensions outside the DHF and `backlog/`) unless the design gate passes.
-  A commit of only the design documents passes — that commit is the
-  approval. A missing `rdm` blocks; `RDM_SKIP_DESIGN_GATE=1` bypasses.
-- **Hooks installer** (`rdm/specification/hooks.py`) — DI-26. Copies the pre-commit hook
-  into `.git/hooks` (or a given directory), the issue-reference hooks only
-  with `--with-issue-hooks`.
-- **New design input** (`rdm/specification/new_input.py`) — DI-22. Reads the DHF
-  through the record reader, so it and the gates share one view of the
-  record; inserts the entry by a targeted line edit (never a YAML re-dump,
-  so comments survive); writes the stub to
-  `tests/acceptance/test_<context>.py` unless `--test-file` is given;
-  `--list` prints contexts, taken ids, the next id and the user needs.
-- **Project scaffold**, **Project templates** (`rdm/specification/init.py`,
-  `rdm/specification/init_files/`) — DI-15. Copies the tree (templates including the
-  design-controls set, `Makefile`, `config.yml`, Dockerfile, Pandoc and Typst
-  configuration, `data/`, `images/`) into a new directory, `dhf` by default,
-  and the runbook from the adoption templates, so both scaffolds share one.
-- **Adoption**, **Adoption templates** (`rdm/specification/adopt.py`, `rdm/specification/adopt_files/`)
-  — DI-24. Creates each missing file of the tree, keeps the hook and the
-  bootstrap executable, writes the installed version for `{rdm_version}`,
-  reports what it skipped, and prints the next steps. The pre-commit hook is
-  copied from `rdm/specification/hook_files/` so the gate has one source. The CI workflow
-  it lays down calls `release`'s reusable workflow (DI-63).
-- **Validation records** (`rdm/specification/validation.py`) — DI-33. Reads
-  `<dhf>/validation/*-validation.json` by user need; only `approved` counts.
-- **Formative usability** (`rdm/specification/persona.py`) — DI-5. Reconciles
-  `*-persona.json` runs against the registry: `failed` if any run could not
-  finish, else `issues` if problems were seen, else `clean`; `not_run` when
-  none tried. `clean` is not validated.
-- **Persona command** (`rdm/specification/persona_cmd.py`) — DI-5. `rdm story
-  persona` prints the status per need from the V&V plan's registry and
-  always exits 0 on a successful run. The runs come from the
-  `usability-persona` skill in `.claude/skills/`, outside the `rdm` package.
-## Components (C3)
+The design outputs are this context's architecture, in the C4 model of the
+architecture workspace: its components, what each is responsible for, and how
+they relate. They name components, never code: the workspace maps each
+component to its code.
 
 ![Components: specification](../../c4/views/C3_specification.svg)
 
-| Component | Responsibility | Technology | Code |
-|-----------|----------------|------------|------|
-| Shared kernel | Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers | Python | `rdm/kernel/` |
-| Record reader | User needs, design inputs, realises and declarations, from the frontmatter | Python | `rdm/specification/sdd.py` |
-| Test tags | The design-input tags in test sources, in every language RDM reads | Python | `rdm/specification/tags.py` |
-| Design gate | The record complete, approved and declared once; the architecture views fresh | Python | `rdm/specification/design_gate.py` |
-| Hooks installer | `rdm hooks` | Python | `rdm/specification/hooks.py` |
-| Pre-commit hook | Runs the design gate before a commit | shell | `rdm/specification/hook_files/` |
-| New design input | `rdm story new-input` | Python | `rdm/specification/new_input.py` |
-| Project scaffold | `rdm init` | Python | `rdm/specification/init.py` |
-| Project templates | What `rdm init` lays down | Markdown, YAML, Typst | `rdm/specification/init_files/` |
-| Adoption | `rdm adopt` | Python | `rdm/specification/adopt.py` |
-| Adoption templates | What `rdm adopt` lays down | Markdown, YAML | `rdm/specification/adopt_files/` |
-| Validation records | Approved validation records per user need | Python | `rdm/specification/validation.py` |
-| Formative usability | Persona runs as formative evidence | Python | `rdm/specification/persona.py` |
-| Persona command | `rdm story persona` | Python | `rdm/specification/persona_cmd.py` |
+| Component | Responsibility | Meets |
+|-----------|----------------|-------|
+| Record reader | Reads the user needs, the design inputs, what each context realises, and every declaration of an id, from the frontmatter of the design documents and the V&V plan. Finds a design document by its `kind: design` marker, never by its name; an id declared more than once keeps its first declaration, and every declaration is listed. | DI-1, DI-46 |
+| Test tags | Finds the test suite (no higher than the DHF's repository root) and the design input each test claims to verify: in Python from the syntax tree, never from strings or comments, falling back to the decorator pattern when a file does not parse; in JavaScript, TypeScript and Java by pattern, across the conventional test-file names; and in a YAML task's own tags. Only the story names a design input. Lists each tagged test by name for the knowledge graph. | DI-1, DI-31, DI-40 |
+| Design gate | Fails unless at least one design document and the design review exist, hold no placeholder markers, and are committed clean: an uncommitted edit re-opens it, and outside git approval is reported as unverifiable. Fails on an id declared more than once, naming every document that declares it, and on stale or uncommitted architecture views. Warns on a user need nothing traces to, an unknown traced or realised id, and a design input no test is tagged with. | DI-2, DI-46 |
+| Pre-commit hook | Blocks a commit that stages implementation files (source, template or configuration outside the DHF and the planning directory) unless the design gate passes. A commit of only the design documents passes: that commit is the approval. When the gate cannot be run, the commit is blocked; an explicit, discouraged override bypasses it. | DI-2 |
+| Hooks installer | `rdm hooks`: installs the pre-commit hook into the repository's git hooks (or a given directory), and the issue-reference hooks only when explicitly asked. | DI-26 |
+| New design input | `rdm story new-input`: allocates the next unused id, inserts the entry into the chosen context's frontmatter by a targeted edit that keeps its comments, writes a stub acceptance test tagged with the id that fails until implemented, and prints the remaining traceability checklist. Refuses an unknown context or user need. It can also list the contexts, the taken ids, the next id and the user needs. | DI-22 |
+| Project scaffold | `rdm init`: copies the project templates into a new directory, and the agent workflow runbook from the adoption templates, so both scaffolds share one runbook. | DI-15 |
+| Project templates | What `rdm init` lays down: the document templates (including the design-controls set), the build Makefile, the render configuration, the container build, and the Pandoc and Typst configuration. | DI-15 |
+| Adoption | `rdm adopt`: creates each missing file of the adoption templates and skips, never overwrites, one that exists; keeps the hook and the bootstrap executable; stamps the installed version; reports what it skipped and prints the next steps. It copies the pre-commit hook rather than holding its own, so the gate has one source. | DI-24 |
+| Adoption templates | What `rdm adopt` lays down: the DHF skeleton (V&V plan, the per-context design template, design review, traceability matrix), the agent workflow runbook, a session bootstrap and a CI gate workflow. | DI-24 |
+| Validation records | Reads the per-user-need validation records from the DHF's validation directory; only an approved disposition counts. Gives the user needs without one. | DI-33 |
+| Formative usability | Reconciles persona runs against the user-need registry into a formative status per need: failed if any run could not finish, else issues if problems were seen, else clean; not run when none tried. Clean is not validated. | DI-5 |
+| Persona command | `rdm story persona`: prints the formative status of each user need in the V&V plan's registry; informational, so a successful run always passes. | DI-5 |
 
+The shared kernel is drawn in this view but is not this context's: every
+context may use it, and the arrows into it are left out of the other views.
 The view also draws the architecture model (`architecture`), which the design
 gate uses, and the components of other contexts that use this one's.
 
@@ -148,15 +90,30 @@ gate uses, and the components of other contexts that use this one's.
 - The design gate reads the record with the record reader, finds the tagged
   tests with the test tags, and checks the views are fresh with the
   architecture model.
-- New design input reads the design documents with the record reader and
-  finds the test suite with the test tags.
-- Project scaffold and adoption copy their templates; scaffold also copies the
-  runbook from the adoption templates, and adoption the pre-commit hook.
-- Persona command classifies runs with formative usability and reads the V&V
-  plan with the record reader; validation records read the registry with it.
+- New design input reads the design documents with the record reader, so it
+  and the gates share one view of the record, and finds the test suite with
+  the test tags.
+- Project scaffold and adoption copy their templates; the scaffold also copies
+  the runbook from the adoption templates, and adoption the pre-commit hook.
+- The persona command classifies runs with formative usability and reads the
+  V&V plan with the record reader; validation records read the registry with
+  it.
 
-The shared kernel is drawn here but is not this context's: every context may
-use it, and the arrows into it are left out of the other views.
+Realised here for other contexts: the test tags' list of tagged tests by name
+is this context's part of `graph`'s DI-61, and the design gate's view check
+is its part of `architecture`'s DI-70. The CI workflow that adoption lays
+down calls `release`'s reusable workflow (DI-63).
+
+Realised elsewhere: `release` reports, at the release gate, the user needs
+the validation records give (DI-33); `publishing` renders the needs and
+design inputs the record reader reads (DI-1); and the knowledge graph records
+each id's declaration count and reports a repeated declaration with its
+shapes (DI-46). With results, the design gate's warnings about executed
+results are `release`'s, handed to the gate's output by the composition root:
+this context never reads results.
+
+Assumption: persona runs are produced by the usability-persona agent skill,
+outside RDM's package; this context only reads them.
 
 ### Dynamic view
 
@@ -169,18 +126,18 @@ stops the commit.
 
 ## Dependencies
 
-Layer 2 of the dependency rule. Depends on the shared kernel and on the
-leaves below it: `architecture` (the design gate's view check). Depended on
-by `test_evidence` (the pytest plugin reads the design inputs), `release`
-(the release gate, the verification data), `publishing` (the DMR index, the
-report, the evidence bundle) and `graph` (the projection). `rdm/main.py`, the
-composition root, wires its commands, and hands the design gate `release`'s
+Layer 2 of the dependency rule. Depends on the shared kernel and on one leaf
+below it: `architecture` (the design gate's view check). Depended on by
+`test_evidence` (the pytest plugin reads the design inputs), `release` (the
+release gate, the verification data), `publishing` (the DMR index, the
+verification report, the evidence bundle) and `graph` (the projection). The
+composition root wires its commands and hands the design gate `release`'s
 results warnings. It reads no results and no risk register.
 
 ## Out of scope
 
-- Summative validation. Persona evidence is formative only — not summative
-  IEC 62366 validation — and never gates release: the release gate does not
-  read persona runs (a structural property, not mutation-testable). The human
-  summative study is the validation record.
+- Summative validation. Persona evidence is formative only, not summative
+  IEC 62366 validation, and never gates release: the release gate does not
+  read persona runs (a structural property, not mutation-testable). The
+  human summative study is the validation record.
 - Planning. RDM ships no planning tooling; tasks live outside the record.
