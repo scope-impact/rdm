@@ -144,8 +144,9 @@ committed. That friction is the feature: the record stays true.
 
 ### Step 5 — make the test real (the PROOF)
 
-**Why:** the tagged test *is* the acceptance criterion ("live BDD") — there is
-no separate spec to drift out of date. The scaffolded stub fails on purpose so
+**Why:** the design input is the acceptance criterion and the tagged test
+verifies it, one verification step per clause ("live BDD") — there is no
+separate spec to drift out of date. The scaffolded stub fails on purpose so
 the release gate stays honestly red until real proof exists; a stub that
 passed would be a lie the pipeline could not see.
 

@@ -44,8 +44,10 @@ rdm story trace UN-… | DI-…             # one need's / input's slice
 - **Design inputs** (the verifiable *what*) are declared once, in the per-context
   design document that owns them (`design_inputs` frontmatter), and `traces_to`
   the user need they refine. A context can `realises` an input owned elsewhere.
-- **Verification** = each design input's `@allure.story("DI-…")` test (the test
-  *is* the acceptance criterion, "live BDD"), aggregated across contexts.
+- **Verification** = each design input (an acceptance criterion: a `shall`
+  requirement, baseline or risk-based) is verified by its
+  `@allure.story("DI-…")` test, whose verification steps check its clauses
+  ("live BDD"), aggregated across contexts. Vocabulary: `CONTEXT.md`.
 - **Independent verification** = the human-reviewed pull request: a reviewer
   other than the author judges whether each tagged test actually verifies its
   input. Git is the controlled record of that review.

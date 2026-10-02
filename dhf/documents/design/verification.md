@@ -25,7 +25,7 @@ design_inputs:
     text: "rdm.pytest_plugin shall label each run of a test tagged with a declared design input with the commit under test, and mark the run when the working tree had uncommitted changes."
     traces_to: [UN-004, UN-003]
   - id: DI-64
-    text: "RDM shall render a verification report to PDF from the record and the Allure results it is given, for review by someone who did not run the tests: a header naming the repository, the record's commit, the commits tested, the executor and environment the results record, the RDM version and one SHA-256 over the result files; an evidence status that is release-grade only when every design input has a passing run, no run failed, and every run tested the record's commit with no uncommitted changes, and that otherwise names each reason; the anomalies (failed, broken or skipped runs, and design inputs with no run); a traceability table of user need, design input, the risks it controls, its tests and their result; per design input, its text, context, user needs, outputs and the risks it controls, and for each run of a test tagged with it the test's file and function, its result, date and duration, its commit and worktree state where they differ from the header, any failure message and trace, its labels other than those the report already shows, its links, each step as an acceptance criterion with its own result, and the attachments the test made (text inline up to a limit, images embedded, any other file named with its SHA-256), with captured output and the copy of the requirement listed by name and SHA-256 only; and an appendix listing every result file with its SHA-256. The evidence bundle and the reusable gates workflow shall include the report."
+    text: "RDM shall render a verification report to PDF from the record and the Allure results it is given, for review by someone who did not run the tests: a header naming the repository, the record's commit, the commits tested, the executor and environment the results record, the RDM version and one SHA-256 over the result files; an evidence status that is release-grade only when every design input has a passing run, no run failed, and every run tested the record's commit with no uncommitted changes, and that otherwise names each reason; the anomalies (failed, broken or skipped runs, and design inputs with no run); a traceability table of user need, design input, the risks it is a control for, its tests and their result; per design input, its text, context, user needs, outputs, whether it is a baseline or a risk-based acceptance criterion, and each risk it is a control for with that risk's status and residual decision, and for each run of a test tagged with it the test's file and function, its result, date and duration, its commit and worktree state where they differ from the header, any failure message and trace, its labels other than those the report already shows, its links, each step as a verification step with its own result, and the attachments the test made (text inline up to a limit, images embedded, any other file named with its SHA-256), with captured output and the copy of the requirement listed by name and SHA-256 only, and the Allure severity label left out; and an appendix listing every result file with its SHA-256. The evidence bundle and the reusable gates workflow shall include the report."
     traces_to: [UN-012]
   - id: DI-65
     text: "rdm.pytest_plugin shall record, in the Allure results of an acceptance run, who or what ran the tests and where: Allure's executor.json naming the CI system, the run and its URL, or a local run with its user and host; and environment.properties with the operating system, the Python, pytest, allure-pytest and RDM versions, the commit under test, whether the worktree had uncommitted changes, and the CI actor and workflow."
@@ -55,7 +55,11 @@ This context owns:
 - **DI-64 (verification report, PDF)** — the matrix says *that* a design
   input is verified; the report shows *what was run* to say so, written for
   the person who has to judge it without having run anything: an auditor, a
-  notified body, the pull-request reviewer. `rdm story evidence-report`
+  notified body, the pull-request reviewer. It speaks the record's language
+  (`CONTEXT.md`): a design input is an acceptance criterion, baseline or
+  risk-based; a test verifies it through its verification steps; a design input
+  allocated to a risk is a *control for* it, never shown as making the risk
+  controlled until the risk's residual is evaluated acceptable. `rdm story evidence-report`
   renders it from the record and the Allure results it is given. Its order is
   the order of their questions:
   - **what is this, and can I rely on it** — the repository, the record's
@@ -63,14 +67,16 @@ This context owns:
     the RDM version, one SHA-256 over the result files; and an *evidence
     status*: release-grade only when every design input has a passing run,
     none failed, and every run tested the record's commit with a clean
-    worktree. Otherwise it is not, and each reason is named;
+    worktree. Otherwise it is not, and each reason is named. Beside it, the
+    state of the risk register: how many ratings are still proposals, and how
+    many risks have no evaluated residual;
   - **what went wrong** — failed, broken or skipped runs, and design inputs
     with no run, up front;
   - **what traces to what** — one table: user need, design input, the risks
-    it controls (from the risk register), its tests, their result;
+    it is a control for (from the risk register), its tests, their result;
   - **the evidence** — per design input, then per run: the test's file and
-    function, the result, date and duration, each step as an acceptance
-    criterion with its own result, failure message and trace, and the
+    function, the result, date and duration, each step as a verification
+    step with its own result, failure message and trace, and the
     attachments the test made (text inline up to a limit, images embedded,
     other files by SHA-256). The commit and worktree appear on a run only
     where they differ from the header;
@@ -78,7 +84,8 @@ This context owns:
     against the retained bundle.
   What would only repeat the report or bury it is left out: labels the report
   already shows (story, epic, feature, output, commit, worktree) and runner
-  internals (host, thread, framework, language, suite, package); pytest's
+  internals (host, thread, framework, language, suite, package), and the
+  Allure severity label, which reads as a harm's severity and is not one; pytest's
   captured stdout and stderr, and the plugin's copy of the requirement, are
   listed by name and SHA-256, not printed. The data reaches the Typst layout
   as a JSON file, never spliced into markup, so no text from a test can change

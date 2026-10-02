@@ -40,8 +40,9 @@ user_needs:
 
 # Purpose
 
-Defines how RDM is verified (does it meet its acceptance criteria?) and validated
-(does it meet the user needs / intended use?).
+Defines how RDM is verified (does it meet its design inputs, the acceptance
+criteria?) and validated (does it meet the user needs / intended use?). The
+vocabulary is the repository's `CONTEXT.md`.
 
 # Intended use
 
@@ -63,11 +64,16 @@ verified before a release.
 Each user need is refined into **design inputs** (declared in the per-context
 design documents, `kind: design`), owned by
 bounded contexts; a context serves the needs its inputs trace to. Verification is anchored on the
-design inputs (§820.30(f): output meets input): each is verified by an automated
-test in RDM's `tests/`, tagged `@allure.story("DI-…")` — the test *is* the
-acceptance criterion ("live BDD"). A user need is met when it is validated and
-every design input that `traces_to` it is verified, wherever those inputs are
-owned. `rdm story release-gate` enforces this.
+design inputs (§820.30(f): output meets input). A design input is an
+acceptance criterion, a `shall` requirement on RDM or one of its bounded
+contexts: *baseline* when it follows from a user need alone, *risk-based* when
+it is allocated as a risk control. Each is verified by an automated test in
+RDM's `tests/`, tagged `@allure.story("DI-…")`, whose verification steps check
+its clauses ("live BDD": the test verifies the criterion, with no separate spec
+to drift). A user need is met when it is validated and every design input that
+`traces_to` it is verified, wherever those inputs are owned; a risk-based
+criterion counts once it is verified and its risk's residual is acceptable.
+`rdm story release-gate` enforces this.
 
 # Validation approach
 

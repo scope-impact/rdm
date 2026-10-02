@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 25
+revision: 26
 title: Design Review — RDM
 ---
 
@@ -735,6 +735,40 @@ DI-45's prose updated for how the risk shapes now agree with the gate.
   kept in the bundle; captured output is listed by checksum.
 - DI-65 has `rdm.pytest_plugin` record the executor and environment in
   Allure's own files, so the Allure report shows them as well.
+
+## Findings and actions
+
+- None open from this review.
+
+# Design Review 25 — One vocabulary with the requirements skill
+
+**Scope reviewed:** the record's vocabulary (`CONTEXT.md`), the V&V plan's
+verification approach, and DI-64 (amended).
+
+**Disposition:** Approved.
+
+## Items reviewed
+
+- RDM said "the test *is* the acceptance criterion". The requirements skill
+  keeps acceptance criteria apart from the tests that verify them, and keeps
+  baseline criteria (from the user need) apart from risk-based ones (from a
+  risk control, counted only after verification and an acceptable residual).
+- Resolved with the product owner: a design input *is* the acceptance
+  criterion, a system or subsystem `shall` requirement. Baseline when it follows
+  from a user need alone; risk-based when it is allocated as a risk control. The
+  test verifies it, step by step ("verification steps"). The record needs no new
+  structure: the register's `controls:` already allocates risk-based criteria,
+  and the release gate already blocks until controls are verified and residuals
+  acceptable.
+- `CONTEXT.md` is rewritten as the glossary, in the domain-modeling skill's
+  format: "risk control" and "control effect" replace "measure" and "measure
+  effect"; a bounded context is the skill's subsystem; "verified" (a passing
+  test) is kept apart from "effective" (verified, and the residual evaluated
+  acceptable); a planning task's acceptance criteria are not the record's.
+- DI-64's report followed the old words: it headed test steps "acceptance
+  criteria", showed "risks controlled" for allocated controls, showed the
+  Allure severity label as if it were a harm's severity, and did not show the
+  risk register's state. It is amended to the glossary.
 
 ## Findings and actions
 
