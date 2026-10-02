@@ -157,21 +157,15 @@ words (so a glossary includes only the terms a document uses).
 
 ## Commands and events
 
-Each row reads: the actor issues the command, resulting in its success
-event or one of its fail events (the business rule it broke, after the
-slash), which affects the entity. A gate concludes every event its rules
-produce. The names are the vocabulary of the record (`CONTEXT.md`,
-"Domain model"); the tools print them as prose today.
+Each row: the actor issues the command, resulting in its success event or a
+fail event (the rule broken, after the slash), which affects the entity.
 
 | Actor | Command | Success event | Fail events | Entity |
 |-------|---------|---------------|-------------|--------|
-| Contributor or CI | Render document (`rdm render`) | Document Rendered | Not Rendered / Data Key Duplicated · Data Invalid | Controlled document |
-| CI | Build evidence bundle | Evidence Bundle Built | Not Built / DHF Missing · Results Missing | Evidence bundle |
-| CI | Write verification report | Report Written | Not Written / DHF Missing · Results Missing · Typst Missing | Verification report |
-| Contributor | Index controlled documents (`rdm dmr`) | Index Written (an uncontrolled document is skipped, warned) | Not Written / Documents Missing · No Controlled Documents | DMR index |
+| CI | Build evidence bundle | Evidence Bundle Built | Not Built / Results Missing | Evidence bundle |
+| CI | Write verification report | Report Written | Not Written / Typst Missing | Verification report |
 
-Everything this context writes is a read model: rendered from the record and
-the executed results, never edited, never a source of a fact.
+Everything this context writes is a read model.
 
 ## Dependencies
 

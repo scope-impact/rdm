@@ -1174,6 +1174,15 @@ changed.
   today (a later change, its own review).
 - The two open questions above, for a later review.
 
+# Design Review 36 — Commands and events, trimmed
+
+**Scope reviewed:** every design document's *Commands and events*.
+**Disposition:** Approved.
+
+Each table keeps the commands a reviewer needs and at most four fail events
+per command, the rules a reviewer thinks in. The full list of rules stays
+where it is checked: the code and its tests.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

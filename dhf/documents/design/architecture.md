@@ -113,16 +113,13 @@ Assumptions and open questions:
 
 ## Commands and events
 
-Each row reads: the actor issues the command, resulting in its success
-event or one of its fail events (the business rule it broke, after the
-slash), which affects the entity. A gate concludes every event its rules
-produce. The names are the vocabulary of the record (`CONTEXT.md`,
-"Domain model"); the tools print them as prose today.
+Each row: the actor issues the command, resulting in its success event or a
+fail event (the rule broken, after the slash), which affects the entity.
 
 | Actor | Command | Success event | Fail events | Entity |
 |-------|---------|---------------|-------------|--------|
-| Contributor | Draw architecture views (`rdm c4 draw`) | Views Drawn | Not Drawn / No Workspace · Tool Missing · Export Failed · View Not Drawn | Architecture workspace |
-| The design gate | Check views current | Views Current | Views Stale / Not Drawn · Model Unreadable · Not Current · Image Missing · Image Of No View | Architecture workspace |
+| Contributor | Draw architecture views | Views Drawn | Not Drawn / No Workspace · Tool Missing | Architecture workspace |
+| The design gate | Check views current | Views Current | Views Stale / Not Current · Image Missing | Architecture workspace |
 
 ## Dependencies
 

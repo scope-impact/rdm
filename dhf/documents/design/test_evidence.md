@@ -119,22 +119,16 @@ counts for no design input.
 
 ## Commands and events
 
-Each row reads: the actor issues the command, resulting in its success
-event or one of its fail events (the business rule it broke, after the
-slash), which affects the entity. A gate concludes every event its rules
-produce. The names are the vocabulary of the record (`CONTEXT.md`,
-"Domain model"); the tools print them as prose today.
+Each row: the actor issues the command, resulting in its success event or a
+fail event (the rule broken, after the slash), which affects the entity.
 
 | Actor | Command | Success event | Fail events | Entity |
 |-------|---------|---------------|-------------|--------|
-| Contributor | Translate results (`rdm translate`) | Results Translated | Not Translated / Unknown Format | Test result |
-| Reviewer | Probe mutation (`rdm story mutation-probe`) | Mutant Killed | Mutant Survived; Probe Refused / File Missing · Find Text Not Unique · Baseline Failing · Run Not Clean | Tagged test |
+| Reviewer | Probe mutation | Mutant Killed | Mutant Survived · Probe Refused / Baseline Failing | Tagged test |
+| Contributor | Translate results | Results Translated | Not Translated / Unknown Format | Test result |
 
-Reactions:
-
-- Whenever a tagged acceptance test runs, its result is labelled from the
-  record: epic, feature, links, commit, the design input's text (*Test Run
-  Labelled*). A story that names no declared design input is left unlabelled.
+Reactions: whenever a tagged acceptance test runs, its result is labelled
+from the record.
 
 ## Dependencies
 

@@ -126,27 +126,17 @@ stops the commit.
 
 ## Commands and events
 
-Each row reads: the actor issues the command, resulting in its success
-event or one of its fail events (the business rule it broke, after the
-slash), which affects the entity. A gate concludes every event its rules
-produce. The names are the vocabulary of the record (`CONTEXT.md`,
-"Domain model"); the tools print them as prose today.
+Each row: the actor issues the command, resulting in its success event or a
+fail event (the rule broken, after the slash), which affects the entity.
 
 | Actor | Command | Success event | Fail events | Entity |
 |-------|---------|---------------|-------------|--------|
-| Contributor | Declare design input (`rdm story new-input`) | Design Input Declared | Not Declared / Unknown Context · Unknown User Need · Fields Missing | Design document |
-| Contributor, or the commit hook | Check design controls (`rdm story design-gate`) | Design Controls Approved | Not Approved / Uncommitted · Placeholders · Document Missing · No Design Document · Duplicate Id · Views Stale; warned / Need Untraced · Unknown Need · Unknown Realised Input · Input Untagged · Orphan Tag | The record |
-| Contributor | Install hooks | Hooks Installed | Not Installed / Not A Repository | — |
-| Contributor | Adopt RDM (`rdm adopt`) | Project Adopted (existing files kept) | Not Adopted / Target Not A Directory | — |
-| Persona (an agent) | Reconcile persona runs (`rdm story persona`) | Formative Runs Reconciled (each user need clean · issues · failed · not run) | Not Reconciled / Plan Missing · Results Missing | User need |
+| Contributor | Declare design input | Design Input Declared | Not Declared / Unknown Context · Unknown User Need | Design document |
+| Contributor, or the commit hook | Check design controls | Design Controls Approved | Not Approved / Uncommitted · Placeholders · Duplicate Id · Views Stale | The record |
+| Persona (an agent) | Reconcile persona runs | Formative Runs Reconciled | — | User need |
 
-Reactions:
-
-- Whenever a design input is declared, a stub test is written that fails
-  until the input is implemented (*Stub Test Written*).
-- Whenever a commit is made, the design controls are checked (the hook):
-  *Commit Accepted*, or *Commit Blocked / Design Controls Not Approved*
-  while implementation is staged.
+Reactions: whenever a design input is declared, a failing stub test is
+written; whenever a commit is made, the design controls are checked.
 
 ## Dependencies
 
