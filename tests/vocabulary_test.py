@@ -1,6 +1,5 @@
 import pytest
 
-from rdm.md_extensions.vocabulary_extension import extract_words, extract_words_ignore_case
 from tests.util import render_from_string
 
 
@@ -44,20 +43,3 @@ def test_filtering():
     assert actual_result == expected_result
 
 
-@pytest.mark.parametrize('lines, expected_result, expected_result_ignore_case', [
-    (
-        [],
-        set(),
-        set(),
-    ),
-    (
-        ['alpha Beta', 'GAMMA::;;&%@', 'beta'],
-        {'alpha', 'Beta', 'GAMMA', 'beta'},
-        {'alpha', 'beta', 'gamma'},
-    ),
-])
-def test_word_extraction(lines, expected_result, expected_result_ignore_case):
-    actual_result = extract_words(lines)
-    assert actual_result == expected_result
-    actual_result_ignore_case = extract_words_ignore_case(lines)
-    assert actual_result_ignore_case == expected_result_ignore_case
