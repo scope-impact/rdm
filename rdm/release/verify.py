@@ -14,6 +14,7 @@ from pathlib import Path
 import yaml
 
 from rdm.evidence import allure
+from rdm.kernel.ids import relevant_orphans
 from rdm.specification.sdd import design_inputs, registry_user_needs
 
 
@@ -64,7 +65,7 @@ def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
             "results_found": report.results_found,
         },
         "groups": groups,
-        "orphans": report.orphan_ids,
+        "orphans": relevant_orphans(report.orphan_ids, di_ids),  # as the gates report them
     }
 
 

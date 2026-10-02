@@ -255,8 +255,3 @@ def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tup
                                  blocking=False, risk=index))
     return register, found
 
-
-def findings(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tuple[list[str], list[str]]:
-    """The release gate's risk findings (DI-44): (blocking, warnings)."""
-    _, found = assess(dhf_dir, design_input_ids, verified)
-    return [f.message for f in found if f.blocking], [f.message for f in found if not f.blocking]
