@@ -842,11 +842,6 @@ glossary's architecture terms; RDM's own C1, C2 and C3 diagrams; three
 
 - None open from this review.
 
-# Approval
-
-Recorded in version control (the merged, reviewed PR), per the design-input
-approval model. No sign-off table is duplicated here.
-
 # Design Review 28 — Mermaid diagrams in rendered documents
 
 **Scope reviewed:** DI-70 (`design/rendering.md`).
@@ -875,3 +870,8 @@ approval model. No sign-off table is duplicated here.
 ## Findings and actions
 
 - None open.
+
+# Approval
+
+Recorded in version control (the merged, reviewed PR), per the design-input
+approval model. No sign-off table is duplicated here.
