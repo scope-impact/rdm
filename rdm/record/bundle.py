@@ -4,7 +4,8 @@ Release evidence bundle (DI-30): the retained artifact set for a release.
 Writes, to an output directory: the verification data (declared design inputs
 reconciled against executed Allure results), the rendered traceability matrix,
 the executed Allure results themselves with the attachments and containers
-they reference, and a manifest describing the bundle —
+they reference, the verification report as a PDF (DI-64), and a manifest
+describing the bundle —
 the DHR-shaped set a team attaches to a release tag so the evidence outlives
 CI artifact retention.
 """
@@ -84,7 +85,15 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
     # evidence behind each verdict, kept past CI artifact retention.
     copy_results(Path(allure_results_dir), out_dir / "allure-results")
 
-    # 4. The manifest describing what this bundle contains.
+    # 4. The verification report: the runs behind each verdict, as a PDF (DI-64).
+    from rdm.record.report import REPORT_PDF, ReportUnavailable, write_report
+    try:
+        write_report(dhf_dir, Path(allure_results_dir), out_dir / REPORT_PDF)
+        report = REPORT_PDF
+    except ReportUnavailable as error:
+        report = f"not rendered: {error}"
+
+    # 5. The manifest describing what this bundle contains.
     summary = data["summary"]
     manifest = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -93,6 +102,7 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
         "verified": summary["verified"],
         "failed": summary["failed"],
         "untested": summary["untested"],
+        "verification_report": report,
         "files": sorted(
             p.relative_to(out_dir).as_posix() for p in out_dir.rglob("*")
             if p.is_file() and p.name != "manifest.json"
@@ -120,5 +130,6 @@ def evidence_bundle_command(
     print(f"Wrote release evidence bundle to {out}:")
     print(f"  design inputs : {manifest['verified']}/{manifest['design_inputs']} verified "
           f"({manifest['failed']} failed, {manifest['untested']} untested)")
+    print(f"  report        : {manifest['verification_report']}")
     print(f"  files         : {len(manifest['files'])} + manifest.json")
     return 0

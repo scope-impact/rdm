@@ -89,6 +89,8 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
     # they reference (on the test, its steps, or a fixture) -- nothing else.
     bundled = {"allure-results/" + n for n in
                ("t1-result.json", "c1-container.json", "a1-attachment.txt", "a2-attachment.json", "a3-attachment.txt")}
-    assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"} | bundled
+    # The verification report (DI-64) is in it when Typst is available, and the manifest says which.
+    report = {"verification_report.pdf"} if manifest["verification_report"] == "verification_report.pdf" else set()
+    assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"} | bundled | report
     assert (out / "allure-results" / "a1-attachment.txt").read_text() == "Release gate PASSED\n"
     assert not (out / "allure-results" / "stray-attachment.txt").exists()

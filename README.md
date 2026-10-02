@@ -267,7 +267,10 @@ uv run pytest tests
   sibling keys no longer count as coverage
 - **`rdm story dmr`** and **`rdm story evidence-bundle`**: DMR index data
   generated from frontmatter; the retained release evidence set (matrix,
-  verification data, manifest)
+  verification data, Allure results, verification report, manifest)
+- **`rdm story evidence-report`**: the verification report as PDF — every run
+  behind each design input, with its commit, steps, labels, links and
+  attachments (extra `report`)
 - `rdm hooks` defaults to the design-gate hook only (`--with-issue-hooks`
   opts into the legacy pair); `new-input` scaffolds an input with its `traces_to`
 - **Polyglot traceability**: JS/TS and Java test tags discovered for

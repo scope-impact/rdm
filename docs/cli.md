@@ -23,7 +23,8 @@
 | `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix |
 | `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed + every risk evaluated, controlled and acceptable ([risk register](risk.md)) |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
-| `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, manifest |
+| `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, Allure results, verification report, manifest |
+| `evidence-report --allure-results DIR -o FILE` | render the verification report (PDF): every run behind each design input, with its steps, labels, links and attachments |
 | `mutation-probe --file F --find A --replace B --test T` | reviewer tool: break one line on purpose, run one test, report KILLED (caught) / SURVIVED (missed), always restore; never gates |
 | `trace UN-nnn \| DI-n` | the traceability slice for one need or input (forward + backward) |
 | `persona --vv-plan F --persona-results DIR` | reconcile formative AI-persona usability runs against the user-need registry (never gates) |

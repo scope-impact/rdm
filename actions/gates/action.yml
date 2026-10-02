@@ -49,7 +49,7 @@ runs:
         PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
         uv tool install --python "$PYTHON_VERSION" \
-          "rdm[graph] @ file://$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+          "rdm[graph,report] @ file://$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
         rdm --version
 
     - name: Design gate

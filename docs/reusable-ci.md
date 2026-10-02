@@ -61,7 +61,7 @@ environment variables, never spliced into the script text.
 | `release-gate` | `true` | `false` until your first design input lands |
 | `graph-validate` | `true` | the gate rules as SHACL, plus graph-only warnings |
 | `checklists` | none | space-separated checklists for graph validation (`rdm gap --list`) |
-| `evidence-bundle` | `true` | writes the release evidence bundle and uploads it as `rdm-evidence` |
+| `evidence-bundle` | `true` | writes the release evidence bundle, including the [verification report](gates.md#the-verification-report) PDF, and uploads it as `rdm-evidence` |
 | `allure-report` | `true` | renders the Allure HTML report and uploads it as `allure-report` |
 
 The verification record (the Allure results and `verification.yml`) is

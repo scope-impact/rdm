@@ -95,7 +95,7 @@ jobs:
 
       - name: Install RDM from the pinned revision
         run: |
-          uv pip install --system "./.rdm[graph]" pytest allure-pytest
+          uv pip install --system "./.rdm[graph,report]" pytest allure-pytest
           rdm --version
 
       # Inputs reach the scripts as environment variables, never spliced into

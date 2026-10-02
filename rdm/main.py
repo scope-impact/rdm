@@ -173,6 +173,14 @@ def handle_story_command(args):
                 output=Path(args.output) if args.output else None,
             )
 
+        elif args.story_command == 'evidence-report':
+            from rdm.record.report import evidence_report_command
+            return evidence_report_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                output=Path(args.output) if args.output else None,
+            )
+
         elif args.story_command == 'new-input':
             from rdm.gates.new_input import story_new_input_command
             return story_new_input_command(
@@ -187,7 +195,7 @@ def handle_story_command(args):
         else:
             print(
                 "Unknown story subcommand. Use: design-gate, verify, release-gate, trace, "
-                "mutation-probe, new-input, dmr, evidence-bundle, or persona"
+                "mutation-probe, new-input, dmr, evidence-bundle, evidence-report, or persona"
             )
             return 1
 
@@ -296,6 +304,13 @@ def parse_arguments(arguments):
     bundle_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     bundle_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
     bundle_parser.add_argument('-o', '--output', help='output directory (default: release-evidence/)')
+
+    # rdm story evidence-report
+    report_help = 'render the verification report (PDF): every run behind each design input, with its evidence'
+    report_parser = story_subparsers.add_parser('evidence-report', help=report_help)
+    report_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    report_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
+    report_parser.add_argument('-o', '--output', help='output PDF (default: verification_report.pdf)')
 
     # rdm story new-input
     new_input_help = 'scaffold a traced design input: frontmatter entry, stub tagged test, checklist'

@@ -168,12 +168,12 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
     with clause("the action installs RDM from its own revision, the workflow from the revision the "
                 "caller pinned, and nothing installs rdm from a package index"):
         install = next(s["run"] for s in action["runs"]["steps"] if s.get("name", "").startswith("Install RDM"))
-        assert '"rdm[graph] @ file://' in install and "$GITHUB_ACTION_PATH/../.." in install
+        assert '"rdm[graph,report] @ file://' in install and "$GITHUB_ACTION_PATH/../.." in install
         steps = workflow["jobs"]["gates"]["steps"]
         rdm = next(s for s in steps if s.get("with", {}).get("path") == ".rdm")
         assert rdm["with"]["ref"] == "${{ inputs.rdm-ref }}" and workflow["on"]["workflow_call"]["inputs"][
             "rdm-ref"]["required"] is True
-        assert any('"./.rdm[graph]"' in s.get("run", "") for s in steps)
+        assert any('"./.rdm[graph,report]"' in s.get("run", "") for s in steps)
         assert any(s.get("uses") == "./.rdm/actions/gates" for s in steps)
         for path in (GATES, WORKFLOW, PDF_ACTION, DOGFOOD):
             assert not re.search(r"install\b[^\n]*\s(?:rdm|'rdm'|\"rdm\")(?:[\s=<>\[]|$)", path.read_text(),

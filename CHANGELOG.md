@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added — the verification report
+- `rdm story evidence-report` renders a PDF from the record and the Allure
+  results: per design input, every run of its tests with the commit, the
+  worktree state, times, status and failure, every label and link, each step
+  with its status, and every attachment (text inline, images embedded, other
+  files by SHA-256), under a header naming the results by one SHA-256 (DI-64).
+- The evidence bundle includes it, and the reusable gates upload it. Typst
+  comes from the new `report` extra or a `typst` executable on PATH.
+
 ### Added — RDM's gates as reusable CI
 - A reusable workflow (`.github/workflows/gates.yml`) runs a repository's
   acceptance tests, then the design gate, verify, the release gate, graph

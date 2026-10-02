@@ -6,6 +6,7 @@ a release; PyPI's `rdm` is another project.
 ```bash
 pip install "rdm @ git+https://github.com/scope-impact/rdm@v1.2.0"         # core: record, gates (rdm story …), gap, render, init, adopt
 pip install "rdm[graph] @ git+https://github.com/scope-impact/rdm@v1.2.0"  # + the record as an RDF graph and the agent server (rdm graph …)
+pip install "rdm[report] @ git+https://github.com/scope-impact/rdm@v1.2.0" # + the verification report as PDF (rdm story evidence-report)
 ```
 
 With [uv](https://docs.astral.sh/uv/) inside a project:

@@ -98,13 +98,45 @@ evidence.
 
 ```bash
 rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence/
+rdm story evidence-report --dhf dhf --allure-results dhf/allure-results -o verification_report.pdf
 rdm story dmr documents/ -o data/dmr.yml
 ```
 
 The evidence bundle is the retained release evidence: verification data, the
 rendered traceability matrix, the executed Allure results with every
-attachment and container they reference, and a manifest — ready to attach to
+attachment and container they reference, the verification report, and a
+manifest — ready to attach to
 a release tag, so the evidence outlives CI artifact retention. Uploaded as a
 CI artifact, the pipeline records its digest. `dmr` generates the
 device-master-record index (id, title, path, revision per controlled
 document) from the documents' own frontmatter.
+
+### The verification report
+
+The matrix says *that* a design input is verified. The verification report
+(`verification_report.pdf`, DI-64) shows *what was run* to say so, as a
+document a reviewer or an auditor reads without opening JSON:
+
+- **header:** the verification summary, the RDM version, the commits tested,
+  and one SHA-256 over every file in the results directory, so the PDF names
+  the exact evidence it was built from;
+- **per design input,** in id order: its text, owning context, user needs and
+  outputs, then every run of a test tagged with it;
+- **per run:** the test, the commit it tested, whether the worktree had
+  uncommitted changes, start and stop times, status, failure message and
+  trace, every label (epic, feature, severity, `output`, and any the test
+  adds) and link;
+- **per step** (the clauses of the test), nested: its status, its failure
+  message, and its attachments;
+- **attachments:** text inline, images embedded, any other file named with its
+  SHA-256, and a missing one marked as missing.
+
+A design input with no run says so in red. Text from a test (an attachment, a
+failure message) reaches the page as text: the data is handed to the Typst
+layout as JSON, never spliced into markup, so it cannot change the document.
+
+It needs Typst: install `rdm[report]` (the `typst` package, compiled
+in-process), or have a `typst` executable on `PATH`, as the RDM image does.
+Without either, the bundle's manifest says why it has no report. The
+[reusable gates](reusable-ci.md) install the extra, so every CI run uploads
+the report inside `rdm-evidence`.

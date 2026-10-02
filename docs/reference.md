@@ -24,6 +24,10 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.record.verify
 
+### `rdm.record.report`
+
+::: rdm.record.report
+
 ### `rdm.record.persona`
 
 ::: rdm.record.persona
