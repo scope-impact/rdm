@@ -89,39 +89,14 @@ acceptable only with an `acceptance:` naming `by` (who accepted it) and
 `rationale` (why further reduction is not reasonably practicable, and what
 monitors it).
 
-## What blocks a release
+## What the gates check, and what they do not
 
-`rdm story release-gate` blocks on any of these:
-
-- risks but no declared risk policy
-- a risk id declared twice, or a risk with no id
-- a missing hazard, situation or harm
-- a missing or unknown category; a security risk with no STRIDE category; a
-  link to an undeclared risk
-- a severity or probability the policy does not define; a recorded level
-  that differs from the policy's
-- a control that is not a declared design input; controls but no residual
-- a control with no passing test (residual not evaluated)
-- a residual — the initial risk, when nothing controls it — the policy
-  calls unacceptable, or one it accepts only with justification and no
-  acceptance
-- an unknown status
-
-Proposed risks, and a proposed policy, are warnings. `rdm graph validate`,
-and the agent server's `validate`, report the same risks through the
-shipped SHACL shapes.
-
-## What the gate does not check
-
-These are the reviewer's job, using the skills:
-
-- **Whether a control is effective, and real in the code.** A verified
-  design input proves the control was specified, built and tested — not
-  that it reduces the risk as claimed.
-- **Whether a residual is as low as reasonably practicable (ALARP).**
-- **Whether the analysis is honest:** probability from the situation,
-  severity from the harm, the harm naming who is hurt, STRIDE threats found
-  rather than assumed absent.
+The release gate blocks on a register it cannot evaluate or whose residuals
+the policy does not accept, and warns on proposed ratings; the rules are
+DI-44 and DI-50 in the [risk design](dhf/documents/design/risk.md), and
+`rdm graph validate` reports the same through its shapes. Whether a control
+is *effective*, whether a residual is as low as reasonably practicable, and
+whether the analysis is honest are the reviewer's, using the skills.
 
 ## Tracing
 
@@ -136,7 +111,7 @@ the chain, the scores, the residual decision and each controlling design
 input with its tests and runs. A design input's trace lists the risks it
 controls.
 
-RDM's own policy and register are
-[`dhf/documents/risk/`](https://github.com/scope-impact/rdm/tree/main/dhf/documents/risk):
-the ways RDM itself could misreport evidence — written by an agent, and
-marked proposed until a maintainer approves them.
+RDM's own [policy](dhf/documents/risk/policy.md) and
+[register](dhf/documents/risk/tool_risks.md) list the ways RDM itself could
+misreport evidence; an agent wrote them, so they are proposed until a
+maintainer approves them.

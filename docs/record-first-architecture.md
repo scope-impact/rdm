@@ -26,60 +26,71 @@ the same as a person.
 The two rows without a written side are facts a tool records: what ran and
 what passed, and who changed what, when. RDM reads them; nobody writes them.
 
-## The evidence chain
+## The data model
 
-A change is complete when every link exists, is current, and is checked by a
-machine — not when the code works:
+Every entity is declared **once**, in one place, with one id. Every link is
+either **written** in a reviewed pull request or **derived** by RDM; a fact
+that can be derived is never also written, because two copies of one fact
+drift. The words are the [glossary](glossary.md)'s.
 
 ```mermaid
 flowchart LR
-    subgraph why["WHY"]
-        UN["User need UN-nnn<br>V&V plan<br><i>defined once</i>"]
-    end
-    subgraph what["WHAT"]
-        DI["Design input DI-n<br>design document<br><i>owned by one context</i>"]
-        RISK["Risk<br>risk register"]
-    end
-    subgraph proof["PROOF"]
-        TEST["Acceptance test<br><code>@allure.story</code><br><i>verifies the criterion</i>"]
-        RUN["Test run<br>at a commit"]
-        PR["Pull-request review<br><i>passing ≠ proving</i>"]
-    end
-    DI -- "traces_to" --> UN
-    RISK -- "controlled by" --> DI
-    TEST -- "verifies" --> DI
-    RUN -- "run of" --> TEST
-    TEST -- "judged by" --> PR
+    UN["User need<br>UN-nnn"]
+    DI["Design input<br>DI-n"]
+    CTX["Bounded context"]
+    DOC["Controlled document"]
+    RISK["Risk"]
+    CL["Checklist clause"]
+    T["Test<br>(function)"]
+    RUN["Test run"]
+    C["Commit"]
+    SRC["Source file"]
+
+    DI -- "traces_to ✎" --> UN
+    DI -- "owned by" --> CTX
+    CTX -- "realises ✎" --> DI
+    RISK -- "controls ✎" --> DI
+    T -- "verifies ✎" --> DI
+    RUN -- "run of" --> T
+    RUN -- "tested at" --> C
+    RUN -- "exercises output ✎" --> SRC
+    DOC -- "references ✎" --> CL
+    DOC -- "references ✎" --> DOC
+    DOC -- "latest change" --> C
 ```
 
-A user need is **met** when it is validated, and every design input that
-traces to it is verified by a passing tagged test, at the commit being
-released, reviewed by someone other than its author.
+✎ marks a written link; every other link is derived.
 
-## A change, start to finish
+| Entity | Declared in | Id | Written there |
+| --- | --- | --- | --- |
+| **User need** | the V&V plan, `user_needs:` | `UN-nnn` | its text |
+| **Bounded context** | its design document (`kind: design`, `context:`); listed with its part in the architecture's `contexts:` | the context name | — |
+| **Design input** | the design document of the context that owns it, `design_inputs:` | `DI-n` | its text, and the needs it `traces_to` |
+| **Controlled document** | any Markdown file in the DHF with a frontmatter `id` | its `id` | `title`, `revision`, `references:` (documents it relies on), `[[KEY]]` clause tags |
+| **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (design inputs), residual, acceptance |
+| **Risk policy** | a document's `risk_policy:` | — | severities, probabilities, levels, acceptability |
+| **Checklist, clause** | a checklist file (text or RDF) | the clause key, e.g. `62304:5.2.2` | each clause's description; includes |
+| **Test** | an acceptance test function, `@allure.story("DI-n")` | `tests/x.py::test_y` | the design inputs it verifies; `@allure.label("output", …)` for the code it exercises |
+| **Test run** | an Allure result, written by running the tests | its uuid | nothing — it is recorded |
+| **Commit** | git | its sha | nothing — it is recorded |
 
-```mermaid
-sequenceDiagram
-    participant A as Author<br>(person or agent)
-    participant G as Gates<br>(machine)
-    participant R as Reviewer<br>(not the author)
-    A->>G: rdm story new-input
-    G-->>A: DI id + failing stub test + checklist
-    A->>G: commit the design documents first
-    G-->>A: design gate passes (that commit is the approval)
-    A->>A: implement, then replace the stub with real assertions
-    A->>G: push, open a pull request
-    G-->>A: CI: design gate → acceptance tests → verify → release gate
-    A->>R: request review
-    alt a test does not prove its clause
-        R-->>A: request changes
-        A->>R: strengthen the test, push again
-    end
-    R->>G: approve and merge — the approval record
-```
+Derived, never declared:
 
-The full procedure, with the decision of whether a change needs a design
-input at all, is [Changing the record](agent-workflow.md).
+| Fact | Derived from |
+| --- | --- |
+| a design input's owning context | the design document that declares it |
+| the user needs a context serves (`rdm:serves`) | its design inputs' `traces_to`, and those it `realises` |
+| the tests a file defines | the tagged functions in it |
+| which test a run ran | the run's full name, matched to the test function |
+| the commit a run tested | the `commit` label `rdm.pytest_plugin` writes at run time |
+| epic, feature and links in the Allure report | the record, at run time (`rdm.pytest_plugin`) |
+| a document's latest commit, and the commit that landed it | git history |
+| whether a design input is verified | the results of its tests' runs |
+| a risk's level and residual decision | its scores against the risk policy, and whether its controls are verified |
+| the traceability matrix | design inputs, user needs and test results |
+
+The order of a change (design input, approval, implementation, test, review)
+is the runbook: [Changing the record](agent-workflow.md).
 
 ## A record-first repository
 
@@ -106,8 +117,8 @@ flowchart TD
 ```
 
 `rdm adopt` lays down the record skeleton and the enforcement without
-touching existing files ([existing repository](quickstart-existing-repo.md)).
-Planning tools stay outside the record: [Plan vs. record](plan-vs-record.md).
+touching existing files ([get started](get-started.md)). Planning tools stay
+outside the record: [Plan vs. record](plan-vs-record.md).
 
 ## What RDM depends on
 
@@ -116,20 +127,5 @@ Planning tools stay outside the record: [Plan vs. record](plan-vs-record.md).
 3. Allure results from running the acceptance tests.
 
 Nothing about how the work was planned, which tracker is used, or who (or
-what) wrote the change.
-
-## Where the code lives
-
-| Part | Packages (one per bounded context) |
-| --- | --- |
-| Record | `rdm/specification/` — the record reader (`sdd.py`), test tags (`tags.py`), the design gate, `init`, `adopt`, `new-input`, validation records and persona runs; `rdm/risk/` — the risk register; `rdm/architecture/` — the C4 model and `rdm c4 draw`; `rdm/evidence/` — Allure results, `translate`, the mutation probe; `rdm/pytest_plugin.py` labels each test run from the record |
-| Gates | `rdm/release/` — the release gate and trace, the verification data; `rdm/compliance/` — gap analysis and the built-in checklists |
-| Graph | `rdm/graph/` — projection (`project.py`, `allure.py`, `checklists.py`, `c4.py`), vocabulary and gate shapes (`ontology.ttl`, `shapes.ttl`), SHACL validation, Graph Explorer file, the MCP server (`agent.py`) |
-| Documents | `rdm/publishing/` — `render.py`, snippets, the DMR index, the verification report, the evidence bundle; `rdm/md_extensions/` |
-
-Below every context, the shared kernel (`rdm/kernel/`); above, the composition
-root (`rdm/main.py`). A context imports only the contexts below it, and a test
-holds the code to it.
-
-RDM's own architecture document assigns each bounded context to one of these
-parts ([`dhf/documents/architecture.md`](https://github.com/scope-impact/rdm/blob/main/dhf/documents/architecture.md)).
+what) wrote the change. How RDM's own code is laid out, one package per
+bounded context, is its [system architecture](dhf/documents/architecture.md).

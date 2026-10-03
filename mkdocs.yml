@@ -63,6 +63,7 @@ markdown_extensions:
 # The build hooks and their template are not pages.
 exclude_docs: |
   _hooks/
+  research/
 
 hooks:
   - docs/_hooks/evidence.py
@@ -71,43 +72,33 @@ hooks:
 
 nav:
   - Home: index.md
-  - The big picture:
-      - How RDM works: record-first-architecture.md
-      - The data model: data-model.md
-      - Glossary: glossary.md
-      - Plan vs. record: plan-vs-record.md
-  - Get started:
-      - Installation: installation.md
-      - New project (rdm init): quickstart-new-project.md
-      - Existing repository (rdm adopt): quickstart-existing-repo.md
+  - Get started: get-started.md
+  - How RDM works: record-first-architecture.md
+  - Glossary: glossary.md
+  - Plan vs. record: plan-vs-record.md
   - Record:
       - Design inputs and tests: design-controls.md
       - Changing the record: agent-workflow.md
       - Risk register: risk.md
+      - Validation evidence: ai-persona-usability-validation.md
   - Gates:
       - The gates: gates.md
-      - Gap analysis: gap-analysis.md
+      - Gap analysis and checklists: gap-analysis.md
       - The gates in your CI: reusable-ci.md
-      - Checklist format: checklist-format.md
-      - Usability validation (formative): ai-persona-usability-validation.md
   - Graph:
       - The record as a graph: graph.md
-      - Gate rules as SHACL: graph-shapes.md
       - Browsing in Graph Explorer: graph-explorer.md
       - For agents (MCP): agents.md
-      - Traceability map: traceability-map.md
   - Documents:
       - Authoring and rendering: authoring.md
   - RDM on RDM:
-      - How RDM controls itself: dogfood.md
-      - Document control (Part 11): document-control.md
+      - Overview: dhf/README.md
+      - Changing RDM: dhf/AGENT_WORKFLOW.md
       - Traceability matrix (generated): traceability-matrix.md
-      - Design history file:
-          - Overview: dhf/README.md
-          - Changing RDM: dhf/AGENT_WORKFLOW.md
-          - V&V plan and user needs: dhf/documents/verification_and_validation_plan.md
-          - System architecture: dhf/documents/architecture.md
-          - Software design:
+      - Traceability map (generated): traceability-map.md
+      - V&V plan and user needs: dhf/documents/verification_and_validation_plan.md
+      - System architecture: dhf/documents/architecture.md
+      - Software design:
               - Architecture: dhf/documents/design/architecture.md
               - Compliance: dhf/documents/design/compliance.md
               - Knowledge graph: dhf/documents/design/graph.md
@@ -116,16 +107,12 @@ nav:
               - Risk: dhf/documents/design/risk.md
               - Design specification: dhf/documents/design/specification.md
               - Test evidence: dhf/documents/design/test_evidence.md
-          - Risk policy: dhf/documents/risk/policy.md
-          - Risk register: dhf/documents/risk/tool_risks.md
-          - Design review: dhf/documents/design_review.md
-          - Document control: dhf/documents/document_control.md
+      - Risk policy: dhf/documents/risk/policy.md
+      - Risk register: dhf/documents/risk/tool_risks.md
+      - Design review: dhf/documents/design_review.md
+      - Document control: dhf/documents/document_control.md
+      - "ADR 0001: user needs across bounded contexts": dhf/decisions/adr-0001-bounded-context-user-needs.md
   - Reference:
       - CLI: cli.md
       - API: reference.md
-      - FAQ: FAQ.md
-      - ADR 0001 — User needs across bounded contexts: adr-0001-bounded-context-user-needs.md
-      - Change history: HISTORY.md
-      - Research notes:
-          - Health hazard taxonomies: research/health-hazard-taxonomies.md
-          - ReqIF and StrictDoc typing: research/reqif-strictdoc-typing.md
+      - Changelog: changelog.md

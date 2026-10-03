@@ -1,16 +1,93 @@
 # API reference
 
-Generated from the source docstrings by
-[mkdocstrings](https://mkdocstrings.github.io/). The record core and the
-gates need no extra; the graph needs the `graph` extra.
+Generated from the source docstrings by [mkdocstrings](https://mkdocstrings.github.io/),
+one section per bounded context, in the order of the dependency rule
+([system architecture](dhf/documents/architecture.md)): a context imports only
+contexts listed before it. `rdm/main.py`, the command, is the composition root.
 
-## Record core
+## Shared kernel
 
-The reconciliation engine that compiles the DHF from the system of record.
+The helpers every context may import.
+
+### `rdm.kernel.events`
+
+::: rdm.kernel.events
+
+### `rdm.kernel.frontmatter`
+
+::: rdm.kernel.frontmatter
+
+### `rdm.kernel.git`
+
+::: rdm.kernel.git
+
+### `rdm.kernel.ids`
+
+::: rdm.kernel.ids
 
 ### `rdm.kernel.reconcile`
 
 ::: rdm.kernel.reconcile
+
+### `rdm.kernel.util`
+
+::: rdm.kernel.util
+
+### `rdm.kernel.version`
+
+::: rdm.kernel.version
+
+## Risk
+
+### `rdm.risk.register`
+
+::: rdm.risk.register
+
+## Architecture
+
+### `rdm.architecture.draw`
+
+::: rdm.architecture.draw
+
+### `rdm.architecture.model`
+
+::: rdm.architecture.model
+
+## Compliance
+
+### `rdm.compliance.gaps`
+
+::: rdm.compliance.gaps
+
+## Specification
+
+### `rdm.specification.adopt`
+
+::: rdm.specification.adopt
+
+### `rdm.specification.design_gate`
+
+::: rdm.specification.design_gate
+
+### `rdm.specification.hooks`
+
+::: rdm.specification.hooks
+
+### `rdm.specification.init`
+
+::: rdm.specification.init
+
+### `rdm.specification.new_input`
+
+::: rdm.specification.new_input
+
+### `rdm.specification.persona`
+
+::: rdm.specification.persona
+
+### `rdm.specification.persona_cmd`
+
+::: rdm.specification.persona_cmd
 
 ### `rdm.specification.sdd`
 
@@ -20,95 +97,128 @@ The reconciliation engine that compiles the DHF from the system of record.
 
 ::: rdm.specification.tags
 
-### `rdm.kernel.frontmatter`
+### `rdm.specification.validation`
 
-::: rdm.kernel.frontmatter
+::: rdm.specification.validation
+
+## Test evidence
 
 ### `rdm.evidence.allure`
 
 ::: rdm.evidence.allure
 
-### `rdm.release.verify`
+### `rdm.evidence.mutation`
 
-::: rdm.release.verify
+::: rdm.evidence.mutation
 
-### `rdm.publishing.report`
+### `rdm.evidence.translate`
 
-::: rdm.publishing.report
+::: rdm.evidence.translate
 
-### `rdm.specification.persona`
+### `rdm.pytest_plugin`
 
-::: rdm.specification.persona
+::: rdm.pytest_plugin
 
-### `rdm.risk.register`
-
-::: rdm.risk.register
-
-### `rdm.kernel.ids`
-
-::: rdm.kernel.ids
-
-### `rdm.kernel.git`
-
-::: rdm.kernel.git
-
-## The record as a graph (`rdm graph`)
-
-### `rdm.graph.project`
-
-::: rdm.graph.project
-
-### `rdm.graph.ns`
-
-::: rdm.graph.ns
-
-### `rdm.graph.rules`
-
-::: rdm.graph.rules
-
-### `rdm.graph.checklists`
-
-::: rdm.graph.checklists
-
-### `rdm.graph.validate`
-
-::: rdm.graph.validate
-
-### `rdm.graph.explorer`
-
-::: rdm.graph.explorer
-
-### `rdm.graph.agent`
-
-::: rdm.graph.agent
-
-### `rdm.graph.cli`
-
-::: rdm.graph.cli
-
-## The gates (`rdm story`)
-
-The design gate, release gate, design-input scaffolding and the mutation
-probe, over the record core.
-
-### `rdm.specification.design_gate`
-
-::: rdm.specification.design_gate
+## Release
 
 ### `rdm.release.gate`
 
 ::: rdm.release.gate
 
-### `rdm.evidence.mutation`
+### `rdm.release.verify`
 
-::: rdm.evidence.mutation
+::: rdm.release.verify
 
-### `rdm.specification.new_input`
+## Knowledge graph
 
-::: rdm.specification.new_input
+Needs the `graph` extra.
 
-## Scaffolding
+### `rdm.graph.agent`
 
-### `rdm.specification.adopt`
+::: rdm.graph.agent
 
-::: rdm.specification.adopt
+### `rdm.graph.allure`
+
+::: rdm.graph.allure
+
+### `rdm.graph.c4`
+
+::: rdm.graph.c4
+
+### `rdm.graph.checklists`
+
+::: rdm.graph.checklists
+
+### `rdm.graph.cli`
+
+::: rdm.graph.cli
+
+### `rdm.graph.endpoint`
+
+::: rdm.graph.endpoint
+
+### `rdm.graph.explorer`
+
+::: rdm.graph.explorer
+
+### `rdm.graph.ns`
+
+::: rdm.graph.ns
+
+### `rdm.graph.project`
+
+::: rdm.graph.project
+
+### `rdm.graph.rules`
+
+::: rdm.graph.rules
+
+### `rdm.graph.validate`
+
+::: rdm.graph.validate
+
+## Publishing
+
+### `rdm.publishing.bundle`
+
+::: rdm.publishing.bundle
+
+### `rdm.publishing.collect`
+
+::: rdm.publishing.collect
+
+### `rdm.publishing.dmr`
+
+::: rdm.publishing.dmr
+
+### `rdm.publishing.first_pass_output`
+
+::: rdm.publishing.first_pass_output
+
+### `rdm.publishing.render`
+
+::: rdm.publishing.render
+
+### `rdm.publishing.report`
+
+::: rdm.publishing.report
+
+### `rdm.md_extensions.audit_notes`
+
+::: rdm.md_extensions.audit_notes
+
+### `rdm.md_extensions.base`
+
+::: rdm.md_extensions.base
+
+### `rdm.md_extensions.code`
+
+::: rdm.md_extensions.code
+
+### `rdm.md_extensions.section_numbers`
+
+::: rdm.md_extensions.section_numbers
+
+### `rdm.md_extensions.vocabulary_extension`
+
+::: rdm.md_extensions.vocabulary_extension

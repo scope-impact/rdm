@@ -4,6 +4,7 @@
 
 # RDM
 
+<!-- --8<-- [start:intro] -->
 RDM keeps the design record of regulated software — medical-device software
 under IEC 62304 first — as Markdown and tests in git. It checks the record,
 renders regulatory documents from it, and builds it into one read-only graph
@@ -22,6 +23,7 @@ Every link is a file you write or a fact a tool records; nothing is typed into
 a database. The record changes only through a pull request that someone other
 than its author approves. The graph and every document are rebuilt from it and
 never edited.
+<!-- --8<-- [end:intro] -->
 
 ## The four parts
 
@@ -46,6 +48,7 @@ Two choices shape it:
 
 ## What it does not do
 
+<!-- --8<-- [start:limits] -->
 - It does not make a device compliant. It keeps the evidence straight; a
   regulator judges the evidence.
 - A green release gate means every design input has a passing tagged test, not
@@ -55,6 +58,9 @@ Two choices shape it:
 - The risk gate checks a register's form, not its truth: whether a risk control
   is effective is the reviewer's call. It ships no risk matrix; acceptability
   criteria are the project's to declare.
+- Git shows who *landed* a change, not who *approved* it; the approval is the
+  pull-request review on the forge.
+<!-- --8<-- [end:limits] -->
 
 ## Install
 
@@ -116,7 +122,7 @@ and the CLI and API reference.
 | **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the evidence |
 
 `docs/` explains; `dhf/` decides. The full comparison is in
-[how RDM controls itself](docs/dogfood.md).
+[the DHF's overview](dhf/README.md).
 
 ## Development
 

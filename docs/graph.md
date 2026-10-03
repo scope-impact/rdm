@@ -15,13 +15,12 @@ change something, edit the Markdown and rebuild.
 | Page | For |
 | --- | --- |
 | this page | building, querying and serving the graph, and what is in it |
-| [Gate rules as SHACL](graph-shapes.md) | `rdm graph validate`: the gate rules as shapes, and adding your own |
+| [The gates](gates.md#graph-validation) | `rdm graph validate`: the gate rules as shapes, and adding your own |
 | [Browsing in Graph Explorer](graph-explorer.md) | seeing the record as a picture |
 | [For agents](agents.md) | the read-only MCP server |
 
-```bash
-pip install 'rdm[graph]'     # pyoxigraph, pyshacl, mcp
-```
+It needs the `graph` extra ([get started](get-started.md)). What the graph
+holds and why is its design: [the knowledge graph](dhf/documents/design/graph.md).
 
 ## Build, query, serve
 
@@ -147,37 +146,14 @@ release bundle keeps); the graph holds the reference.
 
 ## Evidence tied to its version and its test
 
-A run is evidence for one build of one test, and the graph now says which:
+Each run links to the commit it tested and to the test function it ran, and
+`rdm graph validate` warns on stale or unclaimed evidence (DI-60, DI-61).
 
-- `rdm.pytest_plugin` labels each tagged run with the commit under test, and
-  `worktree=dirty` when the working tree had uncommitted changes; the run
-  links to the commit (`rdm:testedAt`), and the record node to the commit the
-  graph was built at (`rdm:atCommit`). `rdm graph validate` warns on a run
-  tied to no commit and on a run of another commit than the record's — stale
-  results presented as current.
-- The claim is per test, not per file: a Python test function or method
-  (including those a module-level `pytestmark` tags) is an `rdm:Test`,
-  `rdm:definedIn` its file, and a run links to it through Allure's full name
-  (`rdm:runOf`). A file in another language, read by pattern, is one test.
-  Validation warns on a tagged test that never ran while its file's other
-  tests did, and on a run exercising a design input its test does not claim.
+## Links between documents
 
-## Who landed a change, and links between documents
-
-Git records who *landed* a change on the default branch, not who *reviewed*
-it — only the forge (GitHub) knows reviewers. So for each controlled document the
-graph records the commit that brought its latest change onto the default
-branch: the commit itself when it was committed or squashed straight onto
-it, otherwise the merge. `rdm:landedIn` points at that commit and
-`rdm:landedBy` at its author. A change still on a branch has neither, and
-`rdm graph validate` warns about it.
-
-User needs link to the document that declares them (`rdm:declaredIn`), and
-risks to the risk-policy document (`rdm:evaluatedAgainst`). Design documents
-are not linked to the design review: the record does not say which review
-covered which document, so such an edge would claim what nobody checked.
-
-Three more links come from frontmatter you write once (DI-58):
+For each controlled document the graph records the commit that landed its
+latest change on the default branch, and who landed it; git does not know who
+reviewed it (DI-51). Two links come from frontmatter you write once (DI-58):
 
 ```yaml
 # architecture.md — the bounded contexts, each with its part
@@ -188,18 +164,8 @@ contexts:
 references: [DC-001]
 ```
 
-- each context `rdm:declaredIn` the architecture, with `rdm:part`; once any
-  document declares contexts, `rdm graph validate` warns about a context
-  whose design document it does not declare;
-- `dcterms:references` from a document to each document it names; naming a
-  document the record does not hold is a violation.
-
-The traceability matrix template is not in the graph: it is an output,
-rendered from what the graph already holds.
-
-So no part of the record is an island: in RDM's own graph, the core view
-(`--exclude TestRun --exclude Activity --exclude Agent`) is one connected
-graph.
+Naming a document the record does not hold is a violation; a context whose
+design document the architecture does not declare is a warning.
 
 ## Checklists are data
 
@@ -228,7 +194,7 @@ SELECT ?key ?doc WHERE {
 To add a checklist, pass any of these to `--checklist`:
 
 - a built-in name (`rdm gap --list`);
-- a `.txt` file in [`rdm gap`'s checklist format](checklist-format.md);
+- a `.txt` file in [`rdm gap`'s checklist format](gap-analysis.md#your-own-checklists);
 - an RDF file (`.ttl`, `.nt`, `.jsonld`, …) using the terms above, which is
   loaded as-is, so it can carry more than the text format, such as a
   standard's full title:
@@ -255,36 +221,20 @@ missing.
 
 ## Derived relations: rules, not facts
 
-The graph stores only what the record states. A relation that follows from
-others is not stored a second time — two copies of one fact drift — but it is
-declared in the vocabulary with the rule that derives it, so a consumer can
-apply the rule instead of finding nothing:
-
-```turtle
-rdm:ServesRule a rdm:Rule ;
-    rdfs:comment "A bounded context serves the user needs that the design inputs it owns or realises trace to." ;
-    rdm:derives rdm:serves ;
-    rdm:construct """CONSTRUCT { ?context rdm:serves ?need } WHERE {
-        { ?input rdm:ownedBy ?context } UNION { ?context rdm:realises ?input }
-        ?input rdm:tracesTo ?need }""" .
-```
+A relation that follows from others, such as the user needs a bounded context
+serves, is not stored a second time; the vocabulary declares it with the
+SPARQL rule that derives it (DI-62). `--infer` adds what the rules derive, in
+its own named graph, so a stated fact and a derived one are never confused:
 
 ```bash
-rdm graph build --infer --store .rdm/graph     # add the derived facts
+rdm graph build --infer --store .rdm/graph
 rdm graph query --infer 'SELECT ?c ?n WHERE { ?c rdm:serves ?n }'
 ```
 
-With `--infer` the results go to their own named graph, `…graph/inferred`, so
-a fact the record states and a fact a rule derived are never confused: in a
-regulated record a derived link is not evidence. The agent server always
-infers, and its `schema` lists every rule. Without `--infer`, nothing is
-added and the rule is still there to read.
-
-Why this way: pruning what can be derived is only safe for a consumer that
-knows the rules. In Fatemi, Ravanbakhsh and Poole's experiment
-([arXiv:1812.03235](https://arxiv.org/abs/1812.03235)), a model given the
-rules over a graph stripped of rule-implied triples beat both a plain model
-and rule inference alone — and the plain model, not given the rules, did worst.
+Why rules rather than stored copies: in Fatemi, Ravanbakhsh and Poole's
+experiment ([arXiv:1812.03235](https://arxiv.org/abs/1812.03235)), a model
+given the rules over a graph stripped of rule-implied triples beat both a
+plain model and rule inference alone.
 
 ## Open world
 

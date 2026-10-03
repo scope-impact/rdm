@@ -10,9 +10,9 @@ weight of design controls (review, approval, retention, validation):
 
 | Store | What it is | Source of truth for |
 |-------|------------|---------------------|
-| **SDD** (`dhf/documents/…`, `user_needs`) | the design and the user needs | requirements / design |
+| **design documents and V&V plan** (`dhf/documents/…`) | the design inputs and the user needs | requirements / design |
 | **Allure results** | executed verification evidence | acceptance-criteria status (pass/fail) |
-| **git history** | reviewed/merged PRs (`reviews_required`) | approval, change history, baselines |
+| **git history** | reviewed, merged pull requests | approval, change history, baselines |
 
 The DHF (rendered Markdown → PDF/DOCX), including the generated traceability
 matrix, is derived **only** from these.
@@ -32,7 +32,7 @@ Rules:
 - The **only** path from planning to the record is via **git** (commits/PRs).
   RDM never ingests a PM tool directly.
 - A planning artifact is **never** screenshotted, quoted, or linked as
-  verification/approval evidence. If you need evidence, it comes from the SDD,
+  verification/approval evidence. If you need evidence, it comes from the design documents,
   the Allure results, or git.
 
 ## Why this matters

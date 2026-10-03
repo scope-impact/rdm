@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- **The docs say each thing once.** Where the design history file already
+  says it, a page links to it instead: 31 pages are now 21. *Get started*
+  replaces the installation page and both quickstarts; the data model is in
+  *How RDM works*; the SHACL rules are in *The gates*; the checklist format
+  and the useful FAQ answers are in *Gap analysis*; *Changing the record* is
+  now the runbook `rdm adopt` installs. The history, FAQ, document-control
+  and dogfood pages are gone (their content is in the CHANGELOG, the DHF and
+  its overview); ADR 0001 moved into the DHF; the research notes stay in
+  `docs/research/`, off the site. The API reference covers every module, by
+  bounded context. Fixed on the way: an install line that installed PyPI's
+  other `rdm`, missing CLI flags and CI inputs, and stale paths.
+
 ## 2.0.0-alpha
 
 A major version: the code is one package per bounded context, so module paths
@@ -455,3 +469,14 @@ development (`dhf/`, `.github/workflows/design-controls.yml`).
 - A lightweight Docker image (Alpine, Pandoc 3.6, Typst 0.12).
 - The GitHub Action for PDFs (`scope-impact/rdm@v1`).
 - Fixed cross-references in the `software_plan.md` template.
+
+## 0.11.0
+
+From the project RDM was forked from.
+
+- PDFs through Pandoc in place of the `rdm tex` command.
+- Folders inside the documents folder.
+- Word documents.
+- SVGs no longer in PDFs (the conversion was unreliable).
+- The first 510(k) documents.
+- Release files ignored by default.

@@ -1,56 +1,56 @@
 # Gap analysis — audit documents against a standard
 
-`rdm gap` checks that your documents contain the references a chosen
-standard's checklist requires. A reference is a `[[KEY]]` marker in the
-document; the checklist maps keys to the standard's clauses.
-
-Reference semantics (exact and auditable):
-
-- keys count only **inside** `[[ … ]]` blocks — a bare prose mention
-  ("we do not address X-1 here") is never a reference;
-- a block may be prose naming several keys
-  (`[[This section fulfills X-1 and X-2]]`);
-- matching is exact with one hierarchy rule: a dotted **descendant** covers
-  its parent (`[[62304:5.6.2.a]]` addresses item `62304:5.6.2`), but a longer
-  sibling never covers a shorter key (`[[X-12]]` does not address `X-1`).
+`rdm gap` checks that your documents reference every clause a standard's
+checklist lists. A reference is a `[[KEY]]` block in a document, such as
+`[[62304:5.1.1]]` or `[[This section fulfills X-1 and X-2]]`; the checklist
+maps keys to the standard's clauses. Only text inside `[[ … ]]` counts, and a
+dotted descendant covers its parent. The exact reading and matching rules are
+the [compliance design](dhf/documents/design/compliance.md#design-outputs).
 
 ```bash
-rdm gap --list                                     # shipped checklists
-rdm gap 62304_2015_class_b documents/*.md          # exit 0 = fully covered; 3 = gaps (listed)
-rdm gap --coverage 62304_2015_class_b documents/*.md   # per-checklist coverage table
-rdm gap --coverage -v 62304_2015_class_b documents/*.md  # …and name the missing items
+rdm gap --list                                          # the built-in checklists
+rdm gap 62304_2015_class_b documents/*.md               # exit 0 = covered; 3 = gaps, listed
+rdm gap --coverage 62304_2015_class_b FDA-SW_2021_basic documents/*.md   # one row per checklist
+rdm gap --coverage -v 62304_2015_class_b documents/*.md # …and name the missing clauses
 ```
 
-## Shipped checklists
+The built-ins cover IEC 62304, ISO 14971, the FDA software, cybersecurity and
+human-factors guidances, and `part11_document_control`: the 21 CFR Part 11
+controls for document control in git. Audit your own document-control
+procedure against it:
 
-IEC 62304 (2006/AMD1:2015 × class A/B/C), ISO 14971 (2007/2019), FDA software
-guidances (2005/2021 basic + enhanced), FDA cybersecurity (2018), FDA human
-factors (2011), and `part11_document_control` — the 21 CFR Part 11
-electronic-records/signatures controls for a git-based
-[document control system](document-control.md).
+```bash
+rdm gap part11_document_control documents/document_control_procedure.md
+```
 
-## Custom checklists
+RDM holds [its own](dhf/documents/document_control.md) to the same checklist,
+and the [worked example](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
+is a complete project built on it.
 
-A checklist is a plain text file: one `KEY description` per line, `#` comments,
-and `include <other-checklist>` directives so lists compose (a built-in name or
-a path works in both `include` lines and on the command line):
+## Your own checklists
+
+A checklist is a plain text file. Each line is a clause key followed by its
+description; `#` starts a comment; `include <name>` pulls in a built-in
+checklist by name or another file, relative to the including one:
 
 ```
 include 62304_2015_class_b
 QMS-1 our additional internal requirement
 ```
 
-Full format details: [Audit checklist format](checklist-format.md).
+There is no way to exclude a clause. Either reference it from a document that
+says where it is met or why it does not apply, or start from a copy: the gap
+report prints the missing clauses in checklist format, so
+`rdm gap 62304_2015_class_b > my_checklist.txt` gives you a checklist to edit.
 
 ## In CI
 
-Run gap analysis as a required check so a document set can't merge with a
-dangling clause:
+Run gap analysis as a required check, so a document set cannot merge with a
+clause no document references:
 
 ```yaml
 - run: rdm gap part11_document_control documents/document_control_procedure.md
 ```
 
-The [worked example](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
-verifies its DI-5 with exactly this, including a falsifiability check that
-proves the audit actually detects gaps.
+The worked example verifies its DI-5 with exactly this, including a check
+that the audit does detect a gap.

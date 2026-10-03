@@ -18,15 +18,15 @@
 
 | Command | What it does |
 |---|---|
-| `new-input --context C --text T --traces-to UN[,UN…]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test, checklist; `--list` shows contexts / taken ids / user needs |
-| `design-gate` | design docs + review present, complete, approved (committed); every user-need and design-input id declared once; the architecture's views drawn from the current workspace; warnings for DI↔tag mismatches |
+| `new-input --context C --text T --traces-to UN[,UN…] [--test-file F]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test (in `F` if given), checklist; `--list` shows contexts / taken ids / user needs |
+| `design-gate [--allure-results DIR]` | design docs + review present, complete, approved (committed); every user-need and design-input id declared once; the architecture's views drawn from the current workspace; warnings for DI↔tag mismatches; with results, also checks the user needs against them |
 | `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix |
 | `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed + every risk evaluated, its risk controls verified and its residual acceptable ([risk register](risk.md)) |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
 | `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, Allure results, verification report, manifest |
 | `evidence-report --allure-results DIR -o FILE` | render the verification report (PDF): every run behind each design input, with its steps, labels, links and attachments |
 | `mutation-probe --file F --find A --replace B --test T` | reviewer tool: break one line on purpose, run one test, report KILLED (caught) / SURVIVED (missed), always restore; never gates |
-| `trace UN-nnn \| DI-n` | the traceability slice for one need or input (forward + backward) |
+| `trace UN-nnn \| DI-n [--allure-results DIR]` | the traceability slice for one need or input (forward + backward); with results, each input's verification status |
 | `persona --vv-plan F --persona-results DIR` | reconcile formative AI-persona usability runs against the user-need registry (never gates) |
 
 Common flag: `--dhf DIR` (default `dhf/`).

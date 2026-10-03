@@ -60,10 +60,10 @@ rendered PDF all show the same picture:
 ![Components: graph](../../c4/views/C3_graph.svg)
 ```
 
-The design gate fails when a drawn file is not the current workspace's, a view
-has no image, or an image has no view. Drawing needs Java, Structurizr's CLI
-(`RDM_STRUCTURIZR`, or `structurizr.sh` on the PATH) and Graphviz; checking
-needs only the stamps.
+The design gate fails when a drawn view is stale or missing
+([the rules](dhf/documents/design/architecture.md)). Drawing needs Java,
+Structurizr's CLI (`RDM_STRUCTURIZR`, or `structurizr.sh` on the PATH) and
+Graphviz; checking needs only the stamps.
 
 ## Template helpers
 
@@ -93,8 +93,8 @@ Convert machine test reports into a YAML data file a document can render:
 rdm translate auto results.xml data/test_results.yml   # formats: auto, gtest, qttest, xunit
 ```
 
-(For design-controls verification evidence, prefer Allure results and
-[`rdm story verify`](design-controls.md) — that path feeds the gates and the
+(For verification evidence, prefer Allure results and
+[`rdm story verify`](design-controls.md): that path feeds the gates and the
 traceability matrix.)
 
 ## Frontmatter conventions for controlled documents
@@ -110,4 +110,27 @@ title: "…"
 ```
 
 Design documents additionally carry `kind: design`, `context` and
-`design_inputs` (each with the needs it `traces_to`) — see [Design controls](design-controls.md).
+`design_inputs` (each with the needs it `traces_to`); see
+[Design inputs and tests](design-controls.md).
+
+## PDF and Word
+
+A project from `rdm init` builds its documents with `make`:
+`make` renders `release/*.md`, `make pdfs` the PDFs (Pandoc to Typst, styled
+by `template.typ`) and `make docs` Word files. In CI, the
+[PDF action](reusable-ci.md) runs `make pdfs` in the RDM image.
+
+Pandoc's table model has no column or row spans and no vertical rules; raw
+Typst in the Markdown is the way out when a table needs them.
+
+For Word, give Pandoc your company template as a
+[reference document](https://pandoc.org/MANUAL.html#option--reference-doc)
+(`reference-doc:` in `pandoc_docx.yml`): the output takes its styles, header
+and footer. Pandoc writes each frontmatter key as a Word document property,
+so the header can show the document's id, revision and title: in the
+reference document choose Insert → Field, pick `DocProperty`, and then the
+property (Pandoc's are lower case, at the bottom of the list).
+
+![Insert a field](./images/insert-form.png)
+![Choose DocProperty](./images/select-docproperty-field.png)
+![Choose the property](./images/select-property.png)
