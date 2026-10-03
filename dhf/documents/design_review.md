@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 56
+revision: 57
 title: Design Review — RDM
 ---
 
@@ -1653,6 +1653,48 @@ test and a usability test of the installed package. No design input changed.
   configuration is now no configuration (no extensions); the other two are a
   message with exit 2. Any command whose output is piped into a reader that
   stops early (`| head`) ends quietly instead of with a traceback.
+
+# Design Review 56 — Starting a project, adopting one and adding an input work as the docs say
+
+**Scope reviewed:** `rdm init` (DI-15), `rdm story new-input` (DI-22), `rdm
+adopt` (DI-24) and the design gate's scope (DI-2), against an adversarial
+behaviour test and two usability tests (an author and an adopter) of the
+installed package. DI-24's text changed: it names what adopt now lays down.
+
+**Disposition:** Approved.
+
+- The design gate held only the design documents and the review. An
+  implementation commit passed while the user needs had uncommitted edits,
+  and the release gate passed with uncommitted risk documents. The documents
+  that declare user needs, and the risk documents (the register and the
+  policy), are record the design rests on: the gate now holds them to the
+  same rule, complete (no placeholder) and committed.
+- `rdm adopt` laid down no `.gitignore`, so the acceptance run's own
+  `__pycache__` marked every run dirty, and no render configuration, so the
+  documented matrix render crashed. It now lays down a `.gitignore` of what
+  RDM generates (Allure results, verification data, the graph store,
+  bytecode) and `dhf/config.yml`, each only when absent; when a `.gitignore`
+  exists, the next steps name the lines to add. It wrote through a dangling
+  symbolic link to a file outside the repository; a link, dangling or not,
+  exists, so it is skipped. Its design template linked a C4 view the project
+  does not have; the line is gone, and C4 is named as optional.
+- `rdm init` into an existing directory ended in a traceback; it is an error
+  naming the directory (exit 2). On success it printed nothing; it now says
+  what it laid down and the next steps.
+- `rdm story new-input` allocated an id that a test was still tagged with, so
+  a retired test verified the new input. An id any test is tagged with is
+  taken. Its stub test file clashed with an existing test module of the same
+  name elsewhere in the suite; it is then named `test_<context>_acceptance.py`.
+  It rewrote CRLF line endings and dropped the comment on an empty
+  `design_inputs: []`; both are kept.
+- The project scaffold's Dockerfile needed a wheel in `dist/` that a new
+  project does not have; it now installs the RDM release from git when there
+  is none. Its Makefile did not rebuild Word documents when the reference
+  document changed, and one template fetched an image over the network that
+  the scaffold already holds; both are fixed.
+- Gap analysis names a gap as the glossary does (*N gaps*, not *missing
+  items*), and verbose coverage prints no empty heading when nothing is
+  missing.
 
 # Approval
 
