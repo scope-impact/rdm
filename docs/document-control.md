@@ -3,7 +3,7 @@
 RDM does not just *recommend* git as a document control system — it makes the
 claim for its own record and holds itself to it on every push. The controlled
 statement is
-[`dhf/documents/document_control.md`](https://github.com/scope-impact/rdm/blob/main/dhf/documents/document_control.md)
+[`dhf/documents/document_control.md`](dhf/documents/document_control.md)
 (DC-001): RDM's Design History File, design documents, and the source that
 realises them are controlled **in git, with GitHub as the service provider**.
 

@@ -67,6 +67,7 @@ exclude_docs: |
 hooks:
   - docs/_hooks/evidence.py
   - docs/_hooks/traceability_map.py
+  - docs/_hooks/dhf.py
 
 nav:
   - Home: index.md
@@ -101,6 +102,24 @@ nav:
       - How RDM controls itself: dogfood.md
       - Document control (Part 11): document-control.md
       - Traceability matrix (generated): traceability-matrix.md
+      - Design history file:
+          - Overview: dhf/README.md
+          - Changing RDM: dhf/AGENT_WORKFLOW.md
+          - V&V plan and user needs: dhf/documents/verification_and_validation_plan.md
+          - System architecture: dhf/documents/architecture.md
+          - Software design:
+              - Architecture: dhf/documents/design/architecture.md
+              - Compliance: dhf/documents/design/compliance.md
+              - Knowledge graph: dhf/documents/design/graph.md
+              - Publishing: dhf/documents/design/publishing.md
+              - Release: dhf/documents/design/release.md
+              - Risk: dhf/documents/design/risk.md
+              - Design specification: dhf/documents/design/specification.md
+              - Test evidence: dhf/documents/design/test_evidence.md
+          - Risk policy: dhf/documents/risk/policy.md
+          - Risk register: dhf/documents/risk/tool_risks.md
+          - Design review: dhf/documents/design_review.md
+          - Document control: dhf/documents/document_control.md
   - Reference:
       - CLI: cli.md
       - API: reference.md

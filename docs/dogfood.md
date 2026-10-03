@@ -1,7 +1,7 @@
 # How RDM controls itself
 
 RDM is developed under RDM's own design controls. RDM is the product; its
-design history file is [`dhf/`](https://github.com/scope-impact/rdm/tree/main/dhf)
+design history file is [`dhf/`](dhf/README.md)
 in this repository, and every change to RDM goes through the same loop RDM
 asks of a device team: record first, then a tagged test, then the gates, then
 a reviewed pull request.
@@ -78,7 +78,7 @@ rdm story trace DI-40                    # one design input's slice
    before the code.
 
 The full procedure, with the decision of whether a change needs a design
-input, is [`dhf/AGENT_WORKFLOW.md`](https://github.com/scope-impact/rdm/blob/main/dhf/AGENT_WORKFLOW.md)
+input, is [`dhf/AGENT_WORKFLOW.md`](dhf/AGENT_WORKFLOW.md)
 ([summary](agent-workflow.md)).
 
 ## The evidence on this site

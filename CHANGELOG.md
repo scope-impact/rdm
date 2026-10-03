@@ -9,9 +9,14 @@ changed (below). The package version is `2.0.0a0`; the release is tagged
 ### Added — docs
 - **Traceability map** (Graph → Traceability map): an interactive map of the
   record, built from the knowledge graph on every docs build (a build hook,
-  `docs/_hooks/traceability_map.py`) — C3 components in their bounded
+  `docs/_hooks/traceability_map.py`, writes its data; the page draws it) — C3 components in their bounded
   contexts, and every user need and risk traced through design inputs and
   tests to the components those tests exercise.
+- **The design history file in the docs** (RDM on RDM → Design history
+  file): every document of `dhf/` is published as it is in git, by a build
+  hook (`docs/_hooks/dhf.py`), with its frontmatter — design inputs, user
+  needs, risks, the risk policy — shown as sections, since the record's
+  substance lives there.
 - **One theme for the docs**: `docs/stylesheets/rdm-theme.css` holds the
   colours and fonts as CSS variables; the docs and the map both use them.
 
