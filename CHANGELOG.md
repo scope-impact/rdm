@@ -18,8 +18,12 @@ changed (below). The package version is `2.0.0a0`; the release is tagged
   needs, risks, the risk policy — shown as sections, since the record's
   substance lives there.
 - **PDFs of the design history file**: each published DHF page links a PDF of
-  the document, built at docs build time with the template `rdm init` ships
-  (`scripts/install-pdf-tools.sh` installs Pandoc, Typst and the fonts).
+  the document, rendered with the template `rdm init` ships, in the RDM image.
+- **One PDF build in CI**: the Docs workflow's `pdfs` job builds the RDM
+  image once, through a scaffolded project's `docker compose`, and renders
+  both that project's PDFs and RDM's own design history file's; the docs
+  build takes the latter as an artifact. It replaces the separate *Test PDF
+  Generation* workflow.
 - **One theme for documents too**: the `rdm init` Typst template and the
   verification report use the docs site's palette and fonts — Nunito Sans
   text, JetBrains Mono headings (Maroon) and code, Nexus links, Ivory pages,

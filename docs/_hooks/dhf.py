@@ -11,9 +11,15 @@ section whose name a heading of the document already has goes under that
 heading instead.
 
 Each page also links a PDF of the document, built with the template ``rdm
-init`` ships (``rdm/specification/init_files``: Pandoc to Typst) when
-``pandoc`` and ``typst`` are on PATH; without them the pages carry no link.
-In the PDF the title moves to the cover and the sections up one level.
+init`` ships (``rdm/specification/init_files``: Pandoc to Typst). In the PDF
+the title moves to the cover and the sections up one level. The PDFs come
+from the directory ``RDM_DHF_PDFS`` names when it is set -- CI renders them
+once, in the RDM image, and hands them to the docs build as an artifact:
+
+    python docs/_hooks/dhf.py OUT     # every document's PDF, OUT/<path>.pdf
+
+-- and are otherwise built here when ``pandoc`` and ``typst`` are on PATH;
+without either the pages carry no link.
 
 The traceability matrix template is left out: the site carries the generated
 matrix (``docs/_hooks/evidence.py``). Nothing here changes the record.
@@ -32,7 +38,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import yaml
-from mkdocs.structure.files import File
 
 from rdm.kernel.frontmatter import parse_frontmatter
 from rdm.md_extensions.code import fenced
@@ -201,10 +206,30 @@ def build_pdfs(documents: dict[str, Path], out: Path) -> dict[str, Path]:
         return {rel: pdf for rel, pdf in pool.map(lambda item: one(*item), documents.items()) if pdf}
 
 
-def on_files(files, config):
+def published() -> dict[str, Path]:
+    """The documents the site publishes, by their path under the DHF."""
     documents = {md.relative_to(DHF).as_posix(): md for md in sorted(DHF.rglob("*.md"))}
-    documents = {rel: md for rel, md in documents.items() if rel not in SKIP and not rel.startswith("allure-results/")}
-    pdfs = build_pdfs(documents, Path(tempfile.mkdtemp(prefix="rdm-dhf-pdf-")))
+    return {rel: md for rel, md in documents.items() if rel not in SKIP and not rel.startswith("allure-results/")}
+
+
+def prebuilt(documents: dict[str, Path], directory: Path) -> dict[str, Path]:
+    """The PDFs CI rendered into ``directory``; a document without one is a warning."""
+    pdfs = {rel: directory / Path(rel).with_suffix(".pdf") for rel in documents}
+    for rel in [rel for rel, pdf in pdfs.items() if not pdf.is_file()]:
+        log.warning("dhf: no PDF of %s in %s", rel, directory)
+        del pdfs[rel]
+    return pdfs
+
+
+def on_files(files, config):
+    from mkdocs.structure.files import File
+
+    documents = published()
+    given = os.environ.get("RDM_DHF_PDFS")
+    if given:
+        pdfs = prebuilt(documents, Path(given))
+    else:
+        pdfs = build_pdfs(documents, Path(tempfile.mkdtemp(prefix="rdm-dhf-")))
     for rel, md in documents.items():
         pdf, name = pdfs.get(rel), Path(rel).with_suffix(".pdf")
         files.append(File.generated(config, f"dhf/{rel}", content=page(md.read_text(encoding="utf-8"),
@@ -215,3 +240,18 @@ def on_files(files, config):
         for asset in sorted(DHF.glob(pattern)):
             files.append(File.generated(config, f"dhf/{asset.relative_to(DHF).as_posix()}", abs_src_path=str(asset)))
     return files
+
+
+if __name__ == "__main__":  # render every document's PDF into a directory, as CI does in the RDM image
+    import sys
+
+    logging.basicConfig(format="%(levelname)s %(message)s")
+    out = Path(sys.argv[1]).resolve()
+    documents = published()
+    built = build_pdfs(documents, Path(tempfile.mkdtemp(prefix="rdm-dhf-")))
+    for rel, pdf in built.items():
+        target = out / Path(rel).with_suffix(".pdf")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(pdf, target)
+    print(f"{len(built)} of {len(documents)} PDF(s) in {out}")
+    sys.exit(0 if len(built) == len(documents) else 1)

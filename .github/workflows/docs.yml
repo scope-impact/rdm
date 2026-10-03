@@ -1,5 +1,10 @@
 name: Docs
 
+# One RDM image, built the way an adopter builds it (rdm init, then docker
+# compose), renders every PDF: the scaffolded project's, which checks the image
+# and the template, and RDM's own design history file's, which the docs build
+# takes as an artifact rather than rendering them again.
+
 on:
   push:
     branches: [main]
@@ -7,20 +12,20 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - "dhf/**"
-      - "scripts/install-pdf-tools.sh"
       - "rdm/**"
       - "pyproject.toml"
       - "uv.lock"
+      - "action.yml"
       - ".github/workflows/docs.yml"
   pull_request:
     paths:
       - "docs/**"
       - "mkdocs.yml"
       - "dhf/**"
-      - "scripts/install-pdf-tools.sh"
       - "rdm/**"
       - "pyproject.toml"
       - "uv.lock"
+      - "action.yml"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -32,8 +37,59 @@ permissions:
   contents: read
 
 jobs:
+  pdfs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0   # each PDF's revision and date are its document's last commit
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+
+      - name: Scaffold a project, with this RDM's wheel for its image
+        run: |
+          uv tool install .
+          rdm init -o test-dhf
+          uv build --wheel --out-dir test-dhf/dist
+
+      - name: Build the RDM image (the scaffold's docker compose)
+        working-directory: test-dhf
+        run: docker compose -p rdm-ci build
+
+      - name: The scaffolded project's PDFs
+        working-directory: test-dhf
+        run: |
+          docker compose -p rdm-ci run --rm rdm make pdfs
+          count=$(find release -type f -name "*.pdf" | wc -l)
+          echo "$count PDF(s)"; find release -type f -name "*.pdf"
+          test "$count" -gt 0
+
+      - name: RDM's design history file as PDFs, in the same image
+        run: |
+          docker run --rm -v "$PWD:/project" -w /project --entrypoint python rdm-ci-rdm \
+            docs/_hooks/dhf.py dhf-pdfs
+
+      - name: Upload the scaffolded project's PDFs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-pdfs
+          path: test-dhf/release/*.pdf
+          retention-days: 7
+
+      - name: Upload the design history file's PDFs (the docs build links them)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dhf-pdfs
+          path: dhf-pdfs
+          if-no-files-found: error
+          retention-days: 7
+
   # Always build (incl. PRs): a strict build is the link/nav check.
   build:
+    needs: pdfs
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -46,11 +102,14 @@ jobs:
         run: uv python install 3.12
       - name: Install all extras (the evidence hook runs the acceptance suite)
         run: uv sync --all-extras
-      - name: Install Pandoc, Typst and the document fonts (the DHF pages' PDFs)
-        run: |
-          scripts/install-pdf-tools.sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: The design history file's PDFs, from the pdfs job
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dhf-pdfs
+          path: dhf-pdfs
       - name: Build the docs site (strict; generates the traceability-matrix evidence page)
+        env:
+          RDM_DHF_PDFS: dhf-pdfs
         run: uv run --extra docs mkdocs build --strict
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
