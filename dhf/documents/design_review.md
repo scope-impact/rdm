@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 69
+revision: 70
 title: Design Review — RDM
 ---
 
@@ -2199,6 +2199,10 @@ left it: evidence that the software units were exercised by their unit tests
 - No threshold is set and nothing blocks release: a minimum, where a
   project wants one (for software of class B or C), is a later input.
 - RDM's own CI measures its unit tests' coverage and passes it to verify.
+- **DI-30** amended: the evidence bundle rebuilt the verification data
+  without the coverage report, so the retained matrix had no coverage
+  section. The bundle takes the same report, carries its coverage as verify
+  does, and keeps the report with the evidence.
 - A new component, the unit coverage reader (`rdm/evidence/unit_coverage.py`),
   in the test-evidence context; the views are redrawn.
 
