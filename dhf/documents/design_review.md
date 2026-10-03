@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 65
+revision: 66
 title: Design Review — RDM
 ---
 
@@ -2060,7 +2060,7 @@ DI-58, DI-59, DI-60, DI-62, DI-67, DI-68, DI-69.
 exercises (DI-56, DI-67, DI-68, DI-69), and how to learn it for a project in
 any language.
 
-**Disposition:** Approved: proposals 1 to 4; proposal 5 deferred to a later review.
+**Disposition:** Approved: proposals 1 to 5.
 
 ## Why
 
@@ -2109,9 +2109,12 @@ reasons over it, and reads code only where a project offers it.
 - **Only a named component counts for DI-68.** Reaching over-approximates —
   a component may use another only in paths the test never runs — so a
   reached component never raises or clears a warning.
-- **Coverage (proposal 5) is deferred.** Per-test coverage is simple with
-  coverage.py and harder elsewhere, and proposals 1 to 4 already free the
-  record from reading code. No DI-74 is declared.
+- **Coverage (proposal 5) is in this change**, first deferred, then taken in
+  on review. A run's coverage reaches RDM as a file the run attaches to its
+  Allure result, in LCOV or Cobertura XML: any language's Allure adapter can
+  attach a file, so coverage is per test without RDM knowing how it was
+  measured, and RDM still parses no source. Coverage, like reaching, never
+  raises or clears a DI-68 warning: only named components do.
 
 ## Approved changes
 
@@ -2124,6 +2127,9 @@ reasons over it, and reads code only where a project offers it.
   component whose code holds none is marked as not read.
 - **DI-68** amended: the context warning is on named components; the
   dependency warning is on dependencies read from code.
+- **DI-74** (test evidence, new; realised by the graph): a run's coverage
+  attachment links it to the components it ran; an attachment that cannot be
+  read is reported. DI-69 also lists these components, apart.
 
 # Approval
 

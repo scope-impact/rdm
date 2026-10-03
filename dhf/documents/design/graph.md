@@ -2,7 +2,7 @@
 id: SDS-GRAPH-001
 kind: design
 context: graph
-realises: [DI-68]
+realises: [DI-74, DI-68]
 design_inputs:
   - id: DI-35
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each controlled document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
@@ -68,7 +68,7 @@ design_inputs:
     text: "RDM shall derive, by a rule its vocabulary declares, that a test run reaches each component the C4 model's declared relationships lead to, at any depth, from a component the run names, and that is not itself named; the record never states it, and a reached component is never taken for a named one."
     traces_to: [UN-017, UN-014]
   - id: DI-69
-    text: "RDM's agent server shall show, in the trace of a design input, the components its runs name and, apart, the components they reach, each with its container and owning bounded context."
+    text: "RDM's agent server shall show, in the trace of a design input, the components its runs name and, apart, the components they reach and the components their coverage shows they ran, each with its container and owning bounded context."
     traces_to: [UN-017, UN-015]
 ---
 
