@@ -11,6 +11,8 @@ Skips cleanly if allure-pytest is not installed.
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -74,6 +76,44 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
         qualified_only.write_text("Covers [[FDA-SW:sdmp]] only.\n")
         assert audit_for_gaps(str(prefix_colon_cl), [str(qualified_only)]) == 3
 
+    with verification_step("nothing checked is an error, never success: a checklist with no clauses, a checklist, "
+                           "include or document that cannot be read, a bare include"):
+        empty = tmp_path / "empty.txt"
+        empty.write_text("# only a header\n")
+        assert audit_for_gaps(str(empty), [str(covered)]) == 2
+        assert audit_for_gaps("14971_2019", [str(covered)]) == 2
+        assert audit_for_gaps(str(tmp_path / "nope.txt"), [str(covered)]) == 2
+        bare = tmp_path / "bare.txt"
+        bare.write_text("include\nX-1 one\n")
+        assert audit_for_gaps(str(bare), [str(covered)]) == 2
+        lost = tmp_path / "lost.txt"
+        lost.write_text("include gone.txt\nX-1 one\n")
+        assert audit_for_gaps(str(lost), [str(covered)]) == 2
+        assert audit_for_gaps(str(checklist), [str(tmp_path / "missing.md")]) == 2
+        assert audit_for_gaps(str(checklist), [str(tmp_path)]) == 2
+        spaced = tmp_path / "spaced.txt"
+        spaced.write_text("include   cl.txt  \n")
+        assert audit_for_gaps(str(spaced), [str(covered)]) == 0
+
+    with verification_step("a byte-order mark is not part of the first key"):
+        bom = tmp_path / "bom.txt"
+        bom.write_text("\ufeffX-1 first\n", encoding="utf-8")
+        assert audit_for_gaps(str(bom), [str(covered)]) == 0
+
+    with verification_step("a document that still holds a placeholder is named in a warning"):
+        draft = tmp_path / "draft.md"
+        draft.write_text("Covers [[X-1]] and [[X-2]].\n\nTODO: write this section\nENDTODO\n")
+        out = subprocess.run([sys.executable, "-m", "rdm.main", "gap", str(checklist), str(draft)],
+                             capture_output=True, text=True)
+        assert out.returncode == 0 and "draft.md" in out.stdout and "placeholder" in out.stdout, out.stdout
+
+    with verification_step("a report piped into a reader that stops early ends quietly, without a traceback"):
+        many = tmp_path / "many.txt"
+        many.write_text("".join(f"K-{i} clause {i}\n" for i in range(20000)))
+        piped = subprocess.run(f'"{sys.executable}" -m rdm.main gap "{many}" "{missing}" | head -1', shell=True,
+                               capture_output=True, text=True)
+        assert "Traceback" not in piped.stderr and "BrokenPipe" not in piped.stderr, piped.stderr
+
 
 @allure.story("DI-11")
 @allure.label("output", "rdm/compliance/checklists/")
@@ -99,6 +139,15 @@ def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
         full.write_text("covers [[M-1]] and [[B-1]]\n")
         assert audit_for_gaps(str(main), [str(partial)]) == 3  # included key missing
         assert audit_for_gaps(str(main), [str(full)]) == 0     # included key covered
+    with verification_step("a checklist reached by two spellings of its path is read once"):
+        (tmp_path / "sub").mkdir()
+        (tmp_path / "a.txt").write_text("include sub/b.txt\nA-1 a\n")
+        (tmp_path / "sub" / "b.txt").write_text("include ../a.txt\ninclude ./../a.txt\nB-2 b\n")
+        only_a = tmp_path / "only_a.md"
+        only_a.write_text("covers [[A-1]]\n")
+        capsys.readouterr()
+        assert coverage_report([str(tmp_path / "a.txt")], [str(only_a)]) == 3
+        assert "| A.TXT | 2 | 1 | 1 | 50% |" in capsys.readouterr().out
 
 
 @allure.story("DI-12")
@@ -110,8 +159,15 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
     source = tmp_path / "process.md"
     source.write_text("Document covers [[ISO-1]] and [[ISO-3]].")
 
-    assert coverage_report([str(checklist)], [str(source)]) == 0
+    assert coverage_report([str(checklist)], [str(source)]) == 3  # a clause is missing, as the audit says
     assert "| ISO | 3 | 1 | 2 | 66% |" in capsys.readouterr().out
+    with verification_step("coverage exits as the audit does: 0 when complete, 2 when nothing could be checked"):
+        complete = tmp_path / "complete.md"
+        complete.write_text("[[ISO-1]] [[ISO-2]] [[ISO-3]]\n")
+        assert coverage_report([str(checklist)], [str(complete)]) == 0
+        assert coverage_report(["14971_2019"], [str(complete)]) == 2
+        assert coverage_report([str(tmp_path / "nope.txt")], [str(complete)]) == 2
+        capsys.readouterr()
 
     with verification_step("every built-in checklist's keys are unique"):
         from rdm.compliance.gaps import builtin_checklists, parse_checklist

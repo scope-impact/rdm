@@ -28,7 +28,8 @@ def dmr_entries(documents_dir: Path, relative_to: Path | None = None) -> list[di
     entries: list[dict] = []
     for md in sorted(documents_dir.glob("*.md")):
         frontmatter = frontmatter_of(md)
-        doc_id = str(frontmatter.get("id", "")).strip()
+        raw = frontmatter.get("id")
+        doc_id = "" if raw is None else str(raw).strip()  # a blank `id:` is no id, never "None"
         if not doc_id:
             print(f"Warning: {md.name} has no frontmatter id -- not a controlled document, skipped",
                   file=sys.stderr)

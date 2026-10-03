@@ -3,6 +3,15 @@ import re
 from pathlib import Path
 
 
+class GapError(ValueError):
+    """Nothing could be checked: a checklist with no clauses, or a checklist,
+    include or document that cannot be read. An error, never success (exit 2)."""
+
+
+# A placeholder marker, as the design gate reads one: a whole word.
+_PLACEHOLDER = re.compile(r"\b(ENDTODO|TODO)\b")
+
+
 # --- The public API: what `rdm gap` reads and matches, for other callers (the
 # graph's checklists and references, DI-37 and DI-48) to use instead of the
 # private helpers below, so the two cannot drift apart.
@@ -40,6 +49,8 @@ def missing_references(checklist_file, source_files):
 def _missing(checklist_file, contents, builtins):
     full_path = os.path.realpath(_full_file_path(checklist_file, builtins))
     checklist = _read_checklists(_checklist_generator([full_path]), {full_path}, builtins)
+    if not checklist:
+        raise GapError(f"checklist {checklist_file} has no clauses: nothing was checked")
     return list(_find_failing_checklist_items(contents, checklist)), checklist
 
 
@@ -47,7 +58,11 @@ def audit_for_gaps(checklist_file, source_files, verbose=False):
     if checklist_file is None:
         print("WARNING: no check list!")
         return 1
-    failing_checklist_items, checklist = missing_references(checklist_file, source_files)
+    try:
+        failing_checklist_items, checklist = missing_references(checklist_file, source_files)
+    except GapError as error:
+        print(f"Error: {error}")
+        return 2
     _print_sources(checklist, source_files)
     if failing_checklist_items:
         _report_failures(failing_checklist_items)
@@ -64,26 +79,30 @@ def coverage_report(checklist_files, source_files, verbose=False):
         return 1
 
     builtins = builtin_checklists()
-    contents = list(_source_generator(source_files))  # read once, matched per checklist
     results = []
-    for checklist_file in checklist_files:
-        if not os.path.exists(os.path.realpath(_full_file_path(checklist_file, builtins))):
-            continue
-        failing, checklist = _missing(checklist_file, contents, builtins)
-        total = len(checklist)
-        if total == 0:
-            continue
-        missing = len(failing)
-        covered = total - missing
-        pct = int(covered * 100 / total)
-        name = os.path.basename(checklist_file).replace('_checklist.txt', '').upper()
-        results.append((name, total, missing, covered, pct, failing))
+    try:
+        contents = list(_source_generator(source_files))  # read once, matched per checklist
+        for checklist_file in checklist_files:
+            failing, checklist = _missing(checklist_file, contents, builtins)
+            results.append((checklist_file, len(checklist), failing))
+    except GapError as error:
+        print(f"Error: {error}")
+        return 2
+    results = [_row(checklist_file, total, failing) for checklist_file, total, failing in results]
+    _print_table(results, verbose)
+    # As the audit: 3 when any clause is missing.
+    return 3 if any(missing for _, _, missing, _, _, _ in results) else 0
 
-    if not results:
-        print("No valid checklists found")
-        return 1
 
-    # Print table
+def _row(checklist_file, total, failing):
+    missing = len(failing)
+    covered = total - missing
+    pct = int(covered * 100 / total)
+    name = os.path.basename(checklist_file).replace('_checklist.txt', '').upper()
+    return name, total, missing, covered, pct, failing
+
+
+def _print_table(results, verbose):
     print("| Standard | Total | Missing | Covered | Coverage |")
     print("|----------|-------|---------|---------|----------|")
     total_all, covered_all = 0, 0
@@ -105,19 +124,18 @@ def coverage_report(checklist_files, source_files, verbose=False):
                     print(f"- ... {len(failing) - 10} more")
                 print()
 
-    return 0
-
 
 def _print_sources(checklist, source_files):
-    if len(checklist) == 0:
-        print("WARNING: no check list items!")
-        return 2
     if len(source_files) == 0:
         print("# WARNING: no source files!")
     else:
         print("# Source files:")
         for source_file in source_files:
             print('#     ' + source_file)
+    for source_file, content in zip(source_files, _source_generator(source_files)):
+        if _PLACEHOLDER.search(content):
+            print(f"# WARNING: {source_file} still holds a placeholder (TODO): its references may describe "
+                  "nothing yet")
 
 
 def _full_file_path(file_name, builtins, path=None):
@@ -137,17 +155,22 @@ def _find_failing_checklist_items(contents, checklist):
     return (item for item in checklist if item['reference'] not in found)
 
 
+def _read(path, what, **options):
+    try:
+        with open(path, encoding='utf-8-sig', **options) as file:  # a byte-order mark is not text
+            return file.read()
+    except OSError as error:
+        raise GapError(f"{what} {path} cannot be read: {error.strerror}") from error
+
+
 def _checklist_generator(checklist_files):
     for checklist_file in checklist_files:
-        with open(checklist_file, encoding='utf-8') as file:
-            dir_path = os.path.dirname(os.path.realpath(checklist_file))
-            yield (file.read(), dir_path)
+        yield _read(checklist_file, "checklist"), os.path.dirname(os.path.realpath(checklist_file))
 
 
 def _source_generator(source_files):
     for source_file in source_files:
-        with open(source_file, encoding='utf-8', errors='ignore') as file:
-            yield file.read()
+        yield _read(source_file, "document", errors='ignore')
 
 
 def _read_checklists(checklist_sources, already_included, builtins):
@@ -181,7 +204,9 @@ def _parsed_line(line_text, path):
             remainder = ' '.join(tokens[1:])
             if not key.startswith('#'):
                 if key == 'include':
-                    yield {'include': remainder, 'path': path}
+                    if not remainder.strip():
+                        raise GapError(f"an include line in {path} names no checklist")
+                    yield {'include': remainder.strip(), 'path': path}
                 else:
                     yield {'reference': key, 'description': remainder}
 
@@ -193,7 +218,8 @@ def _split_out_include_files(checklist, builtins):
         include_file = item.get('include')
         if include_file:
             path = item.get('path')
-            include_files.add(_full_file_path(include_file, builtins, path))
+            # told apart by the resolved path: ../a.txt and ./a.txt are one file
+            include_files.add(os.path.realpath(_full_file_path(include_file, builtins, path)))
         else:
             reduced_checklist.append(item)
     return include_files, reduced_checklist

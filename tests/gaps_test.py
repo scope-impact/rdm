@@ -145,4 +145,4 @@ def test_gap_coverage_cli_resolves_builtin_checklist_name(tmp_path, capsys):
 
     assert "no checklists specified" not in captured.out
     assert "62304_2015_CLASS_B" in captured.out
-    assert result == 0
+    assert result == 3  # clauses are missing: coverage exits as the audit does (Design Review 55)

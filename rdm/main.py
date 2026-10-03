@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -21,7 +22,13 @@ def print_error(message):
 def main():
     try:
         exit_code = cli(sys.argv[1:])
+        sys.stdout.flush()
         sys.exit(exit_code)
+    except BrokenPipeError:
+        # The reader stopped early (`| head`): end quietly, as other tools do,
+        # and keep Python from reporting the same broken pipe again at exit.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(141)
     except Exception:
         print_error(traceback.format_exc())
         sys.exit(1)
@@ -33,9 +40,16 @@ def cli(raw_arguments):
     if args.command is None:
         parse_arguments(['-h'])
     elif args.command == 'render':
-        context = context_from_data_files(args.data_files)
-        config = load_yaml(args.config)
-        render_template_to_file(config, args.template, context, sys.stdout)
+        import jinja2
+
+        try:
+            context = context_from_data_files(args.data_files)
+            config = load_yaml(args.config) or {}  # an empty configuration loads no extensions
+            render_template_to_file(config, args.template, context, sys.stdout)
+        except (jinja2.UndefinedError, jinja2.TemplateSyntaxError, ValueError, OSError) as error:
+            # OSError includes a template that does not exist (TemplateNotFound)
+            print_error(f"Error: cannot render {args.template}: {error}")
+            exit_code = 2
     elif args.command == 'init':
         init(args.output)
     elif args.command == 'adopt':
@@ -47,7 +61,13 @@ def cli(raw_arguments):
         snippets = collect_from_files(args.files)
         yaml.dump(snippets, sys.stdout, default_style='|')
     elif args.command == 'translate':
-        translate_test_results(args.format, args.input, args.output)
+        from xml.etree.ElementTree import ParseError
+
+        try:
+            translate_test_results(args.format, args.input, args.output)
+        except (ValueError, ParseError, OSError) as error:
+            print_error(f"Error: cannot translate {args.input}: {error}")
+            exit_code = 2
     elif args.command == 'gap' and args.list:
         list_default_checklists()
     elif args.command == 'gap' and args.coverage:

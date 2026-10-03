@@ -4,6 +4,7 @@ from rdm.evidence.test_formatters.xml_util import (
     xml_load,
     flattened_qttest_results,
     auto_translator,
+    has_test_results,
 )
 
 XML_TRANSLATORS = {
@@ -19,7 +20,10 @@ def translate_test_results(format, input, output):
     xml_translator = XML_TRANSLATORS.get(format)
     if xml_translator is None:
         raise ValueError("Unknown translation format: " + format)
+    results = xml_load(input)
+    if not has_test_results(results):
+        raise ValueError(f"{input} holds no test results (not gtest, xunit or qttest XML)")
     with open(output, 'w', encoding='utf-8') as out_file:
-        write_yaml(xml_translator(xml_load(input)), out_file)
+        write_yaml(xml_translator(results), out_file)
 
 

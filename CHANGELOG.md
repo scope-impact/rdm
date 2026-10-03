@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Fixed: gap analysis and publishing say what is wrong** (Design Review
+  55). Gap analysis against a checklist with no clauses (ISO 14971 2019) or a
+  file that cannot be read exits 2 instead of saying *Success* or showing a
+  traceback; coverage exits 3 on a gap, as the audit does; a checklist
+  reached by two paths is read once; a byte-order mark no longer hides a key;
+  documents still holding placeholders are named. `rdm translate` keeps
+  same-named tests of different modules apart, reads Qt5 skips and failure
+  text, and refuses a file with no test results. Code fences in blockquotes
+  and list items are left alone; snippet markers are whole words; a blank DMR
+  id is skipped; `rdm render` reports a missing value or template instead of
+  a traceback and reads an empty configuration as none; output piped into
+  `head` ends quietly.
+
 - **Fixed: the hook gates every way implementation is committed** (Design
   Review 54). Names with a tab or a quote, upper-case extensions, more source,
   template and configuration types (JSON, INI, HTML, Vue, R, PowerShell,

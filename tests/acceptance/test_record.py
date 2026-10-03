@@ -40,6 +40,13 @@ def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) ->
         {"id": "SOP-1", "title": "The SOP", "path": "documents/sop.md", "revision": 2},
     ]
 
+    with verification_step("A blank id is no id: the document is skipped, never indexed as None"):
+        blank = tmp_path / "blank"
+        blank.mkdir()
+        (blank / "a.md").write_text("---\nid:\ntitle: A\n---\n")
+        (blank / "b.md").write_text("---\nid: ''\n---\n")
+        assert dmr_command(blank, tmp_path / "blank.yml") == 1
+        assert "a.md" in capsys.readouterr().err
     with verification_step("The output is marked generated, and regenerating is deterministic"):
         first = out.read_text()
         assert "GENERATED" in first

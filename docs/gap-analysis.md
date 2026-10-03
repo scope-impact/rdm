@@ -14,6 +14,13 @@ rdm gap --coverage 62304_2015_class_b FDA-SW_2021_basic documents/*.md   # one r
 rdm gap --coverage -v 62304_2015_class_b documents/*.md # …and name the missing clauses
 ```
 
+Both exit 3 when a clause is missing, and 2 when nothing could be checked: a
+checklist with no clauses (the ISO 14971 2019 list is a placeholder; use
+`14971_2007`), or a checklist, include or document that cannot be read. A
+document that still holds a `TODO` placeholder is named in a warning: a fresh
+`rdm init` project references every clause from templates that say nothing
+yet, so its coverage means nothing until they are written.
+
 The built-ins cover IEC 62304, ISO 14971, the FDA software, cybersecurity and
 human-factors guidances, and `part11_document_control`: the 21 CFR Part 11
 controls for document control in git. Audit your own document-control

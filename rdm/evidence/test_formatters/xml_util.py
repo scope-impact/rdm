@@ -35,7 +35,9 @@ def flattened_gtest_results(test_results):
         suite_name, suite_disabled = check_disabled(test_suite.get('name', '_'))
         for test_case in test_suite.findall('testcase'):
             case_name, case_disabled = check_disabled(test_case.get('name', '_'))
-            test_name = ".".join([suite_name, case_name])
+            # xunit's classname tells apart tests of one name in different
+            # modules; gtest's is the suite's name.
+            test_name = ".".join([test_case.get('classname') or suite_name, case_name])
             status = test_case.get('status')
             problem = test_case.find('failure')
             if problem is None:
@@ -43,7 +45,7 @@ def flattened_gtest_results(test_results):
             if suite_disabled or case_disabled or (status is not None and status != 'run'):
                 result, message = 'skip', None
             elif problem is not None:
-                result, message = 'fail', problem.get('message')
+                result, message = 'fail', problem.get('message') or (problem.text or '').strip() or None
             elif test_case.find('skipped') is not None or test_case.get('result') in ('skipped', 'suppressed'):
                 result, message = 'skip', None
             else:
@@ -63,7 +65,16 @@ def flattened_qttest_results(test_results):
                 description = incident.find('Description')
                 message = None if description is None else description.text
                 _keep_worse(flattened_results, test_name, _QT.get(incident.get("type"), "pass"), message)
+            for skipped in (m for m in test_function.iter('Message') if m.get("type") == "skip"):  # Qt5
+                description = skipped.find('Description')
+                _keep_worse(flattened_results, test_name, "skip", None if description is None else description.text)
     return flattened_results
+
+
+def has_test_results(test_results):
+    """Whether the XML holds any test result a flattener reads."""
+    root = test_results.getroot()
+    return any(next(root.iter(tag), None) is not None for tag in ("testsuite", "testcase", "TestCase"))
 
 
 def auto_translator(test_results):
