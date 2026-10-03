@@ -22,7 +22,7 @@ def project_record(dhf_dir: Path | None, allure_results_dir: Path | None = None,
         return None
     try:
         return project(dhf, allure_results_dir, checklists=checklists, **options)
-    except FileNotFoundError as error:
+    except (FileNotFoundError, SyntaxError) as error:  # SyntaxError: a checklist that is not RDF
         print(f"Error: {error}")
         return None
 
@@ -79,6 +79,10 @@ def graph_query_command(
     if store is not None:
         if not Path(store).exists():
             print(f"Error: store not found: {store} (run `rdm graph build --store {store}` first)")
+            return 2
+        if infer:
+            print("Error: --infer applies to the in-memory projection, not a store: leave out --store, "
+                  "or build the store with `rdm graph build --infer`")
             return 2
         db = ox.Store.read_only(str(store))
     else:
@@ -156,7 +160,11 @@ def graph_explorer_file_command(
         quads = project_record(dhf_dir, allure_results_dir, checklists)
         if quads is None:
             return 2
-    graph = write_explorer_file(output, quads, endpoint or DEFAULT_ENDPOINT, exclude)
+    try:
+        graph = write_explorer_file(output, quads, endpoint or DEFAULT_ENDPOINT, exclude)
+    except ValueError as error:
+        print(f"Error: {error}")
+        return 2
     print(f"wrote {output}: {len(graph['data']['vertices'])} nodes, {len(graph['data']['edges'])} links "
           "(Graph Explorer: Load graph from file)", file=sys.stderr)
     return 0

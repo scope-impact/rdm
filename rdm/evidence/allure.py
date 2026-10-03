@@ -168,7 +168,8 @@ def run_status(data: dict) -> str:
     return status
 
 
-def _named_results(results_dir: Path) -> tuple[list[tuple[dict, str]], list[str]]:
+def named_results(results_dir: Path) -> tuple[list[tuple[dict, str]], list[str]]:
+    """:func:`read_results`, each result with its file name."""
     unreadable: list[str] = []
     named = load_json_records(Path(results_dir), RESULT_SUFFIX, lambda data, name: (data, name), unreadable)
     unreadable += [name for data, name in named if not readable(data)]
@@ -179,7 +180,7 @@ def read_results(results_dir: Path) -> tuple[list[dict], list[str]]:
     """Every readable result in a results directory, in file name order, and
     the names of those that cannot be read (sorted): not JSON, nested too deep,
     a symbolic link, or not :func:`readable`. Any of them could hold a failed run."""
-    named, unreadable = _named_results(results_dir)
+    named, unreadable = named_results(results_dir)
     return [data for data, _ in named], unreadable
 
 
@@ -196,13 +197,13 @@ def _build_result(data: dict, filename: str) -> TestResult:
 def parse_results(results_dir: Path, unreadable: list[str] | None = None) -> list[TestResult]:
     """Parse all ``*-result.json`` files in an Allure results directory; the
     names of those that cannot be read are added to ``unreadable``."""
-    named, cannot = _named_results(results_dir)
+    named, cannot = named_results(results_dir)
     if unreadable is not None:
         unreadable.extend(cannot)
     return [_build_result(data, name) for data, name in named]
 
 
-def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
+def reconcile(sdd_ids: set[str], results_dir: Path | None) -> VerificationReport:
     """Aggregate Allure results into a verification status per design input.
 
     Status rules per design input:
@@ -210,10 +211,11 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
       - ``verified`` else if any covering test passed,
       - ``untested`` if no covering test ran (or only skipped/unknown).
 
-    IDs referenced by tests but not declared are returned as orphans.
+    IDs referenced by tests but not declared are returned as orphans. With
+    no results directory (None), every input is untested.
     """
     unreadable: list[str] = []
-    results = parse_results(Path(results_dir), unreadable)
+    results = parse_results(Path(results_dir), unreadable) if results_dir is not None else []
 
     def _fold(verification: DesignInputVerification, result: TestResult) -> None:
         verification.tests.append(result.name)

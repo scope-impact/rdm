@@ -216,7 +216,7 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
         return by_full_name
     declared = design_input_ids(dhf)
     for file, name, tags in scan_source_tests(tests_dir):
-        tags = [tag for tag in tags if is_id(tag)]
+        tags = [tag for tag in tags if is_id(tag) or tag in declared]  # a declared id, whatever its shape
         if not tags:
             continue
         rel = _rel(Path(file), root)
@@ -235,22 +235,40 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
     return by_full_name
 
 
-def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode]) -> None:
+def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
     from rdm.graph.allure import project_results
 
-    project_results(ds, Path(results_dir), tests)
+    project_results(ds, Path(results_dir), tests, declared)
+
+
+def _record_findings(ds: _Dataset, dhf: Path, results: Path | None) -> None:
+    """What the release gate blocks about the whole record (a design control
+    not met, no design input, a result file that cannot be read), on the
+    record's node as the gate words it, for the shapes to block (DI-38)."""
+    from rdm.release.gate import record_findings
+
+    findings = record_findings(dhf, results)
+    if findings:
+        record = ds.thing(_term(ds.base + "record"), rdm("Record"), ds.base.split(":")[2], "record")
+        for message in findings:
+            ds.add(record, rdm("finding"), message, "record")
 
 
 def default_branch(root: Path) -> str | None:
     """The branch changes land on: origin's HEAD, else origin's or the local
-    main or master (origin first: a local branch may be stale)."""
+    main or master (origin first: a local branch may be stale), else git's
+    ``init.defaultBranch``, else the only local branch."""
     remote = git(root, "rev-parse", "--abbrev-ref", "origin/HEAD")
     if remote and remote != "origin/HEAD":
         return remote
     for ref in ("refs/remotes/origin/main", "refs/remotes/origin/master", "refs/heads/main", "refs/heads/master"):
         if git(root, "rev-parse", "--verify", "--quiet", ref):
             return ref.split("/", 2)[2]
-    return None
+    configured = git(root, "config", "init.defaultBranch")
+    if configured and git(root, "rev-parse", "--verify", "--quiet", f"refs/heads/{configured}"):
+        return configured
+    local = (git(root, "for-each-ref", "--format=%(refname:short)", "refs/heads") or "").split()
+    return local[0] if len(local) == 1 else None
 
 
 @lru_cache(maxsize=4096)
@@ -401,10 +419,11 @@ def project(
     results = Path(allure_results_dir) if allure_results_dir is not None and Path(allure_results_dir).exists() else None
     ds = _Dataset(project_name or (repo or dhf.parent).name)
     _record(ds, dhf, root)
+    _record_findings(ds, dhf, results)
     tests = _tests(ds, dhf, root)
     verified: set[str] = set()
     if results is not None:
-        _executions(ds, results, tests)
+        _executions(ds, results, tests, design_input_ids(dhf))
         verified = set(reconcile(design_input_ids(dhf), results).verified)
     if repo is not None:
         _git(ds, dhf, root)

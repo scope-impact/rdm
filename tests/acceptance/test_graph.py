@@ -178,6 +178,20 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
             assert graph_cli.graph_query_command(refused, store=location) == 2
         capsys.readouterr()
 
+    with verification_step("FROM, which the union default graph would ignore, is refused; SERVICE as a variable or a "
+                           "prefix name is no call; --infer over a store is refused"):
+        for refused in ("SELECT * FROM <urn:nothing> WHERE { ?s ?p ?o }",
+                        "select * from named <urn:x> where { graph ?g { ?s ?p ?o } }"):
+            assert graph_cli.graph_query_command(refused, store=location) == 2
+            assert "GRAPH" in capsys.readouterr().out
+        for accepted in ("SELECT ?SERVICE WHERE { ?SERVICE ?p ?o } LIMIT 1",
+                         "PREFIX SERVICE: <urn:x#> SELECT * WHERE { ?s SERVICE:p ?o }",
+                         'SELECT * WHERE { ?s rdfs:label "FROM <urn:x>" }'):
+            assert graph_cli.graph_query_command(accepted, store=location) == 0, accepted
+        capsys.readouterr()
+        assert graph_cli.graph_query_command(sparql, store=location, infer=True) == 2
+        assert "--infer" in capsys.readouterr().out
+
     from rdm.graph.endpoint import endpoint
 
     server = endpoint(location, "127.0.0.1", 0)

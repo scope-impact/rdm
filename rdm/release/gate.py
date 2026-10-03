@@ -59,7 +59,7 @@ class State:
     unvalidated: list[str] = field(default_factory=list)
 
 
-def fetch_state(dhf_dir: Path, results_dir: Path) -> State:
+def fetch_state(dhf_dir: Path, results_dir: Path | None) -> State:
     """The design gate's pass/fail checks (not its warnings, which would
     reconcile the results a second time), the record, and the results."""
     state = State(dhf_dir.name, design_artifacts(dhf_dir), design_inputs(dhf_dir))
@@ -151,6 +151,16 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
     state = fetch_state(Path(dhf_dir), Path(allure_results_dir))
     return ReleaseResult(design=GateResult(artifacts=state.artifacts),
                          verified=state.report.verified if state.report else [], events=derive(state))
+
+
+# What the release gate blocks about the record as a whole, not about one
+# design input, user need or risk: the graph puts these on the record (DI-38).
+WHOLE_RECORD = (DESIGN_CONTROL_UNMET, NO_DESIGN_INPUTS, UNREADABLE_RESULT)
+
+
+def record_findings(dhf_dir: Path, allure_results_dir: Path | None = None) -> list[str]:
+    """The release gate's blocking findings about the whole record, as it words them."""
+    return [e.message for e in derive(fetch_state(Path(dhf_dir), allure_results_dir)) if e.name in WHOLE_RECORD]
 
 
 def verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[Event]:

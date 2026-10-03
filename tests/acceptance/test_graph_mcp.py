@@ -163,6 +163,16 @@ def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
         assert out["n0"][1]["rows"] == out["n1"][1]["rows"]
         assert {p: p.read_bytes() for p in dhf.rglob("*") if p.is_file()} == before
 
+    with verification_step("trace answers any id the record declares, whatever its shape and case"):
+        from rdm.graph.agent import trace
+        from tests.acceptance.test_graph_shapes import _dhf as _shaped
+
+        odd = _shaped(tmp_path / "odd", inputs=(("DI-1", "UN-1"), ("DI-2a", "UN-2")), tagged=("DI-1", "DI-2a"))
+        traced = trace(Record(odd), "di-2a")["design_input"]
+        assert traced["id"] == "DI-2a" and traced["tests"], traced
+        with pytest.raises(ValueError, match="is not an id"):
+            trace(Record(odd), 'DI-2a" } UNION { ?s ?p ?o')
+
     with verification_step("The read forms all work"):
         assert out["ask"][1] == {"boolean": True}
         assert sorted(t[0] for t in out["construct"][1]["triples"]) == [

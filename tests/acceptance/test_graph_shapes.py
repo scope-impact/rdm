@@ -122,6 +122,72 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
     assert not any("US-1" in message for _, message in warnings)  # unrelated prefix: noise, not reported
     assert not any(label == "DI-1" for label, _ in warnings)
 
+    def commit(dhf: Path) -> None:
+        git_run(dhf.parent, "add", "-A")
+        git_run(dhf.parent, "commit", "-qm", "change")
+
+    def unreadable_frontmatter(dhf):
+        (dhf / "documents" / "design" / "x.md").write_text(
+            "---\nid: SDS-X\nkind: design\ncontext: x\ndesign_inputs: [{id: DI-3\n---\n")
+        commit(dhf)
+
+    def malformed_declaration(dhf):
+        (dhf / "documents" / "design" / "y.md").write_text(
+            "---\nid: SDS-Y\nkind: design\ncontext: y\ndesign_inputs: {DI-3: {text: x}}\n---\n")
+        commit(dhf)
+
+    def uncommitted(dhf):
+        core = dhf / "documents" / "design" / "core.md"
+        core.write_text(core.read_text().replace("DI-1 text", "DI-1 weaker text"))
+
+    def no_review(dhf):
+        (dhf / "documents" / "design_review.md").unlink()
+        commit(dhf)
+
+    def no_inputs(dhf):
+        (dhf / "documents" / "design" / "core.md").write_text(
+            "---\nid: SDS-1\nkind: design\ncontext: core\ndesign_inputs: []\n---\n# Core\n")
+        (dhf / "documents" / "vv.md").write_text("---\nid: VVP-1\nuser_needs: []\n---\n# Plan\n")
+        commit(dhf)
+
+    def unreadable_result(dhf):
+        (dhf.parents[1] / "allure" / "cut-result.json").write_text('{"status": "failed", "labels": [')
+
+    for change in (unreadable_frontmatter, malformed_declaration, uncommitted, no_review, no_inputs,
+                   unreadable_result):
+        with verification_step(f"what the release gate blocks about the whole record, the shapes block: "
+                               f"{change.__name__.replace('_', ' ')}"):
+            case = tmp_path / change.__name__
+            dhf = _dhf(case)
+            results = _results(case, {"DI-1": ["passed"], "DI-2": ["passed"]})
+            change(dhf)
+            gate = {m for m in run_release_gate(dhf, results).blocking
+                    if not re.match(r"(design input|user need) ", m)}
+            shapes = {r.message for r in validate(project(dhf, results))
+                      if r.severity == "Violation" and r.focus.endswith(":record")}
+            attach("blocked", {"release gate": sorted(gate), "shapes": sorted(shapes)})
+            assert gate and shapes == gate, (change.__name__, shapes, gate)
+
+    with verification_step("the executions graph reads results as the gates do: a byte-order mark, a failed step"):
+        case = tmp_path / "reader"
+        dhf = _dhf(case)
+        results = _results(case, {"DI-1": ["passed"]})
+        (results / "bom-result.json").write_text("\ufeff" + json.dumps(
+            {"name": "bom", "status": "failed", "labels": [{"name": "story", "value": "DI-1"}]}))
+        (results / "step-result.json").write_text(json.dumps(
+            {"name": "step", "status": "passed", "labels": [{"name": "story", "value": "DI-2"}],
+             "steps": [{"name": "a check", "status": "failed"}]}))
+        by_shapes, by_gate = _blocked_by_shapes(dhf, results), _blocked_by_gate(dhf, results)
+        assert by_shapes == by_gate == {"DI-1", "DI-2"}, (by_shapes, by_gate)
+
+    with verification_step("an id of another shape the record declares is verified in the graph as by the gates"):
+        case = tmp_path / "id-shape"
+        dhf = _dhf(case, inputs=(("DI-1", "UN-1"), ("DI-2a", "UN-2")), tagged=("DI-1", "DI-2a"))
+        results = _results(case, {"DI-1": ["passed"], "DI-2a": ["passed"]})
+        assert run_release_gate(dhf, results).passed
+        assert not [r for r in validate(project(dhf, results)) if r.severity in ("Violation", "Warning")
+                    and r.label == "DI-2a"]
+
 
 
 @allure.story("DI-49")
@@ -152,3 +218,14 @@ def test_graph_validate_reports_and_exits_on_violations(tmp_path: Path, capsys) 
         assert validate_command(dhf_dir=ok, allure_results_dir=ok_results, extra_shapes=[extra]) == 1
         assert "[VIOLATION] DI-1: design input needs a title" in capsys.readouterr().out
         assert validate_command(dhf_dir=ok, extra_shapes=[tmp_path / "missing.ttl"]) == 2
+
+    with verification_step("A shapes or checklist file that is not RDF is an error (exit 2), never a traceback"):
+        bad = tmp_path / "bad.ttl"
+        bad.write_text("this is { not turtle\n")
+        bad_nt = tmp_path / "bad.nt"
+        bad_nt.write_text("<urn:a> <urn:b> .\n")
+        capsys.readouterr()
+        assert validate_command(dhf_dir=ok, extra_shapes=[bad]) == 2
+        assert "bad.ttl" in capsys.readouterr().out
+        assert validate_command(dhf_dir=ok, checklists=[str(bad_nt)]) == 2
+        assert "bad.nt" in capsys.readouterr().out

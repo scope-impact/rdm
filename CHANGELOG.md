@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Fixed: the graph blocks what the gates block** (Design Review 53).
+  `rdm graph validate` now fails on what the release gate blocks about the
+  whole record (unreadable frontmatter, a malformed declaration, an
+  uncommitted edit, no design review, no design input, an unreadable result),
+  reads results with the gates' reader (a byte-order mark, a failed step), and
+  links declared ids of any shape (`DI-2a`), which `trace` now answers. `FROM`
+  is refused instead of ignored; `SERVICE` as a variable or prefix name is
+  accepted; a shapes or checklist file that is not RDF exits 2; `--infer` with
+  `--store` and an unknown `--exclude` class are refused; a repository whose
+  one branch is not `main` takes it as the default branch.
+
 - **Fixed: every reader of the results agrees with the release gate** (Design
   Review 52). A result file that cannot be read is named by `verify` (which
   exits 1), `trace`, the evidence bundle's manifest and the verification

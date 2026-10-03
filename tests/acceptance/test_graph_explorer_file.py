@@ -105,3 +105,7 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
         assert graph_cli.graph_explorer_file_command(out, store=store, exclude=["TestRun"]) == 0
         assert set(json.loads(out.read_text())["data"]["vertices"]) == set(trimmed["vertices"])
         assert graph_cli.graph_explorer_file_command(out, store=tmp_path / "missing") == 2
+    with verification_step("A class to leave out that the graph does not have is refused, naming the ones it has"):
+        with pytest.raises(ValueError, match="TestRun"):
+            explorer_graph(quads, exclude=["Testrun"])
+        assert graph_cli.graph_explorer_file_command(out, dhf_dir=dhf, exclude=["Testrun"]) == 2

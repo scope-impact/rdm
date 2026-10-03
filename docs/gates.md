@@ -11,7 +11,7 @@ inputs set to `false` until your first design input and its test land
 | **Design gate** — `rdm story design-gate` | implementation before the design is approved: design documents and design review present, complete, committed; every user-need and design-input id declared once | pre-commit hook; CI |
 | **Release gate** — `rdm story release-gate` | a release unless every design input is verified by a passing tagged test, every user need is addressed, and every risk is evaluated, its risk controls verified and its residual acceptable | CI |
 | **Gap analysis** — `rdm gap` | documents that do not reference every clause a checklist requires | on demand; add it to CI |
-| **Graph validation** — `rdm graph validate` | the same rules, as SHACL shapes over the graph, plus warnings the coded gates do not give | on demand; add it to CI |
+| **Graph validation** — `rdm graph validate` | the same rules, as SHACL shapes over the graph (what the release gate blocks about the whole record, such as an unreadable document or result, is on the record's node), plus warnings the coded gates do not give | on demand; add it to CI |
 
 The rules each gate applies, and what it reports, are its design:
 [design gate](dhf/documents/design/specification.md),

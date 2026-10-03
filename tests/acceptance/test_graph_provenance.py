@@ -103,6 +103,13 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
         vvp = _facts(quads, "urn:dhf:proj:doc/VVP-1")
         assert ("prov:wasGeneratedBy", f"urn:dhf:proj:commit/{direct}") in vvp
         assert ("landedIn", f"urn:dhf:proj:commit/{direct}") in vvp
+    with verification_step("A repository with no remote whose one branch is not main or master: it is the default"):
+        lone = _dhf(tmp_path / "trunk")
+        _git(lone.parent, "t", "branch", "-m", "trunk")
+        quads = project(lone)
+        assert not {r.label for r in validate(quads) if r.message == NOT_LANDED}
+        assert ("landedIn", f"urn:dhf:proj:commit/{_git(lone.parent, 't', 'rev-parse', 'HEAD')}") in _facts(
+            quads, "urn:dhf:proj:doc/SDS-1")
 
 
 @allure.story("DI-52")

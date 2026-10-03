@@ -146,15 +146,19 @@ def trace(record: Record, ident: str) -> dict:
     design input (with its document, tests, runs and the risks it controls),
     or one risk (with its scores and each controlling input)."""
     ident = ident.strip().upper()
-    if not is_id(ident):
-        raise ValueError(f"{ident!r} is not an id (a UN-n, DI-n or risk id)")
     store = record.store()
-    if not ident.startswith(("UN-", "DI-")):
+    if not is_id(ident):  # an id of another shape the record declares (DI-2a) is answered too
+        declared = {r["id"].upper(): r["id"] for r in _select(
+            store, "SELECT ?id WHERE { VALUES ?k { rdm:UserNeed rdm:DesignInput } ?n a ?k ; dcterms:identifier ?id }")}
+        if ident not in declared:
+            raise ValueError(f"{ident!r} is not an id (a UN-n, DI-n or risk id)")
+        ident = declared[ident]
+    if not ident.upper().startswith(("UN-", "DI-")):
         found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:Risk ; dcterms:identifier "{ident}" }}')
         if not found:
             raise ValueError(f"{ident} is not a declared user need (UN-n), design input (DI-n) or risk")
         return {"risk": _risk(store, found[0]["n"])}
-    kind = "UserNeed" if ident.startswith("UN") else "DesignInput"
+    kind = "UserNeed" if ident.upper().startswith("UN") else "DesignInput"
     found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:{kind} ; dcterms:identifier "{ident}" }}')
     if not found:
         raise ValueError(f"{ident} is not declared in the record")

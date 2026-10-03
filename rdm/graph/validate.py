@@ -84,6 +84,13 @@ def validate_command(
         if not Path(path).exists():
             print(f"Error: shapes file not found: {path}")
             return 2
+        try:
+            import rdflib
+
+            rdflib.Graph().parse(str(path))
+        except Exception as error:  # rdflib raises a parser's own error for each format
+            print(f"Error: shapes file {path} is not RDF: {error}")
+            return 2
     quads = project_record(dhf_dir, allure_results_dir, checklists)
     if quads is None:
         return 2

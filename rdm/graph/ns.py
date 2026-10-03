@@ -32,7 +32,15 @@ def with_prefixes(sparql: str) -> str:
 
 
 _UPDATE = re.compile(r"(?i)\b(INSERT|DELETE|LOAD|CLEAR|CREATE|DROP|COPY|MOVE|ADD)\b")
-_SERVICE = re.compile(r"(?i)\bSERVICE\b")
+
+
+def _keyword(word: str) -> re.Pattern:
+    """``word`` as a SPARQL keyword: not a variable (``?SERVICE``), nor part of
+    a prefixed name (``SERVICE:p``, ``ex:SERVICE``, ``PREFIX SERVICE:``)."""
+    return re.compile(rf"(?i)(?<![\w?$:]){word}\b(?!\s*:)")
+
+
+_SERVICE, _FROM = _keyword("SERVICE"), _keyword("FROM")
 # String literals, IRIs and comments, removed before looking for SERVICE so a
 # literal or an IRI that merely contains the word is not refused. A comment
 # ends at either line break, as SPARQL's does.
@@ -50,9 +58,13 @@ def read_only_query(store, sparql: str):
     """Answer a SPARQL query over ``store``'s named graphs as one union, with
     the standard prefixes; refuse SPARQL Update, a federated SERVICE call and
     anything that is not a query, so nothing changes the store or reaches the
-    network (DI-36, DI-42)."""
-    if _SERVICE.search(_NOT_KEYWORDS.sub(" ", sparql)):
+    network (DI-36, DI-42); and FROM, which the union would silently ignore."""
+    keywords = _NOT_KEYWORDS.sub(" ", sparql)
+    if _SERVICE.search(keywords):
         raise ReadOnlyError("SERVICE is not accepted: the graph does not reach the network.")
+    if _FROM.search(keywords):
+        raise ReadOnlyError("FROM is not accepted: the default graph is the union of the named graphs, so it "
+                            "would be ignored. Name a graph with GRAPH <…> { … } instead.")
     try:
         return store.query(with_prefixes(sparql), use_default_graph_as_union=True)
     except SyntaxError as error:

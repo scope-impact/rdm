@@ -50,6 +50,8 @@ The endpoint is read-only. It allows requests from any origin so Graph
 Explorer can reach it, which is exactly why it accepts no update and no
 `SERVICE` call: any web page you have open could otherwise clear or forge the
 graph you are reviewing, or have it fetch addresses on your network.
+Every query is over the union of the named graphs, so `FROM` is refused
+rather than silently ignored: name a graph with `GRAPH <…> { … }`.
 
 ## The whole chain in one query
 

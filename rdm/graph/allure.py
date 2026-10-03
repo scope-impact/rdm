@@ -13,14 +13,13 @@ Attachment content stays in the files; the graph holds the reference.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pyoxigraph as ox
 
 from rdm.graph.project import _DCT, _PROV, _XSD, _Dataset, _term, rdm
-from rdm.evidence.allure import COMMIT_LABEL, WORKTREE_LABEL, run_version
+from rdm.evidence.allure import COMMIT_LABEL, WORKTREE_LABEL, named_results, run_status, run_version
 from rdm.specification.tags import DESIGN_INPUT_LABELS
 from rdm.kernel.ids import is_id
 
@@ -66,10 +65,10 @@ def _evidence(ds: _Dataset, owner: ox.NamedNode, raw: dict, scope: str, key: str
         _evidence(ds, node, step, scope, position)
 
 
-def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode]) -> None:
+def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
     stem = path.stem
     run = ds.thing(ds.node("run", stem), rdm("TestRun"), str(raw.get("name") or stem), GRAPH)
-    ds.add(run, rdm("status"), str(raw.get("status", "unknown")), GRAPH)
+    ds.add(run, rdm("status"), run_status(raw), GRAPH)  # a failed step fails the run, as the gates read it
     if raw.get("uuid"):
         ds.add(run, _term(_DCT + "identifier"), str(raw["uuid"]), GRAPH)
     if raw.get("fullName"):
@@ -98,7 +97,7 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode])
         name, value = str(label["name"]), str(label.get("value", "")).strip()
         if name in (COMMIT_LABEL, WORKTREE_LABEL):
             continue
-        if name in DESIGN_INPUT_LABELS and is_id(value):
+        if name in DESIGN_INPUT_LABELS and (is_id(value) or value in declared):
             ds.add(run, rdm("exercises"), ds.node("input", value), GRAPH)
         elif name == "output" and value:  # DI-56: the code the run exercises
             source = ds.thing(ds.node("source", value), rdm("SourceFile"), value, GRAPH)
@@ -110,18 +109,12 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode])
     _evidence(ds, run, raw, stem)
 
 
-def _load(path: Path) -> dict | None:
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return raw if isinstance(raw, dict) else None
-
-
-def project_results(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode] | None = None) -> None:
-    """Every result in an Allure results directory, as quads; ``tests`` maps
-    the full names Allure gives runs to the tests in the tests graph."""
-    for path in sorted(Path(results_dir).glob("*-result.json")):
-        raw = _load(path)
-        if raw is not None:
-            _result(ds, path, raw, tests or {})
+def project_results(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode] | None = None,
+                    declared: set[str] = frozenset()) -> None:
+    """Every result in an Allure results directory, read as the gates read it
+    (one that cannot be read is the record's finding, not a run), as quads;
+    ``tests`` maps the full names Allure gives runs to the tests in the tests
+    graph, and ``declared`` is the design input ids a story may name."""
+    named, _ = named_results(Path(results_dir))
+    for raw, name in named:
+        _result(ds, Path(results_dir) / name, raw, tests or {}, declared)

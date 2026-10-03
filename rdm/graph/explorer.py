@@ -57,6 +57,10 @@ def explorer_graph(quads: list[ox.Quad], endpoint: str = DEFAULT_ENDPOINT,
             types.setdefault(q.subject.value, set()).add(_local(q.object.value))
             if not str(getattr(q.graph_name, "value", "")).endswith(_EXECUTIONS):
                 anchors.add(q.subject.value)
+    known = set().union(*types.values())
+    if excluded - known:
+        raise ValueError(f"no class {', '.join(sorted(excluded - known))} in the graph to leave out; "
+                         f"its classes: {', '.join(sorted(known))}")
     nodes = {n for n, kinds in types.items() if not kinds & excluded}
     links = [(q.subject.value, q.predicate.value, q.object.value) for q in quads
              if q.predicate.value != _TYPE and isinstance(q.object, ox.NamedNode)
