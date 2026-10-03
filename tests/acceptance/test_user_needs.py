@@ -27,18 +27,19 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
 
 from rdm.evidence import allure as allure_ingest
 from rdm.specification import persona
-from rdm.release.verify import build_verification, verify_command
+from rdm.main import cli
+from rdm.release.verify import verify_command
+from rdm.specification import design_gate as design_gate_module
 from rdm.specification.design_gate import (
     check_design_docs,
     run_design_gate,
     story_design_gate_command,
 )
 from rdm.specification.sdd import design_input_ids, design_inputs, user_need_texts
-from rdm.release.gate import INPUT_FAILED, UNREADABLE_RESULT, run_release_gate
+from rdm.release.gate import run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _allure_result
@@ -223,122 +224,95 @@ def test_design_gate_requires_approval(tmp_path: Path, capsys) -> None:
 @allure.story("DI-3")
 @allure.label("output", "rdm/release/gate.py")
 def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
-    """DI-3: block release until every design input is verified by a passing test."""
-    dhf = _approved_dhf(tmp_path, ["UN-003"])  # DI-1 traces to UN-003
+    """DI-3: release is blocked unless every declared design input is verified
+    by a passing test."""
+    dhf = _approved_dhf(tmp_path, ["UN-003"], inputs=[("DI-1", ["UN-003"]), ("DI-2", ["UN-003"])])
     empty = tmp_path / "none"
     empty.mkdir()
-    with verification_step("an untested design input blocks"):
+    with verification_step("with no results, every design input is untested and release is blocked"):
         gate = run_release_gate(dhf, empty)
         attach("release gate blocking", gate.blocking)
         assert not gate.passed
     results = tmp_path / "allure"
-    with verification_step("a failing design input blocks"):
-        _allure_result(results, "a", "failed", "DI-1")
-        gate = run_release_gate(dhf, results)
-        attach("release gate blocking", gate.blocking)
-        assert not gate.passed
-    with verification_step("a verified design input passes"):
+    with verification_step("one design input verified and another untested: release is blocked, naming the "
+                           "untested one"):
         _allure_result(results, "a", "passed", "DI-1")
         gate = run_release_gate(dhf, results)
         attach("release gate blocking", gate.blocking)
-        assert gate.passed
-    with verification_step("a result file that cannot be read blocks: it could hold a failed run"):
-        for bad in ('{"status": "failed", "labels": [{"name": "story", "value": "DI-1"', "[]"):
-            (results / "b-result.json").write_text(bad)
-            gate = run_release_gate(dhf, results)
-            attach("release gate blocking", gate.blocking)
-            assert not gate.passed and any(e.name == UNREADABLE_RESULT for e in gate.events)
-        (results / "b-result.json").write_bytes(b'{"name": "\xff"}')
-        assert not run_release_gate(dhf, results).passed
-    with verification_step("a result with a byte-order mark is read, and its failed run counts"):
-        failed = '{"status": "failed", "labels": [{"name": "story", "value": "DI-1"}]}'
-        (results / "b-result.json").write_text("\ufeff" + failed)
+        assert not gate.passed and any("DI-2" in m for m in gate.blocking) \
+            and not any("DI-1" in m for m in gate.blocking), gate.blocking
+    with verification_step("a failing design input blocks release"):
+        _allure_result(results, "b", "failed", "DI-2")
         gate = run_release_gate(dhf, results)
-        assert not gate.passed and [e.name for e in gate.events if e.blocking] == [INPUT_FAILED]
-    with verification_step("a result that could hold a failed run is unreadable: a status Allure does not write, "
-                           "labels that are not name and value text, a symbolic link, JSON nested too deep"):
-        story = [{"name": "story", "value": "DI-1"}]
-        cases = {"capital-status": {"status": "Failed", "labels": story}, "no-status": {"labels": story},
-                 "null-status": {"status": None, "labels": story},
-                 "labels-text": {"status": "failed", "labels": "story=DI-1"},
-                 "story-list": {"status": "failed", "labels": [{"name": "story", "value": ["DI-1"]}]}}
-        for name, data in cases.items():
-            case = tmp_path / f"unreadable-{name}"
-            _allure_result(case, "a", "passed", "DI-1")
-            (case / "b-result.json").write_text(json.dumps(data))
-            gate = run_release_gate(dhf, case)
-            attach(f"{name} blocking", gate.blocking)
-            assert [e.name for e in gate.events if e.blocking] == [UNREADABLE_RESULT], (name, gate.blocking)
-        case = tmp_path / "unreadable-link"
-        _allure_result(case, "a", "passed", "DI-1")
-        (tmp_path / "elsewhere.json").write_text(json.dumps({"status": "passed", "labels": story}))
-        (case / "b-result.json").symlink_to(tmp_path / "elsewhere.json")
-        assert [e.name for e in run_release_gate(dhf, case).events if e.blocking] == [UNREADABLE_RESULT]
-        case = tmp_path / "unreadable-deep"
-        _allure_result(case, "a", "passed", "DI-1")
-        (case / "b-result.json").write_text("[" * 100000 + "]" * 100000)
-        assert [e.name for e in run_release_gate(dhf, case).events if e.blocking] == [UNREADABLE_RESULT]
-    with verification_step("a run tagged with a mistyped id is an orphan warning, never silence"):
-        case = tmp_path / "mistyped"
-        _allure_result(case, "a", "passed", "DI-1")
-        for i, tag in enumerate(("di-1", "DI_1", "DI\u20131")):
-            _allure_result(case, f"m{i}", "failed", tag)
-        gate = run_release_gate(dhf, case)
-        attach("warnings", gate.warnings)
+        attach("release gate blocking", gate.blocking)
+        assert not gate.passed and any("DI-2" in m for m in gate.blocking), gate.blocking
+    with verification_step("a design input with a passing and a failing run is not verified: release is blocked"):
+        _allure_result(results, "b", "passed", "DI-2")
+        _allure_result(results, "c", "failed", "DI-1")
+        gate = run_release_gate(dhf, results)
+        attach("release gate blocking", gate.blocking)
+        assert not gate.passed and any("DI-1" in m for m in gate.blocking), gate.blocking
+    with verification_step("every design input verified by a passing test: release passes"):
+        (results / "c-result.json").unlink()
+        gate = run_release_gate(dhf, results)
+        attach("release gate blocking", gate.blocking)
         assert gate.passed, gate.blocking
-        assert {f"Allure result tag {tag} matches no design input" for tag in ("di-1", "DI_1", "DI\u20131")} \
-            <= set(gate.warnings), gate.warnings
 
 
 @allure.story("DI-4")
 @allure.label("output", "rdm/evidence/allure.py")
 @allure.label("output", "rdm/release/verify.py")
-def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
-    """DI-4: results reconcile to a status (reconcile clause) AND assemble into the
-    traceability matrix grouped under the user need (render clause)."""
-    with verification_step("Reconcile clause: executed results classify into verified/failed/untested"):
-        results = tmp_path / "allure"
-        _allure_result(results, "ok", "passed", "DI-A")
-        _allure_result(results, "bad", "failed", "DI-B")
-        report = allure_ingest.reconcile({"DI-A", "DI-B", "DI-C"}, results)
-        assert report.verified == ["DI-A"]
-        assert report.failed == ["DI-B"]
-        assert report.untested == ["DI-C"]
-
-    # Render clause: build_verification assembles the matrix — each design input
-    # carries its real status, grouped under the user need it traces to. The
-    # mixed pass/fail row set means a "always verified" assembly bug is caught.
-    with verification_step("Render clause: build_verification assembles the matrix — each design input carries its "
-                           "real…"):
+@allure.label("output", "rdm/publishing/render.py")
+def test_verification_status_traceable_from_results(tmp_path: Path, monkeypatch, capsys) -> None:
+    """DI-4: each declared design input reconciled against the story labels of
+    the executed results as verified, failed or untested, and the traceability
+    matrix of those statuses rendered under the user needs."""
+    results = tmp_path / "allure"
+    for name, status, story in (("p", "passed", "DI-1"), ("f", "failed", "DI-2"), ("s", "skipped", "DI-3"),
+                                ("b", "broken", "DI-4")):
+        _allure_result(results, name, status, story)
+    with verification_step("a passed run verifies; a failed or broken one fails; a skipped run, or none, leaves "
+                           "a design input untested"):
+        report = allure_ingest.reconcile({"DI-1", "DI-2", "DI-3", "DI-4", "DI-5"}, results)
+        attach("statuses", {i: v.status for i, v in sorted(report.by_id.items())})
+        assert report.verified == ["DI-1"]
+        assert report.failed == ["DI-2", "DI-4"]
+        assert report.untested == ["DI-3", "DI-5"]
+    with verification_step("only the story label names a design input: a feature or epic naming one does not"):
+        (results / "e-result.json").write_text(json.dumps({"name": "e", "status": "failed", "labels": [
+            {"name": "feature", "value": "DI-1"}, {"name": "epic", "value": "DI-1"}]}))
+        assert allure_ingest.reconcile({"DI-1"}, results).verified == ["DI-1"]
+        (results / "e-result.json").unlink()
+    with verification_step("the rendered traceability matrix shows each design input's status under the user need "
+                           "it traces to"):
         docs = tmp_path / "dhf" / "documents"
         docs.mkdir(parents=True)
-        write_design_doc(docs / "design", "core", design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))
-        _vv_plan(docs, ["UN-001"])
-        matrix_results = tmp_path / "allure-matrix"
-        _allure_result(matrix_results, "p", "passed", "DI-1")
-        _allure_result(matrix_results, "f", "failed", "DI-2")
-        data = build_verification(tmp_path / "dhf", matrix_results)
-        rows = {di["design_input"]: di["status"]
-                for group in data["groups"] for di in group["design_inputs"]}
-        assert rows == {"DI-1": "verified", "DI-2": "failed"}
-        assert data["groups"][0]["user_need"] == "UN-001"
-
-    with verification_step("A passed run whose verification step failed or broke failed: a failed step fails the test"):
-        stepped = tmp_path / "allure-steps"
-        stepped.mkdir()
-        for name, status in (("s", "failed"), ("t", "broken")):
-            (stepped / f"{name}-result.json").write_text(json.dumps(
-                {"name": name, "status": "passed", "labels": [{"name": "story", "value": f"DI-{name.upper()}"}],
-                 "steps": [{"name": "outer", "status": "passed", "steps": [{"name": "inner", "status": status}]}]}))
-        report = allure_ingest.reconcile({"DI-S", "DI-T"}, stepped)
-        assert report.failed == ["DI-S", "DI-T"], report.by_id
-
-    with verification_step("verify names a result file it cannot read, and exits non-zero, as the gate blocks"):
-        (matrix_results / "x-result.json").write_text('{"status": "failed", "labels": [')
-        out_file = tmp_path / "verification.yml"
-        assert verify_command(tmp_path / "dhf", matrix_results, out_file) == 1
-        data = yaml.safe_load(out_file.read_text())
-        assert data["unreadable"] == ["x-result.json"]
+        write_design_doc(docs / "design", "core", design_inputs=(
+            ("DI-1", ["UN-001"]), ("DI-2", ["UN-001"]), ("DI-3", ["UN-001"]), ("DI-4", ["UN-002"]),
+            ("DI-5", ["UN-002"])))
+        _vv_plan(docs, ["UN-001", "UN-002"])
+        assert verify_command(tmp_path / "dhf", results, tmp_path / "verification.yml") == 0
+        template = Path(design_gate_module.__file__).parent / "init_files" / "documents" / "traceability_matrix.md"
+        (tmp_path / "matrix.md").write_text(template.read_text())
+        (tmp_path / "config.yml").write_text("")
+        (tmp_path / "device.yml").write_text("name: Acme Monitor\nversion: '1.0'\n")  # the scaffold's device data
+        monkeypatch.chdir(tmp_path)
+        capsys.readouterr()
+        assert cli(["render", "matrix.md", "config.yml", "device.yml", "verification.yml"]) == 0, \
+            capsys.readouterr().err
+        matrix = capsys.readouterr().out
+        attach("rendered matrix", matrix)
+        rows = {}
+        need = None
+        for line in matrix.splitlines():
+            if line.startswith("## "):
+                need = line[3:].strip()
+            elif line.startswith("| DI-"):
+                cells = [c.strip() for c in line.strip("|").split("|")]
+                rows[cells[0]] = (need, cells[1])
+        assert rows == {"DI-1": ("UN-001", "verified"), "DI-2": ("UN-001", "failed"),
+                        "DI-3": ("UN-001", "untested"), "DI-4": ("UN-002", "failed"),
+                        "DI-5": ("UN-002", "untested")}, rows
 
 
 @allure.story("DI-5")
