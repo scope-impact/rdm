@@ -1752,7 +1752,8 @@ whose last run passed. **Changes requested:**
 
 **Decision (C):** narrow DI-1 to reading the user needs and design inputs
 from frontmatter with no project-management dependency; ingesting Allure
-results is left to DI-40 and DI-4. Its test is to show that reading the
+results moves to the new reading design input of DI-3's decision
+(DI-40 reads tags from test source, not result files). Its test is to show that reading the
 record imports no planning tool and needs no `backlog/` directory, its output
 label to name what it exercises, and its step names to be whole. To be made
 once the pass is complete.
@@ -1784,6 +1785,34 @@ covers the commit and merge hooks that run the gate on implementation work,
 with its own tagged test and output label. The steps for frontmatter and
 declarations the record reader cannot read move to DI-46's test. To be made
 once the pass is complete.
+
+## DI-3 — Release is blocked until every design input is verified
+
+Traces to UN-003; described by the Release gate row of the release context;
+verified by `test_release_gate_blocks_until_verified` (output
+`rdm/release/gate.py`), whose last run passed with seven verification steps.
+**Changes requested:**
+
+- "Every" is not shown: the test's project declares one design input, so a
+  gate that passed when any one input was verified would pass it too.
+- A design input with both a passing and a failing run is not tried.
+- Three steps verify how Allure results are read — a result that cannot be
+  read, one with a byte-order mark, a status Allure does not write, labels
+  that are not name and value text, a symbolic link, JSON nested too deep —
+  which no design input states. This is the ingestion DI-1 is to drop.
+- The step on a run tagged with a mistyped id verifies a warning, not a
+  block, and the text does not state it.
+- The output label does not name where results are read
+  (`rdm/evidence/allure.py`).
+
+**Decision (C):** split. DI-3 keeps blocking release unless every declared
+design input is verified by a passing test; its test is to declare two
+inputs, one verified and one not, and to try an input with a passing and a
+failing run. A new design input of the test-evidence context covers reading
+Allure results: a result that cannot be read is unverified, never a pass, and
+a run tagged with an id no design input declares is warned about. It takes the
+reading steps, the mistyped-id step and its own output label, and the
+ingestion DI-1 drops. To be made once the pass is complete.
 
 # Approval
 
