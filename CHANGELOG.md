@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Fixed: review findings on the behaviour fixes** (Design Review 57). The
+  merge hook no longer blocks a valid merge of an approved design change
+  with its code: during a merge, a document staged exactly as a commit holds
+  it is approved. A blank user-need string fails the design gate. `rdm
+  translate` refuses a result file whose suites hold no test.
+
 - **Fixed: starting, adopting and adding an input work as the docs say**
   (Design Review 56). The design gate also holds the user needs and the risk
   documents complete and committed. `rdm adopt` lays down a `.gitignore` of

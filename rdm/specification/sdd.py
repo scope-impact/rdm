@@ -141,8 +141,9 @@ def malformed_declarations(dhf_dir: Path) -> list[tuple[Path, str]]:
             elif not isinstance(value, list):
                 found.append((md, f"its {key} is not a list of entries"))
             elif key == "user_needs":
-                found += [(md, problem) for item in value
-                          if not isinstance(item, str) and (problem := _id_problem(item, kind))]
+                found += [(md, f"a {kind} has no id: {item!r}" if isinstance(item, str) else problem)
+                          for item in value if (problem := _id_problem(item, kind)) is not None
+                          and not (isinstance(item, str) and item.strip())]
             else:
                 found += [(md, problem) for item in value if (problem := _id_problem(item, kind))]
     return found

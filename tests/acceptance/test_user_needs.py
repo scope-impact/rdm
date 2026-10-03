@@ -160,6 +160,34 @@ def test_design_gate_requires_approval(tmp_path: Path, capsys) -> None:
         merge = subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "merge", "--no-ff", "-m", "m",
                                 "feature"], cwd=red, capture_output=True, text=True)
         assert merge.returncode != 0 and _git(red, "rev-parse", "HEAD") == head, merge.stdout + merge.stderr
+    with verification_step("a merge of a design change approved on its branch, with its implementation, passes"):
+        green = _approved_dhf(tmp_path / "green", ["UN-001"]).parent
+        _git(green, "branch", "-M", "main")
+        install_hooks(str(green / ".git" / "hooks"))
+        _git(green, "checkout", "-qb", "feature")
+        core = green / "dhf" / "documents" / "design" / "core.md"
+        core.write_text(core.read_text().replace("DI-1 requirement", "DI-1 refined requirement"))
+        _git(green, "commit", "-qam", "design")  # the approval: design documents only
+        (green / "app.py").write_text("print(1)\n")
+        _git(green, "add", "app.py")
+        _git(green, "commit", "-qm", "code")
+        _git(green, "checkout", "-q", "main")
+        (green / "README.md").write_text("moved on\n")
+        _git(green, "add", "README.md")
+        _git(green, "commit", "-qm", "docs")
+        merge = subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "merge", "--no-ff", "-m", "m",
+                                "feature"], cwd=green, capture_output=True, text=True)
+        assert merge.returncode == 0 and (green / "app.py").exists(), merge.stdout + merge.stderr
+        _git(green, "checkout", "-qb", "feature2", "feature")
+        core.write_text(core.read_text().replace("refined", "re-refined"))
+        _git(green, "commit", "-qam", "design again")
+        _git(green, "checkout", "-q", "main")
+        _git(green, "merge", "--no-ff", "--no-commit", "feature2")  # concluded later by git commit
+        assert run_design_gate(green / "dhf").passed
+        core.write_text(core.read_text() + "\nAn edit made during the merge.\n")
+        assert not run_design_gate(green / "dhf").passed
+        _git(green, "add", str(core))  # staged, as a resolved conflict is: content no commit holds
+        assert not run_design_gate(green / "dhf").passed
     with verification_step("Incomplete (placeholder) design doc -> not complete"):
         docs = tmp_path / "dhf" / "documents" / "design"
         docs.mkdir(parents=True)
@@ -222,7 +250,8 @@ def test_design_gate_requires_approval(tmp_path: Path, capsys) -> None:
                 ("no-id", entry + "{text: x}"), ("wrong-key", entry + "{ID: DI-9, text: x}"),
                 ("null-id", entry + "{id: null, text: x}"), ("list-id", entry + "{id: [DI-9], text: x}"),
                 ("not-design", "id: X\ndesign_inputs:\n  - {id: DI-9, text: x}"),
-                ("need-no-id", "id: X\nuser_needs:\n  - {text: x}")):
+                ("need-no-id", "id: X\nuser_needs:\n  - {text: x}"),
+                ("need-blank", "id: X\nuser_needs:\n  - '  '")):
             found = gate_on(name, f"---\n{front}\n---\n\nbody\n", "documents/design")
             assert any(f.startswith(MALFORMED_DECLARATION) and f"{name}.md" in f for f in found), (name, found)
     with verification_step("a repeated frontmatter key, or a document that is not UTF-8, cannot be read"):

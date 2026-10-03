@@ -23,7 +23,10 @@ def translate_test_results(format, input, output):
     results = xml_load(input)
     if not has_test_results(results):
         raise ValueError(f"{input} holds no test results (not gtest, xunit or qttest XML)")
+    flattened = xml_translator(results)
+    if not flattened:  # suites, but no test in them
+        raise ValueError(f"{input} holds no test results (its suites hold no test)")
     with open(output, 'w', encoding='utf-8') as out_file:
-        write_yaml(xml_translator(results), out_file)
+        write_yaml(flattened, out_file)
 
 

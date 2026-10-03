@@ -108,6 +108,10 @@ def test_translates_foreign_test_results(tmp_path: Path) -> None:
         page.write_text("<html><body>not a test report</body></html>")
         with pytest.raises(ValueError, match="no test results"):
             translate_test_results("auto", str(page), str(out))
+        empty = tmp_path / "empty.xml"
+        empty.write_text('<testsuite name="none" tests="0"/>')
+        with pytest.raises(ValueError, match="no test results"):
+            translate_test_results("auto", str(empty), str(out))
         from rdm.main import cli
         assert cli(["translate", "auto", str(page), str(out)]) == 2
         assert cli(["translate", "auto", str(tmp_path / "missing.xml"), str(out)]) == 2

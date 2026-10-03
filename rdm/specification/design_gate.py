@@ -30,6 +30,7 @@ Part of the core install: it reads only the record (``rdm.specification``).
 
 from __future__ import annotations
 
+import os
 import re
 
 from dataclasses import dataclass, field
@@ -163,7 +164,7 @@ def has_uncommitted_changes(path: Path) -> bool | None:
     status = git(path.parent, "status", "--porcelain", "--ignored", "--", str(path))
     if status is None:
         return None
-    if status:
+    if status and not _merged_as_committed(path, status):
         return True
     listed = git(path.parent, "ls-files", "-v", "--", str(path))
     if not listed or listed[0] == "S" or listed[0].islower():  # untracked; skip-worktree; assume-unchanged
@@ -172,6 +173,23 @@ def has_uncommitted_changes(path: Path) -> bool | None:
     if path.is_symlink() and target != path.absolute():
         return has_uncommitted_changes(target) is not False
     return False
+
+
+def _merged_as_committed(path: Path, status: str) -> bool:
+    """Whether ``path`` is staged only because a merge is being made, exactly
+    as a commit holds it at its path: committed and reviewed there, so
+    approved. Git names the merged commit (MERGE_HEAD) only after the merge
+    hook has run, so the commit is found by the document's content. A merge
+    result no commit holds (a resolved conflict) is new content, and an edit
+    in the working tree is uncommitted, as ever."""
+    staged_only = all(line[:1] in "MA" and line[1:2] == " " for line in status.splitlines())
+    merging = bool(git(path.parent, "rev-parse", "-q", "--verify", "MERGE_HEAD")) or \
+        os.environ.get("GIT_REFLOG_ACTION", "").startswith("merge")
+    if not (staged_only and merging):
+        return False
+    staged = git(path.parent, "rev-parse", "-q", "--verify", f":./{path.name}")
+    return bool(staged) and bool(git(path.parent, "log", "--all", "-n1", "--format=%H",
+                                     f"--find-object={staged}", "--", path.name))
 
 
 def _approval(path: Path, events: list[Event]) -> bool | None:
