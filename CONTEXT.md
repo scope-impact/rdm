@@ -101,7 +101,7 @@ _Avoid_: code review (unqualified), self-review
 
 **Chain review**:
 Reading one design input together with its user needs, its design prose, its
-tagged test and verification steps, its output labels and its last run, and
+tagged test and verification steps, its component labels and its last run, and
 deciding whether the test proves the text; recorded as a design review, input
 by input, before each release. A person's judgement, never a gate.
 _Avoid_: faithfulness gate, audit, test review

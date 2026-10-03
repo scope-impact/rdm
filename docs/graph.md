@@ -138,8 +138,8 @@ design controls:
 | a `story` label | `rdm:exercises` the design input |
 | `fullName` | `rdm:runOf` the `rdm:Test` (`tests/x.py::TestClass::test_y`) it ran (DI-61) |
 | a `commit` label (`rdm.pytest_plugin`, DI-59) | `rdm:testedAt` that commit; `worktree=dirty` → `rdm:uncommittedChanges` (DI-60) |
-| an `output` label | `rdm:exercisesOutput` an `rdm:SourceFile` — the code the run exercises — and `rdm:namesComponent` the component holding it |
-| a `component` label | `rdm:namesComponent` the C4 component with that key; a key the model does not declare is `rdm:unknownComponent`, a warning (DI-56) |
+| a `component` label (the way a test names what it exercises) | `rdm:namesComponent` the C4 component with that key; a key the model does not declare is `rdm:unknownComponent`, a warning (DI-56) |
+| an `output` label (optional, a file path) | `rdm:exercisesOutput` an `rdm:SourceFile` — the code the run exercises — and `rdm:namesComponent` the component holding it |
 | `parameters` | `rdm:parameter`, each a name and a value |
 | `steps`, `attachments` | `rdm:step` (nested, ordered), `rdm:attachment` (name, media type, file) |
 | other labels, `links`, `historyId`, containers | not projected: `epic` / `feature` and the links are written from the record (DI-57), the rest is runner metadata, a test case is one-to-one with its run, and fixtures (`tmp_path`, `capsys`) say nothing about a design input. The raw files stay in the evidence bundle. |
