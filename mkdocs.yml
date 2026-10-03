@@ -13,7 +13,11 @@ site_dir: site
 theme:
   name: material
   features:
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.indexes
+    - navigation.footer
     - navigation.top
     - content.code.copy
     - toc.follow
@@ -28,6 +32,12 @@ theme:
 
 extra_css:
   - stylesheets/rdm-theme.css
+  - stylesheets/traceability-map.css   # scoped to .rdm-map
+
+# The traceability map's script: on every page, so its path resolves at any depth; it does
+# nothing on a page without a map.
+extra_javascript:
+  - javascripts/traceability-map.js
 
 plugins:
   - search
@@ -80,7 +90,7 @@ nav:
       - 4. Installation: install/installation.md
       - 5. Getting started: install/getting-started.md
       - 6. Operating instructions:
-          - Overview: use/index.md
+          - use/index.md
           - Design inputs and tests: use/design-inputs-and-tests.md
           - Changing the record: use/changing-the-record.md
           - Risk register: use/risk-register.md
@@ -94,13 +104,13 @@ nav:
           - Authoring and rendering: use/documents.md
       - 7. Troubleshooting: troubleshooting.md
       - 8. Reference:
-          - Overview: reference/index.md
+          - reference/index.md
           - CLI: reference/cli.md
           - API: reference/api.md
           - Glossary: reference/glossary.md
           - "Worked example: Part 11": reference/worked-example.md
       - 9. Revision history: revision-history.md
-  - RDM on RDM:
+  - Design history (RDM on RDM):
       - Overview: dhf/README.md
       - Changing RDM: dhf/AGENT_WORKFLOW.md
       - Traceability (from the graph): traceability-map.md

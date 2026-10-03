@@ -1,8 +1,7 @@
 # RDM — Instructions for use
 
-| | |
-|---|---|
 | **Product** | RDM, the design record of regulated software |
+|---|---|
 | **Release** | v2.0.0-alpha |
 | **Document** | IFU-001, revision 3 |
 | **Maintained by** | Scope Impact, [scope-impact/rdm](https://github.com/scope-impact/rdm) (MIT licence; first written by Innolitics, LLC) |
