@@ -91,6 +91,7 @@ own API (`allure.dynamic`), so the labels can never drift from it:
 | `severity` | `critical` when the design input controls a risk |
 | `commit` | the commit under test, with `worktree=dirty` when the working tree had uncommitted changes |
 | attachment `requirement DI-n` | the design input's text |
+| attachment `coverage.lcov` | with `--rdm-coverage`: the code this test alone ran, as LCOV, which the graph maps to components (needs coverage.py; skipped, with a warning, when another coverage measurement is running) |
 
 Enable it for the acceptance suite only — import its hook in that suite's
 `conftest.py`, or pass `-p rdm.pytest_plugin --rdm-dhf dhf`:
@@ -98,7 +99,15 @@ Enable it for the acceptance suite only — import its hook in that suite's
 ```python
 # tests/acceptance/conftest.py
 from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
+
+
+def pytest_configure(config):
+    config.option.rdm_coverage = True  # attach each test's coverage (optional)
 ```
+
+Any language can attach coverage the same way: an attachment named
+`coverage`, `lcov` or `cobertura` holding LCOV or Cobertura XML is read as the
+run's coverage.
 
 ## Running the acceptance tests
 

@@ -9,6 +9,7 @@ allure-pytest is not installed.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -134,3 +135,65 @@ def test_runs_carry_the_commit_under_test(tmp_path: Path) -> None:
         dirty = _run(repo)
         assert _labels(dirty["test_alarm"], "worktree") == ["dirty"]
         assert _labels(dirty["test_alarm"], "commit") == [head]
+
+
+def _covered_project(tmp_path: Path) -> Path:
+    """A project whose tagged tests run its code: one sounds the alarm, one does not."""
+    repo = tmp_path / "pump"
+    (repo / "tests").mkdir(parents=True)
+    (repo / "alarm.py").write_text("def sound():\n    return 'beep'\n\n\ndef silence():\n    return ''\n")
+    (repo / "tests" / "test_pump.py").write_text(
+        'import allure\nimport alarm\n\n'
+        '@allure.story("DI-1")\ndef test_sounds():\n    assert alarm.sound() == "beep"\n\n'
+        '@allure.story("DI-2")\ndef test_quiet():\n    assert True\n\n'
+        'def test_untagged():\n    assert alarm.silence() == ""\n')
+    return repo
+
+
+def _run_covered(repo: Path, *before: str, flag: bool = True, env: dict | None = None) -> tuple[dict, str]:
+    out = repo.parent / f"allure-{len(list(repo.parent.glob('allure-*')))}"
+    command = [*before] or [sys.executable, "-m"]
+    run = subprocess.run([*command, "pytest", "-q", "-p", "no:cacheprovider", "-p", "rdm.pytest_plugin",
+                          f"--alluredir={out}", "--rdm-dhf", str(repo / "dhf"),
+                          *(["--rdm-coverage"] if flag else []), "tests"],
+                         cwd=repo, capture_output=True, text=True, env={**os.environ, "PYTHONPATH": str(repo),
+                                                                        **(env or {})})
+    assert run.returncode == 0, run.stdout + run.stderr
+    results = {(d := json.loads(f.read_text()))["name"]: d for f in out.glob("*-result.json")}
+    return {name: {a["name"]: out / a["source"] for a in d.get("attachments", [])} for name, d in results.items()}, \
+        run.stdout + run.stderr
+
+
+@allure.story("DI-75")
+@allure.label("output", "rdm/pytest_plugin.py")
+def test_each_tagged_test_attaches_its_own_coverage(tmp_path: Path) -> None:
+    """DI-75: asked with --rdm-coverage, the plugin attaches each tagged
+    test's own coverage as LCOV, which DI-74 reads; with no coverage.py, or
+    another measurement running, it measures nothing and says so."""
+    from rdm.evidence.allure import read_coverage
+    from rdm.pytest_plugin import COVERAGE_ATTACHMENT
+
+    repo = _covered_project(tmp_path)
+    with verification_step("asked, each tagged test that runs the project's code attaches its own coverage as LCOV"):
+        attached, _ = _run_covered(repo)
+        lcov = attached["test_sounds"][COVERAGE_ATTACHMENT]
+        attach("coverage of test_sounds", lcov.read_text())
+        assert "alarm.py" in read_coverage(lcov, repo)
+        assert "DA:2,1" in lcov.read_text() and "DA:6,0" in lcov.read_text()  # sound ran, silence did not
+    with verification_step("a test's coverage is its own: what another test ran is not in it; an untagged test "
+                           "attaches none"):
+        assert "alarm.py" not in read_coverage(attached["test_quiet"][COVERAGE_ATTACHMENT], repo)
+        assert COVERAGE_ATTACHMENT not in attached["test_untagged"]
+    with verification_step("not asked, no coverage is measured"):
+        attached, _ = _run_covered(repo, flag=False)
+        assert all(COVERAGE_ATTACHMENT not in a for a in attached.values())
+    with verification_step("with no coverage.py, or another measurement running, nothing is measured and the run "
+                           "says so"):
+        fake = tmp_path / "no-coverage" / "coverage"
+        fake.mkdir(parents=True)
+        (fake / "__init__.py").write_text("raise ImportError('coverage is not installed')\n")
+        attached, said = _run_covered(repo, env={"PYTHONPATH": f"{fake.parent}{os.pathsep}{repo}"})
+        assert all(COVERAGE_ATTACHMENT not in a for a in attached.values()) and "coverage.py is not installed" in said
+        attached, said = _run_covered(repo, sys.executable, "-m", "coverage", "run", "-m")
+        assert all(COVERAGE_ATTACHMENT not in a for a in attached.values())
+        assert "another coverage measurement is running" in said, said
