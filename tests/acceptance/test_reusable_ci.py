@@ -46,6 +46,7 @@ def _releasable(repo: Path) -> Path:
         "---\nid: SDS-ALM-001\nkind: design\ncontext: alarms\ndesign_inputs:\n"
         "  - {id: DI-1, text: 'The device shall alarm.', traces_to: [UN-001]}\n---\n# Alarms\n")
     (docs / "design_review.md").write_text("---\nid: DR-001\n---\n# Review\nApproved.\n")
+    (docs / "traceability_matrix.md").write_text("---\nid: TM-001\n---\n# Matrix\n")  # the bundle renders it
     write_allure_result(repo / "dhf" / "allure-results", "r1", "passed", "DI-1")
     for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "r"]):
         git_run(repo, *args)

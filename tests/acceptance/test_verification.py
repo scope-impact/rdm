@@ -90,35 +90,28 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
         assert on_disk == manifest
         assert manifest["design_inputs"] == 1 and manifest["verified"] == 1
         assert "faithfulness_verdicts" not in manifest
-    # The executed results ride along: every plain file of the results directory
-    # (results, containers, attachments, the run's executor and environment), so
-    # the report's digest over them can be checked from the bundle.
-    bundled = {"allure-results/" + n for n in
-               ("t1-result.json", "c1-container.json", "a1-attachment.txt", "a2-attachment.json", "a3-attachment.txt",
-                "executor.json", "environment.properties", "stray-attachment.txt")}
-    # The verification report (DI-64) is in it when Typst is available, and the manifest says which.
-    report = {"verification_report.pdf"} if manifest["verification_report"] == "verification_report.pdf" else set()
-    assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"} | bundled | report
-    assert (out / "allure-results" / "a1-attachment.txt").read_text() == "Release gate PASSED\n"
+    with verification_step("the executed results, with every attachment and container they reference"):
+        # every plain file of the results directory (results, containers,
+        # attachments, the run's executor and environment)
+        bundled = {"allure-results/" + n for n in
+                   ("t1-result.json", "c1-container.json", "a1-attachment.txt", "a2-attachment.json",
+                    "a3-attachment.txt", "executor.json", "environment.properties", "stray-attachment.txt")}
+        report = {"verification_report.pdf"} if manifest["verification_report"] == "verification_report.pdf" else set()
+        assert set(manifest["files"]) == {"verification.yml", "traceability_matrix.md"} | bundled | report
+        assert (out / "allure-results" / "a1-attachment.txt").read_text() == "Release gate PASSED\n"
+    with verification_step("the verification report is in the bundle, or the manifest says why it is not"):
+        if manifest["verification_report"] == "verification_report.pdf":
+            assert (out / "verification_report.pdf").read_bytes().startswith(b"%PDF")
+        else:
+            assert manifest["verification_report"].startswith("not rendered: ")
     with verification_step("a symbolic link in the results is never followed; a missing attachment is listed"):
         assert not (out / "allure-results" / "linked-attachment.txt").exists()
         assert manifest["missing_attachments"] == ["gone-attachment.txt", "linked-attachment.txt"]
-    with verification_step("the report's digest over the results can be checked from the bundle"):
-        from rdm.publishing.report import build_report, results_sha256
-        assert results_sha256(out / "allure-results") == build_report(dhf, results)["results_sha256"]
     with verification_step("a bundle written over an earlier one replaces its results, never mixes them"):
         (results / "stray-attachment.txt").unlink()
         manifest = evidence_bundle(dhf, results, out)
         assert not (out / "allure-results" / "stray-attachment.txt").exists()
         assert "allure-results/stray-attachment.txt" not in manifest["files"]
-    with verification_step("a result the report cannot lay out leaves the reason, not a crash"):
-        (results / "t2-result.json").write_text(json.dumps(
-            {"name": "t2", "status": "passed", "labels": [{"name": "story", "value": "DI-1"}],
-             "statusDetails": "not a mapping", "steps": [None], "attachments": [None]}))
-        manifest = evidence_bundle(dhf, results, out)
-        assert (out / "manifest.json").is_file()
-        assert manifest["verification_report"] in ("verification_report.pdf",) or \
-            manifest["verification_report"].startswith("not rendered: ")
     with verification_step("an output that would hold the results, or sit inside them, is refused and the results "
                            "kept"):
         kept = sorted(p.name for p in results.iterdir())
@@ -127,6 +120,17 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
                 evidence_bundle(dhf, results, out_dir)
             assert sorted(p.name for p in results.iterdir()) == kept, out_dir
         assert evidence_bundle_command(dhf, results, results.parent) == 2
+    with verification_step("a record with no traceability matrix template is refused, naming it, and no bundle is "
+                           "written"):
+        template = dhf / "documents" / "traceability_matrix.md"
+        kept_template = template.read_text()
+        template.unlink()
+        elsewhere = tmp_path / "no-matrix"
+        with pytest.raises(ValueError, match="traceability_matrix.md"):
+            evidence_bundle(dhf, results, elsewhere)
+        assert not elsewhere.exists()
+        assert evidence_bundle_command(dhf, results, elsewhere) == 2
+        template.write_text(kept_template)
     with verification_step("an unreadable result is named in the manifest"):
         (results / "cut-result.json").write_text('{"status": "failed"')
         manifest = evidence_bundle(dhf, results, out)

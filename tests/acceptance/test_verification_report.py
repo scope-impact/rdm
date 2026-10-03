@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import struct
 import sys
 import zlib
@@ -25,7 +26,13 @@ pypdf = pytest.importorskip("pypdf")
 
 from rdm.main import cli  # noqa: E402
 from rdm.publishing.bundle import evidence_bundle  # noqa: E402
-from rdm.publishing.report import TEXT_LINES, ReportUnavailable, build_report, render_pdf  # noqa: E402
+from rdm.publishing.report import (  # noqa: E402
+    TEXT_LINES,
+    ReportUnavailable,
+    build_report,
+    render_pdf,
+    results_sha256,
+)
 from rdm.kernel.version import __version__  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.util import git_run  # noqa: E402
@@ -55,6 +62,7 @@ def _record(tmp_path: Path, inputs: str) -> tuple[Path, str]:
         "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: 'a need'}\n  - {id: UN-002, text: 'another'}\n---\n")
     (docs / "design" / "alarms.md").write_text(
         f"---\nid: SDS-ALM-001\nkind: design\ncontext: alarms\ndesign_inputs:\n{inputs}---\n")
+    (docs / "traceability_matrix.md").write_text("---\nid: TM-001\n---\n# Matrix\n")
     (docs / "risks.md").write_text(
         "---\nid: RR-001\nkind: risk\nstatus: proposed\nrisk_policy:\n  severities: [Minor, Major]\n"
         "  probabilities: [Rare, Often]\n  levels: {Minor: [Low, Low], Major: [Low, High]}\n"
@@ -296,6 +304,18 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert cli(["story", "evidence-report", "--dhf", str(dhf), "--allure-results", str(results),
                     "-o", str(out)]) == 0
         assert out.read_bytes().startswith(b"%PDF")
+    with verification_step("the report's one SHA-256 over the results can be checked from the bundle's copy of them"):
+        assert results_sha256(tmp_path / "bundle" / "allure-results") == build_report(dhf, results)["results_sha256"]
+    with verification_step("a result the report cannot lay out leaves the reason in the bundle, not a crash"):
+        odd = tmp_path / "odd-results"
+        shutil.copytree(results, odd, symlinks=True)
+        (odd / "t2-result.json").write_text(json.dumps(
+            {"name": "t2", "status": "passed", "labels": [{"name": "story", "value": "DI-1"}],
+             "statusDetails": "not a mapping", "steps": [None], "attachments": [None]}))
+        manifest = evidence_bundle(dhf, odd, tmp_path / "odd-bundle")
+        assert (tmp_path / "odd-bundle" / "manifest.json").is_file()
+        assert manifest["verification_report"] == "verification_report.pdf" or \
+            manifest["verification_report"].startswith("not rendered: ")
     with verification_step("a symbolic link in the results is never read: its attachment missing, its file unhashed"):
         secret = tmp_path / "outside.txt"
         secret.write_text("a file outside the results\n")

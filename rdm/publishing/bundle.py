@@ -69,11 +69,16 @@ def copy_results(results_dir: Path, dest: Path) -> tuple[list[str], list[str]]:
 def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> dict:
     """Produce the bundle; returns the manifest that was written. Raises
     ``ValueError``, writing nothing, when the bundle's copy of the results
-    would overlap the results directory: replacing it would delete them."""
+    would overlap the results directory (replacing it would delete them), or
+    when the record has no traceability matrix template to render."""
     results, kept = Path(allure_results_dir).resolve(), (Path(out_dir) / "allure-results").resolve()
     if results == kept or results.is_relative_to(kept) or kept.is_relative_to(results):
         raise ValueError(f"the bundle's copy of the results ({kept}) would overlap the results directory "
                          f"({results}): write the bundle elsewhere")
+    template = find_dhf_doc(dhf_dir, MATRIX_DOC)
+    if template is None:
+        raise ValueError(f"the record has no {MATRIX_DOC} template to render the traceability matrix from: "
+                         "a bundle without the matrix is incomplete")
     out_dir.mkdir(parents=True, exist_ok=True)
     for earlier in ("verification.yml", MATRIX_DOC, REPORT_PDF, "manifest.json"):  # an earlier bundle's
         (out_dir / earlier).unlink(missing_ok=True)
@@ -83,21 +88,19 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
     data = write_verification_file(dhf_dir, allure_results_dir, verification_path)
 
     # 2. The rendered traceability matrix (generated, never hand-edited).
+    import jinja2
+    import yaml
+
+    from rdm.kernel.util import load_yaml
+    from rdm.publishing.render import render_template_to_file
+
     matrix_path = out_dir / MATRIX_DOC
-    template = find_dhf_doc(dhf_dir, MATRIX_DOC)
-    if template is not None:
-        import jinja2
-        import yaml
-
-        from rdm.publishing.render import render_template_to_file
-        from rdm.kernel.util import load_yaml
-
-        config_file = dhf_dir / "config.yml"
-        config = load_yaml(config_file) if config_file.exists() else {}
-        context = {"verification": yaml.safe_load(verification_path.read_text())}
-        with matrix_path.open("w", encoding="utf-8") as handle:
-            render_template_to_file(config, template.name, context, handle,
-                                    loaders=[jinja2.FileSystemLoader(str(template.parent))])
+    config_file = dhf_dir / "config.yml"
+    config = load_yaml(config_file) if config_file.exists() else {}
+    context = {"verification": yaml.safe_load(verification_path.read_text())}
+    with matrix_path.open("w", encoding="utf-8") as handle:
+        render_template_to_file(config, template.name, context, handle,
+                                loaders=[jinja2.FileSystemLoader(str(template.parent))])
 
     # 3. The executed results themselves: every result and container, and each
     # attachment they name (on the test, its steps, or a fixture) -- the
