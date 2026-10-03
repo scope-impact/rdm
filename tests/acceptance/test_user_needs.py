@@ -317,20 +317,28 @@ def test_verification_status_traceable_from_results(tmp_path: Path, monkeypatch,
 
 @allure.story("DI-5")
 @allure.label("output", "rdm/specification/persona.py")
-def test_formative_usability_classified(tmp_path: Path) -> None:
-    """DI-5: usability can be exercised formatively against a user need.
-
-    Validation stays anchored on the *user need* (UN-001), not a design input:
-    formative usability evidence never gates release.
-    """
+@allure.label("output", "rdm/specification/persona_cmd.py")
+def test_formative_usability_classified(tmp_path: Path, capsys) -> None:
+    """DI-5: AI-persona runs classified into a formative status per user need
+    (UN-005), failed over issues over clean, and a run file that cannot be read
+    as a run, or a run naming an unknown user need, reported, never clean."""
     runs = tmp_path / "persona-results"
     runs.mkdir()
-    (runs / "p-persona.json").write_text(
-        json.dumps({"persona": "nurse", "user_need": "UN-001", "outcome": "success",
-                    "usability_issues": [{"severity": "confusion", "step": 1, "note": "x"}]})
-    )
-    report = persona.reconcile({"UN-001"}, runs)
-    assert report.by_id["UN-001"].status == persona.ISSUES
+
+    def run(name: str, need: str | None, outcome: str | None = "success", issues=None, raw: str | None = None):
+        data = {"persona": "nurse", **({"user_need": need} if need else {}),
+                **({"outcome": outcome} if outcome else {}), **({"usability_issues": issues} if issues else {})}
+        (runs / f"{name}-persona.json").write_text(raw if raw is not None else json.dumps(data))
+
+    needs = {"UN-001", "UN-002", "UN-003", "UN-004"}
+    with verification_step("each status is given: clean, issues, failed and not run"):
+        run("a", "UN-001")
+        run("b", "UN-002", issues=[{"severity": "confusion", "step": 1, "note": "x"}])
+        run("c", "UN-003", outcome="error")
+        report = persona.reconcile(needs, runs)
+        attach("statuses", {i: v.status for i, v in sorted(report.by_id.items())})
+        assert {i: v.status for i, v in report.by_id.items()} == {
+            "UN-001": persona.CLEAN, "UN-002": persona.ISSUES, "UN-003": persona.FAILED, "UN-004": persona.NOT_RUN}
     with verification_step("a run that does not say it completed did not: an unknown or missing outcome fails"):
         for i, outcome in enumerate(("error", None)):
             other = tmp_path / f"runs-{i}"
@@ -338,5 +346,34 @@ def test_formative_usability_classified(tmp_path: Path) -> None:
             (other / "q-persona.json").write_text(json.dumps(
                 {"persona": "nurse", "user_need": "UN-001", **({"outcome": outcome} if outcome else {})}))
             assert persona.reconcile({"UN-001"}, other).by_id["UN-001"].status == persona.FAILED
+    with verification_step("across several runs of one need, failed outranks issues and issues outranks clean"):
+        run("a2", "UN-001", issues=[{"note": "slow"}])
+        assert persona.reconcile(needs, runs).by_id["UN-001"].status == persona.ISSUES
+        run("a3", "UN-001", outcome="error")
+        assert persona.reconcile(needs, runs).by_id["UN-001"].status == persona.FAILED
+    with verification_step("a run file with no user need, issues that are not a list, or unreadable JSON is "
+                           "reported, never counted clean"):
+        run("n", None)
+        run("t", "UN-004", issues="the button was hard to find")
+        run("j", "UN-004", raw="{not json")
+        report = persona.reconcile(needs, runs)
+        attach("unreadable", report.unreadable)
+        assert report.unreadable == ["j-persona.json", "n-persona.json", "t-persona.json"], report.unreadable
+        assert report.by_id["UN-004"].status == persona.NOT_RUN and "UN-004" not in report.clean
+    with verification_step("a run naming a user need the registry does not hold is reported as an orphan"):
+        run("o", "UN-999")
+        assert persona.reconcile(needs, runs).orphan_ids == ["UN-999"]
+    with verification_step("`rdm story persona` prints each need's status and the reported runs, and passes"):
+        run("e", "UN-005")
+        _vv_plan(tmp_path, sorted(needs | {"UN-005"}))
+        capsys.readouterr()
+        assert cli(["story", "persona", "--vv-plan", str(tmp_path / "verification_and_validation_plan.md"),
+                    "--persona-results", str(runs)]) == 0
+        out = capsys.readouterr().out
+        attach("rdm story persona", out)
+        for line in ("[clean]   no issues observed: UN-005", "[issues]  UN-002", "[FAILED]  UN-001",
+                     "[FAILED]  UN-003", "[not-run] UN-004", "[orphan]  persona run tagged UN-999",
+                     "[unreadable] j-persona.json", "[unreadable] n-persona.json", "[unreadable] t-persona.json"):
+            assert line in out, out
 
 

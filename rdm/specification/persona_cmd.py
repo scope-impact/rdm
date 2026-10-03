@@ -55,6 +55,8 @@ def persona_command(
         print(f"  [not-run] {uid}: no persona simulated-use run")
     for tag in report.orphan_ids:
         print(f"  [orphan]  persona run tagged {tag} matches no user need")
+    for name in report.unreadable:
+        print(f"  [unreadable] {name}: not a persona run (no user need, issues not a list, or not JSON)")
 
     print(f"\n{_DISCLAIMER}")
     return 0

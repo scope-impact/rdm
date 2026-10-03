@@ -276,6 +276,8 @@ def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> No
         assert (repo / "dhf" / "AGENT_WORKFLOW.md").is_file()
         hook = repo / ".githooks" / "pre-commit"
         assert "design-gate" in hook.read_text() and os.access(hook, os.X_OK)
+        merge_hook = repo / ".githooks" / "pre-merge-commit"  # a merge runs the same gate
+        assert "pre-commit" in merge_hook.read_text() and os.access(merge_hook, os.X_OK)
         bootstrap = repo / "scripts" / "agent-bootstrap.sh"
         assert os.access(bootstrap, os.X_OK)
         assert "agent-bootstrap" in (repo / ".claude" / "settings.json").read_text()
