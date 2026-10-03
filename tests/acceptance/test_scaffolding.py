@@ -143,10 +143,12 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
 
     # Emits a stub acceptance test tagged with the new id that FAILS until
     # implemented (honest red at the release gate), and prints the checklist.
-    with verification_step("Emits a stub acceptance test tagged with the new id that FAILS until implemented "
-                           "(honest red at…"):
+    with verification_step("Emits a stub acceptance test tagged with the new id, with a component label to fill "
+                           "in, that FAILS until implemented"):
         stub = tmp_path / "tests" / "acceptance" / "test_alarms.py"
         assert '@allure.story("DI-4")' in stub.read_text()
+        assert '@allure.label("component", "TODO")' in stub.read_text()  # the component to fill in
+        assert '@allure.label("output"' not in stub.read_text()
         result = pytest.main(["-q", "--no-header", "-p", "no:cacheprovider", str(stub)])
         assert result == pytest.ExitCode.TESTS_FAILED
         assert "checklist" in out and "DI-4" in out

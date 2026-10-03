@@ -99,6 +99,7 @@ The endpoint's default graph is the union of all of them.
 | `…graph/unit-coverage` | each component's lines its unit tests ran and lines measured (`rdm:unitLinesRun`, `rdm:unitLinesMeasured`; only with `--unit-coverage REPORT`, a Cobertura XML or LCOV report): the component's own unit-test evidence, linked to no run and no design input |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
 | `…graph/references` | documents' `[[KEY]]` tags, linked to the clauses they name |
+| `…graph/manual` | the user manual: each page a `kind: manual` document lists, the design inputs it names, and the labels of each test example it shows |
 | `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties, and the rules for derived relations |
 | `…graph/inferred` | what the rules derive (only with `--infer`, and always for the agent server); never stated by the record |
 

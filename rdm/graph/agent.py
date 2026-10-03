@@ -125,6 +125,8 @@ def _input(store: ox.Store, node: str) -> dict:
             store, f"SELECT DISTINCT ?p WHERE {{ ?r rdm:exercises <{node}> ; rdm:exercisesOutput/rdm:path ?p }}")),
         "risks": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ ?r rdm:controlledBy <{node}> ; dcterms:identifier ?id }}")),
+        "manual_pages": sorted(r["p"] for r in _select(  # DI-77: the pages to re-read when it changes
+            store, f"SELECT ?p WHERE {{ ?page rdm:namesInput <{node}> ; rdm:path ?p }}")),
         "components": _components(store, node, "rdm:namesComponent"),  # DI-69: named...
         "reached_components": _components(store, node, "rdm:reaches"),  # ...and, apart, reached (DI-73)
         "runs": sorted(({"test": r["name"], "status": r["status"], **_evidence(store, r["r"])} for r in _select(
