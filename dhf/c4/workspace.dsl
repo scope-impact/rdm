@@ -329,6 +329,7 @@ workspace "RDM" "The design record of regulated software." {
     hooks -> precommit_hook "installs"
     precommit_hook -> design_gate "runs"
     projection -> risk_register "reads risks and findings with"
+    projection -> release_gate "reads the findings about the whole record with"
     projection -> vocabulary "declares terms and rules in"
     projection -> explorer_file "writes the explorer file with"
     explorer_file -> projection "takes the executions graph's name from"

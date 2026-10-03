@@ -235,9 +235,11 @@ step, not as an import. It projects:
   file's component, the imports between components;
 - **compliance**, through Gap analysis: the checklist reader, the built-in
   checklists and the key matcher;
+- **release**, through the Release gate: its findings about the whole
+  record, which the Projection puts on the record for the shapes;
 
-and the shared kernel (ids, git history, frontmatter). It reads neither
-release nor publishing. No dependency breaks the rule.
+and the shared kernel (ids, git history, frontmatter). It does not read
+publishing. No dependency breaks the rule.
 
 ## Out of scope
 
