@@ -13,6 +13,10 @@ claims from what the code does:
   as a dependency between the two: the coupling the code actually has; a
   component whose code holds no Python is marked as one whose dependencies
   were not read.
+- ``unit-coverage`` — given the unit tests' coverage report, each measured
+  component's lines its unit tests ran and lines measured: the component's own
+  properties, linked to no run and no design input, for coverage is unit-test
+  evidence, never acceptance evidence (Design Review 63).
 
 And, in ``executions``, the components each run names (DI-56): by a
 ``component`` label's key, or as the owner of a file an ``output`` label
@@ -31,11 +35,14 @@ from rdm.architecture.model import component_dependencies, component_of, python_
 
 _TYPE = ox.NamedNode(RDF + "type")
 _BOOLEAN = ox.NamedNode(XSD + "boolean")
+_INTEGER = ox.NamedNode(XSD + "integer")
 _CLASSES = {"person": "Person", "system": "SoftwareSystem", "container": "Container", "component": "Component"}
 
 
-def project_architecture(ds, dhf: Path, root: Path, rdm) -> None:
-    """Add the architecture and code graphs for the DHF's workspace, if it has one."""
+def project_architecture(ds, dhf: Path, root: Path, rdm, coverage: dict | None = None) -> None:
+    """Add the architecture and code graphs for the DHF's workspace, if it has
+    one, and the unit-coverage graph from ``coverage`` (release.verify's
+    ``unit_coverage``) when given."""
     model = read_model(dhf, root)
     declared = {alias for alias, e in model.elements.items() if e.kind == "component"}
     for run, key in ds.component_labels:  # DI-56: a component label names a component by its key
@@ -75,6 +82,11 @@ def project_architecture(ds, dhf: Path, root: Path, rdm) -> None:
             ds.add(rel, ox.NamedNode(DCTERMS + "description"), r.label, g)
         if r.technology:
             ds.add(rel, rdm("technology"), r.technology, g)
+
+    for entry in (coverage or {}).get("components", []):  # DI-67: unit-test evidence, the component's alone
+        el = node[entry["component"]]
+        ds.add(el, rdm("unitLinesRun"), ox.Literal(str(entry["executed"]), datatype=_INTEGER), "unit-coverage")
+        ds.add(el, rdm("unitLinesMeasured"), ox.Literal(str(entry["measured"]), datatype=_INTEGER), "unit-coverage")
 
     components = model.code_components
     source_file, path = rdm("SourceFile"), rdm("path")

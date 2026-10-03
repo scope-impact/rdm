@@ -285,6 +285,12 @@ rdm:missingCode a owl:DatatypeProperty ; rdfs:label "missing code" ; rdfs:domain
 rdm:dependenciesNotRead a owl:DatatypeProperty ; rdfs:label "dependencies not read" ; rdfs:domain rdm:Component ;
     rdfs:range xsd:boolean ;
     rdfs:comment "The component's code holds no Python, so its imports were not read: no rdm:dependsOn from it means the check did not run, not that it found nothing (graph: code)." .
+rdm:unitLinesRun a owl:DatatypeProperty ; rdfs:label "unit lines run" ; rdfs:domain rdm:Component ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Lines of the component's code its unit tests ran, from the unit tests' coverage report (graph: unit-coverage). Unit-test evidence, never acceptance evidence: linked to no test run and no design input (DI-67, Design Review 63)." .
+rdm:unitLinesMeasured a owl:DatatypeProperty ; rdfs:label "unit lines measured" ; rdfs:domain rdm:Component ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Lines of the component's code the unit tests' coverage report measured (graph: unit-coverage). Unit-test evidence, never acceptance evidence: linked to no test run and no design input (DI-67, Design Review 63)." .
 rdm:namesComponent a owl:ObjectProperty ; rdfs:label "names component" ; rdfs:domain rdm:TestRun ;
     rdfs:range rdm:Component ;
     rdfs:comment "A component the run names: by a component label (the model's key), or the component holding a file an output label names (DI-56)." .

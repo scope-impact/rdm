@@ -8,6 +8,8 @@ if allure-pytest is not installed.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 from pathlib import Path
 
@@ -19,6 +21,7 @@ ox = pytest.importorskip("pyoxigraph")
 from rdm.architecture.model import read_model  # noqa: E402
 from rdm.graph.project import project  # noqa: E402
 from rdm.kernel.frontmatter import parse_frontmatter  # noqa: E402
+from rdm.main import cli  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_graph import PREFIXES, _record  # noqa: E402
 from tests.acceptance.test_graph_allure import RDM, P, _results  # noqa: E402
@@ -81,7 +84,9 @@ def test_the_c4_model_is_projected_into_the_graph(tmp_path: Path) -> None:
     component's code; the component every projected source file belongs to (the longest
     matching code path); and, for a component whose code is Python, an import from its code
     into another component's as a dependency between the two, marking a component whose code
-    holds no Python as one whose dependencies were not read."""
+    holds no Python as one whose dependencies were not read; and, when given the unit tests'
+    code coverage report, each component's lines its unit tests ran and lines measured, as
+    properties of the component alone, linked to no run and no design input."""
     dhf, results = _record(tmp_path)
     _results(results)
     _workspace(dhf.parent)
@@ -136,9 +141,41 @@ def test_the_c4_model_is_projected_into_the_graph(tmp_path: Path) -> None:
         quads = project(dhf, results)
         assert _select(quads, "SELECT ?c WHERE { ?c rdm:dependenciesNotRead true }") == {("element/sounds",)}
         assert not _select(quads, "SELECT ?t WHERE { <urn:dhf:acme:element/sounds> rdm:dependsOn ?t }")
+    report = dhf.parent / "lcov.info"  # the unit tests' coverage: alarms ran 1 of 2 lines, app (speaker) 2 of 2
+    report.write_text(f"SF:{dhf.parent / 'src' / 'alarms.py'}\nDA:1,4\nDA:3,0\nend_of_record\n"
+                      f"SF:{dhf.parent / 'src' / 'speaker.py'}\nDA:1,1\nDA:2,1\nend_of_record\n")
+    without = project(dhf, results)  # the report on disk, not given
+    quads = project(dhf, results, unit_coverage=report)
+    with verification_step("given a unit coverage report, each measured component carries its lines run and measured"):
+        unit = _select(quads, """SELECT ?c ?run ?measured WHERE { GRAPH <urn:dhf:acme:graph/unit-coverage> {
+            ?c rdm:unitLinesRun ?run ; rdm:unitLinesMeasured ?measured } }""")
+        attach("unit coverage", sorted(unit))
+        assert unit == {("element/alarms", "1", "2"), ("element/app", "2", "2")}  # sounds: not measured
+    with verification_step("the lines are the component's alone: no run and no design input links to them"):
+        added = {str(q) for q in quads} - {str(q) for q in without}
+        assert {str(q) for q in without} <= {str(q) for q in quads} and len(added) == 4
+        unit_terms = {RDM + "unitLinesRun", RDM + "unitLinesMeasured"}
+        assert all(q.predicate.value in unit_terms for q in quads if str(q) in added)
+        assert _select(quads, """SELECT ?s WHERE { ?s rdm:unitLinesRun|rdm:unitLinesMeasured ?n .
+            FILTER NOT EXISTS { ?s a rdm:Component } }""") == set()
+        assert _select(quads, """SELECT ?x WHERE { { ?x a rdm:TestRun } UNION { ?x a rdm:DesignInput }
+            ?x ?p ?n . FILTER(?p IN (rdm:unitLinesRun, rdm:unitLinesMeasured)) }""") == set()
+    with verification_step("without a report, no component carries unit coverage"):
+        assert not _select(without, "SELECT ?c WHERE { ?c rdm:unitLinesRun|rdm:unitLinesMeasured ?n }")
+    with verification_step("a report that cannot be read is refused: rdm graph build exits 2 and names it"):
+        broken = dhf.parent / "broken.xml"
+        broken.write_text("<coverage><unclosed>")
+        for bad in (broken, dhf.parent / "missing.info"):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = cli(["graph", "build", "--dhf", str(dhf), "--unit-coverage", str(bad),
+                            "-o", str(dhf.parent / "graph.nq")])
+            attach(f"refusal of {bad.name}", out.getvalue())
+            assert code == 2 and bad.name in out.getvalue() and not (dhf.parent / "graph.nq").exists()
     with verification_step("the terms are in the vocabulary"):
         terms = {q.subject.value for q in quads if q.graph_name.value.endswith("graph/ontology")}
-        used = {q.predicate.value for q in quads if q.graph_name.value.rsplit("/", 1)[-1] in ("architecture", "code")}
+        used = {q.predicate.value for q in quads
+                if q.graph_name.value.rsplit("/", 1)[-1] in ("architecture", "code", "unit-coverage")}
         assert used - {RDF_TYPE, RDFS_LABEL} <= terms | {"http://purl.org/dc/terms/identifier",
                                                          "http://purl.org/dc/terms/description"}
     with verification_step("a DHF without a workspace has neither graph"):

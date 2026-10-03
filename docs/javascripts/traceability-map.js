@@ -1,6 +1,7 @@
 // The traceability map on docs/traceability-map.md: the record's graph, drawn with
 // Cytoscape.js and ELK. Its data, assets/traceability-map.json, is written on every
-// docs build by docs/_hooks/traceability_map.py from SPARQL over the graph.
+// docs build by docs/_hooks/traceability.py from SPARQL over the graph (with its derived
+// relations, and the unit tests' coverage when the build measured it).
 (async () => {
   const root = document.querySelector(".rdm-map");
   if (!root) return;
@@ -19,12 +20,17 @@
   const ORDER = ["need", "risk", "input", "test", "component", "context"];
   const LANES = [["need", "Needs · risks"], ["input", "Design inputs"], ["test", "Tests"], ["component", "Components in contexts"]];
   const PART = {need: 0, risk: 0, input: 1, test: 2, component: 3, context: 3, other: 4};
-  const FLOW = new Set(["traces to", "controlled by", "verifies", "exercises"]);
+  const FLOW = new Set(["traces to", "controlled by", "verifies", "names", "reaches"]);
   const byId = new Map(DATA.nodes.map(n => [n.id, n]));
   const ctxName = iri => (iri || "").split("context/").pop();
   const testName = l => l.split("::").pop();
   const shortLabel = n => n.kind === "test" ? testName(n.label).replace(/^test_/, "").replace(/_/g, " ") : n.label;
-  const exercised = new Set(DATA.edges.filter(e => e.rel === "exercises").map(e => e.t));
+  // A component is exercised when a run names it or reaches it through the declared relationships.
+  const exercised = new Set(DATA.edges.filter(e => e.rel === "names" || e.rel === "reaches").map(e => e.t));
+  const testsOf = (id, rel) => DATA.edges.filter(e => e.rel === rel && e.t === id).length;
+  // Unit coverage: the component's own (unit-test evidence), never a test's or a design input's.
+  const unitPct = n => Math.floor(n.unitRun * 100 / n.unitMeasured);
+  const unitShort = n => n.unitMeasured ? `${unitPct(n)}% unit` : (DATA.unitCoverage ? "no unit coverage" : "");
   const gaps = DATA.nodes.filter(n => n.kind === "component" && !exercised.has(n.id));
   const elLabel = iri => (byId.get(iri) || {}).label || (DATA.elements[iri] || {}).label || iri.split("/").pop();
 
@@ -63,9 +69,10 @@
         "arrow-scale": 0.55, "opacity": 0.6, "transition-property": "opacity", "transition-duration": 120}},
       {selector: "edge[desc]", style: {"label": "data(desc)", "font-family": t.body, "font-size": 10, "color": t.muted, "text-rotation": "autorotate",
         "text-background-color": t.surface, "text-background-opacity": 1, "text-background-padding": "2px", "opacity": 0.9}},
+      {selector: "edge[rel = 'reaches']", style: {"line-style": "dashed"}},
       {selector: "edge.undeclared", style: {"line-color": t.maroon, "target-arrow-color": t.maroon, "line-style": "dashed", "width": 1.8, "opacity": 0.95}},
       {selector: ".faded", style: {"opacity": 0.28}},
-      {selector: "node.card", style: {"text-wrap": "wrap", "text-max-width": 168, "width": 172, "height": 40, "padding": "4px", "font-family": t.body,
+      {selector: "node.card", style: {"text-wrap": "wrap", "text-max-width": 168, "width": 172, "height": 54, "padding": "4px", "font-family": t.body,
         "font-size": 13, "line-height": 1.35, "border-width": 1.6}},
       {selector: "edge.rel", style: {"opacity": 0.12, "curve-style": "bezier", "arrow-scale": 0.8}},
       {selector: "edge.undeclared", style: {"opacity": 0.6}},
@@ -130,10 +137,11 @@
     comps.forEach(n => {
       const r = reachOf(n.id);
       const sub = r.tests ? `${r.inputs} input${r.inputs === 1 ? "" : "s"} · ${r.tests} test${r.tests === 1 ? "" : "s"}` : "no test reaches it";
-      els.push({data: {id: n.id, label: `${n.label}\n${sub}`, kind: "component", parent: n.context}, classes: "card" + (exercised.has(n.id) ? "" : " gap")});
+      const unit = unitShort(n);
+      els.push({data: {id: n.id, label: `${n.label}\n${sub}${unit ? "\n" + unit : ""}`, kind: "component", parent: n.context}, classes: "card" + (exercised.has(n.id) ? "" : " gap")});
     });
     // Pack the contexts into rows of boxes; each holds its components in a small grid.
-    const CWID = 200, CHGT = 62, GAPX = 70, GAPY = 90, ROWMAX = 1900;
+    const CWID = 200, CHGT = 76, GAPX = 70, GAPY = 90, ROWMAX = 1900;
     // Biggest context first, so the rows pack tightly.
     const size = cx => comps.filter(n => n.context === cx.id).length;
     const ctxs = DATA.nodes.filter(n => n.kind === "context").sort((a, b) => size(b) - size(a) || a.label.localeCompare(b.label));
@@ -217,7 +225,10 @@
     if (n.kind === "test") facts([["Last run", n.status]]);
     if (n.kind === "risk") facts([["Category", n.category], ["Level", n.level], ["Residual", n.decision]]);
     if (n.kind === "component") {
-      facts([["Context", ctxName(n.context)], ["Container", n.container], ["Code", n.code], ["Tested", exercised.has(n.id) ? "yes" : "no test exercises it"]]);
+      const named = testsOf(n.id, "names"), reached = testsOf(n.id, "reaches");
+      facts([["Context", ctxName(n.context)], ["Container", n.container], ["Code", n.code],
+             ["Tested", exercised.has(n.id) ? `named by ${named} test${named === 1 ? "" : "s"}, reached by ${reached}` : "no test names or reaches it"],
+             ["Unit tests", n.unitMeasured ? `unit tests ran ${n.unitRun} of ${n.unitMeasured} lines (${unitPct(n)}%)` : unitShort(n)]]);
       const z = add("button", "act", "Zoom into this component"); z.addEventListener("click", () => zoomInto(n.id));
     }
     const reach = {}; tr.nodes().forEach(m => { const k = m.data("kind"); if (m.id() !== n.id && k) reach[k] = (reach[k] || 0) + 1; });
@@ -272,7 +283,8 @@
     add("div", "kind", "Component, zoomed in").style.color = tok().component;
     add("div", "pid", c.label);
     if (c.text) add("p", "ptext", c.text);
-    facts([["Context", ctxName(c.context)], ["Container", c.container], ["Code", c.code]]);
+    facts([["Context", ctxName(c.context)], ["Container", c.container], ["Code", c.code],
+           ["Unit tests", c.unitMeasured ? `unit tests ran ${c.unitRun} of ${c.unitMeasured} lines (${unitPct(c)}%)` : unitShort(c)]]);
     const uses = [], usedBy = [];
     nb.forEach((v, o) => {
       const name = elLabel(o);
@@ -341,7 +353,7 @@
       panel.innerHTML = "";
       add("div", "kind", "Coverage gap").style.color = tok().component;
       add("div", "pid", `${gaps.length} components`);
-      add("p", "ptext", "No test's output label names code these components own, so no design input's trace reaches them. Tag the tests that exercise them with @allure.label(\"output\", …).");
+      add("p", "ptext", "No test run names these components, by a component label or an output label naming their code, or reaches them through the declared C4 relationships, so no design input's trace reaches them. Tag the tests that exercise them with @allure.label(\"component\", …) or @allure.label(\"output\", …).");
       linkList("Components", gaps.slice());
     };
     mode === "zoom" ? showComponents(go) : go();
@@ -351,10 +363,13 @@
     panel.innerHTML = "";
     add("div", "kind", "How to read it").style.color = tok().muted;
     if (mode === "components") {
-      add("p", "ptext", "Every C3 component, inside the bounded context that owns it. Each says how many design inputs and tests reach it; a dashed outline means no test does. Lines are the C4 relationships the workspace declares; a maroon dashed line is an import between components that no relationship declares.");
+      add("p", "ptext", "Every C3 component, inside the bounded context that owns it. Each says how many design inputs and tests reach it, counting the tests whose runs name it and those whose runs reach it through the declared relationships; a dashed outline means no test names or reaches it. Lines are the C4 relationships the workspace declares; a maroon dashed line is an import between components that no relationship declares.");
+      add("p", "ptext", DATA.unitCoverage
+        ? "A box's \u201cN% unit\u201d is the share of the component's measured lines its unit tests ran: unit-test evidence, the component's own, never a design input's or an acceptance test's."
+        : "Unit coverage is not shown: " + (DATA.unitCoverageWhy || "this project's build measures no unit tests") + ".");
       add("p", "hint", "Click a component to see what it uses and what uses it. Double-click it, or use its panel button, to zoom into its full trace. Trace map shows the whole chain from user needs.");
     } else {
-      add("p", "ptext", "Each user need and risk on the left traces through the design inputs that answer it and the tests that verify them to the components those tests exercise, inside their bounded contexts.");
+      add("p", "ptext", "Each user need and risk on the left traces through the design inputs that answer it and the tests that verify them to the components those tests' runs name (solid line) or reach through the declared relationships (dashed line), inside their bounded contexts.");
       add("p", "hint", "Click a node to light its trace. Double-click a component to zoom into it. Click empty space to clear.");
     }
   }

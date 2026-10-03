@@ -409,12 +409,20 @@ def project(
     project_name: str | None = None,
     checklists: list[str] | None = None,
     infer: bool = False,
+    unit_coverage: Path | None = None,
 ) -> list[ox.Quad]:
     """The record as quads, de-duplicated, in a stable order. ``checklists``
     (built-in names or files) adds the checklists and references graphs;
     ``infer`` adds what the vocabulary's rules derive, in the inferred graph
-    (DI-62)."""
+    (DI-62); ``unit_coverage``, the unit tests' coverage report, adds each
+    measured component's lines run and measured (DI-67). Raises ValueError
+    when that report cannot be read."""
     dhf = Path(dhf_dir).resolve()
+    coverage = None
+    if unit_coverage is not None:
+        from rdm.release.verify import unit_coverage as component_coverage
+
+        coverage = component_coverage(dhf, Path(unit_coverage))
     repo = repo_root(dhf.parent)
     root = repo or dhf.parent
     results = Path(allure_results_dir) if allure_results_dir is not None and Path(allure_results_dir).exists() else None
@@ -429,7 +437,7 @@ def project(
     if repo is not None:
         _git(ds, dhf, root)
     _risks(ds, dhf, root, verified)
-    project_architecture(ds, dhf, root, rdm)  # after the runs: their source files belong to components
+    project_architecture(ds, dhf, root, rdm, coverage)  # after the runs: their source files belong to components
     if checklists:
         from rdm.graph.checklists import checklist_quads, reference_quads
 

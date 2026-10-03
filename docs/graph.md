@@ -96,6 +96,7 @@ The endpoint's default graph is the union of all of them.
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/architecture` | the C4 model of the [architecture workspace](authoring.md#architecture-c4): each person, software system, container and component with its name, technology, description, container and external flag; each component's bounded context and code; each relationship; and the component each source file in the graph belongs to |
 | `…graph/code` | Python imports from one component's code into another's, as dependencies between the components: the coupling the code actually has |
+| `…graph/unit-coverage` | each component's lines its unit tests ran and lines measured (`rdm:unitLinesRun`, `rdm:unitLinesMeasured`; only with `--unit-coverage REPORT`, a Cobertura XML or LCOV report): the component's own unit-test evidence, linked to no run and no design input |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
 | `…graph/references` | documents' `[[KEY]]` tags, linked to the clauses they name |
 | `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties, and the rules for derived relations |
