@@ -1710,11 +1710,8 @@ needs (DI-46), and test result translation (DI-17). No design input changed.
   them as uncommitted. A document staged exactly as a commit holds it at its
   path was committed and reviewed there: during a merge it is approved. (Git
   names the merged commit only after its merge hook has run, so the commit is
-  found by the document's content.) A document whose merge result differs from both sides (a
-  resolved conflict) is new content, and still is not. The hook also read the
-  wrong index: git gives a merge hook a relative `GIT_INDEX_FILE`, which RDM's
-  git calls, run from a document's directory, resolved there. The shared
-  kernel now resolves it against the directory git ran the hook in.
+  found by the document's content.) A merge result no commit holds (a
+  resolved conflict) is new content, and still is not.
 - A user need written as a blank string was dropped without a word, where
   every other entry with no id fails the gate. It now fails it too.
 - `rdm translate` accepted a result file whose suites hold no test, and wrote
