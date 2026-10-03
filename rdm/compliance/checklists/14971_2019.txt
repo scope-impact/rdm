@@ -1,9 +1,30 @@
 # Audit checklist for ISO 14971 Medical devices - Application of risk management to medical devices
-# Based on version 2019-XX-XXX
+# Based on version 2019
 #
 # This checklist is not a substitute for reading, understanding, and implementing the associated standard.
 # The descriptive phrase following each keyword reference is intended only as a helpful mnemonic for locating
 # and recalling the referenced section of the standard.
 #
-
-# TODO: write this checklist
+14971:4.1 Risk management process
+14971:4.2 Management responsibilities
+14971:4.3 Competence of personnel
+14971:4.4 Risk management plan
+14971:4.5 Risk management file
+14971:5.1 Risk analysis process
+14971:5.2 Intended use and reasonably foreseeable misuse
+14971:5.3 Identification of characteristics related to safety
+14971:5.4 Identification of hazards and hazardous situations
+14971:5.5 Risk estimation
+14971:6 Risk evaluation
+14971:7.1 Risk control option analysis
+14971:7.2 Implementation of risk control measures
+14971:7.3 Residual risk evaluation
+14971:7.4 Benefit-risk analysis
+14971:7.5 Risks arising from risk control measures
+14971:7.6 Completeness of risk control
+14971:8 Evaluation of overall residual risk
+14971:9 Risk management review
+14971:10.1 Production and post-production activities general
+14971:10.2 Information collection
+14971:10.3 Information review
+14971:10.4 Actions

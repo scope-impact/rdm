@@ -17,7 +17,14 @@ from pathlib import Path
 
 import pytest
 
-from rdm.compliance.gaps import audit_for_gaps, coverage_report, list_default_checklists
+from rdm.compliance.gaps import (
+    audit_for_gaps,
+    builtin_checklists,
+    coverage_report,
+    list_default_checklists,
+    missing_references,
+    parse_checklist,
+)
 
 allure = pytest.importorskip("allure")
 
@@ -35,11 +42,14 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
 
     missing = tmp_path / "partial.md"
     missing.write_text("Document covers [[X-1]] only.\n")
-    assert audit_for_gaps(str(checklist), [str(missing)]) == 3  # gap → non-zero
-
     covered = tmp_path / "full.md"
     covered.write_text("Covers [[X-1]] and [[X-2]].\n")
-    assert audit_for_gaps(str(checklist), [str(covered)]) == 0  # complete → zero
+    with verification_step("a missing reference is listed and exits 3; a document covering every clause exits 0"):
+        gap = subprocess.run([sys.executable, "-m", "rdm.main", "gap", str(checklist), str(missing)],
+                             capture_output=True, text=True)
+        assert gap.returncode == 3 and "X-2" in gap.stdout and "X-1" not in gap.stdout, gap.stdout
+        assert audit_for_gaps(str(checklist), [str(missing)]) == 3
+        assert audit_for_gaps(str(checklist), [str(covered)]) == 0
     with verification_step("a stray [[ does not turn the next paragraphs' mentions into references"):
         stray = tmp_path / "stray.md"
         stray.write_text("Covers [[X-1]]. A stray [[ here.\n\nX-2 is only mentioned. ]]\n")
@@ -81,7 +91,6 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
         empty = tmp_path / "empty.txt"
         empty.write_text("# only a header\n")
         assert audit_for_gaps(str(empty), [str(covered)]) == 2
-        assert audit_for_gaps("14971_2019", [str(covered)]) == 2
         assert audit_for_gaps(str(tmp_path / "nope.txt"), [str(covered)]) == 2
         bare = tmp_path / "bare.txt"
         bare.write_text("include\nX-1 one\n")
@@ -124,10 +133,30 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
 def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
     """DI-11: the standard checklists ship, and a built-in name resolves its
     includes when audited."""
-    list_default_checklists()
-    listed = capsys.readouterr().out
-    for expected in ("62304_2015_class_b", "14971_2019", "FDA-SW_2021_enhanced"):
-        assert expected in listed
+    with verification_step("the built-in checklists are listed by name"):
+        list_default_checklists()
+        listed = capsys.readouterr().out
+        for expected in ("62304_2015_class_b", "14971_2019", "FDA-SW_2021_enhanced"):
+            assert expected in listed
+
+    with verification_step("IEC 62304, ISO 14971, FDA-SW, FDA-CYBER and FDA-HFE each have a built-in with clauses"):
+        names = builtin_checklists()
+        for standard in ("62304_", "14971_", "FDA-SW_", "FDA-CYBER_", "FDA-HFE_"):
+            shipped = [name for name in names if name.startswith(standard)]
+            assert shipped, standard
+            for name in shipped:
+                assert missing_references(name, [])[1], name
+
+    with verification_step("every built-in checklist's keys are unique"):
+        for name, path in builtin_checklists().items():
+            entries = parse_checklist(Path(path).read_text(encoding="utf-8"), Path(path).parent)
+            keys = [e["reference"] for e in entries if "reference" in e]
+            assert len(keys) == len(set(keys)), name
+
+    with verification_step("a built-in that includes another by name counts the included checklist's clauses"):
+        class_b = {item["reference"] for item in missing_references("62304_2015_class_b", [])[1]}
+        class_a = {item["reference"] for item in missing_references("62304_2015_class_a", [])[1]}
+        assert class_a < class_b
 
     # `include` resolution: a key defined ONLY in an included file is still
     # required. If includes were ignored, covering the top-level key alone would
@@ -163,22 +192,19 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
     source = tmp_path / "process.md"
     source.write_text("Document covers [[ISO-1]] and [[ISO-3]].")
 
-    assert coverage_report([str(checklist)], [str(source)]) == 3  # a clause is missing, as the audit says
-    assert "| ISO | 3 | 1 | 2 | 66% |" in capsys.readouterr().out
+    with verification_step("a checklist's row gives total, missing, covered and percent, and a gap exits 3"):
+        assert coverage_report([str(checklist)], [str(source)]) == 3
+        assert "| ISO | 3 | 1 | 2 | 66% |" in capsys.readouterr().out
     with verification_step("coverage exits as the audit does: 0 when complete, 2 when nothing could be checked"):
         complete = tmp_path / "complete.md"
         complete.write_text("[[ISO-1]] [[ISO-2]] [[ISO-3]]\n")
         assert coverage_report([str(checklist)], [str(complete)]) == 0
-        assert coverage_report(["14971_2019"], [str(complete)]) == 2
+        empty = tmp_path / "empty.txt"
+        empty.write_text("# only a header\n")
+        assert coverage_report([str(empty)], [str(complete)]) == 2
         assert coverage_report([str(tmp_path / "nope.txt")], [str(complete)]) == 2
         capsys.readouterr()
 
-    with verification_step("every built-in checklist's keys are unique"):
-        from rdm.compliance.gaps import builtin_checklists, parse_checklist
-        for name, path in builtin_checklists().items():
-            entries = parse_checklist(Path(path).read_text(encoding="utf-8"), Path(path).parent)
-            keys = [e["reference"] for e in entries if "reference" in e]
-            assert len(keys) == len(set(keys)), name
     with verification_step("Verbose mode names the missing reference"):
         coverage_report([str(checklist)], [str(source)], verbose=True)
         assert "ISO-2" in capsys.readouterr().out

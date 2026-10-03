@@ -15,8 +15,7 @@ rdm gap --coverage -v 62304_2015_class_b documents/*.md # …and name the missin
 ```
 
 Both exit 3 when a clause is missing, and 2 when nothing could be checked: a
-checklist with no clauses (the ISO 14971 2019 list is a placeholder; use
-`14971_2007`), or a checklist, include or document that cannot be read. A
+checklist with no clauses, or a checklist, include or document that cannot be read. A
 document that still holds a `TODO` placeholder is named in a warning: a fresh
 `rdm init` project references every clause from templates that say nothing
 yet, so its coverage means nothing until they are written.
