@@ -106,7 +106,7 @@ workspace maps each component to its code.
 | Vocabulary | The classes and properties of the graph, and each derived relation with the rule that derives it; projected as the ontology graph | DI-35, DI-62 |
 | Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61, DI-68 |
 | SHACL validation | `rdm graph validate`: runs the shipped and any user-supplied shapes over the union of the named graphs, reports each result most severe first, and fails on any violation | DI-49, DI-58 |
-| Explorer file | Writes the record as an AWS Graph Explorer file, optionally leaving out chosen classes and what hangs only from them | DI-39 |
+| Explorer file | Writes the record as an AWS Graph Explorer file, every record node whatever its IRI, optionally leaving out chosen classes and what hangs only from them | DI-39 |
 | Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53, DI-56, DI-62, DI-69 |
 
 All six are in the `rdm` container, and need the optional extra `graph`;

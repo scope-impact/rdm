@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 71
+revision: 72
 title: Design Review — RDM
 ---
 
@@ -2225,6 +2225,23 @@ graph, against what the graph now holds (Design Reviews 61 and 64).
   input, so coverage stays unit-test evidence (Design Review 63). `rdm graph
   build` and the docs build take the report; the map shows each component's
   unit coverage on its box and in its panel.
+
+# Design Review 66 — The design outputs follow the behaviour of Design Reviews 58 to 65
+
+**Scope reviewed:** the design-output tables of the context documents,
+checked against the graph after PR #54.
+
+**Disposition:** Approved.
+
+- DI-76 was in no design-output row, and the unit coverage reader component
+  had none: the verification data's row now names DI-76, and the reader has
+  its row (realises DI-76).
+- Rows that described behaviour from before the chain review now state it:
+  the renderer's refusals, the snippets' repeated key, the bundle's coverage
+  and refused template, the Explorer file's nodes whatever their IRI, the
+  second risk policy refused, unreadable and orphan persona runs, the
+  worktree unknown without a commit, Python-only import reading. No design
+  input changes.
 
 # Approval
 

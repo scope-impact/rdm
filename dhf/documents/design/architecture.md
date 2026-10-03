@@ -41,7 +41,7 @@ the workspace maps each component to its code.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Architecture model | The C4 model, read from the workspace's export; whether the drawn files are the current workspace's; which component owns a file, and the code dependencies between components | DI-66, DI-70, DI-68 (the model and code dependencies it is checked against) |
+| Architecture model | The C4 model, read from the workspace's export; whether the drawn files are the current workspace's; which component owns a file, and the code dependencies between components, read for Python code only (a component with none is marked as not read) | DI-66, DI-70, DI-68 (the model and code dependencies it is checked against) |
 | Architecture drawing | `rdm c4 draw`: exports the workspace and draws every view, each stamped with the workspace it was drawn from | DI-70 |
 
 Both components sit in the `rdm` container. What the reviewer needs to

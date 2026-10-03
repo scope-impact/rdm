@@ -42,7 +42,7 @@ the code: the workspace maps each component to its code.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Risk register | Reads the declared risk policy and the register, evaluates each risk's initial and residual risk against the policy, gives each risk its residual decision, and writes the risk rules as findings, each blocking or a warning and tied to the risk it is about | DI-43, DI-44, DI-50 |
+| Risk register | Reads the declared risk policy (refusing a second) and the register, evaluates each risk's initial and residual risk against the policy, gives each risk its residual decision, and writes the risk rules as findings, each blocking or a warning and tied to the risk it is about | DI-43, DI-44, DI-50 |
 
 The register is the frontmatter of `kind: risk` documents — the record
 interface authors write, with one entry per risk:
