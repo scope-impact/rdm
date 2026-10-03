@@ -1,0 +1,84 @@
+/* The traceability map (docs/traceability-map.md), scoped to .rdm-map so it
+   and the docs theme never restyle each other. Colours and fonts are the
+   theme's tokens (rdm-theme.css); every secondary tone is a transparent
+   Charcoal, never a new hue. The script reads these variables to draw the
+   canvas, which cannot take CSS variables itself. */
+.rdm-map {
+  --bg: var(--rdm-ivory); --surface: var(--rdm-ivory); --sunk: rgba(43, 45, 49, 0.06); --fg: var(--rdm-charcoal);
+  --muted: rgba(43, 45, 49, 0.62); --line: rgba(43, 45, 49, 0.16); --edge: rgba(43, 45, 49, 0.28);
+  --charcoal: var(--rdm-charcoal); --maroon: var(--rdm-maroon); --nexus: var(--rdm-nexus); --lime: var(--rdm-lime); --white: var(--rdm-white);
+  --lime-ink: var(--rdm-charcoal); --on-maroon: var(--rdm-white); --input-ink: var(--rdm-nexus);
+  --need: var(--rdm-maroon); --risk: var(--rdm-maroon); --input: var(--rdm-nexus); --test: var(--rdm-lime); --component: var(--rdm-charcoal);
+  --context: var(--rdm-maroon); --other: rgba(43, 45, 49, 0.62); --hilite: var(--rdm-nexus); --focus: var(--rdm-nexus);
+  --body: var(--rdm-font-body); --mono: var(--rdm-font-mono); --display: var(--rdm-font-display);
+  display: grid; gap: 12px; margin-block: 1.5em; color: var(--fg); font-family: var(--body); font-size: 14px; line-height: 1.5;
+}
+.rdm-map--none { display: block; padding: 16px; border: 1px dashed var(--line); border-radius: 1.125rem; color: var(--muted); }
+
+/* Material's typography styles lists, headings and definitions inside .md-typeset; the map lays out its own. */
+.md-typeset .rdm-map :is(ul, ol, li, dl, dd, h3, p) { margin: 0; padding: 0; }
+.md-typeset .rdm-map li { list-style: none; }
+.md-typeset .rdm-map .files { padding-left: 18px; }
+.md-typeset .rdm-map .files li { list-style: disc; }
+.md-typeset .rdm-map code { font-size: 12px; padding: 0 4px; }
+
+.rdm-map .counts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); border-radius: 1.125rem; padding: 8px 16px; justify-self: start; }
+.rdm-map .count { display: inline-flex; align-items: baseline; gap: 5px; font-size: 13px; color: var(--muted); }
+.rdm-map .count b { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--fg); }
+.rdm-map .meta { color: var(--muted); font-size: 13px; }
+.rdm-map .sq { width: 9px; height: 9px; border-radius: 2px; display: inline-block; align-self: center; }
+.rdm-map .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rdm-map .bar label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.rdm-map input[type=search] { font: 13px var(--mono); padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--fg); width: 14rem; max-width: 100%; }
+.rdm-map .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rdm-map button { font-family: var(--body); }
+.rdm-map button.chip { font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.rdm-map button.chip[aria-pressed="true"] { border-color: var(--hilite); background: var(--hilite); color: var(--bg); font-weight: 600; }
+.rdm-map button.chip.gap { border-style: dashed; border-color: var(--fg); }
+.rdm-map :is(button, input):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rdm-map .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.rdm-map .tabs button { font-size: 13px; padding: 6px 14px; border: 0; background: var(--surface); color: var(--muted); cursor: pointer; }
+.rdm-map .tabs button[aria-selected="true"] { background: var(--fg); color: var(--bg); font-weight: 600; }
+
+/* The workspace: the graph canvas and a detail panel beside it, stacked on a narrow screen. */
+.rdm-map .work { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 12px; align-items: stretch; }
+.rdm-map .stage, .rdm-map aside { background: var(--surface); border: 1px solid var(--line); border-radius: 1.5rem; min-width: 0; height: min(78vh, 900px); min-height: 480px; }
+.rdm-map .stage { position: relative; overflow: hidden; }
+.rdm-map aside { padding: 16px; display: grid; align-content: start; gap: 10px; overflow: auto; }
+@media (max-width: 920px) {
+  .rdm-map .work { grid-template-columns: minmax(0, 1fr); }
+  .rdm-map aside { height: auto; min-height: 0; }
+  .rdm-map .stage { height: min(62vh, 560px); min-height: 360px; }
+}
+.rdm-map #cy { position: absolute; inset: 0; }
+.rdm-map .lanes { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; gap: 8px; pointer-events: none; flex-wrap: wrap; }
+.rdm-map .lane { font-family: var(--display); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 4px; background: var(--sunk); }
+.rdm-map .ctl { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 6px; }
+.rdm-map :is(.ctl, .crumb) button { font-size: 12.5px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.rdm-map .ctl button[hidden] { display: none; }
+.rdm-map .crumb { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted);
+  background: var(--surface); padding: 4px 8px 4px 4px; border-radius: 8px; border: 1px solid var(--line); }
+.rdm-map .crumb b { color: var(--fg); font-family: var(--display); }
+.rdm-map .crumb[hidden] { display: none; }
+
+/* The detail panel. */
+.rdm-map .kind { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.rdm-map .pid { font-family: var(--display); font-size: 22px; font-weight: 400; letter-spacing: -0.03em; line-height: 1.15; overflow-wrap: anywhere; }
+.rdm-map .ptext { overflow-wrap: anywhere; }
+.rdm-map .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; font-size: 13px; }
+.rdm-map .facts dt { color: var(--muted); }
+.rdm-map .facts dd { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.rdm-map .sect { display: grid; gap: 4px; }
+.md-typeset .rdm-map .sect h3 { margin-top: 4px; font-family: var(--body); font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; }
+.rdm-map .links { display: flex; flex-wrap: wrap; gap: 4px; }
+.rdm-map .links button { max-width: 100%; overflow-wrap: anywhere; text-align: left; font: 12px var(--mono); padding: 2px 7px; border-radius: 4px;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.rdm-map .files { font: 12px var(--mono); overflow-wrap: anywhere; }
+.rdm-map .hint { color: var(--muted); font-size: 13px; }
+.rdm-map button.act { justify-self: start; font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 0; background: var(--nexus); color: var(--white); cursor: pointer; }
+
+/* Full screen: the map alone, the canvas and panel filling the screen. */
+.rdm-map:fullscreen { margin: 0; padding: 16px; background: var(--rdm-ivory); overflow: auto; align-content: start; }
+.rdm-map:fullscreen :is(.stage, aside) { height: calc(100vh - 150px); }

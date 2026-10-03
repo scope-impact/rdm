@@ -4,29 +4,23 @@ After the evidence hook has run the acceptance suite, project the record into
 its RDF graph and answer a handful of SPARQL queries: user needs, risks, design
 inputs, tagged tests and their runs, C3 components in their bounded contexts,
 the declared C4 relationships, the code imports and the files tests exercise.
-The answers are embedded in ``traceability_map.html`` with the docs theme
-(``docs/stylesheets/rdm-theme.css``) and written to
-``assets/traceability-map.html``, which ``traceability-map.md`` shows. Nothing
-but the graph feeds the map.
+The answers are written to ``assets/traceability-map.json``, which
+``traceability-map.md`` draws with ``docs/javascripts/traceability-map.js``.
+Nothing but the graph feeds the map.
 
-Best-effort: without the ``graph`` extra the page is a short notice instead,
-so ``mkdocs build --strict`` never breaks.
+Best-effort: without the ``graph`` extra the data is ``{"error": why}`` and
+the page says so, so ``mkdocs build --strict`` never breaks.
 """
 
 from __future__ import annotations
 
-import html
 import json
 from pathlib import Path
 
 from mkdocs.structure.files import File
 
 ROOT = Path(__file__).resolve().parents[2]
-TEMPLATE = Path(__file__).with_name("traceability_map.html")
-THEME = ROOT / "docs" / "stylesheets" / "rdm-theme.css"
-OUTPUT = "assets/traceability-map.html"
-LIBRARIES = ("cytoscape@3.34.3/dist/cytoscape.min.js", "elkjs@0.12.0/lib/elk.bundled.js",
-             "cytoscape-elk@2.3.0/dist/cytoscape-elk.js")
+OUTPUT = "assets/traceability-map.json"
 
 
 def graph_data(dhf: Path, results: Path) -> dict:
@@ -98,26 +92,12 @@ def graph_data(dhf: Path, results: Path) -> dict:
     }
 
 
-def render(data: dict) -> str:
-    """The map page: the theme's tokens, then the template, the libraries and the data."""
-    page = TEMPLATE.read_text(encoding="utf-8")
-    page = page.replace("<style>", "<style>\n" + THEME.read_text(encoding="utf-8") + "\n", 1)
-    scripts = "".join(f'<script src="https://cdn.jsdelivr.net/npm/{lib}"></script>\n' for lib in LIBRARIES)
-    return page.replace("__SCRIPTS__", scripts).replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
-
-
-def notice(reason: str) -> str:
-    return ('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>RDM traceability map</title></head>'
-            '<body style="font-family:system-ui;padding:24px">'
-            f"The traceability map was not generated: {html.escape(reason)}</body></html>")
-
-
 def on_files(files, config):
     try:
-        content = render(graph_data(ROOT / "dhf", ROOT / "dhf" / "allure-results"))
+        data = graph_data(ROOT / "dhf", ROOT / "dhf" / "allure-results")
     except ImportError as error:
-        content = notice(f"the graph extra is not installed ({error.name})")
+        data = {"error": f"the graph extra is not installed ({error.name})"}
     except Exception as error:  # a build never breaks on the map
-        content = notice(f"{type(error).__name__}: {error}")
-    files.append(File.generated(config, OUTPUT, content=content))
+        data = {"error": f"{type(error).__name__}: {error}"}
+    files.append(File.generated(config, OUTPUT, content=json.dumps(data)))
     return files
