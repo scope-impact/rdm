@@ -6,6 +6,15 @@ A major version: the code is one package per bounded context, so module paths
 changed (below). The package version is `2.0.0a0`; the release is tagged
 `v2.0.0-alpha` and its image `2.0.0-alpha`.
 
+### Added — docs
+- **Traceability map** (Graph → Traceability map): an interactive map of the
+  record, built from the knowledge graph on every docs build (a build hook,
+  `docs/_hooks/traceability_map.py`) — C3 components in their bounded
+  contexts, and every user need and risk traced through design inputs and
+  tests to the components those tests exercise.
+- **One theme for the docs**: `docs/stylesheets/rdm-theme.css` holds the
+  colours and fonts as CSS variables; the docs and the map both use them.
+
 ### Fixed — what an exploratory test of every command found (Design Reviews 44–48)
 - **Gates over what they cannot read.** Frontmatter is read from a `---` line
   to the next, a byte-order mark ignored; the design gate fails on a document

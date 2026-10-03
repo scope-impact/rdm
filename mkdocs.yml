@@ -60,8 +60,13 @@ markdown_extensions:
       check_paths: true
 
 # Build-time evidence generation (docs/traceability-matrix.md) — see the hook.
+# The build hooks and their template are not pages.
+exclude_docs: |
+  _hooks/
+
 hooks:
   - docs/_hooks/evidence.py
+  - docs/_hooks/traceability_map.py
 
 nav:
   - Home: index.md
@@ -89,6 +94,7 @@ nav:
       - Gate rules as SHACL: graph-shapes.md
       - Browsing in Graph Explorer: graph-explorer.md
       - For agents (MCP): agents.md
+      - Traceability map: traceability-map.md
   - Documents:
       - Authoring and rendering: authoring.md
   - RDM on RDM:
