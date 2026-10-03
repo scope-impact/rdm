@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 50
+revision: 51
 title: Design Review — RDM
 ---
 
@@ -1444,6 +1444,42 @@ reader (DI-1), gap analysis (DI-10, DI-12). No design input changed.
   example, they are not, so no run found its test and each tagged test was
   warned as never run. A test is also found by the full name of its path from
   its project; the test keeps its repository path as its name.
+
+# Design Review 50 — The record says what it holds, or the gate fails
+
+**Scope reviewed:** the record reader and the design gate (DI-1, DI-2, DI-46),
+and `rdm story new-input` (DI-22), against an adversarial behaviour test of the
+installed package. No design input changed.
+
+**Disposition:** Approved.
+
+- A design input the reader could not read was dropped without a word, so a
+  requirement nothing tests passed both gates and the graph: `design_inputs`
+  written as a mapping, a string or a list of bare ids; an entry with no `id`,
+  an empty or null one, a list as an id, or `ID:` for `id:`; `design_inputs`
+  in a document that is not `kind: design`. Each is now a failure of the
+  design gate (*Malformed Declaration*), naming the document and the entry, as
+  is a user need with no id.
+- A frontmatter that repeats a key kept only the last value: a second
+  `design_inputs` block hid the first's inputs and a duplicate id. A repeated
+  key makes the frontmatter unreadable, which fails the gate. So does a
+  document that is not UTF-8, which crashed it.
+- A design document or the review counted as approved when git could not see
+  it: ignored, untracked by its rules, a committed link whose target is not
+  committed, or marked to skip or assume-unchanged. Approval now needs the
+  document tracked, clean, and visible to git, and its target too when it is a
+  link.
+- Outside git the gate passed saying the design was "approved (committed) in
+  version control". It still passes, as the design says, but says approval
+  could not be checked.
+- `PHOTODOCUMENTATION` read as a placeholder: a marker is the word TODO or
+  ENDTODO, not part of a longer word.
+- Two design documents for one context passed, and `new-input` wrote into one
+  of them without saying why. The gate warns, naming both, and `new-input`
+  refuses until one remains.
+- Design Review 49 lost this record's *Approval* heading; it is restored.
+
+# Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
 approval model. No sign-off table is duplicated here.
