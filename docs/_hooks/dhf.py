@@ -21,8 +21,8 @@ once, in the RDM image, and hands them to the docs build as an artifact:
 -- and are otherwise built here when ``pandoc`` and ``typst`` are on PATH;
 without either the pages carry no link.
 
-The traceability matrix template is left out: the site carries the generated
-matrix (``docs/_hooks/evidence.py``). Nothing here changes the record.
+The traceability matrix template is left out: the site draws traceability
+from the graph (``docs/_hooks/traceability.py``). Nothing here changes the record.
 """
 
 from __future__ import annotations

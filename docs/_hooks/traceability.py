@@ -1,26 +1,31 @@
-"""MkDocs build hook: the interactive traceability map, generated from the graph.
+"""MkDocs build hook: traceability from the graph, for RDM and its worked example.
 
-After the evidence hook has run the acceptance suite, project the record into
-its RDF graph and answer a handful of SPARQL queries: user needs, risks, design
-inputs, tagged tests and their runs, C3 components in their bounded contexts,
-the declared C4 relationships, the code imports and the files tests exercise.
-The answers are written to ``assets/traceability-map.json``, which
-``traceability-map.md`` draws with ``docs/javascripts/traceability-map.js``.
-Nothing but the graph feeds the map.
+Before the build, run each record's acceptance tests into its Allure results,
+so the evidence is live. Then project each record into its RDF graph and
+answer a handful of SPARQL queries: user needs, risks, design inputs, tagged
+tests and their runs, C3 components in their bounded contexts, the declared
+C4 relationships, the code imports and the files tests exercise. The answers
+go to ``assets/<name>.json``, which the page of the same name draws with
+``docs/javascripts/traceability-map.js``. Nothing but the graph feeds a map.
 
-Best-effort: without the ``graph`` extra the data is ``{"error": why}`` and
-the page says so, so ``mkdocs build --strict`` never breaks.
+Best-effort: a test run that fails still leaves its results; without the
+``graph`` extra the data is ``{"error": why}`` and the page says so, so
+``mkdocs build --strict`` never breaks.
 """
 
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from mkdocs.structure.files import File
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT = "assets/traceability-map.json"
+EXAMPLE = ROOT / "examples" / "github-document-control"
+# page name -> the project whose acceptance tests run, and its DHF
+MAPS = {"traceability-map": ROOT, "example-traceability-map": EXAMPLE}
 
 
 def graph_data(dhf: Path, results: Path) -> dict:
@@ -92,12 +97,23 @@ def graph_data(dhf: Path, results: Path) -> dict:
     }
 
 
+def on_pre_build(config) -> None:
+    for project in MAPS.values():
+        try:
+            subprocess.run([sys.executable, "-m", "pytest", "tests/acceptance", "-q",
+                            "--clean-alluredir", "--alluredir", "dhf/allure-results"],
+                           cwd=project, capture_output=True, timeout=600)
+        except Exception:
+            pass  # the map then shows the results the record already has, or none
+
+
 def on_files(files, config):
-    try:
-        data = graph_data(ROOT / "dhf", ROOT / "dhf" / "allure-results")
-    except ImportError as error:
-        data = {"error": f"the graph extra is not installed ({error.name})"}
-    except Exception as error:  # a build never breaks on the map
-        data = {"error": f"{type(error).__name__}: {error}"}
-    files.append(File.generated(config, OUTPUT, content=json.dumps(data)))
+    for name, project in MAPS.items():
+        try:
+            data = graph_data(project / "dhf", project / "dhf" / "allure-results")
+        except ImportError as error:
+            data = {"error": f"the graph extra is not installed ({error.name})"}
+        except Exception as error:  # a build never breaks on a map
+            data = {"error": f"{type(error).__name__}: {error}"}
+        files.append(File.generated(config, f"assets/{name}.json", content=json.dumps(data)))
     return files

@@ -36,7 +36,8 @@ How the parts fit, and why the record is the only thing anyone writes:
    [changing the record](agent-workflow.md).
 
 RDM is developed with RDM: its own [design history file](dhf/README.md) is
-on this site, with the [traceability matrix](traceability-matrix.md) and
-[map](traceability-map.md) generated from a live test run on every build.
+on this site, with its [traceability](traceability-map.md) drawn from its
+graph after a live test run on every build, and so is the
+[Part 11 worked example's](example-traceability-map.md).
 Agent skills for working with RDM live in
 [scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).

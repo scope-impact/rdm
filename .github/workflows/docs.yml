@@ -100,14 +100,14 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
       - name: Set up Python
         run: uv python install 3.12
-      - name: Install all extras (the evidence hook runs the acceptance suite)
+      - name: Install all extras (the traceability hook runs both acceptance suites and the graph)
         run: uv sync --all-extras
       - name: The design history file's PDFs, from the pdfs job
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: dhf-pdfs
           path: dhf-pdfs
-      - name: Build the docs site (strict; generates the traceability-matrix evidence page)
+      - name: Build the docs site (strict; draws RDM's and the example's traceability from their graphs)
         env:
           RDM_DHF_PDFS: dhf-pdfs
         run: uv run --extra docs mkdocs build --strict

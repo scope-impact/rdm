@@ -1,0 +1,25 @@
+<!-- The traceability map's markup, shared by the pages that show one (inside their .rdm-map div). -->
+<link rel="stylesheet" href="../stylesheets/traceability-map.css">
+  <div class="counts" id="counts"><span class="meta">tests run at <code id="commit"></code></span></div>
+  <div class="bar">
+    <div class="tabs" role="tablist" aria-label="View">
+      <button role="tab" id="tabComp" aria-selected="true">Components</button>
+      <button role="tab" id="tabMap" aria-selected="false">Trace map</button>
+    </div>
+    <label for="find">Find</label>
+    <input type="search" id="find" placeholder="DI-…, UN-…, a component" autocomplete="off">
+    <div class="chips" id="chips" role="group" aria-label="Show a bounded context's trace"></div>
+  </div>
+  <div class="work">
+    <div class="stage">
+      <div id="cy" role="img" aria-label="Traceability graph: user needs and risks, design inputs, tests, components in their bounded contexts"></div>
+      <div class="lanes" id="lanes"></div>
+      <div class="crumb" id="crumb" hidden><button id="back">← Back</button><span>Zoomed into <b id="crumbName"></b></span></div>
+      <div class="ctl"><button id="fit">Fit all</button><button id="fitSel">Fit selection</button><button id="full">Full screen</button></div>
+    </div>
+    <aside id="panel" aria-live="polite"></aside>
+  </div>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.34.3/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/elkjs@0.12.0/lib/elk.bundled.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-elk@2.3.0/dist/cytoscape-elk.js"></script>
+<script src="../javascripts/traceability-map.js"></script>

@@ -59,15 +59,14 @@ markdown_extensions:
       base_path: ["."]
       check_paths: true
 
-# Build-time evidence generation (docs/traceability-matrix.md) — see the hook.
+# Build hooks: traceability from the graph (RDM's and the example's), and RDM's DHF as pages.
 # The build hooks and their template are not pages.
 exclude_docs: |
   _hooks/
   research/
 
 hooks:
-  - docs/_hooks/evidence.py
-  - docs/_hooks/traceability_map.py
+  - docs/_hooks/traceability.py
   - docs/_hooks/dhf.py
 
 nav:
@@ -94,8 +93,7 @@ nav:
   - RDM on RDM:
       - Overview: dhf/README.md
       - Changing RDM: dhf/AGENT_WORKFLOW.md
-      - Traceability matrix (generated): traceability-matrix.md
-      - Traceability map (generated): traceability-map.md
+      - Traceability (from the graph): traceability-map.md
       - V&V plan and user needs: dhf/documents/verification_and_validation_plan.md
       - System architecture: dhf/documents/architecture.md
       - Software design:
@@ -112,6 +110,7 @@ nav:
       - Design review: dhf/documents/design_review.md
       - Document control: dhf/documents/document_control.md
       - "ADR 0001: user needs across bounded contexts": dhf/decisions/adr-0001-bounded-context-user-needs.md
+  - "Worked example: Part 11": example-traceability-map.md
   - Reference:
       - CLI: cli.md
       - API: reference.md

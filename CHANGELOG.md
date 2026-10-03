@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Fixed: in a project nested in its repository, a test run now finds its
+  test** (DI-61, Design Review 49). Tests were named from the repository root
+  and runs from the project, so none linked, and every tagged test was warned
+  as never run.
+- **Traceability, once, from the graph.** The rendered traceability-matrix
+  page is gone; *Traceability* draws RDM's from its graph, and a second page
+  draws the Part 11 worked example's the same way, each after a live run of
+  its acceptance tests at every docs build (`docs/_hooks/traceability.py`).
 - **The docs say each thing once.** Where the design history file already
   says it, a page links to it instead: 31 pages are now 21. *Get started*
   replaces the installation page and both quickstarts; the data model is in
