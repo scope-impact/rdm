@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 49
+revision: 58
 title: Design Review — RDM
 ---
 
@@ -1428,6 +1428,295 @@ reader (DI-1), gap analysis (DI-10, DI-12). No design input changed.
 - A stray `[[` made every later mention in the document a reference, and the
   built-in FDA cybersecurity checklist listed V.A.1.b.ii twice and
   V.A.1.b.iii never.
+
+# Design Review 49 — A run finds its test in a nested project
+
+**Scope reviewed:** the knowledge graph's link from a test run to its test
+(DI-61). No design input changed.
+
+**Disposition:** Approved.
+
+- Drawing the worked example's traceability from its graph found none of its
+  eleven runs linked to a test. A test is named by its path from the
+  repository root, and a run by the full name Allure gives it, which starts
+  where pytest runs: the project, the DHF's parent. For RDM the two are the
+  same directory; for a project nested in another repository, such as the
+  example, they are not, so no run found its test and each tagged test was
+  warned as never run. A test is also found by the full name of its path from
+  its project; the test keeps its repository path as its name.
+
+# Design Review 50 — The record says what it holds, or the gate fails
+
+**Scope reviewed:** the record reader and the design gate (DI-1, DI-2, DI-46),
+and `rdm story new-input` (DI-22), against an adversarial behaviour test of the
+installed package. No design input changed.
+
+**Disposition:** Approved.
+
+- A design input the reader could not read was dropped without a word, so a
+  requirement nothing tests passed both gates and the graph: `design_inputs`
+  written as a mapping, a string or a list of bare ids; an entry with no `id`,
+  an empty or null one, a list as an id, or `ID:` for `id:`; `design_inputs`
+  in a document that is not `kind: design`. Each is now a failure of the
+  design gate (*Malformed Declaration*), naming the document and the entry, as
+  is a user need with no id.
+- A frontmatter that repeats a key kept only the last value: a second
+  `design_inputs` block hid the first's inputs and a duplicate id. A repeated
+  key makes the frontmatter unreadable, which fails the gate. So does a
+  document that is not UTF-8, which crashed it.
+- A design document or the review counted as approved when git could not see
+  it: ignored, untracked by its rules, a committed link whose target is not
+  committed, or marked to skip or assume-unchanged. Approval now needs the
+  document tracked, clean, and visible to git, and its target too when it is a
+  link.
+- Outside git the gate passed saying the design was "approved (committed) in
+  version control". It still passes, as the design says, but says approval
+  could not be checked.
+- `PHOTODOCUMENTATION` read as a placeholder: a placeholder marker is now a
+  whole word, never part of a longer one.
+- Two design documents for one context passed, and `new-input` wrote into one
+  of them without saying why. The gate warns, naming both, and `new-input`
+  refuses until one remains.
+- Design Review 49 lost this record's *Approval* heading; it is restored.
+
+# Design Review 51 — A risk rating no one approved is never read as approved
+
+**Scope reviewed:** the risk register and its release rules (DI-43, DI-44,
+DI-50) and the risks graph (DI-45), against an adversarial behaviour test of
+the installed package. No design input changed.
+
+**Disposition:** Approved.
+
+- A risk or a policy with no status, or an empty one, was read as approved:
+  the gates passed in silence and the graph, the agent's trace and the
+  verification report said *approved*. A missing status is now *proposed*,
+  as DI-43 has it until a person approves the rating, so it warns.
+- An acceptance whose `by` or `rationale` was a list, a mapping, a number or
+  `false` counted as who accepted it and why. Both must be text.
+- A `kind: risk` document with no `risks` list (a misspelled key, or none)
+  was left out with every risk in it. It now blocks, naming the document, as
+  any other malformed register does; a document that only declares the risk
+  policy is not a register.
+- A policy listing a severity or a probability twice gave one pair two
+  levels, and the first won. It is now a malformed policy.
+- A recorded residual `level` was not checked against the policy, as a
+  recorded initial level is. It now blocks when it differs.
+- A list as a risk id was read as its Python text beside the real id. An id
+  that is not text or a number is now a risk with no id, named as such.
+- `rdm graph validate` passed where the release gate blocked on a malformed
+  register or policy with no risk to carry the finding. Such a finding now
+  goes on a stand-in node for the register, so the shapes block it too.
+
+# Design Review 52 — Every reader of the results agrees with the release gate
+
+**Scope reviewed:** the Allure reader (DI-4), the release gate and its trace
+(DI-3, DI-18), the verification data, the verification report and the
+evidence bundle (DI-30, DI-64), the test tags (DI-40) and the validation
+records (DI-33), against an adversarial behaviour test of the installed
+package. No design input changed.
+
+**Disposition:** Approved.
+
+- A result file the release gate could not read blocked it, while verify,
+  trace, the verification report and the evidence bundle said every input
+  was verified. Each now names the unreadable files: verify exits non-zero,
+  trace lists them, and the report counts them as a reason the evidence is
+  not release-grade.
+- Some results that could hold a failed run were read as nothing at all.
+  These are now unreadable: a status Allure does not write (`Failed`, none,
+  null), labels that are not a list of name and value text, a symbolic link,
+  and JSON nested too deep to decode, which crashed the gate with a
+  traceback.
+- A passed test whose verification step failed counted as verified.
+  CONTEXT.md says a failed step fails the test, so the reader now treats
+  such a run as failed.
+- A run tagged `di-1`, `DI_1` or `DI–1` was dropped without the orphan
+  warning that `DI-9` gets. A tag is now compared on its leading letters,
+  whatever their case or the separator after them.
+- The report ignored failed, broken and dirty runs of tests tagged with no
+  declared input, and called the evidence release-grade over a record with
+  uncommitted changes. Every run now counts toward the evidence status, and
+  uncommitted changes to the record are a reason it is not release-grade.
+- An evidence bundle written to the folder that holds the results deleted
+  them, then reported release-grade over no files. The bundle now refuses an
+  output that would overlap the results.
+- Story decorators on helper functions and classes counted as tags, and
+  `from allure import story` did not. Tags are read only from tests, under
+  any name the file imports the story decorator as.
+- Trace said *untested* for a results directory that does not exist, where
+  verify and the gate refuse one; it now refuses too. It also listed the
+  tests of a failed input as "verified by"; they are now "tested by", each
+  named once.
+- An approved validation record with an empty or missing reviewer silenced
+  the warning. A validation needs a person, so it now needs a reviewer.
+
+# Design Review 53 — The graph blocks what the gates block
+
+**Scope reviewed:** the projection, the gate shapes, SHACL validation, the
+agent server and the graph commands (DI-35, DI-36, DI-38, DI-39, DI-42,
+DI-51), against an adversarial behaviour test of the installed package. No
+design input changed.
+
+**Disposition:** Approved.
+
+- `rdm graph validate` passed records the release gate blocks as a whole: a
+  document whose frontmatter cannot be read, a declaration the record reader
+  cannot read, an uncommitted edit, no design review, no design input, and a
+  result file that cannot be read. The projection now asks the release gate
+  for these findings and puts them on the record's node, where a shape
+  reports each one, so validate blocks them with the gate's own words.
+- The executions graph read results with a reader of its own: it skipped a
+  result with a byte-order mark the gate reads, and a run whose step failed
+  was *passed*. It now uses the Allure reader the gates use.
+- The graph used a stricter id grammar than the record: a design input the
+  gates verified, with an id such as `DI-2a`, had no test and no run in the
+  graph, and `trace` refused it. A tag or a story that names a declared id
+  now links, whatever its shape, and `trace` answers any declared id.
+- `FROM` and `FROM NAMED` were ignored, so a query read the whole graph
+  while saying it read one. They are refused, naming `GRAPH` instead.
+  `SERVICE` used as a variable or a prefix name is no longer refused.
+- A shapes or checklist file that is not valid RDF ended in a traceback with
+  exit 1, the code for a violation. It is an error, exit 2.
+- `--infer` with `--store` was ignored, and an unknown `--exclude` class was
+  ignored. Both are refused.
+- In a repository with no remote whose one branch is not `main` or
+  `master`, every document was warned as not landed. The default branch is
+  now also git's `init.defaultBranch`, or the only local branch.
+
+# Design Review 54 — The hook gates every way implementation is committed
+
+**Scope reviewed:** the pre-commit hook (DI-2) and `rdm hooks` (DI-26),
+against an adversarial behaviour test of the installed package. DI-26's text
+changed: it now names the merge hook.
+
+**Disposition:** Approved.
+
+- Implementation files whose names hold a tab or a double quote committed
+  through a red gate: git quoted the names, and the hook's pattern did not
+  match the quotes. The hook now reads names NUL-separated, exactly as
+  written.
+- Upper-case extensions (`app.PY`) and common configuration, template and
+  source types (`config.json`, `settings.ini`, `setup.cfg`, `Dockerfile`,
+  `Makefile`, `index.html`, `App.vue`, `stubs.pyi`, `analysis.R`,
+  `deploy.ps1`) were not gated. The pattern now matches extensions in any
+  case and includes these.
+- A file replaced by a symbolic link was not gated: the hook looked only at
+  added, copied, modified and renamed files. A type change is now gated too.
+- A merge brought implementation into a branch whose gate was red, because
+  git runs `pre-merge-commit` for a merge, not `pre-commit`. RDM now ships a
+  `pre-merge-commit` hook that runs the same gate, and installs it with the
+  pre-commit hook (DI-26).
+- The hook told a person without RDM to `pip install rdm`, which installs an
+  unrelated package of that name. It now names RDM's own install.
+
+# Design Review 55 — Gap analysis and publishing say what is wrong
+
+**Scope reviewed:** gap analysis and the checklists (DI-10, DI-11, DI-12),
+test result translation (DI-17), rendering and post-processing (DI-7, DI-9),
+snippets (DI-16) and the DMR index (DI-29), against an adversarial behaviour
+test and a usability test of the installed package. No design input changed.
+
+**Disposition:** Approved.
+
+- An audit against a checklist with no clauses (the built-in ISO 14971 2019
+  holds only its header) said *Success* and exited 0, and coverage skipped
+  it. That was an open question in the compliance design; it is closed: a
+  checklist with no clauses, or one that does not exist, is an error (exit
+  2) in an audit and in coverage alike, since nothing was checked.
+- Coverage exited 0 whatever it found. It now exits 3 when any clause is
+  missing, as the audit does.
+- A checklist reached by two spellings of its path (`include ../a.txt`,
+  `include ./a.txt`) was read twice, overstating the clause count. Files are
+  now told apart by their resolved path. An include with spaces around the
+  name is read; a bare `include`, a missing file or a directory is an error
+  naming it, not a traceback. A byte-order mark no longer hides the first
+  key.
+- A fresh scaffold passes gap analysis, because its templates reference
+  every clause while still holding placeholders. The report now warns,
+  naming each document that still holds a placeholder: its references may
+  describe nothing yet.
+- `rdm translate` keyed xunit results by the suite, so three tests named
+  alike in three modules became one row; a test is now keyed by its class
+  name. A Qt5 function skipped with a message disappeared; it is a skip. A
+  failure's text is its message when it has no `message` attribute. A file
+  with no test results in it (an HTML page) is refused, and every translate
+  error is a message with exit 2.
+- Audit-note exclusion deleted `[[…]]` text inside a code fence in a
+  blockquote or a list item. Code fences are now found inside containers too.
+- A snippet marker was any `RDOC` inside a word (`PRDOC_LIMIT`). Markers are
+  whole words now; a whole-word `ENDRDOC` in another column is still
+  refused, as the design says.
+- `rdm story dmr` indexed a blank `id:` as the document `None`. A blank id is
+  no id: the document is skipped with a warning.
+- `rdm render` ended in a traceback for an empty configuration, a value the
+  template does not have, or a template that does not exist. An empty
+  configuration is now no configuration (no extensions); the other two are a
+  message with exit 2. Any command whose output is piped into a reader that
+  stops early (`| head`) ends quietly instead of with a traceback.
+
+# Design Review 56 — Starting a project, adopting one and adding an input work as the docs say
+
+**Scope reviewed:** `rdm init` (DI-15), `rdm story new-input` (DI-22), `rdm
+adopt` (DI-24) and the design gate's scope (DI-2), against an adversarial
+behaviour test and two usability tests (an author and an adopter) of the
+installed package. DI-24's text changed: it names what adopt now lays down.
+
+**Disposition:** Approved.
+
+- The design gate held only the design documents and the review. An
+  implementation commit passed while the user needs had uncommitted edits,
+  and the release gate passed with uncommitted risk documents. The documents
+  that declare user needs, and the risk documents (the register and the
+  policy), are record the design rests on: the gate now holds them to the
+  same rule, complete (no placeholder) and committed.
+- `rdm adopt` laid down no `.gitignore`, so the acceptance run's own
+  `__pycache__` marked every run dirty, and no render configuration, so the
+  documented matrix render crashed. It now lays down a `.gitignore` of what
+  RDM generates (Allure results, verification data, the graph store,
+  bytecode) and `dhf/config.yml`, each only when absent; when a `.gitignore`
+  exists, the next steps name the lines to add. It wrote through a dangling
+  symbolic link to a file outside the repository; a link, dangling or not,
+  exists, so it is skipped. Its design template linked a C4 view the project
+  does not have; the line is gone, and C4 is named as optional.
+- `rdm init` into an existing directory ended in a traceback; it is an error
+  naming the directory (exit 2). On success it printed nothing; it now says
+  what it laid down and the next steps.
+- `rdm story new-input` allocated an id that a test was still tagged with, so
+  a retired test verified the new input. An id any test is tagged with is
+  taken. Its stub test file clashed with an existing test module of the same
+  name elsewhere in the suite; it is then named `test_<context>_acceptance.py`.
+  It rewrote CRLF line endings and dropped the comment on an empty
+  `design_inputs: []`; both are kept.
+- The project scaffold's Dockerfile needed a wheel in `dist/` that a new
+  project does not have; it now installs the RDM release from git when there
+  is none. Its Makefile did not rebuild Word documents when the reference
+  document changed, and one template fetched an image over the network that
+  the scaffold already holds; both are fixed.
+- Gap analysis names a gap as the glossary does (*N gaps*, not *missing
+  items*), and verbose coverage prints no empty heading when nothing is
+  missing.
+
+# Design Review 57 — Review findings on the behaviour fixes
+
+**Scope reviewed:** the review of the behaviour fixes' pull request: the
+design gate's approval check during a merge (DI-2), the record reader's user
+needs (DI-46), and test result translation (DI-17). No design input changed.
+
+**Disposition:** Approved.
+
+- The merge hook of Design Review 54 blocked every valid merge that brought
+  an approved design change with its implementation. While a merge is being
+  made, git stages the merged branch's documents, so the design gate read
+  them as uncommitted. A document staged exactly as a commit holds it at its
+  path was committed and reviewed there: during a merge it is approved. (Git
+  names the merged commit only after its merge hook has run, so the commit is
+  found by the document's content.) A merge result no commit holds (a
+  resolved conflict) is new content, and still is not.
+- A user need written as a blank string was dropped without a word, where
+  every other entry with no id fails the gate. It now fails it too.
+- `rdm translate` accepted a result file whose suites hold no test, and wrote
+  empty data. A file whose results flatten to no test is refused, as one
+  with no suite is.
 
 # Approval
 

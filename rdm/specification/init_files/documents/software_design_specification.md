@@ -161,12 +161,7 @@ Which produces:
 
 ![Screen Two](./images/uimockups/example-ui-mockup-002.jpg)
 
-## Screen Three (PNG Online)
-
-Use something like: `![Screen Three](https://github.com/innolitics/rdm/raw/a29fed650e55b376157cebe8843b087209a0b92a/rdm/init_files/images/uimockups/example-ui-mockup-001.png)`
-
-Which produces:
-
-![Screen Three](https://github.com/innolitics/rdm/raw/a29fed650e55b376157cebe8843b087209a0b92a/rdm/init_files/images/uimockups/example-ui-mockup-001.png)
+Keep images in the project rather than linking them online: a build then
+needs no network, and the image is controlled with the document.
 
 ENDTODO

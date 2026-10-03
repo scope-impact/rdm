@@ -66,7 +66,8 @@ The PDF action is in the Reusable gates container; the others are in `rdm`.
 The rules a reviewer needs to judge the design:
 
 - **Rendering.** A placeholder with no data fails the render rather than
-  rendering empty. Each data file is one entry of the template's context,
+  rendering empty, with a message naming it (exit 2), as does a template
+  that does not exist; an empty configuration loads no extensions. Each data file is one entry of the template's context,
   named by the file's name without its extension; two data files with one
   name are an error. Only when a template asks for the first pass's output
   is it rendered a second time with that output available; otherwise one
@@ -80,26 +81,29 @@ The rules a reviewer needs to judge the design:
   removes each `[[…]]` note, and the space before it, from the output; a
   note may run over several lines of one paragraph, and one left open at the
   paragraph's end is kept as text. Neither extension touches code: fenced
-  blocks (``` or ~~~) and inline code are left as written, and only an ATX
+  blocks (``` or ~~~, also inside a blockquote or a list item) and inline
+  code are left as written, and only an ATX
   heading (`#` to `######`, then a space) is numbered. A
   project laid down by `rdm init` enables only the vocabulary extension.
 - **Snippets.** A snippet runs from its opening marker to the closing marker
-  in the same column, its lines kept from that column. An empty or repeated
+  in the same column (each a whole word, never part of a longer one), its lines kept from that column. An empty or repeated
   key in one file, a closing marker in another column, or a missing closing
   marker is refused, naming the file and line. The snippets are a data file
   the Renderer reads like any other.
 - **DMR index.** One entry per Markdown document in the given directory with
-  a frontmatter id, sorted by id, marked as generated. A document with no id
+  a frontmatter id (a blank one is none), sorted by id, marked as generated. A document with no id
   is skipped with a warning; a directory with no controlled document is an
   error.
 - **Verification report.** The status of each design input is the release
   context's verification data; the report never decides it again. The
   evidence is release-grade only when no reason is found, and each reason is
-  named: a design input not verified; a test that failed or broke; a test
-  run with uncommitted changes, or with no commit; runs of another commit
-  than the record's; or a record whose commit is unknown. The anomalies are
-  a design input with no run, a run that did not pass, a missing attachment
-  and an orphan tag. With no Typst available the report is refused, and the
+  named: a design input not verified; a result file that cannot be read; a
+  test that failed or broke; a test run with uncommitted changes, or with no
+  commit; runs of another commit than the record's; a record with
+  uncommitted changes; or a record whose commit is unknown. Every run
+  counts, tagged with a declared input or not. The anomalies are a design
+  input with no run, a run that did not pass, an unreadable result file, a
+  missing attachment and an orphan tag. With no Typst available the report is refused, and the
   command says so, rather than written without its layout. Because the
   layout sets every value as text, never markup, nothing a test printed can
   change the document.
@@ -111,7 +115,8 @@ The rules a reviewer needs to judge the design:
   ends, the verification report or the reason it was not rendered, and a
   manifest of the counts, the files this bundle wrote, and each attachment
   a result names that is missing. A bundle written where one was before
-  replaces the earlier results, never mixes them. Neither the bundle nor the
+  replaces the earlier results, never mixes them, and an output that would
+  hold the results directory, or sit inside it, is refused. Neither the bundle nor the
   report reads a symbolic link in the results directory. It lives here because it renders:
   the matrix with the Renderer, the report with the Verification report.
 

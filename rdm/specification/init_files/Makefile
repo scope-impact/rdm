@@ -32,7 +32,7 @@ release/%.pdf: release/%.md pandoc_pdf.yml template.typ
 	@mkdir -p $(@D)
 	pandoc --defaults=./pandoc_pdf.yml --resource-path=$(RESOURCE_PATH) $< -o $@
 
-release/%.docx: release/%.md pandoc_docx.yml
+release/%.docx: release/%.md pandoc_docx.yml $(wildcard reference.docx)  # the Word template, if any
 	@mkdir -p $(@D)
 	pandoc --defaults=./pandoc_docx.yml --resource-path=$(RESOURCE_PATH) $< -o $@
 

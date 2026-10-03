@@ -26,15 +26,16 @@ def load_json_records(directory: Path, suffix: str, build: Callable[[dict, str],
     record ingester (Allure results, persona runs, validation records). For
     each well-formed object, ``build(data, filename)`` returns a record (or
     ``None`` to skip it). A missing directory yields an empty list. The name of
-    each file that is not a JSON object is added to ``unreadable`` when given.
+    each file that is not a JSON object is added to ``unreadable`` when given,
+    and so is a symbolic link, which could name any file on the machine.
     """
     records: list = []
     if not directory.exists():
         return records
     for path in sorted(directory.glob(f"*{suffix}")):
         try:
-            data = json.loads(path.read_text(encoding="utf-8-sig"))
-        except (OSError, ValueError):  # ValueError: JSON and Unicode decoding alike
+            data = None if path.is_symlink() else json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, RecursionError):  # ValueError: JSON and Unicode decoding alike
             data = None
         if not isinstance(data, dict):
             if unreadable is not None:

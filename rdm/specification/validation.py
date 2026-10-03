@@ -7,7 +7,7 @@ record — ``<dhf>/validation/UN-…-validation.json``:
 
     {
       "user_need": "UN-001",
-      "disposition": "approved",       // only "approved" counts
+      "disposition": "approved",       // only "approved", with a reviewer, counts
       "reviewer": "name (role)",
       "summary": "what was reviewed, against what"
     }
@@ -40,7 +40,7 @@ def parse_validation_records(validation_dir: Path) -> dict[str, dict]:
         return {
             "user_need": un,
             "disposition": str(data.get("disposition", "")).strip().lower(),
-            "reviewer": str(data.get("reviewer", "")).strip(),
+            "reviewer": data["reviewer"].strip() if isinstance(data.get("reviewer"), str) else "",
             "summary": str(data.get("summary", "")).strip(),
             "source": filename,
         }
@@ -53,5 +53,5 @@ def unvalidated_user_needs(dhf_dir: Path, needs: set[str] | None = None) -> list
     """Registered user needs (``needs``, when the caller has read them) without
     an approved validation record, sorted."""
     records = parse_validation_records(validation_dir_for(dhf_dir))
-    approved = {un for un, record in records.items() if record["disposition"] == APPROVED}
+    approved = {un for un, record in records.items() if record["disposition"] == APPROVED and record["reviewer"]}
     return sorted((registry_user_needs(Path(dhf_dir)) if needs is None else needs) - approved)

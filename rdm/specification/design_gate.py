@@ -30,11 +30,14 @@ Part of the core install: it reads only the record (``rdm.specification``).
 
 from __future__ import annotations
 
+import os
+import re
+
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.kernel.events import Event
-from rdm.kernel.frontmatter import unreadable_documents
+from rdm.kernel.frontmatter import documents, unreadable_documents
 from rdm.kernel.git import git
 from rdm.kernel.ids import relevant_orphans
 from rdm.specification import tags
@@ -44,6 +47,7 @@ from rdm.specification.sdd import (
     design_inputs,
     duplicate_declarations,
     find_design_docs,
+    malformed_declarations,
     realises_by_context,
     registry_user_needs,
 )
@@ -55,8 +59,10 @@ from rdm.specification.sdd import find_dhf_doc as _find_doc
 DESIGN_REVIEW_DOC = "design_review.md"
 
 # A document is considered "incomplete" while it still contains scaffold
-# placeholders. These markers come from the init templates.
+# placeholders. These markers come from the init templates; each is a word, so
+# PHOTODOCUMENTATION is not one.
 PLACEHOLDER_MARKERS = ("TODO", "ENDTODO")
+_PLACEHOLDER = re.compile(r"\b(ENDTODO|TODO)\b")
 
 # Events (specification.md, "Commands and events"): the checks fail with these,
 # and warn with the Warned ones; Approved is the verdict when none fails.
@@ -67,12 +73,14 @@ PLACEHOLDERS = "Design Controls Not Approved / Placeholders"
 DOCUMENT_MISSING = "Design Controls Not Approved / Document Missing"
 NO_DESIGN_DOCUMENT = "Design Controls Not Approved / No Design Document"
 DUPLICATE_ID = "Design Controls Not Approved / Duplicate Id"
+MALFORMED_DECLARATION = "Design Controls Not Approved / Malformed Declaration"
 UNREADABLE_FRONTMATTER = "Design Controls Not Approved / Unreadable Frontmatter"
 VIEWS_STALE = "Design Controls Not Approved / Views Stale"
 NEED_UNTRACED = "Design Controls Warned / Need Untraced"
 UNKNOWN_NEED = "Design Controls Warned / Unknown Need"
 UNKNOWN_REALISED_INPUT = "Design Controls Warned / Unknown Realised Input"
 NO_DESIGN_DOCUMENT_WARNED = "Design Controls Warned / No Design Document"
+CONTEXT_REPEATED = "Design Controls Warned / Context Repeated"
 NO_TESTS = "Design Controls Warned / No Tests"
 INPUT_UNTAGGED = "Design Controls Warned / Input Untagged"
 ORPHAN_TAG = "Design Controls Warned / Orphan Tag"
@@ -147,12 +155,41 @@ def has_uncommitted_changes(path: Path) -> bool | None:
         False - the file is clean and tracked (committed revision == working copy)
         None  - cannot be determined (not a git work tree, or git unavailable)
 
-    Note: a file excluded by .gitignore reports as clean; design documents are
-    expected to be tracked, so this edge case is not treated specially.
+    Uncommitted also covers what git cannot see as it stands: a file it does
+    not track (untracked or ignored), one marked to skip the worktree or assume
+    it unchanged (so ``git status`` hides its edits), and a link whose target
+    is any of these.
     """
     # git status fails (None) outside a work tree, so it needs no prior check.
-    status = git(path.parent, "status", "--porcelain", "--", str(path))
-    return None if status is None else bool(status)
+    status = git(path.parent, "status", "--porcelain", "--ignored", "--", str(path))
+    if status is None:
+        return None
+    if status and not _merged_as_committed(path, status):
+        return True
+    listed = git(path.parent, "ls-files", "-v", "--", str(path))
+    if not listed or listed[0] == "S" or listed[0].islower():  # untracked; skip-worktree; assume-unchanged
+        return True
+    target = path.resolve()
+    if path.is_symlink() and target != path.absolute():
+        return has_uncommitted_changes(target) is not False
+    return False
+
+
+def _merged_as_committed(path: Path, status: str) -> bool:
+    """Whether ``path`` is staged only because a merge is being made, exactly
+    as a commit holds it at its path: committed and reviewed there, so
+    approved. Git names the merged commit (MERGE_HEAD) only after the merge
+    hook has run, so the commit is found by the document's content. A merge
+    result no commit holds (a resolved conflict) is new content, and an edit
+    in the working tree is uncommitted, as ever."""
+    staged_only = all(line[:1] in "MA" and line[1:2] == " " for line in status.splitlines())
+    merging = bool(git(path.parent, "rev-parse", "-q", "--verify", "MERGE_HEAD")) or \
+        os.environ.get("GIT_REFLOG_ACTION", "").startswith("merge")
+    if not (staged_only and merging):
+        return False
+    staged = git(path.parent, "rev-parse", "-q", "--verify", f":./{path.name}")
+    return bool(staged) and bool(git(path.parent, "log", "--all", "-n1", "--format=%H",
+                                     f"--find-object={staged}", "--", path.name))
 
 
 def _approval(path: Path, events: list[Event]) -> bool | None:
@@ -173,13 +210,13 @@ def check_doc_path(path: Path, name: str) -> ArtifactCheck:
     "Approved" is verified against version control: a document with uncommitted
     changes is not yet approved (see `has_uncommitted_changes`).
     """
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8", errors="replace")  # not UTF-8: the frontmatter check fails it
     events: list[Event] = []
 
     if not text.strip():
         events.append(Event(EMPTY, "document is empty"))
 
-    leftover = [m for m in PLACEHOLDER_MARKERS if m in text]
+    leftover = sorted(set(_PLACEHOLDER.findall(text)))
     if leftover:
         events.append(Event(PLACEHOLDERS,
             f"contains unresolved placeholders ({', '.join(sorted(set(leftover)))}); "
@@ -246,6 +283,13 @@ def _coverage_warnings(dhf_dir: Path) -> list[Event]:
     for doc, refs in realises_by_context(dhf_dir).items():
         for ref in sorted(refs - di_ids):
             warnings.append(Event(UNKNOWN_REALISED_INPUT, f"{doc.name} realises unknown design input {ref}"))
+    by_context: dict[str, list[Path]] = {}
+    for doc in docs:
+        by_context.setdefault(context_of(doc), []).append(doc)
+    for context, owners in sorted(by_context.items()):
+        if len(owners) > 1:
+            names = ", ".join(str(d.relative_to(dhf_dir)) for d in owners)
+            warnings.append(Event(CONTEXT_REPEATED, f"context {context} has {len(owners)} design documents: {names}"))
     return warnings
 
 
@@ -285,6 +329,16 @@ def check_unique_ids(dhf_dir: Path) -> ArtifactCheck:
                          complete=not events, events=events, uncommitted=False)
 
 
+def check_declarations(dhf_dir: Path) -> ArtifactCheck:
+    """Every declaration of the record can be read: one that cannot (design
+    inputs that are not a list of entries with ids, a user need with no id)
+    would drop out of every gate and the graph unseen."""
+    events = [Event(MALFORMED_DECLARATION, f"{md.relative_to(dhf_dir)}: {problem}")
+              for md, problem in malformed_declarations(Path(dhf_dir))]
+    return ArtifactCheck(name="Declarations", path=Path(dhf_dir),
+                         complete=not events, events=events, uncommitted=False)
+
+
 def check_frontmatter(dhf_dir: Path) -> ArtifactCheck:
     """Every Markdown document of the DHF has frontmatter that can be read: one
     that cannot would drop out of every gate and the graph unseen."""
@@ -310,11 +364,28 @@ def check_architecture_views(dhf_dir: Path) -> list[ArtifactCheck]:
                           events=events, uncommitted=uncommitted)]
 
 
+def check_record_docs(dhf_dir: Path) -> list[ArtifactCheck]:
+    """The other documents the design rests on, held to the same rule as the
+    design documents (complete and committed): each document that declares
+    user needs, and each risk document (the register, the policy)."""
+    checks = []
+    for md, front in documents(Path(dhf_dir)):
+        rel = md.relative_to(dhf_dir).as_posix()
+        if "user_needs" in front:
+            checks.append(check_doc_path(md, f"User needs ({rel})"))
+        elif str(front.get("kind", "")).strip().lower() == "risk" or "risk_policy" in front:
+            checks.append(check_doc_path(md, f"Risk document ({rel})"))
+    return checks
+
+
 def design_artifacts(dhf_dir: Path) -> list[ArtifactCheck]:
     """The design gate's pass/fail checks: design documents, the design review,
-    ids declared once, the architecture's drawn views."""
+    the user needs and risk documents, ids declared once, the architecture's
+    drawn views."""
     return [*check_design_docs(dhf_dir), check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review"),
-            check_unique_ids(dhf_dir), check_frontmatter(dhf_dir), *check_architecture_views(dhf_dir)]
+            *check_record_docs(dhf_dir),
+            check_unique_ids(dhf_dir), check_declarations(dhf_dir), check_frontmatter(dhf_dir),
+            *check_architecture_views(dhf_dir)]
 
 
 def run_design_gate(dhf_dir: Path, verification_warnings=None) -> GateResult:
@@ -372,6 +443,13 @@ def story_design_gate_command(dhf_dir: Path | None = None, verification_warnings
                 print(f"  [WARN] {warning.message}")
 
     print()
+    if result.passed and any(a.uncommitted is None for a in result.artifacts):
+        print(
+            "Design gate PASSED: the per-context design document(s) and the design "
+            "review are present and complete; their approval could not be checked "
+            "(not a git work tree)."
+        )
+        return 0
     if result.passed:
         print(
             "Design gate PASSED: the per-context design document(s) and the design "
@@ -381,6 +459,6 @@ def story_design_gate_command(dhf_dir: Path | None = None, verification_warnings
 
     print(
         "Design gate FAILED: complete and commit (approve) the design document(s) "
-        "and design review before transitioning work into backlog tasks."
+        "and design review before committing implementation."
     )
     return 1

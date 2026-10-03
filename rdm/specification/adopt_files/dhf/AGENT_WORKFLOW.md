@@ -136,7 +136,8 @@ from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
 record-first commits (design document, then implementation) into one, so the
 history no longer shows the design was approved before the code; a rebase
 rewrites the commits that were reviewed. Configure the repository to allow
-merge commits only, as `examples/github-document-control/` does
+merge commits only, as RDM's
+[worked example](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control) does
 (`allow_squash_merge: false`, `allow_rebase_merge: false`).
 
 ## Hard rules

@@ -184,7 +184,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             "3 design input(s) not verified: DI-2, DI-3, DI-10",
             "1 test(s) failed or broke",
             "1 test(s) ran with uncommitted changes in the worktree",
-            "1 test(s) recorded no commit",
+            "2 test(s) recorded no commit",
             f"runs tested 1 other commit(s) than the record's ({commit[:12]}): {OTHER[:12]}",
         ]
         assert report["executor"] is None and report["environment"] == {}
@@ -308,3 +308,30 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert "link-attachment.txt" not in names and "e-result.json" in names
         runs = [r for di in linked["design_inputs"] for r in di["runs"] if r["test"] == "test_link"]
         assert [a["kind"] for a in runs[0]["attachments"]] == ["missing"]
+    with verification_step("every run counts, tagged with a declared input or not; an unreadable or linked result, and "
+                           "uncommitted changes to the record, are each a reason it is not release-grade"):
+        untagged = clean_results / "u-result.json"
+        untagged.write_text(json.dumps({"name": "test_untagged", "status": "failed",
+                                        "labels": [{"name": "commit", "value": clean_commit}]}))
+        report = build_report(clean_dhf, clean_results)
+        assert report["reasons"] == ["1 test(s) failed or broke"], report["reasons"]
+        assert [(a["subject"], a["kind"]) for a in report["anomalies"]] == [("test_untagged", "failed")]
+        untagged.write_text(json.dumps({"name": "test_untagged", "status": "passed", "steps": [
+            {"name": "a step", "status": "broken"}], "labels": [{"name": "commit", "value": clean_commit}]}))
+        report = build_report(clean_dhf, clean_results)
+        assert [(a["subject"], a["kind"]) for a in report["anomalies"]] == [("test_untagged", "failed")]
+        untagged.unlink()
+        (clean_results / "cut-result.json").write_text('{"status": "failed"')
+        (tmp_path / "linked-result.json").write_text(json.dumps({"name": "x", "status": "passed", "labels": [
+            {"name": "story", "value": "DI-1"}, {"name": "commit", "value": clean_commit}]}))
+        (clean_results / "link-result.json").symlink_to(tmp_path / "linked-result.json")
+        report = build_report(clean_dhf, clean_results)
+        assert report["reasons"] == ["2 result file(s) cannot be read: cut-result.json, link-result.json"]
+        assert [(a["subject"], a["kind"]) for a in report["anomalies"]] == [
+            ("cut-result.json", "unreadable"), ("link-result.json", "unreadable")]
+        (clean_results / "cut-result.json").unlink()
+        (clean_results / "link-result.json").unlink()
+        design = clean_dhf / "documents" / "design" / "alarms.md"
+        design.write_text(design.read_text().replace("sound an alarm", "sound AND flash an alarm"))
+        report = build_report(clean_dhf, clean_results)
+        assert report["reasons"] == ["the record has uncommitted changes"], report["reasons"]

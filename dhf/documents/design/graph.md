@@ -139,12 +139,20 @@ The behaviour a reviewer needs to judge the design:
   references; the tests graph holds the tagged tests; the executions graph
   the Allure results, when given; the git graph each document's latest
   landed commit and the commit the record was built at; the risks graph the
-  register; the architecture graph what the C4 model claims and the code
+  register, with a finding about the register as a whole on each risk, or on
+  a stand-in node for the register when it has none; the architecture graph what the C4 model claims and the code
   graph what the imports between components' code actually are; the
   checklists and references graphs, on request; the ontology graph the
   Vocabulary; and the inferred graph, on request, only what the rules derive
   and nothing else. The traceability matrix template is not projected: it
   is output, not record.
+- **Whole-record findings.** What the release gate blocks about the record
+  as a whole (a design control not met, no design input declared, a result
+  file that cannot be read) goes on the record's node as the gate words it,
+  and a shape blocks each one, so validation never passes what the gate
+  blocks. The executions graph is read with the Allure reader the gates use.
+  A declared id links its tests and runs whatever its shape; an undeclared
+  tag links only when it is id-shaped.
 - **Order.** The architecture is projected after the runs, because the
   source files it places in components (`rdm:inComponent`) are the ones the
   runs' output labels name. The code graph holds one `rdm:Dependency` per
@@ -165,11 +173,17 @@ The behaviour a reviewer needs to judge the design:
 - **What is refused.** The Agent server's `query`, the SPARQL endpoint and
   `rdm graph query` refuse SPARQL Update, any `SERVICE` call outside
   literals, IRIs and comments (a comment ends at either line break), and
-  anything that does not parse as a query; the Agent server's its row limit is capped. Every tool is
+  anything that does not parse as a query, and `FROM` or `FROM NAMED`, which
+  would be ignored (a query names a graph with `GRAPH`); a variable or prefix
+  named SERVICE is not a call. The Agent server's row limit is capped. Every tool is
   annotated read-only and idempotent. `trace` answers a user need, a design
   input (with its risks, runs, steps, attachments and source files) or a
-  risk, and nothing that is not id-shaped. SHACL validation exits 1 on a
-  violation and 2 on a missing DHF or shapes file.
+  risk, and nothing that is neither id-shaped nor declared. SHACL validation
+  exits 1 on a violation and 2 on a missing DHF or a shapes or checklist file
+  that is missing or not RDF. `--infer` over a store and an `--exclude` class
+  the graph does not have are refused. The default branch is origin's HEAD,
+  else `main` or `master`, else git's `init.defaultBranch`, else the only
+  local branch.
 
 Realised for other contexts: the Projection and the Gate shapes implement
 the graph's part of DI-46 (specification): each user need's and design
@@ -221,9 +235,11 @@ step, not as an import. It projects:
   file's component, the imports between components;
 - **compliance**, through Gap analysis: the checklist reader, the built-in
   checklists and the key matcher;
+- **release**, through the Release gate: its findings about the whole
+  record, which the Projection puts on the record for the shapes;
 
-and the shared kernel (ids, git history, frontmatter). It reads neither
-release nor publishing. No dependency breaks the rule.
+and the shared kernel (ids, git history, frontmatter). It does not read
+publishing. No dependency breaks the rule.
 
 ## Out of scope
 

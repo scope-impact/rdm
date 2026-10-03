@@ -12,8 +12,9 @@
 #
 # Configuration (environment variables):
 #   RDM_DHF_DIR              design history file directory   (default: dhf)
-#   RDM_WORK_PATTERN         regex of staged paths that count as implementation
-#                            work (default: source/template/config extensions)
+#   RDM_WORK_PATTERN         regex (ERE, matched in any case) of staged paths
+#                            that count as implementation work (default:
+#                            source/template/config extensions and build files)
 #   RDM_WORK_EXCLUDE         regex of staged paths that never count (default:
 #                            only the DHF itself and the planning directory —
 #                            a whole-directory exemption is a gate hole, so
@@ -23,7 +24,7 @@
 set -euo pipefail
 
 DHF_DIR="${RDM_DHF_DIR:-dhf}"
-WORK_PATTERN="${RDM_WORK_PATTERN:-\.(py|ya?ml|toml|j2|jinja2|sh|bash|[cm]?jsx?|[cm]?tsx?|c|h|cc|cpp|cxx|hh|hpp|cs|go|java|kt|kts|scala|rs|swift|m|mm|rb|php|dart|lua|sql|cmake|gradle)$}"
+WORK_PATTERN="${RDM_WORK_PATTERN:-(\.(pyi?|ya?ml|toml|json|ini|cfg|conf|properties|env|xml|j2|jinja2|html?|vue|svelte|sh|bash|zsh|ps1|psm1|bat|cmd|[cm]?jsx?|[cm]?tsx?|c|h|cc|cpp|cxx|hh|hpp|cs|fs|go|java|kt|kts|scala|groovy|rs|swift|m|mm|rb|php|pl|r|jl|dart|lua|sql|cmake|gradle|mk|tf|hcl|proto)|(^|/)(Dockerfile|Containerfile|Makefile|GNUmakefile|Jenkinsfile|Vagrantfile|Gemfile|Rakefile)(\.[^/]*)?)$}"
 WORK_EXCLUDE="${RDM_WORK_EXCLUDE:-^(${DHF_DIR}|backlog)/}"
 
 if [ -n "${RDM_SKIP_DESIGN_GATE:-}" ]; then
@@ -31,10 +32,19 @@ if [ -n "${RDM_SKIP_DESIGN_GATE:-}" ]; then
     exit 0
 fi
 
-# Staged additions/changes (ignoring deletions), excluding the DHF itself and
-# other non-implementation artifacts (docs, planning, CI/agent scaffolding).
-staged="$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR || true)"  # names as written
-work="$(printf '%s\n' "$staged" | grep -E "$WORK_PATTERN" | grep -vE "$WORK_EXCLUDE" || true)"
+# Staged additions, changes, renames, copies and type changes (ignoring
+# deletions), excluding the DHF itself and the planning directory. Names are
+# read NUL-separated, exactly as written: git would quote a name holding a tab
+# or a double quote, and the quotes would hide its extension. Extensions match
+# in any case (app.PY is Python too).
+shopt -s nocasematch
+work=""
+while IFS= read -r -d '' path; do
+    if [[ $path =~ $WORK_PATTERN ]] && ! [[ $path =~ $WORK_EXCLUDE ]]; then
+        work+="$path"$'\n'
+    fi
+done < <(git diff --cached --name-only -z --diff-filter=ACMRT)
+shopt -u nocasematch
 
 # No implementation work staged -> nothing to gate (e.g. authoring/approving the
 # design documents, or editing docs and config).
@@ -48,7 +58,8 @@ elif command -v uv >/dev/null 2>&1 && [ -f pyproject.toml ]; then
     RDM=(uv run rdm)
 else
     echo "rdm design-gate: 'rdm' not on PATH and no 'uv' + pyproject.toml to fall back to." >&2
-    echo "                 Install it (pip install rdm / uv sync)" >&2
+    echo "                 Install it: uv tool install \"rdm @ git+https://github.com/scope-impact/rdm\"" >&2
+    echo "                 (PyPI's 'rdm' is another project), or uv sync in RDM's own repository" >&2
     echo "                 -- commit blocked. (RDM_SKIP_DESIGN_GATE=1 to bypass, discouraged)" >&2
     exit 1
 fi

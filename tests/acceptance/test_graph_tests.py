@@ -55,22 +55,24 @@ class TestGroup:
 '''
 
 
-def _project(tmp_path: Path) -> tuple[Path, Path]:
+def _project(tmp_path: Path, within: str = "") -> tuple[Path, Path]:
+    """A committed project; ``within`` nests it in a folder of its repository."""
     repo = tmp_path / "acme"
-    docs = repo / "dhf" / "documents"
+    project = repo / within if within else repo
+    docs = project / "dhf" / "documents"
     docs.mkdir(parents=True)
     (docs / "vv.md").write_text("---\nid: VVP-1\nuser_needs:\n  - {id: UN-1, text: a}\n---\n")
     write_design_doc(docs / "design", "alarms",
                      design_inputs=tuple((f"DI-{n}", ["UN-1"]) for n in range(1, 6)))
-    (repo / "tests").mkdir()
-    (repo / "tests" / "test_alarms.py").write_text(ALARMS)
-    (repo / "tests" / "alarm.test.js").write_text("test('beeps', () => { allure.story('DI-5'); });\n")
+    (project / "tests").mkdir()
+    (project / "tests" / "test_alarms.py").write_text(ALARMS)
+    (project / "tests" / "alarm.test.js").write_text("test('beeps', () => { allure.story('DI-5'); });\n")
     git_run(repo, "init")
     git_run(repo, "add", "-A")
     git_run(repo, "commit", "-m", "tests")
     results = tmp_path / "results"
     results.mkdir()
-    return repo / "dhf", results
+    return project / "dhf", results
 
 
 def _result(results: Path, name: str, full_name: str, *stories: str) -> None:
@@ -123,3 +125,11 @@ def test_tests_are_functions_and_runs_find_them(tmp_path: Path) -> None:
     with verification_step("a shape warns on a run exercising a design input its test does not claim"):
         assert {r.label for r in report if r.message == UNCLAIMED} == {"m"}
         assert all(r.severity == "Warning" for r in report if r.message in (NO_RUN, UNCLAIMED))
+    with verification_step("in a project nested in its repository, a run finds its test by its full name"):
+        nested, nested_results = _project(tmp_path / "nested", within="examples/acme")
+        _result(nested_results, "a", "tests.test_alarms#test_alarm", "DI-1", "DI-3")
+        nested_facts = {(q.subject.value, q.predicate.value.replace(RDM, ""), q.object.value)
+                        for q in project(nested, nested_results)}
+        attach("nested project's run", sorted(f for f in nested_facts if f[0] == P + "run/a-result"))
+        assert (P + "run/a-result", "runOf",
+                P + "test/examples/acme/tests/test_alarms.py%3A%3Atest_alarm") in nested_facts

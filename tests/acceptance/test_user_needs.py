@@ -21,14 +21,26 @@ Skips cleanly if allure-pytest is not installed.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 from rdm.evidence import allure as allure_ingest
+from rdm.specification import design_gate as design_gate_module
 from rdm.specification import persona
-from rdm.release.verify import build_verification
-from rdm.specification.design_gate import UNREADABLE_FRONTMATTER, check_design_docs, run_design_gate
+from rdm.specification.hooks import install_hooks
+from rdm.release.verify import build_verification, verify_command
+from rdm.specification.design_gate import (
+    CONTEXT_REPEATED,
+    MALFORMED_DECLARATION,
+    UNREADABLE_FRONTMATTER,
+    check_design_docs,
+    run_design_gate,
+    story_design_gate_command,
+)
 from rdm.specification.sdd import design_input_ids, design_inputs
 from rdm.release.gate import INPUT_FAILED, UNREADABLE_RESULT, run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
@@ -104,8 +116,78 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
 
 @allure.story("DI-2")
 @allure.label("output", "rdm/specification/design_gate.py")
-def test_design_gate_requires_approval(tmp_path: Path) -> None:
+def test_design_gate_requires_approval(tmp_path: Path, capsys) -> None:
     """DI-2: block transition until design docs are complete and approved."""
+    with verification_step("the hook gates implementation however it is named, cased or staged, and so does a merge"):
+        hooks = Path(design_gate_module.__file__).parent / "hook_files"
+        red = tmp_path / "red"
+        (red / "dhf").mkdir(parents=True)  # no design document: the gate is red
+        _git(red, "init", "-q", "-b", "main")
+        (red / "README.md").write_text("start\n")
+        _git(red, "add", "-A")
+        _git(red, "commit", "-qm", "start")
+        assert "pip install rdm " not in (hooks / "pre-commit").read_text()
+
+        def hook(name: str = "pre-commit") -> int:
+            return subprocess.run(["bash", str(hooks / name)], cwd=red, capture_output=True).returncode
+
+        for name in ("a\tb.py", 'we"ird.py', "app.PY", "Main.JAVA", "config.json", "settings.ini", "setup.cfg",
+                     "Dockerfile", "Makefile", "index.html", "App.vue", "stubs.pyi", "analysis.R", "deploy.ps1"):
+            (red / name).write_text("x\n")
+            _git(red, "add", "--", name)
+            assert hook() == 1, name
+            _git(red, "reset", "-q")
+            (red / name).unlink()
+        (red / "app.py").write_text("x\n")
+        (red / "evil.py").write_text("y\n")
+        _git(red, "add", "-A")
+        _git(red, "commit", "-qm", "before the gate")  # no hook installed yet
+        (red / "app.py").unlink()
+        (red / "app.py").symlink_to("evil.py")
+        _git(red, "add", "app.py")
+        assert hook() == 1, "a type change"
+        _git(red, "reset", "-q", "--hard")
+        install_hooks(str(red / ".git" / "hooks"))
+        _git(red, "checkout", "-qb", "feature")
+        (red / "merged.py").write_text("z\n")
+        _git(red, "add", "-A")
+        subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "work"], cwd=red,
+                       check=True, env={**os.environ, "RDM_SKIP_DESIGN_GATE": "1"})
+        _git(red, "checkout", "-q", "main")
+        (red / "README.md").write_text("moved on\n")
+        _git(red, "commit", "-qam", "docs")
+        head = _git(red, "rev-parse", "HEAD")
+        merge = subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "merge", "--no-ff", "-m", "m",
+                                "feature"], cwd=red, capture_output=True, text=True)
+        assert merge.returncode != 0 and _git(red, "rev-parse", "HEAD") == head, merge.stdout + merge.stderr
+    with verification_step("a merge of a design change approved on its branch, with its implementation, passes"):
+        green = _approved_dhf(tmp_path / "green", ["UN-001"]).parent
+        _git(green, "branch", "-M", "main")
+        install_hooks(str(green / ".git" / "hooks"))
+        _git(green, "checkout", "-qb", "feature")
+        core = green / "dhf" / "documents" / "design" / "core.md"
+        core.write_text(core.read_text().replace("DI-1 requirement", "DI-1 refined requirement"))
+        _git(green, "commit", "-qam", "design")  # the approval: design documents only
+        (green / "app.py").write_text("print(1)\n")
+        _git(green, "add", "app.py")
+        _git(green, "commit", "-qm", "code")
+        _git(green, "checkout", "-q", "main")
+        (green / "README.md").write_text("moved on\n")
+        _git(green, "add", "README.md")
+        _git(green, "commit", "-qm", "docs")
+        merge = subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "merge", "--no-ff", "-m", "m",
+                                "feature"], cwd=green, capture_output=True, text=True)
+        assert merge.returncode == 0 and (green / "app.py").exists(), merge.stdout + merge.stderr
+        _git(green, "checkout", "-qb", "feature2", "feature")
+        core.write_text(core.read_text().replace("refined", "re-refined"))
+        _git(green, "commit", "-qam", "design again")
+        _git(green, "checkout", "-q", "main")
+        _git(green, "merge", "--no-ff", "--no-commit", "feature2")  # concluded later by git commit
+        assert run_design_gate(green / "dhf").passed
+        core.write_text(core.read_text() + "\nAn edit made during the merge.\n")
+        assert not run_design_gate(green / "dhf").passed
+        _git(green, "add", str(core))  # staged, as a resolved conflict is: content no commit holds
+        assert not run_design_gate(green / "dhf").passed
     with verification_step("Incomplete (placeholder) design doc -> not complete"):
         docs = tmp_path / "dhf" / "documents" / "design"
         docs.mkdir(parents=True)
@@ -143,6 +225,114 @@ def test_design_gate_requires_approval(tmp_path: Path) -> None:
             assert not gate.passed and any(e.name == UNREADABLE_FRONTMATTER and name in e.message
                                            for e in gate.events)
             broken.unlink()
+    _git(dhf.parent, "add", "-A")
+    _git(dhf.parent, "commit", "-m", "tidy")
+
+    def gate_on(name: str, text: str | bytes, where: str = "documents") -> list[str]:
+        doc = dhf / where / f"{name}.md"
+        doc.write_bytes(text) if isinstance(text, bytes) else doc.write_text(text)
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", name)
+        gate = run_design_gate(dhf)
+        found = [f"{e.name}: {e.message}" for e in gate.events if e.blocking]
+        attach(f"design gate on {name}", found)
+        doc.unlink()
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", f"drop {name}")
+        return found
+
+    with verification_step("a declaration the record reader cannot read fails the gate, naming its document"):
+        entry = "kind: design\ncontext: m\ndesign_inputs:\n  - "
+        for name, front in (
+                ("mapping", "kind: design\ncontext: m\ndesign_inputs: {id: DI-9, text: x}"),
+                ("string", "kind: design\ncontext: m\ndesign_inputs: 'DI-9 The system shall x'"),
+                ("bare-ids", "kind: design\ncontext: m\ndesign_inputs: [DI-9]"),
+                ("no-id", entry + "{text: x}"), ("wrong-key", entry + "{ID: DI-9, text: x}"),
+                ("null-id", entry + "{id: null, text: x}"), ("list-id", entry + "{id: [DI-9], text: x}"),
+                ("not-design", "id: X\ndesign_inputs:\n  - {id: DI-9, text: x}"),
+                ("need-no-id", "id: X\nuser_needs:\n  - {text: x}"),
+                ("need-blank", "id: X\nuser_needs:\n  - '  '")):
+            found = gate_on(name, f"---\n{front}\n---\n\nbody\n", "documents/design")
+            assert any(f.startswith(MALFORMED_DECLARATION) and f"{name}.md" in f for f in found), (name, found)
+    with verification_step("a repeated frontmatter key, or a document that is not UTF-8, cannot be read"):
+        twice = ("---\nkind: design\ncontext: t\ndesign_inputs:\n  - {id: DI-8, text: a, traces_to: [UN-002]}\n"
+                 "design_inputs:\n  - {id: DI-9, text: b, traces_to: [UN-002]}\n---\n\nbody\n")
+        assert any(f.startswith(UNREADABLE_FRONTMATTER) and "twice.md" in f
+                   for f in gate_on("twice", twice, "documents/design"))
+        latin = "---\nid: L\ntitle: caf\xe9\n---\n\nbody\n".encode("latin-1")
+        assert any(f.startswith(UNREADABLE_FRONTMATTER) and "latin.md" in f for f in gate_on("latin", latin))
+    with verification_step("a design document git cannot see, or a link to one, is not approved"):
+        design = dhf / "documents" / "design"
+        (dhf.parent / ".gitignore").write_text("hidden.md\nreal.md\n")
+        write_design_doc(design, "hidden", design_inputs=(("DI-7", ["UN-002"]),))
+        _git(dhf.parent, "add", ".gitignore")
+        _git(dhf.parent, "commit", "-m", "ignore")
+        assert not run_design_gate(dhf).passed  # ignored, never committed
+        (design / "hidden.md").unlink()
+        real = write_design_doc(dhf.parent, "real", design_inputs=(("DI-7", ["UN-002"]),))  # outside the DHF
+        (design / "link.md").symlink_to(os.path.relpath(real, design))
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", "link")
+        assert not run_design_gate(dhf).passed  # the link is committed, its target is not
+        (design / "link.md").unlink()
+        real.unlink()
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", "unlink")
+        assert run_design_gate(dhf).passed
+        core = design / "core.md"
+        _git(dhf.parent, "update-index", "--skip-worktree", str(core))
+        core.write_text(core.read_text().replace("requirement", "weaker requirement"))
+        assert not run_design_gate(dhf).passed  # the edit is hidden from git status, not from the gate
+        _git(dhf.parent, "update-index", "--no-skip-worktree", str(core))
+        _git(dhf.parent, "checkout", "--", str(core))
+    with verification_step("a placeholder is the word TODO, not part of a longer word"):
+        review = dhf / "documents" / "design_review.md"
+        review.write_text(review.read_text() + "\nPHOTODOCUMENTATION of the device.\n")
+        _git(dhf.parent, "commit", "-am", "photo")
+        assert run_design_gate(dhf).passed
+    with verification_step("two design documents for one context are a warning naming both"):
+        write_design_doc(design, "core2", design_inputs=(("DI-6", ["UN-002"]),))
+        (design / "core2.md").write_text((design / "core2.md").read_text().replace("context: core2", "context: core"))
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", "second core")
+        warned = [e.message for e in run_design_gate(dhf).events if e.name == CONTEXT_REPEATED]
+        attach("context warnings", warned)
+        assert len(warned) == 1 and "core.md" in warned[0] and "core2.md" in warned[0]
+    with verification_step("the user needs and the risk documents are held as the design documents are: complete "
+                           "and committed"):
+        held = _approved_dhf(tmp_path / "held", ["UN-001"])
+        assert run_design_gate(held).passed
+        plan = held / "documents" / "verification_and_validation_plan.md"
+        plan.write_text(plan.read_text() + "\nAn unreviewed edit.\n")
+        gate = run_design_gate(held)
+        assert not gate.passed and any("verification_and_validation_plan.md" in " ".join(a.reasons) or
+                                       "verification_and_validation_plan" in a.name for a in gate.artifacts
+                                       if not a.ok), gate.artifacts
+        _git(held.parent, "commit", "-qam", "plan")
+        assert run_design_gate(held).passed
+        plan.write_text(plan.read_text() + "\nTODO: describe validation\n")
+        _git(held.parent, "commit", "-qam", "placeholder")
+        assert not run_design_gate(held).passed
+        plan.write_text(plan.read_text().replace("TODO: describe validation", "Reviewed by QA."))
+        _git(held.parent, "commit", "-qam", "filled")
+        (held / "documents" / "risk").mkdir()
+        (held / "documents" / "risk" / "register.md").write_text("---\nid: RMF\nkind: risk\nrisks: []\n---\n")
+        (held / "documents" / "risk" / "policy.md").write_text("---\nid: RMP\nrisk_policy: {}\n---\n")
+        gate = run_design_gate(held)
+        failing = " ".join(f"{a.name} {' '.join(a.reasons)}" for a in gate.artifacts if not a.ok)
+        assert not gate.passed and "register.md" in failing and "policy.md" in failing, failing
+        _git(held.parent, "add", "-A")
+        _git(held.parent, "commit", "-qm", "risks")
+        assert run_design_gate(held).passed
+    with verification_step("outside git the gate passes but does not claim the design was committed"):
+        plain = tmp_path / "plain"
+        write_design_doc(plain / "documents" / "design", "core", design_inputs=(("DI-1", ["UN-002"]),))
+        (plain / "documents" / "design_review.md").write_text(COMPLETE)
+        _vv_plan(plain / "documents", ["UN-002"])
+        assert story_design_gate_command(plain) == 0
+        out = capsys.readouterr().out
+        attach("design gate outside git", out)
+        assert "approved (committed) in version control" not in out and "could not be checked" in out
 
 
 @allure.story("DI-3")
@@ -180,6 +370,39 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
         (results / "b-result.json").write_text("\ufeff" + failed)
         gate = run_release_gate(dhf, results)
         assert not gate.passed and [e.name for e in gate.events if e.blocking] == [INPUT_FAILED]
+    with verification_step("a result that could hold a failed run is unreadable: a status Allure does not write, "
+                           "labels that are not name and value text, a symbolic link, JSON nested too deep"):
+        story = [{"name": "story", "value": "DI-1"}]
+        cases = {"capital-status": {"status": "Failed", "labels": story}, "no-status": {"labels": story},
+                 "null-status": {"status": None, "labels": story},
+                 "labels-text": {"status": "failed", "labels": "story=DI-1"},
+                 "story-list": {"status": "failed", "labels": [{"name": "story", "value": ["DI-1"]}]}}
+        for name, data in cases.items():
+            case = tmp_path / f"unreadable-{name}"
+            _allure_result(case, "a", "passed", "DI-1")
+            (case / "b-result.json").write_text(json.dumps(data))
+            gate = run_release_gate(dhf, case)
+            attach(f"{name} blocking", gate.blocking)
+            assert [e.name for e in gate.events if e.blocking] == [UNREADABLE_RESULT], (name, gate.blocking)
+        case = tmp_path / "unreadable-link"
+        _allure_result(case, "a", "passed", "DI-1")
+        (tmp_path / "elsewhere.json").write_text(json.dumps({"status": "passed", "labels": story}))
+        (case / "b-result.json").symlink_to(tmp_path / "elsewhere.json")
+        assert [e.name for e in run_release_gate(dhf, case).events if e.blocking] == [UNREADABLE_RESULT]
+        case = tmp_path / "unreadable-deep"
+        _allure_result(case, "a", "passed", "DI-1")
+        (case / "b-result.json").write_text("[" * 100000 + "]" * 100000)
+        assert [e.name for e in run_release_gate(dhf, case).events if e.blocking] == [UNREADABLE_RESULT]
+    with verification_step("a run tagged with a mistyped id is an orphan warning, never silence"):
+        case = tmp_path / "mistyped"
+        _allure_result(case, "a", "passed", "DI-1")
+        for i, tag in enumerate(("di-1", "DI_1", "DI\u20131")):
+            _allure_result(case, f"m{i}", "failed", tag)
+        gate = run_release_gate(dhf, case)
+        attach("warnings", gate.warnings)
+        assert gate.passed, gate.blocking
+        assert {f"Allure result tag {tag} matches no design input" for tag in ("di-1", "DI_1", "DI\u20131")} \
+            <= set(gate.warnings), gate.warnings
 
 
 @allure.story("DI-4")
@@ -214,6 +437,23 @@ def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
                 for group in data["groups"] for di in group["design_inputs"]}
         assert rows == {"DI-1": "verified", "DI-2": "failed"}
         assert data["groups"][0]["user_need"] == "UN-001"
+
+    with verification_step("A passed run whose verification step failed or broke failed: a failed step fails the test"):
+        stepped = tmp_path / "allure-steps"
+        stepped.mkdir()
+        for name, status in (("s", "failed"), ("t", "broken")):
+            (stepped / f"{name}-result.json").write_text(json.dumps(
+                {"name": name, "status": "passed", "labels": [{"name": "story", "value": f"DI-{name.upper()}"}],
+                 "steps": [{"name": "outer", "status": "passed", "steps": [{"name": "inner", "status": status}]}]}))
+        report = allure_ingest.reconcile({"DI-S", "DI-T"}, stepped)
+        assert report.failed == ["DI-S", "DI-T"], report.by_id
+
+    with verification_step("verify names a result file it cannot read, and exits non-zero, as the gate blocks"):
+        (matrix_results / "x-result.json").write_text('{"status": "failed", "labels": [')
+        out_file = tmp_path / "verification.yml"
+        assert verify_command(tmp_path / "dhf", matrix_results, out_file) == 1
+        data = yaml.safe_load(out_file.read_text())
+        assert data["unreadable"] == ["x-result.json"]
 
 
 @allure.story("DI-5")

@@ -6,10 +6,11 @@ from pathlib import Path
 
 from rdm.kernel.git import repo_root
 
-# The design-controls gate: installed by default (DI-26). The remaining hooks
+# The design-controls gate, for commits and for merges: installed by default
+# (DI-26). The remaining hooks
 # enforce an issue-reference commit convention some teams use; they are
 # installed only on request.
-DESIGN_GATE_HOOKS = ('pre-commit',)
+DESIGN_GATE_HOOKS = ('pre-commit', 'pre-merge-commit')
 ISSUE_HOOKS = ('commit-msg', 'prepare-commit-msg')
 
 

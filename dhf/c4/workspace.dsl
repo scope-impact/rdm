@@ -38,13 +38,13 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:specification"
           }
-          hooks = component "Hooks installer" "rdm hooks: installs the design-gate pre-commit hook; the issue-reference hooks only on request" "Python" {
+          hooks = component "Hooks installer" "rdm hooks: installs the design-gate hooks (pre-commit, and pre-merge-commit for merges); the issue-reference hooks only on request" "Python" {
             properties {
               "code" "rdm/specification/hooks.py"
             }
             tags "context:specification"
           }
-          precommit_hook = component "Pre-commit hook" "Runs the design gate before a commit that stages implementation files; blocks when the gate cannot run" "shell" {
+          precommit_hook = component "Pre-commit hook" "Runs the design gate before a commit, or a merge, that stages implementation files; blocks when the gate cannot run" "shell" {
             properties {
               "code" "rdm/specification/hook_files/"
             }
@@ -329,6 +329,7 @@ workspace "RDM" "The design record of regulated software." {
     hooks -> precommit_hook "installs"
     precommit_hook -> design_gate "runs"
     projection -> risk_register "reads risks and findings with"
+    projection -> release_gate "reads the findings about the whole record with"
     projection -> vocabulary "declares terms and rules in"
     projection -> explorer_file "writes the explorer file with"
     explorer_file -> projection "takes the executions graph's name from"
@@ -339,6 +340,7 @@ workspace "RDM" "The design record of regulated software." {
     projection -> gap_analysis "reads checklists and matches checklist references with"
     test_translation -> result_formatters "parses with"
     project_scaffold -> project_templates "copies"
+    project_scaffold -> kernel "takes the release version from"
     adoption -> adoption_templates "copies"
     reusable_workflow -> gates_action "runs the gates with"
     persona_command -> formative_usability "classifies runs with"
@@ -368,6 +370,7 @@ workspace "RDM" "The design record of regulated software." {
     mutation_probe -> test_run "runs one test, unmutated then mutated, in" "pytest subprocess"
     project_scaffold -> adoption_templates "copies the agent workflow runbook from"
     adoption -> precommit_hook "copies"
+    adoption -> hooks "takes the design gate's hook names from"
     agent_server -> vocabulary "returns the vocabulary and rules of"
     projection -> graph_store "builds"
     agent_harness -> agent_server "calls" "MCP over stdio"

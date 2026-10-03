@@ -59,7 +59,7 @@ class State:
     unvalidated: list[str] = field(default_factory=list)
 
 
-def fetch_state(dhf_dir: Path, results_dir: Path) -> State:
+def fetch_state(dhf_dir: Path, results_dir: Path | None) -> State:
     """The design gate's pass/fail checks (not its warnings, which would
     reconcile the results a second time), the record, and the results."""
     state = State(dhf_dir.name, design_artifacts(dhf_dir), design_inputs(dhf_dir))
@@ -151,6 +151,16 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
     state = fetch_state(Path(dhf_dir), Path(allure_results_dir))
     return ReleaseResult(design=GateResult(artifacts=state.artifacts),
                          verified=state.report.verified if state.report else [], events=derive(state))
+
+
+# What the release gate blocks about the record as a whole, not about one
+# design input, user need or risk: the graph puts these on the record (DI-38).
+WHOLE_RECORD = (DESIGN_CONTROL_UNMET, NO_DESIGN_INPUTS, UNREADABLE_RESULT)
+
+
+def record_findings(dhf_dir: Path, allure_results_dir: Path | None = None) -> list[str]:
+    """The release gate's blocking findings about the whole record, as it words them."""
+    return [e.message for e in derive(fetch_state(Path(dhf_dir), allure_results_dir)) if e.name in WHOLE_RECORD]
 
 
 def verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[Event]:
@@ -253,14 +263,15 @@ def build_trace(
             "owned_by": di["context"],
             "realised_by": sorted(realised.get(di["id"], [])),
             "status": v.status if v else None,
-            "tests": sorted(v.tests) if v else [],
+            "tests": sorted(set(v.tests)) if v else [],
         }
 
+    unreadable = verif.unreadable if verif else []
     if target in needs:
         members = [_di_slice(di) for di in inputs if target in di["traces_to"]]
-        return {"kind": "user_need", "id": target, "design_inputs": members}
+        return {"kind": "user_need", "id": target, "design_inputs": members, "unreadable": unreadable}
     if target in by_id:
-        return {"kind": "design_input", **_di_slice(by_id[target])}
+        return {"kind": "design_input", **_di_slice(by_id[target]), "unreadable": unreadable}
     return {"error": f"{target} is not a declared user need or design input"}
 
 
@@ -273,6 +284,9 @@ def story_trace_command(
     dhf = (dhf_dir or Path("dhf")).resolve()
     if not dhf.exists():
         print(f"Error: DHF directory not found: {dhf}")
+        return 2
+    if allure_results_dir and not Path(allure_results_dir).exists():
+        print(f"Error: Allure results directory not found: {allure_results_dir}")
         return 2
 
     trace = build_trace(dhf, target, allure_results_dir)
@@ -289,7 +303,7 @@ def story_trace_command(
             print(f"  {di['design_input']} (owned by {di['owned_by']}) {extra}".rstrip())
             print(f"      {di['text']}")
             if di["tests"]:
-                print(f"      verified by: {', '.join(di['tests'])}")
+                print(f"      {_tested(di['status'])} {', '.join(di['tests'])}")
     else:
         print(f"Design input {trace['design_input']}")
         print(f"  text:        {trace['text']}")
@@ -300,5 +314,12 @@ def story_trace_command(
         if trace["status"]:
             print(f"  status:      {trace['status']}")
         if trace["tests"]:
-            print(f"  verified by: {', '.join(trace['tests'])}")
+            print(f"  {_tested(trace['status'])} {', '.join(trace['tests'])}")
+    if trace["unreadable"]:
+        print(f"  unreadable:  {', '.join(trace['unreadable'])} (could hold a failed run; the release gate blocks)")
     return 0
+
+
+def _tested(status: str | None) -> str:
+    """How a slice names its tests: only a verified input's verified it."""
+    return "verified by:" if status == allure.VERIFIED else "tested by:  "

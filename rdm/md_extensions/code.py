@@ -1,9 +1,12 @@
 """Where Markdown code is, so post-processing leaves it as written: fenced
-blocks (``` or ~~~, indented up to three spaces) and inline code spans."""
+blocks (``` or ~~~, also inside a blockquote or an indented list item) and
+inline code spans."""
 
 import re
 
-_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+# A fence after any blockquote markers and indentation: a list item's fence
+# is indented to the item's content.
+_FENCE = re.compile(r"^(?:[ \t]*>)*[ \t]*(`{3,}|~{3,})")
 _SPAN = re.compile(r"(`+)(?:(?!\1).)+?\1")
 
 

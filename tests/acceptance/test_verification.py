@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm.publishing.bundle import evidence_bundle
+from rdm.publishing.bundle import evidence_bundle, evidence_bundle_command
 
 allure = pytest.importorskip("allure")
 
@@ -119,3 +119,15 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
         assert (out / "manifest.json").is_file()
         assert manifest["verification_report"] in ("verification_report.pdf",) or \
             manifest["verification_report"].startswith("not rendered: ")
+    with verification_step("an output that would hold the results, or sit inside them, is refused and the results "
+                           "kept"):
+        kept = sorted(p.name for p in results.iterdir())
+        for out_dir in (results.parent, results, results / "bundle"):
+            with pytest.raises(ValueError, match="results"):
+                evidence_bundle(dhf, results, out_dir)
+            assert sorted(p.name for p in results.iterdir()) == kept, out_dir
+        assert evidence_bundle_command(dhf, results, results.parent) == 2
+    with verification_step("an unreadable result is named in the manifest"):
+        (results / "cut-result.json").write_text('{"status": "failed"')
+        manifest = evidence_bundle(dhf, results, out)
+        assert manifest["unreadable"] == ["cut-result.json"]

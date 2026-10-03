@@ -21,7 +21,7 @@ from pathlib import Path
 
 from rdm.kernel.frontmatter import parse_frontmatter
 from rdm.kernel.ids import sort_key
-from rdm.specification.tags import find_tests_dir
+from rdm.specification.tags import find_tests_dir, iter_test_files, scan_source_tags
 from rdm.specification.sdd import (
     context_of,
     design_input_ids,
@@ -76,9 +76,23 @@ def _workflow_pointer(dhf_dir: Path) -> str:
 
 
 def next_design_input_id(dhf_dir: Path) -> str:
-    """Allocate the next unused DI-n across every design document in the DHF."""
-    numbers = (_DI_NUMBER.match(di_id) for di_id in design_input_ids(dhf_dir))
+    """Allocate the next unused DI-n: one no design document declares and no
+    test is tagged with -- a retired test still tagged DI-n would otherwise
+    verify the new input."""
+    tests_dir = find_tests_dir(dhf_dir)
+    tagged = set(scan_source_tags(tests_dir)) if tests_dir is not None else set()
+    numbers = (_DI_NUMBER.match(di_id) for di_id in design_input_ids(dhf_dir) | tagged)
     return f"DI-{max((int(m.group(1)) for m in numbers if m), default=0) + 1}"
+
+
+def stub_test_file(tests_dir: Path, context: str) -> Path:
+    """Where a context's stub tests go: ``acceptance/test_<context>.py``, or
+    ``test_<context>_acceptance.py`` when a test module of that name exists
+    elsewhere in the suite (pytest refuses two modules of one name)."""
+    usual = tests_dir / "acceptance" / f"test_{context}.py"
+    if usual.exists() or not any(path.name == usual.name for path in iter_test_files(tests_dir)):
+        return usual
+    return usual.with_name(f"test_{context}_acceptance.py")
 
 
 def docs_by_context(dhf_dir: Path) -> dict[str, Path]:
@@ -100,7 +114,7 @@ def _docstring_escape(text: str) -> str:
 
 def _frontmatter_close(lines: list[str]) -> int | None:
     """Index of the closing frontmatter fence, or None without a leading block."""
-    fences = [i for i, line in enumerate(lines) if line.rstrip("\n") == "---"]
+    fences = [i for i, line in enumerate(lines) if line.rstrip("\r\n") == "---"]
     if len(fences) < 2 or fences[0] != 0:
         return None
     return fences[1]
@@ -114,16 +128,17 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
     just before the closing frontmatter fence. Raises ``ValueError`` when the
     document has no frontmatter block.
     """
-    original = doc_path.read_text(encoding="utf-8")
+    original = doc_path.read_bytes().decode("utf-8")  # as written: CRLF stays CRLF
+    nl = "\r\n" if "\r\n" in original else "\n"
     lines = original.splitlines(keepends=True)
     close = _frontmatter_close(lines)
     if close is None:
         raise ValueError(f"{doc_path} has no frontmatter block to declare design inputs in")
 
     def entry_at(indent: str) -> str:
-        return (f"{indent}- id: {di_id}\n"
-                f"{indent}  text: {_yaml_quote(text)}\n"
-                f"{indent}  traces_to: [{', '.join(traces_to)}]\n")
+        return (f"{indent}- id: {di_id}{nl}"
+                f"{indent}  text: {_yaml_quote(text)}{nl}"
+                f"{indent}  traces_to: [{', '.join(traces_to)}]{nl}")
 
     entry = entry_at("  ")
 
@@ -132,20 +147,20 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
         if re.match(r"^design_inputs:\s*(#.*)?$", lines[i]):
             key_index = i
             break
-        if re.match(r"^design_inputs:\s*\[\s*\]\s*(#.*)?$", lines[i]):
-            # An empty flow list becomes the block list, never a second key.
-            lines[i] = "design_inputs:\n"
+        if empty := re.match(r"^design_inputs:\s*\[\s*\]\s*(#[^\r\n]*)?", lines[i]):
+            # An empty flow list becomes the block list, never a second key; its comment stays.
+            lines[i] = "design_inputs:" + (f"  {empty.group(1)}" if empty.group(1) else "") + nl
             key_index = i
             break
 
     if key_index is None:
-        lines.insert(close, "design_inputs:\n" + entry)
+        lines.insert(close, "design_inputs:" + nl + entry)
     else:
         # The list ends at the next non-indented, non-blank line (a sibling
         # top-level key) or at the closing fence.
         end, indent = close, "  "
         for i in range(key_index + 1, close):
-            stripped = lines[i].rstrip("\n")
+            stripped = lines[i].rstrip("\r\n")
             if stripped.lstrip().startswith("- ") and i == key_index + 1:
                 indent = stripped[:len(stripped) - len(stripped.lstrip())]  # the list's own indentation
             if stripped and not stripped.startswith((" ", "\t")) and not (indent == "" and stripped.startswith("-")):
@@ -164,7 +179,7 @@ def insert_design_input(doc_path: Path, di_id: str, text: str, traces_to: list[s
             != {k: v for k, v in before.items() if k != "design_inputs"}):
         raise ValueError(f"cannot add {di_id} to {doc_path} without changing what it declares "
                          "(its design_inputs list is in a form this edit does not handle): add it by hand")
-    doc_path.write_text(edited, encoding="utf-8")
+    doc_path.write_bytes(edited.encode("utf-8"))
 
 
 def write_stub_test(test_file: Path, di_id: str, text: str, context: str) -> None:
@@ -220,6 +235,11 @@ def story_new_input_command(
     if context not in contexts:
         print(f"Error: unknown context '{context}'. Known contexts: {', '.join(sorted(contexts))}")
         return 2
+    owners = [doc for doc in find_design_docs(dhf) if context_of(doc) == context]
+    if len(owners) > 1:
+        print(f"Error: context '{context}' has {len(owners)} design documents "
+              f"({', '.join(str(doc.relative_to(dhf)) for doc in owners)}); keep one, then add the input")
+        return 2
 
     needs = registry_user_needs(dhf)
     refs = [ref.strip() for ref in traces_to.split(",") if ref.strip()]
@@ -240,8 +260,7 @@ def story_new_input_command(
         return 2
 
     if test_file is None:
-        tests_dir = find_tests_dir(dhf) or (dhf.parent / "tests")
-        test_file = tests_dir / "acceptance" / f"test_{context}.py"
+        test_file = stub_test_file(find_tests_dir(dhf) or (dhf.parent / "tests"), context)
     write_stub_test(test_file, di_id, text, context)
 
     print(f"Scaffolded {di_id} ({context}):")

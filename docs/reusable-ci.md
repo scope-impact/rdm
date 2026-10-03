@@ -54,6 +54,7 @@ environment variables, never spliced into the script text.
 | `rdm-repository` | `scope-impact/rdm` | a fork, say |
 | `python-version` | `3.12` | |
 | `dhf` | `dhf` | the design history file |
+| `install-rdm` | `true` | installs RDM, `pytest` and `allure-pytest` from `rdm-ref`; `false` when `install-command` already does |
 | `install-command` | none | installs your dependencies before the tests |
 | `acceptance-tests` | `true` | `false` until you have a tagged acceptance test |
 | `test-command` | `pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results` | |
@@ -61,7 +62,7 @@ environment variables, never spliced into the script text.
 | `release-gate` | `true` | `false` until your first design input lands |
 | `graph-validate` | `true` | the gate rules as SHACL, plus graph-only warnings |
 | `checklists` | none | space-separated checklists for graph validation (`rdm gap --list`) |
-| `evidence-bundle` | `true` | writes the release evidence bundle, including the [verification report](gates.md#the-verification-report) PDF, and uploads it as `rdm-evidence` |
+| `evidence-bundle` | `true` | writes the release evidence bundle, including the [verification report](gates.md#release-evidence) PDF, and uploads it as `rdm-evidence` |
 | `allure-report` | `true` | renders the Allure HTML report and uploads it as `allure-report` |
 
 The verification record (the Allure results and `verification.yml`) is

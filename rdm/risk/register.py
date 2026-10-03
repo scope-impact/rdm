@@ -39,7 +39,7 @@ class Policy:
     levels: dict                     # severity (a row) -> tuple of levels, one per probability
     acceptability: dict              # level -> acceptable | justify | unacceptable
     source: str
-    status: str = "approved"
+    status: str = "proposed"
 
     @property
     def approved(self) -> bool:
@@ -67,12 +67,14 @@ class Risk:
     severity: str | None = None
     probability: str | None = None
     recorded_level: str | None = None
+    recorded_residual_level: str | None = None
     controls: list[str] = field(default_factory=list)
     residual_severity: str | None = None      # defaults to severity
     residual_probability: str | None = None
     accepted_by: str = ""
     acceptance_rationale: str = ""
-    status: str = "approved"
+    status: str = "proposed"
+    invalid_id: str = ""                # what was given as the id, when it was neither text nor a number
     level: str | None = None            # evaluated against the policy
     residual_level: str | None = None   # evaluated; the initial level when nothing controls it
 
@@ -86,6 +88,11 @@ def _words(value) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
+def _id(value) -> str:
+    """An id is text or a number; a list, mapping or boolean is none."""
+    return _text(value) if isinstance(value, (str, int, float)) and not isinstance(value, bool) else ""
+
+
 def _values(value) -> list[str]:
     """A list's items as text; one value, not a list, is that one value."""
     items = value if isinstance(value, list) else [] if value in (None, "") else [value]
@@ -97,10 +104,11 @@ def _is_register(front: dict) -> bool:
 
 
 def malformed_registers(dhf_dir: Path) -> list[str]:
-    """Each risk document whose risks are not a list of mappings."""
+    """Each risk document whose risks are not a list of mappings, or that has
+    none; a risk document that only declares the policy is not a register."""
     return [str(md.relative_to(Path(dhf_dir).parent)) for md, front in documents(dhf_dir)
-            if _is_register(front) and "risks" in front
-            and not (isinstance(front["risks"], list) and all(isinstance(r, dict) for r in front["risks"]))]
+            if _is_register(front) and ("risks" in front or "risk_policy" not in front)
+            and not (isinstance(front.get("risks"), list) and all(isinstance(r, dict) for r in front["risks"]))]
 
 
 def read_policy(dhf_dir: Path) -> Policy | None:
@@ -119,6 +127,10 @@ def read_policy(dhf_dir: Path) -> Policy | None:
         rows = {_text(k): v for k, v in rows.items()} if isinstance(rows, dict) else rows
         if not severities or not probabilities or not isinstance(rows, dict) or not isinstance(verdicts, dict):
             raise ValueError(f"risk_policy in {where} needs severities, probabilities, levels and acceptability")
+        for axis, names in (("severity", severities), ("probability", probabilities)):
+            twice = sorted(name for name, n in Counter(names).items() if n > 1)
+            if twice:
+                raise ValueError(f"risk_policy in {where} lists the {axis} {', '.join(twice)} more than once")
         levels = {}
         for severity in severities:
             row = tuple(_text(v) for v in rows.get(severity) or [])
@@ -130,7 +142,7 @@ def read_policy(dhf_dir: Path) -> Policy | None:
             if acceptability.get(level) not in ACCEPTABILITY:
                 raise ValueError(f"risk_policy in {where}: level {level} needs an acceptability of "
                                  f"{', '.join(ACCEPTABILITY)}")
-        status = _text(front.get("status")) or "approved"
+        status = _text(front.get("status")) or "proposed"
         return Policy(probabilities, levels, acceptability, where, status)
     return None
 
@@ -157,19 +169,22 @@ def risks(dhf_dir: Path, policy: Policy | None = None) -> list[Risk]:
                 continue
             residual = item.get("residual") if isinstance(item.get("residual"), dict) else {}
             acceptance = item.get("acceptance") if isinstance(item.get("acceptance"), dict) else {}
+            given = item.get("id")
             risk = Risk(
-                id=_text(item.get("id")), document=str(md.relative_to(dhf_dir.parent)),
+                id=_id(given), invalid_id="" if _id(given) or given in (None, "") else _text(given),
+                document=str(md.relative_to(dhf_dir.parent)),
                 category=_text(item.get("category")), stride=_text(item.get("stride")),
                 linked=_values(item.get("linked")),
                 hazard=_words(item.get("hazard")), situation=_words(item.get("situation")),
                 harm=_words(item.get("harm")),
                 severity=_text(item.get("severity")) or None, probability=_text(item.get("probability")) or None,
                 recorded_level=_text(item.get("level")) or None,
+                recorded_residual_level=_text(residual.get("level")) or None,
                 controls=_values(item.get("controls")),
                 residual_severity=_text(residual.get("severity")) or None,
                 residual_probability=_text(residual.get("probability")) or None,
-                accepted_by=_text(acceptance.get("by")), acceptance_rationale=_text(acceptance.get("rationale")),
-                status=_text(item.get("status")) or _text(front.get("status")) or "approved",
+                accepted_by=_words(acceptance.get("by")), acceptance_rationale=_words(acceptance.get("rationale")),
+                status=_text(item.get("status")) or _text(front.get("status")) or "proposed",
             )
             if policy is not None:
                 risk.level = policy.level(risk.severity, risk.probability)
@@ -252,7 +267,9 @@ def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tup
         def block(event: str, message: str, index: int = index) -> None:
             found.append(Finding(event, message, risk=index))
 
-        if not r.id:
+        if r.invalid_id:
+            block(ID_MISSING, f"a risk in {r.document} has an id that is not text or a number: {r.invalid_id}")
+        elif not r.id:
             block(ID_MISSING, f"a risk in {r.document} has no id")
         elif ids[r.id] > 1 and r.id not in reported:
             reported.add(r.id)
@@ -283,6 +300,9 @@ def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tup
         elif policy is not None and r.level is not None and r.residual_probability and r.residual_level is None:
             block(SCORE_NOT_IN_POLICY, f"{name}: residual {r.residual_severity or r.severity!r} × "
                   f"{r.residual_probability!r} is not defined by the risk policy")
+        elif r.residual_level and r.recorded_residual_level and r.recorded_residual_level != r.residual_level:
+            block(LEVEL_MISMATCH, f"{name} records residual level {r.recorded_residual_level}; "
+                  f"the risk policy says {r.residual_level}")
         unverified = [c for c in r.controls if c in design_input_ids and c not in verified]
         if unverified and r.residual_level is not None:
             block(CONTROL_UNVERIFIED,

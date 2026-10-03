@@ -1,20 +1,6 @@
 # RDM
 
-RDM keeps the design record of regulated software — medical-device software
-under IEC 62304 first — as Markdown and tests in git. It checks the record,
-renders regulatory documents from it, and builds it into one read-only graph
-that people and agents query.
-
-```
-regulation → checklist → clause ← document
-user need → design input → test → run (at a commit) → source file
-risk → control (a design input) → test → run
-document → the commit that landed it
-```
-
-Every link is a line someone wrote in a reviewed pull request, or a fact a
-tool recorded. Nothing is typed into a database, and nothing derived is ever
-edited.
+--8<-- "README.md:intro"
 
 ## One record, three things derived from it
 
@@ -37,31 +23,21 @@ flowchart LR
 | **Documents** | Regulatory documents rendered from the record. | [Authoring and rendering](authoring.md) |
 
 How the parts fit, and why the record is the only thing anyone writes:
-[How RDM works](record-first-architecture.md) and
-[the data model](data-model.md).
+[How RDM works](record-first-architecture.md).
 
 ## What it does not do
 
-- It does not make a device compliant. It keeps the evidence straight; a
-  regulator judges the evidence, not the tool.
-- A green release gate means every design input has a passing tagged test,
-  not that the test proves the input. The pull-request reviewer judges that.
-- Checklists are written by hand. Nothing turns a regulation into a checklist.
-- The risk gate checks a register's form, not its truth: whether a control
-  works, and whether a residual is as low as practicable, are the reviewer's.
-  It ships no risk matrix; acceptability is the project's to declare.
-- Git shows who *landed* a change, not who *approved* it; the approval is the
-  pull-request review on the forge.
+--8<-- "README.md:limits"
 
 ## Start
 
-1. [Install](installation.md).
-2. [Start a new project](quickstart-new-project.md) (`rdm init`) or
-   [adopt an existing repository](quickstart-existing-repo.md) (`rdm adopt`).
-3. Make your first change the record-first way:
+1. [Install, and start a project or adopt a repository](get-started.md).
+2. Make your first change the record-first way:
    [changing the record](agent-workflow.md).
 
-RDM is developed with RDM: see [how RDM controls itself](dogfood.md), and the
-[traceability matrix](traceability-matrix.md) this site generates from a live
-test run on every build. Agent skills for working with RDM live in
+RDM is developed with RDM: its own [design history file](dhf/README.md) is
+on this site, with its [traceability](traceability-map.md) drawn from its
+graph after a live test run on every build, and so is the
+[Part 11 worked example's](example-traceability-map.md).
+Agent skills for working with RDM live in
 [scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).

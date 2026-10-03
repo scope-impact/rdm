@@ -8,13 +8,10 @@ what the gates then check is [The gates](gates.md).
 
 ## The model in one breath
 
-User needs (`UN-nnn`, in the V&V plan) are refined by design inputs (`DI-n`,
-in the design document of the bounded context that owns them). Each design
-input is an acceptance criterion: a `shall` requirement on the system or one
-of its bounded contexts, *baseline* when it follows from a user need alone,
-*risk-based* when a risk allocates it as a control. Each is verified by an
-acceptance test tagged `@allure.story("DI-n")`, accepted as a whole: the test's
-verification steps are its own checks, not criteria. The merge of the reviewed pull request is the approval. See [the data model](data-model.md) for every entity and link.
+A user need (`UN-nnn`, in the V&V plan) is refined by design inputs (`DI-n`,
+in the design document of the bounded context that owns them); each design
+input is verified by an acceptance test tagged `@allure.story("DI-n")`. Every
+entity and link is in [the data model](record-first-architecture.md#the-data-model).
 
 ```yaml
 # dhf/documents/verification_and_validation_plan.md
@@ -65,7 +62,7 @@ def test_alarm_within_two_seconds(device):
 ```
 
 - **One verification step for each thing the design input requires**
-  (`with verification_step("…")`), so a failure says what it was checking. The
+  (`with allure.step("…")`), so a failure says what it was checking. The
   steps belong to the test, not to the acceptance criterion; if a part must be
   accepted on its own, make it a separate design input.
 - **Attach what you checked**, so the evidence shows more than "passed".
@@ -90,7 +87,7 @@ own API (`allure.dynamic`), so the labels can never drift from it:
 | --- | --- |
 | `epic` | each user need the design input traces to |
 | `feature` | the bounded context that owns it |
-| `link` | each Markdown document that declares it, at the commit under test: its design document, the V&V plan, the risk document of each risk it controls |
+| `link` | each Markdown document that declares it, at the commit under test: its design document, the V&V plan, the risk document of each risk it controls. Links need a web remote (`origin` on GitHub, GitLab or Bitbucket) and a commit; without one, none is written |
 | `severity` | `critical` when the design input controls a risk |
 | `commit` | the commit under test, with `worktree=dirty` when the working tree had uncommitted changes |
 | attachment `requirement DI-n` | the design input's text |
@@ -105,31 +102,15 @@ from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
 
 ## Running the acceptance tests
 
+Run them into a clean results directory (`--clean-alluredir`, so an earlier
+run's results never count as evidence), then the gates: the commands are
+[the release gate's](gates.md#release-gate). To see one design input's need,
+owner, tests and status, and to render the matrix:
+
 ```bash
-pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
-rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-rdm story trace DI-1 --dhf dhf          # one input: its need, owner, tests, status
+rdm story trace DI-1 --dhf dhf
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
 ```
 
-`verify` reconciles the executed results against every declared design input
-— verified, failed or untested — into the data the traceability matrix renders
-from. `--clean-alluredir` matters: results left from an earlier run would
-otherwise count as evidence.
-
-## Validation evidence (formative)
-
-```bash
-rdm story persona --vv-plan dhf/documents/verification_and_validation_plan.md \
-  --persona-results persona-results/
-```
-
-Reconciles AI-persona simulated-use runs against the user needs — formative
-usability evidence only; it informs but never gates release
-([usability validation](ai-persona-usability-validation.md)).
-
-Human validation judgments live in the record too:
-`<dhf>/validation/UN-…-validation.json` (`user_need`, `disposition:
-"approved"`, `reviewer`, `summary`). The release gate names every user need
-lacking one — as a warning, because a machine cannot supply the judgment, but
-its absence is never silent.
+Validation, by people and by AI personas, is recorded against the user needs:
+[validation evidence](ai-persona-usability-validation.md).

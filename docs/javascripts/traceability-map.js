@@ -134,8 +134,9 @@
     });
     // Pack the contexts into rows of boxes; each holds its components in a small grid.
     const CWID = 200, CHGT = 62, GAPX = 70, GAPY = 90, ROWMAX = 1900;
-    const order = ["specification", "test_evidence", "release", "publishing", "graph", "architecture", "risk", "compliance"];
-    const ctxs = DATA.nodes.filter(n => n.kind === "context").sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+    // Biggest context first, so the rows pack tightly.
+    const size = cx => comps.filter(n => n.context === cx.id).length;
+    const ctxs = DATA.nodes.filter(n => n.kind === "context").sort((a, b) => size(b) - size(a) || a.label.localeCompare(b.label));
     gridPos = {}; let x = 0, y = 0, rowH = 0;
     ctxs.forEach(cx => {
       const members = comps.filter(n => n.context === cx.id).sort((a, b) => a.label.localeCompare(b.label));
@@ -325,8 +326,7 @@
   });
   document.getElementById("commit").textContent = (DATA.commit || "unknown").slice(0, 7);
   const chips = document.getElementById("chips");
-  const LAYER = ["architecture", "risk", "compliance", "specification", "test_evidence", "release", "publishing", "graph"];
-  DATA.nodes.filter(n => n.kind === "context").sort((a, b) => LAYER.indexOf(a.label) - LAYER.indexOf(b.label)).forEach(n => {
+  DATA.nodes.filter(n => n.kind === "context").sort((a, b) => a.label.localeCompare(b.label)).forEach(n => {
     const b = document.createElement("button"); b.className = "chip"; b.textContent = n.label; b.dataset.id = n.id;
     b.setAttribute("aria-pressed", "false"); b.addEventListener("click", () => select(n.id)); chips.appendChild(b);
   });

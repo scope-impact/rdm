@@ -59,13 +59,18 @@ COPY --from=builder /usr/local/bin/pandoc /usr/local/bin/typst /usr/local/bin/
 COPY --from=builder /fonts/ /usr/share/fonts/truetype/
 RUN fc-cache -f && pandoc --version && typst --version
 
-# RDM, from the wheel built next to this Dockerfile, with the graph extra
-# (build, query, validate, serve, mcp), in its own virtualenv: Ubuntu's
-# system Python does not take pip installs.
-COPY dist/*.whl /tmp/
+# RDM, with the graph extra (build, query, validate, serve, mcp), in its own
+# virtualenv (Ubuntu's system Python does not take pip installs): from a
+# wheel in dist/ next to this Dockerfile when there is one, else the RDM
+# release this project was laid down with, from git. The Dockerfile is copied
+# too only so the COPY never matches nothing when there is no dist/.
+ARG RDM_SPEC="rdm[graph] @ git+https://github.com/scope-impact/rdm@v{rdm_version}"
+COPY Dockerfile dist* /tmp/rdm-build/
 RUN python3 -m venv /opt/rdm && \
-    /opt/rdm/bin/pip install --no-cache-dir "$(ls /tmp/*.whl)[graph]" && \
-    rm -f /tmp/*.whl
+    wheel="$(ls /tmp/rdm-build/*.whl 2>/dev/null | head -n 1)" && \
+    if [ -n "$wheel" ]; then /opt/rdm/bin/pip install --no-cache-dir "${wheel}[graph]"; \
+    else /opt/rdm/bin/pip install --no-cache-dir "$RDM_SPEC"; fi && \
+    rm -rf /tmp/rdm-build
 ENV PATH="/opt/rdm/bin:${PATH}"
 
 # The project is mounted, so its owner differs from the container's user;

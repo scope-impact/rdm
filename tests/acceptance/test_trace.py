@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from rdm.release.gate import build_trace
+from rdm.release.gate import build_trace, story_trace_command
 from tests.util import write_allure_result as _allure_result
 from tests.util import write_design_doc
 
@@ -38,7 +38,7 @@ def _dhf(tmp_path: Path) -> Path:
 
 @allure.story("DI-18")
 @allure.label("output", "rdm/release/gate.py")
-def test_trace_user_need_and_design_input(tmp_path: Path) -> None:
+def test_trace_user_need_and_design_input(tmp_path: Path, capsys) -> None:
     """DI-18: trace forward (need → inputs) and backward (input → need/owner/realisers)."""
     dhf = _dhf(tmp_path)
 
@@ -67,3 +67,17 @@ def test_trace_user_need_and_design_input(tmp_path: Path) -> None:
         enriched = build_trace(dhf, "DI-1", allure_results_dir=results)
         assert enriched["status"] == "verified"
         assert enriched["tests"] == ["the_test"]
+
+    with verification_step("A failed input's tests are tested by, each named once; an unreadable result is listed; "
+                           "a missing results directory is refused, as by the gate"):
+        _allure_result(results, "the_test_again", "failed", "DI-1")
+        (results / "the_test_again-result.json").write_text(
+            (results / "the_test_again-result.json").read_text().replace("the_test_again", "the_test"))
+        (results / "cut-result.json").write_text('{"status": "failed"')
+        assert story_trace_command("DI-1", dhf, results) == 0
+        out = capsys.readouterr().out
+        assert "status:      failed" in out and "tested by:   the_test\n" in out and "verified by" not in out, out
+        assert "cut-result.json" in out, out
+        assert build_trace(dhf, "DI-1", results)["unreadable"] == ["cut-result.json"]
+        assert story_trace_command("DI-1", dhf, tmp_path / "resluts") == 2
+        assert "results directory not found" in capsys.readouterr().out

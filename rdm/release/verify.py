@@ -66,6 +66,7 @@ def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
         },
         "groups": groups,
         "orphans": relevant_orphans(report.orphan_ids, di_ids),  # as the gates report them
+        "unreadable": report.unreadable,  # each could hold a failed run: the release gate blocks on them
     }
 
 
@@ -104,4 +105,8 @@ def verify_command(
         f"{summary['untested']} untested of {summary['total']} design input(s) "
         f"({summary['results_found']} Allure result(s))"
     )
+    if data["unreadable"]:
+        print(f"Error: {len(data['unreadable'])} result file(s) cannot be read, and could hold a failed run: "
+              f"{', '.join(data['unreadable'])}")
+        return 1
     return 0

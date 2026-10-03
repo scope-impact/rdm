@@ -74,7 +74,11 @@ with its user and host.
 that the plugin writes and every reader reads back, so the tools' words
 stop here. It reads each result as a test run (its name, result, the
 design inputs it names, and the outputs it labels) and matches a run to
-the test it came from. Its reconciliation gives each declared design
+the test it came from. A run whose step failed or broke failed, whatever
+its own status says. A result it cannot read is named, never skipped: not
+JSON, nested too deep, a symbolic link, a status Allure does not write, or
+labels that are not a list of name and value text. Any of these could hold
+a failed run. Its reconciliation gives each declared design
 input *failed* when any of its runs failed or broke, else *verified* when
 any passed, else *untested*; a story that names no declared input is an
 orphan. What a test *claims* to verify (its tags) is the specification's;
@@ -96,9 +100,14 @@ kept.
 
 **Test result translation** (`rdm translate`) chooses a format, or detects
 it, and writes each test's name, result and failure message as result
-data; the gtest flattener also reads xunit. A test that failed or errored
-is a fail, one skipped or disabled a skip, and only the rest a pass; a
-qttest function fails when any of its incidents does. The data feeds document
+data; the gtest flattener also reads xunit, keying each test by its class
+name, so tests of one name in different modules stay apart. A test that
+failed or errored is a fail, with its failure's message or else its text;
+one skipped or disabled a skip, and only the rest a pass; a qttest function
+fails when any of its incidents does, and is a skip when it was skipped
+with a message (Qt5) or an incident (Qt6). A file with no test results, or
+whose results flatten to no test, is refused, and every refusal is a
+message, exit 2. The data feeds document
 templates; nothing reconciles it against design inputs.
 
 The relationships that matter, in the direction of the arrow: the pytest

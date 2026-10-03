@@ -1,16 +1,20 @@
 # RDM — Design History File
 
-This is RDM's own DHF, produced with RDM's record-first model (it dogfoods the
-method documented in `docs/record-first-architecture.md` and ADR 0001). RDM is
-the product under design control here. The step-by-step procedure for changing
-RDM inside this DHF's scope is `AGENT_WORKFLOW.md` (this directory).
+This is RDM's own DHF: RDM is developed under RDM's own design controls, and
+this directory is the record. Every change to RDM goes through the loop RDM
+asks of a device team: record first, then a tagged test, then the gates, then
+a reviewed pull request. The procedure is `AGENT_WORKFLOW.md` (this
+directory); the method is the docs' *How RDM works*
+(`docs/record-first-architecture.md`), and the decision behind user needs and
+bounded contexts is ADR 0001 (`decisions/`).
 
 Scope note: RDM is not a medical device, so this DHF deliberately implements
 the **design-controls slice** (design inputs, review, verification, validation,
 traceability — the §820.30-shaped record) plus a register of RDM's own tool
 risks, and not the full IEC 62304 lifecycle document set (a complete risk
-management file, SOUP register, maintenance and problem-resolution plans, …). Running `rdm gap 62304_2015_class_b` over these
-documents is expected to report those items as missing.
+management file, SOUP register, maintenance and problem-resolution plans, …).
+Running `rdm gap 62304_2015_class_b` over these documents is expected to
+report those items as missing.
 
 ## Layout (the record)
 
@@ -27,6 +31,8 @@ documents/
   risk/
     policy.md                          risk acceptability policy (RMP-001, proposed)
     tool_risks.md                      `kind: risk` register of RDM's tool risks (RMF-001, proposed)
+c4/                                  the architecture as a Structurizr workspace, and its drawn views
+decisions/                           decision records (ADR 0001)
 ```
 
 The live inventory — which contexts exist, which design inputs each owns, and
@@ -37,38 +43,31 @@ rdm story new-input --dhf dhf --list    # contexts, taken DI ids, user needs
 rdm story trace UN-… | DI-…             # one need's / input's slice
 ```
 
-## Model
+The gates, as CI runs them, are step 6 of `AGENT_WORKFLOW.md`.
+`dhf/allure-results/` and `dhf/data/verification.yml` are generated
+(gitignored) by running the acceptance suite, never committed.
 
-- **User needs** (validated journeys) are defined once in the V&V plan; each
-  context serves the needs its design inputs trace to (derived, never declared).
-- **Design inputs** (the verifiable *what*) are declared once, in the per-context
-  design document that owns them (`design_inputs` frontmatter), and `traces_to`
-  the user need they refine. A context can `realises` an input owned elsewhere.
-- **Verification** = each design input (an acceptance criterion: a `shall`
-  requirement, baseline or risk-based) is verified by its
-  `@allure.story("DI-…")` test ("live BDD"), aggregated across contexts. The
-  test's verification steps belong to the test, not to the criterion. Vocabulary: `CONTEXT.md`.
-- **Independent verification** = the human-reviewed pull request: a reviewer
-  other than the author judges whether each tagged test actually verifies its
-  input. Git is the controlled record of that review.
-- **Validation** = human review + the `usability-persona` skill (formative), UN-keyed.
-- **Approval** = the reviewed, merged PR (git) — not a sign-off block here.
+## `docs/` and `dhf/`
 
-## Gate it
+`docs/` explains RDM to its users; `dhf/` is the controlled record of how RDM
+itself is designed and verified. One explains, the other decides.
 
-```bash
-rdm story design-gate --dhf dhf      # design doc(s) + review present, complete, approved (committed)
-```
+| | `docs/` | `dhf/` |
+|---|---|---|
+| **What it is** | RDM's user documentation, plus an API reference generated from the docstrings | RDM's own design history file: the regulated record RDM develops itself under |
+| **Who it's for** | People and agents using RDM on their own product | Whoever governs RDM's development: authors, reviewers, an auditor, and RDM's gates |
+| **Controlled?** | No: ordinary docs, changed by a normal reviewed pull request | Yes: the design gate requires it complete and committed before code; the release gate requires every design input in it verified |
+| **Checked by** | `mkdocs build --strict` (links, navigation) | The design gate, the release gate, `rdm graph validate`, and the tests tagged with its ids |
+| **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the verification report and the evidence bundle |
+| **Published** | As the docs site | On the same site, each document as a page and a PDF, with the traceability matrix and map generated from a live test run at each build |
 
-## Verify it (generate the traceability matrix)
+Nothing flows from `docs/` into the record. Where the docs would restate what
+the record decides, they link to it instead. A product that adopts RDM gets
+its own `dhf/` (`rdm adopt` or `rdm init`), not RDM's `docs/`.
 
-```bash
-uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results   # run the tagged ACs
-rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
-rdm story release-gate --dhf dhf --allure-results dhf/allure-results   # PASS when all verified + every need addressed
-rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
-```
+## Agents in this repository
 
-`dhf/allure-results/` and `dhf/data/verification.yml` are generated (gitignored);
-they are produced by running the acceptance suite, not committed.
-
+Agents working on RDM read the record through `rdm graph mcp`, registered in
+the repository's `.mcp.json`. A session's bootstrap script syncs dependencies
+and turns on the design-gate hook, so an agent works under the same gates as a
+person.

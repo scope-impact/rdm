@@ -261,7 +261,7 @@ now the PR reviewer's to catch.
 | design-gate: *unresolved placeholders* | `TODO`/`ENDTODO` left in a design doc | finish the doc |
 | design-gate: *uncommitted changes* | a design doc is edited but not committed | commit it (that commit is the approval) |
 | pre-commit: *commit blocked* | implementation staged while the design gate fails | fix/commit the design record first |
-| pre-commit: *'rdm' not on PATH … blocked* | gate runner missing | `uv sync --all-extras` (or `pip install rdm`) |
+| pre-commit: *'rdm' not on PATH … blocked* | gate runner missing | `uv sync --all-extras` (elsewhere: `uv tool install "rdm @ git+https://github.com/scope-impact/rdm"`; PyPI's `rdm` is another project) |
 | release-gate: *DI-n untested* | no executed result for the tag | write/tag the test, re-run the acceptance suite |
 | release-gate: *DI-n failed* | the tagged test failed | fix the implementation (or the test) |
 | release-gate: *user need addressed by no design input* | a UN nothing traces to | add a DI with `traces_to`, or remove the need |

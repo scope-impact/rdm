@@ -112,8 +112,11 @@ def checklist_quads(specs: list[str], graph: ox.NamedNode) -> tuple[list[ox.Quad
             continue
         seen.add(path)
         if path.suffix.lower() in _RDF_SUFFIXES:  # native RDF checklist: loaded as-is
-            for q in ox.parse(path=str(path), format=_RDF_SUFFIXES[path.suffix.lower()]):
-                quads.append(ox.Quad(q.subject, q.predicate, q.object, graph))
+            try:
+                parsed = list(ox.parse(path=str(path), format=_RDF_SUFFIXES[path.suffix.lower()]))
+            except SyntaxError as error:
+                raise SyntaxError(f"checklist {path} is not RDF: {error}") from error
+            quads.extend(ox.Quad(q.subject, q.predicate, q.object, graph) for q in parsed)
             continue
         items, includes = _read_text_checklist(path)
         checklist = _iri("checklist", path.stem)

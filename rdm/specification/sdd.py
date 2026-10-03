@@ -99,12 +99,53 @@ def declarations(dhf_dir: Path) -> dict[str, list[str]]:
     found: dict[str, list[str]] = {}
     for md, front in documents(dhf_dir):
         where = str(md.relative_to(dhf_dir))
-        entries = list(front.get("user_needs") or [])
+        entries = _listed(front, "user_needs")
         if front.get("kind") == DESIGN_KIND:
-            entries += list(front.get("design_inputs") or [])
+            entries += _listed(front, "design_inputs")
         for item in entries:
             if ident := _entry_id(item):
                 found.setdefault(ident, []).append(where)
+    return found
+
+
+def _listed(front: dict, key: str) -> list:
+    """A frontmatter list, or nothing when the key holds anything else (which
+    `malformed_declarations` reports)."""
+    value = front.get(key)
+    return list(value) if isinstance(value, list) else []
+
+
+def _id_problem(item, kind: str) -> str | None:
+    """Why a declaration entry has no usable id, or None when it has one."""
+    if not isinstance(item, dict):
+        return f"a {kind} is not an entry with an id: {item!r}"
+    ident = item.get("id")
+    if isinstance(ident, (list, dict, bool)) or ident is None or not str(ident).strip():
+        return f"a {kind} has no id: {item!r}"
+    return None
+
+
+def malformed_declarations(dhf_dir: Path) -> list[tuple[Path, str]]:
+    """Every declaration the reader cannot read, by document: design inputs
+    that are not a list of entries each with one id, a user need with no id,
+    and design inputs in a document that is not a design document. The
+    readers skip each one, so the design gate fails on them instead."""
+    found: list[tuple[Path, str]] = []
+    for md, front in documents(dhf_dir):
+        for key, kind in (("design_inputs", "design input"), ("user_needs", "user need")):
+            if key not in front or front[key] is None:
+                continue
+            value = front[key]
+            if key == "design_inputs" and front.get("kind") != DESIGN_KIND:
+                found.append((md, "it declares design inputs but is not a design document (kind: design)"))
+            elif not isinstance(value, list):
+                found.append((md, f"its {key} is not a list of entries"))
+            elif key == "user_needs":
+                found += [(md, f"a {kind} has no id: {item!r}" if isinstance(item, str) else problem)
+                          for item in value if (problem := _id_problem(item, kind)) is not None
+                          and not (isinstance(item, str) and item.strip())]
+            else:
+                found += [(md, problem) for item in value if (problem := _id_problem(item, kind))]
     return found
 
 
@@ -141,10 +182,10 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
             continue
         context = _context(front, doc)
         for item in value:
-            if not isinstance(item, dict):
-                continue
+            if _id_problem(item, "design input"):
+                continue  # reported by malformed_declarations
             di_id = _entry_id(item)
-            if not di_id or di_id in seen:
+            if di_id in seen:
                 continue
             seen.add(di_id)
             traces = item.get("traces_to") or []

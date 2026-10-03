@@ -105,9 +105,11 @@ rdm:TestTagShape a sh:NodeShape ;
 # function (rdm/risk/register.py), so the two cannot drift.
 rdm:RiskShape a sh:NodeShape ;
     # The risk rules are written once, in rdm/risk/register.py; the projection
-    # carries the release gate's findings on each risk (DI-45), so the shapes
-    # block exactly what the gate blocks.
-    sh:targetClass rdm:Risk ;
+    # carries the release gate's findings on each risk (DI-45), and on the
+    # record those about the record as a whole (DI-38: a design control not
+    # met, no design input, an unreadable result), so the shapes block
+    # exactly what the gate blocks.
+    sh:targetClass rdm:Risk, rdm:Record ;
     sh:sparql [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
         sh:message "{?finding}" ;

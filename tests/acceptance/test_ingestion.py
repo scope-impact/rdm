@@ -37,6 +37,9 @@ def test_collects_delimited_code_snippets() -> None:
     }
     with verification_step("No markers → no snippets"):
         assert collect_from_lines(["just some prose", "no markers here"]) == {}
+    with verification_step("a marker is a whole word, never part of a longer one"):
+        assert collect_from_lines(["PRDOC_LIMIT = 3", "RDOC limit", "LIMIT = PRDOC_LIMIT", "ENDRDOC"]) == {
+            "limit": "LIMIT = PRDOC_LIMIT"}
 
 
 @allure.story("DI-17")
@@ -77,3 +80,38 @@ def test_translates_foreign_test_results(tmp_path: Path) -> None:
     with verification_step("An unknown format is rejected"):
         with pytest.raises(ValueError):
             translate_test_results("nonsense-format", str(_GTEST_XML), str(out))
+    with verification_step("tests of one name in different modules stay apart; a failure's text is its message"):
+        junit = tmp_path / "junit.xml"
+        junit.write_text(
+            '<testsuites><testsuite name="pytest">'
+            '<testcase classname="tests.test_a" name="test_init"><failure message="A broke"/></testcase>'
+            '<testcase classname="tests.test_b" name="test_init"><failure>expected 3 got 4</failure></testcase>'
+            '<testcase classname="tests.test_c" name="test_init"/>'
+            '</testsuite></testsuites>')
+        translate_test_results("auto", str(junit), str(out))
+        assert load_yaml(str(out)) == {
+            "tests.test_a.test_init": {"name": "tests.test_a.test_init", "result": "fail", "message": "A broke"},
+            "tests.test_b.test_init": {"name": "tests.test_b.test_init", "result": "fail",
+                                       "message": "expected 3 got 4"},
+            "tests.test_c.test_init": {"name": "tests.test_c.test_init", "result": "pass", "message": None}}
+    with verification_step("a Qt5 function skipped with a message is a skip"):
+        qt5 = tmp_path / "qt5.xml"
+        qt5.write_text('<TestCase name="tst_Foo"><Environment/>'
+                       '<TestFunction name="good"><Incident type="pass"/></TestFunction>'
+                       '<TestFunction name="skipped"><Message type="skip"><Description>no GPU</Description>'
+                       '</Message></TestFunction></TestCase>')
+        translate_test_results("auto", str(qt5), str(out))
+        assert {k: v["result"] for k, v in load_yaml(str(out)).items()} == {"tst_Foo.good": "pass",
+                                                                           "tst_Foo.skipped": "skip"}
+    with verification_step("a file with no test results is refused, and the command says so (exit 2)"):
+        page = tmp_path / "page.xml"
+        page.write_text("<html><body>not a test report</body></html>")
+        with pytest.raises(ValueError, match="no test results"):
+            translate_test_results("auto", str(page), str(out))
+        empty = tmp_path / "empty.xml"
+        empty.write_text('<testsuite name="none" tests="0"/>')
+        with pytest.raises(ValueError, match="no test results"):
+            translate_test_results("auto", str(empty), str(out))
+        from rdm.main import cli
+        assert cli(["translate", "auto", str(page), str(out)]) == 2
+        assert cli(["translate", "auto", str(tmp_path / "missing.xml"), str(out)]) == 2

@@ -15,6 +15,7 @@ import yaml
 from rdm.risk.register import read_policy, risks
 from rdm.release.gate import run_release_gate
 from tests.acceptance.test_graph_shapes import _dhf, _results
+from tests.util import git_run
 
 allure = pytest.importorskip("allure")
 
@@ -32,8 +33,10 @@ POLICY = {
 def _policy(dhf: Path, policy: dict | None = None, **front) -> Path:
     path = dhf / "documents" / "risk" / "policy.md"
     path.parent.mkdir(parents=True, exist_ok=True)
+    front = {k: v for k, v in {"status": "approved", **front}.items() if v is not None}  # None: no status
     path.write_text("---\n" + yaml.safe_dump({"id": "RMP-1", **front, "risk_policy": policy or POLICY},
                                              sort_keys=False) + "---\n# Policy\n")
+    _commit(dhf)
     return path
 
 
@@ -42,13 +45,22 @@ def _register(dhf: Path, entries: list[dict], name: str = "risks", **front) -> P
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("---\n" + yaml.safe_dump({"id": f"RMF-{name}", "kind": "risk", **front, "risks": entries},
                                              sort_keys=False) + "---\n# Risks\n")
+    _commit(dhf)
     return path
+
+
+def _commit(dhf: Path) -> None:
+    """Commit the risk documents, as a reviewed record would be: the design gate
+    holds them, uncommitted, as not approved."""
+    if (dhf.parent / ".git").exists():
+        git_run(dhf.parent, "add", "-A")
+        git_run(dhf.parent, "commit", "-qm", "risks", "--allow-empty")
 
 
 def _risk(rid: str | None, **overrides) -> dict:
     entry = {"id": rid, "category": "safety", "hazard": "h", "situation": "s", "harm": "x",
              "severity": "Serious", "probability": "Possible", "controls": ["DI-1"],
-             "residual": {"probability": "Rare"}}
+             "residual": {"probability": "Rare"}, "status": "approved"}
     entry.update(overrides)
     return {k: v for k, v in entry.items() if v is not None}
 
@@ -86,6 +98,8 @@ CASES = {
     "unknown-probability": ([_risk("RISK-S-2", probability=None)], True, "is not defined by the risk policy"),
     "mis-scored": ([_risk("RISK-S-3", level="Low")], True,
                    {"risk RISK-S-3 records level Low; the risk policy says High"}),
+    "mis-scored-residual": ([_risk("RISK-S-4", residual={"probability": "Rare", "level": "Block"})], True,
+                            {"risk RISK-S-4 records residual level Block; the risk policy says Low"}),
     # Nothing controls it, so the initial risk is the residual: no acceptance makes Block pass.
     "uncontrolled-unacceptable": ([_risk("RISK-U-1", severity="Critical", probability="Likely", controls=None,
                                          residual=None, acceptance=ACCEPT)], True,
@@ -114,6 +128,13 @@ CASES = {
                           "has a residual level of Medium that needs an acceptance"),
     "half-accepted-high": ([_risk("RISK-R-5", residual={"probability": "Possible"}, acceptance={"by": "QA"})],
                            True, "has a residual level of High that needs an acceptance"),
+    # Who accepted it and why are text: a list, a mapping, a number or false says neither.
+    "acceptance-not-text": ([_risk("RISK-R-7", residual={"probability": "Unlikely"},
+                                   acceptance={"by": [], "rationale": "ALARP"})], True,
+                            "has a residual level of Medium that needs an acceptance"),
+    "acceptance-not-words": ([_risk("RISK-R-8", residual={"probability": "Unlikely"},
+                                    acceptance={"by": "QA lead", "rationale": True})], True,
+                             "has a residual level of Medium that needs an acceptance"),
     "bad-status": ([_risk("RISK-T-1", status="maybe")], True, {"risk RISK-T-1 has an unknown status 'maybe' "
                                                                 "(proposed or approved)"}),
 }
@@ -188,7 +209,12 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
                     {"severities": ["Bad"], "probabilities": ["Often", "Seldom"], "levels": {"Bad": ["Red"]},
                      "acceptability": {"Red": "unacceptable"}},
                     {"severities": ["Bad"], "probabilities": ["Often"], "levels": {"Bad": ["Red"]},
-                     "acceptability": {"Red": "fine"}}):
+                     "acceptability": {"Red": "fine"}},
+                    # a probability or severity listed twice: one pair would have two levels
+                    {"severities": ["Bad"], "probabilities": ["Often", "Often"], "levels": {"Bad": ["Red", "Black"]},
+                     "acceptability": {"Red": "acceptable", "Black": "unacceptable"}},
+                    {"severities": ["Bad", "Bad"], "probabilities": ["Often"], "levels": {"Bad": ["Red"]},
+                     "acceptability": {"Red": "acceptable"}}):
             _policy(dhf, bad)
             with pytest.raises(ValueError, match="documents/risk/policy.md"):
                 read_policy(dhf)
@@ -197,7 +223,8 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
 # The cases DI-50 owns (the residual decision and status); the rest are DI-44's.
 RESIDUAL_CASES = {"unverified-control", "uncontrolled-unacceptable", "uncontrolled-claimed-residual",
                   "uncontrolled-unaccepted", "block-residual",
-                  "unaccepted-medium", "half-accepted-high", "bad-status"}
+                  "unaccepted-medium", "half-accepted-high", "acceptance-not-text", "acceptance-not-words",
+                  "bad-status"}
 
 
 def _check_cases(tmp_path: Path, names) -> None:
@@ -240,6 +267,8 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
     with verification_step("A risk document whose risks are not a list of risks blocks, named; its kind in any case"):
         for name, front in (("mapping", {"risks": {"RISK-M-1": _risk("RISK-M-1")}}),
                             ("strings", {"risks": ["RISK-M-2"]}),
+                            ("misspelled", {"risk": [_risk("RISK-M-4")]}),
+                            ("no-risks", {}),
                             ("capital-kind", {"kind": "Risk", "risks": [
                                 _risk("RISK-M-3", severity="Critical", probability="Likely", controls=None,
                                       residual=None)]})):
@@ -252,6 +281,22 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
             attach(f"{name} findings", gate.blocking)
             assert not gate.passed and any("documents/risk/risks.md" in m or "RISK-M-3" in m
                                            for m in gate.blocking if "risk" in m)
+
+    with verification_step("A risk document that only declares the policy is not a register"):
+        dhf = _dhf(tmp_path / "policy-only")
+        path = dhf / "documents" / "risk" / "policy.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("---\n" + yaml.safe_dump({"id": "RMP", "kind": "risk", "status": "approved",
+                                                  "risk_policy": POLICY}) + "---\n")
+        _commit(dhf)
+        gate = run_release_gate(dhf, _results(tmp_path / "policy-only", {"DI-1": ["passed"], "DI-2": ["passed"]}))
+        assert gate.passed, gate.blocking
+
+    with verification_step("A risk id that is not text or a number is no id, named with what it was"):
+        dhf, gate = _gate(tmp_path, "list-id", [_risk(["RISK-I-1"]), _risk("RISK-I-1")])
+        assert "a risk in dhf/documents/risk/risks.md has an id that is not text or a number: ['RISK-I-1']" \
+            in gate.blocking, gate.blocking
+        assert [r.id for r in risks(dhf)] == ["", "RISK-I-1"]
 
     with verification_step("A policy whose severities are numbers is read"):
         numeric = {"severities": [1, 2], "probabilities": ["Rare", "Likely"],
@@ -280,3 +325,15 @@ def test_release_gate_blocks_on_the_residual_rules(tmp_path: Path) -> None:
         assert "risk RISK-W-1 is proposed: a person has not approved its rating" in gate.warnings
         assert "the risk policy in documents/risk/policy.md is proposed: a person has not approved it" in gate.warnings
         assert not any("RISK-W-2" in w for w in gate.warnings)
+
+    with verification_step("No status, or an empty one, is proposed — never approved — on a risk or the policy"):
+        dhf, _ = _gate(tmp_path, "no-status", [_risk("RISK-W-3", status=""), _risk("RISK-W-4", status=None)])
+        _policy(dhf, status=None)
+        gate = run_release_gate(dhf, _results(tmp_path / "no-status", {"DI-1": ["passed"], "DI-2": ["passed"]}))
+        attach("warnings", gate.warnings)
+        assert gate.passed, gate.blocking
+        assert {"risk RISK-W-3 is proposed: a person has not approved its rating",
+                "risk RISK-W-4 is proposed: a person has not approved its rating",
+                "the risk policy in documents/risk/policy.md is proposed: a person has not approved it"} \
+            <= set(gate.warnings), gate.warnings
+        assert [r.status for r in risks(dhf)] == ["proposed", "proposed"]

@@ -1,5 +1,112 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed: review findings on the behaviour fixes** (Design Review 57). The
+  merge hook no longer blocks a valid merge of an approved design change
+  with its code: during a merge, a document staged exactly as a commit holds
+  it is approved. A blank user-need string fails the design gate. `rdm
+  translate` refuses a result file whose suites hold no test.
+
+- **Fixed: starting, adopting and adding an input work as the docs say**
+  (Design Review 56). The design gate also holds the user needs and the risk
+  documents complete and committed. `rdm adopt` lays down a `.gitignore` of
+  RDM's generated files and `dhf/config.yml`, never writes through a
+  symbolic link, and its template links no C4 view the project lacks. `rdm
+  init` refuses an existing directory and prints next steps; its Dockerfile
+  installs the pinned RDM release from git when no wheel is given; Word files
+  rebuild when the reference document changes; templates use local images.
+  `new-input` never reuses an id a test is tagged with, never shadows a
+  same-named test module, and keeps CRLF and comments. Gap output says
+  *gaps*.
+- **Docs, from two usability tests:** install lines agree and are pinned;
+  adopting tags existing acceptance-level tests only; Allure links need a web
+  remote; the risk example shows an `acceptance`, and risk tracing is the
+  graph's; authoring covers the Markdown extensions (auditor's and engineers'
+  copies), PDF branding and fonts, and making a reference document; the
+  glossary adds frontmatter, checklist reference, data file, audit note,
+  reference document and DMR index.
+
+- **Fixed: gap analysis and publishing say what is wrong** (Design Review
+  55). Gap analysis against a checklist with no clauses (ISO 14971 2019) or a
+  file that cannot be read exits 2 instead of saying *Success* or showing a
+  traceback; coverage exits 3 on a gap, as the audit does; a checklist
+  reached by two paths is read once; a byte-order mark no longer hides a key;
+  documents still holding placeholders are named. `rdm translate` keeps
+  same-named tests of different modules apart, reads Qt5 skips and failure
+  text, and refuses a file with no test results. Code fences in blockquotes
+  and list items are left alone; snippet markers are whole words; a blank DMR
+  id is skipped; `rdm render` reports a missing value or template instead of
+  a traceback and reads an empty configuration as none; output piped into
+  `head` ends quietly.
+
+- **Fixed: the hook gates every way implementation is committed** (Design
+  Review 54). Names with a tab or a quote, upper-case extensions, more source,
+  template and configuration types (JSON, INI, HTML, Vue, R, PowerShell,
+  Dockerfile, Makefile, …) and a type change to a symbolic link are gated; a
+  new `pre-merge-commit` hook, installed by `rdm hooks` and `rdm adopt`, gates
+  a merge. The hook no longer suggests `pip install rdm`, an unrelated package.
+
+- **Fixed: the graph blocks what the gates block** (Design Review 53).
+  `rdm graph validate` now fails on what the release gate blocks about the
+  whole record (unreadable frontmatter, a malformed declaration, an
+  uncommitted edit, no design review, no design input, an unreadable result),
+  reads results with the gates' reader (a byte-order mark, a failed step), and
+  links declared ids of any shape (`DI-2a`), which `trace` now answers. `FROM`
+  is refused instead of ignored; `SERVICE` as a variable or prefix name is
+  accepted; a shapes or checklist file that is not RDF exits 2; `--infer` with
+  `--store` and an unknown `--exclude` class are refused; a repository whose
+  one branch is not `main` takes it as the default branch.
+
+- **Fixed: every reader of the results agrees with the release gate** (Design
+  Review 52). A result file that cannot be read is named by `verify` (which
+  exits 1), `trace`, the evidence bundle's manifest and the verification
+  report, which is then not release-grade. A result with a status Allure does
+  not write, malformed labels, a symbolic link or JSON nested too deep is
+  unreadable, not skipped or a traceback. A failed verification step fails its
+  test. A mistyped tag (`di-1`, `DI_1`) is an orphan warning. The report
+  counts every run, tagged or not, and a record with uncommitted changes is
+  not release-grade. The bundle refuses an output that overlaps the results.
+  Tags come only from tests, including `from allure import story`. `trace`
+  refuses a missing results directory and says "tested by" for an input that
+  is not verified. An approved validation record needs a reviewer.
+
+- **Fixed: a risk rating no one approved is never read as approved** (Design
+  Review 51). A risk or policy with no status is proposed and warns; an acceptance needs text for who and
+  why; a `kind: risk` document without a `risks` list blocks; a policy that
+  lists a severity or probability twice is malformed; a recorded residual
+  level is checked; a non-scalar risk id is no id; and `rdm graph validate`
+  blocks register and policy findings when there is no risk to carry them.
+- **Fixed: the record says what it holds, or the design gate fails** (Design
+  Review 50). A design input the reader could not read (`design_inputs` not a
+  list of entries each with one id, or outside a design document), a user need
+  with no id, a repeated frontmatter key and a non-UTF-8 document were dropped
+  without a word, so a requirement nothing tests passed every gate. Each is now
+  a failure. Approval needs a document git tracks and can see: ignored,
+  untracked, skip-worktree and assume-unchanged files, and links to them, are
+  not approved. Outside git the verdict says approval was not checked. A
+  placeholder is a whole word. A context with two design documents is a
+  warning, and `new-input` refuses it.
+- **Fixed: in a project nested in its repository, a test run now finds its
+  test** (DI-61, Design Review 49). Tests were named from the repository root
+  and runs from the project, so none linked, and every tagged test was warned
+  as never run.
+- **Traceability, once, from the graph.** The rendered traceability-matrix
+  page is gone; *Traceability* draws RDM's from its graph, and a second page
+  draws the Part 11 worked example's the same way, each after a live run of
+  its acceptance tests at every docs build (`docs/_hooks/traceability.py`).
+- **The docs say each thing once.** Where the design history file already
+  says it, a page links to it instead: 31 pages are now 21. *Get started*
+  replaces the installation page and both quickstarts; the data model is in
+  *How RDM works*; the SHACL rules are in *The gates*; the checklist format
+  and the useful FAQ answers are in *Gap analysis*; *Changing the record* is
+  now the runbook `rdm adopt` installs. The history, FAQ, document-control
+  and dogfood pages are gone (their content is in the CHANGELOG, the DHF and
+  its overview); ADR 0001 moved into the DHF; the research notes stay in
+  `docs/research/`, off the site. The API reference covers every module, by
+  bounded context. Fixed on the way: an install line that installed PyPI's
+  other `rdm`, missing CLI flags and CI inputs, and stale paths.
+
 ## 2.0.0-alpha
 
 A major version: the code is one package per bounded context, so module paths
@@ -455,3 +562,14 @@ development (`dhf/`, `.github/workflows/design-controls.yml`).
 - A lightweight Docker image (Alpine, Pandoc 3.6, Typst 0.12).
 - The GitHub Action for PDFs (`scope-impact/rdm@v1`).
 - Fixed cross-references in the `software_plan.md` template.
+
+## 0.11.0
+
+From the project RDM was forked from.
+
+- PDFs through Pandoc in place of the `rdm tex` command.
+- Folders inside the documents folder.
+- Word documents.
+- SVGs no longer in PDFs (the conversion was unreliable).
+- The first 510(k) documents.
+- Release files ignored by default.

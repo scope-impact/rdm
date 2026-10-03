@@ -89,3 +89,9 @@ def test_release_gate_names_unvalidated_user_needs(tmp_path: Path) -> None:
         assert records["UN-001"]["disposition"] == "approved"
         assert records["UN-001"]["reviewer"] == "maintainer (summative)"
         assert unvalidated_user_needs(dhf) == ["UN-002"]
+
+    with verification_step("An approved record that names no reviewer is no validation: a person makes it"):
+        for reviewer in ({"reviewer": ""}, {}, {"reviewer": ["maintainer"]}):
+            (validation / "UN-001-validation.json").write_text(json.dumps(
+                {"user_need": "UN-001", "disposition": "approved", **reviewer}))
+            assert unvalidated_user_needs(dhf) == ["UN-001", "UN-002"], reviewer

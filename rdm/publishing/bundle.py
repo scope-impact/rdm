@@ -67,7 +67,13 @@ def copy_results(results_dir: Path, dest: Path) -> tuple[list[str], list[str]]:
 
 
 def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> dict:
-    """Produce the bundle; returns the manifest that was written."""
+    """Produce the bundle; returns the manifest that was written. Raises
+    ``ValueError``, writing nothing, when the bundle's copy of the results
+    would overlap the results directory: replacing it would delete them."""
+    results, kept = Path(allure_results_dir).resolve(), (Path(out_dir) / "allure-results").resolve()
+    if results == kept or results.is_relative_to(kept) or kept.is_relative_to(results):
+        raise ValueError(f"the bundle's copy of the results ({kept}) would overlap the results directory "
+                         f"({results}): write the bundle elsewhere")
     out_dir.mkdir(parents=True, exist_ok=True)
     for earlier in ("verification.yml", MATRIX_DOC, REPORT_PDF, "manifest.json"):  # an earlier bundle's
         (out_dir / earlier).unlink(missing_ok=True)
@@ -118,6 +124,7 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
         "untested": summary["untested"],
         "verification_report": report,
         "missing_attachments": missing,
+        "unreadable": data["unreadable"],
         "files": sorted(
             [name for name in ("verification.yml", MATRIX_DOC, REPORT_PDF) if (out_dir / name).is_file()]
             + [f"allure-results/{name}" for name in copied]
@@ -141,10 +148,16 @@ def evidence_bundle_command(
         print("Error: --allure-results <dir> is required (run the acceptance suite first)")
         return 2
     out = Path(output or "release-evidence")
-    manifest = evidence_bundle(dhf, Path(allure_results_dir), out)
+    try:
+        manifest = evidence_bundle(dhf, Path(allure_results_dir), out)
+    except ValueError as error:
+        print(f"Error: {error}")
+        return 2
     print(f"Wrote release evidence bundle to {out}:")
     print(f"  design inputs : {manifest['verified']}/{manifest['design_inputs']} verified "
           f"({manifest['failed']} failed, {manifest['untested']} untested)")
     print(f"  report        : {manifest['verification_report']}")
     print(f"  files         : {len(manifest['files'])} + manifest.json")
+    if manifest["unreadable"]:
+        print(f"  unreadable    : {', '.join(manifest['unreadable'])} (could hold a failed run)")
     return 0

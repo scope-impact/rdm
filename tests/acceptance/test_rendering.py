@@ -29,13 +29,28 @@ ROOT = Path(__file__).parents[2]
 
 @allure.story("DI-7")
 @allure.label("output", "rdm/publishing/render.py")
-def test_renders_template_against_data_context() -> None:
+def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypatch) -> None:
     """DI-7: a Markdown template renders against a supplied data context."""
     out = render_from_string(
         "Device: {{ device.name }} v{{ device.version }}",
         context={"device": {"name": "Acme Monitor", "version": "1.2"}},
     )
     assert "Device: Acme Monitor v1.2" in out
+    with verification_step("rdm render says what is wrong, never a traceback: a value the template does not have, "
+                           "a template that does not exist; an empty configuration loads no extensions"):
+        from rdm.main import cli
+
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "doc.md").write_text("Device: {{ device.name }}\n")
+        (tmp_path / "empty.yml").write_text("")
+        (tmp_path / "device.yml").write_text("name: Acme\n")
+        capsys.readouterr()
+        assert cli(["render", "doc.md", "empty.yml", "device.yml"]) == 0
+        assert "Device: Acme" in capsys.readouterr().out
+        assert cli(["render", "doc.md", "empty.yml"]) == 2
+        assert "device" in capsys.readouterr().err
+        assert cli(["render", "nope.md", "empty.yml"]) == 2
+        assert "nope.md" in capsys.readouterr().err
 
 
 @allure.story("DI-8")
@@ -82,6 +97,9 @@ def test_markdown_post_processing() -> None:
     with verification_step("a note over two lines of a paragraph, or nested, is removed whole"):
         notes = "A [[auditor\nonly]] B.\nC [[outer [[inner]] tail]] D.\n"
         assert render_from_string(notes, config=both) == "A B.\nC D.\n"
+    with verification_step("a code fence inside a blockquote or a list item is code too"):
+        nested = "> ```python\n> x = data[[0]]\n> ```\n\n- step\n\n    ```bash\n    echo [[ok]]\n    ```\n"
+        assert render_from_string(nested, config=both) == nested
     with verification_step("a note still open at the paragraph's end is kept as text"):
         assert render_from_string("Stray [[ here\n\nNext.", config=both) == "Stray [[ here\n\nNext.\n"
 

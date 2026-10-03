@@ -40,8 +40,5 @@ variables:
     left: 2.5cm
     right: 2.5cm
 
-  # Typography
-  fontsize: 11pt
-  mainfont: "Nunito Sans"
-  sansfont: "Nunito Sans"
-  monofont: "JetBrains Mono"
+  # The fonts and colours are template.typ's own (body-font, mono-font and the
+  # palette at its top): change them there, not here.

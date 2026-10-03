@@ -24,9 +24,10 @@ from pathlib import Path
 from rdm.kernel.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 from rdm.specification.tags import DESIGN_INPUT_LABELS
 
-# Allure statuses.
+# Allure statuses: a result with any other is unreadable, since it could be a failed run.
 FAILING = {"failed", "broken"}
 PASSED = "passed"
+STATUSES = ("passed", "failed", "broken", "skipped", "unknown")
 RESULT_SUFFIX = "-result.json"  # one Allure result file per executed test
 
 # What rdm.pytest_plugin writes into a run's labels and results, and every
@@ -144,11 +145,50 @@ def read_run_facts(results_dir: Path) -> tuple[dict | None, dict[str, str]]:
     return executor, environment
 
 
+def readable(data: dict) -> bool:
+    """Whether a parsed result says what it is: a status Allure writes, and
+    labels (if any) that are a list of name and value text."""
+    labels = data.get("labels") or []
+    return data.get("status") in STATUSES and all(  # a string or mapping of labels fails too
+        isinstance(label, dict) and isinstance(label.get("name"), str) and isinstance(label.get("value"), str)
+        for label in labels)
+
+
+def run_status(data: dict) -> str:
+    """A run's result: failed when a verification step at any depth failed or
+    broke, whatever the test's own status says -- a failed step fails the test."""
+    status = data["status"]
+    stack = list(data.get("steps") or [])
+    while status == PASSED and stack:
+        step = stack.pop()
+        if isinstance(step, dict):
+            if step.get("status") in FAILING:
+                status = "failed"
+            stack.extend(step.get("steps") or [])
+    return status
+
+
+def named_results(results_dir: Path) -> tuple[list[tuple[dict, str]], list[str]]:
+    """:func:`read_results`, each result with its file name."""
+    unreadable: list[str] = []
+    named = load_json_records(Path(results_dir), RESULT_SUFFIX, lambda data, name: (data, name), unreadable)
+    unreadable += [name for data, name in named if not readable(data)]
+    return [(data, name) for data, name in named if readable(data)], sorted(unreadable)
+
+
+def read_results(results_dir: Path) -> tuple[list[dict], list[str]]:
+    """Every readable result in a results directory, in file name order, and
+    the names of those that cannot be read (sorted): not JSON, nested too deep,
+    a symbolic link, or not :func:`readable`. Any of them could hold a failed run."""
+    named, unreadable = named_results(results_dir)
+    return [data for data, _ in named], unreadable
+
+
 def _build_result(data: dict, filename: str) -> TestResult:
     """Build one ``TestResult`` from a parsed Allure result file."""
     return TestResult(
         name=str(data.get("name") or filename),
-        status=str(data.get("status", "unknown")),
+        status=run_status(data),
         design_input_ids=design_input_tags(data),
         outputs=labelled(data, OUTPUT_LABEL),
     )
@@ -157,10 +197,13 @@ def _build_result(data: dict, filename: str) -> TestResult:
 def parse_results(results_dir: Path, unreadable: list[str] | None = None) -> list[TestResult]:
     """Parse all ``*-result.json`` files in an Allure results directory; the
     names of those that cannot be read are added to ``unreadable``."""
-    return load_json_records(results_dir, RESULT_SUFFIX, _build_result, unreadable)
+    named, cannot = named_results(results_dir)
+    if unreadable is not None:
+        unreadable.extend(cannot)
+    return [_build_result(data, name) for data, name in named]
 
 
-def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
+def reconcile(sdd_ids: set[str], results_dir: Path | None) -> VerificationReport:
     """Aggregate Allure results into a verification status per design input.
 
     Status rules per design input:
@@ -168,10 +211,11 @@ def reconcile(sdd_ids: set[str], results_dir: Path) -> VerificationReport:
       - ``verified`` else if any covering test passed,
       - ``untested`` if no covering test ran (or only skipped/unknown).
 
-    IDs referenced by tests but not declared are returned as orphans.
+    IDs referenced by tests but not declared are returned as orphans. With
+    no results directory (None), every input is untested.
     """
     unreadable: list[str] = []
-    results = parse_results(Path(results_dir), unreadable)
+    results = parse_results(Path(results_dir), unreadable) if results_dir is not None else []
 
     def _fold(verification: DesignInputVerification, result: TestResult) -> None:
         verification.tests.append(result.name)

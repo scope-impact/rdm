@@ -74,3 +74,15 @@ def test_python_tags_come_from_decorators_only(tmp_path: Path) -> None:
     with verification_step("A file that does not parse still has its decorator-pattern tags read"):
         assert files["DI-11"] == ["test_broken.py"]
         assert set(files) == {"DI-1", "DI-3", "DI-4", "DI-10", "DI-11"}
+    with verification_step("Only tests claim: a story on a helper function or class is no tag, and the story "
+                           "decorator counts under any name the file imports it as"):
+        (tests / "test_helpers.py").write_text(
+            'import allure\n\n\n@allure.story("DI-20")\ndef make_fixture():\n    pass\n\n\n'
+            '@allure.story("DI-21")\nclass Helper:\n    pass\n')
+        (tests / "test_imported.py").write_text(
+            'from allure import story\nfrom allure import story as s\nimport allure as a\n\n\n'
+            '@story("DI-22")\ndef test_d():\n    pass\n\n\n@s("DI-23")\ndef test_e():\n    pass\n\n\n'
+            '@a.story("DI-24")\ndef test_f():\n    pass\n')
+        files = {tag: sorted(Path(f).name for f in paths) for tag, paths in scan_source_tags(tests).items()}
+        assert "DI-20" not in files and "DI-21" not in files
+        assert all(files.get(tag) == ["test_imported.py"] for tag in ("DI-22", "DI-23", "DI-24")), files

@@ -48,7 +48,22 @@ def frontmatter_problem(text: str) -> str | None:
 
 # libyaml when installed (about 10x faster); one parse per distinct block, since
 # a projection or a gate run reads the same documents through many helpers.
-_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+_BASE = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
+class _LOADER(_BASE):
+    """YAML with each key once per mapping: a repeated key would keep only its
+    last value, so a second ``design_inputs`` block would hide the first."""
+
+    def construct_mapping(self, node, deep=False):
+        seen = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=True)
+            if isinstance(key, (str, int, float, bool)) and key in seen:
+                raise yaml.constructor.ConstructorError(
+                    None, None, f"found the key {key!r} twice", key_node.start_mark)
+            seen.add(key)
+        return super().construct_mapping(node, deep)
 
 
 @lru_cache(maxsize=1024)
@@ -83,10 +98,13 @@ def documents(dhf_dir: Path) -> Iterator[tuple[Path, dict]]:
 
 def unreadable_documents(dhf_dir: Path) -> Iterator[tuple[Path, str]]:
     """Every Markdown document under a DHF whose frontmatter cannot be read,
-    with why."""
+    with why: not UTF-8, or a frontmatter problem."""
     for md in sorted(Path(dhf_dir).rglob("*.md")):
         try:
+            md.read_bytes().decode("utf-8")
             problem = frontmatter_problem(_text(md))
+        except UnicodeDecodeError:
+            problem = "it is not UTF-8 text"
         except OSError as error:
             problem = f"it cannot be read ({error.strerror})"
         if problem:

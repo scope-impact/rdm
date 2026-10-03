@@ -40,12 +40,12 @@ from importlib.resources import files
 from pathlib import Path
 
 from rdm.evidence.allure import (
-    FAILING, REQUIREMENT_ATTACHMENT, design_input_tags, full_name, read_run_facts, run_version,
+    FAILING, REQUIREMENT_ATTACHMENT, design_input_tags, full_name, read_results, read_run_facts, run_status,
+    run_version,
 )
 from rdm.specification.tags import find_tests_dir, scan_source_tests
-from rdm.kernel.git import head, repo_root, repository_url
+from rdm.kernel.git import git, head, repo_root, repository_url
 from rdm.kernel.ids import sort_key
-from rdm.kernel.reconcile import load_json_records
 from rdm.risk.register import NOT_EVALUATED, policy_or_none, residual_decision, risks
 from rdm.specification.sdd import design_inputs
 from rdm.release.verify import build_verification
@@ -172,7 +172,7 @@ def _run(result: dict, reader: _Reader, tagged: list[str], test_ids: dict[str, s
     name = str(result.get("fullName") or result.get("name") or "")
     return {
         "test": test_ids.get(name, name),
-        "status": str(result.get("status", "unknown")),
+        "status": run_status(result),
         "message": message,
         "trace": trace,
         "start": _time(result.get("start")),
@@ -193,14 +193,19 @@ def _all_attachments(node: dict):
         yield from _all_attachments(step)
 
 
-def _assess(inputs: list[dict], commits: list[str], record_commit: str | None,
-            orphans: list[str]) -> tuple[list[str], list[dict]]:
-    """The reasons the evidence is not release-grade (none: it is), and the anomalies."""
-    runs = [run for di in inputs for run in di["runs"]]
+def _assess(inputs: list[dict], others: list[dict], commits: list[str], record: tuple[str | None, bool],
+            orphans: list[str], unreadable: list[str]) -> tuple[list[str], list[dict]]:
+    """The reasons the evidence is not release-grade (none: it is), and the
+    anomalies. Every run counts: those of the design inputs, and ``others``,
+    the runs of tests tagged with no declared design input."""
+    runs = [run for di in inputs for run in di["runs"]] + others
+    record_commit, record_dirty = record
     reasons = []
     unverified = [di["id"] for di in inputs if di["status"] != "verified"]
     if unverified:
         reasons.append(f"{len(unverified)} design input(s) not verified: {', '.join(unverified)}")
+    if unreadable:
+        reasons.append(f"{len(unreadable)} result file(s) cannot be read: {', '.join(unreadable)}")
     for counts, message in ((lambda r: r["status"] in FAILING, "test(s) failed or broke"),
                             (lambda r: r["dirty"], "test(s) ran with uncommitted changes in the worktree"),
                             (lambda r: not r["commit"], "test(s) recorded no commit")):
@@ -211,6 +216,8 @@ def _assess(inputs: list[dict], commits: list[str], record_commit: str | None,
     elif other := [c for c in commits if c != record_commit]:
         reasons.append(f"runs tested {len(other)} other commit(s) than the record's "
                        f"({record_commit[:12]}): {', '.join(c[:12] for c in other)}")
+    if record_dirty:
+        reasons.append("the record has uncommitted changes")
 
     anomalies = []
     for di in inputs:
@@ -224,6 +231,11 @@ def _assess(inputs: list[dict], commits: list[str], record_commit: str | None,
                 if attachment["kind"] == "missing":
                     anomalies.append({"subject": subject, "kind": "missing attachment",
                                       "detail": attachment["source"] or attachment["name"]})
+    for run in others:
+        if run["status"] != "passed":
+            anomalies.append({"subject": run["test"], "kind": run["status"], "detail": run["message"] or ""})
+    for name in unreadable:
+        anomalies.append({"subject": name, "kind": "unreadable", "detail": "it could hold a failed run"})
     for orphan in orphans:
         anomalies.append({"subject": orphan, "kind": "orphan tag",
                           "detail": "a test is tagged with an id no design document declares"})
@@ -259,13 +271,18 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
     root = repo_root(dhf_dir)
     reader = _Reader(results_dir)
     test_ids = _test_ids(dhf_dir, root)
+    declared = sorted(design_inputs(dhf_dir), key=lambda di: sort_key(di["id"]))
+    ids = {di["id"] for di in declared}
     runs: dict[str, list[dict]] = {}
-    results = load_json_records(results_dir, "-result.json", lambda data, _name: data)
+    others: list[dict] = []  # runs of tests tagged with no declared design input: they count too
+    results, unreadable = read_results(results_dir)
     for result in sorted(results, key=lambda r: (r.get("start") or 0, str(r.get("fullName", "")))):
-        if tagged := design_input_tags(result):
-            run = _run(result, reader, tagged, test_ids)
-            for di in tagged:
-                runs.setdefault(di, []).append(run)
+        tagged = [di for di in design_input_tags(result) if di in ids]
+        run = _run(result, reader, tagged, test_ids)
+        for di in tagged:
+            runs.setdefault(di, []).append(run)
+        if not tagged:
+            others.append(run)
 
     inputs = [{
         "id": di["id"],
@@ -276,11 +293,14 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
         "status": status[di["id"]]["status"],
         "outputs": status[di["id"]]["outputs"],
         "runs": runs.get(di["id"], []),
-    } for di in sorted(design_inputs(dhf_dir), key=lambda di: sort_key(di["id"]))]
+    } for di in declared]
 
     record_commit = head(root)[0] if root else None
-    commits = sorted({run["commit"] for di in inputs for run in di["runs"] if run["commit"]})
-    reasons, anomalies = _assess(inputs, commits, record_commit, verification["orphans"])
+    # Uncommitted changes to the record itself: what the runs verified is in no commit.
+    record_dirty = bool(root and git(root, "status", "--porcelain", "--", str(dhf_dir.resolve())))
+    commits = sorted({run["commit"] for run in [*others, *(r for di in inputs for r in di["runs"])] if run["commit"]})
+    reasons, anomalies = _assess(inputs, others, commits, (record_commit, record_dirty), verification["orphans"],
+                                 unreadable)
     executor, environment = read_run_facts(results_dir)
     return {
         "generated_at": _time(time.time() * 1000),
