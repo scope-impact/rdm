@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+- **A chain review of every design input** (Design Reviews 58 and 60). Each
+  input was read with its user needs, design prose, tagged test, verification
+  steps, output labels and last run; 32 texts now state what their tests
+  check, and every test run records its verification steps. New inputs:
+  DI-71 (the commit and merge hooks, split from DI-2) and DI-72 (reading
+  Allure results: what cannot be read is never a pass). Found and fixed: the
+  ISO 14971:2019 checklist held no clause; a persona run whose issues were
+  not a list read as clean; `join_to` rendered a blank row for an unknown id;
+  a snippet key repeated in a second file replaced the first; a second
+  `risk_policy` was ignored; the evidence bundle dropped the matrix when its
+  template was missing; `worktree=clean` was written when nothing was
+  checked; the Graph Explorer file dropped record nodes without a `urn:` IRI;
+  the C4 model drew the shared kernel inside the specification context.
+- **Process: a test checks only what its input states** (Design Review 59).
+  Before a step is added to an existing test, the input's text is read and
+  amended, or a new input declared; one `shall` per input; one bounded
+  context per fix pull request; a chain review, recorded as a design review,
+  before each release. A pull-request template asks the reviewer to read each
+  changed input beside its test.
+- **What an acceptance test exercises, without reading code** (Design Review
+  61). A test names components by a `component` label (a C4 key) or an
+  `output` label's file; the graph derives, by a rule, the components a named
+  one reaches through the declared relationships (DI-73); the trace lists
+  named and reached apart. Python imports are read for Python code only, and
+  a component with none is marked as not read.
+- **Unit-test code coverage, per component** (Design Reviews 63 to 65). Code
+  coverage is a unit-test measure, never acceptance evidence and never in
+  Allure (an attempt to carry it there, DI-74 and DI-75, was retired). `rdm
+  story verify --unit-coverage REPORT` (Cobertura XML or LCOV, any language)
+  adds each component's unit lines run of those measured (DI-76); the
+  traceability matrix shows it beside the design inputs; the evidence bundle
+  carries it and keeps the report; the graph holds it as component
+  properties, and the docs map shows it. RDM's CI measures its unit tests.
+- **The docs map draws what the graph holds** (Design Review 65): the
+  components runs name (solid) and reach (dashed), and each component's unit
+  coverage.
+
 - **Fixed: review findings on the behaviour fixes** (Design Review 57). The
   merge hook no longer blocks a valid merge of an approved design change
   with its code: during a merge, a document staged exactly as a commit holds

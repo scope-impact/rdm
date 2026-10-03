@@ -65,7 +65,8 @@ There is no default. Acceptability criteria are yours, set before any
 individual risk decision — a matrix's cells are not ISO 14971 values. Declare
 one `risk_policy` in any DHF document's frontmatter (the risk management
 plan is the natural place); without it, a register with risks blocks the
-release as *acceptability criteria missing*.
+release as *acceptability criteria missing*. A second document declaring a
+`risk_policy` is refused, naming both, and so blocks as a malformed policy.
 
 ```yaml
 ---

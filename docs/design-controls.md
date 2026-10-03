@@ -92,6 +92,20 @@ own API (`allure.dynamic`), so the labels can never drift from it:
 | `commit` | the commit under test, with `worktree=dirty` when the working tree had uncommitted changes |
 | attachment `requirement DI-n` | the design input's text |
 
+The run's `environment.properties` records `worktree=unknown`, never `clean`,
+when there is no commit to compare against.
+
+A test also says what it exercises, in two labels it writes itself: `output`,
+the file it runs (`@allure.label("output", "rdm/release/gate.py")`), and
+`component`, a C4 component by its key in the architecture workspace
+(`@allure.label("component", "release_gate")`; a key the model does not
+declare is a warning). Either *names* the component; the graph adds the
+components a named one *reaches* through the relationships the workspace
+declares, so a test need not name every module behind its entry point.
+Neither is evidence of coverage: code coverage is the unit tests' measure
+([gates](gates.md#unit-test-code-coverage-optional)), never an acceptance
+test's.
+
 Enable it for the acceptance suite only — import its hook in that suite's
 `conftest.py`, or pass `-p rdm.pytest_plugin --rdm-dhf dhf`:
 

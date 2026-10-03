@@ -63,4 +63,10 @@ rdm story persona --vv-plan dhf/documents/verification_and_validation_plan.md \
 | `failed` | a persona could not complete the journey |
 | `not_run` | no persona attempted this user need |
 
+Across several runs of one need, `failed` outranks `issues`, which outranks
+`clean`. A run file that cannot be read as a run — no user need, issues that
+are not a list, JSON that does not parse — is listed as unreadable, never
+counted as clean; issues written as plain text still count as issues. A run
+naming a user need the registry does not hold is listed as an orphan.
+
 It is informational and never gates a release.

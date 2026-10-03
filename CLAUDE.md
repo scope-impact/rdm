@@ -89,7 +89,10 @@ Run the gates locally exactly as CI does:
 ```bash
 uv run rdm story design-gate --dhf dhf
 uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
-uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+uv run coverage run --source=rdm -m pytest tests --ignore=tests/acceptance -q   # unit tests, under coverage
+uv run coverage xml -q -o dhf/data/unit-coverage.xml
+uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml \
+  --unit-coverage dhf/data/unit-coverage.xml
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
 
@@ -109,7 +112,7 @@ layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 - `rdm/main.py` — the composition root: the `rdm` command; argparse subcommands dispatch to the contexts.
 - `rdm/kernel/` — the shared kernel: YAML and files (`util.py`), ids, git, frontmatter, the reconcile helpers.
 - `rdm/specification/` — the core: the record reader (`sdd.py`), test tags (`tags.py`), the design gate (including duplicate ids), `new-input`, hooks, `init`/`adopt` and their templates, validation records, persona runs.
-- `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`), `translate`, the mutation probe; the plugin labels each run from the record.
+- `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`), `translate`, the mutation probe, the unit tests' code coverage (`unit_coverage.py`, never acceptance evidence); the plugin labels each run from the record.
 - `rdm/risk/`, `rdm/architecture/`, `rdm/compliance/` — the leaves: the risk register; the C4 model and `rdm c4 draw`; gap analysis and the built-in checklists.
 - `rdm/release/` — the release gate and trace (`gate.py`), the verification data (`verify.py`).
 - `rdm/publishing/` and `rdm/md_extensions/` — templates and data to Markdown (`render.py`, two-pass, filters `invert_dependencies`, `join_to`, `md_indent`), snippets, the DMR index, the verification report, the evidence bundle; Markdown post-processing.
