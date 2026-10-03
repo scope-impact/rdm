@@ -112,12 +112,15 @@ def malformed_registers(dhf_dir: Path) -> list[str]:
 
 
 def read_policy(dhf_dir: Path) -> Policy | None:
-    """The declared ``risk_policy`` (the first, by path), or None when there is
-    none. Raises ``ValueError`` naming the document when it is malformed."""
-    for md, front in documents(dhf_dir):
-        value = front.get("risk_policy")
-        if value is None:
-            continue
+    """The declared ``risk_policy``, or None when there is none. Raises
+    ``ValueError`` naming the document when it is malformed, or naming both
+    documents when a second one declares a policy."""
+    declared = [(md, front) for md, front in documents(dhf_dir) if front.get("risk_policy") is not None]
+    if len(declared) > 1:
+        first, second = (str(md.relative_to(dhf_dir)) for md, _ in declared[:2])
+        raise ValueError(f"risk_policy is declared twice, in {first} and in {second}: declare one")
+    for md, front in declared:
+        value = front["risk_policy"]
         where = str(md.relative_to(dhf_dir))
         if not isinstance(value, dict):
             raise ValueError(f"risk_policy in {where} is not a mapping")
