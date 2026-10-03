@@ -50,6 +50,10 @@ on:
       allure-results:
         type: string
         default: 'dhf/allure-results'
+      unit-coverage:
+        description: "The unit tests' code coverage report (Cobertura XML or LCOV) the test command wrote, for verify; optional"
+        type: string
+        default: ''
       release-gate:
         description: 'false until the first design input and its tagged test land'
         type: boolean
@@ -125,6 +129,7 @@ jobs:
           install-rdm: 'false'
           dhf: ${{ inputs.dhf }}
           allure-results: ${{ inputs.allure-results }}
+          unit-coverage: ${{ inputs.unit-coverage }}
           release-gate: ${{ inputs.release-gate }}
           graph-validate: ${{ inputs.graph-validate }}
           checklists: ${{ inputs.checklists }}

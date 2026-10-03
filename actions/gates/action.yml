@@ -12,6 +12,9 @@ inputs:
   allure-results:
     description: 'Allure results of the acceptance tests (run them before this action)'
     default: 'dhf/allure-results'
+  unit-coverage:
+    description: "The unit tests' code coverage, one Cobertura XML or LCOV report, for verify (optional; never acceptance evidence)"
+    default: ''
   release-gate:
     description: 'Run the release gate (false while the record has no design input yet)'
     default: 'true'
@@ -73,9 +76,12 @@ runs:
       env:
         DHF: ${{ inputs.dhf }}
         RESULTS: ${{ inputs.allure-results }}
+        UNIT_COVERAGE: ${{ inputs.unit-coverage }}
       run: |
         mkdir -p "$DHF/data"
-        rdm story verify --dhf "$DHF" --allure-results "$RESULTS" -o "$DHF/data/verification.yml"
+        args=()
+        [ -n "$UNIT_COVERAGE" ] && args+=(--unit-coverage "$UNIT_COVERAGE")
+        rdm story verify --dhf "$DHF" --allure-results "$RESULTS" -o "$DHF/data/verification.yml" "${args[@]}"
 
     - name: Release gate
       if: inputs.release-gate == 'true'
@@ -105,7 +111,11 @@ runs:
       env:
         DHF: ${{ inputs.dhf }}
         RESULTS: ${{ inputs.allure-results }}
-      run: rdm story evidence-bundle --dhf "$DHF" --allure-results "$RESULTS" -o "$RUNNER_TEMP/rdm-evidence"
+        UNIT_COVERAGE: ${{ inputs.unit-coverage }}
+      run: |
+        args=()
+        [ -n "$UNIT_COVERAGE" ] && args+=(--unit-coverage "$UNIT_COVERAGE")
+        rdm story evidence-bundle --dhf "$DHF" --allure-results "$RESULTS" -o "$RUNNER_TEMP/rdm-evidence" "${args[@]}"
 
     - name: Upload the evidence bundle
       if: inputs.evidence-bundle == 'true' && steps.results.outputs.found == 'true'

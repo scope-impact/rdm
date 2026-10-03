@@ -9,16 +9,19 @@ design_inputs:
     text: "RDM shall block release unless every declared design input is verified by a passing test."
     traces_to: [UN-003]
   - id: DI-4
-    text: "RDM shall reconcile against Allure tags and render a traceability matrix from executed results."
+    text: "RDM shall reconcile each declared design input against the story labels of the executed Allure results as verified, failed or untested, and render the traceability matrix of those statuses grouped under the user needs."
     traces_to: [UN-004]
+  - id: DI-76
+    text: "RDM's verify shall, when given the unit tests' code coverage as one Cobertura XML or LCOV report, add to the verification data, for each C4 component with code, the lines of its code the unit tests ran out of the lines the report measured, listing apart each component whose code the report does not measure; a report it cannot read shall be an error, never taken as no coverage; and the traceability matrix shall show it."
+    traces_to: [UN-001, UN-017]
   - id: DI-18
-    text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status)."
+    text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status), listing any result it could not read and refusing a missing results directory."
     traces_to: [UN-004]
   - id: DI-30
-    text: "RDM shall produce a release evidence bundle from the record: the verification data, the rendered traceability matrix, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files, written to an output directory for retention."
+    text: "RDM shall produce a release evidence bundle from the record: the verification data and the rendered traceability matrix (with the unit tests' code coverage, and that report kept, when it is given, as verify takes it), the verification report, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files and any referenced attachment or result it could not include, written to an output directory apart from the results, replacing an earlier bundle there, and refusing to write a bundle it cannot complete."
     traces_to: [UN-012]
   - id: DI-63
-    text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then the design gate, verify, the release gate, graph validation and the evidence bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the same revision. The CI workflow rdm adopt lays down shall call the reusable workflow pinned to the installed RDM's version."
+    text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then the design gate, verify, the release gate, graph validation over the named checklists and the evidence bundle with the verification report, uploading the bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the release it is pinned to (the latest image for a branch or commit). The CI workflow rdm adopt lays down, and RDM's own CI, shall call the reusable workflow, pinned to the installed RDM's version and to the commit under test respectively."
     traces_to: [UN-011, UN-003]
 ---
 

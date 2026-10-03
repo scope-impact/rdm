@@ -30,15 +30,16 @@ def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) ->
     (docs / "notes.md").write_text("just notes, no frontmatter\n")
 
     out = tmp_path / "data" / "dmr.yml"
-    assert dmr_command(docs, out) == 0
-    captured = capsys.readouterr()
-    assert "notes.md" in captured.err  # un-identified document skipped, loudly
+    with verification_step("one entry per controlled document (id, title, path, revision), sorted by id"):
+        assert dmr_command(docs, out) == 0
+        captured = capsys.readouterr()
+        assert "notes.md" in captured.err  # un-identified document skipped, loudly
 
-    data = yaml.safe_load(out.read_text())
-    assert data["entries"] == [
-        {"id": "PLAN-1", "title": "The Plan", "path": "documents/plan.md", "revision": 1},
-        {"id": "SOP-1", "title": "The SOP", "path": "documents/sop.md", "revision": 2},
-    ]
+        data = yaml.safe_load(out.read_text())
+        assert data["entries"] == [
+            {"id": "PLAN-1", "title": "The Plan", "path": "documents/plan.md", "revision": 1},
+            {"id": "SOP-1", "title": "The SOP", "path": "documents/sop.md", "revision": 2},
+        ]
 
     with verification_step("A blank id is no id: the document is skipped, never indexed as None"):
         blank = tmp_path / "blank"
@@ -55,7 +56,7 @@ def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) ->
 
 
 @allure.story("DI-31")
-@allure.label("output", "rdm/evidence/allure.py")
+@allure.label("output", "rdm/specification/tags.py")
 def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
     """DI-31: JS/TS allure.story calls and Java @Story annotations are
     discovered across conventional test-file names; features name no input."""
@@ -84,10 +85,16 @@ def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
         "  @Test\n  void alarmFires() { assertTrue(fire()); }\n"
         "}\n"
     )
+    (tests / "x.test.js").write_text("test('a', async () => { await allure.story('DI-4'); });\n")
+    (tests / "y.spec.ts").write_text("test('b', async () => { await allure.story('DI-5'); });\n")
+    (tests / "FooTests.java").write_text('public class FooTests {\n  @Story("DI-6")\n  @Test\n  void foo() {}\n}\n')
     (tests / "notes.txt").write_text('allure.story("DI-9") mentioned in prose\n')
 
     with verification_step("Every language's story tag is discovered; features and the non-test file are not"):
         tags = scan_source_tags(tests)
-        assert set(tags) == {"DI-1", "DI-2", "DI-3"}
+        assert set(tags) == {"DI-1", "DI-2", "DI-3", "DI-4", "DI-5", "DI-6"}
         assert tags["DI-2"] == [str(tests / "alarms.test.ts")]
         assert tags["DI-3"] == [str(tests / "AlarmTest.java")]
+        assert tags["DI-4"] == [str(tests / "x.test.js")]
+        assert tags["DI-5"] == [str(tests / "y.spec.ts")]
+        assert tags["DI-6"] == [str(tests / "FooTests.java")]

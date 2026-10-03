@@ -124,9 +124,10 @@ def test_needs_risks_and_design_documents_link_to_their_documents(tmp_path: Path
     _register(dhf, [_risk("RISK-L-1")])
     quads = project(dhf)
     doc = "urn:dhf:proj:doc/"
-    assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-1")
-    assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-2")
-    assert ("evaluatedAgainst", doc + "RMP-9") in _facts(quads, "urn:dhf:proj:risk/RISK-L-1")
+    with verification_step("Each user need links to its declaring document, each risk to its policy's document"):
+        assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-1")
+        assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-2")
+        assert ("evaluatedAgainst", doc + "RMP-9") in _facts(quads, "urn:dhf:proj:risk/RISK-L-1")
     with verification_step("A design document is not linked to the design review: the record does not say which "
                            "covered it"):
         assert not any(o == doc + "DR-1" for _, o in _facts(quads, doc + "SDS-1"))

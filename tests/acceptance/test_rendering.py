@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pytest
 
-from rdm.publishing.render import invert_dependencies, join_to, md_indent
 from tests.util import render_from_string
 
 allure = pytest.importorskip("allure")
@@ -30,62 +29,85 @@ ROOT = Path(__file__).parents[2]
 @allure.story("DI-7")
 @allure.label("output", "rdm/publishing/render.py")
 def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypatch) -> None:
-    """DI-7: a Markdown template renders against a supplied data context."""
-    out = render_from_string(
-        "Device: {{ device.name }} v{{ device.version }}",
-        context={"device": {"name": "Acme Monitor", "version": "1.2"}},
-    )
-    assert "Device: Acme Monitor v1.2" in out
-    with verification_step("rdm render says what is wrong, never a traceback: a value the template does not have, "
-                           "a template that does not exist; an empty configuration loads no extensions"):
-        from rdm.main import cli
+    """DI-7: a Markdown template file rendered with Jinja2 against the data
+    files supplied, each under its file name; a value the data does not supply
+    is refused, naming it."""
+    from rdm.main import cli
 
-        monkeypatch.chdir(tmp_path)
-        (tmp_path / "doc.md").write_text("Device: {{ device.name }}\n")
-        (tmp_path / "empty.yml").write_text("")
-        (tmp_path / "device.yml").write_text("name: Acme\n")
-        capsys.readouterr()
-        assert cli(["render", "doc.md", "empty.yml", "device.yml"]) == 0
-        assert "Device: Acme" in capsys.readouterr().out
-        assert cli(["render", "doc.md", "empty.yml"]) == 2
-        assert "device" in capsys.readouterr().err
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "doc.md").write_text("# {{ device.name }}\n\nVersion {{ device.version }}, by {{ other.maker }}.\n")
+    (tmp_path / "empty.yml").write_text("")
+    (tmp_path / "device.yml").write_text("name: Acme Monitor\nversion: '1.2'\n")
+    (tmp_path / "other.yml").write_text("maker: Acme Inc\n")
+    capsys.readouterr()
+    with verification_step("rdm render fills a Markdown template file from data files, each under its file name"):
+        assert cli(["render", "doc.md", "empty.yml", "device.yml", "other.yml"]) == 0
+        out = capsys.readouterr().out
+        attach("rendered", out)
+        assert out == "# Acme Monitor\n\nVersion 1.2, by Acme Inc.\n", out
+    with verification_step("a value the template uses that the data does not supply is refused, naming it"):
+        assert cli(["render", "doc.md", "empty.yml", "device.yml"]) == 2
+        err = capsys.readouterr().err
+        attach("refusal", err)
+        assert "other" in err and "doc.md" in err, err
+    with verification_step("a template that does not exist is refused, naming it"):
         assert cli(["render", "nope.md", "empty.yml"]) == 2
         assert "nope.md" in capsys.readouterr().err
 
 
 @allure.story("DI-8")
 @allure.label("output", "rdm/publishing/render.py")
-def test_traceability_filters() -> None:
-    """DI-8: the invert_dependencies / join_to / md_indent filters behave."""
+def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
+    """DI-8: the invert_dependencies, join_to and md_indent filters, used from
+    a template."""
     with verification_step("invert_dependencies: edge A→B inverts to B being depended-on by {A}"):
-        assert invert_dependencies([{"id": "A", "deps": ["B"]}], "id", "deps") == [("B", {"A"})]
+        out = render_from_string("{% for b, a in items | invert_dependencies('id', 'deps') %}{{ b }}<-{{ a | sort }}"
+                                 "{% endfor %}", context={"items": [{"id": "A", "deps": ["B"]}]})
+        assert out.strip() == "B<-['A']", out
     with verification_step("join_to: resolve foreign keys against a table by primary key"):
         table = [{"id": "r1", "v": 1}, {"id": "r2", "v": 2}]
-        assert join_to(["r2"], table) == [{"id": "r2", "v": 2}]
+        out = render_from_string("{% for r in ['r2', 'r1'] | join_to(table) %}{{ r.v }};{% endfor %}",
+                                 context={"table": table})
+        assert out.strip() == "2;1;", out
     with verification_step("md_indent: shift headings deeper by header_shift"):
-        assert md_indent("# Title", header_shift=1) == "## Title"
+        out = render_from_string("{{ snippet | md_indent(header_shift=1) }}", context={"snippet": "# Title"})
+        assert out.strip() == "## Title", out
+    with verification_step("join_to refuses an id its table lacks, naming it: rdm render exits 2"):
+        from rdm.main import cli
+
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "doc.md").write_text("{% for r in ['r9'] | join_to(table.rows) %}{{ r.v }}{% endfor %}\n")
+        (tmp_path / "empty.yml").write_text("")
+        (tmp_path / "table.yml").write_text("rows: [{id: r1, v: 1}]\n")
+        capsys.readouterr()
+        assert cli(["render", "doc.md", "empty.yml", "table.yml"]) == 2
+        err = capsys.readouterr().err
+        attach("refusal", err)
+        assert "r9" in err, err
 
 
 @allure.story("DI-9")
 @allure.label("output", "rdm/md_extensions/")
 def test_markdown_post_processing() -> None:
-    """DI-9: section numbering, vocabulary expansion, and auditor-note exclusion."""
-    numbered = render_from_string(
-        "## hello", config={"md_extensions": ["rdm.md_extensions.SectionNumberExtension"]}
-    )
-    assert numbered == "## 1.1 hello\n"
-
-    excluded = render_from_string(
-        "Spec [[1234:9.8.7.6]].",
-        config={"md_extensions": ["rdm.md_extensions.AuditNoteExclusionExtension"]},
-    )
-    assert excluded == "Spec.\n"
-
-    vocab = render_from_string(
-        "apple\nbanana\n{% for v in first_pass_output.words | sort %}[{{ v }}]{% endfor %}",
-        config={"md_extensions": ["rdm.md_extensions.VocabularyExtension"]},
-    )
-    assert "[apple][banana]" in vocab
+    """DI-9: section numbering, a second pass that gives a template the words
+    its first render produced, and auditor-note exclusion."""
+    with verification_step("sections are numbered"):
+        numbered = render_from_string(
+            "## hello", config={"md_extensions": ["rdm.md_extensions.SectionNumberExtension"]}
+        )
+        assert numbered == "## 1.1 hello\n"
+    with verification_step("auditor-only notes are removed"):
+        excluded = render_from_string(
+            "Spec [[1234:9.8.7.6]].",
+            config={"md_extensions": ["rdm.md_extensions.AuditNoteExclusionExtension"]},
+        )
+        assert excluded == "Spec.\n"
+    with verification_step("a second render gives the template the words its first render produced"):
+        vocab = render_from_string(
+            "apple\nbanana\n{% for v in first_pass_output.words | sort %}[{{ v }}]{% endfor %}",
+            config={"md_extensions": ["rdm.md_extensions.VocabularyExtension"]},
+        )
+        assert "[apple][banana]" in vocab
 
     both = {"md_extensions": ["rdm.md_extensions.SectionNumberExtension",
                               "rdm.md_extensions.AuditNoteExclusionExtension"]}

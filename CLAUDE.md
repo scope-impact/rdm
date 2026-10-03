@@ -78,7 +78,11 @@ scope:
 - **Independent verification is the pull-request review** — git is the
   controlled record, and a reviewer other than the author approves the PR.
   Whether a tagged test actually proves its design input is that reviewer's
-  call; no separate verdict is recorded.
+  call; no separate verdict is recorded. A test checks only what its input's
+  text states: before adding a step to an existing test, read the text, and
+  amend it or declare a new input when it does not state the step. Before each
+  release, a chain review reads every input with its whole chain, recorded as
+  a design review (Design Review 59).
 
 Run the gates locally exactly as CI does:
 

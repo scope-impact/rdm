@@ -204,7 +204,7 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
         custom = risks(dhf, read_policy(dhf))[0]
         assert (custom.level, custom.residual_level) == ("Red", "Amber")
 
-    with verification_step("A malformed policy is refused, naming where it is"):
+    with verification_step("A malformed policy, or a second declared policy, is refused, naming where it is"):
         for bad in ({"severities": ["Bad"], "probabilities": ["Often"], "levels": {"Bad": ["Red"]}},  # no acceptability
                     {"severities": ["Bad"], "probabilities": ["Often", "Seldom"], "levels": {"Bad": ["Red"]},
                      "acceptability": {"Red": "unacceptable"}},
@@ -218,6 +218,12 @@ def test_register_is_read_and_evaluated_against_the_declared_policy(tmp_path: Pa
             _policy(dhf, bad)
             with pytest.raises(ValueError, match="documents/risk/policy.md"):
                 read_policy(dhf)
+        _policy(dhf)
+        second = dhf / "documents" / "risk" / "second_policy.md"
+        second.write_text("---\n" + yaml.safe_dump({"id": "RMP-2", "risk_policy": POLICY}) + "---\n")
+        with pytest.raises(ValueError, match="documents/risk/policy.md and in documents/risk/second_policy.md"):
+            read_policy(dhf)
+        second.unlink()
 
 
 # The cases DI-50 owns (the residual decision and status); the rest are DI-44's.
@@ -263,6 +269,11 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
         (dhf / "documents" / "risk" / "policy.md").write_text("---\nid: RMP\nrisk_policy: [1, 2]\n---\n")
         gate = run_release_gate(dhf, _results(tmp_path / "anonymous", {"DI-1": ["passed"]}))
         assert any("risk_policy in documents/risk/policy.md" in m for m in gate.blocking)
+        _policy(dhf)
+        (dhf / "documents" / "risk" / "second_policy.md").write_text(
+            "---\n" + yaml.safe_dump({"id": "RMP-2", "risk_policy": POLICY}) + "---\n")
+        gate = run_release_gate(dhf, _results(tmp_path / "anonymous", {"DI-1": ["passed"]}))
+        assert any("risk_policy is declared twice" in m and "second_policy.md" in m for m in gate.blocking)
 
     with verification_step("A risk document whose risks are not a list of risks blocks, named; its kind in any case"):
         for name, front in (("mapping", {"risks": {"RISK-M-1": _risk("RISK-M-1")}}),

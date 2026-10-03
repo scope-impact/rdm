@@ -20,6 +20,7 @@ from rdm.graph.ns import RDF
 _TYPE = RDF + "type"
 DEFAULT_ENDPOINT = "http://localhost:7878"
 _EXECUTIONS = "graph/" + EXECUTIONS_GRAPH  # the test-run results
+_ONTOLOGY = "graph/ontology"  # RDM's vocabulary
 
 
 def _local(iri: str) -> str:
@@ -43,17 +44,18 @@ def _reachable(start: set[str], links) -> set[str]:
 
 def explorer_graph(quads: list[ox.Quad], endpoint: str = DEFAULT_ENDPOINT,
                    exclude: list[str] | None = None) -> dict:
-    """The Graph Explorer file for ``quads``: every typed instance node (its
-    IRI is a ``urn:``, so the vocabulary is left out) and every link between two
-    of them except ``rdf:type``; ``exclude`` names classes (by local name,
+    """The Graph Explorer file for ``quads``: every typed node except the
+    vocabulary's own terms (the subjects of the ontology graph), whatever its
+    IRI, and every link between two of them except ``rdf:type``; ``exclude`` names classes (by local name,
     e.g. ``TestRun``) whose nodes and links are left out, together with the
     nodes that hang only from them: those left with no path to a node outside
     the test-run results (a run's steps, labels, attachments, fixtures...)."""
     excluded = set(exclude or [])
+    vocabulary = {q.subject.value for q in quads if str(getattr(q.graph_name, "value", "")).endswith(_ONTOLOGY)}
     types: dict[str, set[str]] = {}
     anchors: set[str] = set()  # typed outside the test-run results
     for q in quads:
-        if q.predicate.value == _TYPE and isinstance(q.subject, ox.NamedNode) and q.subject.value.startswith("urn:"):
+        if q.predicate.value == _TYPE and isinstance(q.subject, ox.NamedNode) and q.subject.value not in vocabulary:
             types.setdefault(q.subject.value, set()).add(_local(q.object.value))
             if not str(getattr(q.graph_name, "value", "")).endswith(_EXECUTIONS):
                 anchors.add(q.subject.value)

@@ -44,6 +44,32 @@ A user need without an approved human validation record is named as a
 warning: a machine cannot supply that judgment, but its absence is never
 silent.
 
+### Unit-test code coverage (optional)
+
+Code coverage is evidence of unit verification (IEC 62304 5.5), never
+acceptance evidence: a design input is verified by its tagged acceptance test,
+and coverage is never read from Allure. Run your unit tests under coverage,
+apart from the acceptance tests, and give verify the one report, Cobertura XML
+(coverage.py, JaCoCo through a converter, Istanbul) or LCOV (gcov, Istanbul):
+
+```bash
+coverage run --source=rdm -m pytest tests --ignore=tests/acceptance
+coverage xml -o dhf/data/unit-coverage.xml
+rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml \
+  --unit-coverage dhf/data/unit-coverage.xml
+```
+
+The C4 model (`dhf/c4/workspace.json`) maps each file to its component, so a
+report in any language serves. The verification data gains `unit_coverage`:
+per component with code, the lines its unit tests ran of those measured, and
+apart the components the report does not measure; a file of no component is
+ignored. The traceability matrix shows it in its own section, beside the
+design inputs. No threshold is set and nothing blocks. A report that cannot be
+read is an error (exit 2), never no coverage. `rdm story evidence-bundle` takes
+the same `--unit-coverage` report, so the retained matrix carries it, and keeps
+the report with the evidence. In CI, pass the report to the
+[reusable workflow or gates action](reusable-ci.md) as `unit-coverage`.
+
 ## Gap analysis
 
 ```bash

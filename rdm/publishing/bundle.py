@@ -22,6 +22,9 @@ from rdm.specification.sdd import MATRIX_DOC, find_dhf_doc
 from rdm.release.verify import write_verification_file
 
 
+UNIT_COVERAGE_KEPT = ("unit-coverage.xml", "unit-coverage.lcov", "unit-coverage.info", "unit-coverage.txt")
+
+
 def _attachment_sources(node) -> set[str]:
     """Every attachment ``source`` in an Allure result or container, at any depth."""
     found: set[str] = set()
@@ -66,38 +69,55 @@ def copy_results(results_dir: Path, dest: Path) -> tuple[list[str], list[str]]:
     return copied, sorted(named - set(copied))
 
 
-def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> dict:
+def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path,
+                    unit_coverage_report: Path | None = None) -> dict:
     """Produce the bundle; returns the manifest that was written. Raises
     ``ValueError``, writing nothing, when the bundle's copy of the results
-    would overlap the results directory: replacing it would delete them."""
+    would overlap the results directory (replacing it would delete them), when
+    the record has no traceability matrix template to render, or when the unit
+    tests' coverage report, if given, cannot be read (DI-30, DI-76)."""
     results, kept = Path(allure_results_dir).resolve(), (Path(out_dir) / "allure-results").resolve()
     if results == kept or results.is_relative_to(kept) or kept.is_relative_to(results):
         raise ValueError(f"the bundle's copy of the results ({kept}) would overlap the results directory "
                          f"({results}): write the bundle elsewhere")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    for earlier in ("verification.yml", MATRIX_DOC, REPORT_PDF, "manifest.json"):  # an earlier bundle's
-        (out_dir / earlier).unlink(missing_ok=True)
+    template = find_dhf_doc(dhf_dir, MATRIX_DOC)
+    if template is None:
+        raise ValueError(f"the record has no {MATRIX_DOC} template to render the traceability matrix from: "
+                         "a bundle without the matrix is incomplete")
+    if unit_coverage_report is not None:
+        from rdm.evidence.unit_coverage import read_unit_coverage
 
-    # 1. Verification data: design inputs x executed results.
+        read_unit_coverage(Path(unit_coverage_report), Path(dhf_dir).parent)  # refused before anything is written
+        # Held before an earlier bundle is cleared: the report may be that bundle's own kept copy.
+        report_bytes = Path(unit_coverage_report).read_bytes()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for earlier in ("verification.yml", MATRIX_DOC, REPORT_PDF, "manifest.json", *UNIT_COVERAGE_KEPT):
+        (out_dir / earlier).unlink(missing_ok=True)  # an earlier bundle's
+
+    # 1. Verification data: design inputs x executed results, and the unit
+    # tests' code coverage when its report is given (as verify takes it).
     verification_path = out_dir / "verification.yml"
-    data = write_verification_file(dhf_dir, allure_results_dir, verification_path)
+    kept_coverage = None
+    if unit_coverage_report is not None:  # the report itself, kept with the evidence, and read from there
+        kept_coverage = "unit-coverage" + (Path(unit_coverage_report).suffix or ".txt")
+        (out_dir / kept_coverage).write_bytes(report_bytes)
+    data = write_verification_file(dhf_dir, allure_results_dir, verification_path,
+                                   out_dir / kept_coverage if kept_coverage else None)
 
     # 2. The rendered traceability matrix (generated, never hand-edited).
+    import jinja2
+    import yaml
+
+    from rdm.kernel.util import load_yaml
+    from rdm.publishing.render import render_template_to_file
+
     matrix_path = out_dir / MATRIX_DOC
-    template = find_dhf_doc(dhf_dir, MATRIX_DOC)
-    if template is not None:
-        import jinja2
-        import yaml
-
-        from rdm.publishing.render import render_template_to_file
-        from rdm.kernel.util import load_yaml
-
-        config_file = dhf_dir / "config.yml"
-        config = load_yaml(config_file) if config_file.exists() else {}
-        context = {"verification": yaml.safe_load(verification_path.read_text())}
-        with matrix_path.open("w", encoding="utf-8") as handle:
-            render_template_to_file(config, template.name, context, handle,
-                                    loaders=[jinja2.FileSystemLoader(str(template.parent))])
+    config_file = dhf_dir / "config.yml"
+    config = load_yaml(config_file) if config_file.exists() else {}
+    context = {"verification": yaml.safe_load(verification_path.read_text())}
+    with matrix_path.open("w", encoding="utf-8") as handle:
+        render_template_to_file(config, template.name, context, handle,
+                                loaders=[jinja2.FileSystemLoader(str(template.parent))])
 
     # 3. The executed results themselves: every result and container, and each
     # attachment they name (on the test, its steps, or a fixture) -- the
@@ -125,8 +145,10 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
         "verification_report": report,
         "missing_attachments": missing,
         "unreadable": data["unreadable"],
+        "unit_coverage_report": kept_coverage,
         "files": sorted(
-            [name for name in ("verification.yml", MATRIX_DOC, REPORT_PDF) if (out_dir / name).is_file()]
+            [name for name in ("verification.yml", MATRIX_DOC, REPORT_PDF, kept_coverage or "")
+             if name and (out_dir / name).is_file()]
             + [f"allure-results/{name}" for name in copied]
         ),
     }
@@ -138,6 +160,7 @@ def evidence_bundle_command(
     dhf_dir: Path | None = None,
     allure_results_dir: Path | None = None,
     output: Path | None = None,
+    unit_coverage_report: Path | None = None,
 ) -> int:
     """Run `rdm story evidence-bundle --dhf … --allure-results … -o <dir>`."""
     dhf = Path(dhf_dir or "dhf").resolve()
@@ -149,7 +172,7 @@ def evidence_bundle_command(
         return 2
     out = Path(output or "release-evidence")
     try:
-        manifest = evidence_bundle(dhf, Path(allure_results_dir), out)
+        manifest = evidence_bundle(dhf, Path(allure_results_dir), out, unit_coverage_report)
     except ValueError as error:
         print(f"Error: {error}")
         return 2

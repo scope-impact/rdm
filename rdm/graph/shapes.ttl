@@ -224,12 +224,21 @@ rdm:RunContextShape a sh:NodeShape ;
     sh:severity sh:Warning ;
     sh:sparql [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "test run exercises a component of {?context}, which neither owns nor realises {?input}" ;
+        sh:message "test run names a component of {?context}, which neither owns nor realises {?input}" ;
         sh:select """SELECT DISTINCT $this ?context ?input WHERE {
-            $this rdm:exercises ?di ; rdm:exercisesOutput/rdm:inComponent/rdm:inContext ?ctx .
+            $this rdm:exercises ?di ; rdm:namesComponent/rdm:inContext ?ctx .
             BIND (REPLACE(STR(?ctx), "^.*[:/]context/", "") AS ?context) ?di rdfs:label ?input .
             FILTER NOT EXISTS { ?di rdm:ownedBy ?ctx }
             FILTER NOT EXISTS { ?ctx rdm:realises ?di } }""" ;
+    ] .
+
+rdm:UnknownComponentShape a sh:NodeShape ;
+    sh:targetSubjectsOf rdm:unknownComponent ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "test run's component label {?key} names no component of the C4 model" ;
+        sh:select """SELECT $this ?key WHERE { $this rdm:unknownComponent ?key }""" ;
     ] .
 
 rdm:DependencyDeclaredShape a sh:NodeShape ;

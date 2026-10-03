@@ -41,7 +41,7 @@ Common flag: `--dhf DIR` (default `dhf/`).
 
 | Command | What it does |
 |---|---|
-| `build [--allure-results DIR] [--checklist NAME\|FILE]… [-o FILE] [--store DIR] [--project NAME] [--infer]` | project the record (and any checklists, as data) into RDF named graphs; sorted N-Quads to a file or stdout, and/or a rebuilt Oxigraph store; `--infer` adds what the vocabulary's rules derive, in a separate graph |
+| `build [--allure-results DIR] [--checklist NAME\|FILE]… [-o FILE] [--store DIR] [--project NAME] [--infer] [--unit-coverage REPORT]` | project the record (and any checklists, as data) into RDF named graphs; sorted N-Quads to a file or stdout, and/or a rebuilt Oxigraph store; `--infer` adds what the vocabulary's rules derive, in a separate graph; `--unit-coverage` adds each component's unit lines run and measured (also on `query`, `validate` and `explorer-file`; an unreadable report exits 2) |
 | `validate [--allure-results DIR] [--checklist NAME\|FILE]… [--shapes FILE]…` | check the graph against the SHACL gate shapes (plus your own); exit 1 on a violation |
 | `query 'SPARQL' [--store DIR] [--format tsv\|csv\|json] [--infer]` | SELECT / ASK / CONSTRUCT over the store, or over an in-memory projection of `--dhf` |
 | `explorer-file -o FILE [--store DIR] [--exclude CLASS]… [--endpoint URL]` | write the whole record as an AWS Graph Explorer graph file (*Load graph from file*) |

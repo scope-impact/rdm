@@ -58,8 +58,13 @@ def cli(raw_arguments):
     elif args.command == 'hooks':
         install_hooks(args.dest, with_issue_hooks=args.with_issue_hooks)
     elif args.command == 'collect':
-        snippets = collect_from_files(args.files)
-        yaml.dump(snippets, sys.stdout, default_style='|')
+        try:
+            snippets = collect_from_files(args.files)
+        except (ValueError, OSError) as error:  # a malformed or repeated snippet, or a file it cannot read
+            print_error(f"Error: cannot collect snippets: {error}")
+            exit_code = 2
+        else:
+            yaml.dump(snippets, sys.stdout, default_style='|')
     elif args.command == 'translate':
         from xml.etree.ElementTree import ParseError
 
@@ -104,13 +109,13 @@ def handle_graph_command(args):
         return graph_cli.graph_build_command(
             dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
             output=_path(args.output), store=_path(args.store), project_name=args.project,
-            checklists=args.checklist, infer=args.infer,
+            checklists=args.checklist, infer=args.infer, unit_coverage=_path(args.unit_coverage),
         )
     if args.graph_command == 'query':
         return graph_cli.graph_query_command(
             args.sparql, store=_path(args.store), dhf_dir=_path(args.dhf),
             allure_results_dir=_path(args.allure_results), fmt=args.format, checklists=args.checklist,
-            infer=args.infer,
+            infer=args.infer, unit_coverage=_path(args.unit_coverage),
         )
     if args.graph_command == 'serve':
         return graph_cli.graph_serve_command(store=_path(args.store), bind=args.bind)
@@ -118,7 +123,7 @@ def handle_graph_command(args):
         return graph_cli.graph_explorer_file_command(
             Path(args.output), store=_path(args.store), dhf_dir=_path(args.dhf),
             allure_results_dir=_path(args.allure_results), checklists=args.checklist,
-            endpoint=args.endpoint, exclude=args.exclude,
+            endpoint=args.endpoint, exclude=args.exclude, unit_coverage=_path(args.unit_coverage),
         )
     if args.graph_command == 'validate':
         try:
@@ -128,6 +133,7 @@ def handle_graph_command(args):
         return validate_command(
             dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
             checklists=args.checklist, extra_shapes=[Path(s) for s in args.shapes or []],
+            unit_coverage=_path(args.unit_coverage),
         )
     if args.graph_command == 'mcp':
         try:
@@ -161,6 +167,7 @@ def handle_story_command(args):
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
                 output=Path(args.output) if args.output else None,
+                unit_coverage_report=Path(args.unit_coverage) if args.unit_coverage else None,
             )
 
         elif args.story_command == 'release-gate':
@@ -204,6 +211,7 @@ def handle_story_command(args):
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
                 output=Path(args.output) if args.output else None,
+                unit_coverage_report=Path(args.unit_coverage) if args.unit_coverage else None,
             )
 
         elif args.story_command == 'evidence-report':
@@ -302,6 +310,9 @@ def parse_arguments(arguments):
     story_verify_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     story_verify_parser.add_argument('--allure-results', help='Path to an Allure results directory')
     story_verify_parser.add_argument('-o', '--output', help='Output data file (default: verification.yml)')
+    story_verify_parser.add_argument('--unit-coverage', metavar='REPORT',
+                                     help="the unit tests' code coverage, one Cobertura XML or LCOV report: "
+                                          "added per C4 component as unit-test evidence (never acceptance evidence)")
 
     # rdm story release-gate
     release_gate_help = ('block release unless design is approved and every design input is '
@@ -337,6 +348,8 @@ def parse_arguments(arguments):
     bundle_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     bundle_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
     bundle_parser.add_argument('-o', '--output', help='output directory (default: release-evidence/)')
+    bundle_parser.add_argument('--unit-coverage', help="the unit tests' code coverage report (Cobertura XML or LCOV), "
+                               'carried and kept as verify takes it')
 
     # rdm story evidence-report
     report_help = 'render the verification report (PDF): every run behind each design input, with its evidence'
@@ -387,8 +400,13 @@ def _add_graph_parser(subparsers):
     record.add_argument('--allure-results', help='Allure results dir (adds the test runs)')
     record.add_argument('--checklist', action='append',
                         help='add a checklist: built-in name (rdm gap --list) or a .txt/RDF file; repeatable')
+    # The unit tests' coverage, on the commands that project the record (not mcp).
+    coverage = argparse.ArgumentParser(add_help=False)
+    coverage.add_argument('--unit-coverage', metavar='REPORT',
+                          help="the unit tests' code coverage report (Cobertura XML or LCOV): adds each "
+                               "component's unit lines run and measured")
 
-    build = graph_sub.add_parser('build', parents=[record],
+    build = graph_sub.add_parser('build', parents=[record, coverage],
                                  help='project the record into RDF (sorted N-Quads and/or an Oxigraph store)')
     build.add_argument('-o', '--output', help='write sorted N-Quads here (default: stdout, unless --store)')
     build.add_argument('--store', help='(re)build an Oxigraph store in this directory, e.g. .rdm/graph')
@@ -396,19 +414,20 @@ def _add_graph_parser(subparsers):
     build.add_argument('--infer', action='store_true',
                        help="add what the vocabulary's rules derive, in a separate inferred graph")
 
-    query = graph_sub.add_parser('query', parents=[record], help='answer a SPARQL query (SELECT/ASK/CONSTRUCT)')
+    query = graph_sub.add_parser('query', parents=[record, coverage],
+                                 help='answer a SPARQL query (SELECT/ASK/CONSTRUCT)')
     query.add_argument('sparql', help='the SPARQL query text')
     query.add_argument('--store', help='query this store (default: a fresh in-memory projection of --dhf)')
     query.add_argument('--format', choices=['tsv', 'csv', 'json'], default='tsv', help='SELECT result format')
     query.add_argument('--infer', action='store_true',
                        help="include what the vocabulary's rules derive (in-memory projection only)")
 
-    validate = graph_sub.add_parser('validate', parents=[record],
+    validate = graph_sub.add_parser('validate', parents=[record, coverage],
                                     help='check the graph against the SHACL gate shapes (+ your own)')
     validate.add_argument('--shapes', action='append', help='an additional SHACL shapes file; repeatable')
 
     explorer = graph_sub.add_parser(
-        'explorer-file', parents=[record],
+        'explorer-file', parents=[record, coverage],
         help='write the whole record as an AWS Graph Explorer graph file (Load graph from file)')
     explorer.add_argument('-o', '--output', required=True, help='graph file to write, e.g. rdm.graph.json')
     explorer.add_argument('--store', help='read this store (default: a fresh projection of --dhf)')

@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 58
+revision: 71
 title: Design Review — RDM
 ---
 
@@ -1717,6 +1717,514 @@ needs (DI-46), and test result translation (DI-17). No design input changed.
 - `rdm translate` accepted a result file whose suites hold no test, and wrote
   empty data. A file whose results flatten to no test is refused, as one
   with no suite is.
+
+# Design Review 58 — Design input by design input, the whole chain
+
+**Scope reviewed:** each design input in turn, with its user needs, design
+prose, tagged test, verification steps, output label and last run, read
+together. Findings are recorded here as each input is reviewed; nothing is
+changed until the pass is complete.
+
+**Disposition:** Approved for DI-1 to DI-4, as decided below; the changes are
+made context by context. The pass continues from DI-5 in a later design review.
+
+## DI-1 — Reading the record, with no planning dependency
+
+Traces to UN-001 and UN-004; described by the Record reader and Test tags
+rows of the specification context; verified by
+`test_compile_verification_from_the_record` (output `rdm/specification/sdd.py`),
+whose last run passed. **Changes requested:**
+
+- Ingesting Allure results is not verified. The test writes a passed result
+  for DI-1 but checks only the total, which counts declared inputs and would
+  be the same were the result ignored. Neither a verified nor an unverified
+  verdict follows from a result.
+- The check for no project-management dependency cannot fail: it looks for
+  a module name that no longer exists anywhere. It does not show that
+  reading the record imports no planning tool or needs no `backlog/`
+  directory.
+- The text asks for three things to be accepted at once: reading the needs
+  and design inputs, ingesting results, and no planning dependency.
+  Ingesting results is what DI-40 and DI-4 verify. Proposed: narrow DI-1 to
+  reading the needs and design inputs from frontmatter with no
+  project-management dependency.
+- The output label names the record reader only.
+- One verification step's name is cut off mid-sentence.
+
+**Decision (C):** narrow DI-1 to reading the user needs and design inputs
+from frontmatter with no project-management dependency; ingesting Allure
+results moves to the new reading design input of DI-3's decision
+(DI-40 reads tags from test source, not result files). Its test is to show that reading the
+record imports no planning tool and needs no `backlog/` directory, its output
+label to name what it exercises, and its step names to be whole. Made as listed
+under *Approved changes*.
+
+## DI-2 — The design gate blocks implementation until the design is approved
+
+Traces to UN-002; described by the Design gate and Pre-commit hook rows of
+the specification context; verified by `test_design_gate_requires_approval`
+(output `rdm/specification/design_gate.py`), whose last run passed with
+fourteen verification steps. **Changes requested:**
+
+- The test verifies more than the text states: the commit and merge hooks,
+  the user-need and risk documents held as the design documents are, the
+  warning on two design documents for one context, and the verdict outside
+  git. Fourteen steps are too many to accept as one input.
+- Two steps verify the record reader's handling of declarations and
+  frontmatter it cannot read, which is DI-46's, not the gate's.
+- The text names no merge, though the pre-merge-commit hook of Design
+  Reviews 54 and 57 is verified here.
+- "Design input" in the text means the design documents; the glossary's
+  design input is a single requirement.
+- The output label does not name the hooks (`rdm/specification/hook_files/`).
+
+**Decision (C):** split. DI-2 stays the design gate over the documents it
+holds — the design documents, the user needs, the risk documents and the
+design review — present, complete and committed, re-opened by a later edit,
+and saying so when approval cannot be checked outside git. A new design input
+covers the commit and merge hooks that run the gate on implementation work,
+with its own tagged test and output label. The steps for frontmatter and
+declarations the record reader cannot read move to DI-46's test. Made as listed
+under *Approved changes*.
+
+## DI-3 — Release is blocked until every design input is verified
+
+Traces to UN-003; described by the Release gate row of the release context;
+verified by `test_release_gate_blocks_until_verified` (output
+`rdm/release/gate.py`), whose last run passed with seven verification steps.
+**Changes requested:**
+
+- "Every" is not shown: the test's project declares one design input, so a
+  gate that passed when any one input was verified would pass it too.
+- A design input with both a passing and a failing run is not tried.
+- Three steps verify how Allure results are read — a result that cannot be
+  read, one with a byte-order mark, a status Allure does not write, labels
+  that are not name and value text, a symbolic link, JSON nested too deep —
+  which no design input states. This is the ingestion DI-1 is to drop.
+- The step on a run tagged with a mistyped id verifies a warning, not a
+  block, and the text does not state it.
+- The output label does not name where results are read
+  (`rdm/evidence/allure.py`).
+
+**Decision (C):** split. DI-3 keeps blocking release unless every declared
+design input is verified by a passing test; its test is to declare two
+inputs, one verified and one not, and to try an input with a passing and a
+failing run. A new design input of the test-evidence context covers reading
+Allure results: a result that cannot be read is unverified, never a pass, and
+a run tagged with an id no design input declares is warned about. It takes the
+reading steps, the mistyped-id step and its own output label, and the
+ingestion DI-1 drops. Made as listed
+under *Approved changes*.
+
+## DI-4 — Results reconcile to a status per design input and render as a matrix
+
+Traces to UN-004; described by the Verification data row of the release
+context and realised by the Allure reader of the test-evidence context;
+verified by `test_verification_status_traceable_from_results` (outputs
+`rdm/evidence/allure.py` and `rdm/release/verify.py`), whose last run passed
+with four verification steps. **Changes requested:**
+
+- No matrix is rendered: the step named for rendering checks the data the
+  matrix is built from, never the table its template writes.
+- "Allure tags" could mean the story labels of the results or the decorators
+  in test source; the test means the labels of the results.
+- A skipped result, and a broken one, are not tried: the test does not say
+  which status either gives a design input.
+- Two steps verify how results are read — a failed or broken step fails its
+  run, and `verify` names a result file it cannot read — which is the new
+  reading design input's of DI-3's decision.
+- One verification step's name is cut off mid-sentence.
+
+**Decision (C):** reword DI-4 to: "RDM shall reconcile each declared design
+input against the story labels of the executed Allure results as verified,
+failed or untested, and render the traceability matrix of those statuses
+grouped under the user needs." Its test is to render the matrix and check its
+rows, to try a skipped and a broken result, and to have whole step names; the
+two reading steps move to the reading design input. Made as listed
+under *Approved changes*.
+
+## Approved changes
+
+The decisions above, as made in the record:
+
+- **DI-1** reworded: reading the user needs and design inputs from
+  frontmatter, importing no planning tool and needing no planning directory.
+- **DI-2** reworded: the design gate over the design documents, the
+  documents that declare user needs, the risk documents and the design
+  review, and the verdict outside git.
+- **DI-71** (specification, new): the commit and merge hooks that run the
+  design gate on implementation work. RISK-TOOL-003 is controlled by DI-2 and
+  DI-71.
+- **DI-46** widened to the declarations and frontmatter the record reader
+  cannot read, and the warning on a context with more than one design
+  document, so the steps moved from DI-2's test are stated by the input whose
+  test now holds them.
+- **DI-3** unchanged in text; its test to show "every" and a passing and a
+  failing run of one input.
+- **DI-4** reworded as decided.
+- **DI-72** (test evidence, new): reading Allure results, with what cannot be
+  read never counted as a pass, and orphan tags warned about. It takes the
+  ingestion DI-1 drops.
+- The C4 model's component descriptions follow: the hooks, the Allure reader
+  and the verification data.
+
+# Design Review 59 — Why tests drifted from their design inputs, and the process that holds them
+
+**Scope reviewed:** how the first four inputs of Design Review 58 came to
+have tests that verify more, or less, than their text states, and the changes
+to the way RDM is developed that answer it. No design input changes.
+
+**Disposition:** Approved.
+
+## What happened
+
+Every design input had a passing tagged test and the gates were green, yet
+each of the four inputs reviewed disagreed with its test. DI-2's test grew
+from three verification steps to fourteen in two days of fixes (Design
+Reviews 44, 48 and 51 to 57) while its text stayed the same: each fix added
+its proof as a step on the nearest existing test. Other tests verified less
+than their text: DI-1's ingesting of results, DI-3's "every", DI-4's
+rendering.
+
+## Why
+
+- **A fix was recorded but its requirement was not.** Each fix had its
+  design review entry and its amended prose, but whether the behaviour it
+  proved was stated by the input whose test took the step was never asked.
+  The rule that what must be accepted separately is a separate design input
+  existed, and was not applied.
+- **No gate reads a test against its text, and none should.** The gates
+  check that a test exists, is tagged and passes; a mutation probe shows a
+  test is sharp, not that it is aimed at its text. The faithfulness gate that
+  read them together was retired (UN-009) because a machine verdict recorded
+  as evidence is weak and approval is a person's; nothing took its place.
+- **The review was handed too much.** One pull request carried seven fix
+  batches across every context; no reviewer reads 59 inputs against their
+  tests inside it.
+- **Texts joined behaviours with "and",** inviting a test of one half.
+
+## The answer is a process, not automation
+
+A gate that judged whether a test proves its text would be the faithfulness
+gate again. The changes are to how RDM is developed, written where the people
+and agents who change it look:
+
+- **Changing an existing test** (`dhf/AGENT_WORKFLOW.md`, step 5): before a
+  step is added to an existing test, the input's text is read; a step the
+  text does not state means amending the text, or declaring a new input, in
+  the same design review entry.
+- **One requirement per input** (`CONTEXT.md`, design input; step 2): one
+  `shall`, no "and" joining behaviours that could be accepted apart.
+- **The review reads text and test together** (the pull-request template,
+  step 7): for each design input the change touches, the reviewer reads its
+  text beside its tagged test and says so.
+- **One bounded context per fix pull request** (step 7, hard rules).
+- **A chain review before each release** (`dhf/AGENT_WORKFLOW.md`,
+  `CONTEXT.md`): every design input read with its user needs, prose, tagged
+  test, verification steps, output labels and last run, recorded as a design
+  review, as Design Review 58 began.
+
+# Design Review 60 — Design input by design input, continued
+
+**Scope reviewed:** the chain review of Design Review 58, continued from DI-5:
+each design input with its user needs, design prose, tagged test,
+verification steps, output labels and last run. Findings and decisions are
+recorded here as each input is reviewed; changes are made once approved.
+From DI-9 on, the pass was kept simple: a change is made only where a test
+does not check what its text states, where the requirement is asserted outside
+any verification step, where a step checks what the text does not state
+(answered by a few words in the text, never by a new input), or where the code
+passes or drops in silence what it should refuse or report.
+
+**Disposition:** Approved, with the changes below.
+
+## DI-5 — Persona runs give a formative status per user need
+
+Traces to UN-005; described by the Formative usability and Persona command
+rows of the specification context; verified by
+`test_formative_usability_classified` (output
+`rdm/specification/persona.py`), whose last run passed with one
+verification step. **Changes requested:**
+
+- Two of the four statuses, clean and not run, are never shown.
+- The precedence across a need's runs (failed over issues over clean) is not
+  tried: no need has more than one run.
+- `rdm story persona`, which the design says prints each need's status and
+  always passes, is not run.
+- A run that names no user need is dropped without a word, and usability
+  issues written as text rather than a list are discarded, so a run that
+  found problems reads as clean. The design says neither; nothing tests
+  either.
+- A run naming a user need the registry does not hold is collected but not
+  shown to be reported.
+- The test asserts the issues status outside any verification step, and its
+  docstring names UN-001, not UN-005, and claims formative evidence never
+  gates release, which nothing checks.
+
+**Decision (C):** widen DI-5 so that a persona run file RDM cannot read as a
+run — no user need, issues that are not a list, JSON it cannot read — is
+reported and never counted as clean, and a run naming an unknown user need is
+reported. Its test is to show all four statuses and their precedence over
+several runs of one need, to run `rdm story persona`, to put every check in a
+step and to correct its docstring. The reconciler changes with it.
+
+## DI-7 — A Markdown template rendered against the data supplied
+
+Traces to UN-001; described by the Renderer row of the publishing context;
+verified by `test_renders_template_against_data_context` (output
+`rdm/publishing/render.py`), whose last run passed with one verification
+step. **Changes requested:**
+
+- The requirement itself — a template filled from data — is asserted outside
+  any verification step, so the run shows only error handling.
+- That one step checks what the text does not state: `rdm render` refuses a
+  value the template uses that the data does not supply, and a template that
+  does not exist, naming each and exiting 2; an empty configuration loads no
+  extensions.
+- "A supplied data context" leaves unstated what matters: each data file is
+  available under its file name.
+- The test renders a string, not a Markdown template file, except in passing.
+- The Renderer row claims rendering in one or two passes, which no design
+  input states and no acceptance test shows; only unit tests do.
+
+**Decision (C):** reword DI-7 to: "RDM shall render a Markdown template file
+with Jinja2 against the data files supplied, each available under its file
+name, and refuse, naming it, a value the template uses that the data does not
+supply." Its test is to render a template file from data files in a step,
+show the file-name convention, and keep the refusals as steps. Two-pass
+rendering is taken up with DI-9.
+
+## DI-8 — The traceability template filters
+
+Traces to UN-001; described by the Renderer row of the publishing context;
+verified by `test_traceability_filters` (output `rdm/publishing/render.py`),
+whose last run passed with three verification steps. **Changes requested:**
+
+- The filters are called as Python functions, never from a template: a
+  renderer that no longer registered them would pass the test.
+- `join_to` writes nothing for an id its table lacks, so a document renders
+  a blank row where it should fail (`rdm/publishing/render.py`, `join_to`).
+
+**Decision (B, kept simple):** DI-8 keeps one input and its text; its test
+uses each filter from a rendered template, and `join_to` refuses an id its
+table lacks, naming it.
+
+## DI-9 to DI-70 — the rest of the pass
+
+Approved as they stand: DI-25, DI-35, DI-51, DI-53, DI-54, DI-56, DI-57,
+DI-58, DI-59, DI-60, DI-62, DI-67, DI-68, DI-69.
+
+| Input | Finding | Change |
+| --- | --- | --- |
+| DI-9 | Its checks sit outside any step; "expand declared vocabulary" is not what the extension does — a template gets the words its first render produced, which needs the second pass | Text names the second pass; checks in steps |
+| DI-10 | The gaps are counted, never listed; exit codes outside a step; steps for nothing checked, a placeholder and a closed pipe unstated | Text widened; the gaps listed, in steps |
+| DI-11 | FDA-CYBER and FDA-HFE never checked; includes between built-ins never resolved by name; **the ISO 14971:2019 checklist holds no clause** | Text asks clauses under unique keys; one step per named standard and one built-in include; the 14971:2019 clauses written |
+| DI-12 | The table row outside a step; the unique-keys step is DI-11's | Text: exits as the gap report does; step moved to DI-11 |
+| DI-15 | Steps check what the text does not state: an existing directory refused, offline build, empty registry, runbook | Text widened |
+| DI-16 | Extraction asserted outside a step; a key repeated in a second file silently replaces the first | Step; a repeated key refused, naming both files |
+| DI-17 | gtest asserted outside a step; a file with no results refused, unstated | Text widened; step |
+| DI-18 | Unreadable results listed and a missing directory refused, unstated | Text widened |
+| DI-22 | Refusals and kept comments and line endings, unstated | Text widened |
+| DI-24 | The pre-merge-commit hook never checked; symbolic links and the .gitignore lines unstated | Text widened; the second hook checked |
+| DI-26 | No verification steps | Steps |
+| DI-29 | Its checks sit outside any step | Step |
+| DI-30 | The results-with-attachments check outside a step; steps unstated; a missing matrix template omitted in silence; two steps are DI-64's | Text widened; step; a missing template refused; the two steps moved |
+| DI-31 | JavaScript and the other conventional names never exercised; output label names the wrong file | Fixtures added; label `rdm/specification/tags.py` |
+| DI-33 | The named-reviewer rule unstated | Text widened |
+| DI-34 | "One-line" is untrue; the ambiguous-site refusal unstated | Text reworded |
+| DI-36 | Refusing FROM, `--infer` over a store and a missing store, unstated | Text widened |
+| DI-37 | No verification steps; edition unstated | Text widened; steps |
+| DI-38 | Per-rule checks outside any step; whole-record findings and clause shapes unstated | Text widened; steps |
+| DI-39 | A node with its own IRI (a checklist clause from RDF) is left out in silence, and the test asserts it | Vocabulary told apart by the ontology, not the `urn:` prefix; text widened |
+| DI-40 | No story on a test class is tried; output label names the wrong file | Fixture; label `rdm/specification/tags.py` |
+| DI-41 | "Exactly four tools" outside a step | Step |
+| DI-42 | Trace accepts a declared id of any shape, unstated | Text widened |
+| DI-43 | A malformed policy refused and a status inherited, unstated; a second policy ignored in silence | Text widened; a second policy refused |
+| DI-44 | A malformed policy and the policy-only document, unstated | Text widened |
+| DI-45 | The projection checked outside a step; register findings and the proposed warning unstated | Text widened; step |
+| DI-47 | Restoring is skipped when the file was edited since, unstated | Text widened |
+| DI-48 | No verification steps | Steps |
+| DI-49 | A missing or non-RDF file reported, unstated | Text widened |
+| DI-50 | An unknown status blocks and no status is proposed, unstated | Text widened |
+| DI-52 | Both links outside a step; the no-review link unstated | Text widened; step |
+| DI-61 | The shape warns only when other tests in the file ran | Text says so |
+| DI-63 | The image tag for a branch or commit, RDM's own CI and the upload, unstated | Text widened; DI-64's workflow sentence moves here |
+| DI-64 | The workflow sentence untested here; several steps unstated | Text widened; the sentence moved to DI-63; the two steps from DI-30 join |
+| DI-65 | Unstated labels; `worktree=clean` written when nothing was checked | Text widened; `unknown` when the commit is |
+| DI-66 | Views, implied relationships unstated; RDM's naming conventions checked as reading; **the shared kernel drawn in the specification context** | Text widened; the convention check moved to DI-68's own-record step; the kernel drawn in no context |
+| DI-70 | An image of no view, removal and refusal, unstated | Text widened |
+
+# Design Review 61 — What a test exercises, without reading the code
+
+**Scope reviewed:** how the graph learns which components a test run
+exercises (DI-56, DI-67, DI-68, DI-69), and how to learn it for a project in
+any language.
+
+**Disposition:** Approved: proposals 1 to 5.
+
+## Why
+
+A test names the code it exercises in `output` labels, as file paths. Three
+components of RDM's own model — first-pass output, project templates and the
+result formatters — read as exercised by no test, though DI-9, DI-15 and
+DI-17 run their code: each test named the entry point it calls, not the
+module behind it. The graph says no design input covers them, which is
+false. Two things make this worse for a project that is not Python:
+
+- the labels are file paths, so they follow the code's layout and break when
+  it moves, and a test claims only what its author remembered to name;
+- the dependencies DI-67 and DI-68 compare with the model are Python imports
+  read from the syntax tree (`rdm/architecture/model.py`); a Java or
+  TypeScript project has none.
+
+## Proposed
+
+The C4 model is the language-free description of the code, so the record
+reasons over it, and reads code only where a project offers it.
+
+1. **A test names components, not files.** DI-56 amended: a test run links to
+   the components its `component` labels name, by the model's component key;
+   a key the model does not declare is a warning, as an unknown design-input
+   tag is. `output` labels keep working, mapped to components by code path as
+   today.
+2. **What a named component uses is reached.** A new input, DI-73: the graph
+   derives, by a rule declared in its vocabulary (DI-62), that a run reaches
+   each component the declared relationships lead to from a component it
+   names; reached is kept apart from named, and never stated by the record.
+3. **The trace says which.** DI-69 amended: the trace of a design input lists
+   the components its runs name and, apart, those they reach.
+4. **Code is read only where a project offers it.** DI-67 and DI-68 amended:
+   the import dependencies stay, for Python only, as a check of the declared
+   relationships; for any other language the declared relationships stand
+   alone, and the record says the check did not run rather than that it
+   found nothing.
+5. **Coverage, when a project gives it, is evidence.** A new input, DI-74
+   (optional for a project): RDM reads per-test coverage in LCOV or Cobertura
+   XML, which coverage.py, JaCoCo, Istanbul and gcov write, maps each covered
+   file to its component by code path, and links the run to the components it
+   actually ran, apart from those it names or reaches. RDM parses no source.
+
+## Decisions
+
+- **Only a named component counts for DI-68.** Reaching over-approximates —
+  a component may use another only in paths the test never runs — so a
+  reached component never raises or clears a warning.
+- **Coverage (proposal 5) is in this change**, first deferred, then taken in
+  on review. A run's coverage reaches RDM as a file the run attaches to its
+  Allure result, in LCOV or Cobertura XML: any language's Allure adapter can
+  attach a file, so coverage is per test without RDM knowing how it was
+  measured, and RDM still parses no source. Coverage, like reaching, never
+  raises or clears a DI-68 warning: only named components do.
+
+## Approved changes
+
+- **DI-56** amended: a run names components by a `component` label (a model
+  key; an unknown key warns) or, as before, by an `output` label's file.
+- **DI-73** (graph, new): the reaches rule, declared in the vocabulary and
+  derived only into the inferred graph.
+- **DI-69** amended: the trace lists named and reached components apart.
+- **DI-67** amended: Python imports are read for Python code only, and a
+  component whose code holds none is marked as not read.
+- **DI-68** amended: the context warning is on named components; the
+  dependency warning is on dependencies read from code.
+- **DI-74** (test evidence, new; realised by the graph): a run's coverage
+  attachment links it to the components it ran; an attachment that cannot be
+  read is reported. DI-69 also lists these components, apart.
+
+# Design Review 62 — RDM's own runs attach their coverage
+
+**Scope reviewed:** how a test run's coverage reaches the graph for a Python
+project, RDM's own first among them. No other design input changes.
+
+**Disposition:** Approved.
+
+- DI-74 reads coverage a run attaches, but nothing attached it: RDM's own
+  graph showed no covered component. **DI-75** (test evidence, new): the
+  pytest plugin, asked with `--rdm-coverage`, measures each tagged test's own
+  coverage with coverage.py and attaches it as LCOV to that test's result.
+- Coverage is asked for, never assumed: measuring slows a run, and a project
+  may measure coverage its own way. When coverage.py is missing, or another
+  measurement (pytest-cov, `coverage run`) is already running, the plugin
+  measures nothing and says so rather than disturbing it.
+- RDM's own acceptance runs ask for it, so RDM's graph shows what each
+  acceptance test ran. Code a test runs in a separate process is not
+  measured; such a component is still reached or named.
+
+# Design Review 63 — Coverage is a unit-test measure, never acceptance evidence
+
+**Scope reviewed:** DI-74 and DI-75 (Design Reviews 61 and 62), against what
+acceptance evidence is for.
+
+**Disposition:** Approved.
+
+- Acceptance tests prove design inputs, end to end, and Allure carries their
+  evidence. Code coverage measures how much of a unit's code its tests run:
+  a unit-test measure, which RDM keeps out of Allure and the record as it
+  keeps every unit test out (`tests/allure_scope_test.py`).
+- DI-74 and DI-75 measured coverage during acceptance runs and carried it in
+  Allure into the graph. That answers which lines an end-to-end test touched,
+  which no design input asks; it counted the measuring plugin as covered by
+  every run; and it doubled the acceptance run.
+- What an acceptance test exercises is answered at the architecture's level,
+  without coverage: the components a run names, and those it reaches through
+  the declared relationships (DI-56, DI-73).
+- **Retired:** DI-74 and DI-75, with their tests and code (the coverage
+  reader, `rdm:covers`, the unreadable-coverage warning, the trace's covered
+  components, the plugin's `--rdm-coverage`). **DI-69** returns to named and
+  reached components. The glossary and the workflow's hard rules say that
+  coverage is never acceptance evidence.
+- Coverage as evidence of unit verification (IEC 62304 5.5, classes B and
+  C), if wanted, is a design input of its own on the unit-test side, never
+  carried through Allure.
+
+# Design Review 64 — The unit tests' code coverage, as evidence of unit verification
+
+**Scope reviewed:** code coverage on the unit-test side, as Design Review 63
+left it: evidence that the software units were exercised by their unit tests
+(IEC 62304 5.5), never acceptance evidence and never carried in Allure.
+
+**Disposition:** Approved.
+
+- **DI-76** (release, new; realised by test evidence): `rdm story verify`,
+  given the unit tests' coverage as one Cobertura XML or LCOV report (what
+  coverage.py, JaCoCo, Istanbul and gcov write), adds to the verification
+  data, per C4 component with code, the lines its unit tests ran out of
+  those measured, and lists apart a component the report does not measure.
+  The traceability matrix shows it beside the design inputs, not inside them:
+  a design input is verified by its acceptance test; a component's unit
+  coverage says how far its own code was unit-tested.
+- The C4 model, not a language, maps a file to its component, so any
+  language's coverage report serves. A report that cannot be read is an
+  error, never no coverage.
+- No threshold is set and nothing blocks release: a minimum, where a
+  project wants one (for software of class B or C), is a later input.
+- RDM's own CI measures its unit tests' coverage and passes it to verify.
+- **DI-30** amended: the evidence bundle rebuilt the verification data
+  without the coverage report, so the retained matrix had no coverage
+  section. The bundle takes the same report, carries its coverage as verify
+  does, and keeps the report with the evidence.
+- A new component, the unit coverage reader (`rdm/evidence/unit_coverage.py`),
+  in the test-evidence context; the views are redrawn.
+
+# Design Review 65 — The map draws what the graph holds
+
+**Scope reviewed:** the traceability map of the docs site, drawn from the
+graph, against what the graph now holds (Design Reviews 61 and 64).
+
+**Disposition:** Approved.
+
+- The map took the components a run exercises from its output labels only,
+  so it called three components exercised by no test that the graph knows
+  runs name or reach. It draws the components runs **name** and, apart, those
+  they **reach**, and counts a component exercised when any run names or
+  reaches it.
+- The unit tests' code coverage was in the verification data only, so the
+  map, drawn from the graph, could not show it. **DI-67** amended: given the
+  coverage report, the graph carries each component's lines run and measured
+  as the component's own properties — never linked to a run or a design
+  input, so coverage stays unit-test evidence (Design Review 63). `rdm graph
+  build` and the docs build take the report; the map shows each component's
+  unit coverage on its box and in its panel.
 
 # Approval
 

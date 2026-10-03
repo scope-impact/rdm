@@ -5,7 +5,9 @@ Each ``*-result.json`` becomes an ``rdm:TestRun`` (a ``prov:Activity``) with
 what counts as evidence: uuid, full name, start and end times, status and its
 message and trace, parameters, steps and attachments. ``story`` labels link a
 run to the design inputs it verifies, ``output`` labels to the source files it
-exercises. Nothing else is projected (Design Review 18): other labels, links,
+exercises, and ``component`` labels name C4 components by key (linked, or
+recorded as unknown, once the model is read: rdm/graph/c4.py). Nothing else
+is projected (Design Review 18): other labels, links,
 test cases and container fixtures repeat the record or say nothing about
 design controls; the raw results keep them, in the evidence bundle.
 Attachment content stays in the files; the graph holds the reference.
@@ -65,6 +67,12 @@ def _evidence(ds: _Dataset, owner: ox.NamedNode, raw: dict, scope: str, key: str
         _evidence(ds, node, step, scope, position)
 
 
+def _source(ds: _Dataset, value: str) -> ox.NamedNode:
+    source = ds.thing(ds.node("source", value), rdm("SourceFile"), value, GRAPH)
+    ds.add(source, rdm("path"), value, GRAPH)
+    return source
+
+
 def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
     stem = path.stem
     run = ds.thing(ds.node("run", stem), rdm("TestRun"), str(raw.get("name") or stem), GRAPH)
@@ -100,9 +108,9 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode],
         if name in DESIGN_INPUT_LABELS and (is_id(value) or value in declared):
             ds.add(run, rdm("exercises"), ds.node("input", value), GRAPH)
         elif name == "output" and value:  # DI-56: the code the run exercises
-            source = ds.thing(ds.node("source", value), rdm("SourceFile"), value, GRAPH)
-            ds.add(source, rdm("path"), value, GRAPH)
-            ds.add(run, rdm("exercisesOutput"), source, GRAPH)
+            ds.add(run, rdm("exercisesOutput"), _source(ds, value), GRAPH)
+        elif name == "component" and value:  # DI-56: a component the run names, by its key in the model
+            ds.component_labels.append((run, value))
     test = tests.get(str(raw.get("fullName") or ""))
     if test is not None:  # DI-61: the test this run ran
         ds.add(run, rdm("runOf"), test, GRAPH)

@@ -64,9 +64,9 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
         return out
 
     out = _session(dhf, results, steps)
-    assert out["names"] == ["query", "schema", "trace", "validate"]
 
-    with verification_step("schema: the vocabulary and the predeclared prefixes"):
+    with verification_step("Exactly four tools; schema: the vocabulary and the predeclared prefixes"):
+        assert out["names"] == ["query", "schema", "trace", "validate"]
         error, schema = out["schema"]
         assert not error and "rdm:DesignInput" in schema["ontology"]
         assert schema["prefixes"]["rdm"] == "https://github.com/scope-impact/rdm/ns#"
@@ -75,10 +75,7 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
         error, rows = out["query"]
         assert not error and [r["id"] for r in rows["rows"]] == ["DI-1", "DI-2"] and rows["truncated"] is False
 
-    # trace a design input: text, need, owning context and document, realising
-    # context, tagged test file, and its run.
-    with verification_step("trace a design input: text, need, owning context and document, realising context, "
-                           "tagged test…"):
+    with verification_step("trace a design input: its text, need, contexts, document, tagged test file and run"):
         error, di = out["trace_di"]
         di = di["design_input"]
         assert not error and di["id"] == "DI-1" and di["text"] == "The device shall alarm."

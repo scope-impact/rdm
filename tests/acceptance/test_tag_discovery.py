@@ -33,6 +33,7 @@ def test_writes_a_fixture(tmp_path):
 
 
 @allure.feature("DI-2")
+@allure.story("DI-12")
 class TestGroup:
     @allure.story("DI-3")
     async def test_method(self):
@@ -41,7 +42,7 @@ class TestGroup:
 
 
 @allure.story("DI-40")
-@allure.label("output", "rdm/evidence/allure.py")
+@allure.label("output", "rdm/specification/tags.py")
 def test_python_tags_come_from_decorators_only(tmp_path: Path) -> None:
     """DI-40: tags from allure story decorators on functions (sync and async)
     and classes and from a module-level pytestmark; none from strings,
@@ -64,6 +65,7 @@ def test_python_tags_come_from_decorators_only(tmp_path: Path) -> None:
                            "single)"):
         assert files["DI-1"] == ["test_writer.py"]
         assert files["DI-3"] == ["test_writer.py"]
+        assert files["DI-12"] == ["test_writer.py"]  # the story on the test class
         assert files["DI-4"] == ["test_marked.py"]
         assert files["DI-10"] == ["test_single_mark.py"]
     with verification_step("Only the story names a design input: a feature (the context) does not"):
@@ -73,7 +75,7 @@ def test_python_tags_come_from_decorators_only(tmp_path: Path) -> None:
             assert tag not in files, tag
     with verification_step("A file that does not parse still has its decorator-pattern tags read"):
         assert files["DI-11"] == ["test_broken.py"]
-        assert set(files) == {"DI-1", "DI-3", "DI-4", "DI-10", "DI-11"}
+        assert set(files) == {"DI-1", "DI-3", "DI-4", "DI-10", "DI-11", "DI-12"}
     with verification_step("Only tests claim: a story on a helper function or class is no tag, and the story "
                            "decorator counts under any name the file imports it as"):
         (tests / "test_helpers.py").write_text(

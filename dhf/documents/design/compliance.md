@@ -5,13 +5,13 @@ context: compliance
 references: [DC-001]
 design_inputs:
   - id: DI-10
-    text: "RDM shall report the checklist references (keys) absent from a set of documents, exiting non-zero when any required reference is missing."
+    text: "RDM shall report the checklist references (keys) absent from a set of documents, exiting non-zero when any required reference is missing or nothing could be checked, warning of a document that still holds a placeholder, and ending quietly when its reader stops."
     traces_to: [UN-006]
   - id: DI-11
-    text: "RDM shall ship composable built-in checklists for the applicable standards (IEC 62304, ISO 14971, FDA-SW/CYBER/HFE), resolving `include` directives between them."
+    text: "RDM shall ship composable built-in checklists for the applicable standards (IEC 62304, ISO 14971, FDA-SW/CYBER/HFE), each with clauses under unique keys, resolving `include` directives between them by built-in name."
     traces_to: [UN-006]
   - id: DI-12
-    text: "RDM shall report coverage of documents against a checklist (total / missing / covered / percent), listing the missing items in verbose mode."
+    text: "RDM shall report coverage of documents against a checklist (total / missing / covered / percent), listing the missing items in verbose mode, and exiting as the gap report does."
     traces_to: [UN-006]
   - id: DI-25
     text: "RDM shall ship a built-in 21 CFR Part 11 document-control checklist, and RDM's own document-control statement (git as the document control system for this repository) shall pass gap analysis against it."
@@ -109,9 +109,8 @@ reading and matching rules; they are the graph's inputs, not parts of these.
 
 Assumptions and open questions:
 
-- The ISO 14971 2019 checklist holds only its header comments, so it has no
-  clauses, and gap analysis against it is an error (Design Review 55). DI-11
-  names ISO 14971; the 2007 edition is the usable one today.
+- The ISO 14971 2019 checklist lists the standard's clauses by number and a
+  short mnemonic title, as the other built-ins do (Design Review 60).
 - Verbose coverage names at most ten missing clauses per checklist and
   counts the rest; the gap report names them all.
 

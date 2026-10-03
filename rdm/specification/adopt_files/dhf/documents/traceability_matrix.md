@@ -46,6 +46,25 @@ Allure tags matching no declared design input:
 - {{ orphan }}
 {%- endfor %}
 {% endif %}
+
+{% if verification.unit_coverage is defined %}
+# Unit-test code coverage
+
+How much of each component's code its unit tests ran, from the unit tests' coverage report: evidence of unit verification (IEC 62304 5.5), shown beside the design inputs, not inside them. A design input is verified by its acceptance test, never by coverage.
+
+| Component | Context | Lines run | Lines measured | Coverage |
+| --- | --- | --- | --- | --- |
+{%- for c in verification.unit_coverage.components %}
+| {{ c.name }} | {{ c.context or '—' }} | {{ c.executed }} | {{ c.measured }} | {{ c.percent }}% |
+{%- endfor %}
+{% if verification.unit_coverage.unmeasured %}
+
+Components whose code the report does not measure:
+{% for c in verification.unit_coverage.unmeasured %}
+- {{ c.name }} ({{ c.context or '—' }})
+{%- endfor %}
+{% endif %}
+{% endif %}
 {% else %}
 No `verification` data was provided. Run `rdm story verify` to generate
 `dhf/data/verification.yml`, then re-render this document.

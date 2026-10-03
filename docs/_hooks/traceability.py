@@ -1,23 +1,31 @@
 """MkDocs build hook: traceability from the graph, for RDM and its worked example.
 
 Before the build, run each record's acceptance tests into its Allure results,
-so the evidence is live. Then project each record into its RDF graph and
-answer a handful of SPARQL queries: user needs, risks, design inputs, tagged
-tests and their runs, C3 components in their bounded contexts, the declared
-C4 relationships, the code imports and the files tests exercise. The answers
+so the evidence is live, and, for a project with unit tests (RDM's own; the
+example has none), its unit tests under coverage into a Cobertura report in a
+temporary directory. Then project each record into its RDF graph, with what
+the vocabulary's rules derive (``infer=True``: the components a run reaches)
+and the unit coverage report when there is one, and answer a handful of
+SPARQL queries: user needs, risks, design inputs, tagged tests and their runs,
+the components each run names and reaches, C3 components in their bounded
+contexts with their unit coverage, the declared C4 relationships, the code
+imports and the files tests exercise. The answers
 go to ``assets/<name>.json``, which the page of the same name draws with
 ``docs/javascripts/traceability-map.js``. Nothing but the graph feeds a map.
 
 Best-effort: a test run that fails still leaves its results; without the
 ``graph`` extra the data is ``{"error": why}`` and the page says so, so
-``mkdocs build --strict`` never breaks.
+``mkdocs build --strict`` never breaks; a unit coverage run that fails leaves
+the map without coverage and says why.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from mkdocs.structure.files import File
@@ -26,17 +34,22 @@ ROOT = Path(__file__).resolve().parents[2]
 EXAMPLE = ROOT / "examples" / "github-document-control"
 # page name -> the project whose acceptance tests run, and its DHF
 MAPS = {"traceability-map": ROOT, "example-traceability-map": EXAMPLE}
+# page name -> the package its unit tests measure; a project not here has no unit tests
+UNIT_SOURCE = {"traceability-map": "rdm"}
+# page name -> its unit coverage report, or why there is none (set before the build)
+UNIT_COVERAGE: dict[str, Path | str] = {}
 
 
-def graph_data(dhf: Path, results: Path) -> dict:
-    """The map's data, every value from a SPARQL query over the projected graph."""
+def graph_data(dhf: Path, results: Path, unit_coverage: Path | None = None) -> dict:
+    """The map's data, every value from a SPARQL query over the projected graph,
+    with what its rules derive and, given the report, each component's unit coverage."""
     import pyoxigraph as ox
 
     from rdm.graph.ns import with_prefixes
     from rdm.graph.project import project
 
     store = ox.Store()
-    store.extend(project(dhf, results if results.is_dir() else None))
+    store.extend(project(dhf, results if results.is_dir() else None, infer=True, unit_coverage=unit_coverage))
 
     def q(sparql: str) -> list[dict]:
         r = store.query(with_prefixes(sparql), use_default_graph_as_union=True)
@@ -60,17 +73,20 @@ def graph_data(dhf: Path, results: Path) -> dict:
                   OPTIONAL { ?n rdm:hazard ?h } OPTIONAL { ?n rdm:level ?lvl }
                   OPTIONAL { ?n rdm:residualDecision ?dec } OPTIONAL { ?n rdm:category ?cat } }"""):
         node(r["n"], "risk", r["id"], text=r["h"] or "", level=r["lvl"], decision=r["dec"], category=r["cat"])
-    for r in q("""SELECT ?n ?l ?d ?ctx ?kl ?code WHERE { ?n a rdm:Component ; rdfs:label ?l
+    for r in q("""SELECT ?n ?l ?d ?ctx ?kl ?code ?run ?measured WHERE { ?n a rdm:Component ; rdfs:label ?l
                   OPTIONAL { ?n dcterms:description ?d } OPTIONAL { ?n rdm:inContext ?ctx }
-                  OPTIONAL { ?n rdm:containedIn ?k . ?k rdfs:label ?kl } OPTIONAL { ?n rdm:code ?code } }"""):
-        node(r["n"], "component", r["l"], text=r["d"] or "", context=r["ctx"], container=r["kl"], code=r["code"])
-    for r in q("""SELECT ?t ?name ?d ?status ?c WHERE {
-                  ?r a rdm:TestRun ; rdm:runOf ?t ; rdm:exercises ?d ; rdm:status ?status . ?t rdfs:label ?name
-                  OPTIONAL { ?r rdm:exercisesOutput/rdm:inComponent ?c } }"""):
+                  OPTIONAL { ?n rdm:containedIn ?k . ?k rdfs:label ?kl } OPTIONAL { ?n rdm:code ?code }
+                  OPTIONAL { ?n rdm:unitLinesRun ?run ; rdm:unitLinesMeasured ?measured } }"""):
+        unit = {"unitRun": int(r["run"]), "unitMeasured": int(r["measured"])} if r["measured"] else {}
+        node(r["n"], "component", r["l"], text=r["d"] or "", context=r["ctx"], container=r["kl"], code=r["code"],
+             **unit)
+    for r in q("""SELECT ?t ?name ?d ?status WHERE {
+                  ?r a rdm:TestRun ; rdm:runOf ?t ; rdm:exercises ?d ; rdm:status ?status . ?t rdfs:label ?name }"""):
         node(r["t"], "test", r["name"], status=r["status"])
         edges.add((r["t"], r["d"], "verifies"))
-        if r["c"]:
-            edges.add((r["t"], r["c"], "exercises"))
+    # The components a run names (stated) and those it reaches (derived by rdm:ReachesRule).
+    for rel, prop in (("names", "rdm:namesComponent"), ("reaches", "rdm:reaches")):
+        edges.update((r["t"], r["c"], rel) for r in q(f"SELECT DISTINCT ?t ?c WHERE {{ ?r rdm:runOf ?t ; {prop} ?c }}"))
     for rel, sparql in (("traces to", "SELECT ?s ?o WHERE { ?s a rdm:DesignInput ; rdm:tracesTo ?o }"),
                         ("owns", "SELECT ?s ?o WHERE { ?o a rdm:DesignInput ; rdm:ownedBy ?s }"),
                         ("realises", "SELECT ?s ?o WHERE { ?s a rdm:BoundedContext ; rdm:realises ?o }"),
@@ -94,23 +110,48 @@ def graph_data(dhf: Path, results: Path) -> dict:
         "deps": q("SELECT ?s ?t ?i ?b WHERE { ?d a rdm:Dependency ; rdm:source ?s ; rdm:target ?t "
                   "OPTIONAL { ?d rdm:imports ?i } OPTIONAL { ?d rdm:importedBy ?b } }"),
         "files": files,
+        "unitCoverage": unit_coverage is not None,
     }
 
 
+def unit_coverage(project: Path, source: str) -> Path | str:
+    """Run the project's unit tests under coverage, as its CI does: the
+    Cobertura report, or why there is none."""
+    out = Path(tempfile.mkdtemp(prefix="rdm-unit-coverage-"))
+    env = {**os.environ, "COVERAGE_FILE": str(out / ".coverage")}
+    report = out / "unit-coverage.xml"
+    try:
+        for args in (["run", f"--source={source}", "-m", "pytest", "tests", "--ignore=tests/acceptance", "-q",
+                      "-p", "no:cacheprovider"], ["xml", "-q", "-o", str(report)]):
+            run = subprocess.run([sys.executable, "-m", "coverage", *args], cwd=project, env=env,
+                                 capture_output=True, timeout=600)
+            if run.returncode != 0:  # a failed suite's partial coverage is no evidence of unit verification
+                return f"`coverage {args[0]}` failed (exit {run.returncode}): the map shows no unit coverage"
+    except Exception as error:
+        return f"the unit tests did not run under coverage ({type(error).__name__}: {error})"
+    return report if report.is_file() else "the unit tests' coverage run wrote no report"
+
+
 def on_pre_build(config) -> None:
-    for project in MAPS.values():
+    for name, project in MAPS.items():
         try:
             subprocess.run([sys.executable, "-m", "pytest", "tests/acceptance", "-q",
                             "--clean-alluredir", "--alluredir", "dhf/allure-results"],
                            cwd=project, capture_output=True, timeout=600)
         except Exception:
             pass  # the map then shows the results the record already has, or none
+        if name in UNIT_SOURCE:
+            UNIT_COVERAGE[name] = unit_coverage(project, UNIT_SOURCE[name])
 
 
 def on_files(files, config):
     for name, project in MAPS.items():
+        coverage = UNIT_COVERAGE.get(name)
         try:
-            data = graph_data(project / "dhf", project / "dhf" / "allure-results")
+            data = graph_data(project / "dhf", project / "dhf" / "allure-results",
+                              coverage if isinstance(coverage, Path) else None)
+            if isinstance(coverage, str):
+                data["unitCoverageWhy"] = coverage
         except ImportError as error:
             data = {"error": f"the graph extra is not installed ({error.name})"}
         except Exception as error:  # a build never breaks on a map

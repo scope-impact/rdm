@@ -13,13 +13,12 @@ workspace "RDM" "The design record of regulated software." {
     reviewer = person "Reviewer" "Approves each change by reviewing its pull request"
     rdm_system = softwareSystem "RDM" "Keeps the design record of regulated software, gates it, renders it and builds it into a read-only graph" {
       rdm_cli = container "rdm" "The command line: gates, rendering, graph build, query and validate, and the agent server" "Python" {
-        group "specification" {
-          kernel = component "Shared kernel" "Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers" "Python" {
-            properties {
-              "code" "rdm/kernel/"
-            }
-            tags "context:specification"
+        kernel = component "Shared kernel" "Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers; in no bounded context" "Python" {
+          properties {
+            "code" "rdm/kernel/"
           }
+        }
+        group "specification" {
           record_reader = component "Record reader" "User needs, design inputs, realises and declarations, from the design documents' and V&V plan's frontmatter" "Python" {
             properties {
               "code" "rdm/specification/sdd.py"
@@ -44,7 +43,7 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:specification"
           }
-          precommit_hook = component "Pre-commit hook" "Runs the design gate before a commit, or a merge, that stages implementation files; blocks when the gate cannot run" "shell" {
+          precommit_hook = component "Pre-commit hook" "pre-commit and pre-merge-commit: run the design gate on a commit, or a merge, that stages implementation files; block unless it passes, or when it cannot run" "shell" {
             properties {
               "code" "rdm/specification/hook_files/"
             }
@@ -100,7 +99,7 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "release" {
-          verification_data = component "Verification data" "Every declared design input reconciled against the executed results: status, runs and tests per design input, by user need; generated, never edited" "Python" {
+          verification_data = component "Verification data" "Every declared design input reconciled against the executed results: status, runs and tests per design input, by user need; the data the Renderer fills the traceability matrix from; generated, never edited" "Python" {
             properties {
               "code" "rdm/release/verify.py"
             }
@@ -114,9 +113,15 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "test_evidence" {
-          allure_reader = component "Allure reader" "Allure results into test runs and a status per design input (failed, else verified, else untested; undeclared stories as orphans); run labels and facts" "Python" {
+          allure_reader = component "Allure reader" "Allure results into test runs and a status per design input (failed, else verified, else untested; undeclared stories as orphans); a result it cannot read is never a pass; run labels and facts" "Python" {
             properties {
               "code" "rdm/evidence/allure.py"
+            }
+            tags "context:test_evidence"
+          }
+          unit_coverage = component "Unit coverage reader" "The unit tests' code coverage, from one Cobertura XML or LCOV report: the lines each file ran out of those measured; never acceptance evidence" "Python" {
+            properties {
+              "code" "rdm/evidence/unit_coverage.py"
             }
             tags "context:test_evidence"
           }
@@ -357,6 +362,10 @@ workspace "RDM" "The design record of regulated software." {
     projection -> architecture_model "reads the C4 model and code dependencies with"
     pytest_plugin -> allure_reader "writes run labels and facts with"
     verification_data -> allure_reader "reconciles results with"
+    verification_data -> unit_coverage "reads the unit tests' coverage with"
+    projection -> verification_data "reads each component's unit coverage with"
+    evidence_bundle -> unit_coverage "refuses an unreadable unit-coverage report with"
+    verification_data -> architecture_model "maps covered files to components with"
     verification_report -> allure_reader "reads results with"
     architecture_drawing -> product_repo "writes the exported model and stamped view images to"
     renderer -> markdown_extensions "post-processes the rendered Markdown with"

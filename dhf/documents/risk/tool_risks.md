@@ -32,7 +32,7 @@ risks:
     harm: "The record shows a design approved after the code it governs; an audit finds design controls not followed."
     severity: Minor
     probability: Possible
-    controls: [DI-2]
+    controls: [DI-2, DI-71]
     residual: {probability: Unlikely}
   - id: RISK-TOOL-004
     category: security

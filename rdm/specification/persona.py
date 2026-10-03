@@ -58,6 +58,8 @@ class ValidationReport(StatusReportMixin):
     by_id: dict[str, NeedValidation] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     runs_found: int = 0
+    # Run files that could not be read as a run: reported, never counted as clean.
+    unreadable: list[str] = field(default_factory=list)
 
     @property
     def not_run(self) -> list[str]:
@@ -77,23 +79,32 @@ class ValidationReport(StatusReportMixin):
 
 
 def _build_run(data: dict, filename: str) -> PersonaRun | None:
-    """Build one ``PersonaRun`` from a parsed ``*-persona.json`` file (skip if it
-    names no user need)."""
-    uid = str(data.get("user_need", "")).strip()
-    if not uid:
+    """Build one ``PersonaRun`` from a parsed ``*-persona.json`` file; ``None``
+    when it is not a run: it names no user need, or its usability issues are
+    not a list."""
+    uid = str(data.get("user_need") or "").strip()
+    issues = data.get("usability_issues")
+    if not uid or (issues is not None and not isinstance(issues, list)):
         return None
-    issues = data.get("usability_issues") or []
     return PersonaRun(
         persona=str(data.get("persona", "")),
         user_need=uid,
         outcome=str(data.get("outcome", "")).lower(),
-        usability_issues=[i for i in issues if isinstance(i, dict)],
+        usability_issues=[i if isinstance(i, dict) else {"note": str(i)} for i in issues or []],
     )
 
 
-def parse_runs(results_dir: Path) -> list[PersonaRun]:
-    """Parse all ``*-persona.json`` run files in a results directory."""
-    return load_json_records(results_dir, "-persona.json", _build_run)
+def parse_runs(results_dir: Path, unreadable: list[str] | None = None) -> list[PersonaRun]:
+    """Parse all ``*-persona.json`` run files in a results directory, adding the
+    name of each file that cannot be read as a run to ``unreadable`` when given."""
+
+    def build(data: dict, filename: str) -> PersonaRun | None:
+        run = _build_run(data, filename)
+        if run is None and unreadable is not None:
+            unreadable.append(filename)
+        return run
+
+    return load_json_records(results_dir, "-persona.json", build, unreadable)
 
 
 def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
@@ -102,9 +113,11 @@ def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
     Status precedence per need: ``failed`` (any run could not complete) >
     ``issues`` (completed but problems observed) > ``clean`` (completed, none) >
     ``not_run`` (no persona attempted it). ``clean`` means "no formative issues
-    found" -- it does NOT mean validated.
+    found" -- it does NOT mean validated. A run file that cannot be read as a
+    run is listed in ``unreadable``, never counted.
     """
-    runs = parse_runs(Path(results_dir))
+    unreadable: list[str] = []
+    runs = parse_runs(Path(results_dir), unreadable)
 
     def _fold(need: NeedValidation, run: PersonaRun) -> None:
         need.runs += 1
@@ -133,4 +146,5 @@ def reconcile(user_need_ids: set[str], results_dir: Path) -> ValidationReport:
         by_id=by_id,
         orphan_ids=orphan_ids,
         runs_found=len(runs),
+        unreadable=sorted(unreadable),
     )

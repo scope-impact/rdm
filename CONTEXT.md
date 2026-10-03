@@ -16,7 +16,8 @@ _Avoid_: user story, feature, epic
 A uniquely identified `shall` requirement on the system or one of its
 subsystems, owned by one bounded context and traced to the user need it refines.
 It is one acceptance criterion, accepted or not as a whole; what must be
-accepted separately is a separate design input.
+accepted separately is a separate design input. One `shall`: behaviours that
+could be accepted apart are never joined with "and".
 _Avoid_: spec item, story, ticket, the test, sub-criterion
 
 **Baseline acceptance criterion**:
@@ -97,6 +98,20 @@ _Avoid_: signed off, accepted
 Approval of a pull request by someone other than its author: the record's
 independent verification. An agent never gives it.
 _Avoid_: code review (unqualified), self-review
+
+**Chain review**:
+Reading one design input together with its user needs, its design prose, its
+tagged test and verification steps, its output labels and its last run, and
+deciding whether the test proves the text; recorded as a design review, input
+by input, before each release. A person's judgement, never a gate.
+_Avoid_: faithfulness gate, audit, test review
+
+**Code coverage**:
+How much of a unit's code its unit tests run: a unit-test measure. Never
+acceptance evidence, never carried in Allure, never in the record's
+traceability; what an acceptance test exercises is the components it names
+or reaches. Not checklist coverage (the clauses the documents reference).
+_Avoid_: coverage (unqualified), test coverage (for the design inputs a test verifies)
 
 **Design input lifecycle**:
 The stages of one design input: declared, approved, verified, released; and
