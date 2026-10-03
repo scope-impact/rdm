@@ -363,6 +363,7 @@ workspace "RDM" "The design record of regulated software." {
     pytest_plugin -> allure_reader "writes run labels and facts with"
     verification_data -> allure_reader "reconciles results with"
     verification_data -> unit_coverage "reads the unit tests' coverage with"
+    evidence_bundle -> unit_coverage "refuses an unreadable unit-coverage report with"
     verification_data -> architecture_model "maps covered files to components with"
     verification_report -> allure_reader "reads results with"
     architecture_drawing -> product_repo "writes the exported model and stamped view images to"
