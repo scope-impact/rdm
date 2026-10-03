@@ -16,7 +16,9 @@ import pytest
 allure = pytest.importorskip("allure")
 ox = pytest.importorskip("pyoxigraph")
 
+from rdm.architecture.model import read_model  # noqa: E402
 from rdm.graph.project import project  # noqa: E402
+from rdm.kernel.frontmatter import parse_frontmatter  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_graph import PREFIXES, _record  # noqa: E402
 from tests.acceptance.test_graph_allure import RDM, P, _results  # noqa: E402
@@ -212,10 +214,18 @@ def test_the_c4_model_and_the_record_are_checked_against_each_other(tmp_path: Pa
     with verification_step("every one is a warning, never a violation"):
         assert {severity for severity, _, _ in found} == {"Warning"}
 
-    with verification_step("RDM's own C4 model and record agree"):
+    with verification_step("RDM's own C4 model and record agree, its views named by convention: a component view "
+                           "for each context, dynamic views named for one"):
         own = _c4_warnings(project(ROOT / "dhf", None))
         attach("RDM's own", sorted(own))
         assert own == set()
+        views = set(read_model(ROOT / "dhf").views)
+        architecture = parse_frontmatter((ROOT / "dhf" / "documents" / "architecture.md").read_text())
+        declared = {c["id"] for c in architecture["contexts"]}
+        static = {"C1", "C2"} | {f"C3_{context}" for context in declared}
+        assert static <= views
+        dynamic = views - static
+        assert all(any(key.startswith(f"D_{context}_") for context in declared) for key in dynamic), dynamic
 
 
 @allure.story("DI-69")
