@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 61
+revision: 62
 title: Design Review — RDM
 ---
 
@@ -1923,6 +1923,45 @@ and agents who change it look:
   `CONTEXT.md`): every design input read with its user needs, prose, tagged
   test, verification steps, output labels and last run, recorded as a design
   review, as Design Review 58 began.
+
+# Design Review 60 — Design input by design input, continued
+
+**Scope reviewed:** the chain review of Design Review 58, continued from DI-5:
+each design input with its user needs, design prose, tagged test,
+verification steps, output labels and last run. Findings and decisions are
+recorded here as each input is reviewed; changes are made once approved.
+
+**Disposition:** Open.
+
+## DI-5 — Persona runs give a formative status per user need
+
+Traces to UN-005; described by the Formative usability and Persona command
+rows of the specification context; verified by
+`test_formative_usability_classified` (output
+`rdm/specification/persona.py`), whose last run passed with one
+verification step. **Changes requested:**
+
+- Two of the four statuses, clean and not run, are never shown.
+- The precedence across a need's runs (failed over issues over clean) is not
+  tried: no need has more than one run.
+- `rdm story persona`, which the design says prints each need's status and
+  always passes, is not run.
+- A run that names no user need is dropped without a word, and usability
+  issues written as text rather than a list are discarded, so a run that
+  found problems reads as clean. The design says neither; nothing tests
+  either.
+- A run naming a user need the registry does not hold is collected but not
+  shown to be reported.
+- The test asserts the issues status outside any verification step, and its
+  docstring names UN-001, not UN-005, and claims formative evidence never
+  gates release, which nothing checks.
+
+**Decision (C):** widen DI-5 so that a persona run file RDM cannot read as a
+run — no user need, issues that are not a list, JSON it cannot read — is
+reported and never counted as clean, and a run naming an unknown user need is
+reported. Its test is to show all four statuses and their precedence over
+several runs of one need, to run `rdm story persona`, to put every check in a
+step and to correct its docstring. The reconciler changes with it.
 
 # Approval
 
