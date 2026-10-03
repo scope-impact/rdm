@@ -17,7 +17,9 @@ input; the Allure result says whether that test actually *passed*.
 from __future__ import annotations
 
 import json
+import os
 import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -117,6 +119,82 @@ def full_name(rel: str, name: str | None) -> str | None:
         return None
     *owner, function = name.split("::")
     return ".".join([rel[:-3].replace("/", "."), *owner]) + "#" + function
+
+
+# A coverage attachment (DI-74) is named as one — coverage, lcov or cobertura,
+# with or without an extension (coverage.xml, lcov.info) — whatever language ran
+# it; its format, LCOV or Cobertura XML, is read from its content.
+_COVERAGE = re.compile(r"(coverage|lcov|cobertura)(\.\w+)?", re.IGNORECASE)
+
+
+def coverage_attachments(data: dict) -> list[dict]:
+    """The attachments of a run, or of any of its steps, that hold its coverage."""
+    found = []
+    for item in data.get("attachments") or []:
+        if isinstance(item, dict) and item.get("source") and _COVERAGE.fullmatch(str(item.get("name") or "").strip()):
+            found.append(item)
+    for step in data.get("steps") or []:
+        if isinstance(step, dict):
+            found += coverage_attachments(step)
+    return found
+
+
+def _project_path(path: str, root: Path) -> str:
+    """A covered file's path relative to the project ``root`` (as given when it is outside it)."""
+    norm = os.path.normpath(path)
+    if os.path.isabs(norm):
+        try:
+            return Path(norm).resolve().relative_to(Path(root).resolve()).as_posix()
+        except ValueError:
+            return Path(norm).as_posix()
+    return Path(norm).as_posix()
+
+
+def read_coverage(path: Path, root: Path) -> set[str] | None:
+    """The files, relative to the project ``root``, with a line the run executed,
+    from an LCOV or a Cobertura XML file; None when it is neither, or cannot be read."""
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    if text.lstrip().startswith("<"):  # Cobertura XML
+        try:
+            tree = ET.fromstring(text)
+        except ET.ParseError:
+            return None
+        if tree.tag != "coverage":
+            return None
+        sources = [s.text.strip() for s in tree.iter("source") if s.text and s.text.strip()]
+        covered = set()
+        for cls in tree.iter("class"):
+            name = cls.get("filename")
+            if not name or not any(_hits(line.get("hits")) for line in cls.iter("line")):
+                continue
+            candidates = [_project_path(os.path.join(source, name), root) for source in sources]
+            covered.add(next((c for c in candidates if (Path(root) / c).is_file()), _project_path(name, root)))
+        return covered
+    covered, current, records = set(), None, False
+    for line in text.splitlines():  # LCOV: SF:<file>, then DA:<line>,<hits>, up to end_of_record
+        line = line.strip()
+        if line.startswith("SF:"):
+            current, records = _project_path(line[3:], root), True
+        elif line.startswith("DA:") and current is not None:
+            fields = line[3:].split(",")
+            if len(fields) < 2:
+                return None
+            if _hits(fields[1]):
+                covered.add(current)
+        elif line == "end_of_record":
+            current = None
+    return covered if records else None
+
+
+def _hits(value) -> bool:
+    """Whether a line's hit count says it was executed."""
+    try:
+        return int(float(value)) > 0
+    except (TypeError, ValueError):
+        return False
 
 
 def write_run_facts(results_dir: Path, executor: dict, environment: dict[str, str]) -> None:
