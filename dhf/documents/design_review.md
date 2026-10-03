@@ -1707,9 +1707,10 @@ needs (DI-46), and test result translation (DI-17). No design input changed.
 - The merge hook of Design Review 54 blocked every valid merge that brought
   an approved design change with its implementation. While a merge is being
   made, git stages the merged branch's documents, so the design gate read
-  them as uncommitted. A document staged exactly as the merged commit holds
-  it was committed and reviewed on that branch: during a merge it is
-  approved. A document whose merge result differs from both sides (a
+  them as uncommitted. A document staged exactly as a commit holds it at its
+  path was committed and reviewed there: during a merge it is approved. (Git
+  names the merged commit only after its merge hook has run, so the commit is
+  found by the document's content.) A document whose merge result differs from both sides (a
   resolved conflict) is new content, and still is not. The hook also read the
   wrong index: git gives a merge hook a relative `GIT_INDEX_FILE`, which RDM's
   git calls, run from a document's directory, resolved there. The shared
