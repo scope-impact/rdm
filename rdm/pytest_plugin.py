@@ -137,7 +137,8 @@ def environment(record: dict | None, env=os.environ) -> dict[str, str]:
         "allure-pytest": _version("allure-pytest"),
         "rdm": _version("rdm"),
         "commit": record.get("commit") or "unknown",
-        "worktree": DIRTY if record.get("dirty") else "clean",
+        # Nothing was checked when the commit is unknown: never claim a clean worktree.
+        "worktree": "unknown" if not record.get("commit") else DIRTY if record.get("dirty") else "clean",
     }
     if env.get("GITHUB_ACTIONS") == "true":
         facts |= {"ci.actor": env.get("GITHUB_ACTOR", ""), "ci.workflow": env.get("GITHUB_WORKFLOW", ""),

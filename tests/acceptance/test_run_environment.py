@@ -12,6 +12,7 @@ import getpass
 import json
 import os
 import platform
+import shutil
 import socket
 import subprocess
 import sys
@@ -98,3 +99,9 @@ def test_the_results_record_who_ran_the_tests_and_where(tmp_path: Path) -> None:
         assert len(list((tmp_path / "local").glob("*-result.json"))) == 2
         assert (tmp_path / "local" / "executor.json").is_file()
         assert (tmp_path / "local" / "environment.properties").is_file()
+    with verification_step("outside git the commit is unknown, and so is the worktree state"):
+        plain = tmp_path / "plain"
+        shutil.copytree(repo, plain, ignore=shutil.ignore_patterns(".git"))
+        _, properties = _run(plain, tmp_path / "plain-results", {})
+        attach("environment.properties (no git)", properties)
+        assert (properties["commit"], properties["worktree"]) == ("unknown", "unknown")
