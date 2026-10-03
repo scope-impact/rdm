@@ -399,6 +399,15 @@ The generated list of controlled documents (id, title, path, revision) a DMR
 document renders. Abbreviated DMR index.
 _Avoid_: document list, register (the risk register is another thing)
 
+**User manual**:
+The product's instructions for its users: a design output, listed page by page
+by a controlled document of kind `manual`, so the DMR index holds it. Its
+pages are projected into the knowledge graph with the design inputs they name
+and the labels of the test examples they show. What it must teach is stated
+as design inputs.
+_Avoid_: docs (unqualified), instructions for use (the regulatory name; use it
+only when citing a standard)
+
 ## Knowledge graph
 
 **Knowledge graph**:

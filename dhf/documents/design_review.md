@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 72
+revision: 73
 title: Design Review — RDM
 ---
 
@@ -2242,6 +2242,37 @@ checked against the graph after PR #54.
   second risk policy refused, unreadable and orphan persona runs, the
   worktree unknown without a commit, Python-only import reading. No design
   input changes.
+
+# Design Review 67 — The user manual is a design output, held in the DMR and the graph
+
+**Scope reviewed:** the documentation site, after PR #55 moved its test
+examples from file paths to component labels and nothing in the record
+showed which pages still taught file paths.
+
+**Disposition:** Approved.
+
+- **Why:** a convention changed in prose alone. The graph held the record
+  but not the manual, so no rule, query or gate could say which pages were
+  out of date; they were found by hand.
+- **The manual is a controlled document:** `dhf/documents/user_manual.md`
+  (`IFU-001`, `kind: manual`) lists its pages, so the DMR index (DI-29)
+  lists the manual. The pages stay in `docs/`: the DMR references them, it
+  does not hold copies. The "RDM on RDM" pages publish this DHF and are not
+  the manual.
+- **New user need UN-018:** a user learns from the manual how to keep the
+  record the way the gates enforce, and a reviewer sees which pages a change
+  touches.
+- **New design inputs:** DI-77 (graph: the manual's pages, with the design
+  inputs they name and the labels of their test examples, and the pages in
+  a design input's trace), DI-78 (graph: a shape warns on a test example
+  that writes no component label), DI-79 (publishing: RDM's manual shows
+  every test example naming its component).
+- **DI-22 amended:** the stub test `new-input` writes carries a component
+  label to fill in, not an output label.
+- **C4:** a manual reader component (graph) and a documentation site
+  container holding the user manual (publishing); views redrawn.
+- **Not done:** RDM's own acceptance tests keep their output labels (DI-56
+  allows both); moving them is separate work.
 
 # Approval
 
