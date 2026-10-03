@@ -1649,7 +1649,8 @@ test and a usability test of the installed package. No design input changed.
 - `rdm story dmr` indexed a blank `id:` as the document `None`. A blank id is
   no id: the document is skipped with a warning.
 - `rdm render` ended in a traceback for an empty configuration, a value the
-  template does not have, or a template that does not exist. Each is now a
+  template does not have, or a template that does not exist. An empty
+  configuration is now no configuration (no extensions); the other two are a
   message with exit 2. Any command whose output is piped into a reader that
   stops early (`| head`) ends quietly instead of with a traceback.
 

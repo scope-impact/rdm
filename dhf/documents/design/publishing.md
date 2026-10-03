@@ -67,7 +67,7 @@ The rules a reviewer needs to judge the design:
 
 - **Rendering.** A placeholder with no data fails the render rather than
   rendering empty, with a message naming it (exit 2), as does a template
-  that does not exist or a configuration that is empty. Each data file is one entry of the template's context,
+  that does not exist; an empty configuration loads no extensions. Each data file is one entry of the template's context,
   named by the file's name without its extension; two data files with one
   name are an error. Only when a template asks for the first pass's output
   is it rendered a second time with that output available; otherwise one
