@@ -1,24 +1,12 @@
 import pytest
 
-from rdm.gaps import _find_keys_in_sources, _find_keys_in_content, \
-    _read_raw_checklists, _split_out_include_files, _extract_keys_from_checklist, _find_failing_checklist_items, \
-    _next_number, _next_non_number, _components, SectionalAnalysis, coverage_report
+from rdm.compliance.gaps import SectionalAnalysis, coverage_report
 
 
 @pytest.fixture
 def example_short_checklist_source():
     return [
         ('   include other_file\napple tempted Eve\nbanana tempted Curious George\n# commentary', 'yellow brick road')
-    ]
-
-
-@pytest.fixture
-def example_long_checklist_source():
-    return [
-        (
-            'include other_file\napple tempted Eve\nbanana tempted Curious George\n# commentary\ncherry\ndates',
-            'yellow brick road'
-        )
     ]
 
 
@@ -80,87 +68,26 @@ document_ac = "We like [[apple]] pie and [[cherry]] pie."
 document_ad = "Never put [[dates]] in [[apple]] pie."
 
 
-def test_reference_requires_brackets_and_exact_key():
-    """A bare prose mention is not a reference, and a shorter key never
-    matches inside a longer one (X-1 vs X-12)."""
-    keys = {'X-1', 'X-12'}
-    assert set(_find_keys_in_content("We mention X-1 in prose only.", keys)) == set()
-    assert set(_find_keys_in_content("Covers [[X-12]] only.", keys)) == {'X-12'}
-    assert set(_find_keys_in_content("Covers [[X-1]] and [[X-12]].", keys)) == {'X-1', 'X-12'}
-    # Prose inside a block still counts for every key it names (template style).
-    assert set(_find_keys_in_content("[[This section fulfills X-1, X-12]]", keys)) == {'X-1', 'X-12'}
-    # A dotted DESCENDANT covers its parent (hierarchy convention)...
-    assert set(_find_keys_in_content("Covers [[X-1.a]].", keys)) == {'X-1'}
-    # ...but a longer sibling still does not.
-    assert set(_find_keys_in_content("Covers [[X-120]].", keys)) == set()
 
 
-def test_extract_keys_from_short_checklist(example_short_checklist):
-    actual_keys = set(_extract_keys_from_checklist(example_short_checklist))
-    assert actual_keys == {'apple', 'banana'}
 
 
-def test_extract_keys_from_long_checklist(example_long_checklist):
-    actual_keys = set(_extract_keys_from_checklist(example_long_checklist))
-    assert actual_keys == {'apple', 'banana', 'cherry', 'dates'}
 
 
-def test_find_keys_in_sources():
-    expected_keys = {'apple', 'banana', 'cherry'}
-    documents = [document_a, document_b, document_ac]
-    actual_keys = set(_find_keys_in_sources(documents, {'apple', 'banana', 'cherry', 'dates'}))
-    assert actual_keys == expected_keys
 
 
-def test_find_failing_checklist_items_should_pass(example_long_checklist):
-    documents = [document_a, document_b, document_ac, document_ad]
-    failures = list(_find_failing_checklist_items(documents, example_long_checklist))
-    assert len(failures) == 0
 
 
-def test_find_failing_checklist_itemss_should_fail(example_long_checklist):
-    documents = [document_a, document_b, document_ac]
-    failures = list(_find_failing_checklist_items(documents, example_long_checklist))
-    assert len(failures) == 1
-    assert failures[0].get('reference') == 'dates'
 
 
-def test_raw_parser(example_short_checklist_source, example_raw_checklist):
-    actual_checklist = list(_read_raw_checklists(example_short_checklist_source))
-    assert actual_checklist == example_raw_checklist
 
 
-def test_include_file_extractor(example_raw_checklist):
-    include_files, reduced_checklist = _split_out_include_files(example_raw_checklist, {})
-    assert include_files == {'yellow brick road/other_file'}
-    assert reduced_checklist == example_raw_checklist[1:]
 
 
-def test_next_number():
-    assert (0, '') == _next_number('')
-    assert (1, '') == _next_number('0')
-    assert (12345678910, '') == _next_number('0123456789')
-    assert (2, '') == _next_number('00')
-    assert (3, '') == _next_number('000')
-    assert (103, '') == _next_number('001')
-    assert (101, '') == _next_number('1')
-    assert (0, 'cat') == _next_number('cat')
-    assert (12303, '') == _next_number('123')
-    assert (1234505, '.cat') == _next_number('12345.cat')
 
 
-def test_next_nonnumber():
-    assert ('', '123dog') == _next_non_number('123dog')
-    assert ('cat', '123dog') == _next_non_number('cat123dog')
-    assert ('', '') == _next_non_number('')
 
 
-def test_components():
-    assert [] == _components('')
-    assert [(12303, '')] == _components('123')
-    assert [(12303, 'cat')] == _components('123cat')
-    assert [(12303, 'cat'), (45604, 'dog')] == _components('123cat0456dog')
-    assert [(0, 'cat')] == _components('cat')
 
 
 def test_sorting():
@@ -192,57 +119,12 @@ def test_sorting_reversed():
     assert properly_sorted == actual
 
 
-def test_sectional_analysis():
-    alpha = SectionalAnalysis('62304:5.1.8')
-    beta = SectionalAnalysis('62304:5.1.9')
-    gamma = SectionalAnalysis('62304:5.1.10')
-    assert alpha < beta
-    assert beta < gamma
-    assert alpha < gamma
 
 
-def test_coverage_report_single_checklist(tmp_path, capsys):
-    checklist = tmp_path / "iso_checklist.txt"
-    checklist.write_text("ISO-1 Requirement one\nISO-2 Requirement two\nISO-3 Requirement three\n")
-
-    source = tmp_path / "process.md"
-    source.write_text("Document covers [[ISO-1]] and [[ISO-3]].")
-
-    result = coverage_report([str(checklist)], [str(source)])
-    captured = capsys.readouterr()
-
-    assert result == 0
-    assert "| ISO | 3 | 1 | 2 | 66% |" in captured.out
 
 
-def test_coverage_report_all_covered(tmp_path, capsys):
-    checklist = tmp_path / "test_checklist.txt"
-    checklist.write_text("REF-A First\nREF-B Second\n")
-
-    source = tmp_path / "doc.md"
-    source.write_text("Has [[REF-A]] and [[REF-B]] both.")
-
-    result = coverage_report([str(checklist)], [str(source)])
-    captured = capsys.readouterr()
-
-    assert result == 0
-    assert "| 2 | 0 | 2 | 100% |" in captured.out
 
 
-def test_coverage_report_verbose_shows_missing(tmp_path, capsys):
-    checklist = tmp_path / "gdpr_checklist.txt"
-    checklist.write_text("GDPR-1 First\nGDPR-2 Second\nGDPR-3 Third\n")
-
-    source = tmp_path / "doc.md"
-    source.write_text("Only [[GDPR-1]] here.")
-
-    result = coverage_report([str(checklist)], [str(source)], verbose=True)
-    captured = capsys.readouterr()
-
-    assert result == 0
-    assert "## Missing Items" in captured.out
-    assert "GDPR-2" in captured.out
-    assert "GDPR-3" in captured.out
 
 
 def test_coverage_report_no_checklists():

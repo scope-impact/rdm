@@ -3,7 +3,7 @@ import sys
 from collections import OrderedDict
 
 import argparse
-from rdm.util import write_yaml
+from rdm.kernel.util import write_yaml
 
 
 def extract_package_info(lines):

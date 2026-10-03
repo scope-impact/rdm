@@ -16,7 +16,7 @@ import json
 import sys
 from pathlib import Path
 
-# Mirror rdm.record.persona._FAILURE_OUTCOMES.
+# Mirror rdm.specification.persona._FAILURE_OUTCOMES.
 FAILURE_OUTCOMES = {"failure", "failed", "blocked", "abandoned"}
 
 

@@ -1,0 +1,144 @@
+import collections
+import os
+from importlib import import_module
+
+import jinja2
+from jinja2.environment import TemplateStream
+
+from rdm.publishing.first_pass_output import FirstPassOutput
+from rdm.kernel.util import load_yaml
+from rdm.md_extensions.base import post_processing_filter_list
+
+
+
+def context_from_data_files(data_filenames):
+    """The render context: each data file's YAML under its basename."""
+    context = {}
+    for data_filename in data_filenames:
+        key, _ = os.path.splitext(os.path.basename(data_filename))
+        if key in context:
+            raise ValueError('There is already data attached to the key "{}"'.format(key))
+        context[key] = load_yaml(data_filename)
+    return context
+
+def load_class(class_descriptor):
+    module_name, _, class_name = class_descriptor.rpartition('.')
+    return getattr(import_module(module_name), class_name)
+
+def invert_dependencies(objects, id_key, dependencies_key):
+    # TODO: add docstring
+    inverted = collections.defaultdict(lambda: set())
+    for o in objects:
+        for d in o[dependencies_key]:
+            inverted[d].add(o[id_key])
+    inverted_as_list = list(inverted.items())
+    return sorted(inverted_as_list, key=lambda i: i[0].split('-'))
+
+
+def join_to(foreign_keys, table, primary_key='id'):
+    '''
+    Given a set of ids for an object, and a list of the objects these ids refer
+    to, select out the objects by joining using the specified primary key
+    (which defaults to 'id').
+    '''
+    joined = []
+    for foreign_key in foreign_keys:
+        selected_row = None
+        for row in table:
+            if row[primary_key] == foreign_key:
+                selected_row = row
+                break
+        joined.append(selected_row)
+    return joined
+
+
+def md_indent(snippet, header_shift=0):
+    lines = snippet.split('\n')
+    in_code = False
+    for j, line in enumerate(lines):
+        if line.startswith('```'):
+            in_code = not in_code
+        if in_code:
+            continue
+        if header_shift < 0:
+            if line.startswith('#'):
+                if line.startswith('#' * (abs(header_shift) + 1)):
+                    lines[j] = line[abs(header_shift):]
+                else:
+                    raise ValueError("Can't remove headings from snippet")
+        else:
+            if line.startswith('#'):
+                lines[j] = '#' * header_shift + line
+    processed_snippet = "\n".join(lines)
+    return processed_snippet
+
+
+def render_template_to_file(config, template_filename, context, output_file, loaders=None):
+    generator = generate_template_output(config, template_filename, context, loaders=loaders)
+    TemplateStream(generator).dump(output_file)
+
+
+def render_template_to_string(config, template_filename, context, loaders=None):
+    return ''.join(generate_template_output(config, template_filename, context, loaders=loaders))
+
+
+def generate_template_output(config, template_filename, context, loaders=None):
+    environment = _create_jinja_environment(config, loaders)
+    first_pass_output = FirstPassOutput()
+    environment.globals['first_pass_output'] = first_pass_output
+    output_line_list = generate_template_output_lines(environment, template_filename, context)
+    if first_pass_output.second_pass_is_requested:
+        jinja2.clear_caches()
+        first_pass_output_filled = FirstPassOutput(output_line_list)
+        second_pass_environment = _create_jinja_environment(config, loaders)
+        second_pass_environment.globals['first_pass_output'] = first_pass_output_filled
+        output_line_list = generate_template_output_lines(second_pass_environment, template_filename, context)
+    return iter(output_line_list)
+
+
+def generate_template_output_lines(environment, template_filename, context):
+    template = environment.get_template(template_filename)
+    source_line_list = _generate_source_line_list(template, context)
+    return list(_generate_output_lines(environment, source_line_list))
+
+
+def _create_jinja_environment(config, loaders=None):
+    extensions = [load_class(ed) for ed in config.get('md_extensions', [])]
+    loader = _create_loader(loaders)
+    environment = jinja2.Environment(
+        cache_size=0,
+        undefined=jinja2.StrictUndefined,
+        loader=loader,
+        extensions=extensions,
+    )
+    environment.filters['invert_dependencies'] = invert_dependencies
+    environment.filters['join_to'] = join_to
+    environment.filters['md_indent'] = md_indent
+
+    return environment
+
+
+def _create_loader(loaders=None):
+    if loaders is None:
+        loaders = [
+            jinja2.FileSystemLoader('.'),
+        ]
+
+    return jinja2.ChoiceLoader(loaders)
+
+
+def _generate_source_line_list(template, context):
+    generator = template.generate(**context)
+    source = ''.join(generator)
+    # template generator usually loses trailing new line.
+    if source and source[-1] != '\n':
+        source += '\n'
+    return source.splitlines(keepends=True)
+
+
+def _generate_output_lines(environment, source_line_list):
+    output_generator = iter(source_line_list)
+    post_process_filters = post_processing_filter_list(environment)
+    for post_process_filter in post_process_filters:
+        output_generator = post_process_filter(output_generator)
+    return output_generator

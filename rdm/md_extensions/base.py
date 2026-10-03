@@ -1,7 +1,9 @@
 from jinja2 import nodes
 from jinja2.ext import Extension
 
-from rdm.util import post_processing_filter_list
+
+def post_processing_filter_list(environment):
+    return getattr(environment, 'rdm_post_process_filters', [])
 
 
 class RdmExtension(Extension):

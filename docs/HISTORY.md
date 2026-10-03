@@ -2,6 +2,61 @@
 
 ## Unreleased
 
+- Allure is for acceptance tests only: each acceptance run attaches the text of
+  the design input it verifies; unit tests carry no Allure, held by a guard test.
+- Allure results as RDF (Design Review 14, `rdm/graph/allure.py`): each run in
+  full — times, failure details, parameters, labels, links (DI-54); container
+  fixtures (DI-55); output labels link runs to source files, and `trace` lists a
+  design input's code (DI-56). The acceptance suite records a step per clause.
+- Test evidence (Design Review 13): the release bundle keeps the executed Allure
+  results with their attachments and containers (DI-30); the graph and `trace`
+  carry each run's steps and attachments (DI-53); RDM's gate and risk tests
+  record a step per clause and attach what they checked.
+- Findings from the graph's own analysis (Design Review 12): `rdm graph serve`
+  is read-only; the agent server refuses `SERVICE` and non-id `trace` input
+  (DI-36, DI-42; RISK-TOOL-006/007). The graph records who landed each design
+  document's change (DI-51) and links needs, risks and design documents to
+  their documents (DI-52). Four oversized design inputs are split: DI-47..50.
+- One data model (Design Review 11): DuckDB, the planning tooling
+  (`rdm story audit | sync | backlog-validate | check-ids | validate`, `rdm pm`,
+  `rdm pull`) and the `story-audit`, `analytics`, `github` and `plan` extras are
+  removed; the gates move to `rdm/gates/` and need no extra. A duplicated
+  user-need or design-input id now fails the design gate (DI-46).
+- Risk evaluation per the requirements skill (Design Review 10): no default
+  matrix — a register needs a declared `risk_policy` with per-level
+  acceptability; a residual is not evaluated until its controls are verified;
+  `category` safety/security with `stride` and `linked`; optional residual
+  severity; `status: proposed` warns.
+- `rdm story mutation-probe` runs the test once unmutated and refuses a test that
+  does not pass: an already-failing test was reported KILLED under any mutation (DI-34).
+- Risk register (UN-016, DI-43/44/45): risks as frontmatter in `kind: risk`
+  documents, evaluated against a declared `risk_policy`, each control a
+  design input; the release gate and the graph shapes block a broken, unscored,
+  uncontrolled or unaccepted risk; `trace` takes risk ids. RDM's own tool-risk
+  register is `dhf/documents/risk/` (Design Review 9). `rdm story new-input` no
+  longer duplicates an empty `design_inputs: []` and wraps its stub docstring.
+- Read-only agent interface (`rdm graph mcp`, UN-015, DI-41/42): an MCP
+  stdio server with `schema`, `query`, `trace` and `validate`, each answering
+  from a fresh projection; no write tool, SPARQL Update refused, rows capped.
+  User needs now carry their text in the graph (DI-35; Design Review 8).
+- Python test tags are read from decorators and `pytestmark` only, never from
+  strings or comments (DI-40): fixture files written by a test no longer count
+  as coverage. Every acceptance command passes `--clean-alluredir`, so repeated
+  runs and docs builds no longer double the results (Design Review 7).
+- Restate RDM as four parts — Record, Gates, Graph, Documents — in the README,
+  the docs home and navigation, the intended use and the architecture (Design
+  Review 6). Agent skills are maintained in scope-impact/agent-skills.
+- Keep `rdm story mutation-probe` as a standalone reviewer tool (DI-34,
+  UN-013): no verdicts, never a gate.
+- Retire the faithfulness gate: `rdm story faithfulness` and `verdict`, the
+  `dhf/faithfulness/` verdicts, probe replay, verdict
+  hash scope, the `test-faithfulness` skill and
+  `contrib/mutmut_by_design_input.py` are removed (DI-19, DI-20, DI-21, DI-27,
+  DI-28 and UN-009 retired, ids not reused). The verdicts' hash pins re-opened
+  reviews on edits that changed no requirement; independent verification is
+  now the human-reviewed pull request, with git as the controlled record. CI
+  runs design-gate → acceptance tests → verify → release-gate, and the
+  evidence bundle no longer carries verdicts (Design Review 4).
 - Findings from an independent review of the agent-era tooling (PR #40),
   all fixed through the design-controls loop:
     - Mutation-probe verdicts discriminate pytest exit codes: only a genuine

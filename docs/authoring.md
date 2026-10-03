@@ -32,6 +32,39 @@ title: "My controlled document"
 {%- endfor %}
 ```
 
+## Architecture (C4)
+
+The architecture is one [Structurizr](https://docs.structurizr.com/dsl)
+workspace, `dhf/c4/workspace.dsl`: the C4 model (people, software systems,
+containers, and components grouped by bounded context) and its views (the
+system context and containers, and one component view per bounded context).
+Each component names its code with a `code` property, a file or a directory:
+
+```
+group "graph" {
+  projection = component "Projection" "The record into RDF" "Python" {
+    properties {
+      "code" "rdm/graph/"
+    }
+  }
+}
+```
+
+`rdm c4 draw` exports the model to `dhf/c4/workspace.json` (what RDM reads)
+and draws each view with Graphviz to `dhf/c4/views/<view>.svg`; every drawn
+file is stamped with the workspace's hash. Commit them with the workspace. A
+document shows its view as an ordinary image, so GitHub, the docs site and a
+rendered PDF all show the same picture:
+
+```markdown
+![Components: graph](../../c4/views/C3_graph.svg)
+```
+
+The design gate fails when a drawn file is not the current workspace's, a view
+has no image, or an image has no view. Drawing needs Java, Structurizr's CLI
+(`RDM_STRUCTURIZR`, or `structurizr.sh` on the PATH) and Graphviz; checking
+needs only the stamps.
+
 ## Template helpers
 
 | Helper | What it does |
@@ -40,9 +73,6 @@ title: "My controlled document"
 | `join_to` | join foreign keys to rows in another table by `id` |
 | `md_indent` | indent an included snippet, optionally shifting its heading levels |
 | `first_pass_output` | two-pass rendering: reference content computed later in the document (e.g. a table of contents over generated sections) |
-
-DuckDB-backed queries are also available for templates that report over synced
-planning data — see the [API reference](reference.md) for `rdm.render`.
 
 ## Collecting snippets from source
 
@@ -79,5 +109,5 @@ title: "…"
 ---
 ```
 
-Design documents additionally carry `kind: design`, `context`, `satisfies`,
-and `design_inputs` — see [Design controls](design-controls.md).
+Design documents additionally carry `kind: design`, `context` and
+`design_inputs` (each with the needs it `traces_to`) — see [Design controls](design-controls.md).

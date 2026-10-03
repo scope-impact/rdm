@@ -1,5 +1,406 @@
 # Changelog
 
+## 2.0.0-alpha
+
+A major version: the code is one package per bounded context, so module paths
+changed (below). The package version is `2.0.0a0`; the release is tagged
+`v2.0.0-alpha` and its image `2.0.0-alpha`.
+
+### Added — docs
+- **Traceability map** (Graph → Traceability map): an interactive map of the
+  record, built from the knowledge graph on every docs build (a build hook,
+  `docs/_hooks/traceability_map.py`, writes its data; the page draws it) — C3 components in their bounded
+  contexts, and every user need and risk traced through design inputs and
+  tests to the components those tests exercise.
+- **The design history file in the docs** (RDM on RDM → Design history
+  file): every document of `dhf/` is published as it is in git, by a build
+  hook (`docs/_hooks/dhf.py`), with its frontmatter — design inputs, user
+  needs, risks, the risk policy — shown as sections, since the record's
+  substance lives there.
+- **PDFs of the design history file**: each published DHF page links a PDF of
+  the document, rendered with the template `rdm init` ships, in the RDM image.
+- **One PDF build in CI**: the Docs workflow's `pdfs` job builds the RDM
+  image once, through a scaffolded project's `docker compose`, and renders
+  both that project's PDFs and RDM's own design history file's; the docs
+  build takes the latter as an artifact. It replaces the separate *Test PDF
+  Generation* workflow.
+- **One theme for documents too**: the `rdm init` Typst template and the
+  verification report use the docs site's palette and fonts — Nunito Sans
+  text, JetBrains Mono headings (Maroon) and code, Nexus links, Ivory pages,
+  and a Maroon cover. The RDM image ships Nunito Sans in place of Inter.
+- **One theme for the docs**: `docs/stylesheets/rdm-theme.css` holds the
+  colours and fonts as CSS variables; the docs and the map both use them.
+
+### Fixed — PDFs
+- The `rdm init` Pandoc PDF config reads Markdown without citations: a
+  document that mentioned a tag such as `@allure.story` in prose failed to
+  build, as Typst found no bibliography for the "citation".
+
+### Fixed — what an exploratory test of every command found (Design Reviews 44–48)
+- **Gates over what they cannot read.** Frontmatter is read from a `---` line
+  to the next, a byte-order mark ignored; the design gate fails on a document
+  whose frontmatter is not YAML, not a mapping or unclosed (*Unreadable
+  Frontmatter*), and the release gate blocks on a result file it cannot read
+  (*Unreadable Result*). Before, either silently dropped out and the gates
+  passed.
+- **Risk.** Only a control reduces a risk; a risk document whose risks are not
+  a list blocks (*Malformed Register*); only text is a hazard, situation or
+  harm; numbered severities are read.
+- **Graph.** `rdm graph serve` is RDM's own read-only endpoint: it refuses
+  SPARQL Update and `SERVICE`, serves the last build, and needs no oxigraph
+  CLI (no longer a dependency). `rdm graph query` refuses them too, and the
+  agent server's guard ends a comment at a carriage return as well.
+- **Evidence.** The report and bundle never read a symbolic link; the bundle
+  keeps every plain result file, replaces an earlier bundle, and lists missing
+  attachments. Audit notes and section numbers leave code alone. `rdm
+  translate` counts errored and skipped cases as such. The mutation probe
+  restores exact bytes and never overwrites a later edit from its journal.
+- **Specification and architecture.** View freshness covers `!include`d
+  files; `new-input` refuses an edit it would misread; the pre-commit hook
+  gates the common languages and non-ASCII names; a persona run that does not
+  say it completed did not; the FDA cybersecurity checklist's V.A.1.b.iii key.
+
+### Changed — adoption pins the release tag (Design Review 43)
+- The CI workflow `rdm adopt` lays down pins the installed version's release
+  tag: a pre-release such as `2.0.0a0` as `v2.0.0-alpha`, the tag the release
+  and its image carry.
+
+### Changed — one package per bounded context (Design Review 32)
+- RDM's code is in one package per context: `rdm.specification`,
+  `rdm.evidence`, `rdm.risk`, `rdm.architecture`, `rdm.compliance`,
+  `rdm.release`, `rdm.publishing` and `rdm.graph`, over a shared kernel
+  (`rdm.kernel`). A test holds the code to the dependency rule of the
+  architecture: a context imports only the contexts below it.
+- The `rdm` command, `rdm.pytest_plugin` (for a project's `conftest.py`) and
+  `rdm.md_extensions` (named in a project's `config.yml`) keep their paths.
+  Other modules moved; code that imported them directly (`rdm.render`,
+  `rdm.util`, `rdm.record.*`, `rdm.gates.*`) imports them from their package
+  (`rdm.publishing.render`, `rdm.kernel.util`, …).
+- The test tags (`rdm.specification.tags`), the release gate and trace
+  (`rdm.release.gate`) and the frontmatter parser (`rdm.kernel.frontmatter`)
+  are modules of their own.
+
+### Added — the architecture in the graph (DI-67)
+- The graph has two more named graphs: `architecture`, the C4 model (every
+  element typed, contained and described; each component's bounded context and
+  code; each relationship; the component each source file a test run exercises
+  belongs to), and `code`, the Python imports between components' code. So a
+  query can follow a design input to its tests, the files they exercise, and
+  the components and contexts those files belong to.
+
+### Added — the architecture as one workspace, its views as images (DI-66, DI-70)
+- The C4 architecture is one Structurizr workspace, `dhf/c4/workspace.dsl`:
+  the model, each component's bounded context as its group and its code as a
+  property, and the views. RDM reads the model from its JSON export, with no
+  parser and no Java.
+- `rdm c4 draw` exports the model and draws each view with Graphviz to
+  `dhf/c4/views/<view>.svg`, stamped with the workspace's hash; documents show
+  their views as images, so GitHub, the docs site and PDFs show one picture,
+  and no browser draws it. The design gate fails on a stale drawn file.
+- RDM's own architecture moved from twelve Mermaid diagrams to the workspace.
+  The Mermaid rendering tried first (Design Review 28) is retired.
+
+### Fixed — PDF titles
+- A rendered PDF's cover and running header showed the document's first heading
+  (usually "Purpose") instead of its `title:`: `pandoc_pdf.yml` shifted every
+  heading up a level, which made the first one the title. Headings now keep
+  their level and are numbered from 1.
+- A title's em dash printed as `---`: the template quoted Pandoc's Typst markup
+  as a string. It now passes the title as content.
+- A long table ran over the footer, its last rows printed on top of each other:
+  Pandoc wraps a table in a figure, which does not break across pages. Tables
+  now continue on the next page.
+- Inline code was boxed, so a long path or name could not wrap and ran into the
+  next table column; identifiers and paths now also break after `/` and `_`.
+- The cover title is no longer justified, which spread a short line wide.
+- The traceability matrix has five columns, with most of the width for the
+  tests and outputs (in `rdm adopt`'s template and the example as well).
+
+### Changed — the worked example uses all of RDM
+- `examples/github-document-control/` is laid out as `rdm init` and
+  `rdm adopt` lay a project out (`.github/`, `dhf/` with its Makefile,
+  procedures under `dhf/documents/procedures/`), with the agent workflow,
+  hooks and session bootstrap `rdm adopt` adds.
+- Three bounded contexts with an architecture document and `realises`; a
+  proposed risk policy and register (six risks, three STRIDE threats linked to
+  a safety risk, one residual accepted with a reason); pending validation
+  records; DI-11, a daily drift audit, scaffolded with `rdm story new-input`.
+- The DMR index data is generated by `rdm story dmr`; the documents render
+  with the vocabulary and audit-note extensions; releases attach the evidence
+  bundle and every document as PDF through RDM's action.
+- Its own SHACL shapes (`dhf/shapes/`), an `.mcp.json` for the agent server,
+  and README commands for `trace`, `query`, Graph Explorer and
+  `mutation-probe`. RDM's CI runs the example's gates.
+- `rdm adopt`'s session bootstrap no longer suggests `pip install rdm`, which
+  installs another project from PyPI.
+
+### Changed — the worked example follows current RDM
+- `examples/github-document-control/` runs RDM's reusable gates, pinned to
+  `v1.2.0`, and the Part 11 gap analysis on every pull request, and its ruleset
+  requires exactly those checks (DI-9): it used to require two checks no
+  workflow reported, which would have blocked every merge.
+- Its release is published only if the release gate passes at the tag, with the
+  verification report attached (DI-10); the SOP is at revision 2.
+- Its tests record named verification steps with what each checked, and RDM's
+  pytest plugin labels each run from the example's own record. Design Review 2
+  also reviews DI-6..DI-8, which had none.
+
+### Added — document control and traceability
+- The `part11_document_control` built-in checklist and RDM's own Part 11-mapped
+  document-control statement, held by an acceptance test.
+- The `examples/github-document-control/` example: git as document control with
+  GitHub as the provider — rulesets and settings as code, pull-request approval
+  as the Part 11 signature, DMR/DHR analogs, a drift-audit script, its own gated
+  DHF.
+- Sound gap matching: a reference counts only inside `[[ … ]]`, by exact key
+  with a descendant covering its parent; prose mentions and sibling keys no
+  longer count.
+- Polyglot traceability: JS/TS and Java test tags are found for linkage.
+- `rdm hooks` installs the design-gate hook only (`--with-issue-hooks` adds the
+  legacy pair).
+
+### Changed — one vocabulary with the requirements skill
+- `CONTEXT.md` is the glossary, in the domain-modeling skill's format, and the
+  docs site shows it (Glossary). A design input *is* the acceptance criterion,
+  a system or subsystem `shall` requirement: *baseline* from a user need,
+  *risk-based* when a risk allocates it as a control. The test verifies it as a
+  whole; its verification steps are the test's own checks, never acceptance
+  criteria, and the test helper is `verification_step(...)`. "Clause" means a
+  checklist clause only. "Risk control" replaces "measure"; "verified" is kept
+  apart from "effective".
+- The verification report heads test steps "Verification steps", marks each
+  design input baseline or risk-based, shows each risk it is a control for with
+  that risk's status and residual decision (a residual on a proposed rating
+  says so), summarises the risk register on page 1, and leaves out Allure's
+  severity label. The release gate's message no longer calls risks
+  "controlled".
+
+### Added — the verification report
+- `rdm story evidence-report` renders a PDF for an auditor (DI-64):
+  identification (repository, record commit, commits tested, executor and
+  environment, RDM version, one SHA-256 over the results); an evidence status,
+  release-grade or each reason not; the anomalies; a traceability table with
+  the risks each design input controls; then each run with its steps as
+  acceptance criteria and the attachments the test made; and an appendix of
+  every result file's SHA-256. Runner internals, repeated labels and captured
+  output are left out.
+- `rdm.pytest_plugin` writes Allure's `executor.json` and
+  `environment.properties`: the CI run or local user, the OS and tool
+  versions, the commit and worktree state (DI-65).
+- The evidence bundle includes the report, and the reusable gates upload it.
+  Typst comes from the new `report` extra or a `typst` executable on PATH.
+
+### Added — RDM's gates as reusable CI
+- A reusable workflow (`.github/workflows/gates.yml`) runs a repository's
+  acceptance tests, then the design gate, verify, the release gate, graph
+  validation and the evidence bundle. A composite action (`actions/gates`)
+  runs the same gates in a workflow of your own. Both install RDM from the
+  pinned revision, not a package index (DI-63).
+- The workflow `rdm adopt` lays down calls the reusable workflow pinned to the
+  installed RDM's version. RDM's own CI calls it pinned to the commit under test.
+- The PDF action renders with the image of the release it is pinned to.
+- CI: tests on the latest stable Python on every push and pull request; a
+  multi-arch Docker image (amd64, arm64) with provenance and SBOM; Dependabot
+  for uv; a pinned Allure CLI.
+- CI hardening: every action pinned to a full commit sha (its release as a
+  comment, for Dependabot), `contents: read` by default, no persisted checkout
+  credentials, job timeouts, inputs passed to scripts through the environment,
+  and the Pages lock held by deployments only.
+
+### Changed — dependencies upgraded
+- Docker image: Ubuntu 26.04 LTS instead of Alpine, Pandoc 3.6.1 → 3.12,
+  Typst 0.12.0 → 0.15.1, Inter 4.0 → 4.1; RDM installed with the `graph`
+  extra, so the graph commands, including `rdm graph serve` (whose oxigraph
+  server has no Alpine build), run in the image.
+- The PDF template names the font family `Inter`: Typst 0.15 no longer lists
+  the variable font as `Inter Variable`, so it fell back to the default font.
+- Python dependencies upgraded to their latest releases.
+
+### Added — Allure labels from the record
+- `rdm.pytest_plugin` labels each acceptance run with Allure's API: epic (user
+  need), feature (bounded context), links to the Markdown documents that
+  declare it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
+  attachment (DI-57).
+
+### Changed — one home for each rule and helper
+- The risk rules are written once (`rdm.record.risk.assess`): the release gate
+  reports their findings and the graph carries them on each risk
+  (`rdm:finding`, `rdm:riskWarning`), so the risk shapes report the gate's own
+  messages and cannot drift from it (DI-45).
+- One id grammar (`rdm.record.ids`), one git helper (`rdm.record.git`), one
+  namespace module (`rdm.graph.ns`), and a public `rdm.gaps` API the graph
+  uses; orphan test tags are projected as data (`rdm:undeclaredTag`).
+- A projection parses each document once and asks git for every document's
+  latest commit in one call — about 1 s to 0.2 s per MCP call; the release
+  gate about 1.1 s to 0.06 s. `rdm graph` subcommands share their record
+  options, and `query` reports a missing checklist instead of a traceback.
+
+### Added — rules for derived relations
+- Each relation the graph derives rather than stores is declared in the
+  vocabulary with its SPARQL CONSTRUCT (`rdm:Rule`); the first,
+  `rdm:serves`, gives a context's user needs. The agent server's `schema`
+  lists the rules and its queries see the results; `rdm graph build --infer`
+  and `query --infer` add them to a separate inferred graph (DI-62).
+
+### Added — evidence tied to its version and its test
+- `rdm.pytest_plugin` labels each tagged run with the commit under test and a
+  dirty working tree (DI-59); the graph links run → commit and the record →
+  the commit it was built at, and warns on an unversioned or stale run
+  (DI-60).
+- A test is a function (`rdm:Test`, defined in its file), and a run links to
+  the test it ran; warnings for a test that never ran and a run whose test
+  does not claim its design input (DI-61).
+- Every controlled document, not only design documents, carries its latest
+  commit and its landing (DI-35, DI-51).
+
+### Removed — noise from the graph
+- Allure labels as nodes (565 in RDM's own graph), links (`rdfs:seeAlso`),
+  test cases (`rdm:runOf`) and container fixtures (DI-55, retired) are no
+  longer projected: they repeated the record or said nothing about design
+  controls. `story` and `output` labels still become `rdm:exercises` and
+  `rdm:exercisesOutput`; the raw results stay in the evidence bundle (DI-54).
+- The traceability matrix template is not projected, and its
+  `prov:wasDerivedFrom` edges are gone (DI-58).
+
+### Changed — a context's user needs are derived
+- `satisfies` is gone from design documents: the needs a context serves follow
+  from its design inputs' `traces_to` (owned or realised). The design gate's
+  coverage warning reads the inputs, `rdm story new-input` no longer edits a
+  context list, and the graph has no `rdm:satisfies` edge. A legacy key is
+  ignored (DI-1, DI-22).
+
+### Removed — `rdm:reviewedIn`
+- Every design document was linked to the one design review because the gate
+  requires a review to exist, not because the review covered it (DI-52).
+
+### Added — no island documents
+- The architecture declares the bounded contexts and their parts
+  (`contexts:`), a document names the documents it relies on
+  (`references:`); a context the architecture omits warns, a dangling reference fails
+  `rdm graph validate` (DI-58).
+
+### Fixed — Graph Explorer
+- `rdm graph explorer-file --exclude TestRun` left a run's details (steps,
+  attachments, labels, fixtures, test cases) as about a thousand islands; they
+  now go with the excluded runs (DI-39).
+
+### Changed — only the story names a design input
+- Tag discovery reads `@allure.story` (Python), `allure.story` (JS/TS) and
+  `@Story` (Java) only; a feature carries the context, not a design input
+  (DI-31, DI-40).
+
+### Added — Allure results as RDF
+- `rdm/graph/allure.py`: each result's uuid, full name, times, status
+  message and trace, and parameters (DI-54); output labels linking runs to
+  source files, listed by `trace` (DI-56).
+
+### Added — test evidence
+- `rdm story evidence-bundle` keeps the executed Allure results, with every
+  attachment and container they reference, in `allure-results/` (DI-30).
+- The graph carries each test run's steps and attachments, and `trace` lists
+  them with each run (DI-53).
+
+### Fixed — security
+- `rdm graph serve` ran Oxigraph read-write with CORS open: a cross-origin
+  `CLEAR ALL` emptied the store. It now serves read-only (DI-36).
+- The agent server's `query` refuses `SERVICE`, which made HTTP requests, and
+  `trace` takes only id-shaped input (DI-42). Recorded as RISK-TOOL-006/007.
+
+### Added — graph
+- Who landed each design document's latest change on the default branch
+  (`rdm:landedIn`, `rdm:landedBy`), with a warning while it has not (DI-51).
+- User needs, risks and design documents link to the documents that declare,
+  evaluate and review them (DI-52).
+
+### Changed
+- DI-34, DI-37, DI-38 and DI-44 are split into DI-47..50, one clause group and
+  one test each (Design Review 12).
+
+### Removed — DuckDB and the planning tooling
+- `rdm story audit`, `sync`, `backlog-validate`, `check-ids`, `validate`;
+  `rdm pm sync`; `rdm pull`; the `duckdb` query in templates; the
+  `story-audit`, `analytics`, `github` and `plan` extras. The record and its
+  RDF graph are the only data model (Design Review 11). DI-6, DI-13, DI-14,
+  DI-23 and DI-32 retired.
+- The gates (`design_gate`, `new_input`, `mutation`) move to `rdm/gates/` and
+  are part of the core install.
+
+### Added
+- A user-need or design-input id declared more than once fails the design
+  gate, naming every declaring document; the graph counts declarations and
+  its shapes report a repeat (DI-46, UN-007).
+
+### Changed — RDM as four parts
+- README, docs home and navigation describe RDM as Record, Gates, Graph and
+  Documents, with a plain "what it does not do" list; the intended use is in
+  the V&V plan (Design Review 6).
+
+### Added — read-only agent interface
+- `rdm graph mcp`: an MCP stdio server with `schema`, `query`, `trace` and
+  `validate`, each answering from a fresh projection of the record; no write
+  tool, SPARQL Update refused, rows capped (UN-015, DI-41, DI-42).
+  `.mcp.json` registers it for this repository.
+
+### Added — risk register
+- Risks as frontmatter in `kind: risk` documents: safety or security (with a
+  STRIDE category), hazard → situation → harm, severity, probability,
+  controls (design inputs), residual, acceptance, `status: proposed |
+  approved` (UN-016, DI-43).
+- No default matrix: risks are evaluated only against a declared
+  `risk_policy` with per-level acceptability (`acceptable`, `justify`,
+  `unacceptable`).
+- The release gate blocks missing criteria, a broken chain, an undefined or
+  mis-scored risk, an undeclared or unverified control, and an unacceptable
+  or unaccepted residual; proposed ratings warn (DI-44).
+- Risks in the graph (`risks` named graph, `rdm:controlledBy`, residual
+  decision), risk shapes in agreement with the gate, risk ids in `trace`
+  (DI-45). Design Reviews 9 and 10.
+
+### Fixed
+- Python test tags are read from decorators and `pytestmark` only, never
+  from strings or comments (DI-40); every acceptance command passes
+  `--clean-alluredir`, so repeated runs no longer double the results.
+- `rdm story mutation-probe` runs the test once unmutated and refuses a test
+  that does not pass — an already-failing test was reported KILLED (DI-34).
+- `rdm story new-input` fills an empty `design_inputs: []` in place instead of
+  writing a second key, and wraps its stub test's docstring (DI-22).
+- User needs carry their text in the graph (DI-35).
+
+### Added — the design record as a linked-data graph
+- `rdm graph build | query | serve` (optional extra `graph`): projects the
+  record into RDF named graphs (record, tests, executions, git, ontology),
+  stores it in an embedded Oxigraph database, answers SPARQL, and serves a
+  SPARQL 1.1 endpoint for AWS Graph Explorer. DI-35, DI-36, user need UN-014.
+- Checklists and `[[KEY]]` reference tags in the graph, as SKOS data: a new
+  standard or checklist is a `.txt` or RDF file, never a code change; matched
+  with `rdm gap`'s own reader and matcher (DI-37).
+- `rdm graph validate`: the gate rules as SHACL shapes (plus `--shapes` for
+  your own), held by test to agreement with the release gate (DI-38).
+- `rdm graph explorer-file`: the whole record as an AWS Graph Explorer graph
+  file, so the full traceability graph opens in one step (DI-39).
+
+### Changed — `rdm story mutation-probe` is a standalone reviewer tool
+- Same command and restore guarantees, now recorded as DI-34 (user need
+  UN-013): a reviewer proves a test catches a specific defect. It records no
+  verdict and gates nothing.
+
+### Removed — the faithfulness gate
+- `rdm story faithfulness` and `rdm story verdict`, faithfulness verdicts (`dhf/faithfulness/*.json`), probe replay, verdict hash
+  scope, the `test-faithfulness` skill and `contrib/mutmut_by_design_input.py`.
+  Retired design inputs DI-19, DI-20, DI-21, DI-27, DI-28 and user need UN-009
+  (ids are not reused).
+- Why: the verdicts were RDM's own construct, not a §820.30 or IEC 62304
+  requirement, and their hash pins re-opened reviews on edits that changed no
+  requirement or product behavior. Independent verification is now the
+  human-reviewed pull request, with git as the controlled record (Design
+  Review 4).
+
+### Changed
+- CI runs design-gate → acceptance tests (Allure) → verify → release-gate.
+- `release-gate` requires the design approved, every design input verified by
+  a passing tagged test, and every user need addressed — no verdicts.
+- `rdm story evidence-bundle` no longer includes verdicts.
+
 ## 1.2.0
 
 Record-first design controls and an agentic faithfulness pipeline — RDM now
@@ -35,3 +436,22 @@ development (`dhf/`, `.github/workflows/design-controls.yml`).
 
 ### Changed
 - `[plan]` extra; planning tooling (Backlog.md / GitHub) is fenced as non-record.
+
+## 1.1.0
+
+- Story Audit module (`rdm[story-audit]`): Backlog.md parser, schema
+  validation, traceability audit and duplicate-id detection (removed since).
+- Bidirectional GitHub sync (`rdm[github]`): Backlog.md tasks to GitHub
+  Issues, Milestones and Projects v2, pull requests into DuckDB (removed since).
+- The VitalView example: a software-only medical device worked example for the
+  record-first model (removed since; RDM's own `dhf/` is the worked example).
+- Alias-based status normalization with fix hints in the validator.
+- Codebase simplification; CLAUDE.md for Claude Code; PyGithub 2.8.1, Ruff 0.14.13.
+
+## 1.0.0
+
+- Installation with `uv tool install` straight from GitHub.
+- Typst instead of LaTeX for PDF generation.
+- A lightweight Docker image (Alpine, Pandoc 3.6, Typst 0.12).
+- The GitHub Action for PDFs (`scope-impact/rdm@v1`).
+- Fixed cross-references in the `software_plan.md` template.

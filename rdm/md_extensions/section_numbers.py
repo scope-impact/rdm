@@ -1,10 +1,15 @@
+import re
+
 from rdm.md_extensions.base import RdmExtension
+from rdm.md_extensions.code import fenced
+
+_HEADING = re.compile(r"^(#{1,6})[ \t]+\S")
 
 
 def section_number_filter(generator):
     section_list = []
-    for line in generator:
-        section_depth = section_number_depth(line)
+    for line, code in fenced(generator):
+        section_depth = 0 if code else section_number_depth(line)
         if section_depth == 0:
             yield line
         else:
@@ -21,10 +26,9 @@ def section_number_filter(generator):
 
 
 def section_number_depth(line):
-    for index in range(len(line)):
-        if line[index] != '#':
-            return index
-    return len(line)
+    """The level of an ATX heading (``#`` to ``######``, then a space), else 0."""
+    match = _HEADING.match(line)
+    return len(match.group(1)) if match else 0
 
 
 class SectionNumberExtension(RdmExtension):

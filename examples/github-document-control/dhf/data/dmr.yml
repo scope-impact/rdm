@@ -1,0 +1,11 @@
+# Device-master-record index data -- GENERATED from the controlled
+# documents' frontmatter by `rdm story dmr`. Do not edit by hand.
+entries:
+- id: DMR-001
+  title: "Device Master Record \u2014 index of the controlled specification set"
+  path: procedures/device_master_record_index.md
+  revision: 2
+- id: SOP-DC-001
+  title: "Document Control Procedure \u2014 git as the document control system"
+  path: procedures/document_control_procedure.md
+  revision: 3

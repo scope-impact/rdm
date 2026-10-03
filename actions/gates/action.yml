@@ -1,0 +1,116 @@
+name: 'RDM gates'
+description: >-
+  Run RDM's design controls on a repository's record: design gate, verify,
+  release gate, graph validation and the release evidence bundle (DI-63).
+  RDM is installed from the revision this action is pinned to, never by name
+  from a package index.
+
+inputs:
+  dhf:
+    description: 'Path to the design history file'
+    default: 'dhf'
+  allure-results:
+    description: 'Allure results of the acceptance tests (run them before this action)'
+    default: 'dhf/allure-results'
+  release-gate:
+    description: 'Run the release gate (false while the record has no design input yet)'
+    default: 'true'
+  graph-validate:
+    description: 'Run rdm graph validate (the gate rules as SHACL, with graph-only warnings)'
+    default: 'true'
+  checklists:
+    description: 'Checklists the documents are held to, space-separated (built-in names or files)'
+    default: ''
+  evidence-bundle:
+    description: 'Write the release evidence bundle and upload it as an artifact'
+    default: 'true'
+  artifact-name:
+    description: 'Name of the uploaded evidence artifact'
+    default: 'rdm-evidence'
+  install-rdm:
+    description: "Install RDM from this action's revision (false when the caller already did, from the same revision)"
+    default: 'true'
+  python-version:
+    description: 'Python that runs RDM'
+    default: '3.12'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      if: inputs.install-rdm == 'true'
+
+    # Inputs reach the scripts as environment variables, never spliced into
+    # the script text: an input cannot inject shell.
+    - name: Install RDM from this action's revision
+      if: inputs.install-rdm == 'true'
+      shell: bash
+      env:
+        PYTHON_VERSION: ${{ inputs.python-version }}
+      run: |
+        uv tool install --python "$PYTHON_VERSION" \
+          "rdm[graph,report] @ file://$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        rdm --version
+
+    - name: Find the Allure results
+      id: results
+      shell: bash
+      env:
+        RESULTS: ${{ inputs.allure-results }}
+      run: |
+        if compgen -G "$RESULTS/*-result.json" > /dev/null; then found=true; else found=false; fi
+        echo "found=$found" >> "$GITHUB_OUTPUT"
+
+    - name: Design gate
+      shell: bash
+      env:
+        DHF: ${{ inputs.dhf }}
+      run: rdm story design-gate --dhf "$DHF"
+
+    - name: Verification data
+      if: steps.results.outputs.found == 'true'
+      shell: bash
+      env:
+        DHF: ${{ inputs.dhf }}
+        RESULTS: ${{ inputs.allure-results }}
+      run: |
+        mkdir -p "$DHF/data"
+        rdm story verify --dhf "$DHF" --allure-results "$RESULTS" -o "$DHF/data/verification.yml"
+
+    - name: Release gate
+      if: inputs.release-gate == 'true'
+      shell: bash
+      env:
+        DHF: ${{ inputs.dhf }}
+        RESULTS: ${{ inputs.allure-results }}
+      run: rdm story release-gate --dhf "$DHF" --allure-results "$RESULTS"
+
+    - name: Graph validation
+      if: inputs.graph-validate == 'true'
+      shell: bash
+      env:
+        DHF: ${{ inputs.dhf }}
+        RESULTS: ${{ inputs.allure-results }}
+        CHECKLISTS: ${{ inputs.checklists }}
+      run: |
+        args=()
+        read -r -a checklists <<< "$CHECKLISTS"
+        for checklist in "${checklists[@]}"; do args+=(--checklist "$checklist"); done
+        [ -d "$RESULTS" ] && args+=(--allure-results "$RESULTS")
+        rdm graph validate --dhf "$DHF" "${args[@]}"
+
+    - name: Release evidence bundle
+      if: inputs.evidence-bundle == 'true' && steps.results.outputs.found == 'true'
+      shell: bash
+      env:
+        DHF: ${{ inputs.dhf }}
+        RESULTS: ${{ inputs.allure-results }}
+      run: rdm story evidence-bundle --dhf "$DHF" --allure-results "$RESULTS" -o "$RUNNER_TEMP/rdm-evidence"
+
+    - name: Upload the evidence bundle
+      if: inputs.evidence-bundle == 'true' && steps.results.outputs.found == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/rdm-evidence
+        if-no-files-found: error

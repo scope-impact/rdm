@@ -1,0 +1,3091 @@
+{
+  "configuration": {},
+  "description": "The design record of regulated software.",
+  "documentation": {},
+  "id": 0,
+  "model": {
+    "people": [
+      {
+        "description": "Writes the record; renders and checks the regulatory documents",
+        "id": "1",
+        "name": "Regulatory author",
+        "properties": {
+          "structurizr.dsl.identifier": "author"
+        },
+        "relationships": [
+          {
+            "description": "writes the record and renders documents with",
+            "destinationId": "4",
+            "id": "58",
+            "sourceId": "1",
+            "tags": "Relationship"
+          },
+          {
+            "description": "renders documents and checks the record with",
+            "destinationId": "5",
+            "id": "65",
+            "sourceId": "1",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Person"
+      },
+      {
+        "description": "Changes the product and its tagged acceptance tests",
+        "id": "2",
+        "name": "Engineer",
+        "properties": {
+          "structurizr.dsl.identifier": "engineer"
+        },
+        "relationships": [
+          {
+            "description": "runs the gates and tests with",
+            "destinationId": "4",
+            "id": "59",
+            "sourceId": "2",
+            "tags": "Relationship"
+          },
+          {
+            "description": "runs",
+            "destinationId": "45",
+            "id": "66",
+            "sourceId": "2",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Person"
+      },
+      {
+        "description": "Approves each change by reviewing its pull request",
+        "id": "3",
+        "name": "Reviewer",
+        "properties": {
+          "structurizr.dsl.identifier": "reviewer"
+        },
+        "relationships": [
+          {
+            "description": "approves pull requests on",
+            "destinationId": "55",
+            "id": "60",
+            "sourceId": "3",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Person"
+      }
+    ],
+    "softwareSystems": [
+      {
+        "containers": [
+          {
+            "components": [
+              {
+                "description": "Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers",
+                "documentation": {},
+                "group": "specification",
+                "id": "6",
+                "name": "Shared kernel",
+                "properties": {
+                  "code": "rdm/kernel/",
+                  "structurizr.dsl.identifier": "kernel"
+                },
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "User needs, design inputs, realises and declarations, from the design documents' and V&V plan's frontmatter",
+                "documentation": {},
+                "group": "specification",
+                "id": "7",
+                "name": "Record reader",
+                "properties": {
+                  "code": "rdm/specification/sdd.py",
+                  "structurizr.dsl.identifier": "record_reader"
+                },
+                "relationships": [
+                  {
+                    "description": "parses frontmatter with",
+                    "destinationId": "6",
+                    "id": "155",
+                    "sourceId": "7",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "The design-input tags in test sources, in every language RDM reads",
+                "documentation": {},
+                "group": "specification",
+                "id": "8",
+                "name": "Test tags",
+                "properties": {
+                  "code": "rdm/specification/tags.py",
+                  "structurizr.dsl.identifier": "test_tags"
+                },
+                "relationships": [
+                  {
+                    "description": "asks git with and checks ids with",
+                    "destinationId": "6",
+                    "id": "160",
+                    "sourceId": "8",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "The record complete, approved and declared once; the architecture views fresh",
+                "documentation": {},
+                "group": "specification",
+                "id": "9",
+                "name": "Design gate",
+                "properties": {
+                  "code": "rdm/specification/design_gate.py",
+                  "structurizr.dsl.identifier": "design_gate"
+                },
+                "relationships": [
+                  {
+                    "description": "checks the views are fresh with",
+                    "destinationId": "27",
+                    "id": "105",
+                    "sourceId": "9",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "asks git with and checks ids with",
+                    "destinationId": "6",
+                    "id": "136",
+                    "sourceId": "9",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the record with",
+                    "destinationId": "7",
+                    "id": "137",
+                    "sourceId": "9",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "finds the tagged tests with",
+                    "destinationId": "8",
+                    "id": "170",
+                    "sourceId": "9",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm hooks: installs the design-gate pre-commit hook; the issue-reference hooks only on request",
+                "documentation": {},
+                "group": "specification",
+                "id": "10",
+                "name": "Hooks installer",
+                "properties": {
+                  "code": "rdm/specification/hooks.py",
+                  "structurizr.dsl.identifier": "hooks"
+                },
+                "relationships": [
+                  {
+                    "description": "installs",
+                    "destinationId": "11",
+                    "id": "78",
+                    "sourceId": "10",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "uses",
+                    "destinationId": "6",
+                    "id": "143",
+                    "sourceId": "10",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "Runs the design gate before a commit that stages implementation files; blocks when the gate cannot run",
+                "documentation": {},
+                "group": "specification",
+                "id": "11",
+                "name": "Pre-commit hook",
+                "properties": {
+                  "code": "rdm/specification/hook_files/",
+                  "structurizr.dsl.identifier": "precommit_hook"
+                },
+                "relationships": [
+                  {
+                    "description": "runs",
+                    "destinationId": "9",
+                    "id": "79",
+                    "sourceId": "11",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "shell"
+              },
+              {
+                "description": "rdm story new-input: allocates the next id, inserts it into a context's frontmatter, writes a failing stub test",
+                "documentation": {},
+                "group": "specification",
+                "id": "12",
+                "name": "New design input",
+                "properties": {
+                  "code": "rdm/specification/new_input.py",
+                  "structurizr.dsl.identifier": "new_input"
+                },
+                "relationships": [
+                  {
+                    "description": "reads the design documents with",
+                    "destinationId": "7",
+                    "id": "145",
+                    "sourceId": "12",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "sorts ids with",
+                    "destinationId": "6",
+                    "id": "161",
+                    "sourceId": "12",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "finds the test suite with",
+                    "destinationId": "8",
+                    "id": "171",
+                    "sourceId": "12",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm init: lays down the project templates and the shared agent workflow runbook",
+                "documentation": {},
+                "group": "specification",
+                "id": "13",
+                "name": "Project scaffold",
+                "properties": {
+                  "code": "rdm/specification/init.py",
+                  "structurizr.dsl.identifier": "project_scaffold"
+                },
+                "relationships": [
+                  {
+                    "description": "copies",
+                    "destinationId": "14",
+                    "id": "90",
+                    "sourceId": "13",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "copies the agent workflow runbook from",
+                    "destinationId": "16",
+                    "id": "128",
+                    "sourceId": "13",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "What rdm init lays down",
+                "documentation": {},
+                "group": "specification",
+                "id": "14",
+                "name": "Project templates",
+                "properties": {
+                  "code": "rdm/specification/init_files/",
+                  "structurizr.dsl.identifier": "project_templates"
+                },
+                "tags": "Element,Component,context:specification",
+                "technology": "Markdown, YAML, Typst"
+              },
+              {
+                "description": "rdm adopt: lays down each missing file of the adoption templates, never overwriting one",
+                "documentation": {},
+                "group": "specification",
+                "id": "15",
+                "name": "Adoption",
+                "properties": {
+                  "code": "rdm/specification/adopt.py",
+                  "structurizr.dsl.identifier": "adoption"
+                },
+                "relationships": [
+                  {
+                    "description": "copies",
+                    "destinationId": "16",
+                    "id": "91",
+                    "sourceId": "15",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "copies",
+                    "destinationId": "11",
+                    "id": "129",
+                    "sourceId": "15",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "takes the version from",
+                    "destinationId": "6",
+                    "id": "133",
+                    "sourceId": "15",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "What rdm adopt lays down",
+                "documentation": {},
+                "group": "specification",
+                "id": "16",
+                "name": "Adoption templates",
+                "properties": {
+                  "code": "rdm/specification/adopt_files/",
+                  "structurizr.dsl.identifier": "adoption_templates"
+                },
+                "tags": "Element,Component,context:specification",
+                "technology": "Markdown, YAML"
+              },
+              {
+                "description": "Approved validation records per user need",
+                "documentation": {},
+                "group": "specification",
+                "id": "17",
+                "name": "Validation records",
+                "properties": {
+                  "code": "rdm/specification/validation.py",
+                  "structurizr.dsl.identifier": "validation_records"
+                },
+                "relationships": [
+                  {
+                    "description": "buckets observations by id with",
+                    "destinationId": "6",
+                    "id": "164",
+                    "sourceId": "17",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the user-need registry with",
+                    "destinationId": "7",
+                    "id": "165",
+                    "sourceId": "17",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "Persona runs as formative evidence",
+                "documentation": {},
+                "group": "specification",
+                "id": "18",
+                "name": "Formative usability",
+                "properties": {
+                  "code": "rdm/specification/persona.py",
+                  "structurizr.dsl.identifier": "formative_usability"
+                },
+                "relationships": [
+                  {
+                    "description": "buckets observations by id with",
+                    "destinationId": "6",
+                    "id": "142",
+                    "sourceId": "18",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm story persona: the formative status of each user need; informational, never fails a successful run",
+                "documentation": {},
+                "group": "specification",
+                "id": "19",
+                "name": "Persona command",
+                "properties": {
+                  "code": "rdm/specification/persona_cmd.py",
+                  "structurizr.dsl.identifier": "persona_command"
+                },
+                "relationships": [
+                  {
+                    "description": "classifies runs with",
+                    "destinationId": "18",
+                    "id": "93",
+                    "sourceId": "19",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the V&V plan with",
+                    "destinationId": "7",
+                    "id": "146",
+                    "sourceId": "19",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:specification",
+                "technology": "Python"
+              },
+              {
+                "description": "Every declared design input reconciled against the executed results: status, runs and tests per design input, by user need; generated, never edited",
+                "documentation": {},
+                "group": "release",
+                "id": "20",
+                "name": "Verification data",
+                "properties": {
+                  "code": "rdm/release/verify.py",
+                  "structurizr.dsl.identifier": "verification_data"
+                },
+                "relationships": [
+                  {
+                    "description": "reconciles results with",
+                    "destinationId": "22",
+                    "id": "110",
+                    "sourceId": "20",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "checks ids with",
+                    "destinationId": "6",
+                    "id": "162",
+                    "sourceId": "20",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the record with",
+                    "destinationId": "7",
+                    "id": "166",
+                    "sourceId": "20",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:release",
+                "technology": "Python"
+              },
+              {
+                "description": "Blocks a release on design-gate failures, failed or untested design inputs, blocking risk findings or an unrefined user need; warns on unvalidated user needs and orphan tags; the design gate's results warnings; the trace slice",
+                "documentation": {},
+                "group": "release",
+                "id": "21",
+                "name": "Release gate",
+                "properties": {
+                  "code": "rdm/release/gate.py",
+                  "structurizr.dsl.identifier": "release_gate"
+                },
+                "relationships": [
+                  {
+                    "description": "checks ids with",
+                    "destinationId": "6",
+                    "id": "156",
+                    "sourceId": "21",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the record with",
+                    "destinationId": "7",
+                    "id": "157",
+                    "sourceId": "21",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "runs the design gate's checks of",
+                    "destinationId": "9",
+                    "id": "174",
+                    "sourceId": "21",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reconciles results with",
+                    "destinationId": "22",
+                    "id": "175",
+                    "sourceId": "21",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reports the risk findings of",
+                    "destinationId": "26",
+                    "id": "176",
+                    "sourceId": "21",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads validation records with",
+                    "destinationId": "17",
+                    "id": "177",
+                    "sourceId": "21",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:release",
+                "technology": "Python"
+              },
+              {
+                "description": "Allure results into test runs and a status per design input (failed, else verified, else untested; undeclared stories as orphans); run labels and facts",
+                "documentation": {},
+                "group": "test_evidence",
+                "id": "22",
+                "name": "Allure reader",
+                "properties": {
+                  "code": "rdm/evidence/allure.py",
+                  "structurizr.dsl.identifier": "allure_reader"
+                },
+                "relationships": [
+                  {
+                    "description": "buckets observations by id with",
+                    "destinationId": "6",
+                    "id": "135",
+                    "sourceId": "22",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "takes the label that names a design input from",
+                    "destinationId": "8",
+                    "id": "169",
+                    "sourceId": "22",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:test_evidence",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm story mutation-probe: runs one test unmutated, then mutated; killed, survived or error; journals the original beside the file and always restores it",
+                "documentation": {},
+                "group": "test_evidence",
+                "id": "23",
+                "name": "Mutation probe",
+                "properties": {
+                  "code": "rdm/evidence/mutation.py",
+                  "structurizr.dsl.identifier": "mutation_probe"
+                },
+                "relationships": [
+                  {
+                    "description": "runs one test, unmutated then mutated, in",
+                    "destinationId": "45",
+                    "id": "126",
+                    "sourceId": "23",
+                    "tags": "Relationship",
+                    "technology": "pytest subprocess"
+                  }
+                ],
+                "tags": "Element,Component,context:test_evidence",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm translate: foreign XML results to a YAML data file; rejects an unknown format",
+                "documentation": {},
+                "group": "test_evidence",
+                "id": "24",
+                "name": "Test result translation",
+                "properties": {
+                  "code": "rdm/evidence/translate.py",
+                  "structurizr.dsl.identifier": "test_translation"
+                },
+                "relationships": [
+                  {
+                    "description": "parses with",
+                    "destinationId": "25",
+                    "id": "89",
+                    "sourceId": "24",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "uses",
+                    "destinationId": "6",
+                    "id": "163",
+                    "sourceId": "24",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:test_evidence",
+                "technology": "Python"
+              },
+              {
+                "description": "Flattens gtest, xunit and qttest XML into result data",
+                "documentation": {},
+                "group": "test_evidence",
+                "id": "25",
+                "name": "Result formatters",
+                "properties": {
+                  "code": "rdm/evidence/test_formatters/",
+                  "structurizr.dsl.identifier": "result_formatters"
+                },
+                "tags": "Element,Component,context:test_evidence",
+                "technology": "Python"
+              },
+              {
+                "description": "The risk register evaluated against the declared risk policy; the risk rules as findings, written only here; handed the declared and verified design input ids, it reads nothing of the specification",
+                "documentation": {},
+                "group": "risk",
+                "id": "26",
+                "name": "Risk register",
+                "properties": {
+                  "code": "rdm/risk/register.py",
+                  "structurizr.dsl.identifier": "risk_register"
+                },
+                "relationships": [
+                  {
+                    "description": "parses frontmatter with",
+                    "destinationId": "6",
+                    "id": "159",
+                    "sourceId": "26",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:risk",
+                "technology": "Python"
+              },
+              {
+                "description": "The C4 model, read from the workspace's export (declared relationships only); view freshness from the stamps; the component owning a file (longest code match) and the import dependencies between components",
+                "documentation": {},
+                "group": "architecture",
+                "id": "27",
+                "name": "Architecture model",
+                "properties": {
+                  "code": "rdm/architecture/model.py",
+                  "structurizr.dsl.identifier": "architecture_model"
+                },
+                "tags": "Element,Component,context:architecture",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm c4 draw: Structurizr export, Graphviz views, each stamped with the workspace digest; all or nothing, removes the image of a removed view",
+                "documentation": {},
+                "group": "architecture",
+                "id": "28",
+                "name": "Architecture drawing",
+                "properties": {
+                  "code": "rdm/architecture/draw.py",
+                  "structurizr.dsl.identifier": "architecture_drawing"
+                },
+                "relationships": [
+                  {
+                    "description": "takes the paths, view keys, stamp format and workspace digest from",
+                    "destinationId": "27",
+                    "id": "104",
+                    "sourceId": "28",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "writes the exported model and stamped view images to",
+                    "destinationId": "54",
+                    "id": "112",
+                    "sourceId": "28",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:architecture",
+                "technology": "Python, Structurizr, Graphviz"
+              },
+              {
+                "description": "Reads a checklist and its includes, finds the checklist clauses no document references, and reports the gaps or the coverage; offers its reader and key matcher to other contexts",
+                "documentation": {},
+                "group": "compliance",
+                "id": "29",
+                "name": "Gap analysis",
+                "properties": {
+                  "code": "rdm/compliance/gaps.py",
+                  "structurizr.dsl.identifier": "gap_analysis"
+                },
+                "relationships": [
+                  {
+                    "description": "resolves built-in names and follows includes in",
+                    "destinationId": "30",
+                    "id": "77",
+                    "sourceId": "29",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:compliance",
+                "technology": "Python"
+              },
+              {
+                "description": "The built-in checklists: IEC 62304 (base, 2006, 2015; classes A-C), ISO 14971 2007/2019, FDA-SW 2005/2021, FDA-CYBER 2018, FDA-HFE 2011, 21 CFR Part 11 document control",
+                "documentation": {},
+                "group": "compliance",
+                "id": "30",
+                "name": "Checklists",
+                "properties": {
+                  "code": "rdm/compliance/checklists/",
+                  "structurizr.dsl.identifier": "checklists"
+                },
+                "tags": "Element,Component,context:compliance",
+                "technology": "text"
+              },
+              {
+                "description": "Templates and data to Markdown",
+                "documentation": {},
+                "group": "publishing",
+                "id": "31",
+                "name": "Renderer",
+                "properties": {
+                  "code": "rdm/publishing/render.py",
+                  "structurizr.dsl.identifier": "renderer"
+                },
+                "relationships": [
+                  {
+                    "description": "post-processes the rendered Markdown with",
+                    "destinationId": "32",
+                    "id": "113",
+                    "sourceId": "31",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "keeps the first pass's words in",
+                    "destinationId": "33",
+                    "id": "114",
+                    "sourceId": "31",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "uses",
+                    "destinationId": "6",
+                    "id": "158",
+                    "sourceId": "31",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:publishing",
+                "technology": "Python, Jinja2"
+              },
+              {
+                "description": "Section numbers, vocabulary and audit-note exclusion over the rendered lines; loaded by name from the project's config.yml",
+                "documentation": {},
+                "group": "publishing",
+                "id": "32",
+                "name": "Markdown extensions",
+                "properties": {
+                  "code": "rdm/md_extensions/",
+                  "structurizr.dsl.identifier": "markdown_extensions"
+                },
+                "relationships": [
+                  {
+                    "description": "gives the template the first pass's words from",
+                    "destinationId": "33",
+                    "id": "115",
+                    "sourceId": "32",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "uses",
+                    "destinationId": "6",
+                    "id": "144",
+                    "sourceId": "32",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:publishing",
+                "technology": "Python"
+              },
+              {
+                "description": "The words a first render produced, for the second pass to test against",
+                "documentation": {},
+                "group": "publishing",
+                "id": "33",
+                "name": "First-pass output",
+                "properties": {
+                  "code": "rdm/publishing/first_pass_output.py",
+                  "structurizr.dsl.identifier": "first_pass_output"
+                },
+                "tags": "Element,Component,context:publishing",
+                "technology": "Python"
+              },
+              {
+                "description": "The retained release evidence",
+                "documentation": {},
+                "group": "publishing",
+                "id": "34",
+                "name": "Evidence bundle",
+                "properties": {
+                  "code": "rdm/publishing/bundle.py",
+                  "structurizr.dsl.identifier": "evidence_bundle"
+                },
+                "relationships": [
+                  {
+                    "description": "writes verification.yml with",
+                    "destinationId": "20",
+                    "id": "94",
+                    "sourceId": "34",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "writes the report PDF with",
+                    "destinationId": "37",
+                    "id": "95",
+                    "sourceId": "34",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "renders the matrix with",
+                    "destinationId": "31",
+                    "id": "96",
+                    "sourceId": "34",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "uses",
+                    "destinationId": "6",
+                    "id": "139",
+                    "sourceId": "34",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "keeps the run files named by",
+                    "destinationId": "22",
+                    "id": "140",
+                    "sourceId": "34",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "finds the matrix template with",
+                    "destinationId": "7",
+                    "id": "141",
+                    "sourceId": "34",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:publishing",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm collect: RDOC/ENDRDOC snippets from source files, by key, as YAML data",
+                "documentation": {},
+                "group": "publishing",
+                "id": "35",
+                "name": "Code snippets",
+                "properties": {
+                  "code": "rdm/publishing/collect.py",
+                  "structurizr.dsl.identifier": "snippets"
+                },
+                "tags": "Element,Component,context:publishing",
+                "technology": "Python"
+              },
+              {
+                "description": "The device-master-record index from frontmatter",
+                "documentation": {},
+                "group": "publishing",
+                "id": "36",
+                "name": "DMR index",
+                "properties": {
+                  "code": "rdm/publishing/dmr.py",
+                  "structurizr.dsl.identifier": "dmr_index"
+                },
+                "relationships": [
+                  {
+                    "description": "parses frontmatter with",
+                    "destinationId": "6",
+                    "id": "138",
+                    "sourceId": "36",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:publishing",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm story evidence-report: the PDF of every run behind each design input",
+                "documentation": {},
+                "group": "publishing",
+                "id": "37",
+                "name": "Verification report",
+                "properties": {
+                  "code": "rdm/publishing/report.py",
+                  "structurizr.dsl.identifier": "verification_report"
+                },
+                "relationships": [
+                  {
+                    "description": "builds on",
+                    "destinationId": "20",
+                    "id": "97",
+                    "sourceId": "37",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads risk status and residual decisions with",
+                    "destinationId": "26",
+                    "id": "98",
+                    "sourceId": "37",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "lays out with",
+                    "destinationId": "38",
+                    "id": "99",
+                    "sourceId": "37",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads results with",
+                    "destinationId": "22",
+                    "id": "111",
+                    "sourceId": "37",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "asks git with and buckets observations by id with and checks ids with and takes the version from",
+                    "destinationId": "6",
+                    "id": "167",
+                    "sourceId": "37",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the record with",
+                    "destinationId": "7",
+                    "id": "168",
+                    "sourceId": "37",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the tagged tests with",
+                    "destinationId": "8",
+                    "id": "173",
+                    "sourceId": "37",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:publishing",
+                "technology": "Python"
+              },
+              {
+                "description": "The report's page layout",
+                "documentation": {},
+                "group": "publishing",
+                "id": "38",
+                "name": "Report layout",
+                "properties": {
+                  "code": "rdm/publishing/verification_report.typ",
+                  "structurizr.dsl.identifier": "report_layout"
+                },
+                "tags": "Element,Component,context:publishing",
+                "technology": "Typst"
+              },
+              {
+                "description": "The record into RDF, one named graph per source, de-duplicated and sorted; replaces the store on each build; rdm graph build, query, serve (read-only) and explorer-file",
+                "documentation": {},
+                "group": "graph",
+                "id": "39",
+                "name": "Projection",
+                "properties": {
+                  "code": "rdm/graph/",
+                  "structurizr.dsl.identifier": "projection"
+                },
+                "relationships": [
+                  {
+                    "description": "reads risks and findings with",
+                    "destinationId": "26",
+                    "id": "80",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "declares terms and rules in",
+                    "destinationId": "40",
+                    "id": "81",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "writes the explorer file with",
+                    "destinationId": "43",
+                    "id": "82",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads checklists and matches checklist references with",
+                    "destinationId": "29",
+                    "id": "88",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads results and test tags with",
+                    "destinationId": "22",
+                    "id": "106",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the C4 model and code dependencies with",
+                    "destinationId": "27",
+                    "id": "107",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "builds",
+                    "destinationId": "51",
+                    "id": "131",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "asks git with and checks ids with and parses frontmatter with",
+                    "destinationId": "6",
+                    "id": "147",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the record with",
+                    "destinationId": "7",
+                    "id": "148",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the tagged tests with",
+                    "destinationId": "8",
+                    "id": "172",
+                    "sourceId": "39",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:graph",
+                "technology": "Python, pyoxigraph"
+              },
+              {
+                "description": "Classes, properties and the rules that derive relations",
+                "documentation": {},
+                "group": "graph",
+                "id": "40",
+                "name": "Vocabulary",
+                "properties": {
+                  "code": "rdm/graph/ontology.ttl",
+                  "structurizr.dsl.identifier": "vocabulary"
+                },
+                "tags": "Element,Component,context:graph",
+                "technology": "Turtle"
+              },
+              {
+                "description": "The gate rules as SHACL: violations block, warnings inform",
+                "documentation": {},
+                "group": "graph",
+                "id": "41",
+                "name": "Gate shapes",
+                "properties": {
+                  "code": "rdm/graph/shapes.ttl",
+                  "structurizr.dsl.identifier": "gate_shapes"
+                },
+                "tags": "Element,Component,context:graph",
+                "technology": "SHACL"
+              },
+              {
+                "description": "rdm graph validate",
+                "documentation": {},
+                "group": "graph",
+                "id": "42",
+                "name": "SHACL validation",
+                "properties": {
+                  "code": "rdm/graph/validate.py",
+                  "structurizr.dsl.identifier": "shacl_validation"
+                },
+                "relationships": [
+                  {
+                    "description": "validates the graph of",
+                    "destinationId": "39",
+                    "id": "84",
+                    "sourceId": "42",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "checks with",
+                    "destinationId": "41",
+                    "id": "85",
+                    "sourceId": "42",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:graph",
+                "technology": "Python, pySHACL"
+              },
+              {
+                "description": "rdm graph explorer-file: the record as an AWS Graph Explorer file, optionally without chosen classes and the nodes that hang only from them",
+                "documentation": {},
+                "group": "graph",
+                "id": "43",
+                "name": "Explorer file",
+                "properties": {
+                  "code": "rdm/graph/explorer.py",
+                  "structurizr.dsl.identifier": "explorer_file"
+                },
+                "relationships": [
+                  {
+                    "description": "takes the executions graph's name from",
+                    "destinationId": "39",
+                    "id": "83",
+                    "sourceId": "43",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:graph",
+                "technology": "Python"
+              },
+              {
+                "description": "rdm graph mcp: read-only, idempotent schema, query, trace and validate for agents, each projecting the record afresh; query rows capped",
+                "documentation": {},
+                "group": "graph",
+                "id": "44",
+                "name": "Agent server",
+                "properties": {
+                  "code": "rdm/graph/agent.py",
+                  "structurizr.dsl.identifier": "agent_server"
+                },
+                "relationships": [
+                  {
+                    "description": "projects the record afresh on each call with",
+                    "destinationId": "39",
+                    "id": "86",
+                    "sourceId": "44",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "validates with",
+                    "destinationId": "42",
+                    "id": "87",
+                    "sourceId": "44",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "returns the vocabulary and rules of",
+                    "destinationId": "40",
+                    "id": "130",
+                    "sourceId": "44",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "checks ids with",
+                    "destinationId": "6",
+                    "id": "134",
+                    "sourceId": "44",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:graph",
+                "technology": "Python, MCP"
+              }
+            ],
+            "description": "The command line: gates, rendering, graph build, query and validate, and the agent server",
+            "documentation": {},
+            "id": "5",
+            "name": "rdm",
+            "properties": {
+              "structurizr.dsl.identifier": "rdm_cli"
+            },
+            "relationships": [
+              {
+                "description": "reads the record, results and git history from",
+                "destinationId": "54",
+                "id": "67",
+                "sourceId": "5",
+                "tags": "Relationship"
+              },
+              {
+                "description": "builds",
+                "destinationId": "51",
+                "id": "69",
+                "sourceId": "5",
+                "tags": "Relationship"
+              },
+              {
+                "description": "runs one test, unmutated then mutated, in",
+                "destinationId": "45",
+                "id": "127",
+                "linkedRelationshipId": "126",
+                "sourceId": "5",
+                "technology": "pytest subprocess"
+              }
+            ],
+            "tags": "Element,Container",
+            "technology": "Python"
+          },
+          {
+            "components": [
+              {
+                "description": "Labels each run from the record; the run's executor and environment, written only when the run writes Allure results",
+                "documentation": {},
+                "group": "test_evidence",
+                "id": "46",
+                "name": "pytest plugin",
+                "properties": {
+                  "code": "rdm/pytest_plugin.py",
+                  "structurizr.dsl.identifier": "pytest_plugin"
+                },
+                "relationships": [
+                  {
+                    "description": "finds the risks each design input controls with",
+                    "destinationId": "26",
+                    "id": "100",
+                    "sourceId": "46",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "finds the risks each design input controls with",
+                    "destinationId": "5",
+                    "id": "101",
+                    "linkedRelationshipId": "100",
+                    "sourceId": "46"
+                  },
+                  {
+                    "description": "writes run labels and facts with",
+                    "destinationId": "22",
+                    "id": "108",
+                    "sourceId": "46",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "asks git with",
+                    "destinationId": "6",
+                    "id": "149",
+                    "sourceId": "46",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "takes the label that names a design input from",
+                    "destinationId": "8",
+                    "id": "151",
+                    "sourceId": "46",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads the record with",
+                    "destinationId": "7",
+                    "id": "153",
+                    "sourceId": "46",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:test_evidence",
+                "technology": "Python, pytest"
+              }
+            ],
+            "description": "Runs the tagged tests; RDM's plugin labels each run from the record",
+            "documentation": {},
+            "id": "45",
+            "name": "Acceptance test run",
+            "properties": {
+              "structurizr.dsl.identifier": "test_run"
+            },
+            "relationships": [
+              {
+                "description": "writes Allure results to",
+                "destinationId": "54",
+                "id": "68",
+                "sourceId": "45",
+                "tags": "Relationship"
+              },
+              {
+                "description": "finds the risks each design input controls with",
+                "destinationId": "26",
+                "id": "102",
+                "linkedRelationshipId": "100",
+                "sourceId": "45"
+              },
+              {
+                "description": "finds the risks each design input controls with",
+                "destinationId": "5",
+                "id": "103",
+                "linkedRelationshipId": "100",
+                "sourceId": "45"
+              },
+              {
+                "description": "writes run labels and facts with",
+                "destinationId": "22",
+                "id": "109",
+                "linkedRelationshipId": "108",
+                "sourceId": "45"
+              },
+              {
+                "description": "asks git with",
+                "destinationId": "6",
+                "id": "150",
+                "linkedRelationshipId": "149",
+                "sourceId": "45"
+              },
+              {
+                "description": "takes the label that names a design input from",
+                "destinationId": "8",
+                "id": "152",
+                "linkedRelationshipId": "151",
+                "sourceId": "45"
+              },
+              {
+                "description": "reads the record with",
+                "destinationId": "7",
+                "id": "154",
+                "linkedRelationshipId": "153",
+                "sourceId": "45"
+              }
+            ],
+            "tags": "Element,Container",
+            "technology": "pytest, allure-pytest"
+          },
+          {
+            "components": [
+              {
+                "description": "Checks out the caller and RDM at the pinned revision, installs RDM from it, runs the acceptance tests, then the gates; uploads the Allure report and verification record",
+                "documentation": {},
+                "group": "release",
+                "id": "48",
+                "name": "Reusable workflow",
+                "properties": {
+                  "code": ".github/workflows/gates.yml",
+                  "structurizr.dsl.identifier": "reusable_workflow"
+                },
+                "relationships": [
+                  {
+                    "description": "runs the gates with",
+                    "destinationId": "49",
+                    "id": "92",
+                    "sourceId": "48",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "runs the acceptance tests in",
+                    "destinationId": "45",
+                    "id": "125",
+                    "sourceId": "48",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:release",
+                "technology": "GitHub Actions"
+              },
+              {
+                "description": "The gates as steps: design gate, verification data, release gate, graph validation, evidence bundle (uploaded); each switchable; inputs passed as environment variables",
+                "documentation": {},
+                "group": "release",
+                "id": "49",
+                "name": "Gates action",
+                "properties": {
+                  "code": "actions/gates/",
+                  "structurizr.dsl.identifier": "gates_action"
+                },
+                "relationships": [
+                  {
+                    "description": "writes verification.yml with",
+                    "destinationId": "20",
+                    "id": "118",
+                    "sourceId": "49",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "writes verification.yml with",
+                    "destinationId": "5",
+                    "id": "119",
+                    "linkedRelationshipId": "118",
+                    "sourceId": "49"
+                  },
+                  {
+                    "description": "validates the graph with",
+                    "destinationId": "42",
+                    "id": "121",
+                    "sourceId": "49",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "writes the evidence bundle with",
+                    "destinationId": "34",
+                    "id": "123",
+                    "sourceId": "49",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "runs the design gate of",
+                    "destinationId": "9",
+                    "id": "178",
+                    "sourceId": "49",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "runs the release gate of",
+                    "destinationId": "21",
+                    "id": "180",
+                    "sourceId": "49",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:release",
+                "technology": "GitHub Actions"
+              },
+              {
+                "description": "Renders the documents in the image",
+                "documentation": {},
+                "group": "publishing",
+                "id": "50",
+                "name": "PDF action",
+                "properties": {
+                  "code": "action.yml",
+                  "structurizr.dsl.identifier": "pdf_action"
+                },
+                "relationships": [
+                  {
+                    "description": "renders the documents in",
+                    "destinationId": "53",
+                    "id": "116",
+                    "sourceId": "50",
+                    "tags": "Relationship",
+                    "technology": "docker run make pdfs"
+                  }
+                ],
+                "tags": "Element,Component,context:publishing",
+                "technology": "GitHub Actions"
+              }
+            ],
+            "description": "The workflow and actions other repositories call",
+            "documentation": {},
+            "id": "47",
+            "name": "Reusable gates",
+            "properties": {
+              "structurizr.dsl.identifier": "gates_ci"
+            },
+            "relationships": [
+              {
+                "description": "runs",
+                "destinationId": "45",
+                "id": "74",
+                "sourceId": "47",
+                "tags": "Relationship"
+              },
+              {
+                "description": "installs and runs",
+                "destinationId": "5",
+                "id": "75",
+                "sourceId": "47",
+                "tags": "Relationship"
+              },
+              {
+                "description": "renders the documents in",
+                "destinationId": "53",
+                "id": "117",
+                "linkedRelationshipId": "116",
+                "sourceId": "47",
+                "technology": "docker run make pdfs"
+              },
+              {
+                "description": "writes verification.yml with",
+                "destinationId": "20",
+                "id": "120",
+                "linkedRelationshipId": "118",
+                "sourceId": "47"
+              },
+              {
+                "description": "validates the graph with",
+                "destinationId": "42",
+                "id": "122",
+                "linkedRelationshipId": "121",
+                "sourceId": "47"
+              },
+              {
+                "description": "writes the evidence bundle with",
+                "destinationId": "34",
+                "id": "124",
+                "linkedRelationshipId": "123",
+                "sourceId": "47"
+              },
+              {
+                "description": "runs the design gate of",
+                "destinationId": "9",
+                "id": "179",
+                "linkedRelationshipId": "178",
+                "sourceId": "47"
+              },
+              {
+                "description": "runs the release gate of",
+                "destinationId": "21",
+                "id": "181",
+                "linkedRelationshipId": "180",
+                "sourceId": "47"
+              }
+            ],
+            "tags": "Element,Container",
+            "technology": "GitHub Actions"
+          },
+          {
+            "description": "The record projected into RDF",
+            "documentation": {},
+            "id": "51",
+            "name": "Graph store",
+            "properties": {
+              "structurizr.dsl.identifier": "graph_store"
+            },
+            "tags": "Element,Container,Database",
+            "technology": "Oxigraph"
+          },
+          {
+            "description": "rdm graph serve: the store, read-only, refusing updates and SERVICE",
+            "documentation": {},
+            "id": "52",
+            "name": "SPARQL endpoint",
+            "properties": {
+              "structurizr.dsl.identifier": "sparql_endpoint"
+            },
+            "relationships": [
+              {
+                "description": "serves, read-only",
+                "destinationId": "51",
+                "id": "70",
+                "sourceId": "52",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container",
+            "technology": "Python, pyoxigraph"
+          },
+          {
+            "description": "Renders the documents to PDF",
+            "documentation": {},
+            "id": "53",
+            "name": "Documents image",
+            "properties": {
+              "structurizr.dsl.identifier": "documents_image"
+            },
+            "relationships": [
+              {
+                "description": "renders with",
+                "destinationId": "5",
+                "id": "76",
+                "sourceId": "53",
+                "tags": "Relationship"
+              }
+            ],
+            "tags": "Element,Container",
+            "technology": "Docker: Ubuntu, Pandoc, Typst"
+          }
+        ],
+        "description": "Keeps the design record of regulated software, gates it, renders it and builds it into a read-only graph",
+        "documentation": {},
+        "id": "4",
+        "name": "RDM",
+        "properties": {
+          "structurizr.dsl.identifier": "rdm_system"
+        },
+        "relationships": [
+          {
+            "description": "reads the record, tests, results and history from",
+            "destinationId": "54",
+            "id": "61",
+            "sourceId": "4",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Software System"
+      },
+      {
+        "description": "git: the Markdown record, the tests and their Allure results",
+        "documentation": {},
+        "id": "54",
+        "name": "Product repository",
+        "properties": {
+          "structurizr.dsl.identifier": "product_repo"
+        },
+        "tags": "Element,Software System,External"
+      },
+      {
+        "description": "Pull requests, Actions and the image registry",
+        "documentation": {},
+        "id": "55",
+        "name": "GitHub",
+        "properties": {
+          "structurizr.dsl.identifier": "forge"
+        },
+        "relationships": [
+          {
+            "description": "runs the gates of",
+            "destinationId": "4",
+            "id": "62",
+            "sourceId": "55",
+            "tags": "Relationship",
+            "technology": "GitHub Actions"
+          },
+          {
+            "description": "runs on every push and pull request",
+            "destinationId": "47",
+            "id": "73",
+            "sourceId": "55",
+            "tags": "Relationship"
+          }
+        ],
+        "tags": "Element,Software System,External"
+      },
+      {
+        "description": "An MCP client such as Claude Code, working under a person's direction",
+        "documentation": {},
+        "id": "56",
+        "name": "Agent harness",
+        "properties": {
+          "structurizr.dsl.identifier": "agent_harness"
+        },
+        "relationships": [
+          {
+            "description": "reads the record through",
+            "destinationId": "4",
+            "id": "63",
+            "sourceId": "56",
+            "tags": "Relationship",
+            "technology": "MCP"
+          },
+          {
+            "description": "calls the agent server of",
+            "destinationId": "5",
+            "id": "72",
+            "sourceId": "56",
+            "tags": "Relationship",
+            "technology": "MCP over stdio"
+          },
+          {
+            "description": "calls",
+            "destinationId": "44",
+            "id": "132",
+            "sourceId": "56",
+            "tags": "Relationship",
+            "technology": "MCP over stdio"
+          }
+        ],
+        "tags": "Element,Software System,External"
+      },
+      {
+        "description": "A graph browser",
+        "documentation": {},
+        "id": "57",
+        "name": "AWS Graph Explorer",
+        "properties": {
+          "structurizr.dsl.identifier": "graph_explorer"
+        },
+        "relationships": [
+          {
+            "description": "browses the graph of",
+            "destinationId": "4",
+            "id": "64",
+            "sourceId": "57",
+            "tags": "Relationship",
+            "technology": "SPARQL over HTTP"
+          },
+          {
+            "description": "queries",
+            "destinationId": "52",
+            "id": "71",
+            "sourceId": "57",
+            "tags": "Relationship",
+            "technology": "SPARQL over HTTP"
+          }
+        ],
+        "tags": "Element,Software System,External"
+      }
+    ]
+  },
+  "name": "RDM",
+  "properties": {
+    "structurizr.inspection.error": "118",
+    "structurizr.inspection.ignore": "0",
+    "structurizr.inspection.info": "0",
+    "structurizr.inspection.warning": "0"
+  },
+  "rdm": {
+    "workspace_sha256": "e5f2c92eddcc9a5982571fedb7853eea47b0dc8a7157143d8e871aefc56b3c5f"
+  },
+  "views": {
+    "componentViews": [
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "7",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "8",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "9",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "10",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "11",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "12",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "13",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "14",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "15",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "16",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "17",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "18",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "19",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "22",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "27",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "34",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "37",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "39",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "46",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "49",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_specification",
+        "name": "Component View: RDM - rdm",
+        "order": 3,
+        "relationships": [
+          {
+            "id": "105"
+          },
+          {
+            "id": "128"
+          },
+          {
+            "id": "129"
+          },
+          {
+            "id": "137"
+          },
+          {
+            "id": "140"
+          },
+          {
+            "id": "141"
+          },
+          {
+            "id": "145"
+          },
+          {
+            "id": "146"
+          },
+          {
+            "id": "148"
+          },
+          {
+            "id": "151"
+          },
+          {
+            "id": "153"
+          },
+          {
+            "id": "157"
+          },
+          {
+            "id": "165"
+          },
+          {
+            "id": "166"
+          },
+          {
+            "id": "168"
+          },
+          {
+            "id": "169"
+          },
+          {
+            "id": "170"
+          },
+          {
+            "id": "171"
+          },
+          {
+            "id": "172"
+          },
+          {
+            "id": "173"
+          },
+          {
+            "id": "174"
+          },
+          {
+            "id": "177"
+          },
+          {
+            "id": "178"
+          },
+          {
+            "id": "78"
+          },
+          {
+            "id": "79"
+          },
+          {
+            "id": "90"
+          },
+          {
+            "id": "91"
+          },
+          {
+            "id": "93"
+          }
+        ],
+        "title": "Design specification: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "7",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "9",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "17",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "22",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "26",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "34",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "37",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "42",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "45",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "48",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "49",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_release",
+        "name": "Component View: RDM - rdm",
+        "order": 4,
+        "relationships": [
+          {
+            "id": "102"
+          },
+          {
+            "id": "109"
+          },
+          {
+            "id": "110"
+          },
+          {
+            "id": "118"
+          },
+          {
+            "id": "121"
+          },
+          {
+            "id": "123"
+          },
+          {
+            "id": "125"
+          },
+          {
+            "id": "140"
+          },
+          {
+            "id": "154"
+          },
+          {
+            "id": "157"
+          },
+          {
+            "id": "166"
+          },
+          {
+            "id": "174"
+          },
+          {
+            "id": "175"
+          },
+          {
+            "id": "176"
+          },
+          {
+            "id": "177"
+          },
+          {
+            "id": "178"
+          },
+          {
+            "id": "180"
+          },
+          {
+            "id": "92"
+          },
+          {
+            "id": "94"
+          },
+          {
+            "id": "97"
+          }
+        ],
+        "title": "Release: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "7",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "8",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "22",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "23",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "24",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "25",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "26",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "37",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "39",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "46",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_test_evidence",
+        "name": "Component View: RDM - rdm",
+        "order": 5,
+        "relationships": [
+          {
+            "id": "100"
+          },
+          {
+            "id": "106"
+          },
+          {
+            "id": "108"
+          },
+          {
+            "id": "110"
+          },
+          {
+            "id": "111"
+          },
+          {
+            "id": "151"
+          },
+          {
+            "id": "153"
+          },
+          {
+            "id": "169"
+          },
+          {
+            "id": "175"
+          },
+          {
+            "id": "89"
+          }
+        ],
+        "title": "Test evidence: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "21",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "26",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "37",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "39",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "46",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_risk",
+        "name": "Component View: RDM - rdm",
+        "order": 6,
+        "relationships": [
+          {
+            "id": "100"
+          },
+          {
+            "id": "176"
+          },
+          {
+            "id": "80"
+          },
+          {
+            "id": "98"
+          }
+        ],
+        "title": "Risk: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "9",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "27",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "28",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "39",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "54",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_architecture",
+        "name": "Component View: RDM - rdm",
+        "order": 7,
+        "relationships": [
+          {
+            "id": "104"
+          },
+          {
+            "id": "105"
+          },
+          {
+            "id": "107"
+          },
+          {
+            "id": "112"
+          }
+        ],
+        "title": "Architecture: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "29",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "30",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "39",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_compliance",
+        "name": "Component View: RDM - rdm",
+        "order": 8,
+        "relationships": [
+          {
+            "id": "77"
+          },
+          {
+            "id": "88"
+          }
+        ],
+        "title": "Compliance: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "7",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "8",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "20",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "22",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "26",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "31",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "32",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "33",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "34",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "35",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "36",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "37",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "38",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "49",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "50",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "53",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_publishing",
+        "name": "Component View: RDM - rdm",
+        "order": 9,
+        "relationships": [
+          {
+            "id": "111"
+          },
+          {
+            "id": "113"
+          },
+          {
+            "id": "114"
+          },
+          {
+            "id": "115"
+          },
+          {
+            "id": "116"
+          },
+          {
+            "id": "123"
+          },
+          {
+            "id": "140"
+          },
+          {
+            "id": "141"
+          },
+          {
+            "id": "168"
+          },
+          {
+            "id": "173"
+          },
+          {
+            "id": "94"
+          },
+          {
+            "id": "95"
+          },
+          {
+            "id": "96"
+          },
+          {
+            "id": "97"
+          },
+          {
+            "id": "98"
+          },
+          {
+            "id": "99"
+          }
+        ],
+        "title": "Publishing: components (C3)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "containerId": "5",
+        "elements": [
+          {
+            "id": "7",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "8",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "22",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "26",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "27",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "29",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "39",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "40",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "41",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "42",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "43",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "44",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "49",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "51",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "56",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalContainerBoundariesVisible": false,
+        "key": "C3_graph",
+        "name": "Component View: RDM - rdm",
+        "order": 10,
+        "relationships": [
+          {
+            "id": "106"
+          },
+          {
+            "id": "107"
+          },
+          {
+            "id": "121"
+          },
+          {
+            "id": "130"
+          },
+          {
+            "id": "131"
+          },
+          {
+            "id": "132"
+          },
+          {
+            "id": "148"
+          },
+          {
+            "id": "172"
+          },
+          {
+            "id": "80"
+          },
+          {
+            "id": "81"
+          },
+          {
+            "id": "82"
+          },
+          {
+            "id": "83"
+          },
+          {
+            "id": "84"
+          },
+          {
+            "id": "85"
+          },
+          {
+            "id": "86"
+          },
+          {
+            "id": "87"
+          },
+          {
+            "id": "88"
+          }
+        ],
+        "title": "Knowledge graph: components (C3)"
+      }
+    ],
+    "configuration": {
+      "branding": {},
+      "styles": {
+        "elements": [
+          {
+            "background": "#85bbf0",
+            "color": "#000000",
+            "tag": "Component"
+          },
+          {
+            "background": "#438dd5",
+            "color": "#ffffff",
+            "tag": "Container"
+          },
+          {
+            "shape": "Cylinder",
+            "tag": "Database"
+          },
+          {
+            "background": "#999999",
+            "color": "#ffffff",
+            "tag": "External"
+          },
+          {
+            "background": "#08427b",
+            "color": "#ffffff",
+            "shape": "Person",
+            "tag": "Person"
+          },
+          {
+            "background": "#1168bd",
+            "color": "#ffffff",
+            "tag": "Software System"
+          }
+        ]
+      },
+      "terminology": {}
+    },
+    "containerViews": [
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "2",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "5",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "45",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "47",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "51",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "52",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "53",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "54",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "55",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "56",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "57",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalSoftwareSystemBoundariesVisible": false,
+        "key": "C2",
+        "name": "Container View: RDM",
+        "order": 2,
+        "relationships": [
+          {
+            "id": "103"
+          },
+          {
+            "id": "117"
+          },
+          {
+            "id": "127"
+          },
+          {
+            "id": "65"
+          },
+          {
+            "id": "66"
+          },
+          {
+            "id": "67"
+          },
+          {
+            "id": "68"
+          },
+          {
+            "id": "69"
+          },
+          {
+            "id": "70"
+          },
+          {
+            "id": "71"
+          },
+          {
+            "id": "72"
+          },
+          {
+            "id": "73"
+          },
+          {
+            "id": "74"
+          },
+          {
+            "id": "75"
+          },
+          {
+            "id": "76"
+          }
+        ],
+        "softwareSystemId": "4",
+        "title": "RDM: containers (C2)"
+      }
+    ],
+    "dynamicViews": [
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "LeftRight",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "elementId": "5",
+        "elements": [
+          {
+            "id": "7",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "8",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "9",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "11",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "27",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalBoundariesVisible": false,
+        "key": "D_specification_commit",
+        "name": "Dynamic View: RDM - rdm",
+        "order": 11,
+        "relationships": [
+          {
+            "description": "runs",
+            "id": "79",
+            "order": "1",
+            "response": false
+          },
+          {
+            "description": "reads the design documents and the review with",
+            "id": "137",
+            "order": "2",
+            "response": false
+          },
+          {
+            "description": "checks the views are fresh with",
+            "id": "105",
+            "order": "3",
+            "response": false
+          },
+          {
+            "description": "finds tagged tests with",
+            "id": "170",
+            "order": "4",
+            "response": false
+          }
+        ],
+        "title": "Design specification: a commit meets the design gate (dynamic)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "LeftRight",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "elementId": "4",
+        "elements": [
+          {
+            "id": "5",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "45",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "47",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "54",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "55",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalBoundariesVisible": false,
+        "key": "D_release_pipeline",
+        "name": "Dynamic View: RDM",
+        "order": 12,
+        "relationships": [
+          {
+            "description": "runs on every push and pull request",
+            "id": "73",
+            "order": "1",
+            "response": false
+          },
+          {
+            "description": "runs",
+            "id": "74",
+            "order": "2",
+            "response": false
+          },
+          {
+            "description": "writes Allure results to",
+            "id": "68",
+            "order": "3",
+            "response": false
+          },
+          {
+            "description": "installs and runs",
+            "id": "75",
+            "order": "4",
+            "response": false
+          },
+          {
+            "description": "reads the record, results and git history from",
+            "id": "67",
+            "order": "5",
+            "response": false
+          }
+        ],
+        "title": "Release: one run of the reusable gates (dynamic)"
+      },
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "LeftRight",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "elementId": "5",
+        "elements": [
+          {
+            "id": "6",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "31",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "32",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "33",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "externalBoundariesVisible": false,
+        "key": "D_publishing_render",
+        "name": "Dynamic View: RDM - rdm",
+        "order": 13,
+        "relationships": [
+          {
+            "description": "loads the data files as the context with",
+            "id": "158",
+            "order": "1",
+            "response": false
+          },
+          {
+            "description": "keeps the first pass's words in",
+            "id": "114",
+            "order": "2",
+            "response": false
+          },
+          {
+            "description": "post-processes the rendered Markdown with",
+            "id": "113",
+            "order": "3",
+            "response": false
+          },
+          {
+            "description": "gives the template the first pass's words from",
+            "id": "115",
+            "order": "4",
+            "response": false
+          }
+        ],
+        "title": "Publishing: rendering a document (dynamic)"
+      }
+    ],
+    "systemContextViews": [
+      {
+        "automaticLayout": {
+          "applied": false,
+          "edgeSeparation": 0,
+          "implementation": "Graphviz",
+          "nodeSeparation": 300,
+          "rankDirection": "TopBottom",
+          "rankSeparation": 300,
+          "vertices": false
+        },
+        "elements": [
+          {
+            "id": "1",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "2",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "3",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "4",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "54",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "55",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "56",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "57",
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "enterpriseBoundaryVisible": true,
+        "key": "C1",
+        "name": "System Context View: RDM",
+        "order": 1,
+        "relationships": [
+          {
+            "id": "58"
+          },
+          {
+            "id": "59"
+          },
+          {
+            "id": "60"
+          },
+          {
+            "id": "61"
+          },
+          {
+            "id": "62"
+          },
+          {
+            "id": "63"
+          },
+          {
+            "id": "64"
+          }
+        ],
+        "softwareSystemId": "4",
+        "title": "RDM: system context (C1)"
+      }
+    ]
+  }
+}

@@ -1,8 +1,8 @@
 """Acceptance tests for the gap-analysis context's design inputs (see dhf/).
 
-Each test is the acceptance criterion ("live BDD") for a gap-analysis design
+Each test ("live BDD") verifies a gap-analysis design
 input, tagged with `@allure.story` and its DI id, exercising the real
-`rdm/gaps.py` engine.
+`rdm/compliance/gaps.py` engine.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results
 
@@ -15,13 +15,15 @@ from pathlib import Path
 
 import pytest
 
-from rdm.gaps import audit_for_gaps, coverage_report, list_default_checklists
+from rdm.compliance.gaps import audit_for_gaps, coverage_report, list_default_checklists
 
 allure = pytest.importorskip("allure")
 
+from tests.acceptance.evidence import verification_step  # noqa: E402
+
 
 @allure.story("DI-10")
-@allure.label("output", "rdm/gaps.py")
+@allure.label("output", "rdm/compliance/gaps.py")
 def test_reports_missing_checklist_references(tmp_path: Path) -> None:
     """DI-10: a missing required reference makes the audit exit non-zero; a fully
     covered document exits zero. A reference is a delimited [[KEY]] — a bare
@@ -31,44 +33,50 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
 
     missing = tmp_path / "partial.md"
     missing.write_text("Document covers [[X-1]] only.\n")
-    assert audit_for_gaps(str(checklist), [str(missing)], coverage=False) == 3  # gap → non-zero
+    assert audit_for_gaps(str(checklist), [str(missing)]) == 3  # gap → non-zero
 
     covered = tmp_path / "full.md"
     covered.write_text("Covers [[X-1]] and [[X-2]].\n")
-    assert audit_for_gaps(str(checklist), [str(covered)], coverage=False) == 0  # complete → zero
+    assert audit_for_gaps(str(checklist), [str(covered)]) == 0  # complete → zero
+    with verification_step("a stray [[ does not turn the next paragraphs' mentions into references"):
+        stray = tmp_path / "stray.md"
+        stray.write_text("Covers [[X-1]]. A stray [[ here.\n\nX-2 is only mentioned. ]]\n")
+        assert audit_for_gaps(str(checklist), [str(stray)]) == 3
 
-    # A bare mention is not a reference: "we do not address X-2" must not
-    # count as covering X-2.
-    prose = tmp_path / "prose.md"
-    prose.write_text("Covers [[X-1]]. We do not address X-2 here.\n")
-    assert audit_for_gaps(str(checklist), [str(prose)], coverage=False) == 3
+    with verification_step("A bare mention is not a reference: \"we do not address X-2\" must not count as covering "
+                           "X-2"):
+        prose = tmp_path / "prose.md"
+        prose.write_text("Covers [[X-1]]. We do not address X-2 here.\n")
+        assert audit_for_gaps(str(checklist), [str(prose)]) == 3
 
-    # Exact key matching: [[X-12]] must not satisfy the key X-1.
-    prefix_cl = tmp_path / "prefix_cl.txt"
-    prefix_cl.write_text("X-1 first requirement\nX-12 twelfth requirement\n")
-    only_longer = tmp_path / "only_longer.md"
-    only_longer.write_text("Covers [[X-12]] only.\n")
-    assert audit_for_gaps(str(prefix_cl), [str(only_longer)], coverage=False) == 3
+    with verification_step("Exact key matching: [[X-12]] must not satisfy the key X-1"):
+        prefix_cl = tmp_path / "prefix_cl.txt"
+        prefix_cl.write_text("X-1 first requirement\nX-12 twelfth requirement\n")
+        only_longer = tmp_path / "only_longer.md"
+        only_longer.write_text("Covers [[X-12]] only.\n")
+        assert audit_for_gaps(str(prefix_cl), [str(only_longer)]) == 3
 
     # The `[[KEY: annotation]]` idiom the shipped `rdm init` templates use
     # counts as a reference to KEY — the colon-space tail is prose, not a
     # longer key. But a colon-QUALIFIED key ([[FDA-SW:sdmp]]) still never
     # satisfies its prefix (FDA-SW).
-    colon_cl = tmp_path / "colon_cl.txt"
-    colon_cl.write_text("FDA-SW:sdmp development and maintenance practices\n")
-    annotated = tmp_path / "annotated.md"
-    annotated.write_text("[[FDA-SW:sdmp: This document is a pointer document.]]\n")
-    assert audit_for_gaps(str(colon_cl), [str(annotated)], coverage=False) == 0
+    with verification_step("The `[[KEY: annotation]]` idiom the shipped `rdm init` templates use counts as a "
+                           "reference to…"):
+        colon_cl = tmp_path / "colon_cl.txt"
+        colon_cl.write_text("FDA-SW:sdmp development and maintenance practices\n")
+        annotated = tmp_path / "annotated.md"
+        annotated.write_text("[[FDA-SW:sdmp: This document is a pointer document.]]\n")
+        assert audit_for_gaps(str(colon_cl), [str(annotated)]) == 0
 
-    prefix_colon_cl = tmp_path / "prefix_colon_cl.txt"
-    prefix_colon_cl.write_text("FDA-SW parent guidance\nFDA-SW:sdmp practices\n")
-    qualified_only = tmp_path / "qualified_only.md"
-    qualified_only.write_text("Covers [[FDA-SW:sdmp]] only.\n")
-    assert audit_for_gaps(str(prefix_colon_cl), [str(qualified_only)], coverage=False) == 3
+        prefix_colon_cl = tmp_path / "prefix_colon_cl.txt"
+        prefix_colon_cl.write_text("FDA-SW parent guidance\nFDA-SW:sdmp practices\n")
+        qualified_only = tmp_path / "qualified_only.md"
+        qualified_only.write_text("Covers [[FDA-SW:sdmp]] only.\n")
+        assert audit_for_gaps(str(prefix_colon_cl), [str(qualified_only)]) == 3
 
 
 @allure.story("DI-11")
-@allure.label("output", "rdm/checklists/")
+@allure.label("output", "rdm/compliance/checklists/")
 def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
     """DI-11: the standard checklists ship, and a built-in name resolves its
     includes when audited."""
@@ -80,19 +88,21 @@ def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
     # `include` resolution: a key defined ONLY in an included file is still
     # required. If includes were ignored, covering the top-level key alone would
     # pass (0); resolution makes the included B-1 required, so partial → gap (3).
-    (tmp_path / "base.txt").write_text("B-1 base requirement\n")
-    main = tmp_path / "main.txt"
-    main.write_text("include base.txt\nM-1 main requirement\n")
-    partial = tmp_path / "partial.md"
-    partial.write_text("covers [[M-1]] only\n")
-    full = tmp_path / "full.md"
-    full.write_text("covers [[M-1]] and [[B-1]]\n")
-    assert audit_for_gaps(str(main), [str(partial)], coverage=False) == 3  # included key missing
-    assert audit_for_gaps(str(main), [str(full)], coverage=False) == 0     # included key covered
+    with verification_step("`include` resolution: a key defined ONLY in an included file is still required. If "
+                           "includes were…"):
+        (tmp_path / "base.txt").write_text("B-1 base requirement\n")
+        main = tmp_path / "main.txt"
+        main.write_text("include base.txt\nM-1 main requirement\n")
+        partial = tmp_path / "partial.md"
+        partial.write_text("covers [[M-1]] only\n")
+        full = tmp_path / "full.md"
+        full.write_text("covers [[M-1]] and [[B-1]]\n")
+        assert audit_for_gaps(str(main), [str(partial)]) == 3  # included key missing
+        assert audit_for_gaps(str(main), [str(full)]) == 0     # included key covered
 
 
 @allure.story("DI-12")
-@allure.label("output", "rdm/gaps.py")
+@allure.label("output", "rdm/compliance/gaps.py")
 def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> None:
     """DI-12: coverage is tabulated per checklist; verbose names the missing items."""
     checklist = tmp_path / "iso_checklist.txt"
@@ -103,28 +113,34 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
     assert coverage_report([str(checklist)], [str(source)]) == 0
     assert "| ISO | 3 | 1 | 2 | 66% |" in capsys.readouterr().out
 
-    # Verbose mode names the missing reference.
-    coverage_report([str(checklist)], [str(source)], verbose=True)
-    assert "ISO-2" in capsys.readouterr().out
+    with verification_step("every built-in checklist's keys are unique"):
+        from rdm.compliance.gaps import builtin_checklists, parse_checklist
+        for name, path in builtin_checklists().items():
+            entries = parse_checklist(Path(path).read_text(encoding="utf-8"), Path(path).parent)
+            keys = [e["reference"] for e in entries if "reference" in e]
+            assert len(keys) == len(set(keys)), name
+    with verification_step("Verbose mode names the missing reference"):
+        coverage_report([str(checklist)], [str(source)], verbose=True)
+        assert "ISO-2" in capsys.readouterr().out
 
 
 @allure.story("DI-25")
-@allure.label("output", "rdm/checklists/part11_document_control.txt")
+@allure.label("output", "rdm/compliance/checklists/part11_document_control.txt")
 def test_rdm_claims_git_as_its_own_document_control(tmp_path: Path, capsys) -> None:
     """DI-25: the Part 11 document-control checklist ships as a built-in, and
     RDM's own document-control statement passes gap analysis against it."""
     import shutil
 
-    # The checklist ships (resolvable by built-in name, not just as a file).
-    list_default_checklists()
-    assert "part11_document_control" in capsys.readouterr().out
+    with verification_step("The checklist ships (resolvable by built-in name, not just as a file)"):
+        list_default_checklists()
+        assert "part11_document_control" in capsys.readouterr().out
 
-    # RDM's own claim is executable: the statement covers every checklist item.
-    statement = Path(__file__).parents[2] / "dhf" / "documents" / "document_control.md"
-    assert audit_for_gaps("part11_document_control", [str(statement)], coverage=False) == 0
+    with verification_step("RDM's own claim is executable: the statement covers every checklist item"):
+        statement = Path(__file__).parents[2] / "dhf" / "documents" / "document_control.md"
+        assert audit_for_gaps("part11_document_control", [str(statement)]) == 0
 
-    # Falsifiable: dropping one control from the statement fails the audit.
-    stripped = tmp_path / "statement_missing_audit_trail.md"
-    shutil.copy(statement, stripped)
-    stripped.write_text(stripped.read_text().replace("[[P11:11.10e]]", ""))
-    assert audit_for_gaps("part11_document_control", [str(stripped)], coverage=False) == 3
+    with verification_step("Falsifiable: dropping one control from the statement fails the audit"):
+        stripped = tmp_path / "statement_missing_audit_trail.md"
+        shutil.copy(statement, stripped)
+        stripped.write_text(stripped.read_text().replace("[[P11:11.10e]]", ""))
+        assert audit_for_gaps("part11_document_control", [str(stripped)]) == 3

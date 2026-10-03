@@ -2,174 +2,151 @@
   <img src="https://github.com/scope-impact/rdm/actions/workflows/tests.yml/badge.svg?branch=main">
 </a>
 
-# Regulatory Documentation Manager
+# RDM
 
-> **Fork Notice:** This is a maintained fork of [innolitics/rdm](https://github.com/innolitics/rdm). All credit for the original work goes to the [Innolitics](https://innolitics.com) team.
+RDM keeps the design record of regulated software — medical-device software
+under IEC 62304 first — as Markdown and tests in git. It checks the record,
+renders regulatory documents from it, and builds it into one read-only graph
+that people and agents query.
 
-RDM is a documentation-as-code tool that provides Markdown templates and Python scripts to manage medical device software documentation. It's especially well-suited for software-only medical devices following IEC 62304.
+The chain it holds:
 
-## Quick Start
+```
+regulation → checklist → clause ← document
+user need → design input → tagged test → run → source file
+risk → risk control (a design input) → tagged test → run
+design document → the commit that landed it
+```
 
-### Docker (Recommended)
+Every link is a file you write or a fact a tool records; nothing is typed into
+a database. The record changes only through a pull request that someone other
+than its author approves. The graph and every document are rebuilt from it and
+never edited.
+
+## The four parts
+
+| Part | What it is | Commands |
+| --- | --- | --- |
+| **Record** | User needs; design inputs, one design document per bounded context; the risk register; checklists; tests tagged `@allure.story("DI-n")`. Markdown and git. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story trace` |
+| **Gates** | No implementation before the design is approved. No release until every design input has a passing test, every need is addressed, and every risk is evaluated with its risk controls verified. No required checklist clause left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
+| **Graph** | The record as RDF: needs, inputs, contexts, documents, tests, runs, commits, risks, clauses. Read-only; agents read it over MCP, people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
+| **Documents** | Regulatory documents rendered from the record: templates and YAML data → Markdown → PDF/DOCX. | `rdm render`, `make pdfs` |
+
+Two choices shape it:
+
+- **Any harness, any store.** Agents read the record through an MCP server
+  (`rdm graph mcp`); a harness that can only run commands uses
+  `rdm graph query`. The graph is RDF in standard vocabularies (OSLC RM, Dublin
+  Core, PROV-O, SKOS), so any RDF store can load it.
+- **Skills are the method; RDM is the check.** How to write requirements,
+  analyse risk and develop test-first lives in
+  [scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).
+  A skill decides what to write; RDM checks that it is complete, traced and
+  verified.
+
+## What it does not do
+
+- It does not make a device compliant. It keeps the evidence straight; a
+  regulator judges the evidence.
+- A green release gate means every design input has a passing tagged test, not
+  that the test proves it. The pull-request reviewer judges that
+  (`rdm story mutation-probe` helps).
+- Checklists are written by hand; nothing turns a regulation into one.
+- The risk gate checks a register's form, not its truth: whether a risk control
+  is effective is the reviewer's call. It ships no risk matrix; acceptability
+  criteria are the project's to declare.
+
+## Install
 
 ```sh
-# Install rdm CLI
 uv tool install git+https://github.com/scope-impact/rdm
-
-# Scaffold project and build documents
-rdm init
-cd dhf
-docker compose run rdm make pdfs
 ```
 
-### Native Installation
+Python 3.10+ and [uv](https://github.com/astral-sh/uv). PyPI's `rdm` is another
+project; install from this repository, and upgrade with `uv tool upgrade rdm`.
+Rendering documents needs Pandoc 2.14+, Typst and Make: use the Docker image
+(Ubuntu 26.04 LTS, Pandoc 3.12, Typst 0.15, the fonts, and RDM with the graph
+extra) or install them natively (`brew install pandoc typst`).
+
+## Quick start
 
 ```sh
-# Install rdm CLI
-uv tool install git+https://github.com/scope-impact/rdm
+rdm init                     # a new project: a DHF skeleton and document templates in dhf/
+rdm adopt .                  # or an existing repository: never overwrites a file
 
-# Install dependencies (macOS)
-brew install pandoc typst
+rdm story new-input --list   # contexts, taken ids, user needs
+rdm story new-input --context <context> --traces-to UN-001 --text "The device shall …"
 
-# Scaffold project and build documents
-rdm init
-cd dhf
-make pdfs
+# The gates, as CI runs them (the tests need pytest and allure-pytest)
+rdm story design-gate --dhf dhf
+pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+
+cd dhf && make pdfs          # or, with Docker: docker compose run rdm make pdfs
 ```
 
-### Existing repository (brownfield)
-
-```sh
-# Lay down record-first design controls WITHOUT touching existing files:
-# DHF skeleton, agent runbook, design-gate pre-commit hook, session
-# bootstrap, and CI gates. Never overwrites; re-running is a no-op.
-rdm adopt .
-```
-
-### Update
-
-```sh
-uv tool upgrade rdm
-```
-
-## GitHub Action
+## In CI
 
 ```yaml
-# .github/workflows/pdfs.yml
-name: Generate PDFs
-
-on:
-  push:
-    paths: ['dhf/**']
-  workflow_dispatch:
-
 jobs:
-  pdfs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: scope-impact/rdm@v1
+  design-controls:
+    uses: scope-impact/rdm/.github/workflows/gates.yml@v2.0.0-alpha
+    with:
+      rdm-ref: v2.0.0-alpha        # the same ref as after the @
 ```
 
-| Input | Description | Default |
-| --- | --- | --- |
-| `dhf_path` | Path to the DHF directory | `dhf` |
-| `version` | RDM Docker image version | `latest` |
-| `artifact_name` | Name for the uploaded artifact | `regulatory-documents` |
-
-## Dependencies
-
-**Docker (recommended):** Just Docker. The image includes Pandoc 3.6, Typst 0.12, and required fonts.
-
-**Native:**
-- Python 3.10+
-- [uv](https://github.com/astral-sh/uv)
-- [Pandoc](https://pandoc.org/) 2.14+
-- [Typst](https://typst.app/)
-- Make
+This runs your acceptance tests, then the design gate, verify, the release
+gate, graph validation and the evidence bundle, with RDM installed from the
+pinned revision; `rdm adopt` lays this workflow down. For PDFs, add a step
+`uses: scope-impact/rdm@v2.0.0-alpha`. Inputs and options are in
+[the gates in your CI](docs/reusable-ci.md).
 
 ## Documentation
 
-Full documentation lives at **[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/)**:
-installation and quickstarts, a task-oriented user guide (authoring/rendering,
-gap analysis, the `rdm story` design-controls workflow), the complete CLI
-reference, the record-first concepts, and the site's own live verification
-evidence — the traceability matrix is generated from an acceptance-suite run
-on every docs build.
+[scope-impact.github.io/rdm](https://scope-impact.github.io/rdm/): how RDM
+works and its data model, getting started, one section per part, how RDM
+controls itself (with a traceability matrix generated from a live test run),
+and the CLI and API reference.
 
-RDM dogfoods itself: its own development is governed by its record-first design
-controls (see `dhf/AGENT_WORKFLOW.md`), its own record is controlled in git per
-the shipped 21 CFR Part 11 checklist (`dhf/documents/document_control.md`), and
-`examples/github-document-control/` is a complete worked example of git as a
-document control system with GitHub as the service provider.
+| | `docs/` | `dhf/` |
+|---|---|---|
+| **What it is** | RDM's user documentation, the site above | RDM's own design history file: the record RDM develops itself under |
+| **Controlled?** | No: ordinary docs | Yes: the design gate and the release gate hold it |
+| **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the evidence |
+
+`docs/` explains; `dhf/` decides. The full comparison is in
+[how RDM controls itself](docs/dogfood.md).
 
 ## Development
 
 ```sh
-git clone https://github.com/scope-impact/rdm.git
-cd rdm
+git clone https://github.com/scope-impact/rdm.git && cd rdm
 uv sync --all-extras
 uv run pytest tests
 ```
 
-## Changes from Upstream
+RDM is developed under its own design controls: every change follows
+[`dhf/AGENT_WORKFLOW.md`](dhf/AGENT_WORKFLOW.md) — the record first, then the
+tagged test, then the code — and [CLAUDE.md](CLAUDE.md) lists the gates to run
+as CI does. The vocabulary is [CONTEXT.md](CONTEXT.md).
 
-### Unreleased
+## Direction
 
-- **Agent-era design controls, end to end**: canonical change procedure
-  (`dhf/AGENT_WORKFLOW.md`), always-on local design gate (committed
-  `.githooks/` + session bootstrap), and CI gates
-- **`rdm adopt`**: bring an existing repository under record-first design
-  controls from one command (never overwrites)
-- **`rdm story new-input`**: scaffold a traced design input (frontmatter
-  entry, failing tagged stub test, checklist)
-- **Record-first-aware `rdm story audit`**: design-input tag coverage in the
-  report and score
-- **`part11_document_control` built-in checklist** + RDM's own Part 11-mapped
-  document-control statement, enforced by an acceptance test
-- **Worked example** `examples/github-document-control/`: git as document
-  control with GitHub as provider — rulesets/settings as code, PR approval as
-  the Part 11 e-signature, DMR/DHR analogs, drift-audit script, its own
-  gated DHF
-- **Docs site**: user manual (quickstarts, guides, CLI reference), Mermaid
-  diagrams, and build-time-generated verification evidence
-- **Replayable faithfulness reviews**: verdicts record their executed
-  mutation probes; `rdm story faithfulness --replay` re-executes them and
-  fails on survivors; `--stale` lists the review worklist
-- **Verdict hash scope**: module-scope pinning by default (helper/fixture
-  edits re-open the review), function scope selectable, legacy verdicts
-  honored
-- **Sound gap matching**: references count only inside `[[ … ]]` blocks,
-  exact keys with descendant-covers-parent hierarchy — prose mentions and
-  sibling keys no longer count as coverage
-- **`rdm story dmr`** and **`rdm story evidence-bundle`**: DMR index data
-  generated from frontmatter; the retained release evidence set (matrix,
-  verification data, verdicts, manifest)
-- `rdm hooks` defaults to the design-gate hook only (`--with-issue-hooks`
-  opts into the legacy pair); `new-input` keeps `satisfies` lists in sync
-- **Polyglot traceability**: JS/TS and Java test tags discovered for
-  linkage, audit, and faithfulness; legacy YAML workflow deprecated
-- Fixes: `rdm gap --coverage` with built-in checklist names; tag-scanner
-  false positive; root-container test skip
+Not built yet, in rough order:
 
-### v1.1.0
+- Turning a regulation into a checklist mapped to its standard's clauses.
+- `rdm graph push` to an external graph database, with the vocabulary and gate
+  shapes versioned so another store reads them the same way.
+- Several projects in one graph; clause identifiers are already shared across
+  repositories.
 
-- **Story Audit module** (`rdm[story-audit]`): Backlog.md parser, schema validation, traceability audit, and duplicate ID detection
-- **Bidirectional GitHub Sync** (`rdm[github]`): Push Backlog.md tasks to GitHub Issues/Milestones/Projects v2, pull PRs into DuckDB for analytics
-- **VitalView example**: Software-only medical device (SaMD) worked example for the record-first model (user needs, bounded-context SDDs, AI-persona usability validation)
-- Alias-based status normalization with actionable fix hints in validator
-- Codebase simplification: removed dead code, deduplicated logic, fixed inefficiencies
-- Added CLAUDE.md for Claude Code development guidance
-- Dependency bumps: PyGithub 2.8.1, Ruff 0.14.13
+## Changes
 
-### v1.0.0
+See [CHANGELOG.md](CHANGELOG.md).
 
-- Installation via `uv tool install` directly from GitHub
-- Migrated from LaTeX to Typst for PDF generation
-- New lightweight Docker image (Alpine + Pandoc 3.6 + Typst 0.12)
-- Added GitHub Action for CI/CD (`scope-impact/rdm@v1`)
-- Fixed broken cross-references in software_plan.md template
+## Origin and license
 
-## License
-
-[MIT](LICENSE.txt) - Original work by [Innolitics](https://innolitics.com)
+RDM started as a fork of [innolitics/rdm](https://github.com/innolitics/rdm), the
+document-rendering part above; credit for that work goes to the
+[Innolitics](https://innolitics.com) team. [MIT](LICENSE.txt).

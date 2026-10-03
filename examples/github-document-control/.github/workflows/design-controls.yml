@@ -1,0 +1,48 @@
+name: Design controls
+
+# Every pull request to the default branch, and every push to it, runs the
+# design controls and the record checks (DI-9). The ruleset requires the two
+# checks this workflow reports, by these names:
+#   design-controls / gates    RDM's reusable gates: design gate, acceptance
+#                              tests, verify, release gate, graph validation
+#                              with the Part 11 checklist, the evidence bundle
+#                              and the Allure report
+#   record-checks              the Part 11 gap analysis of the SOP (DI-5), and
+#                              this system's own graph rules (dhf/shapes/)
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  design-controls:
+    # RDM pinned to a released tag: the tool that verifies a change is itself a
+    # controlled version. rdm-ref is the same tag as after the @.
+    uses: scope-impact/rdm/.github/workflows/gates.yml@v2.0.0-alpha
+    with:
+      rdm-ref: v2.0.0-alpha
+      checklists: checklists/part11_document_control.txt
+
+  record-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0          # the graph records the commit that landed each document
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.x"
+      - name: Install rdm
+        run: pip install "rdm[graph] @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha"   # not PyPI's rdm, another project
+      - name: Part 11 gap analysis of the SOP
+        run: rdm gap checklists/part11_document_control.txt dhf/documents/procedures/document_control_procedure.md
+      - name: This system's own graph rules
+        run: >-
+          rdm graph validate --dhf dhf
+          --checklist checklists/part11_document_control.txt
+          --shapes dhf/shapes/document_control.ttl

@@ -13,37 +13,44 @@
 | `rdm collect [FILES…]` | extract `RDOC name … ENDRDOC` snippets from source files into YAML → stdout |
 | `rdm translate FORMAT IN OUT` | convert test-runner XML (`auto`, `gtest`, `qttest`, `xunit`) into a YAML data file |
 | `rdm hooks [DEST] [--with-issue-hooks]` | install the design-gate pre-commit hook into `DEST` or `.git/hooks`; the issue-reference hooks only with the flag |
-| `rdm pull CONFIG` | legacy: pull data from the configured project-management tool |
 
-## Design controls & traceability — `rdm story …` (extra: `story-audit`)
+## Design controls & traceability — `rdm story …`
 
 | Command | What it does |
 |---|---|
 | `new-input --context C --text T --traces-to UN[,UN…]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test, checklist; `--list` shows contexts / taken ids / user needs |
-| `design-gate` | design docs + review present, complete, approved (committed); warnings for DI↔tag mismatches |
+| `design-gate` | design docs + review present, complete, approved (committed); every user-need and design-input id declared once; the architecture's views drawn from the current workspace; warnings for DI↔tag mismatches |
 | `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix |
-| `faithfulness [--stale] [--replay]` | every design input has a current, independent verdict (hash-pinned; test edits go `stale`); `--stale` lists only the worklist, `--replay` re-executes recorded killing probes and fails on survivors |
-| `release-gate --allure-results DIR` | hard gate: approved + all inputs verified + all faithful + every user need addressed |
-| `verdict DI-n --verdict V --reviewer R --rationale …` | record a faithfulness verdict (`faithful`/`partial`/`unfaithful`/`weak`; `--uncovered` for partial; `--probe` JSON per executed mutation, repeatable; `--hash-scope module\|function`, default module) |
+| `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed + every risk evaluated, its risk controls verified and its residual acceptable ([risk register](risk.md)) |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
-| `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, verdicts, manifest |
-| `mutation-probe --file F --find A --replace B --test T` | prove a test catches a defect: apply a one-line mutation, run the test, report KILLED/SURVIVED, always restore |
+| `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, Allure results, verification report, manifest |
+| `evidence-report --allure-results DIR -o FILE` | render the verification report (PDF): every run behind each design input, with its steps, labels, links and attachments |
+| `mutation-probe --file F --find A --replace B --test T` | reviewer tool: break one line on purpose, run one test, report KILLED (caught) / SURVIVED (missed), always restore; never gates |
 | `trace UN-nnn \| DI-n` | the traceability slice for one need or input (forward + backward) |
-| `audit [REPO]` | repo-wide traceability report + score; DHF-aware (design-input tag coverage) |
 | `persona --vv-plan F --persona-results DIR` | reconcile formative AI-persona usability runs against the user-need registry (never gates) |
 
-Common flags: `--dhf DIR` (default `dhf/`), `--faithfulness DIR` (default
-`<dhf>/faithfulness`).
+Common flag: `--dhf DIR` (default `dhf/`).
 
-## Planning layer (optional, non-record)
+## The architecture — `rdm c4 …`
+
+| Command | What it does |
+| --- | --- |
+| `draw [--dhf DIR]` | export the architecture workspace (`<dhf>/c4/workspace.dsl`): its model to `c4/workspace.json`, each view drawn by Graphviz to `c4/views/<view>.svg`, all stamped with the workspace's hash (needs Java, Structurizr's CLI and Graphviz; the design gate fails on a stale one) |
+
+## The record as a graph — `rdm graph …` (extra: `graph`)
 
 | Command | What it does |
 |---|---|
-| `rdm story sync BACKLOG_DIR -o DB` | sync Backlog.md → DuckDB analytics (`--migrate-only` for schema only) |
-| `rdm story backlog-validate [DIR]` | validate Backlog.md files (`-f` single file, `--strict`, `--verbose`) |
-| `rdm story check-ids [FILES…]` | duplicate requirement-ID detection (**deprecated** legacy YAML path — prints a notice; functional, exit codes unchanged) |
-| `rdm story validate` | validate legacy requirements YAML against the schema (**deprecated** — new projects use the DHF + gates) |
-| `rdm pm sync` | bidirectional GitHub sync: tasks → issues, PRs → DuckDB (extra: `github`) |
+| `build [--allure-results DIR] [--checklist NAME\|FILE]… [-o FILE] [--store DIR] [--project NAME] [--infer]` | project the record (and any checklists, as data) into RDF named graphs; sorted N-Quads to a file or stdout, and/or a rebuilt Oxigraph store; `--infer` adds what the vocabulary's rules derive, in a separate graph |
+| `validate [--allure-results DIR] [--checklist NAME\|FILE]… [--shapes FILE]…` | check the graph against the SHACL gate shapes (plus your own); exit 1 on a violation |
+| `query 'SPARQL' [--store DIR] [--format tsv\|csv\|json] [--infer]` | SELECT / ASK / CONSTRUCT over the store, or over an in-memory projection of `--dhf` |
+| `explorer-file -o FILE [--store DIR] [--exclude CLASS]… [--endpoint URL]` | write the whole record as an AWS Graph Explorer graph file (*Load graph from file*) |
+| `serve [--store DIR] [--bind HOST:PORT]` | read-only SPARQL 1.1 endpoint (union default graph, CORS) for AWS Graph Explorer and other SPARQL clients |
+| `mcp [--allure-results DIR] [--checklist NAME\|FILE]…` | serve the record to agents as a read-only MCP server over stdio: `schema`, `query`, `trace`, `validate`, each from a fresh projection |
 
-Planning outputs are stamped as derived data — never cite them as evidence
+See [The record as a graph](graph.md).
+
+## Planning
+
+RDM ships no planning tooling: tasks and issues live in their own tools
 ([Plan vs. record](plan-vs-record.md)).

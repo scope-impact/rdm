@@ -1,108 +1,67 @@
-# RDM — Regulatory Documentation Manager
+# RDM
 
-RDM is a documentation-as-code CLI for **IEC 62304** medical-device software. It
-generates regulatory documents from Markdown templates + YAML data files, and —
-record-first — **compiles and gates a Design History File** from the system of
-record: per-context design documents + executed Allure results + git.
+RDM keeps the design record of regulated software — medical-device software
+under IEC 62304 first — as Markdown and tests in git. It checks the record,
+renders regulatory documents from it, and builds it into one read-only graph
+that people and agents query.
 
 ```
-YAML data + Jinja2 templates → Markdown → PDF/DOCX (via Pandoc/Typst)
+regulation → checklist → clause ← document
+user need → design input → test → run (at a commit) → source file
+risk → control (a design input) → test → run
+document → the commit that landed it
 ```
 
-## Where to start
+Every link is a line someone wrote in a reviewed pull request, or a fact a
+tool recorded. Nothing is typed into a database, and nothing derived is ever
+edited.
 
-- **New here?** [Install](installation.md), then follow a quickstart:
-  [a new documentation project](quickstart-new-project.md) (`rdm init`) or
-  [an existing repository](quickstart-existing-repo.md) (`rdm adopt`). The
-  **User guide** covers [authoring](authoring.md),
-  [gap analysis](gap-analysis.md), [design controls](design-controls.md), the
-  [agent workflow](agent-workflow.md), and the [CLI reference](cli.md).
-- **Why it works this way**: [record-first architecture](record-first-architecture.md),
-  [plan vs. record](plan-vs-record.md), and
-  [ADR 0001](adr-0001-bounded-context-user-needs.md); worked examples for
-  [a realistic device (VitalView)](example-vitalview-decomposition.md) and
-  [git as a document control system](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control).
-- **Proof, not promises**: [RDM's own document control](document-control.md)
-  is held to the shipped Part 11 checklist, and this site's
-  [traceability matrix](traceability-matrix.md) is generated from a live
-  acceptance run at every build.
-
-## The evidence chain
-
-A change is **complete** when every link below exists, is current, and is
-machine-checked — not just when the code works:
+## One record, three things derived from it
 
 ```mermaid
 flowchart LR
-    subgraph why["WHY"]
-        UN["User need UN-nnn<br>V&V plan frontmatter<br><i>defined once</i>"]
+    subgraph write["written by people and agents — only through reviewed pull requests"]
+        R["<b>Record</b><br>needs, design inputs, risks,<br>checklists, tagged tests"]
     end
-    subgraph what["WHAT"]
-        DI["Design input DI-n<br><code>kind: design</code> document<br><i>owned by one context</i>"]
-    end
-    subgraph proof["PROOF"]
-        TEST["Acceptance test<br><code>@allure.story</code> tag<br><i>the test is the AC</i>"]
-        VERDICT["Faithfulness verdict<br>independent + mutation-proven<br><i>hash-pinned: edit test → stale</i>"]
-    end
-    DI -- "traces_to" --> UN
-    TEST -- "verifies" --> DI
-    TEST -- "passing ≠ proving" --> VERDICT
-    DI -- "approval = the git commit" --> MATRIX["Traceability matrix<br><i>generated, never hand-edited</i>"]
-    VERDICT --> MATRIX
+    R --> G["<b>Gates</b><br>pass / block"]
+    R --> K["<b>Graph</b><br>read-only RDF"]
+    R --> D["<b>Documents</b><br>PDF / DOCX"]
+    K --> A["agents (MCP), Graph Explorer, SPARQL"]
 ```
 
-A user need is **met** when it is validated **and** every design input that
-`traces_to` it is verified by a passing, independently-confirmed-faithful test.
+| Part | What it is | Read |
+| --- | --- | --- |
+| **Record** | User needs, design inputs (one design document per bounded context), the risk register, checklists, tagged acceptance tests. Markdown and git. | [Design inputs and tests](design-controls.md), [changing the record](agent-workflow.md), [risk register](risk.md) |
+| **Gates** | Machine checks: design approved before implementation; before release, every design input verified, every need addressed, every risk controlled; every required clause referenced. | [The gates](gates.md), [gap analysis](gap-analysis.md) |
+| **Graph** | The record as RDF, rebuilt on every run and never edited. Agents read it over MCP; people browse it in Graph Explorer. | [The record as a graph](graph.md), [for agents](agents.md) |
+| **Documents** | Regulatory documents rendered from the record. | [Authoring and rendering](authoring.md) |
 
-## The change lifecycle
+How the parts fit, and why the record is the only thing anyone writes:
+[How RDM works](record-first-architecture.md) and
+[the data model](data-model.md).
 
-```mermaid
-sequenceDiagram
-    participant A as Author<br>(human / agent 1)
-    participant R as Reviewer<br>(independent: agent 2 / human)
-    participant G as Gates<br>(machine)
-    A->>G: rdm story new-input
-    G-->>A: DI id + failing stub test + checklist
-    A->>G: commit design docs FIRST
-    G-->>A: design-gate PASS (the commit is the approval)
-    A->>A: implement, replace stub with real assertions
-    A->>R: hand off — never review your own test
-    R->>R: clause table + mutation probes (KILLED / SURVIVED)
-    alt uncovered clause found
-        R-->>A: verdict partial (names the gap)
-        A->>R: strengthen the test, re-review
-    end
-    R->>G: rdm story verdict — faithful
-    A->>G: push / PR
-    G-->>A: CI — design-gate → acceptance → verify → faithfulness → release-gate ✅
-```
+## What it does not do
 
-## A record-first repository
+- It does not make a device compliant. It keeps the evidence straight; a
+  regulator judges the evidence, not the tool.
+- A green release gate means every design input has a passing tagged test,
+  not that the test proves the input. The pull-request reviewer judges that.
+- Checklists are written by hand. Nothing turns a regulation into a checklist.
+- The risk gate checks a register's form, not its truth: whether a control
+  works, and whether a residual is as low as practicable, are the reviewer's.
+  It ships no risk matrix; acceptability is the project's to declare.
+- Git shows who *landed* a change, not who *approved* it; the approval is the
+  pull-request review on the forge.
 
-```mermaid
-flowchart TD
-    subgraph repo["your-product repository"]
-        subgraph record["the record — controlled"]
-            VVP["V&V plan<br>user_needs: UN-nnn"]
-            DESIGN["documents/design/*.md<br>kind: design, design_inputs"]
-            TESTS["tests/acceptance<br>@allure.story tagged"]
-            FAITH["faithfulness/*.json<br>hash-pinned verdicts"]
-        end
-        subgraph enforce["enforcement — on by default"]
-            BOOT["session bootstrap<br>.claude/settings.json"]
-            RUNBOOK["dhf/AGENT_WORKFLOW.md<br>the canonical procedure"]
-            HOOK[".githooks/pre-commit<br>design gate before implementation"]
-            CI["design-controls.yml<br>the five gates on every push"]
-        end
-        subgraph plan["planning — never evidence"]
-            PM["Backlog.md / issues / boards"]
-        end
-    end
-    BOOT --> RUNBOOK
-    BOOT --> HOOK
-    PM -. "only path in: a reviewed git commit" .-> record
+## Start
 
-    style plan stroke-dasharray: 5 5
-```
+1. [Install](installation.md).
+2. [Start a new project](quickstart-new-project.md) (`rdm init`) or
+   [adopt an existing repository](quickstart-existing-repo.md) (`rdm adopt`).
+3. Make your first change the record-first way:
+   [changing the record](agent-workflow.md).
 
-See the **[API reference](reference.md)** for the modules that implement this.
+RDM is developed with RDM: see [how RDM controls itself](dogfood.md), and the
+[traceability matrix](traceability-matrix.md) this site generates from a live
+test run on every build. Agent skills for working with RDM live in
+[scope-impact/agent-skills](https://github.com/scope-impact/agent-skills).

@@ -5,16 +5,18 @@ from pathlib import Path
 
 import yaml
 
-from rdm.gaps import audit_for_gaps, list_default_checklists
-from rdm.collect import collect_from_files
-from rdm.hooks import install_hooks
-from rdm.init import init
-from rdm.pull import pull_from_project_manager
-from rdm.render import render_template_to_file
-from rdm.translate import translate_test_results, XML_FORMATS
-from rdm.util import context_from_data_files, print_error, load_yaml
-from rdm.version import __version__
+from rdm.compliance.gaps import audit_for_gaps, coverage_report, list_default_checklists
+from rdm.publishing.collect import collect_from_files
+from rdm.specification.hooks import install_hooks
+from rdm.specification.init import init
+from rdm.publishing.render import context_from_data_files, render_template_to_file
+from rdm.evidence.translate import translate_test_results, XML_FORMATS
+from rdm.kernel.util import load_yaml
+from rdm.kernel.version import __version__
 
+
+def print_error(message):
+    print('\033[31m' + message + '\033[0m', file=sys.stderr)
 
 def main():
     try:
@@ -37,10 +39,8 @@ def cli(raw_arguments):
     elif args.command == 'init':
         init(args.output)
     elif args.command == 'adopt':
-        from rdm.adopt import adopt_command
+        from rdm.specification.adopt import adopt_command
         exit_code = adopt_command(args.target)
-    elif args.command == 'pull':
-        pull_from_project_manager(args.config)
     elif args.command == 'hooks':
         install_hooks(args.dest, with_issue_hooks=args.with_issue_hooks)
     elif args.command == 'collect':
@@ -53,71 +53,90 @@ def cli(raw_arguments):
     elif args.command == 'gap' and args.coverage:
         # In coverage mode, checklist + files can all be checklists or source
         # files: a checklist is a .txt path or a built-in checklist name.
-        from rdm.gaps import _builtin_checklist_dictionary
-        builtins = _builtin_checklist_dictionary()
+        from rdm.compliance.gaps import builtin_checklists
+        builtins = builtin_checklists()
         all_files = ([args.checklist] if args.checklist else []) + args.files
         checklists = [f for f in all_files if f.endswith('.txt') or f in builtins]
         sources = [f for f in all_files if not (f.endswith('.txt') or f in builtins)]
-        exit_code = audit_for_gaps(checklists, sources, True, args.verbose)
+        exit_code = coverage_report(checklists, sources, args.verbose)
     elif args.command == 'gap':
-        exit_code = audit_for_gaps(args.checklist, args.files, False, args.verbose)
+        exit_code = audit_for_gaps(args.checklist, args.files, args.verbose)
+    elif args.command == 'c4' and args.c4_command == 'draw':
+        from rdm.architecture.draw import draw_command
+        exit_code = draw_command(args)
+    elif args.command == 'c4':
+        parse_arguments(['c4', '-h'])
     elif args.command == 'story':
         exit_code = handle_story_command(args)
-    elif args.command == 'pm':
-        exit_code = handle_pm_command(args)
+    elif args.command == 'graph':
+        exit_code = handle_graph_command(args)
     return exit_code
+
+
+def handle_graph_command(args):
+    """Handle `rdm graph build | query | validate | serve | explorer-file | mcp` (the record as a graph)."""
+    from rdm.graph import cli as graph_cli
+
+    def _path(value):
+        return Path(value) if value else None
+
+    if args.graph_command == 'build':
+        return graph_cli.graph_build_command(
+            dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
+            output=_path(args.output), store=_path(args.store), project_name=args.project,
+            checklists=args.checklist, infer=args.infer,
+        )
+    if args.graph_command == 'query':
+        return graph_cli.graph_query_command(
+            args.sparql, store=_path(args.store), dhf_dir=_path(args.dhf),
+            allure_results_dir=_path(args.allure_results), fmt=args.format, checklists=args.checklist,
+            infer=args.infer,
+        )
+    if args.graph_command == 'serve':
+        return graph_cli.graph_serve_command(store=_path(args.store), bind=args.bind)
+    if args.graph_command == 'explorer-file':
+        return graph_cli.graph_explorer_file_command(
+            Path(args.output), store=_path(args.store), dhf_dir=_path(args.dhf),
+            allure_results_dir=_path(args.allure_results), checklists=args.checklist,
+            endpoint=args.endpoint, exclude=args.exclude,
+        )
+    if args.graph_command == 'validate':
+        try:
+            from rdm.graph.validate import validate_command
+        except ImportError:
+            return graph_cli._missing_extra()
+        return validate_command(
+            dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
+            checklists=args.checklist, extra_shapes=[Path(s) for s in args.shapes or []],
+        )
+    if args.graph_command == 'mcp':
+        try:
+            from rdm.graph.agent import mcp_command
+        except ImportError:
+            return graph_cli._missing_extra()
+        return mcp_command(dhf_dir=_path(args.dhf), allure_results_dir=_path(args.allure_results),
+                           checklists=args.checklist)
+    print("Unknown graph subcommand. Use: build, query, serve, validate, explorer-file, or mcp")
+    return 1
 
 
 def handle_story_command(args):
     """Handle the story subcommand and its sub-subcommands."""
     try:
-        if args.story_command == 'audit':
-            from rdm.story_audit.audit import story_audit_command
-            repo_path = Path(args.repo) if args.repo else None
-            return story_audit_command(repo_path)
+        if args.story_command == 'design-gate':
+            from rdm.specification.design_gate import story_design_gate_command
+            results = Path(args.allure_results) if args.allure_results else None
+            warnings = None
+            if results is not None and results.exists():  # release reads results; the design gate shows its warnings
+                from rdm.release.gate import verification_warnings
 
-        elif args.story_command == 'validate':
-            from rdm.story_audit.validate import story_validate_command
-            return story_validate_command(
-                requirements_dir=Path(args.requirements) if args.requirements else None,
-                file_path=Path(args.file) if args.file else None,
-                strict=args.strict,
-                verbose=args.verbose,
-                quiet=args.quiet,
-            )
-
-        elif args.story_command == 'sync':
-            from rdm.story_audit.sync import story_sync_command
-            return story_sync_command(
-                backlog_dir=Path(args.backlog_dir) if args.backlog_dir else None,
-                output_path=Path(args.output) if args.output else None,
-                migrate_only=args.migrate_only,
-            )
-
-        elif args.story_command == 'check-ids':
-            from rdm.story_audit.check_ids import story_check_ids_command
-            files = [Path(f) for f in args.files] if args.files else None
-            return story_check_ids_command(files)
-
-        elif args.story_command == 'backlog-validate':
-            from rdm.story_audit.backlog_validate import story_backlog_validate_command
-            return story_backlog_validate_command(
-                backlog_dir=Path(args.backlog_dir) if args.backlog_dir else None,
-                file_path=Path(args.file) if args.file else None,
-                strict=args.strict,
-                verbose=args.verbose,
-                quiet=args.quiet,
-            )
-
-        elif args.story_command == 'design-gate':
-            from rdm.story_audit.design_gate import story_design_gate_command
-            return story_design_gate_command(
-                dhf_dir=Path(args.dhf) if args.dhf else None,
-                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
-            )
+                def warnings(dhf):
+                    return verification_warnings(dhf, results)
+            return story_design_gate_command(dhf_dir=Path(args.dhf) if args.dhf else None,
+                                             verification_warnings=warnings)
 
         elif args.story_command == 'verify':
-            from rdm.record.verify import verify_command
+            from rdm.release.verify import verify_command
             return verify_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
@@ -125,33 +144,14 @@ def handle_story_command(args):
             )
 
         elif args.story_command == 'release-gate':
-            from rdm.story_audit.design_gate import story_release_gate_command
+            from rdm.release.gate import story_release_gate_command
             return story_release_gate_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
-                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
-            )
-
-        elif args.story_command == 'faithfulness':
-            from rdm.story_audit.design_gate import story_faithfulness_command
-            return story_faithfulness_command(
-                stale_only=args.stale,
-                replay=args.replay,
-                dhf_dir=Path(args.dhf) if args.dhf else None,
-                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
-            )
-
-        elif args.story_command == 'trace':
-            from rdm.story_audit.design_gate import story_trace_command
-            return story_trace_command(
-                target=args.target,
-                dhf_dir=Path(args.dhf) if args.dhf else None,
-                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
-                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
             )
 
         elif args.story_command == 'mutation-probe':
-            from rdm.story_audit.mutation import story_mutation_probe_command
+            from rdm.evidence.mutation import story_mutation_probe_command
             return story_mutation_probe_command(
                 file=args.file,
                 find=args.find,
@@ -159,42 +159,43 @@ def handle_story_command(args):
                 test=args.test,
             )
 
-        elif args.story_command == 'verdict':
-            from rdm.story_audit.design_gate import story_verdict_command
-            return story_verdict_command(
+        elif args.story_command == 'trace':
+            from rdm.release.gate import story_trace_command
+            return story_trace_command(
                 target=args.target,
-                verdict=args.verdict,
-                reviewer=args.reviewer,
-                rationale=args.rationale,
-                reviewed_tests=args.reviewed_tests,
-                uncovered=args.uncovered,
                 dhf_dir=Path(args.dhf) if args.dhf else None,
-                faithfulness_dir=Path(args.faithfulness) if args.faithfulness else None,
-                hash_scope=args.hash_scope,
-                probe=args.probe,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
             )
 
         elif args.story_command == 'persona':
-            from rdm.record.persona_cmd import persona_command
+            from rdm.specification.persona_cmd import persona_command
             return persona_command(
                 vv_plan=Path(args.vv_plan) if args.vv_plan else None,
                 persona_results=Path(args.persona_results) if args.persona_results else None,
             )
 
         elif args.story_command == 'dmr':
-            from rdm.record.dmr import dmr_command
+            from rdm.publishing.dmr import dmr_command
             return dmr_command(Path(args.documents_dir), Path(args.output))
 
         elif args.story_command == 'evidence-bundle':
-            from rdm.record.bundle import evidence_bundle_command
+            from rdm.publishing.bundle import evidence_bundle_command
             return evidence_bundle_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
                 output=Path(args.output) if args.output else None,
             )
 
+        elif args.story_command == 'evidence-report':
+            from rdm.publishing.report import evidence_report_command
+            return evidence_report_command(
+                dhf_dir=Path(args.dhf) if args.dhf else None,
+                allure_results_dir=Path(args.allure_results) if args.allure_results else None,
+                output=Path(args.output) if args.output else None,
+            )
+
         elif args.story_command == 'new-input':
-            from rdm.story_audit.new_input import story_new_input_command
+            from rdm.specification.new_input import story_new_input_command
             return story_new_input_command(
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 context=args.context,
@@ -206,41 +207,13 @@ def handle_story_command(args):
 
         else:
             print(
-                "Unknown story subcommand. Use: audit, validate, sync, check-ids, "
-                "backlog-validate, design-gate, verify, release-gate, faithfulness, "
-                "verdict, mutation-probe, trace, new-input, or persona"
+                "Unknown story subcommand. Use: design-gate, verify, release-gate, trace, "
+                "mutation-probe, new-input, dmr, evidence-bundle, evidence-report, or persona"
             )
-            return 1
-
-    except ImportError as e:
-        print(f"Error: Missing dependency for story_audit: {e}")
-        print("Install with: pip install rdm[story-audit]")
-        return 1
-
-
-def handle_pm_command(args):
-    """Handle the pm (project management) subcommand."""
-    try:
-        if args.pm_command == 'sync':
-            from rdm.project_management.sync import pm_sync_command
-            return pm_sync_command(
-                repo=args.repo,
-                db_path=Path(args.db) if args.db else None,
-                pull=args.pull,
-                push=args.push,
-                status=args.status,
-                backlog_dir=Path(args.backlog) if args.backlog else None,
-                base_branch=args.branch,
-                dhf_dir=Path(args.dhf) if args.dhf else None,
-                skip_design_gate=args.skip_design_gate,
-            )
-        else:
-            print("Unknown pm subcommand. Use: sync")
             return 1
 
     except ImportError as e:
         print(f"Error: Missing dependency: {e}")
-        print("Install with: pip install rdm[github] rdm[analytics]")
         return 1
 
 
@@ -264,10 +237,6 @@ def parse_arguments(arguments):
     render_parser.add_argument('template')
     render_parser.add_argument('config', help='Path to project `config.yml` file')
     render_parser.add_argument('data_files', nargs='*')
-
-    pull_help = 'pull data from the project management tool'
-    pull_parser = subparsers.add_parser('pull', help=pull_help)
-    pull_parser.add_argument('config', help='Path to project `config.yml` file')
 
     gap_help = 'use checklist to verify documents have expected references to particular standard(s)'
     gap_parser = subparsers.add_parser('gap', help=gap_help)
@@ -293,45 +262,10 @@ def parse_arguments(arguments):
     translate_parser.add_argument('input')
     translate_parser.add_argument('output')
 
-    # Story audit commands
-    story_help = 'requirements traceability and story audit tools'
+    # Design controls: the gates and traceability over the record
+    story_help = 'design controls: design and release gates, traceability, design-input scaffolding'
     story_parser = subparsers.add_parser('story', help=story_help)
     story_subparsers = story_parser.add_subparsers(dest='story_command', metavar='<subcommand>')
-
-    # rdm story audit
-    story_audit_help = 'run traceability audit on repository'
-    story_audit_parser = story_subparsers.add_parser('audit', help=story_audit_help)
-    story_audit_parser.add_argument('repo', nargs='?', default='.', help='Repository path (default: .)')
-
-    # rdm story validate
-    story_validate_help = 'validate requirements YAML against schema'
-    story_validate_parser = story_subparsers.add_parser('validate', help=story_validate_help)
-    story_validate_parser.add_argument('-r', '--requirements', help='Path to requirements directory')
-    story_validate_parser.add_argument('-f', '--file', help='Validate single file')
-    story_validate_parser.add_argument('-s', '--strict', action='store_true', help='Fail on extra fields')
-    story_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
-    story_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
-
-    # rdm story sync
-    story_sync_help = 'sync Backlog.md to DuckDB for analytics'
-    story_sync_parser = story_subparsers.add_parser('sync', help=story_sync_help)
-    story_sync_parser.add_argument('backlog_dir', nargs='?', help='Path to Backlog.md directory')
-    story_sync_parser.add_argument('-o', '--output', help='Output database path')
-    story_sync_parser.add_argument('--migrate-only', action='store_true', help='Only run migrations')
-
-    # rdm story check-ids
-    story_check_help = 'check for duplicate story IDs'
-    story_check_parser = story_subparsers.add_parser('check-ids', help=story_check_help)
-    story_check_parser.add_argument('files', nargs='*', help='Files to check (default: requirements/)')
-
-    # rdm story backlog-validate
-    backlog_validate_help = 'validate Backlog.md markdown files for consistency'
-    backlog_validate_parser = story_subparsers.add_parser('backlog-validate', help=backlog_validate_help)
-    backlog_validate_parser.add_argument('backlog_dir', nargs='?', help='Path to backlog directory')
-    backlog_validate_parser.add_argument('-f', '--file', help='Validate single file')
-    backlog_validate_parser.add_argument('-s', '--strict', action='store_true', help='Treat warnings as errors')
-    backlog_validate_parser.add_argument('-v', '--verbose', action='store_true', help='Show warnings')
-    backlog_validate_parser.add_argument('-q', '--quiet', action='store_true', help='Only show summary')
 
     # rdm story design-gate
     design_gate_help = 'verify design input and design review exist before tasks transition'
@@ -351,54 +285,18 @@ def parse_arguments(arguments):
 
     # rdm story release-gate
     release_gate_help = ('block release unless design is approved and every design input is '
-                         'verified and faithfully reviewed')
+                         'verified by a passing test')
     release_gate_parser = story_subparsers.add_parser('release-gate', help=release_gate_help)
     release_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     release_gate_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
-    release_gate_parser.add_argument(
-        '--faithfulness',
-        help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
-    )
-
-    # rdm story faithfulness
-    faithfulness_help = 'report independent faithfulness review (does each verifying test verify its design input?)'
-    faithfulness_parser = story_subparsers.add_parser('faithfulness', help=faithfulness_help)
-    faithfulness_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    faithfulness_parser.add_argument(
-        '--faithfulness',
-        help='Path to a directory of *-faithfulness.json verdicts (default: <dhf>/faithfulness)',
-    )
-    faithfulness_parser.add_argument('--stale', action='store_true',
-                                     help='show only non-faithful inputs (the review worklist)')
-    faithfulness_parser.add_argument('--replay', action='store_true',
-                                     help='re-execute recorded killing mutation probes; fail if any survives')
 
     # rdm story mutation-probe
-    mutation_help = 'prove a test catches a defect: apply a one-line mutation, run the test, always revert'
+    mutation_help = 'reviewer tool: prove a test catches a defect (apply a one-line mutation, run it, always revert)'
     mutation_parser = story_subparsers.add_parser('mutation-probe', help=mutation_help)
     mutation_parser.add_argument('--file', required=True, help='source file to mutate')
     mutation_parser.add_argument('--find', required=True, help='exact text to replace (must occur once)')
     mutation_parser.add_argument('--replace', required=True, help='replacement text (the mutation)')
     mutation_parser.add_argument('--test', required=True, help='pytest -k selector for the verifying test')
-
-    # rdm story verdict
-    verdict_help = 'record an independent faithfulness verdict for a design input (hash-pinned to its test)'
-    verdict_parser = story_subparsers.add_parser('verdict', help=verdict_help)
-    verdict_parser.add_argument('target', help='the design-input id (DI-…) being reviewed')
-    verdict_parser.add_argument('--verdict', required=True,
-                                choices=['faithful', 'partial', 'unfaithful', 'weak'])
-    verdict_parser.add_argument('--reviewer', required=True,
-                                help='who reviewed (must be independent of the test author)')
-    verdict_parser.add_argument('--rationale', required=True,
-                                help='per-clause reasoning incl. the failing mutation(s)')
-    verdict_parser.add_argument('--reviewed-tests', help='comma-separated test names examined')
-    verdict_parser.add_argument('--uncovered', help='semicolon-separated requirement clauses NOT covered')
-    verdict_parser.add_argument('--hash-scope', choices=['module', 'function'], default='module',
-                                help='pin scope: full test file(s) (module, default) or tagged functions only')
-    verdict_parser.add_argument('--probe', action='append',
-                                help='executed mutation probe as JSON with file/find/replace/test; repeatable')
-    verdict_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
-    verdict_parser.add_argument('--faithfulness', help='Verdicts dir (default: <dhf>/faithfulness)')
 
     # rdm story trace
     trace_help = 'show the traceability slice for a user need or design input (forward + backward)'
@@ -406,7 +304,6 @@ def parse_arguments(arguments):
     trace_parser.add_argument('target', help='a user-need id (UN-…) or design-input id (DI-…)')
     trace_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     trace_parser.add_argument('--allure-results', help='Allure results dir (adds verification status)')
-    trace_parser.add_argument('--faithfulness', help='Faithfulness verdicts dir (adds review status)')
 
     # rdm story dmr
     dmr_help = 'generate device-master-record index data from controlled documents\' frontmatter'
@@ -415,18 +312,25 @@ def parse_arguments(arguments):
     dmr_parser.add_argument('-o', '--output', required=True, help='output data file (e.g. data/dmr.yml)')
 
     # rdm story evidence-bundle
-    bundle_help = 'write the retained release evidence set: verification data, matrix, verdicts, manifest'
+    bundle_help = 'write the retained release evidence set: verification data, matrix, manifest'
     bundle_parser = story_subparsers.add_parser('evidence-bundle', help=bundle_help)
     bundle_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     bundle_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
     bundle_parser.add_argument('-o', '--output', help='output directory (default: release-evidence/)')
+
+    # rdm story evidence-report
+    report_help = 'render the verification report (PDF): every run behind each design input, with its evidence'
+    report_parser = story_subparsers.add_parser('evidence-report', help=report_help)
+    report_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    report_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
+    report_parser.add_argument('-o', '--output', help='output PDF (default: verification_report.pdf)')
 
     # rdm story new-input
     new_input_help = 'scaffold a traced design input: frontmatter entry, stub tagged test, checklist'
     new_input_parser = story_subparsers.add_parser('new-input', help=new_input_help)
     new_input_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     new_input_parser.add_argument('--context', help='bounded context that will OWN the input')
-    new_input_parser.add_argument('--text', help='the requirement ("RDM shall ..."), in verifiable clauses')
+    new_input_parser.add_argument('--text', help='the requirement ("RDM shall ..."), each thing it requires verifiable')
     new_input_parser.add_argument('--traces-to', help='comma-separated user-need id(s) the input refines')
     new_input_parser.add_argument('--test-file',
                                   help='stub test destination (default: tests/acceptance/test_<context>.py)')
@@ -439,30 +343,67 @@ def parse_arguments(arguments):
     persona_parser.add_argument('--vv-plan', help='Path to the V&V plan (carries the user_needs registry)')
     persona_parser.add_argument('--persona-results', help='Path to a directory of *-persona.json run files')
 
-    # =========================================================================
-    # rdm pm (project management)
-    # =========================================================================
-    pm_help = 'project management commands (GitHub sync)'
-    pm_parser = subparsers.add_parser('pm', help=pm_help)
-    pm_subparsers = pm_parser.add_subparsers(dest='pm_command', metavar='<subcommand>')
+    _add_graph_parser(subparsers)
 
-    # rdm pm sync
-    pm_sync_help = 'sync GitHub issues/PRs with DuckDB'
-    pm_sync_parser = pm_subparsers.add_parser('sync', help=pm_sync_help)
-    pm_sync_parser.add_argument('--repo', help='GitHub repo (owner/name)')
-    pm_sync_parser.add_argument('--db', help='DuckDB path (default: github_sync.duckdb)')
-    pm_sync_parser.add_argument('--pull', action='store_true', help='Pull from GitHub only')
-    pm_sync_parser.add_argument('--push', action='store_true', help='Push to GitHub only')
-    pm_sync_parser.add_argument('--status', action='store_true', help='Show sync status')
-    pm_sync_parser.add_argument('--backlog', help='Backlog directory (default: backlog/)')
-    pm_sync_parser.add_argument('--branch', help='Base branch filter for PRs (default: all)')
-    pm_sync_parser.add_argument('--dhf', help='DHF directory for the design gate (default: dhf/)')
-    pm_sync_parser.add_argument(
-        '--skip-design-gate', action='store_true',
-        help='Skip the design input/review gate before pushing tasks',
-    )
+    # rdm c4: the architecture workspace (DI-66, DI-70)
+    c4_parser = subparsers.add_parser('c4', help='the architecture workspace: draw its model and views')
+    c4_sub = c4_parser.add_subparsers(dest='c4_command', metavar='<subcommand>')
+    c4_draw = c4_sub.add_parser('draw', help="export the workspace's model and draw each view, stamped "
+                                             "(needs Java, Structurizr's CLI and Graphviz)")
+    c4_draw.add_argument('--dhf', default='dhf', help='Path to DHF directory (default: dhf/)')
 
     return parser.parse_args(arguments)
+
+
+def _add_graph_parser(subparsers):
+    """`rdm graph`: the design record projected into RDF (needs extra: graph)."""
+    graph_parser = subparsers.add_parser(
+        'graph',
+        help='the design record as a linked-data (RDF) graph: build, query, validate, serve, explorer-file, mcp')
+    graph_sub = graph_parser.add_subparsers(dest='graph_command', metavar='<subcommand>')
+    # The record a graph command reads: the same three options on every one.
+    record = argparse.ArgumentParser(add_help=False)
+    record.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
+    record.add_argument('--allure-results', help='Allure results dir (adds the test runs)')
+    record.add_argument('--checklist', action='append',
+                        help='add a checklist: built-in name (rdm gap --list) or a .txt/RDF file; repeatable')
+
+    build = graph_sub.add_parser('build', parents=[record],
+                                 help='project the record into RDF (sorted N-Quads and/or an Oxigraph store)')
+    build.add_argument('-o', '--output', help='write sorted N-Quads here (default: stdout, unless --store)')
+    build.add_argument('--store', help='(re)build an Oxigraph store in this directory, e.g. .rdm/graph')
+    build.add_argument('--project', help='project name in instance IRIs (default: the repository name)')
+    build.add_argument('--infer', action='store_true',
+                       help="add what the vocabulary's rules derive, in a separate inferred graph")
+
+    query = graph_sub.add_parser('query', parents=[record], help='answer a SPARQL query (SELECT/ASK/CONSTRUCT)')
+    query.add_argument('sparql', help='the SPARQL query text')
+    query.add_argument('--store', help='query this store (default: a fresh in-memory projection of --dhf)')
+    query.add_argument('--format', choices=['tsv', 'csv', 'json'], default='tsv', help='SELECT result format')
+    query.add_argument('--infer', action='store_true',
+                       help="include what the vocabulary's rules derive (in-memory projection only)")
+
+    validate = graph_sub.add_parser('validate', parents=[record],
+                                    help='check the graph against the SHACL gate shapes (+ your own)')
+    validate.add_argument('--shapes', action='append', help='an additional SHACL shapes file; repeatable')
+
+    explorer = graph_sub.add_parser(
+        'explorer-file', parents=[record],
+        help='write the whole record as an AWS Graph Explorer graph file (Load graph from file)')
+    explorer.add_argument('-o', '--output', required=True, help='graph file to write, e.g. rdm.graph.json')
+    explorer.add_argument('--store', help='read this store (default: a fresh projection of --dhf)')
+    explorer.add_argument('--endpoint', help='SPARQL endpoint Graph Explorer reads details from '
+                                             '(default: http://localhost:7878)')
+    explorer.add_argument('--exclude', action='append',
+                          help='leave out a class and its links, e.g. TestRun; repeatable')
+
+    graph_sub.add_parser(
+        'mcp', parents=[record],
+        help='serve the record to agents, read-only, as an MCP server over stdio (schema, query, trace, validate)')
+
+    serve = graph_sub.add_parser('serve', help='serve the store as a SPARQL 1.1 endpoint (for AWS Graph Explorer)')
+    serve.add_argument('--store', help='store directory (default: .rdm/graph)')
+    serve.add_argument('--bind', default='localhost:7878', help='host:port (default: localhost:7878)')
 
 
 if __name__ == '__main__':

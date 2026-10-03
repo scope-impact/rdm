@@ -1,56 +1,114 @@
 # API reference
 
 Generated from the source docstrings by
-[mkdocstrings](https://mkdocstrings.github.io/). The record core is
-dependency-light; the project-management surface lives behind the optional
-`plan` extra.
+[mkdocstrings](https://mkdocstrings.github.io/). The record core and the
+gates need no extra; the graph needs the `graph` extra.
 
 ## Record core
 
 The reconciliation engine that compiles the DHF from the system of record.
 
-### `rdm.record.reconcile`
+### `rdm.kernel.reconcile`
 
-::: rdm.record.reconcile
+::: rdm.kernel.reconcile
 
-### `rdm.record.sdd`
+### `rdm.specification.sdd`
 
-::: rdm.record.sdd
+::: rdm.specification.sdd
 
-### `rdm.record.allure`
+### `rdm.specification.tags`
 
-::: rdm.record.allure
+::: rdm.specification.tags
 
-### `rdm.record.verify`
+### `rdm.kernel.frontmatter`
 
-::: rdm.record.verify
+::: rdm.kernel.frontmatter
 
-### `rdm.record.faithfulness`
+### `rdm.evidence.allure`
 
-::: rdm.record.faithfulness
+::: rdm.evidence.allure
 
-### `rdm.record.persona`
+### `rdm.release.verify`
 
-::: rdm.record.persona
+::: rdm.release.verify
 
-## Design-controls gates (`rdm story`)
+### `rdm.publishing.report`
 
-The gates and traceability commands layered on the record core.
+::: rdm.publishing.report
 
-### `rdm.story_audit.design_gate`
+### `rdm.specification.persona`
 
-::: rdm.story_audit.design_gate
+::: rdm.specification.persona
 
-### `rdm.story_audit.mutation`
+### `rdm.risk.register`
 
-::: rdm.story_audit.mutation
+::: rdm.risk.register
 
-### `rdm.story_audit.new_input`
+### `rdm.kernel.ids`
 
-::: rdm.story_audit.new_input
+::: rdm.kernel.ids
+
+### `rdm.kernel.git`
+
+::: rdm.kernel.git
+
+## The record as a graph (`rdm graph`)
+
+### `rdm.graph.project`
+
+::: rdm.graph.project
+
+### `rdm.graph.ns`
+
+::: rdm.graph.ns
+
+### `rdm.graph.rules`
+
+::: rdm.graph.rules
+
+### `rdm.graph.checklists`
+
+::: rdm.graph.checklists
+
+### `rdm.graph.validate`
+
+::: rdm.graph.validate
+
+### `rdm.graph.explorer`
+
+::: rdm.graph.explorer
+
+### `rdm.graph.agent`
+
+::: rdm.graph.agent
+
+### `rdm.graph.cli`
+
+::: rdm.graph.cli
+
+## The gates (`rdm story`)
+
+The design gate, release gate, design-input scaffolding and the mutation
+probe, over the record core.
+
+### `rdm.specification.design_gate`
+
+::: rdm.specification.design_gate
+
+### `rdm.release.gate`
+
+::: rdm.release.gate
+
+### `rdm.evidence.mutation`
+
+::: rdm.evidence.mutation
+
+### `rdm.specification.new_input`
+
+::: rdm.specification.new_input
 
 ## Scaffolding
 
-### `rdm.adopt`
+### `rdm.specification.adopt`
 
-::: rdm.adopt
+::: rdm.specification.adopt

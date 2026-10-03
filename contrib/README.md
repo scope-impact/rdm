@@ -4,10 +4,6 @@ This directory contains scripts and other files which, while they may be useful 
 
 See below for a brief description of each of the scripts.
 
-## [GitHub Workflow](https://github.com/innolitics/rdm/tree/main/contrib/github_workflow.yml)
-
-One benefit of storing the design history file in the Git repository alongside the code is that you can easily generate the documents for various versions of the code. This GitHub workflow will generate the release PDFs or word documents and store them as artifacts.
-
 ## [Simple Requirements Format](https://github.com/innolitics/rdm/tree/main/contrib/convert_requirements.py)
 
 This script lets you write software requirements in a simpler format that looks like this:

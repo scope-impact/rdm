@@ -1,0 +1,312 @@
+@prefix rdm:     <https://github.com/scope-impact/rdm/ns#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix oslc_rm: <http://open-services.net/ns/rm#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+
+# RDM's vocabulary for the design record as a graph (DI-35). Standard terms are
+# reused where they exist -- OSLC Requirements Management for requirements,
+# Dublin Core for document metadata, PROV-O for commits and authors -- and an
+# rdm: term is minted only where none fits.
+
+rdm: a owl:Ontology ;
+    rdfs:label "RDM design-record vocabulary" ;
+    rdfs:comment "Classes and properties for a medical-device design history file projected from RDM's Markdown record." .
+
+# --- Classes ----------------------------------------------------------------
+
+rdm:UserNeed a owl:Class ;
+    rdfs:label "User need" ;
+    rdfs:comment "A validated journey the product exists to serve (registered in the V&V plan)." .
+
+rdm:DesignInput a owl:Class ;
+    rdfs:subClassOf oslc_rm:Requirement ;
+    rdfs:label "Design input" ;
+    rdfs:comment "A verifiable requirement (§820.30(c)), declared once by its owning bounded context." .
+
+rdm:BoundedContext a owl:Class ;
+    rdfs:label "Bounded context" ;
+    rdfs:comment "A unit of design, captured in one kind: design document." .
+
+rdm:Document a owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Controlled document" ;
+    rdfs:comment "A document with a frontmatter id, under version control." .
+
+rdm:TestFile a owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Test file" ;
+    rdfs:comment "A test source file that defines tagged tests." .
+
+rdm:Test a owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Test" ;
+    rdfs:comment "One tagged test: a Python test function or method, or the whole file where tags are read by pattern (DI-61)." .
+
+rdm:Record a owl:Class ;
+    rdfs:label "Record" ;
+    rdfs:comment "The design record the graph was built from (DI-60)." .
+
+rdm:TestRun a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Test run" ;
+    rdfs:comment "One executed test, as reported in an Allure result." .
+
+# Gap analysis (DI-37). Checklists are data, never classes: a new standard is
+# a new skos:ConceptScheme instance, a new checklist a new rdm:Checklist
+# instance -- loaded from a file, with no change to this vocabulary.
+
+rdm:Clause a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label "Checklist clause" ;
+    rdfs:comment "One requirement of a standard, as a checklist item: skos:notation is its key (e.g. 62304:5.6.2), skos:definition its description, skos:inScheme its standard, skos:broader its parent clause." .
+
+rdm:Checklist a owl:Class ;
+    rdfs:subClassOf skos:Collection ;
+    rdfs:label "Checklist" ;
+    rdfs:comment "A named selection of clauses: skos:member lists its own items, rdm:includes the checklists it includes; its effective contents are rdm:includes*/skos:member." .
+
+skos:ConceptScheme rdfs:label "Standard" ;
+    rdfs:comment "A standard or regulation whose clauses checklists select from, named by the key prefix (62304, P11, FDA-SW, ...)." .
+
+prov:Activity rdfs:label "Activity" .
+prov:Agent rdfs:label "Agent" .
+
+# --- Properties -------------------------------------------------------------
+
+rdm:text a owl:DatatypeProperty ;
+    rdfs:label "text" ; rdfs:comment "What a user need or design input says." ; rdfs:range xsd:string .
+
+rdm:tracesTo a owl:ObjectProperty ;
+    rdfs:label "traces to" ; rdfs:domain rdm:DesignInput ; rdfs:range rdm:UserNeed ;
+    rdfs:comment "The user need a design input refines. The needs a context serves follow from it: ?i rdm:tracesTo ?need ; rdm:ownedBy ?context." .
+
+rdm:ownedBy a owl:ObjectProperty ;
+    rdfs:label "owned by" ; rdfs:domain rdm:DesignInput ; rdfs:range rdm:BoundedContext .
+
+rdm:realises a owl:ObjectProperty ;
+    rdfs:label "realises" ; rdfs:domain rdm:BoundedContext ; rdfs:range rdm:DesignInput ;
+    rdfs:comment "A context that contributes to a design input another context owns." .
+
+rdm:declaredIn a owl:ObjectProperty ;
+    rdfs:label "declared in" ; rdfs:range rdm:Document .
+
+rdm:part a owl:DatatypeProperty ;
+    rdfs:label "part" ; rdfs:domain rdm:BoundedContext ;
+    rdfs:comment "The part of the product (Record, Gates, Graph, Documents...) the architecture assigns a context to (DI-58)." .
+
+rdm:describes a owl:ObjectProperty ;
+    rdfs:label "describes" ; rdfs:domain rdm:Document ; rdfs:range rdm:BoundedContext .
+
+rdm:revision a owl:DatatypeProperty ;
+    rdfs:label "revision" ; rdfs:domain rdm:Document .
+
+rdm:path a owl:DatatypeProperty ;
+    rdfs:label "path" ; rdfs:comment "Repository-relative path." .
+
+rdm:undeclaredTag a owl:DatatypeProperty ;
+    rdfs:label "undeclared tag" ; rdfs:domain rdm:Test ;
+    rdfs:comment "A tag on the test naming no declared design input, though sharing a declared input's prefix — what the design gate warns about." .
+
+rdm:definedIn a owl:ObjectProperty ;
+    rdfs:label "defined in" ; rdfs:domain rdm:Test ; rdfs:range rdm:TestFile .
+
+rdm:runOf a owl:ObjectProperty ;
+    rdfs:label "run of" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Test ;
+    rdfs:comment "The test a run ran, matched by Allure's full name (DI-61)." .
+
+rdm:testedAt a owl:ObjectProperty ;
+    rdfs:label "tested at" ; rdfs:domain rdm:TestRun ; rdfs:range prov:Activity ;
+    rdfs:comment "The commit under test: the version the run is evidence for (DI-60)." .
+
+rdm:uncommittedChanges a owl:DatatypeProperty ;
+    rdfs:label "uncommitted changes" ; rdfs:domain rdm:TestRun ;
+    rdfs:comment "The run tested a working tree with changes not in its commit (DI-60)." .
+
+rdm:atCommit a owl:ObjectProperty ;
+    rdfs:label "at commit" ; rdfs:domain rdm:Record ; rdfs:range prov:Activity ;
+    rdfs:comment "The commit the record was at when the graph was built (DI-60)." .
+
+rdm:verifies a owl:ObjectProperty ;
+    rdfs:label "verifies" ; rdfs:domain rdm:Test ; rdfs:range rdm:DesignInput ;
+    rdfs:comment "The test carries a verification tag for the design input. A tag, not a verdict." .
+
+rdm:exercises a owl:ObjectProperty ;
+    rdfs:label "exercises" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:DesignInput .
+
+rdm:landedIn a owl:ObjectProperty ; rdfs:label "landed in" ; rdfs:domain rdm:Document ; rdfs:range prov:Activity ;
+    rdfs:comment "The first-parent commit of the default branch that brought the document's latest change in (a merge, squash or direct commit). Git records who landed a change, not who reviewed it." .
+rdm:landedBy a owl:ObjectProperty ; rdfs:label "landed by" ; rdfs:domain rdm:Document ; rdfs:range prov:Agent ;
+    rdfs:comment "The author of the landing commit." .
+rdm:evaluatedAgainst a owl:ObjectProperty ; rdfs:label "evaluated against" ; rdfs:range rdm:Document ;
+    rdfs:comment "The document holding the risk policy the risk was evaluated against." .
+
+rdm:Step a owl:Class ;
+    rdfs:label "Test step" ;
+    rdfs:comment "One Allure step of a test run, in order, nested under its parent step (DI-53)." .
+rdm:Attachment a owl:Class ;
+    rdfs:label "Attachment" ;
+    rdfs:comment "Evidence a test run or step attached: a file in the Allure results (DI-53)." .
+rdm:step a owl:ObjectProperty ; rdfs:label "step" ; rdfs:range rdm:Step ;
+    rdfs:comment "From a test run or a step to a step it contains." .
+rdm:attachment a owl:ObjectProperty ; rdfs:label "attachment" ; rdfs:range rdm:Attachment ;
+    rdfs:comment "From a test run or a step to evidence it attached." .
+rdm:position a owl:DatatypeProperty ; rdfs:label "position" ; rdfs:domain rdm:Step ;
+    rdfs:comment "The step's place in the run: 1, 2, 2.1 ..." .
+
+rdm:SourceFile a owl:Class ;
+    rdfs:label "Source file" ;
+    rdfs:comment "A file a test run exercises, named by its output label (DI-56)." .
+rdm:Parameter a owl:Class ; rdfs:label "Parameter" ;
+    rdfs:comment "One parameter of a parametrised run: a name and a value (DI-54)." .
+rdm:parameter a owl:ObjectProperty ; rdfs:label "parameter" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Parameter .
+rdm:name a owl:DatatypeProperty ; rdfs:label "name" .
+rdm:value a owl:DatatypeProperty ; rdfs:label "value" .
+rdm:fullName a owl:DatatypeProperty ; rdfs:label "full name" ; rdfs:domain rdm:TestRun .
+rdm:statusMessage a owl:DatatypeProperty ; rdfs:label "status message" .
+rdm:statusTrace a owl:DatatypeProperty ; rdfs:label "status trace" .
+rdm:exercisesOutput a owl:ObjectProperty ; rdfs:label "exercises output" ; rdfs:domain rdm:TestRun ;
+    rdfs:range rdm:SourceFile ; rdfs:comment "The code a run exercises: design input -> test -> run -> code." .
+
+rdm:finding a owl:DatatypeProperty ; rdfs:label "finding" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "A release-blocking finding of the risk rules on this risk, as the release gate reports it (DI-45)." .
+rdm:riskWarning a owl:DatatypeProperty ; rdfs:label "risk warning" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "A warning of the risk rules on this risk, as the release gate reports it (DI-45)." .
+
+rdm:Risk a owl:Class ;
+    rdfs:label "Risk" ;
+    rdfs:comment "One risk of the register: hazard, situation, harm, scored severity × probability, its controls and residual (DI-45)." .
+
+rdm:controlledBy a owl:ObjectProperty ;
+    rdfs:label "controlled by" ; rdfs:domain rdm:Risk ; rdfs:range rdm:DesignInput ;
+    rdfs:comment "A design input that implements a control of this risk." .
+
+rdm:hazard a owl:DatatypeProperty ; rdfs:label "hazard" ; rdfs:domain rdm:Risk .
+rdm:situation a owl:DatatypeProperty ; rdfs:label "situation" ; rdfs:domain rdm:Risk .
+rdm:harm a owl:DatatypeProperty ; rdfs:label "harm" ; rdfs:domain rdm:Risk .
+rdm:severity a owl:DatatypeProperty ; rdfs:label "severity" ; rdfs:domain rdm:Risk .
+rdm:probability a owl:DatatypeProperty ; rdfs:label "probability" ; rdfs:domain rdm:Risk .
+rdm:level a owl:DatatypeProperty ; rdfs:label "level" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "The risk policy's level for severity × probability (evaluated, never typed)." .
+rdm:recordedLevel a owl:DatatypeProperty ; rdfs:label "recorded level" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "The level the register states, if it states one." .
+rdm:residualProbability a owl:DatatypeProperty ; rdfs:label "residual probability" ; rdfs:domain rdm:Risk .
+rdm:residualLevel a owl:DatatypeProperty ; rdfs:label "residual level" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "The policy level after controls; the initial level when nothing controls the risk." .
+rdm:acceptedBy a owl:DatatypeProperty ; rdfs:label "accepted by" ; rdfs:domain rdm:Risk .
+rdm:acceptanceRationale a owl:DatatypeProperty ; rdfs:label "acceptance rationale" ; rdfs:domain rdm:Risk .
+rdm:category a owl:DatatypeProperty ; rdfs:label "category" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "safety or security: the branch the risk was analysed on." .
+rdm:stride a owl:DatatypeProperty ; rdfs:label "STRIDE category" ; rdfs:domain rdm:Risk .
+rdm:linkedTo a owl:ObjectProperty ; rdfs:label "linked to" ; rdfs:domain rdm:Risk ; rdfs:range rdm:Risk ;
+    rdfs:comment "Another risk this one bears on (a security threat and the safety risk it can cause)." .
+rdm:residualSeverity a owl:DatatypeProperty ; rdfs:label "residual severity" ; rdfs:domain rdm:Risk .
+rdm:residualDecision a owl:DatatypeProperty ; rdfs:label "residual decision" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "acceptable, accepted, needs acceptance, unacceptable, or not evaluated (a control lacks a passing test)." .
+rdm:riskStatus a owl:DatatypeProperty ; rdfs:label "status" ; rdfs:domain rdm:Risk ;
+    rdfs:comment "proposed (no person has approved the rating yet) or approved." .
+rdm:declarationCount a owl:DatatypeProperty ; rdfs:label "declaration count" ;
+    rdfs:comment "How many times the record declares this id (a user need, design input or risk); more than one is a conflict." .
+
+rdm:status a owl:DatatypeProperty ;
+    rdfs:label "status" ; rdfs:domain rdm:TestRun ;
+    rdfs:comment "The executed result as Allure reported it (passed, failed, broken, skipped)." .
+
+rdm:sha a owl:DatatypeProperty ;
+    rdfs:label "commit sha" ; rdfs:domain prov:Activity .
+
+rdm:includes a owl:ObjectProperty, owl:TransitiveProperty ;
+    rdfs:label "includes" ; rdfs:domain rdm:Checklist ; rdfs:range rdm:Checklist ;
+    rdfs:comment "The checklist includes every clause of another checklist (an include directive)." .
+
+rdm:edition a owl:DatatypeProperty ;
+    rdfs:label "edition" ; rdfs:domain rdm:Clause ;
+    rdfs:comment "The edition a clause key is qualified with (62304:5.2.2.j@2015 -> 2015)." .
+
+dcterms:references rdfs:label "references" ;
+    rdfs:comment "A controlled document claims a clause with a [[KEY]] reference tag, or names a controlled document it relies on in its references frontmatter (DI-58)." .
+skos:notation rdfs:label "key" .
+skos:definition rdfs:label "description" .
+skos:inScheme rdfs:label "standard" .
+skos:broader rdfs:label "parent clause" .
+skos:member rdfs:label "member" .
+dcterms:identifier rdfs:label "identifier" .
+dcterms:title rdfs:label "title" .
+prov:wasGeneratedBy rdfs:label "was generated by" .
+prov:wasAssociatedWith rdfs:label "was associated with" .
+prov:endedAtTime rdfs:label "ended at" .
+
+# --- The architecture: the C4 model (DI-67) ---------------------------------
+# From the architecture workspace (graph: architecture) and the code's imports
+# (graph: code). Names are rdfs:label, descriptions dcterms:description.
+
+rdm:ArchitectureElement a owl:Class ;
+    rdfs:label "Architecture element" ;
+    rdfs:comment "A person, software system, container or component of the C4 model." .
+rdm:Person a owl:Class ; rdfs:subClassOf rdm:ArchitectureElement ; rdfs:label "Person" ;
+    rdfs:comment "Someone who uses a software system." .
+rdm:SoftwareSystem a owl:Class ; rdfs:subClassOf rdm:ArchitectureElement ; rdfs:label "Software system" ;
+    rdfs:comment "The system in scope, or one it depends on." .
+rdm:Container a owl:Class ; rdfs:subClassOf rdm:ArchitectureElement ; rdfs:label "Container" ;
+    rdfs:comment "Something that runs or stores data, inside a software system." .
+rdm:Component a owl:Class ; rdfs:subClassOf rdm:ArchitectureElement ; rdfs:label "Component" ;
+    rdfs:comment "A part of a container, in one bounded context, implemented by its code." .
+rdm:Relationship a owl:Class ; rdfs:label "Relationship" ;
+    rdfs:comment "One element using another, as the workspace declares it." .
+rdm:Dependency a owl:Class ; rdfs:label "Dependency" ;
+    rdfs:comment "A Python import from one component's code into another's: the coupling the code has." .
+
+rdm:technology a owl:DatatypeProperty ; rdfs:label "technology" ;
+    rdfs:comment "What an element is built with, or a relationship carried over." .
+rdm:external a owl:DatatypeProperty ; rdfs:label "external" ; rdfs:domain rdm:ArchitectureElement ;
+    rdfs:range xsd:boolean ; rdfs:comment "Outside the system in scope." .
+rdm:containedIn a owl:ObjectProperty ; rdfs:label "contained in" ; rdfs:domain rdm:ArchitectureElement ;
+    rdfs:range rdm:ArchitectureElement ; rdfs:comment "The software system or container an element sits in." .
+rdm:inContext a owl:ObjectProperty ; rdfs:label "in context" ; rdfs:domain rdm:Component ;
+    rdfs:range rdm:BoundedContext ; rdfs:comment "The bounded context a component belongs to: its group in the workspace." .
+rdm:code a owl:DatatypeProperty ; rdfs:label "code" ; rdfs:domain rdm:Component ;
+    rdfs:comment "The file or directory that implements a component, relative to its project (the DHF's parent)." .
+rdm:inComponent a owl:ObjectProperty ; rdfs:label "in component" ; rdfs:domain rdm:SourceFile ;
+    rdfs:range rdm:Component ; rdfs:comment "The component whose code path is the longest match for a source file." .
+rdm:source a owl:ObjectProperty ; rdfs:label "source" ; rdfs:range rdm:ArchitectureElement .
+rdm:target a owl:ObjectProperty ; rdfs:label "target" ; rdfs:range rdm:ArchitectureElement .
+rdm:dependsOn a owl:ObjectProperty ; rdfs:label "depends on" ; rdfs:domain rdm:Component ;
+    rdfs:range rdm:Component ; rdfs:comment "A component's code imports the other's (graph: code)." .
+rdm:importedBy a owl:DatatypeProperty ; rdfs:label "imported by" ; rdfs:domain rdm:Dependency ;
+    rdfs:comment "A file of the source component that makes the import (one example)." .
+rdm:imports a owl:DatatypeProperty ; rdfs:label "imports" ; rdfs:domain rdm:Dependency ;
+    rdfs:comment "The file of the target component it imports." .
+rdm:missingCode a owl:DatatypeProperty ; rdfs:label "missing code" ; rdfs:domain rdm:Component ;
+    rdfs:comment "A component's code path that does not exist in the repository." .
+rdm:showsView a owl:DatatypeProperty ; rdfs:label "shows view" ; rdfs:domain rdm:Document ;
+    rdfs:comment "The key of an architecture view whose image the document shows." .
+dcterms:description rdfs:label "description" .
+
+# --- Derived relations and the rules that derive them (DI-62) ---------------
+# A fact that follows from others is not stored; it is declared here with its
+# rule, so a consumer can derive it. `rdm graph build --infer` (and the agent
+# server, always) adds the results to the separate inferred named graph.
+
+rdm:Rule a owl:Class ;
+    rdfs:label "Rule" ;
+    rdfs:comment "A rule that derives a relation the graph does not store (DI-62)." .
+rdm:derives a owl:ObjectProperty ; rdfs:label "derives" ; rdfs:domain rdm:Rule ;
+    rdfs:comment "The relation the rule derives." .
+rdm:construct a owl:DatatypeProperty ; rdfs:label "construct" ; rdfs:domain rdm:Rule ;
+    rdfs:comment "The rule as a SPARQL CONSTRUCT, over the union of the graphs, with RDM's prefixes predeclared." .
+
+rdm:serves a owl:ObjectProperty ;
+    rdfs:label "serves" ; rdfs:domain rdm:BoundedContext ; rdfs:range rdm:UserNeed ;
+    rdfs:comment "Derived, never stored in the record: see rdm:ServesRule." .
+
+rdm:ServesRule a rdm:Rule ;
+    rdfs:label "a context serves the needs its design inputs trace to" ;
+    rdfs:comment "A bounded context serves the user needs that the design inputs it owns or realises trace to." ;
+    rdm:derives rdm:serves ;
+    rdm:construct """CONSTRUCT { ?context rdm:serves ?need } WHERE {
+    { ?input rdm:ownedBy ?context } UNION { ?context rdm:realises ?input }
+    ?input rdm:tracesTo ?need }""" .

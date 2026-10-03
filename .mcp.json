@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rdm": {
+      "command": "uv",
+      "args": ["run", "--quiet", "rdm", "graph", "mcp", "--dhf", "dhf", "--allure-results", "dhf/allure-results"]
+    }
+  }
+}

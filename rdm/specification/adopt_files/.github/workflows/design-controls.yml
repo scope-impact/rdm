@@ -1,0 +1,28 @@
+name: Design controls
+
+# Record-first gates on every change (laid down by `rdm adopt`). The gates
+# are RDM's reusable workflow, pinned to the RDM release that adopted this
+# repository: the workflow and the RDM it installs are that one revision.
+# Upgrade RDM by changing both refs below together.
+#
+# Phased adoption: the design gate runs from day one. Set acceptance-tests
+# and release-gate to true when your first design input and its tagged
+# acceptance test land -- until then the release gate would fail on "no
+# design inputs declared".
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  design-controls:
+    uses: scope-impact/rdm/.github/workflows/gates.yml@v{rdm_version}
+    with:
+      rdm-ref: v{rdm_version}
+      acceptance-tests: false
+      release-gate: false
+      # install-command: pip install -e .   # your project's own dependencies
+      # checklists: iec62304                  # clauses the graph validation holds documents to

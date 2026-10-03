@@ -27,7 +27,7 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
-          { "context": "design-controls" },
+          { "context": "design-controls / gates" },
           { "context": "tests" }
         ]
       }

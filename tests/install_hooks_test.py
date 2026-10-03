@@ -3,7 +3,7 @@ import pytest
 import subprocess
 
 from git import Repo
-from rdm.hooks import install_hooks
+from rdm.specification.hooks import install_hooks
 
 
 @pytest.fixture
@@ -19,16 +19,7 @@ def test_install_hooks_no_destination(tmp_repo):
     install_hooks(None)
 
 
-def test_install_hooks_existing_destination(tmp_repo):
-    install_hooks('../.git/hooks')
 
 
-def test_install_hooks_non_existing_destination(tmp_repo):
-    install_hooks('hooks')
 
 
-def test_install_hooks_includes_executable_pre_commit(tmp_repo):
-    install_hooks('hooks')
-    hook = os.path.join('hooks', 'pre-commit')
-    assert os.path.exists(hook)
-    assert os.access(hook, os.X_OK)

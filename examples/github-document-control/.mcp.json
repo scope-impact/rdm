@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "rdm": {
+      "command": "rdm",
+      "args": ["graph", "mcp", "--dhf", "dhf", "--allure-results", "dhf/allure-results",
+               "--checklist", "checklists/part11_document_control.txt"]
+    }
+  }
+}

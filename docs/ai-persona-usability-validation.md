@@ -25,7 +25,7 @@ as summative validation is a regulatory and patient-safety error.
 ## Where it sits
 ```
 user need (V&V plan)
-  ├─ verified by  → @allure tests (acceptance criteria)              [automated]
+  ├─ verified by  → @allure tests of its design inputs              [automated]
   └─ validated by → ① human summative HF study   (record of truth)   [human]
                     ② AI-persona simulated-use run                    [formative, this]
                           │ emits *-persona.json tagged to the user need

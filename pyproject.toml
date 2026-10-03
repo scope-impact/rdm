@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rdm"
-version = "1.2.0"
-description = "Regulatory Documentation Manager"
+version = "2.0.0-alpha"
+description = "The design record of regulated software as Markdown and tests in git: gated, rendered, and queryable as a graph"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -28,52 +28,50 @@ requires-python = ">=3.10"
 dependencies = [
     "jinja2==3.1.6",
     "pyyaml==6.0.3",
-    "gitpython==3.1.46"
+    "gitpython==3.2.0"
 ]
 
 [project.optional-dependencies]
-github = ["pygithub==2.8.1"]
-story-audit = ["pydantic==2.12.5", "duckdb==1.4.3"]
-analytics = ["duckdb==1.4.3"]
 # Playwright for the usability-persona skill (AI-persona usability validation).
 # Browsers are provided by the environment; if the preinstalled browser version
-# differs, launch with executable_path (see examples/.../app/run_persona_demo.py).
-validation = ["playwright==1.60.0"]
-# Project-management pipeline (Backlog.md -> GitHub Issues/Projects, DuckDB
-# analytics). This is an OPTIONAL, detachable layer that operates on PLANNING
-# artifacts, not the system of record (SDD + Allure + git). RDM's record/render
-# core does not require it. See docs/plan-vs-record.md.
-plan = ["rdm[github]", "rdm[analytics]", "rdm[story-audit]"]
+# differs, launch with executable_path.
+validation = ["playwright==1.63.0"]
+# The design record as a linked-data graph (DI-35/36): an embedded RDF store
+# (pyoxigraph), which RDM also serves as a read-only SPARQL endpoint for
+# graph browsers such as AWS Graph Explorer; pyshacl runs the gate shapes
+# (DI-38); mcp serves it to agents, read-only (DI-41/42). Optional: the record core keeps
+# no RDF dependency.
+graph = ["pyoxigraph==0.5.11", "pyshacl==0.40.1", "mcp==2.2.0"]
+# The verification report as PDF (DI-64): Typst compiled in-process, so CI
+# needs no Pandoc. Without it, a `typst` executable on PATH is used.
+report = ["typst==0.15.0"]
 # Documentation site (Markdown prose under docs/ + an API reference generated
 # from the source docstrings via mkdocstrings). Build with:
 #   uv run --extra docs mkdocs build      # -> site/ (gitignored)
 #   uv run --extra docs mkdocs serve      # live preview
 docs = [
     "mkdocs==1.6.1",
-    "mkdocs-material==9.6.21",
-    "mkdocstrings[python]==0.30.1",
-    "ruff==0.14.13",  # mkdocstrings uses it to format rendered signatures
+    "mkdocs-material==9.7.7",
+    "mkdocstrings[python]==1.0.6",
+    "ruff==0.16.10",  # mkdocstrings uses it to format rendered signatures
 ]
 dev = [
-    "pytest==9.0.2",
-    "ruff==0.14.13",
+    "pytest==9.1.1",
+    "ruff==0.16.10",
     "check-manifest==0.51",
     "mkdocs==1.6.1",
-    "mkdocs-material==9.6.21",
-    "mkdocstrings[python]==0.30.1",
+    "mkdocs-material==9.7.7",
+    "mkdocstrings[python]==1.0.6",
     "mock==5.2.0",
-    "docutils==0.21.2",
-    "coverage==7.13.1",
-    "pydantic==2.12.5",
-    "duckdb==1.4.3",
-    "playwright==1.60.0",
-    "allure-pytest==2.16.0",
-    # Exhaustive mutation testing, complementing `rdm story mutation-probe`.
-    # The probe proves ONE named clause is covered and records that as evidence;
-    # mutmut generates mutants nobody thought of and reports what survives.
-    # Its score is a finding generator, never DHF evidence. See
-    # docs/design-controls.md.
-    "mutmut==3.3.1"
+    "docutils==0.23",
+    "coverage==7.16.2",
+    "playwright==1.63.0",
+    "allure-pytest==2.16.2",
+    "pyoxigraph==0.5.11",
+    "pyshacl==0.40.1",
+    "mcp==2.2.0",
+    "typst==0.15.0",
+    "pypdf==6.19.0",  # the DI-64 test reads the rendered report back
 ]
 
 [project.scripts]
@@ -87,28 +85,29 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["rdm*", "rdm.story_audit*"]
+include = ["rdm*"]
 exclude = ["contrib*", "docs*", "tests*"]
 
 [tool.setuptools.package-data]
 rdm = [
-    "base/*",
-    "checklists/*",
-    "init_files/.gitignore",
-    "init_files/*",
-    "init_files/data/*",
-    "init_files/images/*",
-    "init_files/images/uimockups/*",
-    "init_files/documents/*",
-    "init_files/documents/510k/*",
-    "hook_files/*",
-    "adopt_files/.claude/*",
-    "adopt_files/.github/workflows/*",
-    "adopt_files/.githooks/*",
-    "adopt_files/dhf/*",
-    "adopt_files/dhf/documents/*",
-    "adopt_files/dhf/documents/design/*",
-    "adopt_files/scripts/*"
+    "graph/*.ttl",
+    "publishing/*.typ",
+    "compliance/checklists/*",
+    "specification/init_files/.gitignore",
+    "specification/init_files/*",
+    "specification/init_files/data/*",
+    "specification/init_files/images/*",
+    "specification/init_files/images/uimockups/*",
+    "specification/init_files/documents/*",
+    "specification/init_files/documents/510k/*",
+    "specification/hook_files/*",
+    "specification/adopt_files/.claude/*",
+    "specification/adopt_files/.github/workflows/*",
+    "specification/adopt_files/.githooks/*",
+    "specification/adopt_files/dhf/*",
+    "specification/adopt_files/dhf/documents/*",
+    "specification/adopt_files/dhf/documents/design/*",
+    "specification/adopt_files/scripts/*"
 ]
 
 [tool.ruff]
@@ -121,38 +120,8 @@ select = ["E", "W", "F"]
 [tool.bdist_wheel]
 universal = true
 
-# Exhaustive mutation testing (dev only; not part of the record).
-# Scoped narrow on purpose: a full-tree run is slow, and the value is in
-# aiming it at the module you are reviewing. Override on the command line.
 [tool.pytest.ini_options]
-# mutmut leaves a copy of the tree under mutants/ after a run. Without this,
-# a plain `pytest` collects those copies and reports dozens of confusing
-# collection errors that have nothing to do with your change.
-norecursedirs = ["mutants", ".venv", "build", "dist"]
+# The example is its own project, run from its own directory (CI does).
+testpaths = ["tests"]
+norecursedirs = [".venv", "build", "dist"]
 
-[tool.mutmut]
-# Exhaustive mutation testing. Generates hundreds of mutants automatically and
-# reports which survive — the coverage the hand-aimed `rdm story mutation-probe`
-# cannot give, because a probe only tests mutations a reviewer thought of.
-#
-# Scoped to one module by default: a full-tree run is slow, and the value is in
-# aiming it at the module under review. Override on the command line.
-paths_to_mutate = ["rdm/gaps.py"]
-tests_dir = ["tests/"]
-
-# mutmut runs the suite against a COPY of the tree under mutants/, copying only
-# the Python sources it mutates. Every path below is read at runtime by the
-# package or the tests — omit one and its tests fail on the copy while passing
-# in place, with a FileNotFoundError that names nothing useful. Add to this list
-# when new package data or a new fixture directory appears.
-also_copy = [
-    "rdm/checklists/",     # built-in gap-analysis checklists
-    "rdm/init_files/",     # `rdm init` scaffolding
-    "rdm/hook_files/",     # git hook templates
-    "rdm/adopt_files/",    # `rdm adopt` scaffolding
-    "dhf/",                # rdm's own DHF — the acceptance tests read it
-    "examples/",
-    "docs/",
-    "README.md",
-    "LICENSE.txt",
-]

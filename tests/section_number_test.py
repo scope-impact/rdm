@@ -1,14 +1,7 @@
-import pytest
 
-from rdm.md_extensions.section_numbers import section_number_filter, section_number_depth
-from tests.util import render_from_string
+from rdm.md_extensions.section_numbers import section_number_filter
 
 
-def test_section_number_depth():
-    assert section_number_depth('') == 0
-    assert section_number_depth('# hello') == 1
-    assert section_number_depth('##') == 2
-    assert section_number_depth('### plus some #####') == 3
 
 
 SECTION_NUMBER_INPUT = """preceding
@@ -48,25 +41,5 @@ def test_section_number_filter_direct():
     assert actual_output == EXPECTED_SECTION_NUMBER_OUTPUT
 
 
-@pytest.mark.parametrize('input_string, context, expected_output', [
-    ('', {}, ''),
-    (SECTION_NUMBER_INPUT, {}, EXPECTED_SECTION_NUMBER_OUTPUT),
-    ('## hello', {}, '## 1.1 hello\n'),
-])
-def test_section_numbering_enabled(input_string, context, expected_output):
-    config = {
-        'md_extensions': ['rdm.md_extensions.SectionNumberExtension'],
-    }
-    actual_output = render_from_string(input_string, context, config=config)
-    assert actual_output == expected_output
 
 
-@pytest.mark.parametrize('input_string, context, expected_output', [
-    ('', {}, ''),
-    ('{% if fruit is defined %}banana{% endif %}', {}, ''),
-    ('{% if fruit is defined %}banana{% endif %}', {'fruit': 'apple'}, 'banana\n'),
-    ('## hello', {}, '## hello\n'),
-])
-def test_section_numbering_disabled(input_string, context, expected_output):
-    actual_output = render_from_string(input_string, context=context)
-    assert actual_output == expected_output

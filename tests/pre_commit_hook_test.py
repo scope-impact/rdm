@@ -17,7 +17,7 @@ import pytest
 
 from tests.util import git_run as _git
 
-HOOK = Path(__file__).resolve().parents[1] / "rdm" / "hook_files" / "pre-commit"
+HOOK = Path(__file__).resolve().parents[1] / "rdm" / "specification" / "hook_files" / "pre-commit"
 
 
 def _run_hook(repo: Path, **env_overrides: str) -> int:
@@ -74,4 +74,15 @@ def test_blocks_python_when_design_docs_incomplete(repo: Path) -> None:
     (repo / "app.py").write_text("x = 1\n")
     _git(repo, "add", "app.py")
     # Scaffolded design docs still contain placeholders -> blocked.
+    assert _run_hook(repo) == 1
+
+
+@pytest.mark.parametrize("name", ["app.go", "src/Main.java", "lib.rs", "drv.c", "ui/App.tsx", "módulo.py"])
+def test_blocks_any_common_language_and_any_name(repo: Path, name: str) -> None:
+    """Implementation in any common language, whatever characters its name
+    holds (git quotes non-ASCII names unless told not to), is gated."""
+    path = repo / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("x\n")
+    _git(repo, "add", name)
     assert _run_hook(repo) == 1

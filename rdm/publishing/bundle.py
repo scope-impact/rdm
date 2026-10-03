@@ -1,0 +1,150 @@
+"""
+Release evidence bundle (DI-30): the retained artifact set for a release.
+
+Writes, to an output directory: the verification data (declared design inputs
+reconciled against executed Allure results), the rendered traceability matrix,
+the executed Allure results themselves with the attachments and containers
+they reference, the verification report as a PDF (DI-64), and a manifest
+describing the bundle —
+the DHR-shaped set a team attaches to a release tag so the evidence outlives
+CI artifact retention.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+from datetime import datetime, timezone
+from pathlib import Path
+
+from rdm.publishing.report import REPORT_PDF, ReportUnavailable, write_report
+from rdm.specification.sdd import MATRIX_DOC, find_dhf_doc
+from rdm.release.verify import write_verification_file
+
+
+def _attachment_sources(node) -> set[str]:
+    """Every attachment ``source`` in an Allure result or container, at any depth."""
+    found: set[str] = set()
+    if isinstance(node, dict):
+        for item in node.get("attachments") or []:
+            if isinstance(item, dict) and item.get("source"):
+                found.add(str(item["source"]))
+        for value in node.values():
+            found |= _attachment_sources(value)
+    elif isinstance(node, list):
+        for value in node:
+            found |= _attachment_sources(value)
+    return found
+
+
+def plain_files(results_dir: Path) -> list[Path]:
+    """The plain files of a results directory: never a symbolic link, which
+    could name any file on the machine."""
+    return sorted(p for p in Path(results_dir).iterdir() if p.is_file() and not p.is_symlink()) \
+        if Path(results_dir).is_dir() else []
+
+
+def copy_results(results_dir: Path, dest: Path) -> tuple[list[str], list[str]]:
+    """Copy every plain file of the results directory (results, containers,
+    attachments, the run's executor and environment), replacing what an
+    earlier bundle left; return the names copied, and each attachment a
+    result or container names that is not among them."""
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    copied = []
+    for source in plain_files(results_dir):
+        shutil.copy2(source, dest / source.name)
+        copied.append(source.name)
+    named: set[str] = set()
+    for name in copied:
+        if name.endswith(("-result.json", "-container.json")):
+            try:
+                named |= _attachment_sources(json.loads((dest / name).read_text(encoding="utf-8-sig")))
+            except (OSError, ValueError):
+                continue  # an unreadable file is still kept as-is
+    return copied, sorted(named - set(copied))
+
+
+def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> dict:
+    """Produce the bundle; returns the manifest that was written."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for earlier in ("verification.yml", MATRIX_DOC, REPORT_PDF, "manifest.json"):  # an earlier bundle's
+        (out_dir / earlier).unlink(missing_ok=True)
+
+    # 1. Verification data: design inputs x executed results.
+    verification_path = out_dir / "verification.yml"
+    data = write_verification_file(dhf_dir, allure_results_dir, verification_path)
+
+    # 2. The rendered traceability matrix (generated, never hand-edited).
+    matrix_path = out_dir / MATRIX_DOC
+    template = find_dhf_doc(dhf_dir, MATRIX_DOC)
+    if template is not None:
+        import jinja2
+        import yaml
+
+        from rdm.publishing.render import render_template_to_file
+        from rdm.kernel.util import load_yaml
+
+        config_file = dhf_dir / "config.yml"
+        config = load_yaml(config_file) if config_file.exists() else {}
+        context = {"verification": yaml.safe_load(verification_path.read_text())}
+        with matrix_path.open("w", encoding="utf-8") as handle:
+            render_template_to_file(config, template.name, context, handle,
+                                    loaders=[jinja2.FileSystemLoader(str(template.parent))])
+
+    # 3. The executed results themselves: every result and container, and each
+    # attachment they name (on the test, its steps, or a fixture) -- the
+    # evidence behind each verdict, kept past CI artifact retention.
+    copied, missing = copy_results(Path(allure_results_dir), out_dir / "allure-results")
+
+    # 4. The verification report: the runs behind each verdict, as a PDF (DI-64).
+    try:
+        write_report(dhf_dir, Path(allure_results_dir), out_dir / REPORT_PDF, verification=data)
+        report = REPORT_PDF
+    except ReportUnavailable as error:
+        report = f"not rendered: {error}"
+    except Exception as error:  # a result the layout cannot set: the bundle keeps the reason, not a crash
+        report = f"not rendered: {type(error).__name__}: {error}"
+
+    # 5. The manifest describing what this bundle contains.
+    summary = data["summary"]
+    manifest = {
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "dhf": str(dhf_dir),
+        "design_inputs": summary["total"],
+        "verified": summary["verified"],
+        "failed": summary["failed"],
+        "untested": summary["untested"],
+        "verification_report": report,
+        "missing_attachments": missing,
+        "files": sorted(
+            [name for name in ("verification.yml", MATRIX_DOC, REPORT_PDF) if (out_dir / name).is_file()]
+            + [f"allure-results/{name}" for name in copied]
+        ),
+    }
+    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return manifest
+
+
+def evidence_bundle_command(
+    dhf_dir: Path | None = None,
+    allure_results_dir: Path | None = None,
+    output: Path | None = None,
+) -> int:
+    """Run `rdm story evidence-bundle --dhf … --allure-results … -o <dir>`."""
+    dhf = Path(dhf_dir or "dhf").resolve()
+    if not dhf.exists():
+        print(f"Error: DHF directory not found: {dhf}")
+        return 2
+    if not allure_results_dir or not Path(allure_results_dir).exists():
+        print("Error: --allure-results <dir> is required (run the acceptance suite first)")
+        return 2
+    out = Path(output or "release-evidence")
+    manifest = evidence_bundle(dhf, Path(allure_results_dir), out)
+    print(f"Wrote release evidence bundle to {out}:")
+    print(f"  design inputs : {manifest['verified']}/{manifest['design_inputs']} verified "
+          f"({manifest['failed']} failed, {manifest['untested']} untested)")
+    print(f"  report        : {manifest['verification_report']}")
+    print(f"  files         : {len(manifest['files'])} + manifest.json")
+    return 0

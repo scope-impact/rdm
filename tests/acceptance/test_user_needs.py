@@ -1,8 +1,8 @@
 """Acceptance tests for RDM's own design inputs (see dhf/).
 
-Each test *is* the acceptance criterion ("live BDD"): the test is the behaviour,
-the `@allure.story` tag (DI-n) is the traceability link to the design input it
-verifies, and the optional `@allure.label("output", "...")` records the design
+Each test verifies a design input, the acceptance criterion ("live BDD"): its
+verification steps check the clauses, the `@allure.story` tag (DI-n) is the
+traceability link to the design input it verifies, and the optional `@allure.label("output", "...")` records the design
 output exercised. There is no Gherkin / feature file / step glue — the reviewed
 spec lives in the registries (the per-context design docs, the V&V plan) and the living doc
 is the Allure report. An `allure.step(...)` narrative is available but optional
@@ -25,19 +25,21 @@ from pathlib import Path
 
 import pytest
 
-from rdm.project_management.sync import PROVENANCE_NOTE
-from rdm.record import allure as allure_ingest
-from rdm.record import persona
-from rdm.record.verify import build_verification
-from rdm.story_audit.design_gate import check_design_docs, run_release_gate
+from rdm.evidence import allure as allure_ingest
+from rdm.specification import persona
+from rdm.release.verify import build_verification
+from rdm.specification.design_gate import UNREADABLE_FRONTMATTER, check_design_docs, run_design_gate
+from rdm.specification.sdd import design_input_ids, design_inputs
+from rdm.release.gate import INPUT_FAILED, UNREADABLE_RESULT, run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
 from tests.util import git_run as _git
 from tests.util import write_allure_result as _allure_result
 from tests.util import write_design_doc
-from tests.util import write_faithful_verdicts as _faithful
 
 # Tagging requires allure-pytest; skip cleanly if it is not installed.
 allure = pytest.importorskip("allure")
+
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 
 def _vv_plan(docs: Path, needs: list[str]) -> None:
@@ -62,8 +64,7 @@ def _approved_dhf(
     _git(repo, "init")
     if inputs is None:
         inputs = [(f"DI-{i + 1}", [n]) for i, n in enumerate(needs)]
-    write_design_doc(docs / "design", "core", satisfies=tuple(needs),
-                     design_inputs=tuple(inputs))
+    write_design_doc(docs / "design", "core", design_inputs=tuple(inputs))
     (docs / "design_review.md").write_text(COMPLETE)
     _vv_plan(docs, needs)
     _git(repo, "add", "-A")
@@ -72,7 +73,7 @@ def _approved_dhf(
 
 
 @allure.story("DI-1")
-@allure.label("output", "SDS-record")
+@allure.label("output", "rdm/specification/sdd.py")
 def test_compile_verification_from_the_record(tmp_path: Path) -> None:
     """DI-1: compile a DHF from the system of record (registry + results)."""
     dhf = _approved_dhf(tmp_path, ["UN-001"])  # DI-1 traces to UN-001
@@ -81,91 +82,142 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
     with allure.step("Reconcile the declared design inputs against Allure results"):
         data = build_verification(dhf, results)
     assert data["summary"]["total"] == 1
-    # Rows are design inputs, grouped under the user need they trace to.
-    assert data["groups"][0]["user_need"] == "UN-001"
-    assert data["groups"][0]["design_inputs"][0]["design_input"] == "DI-1"
+    with verification_step("Rows are design inputs, grouped under the user need they trace to"):
+        assert data["groups"][0]["user_need"] == "UN-001"
+        assert data["groups"][0]["design_inputs"][0]["design_input"] == "DI-1"
+    with verification_step("a user need traced as one value, not a list, is that one need"):
+        doc = dhf / "documents" / "design" / "core.md"
+        doc.write_text(doc.read_text().replace("traces_to: [UN-001]", "traces_to: UN-001"))
+        assert [di["traces_to"] for di in design_inputs(dhf)] == [["UN-001"]]
     # ...with NO project-management dependency: the record core must not import
     # the planning layer (a violation would show as a source-level import).
-    import rdm.record as _record_pkg
-    _record_dir = Path(_record_pkg.__file__).parent
-    assert not any(
-        "project_management" in p.read_text(encoding="utf-8")
-        for p in _record_dir.glob("*.py")
-    )
+    with verification_step("...with NO project-management dependency: the record core must not import the planning "
+                           "layer (a…"):
+        import rdm.kernel
+        import rdm.specification
+        assert not any(
+            "project_management" in p.read_text(encoding="utf-8")
+            for package in (rdm.specification, rdm.kernel)
+            for p in Path(package.__file__).parent.glob("*.py")
+        )
 
 
 @allure.story("DI-2")
+@allure.label("output", "rdm/specification/design_gate.py")
 def test_design_gate_requires_approval(tmp_path: Path) -> None:
     """DI-2: block transition until design docs are complete and approved."""
-    # Incomplete (placeholder) design doc -> not complete.
-    docs = tmp_path / "dhf" / "documents" / "design"
-    docs.mkdir(parents=True)
-    (docs / "core.md").write_text("---\nkind: design\ncontext: core\n---\nTODO: fill me\nENDTODO\n")
-    assert not check_design_docs(tmp_path / "dhf")[0].complete
-    # Approved (committed clean) -> ok.
-    dhf = _approved_dhf(tmp_path, ["UN-002"])
-    assert all(c.ok for c in check_design_docs(dhf))
+    with verification_step("Incomplete (placeholder) design doc -> not complete"):
+        docs = tmp_path / "dhf" / "documents" / "design"
+        docs.mkdir(parents=True)
+        (docs / "core.md").write_text("---\nkind: design\ncontext: core\n---\nTODO: fill me\nENDTODO\n")
+        assert not check_design_docs(tmp_path / "dhf")[0].complete
+    with verification_step("Approved (committed clean) -> ok"):
+        dhf = _approved_dhf(tmp_path, ["UN-002"])
+        assert all(c.ok for c in check_design_docs(dhf))
     # A COMPLETE but uncommitted doc is NOT approved -> not ok (this is the
     # "edit re-opens the gate" clause: approval is the committed revision, so an
     # unapproved working-tree change must fail even though the content is fine).
-    repo = tmp_path / "uncommitted"
-    udocs = repo / "dhf" / "documents" / "design"
-    udocs.mkdir(parents=True)
-    _git(repo, "init")
-    write_design_doc(udocs, "core", satisfies=("UN-002",), design_inputs=(("DI-2", ["UN-002"]),))
-    uncommitted = check_design_docs(repo / "dhf")
-    assert uncommitted and uncommitted[0].complete and not uncommitted[0].ok
+    with verification_step("A COMPLETE but uncommitted doc is NOT approved -> not ok (this is the \"edit re-opens "
+                           "the gate\"…"):
+        repo = tmp_path / "uncommitted"
+        udocs = repo / "dhf" / "documents" / "design"
+        udocs.mkdir(parents=True)
+        _git(repo, "init")
+        write_design_doc(udocs, "core", design_inputs=(("DI-2", ["UN-002"]),))
+        uncommitted = check_design_docs(repo / "dhf")
+        assert uncommitted and uncommitted[0].complete and not uncommitted[0].ok
+    with verification_step("a `---` inside a frontmatter value, or a byte-order mark, does not cut the document"):
+        doc = dhf / "documents" / "design" / "core.md"
+        text = doc.read_text().replace(" requirement,", " --- requirement,", 1)
+        doc.write_text("\ufeff" + text)
+        assert design_input_ids(dhf) == {"DI-1"}
+    with verification_step("a Markdown document whose frontmatter cannot be read fails the gate, named"):
+        for name, block in (("not-yaml", "id: X\ntext: shall: alarm\n  bad"), ("not-a-mapping", "- a\n- b"),
+                            ("unclosed", "id: X\n")):
+            broken = dhf / "documents" / f"{name}.md"
+            broken.write_text(f"---\n{block}\n" + ("" if name == "unclosed" else "---\n") + "\nbody\n")
+            _git(dhf.parent, "add", "-A")
+            _git(dhf.parent, "commit", "-m", name)
+            gate = run_design_gate(dhf)
+            attach(f"design gate on {name}", [str(e) for e in gate.events if e.blocking])
+            assert not gate.passed and any(e.name == UNREADABLE_FRONTMATTER and name in e.message
+                                           for e in gate.events)
+            broken.unlink()
 
 
 @allure.story("DI-3")
+@allure.label("output", "rdm/release/gate.py")
 def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
-    """DI-3: block release until every design input is verified by a passing test
-    AND independently confirmed to verify it (the faithfulness gate)."""
+    """DI-3: block release until every design input is verified by a passing test."""
     dhf = _approved_dhf(tmp_path, ["UN-003"])  # DI-1 traces to UN-003
-    (dhf.parent / "tests").mkdir(exist_ok=True)  # isolate the test-source hash
     empty = tmp_path / "none"
     empty.mkdir()
-    assert not run_release_gate(dhf, empty).passed  # untested -> blocked
+    with verification_step("an untested design input blocks"):
+        gate = run_release_gate(dhf, empty)
+        attach("release gate blocking", gate.blocking)
+        assert not gate.passed
     results = tmp_path / "allure"
-    _allure_result(results, "a", "passed", "DI-1")
-    # Verified (the test passed) but not yet faithfully reviewed -> still blocked.
-    assert not run_release_gate(dhf, results).passed
-    _faithful(dhf)  # record the independent faithfulness verdict
-    assert run_release_gate(dhf, results).passed  # verified + faithful -> passes
+    with verification_step("a failing design input blocks"):
+        _allure_result(results, "a", "failed", "DI-1")
+        gate = run_release_gate(dhf, results)
+        attach("release gate blocking", gate.blocking)
+        assert not gate.passed
+    with verification_step("a verified design input passes"):
+        _allure_result(results, "a", "passed", "DI-1")
+        gate = run_release_gate(dhf, results)
+        attach("release gate blocking", gate.blocking)
+        assert gate.passed
+    with verification_step("a result file that cannot be read blocks: it could hold a failed run"):
+        for bad in ('{"status": "failed", "labels": [{"name": "story", "value": "DI-1"', "[]"):
+            (results / "b-result.json").write_text(bad)
+            gate = run_release_gate(dhf, results)
+            attach("release gate blocking", gate.blocking)
+            assert not gate.passed and any(e.name == UNREADABLE_RESULT for e in gate.events)
+        (results / "b-result.json").write_bytes(b'{"name": "\xff"}')
+        assert not run_release_gate(dhf, results).passed
+    with verification_step("a result with a byte-order mark is read, and its failed run counts"):
+        failed = '{"status": "failed", "labels": [{"name": "story", "value": "DI-1"}]}'
+        (results / "b-result.json").write_text("\ufeff" + failed)
+        gate = run_release_gate(dhf, results)
+        assert not gate.passed and [e.name for e in gate.events if e.blocking] == [INPUT_FAILED]
 
 
 @allure.story("DI-4")
+@allure.label("output", "rdm/evidence/allure.py")
+@allure.label("output", "rdm/release/verify.py")
 def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
     """DI-4: results reconcile to a status (reconcile clause) AND assemble into the
     traceability matrix grouped under the user need (render clause)."""
-    # Reconcile clause: executed results classify into verified/failed/untested.
-    results = tmp_path / "allure"
-    _allure_result(results, "ok", "passed", "DI-A")
-    _allure_result(results, "bad", "failed", "DI-B")
-    report = allure_ingest.reconcile({"DI-A", "DI-B", "DI-C"}, results)
-    assert report.verified == ["DI-A"]
-    assert report.failed == ["DI-B"]
-    assert report.untested == ["DI-C"]
+    with verification_step("Reconcile clause: executed results classify into verified/failed/untested"):
+        results = tmp_path / "allure"
+        _allure_result(results, "ok", "passed", "DI-A")
+        _allure_result(results, "bad", "failed", "DI-B")
+        report = allure_ingest.reconcile({"DI-A", "DI-B", "DI-C"}, results)
+        assert report.verified == ["DI-A"]
+        assert report.failed == ["DI-B"]
+        assert report.untested == ["DI-C"]
 
     # Render clause: build_verification assembles the matrix — each design input
     # carries its real status, grouped under the user need it traces to. The
     # mixed pass/fail row set means a "always verified" assembly bug is caught.
-    docs = tmp_path / "dhf" / "documents"
-    docs.mkdir(parents=True)
-    write_design_doc(docs / "design", "core", satisfies=("UN-001",),
-                     design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))
-    _vv_plan(docs, ["UN-001"])
-    matrix_results = tmp_path / "allure-matrix"
-    _allure_result(matrix_results, "p", "passed", "DI-1")
-    _allure_result(matrix_results, "f", "failed", "DI-2")
-    data = build_verification(tmp_path / "dhf", matrix_results)
-    rows = {di["design_input"]: di["status"]
-            for group in data["groups"] for di in group["design_inputs"]}
-    assert rows == {"DI-1": "verified", "DI-2": "failed"}
-    assert data["groups"][0]["user_need"] == "UN-001"
+    with verification_step("Render clause: build_verification assembles the matrix — each design input carries its "
+                           "real…"):
+        docs = tmp_path / "dhf" / "documents"
+        docs.mkdir(parents=True)
+        write_design_doc(docs / "design", "core", design_inputs=(("DI-1", ["UN-001"]), ("DI-2", ["UN-001"])))
+        _vv_plan(docs, ["UN-001"])
+        matrix_results = tmp_path / "allure-matrix"
+        _allure_result(matrix_results, "p", "passed", "DI-1")
+        _allure_result(matrix_results, "f", "failed", "DI-2")
+        data = build_verification(tmp_path / "dhf", matrix_results)
+        rows = {di["design_input"]: di["status"]
+                for group in data["groups"] for di in group["design_inputs"]}
+        assert rows == {"DI-1": "verified", "DI-2": "failed"}
+        assert data["groups"][0]["user_need"] == "UN-001"
 
 
 @allure.story("DI-5")
+@allure.label("output", "rdm/specification/persona.py")
 def test_formative_usability_classified(tmp_path: Path) -> None:
     """DI-5: usability can be exercised formatively against a user need.
 
@@ -180,19 +232,12 @@ def test_formative_usability_classified(tmp_path: Path) -> None:
     )
     report = persona.reconcile({"UN-001"}, runs)
     assert report.by_id["UN-001"].status == persona.ISSUES
+    with verification_step("a run that does not say it completed did not: an unknown or missing outcome fails"):
+        for i, outcome in enumerate(("error", None)):
+            other = tmp_path / f"runs-{i}"
+            other.mkdir()
+            (other / "q-persona.json").write_text(json.dumps(
+                {"persona": "nurse", "user_need": "UN-001", **({"outcome": outcome} if outcome else {})}))
+            assert persona.reconcile({"UN-001"}, other).by_id["UN-001"].status == persona.FAILED
 
 
-@allure.story("DI-6")
-def test_planning_artifacts_marked_non_record() -> None:
-    """DI-6: planning tooling is optional and its outputs are marked non-record."""
-    from types import SimpleNamespace
-
-    from rdm.project_management.sync import build_task_body
-
-    # The note declares non-record status...
-    assert "not a controlled record" in PROVENANCE_NOTE
-    # ...and a generated planning artifact actually carries the stamp (verifying
-    # the behaviour, not merely the constant's wording).
-    task = SimpleNamespace(id="rdm-001", description="x", business_value="",
-                           acceptance_criteria=[], subtask_ids=[], priority="high")
-    assert PROVENANCE_NOTE in build_task_body(task)

@@ -17,7 +17,7 @@ What lands:
 | `dhf/AGENT_WORKFLOW.md` | the end-to-end change procedure (humans and AI agents) |
 | `.githooks/pre-commit` | the local design gate: implementation commits are blocked until the design record is approved |
 | `.claude/settings.json` + `scripts/agent-bootstrap.sh` | agent sessions activate the gate automatically |
-| `.github/workflows/design-controls.yml` | CI: design gate active immediately; the remaining gates ship commented until your first design input lands |
+| `.github/workflows/design-controls.yml` | CI: calls RDM's [reusable gates workflow](reusable-ci.md) pinned to this RDM's release; the design gate runs immediately, the tests and the release gate once you set `acceptance-tests` and `release-gate` to `true` |
 
 The templates deliberately contain placeholder markers, so the design gate
 stays **red until you write and commit your actual record** — that is the
@@ -44,14 +44,15 @@ git add dhf/ .githooks/ .claude/ scripts/ .github/ && git commit -m "Adopt desig
    ```
 
 4. Follow the printed checklist (commit the design docs first — that commit
-   *is* the approval — then implement, replace the failing stub test, get an
-   independent [faithfulness verdict](design-controls.md#faithfulness-review), run
-   the gates).
+   *is* the approval — then implement, replace the failing stub test, run the
+   gates, and open a pull request for
+   [independent review](gates.md#independent-review)).
 
 ## Backfilling an undocumented codebase
 
 Adopt is a ratchet: all **new** work is gated from day one; the old code is
 backfilled context-by-context, by risk — declare only the design inputs you
 can verify in the same change, and tag *existing* tests rather than writing
-new ones. `rdm story audit` is the progress meter. The full strategy is in
+new ones. `rdm graph validate` (untagged inputs, stray tags) is the progress
+meter. The full strategy is in
 the [agent workflow](agent-workflow.md).

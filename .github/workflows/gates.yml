@@ -1,0 +1,162 @@
+name: RDM gates
+
+# Reusable: RDM's design controls for any repository's record (DI-63).
+#
+#   jobs:
+#     design-controls:
+#       uses: scope-impact/rdm/.github/workflows/gates.yml@v2.0.0-alpha
+#       with:
+#         rdm-ref: v2.0.0-alpha        # the same revision as after the @
+#
+# Runs the caller's acceptance tests, then the design gate, verify, the
+# release gate, graph validation and the release evidence bundle, with RDM
+# installed from the pinned revision of this repository, never from a package
+# index. RDM's own CI calls it too.
+on:
+  workflow_call:
+    inputs:
+      rdm-ref:
+        description: 'The RDM revision this workflow is pinned to (tag or sha after the @)'
+        type: string
+        required: true
+      rdm-repository:
+        description: 'Where RDM is checked out from (a fork, say)'
+        type: string
+        default: 'scope-impact/rdm'
+      python-version:
+        type: string
+        default: '3.12'
+      dhf:
+        type: string
+        default: 'dhf'
+      install-rdm:
+        description: >-
+          Install RDM, pytest and allure-pytest from the pinned revision. false when
+          install-command already puts RDM of that revision on PATH (RDM's own CI).
+        type: boolean
+        default: true
+      install-command:
+        description: "Installs the caller's own dependencies before the tests (RDM, pytest and allure-pytest already are)"
+        type: string
+        default: ''
+      acceptance-tests:
+        description: 'false until the repository has its first tagged acceptance test'
+        type: boolean
+        default: true
+      test-command:
+        description: 'Runs the acceptance tests and writes Allure results to allure-results'
+        type: string
+        default: 'pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results'
+      allure-results:
+        type: string
+        default: 'dhf/allure-results'
+      release-gate:
+        description: 'false until the first design input and its tagged test land'
+        type: boolean
+        default: true
+      graph-validate:
+        type: boolean
+        default: true
+      checklists:
+        description: 'Checklists for graph validation, space-separated'
+        type: string
+        default: ''
+      evidence-bundle:
+        type: boolean
+        default: true
+      allure-report:
+        description: 'Render the Allure HTML report and upload it'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0   # the design gate and the graph read the history
+          persist-credentials: false
+
+      - name: Check out RDM at the pinned revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.rdm-repository }}
+          ref: ${{ inputs.rdm-ref }}
+          path: .rdm
+          persist-credentials: false
+
+      - name: Keep the RDM checkout out of the repository's worktree state
+        run: echo /.rdm/ >> .git/info/exclude
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+
+      - name: Install RDM from the pinned revision
+        if: inputs.install-rdm
+        run: |
+          uv pip install --system "./.rdm[graph,report]" pytest allure-pytest
+          rdm --version
+
+      # Inputs reach the scripts as environment variables, never spliced into
+      # the script text.
+      - name: Install the repository's dependencies
+        if: inputs.install-command != ''
+        env:
+          COMMAND: ${{ inputs.install-command }}
+        run: bash -e -c "$COMMAND"
+
+      - name: Acceptance tests -> Allure results
+        if: inputs.acceptance-tests
+        env:
+          COMMAND: ${{ inputs.test-command }}
+        run: bash -e -c "$COMMAND"
+
+      - name: Gates
+        uses: ./.rdm/actions/gates
+        with:
+          install-rdm: 'false'
+          dhf: ${{ inputs.dhf }}
+          allure-results: ${{ inputs.allure-results }}
+          release-gate: ${{ inputs.release-gate }}
+          graph-validate: ${{ inputs.graph-validate }}
+          checklists: ${{ inputs.checklists }}
+          evidence-bundle: ${{ inputs.evidence-bundle }}
+
+      - name: Set up Java (Allure CLI runtime)
+        if: always() && inputs.allure-report && hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Allure report
+        if: always() && inputs.allure-report && hashFiles(format('{0}/*-result.json', inputs.allure-results)) != ''
+        env:
+          RESULTS: ${{ inputs.allure-results }}
+        run: npx --yes allure-commandline@2.46.1 generate "$RESULTS" --clean -o allure-report
+
+      - name: Upload the Allure report
+        if: always() && inputs.allure-report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: allure-report
+          path: allure-report
+          if-no-files-found: ignore
+
+      - name: Upload the verification record
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verification-record
+          path: |
+            ${{ inputs.allure-results }}
+            ${{ inputs.dhf }}/data/verification.yml
+          if-no-files-found: ignore

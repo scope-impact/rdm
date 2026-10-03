@@ -1,0 +1,40 @@
+# This system's own rules over the record graph, checked with RDM's gate shapes
+# by `rdm graph validate --shapes dhf/shapes/document_control.ttl`.
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix rdm:     <https://github.com/scope-impact/rdm/ns#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix dc:      <https://github.com/scope-impact/rdm/examples/document-control#> .
+
+dc:ProcedureShape a sh:NodeShape ;
+    sh:targetClass rdm:Document ;
+    # DI-2: a procedure without a revision cannot be identified as the
+    # approved one.
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "procedure declares no revision" ;
+        sh:prefixes dc:prefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this rdm:path ?path .
+                FILTER(CONTAINS(?path, "/documents/procedures/"))
+                FILTER NOT EXISTS { $this rdm:revision ?revision }
+            }""" ;
+    ] ;
+    # DI-5: a standard operating procedure cites the regulation it implements.
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:severity sh:Violation ;
+        sh:message "SOP cites no checklist clause" ;
+        sh:prefixes dc:prefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this dcterms:identifier ?id .
+                FILTER(STRSTARTS(STR(?id), "SOP-"))
+                FILTER NOT EXISTS { $this dcterms:references ?clause . ?clause a rdm:Clause }
+            }""" ;
+    ] .
+
+dc:prefixes
+    sh:declare [ sh:prefix "rdm" ; sh:namespace "https://github.com/scope-impact/rdm/ns#"^^<http://www.w3.org/2001/XMLSchema#anyURI> ] ,
+               [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^<http://www.w3.org/2001/XMLSchema#anyURI> ] .

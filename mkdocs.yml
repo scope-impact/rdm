@@ -1,8 +1,8 @@
-site_name: RDM — Regulatory Documentation Manager
+site_name: RDM
 site_description: >-
-  Documentation-as-code for IEC 62304 medical-device software: compile and gate
-  a Design History File from the system of record (design documents + executed
-  Allure results + git).
+  The design record of regulated software as Markdown and tests in git —
+  gated, rendered into regulatory documents, and built into a read-only graph
+  for people and agents.
 site_url: https://scope-impact.github.io/rdm/
 repo_url: https://github.com/scope-impact/rdm
 repo_name: scope-impact/rdm
@@ -17,17 +17,17 @@ theme:
     - navigation.top
     - content.code.copy
     - toc.follow
+  # One theme, its tokens in docs/stylesheets/rdm-theme.css (shared with the traceability map).
   palette:
-    - scheme: default
-      primary: teal
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - scheme: slate
-      primary: teal
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
+    scheme: rdm
+    primary: custom
+    accent: custom
+  font:
+    text: Nunito Sans
+    code: JetBrains Mono
+
+extra_css:
+  - stylesheets/rdm-theme.css
 
 plugins:
   - search
@@ -55,33 +55,77 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
 
 # Build-time evidence generation (docs/traceability-matrix.md) — see the hook.
+# The build hooks and their template are not pages.
+exclude_docs: |
+  _hooks/
+
 hooks:
   - docs/_hooks/evidence.py
+  - docs/_hooks/traceability_map.py
+  - docs/_hooks/dhf.py
 
 nav:
   - Home: index.md
-  - Getting started:
+  - The big picture:
+      - How RDM works: record-first-architecture.md
+      - The data model: data-model.md
+      - Glossary: glossary.md
+      - Plan vs. record: plan-vs-record.md
+  - Get started:
       - Installation: installation.md
       - New project (rdm init): quickstart-new-project.md
       - Existing repository (rdm adopt): quickstart-existing-repo.md
-  - User guide:
+  - Record:
+      - Design inputs and tests: design-controls.md
+      - Changing the record: agent-workflow.md
+      - Risk register: risk.md
+  - Gates:
+      - The gates: gates.md
+      - Gap analysis: gap-analysis.md
+      - The gates in your CI: reusable-ci.md
+      - Checklist format: checklist-format.md
+      - Usability validation (formative): ai-persona-usability-validation.md
+  - Graph:
+      - The record as a graph: graph.md
+      - Gate rules as SHACL: graph-shapes.md
+      - Browsing in Graph Explorer: graph-explorer.md
+      - For agents (MCP): agents.md
+      - Traceability map: traceability-map.md
+  - Documents:
       - Authoring and rendering: authoring.md
-      - Gap analysis (checklists): gap-analysis.md
-      - Design controls and traceability: design-controls.md
-      - Agent workflow (the change procedure): agent-workflow.md
-      - CLI reference: cli.md
-      - FAQ: FAQ.md
-  - Concepts:
-      - Record-first architecture: record-first-architecture.md
-      - Plan vs. record: plan-vs-record.md
-      - ADR 0001 — User needs across bounded contexts: adr-0001-bounded-context-user-needs.md
-      - Audit checklist format: checklist-format.md
-      - AI-persona usability validation: ai-persona-usability-validation.md
-      - Worked example — VitalView: example-vitalview-decomposition.md
-  - Evidence:
+  - RDM on RDM:
+      - How RDM controls itself: dogfood.md
       - Document control (Part 11): document-control.md
       - Traceability matrix (generated): traceability-matrix.md
-  - Change history: HISTORY.md
-  - API reference: reference.md
+      - Design history file:
+          - Overview: dhf/README.md
+          - Changing RDM: dhf/AGENT_WORKFLOW.md
+          - V&V plan and user needs: dhf/documents/verification_and_validation_plan.md
+          - System architecture: dhf/documents/architecture.md
+          - Software design:
+              - Architecture: dhf/documents/design/architecture.md
+              - Compliance: dhf/documents/design/compliance.md
+              - Knowledge graph: dhf/documents/design/graph.md
+              - Publishing: dhf/documents/design/publishing.md
+              - Release: dhf/documents/design/release.md
+              - Risk: dhf/documents/design/risk.md
+              - Design specification: dhf/documents/design/specification.md
+              - Test evidence: dhf/documents/design/test_evidence.md
+          - Risk policy: dhf/documents/risk/policy.md
+          - Risk register: dhf/documents/risk/tool_risks.md
+          - Design review: dhf/documents/design_review.md
+          - Document control: dhf/documents/document_control.md
+  - Reference:
+      - CLI: cli.md
+      - API: reference.md
+      - FAQ: FAQ.md
+      - ADR 0001 — User needs across bounded contexts: adr-0001-bounded-context-user-needs.md
+      - Change history: HISTORY.md
+      - Research notes:
+          - Health hazard taxonomies: research/health-hazard-taxonomies.md
+          - ReqIF and StrictDoc typing: research/reqif-strictdoc-typing.md

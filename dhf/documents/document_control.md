@@ -7,7 +7,7 @@ title: "Document Control — git as the document control system for RDM's record
 # Purpose
 
 States how RDM's own controlled records — this Design History File, the design
-documents, the faithfulness verdicts, and the source that realises them — are
+documents, and the source that realises them — are
 controlled. RDM keeps its record **in git, with GitHub as the service
 provider**; this statement maps each applicable 21 CFR Part 11 control to the
 mechanism that meets it, and it must pass gap analysis against RDM's own
@@ -27,10 +27,9 @@ are tags; the revision history is the git history itself. Planning artifacts
 - **Validation** [[P11:11.10a]] — the controls are enforced configuration and
   code, exercised on every change: the design gate, the pre-commit hook
   (`.githooks/`), and the CI pipeline (`design-controls.yml`) are RDM's own
-  features, verified by RDM's own tagged acceptance tests and independent
-  faithfulness verdicts. Altered records are discernible by construction —
-  any change produces a new SHA, and hash-pinned verdicts go stale on any edit
-  to what they reviewed.
+  features, verified by RDM's own tagged acceptance tests, with every change
+  independently reviewed on its pull request. Altered records are discernible
+  by construction — any change produces a new SHA.
 - **Copies** [[P11:11.10b]] — accurate and complete copies in human-readable
   and electronic form: the rendered documentation site and the rendered
   traceability matrix are generated from the record by `rdm render`; a
@@ -51,8 +50,8 @@ are tags; the revision history is the git history itself. Planning artifacts
 - **Signature accountability** [[P11:11.10j]] — the contributor policy
   (`dhf/AGENT_WORKFLOW.md` and this statement, both controlled documents)
   states that a pull-request approval is the approver's electronic signature
-  and that the approver is accountable for what it approves; verdict reviewers
-  are named in each hash-pinned verdict.
+  and that the approver is accountable for what it approves; the approver is
+  named on the pull request.
 - **Audit trail** [[P11:11.10e]] — the git history: secure (SHA-chained),
   computer-generated, time-stamped, author-attributed on every action; a later
   change never obscures an earlier entry, and the trail lives exactly as long
@@ -60,11 +59,10 @@ are tags; the revision history is the git history itself. Planning artifacts
 - **Sequencing** [[P11:11.10f]] — the enforced order of steps is RDM's own
   design-controls loop: the pre-commit hook blocks implementation before
   design approval, and CI blocks merge until design-gate, acceptance tests,
-  verification, faithfulness, and release-gate pass in order.
+  verification, and release-gate pass in order.
 - **Authority** [[P11:11.10g]] — only authorized reviewers can approve a pull
-  request into the default branch; the reviewer of a faithfulness verdict must
-  be independent of the test's author (enforced procedure, recorded in each
-  verdict). The branch controls are configuration code in this repository —
+  request into the default branch, and the approver must not be the change's
+  author (enforced by the ruleset's required review). The branch controls are configuration code in this repository —
   `.github/rulesets/controlled-record.json` (pull-request review, verified
   commit signatures, required checks, no history rewriting) and
   `repo-settings.json` — applied and drift-checked with
