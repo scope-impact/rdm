@@ -109,9 +109,8 @@ reading and matching rules; they are the graph's inputs, not parts of these.
 
 Assumptions and open questions:
 
-- The ISO 14971 2019 checklist holds only its header comments, so it has no
-  clauses, and gap analysis against it is an error (Design Review 55). DI-11
-  names ISO 14971; the 2007 edition is the usable one today.
+- The ISO 14971 2019 checklist lists the standard's clauses by number and a
+  short mnemonic title, as the other built-ins do (Design Review 60).
 - Verbose coverage names at most ten missing clauses per checklist and
   counts the rest; the gap report names them all.
 
