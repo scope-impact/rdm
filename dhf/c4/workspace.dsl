@@ -340,6 +340,7 @@ workspace "RDM" "The design record of regulated software." {
     projection -> gap_analysis "reads checklists and matches checklist references with"
     test_translation -> result_formatters "parses with"
     project_scaffold -> project_templates "copies"
+    project_scaffold -> kernel "takes the release version from"
     adoption -> adoption_templates "copies"
     reusable_workflow -> gates_action "runs the gates with"
     persona_command -> formative_usability "classifies runs with"
