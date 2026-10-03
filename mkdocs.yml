@@ -109,7 +109,7 @@ nav:
       - Risk register: dhf/documents/risk/tool_risks.md
       - Design review: dhf/documents/design_review.md
       - Document control: dhf/documents/document_control.md
-      - User manual: dhf/documents/user_manual.md
+      - Instructions for use (IFU): dhf/documents/user_manual.md
       - "ADR 0001: user needs across bounded contexts": dhf/decisions/adr-0001-bounded-context-user-needs.md
   - "Worked example: Part 11": example-traceability-map.md
   - Reference:

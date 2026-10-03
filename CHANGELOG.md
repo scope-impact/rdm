@@ -13,7 +13,7 @@
 - **Unit-test code coverage per component** (Design Reviews 63–65, DI-76):
   `verify --unit-coverage`; shown in the matrix, the bundle and the map; never
   acceptance evidence.
-- **The user manual is a design output** (Design Review 67, DI-77–79): a
+- **The user manual is the IFU, a design output** (Design Review 67, DI-77–79): a
   `kind: manual` document lists its pages, so the DMR index holds it; the
   graph reads the pages, `trace` lists those naming a design input, and a test
   example without a `component` label is a warning. `new-input`'s stub writes
