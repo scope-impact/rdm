@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 67
+revision: 68
 title: Design Review — RDM
 ---
 
@@ -2149,6 +2149,33 @@ project, RDM's own first among them. No other design input changes.
 - RDM's own acceptance runs ask for it, so RDM's graph shows what each
   acceptance test ran. Code a test runs in a separate process is not
   measured; such a component is still reached or named.
+
+# Design Review 63 — Coverage is a unit-test measure, never acceptance evidence
+
+**Scope reviewed:** DI-74 and DI-75 (Design Reviews 61 and 62), against what
+acceptance evidence is for.
+
+**Disposition:** Approved.
+
+- Acceptance tests prove design inputs, end to end, and Allure carries their
+  evidence. Code coverage measures how much of a unit's code its tests run:
+  a unit-test measure, which RDM keeps out of Allure and the record as it
+  keeps every unit test out (`tests/allure_scope_test.py`).
+- DI-74 and DI-75 measured coverage during acceptance runs and carried it in
+  Allure into the graph. That answers which lines an end-to-end test touched,
+  which no design input asks; it counted the measuring plugin as covered by
+  every run; and it doubled the acceptance run.
+- What an acceptance test exercises is answered at the architecture's level,
+  without coverage: the components a run names, and those it reaches through
+  the declared relationships (DI-56, DI-73).
+- **Retired:** DI-74 and DI-75, with their tests and code (the coverage
+  reader, `rdm:covers`, the unreadable-coverage warning, the trace's covered
+  components, the plugin's `--rdm-coverage`). **DI-69** returns to named and
+  reached components. The glossary and the workflow's hard rules say that
+  coverage is never acceptance evidence.
+- Coverage as evidence of unit verification (IEC 62304 5.5, classes B and
+  C), if wanted, is a design input of its own on the unit-test side, never
+  carried through Allure.
 
 # Approval
 

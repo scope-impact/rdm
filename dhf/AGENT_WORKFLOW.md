@@ -272,6 +272,7 @@ now the PR reviewer's to catch.
 | Never approve a PR you authored | self-review over-rates; independence is the entire point of the PR review |
 | Design docs commit before implementation | the commit is the approval; the hook and CI enforce the order |
 | Allure tags, steps and attachments go in acceptance tests only | unit tests are not evidence of record; `tests/allure_scope_test.py` holds the line |
+| Code coverage stays with the unit tests, never in Allure | acceptance evidence proves design inputs end to end; which lines ran is a unit-level measure |
 | Merge PRs with a merge commit, never squash or rebase | a squash erases the design-before-code order the record-first commits prove |
 | A DI is declared once; other contexts use `realises` | duplicated requirements drift apart |
 | A test checks only what its DI's text states | a step the text does not state is a requirement nobody approved |
