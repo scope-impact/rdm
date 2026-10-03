@@ -210,6 +210,7 @@ def handle_story_command(args):
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
                 output=Path(args.output) if args.output else None,
+                unit_coverage_report=Path(args.unit_coverage) if args.unit_coverage else None,
             )
 
         elif args.story_command == 'evidence-report':
@@ -346,6 +347,8 @@ def parse_arguments(arguments):
     bundle_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     bundle_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
     bundle_parser.add_argument('-o', '--output', help='output directory (default: release-evidence/)')
+    bundle_parser.add_argument('--unit-coverage', help="the unit tests' code coverage report (Cobertura XML or LCOV), "
+                               'carried and kept as verify takes it')
 
     # rdm story evidence-report
     report_help = 'render the verification report (PDF): every run behind each design input, with its evidence'

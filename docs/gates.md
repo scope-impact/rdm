@@ -65,7 +65,9 @@ per component with code, the lines its unit tests ran of those measured, and
 apart the components the report does not measure; a file of no component is
 ignored. The traceability matrix shows it in its own section, beside the
 design inputs. No threshold is set and nothing blocks. A report that cannot be
-read is an error (exit 2), never no coverage. In CI, pass the report to the
+read is an error (exit 2), never no coverage. `rdm story evidence-bundle` takes
+the same `--unit-coverage` report, so the retained matrix carries it, and keeps
+the report with the evidence. In CI, pass the report to the
 [reusable workflow or gates action](reusable-ci.md) as `unit-coverage`.
 
 ## Gap analysis

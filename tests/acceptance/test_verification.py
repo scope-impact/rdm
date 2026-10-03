@@ -11,12 +11,13 @@ import json
 from pathlib import Path
 
 import pytest
+import yaml
 
 from rdm.publishing.bundle import evidence_bundle, evidence_bundle_command
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import verification_step  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 
 def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
@@ -135,3 +136,27 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
         (results / "cut-result.json").write_text('{"status": "failed"')
         manifest = evidence_bundle(dhf, results, out)
         assert manifest["unreadable"] == ["cut-result.json"]
+    with verification_step("given the unit tests' coverage report, the bundle carries it as verify does and keeps the "
+                           "report; an unreadable one is refused before anything is written"):
+        from tests.acceptance.test_unit_coverage import _cobertura, _project
+
+        covered = _project(tmp_path / "covered")
+        (covered / "documents" / "traceability_matrix.md").write_text(
+            (Path(__file__).resolve().parents[2] / "dhf" / "documents" / "traceability_matrix.md").read_text())
+        report = _cobertura(tmp_path / "covered")
+        kept = tmp_path / "covered-evidence"
+        manifest = evidence_bundle(covered, covered / "allure-results", kept, report)
+        data = yaml.safe_load((kept / "verification.yml").read_text())
+        attach("unit coverage in the bundle", data["unit_coverage"])
+        assert [c["component"] for c in data["unit_coverage"]["components"]] == ["dosing", "ui"]
+        matrix = (kept / "traceability_matrix.md").read_text()
+        assert "# Unit-test code coverage" in matrix and "| Dose control | delivery | 2 | 4 | 50% |" in matrix
+        assert manifest["unit_coverage_report"] == "unit-coverage.xml" and "unit-coverage.xml" in manifest["files"]
+        assert (kept / "unit-coverage.xml").read_bytes() == report.read_bytes()
+        broken = tmp_path / "broken.xml"
+        broken.write_text("<coverage")
+        nowhere = tmp_path / "no-bundle"
+        with pytest.raises(ValueError, match="broken.xml"):
+            evidence_bundle(covered, covered / "allure-results", nowhere, broken)
+        assert not nowhere.exists()
+        assert evidence_bundle_command(covered, covered / "allure-results", nowhere, broken) == 2

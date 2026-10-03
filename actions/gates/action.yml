@@ -111,7 +111,11 @@ runs:
       env:
         DHF: ${{ inputs.dhf }}
         RESULTS: ${{ inputs.allure-results }}
-      run: rdm story evidence-bundle --dhf "$DHF" --allure-results "$RESULTS" -o "$RUNNER_TEMP/rdm-evidence"
+        UNIT_COVERAGE: ${{ inputs.unit-coverage }}
+      run: |
+        args=()
+        [ -n "$UNIT_COVERAGE" ] && args+=(--unit-coverage "$UNIT_COVERAGE")
+        rdm story evidence-bundle --dhf "$DHF" --allure-results "$RESULTS" -o "$RUNNER_TEMP/rdm-evidence" "${args[@]}"
 
     - name: Upload the evidence bundle
       if: inputs.evidence-bundle == 'true' && steps.results.outputs.found == 'true'
