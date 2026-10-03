@@ -25,10 +25,11 @@ import os
 from pathlib import Path
 
 import pytest
+import yaml
 
 from rdm.evidence import allure as allure_ingest
 from rdm.specification import persona
-from rdm.release.verify import build_verification
+from rdm.release.verify import build_verification, verify_command
 from rdm.specification.design_gate import (
     CONTEXT_REPEATED,
     MALFORMED_DECLARATION,
@@ -269,6 +270,39 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
         (results / "b-result.json").write_text("\ufeff" + failed)
         gate = run_release_gate(dhf, results)
         assert not gate.passed and [e.name for e in gate.events if e.blocking] == [INPUT_FAILED]
+    with verification_step("a result that could hold a failed run is unreadable: a status Allure does not write, "
+                           "labels that are not name and value text, a symbolic link, JSON nested too deep"):
+        story = [{"name": "story", "value": "DI-1"}]
+        cases = {"capital-status": {"status": "Failed", "labels": story}, "no-status": {"labels": story},
+                 "null-status": {"status": None, "labels": story},
+                 "labels-text": {"status": "failed", "labels": "story=DI-1"},
+                 "story-list": {"status": "failed", "labels": [{"name": "story", "value": ["DI-1"]}]}}
+        for name, data in cases.items():
+            case = tmp_path / f"unreadable-{name}"
+            _allure_result(case, "a", "passed", "DI-1")
+            (case / "b-result.json").write_text(json.dumps(data))
+            gate = run_release_gate(dhf, case)
+            attach(f"{name} blocking", gate.blocking)
+            assert [e.name for e in gate.events if e.blocking] == [UNREADABLE_RESULT], (name, gate.blocking)
+        case = tmp_path / "unreadable-link"
+        _allure_result(case, "a", "passed", "DI-1")
+        (tmp_path / "elsewhere.json").write_text(json.dumps({"status": "passed", "labels": story}))
+        (case / "b-result.json").symlink_to(tmp_path / "elsewhere.json")
+        assert [e.name for e in run_release_gate(dhf, case).events if e.blocking] == [UNREADABLE_RESULT]
+        case = tmp_path / "unreadable-deep"
+        _allure_result(case, "a", "passed", "DI-1")
+        (case / "b-result.json").write_text("[" * 100000 + "]" * 100000)
+        assert [e.name for e in run_release_gate(dhf, case).events if e.blocking] == [UNREADABLE_RESULT]
+    with verification_step("a run tagged with a mistyped id is an orphan warning, never silence"):
+        case = tmp_path / "mistyped"
+        _allure_result(case, "a", "passed", "DI-1")
+        for i, tag in enumerate(("di-1", "DI_1", "DI\u20131")):
+            _allure_result(case, f"m{i}", "failed", tag)
+        gate = run_release_gate(dhf, case)
+        attach("warnings", gate.warnings)
+        assert gate.passed, gate.blocking
+        assert {f"Allure result tag {tag} matches no design input" for tag in ("di-1", "DI_1", "DI\u20131")} \
+            <= set(gate.warnings), gate.warnings
 
 
 @allure.story("DI-4")
@@ -303,6 +337,23 @@ def test_verification_status_traceable_from_results(tmp_path: Path) -> None:
                 for group in data["groups"] for di in group["design_inputs"]}
         assert rows == {"DI-1": "verified", "DI-2": "failed"}
         assert data["groups"][0]["user_need"] == "UN-001"
+
+    with verification_step("A passed run whose verification step failed or broke failed: a failed step fails the test"):
+        stepped = tmp_path / "allure-steps"
+        stepped.mkdir()
+        for name, status in (("s", "failed"), ("t", "broken")):
+            (stepped / f"{name}-result.json").write_text(json.dumps(
+                {"name": name, "status": "passed", "labels": [{"name": "story", "value": f"DI-{name.upper()}"}],
+                 "steps": [{"name": "outer", "status": "passed", "steps": [{"name": "inner", "status": status}]}]}))
+        report = allure_ingest.reconcile({"DI-S", "DI-T"}, stepped)
+        assert report.failed == ["DI-S", "DI-T"], report.by_id
+
+    with verification_step("verify names a result file it cannot read, and exits non-zero, as the gate blocks"):
+        (matrix_results / "x-result.json").write_text('{"status": "failed", "labels": [')
+        out_file = tmp_path / "verification.yml"
+        assert verify_command(tmp_path / "dhf", matrix_results, out_file) == 1
+        data = yaml.safe_load(out_file.read_text())
+        assert data["unreadable"] == ["x-result.json"]
 
 
 @allure.story("DI-5")

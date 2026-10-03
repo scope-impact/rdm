@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Fixed: every reader of the results agrees with the release gate** (Design
+  Review 52). A result file that cannot be read is named by `verify` (which
+  exits 1), `trace`, the evidence bundle's manifest and the verification
+  report, which is then not release-grade. A result with a status Allure does
+  not write, malformed labels, a symbolic link or JSON nested too deep is
+  unreadable, not skipped or a traceback. A failed verification step fails its
+  test. A mistyped tag (`di-1`, `DI_1`) is an orphan warning. The report
+  counts every run, tagged or not, and a record with uncommitted changes is
+  not release-grade. The bundle refuses an output that overlaps the results.
+  Tags come only from tests, including `from allure import story`. `trace`
+  refuses a missing results directory and says "tested by" for an input that
+  is not verified. An approved validation record needs a reviewer.
+
 - **Fixed: a risk rating no one approved is never read as approved** (Design
   Review 51). A risk or policy with no status is proposed and warns; an acceptance needs text for who and
   why; a `kind: risk` document without a `risks` list blocks; a policy that

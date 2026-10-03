@@ -17,12 +17,22 @@ def is_id(text: str) -> bool:
     return ID.fullmatch(text) is not None
 
 
+_LEADING_LETTERS = re.compile(r"[A-Za-z]+")
+
+
+def _prefix(tag: str) -> str:
+    match = _LEADING_LETTERS.match(tag)
+    return match.group().upper() if match else ""
+
+
 def relevant_orphans(referenced: Iterable[str], declared_ids: set[str]) -> list[str]:
     """The referenced ids no declared id names, worth reporting: those sharing
     an id prefix with a declared one, to avoid noise from unrelated tags (e.g.
-    FT-001, US-001). Sorted; the one rule every gate and the graph report by."""
-    prefixes = {uid.split("-")[0] for uid in declared_ids}
-    return sorted(tag for tag in set(referenced) - set(declared_ids) if tag.split("-")[0] in prefixes)
+    FT-001, US-001). The prefix is the leading letters, whatever their case or
+    the separator after them, so a mistyped ``di-1`` or ``DI_1`` is reported,
+    not dropped. Sorted; the one rule every gate and the graph report by."""
+    prefixes = {_prefix(uid) for uid in declared_ids}
+    return sorted(tag for tag in set(referenced) - set(declared_ids) if _prefix(tag) in prefixes)
 
 
 def sort_key(ident: str) -> tuple:

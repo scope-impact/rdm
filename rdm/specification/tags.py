@@ -138,39 +138,59 @@ def _tag_ids_in(path: Path, content: str) -> list[str]:
     return ids
 
 
-def _allure_tag(node: ast.AST) -> str | None:
-    """The id in ``allure.story("ID")``, else None."""
-    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-            and node.func.attr in DESIGN_INPUT_LABELS
-            and isinstance(node.func.value, ast.Name) and node.func.value.id == "allure"
-            and node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)):
+def _story_names(tree: ast.Module) -> tuple[set[str], set[str]]:
+    """The names a file calls the story decorator by: the modules ``allure``
+    is imported as (``allure.story``), and the names ``story`` itself is
+    imported as (``from allure import story``)."""
+    modules, functions = {"allure"}, set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            modules |= {alias.asname or alias.name for alias in node.names if alias.name == "allure"}
+        elif isinstance(node, ast.ImportFrom) and node.module == "allure":
+            functions |= {alias.asname or alias.name for alias in node.names if alias.name in DESIGN_INPUT_LABELS}
+    return modules, functions
+
+
+def _allure_tag(node: ast.AST, names: tuple[set[str], set[str]]) -> str | None:
+    """The id in ``allure.story("ID")``, or ``story("ID")`` under a name the
+    file imported it as, else None."""
+    modules, functions = names
+    if not (isinstance(node, ast.Call) and node.args and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)):
+        return None
+    func = node.func
+    if (isinstance(func, ast.Attribute) and func.attr in DESIGN_INPUT_LABELS
+            and isinstance(func.value, ast.Name) and func.value.id in modules) \
+            or (isinstance(func, ast.Name) and func.id in functions):
         return node.args[0].value
     return None
 
 
-def _module_marks(tree: ast.Module) -> list[str]:
+def _tags(nodes, names) -> list[str]:
+    return [tag for node in nodes if (tag := _allure_tag(node, names))]
+
+
+def _module_marks(tree: ast.Module, names) -> list[str]:
     """The tags of a module-level ``pytestmark = allure.story(...) | [ ... ]``."""
     tags: list[str] = []
     for node in tree.body:
         if (isinstance(node, ast.Assign)
                 and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets)):
-            marks = node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value]
-            tags.extend(tag for tag in map(_allure_tag, marks) if tag)
+            tags.extend(_tags(node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value],
+                              names))
     return tags
 
 
 def _python_tag_ids(content: str) -> list[str]:
-    """Tags a Python test file claims (DI-40): allure decorators on functions
-    and classes, and a module-level ``pytestmark`` -- never text inside strings
-    or comments, so a test that writes fixture files does not claim their ids.
-    A file that does not parse falls back to the decorator pattern."""
-    tree = _parse(content)
-    if tree is None:
+    """Tags a Python test file claims (DI-40): story decorators on its tests
+    (never a helper function or class) and a module-level ``pytestmark`` --
+    never text inside strings or comments, so a test that writes fixture files
+    does not claim their ids. A file that does not parse falls back to the
+    decorator pattern."""
+    tests = _python_tests(content)
+    if tests is None:
         return [m.group(1) for m in ALLURE_PATTERN.finditer(content)]
-    ids = _module_marks(tree)
-    for node in _definitions(tree):
-        ids.extend(tag for tag in map(_allure_tag, node.decorator_list) if tag)
-    return ids
+    return [tag for _, tags in tests for tag in tags]
 
 
 @lru_cache(maxsize=1024)
@@ -184,48 +204,31 @@ def _parse(content: str) -> ast.Module | None:
         return None
 
 
-_DEFINITIONS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-
-
-def _definitions(tree: ast.Module):
-    """Every function and class definition, at any depth. Only statements can
-    hold one, so expressions -- most of a file's nodes -- are never visited."""
-    stack = list(tree.body)
-    while stack:
-        node = stack.pop()
-        if isinstance(node, _DEFINITIONS):
-            yield node
-        for name in ("body", "orelse", "finalbody", "handlers", "cases"):
-            children = getattr(node, name, None)
-            if isinstance(children, list):
-                stack.extend(children)
-
-
 def _python_tests(content: str) -> list[tuple[str, list[str]]] | None:
     """Each tagged Python test in a file (DI-61): its qualified name
     (``test_x`` or ``TestClass::test_x``) and its tags — its own decorators,
     its class's, and a module-level ``pytestmark``'s, which reaches every
-    ``test*`` function and ``Test*`` method. None when the file does not parse."""
+    ``test*`` function and ``Test*`` method. Only a ``test*`` function or
+    method is a test. None when the file does not parse."""
     tree = _parse(content)
     if tree is None:
         return None
-    module = _module_marks(tree)
+    names = _story_names(tree)
+    module = _module_marks(tree, names)
 
     def tags_of(node) -> list[str]:
-        return [tag for tag in map(_allure_tag, node.decorator_list) if tag]
+        return _tags(node.decorator_list, names)
 
     tests: list[tuple[str, list[str]]] = []
     functions = (ast.FunctionDef, ast.AsyncFunctionDef)
-    for node in tree.body:
-        if isinstance(node, functions):
-            inherited = module if node.name.startswith("test") else []
-            tests.append((node.name, tags_of(node) + inherited))
+    for node in tree.body:  # only tests claim: a helper's decorators are no tag
+        if isinstance(node, functions) and node.name.startswith("test"):
+            tests.append((node.name, tags_of(node) + module))
         elif isinstance(node, ast.ClassDef):
             outer = tags_of(node) + (module if node.name.startswith("Test") else [])
             for item in node.body:
-                if isinstance(item, functions):
-                    inherited = outer if item.name.startswith("test") else []
-                    tests.append((f"{node.name}::{item.name}", tags_of(item) + inherited))
+                if isinstance(item, functions) and item.name.startswith("test"):
+                    tests.append((f"{node.name}::{item.name}", tags_of(item) + outer))
     return [(name, list(dict.fromkeys(tags))) for name, tags in tests if tags]
 
 

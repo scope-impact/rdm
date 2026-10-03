@@ -79,7 +79,7 @@ coded gates stay authoritative. It exits 1 on any violation.
 | Rule | Why |
 | --- | --- |
 | a design input with no tagged test | nothing claims to verify it yet |
-| a `tracesTo` or `realises` naming an undeclared need or input; a test tag sharing the design-input prefix but naming no declared input | a reference that resolves to nothing |
+| a `tracesTo` or `realises` naming an undeclared need or input; a test tag sharing the design-input prefix (its leading letters, in any case) but naming no declared input | a reference that resolves to nothing |
 | a test run tied to no commit | the version it is evidence for is unknown |
 | a test run of another commit than the record's | stale evidence |
 | a tagged test with no run, while other tests in its file ran | a claim never executed |

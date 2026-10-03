@@ -253,14 +253,15 @@ def build_trace(
             "owned_by": di["context"],
             "realised_by": sorted(realised.get(di["id"], [])),
             "status": v.status if v else None,
-            "tests": sorted(v.tests) if v else [],
+            "tests": sorted(set(v.tests)) if v else [],
         }
 
+    unreadable = verif.unreadable if verif else []
     if target in needs:
         members = [_di_slice(di) for di in inputs if target in di["traces_to"]]
-        return {"kind": "user_need", "id": target, "design_inputs": members}
+        return {"kind": "user_need", "id": target, "design_inputs": members, "unreadable": unreadable}
     if target in by_id:
-        return {"kind": "design_input", **_di_slice(by_id[target])}
+        return {"kind": "design_input", **_di_slice(by_id[target]), "unreadable": unreadable}
     return {"error": f"{target} is not a declared user need or design input"}
 
 
@@ -273,6 +274,9 @@ def story_trace_command(
     dhf = (dhf_dir or Path("dhf")).resolve()
     if not dhf.exists():
         print(f"Error: DHF directory not found: {dhf}")
+        return 2
+    if allure_results_dir and not Path(allure_results_dir).exists():
+        print(f"Error: Allure results directory not found: {allure_results_dir}")
         return 2
 
     trace = build_trace(dhf, target, allure_results_dir)
@@ -289,7 +293,7 @@ def story_trace_command(
             print(f"  {di['design_input']} (owned by {di['owned_by']}) {extra}".rstrip())
             print(f"      {di['text']}")
             if di["tests"]:
-                print(f"      verified by: {', '.join(di['tests'])}")
+                print(f"      {_tested(di['status'])} {', '.join(di['tests'])}")
     else:
         print(f"Design input {trace['design_input']}")
         print(f"  text:        {trace['text']}")
@@ -300,5 +304,12 @@ def story_trace_command(
         if trace["status"]:
             print(f"  status:      {trace['status']}")
         if trace["tests"]:
-            print(f"  verified by: {', '.join(trace['tests'])}")
+            print(f"  {_tested(trace['status'])} {', '.join(trace['tests'])}")
+    if trace["unreadable"]:
+        print(f"  unreadable:  {', '.join(trace['unreadable'])} (could hold a failed run; the release gate blocks)")
     return 0
+
+
+def _tested(status: str | None) -> str:
+    """How a slice names its tests: only a verified input's verified it."""
+    return "verified by:" if status == allure.VERIFIED else "tested by:  "
