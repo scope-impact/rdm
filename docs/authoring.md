@@ -91,7 +91,7 @@ Graphviz; checking needs only the stamps.
 | Helper | What it does |
 |---|---|
 | `invert_dependencies` | group items by the things they depend on (e.g. tests per requirement) |
-| `join_to` | join foreign keys to rows in another table by `id` |
+| `join_to` | join foreign keys to rows in another table by `id`; an id the table lacks is an error naming it, never a blank row |
 | `md_indent` | indent an included snippet, optionally shifting its heading levels |
 | `first_pass_output` | two-pass rendering: reference content computed later in the document (e.g. a table of contents over generated sections) |
 
@@ -104,7 +104,8 @@ rdm collect src/**/*.py > data/snippets.yml
 ```
 
 Delimit snippets in any text file with `RDOC <name>` … `ENDRDOC`; each becomes
-a named entry you can render with `{{ snippets.<name> }}`.
+a named entry you can render with `{{ snippets.<name> }}`. A name used twice,
+in one file or in two, is refused, naming where, and `rdm collect` exits 2.
 
 ## Translating test output
 

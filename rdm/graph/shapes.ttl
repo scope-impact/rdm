@@ -241,6 +241,26 @@ rdm:UnknownComponentShape a sh:NodeShape ;
         sh:select """SELECT $this ?key WHERE { $this rdm:unknownComponent ?key }""" ;
     ] .
 
+rdm:ManualPageMissingShape a sh:NodeShape ;
+    sh:targetSubjectsOf rdm:missingPage ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "the user manual lists a page that does not exist: {?page}" ;
+        sh:select """SELECT $this ?page WHERE { $this rdm:missingPage ?page }""" ;
+    ] .
+
+rdm:ManualExampleComponentShape a sh:NodeShape ;
+    sh:targetClass rdm:TestExample ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "test example on manual page {?page} writes no component label (DI-78)" ;
+        sh:select """SELECT $this ?page WHERE {
+            $this rdm:onPage/rdm:path ?page .
+            FILTER NOT EXISTS { $this rdm:writesLabel "component" } }""" ;
+    ] .
+
 rdm:DependencyDeclaredShape a sh:NodeShape ;
     sh:targetClass rdm:Dependency ;
     sh:severity sh:Warning ;

@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 71
+revision: 76
 title: Design Review — RDM
 ---
 
@@ -2225,6 +2225,88 @@ graph, against what the graph now holds (Design Reviews 61 and 64).
   input, so coverage stays unit-test evidence (Design Review 63). `rdm graph
   build` and the docs build take the report; the map shows each component's
   unit coverage on its box and in its panel.
+
+# Design Review 66 — The design outputs follow the behaviour of Design Reviews 58 to 65
+
+**Scope reviewed:** the design-output tables of the context documents,
+checked against the graph after PR #54.
+
+**Disposition:** Approved.
+
+- DI-76 was in no design-output row, and the unit coverage reader component
+  had none: the verification data's row now names DI-76, and the reader has
+  its row (realises DI-76).
+- Rows that described behaviour from before the chain review now state it:
+  the renderer's refusals, the snippets' repeated key, the bundle's coverage
+  and refused template, the Explorer file's nodes whatever their IRI, the
+  second risk policy refused, unreadable and orphan persona runs, the
+  worktree unknown without a commit, Python-only import reading. No design
+  input changes.
+
+# Design Review 67 — The user manual is a design output, held in the DMR and the graph
+
+**Scope reviewed:** the documentation site, after PR #55 moved its test
+examples from file paths to component labels and nothing in the record
+showed which pages still taught file paths.
+
+**Disposition:** Approved.
+
+- **Why:** a convention changed in prose alone. The graph held the record
+  but not the manual, so no rule, query or gate could say which pages were
+  out of date; they were found by hand.
+- **The manual is a controlled document:** `dhf/documents/user_manual.md`
+  (`IFU-001`, `kind: manual`) lists its pages, so the DMR index (DI-29)
+  lists the manual. The pages stay in `docs/`: the DMR references them, it
+  does not hold copies. The "RDM on RDM" pages publish this DHF and are not
+  the manual.
+- **New user need UN-018:** a user learns from the manual how to keep the
+  record the way the gates enforce, and a reviewer sees which pages a change
+  touches.
+- **New design inputs:** DI-77 (graph: the manual's pages, with the design
+  inputs they name and the labels of their test examples, and the pages in
+  a design input's trace), DI-78 (graph: a shape warns on a test example
+  that writes no component label), DI-79 (publishing: RDM's manual shows
+  every test example naming its component).
+- **DI-22 amended:** the stub test `new-input` writes carries a component
+  label to fill in, not an output label.
+- **C4:** a manual reader component (graph) and a documentation site
+  container holding the user manual and, apart from it, the docs build hooks
+  (`docs/_hooks/`, Python the site build runs), so the manual's code is its
+  pages alone (publishing); views redrawn.
+- **The manual is the IFU:** anyone who uses RDM is its user, so the user
+  manual is RDM's instructions for use; `CONTEXT.md` names the term
+  "Instructions for use (IFU)", user manual being its plain name.
+- **Not done:** RDM's own acceptance tests keep their output labels (DI-56
+  allows both); moving them is separate work.
+
+# Design Review 68 — A blind provenance check, from the graph alone
+
+**Scope reviewed:** six agents with no context and no file access queried a
+snapshot of the graph (built at 337693c with fresh evidence), each from one
+angle: needs forward, evidence backward, documents and git, architecture,
+risks, and the user manual.
+
+**Disposition:** Approved.
+
+- **Defect, DI-51:** no document showed a landing commit, although most had
+  landed on `main` through a merge. The landing walk combined
+  `--first-parent` with `--ancestry-path`, which finds the merge only when
+  the document's change is its branch's last commit; in a pull request with
+  later commits it finds nothing. DI-51's text stands; its test gains the
+  case (a change followed by more commits on the branch), and the landing is
+  the oldest first-parent commit of the default branch among the change's
+  descendants.
+- **Recorded, not changed here:** every risk is still proposed while six
+  carry a residual decision and one an acceptance (the ratings await a
+  person's approval); a manual page links to a design input only by naming
+  its id, so pages teaching a feature without its id are not found; the
+  DI-79 test names the manual reader, a component of another context that
+  does not realise DI-79; `docs_hooks` is exercised by no test; and no run
+  or commit names a person, the pull-request review being outside the graph.
+- **Checked and sound:** every need, input, test and run links forward and
+  back; every run tested the record's commit with a clean worktree; every
+  code dependency has a declared relationship; reached components match the
+  rule exactly; unit coverage is linked to no run or input.
 
 # Approval
 

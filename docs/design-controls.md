@@ -50,7 +50,7 @@ should be split.
 import allure
 
 @allure.story("DI-1")                         # the link the whole chain hangs on
-@allure.label("output", "src/alarms.py")      # the code this test exercises
+@allure.label("component", "alarm_logic")    # the C4 component it exercises
 def test_alarm_within_two_seconds(device):
     """DI-1: an alarm within 2 s of a reading above the limit."""
     with allure.step("a reading above the limit raises an alarm"):
@@ -91,6 +91,24 @@ own API (`allure.dynamic`), so the labels can never drift from it:
 | `severity` | `critical` when the design input controls a risk |
 | `commit` | the commit under test, with `worktree=dirty` when the working tree had uncommitted changes |
 | attachment `requirement DI-n` | the design input's text |
+
+The run's `environment.properties` records `worktree=unknown`, never `clean`,
+when there is no commit to compare against.
+
+A test also says what it exercises, by `component`: a C4 component by its key
+in the architecture workspace (`@allure.label("component", "release_gate")`;
+a key the model does not declare is a warning). The key keeps the record
+code-agnostic: a file can move without the test changing. An `output` label,
+the file it runs (`@allure.label("output", "rdm/release/gate.py")`), is
+optional and names the component holding that file. Either *names* the
+component; the graph adds the components a named one *reaches* through the relationships the workspace
+declares, so a test need not name every module behind its entry point.
+Reaching is derived by a rule, not stored: `rdm graph build` and `query` add
+it with `--infer`, and the agent server always does
+([derived relations](graph.md#derived-relations-rules-not-facts)).
+Neither is evidence of coverage: code coverage is the unit tests' measure
+([gates](gates.md#unit-test-code-coverage-optional)), never an acceptance
+test's.
 
 Enable it for the acceptance suite only — import its hook in that suite's
 `conftest.py`, or pass `-p rdm.pytest_plugin --rdm-dhf dhf`:

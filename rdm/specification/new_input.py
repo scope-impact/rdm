@@ -61,7 +61,7 @@ allure = pytest.importorskip("allure")
 STUB_TEST = '''
 
 @allure.story("{di_id}")
-@allure.label("output", "TODO")
+@allure.label("component", "TODO")
 def test_{fn_suffix}_not_implemented() -> None:
     """{doc}"""
     pytest.fail("{di_id} acceptance test not implemented -- replace this stub with real assertions")

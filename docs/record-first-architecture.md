@@ -70,7 +70,7 @@ flowchart LR
 | **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (design inputs), residual, acceptance |
 | **Risk policy** | a document's `risk_policy:` | — | severities, probabilities, levels, acceptability |
 | **Checklist, clause** | a checklist file (text or RDF) | the clause key, e.g. `62304:5.2.2` | each clause's description; includes |
-| **Test** | an acceptance test function, `@allure.story("DI-n")` | `tests/x.py::test_y` | the design inputs it verifies; `@allure.label("output", …)` for the code it exercises, `@allure.label("component", …)` for a component it names |
+| **Test** | an acceptance test function, `@allure.story("DI-n")` | `tests/x.py::test_y` | the design inputs it verifies; `@allure.label("component", …)` for the C4 component it exercises; optionally `@allure.label("output", …)`, a file path |
 | **Test run** | an Allure result, written by running the tests | its uuid | nothing — it is recorded |
 | **Commit** | git | its sha | nothing — it is recorded |
 

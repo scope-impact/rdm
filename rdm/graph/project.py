@@ -14,6 +14,7 @@ a query can always tell where a fact came from:
 - ``code``       — Python imports between components' code (DI-67)
 - ``checklists`` — requested regulatory checklists, as data (DI-37)
 - ``references`` — documents' ``[[…]]`` tags linked to the clauses they name
+- ``manual``     — the user manual's pages, the design inputs they name, their test examples (DI-77)
 - ``ontology``   — RDM's vocabulary (``ontology.ttl``), so browsers can label things
 
 Open world: the graph asserts only what the record says. A missing
@@ -31,6 +32,7 @@ from urllib.parse import quote
 import pyoxigraph as ox
 
 from rdm.graph.c4 import project_architecture
+from rdm.graph.manual import project_manual
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
 from rdm.evidence.allure import full_name, reconcile
 from rdm.specification.tags import find_tests_dir, scan_source_tests
@@ -293,11 +295,14 @@ def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, o
 def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str | None:
     """The first-parent commit of ``branch`` that brought ``sha`` in (DI-51):
     ``sha`` itself when it is on that line (a direct or squash commit), else
-    the oldest first-parent commit descending from it (the merge)."""
+    the oldest first-parent commit descending from it (the merge). Descent is
+    walked through every parent: walked through first parents only, a merge
+    descends from the change only when the change is its branch's last commit."""
     if sha in first_parent:
         return sha
-    path = git(root, "rev-list", "--first-parent", "--ancestry-path", f"{sha}..{branch}")
-    return path.splitlines()[-1] if path else None
+    descendants = (git(root, "rev-list", "--ancestry-path", f"{sha}..{branch}") or "").split()
+    landed = [c for c in descendants if c in first_parent]  # newest first
+    return landed[-1] if landed else None
 
 
 def _latest_commits(root: Path, paths: list[str]) -> dict[str, str]:
@@ -429,6 +434,7 @@ def project(
     ds = _Dataset(project_name or (repo or dhf.parent).name)
     _record(ds, dhf, root)
     _record_findings(ds, dhf, results)
+    project_manual(ds, controlled_documents(dhf, root), dhf.parent, design_input_ids(dhf), rdm)
     tests = _tests(ds, dhf, root)
     verified: set[str] = set()
     if results is not None:

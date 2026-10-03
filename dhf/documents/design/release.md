@@ -53,7 +53,7 @@ repositories' pipelines call.
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
 | Release gate | The release decision over verified status, risk and validation; the design gate's warnings about executed results; the trace slice of a user need or design input | DI-3, DI-18; realises DI-33, DI-44, DI-50 |
-| Verification data | Every declared design input reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from | DI-4, DI-30 |
+| Verification data | Every declared design input reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from; given the unit tests' coverage report, each component's unit lines run of those measured, beside the inputs, never inside them | DI-4, DI-30, DI-76 |
 | Reusable workflow | Runs a repository's acceptance tests, then the gates, with RDM installed from the revision the caller pinned | DI-63 |
 | Gates action | The gate steps, written once: design gate, verification data, release gate, graph validation and the evidence bundle | DI-63, DI-30 |
 

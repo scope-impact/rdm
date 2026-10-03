@@ -67,6 +67,12 @@ design_inputs:
   - id: DI-73
     text: "RDM shall derive, by a rule its vocabulary declares, that a test run reaches each component the C4 model's declared relationships lead to, at any depth, from a component the run names, and that is not itself named; the record never states it, and a reached component is never taken for a named one."
     traces_to: [UN-017, UN-014]
+  - id: DI-77
+    text: "RDM shall project the user manual into the graph: each page that a controlled document of kind manual lists under pages, with the files the page includes whole, linked to that document; each design input the page names by its id; and each tagged-test example it shows, a fenced code block with an Allure story decorator, with the names of the labels the example writes; a listed page that does not exist shall be a warning; and the agent server's trace shall list, for a design input, the manual pages that name it."
+    traces_to: [UN-018, UN-014]
+  - id: DI-78
+    text: "RDM's gate shapes shall warn on a tagged-test example in the user manual that writes no component label."
+    traces_to: [UN-018]
   - id: DI-69
     text: "RDM's agent server shall show, in the trace of a design input, the components its runs name and, apart, the components they reach, each with its container and owning bounded context."
     traces_to: [UN-017, UN-015]
@@ -102,12 +108,13 @@ workspace maps each component to its code.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists and inferred facts on request | DI-35, DI-36, DI-37, DI-45, DI-48, DI-51, DI-52, DI-53, DI-54, DI-56, DI-58, DI-60, DI-61, DI-62, DI-67, DI-73 |
+| Manual reader | Reads the pages a manual document lists, and the files they include whole: the design inputs each names and the labels of each tagged-test example | DI-77 |
+| Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists and inferred facts on request | DI-35, DI-36, DI-37, DI-45, DI-48, DI-51, DI-52, DI-53, DI-54, DI-56, DI-58, DI-60, DI-61, DI-62, DI-67, DI-73, DI-77 |
 | Vocabulary | The classes and properties of the graph, and each derived relation with the rule that derives it; projected as the ontology graph | DI-35, DI-62 |
-| Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61, DI-68 |
+| Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61, DI-68, DI-78 |
 | SHACL validation | `rdm graph validate`: runs the shipped and any user-supplied shapes over the union of the named graphs, reports each result most severe first, and fails on any violation | DI-49, DI-58 |
-| Explorer file | Writes the record as an AWS Graph Explorer file, optionally leaving out chosen classes and what hangs only from them | DI-39 |
-| Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53, DI-56, DI-62, DI-69 |
+| Explorer file | Writes the record as an AWS Graph Explorer file, every record node whatever its IRI, optionally leaving out chosen classes and what hangs only from them | DI-39 |
+| Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53, DI-56, DI-62, DI-69, DI-77 |
 
 All six are in the `rdm` container, and need the optional extra `graph`;
 without it every `rdm graph` command exits 2 and names the extra. The view

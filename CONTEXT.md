@@ -101,7 +101,7 @@ _Avoid_: code review (unqualified), self-review
 
 **Chain review**:
 Reading one design input together with its user needs, its design prose, its
-tagged test and verification steps, its output labels and its last run, and
+tagged test and verification steps, its component labels and its last run, and
 deciding whether the test proves the text; recorded as a design review, input
 by input, before each release. A person's judgement, never a gate.
 _Avoid_: faithfulness gate, audit, test review
@@ -398,6 +398,15 @@ _Avoid_: Word template (it is not a template of the record)
 The generated list of controlled documents (id, title, path, revision) a DMR
 document renders. Abbreviated DMR index.
 _Avoid_: document list, register (the risk register is another thing)
+
+**Instructions for use (IFU)**:
+The product's instructions for anyone who uses it; in plain words, its user
+manual (RDM's is its documentation site). A design output, listed page by page
+by a controlled document of kind `manual`, so the DMR index holds it. Its
+pages are projected into the knowledge graph with the design inputs they name
+and the labels of the test examples they show. What it must teach is stated
+as design inputs.
+_Avoid_: docs (unqualified), help
 
 ## Knowledge graph
 

@@ -17,6 +17,9 @@ design_inputs:
   - id: DI-16
     text: "RDM shall extract delimited code snippets from source files (RDOC/ENDRDOC), keyed by name, for inclusion in documents."
     traces_to: [UN-001]
+  - id: DI-79
+    text: "RDM's user manual shall show each tagged-test example naming the C4 component it exercises by a component label."
+    traces_to: [UN-018]
   - id: DI-29
     text: "RDM shall generate device-master-record index data from controlled documents' frontmatter, writing one entry per document (id, title, path, revision) to a data file the DMR index renders from."
     traces_to: [UN-012]
@@ -51,15 +54,17 @@ each component to its code.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Renderer | Fills a template with the data files as its context, in one or two passes, and post-processes the result | DI-7, DI-8 |
+| Renderer | Fills a template with the data files as its context, each under its file name, in one or two passes, and post-processes the result; refuses a value the data does not supply, and `join_to` an id its table lacks | DI-7, DI-8 |
 | Markdown extensions | Number the sections, give the template the vocabulary the document uses, and remove auditor-only notes | DI-9 |
 | First-pass output | Holds the words a first render produced, for the second pass to test against | DI-9 |
-| Code snippets | Collects the delimited snippets of source files, by key, as a data file | DI-16 |
+| Code snippets | Collects the delimited snippets of source files, by key, as a data file, refusing a key used twice, in one file or two | DI-16 |
 | DMR index | Writes one index entry per controlled document from its frontmatter | DI-29 |
 | Verification report | Builds the report's data from the record and the results it is given, and has it laid out as a PDF | DI-64 |
 | Report layout | Sets the report's pages, every value as text | DI-64 |
-| Evidence bundle | Writes the retained release evidence, the verification report among it | DI-64; realises DI-30 |
+| Evidence bundle | Writes the retained release evidence, the verification report among it, and, given the unit tests' coverage report, carries it as verify does and keeps it; refuses a record with no matrix template before writing anything | DI-64; realises DI-30 |
 | PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | realises part of DI-63 |
+| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; each tagged-test example names its component by key | DI-79 |
+| Docs build hooks | Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual | — |
 
 The PDF action is in the Reusable gates container; the others are in `rdm`.
 

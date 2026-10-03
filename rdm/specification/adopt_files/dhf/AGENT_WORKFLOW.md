@@ -96,7 +96,7 @@ real code path — **one verification step for each thing the DI requires** (the
 steps belong to the test, never to the acceptance criterion) — keeping the tag:
 ```python
 @allure.story("DI-n")
-@allure.label("output", "src/<impl>")
+@allure.label("component", "<c4 key>")
 def test_<behavior>(...):
     """DI-n: <the requirement in one line>."""
 ```

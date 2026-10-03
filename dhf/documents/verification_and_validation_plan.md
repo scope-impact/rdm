@@ -38,6 +38,8 @@ user_needs:
     text: "A team can keep its risk register in the record, with each risk scored from its own matrix and each control traced to a verified design input, and cannot release while a risk is unscored, uncontrolled, or residually unacceptable without a named acceptance."
   - id: UN-017
     text: "A team can keep its architecture in the record as C4 diagrams (system context and containers for the system, components for each bounded context) and is warned wherever the code, the tests and the diagrams disagree."
+  - id: UN-018
+    text: "A user learns from RDM's user manual, a controlled document of each release, how to keep the record the way that release's gates enforce, and a reviewer can see which pages of the manual name what a change touches."
 ---
 
 # Purpose
@@ -95,5 +97,6 @@ criterion counts once it is verified and its risk's residual is acceptable.
 | UN-015 | maintainer review that an agent harness connected to the server answers traceability questions about RDM's own record correctly and has no way to change it | dogfooding: agent sessions on RDM itself using `rdm graph mcp` |
 | UN-016 | maintainer review that the gate's risk findings match a manual review of the same register with the risk-analysis method | dogfooding: RDM's own tool-risk register (`dhf/documents/risk/`) held to the release gate |
 | UN-017 | maintainer review that RDM's own C4 diagrams, rendered, match the code they name, and that each conformance warning on them points at a real disagreement | dogfooding: RDM's own architecture and design documents carry C1–C3, held to `rdm graph validate` |
+| UN-018 | maintainer review that the manual's pages teach what the gates enforce, and that each page the graph flags, or names for a changed design input, is one to re-read | dogfooding: RDM's own manual (`dhf/documents/user_manual.md`) projected and held to `rdm graph validate` |
 
 Formative evidence never gates release.

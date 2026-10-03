@@ -55,7 +55,8 @@ its code.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| pytest plugin | Labels each run of a tagged test from the record at test time; records the run's commit, worktree state, executor and environment | DI-57, DI-59, DI-65 |
+| pytest plugin | Labels each run of a tagged test from the record at test time; records the run's commit, worktree state (unknown when there is no commit), executor and environment | DI-57, DI-59, DI-65 |
+| Unit coverage reader | The unit tests' code coverage, from one Cobertura XML or LCOV report: the lines each file ran of those measured; a report it cannot read is an error. Never acceptance evidence. | realises DI-76 |
 | Allure reader | The labels and run facts in Allure's terms, written for the plugin and read back as test runs; a status per design input | DI-72, DI-57, DI-59, DI-65; realises DI-4 |
 | Mutation probe | Runs one test unmutated, then with one line mutated, reports killed or survived, and always restores the file | DI-34, DI-47 |
 | Test result translation | Translates a foreign XML result file into result data; refuses an unknown format | DI-17 |

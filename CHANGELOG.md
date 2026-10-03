@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- **Fixed: landing commits** (Design Review 68, DI-51): a change merged with
+  later commits on its branch now shows the merge that landed it; before, it
+  showed none. Found by six agents checking the graph with no other context.
+- **Chain review of every design input** (Design Reviews 58, 60): texts now
+  state what their tests check; new DI-71 (commit and merge hooks) and DI-72
+  (reading Allure results). Nine defects fixed, among them an empty ISO
+  14971:2019 checklist.
+- **Process** (Design Review 59): a test checks only what its input states;
+  one `shall` per input; a chain review before each release.
+- **Named and reached components** (Design Review 61, DI-73): what an
+  acceptance test exercises, from labels and the C4 model, without reading code.
+- **Unit-test code coverage per component** (Design Reviews 63–65, DI-76):
+  `verify --unit-coverage`; shown in the matrix, the bundle and the map; never
+  acceptance evidence.
+- **The user manual is the IFU, a design output** (Design Review 67, DI-77–79): a
+  `kind: manual` document lists its pages, so the DMR index holds it; the
+  graph reads the pages, `trace` lists those naming a design input, and a test
+  example without a `component` label is a warning. `new-input`'s stub writes
+  a `component` label.
+
 - **Fixed: review findings on the behaviour fixes** (Design Review 57). The
   merge hook no longer blocks a valid merge of an approved design change
   with its code: during a merge, a document staged exactly as a commit holds

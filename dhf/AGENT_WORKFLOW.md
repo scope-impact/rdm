@@ -157,11 +157,11 @@ passed would be a lie the pipeline could not see.
 
 **Do:** replace the stub body in `tests/acceptance/` with real assertions
 against the real code path — **one verification step for each thing the DI text requires** —
-keeping the tag and labelling the output:
+keeping the tag and naming the C4 component it exercises:
 
 ```python
 @allure.story("DI-n")                      # the link the whole chain hangs on
-@allure.label("output", "rdm/<impl>.py")   # which design output this exercises
+@allure.label("component", "<c4 key>")    # the component it exercises (dhf/c4/workspace.dsl)
 def test_<behavior>(...):
     """DI-n: <the requirement in one line>."""
     with verification_step("<what this step checks>"):   # tests/acceptance/evidence.py
@@ -196,10 +196,15 @@ checks something the input's text states.
 
 ```bash
 uv run rdm story design-gate --dhf dhf
+uv run coverage run --source=rdm -m pytest tests --ignore=tests/acceptance -q   # unit tests, under coverage
+uv run coverage xml -q -o dhf/data/unit-coverage.xml
 uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
-uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml \
+  --unit-coverage dhf/data/unit-coverage.xml
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
+The unit tests' coverage is unit-test evidence the matrix shows beside the
+design inputs; it never verifies one (Design Review 63).
 Plus the general suite: `uv run pytest tests`, `uv run ruff check .`, and
 `uv run --extra docs mkdocs build --strict` if docs changed.
 
@@ -240,7 +245,7 @@ merge commits only, as `examples/github-document-control/` does
 No gate judges whether a test proves its design input; a person does. Before
 each release, read every design input with its whole chain — its user needs,
 its design prose, its tagged test and that test's verification steps, its
-output labels and its last run — and record what was found and decided as a
+component labels and its last run — and record what was found and decided as a
 design review, one input at a time (Design Review 58 is the first). Changes it
 asks for go through this loop like any other.
 

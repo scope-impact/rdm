@@ -296,6 +296,21 @@ rdm:namesComponent a owl:ObjectProperty ; rdfs:label "names component" ; rdfs:do
     rdfs:comment "A component the run names: by a component label (the model's key), or the component holding a file an output label names (DI-56)." .
 rdm:unknownComponent a owl:DatatypeProperty ; rdfs:label "unknown component" ; rdfs:domain rdm:TestRun ;
     rdfs:comment "A component label's key that names no component of the C4 model (DI-56)." .
+rdm:ManualPage a owl:Class ; rdfs:label "Manual page" ;
+    rdfs:comment "A page of the user manual, listed by a controlled document of kind manual (graph: manual, DI-77)." .
+rdm:TestExample a owl:Class ; rdfs:label "Test example" ;
+    rdfs:comment "A tagged-test example a manual page shows: a fenced code block with an Allure story decorator (DI-77)." .
+rdm:pageOf a owl:ObjectProperty ; rdfs:label "page of" ; rdfs:domain rdm:ManualPage ; rdfs:range rdm:Document ;
+    rdfs:comment "The manual document that lists the page." .
+rdm:includesFile a owl:DatatypeProperty ; rdfs:label "includes file" ; rdfs:domain rdm:ManualPage ;
+    rdfs:comment "A file the page includes whole; its text is read as the page's." .
+rdm:namesInput a owl:ObjectProperty ; rdfs:label "names input" ; rdfs:domain rdm:ManualPage ;
+    rdfs:range rdm:DesignInput ; rdfs:comment "A design input the page names by its id: a page to re-read when the input changes." .
+rdm:onPage a owl:ObjectProperty ; rdfs:label "on page" ; rdfs:domain rdm:TestExample ; rdfs:range rdm:ManualPage .
+rdm:writesLabel a owl:DatatypeProperty ; rdfs:label "writes label" ; rdfs:domain rdm:TestExample ;
+    rdfs:comment "The name of an Allure label the example writes: story, component, output ..." .
+rdm:missingPage a owl:DatatypeProperty ; rdfs:label "missing page" ; rdfs:domain rdm:Document ;
+    rdfs:comment "A page the manual document lists that does not exist (a warning, DI-77)." .
 rdm:showsView a owl:DatatypeProperty ; rdfs:label "shows view" ; rdfs:domain rdm:Document ;
     rdfs:comment "The key of an architecture view whose image the document shows." .
 dcterms:description rdfs:label "description" .

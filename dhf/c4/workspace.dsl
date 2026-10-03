@@ -261,6 +261,12 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:graph"
           }
+          manual_reader = component "Manual reader" "The pages a manual document lists, and the files they include whole: the design inputs each names and the labels of each tagged-test example" "Python" {
+            properties {
+              "code" "rdm/graph/manual.py"
+            }
+            tags "context:graph"
+          }
           agent_server = component "Agent server" "rdm graph mcp: read-only, idempotent schema, query, trace and validate for agents, each projecting the record afresh; query rows capped" "Python, MCP" {
             properties {
               "code" "rdm/graph/agent.py"
@@ -303,6 +309,22 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
       }
+      docs_site = container "Documentation site" "The user manual, built with MkDocs; a controlled document lists its pages" "MkDocs" {
+        group "publishing" {
+          user_manual = component "User manual" "The pages that teach a team to keep its record the way the gates enforce" "Markdown" {
+            properties {
+              "code" "docs/"
+            }
+            tags "context:publishing"
+          }
+          docs_hooks = component "Docs build hooks" "Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual" "Python, MkDocs" {
+            properties {
+              "code" "docs/_hooks/"
+            }
+            tags "context:publishing"
+          }
+        }
+      }
       graph_store = container "Graph store" "The record projected into RDF" "Oxigraph" "Database"
       sparql_endpoint = container "SPARQL endpoint" "rdm graph serve: the store, read-only, refusing updates and SERVICE" "Python, pyoxigraph"
       documents_image = container "Documents image" "Renders the documents to PDF" "Docker: Ubuntu, Pandoc, Typst"
@@ -336,6 +358,12 @@ workspace "RDM" "The design record of regulated software." {
     projection -> risk_register "reads risks and findings with"
     projection -> release_gate "reads the findings about the whole record with"
     projection -> vocabulary "declares terms and rules in"
+    projection -> manual_reader "reads the user manual with"
+    manual_reader -> user_manual "reads the pages of"
+    docs_hooks -> projection "draws the traceability maps from the graph of"
+    docs_hooks -> kernel "parses frontmatter with"
+    docs_hooks -> markdown_extensions "reads fenced blocks with"
+    engineer -> docs_site "learns to keep the record from"
     projection -> explorer_file "writes the explorer file with"
     explorer_file -> projection "takes the executions graph's name from"
     shacl_validation -> projection "validates the graph of"
@@ -501,7 +529,7 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_publishing" {
       title "Publishing: components (C3)"
-      include renderer markdown_extensions first_pass_output evidence_bundle snippets dmr_index verification_report report_layout pdf_action allure_reader documents_image gates_action record_reader risk_register test_tags verification_data
+      include renderer markdown_extensions first_pass_output evidence_bundle snippets dmr_index user_manual docs_hooks verification_report report_layout pdf_action allure_reader documents_image gates_action record_reader risk_register test_tags verification_data
       exclude "allure_reader -> test_tags"
       exclude "gates_action -> verification_data"
       exclude "verification_data -> allure_reader"
@@ -510,7 +538,7 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_graph" {
       title "Knowledge graph: components (C3)"
-      include projection vocabulary gate_shapes shacl_validation explorer_file agent_server agent_harness allure_reader architecture_model gap_analysis gates_action graph_store record_reader risk_register test_tags
+      include projection vocabulary gate_shapes shacl_validation explorer_file manual_reader agent_server user_manual agent_harness allure_reader architecture_model gap_analysis gates_action graph_store record_reader risk_register test_tags
       exclude "allure_reader -> test_tags"
       autolayout tb
     }

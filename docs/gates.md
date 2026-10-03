@@ -172,3 +172,11 @@ image does. The [reusable gates](reusable-ci.md) upload it in `rdm-evidence`.
 
 `dmr` writes the device-master-record index (id, title, path and revision of
 each controlled document) from the documents' own frontmatter.
+
+The user manual belongs in that index too: a controlled document of
+`kind: manual` lists its pages under `pages:` (paths from the project root),
+and the pages stay where the site builds them. The graph reads each listed
+page (`…graph/manual`): `trace` of a design input lists the pages that name
+it, the pages to re-read when it changes, and `rdm graph validate` warns on a
+listed page that is missing and on a test example that writes no `component`
+label. RDM's own manual is `dhf/documents/user_manual.md`.
