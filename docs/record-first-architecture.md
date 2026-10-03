@@ -67,7 +67,7 @@ sequenceDiagram
     G-->>A: DI id + failing stub test + checklist
     A->>G: commit the design documents first
     G-->>A: design gate passes (that commit is the approval)
-    A->>A: implement; replace the stub with real assertions
+    A->>A: implement, then replace the stub with real assertions
     A->>G: push, open a pull request
     G-->>A: CI: design gate → acceptance tests → verify → release gate
     A->>R: request review

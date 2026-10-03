@@ -20,7 +20,7 @@ edited.
 
 ```mermaid
 flowchart LR
-    subgraph write["written by people and agents — only through reviewed pull requests"]
+    subgraph write["changed only by a reviewed pull request"]
         R["<b>Record</b><br>needs, design inputs, risks,<br>checklists, tagged tests"]
     end
     R --> G["<b>Gates</b><br>pass / block"]
