@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 63
+revision: 64
 title: Design Review — RDM
 ---
 
@@ -2053,6 +2053,63 @@ DI-58, DI-59, DI-60, DI-62, DI-67, DI-68, DI-69.
 | DI-65 | Unstated labels; `worktree=clean` written when nothing was checked | Text widened; `unknown` when the commit is |
 | DI-66 | Views, implied relationships unstated; RDM's naming conventions checked as reading; **the shared kernel drawn in the specification context** | Text widened; the convention check moved to DI-68's own-record step; the kernel drawn in no context |
 | DI-70 | An image of no view, removal and refusal, unstated | Text widened |
+
+# Design Review 61 — What a test exercises, without reading the code (proposal)
+
+**Scope reviewed:** how the graph learns which components a test run
+exercises (DI-56, DI-67, DI-68, DI-69), and how to learn it for a project in
+any language.
+
+**Disposition:** Proposed. Nothing changes until it is approved.
+
+## Why
+
+A test names the code it exercises in `output` labels, as file paths. Three
+components of RDM's own model — first-pass output, project templates and the
+result formatters — read as exercised by no test, though DI-9, DI-15 and
+DI-17 run their code: each test named the entry point it calls, not the
+module behind it. The graph says no design input covers them, which is
+false. Two things make this worse for a project that is not Python:
+
+- the labels are file paths, so they follow the code's layout and break when
+  it moves, and a test claims only what its author remembered to name;
+- the dependencies DI-67 and DI-68 compare with the model are Python imports
+  read from the syntax tree (`rdm/architecture/model.py`); a Java or
+  TypeScript project has none.
+
+## Proposed
+
+The C4 model is the language-free description of the code, so the record
+reasons over it, and reads code only where a project offers it.
+
+1. **A test names components, not files.** DI-56 amended: a test run links to
+   the components its `component` labels name, by the model's component key;
+   a key the model does not declare is a warning, as an unknown design-input
+   tag is. `output` labels keep working, mapped to components by code path as
+   today.
+2. **What a named component uses is reached.** A new input, DI-73: the graph
+   derives, by a rule declared in its vocabulary (DI-62), that a run reaches
+   each component the declared relationships lead to from a component it
+   names; reached is kept apart from named, and never stated by the record.
+3. **The trace says which.** DI-69 amended: the trace of a design input lists
+   the components its runs name and, apart, those they reach.
+4. **Code is read only where a project offers it.** DI-67 and DI-68 amended:
+   the import dependencies stay, for Python only, as a check of the declared
+   relationships; for any other language the declared relationships stand
+   alone, and the record says the check did not run rather than that it
+   found nothing.
+5. **Coverage, when a project gives it, is evidence.** A new input, DI-74
+   (optional for a project): RDM reads per-test coverage in LCOV or Cobertura
+   XML, which coverage.py, JaCoCo, Istanbul and gcov write, maps each covered
+   file to its component by code path, and links the run to the components it
+   actually ran, apart from those it names or reaches. RDM parses no source.
+
+## Open questions
+
+- Whether a reached component may satisfy DI-68's check that a run exercises
+  only components of its input's context, or only a named one may.
+- Whether DI-74 belongs in this change or a later one: per-test coverage is
+  simple with coverage.py and harder elsewhere.
 
 # Approval
 
