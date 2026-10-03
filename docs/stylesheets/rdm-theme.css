@@ -82,7 +82,36 @@
 
   --md-text-font: "Nunito Sans";
   --md-code-font: "JetBrains Mono";
+
+  /* Mermaid diagrams: white nodes outlined in Charcoal, Charcoal edges, Ivory labels */
+  --md-mermaid-font-family: var(--rdm-font-body);
+  --md-mermaid-node-bg-color: var(--rdm-white);
+  --md-mermaid-node-fg-color: var(--rdm-charcoal);
+  --md-mermaid-edge-color: var(--rdm-charcoal);
+  --md-mermaid-label-bg-color: var(--rdm-ivory);
+  --md-mermaid-label-fg-color: var(--rdm-charcoal);
+  --md-mermaid-sequence-actor-bg-color: var(--rdm-white);
+  --md-mermaid-sequence-actor-fg-color: var(--rdm-charcoal);
+  --md-mermaid-sequence-actor-border-color: var(--rdm-charcoal);
+  --md-mermaid-sequence-actor-line-color: var(--rdm-edge);
+  --md-mermaid-sequence-note-bg-color: var(--rdm-sunk);
+  --md-mermaid-sequence-note-fg-color: var(--rdm-charcoal);
+  --md-mermaid-sequence-note-border-color: var(--rdm-line);
+  --md-mermaid-sequence-message-color: var(--rdm-charcoal);
 }
+
+/* Admonitions in the palette: a note in Nexus Blue, a warning in Maroon, a tip in Lime. */
+[data-md-color-scheme="rdm"] .md-typeset .admonition,
+[data-md-color-scheme="rdm"] .md-typeset details { border-radius: 0.6875rem; background: var(--rdm-white); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.note, .info, .abstract, .question) { border-color: var(--rdm-nexus); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.note, .info, .abstract, .question) > :is(.admonition-title, summary) { background: var(--rdm-nexus-wash); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.note, .info, .abstract, .question) > :is(.admonition-title, summary)::before { background-color: var(--rdm-nexus); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.warning, .danger, .failure, .bug, .caution, .attention, .error) { border-color: var(--rdm-maroon); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.warning, .danger, .failure, .bug, .caution, .attention, .error) > :is(.admonition-title, summary) { background: rgba(85, 17, 31, 0.08); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.warning, .danger, .failure, .bug, .caution, .attention, .error) > :is(.admonition-title, summary)::before { background-color: var(--rdm-maroon); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.tip, .hint, .important, .success, .check, .done, .example, .quote) { border-color: var(--rdm-charcoal); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.tip, .hint, .important, .success, .check, .done, .example, .quote) > :is(.admonition-title, summary) { background: var(--rdm-lime); }
+[data-md-color-scheme="rdm"] .md-typeset :is(.tip, .hint, .important, .success, .check, .done, .example, .quote) > :is(.admonition-title, summary)::before { background-color: var(--rdm-charcoal); }
 
 /* Headings: JetBrains Mono, regular weight, tight tracking; the page title in Maroon. */
 [data-md-color-scheme="rdm"] .md-typeset h1,
