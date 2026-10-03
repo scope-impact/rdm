@@ -66,7 +66,8 @@ The PDF action is in the Reusable gates container; the others are in `rdm`.
 The rules a reviewer needs to judge the design:
 
 - **Rendering.** A placeholder with no data fails the render rather than
-  rendering empty. Each data file is one entry of the template's context,
+  rendering empty, with a message naming it (exit 2), as does a template
+  that does not exist or a configuration that is empty. Each data file is one entry of the template's context,
   named by the file's name without its extension; two data files with one
   name are an error. Only when a template asks for the first pass's output
   is it rendered a second time with that output available; otherwise one
@@ -80,16 +81,17 @@ The rules a reviewer needs to judge the design:
   removes each `[[…]]` note, and the space before it, from the output; a
   note may run over several lines of one paragraph, and one left open at the
   paragraph's end is kept as text. Neither extension touches code: fenced
-  blocks (``` or ~~~) and inline code are left as written, and only an ATX
+  blocks (``` or ~~~, also inside a blockquote or a list item) and inline
+  code are left as written, and only an ATX
   heading (`#` to `######`, then a space) is numbered. A
   project laid down by `rdm init` enables only the vocabulary extension.
 - **Snippets.** A snippet runs from its opening marker to the closing marker
-  in the same column, its lines kept from that column. An empty or repeated
+  in the same column (each a whole word, never part of a longer one), its lines kept from that column. An empty or repeated
   key in one file, a closing marker in another column, or a missing closing
   marker is refused, naming the file and line. The snippets are a data file
   the Renderer reads like any other.
 - **DMR index.** One entry per Markdown document in the given directory with
-  a frontmatter id, sorted by id, marked as generated. A document with no id
+  a frontmatter id (a blank one is none), sorted by id, marked as generated. A document with no id
   is skipped with a warning; a directory with no controlled document is an
   error.
 - **Verification report.** The status of each design input is the release

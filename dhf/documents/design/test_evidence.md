@@ -100,9 +100,13 @@ kept.
 
 **Test result translation** (`rdm translate`) chooses a format, or detects
 it, and writes each test's name, result and failure message as result
-data; the gtest flattener also reads xunit. A test that failed or errored
-is a fail, one skipped or disabled a skip, and only the rest a pass; a
-qttest function fails when any of its incidents does. The data feeds document
+data; the gtest flattener also reads xunit, keying each test by its class
+name, so tests of one name in different modules stay apart. A test that
+failed or errored is a fail, with its failure's message or else its text;
+one skipped or disabled a skip, and only the rest a pass; a qttest function
+fails when any of its incidents does, and is a skip when it was skipped
+with a message (Qt5) or an incident (Qt6). A file with no test results is
+refused, and every refusal is a message, exit 2. The data feeds document
 templates; nothing reconciles it against design inputs.
 
 The relationships that matter, in the direction of the arrow: the pytest

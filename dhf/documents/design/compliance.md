@@ -54,7 +54,10 @@ and the documents to check, and applies these rules:
 - *Reading a checklist.* A line's first word is its clause key and the rest
   its description; a line starting with `#` is a comment; a line
   `include <name>` names a built-in checklist or a file relative to the
-  including one. Each file is read once, so an include cycle ends.
+  including one. Each file is read once, told apart by its resolved path,
+  so an include cycle ends and no file is counted twice. A byte-order mark is
+  not part of the first key. A bare `include`, or a checklist or document
+  that cannot be read, is an error naming it (exit 2).
 - *Matching a reference.* Only text inside `[[ … ]]` blocks counts; a bare
   mention of a key elsewhere is not a reference. A block never runs past a
   blank line, so a stray `[[` does not turn the next paragraphs' mentions
@@ -70,11 +73,15 @@ and the documents to check, and applies these rules:
   format, so the report can itself be used as a checklist, sorted in
   section order (`62304:5.1.2` before `62304:5.1.11`), since includes would
   otherwise scramble the standard's order. The exit status is 3 when any
-  clause is missing, 0 when none is, and 1 when no checklist is given.
+  clause is missing, 0 when none is, 1 when no checklist is given, and 2
+  when the checklist has no clauses: nothing was checked. A document that
+  still holds a placeholder marker is named in a warning, since its
+  references may describe nothing yet.
 - *Reporting coverage* (DI-12). For one or more checklists, one table row
   each (total, missing, covered, percent) and an overall row; in verbose
   mode, each checklist's missing clauses, the first ten and a count of the
-  rest.
+  rest. It exits as the audit does: 3 when any clause is missing, 2 for a
+  checklist with no clauses or none at all.
 - *Listing* (DI-11, DI-25). The built-in checklists are listed by name.
 
 **Checklists** holds seventeen built-in checklists (DI-11): IEC 62304 base
@@ -103,12 +110,8 @@ reading and matching rules; they are the graph's inputs, not parts of these.
 Assumptions and open questions:
 
 - The ISO 14971 2019 checklist holds only its header comments, so it has no
-  clauses: coverage skips it, and an audit against it reports success. DI-11
+  clauses, and gap analysis against it is an error (Design Review 55). DI-11
   names ISO 14971; the 2007 edition is the usable one today.
-- An audit against a checklist with no clauses prints a warning and still
-  exits 0; a checklist file that does not exist is skipped silently by the
-  coverage report but is an error in an audit. Whether either should fail is
-  open.
 - Verbose coverage names at most ten missing clauses per checklist and
   counts the rest; the gap report names them all.
 

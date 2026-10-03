@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 55
+revision: 56
 title: Design Review — RDM
 ---
 
@@ -1608,6 +1608,50 @@ changed: it now names the merge hook.
   pre-commit hook (DI-26).
 - The hook told a person without RDM to `pip install rdm`, which installs an
   unrelated package of that name. It now names RDM's own install.
+
+# Design Review 55 — Gap analysis and publishing say what is wrong
+
+**Scope reviewed:** gap analysis and the checklists (DI-10, DI-11, DI-12),
+test result translation (DI-17), rendering and post-processing (DI-7, DI-9),
+snippets (DI-16) and the DMR index (DI-29), against an adversarial behaviour
+test and a usability test of the installed package. No design input changed.
+
+**Disposition:** Approved.
+
+- An audit against a checklist with no clauses (the built-in ISO 14971 2019
+  holds only its header) said *Success* and exited 0, and coverage skipped
+  it. That was an open question in the compliance design; it is closed: a
+  checklist with no clauses, or one that does not exist, is an error (exit
+  2) in an audit and in coverage alike, since nothing was checked.
+- Coverage exited 0 whatever it found. It now exits 3 when any clause is
+  missing, as the audit does.
+- A checklist reached by two spellings of its path (`include ../a.txt`,
+  `include ./a.txt`) was read twice, overstating the clause count. Files are
+  now told apart by their resolved path. An include with spaces around the
+  name is read; a bare `include`, a missing file or a directory is an error
+  naming it, not a traceback. A byte-order mark no longer hides the first
+  key.
+- A fresh scaffold passes gap analysis, because its templates reference
+  every clause while still holding placeholders. The report now warns,
+  naming each document that still holds a placeholder: its references may
+  describe nothing yet.
+- `rdm translate` keyed xunit results by the suite, so three tests named
+  alike in three modules became one row; a test is now keyed by its class
+  name. A Qt5 function skipped with a message disappeared; it is a skip. A
+  failure's text is its message when it has no `message` attribute. A file
+  with no test results in it (an HTML page) is refused, and every translate
+  error is a message with exit 2.
+- Audit-note exclusion deleted `[[…]]` text inside a code fence in a
+  blockquote or a list item. Code fences are now found inside containers too.
+- A snippet marker was any `RDOC` inside a word (`PRDOC_LIMIT`). Markers are
+  whole words now; a whole-word `ENDRDOC` in another column is still
+  refused, as the design says.
+- `rdm story dmr` indexed a blank `id:` as the document `None`. A blank id is
+  no id: the document is skipped with a warning.
+- `rdm render` ended in a traceback for an empty configuration, a value the
+  template does not have, or a template that does not exist. Each is now a
+  message with exit 2. Any command whose output is piped into a reader that
+  stops early (`| head`) ends quietly instead of with a traceback.
 
 # Approval
 
