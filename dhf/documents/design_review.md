@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 57
+revision: 58
 title: Design Review — RDM
 ---
 
@@ -1695,6 +1695,27 @@ installed package. DI-24's text changed: it names what adopt now lays down.
 - Gap analysis names a gap as the glossary does (*N gaps*, not *missing
   items*), and verbose coverage prints no empty heading when nothing is
   missing.
+
+# Design Review 57 — Review findings on the behaviour fixes
+
+**Scope reviewed:** the review of the behaviour fixes' pull request: the
+design gate's approval check during a merge (DI-2), the record reader's user
+needs (DI-46), and test result translation (DI-17). No design input changed.
+
+**Disposition:** Approved.
+
+- The merge hook of Design Review 54 blocked every valid merge that brought
+  an approved design change with its implementation. While a merge is being
+  made, git stages the merged branch's documents, so the design gate read
+  them as uncommitted. A document staged exactly as the merged commit holds
+  it was committed and reviewed on that branch: during a merge it is
+  approved. A document whose merge result differs from both sides (a
+  resolved conflict) is new content, and still is not.
+- A user need written as a blank string was dropped without a word, where
+  every other entry with no id fails the gate. It now fails it too.
+- `rdm translate` accepted a result file whose suites hold no test, and wrote
+  empty data. A file whose results flatten to no test is refused, as one
+  with no suite is.
 
 # Approval
 

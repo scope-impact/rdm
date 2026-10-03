@@ -105,8 +105,9 @@ name, so tests of one name in different modules stay apart. A test that
 failed or errored is a fail, with its failure's message or else its text;
 one skipped or disabled a skip, and only the rest a pass; a qttest function
 fails when any of its incidents does, and is a skip when it was skipped
-with a message (Qt5) or an incident (Qt6). A file with no test results is
-refused, and every refusal is a message, exit 2. The data feeds document
+with a message (Qt5) or an incident (Qt6). A file with no test results, or
+whose results flatten to no test, is refused, and every refusal is a
+message, exit 2. The data feeds document
 templates; nothing reconciles it against design inputs.
 
 The relationships that matter, in the direction of the arrow: the pytest
