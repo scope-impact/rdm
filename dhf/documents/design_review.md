@@ -1814,6 +1814,33 @@ a run tagged with an id no design input declares is warned about. It takes the
 reading steps, the mistyped-id step and its own output label, and the
 ingestion DI-1 drops. To be made once the pass is complete.
 
+## DI-4 — Results reconcile to a status per design input and render as a matrix
+
+Traces to UN-004; described by the Verification data row of the release
+context and realised by the Allure reader of the test-evidence context;
+verified by `test_verification_status_traceable_from_results` (outputs
+`rdm/evidence/allure.py` and `rdm/release/verify.py`), whose last run passed
+with four verification steps. **Changes requested:**
+
+- No matrix is rendered: the step named for rendering checks the data the
+  matrix is built from, never the table its template writes.
+- "Allure tags" could mean the story labels of the results or the decorators
+  in test source; the test means the labels of the results.
+- A skipped result, and a broken one, are not tried: the test does not say
+  which status either gives a design input.
+- Two steps verify how results are read — a failed or broken step fails its
+  run, and `verify` names a result file it cannot read — which is the new
+  reading design input's of DI-3's decision.
+- One verification step's name is cut off mid-sentence.
+
+**Decision (C):** reword DI-4 to: "RDM shall reconcile each declared design
+input against the story labels of the executed Allure results as verified,
+failed or untested, and render the traceability matrix of those statuses
+grouped under the user needs." Its test is to render the matrix and check its
+rows, to try a skipped and a broken result, and to have whole step names; the
+two reading steps move to the reading design input. To be made once the pass
+is complete.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
