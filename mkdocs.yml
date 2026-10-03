@@ -17,17 +17,17 @@ theme:
     - navigation.top
     - content.code.copy
     - toc.follow
+  # One theme, its tokens in docs/stylesheets/rdm-theme.css (shared with the traceability map).
   palette:
-    - scheme: default
-      primary: teal
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - scheme: slate
-      primary: teal
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
+    scheme: rdm
+    primary: custom
+    accent: custom
+  font:
+    text: Nunito Sans
+    code: JetBrains Mono
+
+extra_css:
+  - stylesheets/rdm-theme.css
 
 plugins:
   - search

@@ -1,0 +1,104 @@
+/*
+ * RDM theme — the one source of the colours and type the docs site and the
+ * traceability map share. Edit tokens here; everything else reads them.
+ *
+ * Palette: five colours and white. Every secondary tone is a transparent
+ * Charcoal, Maroon or Nexus Blue, never a new hue.
+ */
+:root {
+  /* Palette */
+  --rdm-charcoal: #2B2D31;
+  --rdm-ivory: #F7F5F3;
+  --rdm-maroon: #55111F;
+  --rdm-nexus: #383EE9;
+  --rdm-lime: #BEF274;
+  --rdm-white: #FFFFFF;
+
+  /* Tints (transparent palette colours) */
+  --rdm-muted: rgba(43, 45, 49, 0.62);
+  --rdm-line: rgba(43, 45, 49, 0.16);
+  --rdm-edge: rgba(43, 45, 49, 0.28);
+  --rdm-sunk: rgba(43, 45, 49, 0.06);
+  --rdm-on-maroon-muted: rgba(255, 255, 255, 0.72);
+  --rdm-nexus-wash: rgba(56, 62, 233, 0.08);
+
+  /* Roles */
+  --rdm-page: var(--rdm-maroon);      /* behind the header and cards */
+  --rdm-card: var(--rdm-ivory);       /* where content sits */
+  --rdm-text: var(--rdm-charcoal);
+  --rdm-link: var(--rdm-nexus);
+  --rdm-highlight: var(--rdm-nexus);  /* a selection, a lit trace */
+  --rdm-success: var(--rdm-lime);     /* a fill, never text on Ivory */
+
+  /* The record's kinds, as the traceability map draws them */
+  --rdm-kind-need: var(--rdm-maroon);       /* outlined */
+  --rdm-kind-risk: var(--rdm-maroon);       /* filled */
+  --rdm-kind-input: var(--rdm-nexus);
+  --rdm-kind-test: var(--rdm-lime);         /* a Lime chip, Charcoal text */
+  --rdm-kind-component: var(--rdm-charcoal);
+  --rdm-kind-context: var(--rdm-maroon);
+
+  /* Type */
+  --rdm-font-display: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --rdm-font-body: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --rdm-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --rdm-heading-tracking: -0.035em;
+  --rdm-radius-card: 1.5rem;
+  --rdm-radius-pill: 999px;
+}
+
+/* ---- Material for MkDocs, mapped onto the tokens (palette scheme "rdm") ---- */
+[data-md-color-scheme="rdm"] {
+  color-scheme: light;
+  --md-primary-fg-color: var(--rdm-maroon);
+  --md-primary-fg-color--light: var(--rdm-maroon);
+  --md-primary-fg-color--dark: var(--rdm-maroon);
+  --md-primary-bg-color: var(--rdm-white);
+  --md-primary-bg-color--light: var(--rdm-on-maroon-muted);
+  --md-accent-fg-color: var(--rdm-nexus);
+  --md-accent-fg-color--transparent: var(--rdm-nexus-wash);
+  --md-accent-bg-color: var(--rdm-white);
+
+  --md-default-bg-color: var(--rdm-ivory);
+  --md-default-fg-color: var(--rdm-charcoal);
+  --md-default-fg-color--light: var(--rdm-muted);
+  --md-default-fg-color--lighter: var(--rdm-line);
+  --md-default-fg-color--lightest: var(--rdm-sunk);
+
+  --md-typeset-color: var(--rdm-charcoal);
+  --md-typeset-a-color: var(--rdm-nexus);
+  --md-typeset-mark-color: var(--rdm-lime);
+  --md-typeset-table-color: var(--rdm-line);
+  --md-typeset-table-color--light: var(--rdm-sunk);
+
+  --md-code-bg-color: var(--rdm-sunk);
+  --md-code-fg-color: var(--rdm-charcoal);
+
+  --md-footer-bg-color: var(--rdm-charcoal);
+  --md-footer-bg-color--dark: var(--rdm-charcoal);
+  --md-footer-fg-color: var(--rdm-white);
+  --md-footer-fg-color--light: var(--rdm-on-maroon-muted);
+  --md-footer-fg-color--lighter: rgba(255, 255, 255, 0.45);
+
+  --md-text-font: "Nunito Sans";
+  --md-code-font: "JetBrains Mono";
+}
+
+/* Headings: JetBrains Mono, regular weight, tight tracking; the page title in Maroon. */
+[data-md-color-scheme="rdm"] .md-typeset h1,
+[data-md-color-scheme="rdm"] .md-typeset h2,
+[data-md-color-scheme="rdm"] .md-typeset h3 {
+  font-family: var(--rdm-font-display);
+  font-weight: 400;
+  letter-spacing: var(--rdm-heading-tracking);
+}
+[data-md-color-scheme="rdm"] .md-typeset h1 { color: var(--rdm-maroon); }
+[data-md-color-scheme="rdm"] .md-header__title,
+[data-md-color-scheme="rdm"] .md-tabs__link { font-family: var(--rdm-font-display); letter-spacing: -0.01em; }
+
+/* Links keep their colour; focus rings are Nexus Blue. */
+[data-md-color-scheme="rdm"] .md-typeset a:hover { color: var(--rdm-maroon); }
+[data-md-color-scheme="rdm"] :focus-visible { outline-color: var(--rdm-nexus); }
+
+/* Marked text and the "copy" button use the palette. */
+[data-md-color-scheme="rdm"] .md-typeset mark { background: var(--rdm-lime); color: var(--rdm-charcoal); }
