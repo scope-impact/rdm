@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Fixed: the record says what it holds, or the design gate fails** (Design
+  Review 50). A design input the reader could not read (`design_inputs` not a
+  list of entries each with one id, or outside a design document), a user need
+  with no id, a repeated frontmatter key and a non-UTF-8 document were dropped
+  without a word, so a requirement nothing tests passed every gate. Each is now
+  a failure. Approval needs a document git tracks and can see: ignored,
+  untracked, skip-worktree and assume-unchanged files, and links to them, are
+  not approved. Outside git the verdict says approval was not checked. A
+  placeholder is a whole word. A context with two design documents is a
+  warning, and `new-input` refuses it.
 - **Fixed: in a project nested in its repository, a test run now finds its
   test** (DI-61, Design Review 49). Tests were named from the repository root
   and runs from the project, so none linked, and every tagged test was warned

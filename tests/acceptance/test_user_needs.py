@@ -21,6 +21,7 @@ Skips cleanly if allure-pytest is not installed.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -28,7 +29,14 @@ import pytest
 from rdm.evidence import allure as allure_ingest
 from rdm.specification import persona
 from rdm.release.verify import build_verification
-from rdm.specification.design_gate import UNREADABLE_FRONTMATTER, check_design_docs, run_design_gate
+from rdm.specification.design_gate import (
+    CONTEXT_REPEATED,
+    MALFORMED_DECLARATION,
+    UNREADABLE_FRONTMATTER,
+    check_design_docs,
+    run_design_gate,
+    story_design_gate_command,
+)
 from rdm.specification.sdd import design_input_ids, design_inputs
 from rdm.release.gate import INPUT_FAILED, UNREADABLE_RESULT, run_release_gate
 from tests.util import COMPLETE_DOC as COMPLETE
@@ -104,7 +112,7 @@ def test_compile_verification_from_the_record(tmp_path: Path) -> None:
 
 @allure.story("DI-2")
 @allure.label("output", "rdm/specification/design_gate.py")
-def test_design_gate_requires_approval(tmp_path: Path) -> None:
+def test_design_gate_requires_approval(tmp_path: Path, capsys) -> None:
     """DI-2: block transition until design docs are complete and approved."""
     with verification_step("Incomplete (placeholder) design doc -> not complete"):
         docs = tmp_path / "dhf" / "documents" / "design"
@@ -143,6 +151,87 @@ def test_design_gate_requires_approval(tmp_path: Path) -> None:
             assert not gate.passed and any(e.name == UNREADABLE_FRONTMATTER and name in e.message
                                            for e in gate.events)
             broken.unlink()
+    _git(dhf.parent, "add", "-A")
+    _git(dhf.parent, "commit", "-m", "tidy")
+
+    def gate_on(name: str, text: str | bytes, where: str = "documents") -> list[str]:
+        doc = dhf / where / f"{name}.md"
+        doc.write_bytes(text) if isinstance(text, bytes) else doc.write_text(text)
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", name)
+        gate = run_design_gate(dhf)
+        found = [f"{e.name}: {e.message}" for e in gate.events if e.blocking]
+        attach(f"design gate on {name}", found)
+        doc.unlink()
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", f"drop {name}")
+        return found
+
+    with verification_step("a declaration the record reader cannot read fails the gate, naming its document"):
+        entry = "kind: design\ncontext: m\ndesign_inputs:\n  - "
+        for name, front in (
+                ("mapping", "kind: design\ncontext: m\ndesign_inputs: {id: DI-9, text: x}"),
+                ("string", "kind: design\ncontext: m\ndesign_inputs: 'DI-9 The system shall x'"),
+                ("bare-ids", "kind: design\ncontext: m\ndesign_inputs: [DI-9]"),
+                ("no-id", entry + "{text: x}"), ("wrong-key", entry + "{ID: DI-9, text: x}"),
+                ("null-id", entry + "{id: null, text: x}"), ("list-id", entry + "{id: [DI-9], text: x}"),
+                ("not-design", "id: X\ndesign_inputs:\n  - {id: DI-9, text: x}"),
+                ("need-no-id", "id: X\nuser_needs:\n  - {text: x}")):
+            found = gate_on(name, f"---\n{front}\n---\n\nbody\n", "documents/design")
+            assert any(f.startswith(MALFORMED_DECLARATION) and f"{name}.md" in f for f in found), (name, found)
+    with verification_step("a repeated frontmatter key, or a document that is not UTF-8, cannot be read"):
+        twice = ("---\nkind: design\ncontext: t\ndesign_inputs:\n  - {id: DI-8, text: a, traces_to: [UN-002]}\n"
+                 "design_inputs:\n  - {id: DI-9, text: b, traces_to: [UN-002]}\n---\n\nbody\n")
+        assert any(f.startswith(UNREADABLE_FRONTMATTER) and "twice.md" in f
+                   for f in gate_on("twice", twice, "documents/design"))
+        latin = "---\nid: L\ntitle: caf\xe9\n---\n\nbody\n".encode("latin-1")
+        assert any(f.startswith(UNREADABLE_FRONTMATTER) and "latin.md" in f for f in gate_on("latin", latin))
+    with verification_step("a design document git cannot see, or a link to one, is not approved"):
+        design = dhf / "documents" / "design"
+        (dhf.parent / ".gitignore").write_text("hidden.md\nreal.md\n")
+        write_design_doc(design, "hidden", design_inputs=(("DI-7", ["UN-002"]),))
+        _git(dhf.parent, "add", ".gitignore")
+        _git(dhf.parent, "commit", "-m", "ignore")
+        assert not run_design_gate(dhf).passed  # ignored, never committed
+        (design / "hidden.md").unlink()
+        real = write_design_doc(dhf.parent, "real", design_inputs=(("DI-7", ["UN-002"]),))  # outside the DHF
+        (design / "link.md").symlink_to(os.path.relpath(real, design))
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", "link")
+        assert not run_design_gate(dhf).passed  # the link is committed, its target is not
+        (design / "link.md").unlink()
+        real.unlink()
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", "unlink")
+        assert run_design_gate(dhf).passed
+        core = design / "core.md"
+        _git(dhf.parent, "update-index", "--skip-worktree", str(core))
+        core.write_text(core.read_text().replace("requirement", "weaker requirement"))
+        assert not run_design_gate(dhf).passed  # the edit is hidden from git status, not from the gate
+        _git(dhf.parent, "update-index", "--no-skip-worktree", str(core))
+        _git(dhf.parent, "checkout", "--", str(core))
+    with verification_step("a placeholder is the word TODO, not part of a longer word"):
+        review = dhf / "documents" / "design_review.md"
+        review.write_text(review.read_text() + "\nPHOTODOCUMENTATION of the device.\n")
+        _git(dhf.parent, "commit", "-am", "photo")
+        assert run_design_gate(dhf).passed
+    with verification_step("two design documents for one context are a warning naming both"):
+        write_design_doc(design, "core2", design_inputs=(("DI-6", ["UN-002"]),))
+        (design / "core2.md").write_text((design / "core2.md").read_text().replace("context: core2", "context: core"))
+        _git(dhf.parent, "add", "-A")
+        _git(dhf.parent, "commit", "-m", "second core")
+        warned = [e.message for e in run_design_gate(dhf).events if e.name == CONTEXT_REPEATED]
+        attach("context warnings", warned)
+        assert len(warned) == 1 and "core.md" in warned[0] and "core2.md" in warned[0]
+    with verification_step("outside git the gate passes but does not claim the design was committed"):
+        plain = tmp_path / "plain"
+        write_design_doc(plain / "documents" / "design", "core", design_inputs=(("DI-1", ["UN-002"]),))
+        (plain / "documents" / "design_review.md").write_text(COMPLETE)
+        _vv_plan(plain / "documents", ["UN-002"])
+        assert story_design_gate_command(plain) == 0
+        out = capsys.readouterr().out
+        attach("design gate outside git", out)
+        assert "approved (committed) in version control" not in out and "could not be checked" in out
 
 
 @allure.story("DI-3")

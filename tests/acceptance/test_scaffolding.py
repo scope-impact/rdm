@@ -22,7 +22,7 @@ from rdm.specification.new_input import story_new_input_command
 
 allure = pytest.importorskip("allure")
 
-from tests.acceptance.evidence import verification_step  # noqa: E402
+from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 
 @allure.story("DI-15")
@@ -198,6 +198,15 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
         assert story_new_input_command(
             dhf_dir=dhf, context="alarms", text="x", traces_to="UN-999"
         ) != 0
+        assert set(di["id"] for di in design_inputs(dhf)) == {"DI-1", "DI-3", "DI-4", "DI-5", "DI-6"}
+    with verification_step("Refuses a context with two design documents, naming both (nothing scaffolded)"):
+        second = dhf / "documents" / "design" / "alarms_too.md"
+        second.write_text("---\nid: SDS-A-002\nkind: design\ncontext: alarms\ndesign_inputs: []\n---\n")
+        capsys.readouterr()
+        assert story_new_input_command(dhf_dir=dhf, context="alarms", text="x", traces_to="UN-001") == 2
+        out = capsys.readouterr().out
+        attach("new-input on a repeated context", out)
+        assert "alarms.md" in out and "alarms_too.md" in out
         assert set(di["id"] for di in design_inputs(dhf)) == {"DI-1", "DI-3", "DI-4", "DI-5", "DI-6"}
 
 

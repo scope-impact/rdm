@@ -220,6 +220,11 @@ def story_new_input_command(
     if context not in contexts:
         print(f"Error: unknown context '{context}'. Known contexts: {', '.join(sorted(contexts))}")
         return 2
+    owners = [doc for doc in find_design_docs(dhf) if context_of(doc) == context]
+    if len(owners) > 1:
+        print(f"Error: context '{context}' has {len(owners)} design documents "
+              f"({', '.join(str(doc.relative_to(dhf)) for doc in owners)}); keep one, then add the input")
+        return 2
 
     needs = registry_user_needs(dhf)
     refs = [ref.strip() for ref in traces_to.split(",") if ref.strip()]
