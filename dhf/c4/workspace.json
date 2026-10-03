@@ -80,16 +80,15 @@
           {
             "components": [
               {
-                "description": "Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers",
+                "description": "Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers; in no bounded context",
                 "documentation": {},
-                "group": "specification",
                 "id": "6",
                 "name": "Shared kernel",
                 "properties": {
                   "code": "rdm/kernel/",
                   "structurizr.dsl.identifier": "kernel"
                 },
-                "tags": "Element,Component,context:specification",
+                "tags": "Element,Component",
                 "technology": "Python"
               },
               {
@@ -1714,7 +1713,7 @@
     "structurizr.inspection.warning": "0"
   },
   "rdm": {
-    "workspace_sha256": "7bc934e63444f315f907c4c86a7d4ab25742b2b5096fa66436c1c5324455de06"
+    "workspace_sha256": "137d6a8737b023720e7b19a67a82bfbc07784f8bde5bfd810d7ad5e72cc2da1b"
   },
   "views": {
     "componentViews": [

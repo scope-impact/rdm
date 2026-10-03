@@ -12,13 +12,13 @@ design_inputs:
     text: "RDM shall reconcile each declared design input against the story labels of the executed Allure results as verified, failed or untested, and render the traceability matrix of those statuses grouped under the user needs."
     traces_to: [UN-004]
   - id: DI-18
-    text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status)."
+    text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status), listing any result it could not read and refusing a missing results directory."
     traces_to: [UN-004]
   - id: DI-30
-    text: "RDM shall produce a release evidence bundle from the record: the verification data, the rendered traceability matrix, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files, written to an output directory for retention."
+    text: "RDM shall produce a release evidence bundle from the record: the verification data, the rendered traceability matrix, the verification report, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files and any referenced attachment or result it could not include, written to an output directory apart from the results, replacing an earlier bundle there, and refusing to write a bundle it cannot complete."
     traces_to: [UN-012]
   - id: DI-63
-    text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then the design gate, verify, the release gate, graph validation and the evidence bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the same revision. The CI workflow rdm adopt lays down shall call the reusable workflow pinned to the installed RDM's version."
+    text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then the design gate, verify, the release gate, graph validation over the named checklists and the evidence bundle with the verification report, uploading the bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the release it is pinned to (the latest image for a branch or commit). The CI workflow rdm adopt lays down, and RDM's own CI, shall call the reusable workflow, pinned to the installed RDM's version and to the commit under test respectively."
     traces_to: [UN-011, UN-003]
 ---
 

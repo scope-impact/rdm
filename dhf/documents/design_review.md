@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 62
+revision: 63
 title: Design Review — RDM
 ---
 
@@ -1930,8 +1930,13 @@ and agents who change it look:
 each design input with its user needs, design prose, tagged test,
 verification steps, output labels and last run. Findings and decisions are
 recorded here as each input is reviewed; changes are made once approved.
+From DI-9 on, the pass was kept simple: a change is made only where a test
+does not check what its text states, where the requirement is asserted outside
+any verification step, where a step checks what the text does not state
+(answered by a few words in the text, never by a new input), or where the code
+passes or drops in silence what it should refuse or report.
 
-**Disposition:** Open.
+**Disposition:** Approved, with the changes below.
 
 ## DI-5 — Persona runs give a formative status per user need
 
@@ -2003,6 +2008,51 @@ whose last run passed with three verification steps. **Changes requested:**
 **Decision (B, kept simple):** DI-8 keeps one input and its text; its test
 uses each filter from a rendered template, and `join_to` refuses an id its
 table lacks, naming it.
+
+## DI-9 to DI-70 — the rest of the pass
+
+Approved as they stand: DI-25, DI-35, DI-51, DI-53, DI-54, DI-56, DI-57,
+DI-58, DI-59, DI-60, DI-62, DI-67, DI-68, DI-69.
+
+| Input | Finding | Change |
+| --- | --- | --- |
+| DI-9 | Its checks sit outside any step; "expand declared vocabulary" is not what the extension does — a template gets the words its first render produced, which needs the second pass | Text names the second pass; checks in steps |
+| DI-10 | The gaps are counted, never listed; exit codes outside a step; steps for nothing checked, a placeholder and a closed pipe unstated | Text widened; the gaps listed, in steps |
+| DI-11 | FDA-CYBER and FDA-HFE never checked; includes between built-ins never resolved by name; **the ISO 14971:2019 checklist holds no clause** | Text asks clauses under unique keys; one step per named standard and one built-in include; the 14971:2019 clauses written |
+| DI-12 | The table row outside a step; the unique-keys step is DI-11's | Text: exits as the gap report does; step moved to DI-11 |
+| DI-15 | Steps check what the text does not state: an existing directory refused, offline build, empty registry, runbook | Text widened |
+| DI-16 | Extraction asserted outside a step; a key repeated in a second file silently replaces the first | Step; a repeated key refused, naming both files |
+| DI-17 | gtest asserted outside a step; a file with no results refused, unstated | Text widened; step |
+| DI-18 | Unreadable results listed and a missing directory refused, unstated | Text widened |
+| DI-22 | Refusals and kept comments and line endings, unstated | Text widened |
+| DI-24 | The pre-merge-commit hook never checked; symbolic links and the .gitignore lines unstated | Text widened; the second hook checked |
+| DI-26 | No verification steps | Steps |
+| DI-29 | Its checks sit outside any step | Step |
+| DI-30 | The results-with-attachments check outside a step; steps unstated; a missing matrix template omitted in silence; two steps are DI-64's | Text widened; step; a missing template refused; the two steps moved |
+| DI-31 | JavaScript and the other conventional names never exercised; output label names the wrong file | Fixtures added; label `rdm/specification/tags.py` |
+| DI-33 | The named-reviewer rule unstated | Text widened |
+| DI-34 | "One-line" is untrue; the ambiguous-site refusal unstated | Text reworded |
+| DI-36 | Refusing FROM, `--infer` over a store and a missing store, unstated | Text widened |
+| DI-37 | No verification steps; edition unstated | Text widened; steps |
+| DI-38 | Per-rule checks outside any step; whole-record findings and clause shapes unstated | Text widened; steps |
+| DI-39 | A node with its own IRI (a checklist clause from RDF) is left out in silence, and the test asserts it | Vocabulary told apart by the ontology, not the `urn:` prefix; text widened |
+| DI-40 | No story on a test class is tried; output label names the wrong file | Fixture; label `rdm/specification/tags.py` |
+| DI-41 | "Exactly four tools" outside a step | Step |
+| DI-42 | Trace accepts a declared id of any shape, unstated | Text widened |
+| DI-43 | A malformed policy refused and a status inherited, unstated; a second policy ignored in silence | Text widened; a second policy refused |
+| DI-44 | A malformed policy and the policy-only document, unstated | Text widened |
+| DI-45 | The projection checked outside a step; register findings and the proposed warning unstated | Text widened; step |
+| DI-47 | Restoring is skipped when the file was edited since, unstated | Text widened |
+| DI-48 | No verification steps | Steps |
+| DI-49 | A missing or non-RDF file reported, unstated | Text widened |
+| DI-50 | An unknown status blocks and no status is proposed, unstated | Text widened |
+| DI-52 | Both links outside a step; the no-review link unstated | Text widened; step |
+| DI-61 | The shape warns only when other tests in the file ran | Text says so |
+| DI-63 | The image tag for a branch or commit, RDM's own CI and the upload, unstated | Text widened; DI-64's workflow sentence moves here |
+| DI-64 | The workflow sentence untested here; several steps unstated | Text widened; the sentence moved to DI-63; the two steps from DI-30 join |
+| DI-65 | Unstated labels; `worktree=clean` written when nothing was checked | Text widened; `unknown` when the commit is |
+| DI-66 | Views, implied relationships unstated; RDM's naming conventions checked as reading; **the shared kernel drawn in the specification context** | Text widened; the convention check moved to DI-68's own-record step; the kernel drawn in no context |
+| DI-70 | An image of no view, removal and refusal, unstated | Text widened |
 
 # Approval
 

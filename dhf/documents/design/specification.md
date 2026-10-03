@@ -27,19 +27,19 @@ design_inputs:
     text: "The design gate shall fail when a user-need or design-input id is declared more than once across the DHF — twice in one document or in several — naming every document that declares it; the graph shall record how many times each user need and design input is declared, and its shapes shall report a repeated declaration as a violation. The design gate shall also fail on a declaration the record reader cannot read and on a Markdown document of the DHF whose frontmatter cannot be read, naming the document, and warn on a context with more than one design document."
     traces_to: [UN-007]
   - id: DI-15
-    text: "RDM shall scaffold a new documentation project from one command, laying down the document templates, build Makefile, and render config."
+    text: "RDM shall scaffold a new documentation project from one command into a directory that does not yet exist, laying down the document templates (including the design-controls set and a V&V plan with an empty user-need registry), the agent workflow runbook, build Makefile, container build and render config, buildable offline without an RDM checkout, and naming what it laid down and the next steps."
     traces_to: [UN-008]
   - id: DI-22
-    text: "RDM shall scaffold a new design input: allocate the next unused DI id, insert the entry into the chosen context's design_inputs frontmatter, emit a stub acceptance test tagged with the new id that fails until implemented, and print the remaining traceability checklist, rejecting an unknown context or user need."
+    text: "RDM shall scaffold a new design input: allocate the next unused DI id, insert the entry into the chosen context's design_inputs frontmatter, keeping the document's other content, comments and line endings, emit a stub acceptance test tagged with the new id that fails until implemented and shadows no test module elsewhere in the suite, and print the remaining traceability checklist, rejecting, with the record left as it was, an unknown context or user need, a context with more than one design document, or a design_inputs list it cannot extend in place."
     traces_to: [UN-010]
   - id: DI-24
-    text: "RDM shall bring an existing repository under design controls from one command: lay down the DHF skeleton (V&V plan, per-context design template, design review, traceability matrix, render configuration), the agent workflow runbook, the design-gate hooks, a session bootstrap, a CI gate workflow and a .gitignore of what RDM generates, skipping (never overwriting) any destination file that already exists."
+    text: "RDM shall bring an existing repository under design controls from one command: lay down the DHF skeleton (V&V plan, per-context design template, design review, traceability matrix, render configuration), the agent workflow runbook, the design-gate hooks, a session bootstrap, a CI gate workflow and a .gitignore of what RDM generates, skipping (never overwriting) any destination that already exists, a symbolic link included, and naming the .gitignore lines to add when it keeps an existing one."
     traces_to: [UN-011]
   - id: DI-5
-    text: "RDM shall classify AI-persona simulated-use runs into a per-user-need formative status (clean / issues / failed / not_run)."
+    text: "RDM shall classify AI-persona simulated-use runs into a per-user-need formative status (clean / issues / failed / not_run), failed over issues over clean across a need's runs, and report, never count as clean, a run file it cannot read as a run or a run naming a user need the registry does not hold."
     traces_to: [UN-005]
   - id: DI-33
-    text: "RDM shall ingest per-user-need validation records (user need, disposition, reviewer) from the DHF's validation directory and report, at the release gate, each user need lacking an approved validation record as a warning that does not block release."
+    text: "RDM shall ingest per-user-need validation records (user need, disposition, reviewer) from the DHF's validation directory and report, at the release gate, each user need lacking an approved validation record (an approved disposition with a named reviewer) as a warning that does not block release."
     traces_to: [UN-005]
 ---
 

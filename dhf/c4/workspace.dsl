@@ -13,13 +13,12 @@ workspace "RDM" "The design record of regulated software." {
     reviewer = person "Reviewer" "Approves each change by reviewing its pull request"
     rdm_system = softwareSystem "RDM" "Keeps the design record of regulated software, gates it, renders it and builds it into a read-only graph" {
       rdm_cli = container "rdm" "The command line: gates, rendering, graph build, query and validate, and the agent server" "Python" {
-        group "specification" {
-          kernel = component "Shared kernel" "Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers" "Python" {
-            properties {
-              "code" "rdm/kernel/"
-            }
-            tags "context:specification"
+        kernel = component "Shared kernel" "Shared helpers every context may use: YAML and files, ids, git, frontmatter, the reconcile helpers; in no bounded context" "Python" {
+          properties {
+            "code" "rdm/kernel/"
           }
+        }
+        group "specification" {
           record_reader = component "Record reader" "User needs, design inputs, realises and declarations, from the design documents' and V&V plan's frontmatter" "Python" {
             properties {
               "code" "rdm/specification/sdd.py"
