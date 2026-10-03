@@ -123,8 +123,10 @@ def unit_coverage(project: Path, source: str) -> Path | str:
     try:
         for args in (["run", f"--source={source}", "-m", "pytest", "tests", "--ignore=tests/acceptance", "-q",
                       "-p", "no:cacheprovider"], ["xml", "-q", "-o", str(report)]):
-            subprocess.run([sys.executable, "-m", "coverage", *args], cwd=project, env=env,
-                           capture_output=True, timeout=600)
+            run = subprocess.run([sys.executable, "-m", "coverage", *args], cwd=project, env=env,
+                                 capture_output=True, timeout=600)
+            if run.returncode != 0:  # a failed suite's partial coverage is no evidence of unit verification
+                return f"`coverage {args[0]}` failed (exit {run.returncode}): the map shows no unit coverage"
     except Exception as error:
         return f"the unit tests did not run under coverage ({type(error).__name__}: {error})"
     return report if report.is_file() else "the unit tests' coverage run wrote no report"

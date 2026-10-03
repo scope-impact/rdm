@@ -161,6 +161,10 @@ def graph_explorer_file_command(
         if not Path(store).exists():
             print(f"Error: store not found: {store}")
             return 2
+        if unit_coverage is not None:
+            print("Error: --unit-coverage applies to the in-memory projection, not a store: "
+                  "leave out --store, or build the store with it (`rdm graph build --store ...`)")
+            return 2
         quads = list(ox.Store.read_only(str(store)))
     else:
         quads = project_record(dhf_dir, allure_results_dir, checklists, unit_coverage=unit_coverage)

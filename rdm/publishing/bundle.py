@@ -88,6 +88,8 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path,
         from rdm.evidence.unit_coverage import read_unit_coverage
 
         read_unit_coverage(Path(unit_coverage_report), Path(dhf_dir).parent)  # refused before anything is written
+        # Held before an earlier bundle is cleared: the report may be that bundle's own kept copy.
+        report_bytes = Path(unit_coverage_report).read_bytes()
     out_dir.mkdir(parents=True, exist_ok=True)
     for earlier in ("verification.yml", MATRIX_DOC, REPORT_PDF, "manifest.json", *UNIT_COVERAGE_KEPT):
         (out_dir / earlier).unlink(missing_ok=True)  # an earlier bundle's
@@ -95,11 +97,12 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path,
     # 1. Verification data: design inputs x executed results, and the unit
     # tests' code coverage when its report is given (as verify takes it).
     verification_path = out_dir / "verification.yml"
-    data = write_verification_file(dhf_dir, allure_results_dir, verification_path, unit_coverage_report)
     kept_coverage = None
-    if unit_coverage_report is not None:  # the report itself, kept with the evidence
+    if unit_coverage_report is not None:  # the report itself, kept with the evidence, and read from there
         kept_coverage = "unit-coverage" + (Path(unit_coverage_report).suffix or ".txt")
-        shutil.copyfile(unit_coverage_report, out_dir / kept_coverage)
+        (out_dir / kept_coverage).write_bytes(report_bytes)
+    data = write_verification_file(dhf_dir, allure_results_dir, verification_path,
+                                   out_dir / kept_coverage if kept_coverage else None)
 
     # 2. The rendered traceability matrix (generated, never hand-edited).
     import jinja2

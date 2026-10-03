@@ -153,6 +153,9 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
         assert "# Unit-test code coverage" in matrix and "| Dose control | delivery | 2 | 4 | 50% |" in matrix
         assert manifest["unit_coverage_report"] == "unit-coverage.xml" and "unit-coverage.xml" in manifest["files"]
         assert (kept / "unit-coverage.xml").read_bytes() == report.read_bytes()
+        rebuilt = evidence_bundle(covered, covered / "allure-results", kept, kept / "unit-coverage.xml")
+        assert rebuilt["unit_coverage_report"] == "unit-coverage.xml"  # rebuilt from its own kept report
+        assert (kept / "unit-coverage.xml").read_bytes() == report.read_bytes()
         broken = tmp_path / "broken.xml"
         broken.write_text("<coverage")
         nowhere = tmp_path / "no-bundle"
