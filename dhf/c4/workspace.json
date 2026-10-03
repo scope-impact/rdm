@@ -16,14 +16,14 @@
           {
             "description": "writes the record and renders documents with",
             "destinationId": "4",
-            "id": "62",
+            "id": "63",
             "sourceId": "1",
             "tags": "Relationship"
           },
           {
             "description": "renders documents and checks the record with",
             "destinationId": "5",
-            "id": "69",
+            "id": "70",
             "sourceId": "1",
             "tags": "Relationship"
           }
@@ -41,21 +41,21 @@
           {
             "description": "runs the gates and tests with",
             "destinationId": "4",
-            "id": "63",
+            "id": "64",
             "sourceId": "2",
             "tags": "Relationship"
           },
           {
             "description": "runs",
             "destinationId": "47",
-            "id": "70",
+            "id": "71",
             "sourceId": "2",
             "tags": "Relationship"
           },
           {
             "description": "learns to keep the record from",
             "destinationId": "53",
-            "id": "92",
+            "id": "101",
             "sourceId": "2",
             "tags": "Relationship"
           }
@@ -72,8 +72,8 @@
         "relationships": [
           {
             "description": "approves pull requests on",
-            "destinationId": "59",
-            "id": "64",
+            "destinationId": "60",
+            "id": "65",
             "sourceId": "3",
             "tags": "Relationship"
           }
@@ -112,7 +112,7 @@
                   {
                     "description": "parses frontmatter with",
                     "destinationId": "6",
-                    "id": "172",
+                    "id": "181",
                     "sourceId": "7",
                     "tags": "Relationship"
                   }
@@ -134,7 +134,7 @@
                   {
                     "description": "asks git with and checks ids with",
                     "destinationId": "6",
-                    "id": "177",
+                    "id": "186",
                     "sourceId": "8",
                     "tags": "Relationship"
                   }
@@ -156,28 +156,28 @@
                   {
                     "description": "checks the views are fresh with",
                     "destinationId": "28",
-                    "id": "117",
+                    "id": "126",
                     "sourceId": "9",
                     "tags": "Relationship"
                   },
                   {
                     "description": "asks git with and checks ids with",
                     "destinationId": "6",
-                    "id": "153",
+                    "id": "162",
                     "sourceId": "9",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the record with",
                     "destinationId": "7",
-                    "id": "154",
+                    "id": "163",
                     "sourceId": "9",
                     "tags": "Relationship"
                   },
                   {
                     "description": "finds the tagged tests with",
                     "destinationId": "8",
-                    "id": "187",
+                    "id": "196",
                     "sourceId": "9",
                     "tags": "Relationship"
                   }
@@ -199,14 +199,14 @@
                   {
                     "description": "installs",
                     "destinationId": "11",
-                    "id": "82",
+                    "id": "83",
                     "sourceId": "10",
                     "tags": "Relationship"
                   },
                   {
                     "description": "uses",
                     "destinationId": "6",
-                    "id": "160",
+                    "id": "169",
                     "sourceId": "10",
                     "tags": "Relationship"
                   }
@@ -228,7 +228,7 @@
                   {
                     "description": "runs",
                     "destinationId": "9",
-                    "id": "83",
+                    "id": "84",
                     "sourceId": "11",
                     "tags": "Relationship"
                   }
@@ -250,21 +250,21 @@
                   {
                     "description": "reads the design documents with",
                     "destinationId": "7",
-                    "id": "162",
+                    "id": "171",
                     "sourceId": "12",
                     "tags": "Relationship"
                   },
                   {
                     "description": "sorts ids with",
                     "destinationId": "6",
-                    "id": "178",
+                    "id": "187",
                     "sourceId": "12",
                     "tags": "Relationship"
                   },
                   {
                     "description": "finds the test suite with",
                     "destinationId": "8",
-                    "id": "188",
+                    "id": "197",
                     "sourceId": "12",
                     "tags": "Relationship"
                   }
@@ -286,21 +286,21 @@
                   {
                     "description": "copies",
                     "destinationId": "14",
-                    "id": "101",
+                    "id": "110",
                     "sourceId": "13",
                     "tags": "Relationship"
                   },
                   {
                     "description": "takes the release version from",
                     "destinationId": "6",
-                    "id": "102",
+                    "id": "111",
                     "sourceId": "13",
                     "tags": "Relationship"
                   },
                   {
                     "description": "copies the agent workflow runbook from",
                     "destinationId": "16",
-                    "id": "144",
+                    "id": "153",
                     "sourceId": "13",
                     "tags": "Relationship"
                   }
@@ -335,28 +335,28 @@
                   {
                     "description": "copies",
                     "destinationId": "16",
-                    "id": "103",
+                    "id": "112",
                     "sourceId": "15",
                     "tags": "Relationship"
                   },
                   {
                     "description": "copies",
                     "destinationId": "11",
-                    "id": "145",
+                    "id": "154",
                     "sourceId": "15",
                     "tags": "Relationship"
                   },
                   {
                     "description": "takes the design gate's hook names from",
                     "destinationId": "10",
-                    "id": "146",
+                    "id": "155",
                     "sourceId": "15",
                     "tags": "Relationship"
                   },
                   {
                     "description": "takes the version from",
                     "destinationId": "6",
-                    "id": "150",
+                    "id": "159",
                     "sourceId": "15",
                     "tags": "Relationship"
                   }
@@ -391,14 +391,14 @@
                   {
                     "description": "buckets observations by id with",
                     "destinationId": "6",
-                    "id": "181",
+                    "id": "190",
                     "sourceId": "17",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the user-need registry with",
                     "destinationId": "7",
-                    "id": "182",
+                    "id": "191",
                     "sourceId": "17",
                     "tags": "Relationship"
                   }
@@ -420,7 +420,7 @@
                   {
                     "description": "buckets observations by id with",
                     "destinationId": "6",
-                    "id": "159",
+                    "id": "168",
                     "sourceId": "18",
                     "tags": "Relationship"
                   }
@@ -442,14 +442,14 @@
                   {
                     "description": "classifies runs with",
                     "destinationId": "18",
-                    "id": "105",
+                    "id": "114",
                     "sourceId": "19",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the V&V plan with",
                     "destinationId": "7",
-                    "id": "163",
+                    "id": "172",
                     "sourceId": "19",
                     "tags": "Relationship"
                   }
@@ -471,35 +471,35 @@
                   {
                     "description": "reconciles results with",
                     "destinationId": "22",
-                    "id": "122",
+                    "id": "131",
                     "sourceId": "20",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the unit tests' coverage with",
                     "destinationId": "23",
-                    "id": "123",
+                    "id": "132",
                     "sourceId": "20",
                     "tags": "Relationship"
                   },
                   {
                     "description": "maps covered files to components with",
                     "destinationId": "28",
-                    "id": "126",
+                    "id": "135",
                     "sourceId": "20",
                     "tags": "Relationship"
                   },
                   {
                     "description": "checks ids with",
                     "destinationId": "6",
-                    "id": "179",
+                    "id": "188",
                     "sourceId": "20",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the record with",
                     "destinationId": "7",
-                    "id": "183",
+                    "id": "192",
                     "sourceId": "20",
                     "tags": "Relationship"
                   }
@@ -521,42 +521,42 @@
                   {
                     "description": "checks ids with",
                     "destinationId": "6",
-                    "id": "173",
+                    "id": "182",
                     "sourceId": "21",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the record with",
                     "destinationId": "7",
-                    "id": "174",
+                    "id": "183",
                     "sourceId": "21",
                     "tags": "Relationship"
                   },
                   {
                     "description": "runs the design gate's checks of",
                     "destinationId": "9",
-                    "id": "191",
+                    "id": "200",
                     "sourceId": "21",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reconciles results with",
                     "destinationId": "22",
-                    "id": "192",
+                    "id": "201",
                     "sourceId": "21",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reports the risk findings of",
                     "destinationId": "27",
-                    "id": "193",
+                    "id": "202",
                     "sourceId": "21",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads validation records with",
                     "destinationId": "17",
-                    "id": "194",
+                    "id": "203",
                     "sourceId": "21",
                     "tags": "Relationship"
                   }
@@ -578,14 +578,14 @@
                   {
                     "description": "buckets observations by id with",
                     "destinationId": "6",
-                    "id": "152",
+                    "id": "161",
                     "sourceId": "22",
                     "tags": "Relationship"
                   },
                   {
                     "description": "takes the label that names a design input from",
                     "destinationId": "8",
-                    "id": "186",
+                    "id": "195",
                     "sourceId": "22",
                     "tags": "Relationship"
                   }
@@ -620,7 +620,7 @@
                   {
                     "description": "runs one test, unmutated then mutated, in",
                     "destinationId": "47",
-                    "id": "142",
+                    "id": "151",
                     "sourceId": "24",
                     "tags": "Relationship",
                     "technology": "pytest subprocess"
@@ -643,14 +643,14 @@
                   {
                     "description": "parses with",
                     "destinationId": "26",
-                    "id": "100",
+                    "id": "109",
                     "sourceId": "25",
                     "tags": "Relationship"
                   },
                   {
                     "description": "uses",
                     "destinationId": "6",
-                    "id": "180",
+                    "id": "189",
                     "sourceId": "25",
                     "tags": "Relationship"
                   }
@@ -685,7 +685,7 @@
                   {
                     "description": "parses frontmatter with",
                     "destinationId": "6",
-                    "id": "176",
+                    "id": "185",
                     "sourceId": "27",
                     "tags": "Relationship"
                   }
@@ -720,14 +720,14 @@
                   {
                     "description": "takes the paths, view keys, stamp format and workspace digest from",
                     "destinationId": "28",
-                    "id": "116",
+                    "id": "125",
                     "sourceId": "29",
                     "tags": "Relationship"
                   },
                   {
                     "description": "writes the exported model and stamped view images to",
-                    "destinationId": "58",
-                    "id": "128",
+                    "destinationId": "59",
+                    "id": "137",
                     "sourceId": "29",
                     "tags": "Relationship"
                   }
@@ -749,7 +749,7 @@
                   {
                     "description": "resolves built-in names and follows includes in",
                     "destinationId": "31",
-                    "id": "81",
+                    "id": "82",
                     "sourceId": "30",
                     "tags": "Relationship"
                   }
@@ -784,21 +784,21 @@
                   {
                     "description": "post-processes the rendered Markdown with",
                     "destinationId": "33",
-                    "id": "129",
+                    "id": "138",
                     "sourceId": "32",
                     "tags": "Relationship"
                   },
                   {
                     "description": "keeps the first pass's words in",
                     "destinationId": "34",
-                    "id": "130",
+                    "id": "139",
                     "sourceId": "32",
                     "tags": "Relationship"
                   },
                   {
                     "description": "uses",
                     "destinationId": "6",
-                    "id": "175",
+                    "id": "184",
                     "sourceId": "32",
                     "tags": "Relationship"
                   }
@@ -820,14 +820,14 @@
                   {
                     "description": "gives the template the first pass's words from",
                     "destinationId": "34",
-                    "id": "131",
+                    "id": "140",
                     "sourceId": "33",
                     "tags": "Relationship"
                   },
                   {
                     "description": "uses",
                     "destinationId": "6",
-                    "id": "161",
+                    "id": "170",
                     "sourceId": "33",
                     "tags": "Relationship"
                   }
@@ -862,49 +862,49 @@
                   {
                     "description": "writes verification.yml with",
                     "destinationId": "20",
-                    "id": "106",
+                    "id": "115",
                     "sourceId": "35",
                     "tags": "Relationship"
                   },
                   {
                     "description": "writes the report PDF with",
                     "destinationId": "38",
-                    "id": "107",
+                    "id": "116",
                     "sourceId": "35",
                     "tags": "Relationship"
                   },
                   {
                     "description": "renders the matrix with",
                     "destinationId": "32",
-                    "id": "108",
+                    "id": "117",
                     "sourceId": "35",
                     "tags": "Relationship"
                   },
                   {
                     "description": "refuses an unreadable unit-coverage report with",
                     "destinationId": "23",
-                    "id": "125",
+                    "id": "134",
                     "sourceId": "35",
                     "tags": "Relationship"
                   },
                   {
                     "description": "uses",
                     "destinationId": "6",
-                    "id": "156",
+                    "id": "165",
                     "sourceId": "35",
                     "tags": "Relationship"
                   },
                   {
                     "description": "keeps the run files named by",
                     "destinationId": "22",
-                    "id": "157",
+                    "id": "166",
                     "sourceId": "35",
                     "tags": "Relationship"
                   },
                   {
                     "description": "finds the matrix template with",
                     "destinationId": "7",
-                    "id": "158",
+                    "id": "167",
                     "sourceId": "35",
                     "tags": "Relationship"
                   }
@@ -939,7 +939,7 @@
                   {
                     "description": "parses frontmatter with",
                     "destinationId": "6",
-                    "id": "155",
+                    "id": "164",
                     "sourceId": "37",
                     "tags": "Relationship"
                   }
@@ -961,49 +961,49 @@
                   {
                     "description": "builds on",
                     "destinationId": "20",
-                    "id": "109",
+                    "id": "118",
                     "sourceId": "38",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads risk status and residual decisions with",
                     "destinationId": "27",
-                    "id": "110",
+                    "id": "119",
                     "sourceId": "38",
                     "tags": "Relationship"
                   },
                   {
                     "description": "lays out with",
                     "destinationId": "39",
-                    "id": "111",
+                    "id": "120",
                     "sourceId": "38",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads results with",
                     "destinationId": "22",
-                    "id": "127",
+                    "id": "136",
                     "sourceId": "38",
                     "tags": "Relationship"
                   },
                   {
                     "description": "asks git with and buckets observations by id with and checks ids with and takes the version from",
                     "destinationId": "6",
-                    "id": "184",
+                    "id": "193",
                     "sourceId": "38",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the record with",
                     "destinationId": "7",
-                    "id": "185",
+                    "id": "194",
                     "sourceId": "38",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the tagged tests with",
                     "destinationId": "8",
-                    "id": "190",
+                    "id": "199",
                     "sourceId": "38",
                     "tags": "Relationship"
                   }
@@ -1038,91 +1038,91 @@
                   {
                     "description": "reads risks and findings with",
                     "destinationId": "27",
-                    "id": "84",
+                    "id": "85",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the findings about the whole record with",
                     "destinationId": "21",
-                    "id": "85",
+                    "id": "86",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "declares terms and rules in",
                     "destinationId": "41",
-                    "id": "86",
+                    "id": "87",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the user manual with",
                     "destinationId": "45",
-                    "id": "87",
+                    "id": "88",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "writes the explorer file with",
                     "destinationId": "44",
-                    "id": "93",
+                    "id": "102",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads checklists and matches checklist references with",
                     "destinationId": "30",
-                    "id": "99",
+                    "id": "108",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads results and test tags with",
                     "destinationId": "22",
-                    "id": "118",
+                    "id": "127",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the C4 model and code dependencies with",
                     "destinationId": "28",
-                    "id": "119",
+                    "id": "128",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads each component's unit coverage with",
                     "destinationId": "20",
-                    "id": "124",
+                    "id": "133",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "builds",
-                    "destinationId": "55",
-                    "id": "148",
+                    "destinationId": "56",
+                    "id": "157",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "asks git with and checks ids with and parses frontmatter with",
                     "destinationId": "6",
-                    "id": "164",
+                    "id": "173",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the record with",
                     "destinationId": "7",
-                    "id": "165",
+                    "id": "174",
                     "sourceId": "40",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the tagged tests with",
                     "destinationId": "8",
-                    "id": "189",
+                    "id": "198",
                     "sourceId": "40",
                     "tags": "Relationship"
                   }
@@ -1170,14 +1170,14 @@
                   {
                     "description": "validates the graph of",
                     "destinationId": "40",
-                    "id": "95",
+                    "id": "104",
                     "sourceId": "43",
                     "tags": "Relationship"
                   },
                   {
                     "description": "checks with",
                     "destinationId": "42",
-                    "id": "96",
+                    "id": "105",
                     "sourceId": "43",
                     "tags": "Relationship"
                   }
@@ -1199,7 +1199,7 @@
                   {
                     "description": "takes the executions graph's name from",
                     "destinationId": "40",
-                    "id": "94",
+                    "id": "103",
                     "sourceId": "44",
                     "tags": "Relationship"
                   }
@@ -1221,15 +1221,15 @@
                   {
                     "description": "reads the pages of",
                     "destinationId": "54",
-                    "id": "88",
+                    "id": "89",
                     "sourceId": "45",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the pages of",
                     "destinationId": "53",
-                    "id": "89",
-                    "linkedRelationshipId": "88",
+                    "id": "90",
+                    "linkedRelationshipId": "89",
                     "sourceId": "45"
                   }
                 ],
@@ -1250,28 +1250,28 @@
                   {
                     "description": "projects the record afresh on each call with",
                     "destinationId": "40",
-                    "id": "97",
+                    "id": "106",
                     "sourceId": "46",
                     "tags": "Relationship"
                   },
                   {
                     "description": "validates with",
                     "destinationId": "43",
-                    "id": "98",
+                    "id": "107",
                     "sourceId": "46",
                     "tags": "Relationship"
                   },
                   {
                     "description": "returns the vocabulary and rules of",
                     "destinationId": "41",
-                    "id": "147",
+                    "id": "156",
                     "sourceId": "46",
                     "tags": "Relationship"
                   },
                   {
                     "description": "checks ids with",
                     "destinationId": "6",
-                    "id": "151",
+                    "id": "160",
                     "sourceId": "46",
                     "tags": "Relationship"
                   }
@@ -1290,37 +1290,37 @@
             "relationships": [
               {
                 "description": "reads the record, results and git history from",
-                "destinationId": "58",
-                "id": "71",
+                "destinationId": "59",
+                "id": "72",
                 "sourceId": "5",
                 "tags": "Relationship"
               },
               {
                 "description": "builds",
-                "destinationId": "55",
-                "id": "73",
+                "destinationId": "56",
+                "id": "74",
                 "sourceId": "5",
                 "tags": "Relationship"
               },
               {
                 "description": "reads the pages of",
                 "destinationId": "54",
-                "id": "90",
-                "linkedRelationshipId": "88",
+                "id": "91",
+                "linkedRelationshipId": "89",
                 "sourceId": "5"
               },
               {
                 "description": "reads the pages of",
                 "destinationId": "53",
-                "id": "91",
-                "linkedRelationshipId": "88",
+                "id": "92",
+                "linkedRelationshipId": "89",
                 "sourceId": "5"
               },
               {
                 "description": "runs one test, unmutated then mutated, in",
                 "destinationId": "47",
-                "id": "143",
-                "linkedRelationshipId": "142",
+                "id": "152",
+                "linkedRelationshipId": "151",
                 "sourceId": "5",
                 "technology": "pytest subprocess"
               }
@@ -1344,42 +1344,42 @@
                   {
                     "description": "finds the risks each design input controls with",
                     "destinationId": "27",
-                    "id": "112",
+                    "id": "121",
                     "sourceId": "48",
                     "tags": "Relationship"
                   },
                   {
                     "description": "finds the risks each design input controls with",
                     "destinationId": "5",
-                    "id": "113",
-                    "linkedRelationshipId": "112",
+                    "id": "122",
+                    "linkedRelationshipId": "121",
                     "sourceId": "48"
                   },
                   {
                     "description": "writes run labels and facts with",
                     "destinationId": "22",
-                    "id": "120",
+                    "id": "129",
                     "sourceId": "48",
                     "tags": "Relationship"
                   },
                   {
                     "description": "asks git with",
                     "destinationId": "6",
-                    "id": "166",
+                    "id": "175",
                     "sourceId": "48",
                     "tags": "Relationship"
                   },
                   {
                     "description": "takes the label that names a design input from",
                     "destinationId": "8",
-                    "id": "168",
+                    "id": "177",
                     "sourceId": "48",
                     "tags": "Relationship"
                   },
                   {
                     "description": "reads the record with",
                     "destinationId": "7",
-                    "id": "170",
+                    "id": "179",
                     "sourceId": "48",
                     "tags": "Relationship"
                   }
@@ -1398,51 +1398,51 @@
             "relationships": [
               {
                 "description": "writes Allure results to",
-                "destinationId": "58",
-                "id": "72",
+                "destinationId": "59",
+                "id": "73",
                 "sourceId": "47",
                 "tags": "Relationship"
               },
               {
                 "description": "finds the risks each design input controls with",
                 "destinationId": "27",
-                "id": "114",
-                "linkedRelationshipId": "112",
+                "id": "123",
+                "linkedRelationshipId": "121",
                 "sourceId": "47"
               },
               {
                 "description": "finds the risks each design input controls with",
                 "destinationId": "5",
-                "id": "115",
-                "linkedRelationshipId": "112",
+                "id": "124",
+                "linkedRelationshipId": "121",
                 "sourceId": "47"
               },
               {
                 "description": "writes run labels and facts with",
                 "destinationId": "22",
-                "id": "121",
-                "linkedRelationshipId": "120",
+                "id": "130",
+                "linkedRelationshipId": "129",
                 "sourceId": "47"
               },
               {
                 "description": "asks git with",
                 "destinationId": "6",
-                "id": "167",
-                "linkedRelationshipId": "166",
+                "id": "176",
+                "linkedRelationshipId": "175",
                 "sourceId": "47"
               },
               {
                 "description": "takes the label that names a design input from",
                 "destinationId": "8",
-                "id": "169",
-                "linkedRelationshipId": "168",
+                "id": "178",
+                "linkedRelationshipId": "177",
                 "sourceId": "47"
               },
               {
                 "description": "reads the record with",
                 "destinationId": "7",
-                "id": "171",
-                "linkedRelationshipId": "170",
+                "id": "180",
+                "linkedRelationshipId": "179",
                 "sourceId": "47"
               }
             ],
@@ -1465,14 +1465,14 @@
                   {
                     "description": "runs the gates with",
                     "destinationId": "51",
-                    "id": "104",
+                    "id": "113",
                     "sourceId": "50",
                     "tags": "Relationship"
                   },
                   {
                     "description": "runs the acceptance tests in",
                     "destinationId": "47",
-                    "id": "141",
+                    "id": "150",
                     "sourceId": "50",
                     "tags": "Relationship"
                   }
@@ -1494,42 +1494,42 @@
                   {
                     "description": "writes verification.yml with",
                     "destinationId": "20",
-                    "id": "134",
+                    "id": "143",
                     "sourceId": "51",
                     "tags": "Relationship"
                   },
                   {
                     "description": "writes verification.yml with",
                     "destinationId": "5",
-                    "id": "135",
-                    "linkedRelationshipId": "134",
+                    "id": "144",
+                    "linkedRelationshipId": "143",
                     "sourceId": "51"
                   },
                   {
                     "description": "validates the graph with",
                     "destinationId": "43",
-                    "id": "137",
+                    "id": "146",
                     "sourceId": "51",
                     "tags": "Relationship"
                   },
                   {
                     "description": "writes the evidence bundle with",
                     "destinationId": "35",
-                    "id": "139",
+                    "id": "148",
                     "sourceId": "51",
                     "tags": "Relationship"
                   },
                   {
                     "description": "runs the design gate of",
                     "destinationId": "9",
-                    "id": "195",
+                    "id": "204",
                     "sourceId": "51",
                     "tags": "Relationship"
                   },
                   {
                     "description": "runs the release gate of",
                     "destinationId": "21",
-                    "id": "197",
+                    "id": "206",
                     "sourceId": "51",
                     "tags": "Relationship"
                   }
@@ -1550,8 +1550,8 @@
                 "relationships": [
                   {
                     "description": "renders the documents in",
-                    "destinationId": "57",
-                    "id": "132",
+                    "destinationId": "58",
+                    "id": "141",
                     "sourceId": "52",
                     "tags": "Relationship",
                     "technology": "docker run make pdfs"
@@ -1572,58 +1572,58 @@
               {
                 "description": "runs",
                 "destinationId": "47",
-                "id": "78",
+                "id": "79",
                 "sourceId": "49",
                 "tags": "Relationship"
               },
               {
                 "description": "installs and runs",
                 "destinationId": "5",
-                "id": "79",
+                "id": "80",
                 "sourceId": "49",
                 "tags": "Relationship"
               },
               {
                 "description": "renders the documents in",
-                "destinationId": "57",
-                "id": "133",
-                "linkedRelationshipId": "132",
+                "destinationId": "58",
+                "id": "142",
+                "linkedRelationshipId": "141",
                 "sourceId": "49",
                 "technology": "docker run make pdfs"
               },
               {
                 "description": "writes verification.yml with",
                 "destinationId": "20",
-                "id": "136",
-                "linkedRelationshipId": "134",
+                "id": "145",
+                "linkedRelationshipId": "143",
                 "sourceId": "49"
               },
               {
                 "description": "validates the graph with",
                 "destinationId": "43",
-                "id": "138",
-                "linkedRelationshipId": "137",
+                "id": "147",
+                "linkedRelationshipId": "146",
                 "sourceId": "49"
               },
               {
                 "description": "writes the evidence bundle with",
                 "destinationId": "35",
-                "id": "140",
-                "linkedRelationshipId": "139",
+                "id": "149",
+                "linkedRelationshipId": "148",
                 "sourceId": "49"
               },
               {
                 "description": "runs the design gate of",
                 "destinationId": "9",
-                "id": "196",
-                "linkedRelationshipId": "195",
+                "id": "205",
+                "linkedRelationshipId": "204",
                 "sourceId": "49"
               },
               {
                 "description": "runs the release gate of",
                 "destinationId": "21",
-                "id": "198",
-                "linkedRelationshipId": "197",
+                "id": "207",
+                "linkedRelationshipId": "206",
                 "sourceId": "49"
               }
             ],
@@ -1644,6 +1644,49 @@
                 },
                 "tags": "Element,Component,context:publishing",
                 "technology": "Markdown"
+              },
+              {
+                "description": "Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual",
+                "documentation": {},
+                "group": "publishing",
+                "id": "55",
+                "name": "Docs build hooks",
+                "properties": {
+                  "code": "docs/_hooks/",
+                  "structurizr.dsl.identifier": "docs_hooks"
+                },
+                "relationships": [
+                  {
+                    "description": "draws the traceability maps from the graph of",
+                    "destinationId": "40",
+                    "id": "93",
+                    "sourceId": "55",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "draws the traceability maps from the graph of",
+                    "destinationId": "5",
+                    "id": "94",
+                    "linkedRelationshipId": "93",
+                    "sourceId": "55"
+                  },
+                  {
+                    "description": "parses frontmatter with",
+                    "destinationId": "6",
+                    "id": "97",
+                    "sourceId": "55",
+                    "tags": "Relationship"
+                  },
+                  {
+                    "description": "reads fenced blocks with",
+                    "destinationId": "33",
+                    "id": "99",
+                    "sourceId": "55",
+                    "tags": "Relationship"
+                  }
+                ],
+                "tags": "Element,Component,context:publishing",
+                "technology": "Python, MkDocs"
               }
             ],
             "description": "The user manual, built with MkDocs; a controlled document lists its pages",
@@ -1653,13 +1696,43 @@
             "properties": {
               "structurizr.dsl.identifier": "docs_site"
             },
+            "relationships": [
+              {
+                "description": "draws the traceability maps from the graph of",
+                "destinationId": "40",
+                "id": "95",
+                "linkedRelationshipId": "93",
+                "sourceId": "53"
+              },
+              {
+                "description": "draws the traceability maps from the graph of",
+                "destinationId": "5",
+                "id": "96",
+                "linkedRelationshipId": "93",
+                "sourceId": "53"
+              },
+              {
+                "description": "parses frontmatter with",
+                "destinationId": "6",
+                "id": "98",
+                "linkedRelationshipId": "97",
+                "sourceId": "53"
+              },
+              {
+                "description": "reads fenced blocks with",
+                "destinationId": "33",
+                "id": "100",
+                "linkedRelationshipId": "99",
+                "sourceId": "53"
+              }
+            ],
             "tags": "Element,Container",
             "technology": "MkDocs"
           },
           {
             "description": "The record projected into RDF",
             "documentation": {},
-            "id": "55",
+            "id": "56",
             "name": "Graph store",
             "properties": {
               "structurizr.dsl.identifier": "graph_store"
@@ -1670,7 +1743,7 @@
           {
             "description": "rdm graph serve: the store, read-only, refusing updates and SERVICE",
             "documentation": {},
-            "id": "56",
+            "id": "57",
             "name": "SPARQL endpoint",
             "properties": {
               "structurizr.dsl.identifier": "sparql_endpoint"
@@ -1678,9 +1751,9 @@
             "relationships": [
               {
                 "description": "serves, read-only",
-                "destinationId": "55",
-                "id": "74",
-                "sourceId": "56",
+                "destinationId": "56",
+                "id": "75",
+                "sourceId": "57",
                 "tags": "Relationship"
               }
             ],
@@ -1690,7 +1763,7 @@
           {
             "description": "Renders the documents to PDF",
             "documentation": {},
-            "id": "57",
+            "id": "58",
             "name": "Documents image",
             "properties": {
               "structurizr.dsl.identifier": "documents_image"
@@ -1699,8 +1772,8 @@
               {
                 "description": "renders with",
                 "destinationId": "5",
-                "id": "80",
-                "sourceId": "57",
+                "id": "81",
+                "sourceId": "58",
                 "tags": "Relationship"
               }
             ],
@@ -1718,8 +1791,8 @@
         "relationships": [
           {
             "description": "reads the record, tests, results and history from",
-            "destinationId": "58",
-            "id": "65",
+            "destinationId": "59",
+            "id": "66",
             "sourceId": "4",
             "tags": "Relationship"
           }
@@ -1729,7 +1802,7 @@
       {
         "description": "git: the Markdown record, the tests and their Allure results",
         "documentation": {},
-        "id": "58",
+        "id": "59",
         "name": "Product repository",
         "properties": {
           "structurizr.dsl.identifier": "product_repo"
@@ -1739,7 +1812,7 @@
       {
         "description": "Pull requests, Actions and the image registry",
         "documentation": {},
-        "id": "59",
+        "id": "60",
         "name": "GitHub",
         "properties": {
           "structurizr.dsl.identifier": "forge"
@@ -1748,16 +1821,16 @@
           {
             "description": "runs the gates of",
             "destinationId": "4",
-            "id": "66",
-            "sourceId": "59",
+            "id": "67",
+            "sourceId": "60",
             "tags": "Relationship",
             "technology": "GitHub Actions"
           },
           {
             "description": "runs on every push and pull request",
             "destinationId": "49",
-            "id": "77",
-            "sourceId": "59",
+            "id": "78",
+            "sourceId": "60",
             "tags": "Relationship"
           }
         ],
@@ -1766,7 +1839,7 @@
       {
         "description": "An MCP client such as Claude Code, working under a person's direction",
         "documentation": {},
-        "id": "60",
+        "id": "61",
         "name": "Agent harness",
         "properties": {
           "structurizr.dsl.identifier": "agent_harness"
@@ -1775,24 +1848,24 @@
           {
             "description": "reads the record through",
             "destinationId": "4",
-            "id": "67",
-            "sourceId": "60",
+            "id": "68",
+            "sourceId": "61",
             "tags": "Relationship",
             "technology": "MCP"
           },
           {
             "description": "calls the agent server of",
             "destinationId": "5",
-            "id": "76",
-            "sourceId": "60",
+            "id": "77",
+            "sourceId": "61",
             "tags": "Relationship",
             "technology": "MCP over stdio"
           },
           {
             "description": "calls",
             "destinationId": "46",
-            "id": "149",
-            "sourceId": "60",
+            "id": "158",
+            "sourceId": "61",
             "tags": "Relationship",
             "technology": "MCP over stdio"
           }
@@ -1802,7 +1875,7 @@
       {
         "description": "A graph browser",
         "documentation": {},
-        "id": "61",
+        "id": "62",
         "name": "AWS Graph Explorer",
         "properties": {
           "structurizr.dsl.identifier": "graph_explorer"
@@ -1811,16 +1884,16 @@
           {
             "description": "browses the graph of",
             "destinationId": "4",
-            "id": "68",
-            "sourceId": "61",
+            "id": "69",
+            "sourceId": "62",
             "tags": "Relationship",
             "technology": "SPARQL over HTTP"
           },
           {
             "description": "queries",
-            "destinationId": "56",
-            "id": "75",
-            "sourceId": "61",
+            "destinationId": "57",
+            "id": "76",
+            "sourceId": "62",
             "tags": "Relationship",
             "technology": "SPARQL over HTTP"
           }
@@ -1831,13 +1904,13 @@
   },
   "name": "RDM",
   "properties": {
-    "structurizr.inspection.error": "132",
+    "structurizr.inspection.error": "140",
     "structurizr.inspection.ignore": "0",
     "structurizr.inspection.info": "0",
     "structurizr.inspection.warning": "0"
   },
   "rdm": {
-    "workspace_sha256": "3a97be1b07e0dbf85a05d1b03d66964e68c1106dbdc363c54f2832385f1a0473"
+    "workspace_sha256": "ea8d1775d74c0d13f72ce16fbb4e52103f4b820eafd457d0b4b924eb33ef52af"
   },
   "views": {
     "componentViews": [
@@ -1970,85 +2043,64 @@
         "order": 3,
         "relationships": [
           {
-            "id": "101"
+            "id": "110"
           },
           {
-            "id": "103"
+            "id": "112"
           },
           {
-            "id": "105"
-          },
-          {
-            "id": "117"
-          },
-          {
-            "id": "124"
+            "id": "114"
           },
           {
             "id": "126"
           },
           {
-            "id": "144"
+            "id": "133"
           },
           {
-            "id": "145"
+            "id": "135"
           },
           {
-            "id": "146"
+            "id": "153"
           },
           {
             "id": "154"
           },
           {
-            "id": "157"
-          },
-          {
-            "id": "158"
-          },
-          {
-            "id": "162"
+            "id": "155"
           },
           {
             "id": "163"
           },
           {
-            "id": "165"
+            "id": "166"
           },
           {
-            "id": "168"
+            "id": "167"
           },
           {
-            "id": "170"
+            "id": "171"
+          },
+          {
+            "id": "172"
           },
           {
             "id": "174"
           },
           {
-            "id": "182"
+            "id": "177"
+          },
+          {
+            "id": "179"
           },
           {
             "id": "183"
           },
           {
-            "id": "185"
-          },
-          {
-            "id": "186"
-          },
-          {
-            "id": "187"
-          },
-          {
-            "id": "188"
-          },
-          {
-            "id": "189"
-          },
-          {
-            "id": "190"
-          },
-          {
             "id": "191"
+          },
+          {
+            "id": "192"
           },
           {
             "id": "194"
@@ -2057,13 +2109,34 @@
             "id": "195"
           },
           {
-            "id": "82"
+            "id": "196"
+          },
+          {
+            "id": "197"
+          },
+          {
+            "id": "198"
+          },
+          {
+            "id": "199"
+          },
+          {
+            "id": "200"
+          },
+          {
+            "id": "203"
+          },
+          {
+            "id": "204"
           },
           {
             "id": "83"
           },
           {
-            "id": "85"
+            "id": "84"
+          },
+          {
+            "id": "86"
           }
         ],
         "title": "Design specification: components (C3)"
@@ -2152,64 +2225,64 @@
         "order": 4,
         "relationships": [
           {
-            "id": "104"
+            "id": "113"
           },
           {
-            "id": "106"
+            "id": "115"
           },
           {
-            "id": "109"
+            "id": "118"
           },
           {
-            "id": "114"
+            "id": "123"
           },
           {
-            "id": "121"
+            "id": "130"
           },
           {
-            "id": "122"
+            "id": "131"
           },
           {
-            "id": "134"
+            "id": "143"
           },
           {
-            "id": "137"
+            "id": "146"
           },
           {
-            "id": "139"
+            "id": "148"
           },
           {
-            "id": "141"
+            "id": "150"
           },
           {
-            "id": "157"
+            "id": "166"
           },
           {
-            "id": "171"
-          },
-          {
-            "id": "174"
+            "id": "180"
           },
           {
             "id": "183"
           },
           {
-            "id": "191"
-          },
-          {
             "id": "192"
           },
           {
-            "id": "193"
+            "id": "200"
           },
           {
-            "id": "194"
+            "id": "201"
           },
           {
-            "id": "195"
+            "id": "202"
           },
           {
-            "id": "197"
+            "id": "203"
+          },
+          {
+            "id": "204"
+          },
+          {
+            "id": "206"
           }
         ],
         "title": "Release: components (C3)"
@@ -2293,40 +2366,40 @@
         "order": 5,
         "relationships": [
           {
-            "id": "100"
+            "id": "109"
           },
           {
-            "id": "112"
-          },
-          {
-            "id": "118"
-          },
-          {
-            "id": "120"
-          },
-          {
-            "id": "122"
-          },
-          {
-            "id": "124"
+            "id": "121"
           },
           {
             "id": "127"
           },
           {
-            "id": "168"
+            "id": "129"
           },
           {
-            "id": "170"
+            "id": "131"
           },
           {
-            "id": "186"
+            "id": "133"
           },
           {
-            "id": "192"
+            "id": "136"
           },
           {
-            "id": "85"
+            "id": "177"
+          },
+          {
+            "id": "179"
+          },
+          {
+            "id": "195"
+          },
+          {
+            "id": "201"
+          },
+          {
+            "id": "86"
           }
         ],
         "title": "Test evidence: components (C3)"
@@ -2375,19 +2448,19 @@
         "order": 6,
         "relationships": [
           {
-            "id": "110"
+            "id": "119"
           },
           {
-            "id": "112"
+            "id": "121"
           },
           {
-            "id": "193"
-          },
-          {
-            "id": "84"
+            "id": "202"
           },
           {
             "id": "85"
+          },
+          {
+            "id": "86"
           }
         ],
         "title": "Risk: components (C3)"
@@ -2425,7 +2498,7 @@
             "y": 0
           },
           {
-            "id": "58",
+            "id": "59",
             "x": 0,
             "y": 0
           }
@@ -2436,16 +2509,16 @@
         "order": 7,
         "relationships": [
           {
-            "id": "116"
+            "id": "125"
           },
           {
-            "id": "117"
-          },
-          {
-            "id": "119"
+            "id": "126"
           },
           {
             "id": "128"
+          },
+          {
+            "id": "137"
           }
         ],
         "title": "Architecture: components (C3)"
@@ -2484,10 +2557,10 @@
         "order": 8,
         "relationships": [
           {
-            "id": "81"
+            "id": "108"
           },
           {
-            "id": "99"
+            "id": "82"
           }
         ],
         "title": "Compliance: components (C3)"
@@ -2585,7 +2658,12 @@
             "y": 0
           },
           {
-            "id": "57",
+            "id": "55",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "58",
             "x": 0,
             "y": 0
           }
@@ -2596,52 +2674,55 @@
         "order": 9,
         "relationships": [
           {
-            "id": "106"
+            "id": "115"
           },
           {
-            "id": "107"
+            "id": "116"
           },
           {
-            "id": "108"
+            "id": "117"
           },
           {
-            "id": "109"
+            "id": "118"
           },
           {
-            "id": "110"
+            "id": "119"
           },
           {
-            "id": "111"
+            "id": "120"
           },
           {
-            "id": "127"
+            "id": "136"
           },
           {
-            "id": "129"
-          },
-          {
-            "id": "130"
-          },
-          {
-            "id": "131"
-          },
-          {
-            "id": "132"
+            "id": "138"
           },
           {
             "id": "139"
           },
           {
-            "id": "157"
+            "id": "140"
           },
           {
-            "id": "158"
+            "id": "141"
           },
           {
-            "id": "185"
+            "id": "148"
           },
           {
-            "id": "190"
+            "id": "166"
+          },
+          {
+            "id": "167"
+          },
+          {
+            "id": "194"
+          },
+          {
+            "id": "199"
+          },
+          {
+            "id": "99"
           }
         ],
         "title": "Publishing: components (C3)"
@@ -2734,12 +2815,12 @@
             "y": 0
           },
           {
-            "id": "55",
+            "id": "56",
             "x": 0,
             "y": 0
           },
           {
-            "id": "60",
+            "id": "61",
             "x": 0,
             "y": 0
           }
@@ -2750,34 +2831,52 @@
         "order": 10,
         "relationships": [
           {
-            "id": "118"
+            "id": "102"
           },
           {
-            "id": "119"
+            "id": "103"
           },
           {
-            "id": "137"
+            "id": "104"
           },
           {
-            "id": "147"
+            "id": "105"
           },
           {
-            "id": "148"
+            "id": "106"
           },
           {
-            "id": "149"
+            "id": "107"
           },
           {
-            "id": "165"
+            "id": "108"
           },
           {
-            "id": "189"
+            "id": "127"
           },
           {
-            "id": "84"
+            "id": "128"
           },
           {
-            "id": "86"
+            "id": "146"
+          },
+          {
+            "id": "156"
+          },
+          {
+            "id": "157"
+          },
+          {
+            "id": "158"
+          },
+          {
+            "id": "174"
+          },
+          {
+            "id": "198"
+          },
+          {
+            "id": "85"
           },
           {
             "id": "87"
@@ -2786,25 +2885,7 @@
             "id": "88"
           },
           {
-            "id": "93"
-          },
-          {
-            "id": "94"
-          },
-          {
-            "id": "95"
-          },
-          {
-            "id": "96"
-          },
-          {
-            "id": "97"
-          },
-          {
-            "id": "98"
-          },
-          {
-            "id": "99"
+            "id": "89"
           }
         ],
         "title": "Knowledge graph: components (C3)"
@@ -2891,11 +2972,6 @@
             "y": 0
           },
           {
-            "id": "55",
-            "x": 0,
-            "y": 0
-          },
-          {
             "id": "56",
             "x": 0,
             "y": 0
@@ -2924,6 +3000,11 @@
             "id": "61",
             "x": 0,
             "y": 0
+          },
+          {
+            "id": "62",
+            "x": 0,
+            "y": 0
           }
         ],
         "externalSoftwareSystemBoundariesVisible": false,
@@ -2932,16 +3013,16 @@
         "order": 2,
         "relationships": [
           {
-            "id": "115"
+            "id": "101"
           },
           {
-            "id": "133"
+            "id": "124"
           },
           {
-            "id": "143"
+            "id": "142"
           },
           {
-            "id": "69"
+            "id": "152"
           },
           {
             "id": "70"
@@ -2977,10 +3058,13 @@
             "id": "80"
           },
           {
-            "id": "91"
+            "id": "81"
           },
           {
             "id": "92"
+          },
+          {
+            "id": "96"
           }
         ],
         "softwareSystemId": "4",
@@ -3033,25 +3117,25 @@
         "relationships": [
           {
             "description": "runs",
-            "id": "83",
+            "id": "84",
             "order": "1",
             "response": false
           },
           {
             "description": "reads the design documents and the review with",
-            "id": "154",
+            "id": "163",
             "order": "2",
             "response": false
           },
           {
             "description": "checks the views are fresh with",
-            "id": "117",
+            "id": "126",
             "order": "3",
             "response": false
           },
           {
             "description": "finds tagged tests with",
-            "id": "187",
+            "id": "196",
             "order": "4",
             "response": false
           }
@@ -3086,12 +3170,12 @@
             "y": 0
           },
           {
-            "id": "58",
+            "id": "59",
             "x": 0,
             "y": 0
           },
           {
-            "id": "59",
+            "id": "60",
             "x": 0,
             "y": 0
           }
@@ -3103,31 +3187,31 @@
         "relationships": [
           {
             "description": "runs on every push and pull request",
-            "id": "77",
+            "id": "78",
             "order": "1",
             "response": false
           },
           {
             "description": "runs",
-            "id": "78",
+            "id": "79",
             "order": "2",
             "response": false
           },
           {
             "description": "writes Allure results to",
-            "id": "72",
+            "id": "73",
             "order": "3",
             "response": false
           },
           {
             "description": "installs and runs",
-            "id": "79",
+            "id": "80",
             "order": "4",
             "response": false
           },
           {
             "description": "reads the record, results and git history from",
-            "id": "71",
+            "id": "72",
             "order": "5",
             "response": false
           }
@@ -3174,25 +3258,25 @@
         "relationships": [
           {
             "description": "loads the data files as the context with",
-            "id": "175",
+            "id": "184",
             "order": "1",
             "response": false
           },
           {
             "description": "keeps the first pass's words in",
-            "id": "130",
+            "id": "139",
             "order": "2",
             "response": false
           },
           {
             "description": "post-processes the rendered Markdown with",
-            "id": "129",
+            "id": "138",
             "order": "3",
             "response": false
           },
           {
             "description": "gives the template the first pass's words from",
-            "id": "131",
+            "id": "140",
             "order": "4",
             "response": false
           }
@@ -3233,11 +3317,6 @@
             "y": 0
           },
           {
-            "id": "58",
-            "x": 0,
-            "y": 0
-          },
-          {
             "id": "59",
             "x": 0,
             "y": 0
@@ -3251,6 +3330,11 @@
             "id": "61",
             "x": 0,
             "y": 0
+          },
+          {
+            "id": "62",
+            "x": 0,
+            "y": 0
           }
         ],
         "enterpriseBoundaryVisible": true,
@@ -3258,9 +3342,6 @@
         "name": "System Context View: RDM",
         "order": 1,
         "relationships": [
-          {
-            "id": "62"
-          },
           {
             "id": "63"
           },
@@ -3278,6 +3359,9 @@
           },
           {
             "id": "68"
+          },
+          {
+            "id": "69"
           }
         ],
         "softwareSystemId": "4",

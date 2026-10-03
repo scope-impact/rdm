@@ -64,6 +64,7 @@ each component to its code.
 | Evidence bundle | Writes the retained release evidence, the verification report among it, and, given the unit tests' coverage report, carries it as verify does and keeps it; refuses a record with no matrix template before writing anything | DI-64; realises DI-30 |
 | PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | realises part of DI-63 |
 | User manual | The documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; each tagged-test example names its component by key | DI-79 |
+| Docs build hooks | Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual | — |
 
 The PDF action is in the Reusable gates container; the others are in `rdm`.
 

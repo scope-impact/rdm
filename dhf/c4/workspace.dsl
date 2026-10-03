@@ -317,6 +317,12 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:publishing"
           }
+          docs_hooks = component "Docs build hooks" "Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual" "Python, MkDocs" {
+            properties {
+              "code" "docs/_hooks/"
+            }
+            tags "context:publishing"
+          }
         }
       }
       graph_store = container "Graph store" "The record projected into RDF" "Oxigraph" "Database"
@@ -354,6 +360,9 @@ workspace "RDM" "The design record of regulated software." {
     projection -> vocabulary "declares terms and rules in"
     projection -> manual_reader "reads the user manual with"
     manual_reader -> user_manual "reads the pages of"
+    docs_hooks -> projection "draws the traceability maps from the graph of"
+    docs_hooks -> kernel "parses frontmatter with"
+    docs_hooks -> markdown_extensions "reads fenced blocks with"
     engineer -> docs_site "learns to keep the record from"
     projection -> explorer_file "writes the explorer file with"
     explorer_file -> projection "takes the executions graph's name from"
@@ -520,7 +529,7 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_publishing" {
       title "Publishing: components (C3)"
-      include renderer markdown_extensions first_pass_output evidence_bundle snippets dmr_index user_manual verification_report report_layout pdf_action allure_reader documents_image gates_action record_reader risk_register test_tags verification_data
+      include renderer markdown_extensions first_pass_output evidence_bundle snippets dmr_index user_manual docs_hooks verification_report report_layout pdf_action allure_reader documents_image gates_action record_reader risk_register test_tags verification_data
       exclude "allure_reader -> test_tags"
       exclude "gates_action -> verification_data"
       exclude "verification_data -> allure_reader"

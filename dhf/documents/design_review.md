@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 73
+revision: 74
 title: Design Review — RDM
 ---
 
@@ -2270,7 +2270,9 @@ showed which pages still taught file paths.
 - **DI-22 amended:** the stub test `new-input` writes carries a component
   label to fill in, not an output label.
 - **C4:** a manual reader component (graph) and a documentation site
-  container holding the user manual (publishing); views redrawn.
+  container holding the user manual and, apart from it, the docs build hooks
+  (`docs/_hooks/`, Python the site build runs), so the manual's code is its
+  pages alone (publishing); views redrawn.
 - **Not done:** RDM's own acceptance tests keep their output labels (DI-56
   allows both); moving them is separate work.
 
