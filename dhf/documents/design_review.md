@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 58
+revision: 59
 title: Design Review — RDM
 ---
 
@@ -1717,6 +1717,38 @@ needs (DI-46), and test result translation (DI-17). No design input changed.
 - `rdm translate` accepted a result file whose suites hold no test, and wrote
   empty data. A file whose results flatten to no test is refused, as one
   with no suite is.
+
+# Design Review 58 — Design input by design input, the whole chain
+
+**Scope reviewed:** each design input in turn, with its user needs, design
+prose, tagged test, verification steps, output label and last run, read
+together. Findings are recorded here as each input is reviewed; nothing is
+changed until the pass is complete.
+
+**Disposition:** Open. Changes requested where noted; none made yet.
+
+## DI-1 — Reading the record, with no planning dependency
+
+Traces to UN-001 and UN-004; described by the Record reader and Test tags
+rows of the specification context; verified by
+`test_compile_verification_from_the_record` (output `rdm/specification/sdd.py`),
+whose last run passed. **Changes requested:**
+
+- Ingesting Allure results is not verified. The test writes a passed result
+  for DI-1 but checks only the total, which counts declared inputs and would
+  be the same were the result ignored. Neither a verified nor an unverified
+  verdict follows from a result.
+- The check for no project-management dependency cannot fail: it looks for
+  a module name that no longer exists anywhere. It does not show that
+  reading the record imports no planning tool or needs no `backlog/`
+  directory.
+- The text asks for three things to be accepted at once: reading the needs
+  and design inputs, ingesting results, and no planning dependency.
+  Ingesting results is what DI-40 and DI-4 verify. Proposed: narrow DI-1 to
+  reading the needs and design inputs from frontmatter with no
+  project-management dependency.
+- The output label names the record reader only.
+- One verification step's name is cut off mid-sentence.
 
 # Approval
 
