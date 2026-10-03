@@ -196,10 +196,15 @@ checks something the input's text states.
 
 ```bash
 uv run rdm story design-gate --dhf dhf
+uv run coverage run --source=rdm -m pytest tests --ignore=tests/acceptance -q   # unit tests, under coverage
+uv run coverage xml -q -o dhf/data/unit-coverage.xml
 uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
-uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml \
+  --unit-coverage dhf/data/unit-coverage.xml
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
+The unit tests' coverage is unit-test evidence the matrix shows beside the
+design inputs; it never verifies one (Design Review 63).
 Plus the general suite: `uv run pytest tests`, `uv run ruff check .`, and
 `uv run --extra docs mkdocs build --strict` if docs changed.
 
