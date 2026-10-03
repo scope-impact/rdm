@@ -49,26 +49,27 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
     ])
     results = _results(tmp_path / "facts", {"DI-1": ["passed"], "DI-2": ["passed"]})
     quads = project(dhf, results)
-    risk = "urn:dhf:proj:risk/RISK-F-1"
-    facts = {(q.predicate.value.replace(RDM, ""), q.object.value) for q in quads if q.subject.value == risk}
-    assert {q.graph_name.value for q in quads if q.subject.value == risk} == {"urn:dhf:proj:graph/risks"}
-    for fact in (("category", "security"), ("stride", "Spoofing"), ("linkedTo", "urn:dhf:proj:risk/RISK-F-2"),
-                 ("hazard", "Hz"), ("situation", "Si"), ("harm", "Ha"), ("severity", "Serious"),
-                 ("probability", "Possible"), ("level", "High"), ("recordedLevel", "High"),
-                 ("residualProbability", "Unlikely"), ("residualLevel", "Medium"), ("residualDecision", "accepted"),
-                 ("acceptedBy", "QA lead"), ("acceptanceRationale", "ALARP"), ("riskStatus", "proposed"),
-                 ("controlledBy", "urn:dhf:proj:input/DI-1"), ("controlledBy", "urn:dhf:proj:input/DI-2"),
-                 ("declaredIn", "urn:dhf:proj:doc/RMF-risks"),
-                 ("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", RDM + "Risk")):
-        assert fact in facts, fact
-    f2 = {(q.predicate.value.replace(RDM, ""), q.object.value) for q in quads
-          if q.subject.value == "urn:dhf:proj:risk/RISK-F-2"}
-    assert {("residualSeverity", "Minor"), ("residualLevel", "Low"), ("residualDecision", "acceptable")} <= f2
-    report = validate(quads)
-    assert not [r for r in report if r.severity == "Violation"]
-    risk_warnings = [r for r in report if r.severity == "Warning" and not r.message.startswith("test run")]
-    assert [(r.label, r.message) for r in risk_warnings] == [
-        ("RISK-F-1", "risk RISK-F-1 is proposed: a person has not approved its rating")]
+    with verification_step("Each risk's facts in the risks graph"):
+        risk = "urn:dhf:proj:risk/RISK-F-1"
+        facts = {(q.predicate.value.replace(RDM, ""), q.object.value) for q in quads if q.subject.value == risk}
+        assert {q.graph_name.value for q in quads if q.subject.value == risk} == {"urn:dhf:proj:graph/risks"}
+        for fact in (("category", "security"), ("stride", "Spoofing"), ("linkedTo", "urn:dhf:proj:risk/RISK-F-2"),
+                     ("hazard", "Hz"), ("situation", "Si"), ("harm", "Ha"), ("severity", "Serious"),
+                     ("probability", "Possible"), ("level", "High"), ("recordedLevel", "High"),
+                     ("residualProbability", "Unlikely"), ("residualLevel", "Medium"), ("residualDecision", "accepted"),
+                     ("acceptedBy", "QA lead"), ("acceptanceRationale", "ALARP"), ("riskStatus", "proposed"),
+                     ("controlledBy", "urn:dhf:proj:input/DI-1"), ("controlledBy", "urn:dhf:proj:input/DI-2"),
+                     ("declaredIn", "urn:dhf:proj:doc/RMF-risks"),
+                     ("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", RDM + "Risk")):
+            assert fact in facts, fact
+        f2 = {(q.predicate.value.replace(RDM, ""), q.object.value) for q in quads
+              if q.subject.value == "urn:dhf:proj:risk/RISK-F-2"}
+        assert {("residualSeverity", "Minor"), ("residualLevel", "Low"), ("residualDecision", "acceptable")} <= f2
+        report = validate(quads)
+        assert not [r for r in report if r.severity == "Violation"]
+        risk_warnings = [r for r in report if r.severity == "Warning" and not r.message.startswith("test run")]
+        assert [(r.label, r.message) for r in risk_warnings] == [
+            ("RISK-F-1", "risk RISK-F-1 is proposed: a person has not approved its rating")]
 
     with verification_step("The residual decision is \"not evaluated\" until every control has a passing test"):
         (tmp_path / "facts-red").mkdir()

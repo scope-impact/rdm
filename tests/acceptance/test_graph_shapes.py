@@ -89,38 +89,41 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
             attach("blocked", {"shapes": sorted(by_shapes), "release gate": sorted(by_gate)})
             assert by_shapes == by_gate == expected, name
 
-    # Messages per rule (violations).
-    dhf = _dhf(tmp_path / "msgs", needs=("UN-1", "UN-2", "UN-3"))
-    results = _results(tmp_path / "msgs", {"DI-1": ["failed"]})
-    found = {(r.severity, r.label, r.message) for r in validate(project(dhf, results))}
-    assert ("Violation", "UN-3", "user need is addressed by no design input") in found
-    assert ("Violation", "DI-1", "design input has a failed or broken test run") in found
-    assert ("Violation", "DI-2", "design input is not verified by any passing test run") in found
+    with verification_step("Each violation rule reports its focus node and message"):
+        # Messages per rule (violations).
+        dhf = _dhf(tmp_path / "msgs", needs=("UN-1", "UN-2", "UN-3"))
+        results = _results(tmp_path / "msgs", {"DI-1": ["failed"]})
+        found = {(r.severity, r.label, r.message) for r in validate(project(dhf, results))}
+        assert ("Violation", "UN-3", "user need is addressed by no design input") in found
+        assert ("Violation", "DI-1", "design input has a failed or broken test run") in found
+        assert ("Violation", "DI-2", "design input is not verified by any passing test run") in found
 
-    # Unreferenced checklist clauses are violations; checklist data is checked too.
-    lists = tmp_path / "lists"
-    lists.mkdir()
-    (lists / "mini.txt").write_text("STD:1 a clause no document references\n")
-    (lists / "bad.ttl").write_text(
-        "@prefix rdm: <https://github.com/scope-impact/rdm/ns#> .\n"
-        "<urn:rdm:clause:BAD:1> a rdm:Clause .\n")  # no key, no standard (labelled from its IRI)
-    quads = project(dhf, results, checklists=[str(lists / "mini.txt"), str(lists / "bad.ttl")])
-    found = {(r.severity, r.label, r.message) for r in validate(quads)}
-    assert ("Violation", "STD:1", "checklist clause is referenced by no document") in found
-    assert ("Violation", "BAD:1", "clause needs exactly one key (skos:notation)") in found
-    assert ("Violation", "BAD:1",
-            "clause needs a standard (skos:inScheme a skos:ConceptScheme)") in found
+    with verification_step("An unreferenced clause and a clause without a key or a standard are violations"):
+        # Unreferenced checklist clauses are violations; checklist data is checked too.
+        lists = tmp_path / "lists"
+        lists.mkdir()
+        (lists / "mini.txt").write_text("STD:1 a clause no document references\n")
+        (lists / "bad.ttl").write_text(
+            "@prefix rdm: <https://github.com/scope-impact/rdm/ns#> .\n"
+            "<urn:rdm:clause:BAD:1> a rdm:Clause .\n")  # no key, no standard (labelled from its IRI)
+        quads = project(dhf, results, checklists=[str(lists / "mini.txt"), str(lists / "bad.ttl")])
+        found = {(r.severity, r.label, r.message) for r in validate(quads)}
+        assert ("Violation", "STD:1", "checklist clause is referenced by no document") in found
+        assert ("Violation", "BAD:1", "clause needs exactly one key (skos:notation)") in found
+        assert ("Violation", "BAD:1",
+                "clause needs a standard (skos:inScheme a skos:ConceptScheme)") in found
 
-    # Warnings: untagged input, undeclared references, a stray tag sharing the DI prefix.
-    wdhf = _dhf(tmp_path / "warn", inputs=(("DI-1", "UN-1"), ("DI-2", "UN-9")), tagged=("DI-1", "DI-99", "US-1"),
-                extra_frontmatter="realises: [DI-77]\n")
-    warnings = {(r.label, r.message) for r in validate(project(wdhf)) if r.severity == "Warning"}
-    assert ("DI-2", "design input has no tagged test file") in warnings
-    assert ("DI-2", "design input traces to an undeclared user need") in warnings
-    assert ("core", "context realises an undeclared design input") in warnings
-    assert ("tests/test_core.py::test_1", "test tag DI-99 names no declared design input") in warnings
-    assert not any("US-1" in message for _, message in warnings)  # unrelated prefix: noise, not reported
-    assert not any(label == "DI-1" for label, _ in warnings)
+    with verification_step("Untagged inputs, undeclared references and stray tags are warnings"):
+        # Warnings: untagged input, undeclared references, a stray tag sharing the DI prefix.
+        wdhf = _dhf(tmp_path / "warn", inputs=(("DI-1", "UN-1"), ("DI-2", "UN-9")), tagged=("DI-1", "DI-99", "US-1"),
+                    extra_frontmatter="realises: [DI-77]\n")
+        warnings = {(r.label, r.message) for r in validate(project(wdhf)) if r.severity == "Warning"}
+        assert ("DI-2", "design input has no tagged test file") in warnings
+        assert ("DI-2", "design input traces to an undeclared user need") in warnings
+        assert ("core", "context realises an undeclared design input") in warnings
+        assert ("tests/test_core.py::test_1", "test tag DI-99 names no declared design input") in warnings
+        assert not any("US-1" in message for _, message in warnings)  # unrelated prefix: noise, not reported
+        assert not any(label == "DI-1" for label, _ in warnings)
 
     def commit(dhf: Path) -> None:
         git_run(dhf.parent, "add", "-A")

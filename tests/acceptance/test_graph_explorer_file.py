@@ -38,7 +38,14 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
                                "attachments": [{"name": "log", "source": "l-attachment.txt"}]}))
     lists = tmp_path / "mini.txt"
     lists.write_text("STD:1 a clause\n")
-    quads = project(dhf, results, checklists=[str(lists)])
+    native = tmp_path / "native.ttl"  # a native RDF checklist whose clause has its own https IRI
+    native.write_text(
+        "@prefix rdm: <https://github.com/scope-impact/rdm/ns#> .\n"
+        "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n"
+        "<https://example.org/std/rdfx/2> a rdm:Clause ; skos:notation \"RDFX:2\" .\n"
+        "<urn:rdm:checklist:native> a rdm:Checklist ; skos:member <https://example.org/std/rdfx/2> .\n")
+    (dhf / "documents" / "plan.md").write_text("---\nid: PLAN-1\n---\n# Plan\nCovers [[RDFX:2]].\n")
+    quads = project(dhf, results, checklists=[str(lists), str(native)])
     graph = explorer_graph(quads, endpoint="http://example:7878")
 
     with verification_step("Graph Explorer's envelope and connection"):
@@ -53,16 +60,19 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
                      "urn:dhf:acme:run/r1-result", "urn:rdm:clause:STD:1", "urn:rdm:checklist:mini"):
             assert node in vertices, node
         assert any(v.startswith("urn:dhf:acme:commit/") for v in vertices)
-        assert not any(v.startswith(NS) or v.startswith("http") for v in vertices)
+        assert "https://example.org/std/rdfx/2" in vertices  # a record node with its own IRI
+        vocabulary = {q.subject.value for q in quads if q.graph_name.value.endswith("graph/ontology")}
+        assert vocabulary and not vertices & vocabulary
+        assert not any(v.startswith(NS) for v in vertices)
 
-    # Every link between two record nodes, in Graph Explorer's edge-id form;
-    # no rdf:type statements and no link to anything outside the node set.
-    with verification_step("Every link between two record nodes, in Graph Explorer's edge-id form; no rdf:type "
-                           "statements…"):
+    with verification_step("Every link between two record nodes, in Graph Explorer's edge-id form, and no rdf:type "
+                           "statement"):
         edges = set(graph["data"]["edges"])
         assert f"urn:dhf:acme:input/DI-1-[{NS}tracesTo]->urn:dhf:acme:need/UN-001" in edges
         assert f"urn:dhf:acme:run/r1-result-[{NS}exercises]->urn:dhf:acme:input/DI-1" in edges
         assert "urn:rdm:checklist:mini-[http://www.w3.org/2004/02/skos/core#member]->urn:rdm:clause:STD:1" in edges
+        assert ("urn:dhf:acme:doc/PLAN-1-[http://purl.org/dc/terms/references]->https://example.org/std/rdfx/2"
+                in edges)
         assert not any("22-rdf-syntax-ns#type" in e for e in edges)
         for edge in edges:
             subject, rest = edge.split("-[", 1)
@@ -97,11 +107,11 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
     with verification_step("The command writes it, from a fresh projection or from a built store"):
         out = tmp_path / "acme.graph.json"
         assert graph_cli.graph_explorer_file_command(out, dhf_dir=dhf, allure_results_dir=results,
-                                                     checklists=[str(lists)]) == 0
+                                                     checklists=[str(lists), str(native)]) == 0
         assert set(json.loads(out.read_text())["data"]["vertices"]) == vertices
         store = tmp_path / "store"
         assert graph_cli.graph_build_command(dhf_dir=dhf, allure_results_dir=results, store=store,
-                                             checklists=[str(lists)]) == 0
+                                             checklists=[str(lists), str(native)]) == 0
         assert graph_cli.graph_explorer_file_command(out, store=store, exclude=["TestRun"]) == 0
         assert set(json.loads(out.read_text())["data"]["vertices"]) == set(trimmed["vertices"])
         assert graph_cli.graph_explorer_file_command(out, store=tmp_path / "missing") == 2
