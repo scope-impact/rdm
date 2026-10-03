@@ -1,0 +1,6 @@
+# Render configuration (rdm render <template> dhf/config.yml <data files…>).
+# The Markdown extensions run over the rendered lines, in order:
+#   rdm.md_extensions.SectionNumberExtension     numbers the headings
+#   rdm.md_extensions.VocabularyExtension        a glossary of the words a document uses
+#   rdm.md_extensions.AuditNoteExclusionExtension  removes [[…]] notes (the release copy)
+md_extensions: []

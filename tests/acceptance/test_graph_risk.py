@@ -22,7 +22,7 @@ from rdm.graph.project import project  # noqa: E402
 from rdm.graph.validate import validate  # noqa: E402
 from tests.acceptance.test_graph_shapes import _dhf, _results  # noqa: E402
 from rdm.release.gate import run_release_gate  # noqa: E402
-from tests.acceptance.test_risk import ACCEPT, CASES, _gate, _policy, _register, _risk  # noqa: E402
+from tests.acceptance.test_risk import ACCEPT, CASES, _commit, _gate, _policy, _register, _risk  # noqa: E402
 
 RDM = "https://github.com/scope-impact/rdm/ns#"
 
@@ -129,6 +129,7 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
             if name != "policy-only-bad":
                 _policy(case_dhf)
             write(case_dhf)
+            _commit(case_dhf)
             results = _results(tmp_path / "agree" / name, {"DI-1": ["passed"], "DI-2": ["passed"]})
             gate = run_release_gate(case_dhf, results)
             blocked = {m for m in gate.blocking if "risk" in m}

@@ -113,7 +113,7 @@ def _print_table(results, verbose):
     overall_pct = int(covered_all * 100 / total_all) if total_all else 0
     print(f"| **Overall** | {total_all} | {total_all - covered_all} | {covered_all} | {overall_pct}% |")
 
-    if verbose:
+    if verbose and any(failing for *_, failing in results):
         print("\n## Missing Items\n")
         for name, _, _, _, _, failing in results:
             if failing:
@@ -263,7 +263,7 @@ def _report_failures(failing_checklists):
     # Note output conforms to checklist format, so can be used as a checklist itself.
     failure_count = len(failing_checklists)
     plural = 's' if failure_count > 1 else ''
-    print('# Missing ' + str(failure_count) + ' item' + plural + ':')
+    print(f'# {failure_count} gap{plural}:')  # a clause no document references: a gap (the glossary's word)
     # The use of include files is convenient but causes the checklists
     # to not be in the same order as they appear in the referenced standard.
     # Therefore they should be sorted.

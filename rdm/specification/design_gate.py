@@ -36,7 +36,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.kernel.events import Event
-from rdm.kernel.frontmatter import unreadable_documents
+from rdm.kernel.frontmatter import documents, unreadable_documents
 from rdm.kernel.git import git
 from rdm.kernel.ids import relevant_orphans
 from rdm.specification import tags
@@ -346,10 +346,26 @@ def check_architecture_views(dhf_dir: Path) -> list[ArtifactCheck]:
                           events=events, uncommitted=uncommitted)]
 
 
+def check_record_docs(dhf_dir: Path) -> list[ArtifactCheck]:
+    """The other documents the design rests on, held to the same rule as the
+    design documents (complete and committed): each document that declares
+    user needs, and each risk document (the register, the policy)."""
+    checks = []
+    for md, front in documents(Path(dhf_dir)):
+        rel = md.relative_to(dhf_dir).as_posix()
+        if "user_needs" in front:
+            checks.append(check_doc_path(md, f"User needs ({rel})"))
+        elif str(front.get("kind", "")).strip().lower() == "risk" or "risk_policy" in front:
+            checks.append(check_doc_path(md, f"Risk document ({rel})"))
+    return checks
+
+
 def design_artifacts(dhf_dir: Path) -> list[ArtifactCheck]:
     """The design gate's pass/fail checks: design documents, the design review,
-    ids declared once, the architecture's drawn views."""
+    the user needs and risk documents, ids declared once, the architecture's
+    drawn views."""
     return [*check_design_docs(dhf_dir), check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review"),
+            *check_record_docs(dhf_dir),
             check_unique_ids(dhf_dir), check_declarations(dhf_dir), check_frontmatter(dhf_dir),
             *check_architecture_views(dhf_dir)]
 

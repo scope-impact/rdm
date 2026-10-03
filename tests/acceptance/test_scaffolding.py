@@ -12,11 +12,11 @@ Skips cleanly if allure-pytest is not installed.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 
-from rdm.specification.init import init
 from rdm.specification.sdd import design_inputs
 from rdm.specification.new_input import story_new_input_command
 
@@ -27,12 +27,26 @@ from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 
 @allure.story("DI-15")
 @allure.label("output", "rdm/specification/init.py")
-def test_init_scaffolds_a_project(tmp_path: Path) -> None:
+def test_init_scaffolds_a_project(tmp_path: Path, capsys) -> None:
     """DI-15: `rdm init` lays down the templates, Makefile, and render config."""
     import yaml
 
+    from rdm.main import cli
+
     project = tmp_path / "regulatory"  # must not pre-exist (copytree)
-    init(str(project))
+    assert cli(["init", "-o", str(project)]) == 0
+    with verification_step("it says what it laid down and what to do next; a directory that exists is refused"):
+        out = capsys.readouterr().out
+        assert str(project) in out and "Next steps" in out and "rdm gap" in out, out
+        assert cli(["init", "-o", str(project)]) == 2
+        assert "exists" in capsys.readouterr().out
+    with verification_step("the scaffold builds offline and without an RDM checkout: local images, Word rebuilt "
+                           "when its reference document changes, the container installs RDM without a wheel"):
+        for doc in (project / "documents").rglob("*.md"):
+            assert "github.com/innolitics/rdm/raw" not in doc.read_text(), doc
+        assert "$(wildcard reference.docx)" in (project / "Makefile").read_text()
+        dockerfile = (project / "Dockerfile").read_text()
+        assert "COPY dist/*.whl" not in dockerfile and "git+https://github.com/scope-impact/rdm" in dockerfile
 
     with verification_step("the build skeleton"):
         assert (project / "Makefile").is_file()
@@ -208,6 +222,27 @@ def test_new_input_scaffolds_a_traced_design_input(tmp_path: Path, capsys) -> No
         attach("new-input on a repeated context", out)
         assert "alarms.md" in out and "alarms_too.md" in out
         assert set(di["id"] for di in design_inputs(dhf)) == {"DI-1", "DI-3", "DI-4", "DI-5", "DI-6"}
+        second.unlink()
+    with verification_step("an id a test is still tagged with is taken; a stub never shadows a test module of the "
+                           "same name elsewhere in the suite"):
+        (tmp_path / "tests" / "test_old.py").write_text(
+            'import allure\n\n\n@allure.story("DI-9")\ndef test_retired():\n    pass\n')
+        (tmp_path / "tests" / "test_trends.py").unlink(missing_ok=True)
+        (tmp_path / "tests" / "unit").mkdir()
+        (tmp_path / "tests" / "unit" / "test_alarms.py").write_text("def test_unit():\n    pass\n")
+        (tmp_path / "tests" / "acceptance" / "test_alarms.py").unlink()
+        assert story_new_input_command(dhf_dir=dhf, context="alarms", text="RDM shall ring.", traces_to="UN-001") == 0
+        assert "DI-10" in {di["id"] for di in design_inputs(dhf)}
+        assert not (tmp_path / "tests" / "acceptance" / "test_alarms.py").exists()
+        assert '@allure.story("DI-10")' in (tmp_path / "tests" / "acceptance" / "test_alarms_acceptance.py").read_text()
+    with verification_step("CRLF line endings and the comment on an empty list are kept"):
+        crlf = dhf / "documents" / "design" / "crlf.md"
+        crlf.write_bytes(b"---\r\nid: SDS-CRLF\r\nkind: design\r\ncontext: crlf\r\n"
+                         b"design_inputs: []  # none yet, see review 3\r\n---\r\n# CRLF\r\n")
+        assert story_new_input_command(dhf_dir=dhf, context="crlf", text="RDM shall keep.", traces_to="UN-001") == 0
+        raw = crlf.read_bytes()
+        assert b"\n" not in raw.replace(b"\r\n", b""), raw
+        assert b"# none yet, see review 3" in raw
 
 
 @allure.story("DI-24")
@@ -256,3 +291,25 @@ def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> No
         assert adopt_command(str(repo)) == 0
         rerun_out = capsys.readouterr().out
         assert "Laid down:" not in rerun_out
+    with verification_step("what RDM generates is ignored and a render configuration lands; the design template "
+                           "links nothing the project lacks"):
+        ignored = (repo / ".gitignore").read_text()
+        for entry in ("allure-results/", "dhf/data/", ".rdm/", "__pycache__/"):
+            assert entry in ignored, entry
+        assert (repo / "dhf" / "config.yml").is_file()
+        template = (repo / "dhf" / "documents" / "design" / "example_context.md").read_text()
+        assert not re.search(r"^!\[.*c4/views", template, re.M)  # no image the project does not have
+    with verification_step("an existing .gitignore is kept, and the lines to add are named; a symbolic link, "
+                           "dangling or not, is never written through"):
+        other = tmp_path / "other"
+        other.mkdir()
+        (other / ".gitignore").write_text("node_modules/\n")
+        (other / "scripts").mkdir()
+        (other / "scripts" / "agent-bootstrap.sh").symlink_to("../../outside-the-repo.sh")
+        capsys.readouterr()
+        assert adopt_command(str(other)) == 0
+        out = capsys.readouterr().out
+        assert (other / ".gitignore").read_text() == "node_modules/\n"
+        assert "__pycache__/" in out and ".gitignore" in out
+        assert not (tmp_path / "outside-the-repo.sh").exists()
+        assert "scripts/agent-bootstrap.sh" in out.split("Skipped")[1]

@@ -95,6 +95,10 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
         spaced.write_text("include   cl.txt  \n")
         assert audit_for_gaps(str(spaced), [str(covered)]) == 0
 
+    with verification_step("a gap is named as the glossary names it"):
+        out = subprocess.run([sys.executable, "-m", "rdm.main", "gap", str(checklist), str(missing)],
+                             capture_output=True, text=True).stdout
+        assert "# 1 gap:" in out and "Missing" not in out, out
     with verification_step("a byte-order mark is not part of the first key"):
         bom = tmp_path / "bom.txt"
         bom.write_text("\ufeffX-1 first\n", encoding="utf-8")
@@ -178,6 +182,9 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
     with verification_step("Verbose mode names the missing reference"):
         coverage_report([str(checklist)], [str(source)], verbose=True)
         assert "ISO-2" in capsys.readouterr().out
+    with verification_step("with nothing missing, verbose mode prints no empty heading"):
+        coverage_report([str(checklist)], [str(complete)], verbose=True)
+        assert "Missing Items" not in capsys.readouterr().out
 
 
 @allure.story("DI-25")

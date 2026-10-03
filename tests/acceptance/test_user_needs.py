@@ -269,6 +269,32 @@ def test_design_gate_requires_approval(tmp_path: Path, capsys) -> None:
         warned = [e.message for e in run_design_gate(dhf).events if e.name == CONTEXT_REPEATED]
         attach("context warnings", warned)
         assert len(warned) == 1 and "core.md" in warned[0] and "core2.md" in warned[0]
+    with verification_step("the user needs and the risk documents are held as the design documents are: complete "
+                           "and committed"):
+        held = _approved_dhf(tmp_path / "held", ["UN-001"])
+        assert run_design_gate(held).passed
+        plan = held / "documents" / "verification_and_validation_plan.md"
+        plan.write_text(plan.read_text() + "\nAn unreviewed edit.\n")
+        gate = run_design_gate(held)
+        assert not gate.passed and any("verification_and_validation_plan.md" in " ".join(a.reasons) or
+                                       "verification_and_validation_plan" in a.name for a in gate.artifacts
+                                       if not a.ok), gate.artifacts
+        _git(held.parent, "commit", "-qam", "plan")
+        assert run_design_gate(held).passed
+        plan.write_text(plan.read_text() + "\nTODO: describe validation\n")
+        _git(held.parent, "commit", "-qam", "placeholder")
+        assert not run_design_gate(held).passed
+        plan.write_text(plan.read_text().replace("TODO: describe validation", "Reviewed by QA."))
+        _git(held.parent, "commit", "-qam", "filled")
+        (held / "documents" / "risk").mkdir()
+        (held / "documents" / "risk" / "register.md").write_text("---\nid: RMF\nkind: risk\nrisks: []\n---\n")
+        (held / "documents" / "risk" / "policy.md").write_text("---\nid: RMP\nrisk_policy: {}\n---\n")
+        gate = run_design_gate(held)
+        failing = " ".join(f"{a.name} {' '.join(a.reasons)}" for a in gate.artifacts if not a.ok)
+        assert not gate.passed and "register.md" in failing and "policy.md" in failing, failing
+        _git(held.parent, "add", "-A")
+        _git(held.parent, "commit", "-qm", "risks")
+        assert run_design_gate(held).passed
     with verification_step("outside git the gate passes but does not claim the design was committed"):
         plain = tmp_path / "plain"
         write_design_doc(plain / "documents" / "design", "core", design_inputs=(("DI-1", ["UN-002"]),))

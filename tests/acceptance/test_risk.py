@@ -15,6 +15,7 @@ import yaml
 from rdm.risk.register import read_policy, risks
 from rdm.release.gate import run_release_gate
 from tests.acceptance.test_graph_shapes import _dhf, _results
+from tests.util import git_run
 
 allure = pytest.importorskip("allure")
 
@@ -35,6 +36,7 @@ def _policy(dhf: Path, policy: dict | None = None, **front) -> Path:
     front = {k: v for k, v in {"status": "approved", **front}.items() if v is not None}  # None: no status
     path.write_text("---\n" + yaml.safe_dump({"id": "RMP-1", **front, "risk_policy": policy or POLICY},
                                              sort_keys=False) + "---\n# Policy\n")
+    _commit(dhf)
     return path
 
 
@@ -43,7 +45,16 @@ def _register(dhf: Path, entries: list[dict], name: str = "risks", **front) -> P
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("---\n" + yaml.safe_dump({"id": f"RMF-{name}", "kind": "risk", **front, "risks": entries},
                                              sort_keys=False) + "---\n# Risks\n")
+    _commit(dhf)
     return path
+
+
+def _commit(dhf: Path) -> None:
+    """Commit the risk documents, as a reviewed record would be: the design gate
+    holds them, uncommitted, as not approved."""
+    if (dhf.parent / ".git").exists():
+        git_run(dhf.parent, "add", "-A")
+        git_run(dhf.parent, "commit", "-qm", "risks", "--allow-empty")
 
 
 def _risk(rid: str | None, **overrides) -> dict:
@@ -277,6 +288,7 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("---\n" + yaml.safe_dump({"id": "RMP", "kind": "risk", "status": "approved",
                                                   "risk_policy": POLICY}) + "---\n")
+        _commit(dhf)
         gate = run_release_gate(dhf, _results(tmp_path / "policy-only", {"DI-1": ["passed"], "DI-2": ["passed"]}))
         assert gate.passed, gate.blocking
 

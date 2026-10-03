@@ -9,7 +9,7 @@ import yaml
 from rdm.compliance.gaps import audit_for_gaps, coverage_report, list_default_checklists
 from rdm.publishing.collect import collect_from_files
 from rdm.specification.hooks import install_hooks
-from rdm.specification.init import init
+from rdm.specification.init import init_command
 from rdm.publishing.render import context_from_data_files, render_template_to_file
 from rdm.evidence.translate import translate_test_results, XML_FORMATS
 from rdm.kernel.util import load_yaml
@@ -51,7 +51,7 @@ def cli(raw_arguments):
             print_error(f"Error: cannot render {args.template}: {error}")
             exit_code = 2
     elif args.command == 'init':
-        init(args.output)
+        exit_code = init_command(args.output)
     elif args.command == 'adopt':
         from rdm.specification.adopt import adopt_command
         exit_code = adopt_command(args.target)

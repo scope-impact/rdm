@@ -26,12 +26,12 @@ is drawn where the language changes, not where a workflow stage does.
 
 ## Design Outputs
 
-The design outputs are this context's architecture, in the C4 model of the
-architecture workspace (`rdm c4 draw`): its components, what each is
-responsible for, and how they relate. They name components, never source
-files or functions — the workspace maps each component to its code.
-
-![Components: TODO-context](../../c4/views/C3_TODO-context.svg)
+The design outputs are this context's architecture: its components, what
+each is responsible for, and how they relate. They name components, never
+source files or functions. A C4 model is optional: when the project keeps
+one (a Structurizr workspace in `dhf/c4/`, drawn with `rdm c4 draw`, which
+needs Java, Structurizr's CLI and Graphviz), show this context's component
+view here as `![Components: <context>](../../c4/views/C3_<context>.svg)`.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
@@ -48,9 +48,8 @@ Optional. Add one only when the order of interactions matters and the
 component view cannot show it: one important runtime scenario, not one per
 feature. Declare it in the workspace as `dynamic <container> "D_<context>_<scenario>"`,
 each step along a relationship the model already declares, and draw it with
-`rdm c4 draw`. Delete this section when there is none.
-
-![Scenario: TODO-scenario](../../c4/views/D_TODO-context_TODO-scenario.svg)
+`rdm c4 draw`, shown as `![Scenario: <name>](../../c4/views/D_<context>_<scenario>.svg)`.
+Delete this section when there is none.
 
 ## Commands and events
 

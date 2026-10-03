@@ -41,10 +41,16 @@ Next steps (see dhf/AGENT_WORKFLOW.md for the full loop):
 """
 
 
+# A template whose name cannot ship as itself: a .gitignore inside the
+# package would be read as one by git and the build tools.
+_RENAMED = {"gitignore": ".gitignore"}
+
+
 def _copy_if_absent(src: Path, dest: Path, rel: str,
                     copied: list[str], skipped: list[str]) -> None:
-    """Copy ``src`` to ``dest`` unless the destination already exists."""
-    if dest.exists():
+    """Copy ``src`` to ``dest`` unless the destination already exists. A
+    symbolic link exists, dangling or not: it is never written through."""
+    if dest.exists() or dest.is_symlink():
         skipped.append(rel)
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -69,6 +75,7 @@ def adopt(target: Path) -> tuple[list[str], list[str]]:
             if src.is_dir():
                 continue
             rel = src.relative_to(root).as_posix()
+            rel = _RENAMED.get(rel, rel)
             _copy_if_absent(src, target / rel, rel, copied, skipped)
 
     # The design gate's hooks (pre-commit, and pre-merge-commit for merges) are
@@ -102,4 +109,14 @@ def adopt_command(target: str | None = None) -> int:
             print(f"  = {rel}")
     print()
     print(NEXT_STEPS)
+    if ".gitignore" in skipped:
+        with as_file(files("rdm.specification") / "adopt_files" / "gitignore") as template:
+            wanted = [line for line in Path(template).read_text().splitlines() if line and not line.startswith("#")]
+        present = set((dest / ".gitignore").read_text(errors="replace").split())
+        missing = [line for line in wanted if line not in present]
+        if missing:
+            print("\nYour .gitignore was kept. Add these lines, so a run of the acceptance suite is not "
+                  "marked dirty by what RDM generates:")
+            for line in missing:
+                print(f"  {line}")
     return 0
