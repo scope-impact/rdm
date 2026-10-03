@@ -70,7 +70,7 @@ flowchart LR
 | **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (design inputs), residual, acceptance |
 | **Risk policy** | a document's `risk_policy:` | — | severities, probabilities, levels, acceptability |
 | **Checklist, clause** | a checklist file (text or RDF) | the clause key, e.g. `62304:5.2.2` | each clause's description; includes |
-| **Test** | an acceptance test function, `@allure.story("DI-n")` | `tests/x.py::test_y` | the design inputs it verifies; `@allure.label("output", …)` for the code it exercises |
+| **Test** | an acceptance test function, `@allure.story("DI-n")` | `tests/x.py::test_y` | the design inputs it verifies; `@allure.label("output", …)` for the code it exercises, `@allure.label("component", …)` for a component it names |
 | **Test run** | an Allure result, written by running the tests | its uuid | nothing — it is recorded |
 | **Commit** | git | its sha | nothing — it is recorded |
 
@@ -80,6 +80,7 @@ Derived, never declared:
 | --- | --- |
 | a design input's owning context | the design document that declares it |
 | the user needs a context serves (`rdm:serves`) | its design inputs' `traces_to`, and those it `realises` |
+| the components a run reaches (`rdm:reaches`) | the components it names, and the C4 model's declared relationships |
 | the tests a file defines | the tagged functions in it |
 | which test a run ran | the run's full name, matched to the test function |
 | the commit a run tested | the `commit` label `rdm.pytest_plugin` writes at run time |

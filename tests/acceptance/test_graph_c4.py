@@ -57,6 +57,13 @@ def _workspace(repo: Path) -> None:
     (repo / "src" / "alarms.py").write_text("from src.speaker import beep\n\nbeep()\n")
 
 
+def _named_run(results: Path, stem: str, story: str, *components: str) -> None:
+    """A passed run of ``story`` naming each of ``components`` by a component label."""
+    labels = [{"name": "story", "value": story}] + [{"name": "component", "value": c} for c in components]
+    (results / f"{stem}-result.json").write_text(json.dumps({
+        "fullName": "tests.test_alarms#test_alarm", "name": stem, "status": "passed", "labels": labels}))
+
+
 def _select(quads, query: str) -> set[tuple[str, ...]]:
     store = ox.Store()
     store.extend(quads)
@@ -72,8 +79,9 @@ def test_the_c4_model_is_projected_into_the_graph(tmp_path: Path) -> None:
     external flag; the element that contains it; the bounded context that owns each
     component; each relationship with its source, target, label and technology; each
     component's code; the component every projected source file belongs to (the longest
-    matching code path); and, for Python, an import from one component's code into another's
-    as a dependency between the two."""
+    matching code path); and, for a component whose code is Python, an import from its code
+    into another component's as a dependency between the two, marking a component whose code
+    holds no Python as one whose dependencies were not read."""
     dhf, results = _record(tmp_path)
     _results(results)
     _workspace(dhf.parent)
@@ -116,6 +124,18 @@ def test_the_c4_model_is_projected_into_the_graph(tmp_path: Path) -> None:
             rdm:importedBy ?by ; rdm:imports ?imp } }""") == {
             ("element/alarms", "element/app", "src/alarms.py", "src/speaker.py")}
         assert {"architecture", "code"} <= graphs
+    with verification_step("a component whose code holds no Python is marked as one whose dependencies were not read"):
+        workspace = dhf / "c4" / "workspace.json"
+        model = json.loads(workspace.read_text())
+        model["model"]["softwareSystems"][0]["containers"][0]["components"].append(
+            {"id": "7", "name": "Sounds", "group": "alarms",
+             "properties": {"structurizr.dsl.identifier": "sounds", "code": "web/"}})
+        workspace.write_text(json.dumps(model))
+        (dhf.parent / "web").mkdir()
+        (dhf.parent / "web" / "sounds.ts").write_text("import { beep } from '../src/speaker';\n")
+        quads = project(dhf, results)
+        assert _select(quads, "SELECT ?c WHERE { ?c rdm:dependenciesNotRead true }") == {("element/sounds",)}
+        assert not _select(quads, "SELECT ?t WHERE { <urn:dhf:acme:element/sounds> rdm:dependsOn ?t }")
     with verification_step("the terms are in the vocabulary"):
         terms = {q.subject.value for q in quads if q.graph_name.value.endswith("graph/ontology")}
         used = {q.predicate.value for q in quads if q.graph_name.value.rsplit("/", 1)[-1] in ("architecture", "code")}
@@ -133,7 +153,7 @@ def test_the_c4_model_is_projected_into_the_graph(tmp_path: Path) -> None:
 
 
 # The warnings DI-68's shapes give, by the start of their message.
-C4_WARNINGS = ("design output is in no component's code", "test run exercises a component of",
+C4_WARNINGS = ("design output is in no component's code", "test run names a component of",
                "code dependency with no relationship", "component's group", "bounded context has no component",
                "bounded context's design document does not show", "component's code path", "relationship has no")
 
@@ -160,19 +180,28 @@ def _agreeing(repo: Path) -> None:
 @allure.label("output", "rdm/graph/c4.py")
 def test_the_c4_model_and_the_record_are_checked_against_each_other(tmp_path: Path) -> None:
     """DI-68: RDM shall warn, never block, through the graph's gate shapes, when the C4 model
-    and the record disagree: a design output in no component's code; a test run that
-    exercises a component of a context that neither owns nor realises the design input it
-    verifies; a dependency between two components with no relationship declared from the one
-    to the other; a group of components that is not a bounded context of the architecture, or
-    a bounded context with no component; a bounded context whose design document does not show
-    its component view; a component whose code path does not exist; and a relationship with no
-    description."""
+    and the record disagree: a design output in no component's code; a test run that names a
+    component of a context that neither owns nor realises the design input it verifies (a
+    component it only reaches is never one); a dependency read from the code between two
+    components with no relationship declared from the one to the other; a group of components
+    that is not a bounded context of the architecture, or a bounded context with no component;
+    a bounded context whose design document does not show its component view; a component
+    whose code path does not exist; and a relationship with no description."""
     dhf, results = _record(tmp_path / "agree")
     _results(results)
     _workspace(dhf.parent)
     _agreeing(dhf.parent)
     with verification_step("a record that agrees with its C4 model gets no warning"):
         assert _c4_warnings(project(dhf, results)) == set()  # run b exercises ui's code for DI-1, which ui realises
+
+    with verification_step("a component of another context a run only reaches raises no warning; one it names does"):
+        _named_run(results, "reaching", "DI-2", "alarms")  # alarms owns DI-2; alarms -> app, of ui
+        quads = project(dhf, results, infer=True)
+        assert ("run/reaching-result", "element/app") in _select(quads, "SELECT ?r ?c WHERE { ?r rdm:reaches ?c }")
+        assert _c4_warnings(quads) == set()
+        _named_run(results, "naming", "DI-2", "app")
+        assert {(label, message) for _, label, message in _c4_warnings(project(dhf, results, infer=True))} == {
+            ("naming", "test run names a component of ui, which neither owns nor realises DI-2")}
 
     dhf, results = _record(tmp_path / "disagree")
     _results(results)
@@ -203,7 +232,7 @@ def test_the_c4_model_and_the_record_are_checked_against_each_other(tmp_path: Pa
     with verification_step("each disagreement gets its warning, on what disagrees"):
         assert {(label, message) for _, label, message in found} == {
             ("lib/stray.py", "design output is in no component's code"),
-            ("test_alarm", "test run exercises a component of ui, which neither owns nor realises DI-2"),
+            ("test_alarm", "test run names a component of ui, which neither owns nor realises DI-2"),
             ("app imports alarms", "code dependency with no relationship declared from the one component to the other"),
             ("Logger", "component's group logging is not a bounded context the architecture declares"),
             ("billing", "bounded context has no component in the architecture"),
@@ -232,13 +261,14 @@ def test_the_c4_model_and_the_record_are_checked_against_each_other(tmp_path: Pa
 @allure.label("output", "rdm/graph/agent.py")
 def test_the_trace_names_the_components_a_design_input_exercises(tmp_path: Path) -> None:
     """DI-69: RDM's agent server shall show, in the trace of a design input, the components
-    whose code its tests exercise, each with its container and owning bounded context."""
+    its runs name and, apart, the components they reach and the components their coverage
+    shows they ran, each with its container and owning bounded context."""
     from rdm.graph.agent import Record, trace
 
     dhf, results = _record(tmp_path)
     _results(results)
     _workspace(dhf.parent)
-    with verification_step("each component its runs exercise, with its container and context"):
+    with verification_step("each component its runs name, with its container and context"):
         components = trace(Record(dhf, results), "DI-1")["design_input"]["components"]
         attach("components of DI-1", components)
         assert components == [
@@ -246,3 +276,67 @@ def test_the_trace_names_the_components_a_design_input_exercises(tmp_path: Path)
             {"component": "app", "name": "Device app", "container": "Firmware", "context": "ui"}]
     with verification_step("an input no run exercises names none"):
         assert trace(Record(dhf, results), "DI-2")["design_input"]["components"] == []
+    with verification_step("the components their coverage shows they ran are listed apart from named and reached"):
+        from tests.acceptance.test_coverage import _covered_run
+
+        _covered_run(results, "ran", "DI-2", "coverage", "SF:src/speaker.py\nDA:1,1\nend_of_record\n")
+        traced = trace(Record(dhf, results), "DI-2")["design_input"]
+        attach("trace DI-2, coverage only", traced)
+        assert traced["covered_components"] == [
+            {"component": "app", "name": "Device app", "container": "Firmware", "context": "ui"}]
+        assert traced["components"] == [] and traced["reached_components"] == []
+    with verification_step("the components its runs reach are listed apart from those they name"):
+        _named_run(results, "reaching", "DI-2", "alarms")  # alarms -> app
+        traced = trace(Record(dhf, results), "DI-2")["design_input"]
+        attach("trace DI-2", traced)
+        assert traced["components"] == [
+            {"component": "alarms", "name": "Alarm logic", "container": "Firmware", "context": "alarms"}]
+        assert traced["reached_components"] == [
+            {"component": "app", "name": "Device app", "container": "Firmware", "context": "ui"}]
+
+
+@allure.story("DI-73")
+@allure.label("output", "rdm/graph/ontology.ttl")
+@allure.label("output", "rdm/graph/c4.py")
+@allure.label("output", "rdm/graph/agent.py")
+def test_a_run_reaches_what_the_components_it_names_lead_to(tmp_path: Path) -> None:
+    """DI-73: RDM shall derive, by a rule its vocabulary declares, that a test run reaches each
+    component the C4 model's declared relationships lead to, at any depth, from a component the
+    run names, and that is not itself named; the record never states it, and a reached
+    component is never taken for a named one."""
+    from rdm.graph.agent import schema
+
+    dhf, results = _record(tmp_path)
+    _results(results)
+    _workspace(dhf.parent)  # nurse -> alarms -> app
+    workspace = dhf / "c4" / "workspace.json"
+    model = json.loads(workspace.read_text())
+    components = model["model"]["softwareSystems"][0]["containers"][0]["components"]
+    components[1]["relationships"] = [{"id": "11", "sourceId": "5", "destinationId": "7", "description": "logs"},
+                                      {"id": "12", "sourceId": "5", "destinationId": "6", "description": "records"}]
+    components.append({"id": "7", "name": "Logger", "group": "ui",
+                       "properties": {"structurizr.dsl.identifier": "logger", "code": "src/log.py"}})
+    workspace.write_text(json.dumps(model))  # alarms -> app -> logger; app -> the EHR, a software system
+    _named_run(results, "chain", "DI-2", "alarms")
+    _named_run(results, "both", "DI-2", "alarms", "app")
+    (dhf.parent / "src" / "log.py").write_text("from src.alarms import beep\n")  # a code dependency, not declared
+    _named_run(results, "leaf", "DI-2", "logger")
+    quads = project(dhf, results, infer=True)
+    reached = _select(quads, "SELECT ?r ?c WHERE { ?r rdm:reaches ?c }")
+    attach("reached", sorted(reached))
+
+    with verification_step("a run reaches each component the declared relationships lead to, at any depth"):
+        assert {c for r, c in reached if r == "run/chain-result"} == {"element/app", "element/logger"}
+    with verification_step("a component the run names is never reached, nor a person, system or container"):
+        assert {c for r, c in reached if r == "run/both-result"} == {"element/logger"}
+        assert not {c for r, c in reached if r == "run/leaf-result"}  # logger imports alarms: no relationship
+        assert not any(c in ("element/alarms", "element/nurse", "element/ehr", "element/firmware")
+                       for _, c in reached)
+    with verification_step("reached facts are derived into the inferred graph only, never stated by the record"):
+        assert {q.graph_name.value for q in quads if q.predicate.value == RDM + "reaches"} == {
+            "urn:dhf:acme:graph/inferred"}
+        assert not any(q.predicate.value == RDM + "reaches" for q in project(dhf, results))
+    with verification_step("the vocabulary declares the rule, and the agent server's schema lists it"):
+        rule = {r["rule"]: r for r in schema()["rules"]}[RDM + "ReachesRule"]
+        attach("rdm:ReachesRule", rule)
+        assert rule["derives"] == RDM + "reaches" and rule["construct"].lstrip().startswith("CONSTRUCT")

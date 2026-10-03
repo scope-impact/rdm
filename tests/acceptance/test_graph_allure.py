@@ -94,9 +94,14 @@ def test_results_are_projected_in_full(tmp_path: Path) -> None:
 
 @allure.story("DI-56")
 @allure.label("output", "rdm/graph/allure.py")
+@allure.label("output", "rdm/graph/c4.py")
+@allure.label("output", "rdm/graph/shapes.ttl")
 def test_runs_link_to_the_code_they_exercise(tmp_path: Path) -> None:
-    """DI-56: each run to the source files its output labels name; trace lists
-    a design input's source files."""
+    """DI-56: RDM shall link each test run to the components it names: by a component label,
+    the key of a component the C4 model declares, or by an output label, the component whose
+    code holds the file it names; a component label naming no component of the model shall be
+    a warning; and the agent server's trace shall list, for a design input, the source files
+    its runs' output labels name."""
     dhf, results = _record(tmp_path)
     _results(results)
     quads = project(dhf, results)
@@ -109,3 +114,20 @@ def test_runs_link_to_the_code_they_exercise(tmp_path: Path) -> None:
         traced = trace(Record(dhf, results), "DI-1")["design_input"]
         attach("trace DI-1", traced)
         assert traced["code"] == ["src/alarms.py", "src/speaker.py"]
+    from rdm.graph.validate import validate
+    from tests.acceptance.test_graph_c4 import _named_run, _workspace
+
+    _workspace(dhf.parent)
+    _named_run(results, "keyed", "DI-2", "app", "pager")
+    quads = project(dhf, results)
+    named = {(q.subject.value.replace(P, ""), q.object.value.replace(P, ""))
+             for q in quads if q.predicate.value == RDM + "namesComponent"}
+    attach("named components", sorted(named))
+    with verification_step("an output label names the component whose code holds its file"):
+        assert {("run/b-result", "element/alarms"), ("run/b-result", "element/app")} <= named
+    with verification_step("a component label names the component the model declares under its key"):
+        assert {c for r, c in named if r == "run/keyed-result"} == {"element/app"}
+    with verification_step("a component label naming no component of the model is a warning"):
+        assert ("unknownComponent", "pager") in _facts(quads, P + "run/keyed-result")
+        warned = {(r.severity, r.label, r.message) for r in validate(quads) if "component label" in r.message}
+        assert warned == {("Warning", "keyed", "test run's component label pager names no component of the C4 model")}

@@ -96,6 +96,16 @@ def _evidence(store: ox.Store, node: str) -> dict:
             "attachments": attachments}
 
 
+def _components(store: ox.Store, node: str, link: str) -> list[dict]:
+    """The components the runs of a design input link to by ``link``, each
+    with its container and owning bounded context (DI-69)."""
+    return sorted(_select(store, f"""SELECT DISTINCT ?component ?name ?container ?context WHERE {{
+        ?r rdm:exercises <{node}> ; {link} ?c .
+        ?c dcterms:identifier ?component ; rdfs:label ?name .
+        OPTIONAL {{ ?c rdm:containedIn/rdfs:label ?container }}
+        OPTIONAL {{ ?c rdm:inContext/rdfs:label ?context }} }}"""), key=lambda c: c["component"])
+
+
 def _input(store: ox.Store, node: str) -> dict:
     one = _select(store, f"""SELECT ?id ?text ?context ?doc ?path ?commit WHERE {{
         <{node}> dcterms:identifier ?id ; rdm:text ?text .
@@ -115,11 +125,9 @@ def _input(store: ox.Store, node: str) -> dict:
             store, f"SELECT DISTINCT ?p WHERE {{ ?r rdm:exercises <{node}> ; rdm:exercisesOutput/rdm:path ?p }}")),
         "risks": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ ?r rdm:controlledBy <{node}> ; dcterms:identifier ?id }}")),
-        "components": sorted(_select(store, f"""SELECT DISTINCT ?component ?name ?container ?context WHERE {{
-            ?r rdm:exercises <{node}> ; rdm:exercisesOutput/rdm:inComponent ?c .
-            ?c dcterms:identifier ?component ; rdfs:label ?name .
-            OPTIONAL {{ ?c rdm:containedIn/rdfs:label ?container }}
-            OPTIONAL {{ ?c rdm:inContext/rdfs:label ?context }} }}"""), key=lambda c: c["component"]),
+        "components": _components(store, node, "rdm:namesComponent"),  # DI-69: named...
+        "reached_components": _components(store, node, "rdm:reaches"),  # ...and, apart, reached (DI-73)
+        "covered_components": _components(store, node, "rdm:covers/rdm:inComponent"),  # ...and ran (DI-74)
         "runs": sorted(({"test": r["name"], "status": r["status"], **_evidence(store, r["r"])} for r in _select(
             store, f"SELECT ?r ?name ?status WHERE {{ ?r rdm:exercises <{node}> ; rdfs:label ?name ; "
                    f"rdm:status ?status }}")), key=lambda r: (r["test"], r["status"])),
@@ -224,8 +232,9 @@ def server(record: Record):
     @app.tool(name="trace", annotations=read_only,
               description="Trace a user need (UN-n), design input (DI-n) or risk id: text, contexts, owning document "
                           "and last commit, needs refined, tagged tests, runs (with steps and attachments), the source "
-                          "files they exercise, risks controlled; for a risk, "
-                          "its chain, scores, levels, acceptance and each controlling design input.")
+                          "files they exercise, the components they name and, apart, reach and cover, "
+                          "risks controlled; for a risk, its chain, scores, levels, acceptance and each "
+                          "controlling design input.")
     def _trace(id: str) -> dict:
         try:
             return trace(record, id)

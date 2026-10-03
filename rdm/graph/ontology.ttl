@@ -160,7 +160,11 @@ rdm:position a owl:DatatypeProperty ; rdfs:label "position" ; rdfs:domain rdm:St
 
 rdm:SourceFile a owl:Class ;
     rdfs:label "Source file" ;
-    rdfs:comment "A file a test run exercises, named by its output label (DI-56)." .
+    rdfs:comment "A file a test run exercises, named by its output label (DI-56), or a file its coverage shows it ran (DI-74)." .
+rdm:covers a owl:ObjectProperty ; rdfs:label "covers" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:SourceFile ;
+    rdfs:comment "A file with a line the run executed, by the coverage (LCOV or Cobertura XML) it attached; its component is rdm:covers/rdm:inComponent, apart from the components the run names or reaches (DI-74)." .
+rdm:unreadableCoverage a owl:DatatypeProperty ; rdfs:label "unreadable coverage" ; rdfs:domain rdm:TestRun ;
+    rdfs:comment "A coverage attachment of the run that could not be read as LCOV or Cobertura XML: never taken as covering nothing (DI-74)." .
 rdm:Parameter a owl:Class ; rdfs:label "Parameter" ;
     rdfs:comment "One parameter of a parametrised run: a name and a value (DI-54)." .
 rdm:parameter a owl:ObjectProperty ; rdfs:label "parameter" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Parameter .
@@ -282,6 +286,14 @@ rdm:imports a owl:DatatypeProperty ; rdfs:label "imports" ; rdfs:domain rdm:Depe
     rdfs:comment "The file of the target component it imports." .
 rdm:missingCode a owl:DatatypeProperty ; rdfs:label "missing code" ; rdfs:domain rdm:Component ;
     rdfs:comment "A component's code path that does not exist in the repository." .
+rdm:dependenciesNotRead a owl:DatatypeProperty ; rdfs:label "dependencies not read" ; rdfs:domain rdm:Component ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "The component's code holds no Python, so its imports were not read: no rdm:dependsOn from it means the check did not run, not that it found nothing (graph: code)." .
+rdm:namesComponent a owl:ObjectProperty ; rdfs:label "names component" ; rdfs:domain rdm:TestRun ;
+    rdfs:range rdm:Component ;
+    rdfs:comment "A component the run names: by a component label (the model's key), or the component holding a file an output label names (DI-56)." .
+rdm:unknownComponent a owl:DatatypeProperty ; rdfs:label "unknown component" ; rdfs:domain rdm:TestRun ;
+    rdfs:comment "A component label's key that names no component of the C4 model (DI-56)." .
 rdm:showsView a owl:DatatypeProperty ; rdfs:label "shows view" ; rdfs:domain rdm:Document ;
     rdfs:comment "The key of an architecture view whose image the document shows." .
 dcterms:description rdfs:label "description" .
@@ -310,3 +322,18 @@ rdm:ServesRule a rdm:Rule ;
     rdm:construct """CONSTRUCT { ?context rdm:serves ?need } WHERE {
     { ?input rdm:ownedBy ?context } UNION { ?context rdm:realises ?input }
     ?input rdm:tracesTo ?need }""" .
+
+rdm:reaches a owl:ObjectProperty ;
+    rdfs:label "reaches" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Component ;
+    rdfs:comment "Derived, never stored in the record: see rdm:ReachesRule. Never a named component (DI-73)." .
+
+rdm:ReachesRule a rdm:Rule ;
+    rdfs:label "a run reaches what the components it names lead to" ;
+    rdfs:comment "A test run reaches each component the declared relationships (rdm:Relationship, not code dependencies) lead to, at any depth, from a component it names, and that it does not itself name (DI-73)." ;
+    rdm:derives rdm:reaches ;
+    rdm:construct """CONSTRUCT { ?run rdm:reaches ?reached } WHERE {
+    ?run rdm:namesComponent ?named .
+    GRAPH ?declared { ?named (^rdm:source/rdm:target)+ ?reached }
+    FILTER EXISTS { GRAPH ?declared { ?any a rdm:Relationship } }
+    ?reached a rdm:Component .
+    FILTER NOT EXISTS { ?run rdm:namesComponent ?reached } }""" .

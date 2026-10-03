@@ -80,6 +80,7 @@ class _Dataset:
     def __init__(self, project: str):
         self.base = f"urn:dhf:{_slug(project)}:"
         self.quads: list[ox.Quad] = []
+        self.component_labels: list[tuple[ox.NamedNode, str]] = []  # (run, key): resolved against the C4 model
 
     def node(self, kind: str, local: str) -> ox.NamedNode:
         return _term(self.base + kind + "/" + quote(local, safe="/-._~"))
@@ -235,10 +236,11 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
     return by_full_name
 
 
-def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
+def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode], declared: set[str],
+                root: Path) -> None:
     from rdm.graph.allure import project_results
 
-    project_results(ds, Path(results_dir), tests, declared)
+    project_results(ds, Path(results_dir), tests, declared, root)
 
 
 def _record_findings(ds: _Dataset, dhf: Path, results: Path | None) -> None:
@@ -423,7 +425,7 @@ def project(
     tests = _tests(ds, dhf, root)
     verified: set[str] = set()
     if results is not None:
-        _executions(ds, results, tests, design_input_ids(dhf))
+        _executions(ds, results, tests, design_input_ids(dhf), dhf.parent)  # coverage is the project's
         verified = set(reconcile(design_input_ids(dhf), results).verified)
     if repo is not None:
         _git(ds, dhf, root)
