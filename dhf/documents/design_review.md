@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 76
+revision: 77
 title: Design Review — RDM
 ---
 
@@ -2307,6 +2307,29 @@ risks, and the user manual.
   back; every run tested the record's commit with a clean worktree; every
   code dependency has a declared relationship; reached components match the
   rule exactly; unit coverage is linked to no run or input.
+
+# Design Review 69 — The instructions for use as one document
+
+**Scope reviewed:** IFU-001 after Design Review 67: a list of the site's
+pages in the order the site happened to have, which nobody could read as
+one document.
+
+**Disposition:** Approved.
+
+- **The IFU is restructured as instructions for use** (ISO 20417, IEC
+  82304-1 accompanying documents): a cover with the release and the
+  manual's revision; intended use; how RDM works; safety and limitations;
+  installation; getting started; operating instructions; troubleshooting;
+  reference; revision history (DI-80). The pages move into chapter folders
+  under `docs/`, and IFU-001 lists them in reading order.
+- **Residual risks are disclosed** in the safety chapter, each by its
+  register id with what the user must do (DI-81, ISO 14971 disclosure of
+  residual risk).
+- **New pages:** the cover, intended use, safety and limitations,
+  operating instructions, troubleshooting, reference. The rest move,
+  unchanged in substance. "RDM on RDM" stays outside the IFU: it publishes
+  this DHF.
+- **Not done here:** rendering the IFU as one PDF.
 
 # Approval
 
