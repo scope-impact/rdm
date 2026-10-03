@@ -244,6 +244,12 @@ def imported_files(root: Path, path: Path) -> set[str]:
     return found
 
 
+def python_files(component: Element, root: Path) -> list[Path]:
+    """The Python files a component's code holds: none for code in another language."""
+    target = Path(root) / component.link
+    return sorted(target.rglob("*.py")) if target.is_dir() else [target] if target.suffix == ".py" else []
+
+
 def component_dependencies(model: Model, root: Path) -> dict[tuple[str, str], tuple[str, str]]:
     """Every Python import from one component's code into another component's:
     ``(source alias, target alias) -> (importing file, imported file)``, one
@@ -252,9 +258,7 @@ def component_dependencies(model: Model, root: Path) -> dict[tuple[str, str], tu
     components = model.code_components
     dependencies: dict[tuple[str, str], tuple[str, str]] = {}
     for component in components:
-        target = root / component.link
-        files = sorted(target.rglob("*.py")) if target.is_dir() else [target] if target.suffix == ".py" else []
-        for file in files:
+        for file in python_files(component, root):
             rel = file.relative_to(root).as_posix()
             if component_of(rel, components) is not component:
                 continue  # a more specific component owns this file
