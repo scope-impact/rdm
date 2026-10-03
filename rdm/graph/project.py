@@ -207,7 +207,9 @@ def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> Non
 def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
     """Each tagged test, defined in its file and verifying its design inputs
     (DI-61). Returns the Python tests keyed by the full name Allure gives
-    their runs (``tests.x.TestClass#test_y``), so a run can find its test."""
+    their runs (``tests.x.TestClass#test_y``), so a run can find its test:
+    from the repository root, and from the project (the DHF's parent), where
+    pytest runs when the project is nested in its repository."""
     tests_dir = find_tests_dir(dhf)
     by_full_name: dict[str, ox.NamedNode] = {}
     if tests_dir is None:
@@ -227,8 +229,9 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
             ds.add(test, rdm("verifies"), ds.node("input", tag), "tests")
         for tag in relevant_orphans(tags, declared):  # as the design gate reports them
             ds.add(test, rdm("undeclaredTag"), tag, "tests")
-        if (key := full_name(rel, name)) is not None:
-            by_full_name[key] = test
+        for path in {rel, _rel(Path(file), dhf.parent)}:
+            if (key := full_name(path, name)) is not None:
+                by_full_name[key] = test
     return by_full_name
 
 
