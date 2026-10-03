@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 53
+revision: 54
 title: Design Review — RDM
 ---
 
@@ -1549,6 +1549,39 @@ package. No design input changed.
   named once.
 - An approved validation record with an empty or missing reviewer silenced
   the warning. A validation needs a person, so it now needs a reviewer.
+
+# Design Review 53 — The graph blocks what the gates block
+
+**Scope reviewed:** the projection, the gate shapes, SHACL validation, the
+agent server and the graph commands (DI-35, DI-36, DI-38, DI-39, DI-42,
+DI-51), against an adversarial behaviour test of the installed package. No
+design input changed.
+
+**Disposition:** Approved.
+
+- `rdm graph validate` passed records the release gate blocks as a whole: a
+  document whose frontmatter cannot be read, a declaration the record reader
+  cannot read, an uncommitted edit, no design review, no design input, and a
+  result file that cannot be read. The projection now asks the release gate
+  for these findings and puts them on the record's node, where a shape
+  reports each one, so validate blocks them with the gate's own words.
+- The executions graph read results with a reader of its own: it skipped a
+  result with a byte-order mark the gate reads, and a run whose step failed
+  was *passed*. It now uses the Allure reader the gates use.
+- The graph used a stricter id grammar than the record: a design input the
+  gates verified, with an id such as `DI-2a`, had no test and no run in the
+  graph, and `trace` refused it. A tag or a story that names a declared id
+  now links, whatever its shape, and `trace` answers any declared id.
+- `FROM` and `FROM NAMED` were ignored, so a query read the whole graph
+  while saying it read one. They are refused, naming `GRAPH` instead.
+  `SERVICE` used as a variable or a prefix name is no longer refused.
+- A shapes or checklist file that is not valid RDF ended in a traceback with
+  exit 1, the code for a violation. It is an error, exit 2.
+- `--infer` with `--store` was ignored, and an unknown `--exclude` class was
+  ignored. Both are refused.
+- In a repository with no remote whose one branch is not `main` or
+  `master`, every document was warned as not landed. The default branch is
+  now also git's `init.defaultBranch`, or the only local branch.
 
 # Approval
 
