@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 60
+revision: 61
 title: Design Review — RDM
 ---
 
@@ -1726,7 +1726,7 @@ together. Findings are recorded here as each input is reviewed; nothing is
 changed until the pass is complete.
 
 **Disposition:** Approved for DI-1 to DI-4, as decided below; the changes are
-made context by context. The pass continues from DI-5 in the next design review.
+made context by context. The pass continues from DI-5 in a later design review.
 
 ## DI-1 — Reading the record, with no planning dependency
 
@@ -1867,6 +1867,62 @@ The decisions above, as made in the record:
   ingestion DI-1 drops.
 - The C4 model's component descriptions follow: the hooks, the Allure reader
   and the verification data.
+
+# Design Review 59 — Why tests drifted from their design inputs, and the process that holds them
+
+**Scope reviewed:** how the first four inputs of Design Review 58 came to
+have tests that verify more, or less, than their text states, and the changes
+to the way RDM is developed that answer it. No design input changes.
+
+**Disposition:** Approved.
+
+## What happened
+
+Every design input had a passing tagged test and the gates were green, yet
+each of the four inputs reviewed disagreed with its test. DI-2's test grew
+from three verification steps to fourteen in two days of fixes (Design
+Reviews 44, 48 and 51 to 57) while its text stayed the same: each fix added
+its proof as a step on the nearest existing test. Other tests verified less
+than their text: DI-1's ingesting of results, DI-3's "every", DI-4's
+rendering.
+
+## Why
+
+- **A fix was recorded but its requirement was not.** Each fix had its
+  design review entry and its amended prose, but whether the behaviour it
+  proved was stated by the input whose test took the step was never asked.
+  The rule that what must be accepted separately is a separate design input
+  existed, and was not applied.
+- **No gate reads a test against its text, and none should.** The gates
+  check that a test exists, is tagged and passes; a mutation probe shows a
+  test is sharp, not that it is aimed at its text. The faithfulness gate that
+  read them together was retired (UN-009) because a machine verdict recorded
+  as evidence is weak and approval is a person's; nothing took its place.
+- **The review was handed too much.** One pull request carried seven fix
+  batches across every context; no reviewer reads 59 inputs against their
+  tests inside it.
+- **Texts joined behaviours with "and",** inviting a test of one half.
+
+## The answer is a process, not automation
+
+A gate that judged whether a test proves its text would be the faithfulness
+gate again. The changes are to how RDM is developed, written where the people
+and agents who change it look:
+
+- **Changing an existing test** (`dhf/AGENT_WORKFLOW.md`, step 5): before a
+  step is added to an existing test, the input's text is read; a step the
+  text does not state means amending the text, or declaring a new input, in
+  the same design review entry.
+- **One requirement per input** (`CONTEXT.md`, design input; step 2): one
+  `shall`, no "and" joining behaviours that could be accepted apart.
+- **The review reads text and test together** (the pull-request template,
+  step 7): for each design input the change touches, the reviewer reads its
+  text beside its tagged test and says so.
+- **One bounded context per fix pull request** (step 7, hard rules).
+- **A chain review before each release** (`dhf/AGENT_WORKFLOW.md`,
+  `CONTEXT.md`): every design input read with its user needs, prose, tagged
+  test, verification steps, output labels and last run, recorded as a design
+  review, as Design Review 58 began.
 
 # Approval
 
