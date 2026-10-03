@@ -118,3 +118,21 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
         assert [r.label for r in flagged] == ["risk with no id #1 in dhf/documents/risk/risks.md"]
         undeclared = trace(Record(tmp_path / "agree" / "undeclared-control" / "proj" / "dhf"), "RISK-U-2")["risk"]
         assert [c["id"] for c in undeclared["controls"]] == ["DI-1"] and undeclared["undeclared_controls"] == ["DI-77"]
+    with verification_step("A finding about the register with no risk to carry it: the gate blocks, and so do "
+                           "the shapes, on a stand-in node for the register"):
+        for name, write in (("register-mapping", lambda d: _register(d, {"RISK-X-1": {}})),
+                            ("register-misspelled", lambda d: (d / "documents" / "risk" / "risks.md").write_text(
+                                "---\nid: RMF\nkind: risk\nrisk: []\n---\n")),
+                            ("policy-only-bad", lambda d: _policy(d, {"severities": ["Minor"]}))):
+            case_dhf = _dhf(tmp_path / "agree" / name)
+            (case_dhf / "documents" / "risk").mkdir(parents=True, exist_ok=True)
+            if name != "policy-only-bad":
+                _policy(case_dhf)
+            write(case_dhf)
+            results = _results(tmp_path / "agree" / name, {"DI-1": ["passed"], "DI-2": ["passed"]})
+            gate = run_release_gate(case_dhf, results)
+            blocked = {m for m in gate.blocking if "risk" in m}
+            assert blocked, (name, gate.blocking)
+            flagged = {r.message for r in validate(project(case_dhf, results))
+                       if r.severity == "Violation" and r.focus.startswith("urn:dhf:proj:risk/")}
+            assert flagged == blocked, (name, flagged, blocked)

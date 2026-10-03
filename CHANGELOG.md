@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Fixed: a risk rating no one approved is never read as approved** (Design
+  Review 51). A risk or policy with no status is proposed and warns; an acceptance needs text for who and
+  why; a `kind: risk` document without a `risks` list blocks; a policy that
+  lists a severity or probability twice is malformed; a recorded residual
+  level is checked; a non-scalar risk id is no id; and `rdm graph validate`
+  blocks register and policy findings when there is no risk to carry them.
 - **Fixed: the record says what it holds, or the design gate fails** (Design
   Review 50). A design input the reader could not read (`design_inputs` not a
   list of entries each with one id, or outside a design document), a user need

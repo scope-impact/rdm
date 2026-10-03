@@ -327,7 +327,8 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
     levels, residual decision, status, controls and acceptance — and the
     release gate's own findings on it (``rdm:finding`` blocks,
     ``rdm:riskWarning`` warns), which the shapes report, so the two cannot
-    disagree. A finding about the register as a whole goes on every risk."""
+    disagree. A finding about the register as a whole goes on every risk, or
+    on a stand-in node for the register when there is none."""
     from collections import Counter
 
     from rdm.risk.register import assess, policy_or_none, residual_decision
@@ -371,6 +372,11 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
         for finding in found:
             if finding.risk == index or (finding.risk is None and finding.blocking):
                 ds.add(node, rdm("finding" if finding.blocking else "riskWarning"), finding.message, g)
+    whole = [finding.message for finding in found if finding.risk is None and finding.blocking]
+    if whole and not register:  # still in the graph, so the shapes block it as the release gate does
+        node = ds.thing(ds.node("risk", "_register"), rdm("Risk"), "the risk register", g)
+        for message in whole:
+            ds.add(node, rdm("finding"), message, g)
 
 
 def _ontology(ds: _Dataset) -> None:

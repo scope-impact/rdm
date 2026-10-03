@@ -52,7 +52,9 @@ risks:
   reviewer's judgement.
 - **`status: proposed`** marks ratings no person has approved — an agent's
   suggestion, say. It is a warning at the release gate, never silent. A
-  document-level `status` applies to every risk in it that sets none.
+  document-level `status` applies to every risk in it that sets none; with
+  neither, the rating is proposed. The same holds for the policy: only
+  `status: approved` is approved.
 
 ## The risk policy
 
