@@ -1963,6 +1963,32 @@ reported. Its test is to show all four statuses and their precedence over
 several runs of one need, to run `rdm story persona`, to put every check in a
 step and to correct its docstring. The reconciler changes with it.
 
+## DI-7 — A Markdown template rendered against the data supplied
+
+Traces to UN-001; described by the Renderer row of the publishing context;
+verified by `test_renders_template_against_data_context` (output
+`rdm/publishing/render.py`), whose last run passed with one verification
+step. **Changes requested:**
+
+- The requirement itself — a template filled from data — is asserted outside
+  any verification step, so the run shows only error handling.
+- That one step checks what the text does not state: `rdm render` refuses a
+  value the template uses that the data does not supply, and a template that
+  does not exist, naming each and exiting 2; an empty configuration loads no
+  extensions.
+- "A supplied data context" leaves unstated what matters: each data file is
+  available under its file name.
+- The test renders a string, not a Markdown template file, except in passing.
+- The Renderer row claims rendering in one or two passes, which no design
+  input states and no acceptance test shows; only unit tests do.
+
+**Decision (C):** reword DI-7 to: "RDM shall render a Markdown template file
+with Jinja2 against the data files supplied, each available under its file
+name, and refuse, naming it, a value the template uses that the data does not
+supply." Its test is to render a template file from data files in a step,
+show the file-name convention, and keep the refusals as steps. Two-pass
+rendering is taken up with DI-9.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
