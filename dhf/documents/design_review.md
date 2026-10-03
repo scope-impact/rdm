@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 64
+revision: 65
 title: Design Review — RDM
 ---
 
@@ -2054,13 +2054,13 @@ DI-58, DI-59, DI-60, DI-62, DI-67, DI-68, DI-69.
 | DI-66 | Views, implied relationships unstated; RDM's naming conventions checked as reading; **the shared kernel drawn in the specification context** | Text widened; the convention check moved to DI-68's own-record step; the kernel drawn in no context |
 | DI-70 | An image of no view, removal and refusal, unstated | Text widened |
 
-# Design Review 61 — What a test exercises, without reading the code (proposal)
+# Design Review 61 — What a test exercises, without reading the code
 
 **Scope reviewed:** how the graph learns which components a test run
 exercises (DI-56, DI-67, DI-68, DI-69), and how to learn it for a project in
 any language.
 
-**Disposition:** Proposed. Nothing changes until it is approved.
+**Disposition:** Approved: proposals 1 to 4; proposal 5 deferred to a later review.
 
 ## Why
 
@@ -2104,12 +2104,26 @@ reasons over it, and reads code only where a project offers it.
    file to its component by code path, and links the run to the components it
    actually ran, apart from those it names or reaches. RDM parses no source.
 
-## Open questions
+## Decisions
 
-- Whether a reached component may satisfy DI-68's check that a run exercises
-  only components of its input's context, or only a named one may.
-- Whether DI-74 belongs in this change or a later one: per-test coverage is
-  simple with coverage.py and harder elsewhere.
+- **Only a named component counts for DI-68.** Reaching over-approximates —
+  a component may use another only in paths the test never runs — so a
+  reached component never raises or clears a warning.
+- **Coverage (proposal 5) is deferred.** Per-test coverage is simple with
+  coverage.py and harder elsewhere, and proposals 1 to 4 already free the
+  record from reading code. No DI-74 is declared.
+
+## Approved changes
+
+- **DI-56** amended: a run names components by a `component` label (a model
+  key; an unknown key warns) or, as before, by an `output` label's file.
+- **DI-73** (graph, new): the reaches rule, declared in the vocabulary and
+  derived only into the inferred graph.
+- **DI-69** amended: the trace lists named and reached components apart.
+- **DI-67** amended: Python imports are read for Python code only, and a
+  component whose code holds none is marked as not read.
+- **DI-68** amended: the context warning is on named components; the
+  dependency warning is on dependencies read from code.
 
 # Approval
 
