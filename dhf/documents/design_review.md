@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 74
+revision: 75
 title: Design Review — RDM
 ---
 
@@ -2273,6 +2273,9 @@ showed which pages still taught file paths.
   container holding the user manual and, apart from it, the docs build hooks
   (`docs/_hooks/`, Python the site build runs), so the manual's code is its
   pages alone (publishing); views redrawn.
+- **The manual is the IFU:** anyone who uses RDM is its user, so the user
+  manual is RDM's instructions for use; `CONTEXT.md` names the term
+  "Instructions for use (IFU)", user manual being its plain name.
 - **Not done:** RDM's own acceptance tests keep their output labels (DI-56
   allows both); moving them is separate work.
 

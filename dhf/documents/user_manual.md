@@ -1,8 +1,8 @@
 ---
 id: IFU-001
 kind: manual
-revision: 1
-title: "User manual — RDM's documentation site"
+revision: 2
+title: "Instructions for use (IFU) — RDM's user manual"
 # The pages of the manual, from the project root (DI-77). The "RDM on RDM"
 # pages are not here: they publish this DHF, which is the record, not the manual.
 pages:
@@ -30,9 +30,9 @@ pages:
 
 # Purpose
 
-RDM's user manual is its documentation site: the instructions a team follows
-to keep its record the way RDM's gates enforce. It is a design output, and
-this controlled document is its entry in the device-master-record index
+RDM's instructions for use (IFU) are its user manual, the documentation site:
+what anyone who uses RDM follows to keep a record the way RDM's gates
+enforce. It is a design output, and this controlled document is its entry in the device-master-record index
 (`rdm story dmr`): the pages listed above, at the revision of the release
 they ship with.
 
