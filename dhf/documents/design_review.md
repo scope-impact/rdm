@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 68
+revision: 69
 title: Design Review — RDM
 ---
 
@@ -2176,6 +2176,31 @@ acceptance evidence is for.
 - Coverage as evidence of unit verification (IEC 62304 5.5, classes B and
   C), if wanted, is a design input of its own on the unit-test side, never
   carried through Allure.
+
+# Design Review 64 — The unit tests' code coverage, as evidence of unit verification
+
+**Scope reviewed:** code coverage on the unit-test side, as Design Review 63
+left it: evidence that the software units were exercised by their unit tests
+(IEC 62304 5.5), never acceptance evidence and never carried in Allure.
+
+**Disposition:** Approved.
+
+- **DI-76** (release, new; realised by test evidence): `rdm story verify`,
+  given the unit tests' coverage as one Cobertura XML or LCOV report (what
+  coverage.py, JaCoCo, Istanbul and gcov write), adds to the verification
+  data, per C4 component with code, the lines its unit tests ran out of
+  those measured, and lists apart a component the report does not measure.
+  The traceability matrix shows it beside the design inputs, not inside them:
+  a design input is verified by its acceptance test; a component's unit
+  coverage says how far its own code was unit-tested.
+- The C4 model, not a language, maps a file to its component, so any
+  language's coverage report serves. A report that cannot be read is an
+  error, never no coverage.
+- No threshold is set and nothing blocks release: a minimum, where a
+  project wants one (for software of class B or C), is a later input.
+- RDM's own CI measures its unit tests' coverage and passes it to verify.
+- A new component, the unit coverage reader (`rdm/evidence/unit_coverage.py`),
+  in the test-evidence context; the views are redrawn.
 
 # Approval
 

@@ -119,6 +119,12 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:test_evidence"
           }
+          unit_coverage = component "Unit coverage reader" "The unit tests' code coverage, from one Cobertura XML or LCOV report: the lines each file ran out of those measured; never acceptance evidence" "Python" {
+            properties {
+              "code" "rdm/evidence/unit_coverage.py"
+            }
+            tags "context:test_evidence"
+          }
           mutation_probe = component "Mutation probe" "rdm story mutation-probe: runs one test unmutated, then mutated; killed, survived or error; journals the original beside the file and always restores it" "Python" {
             properties {
               "code" "rdm/evidence/mutation.py"
@@ -356,6 +362,8 @@ workspace "RDM" "The design record of regulated software." {
     projection -> architecture_model "reads the C4 model and code dependencies with"
     pytest_plugin -> allure_reader "writes run labels and facts with"
     verification_data -> allure_reader "reconciles results with"
+    verification_data -> unit_coverage "reads the unit tests' coverage with"
+    verification_data -> architecture_model "maps covered files to components with"
     verification_report -> allure_reader "reads results with"
     architecture_drawing -> product_repo "writes the exported model and stamped view images to"
     renderer -> markdown_extensions "post-processes the rendered Markdown with"

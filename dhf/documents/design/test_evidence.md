@@ -3,7 +3,7 @@ id: SDS-EVID-001
 kind: design
 context: test_evidence
 # Implements part of inputs other contexts own.
-realises: [DI-4, DI-31, DI-40, DI-61]
+realises: [DI-4, DI-31, DI-40, DI-61, DI-76]
 design_inputs:
   - id: DI-17
     text: "RDM shall translate external test-result formats (gtest/xunit/qttest XML) into RDM's result data, and reject an unknown format or a file that holds no test results."
