@@ -26,7 +26,6 @@ from tests.acceptance.test_user_needs import _approved_dhf  # noqa: E402
 
 @allure.story("DI-72")
 @allure.label("output", "rdm/evidence/allure.py")
-@allure.label("output", "rdm/kernel/reconcile.py")
 def test_a_result_that_cannot_be_read_is_never_a_pass(tmp_path: Path) -> None:
     """DI-72: what cannot be read blocks release and is named by verify; a
     byte-order mark is read; a failed step fails its run; an undeclared tag
