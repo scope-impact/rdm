@@ -106,12 +106,12 @@ deciding whether the test proves the text; recorded as a design review, input
 by input, before each release. A person's judgement, never a gate.
 _Avoid_: faithfulness gate, audit, test review
 
-**Coverage**:
+**Code coverage**:
 How much of a unit's code its unit tests run: a unit-test measure. Never
 acceptance evidence, never carried in Allure, never in the record's
 traceability; what an acceptance test exercises is the components it names
-or reaches.
-_Avoid_: test coverage (for the design inputs a test verifies), covered (of a design input)
+or reaches. Not checklist coverage (the clauses the documents reference).
+_Avoid_: coverage (unqualified), test coverage (for the design inputs a test verifies)
 
 **Design input lifecycle**:
 The stages of one design input: declared, approved, verified, released; and
