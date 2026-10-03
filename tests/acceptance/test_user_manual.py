@@ -108,6 +108,7 @@ def test_the_manual_is_projected_into_the_graph(tmp_path: Path) -> None:
 
 @allure.story("DI-78")
 @allure.label("component", "gate_shapes")
+@allure.label("component", "manual_reader")
 def test_an_example_without_a_component_label_is_a_warning(tmp_path: Path) -> None:
     """DI-78: a tagged-test example in the manual that writes no component
     label is a warning; one that writes it is not."""
@@ -124,6 +125,7 @@ def test_an_example_without_a_component_label_is_a_warning(tmp_path: Path) -> No
 
 @allure.story("DI-79")
 @allure.label("component", "user_manual")
+@allure.label("component", "manual_reader")
 def test_rdm_manual_examples_name_their_component() -> None:
     """DI-79: every tagged-test example in RDM's own user manual names the C4
     component it exercises by a component label."""
