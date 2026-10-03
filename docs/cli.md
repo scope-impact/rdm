@@ -12,7 +12,7 @@
 | `rdm gap [-l] [-c] [-v] CHECKLIST [FILES…]` | audit documents for required `[[KEY]]` references; `-l` list built-ins, `-c` coverage table, `-v` name missing items; exit 0 covered / 3 gaps |
 | `rdm collect [FILES…]` | extract `RDOC name … ENDRDOC` snippets from source files into YAML → stdout |
 | `rdm translate FORMAT IN OUT` | convert test-runner XML (`auto`, `gtest`, `qttest`, `xunit`) into a YAML data file |
-| `rdm hooks [DEST] [--with-issue-hooks]` | install the design-gate pre-commit hook into `DEST` or `.git/hooks`; the issue-reference hooks only with the flag |
+| `rdm hooks [DEST] [--with-issue-hooks]` | install the design-gate hooks (pre-commit, and pre-merge-commit for merges) into `DEST` or `.git/hooks`; the issue-reference hooks only with the flag |
 
 ## Design controls & traceability — `rdm story …`
 

@@ -27,6 +27,7 @@ def test_hooks_installs_design_gate_only_by_default(tmp_path: Path) -> None:
     default_dest = tmp_path / "default"
     install_hooks(str(default_dest))
     assert os.access(default_dest / "pre-commit", os.X_OK)
+    assert os.access(default_dest / "pre-merge-commit", os.X_OK)  # a merge runs the same gate
     assert not (default_dest / "commit-msg").exists()
     assert not (default_dest / "prepare-commit-msg").exists()
 

@@ -28,7 +28,8 @@ rdm story design-gate --dhf dhf
 
 The pre-commit hook (`rdm hooks .githooks && git config core.hooksPath
 .githooks`, or set up by [`rdm adopt`](get-started.md)) blocks
-implementation commits while the gate is red. Committing only design documents
+implementation commits while the gate is red, and its `pre-merge-commit` twin
+blocks a merge that would bring implementation in. Committing only design documents
 is always allowed: that commit is the approval of the design.
 
 ## Release gate

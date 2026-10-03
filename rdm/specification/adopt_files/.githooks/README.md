@@ -1,8 +1,8 @@
 # Committed git hooks — the local design gate
 
 `pre-commit` here (laid down by `rdm adopt`, from RDM's `hook_files/`) blocks a
-commit that stages implementation work until the design documents and design
-review are complete and approved (committed) — see `dhf/AGENT_WORKFLOW.md`.
+commit that stages implementation work, and `pre-merge-commit` a merge that
+brings it in, until the design documents and design review are complete and approved (committed) — see `dhf/AGENT_WORKFLOW.md`.
 
 Activate it (agent sessions do this automatically via
 `scripts/agent-bootstrap.sh`):

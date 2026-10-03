@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Fixed: the hook gates every way implementation is committed** (Design
+  Review 54). Names with a tab or a quote, upper-case extensions, more source,
+  template and configuration types (JSON, INI, HTML, Vue, R, PowerShell,
+  Dockerfile, Makefile, …) and a type change to a symbolic link are gated; a
+  new `pre-merge-commit` hook, installed by `rdm hooks` and `rdm adopt`, gates
+  a merge. The hook no longer suggests `pip install rdm`, an unrelated package.
+
 - **Fixed: the graph blocks what the gates block** (Design Review 53).
   `rdm graph validate` now fails on what the release gate blocks about the
   whole record (unreadable frontmatter, a malformed declaration, an

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+# Design-controls gate for a merge: git runs pre-merge-commit, not pre-commit,
+# when a merge creates a commit, so a merge could otherwise bring
+# implementation into a branch whose design gate is red. The merge's changes
+# are staged when this runs; the pre-commit gate beside this file decides.
+#
+exec bash "$(dirname "$0")/pre-commit" "$@"

@@ -19,9 +19,10 @@ from importlib.resources import as_file, files
 from pathlib import Path
 
 from rdm.kernel.version import release_version
+from rdm.specification.hooks import DESIGN_GATE_HOOKS
 
 # Paths that must be executable at the destination.
-_EXECUTABLE = {"scripts/agent-bootstrap.sh", ".githooks/pre-commit"}
+_EXECUTABLE = {"scripts/agent-bootstrap.sh", ".githooks/pre-commit", ".githooks/pre-merge-commit"}
 
 # A template that names RDM's own version is pinned to the RDM that adopts:
 # the CI workflow calls RDM's reusable gates at this release (DI-63).
@@ -70,13 +71,13 @@ def adopt(target: Path) -> tuple[list[str], list[str]]:
             rel = src.relative_to(root).as_posix()
             _copy_if_absent(src, target / rel, rel, copied, skipped)
 
-    # The pre-commit design gate is copied from hook_files at adopt time so the
-    # gate has one source of truth. Only the design gate is installed -- the
-    # issue-reference hooks that `rdm hooks` also ships stay opt-in.
-    hook_ref = files("rdm.specification") / "hook_files" / "pre-commit"
-    with as_file(hook_ref) as hook_src:
-        _copy_if_absent(Path(hook_src), target / ".githooks" / "pre-commit",
-                        ".githooks/pre-commit", copied, skipped)
+    # The design gate's hooks (pre-commit, and pre-merge-commit for merges) are
+    # copied from hook_files at adopt time so the gate has one source of truth.
+    # Only the design gate is installed -- the issue-reference hooks that
+    # `rdm hooks` also ships stay opt-in.
+    for name in DESIGN_GATE_HOOKS:
+        with as_file(files("rdm.specification") / "hook_files" / name) as hook_src:
+            _copy_if_absent(Path(hook_src), target / ".githooks" / name, f".githooks/{name}", copied, skipped)
 
     return copied, skipped
 
