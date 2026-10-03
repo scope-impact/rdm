@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 75
+revision: 76
 title: Design Review — RDM
 ---
 
@@ -2278,6 +2278,35 @@ showed which pages still taught file paths.
   "Instructions for use (IFU)", user manual being its plain name.
 - **Not done:** RDM's own acceptance tests keep their output labels (DI-56
   allows both); moving them is separate work.
+
+# Design Review 68 — A blind provenance check, from the graph alone
+
+**Scope reviewed:** six agents with no context and no file access queried a
+snapshot of the graph (built at 337693c with fresh evidence), each from one
+angle: needs forward, evidence backward, documents and git, architecture,
+risks, and the user manual.
+
+**Disposition:** Approved.
+
+- **Defect, DI-51:** no document showed a landing commit, although most had
+  landed on `main` through a merge. The landing walk combined
+  `--first-parent` with `--ancestry-path`, which finds the merge only when
+  the document's change is its branch's last commit; in a pull request with
+  later commits it finds nothing. DI-51's text stands; its test gains the
+  case (a change followed by more commits on the branch), and the landing is
+  the oldest first-parent commit of the default branch among the change's
+  descendants.
+- **Recorded, not changed here:** every risk is still proposed while six
+  carry a residual decision and one an acceptance (the ratings await a
+  person's approval); a manual page links to a design input only by naming
+  its id, so pages teaching a feature without its id are not found; the
+  DI-79 test names the manual reader, a component of another context that
+  does not realise DI-79; `docs_hooks` is exercised by no test; and no run
+  or commit names a person, the pull-request review being outside the graph.
+- **Checked and sound:** every need, input, test and run links forward and
+  back; every run tested the record's commit with a clean worktree; every
+  code dependency has a declared relationship; reached components match the
+  rule exactly; unit coverage is linked to no run or input.
 
 # Approval
 
