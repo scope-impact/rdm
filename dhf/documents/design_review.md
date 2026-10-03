@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 66
+revision: 67
 title: Design Review — RDM
 ---
 
@@ -2130,6 +2130,25 @@ reasons over it, and reads code only where a project offers it.
 - **DI-74** (test evidence, new; realised by the graph): a run's coverage
   attachment links it to the components it ran; an attachment that cannot be
   read is reported. DI-69 also lists these components, apart.
+
+# Design Review 62 — RDM's own runs attach their coverage
+
+**Scope reviewed:** how a test run's coverage reaches the graph for a Python
+project, RDM's own first among them. No other design input changes.
+
+**Disposition:** Approved.
+
+- DI-74 reads coverage a run attaches, but nothing attached it: RDM's own
+  graph showed no covered component. **DI-75** (test evidence, new): the
+  pytest plugin, asked with `--rdm-coverage`, measures each tagged test's own
+  coverage with coverage.py and attaches it as LCOV to that test's result.
+- Coverage is asked for, never assumed: measuring slows a run, and a project
+  may measure coverage its own way. When coverage.py is missing, or another
+  measurement (pytest-cov, `coverage run`) is already running, the plugin
+  measures nothing and says so rather than disturbing it.
+- RDM's own acceptance runs ask for it, so RDM's graph shows what each
+  acceptance test ran. Code a test runs in a separate process is not
+  measured; such a component is still reached or named.
 
 # Approval
 

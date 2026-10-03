@@ -20,6 +20,9 @@ design_inputs:
   - id: DI-74
     text: "RDM shall read the coverage a test run attaches to its Allure result, as LCOV or Cobertura XML, take each file with a line the run executed as covered by that run, and link the run to the components whose code holds those files, apart from the components it names or reaches; a coverage attachment it cannot read shall be reported, never taken as covering nothing."
     traces_to: [UN-017, UN-004]
+  - id: DI-75
+    text: "rdm.pytest_plugin shall, when asked with --rdm-coverage, measure each tagged test's own coverage of its project's code and attach it to that test's Allure result as LCOV, named so DI-74 reads it, and, when coverage.py is not installed or another coverage measurement is already running, measure nothing and say so; RDM's own acceptance runs shall ask for it."
+    traces_to: [UN-017, UN-004]
   - id: DI-57
     text: "RDM shall provide a pytest plugin that, for each test tagged with a design input's story, labels the run from the record at test time — the input's user needs as Allure epics, its bounded context as the feature, links to the Markdown documents that declare it at the tested commit (its design document, the V&V plan for its user needs, and the risk document of each risk it controls), critical severity when it controls a risk — and attaches the input's text."
     traces_to: [UN-004, UN-010]
