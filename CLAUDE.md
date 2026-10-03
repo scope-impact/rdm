@@ -19,7 +19,10 @@ Ruff config: line-length 120, rules E/W/F (see `[tool.ruff]` in pyproject.toml).
 Note: the docs build runs the acceptance suite (a build hook generates the
 traceability-matrix evidence page from a live run), so expect `mkdocs build`
 to take ~10s and to need the full dev environment for real evidence — it
-degrades to a "no data" notice otherwise.
+degrades to a "no data" notice otherwise. The published design history file
+(`docs/_hooks/dhf.py`) links each document's PDF when `pandoc` and `typst`
+are on PATH (`scripts/install-pdf-tools.sh` installs them and the fonts, as
+the docs CI does); without them the pages carry no PDF link.
 
 Documentation is a [MkDocs](https://www.mkdocs.org/) site (Material theme):
 the Markdown prose under `docs/` plus an API reference generated from the source

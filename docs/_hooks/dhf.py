@@ -10,6 +10,11 @@ ones, and the risk policy's levels as a severity-by-probability table. A
 section whose name a heading of the document already has goes under that
 heading instead.
 
+Each page also links a PDF of the document, built with the template ``rdm
+init`` ships (``rdm/specification/init_files``: Pandoc to Typst) when
+``pandoc`` and ``typst`` are on PATH; without them the pages carry no link.
+In the PDF the title moves to the cover and the sections up one level.
+
 The traceability matrix template is left out: the site carries the generated
 matrix (``docs/_hooks/evidence.py``). Nothing here changes the record.
 """
@@ -17,7 +22,13 @@ matrix (``docs/_hooks/evidence.py``). Nothing here changes the record.
 from __future__ import annotations
 
 import html
+import logging
+import os
 import re
+import shutil
+import subprocess
+import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import yaml
@@ -28,6 +39,8 @@ from rdm.md_extensions.code import fenced
 
 ROOT = Path(__file__).resolve().parents[2]
 DHF = ROOT / "dhf"
+TEMPLATES = ROOT / "rdm" / "specification" / "init_files"
+log = logging.getLogger("mkdocs.hooks.dhf")
 SKIP = {"documents/traceability_matrix.md"}  # a template; the site has the generated matrix
 ASSETS = ("c4/views/*.svg", "c4/workspace.dsl")
 SECTIONS = {"user_needs": "User needs", "design_inputs": "Design inputs", "risks": "Risks",
@@ -67,7 +80,7 @@ def _entries(items: list) -> list[str]:
 def _policy(policy: dict) -> list[str]:
     """The levels as a severity-by-probability table, then each level's acceptability."""
     probabilities = policy.get("probabilities") or []
-    lines = ["| Severity \\ Probability | " + " | ".join(map(_value, probabilities)) + " |",
+    lines = ["| Severity / probability | " + " | ".join(map(_value, probabilities)) + " |",
              "|" + "---|" * (len(probabilities) + 1)]
     lines += [f"| {_value(s)} | " + " | ".join(map(_value, (policy.get("levels") or {}).get(s, []))) + " |"
               for s in policy.get("severities") or []]
@@ -99,7 +112,7 @@ def _is_section(key: str, value) -> bool:
         isinstance(value, list) and any(isinstance(v, dict) for v in value))
 
 
-def page(text: str) -> str:
+def page(text: str, pdf: str | None = None) -> str:
     """A record document as a page: its title, the frontmatter's facts and
     sections under it, then the body. A document with no single top-level
     heading -- sections written as headings of their own, the rendered-
@@ -117,6 +130,8 @@ def page(text: str) -> str:
     top = next(i for i, level, _ in headings if level == "#")
 
     facts = [f"{_label(k)}: `{_value(v)}`" for k, v in data.items() if k != "title" and not _is_section(k, v)]
+    if pdf:
+        facts.append(f"[Download as PDF]({pdf})")
     head = ["", " · ".join(facts)] if facts else []
     inserts: dict[int, list[str]] = {}
     for key, value in data.items():
@@ -138,12 +153,64 @@ def page(text: str) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
+def _git(path: Path, fmt: str) -> str:
+    result = subprocess.run(["git", "log", "-1", f"--format={fmt}", "--", str(path)],
+                            cwd=ROOT, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def pdf_source(text: str, path: Path) -> str:
+    """The page as Pandoc input for the template: the title, id, revision,
+    date and status as metadata (the cover), the sections one level up."""
+    data = parse_frontmatter(text)
+    lines = page(text).splitlines()
+    code = [c for _, c in fenced(lines)]
+    top = next(i for i, line in enumerate(lines) if not code[i] and line.startswith("# "))
+    title = lines[top][2:].strip()
+    body = [line[1:] if not code[i] and re.match(r"##+ ", line) else line
+            for i, line in enumerate(lines) if i != top]
+    meta = {"id": str(data.get("id", path.stem)), "title": title,
+            "revision": str(data.get("revision") or _git(path, "%h") or "1"),
+            "date": _git(path, "%cs") or "", "status": str(data.get("status") or "Controlled in git")}
+    return "---\n" + yaml.safe_dump(meta, sort_keys=False, allow_unicode=True) + "---\n\n" + "\n".join(body) + "\n"
+
+
+def build_pdfs(documents: dict[str, Path], out: Path) -> dict[str, Path]:
+    """Each document's PDF, built with the template ``rdm init`` ships; none
+    without pandoc and typst on PATH. A document that fails is a warning."""
+    pandoc = shutil.which("pandoc")
+    if not (pandoc and shutil.which("typst")):
+        log.info("dhf: no PDFs (pandoc and typst are not both on PATH)")
+        return {}
+    for name in ("template.typ", "pandoc_pdf.yml"):
+        shutil.copy(TEMPLATES / name, out / name)
+
+    def one(rel: str, md: Path) -> tuple[str, Path | None]:
+        source, pdf = out / "src" / rel, out / "pdf" / Path(rel).with_suffix(".pdf")
+        source.parent.mkdir(parents=True, exist_ok=True)
+        pdf.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text(pdf_source(md.read_text(encoding="utf-8"), md), encoding="utf-8")
+        result = subprocess.run([pandoc, "--defaults=pandoc_pdf.yml", f"--resource-path={md.parent}:{DHF}",
+                                 str(source), "-o", str(pdf)], cwd=out, capture_output=True, text=True)
+        if result.returncode:
+            log.warning("dhf: no PDF of %s: %s", rel, result.stderr.strip()[-500:])
+            return rel, None
+        return rel, pdf
+
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+        return {rel: pdf for rel, pdf in pool.map(lambda item: one(*item), documents.items()) if pdf}
+
+
 def on_files(files, config):
-    for md in sorted(DHF.rglob("*.md")):
-        rel = md.relative_to(DHF).as_posix()
-        if rel in SKIP or rel.startswith("allure-results/"):
-            continue
-        files.append(File.generated(config, f"dhf/{rel}", content=page(md.read_text(encoding="utf-8"))))
+    documents = {md.relative_to(DHF).as_posix(): md for md in sorted(DHF.rglob("*.md"))}
+    documents = {rel: md for rel, md in documents.items() if rel not in SKIP and not rel.startswith("allure-results/")}
+    pdfs = build_pdfs(documents, Path(tempfile.mkdtemp(prefix="rdm-dhf-pdf-")))
+    for rel, md in documents.items():
+        pdf, name = pdfs.get(rel), Path(rel).with_suffix(".pdf")
+        files.append(File.generated(config, f"dhf/{rel}", content=page(md.read_text(encoding="utf-8"),
+                                                                       pdf and name.name)))
+        if pdf:
+            files.append(File.generated(config, f"dhf/{name.as_posix()}", abs_src_path=str(pdf)))
     for pattern in ASSETS:
         for asset in sorted(DHF.glob(pattern)):
             files.append(File.generated(config, f"dhf/{asset.relative_to(DHF).as_posix()}", abs_src_path=str(asset)))

@@ -10,44 +10,54 @@
 #let d = json("report.json")
 #let title = "Verification report"
 
+// The palette and fonts of the document template rdm init ships (and of the
+// docs site): Charcoal text on Ivory, Maroon JetBrains Mono headings, Nexus links.
+#let charcoal = rgb("#2B2D31")
+#let maroon = rgb("#55111F")
+#let nexus = rgb("#383EE9")
+#let mono-font = ("JetBrains Mono", "DejaVu Sans Mono")
+
 #set document(title: title)
-#set text(size: 9pt)
+#set text(size: 9pt, font: ("Nunito Sans", "Noto Sans"), fill: charcoal)
+#show heading: set text(font: mono-font, weight: "regular", tracking: -0.035em, fill: maroon)
+#show raw: set text(font: mono-font)
 #set par(justify: false)
 #set heading(numbering: none)
 #set page(
   paper: "a4",
+  fill: rgb("#F7F5F3"),
   margin: (x: 1.8cm, y: 2cm),
   header: context {
-    set text(7.5pt, fill: luma(90))
+    set text(7.5pt, fill: charcoal.transparentize(38%))
     [#title · #d.repository #h(1fr) results sha256 #raw(d.results_sha256.slice(0, 16))]
   },
   footer: context {
-    set text(7.5pt, fill: luma(90))
+    set text(7.5pt, fill: charcoal.transparentize(38%))
     [#d.generated_at · RDM #d.rdm_version #h(1fr) page #counter(page).display("1 of 1", both: true)]
   },
 )
 #show raw.where(block: true): set text(7.5pt)
-#show link: set text(fill: blue.darken(30%))
+#show link: set text(fill: nexus)
 
 #let ok = green.darken(35%)
 #let bad = red.darken(25%)
 #let tone(s) = if s in ("passed", "verified", "acceptable", "accepted", "approved") { ok } else if s in (
-  "failed", "broken", "unacceptable", "needs acceptance") { bad } else { luma(80) }
+  "failed", "broken", "unacceptable", "needs acceptance") { bad } else { charcoal.transparentize(30%) }
 #let badge(s) = box(inset: (x: 3pt, y: 1.5pt), radius: 2pt, fill: tone(s).lighten(85%),
   text(7.5pt, fill: tone(s), weight: "bold", upper(s)))
-#let muted(body) = text(fill: luma(100), body)
+#let muted(body) = text(fill: charcoal.transparentize(38%), body)
 #let risk-ref(r) = [#r.id #badge(r.status) residual #badge(r.residual)#if r.status == "proposed" and r.residual != "not evaluated" [ #muted[(on a proposed rating)]]]
 #let either(value, fallback) = if value == none { muted(fallback) } else { value }
 #let short(sha) = raw(sha.slice(0, 12))
 #let field-table(..rows) = table(
-  columns: (auto, 1fr), stroke: 0.4pt + luma(200), inset: 4pt,
+  columns: (auto, 1fr), stroke: 0.4pt + charcoal.transparentize(84%), inset: 4pt,
   ..rows.pos().filter(r => r != none).map(((k, v)) => (text(weight: "bold", k), v)).flatten(),
 )
-#let code(s) = block(fill: luma(246), inset: 5pt, radius: 2pt, width: 100%, raw(s, block: true))
+#let code(s) = block(fill: charcoal.transparentize(94%), inset: 5pt, radius: 2pt, width: 100%, raw(s, block: true))
 #let kb(n) = if n < 1024 [#n B] else [#calc.round(n / 1024, digits: 1) KB]
 #let di-label(id) = label("di-" + id)
 // An identifier that may wrap: a break opportunity after each underscore and dot.
-#let ident(s) = text(font: "DejaVu Sans Mono", size: 0.9em, s.replace("_", "_\u{200B}").replace(".", ".\u{200B}").replace("/", "/\u{200B}"))
+#let ident(s) = text(font: mono-font, size: 0.9em, s.replace("_", "_\u{200B}").replace(".", ".\u{200B}").replace("/", "/\u{200B}"))
 #let first-line(s) = s.split("\n").first()
 #let page-of(id) = context link(di-label(id), str(counter(page).at(di-label(id)).first()))
 
@@ -132,7 +142,7 @@ request; this report is its evidence.
 })
 
 #let reg = d.risk_register
-#block(width: 100%, inset: 6pt, radius: 3pt, stroke: 0.6pt + luma(170), {
+#block(width: 100%, inset: 6pt, radius: 3pt, stroke: 0.6pt + charcoal.transparentize(70%), {
   text(weight: "bold", [Risk register])
   linebreak()
   if reg.risks == 0 [No risks are declared.] else [
@@ -144,7 +154,7 @@ request; this report is its evidence.
 })
 
 #table(
-  columns: 5, stroke: 0.4pt + luma(200), inset: 4pt,
+  columns: 5, stroke: 0.4pt + charcoal.transparentize(84%), inset: 4pt,
   ..("Verified", "Failed", "Untested", "Design inputs", "Test results").map(h => text(weight: "bold", h)),
   ..(d.summary.verified, d.summary.failed, d.summary.untested, d.summary.total, d.summary.results_found).map(str),
 )
@@ -155,7 +165,7 @@ request; this report is its evidence.
 
 #if d.anomalies.len() == 0 [None: every run passed, and every design input has one.] else {
   table(
-    columns: (2fr, auto, 3fr), stroke: 0.4pt + luma(200), inset: 4pt,
+    columns: (2fr, auto, 3fr), stroke: 0.4pt + charcoal.transparentize(84%), inset: 4pt,
     ..("Subject", "Kind", "Detail").map(h => text(weight: "bold", h)),
     ..d.anomalies.map(a => (ident(a.subject), badge(a.kind), first-line(a.detail))).flatten(),
   )
@@ -166,7 +176,7 @@ request; this report is its evidence.
 == Traceability
 
 #table(
-  columns: (auto, auto, auto, 1fr, auto, auto), stroke: 0.4pt + luma(200), inset: 4pt,
+  columns: (auto, auto, auto, 1fr, auto, auto), stroke: 0.4pt + charcoal.transparentize(84%), inset: 4pt,
   ..("Design input", "User needs", "Control for", "Tests", "Result", "Page").map(h => text(weight: "bold", h)),
   ..d.design_inputs.map(di => (
     link(di-label(di.id), di.id),
@@ -183,7 +193,7 @@ request; this report is its evidence.
 #for di in d.design_inputs {
   pagebreak(weak: true)
   [#heading(level: 2, [#di.id #h(4pt) #badge(di.status)])#di-label(di.id)]
-  block(inset: (left: 8pt), stroke: (left: 2pt + luma(180)), di.text)
+  block(inset: (left: 8pt), stroke: (left: 2pt + maroon), di.text)
   field-table(
     ("Acceptance criterion", if di.control_for.len() > 0 [risk-based: a risk control] else [baseline: from its user needs]),
     ("Bounded context", di.context),
@@ -227,7 +237,7 @@ SHA-256 in hex, and a newline. Recompute it on the retained evidence bundle to
 show this report describes that evidence.
 
 #table(
-  columns: (1fr, auto, auto), stroke: 0.4pt + luma(200), inset: 3pt,
+  columns: (1fr, auto, auto), stroke: 0.4pt + charcoal.transparentize(84%), inset: 3pt,
   ..("File", "Size", "SHA-256").map(h => text(weight: "bold", h)),
   ..d.files.map(f => (text(7pt, ident(f.name)), text(7pt, kb(f.bytes)), text(6.5pt, raw(f.sha256)))).flatten(),
 )

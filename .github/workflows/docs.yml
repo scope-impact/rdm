@@ -6,6 +6,8 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "dhf/**"
+      - "scripts/install-pdf-tools.sh"
       - "rdm/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -14,6 +16,8 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "dhf/**"
+      - "scripts/install-pdf-tools.sh"
       - "rdm/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -42,6 +46,10 @@ jobs:
         run: uv python install 3.12
       - name: Install all extras (the evidence hook runs the acceptance suite)
         run: uv sync --all-extras
+      - name: Install Pandoc, Typst and the document fonts (the DHF pages' PDFs)
+        run: |
+          scripts/install-pdf-tools.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Build the docs site (strict; generates the traceability-matrix evidence page)
         run: uv run --extra docs mkdocs build --strict
       - name: Upload Pages artifact

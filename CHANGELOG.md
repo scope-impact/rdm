@@ -17,8 +17,20 @@ changed (below). The package version is `2.0.0a0`; the release is tagged
   hook (`docs/_hooks/dhf.py`), with its frontmatter — design inputs, user
   needs, risks, the risk policy — shown as sections, since the record's
   substance lives there.
+- **PDFs of the design history file**: each published DHF page links a PDF of
+  the document, built at docs build time with the template `rdm init` ships
+  (`scripts/install-pdf-tools.sh` installs Pandoc, Typst and the fonts).
+- **One theme for documents too**: the `rdm init` Typst template and the
+  verification report use the docs site's palette and fonts — Nunito Sans
+  text, JetBrains Mono headings (Maroon) and code, Nexus links, Ivory pages,
+  and a Maroon cover. The RDM image ships Nunito Sans in place of Inter.
 - **One theme for the docs**: `docs/stylesheets/rdm-theme.css` holds the
   colours and fonts as CSS variables; the docs and the map both use them.
+
+### Fixed — PDFs
+- The `rdm init` Pandoc PDF config reads Markdown without citations: a
+  document that mentioned a tag such as `@allure.story` in prose failed to
+  build, as Typst found no bibliography for the "citation".
 
 ### Fixed — what an exploratory test of every command found (Design Reviews 44–48)
 - **Gates over what they cannot read.** Frontmatter is read from a `---` line

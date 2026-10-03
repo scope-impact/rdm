@@ -3,7 +3,7 @@
 # Usage: pandoc -d defaults.yml input.md -o output.pdf
 # ============================================================================
 
-from: markdown+smart+yaml_metadata_block+fenced_divs+bracketed_spans
+from: markdown+smart+yaml_metadata_block+fenced_divs+bracketed_spans-citations
 to: typst
 
 standalone: true
@@ -42,6 +42,6 @@ variables:
 
   # Typography
   fontsize: 11pt
-  mainfont: "Inter"
-  sansfont: "Inter"
+  mainfont: "Nunito Sans"
+  sansfont: "Nunito Sans"
   monofont: "JetBrains Mono"

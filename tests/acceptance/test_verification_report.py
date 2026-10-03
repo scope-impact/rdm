@@ -130,7 +130,8 @@ def _problems(results: Path) -> None:
 
 
 def _text(pdf: Path) -> str:
-    return "\n".join(page.extract_text() for page in pypdf.PdfReader(pdf).pages)
+    """The PDF's text, whitespace collapsed: where a line wraps depends on the font."""
+    return " ".join(" ".join(page.extract_text() for page in pypdf.PdfReader(pdf).pages).split())
 
 
 @allure.story("DI-64")
