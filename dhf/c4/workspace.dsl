@@ -44,7 +44,7 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:specification"
           }
-          precommit_hook = component "Pre-commit hook" "Runs the design gate before a commit, or a merge, that stages implementation files; blocks when the gate cannot run" "shell" {
+          precommit_hook = component "Pre-commit hook" "pre-commit and pre-merge-commit: run the design gate on a commit, or a merge, that stages implementation files; block unless it passes, or when it cannot run" "shell" {
             properties {
               "code" "rdm/specification/hook_files/"
             }
@@ -100,7 +100,7 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "release" {
-          verification_data = component "Verification data" "Every declared design input reconciled against the executed results: status, runs and tests per design input, by user need; generated, never edited" "Python" {
+          verification_data = component "Verification data" "Every declared design input reconciled against the executed results: status, runs and tests per design input, by user need; the data the Renderer fills the traceability matrix from; generated, never edited" "Python" {
             properties {
               "code" "rdm/release/verify.py"
             }
@@ -114,7 +114,7 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "test_evidence" {
-          allure_reader = component "Allure reader" "Allure results into test runs and a status per design input (failed, else verified, else untested; undeclared stories as orphans); run labels and facts" "Python" {
+          allure_reader = component "Allure reader" "Allure results into test runs and a status per design input (failed, else verified, else untested; undeclared stories as orphans); a result it cannot read is never a pass; run labels and facts" "Python" {
             properties {
               "code" "rdm/evidence/allure.py"
             }

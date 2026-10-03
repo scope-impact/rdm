@@ -14,6 +14,9 @@ design_inputs:
   - id: DI-47
     text: "The mutation probe shall always restore the file it mutated: it journals the original beside the file so an interrupted probe is recovered on the next probe of that file, restores on a termination signal, and invalidates the bytecode cache on every write."
     traces_to: [UN-013]
+  - id: DI-72
+    text: "RDM shall read Allure results so that a result it cannot read is never counted as a pass: a file that is not JSON or not an object, not UTF-8, a symbolic link, nested too deep, with a status Allure does not write or labels that are not name and value text blocks release and is named by verify; a byte-order mark is read; a run whose step failed or broke has failed; and a run tagged with an id no design input declares is warned about."
+    traces_to: [UN-004, UN-003]
   - id: DI-57
     text: "RDM shall provide a pytest plugin that, for each test tagged with a design input's story, labels the run from the record at test time — the input's user needs as Allure epics, its bounded context as the feature, links to the Markdown documents that declare it at the tested commit (its design document, the V&V plan for its user needs, and the risk document of each risk it controls), critical severity when it controls a risk — and attaches the input's text."
     traces_to: [UN-004, UN-010]
@@ -53,7 +56,7 @@ its code.
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
 | pytest plugin | Labels each run of a tagged test from the record at test time; records the run's commit, worktree state, executor and environment | DI-57, DI-59, DI-65 |
-| Allure reader | The labels and run facts in Allure's terms, written for the plugin and read back as test runs; a status per design input | DI-57, DI-59, DI-65; realises DI-4 |
+| Allure reader | The labels and run facts in Allure's terms, written for the plugin and read back as test runs; a status per design input | DI-72, DI-57, DI-59, DI-65; realises DI-4 |
 | Mutation probe | Runs one test unmutated, then with one line mutated, reports killed or survived, and always restores the file | DI-34, DI-47 |
 | Test result translation | Translates a foreign XML result file into result data; refuses an unknown format | DI-17 |
 | Result formatters | Flattens gtest, xunit and qttest XML into one result per test | DI-17 |

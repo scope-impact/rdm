@@ -9,7 +9,7 @@ design_inputs:
     text: "RDM shall block release unless every declared design input is verified by a passing test."
     traces_to: [UN-003]
   - id: DI-4
-    text: "RDM shall reconcile against Allure tags and render a traceability matrix from executed results."
+    text: "RDM shall reconcile each declared design input against the story labels of the executed Allure results as verified, failed or untested, and render the traceability matrix of those statuses grouped under the user needs."
     traces_to: [UN-004]
   - id: DI-18
     text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status)."

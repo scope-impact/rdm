@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 59
+revision: 60
 title: Design Review — RDM
 ---
 
@@ -1725,7 +1725,8 @@ prose, tagged test, verification steps, output label and last run, read
 together. Findings are recorded here as each input is reviewed; nothing is
 changed until the pass is complete.
 
-**Disposition:** Open. Changes requested where noted; none made yet.
+**Disposition:** Approved for DI-1 to DI-4, as decided below; the changes are
+made context by context. The pass continues from DI-5 in the next design review.
 
 ## DI-1 — Reading the record, with no planning dependency
 
@@ -1755,8 +1756,8 @@ from frontmatter with no project-management dependency; ingesting Allure
 results moves to the new reading design input of DI-3's decision
 (DI-40 reads tags from test source, not result files). Its test is to show that reading the
 record imports no planning tool and needs no `backlog/` directory, its output
-label to name what it exercises, and its step names to be whole. To be made
-once the pass is complete.
+label to name what it exercises, and its step names to be whole. Made as listed
+under *Approved changes*.
 
 ## DI-2 — The design gate blocks implementation until the design is approved
 
@@ -1783,8 +1784,8 @@ design review — present, complete and committed, re-opened by a later edit,
 and saying so when approval cannot be checked outside git. A new design input
 covers the commit and merge hooks that run the gate on implementation work,
 with its own tagged test and output label. The steps for frontmatter and
-declarations the record reader cannot read move to DI-46's test. To be made
-once the pass is complete.
+declarations the record reader cannot read move to DI-46's test. Made as listed
+under *Approved changes*.
 
 ## DI-3 — Release is blocked until every design input is verified
 
@@ -1812,7 +1813,8 @@ failing run. A new design input of the test-evidence context covers reading
 Allure results: a result that cannot be read is unverified, never a pass, and
 a run tagged with an id no design input declares is warned about. It takes the
 reading steps, the mistyped-id step and its own output label, and the
-ingestion DI-1 drops. To be made once the pass is complete.
+ingestion DI-1 drops. Made as listed
+under *Approved changes*.
 
 ## DI-4 — Results reconcile to a status per design input and render as a matrix
 
@@ -1838,8 +1840,33 @@ input against the story labels of the executed Allure results as verified,
 failed or untested, and render the traceability matrix of those statuses
 grouped under the user needs." Its test is to render the matrix and check its
 rows, to try a skipped and a broken result, and to have whole step names; the
-two reading steps move to the reading design input. To be made once the pass
-is complete.
+two reading steps move to the reading design input. Made as listed
+under *Approved changes*.
+
+## Approved changes
+
+The decisions above, as made in the record:
+
+- **DI-1** reworded: reading the user needs and design inputs from
+  frontmatter, importing no planning tool and needing no planning directory.
+- **DI-2** reworded: the design gate over the design documents, the
+  documents that declare user needs, the risk documents and the design
+  review, and the verdict outside git.
+- **DI-71** (specification, new): the commit and merge hooks that run the
+  design gate on implementation work. RISK-TOOL-003 is controlled by DI-2 and
+  DI-71.
+- **DI-46** widened to the declarations and frontmatter the record reader
+  cannot read, and the warning on a context with more than one design
+  document, so the steps moved from DI-2's test are stated by the input whose
+  test now holds them.
+- **DI-3** unchanged in text; its test to show "every" and a passing and a
+  failing run of one input.
+- **DI-4** reworded as decided.
+- **DI-72** (test evidence, new): reading Allure results, with what cannot be
+  read never counted as a pass, and orphan tags warned about. It takes the
+  ingestion DI-1 drops.
+- The C4 model's component descriptions follow: the hooks, the Allure reader
+  and the verification data.
 
 # Approval
 
