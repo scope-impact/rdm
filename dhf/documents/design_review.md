@@ -1989,6 +1989,21 @@ supply." Its test is to render a template file from data files in a step,
 show the file-name convention, and keep the refusals as steps. Two-pass
 rendering is taken up with DI-9.
 
+## DI-8 — The traceability template filters
+
+Traces to UN-001; described by the Renderer row of the publishing context;
+verified by `test_traceability_filters` (output `rdm/publishing/render.py`),
+whose last run passed with three verification steps. **Changes requested:**
+
+- The filters are called as Python functions, never from a template: a
+  renderer that no longer registered them would pass the test.
+- `join_to` writes nothing for an id its table lacks, so a document renders
+  a blank row where it should fail (`rdm/publishing/render.py`, `join_to`).
+
+**Decision (B, kept simple):** DI-8 keeps one input and its text; its test
+uses each filter from a rendered template, and `join_to` refuses an id its
+table lacks, naming it.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
