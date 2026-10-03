@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 70
+revision: 71
 title: Design Review — RDM
 ---
 
@@ -2205,6 +2205,26 @@ left it: evidence that the software units were exercised by their unit tests
   does, and keeps the report with the evidence.
 - A new component, the unit coverage reader (`rdm/evidence/unit_coverage.py`),
   in the test-evidence context; the views are redrawn.
+
+# Design Review 65 — The map draws what the graph holds
+
+**Scope reviewed:** the traceability map of the docs site, drawn from the
+graph, against what the graph now holds (Design Reviews 61 and 64).
+
+**Disposition:** Approved.
+
+- The map took the components a run exercises from its output labels only,
+  so it called three components exercised by no test that the graph knows
+  runs name or reach. It draws the components runs **name** and, apart, those
+  they **reach**, and counts a component exercised when any run names or
+  reaches it.
+- The unit tests' code coverage was in the verification data only, so the
+  map, drawn from the graph, could not show it. **DI-67** amended: given the
+  coverage report, the graph carries each component's lines run and measured
+  as the component's own properties — never linked to a run or a design
+  input, so coverage stays unit-test evidence (Design Review 63). `rdm graph
+  build` and the docs build take the report; the map shows each component's
+  unit coverage on its box and in its panel.
 
 # Approval
 
