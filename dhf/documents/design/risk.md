@@ -71,22 +71,27 @@ The rules the Risk register applies, which a reviewer needs to judge it:
   is the one read). A policy that does not give a level for every pair, or
   an acceptability for every level, is one blocking finding naming its
   document, and the register is not checked further until it is fixed. The
-  policy's status is its document's; an unapproved policy is a warning.
+  policy's status is its document's; an unapproved policy is a warning. A policy
+  that lists a severity or a probability twice is malformed: one pair would
+  have two levels.
 - **Evaluation.** With no policy no risk is evaluated, and a register with
   risks blocks. A risk with no controls keeps its initial risk as its
   residual risk, whatever residual it declares: only a control reduces a
   risk. A hazard, situation or harm is text; anything else is empty. A
   control or a link written as one value, not a list, is that one value.
   The policy's severities may be numbers as well as names. A risk's status is its own, else its
-  document's.
+  document's, else *proposed*: no status is never read as approved. A risk id
+  is text or a number; anything else is no id. A recorded `level`, initial or
+  residual, must be the policy's.
 - **The residual decision** is one of: *not evaluated* (no policy, no
   residual level, or a control without a passing test), *acceptable*,
   *accepted* (a level the policy accepts only with justification, with who
-  accepted it and why), *needs acceptance*, or *unacceptable*. Only
+  accepted it and why, both text), *needs acceptance*, or *unacceptable*. Only
   acceptable and accepted let a release through.
 - **The register.** A document of kind `risk` (in any case) holds its risks
-  as a list of mappings; any other shape is a blocking finding naming the
-  document, never a register silently left out.
+  as a list of mappings under `risks`; any other shape, or no `risks` at all,
+  is a blocking finding naming the document, never a register silently left
+  out. A document that only declares the risk policy is not a register.
 - **The findings** are every refusal of DI-44 and DI-50, and also a risk
   whose status is neither proposed nor approved, which blocks. A proposed
   risk or policy is a warning. The Risk register is the one place these

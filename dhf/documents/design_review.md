@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 51
+revision: 52
 title: Design Review — RDM
 ---
 
@@ -1478,6 +1478,34 @@ installed package. No design input changed.
   of them without saying why. The gate warns, naming both, and `new-input`
   refuses until one remains.
 - Design Review 49 lost this record's *Approval* heading; it is restored.
+
+# Design Review 51 — A risk rating no one approved is never read as approved
+
+**Scope reviewed:** the risk register and its release rules (DI-43, DI-44,
+DI-50) and the risks graph (DI-45), against an adversarial behaviour test of
+the installed package. No design input changed.
+
+**Disposition:** Approved.
+
+- A risk or a policy with no status, or an empty one, was read as approved:
+  the gates passed in silence and the graph, the agent's trace and the
+  verification report said *approved*. A missing status is now *proposed*,
+  as DI-43 has it until a person approves the rating, so it warns.
+- An acceptance whose `by` or `rationale` was a list, a mapping, a number or
+  `false` counted as who accepted it and why. Both must be text.
+- A `kind: risk` document with no `risks` list (a misspelled key, or none)
+  was left out with every risk in it. It now blocks, naming the document, as
+  any other malformed register does; a document that only declares the risk
+  policy is not a register.
+- A policy listing a severity or a probability twice gave one pair two
+  levels, and the first won. It is now a malformed policy.
+- A recorded residual `level` was not checked against the policy, as a
+  recorded initial level is. It now blocks when it differs.
+- A list as a risk id was read as its Python text beside the real id. An id
+  that is not text or a number is now a risk with no id, named as such.
+- `rdm graph validate` passed where the release gate blocked on a malformed
+  register or policy with no risk to carry the finding. Such a finding now
+  goes on a stand-in node for the register, so the shapes block it too.
 
 # Approval
 

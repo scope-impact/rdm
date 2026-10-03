@@ -139,7 +139,8 @@ The behaviour a reviewer needs to judge the design:
   references; the tests graph holds the tagged tests; the executions graph
   the Allure results, when given; the git graph each document's latest
   landed commit and the commit the record was built at; the risks graph the
-  register; the architecture graph what the C4 model claims and the code
+  register, with a finding about the register as a whole on each risk, or on
+  a stand-in node for the register when it has none; the architecture graph what the C4 model claims and the code
   graph what the imports between components' code actually are; the
   checklists and references graphs, on request; the ontology graph the
   Vocabulary; and the inferred graph, on request, only what the rules derive
