@@ -1757,6 +1757,34 @@ record imports no planning tool and needs no `backlog/` directory, its output
 label to name what it exercises, and its step names to be whole. To be made
 once the pass is complete.
 
+## DI-2 — The design gate blocks implementation until the design is approved
+
+Traces to UN-002; described by the Design gate and Pre-commit hook rows of
+the specification context; verified by `test_design_gate_requires_approval`
+(output `rdm/specification/design_gate.py`), whose last run passed with
+fourteen verification steps. **Changes requested:**
+
+- The test verifies more than the text states: the commit and merge hooks,
+  the user-need and risk documents held as the design documents are, the
+  warning on two design documents for one context, and the verdict outside
+  git. Fourteen steps are too many to accept as one input.
+- Two steps verify the record reader's handling of declarations and
+  frontmatter it cannot read, which is DI-46's, not the gate's.
+- The text names no merge, though the pre-merge-commit hook of Design
+  Reviews 54 and 57 is verified here.
+- "Design input" in the text means the design documents; the glossary's
+  design input is a single requirement.
+- The output label does not name the hooks (`rdm/specification/hook_files/`).
+
+**Decision (C):** split. DI-2 stays the design gate over the documents it
+holds — the design documents, the user needs, the risk documents and the
+design review — present, complete and committed, re-opened by a later edit,
+and saying so when approval cannot be checked outside git. A new design input
+covers the commit and merge hooks that run the gate on implementation work,
+with its own tagged test and output label. The steps for frontmatter and
+declarations the record reader cannot read move to DI-46's test. To be made
+once the pass is complete.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
