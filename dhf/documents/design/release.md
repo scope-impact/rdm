@@ -60,16 +60,20 @@ or is untested in the given results; when a result file in them cannot be
 read (it could hold a failed run); when the risk register's release rules
 report a blocking finding; and when a user need is addressed by no design
 input. It warns, never blocks, on a user need with no approved validation
-record, and on a test tag that matches no design input. The same
+record, and on a test tag that matches no design input (compared on its
+leading letters, so `di-1` or `DI_1` is an orphan, not silence). The same
 reconciliation of executed results gives the design gate its warnings, which
 the composition root hands to the design gate's output, so the
 specification never reads results. The trace slice is a user need's design
 inputs, or a design input's text, user needs, owner and realising contexts
-and, when results are given, its status and tests.
+and, when results are given, its status, its tests (each once) and any
+result file that cannot be read; a results directory that does not exist is
+refused, as by the gate.
 
 **Verification data.** For each declared design input: its status, run
 counts, tests and their outputs, grouped by user need, with a summary and
-the tags that match no design input. It is generated, never edited.
+the tags that match no design input, and the result files that cannot be
+read, which make `verify` exit non-zero. It is generated, never edited.
 
 **Reusable workflow and Gates action.** The caller pins the workflow and
 names the same revision again as an input, because a reusable workflow

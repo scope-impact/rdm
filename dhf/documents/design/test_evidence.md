@@ -74,7 +74,11 @@ with its user and host.
 that the plugin writes and every reader reads back, so the tools' words
 stop here. It reads each result as a test run (its name, result, the
 design inputs it names, and the outputs it labels) and matches a run to
-the test it came from. Its reconciliation gives each declared design
+the test it came from. A run whose step failed or broke failed, whatever
+its own status says. A result it cannot read is named, never skipped: not
+JSON, nested too deep, a symbolic link, a status Allure does not write, or
+labels that are not a list of name and value text. Any of these could hold
+a failed run. Its reconciliation gives each declared design
 input *failed* when any of its runs failed or broke, else *verified* when
 any passed, else *untested*; a story that names no declared input is an
 orphan. What a test *claims* to verify (its tags) is the specification's;

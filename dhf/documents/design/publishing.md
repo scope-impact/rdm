@@ -95,11 +95,13 @@ The rules a reviewer needs to judge the design:
 - **Verification report.** The status of each design input is the release
   context's verification data; the report never decides it again. The
   evidence is release-grade only when no reason is found, and each reason is
-  named: a design input not verified; a test that failed or broke; a test
-  run with uncommitted changes, or with no commit; runs of another commit
-  than the record's; or a record whose commit is unknown. The anomalies are
-  a design input with no run, a run that did not pass, a missing attachment
-  and an orphan tag. With no Typst available the report is refused, and the
+  named: a design input not verified; a result file that cannot be read; a
+  test that failed or broke; a test run with uncommitted changes, or with no
+  commit; runs of another commit than the record's; a record with
+  uncommitted changes; or a record whose commit is unknown. Every run
+  counts, tagged with a declared input or not. The anomalies are a design
+  input with no run, a run that did not pass, an unreadable result file, a
+  missing attachment and an orphan tag. With no Typst available the report is refused, and the
   command says so, rather than written without its layout. Because the
   layout sets every value as text, never markup, nothing a test printed can
   change the document.
@@ -111,7 +113,8 @@ The rules a reviewer needs to judge the design:
   ends, the verification report or the reason it was not rendered, and a
   manifest of the counts, the files this bundle wrote, and each attachment
   a result names that is missing. A bundle written where one was before
-  replaces the earlier results, never mixes them. Neither the bundle nor the
+  replaces the earlier results, never mixes them, and an output that would
+  hold the results directory, or sit inside it, is refused. Neither the bundle nor the
   report reads a symbolic link in the results directory. It lives here because it renders:
   the matrix with the Renderer, the report with the Verification report.
 

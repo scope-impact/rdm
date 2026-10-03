@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 52
+revision: 53
 title: Design Review — RDM
 ---
 
@@ -1506,6 +1506,49 @@ the installed package. No design input changed.
 - `rdm graph validate` passed where the release gate blocked on a malformed
   register or policy with no risk to carry the finding. Such a finding now
   goes on a stand-in node for the register, so the shapes block it too.
+
+# Design Review 52 — Every reader of the results agrees with the release gate
+
+**Scope reviewed:** the Allure reader (DI-4), the release gate and its trace
+(DI-3, DI-18), the verification data, the verification report and the
+evidence bundle (DI-30, DI-64), the test tags (DI-40) and the validation
+records (DI-33), against an adversarial behaviour test of the installed
+package. No design input changed.
+
+**Disposition:** Approved.
+
+- A result file the release gate could not read blocked it, while verify,
+  trace, the verification report and the evidence bundle said every input
+  was verified. Each now names the unreadable files: verify exits non-zero,
+  trace lists them, and the report counts them as a reason the evidence is
+  not release-grade.
+- Some results that could hold a failed run were read as nothing at all.
+  These are now unreadable: a status Allure does not write (`Failed`, none,
+  null), labels that are not a list of name and value text, a symbolic link,
+  and JSON nested too deep to decode, which crashed the gate with a
+  traceback.
+- A passed test whose verification step failed counted as verified.
+  CONTEXT.md says a failed step fails the test, so the reader now treats
+  such a run as failed.
+- A run tagged `di-1`, `DI_1` or `DI–1` was dropped without the orphan
+  warning that `DI-9` gets. A tag is now compared on its leading letters,
+  whatever their case or the separator after them.
+- The report ignored failed, broken and dirty runs of tests tagged with no
+  declared input, and called the evidence release-grade over a record with
+  uncommitted changes. Every run now counts toward the evidence status, and
+  uncommitted changes to the record are a reason it is not release-grade.
+- An evidence bundle written to the folder that holds the results deleted
+  them, then reported release-grade over no files. The bundle now refuses an
+  output that would overlap the results.
+- Story decorators on helper functions and classes counted as tags, and
+  `from allure import story` did not. Tags are read only from tests, under
+  any name the file imports the story decorator as.
+- Trace said *untested* for a results directory that does not exist, where
+  verify and the gate refuse one; it now refuses too. It also listed the
+  tests of a failed input as "verified by"; they are now "tested by", each
+  named once.
+- An approved validation record with an empty or missing reviewer silenced
+  the warning. A validation needs a person, so it now needs a reviewer.
 
 # Approval
 
