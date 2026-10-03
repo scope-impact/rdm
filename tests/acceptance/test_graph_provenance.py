@@ -62,7 +62,15 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
         _git(repo, "author", "add", "-A")
         _git(repo, "author", "commit", "-q", "-m", "ui design")
         change = _git(repo, "author", "rev-parse", "HEAD")
+    with verification_step("The branch goes on after the change, and main moves before the merge"):
+        (repo / "MORE.md").write_text("more\n")
+        _git(repo, "author", "add", "-A")
+        _git(repo, "author", "commit", "-q", "-m", "more work on the branch")
         _git(repo, "merger", "checkout", "-q", "main")
+        (repo / "MAIN.md").write_text("main\n")
+        _git(repo, "merger", "add", "-A")
+        _git(repo, "merger", "commit", "-q", "-m", "main moves")
+    with verification_step("The branch is merged into main by someone else"):
         _git(repo, "merger", "merge", "-q", "--no-ff", "-m", "Merge feature", "feature")
         merge = _git(repo, "merger", "rev-parse", "HEAD")
     with verification_step("Later work on main: the landing is still the merge, not the newest commit"):

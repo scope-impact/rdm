@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Fixed: landing commits** (Design Review 68, DI-51): a change merged with
+  later commits on its branch now shows the merge that landed it; before, it
+  showed none. Found by six agents checking the graph with no other context.
 - **Chain review of every design input** (Design Reviews 58, 60): texts now
   state what their tests check; new DI-71 (commit and merge hooks) and DI-72
   (reading Allure results). Nine defects fixed, among them an empty ISO

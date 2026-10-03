@@ -295,11 +295,14 @@ def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, o
 def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str | None:
     """The first-parent commit of ``branch`` that brought ``sha`` in (DI-51):
     ``sha`` itself when it is on that line (a direct or squash commit), else
-    the oldest first-parent commit descending from it (the merge)."""
+    the oldest first-parent commit descending from it (the merge). Descent is
+    walked through every parent: walked through first parents only, a merge
+    descends from the change only when the change is its branch's last commit."""
     if sha in first_parent:
         return sha
-    path = git(root, "rev-list", "--first-parent", "--ancestry-path", f"{sha}..{branch}")
-    return path.splitlines()[-1] if path else None
+    descendants = (git(root, "rev-list", "--ancestry-path", f"{sha}..{branch}") or "").split()
+    landed = [c for c in descendants if c in first_parent]  # newest first
+    return landed[-1] if landed else None
 
 
 def _latest_commits(root: Path, paths: list[str]) -> dict[str, str]:
