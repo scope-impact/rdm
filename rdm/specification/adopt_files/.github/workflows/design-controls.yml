@@ -11,7 +11,7 @@ name: Design controls
 # design inputs declared".
 on:
   push:
-    branches: [main]
+    branches: [main]   # your default branch, if it is another (git init may name it master)
   pull_request:
 
 permissions:
@@ -25,4 +25,5 @@ jobs:
       acceptance-tests: false
       release-gate: false
       # install-command: pip install -e .   # your project's own dependencies
-      # checklists: 62304_2015_class_b        # clauses the graph validation holds documents to
+      # checklists: 62304_2015_class_b        # clauses the graph validation holds documents to:
+      #                                       # built-in names (rdm gap --list) or checklist files in the repo

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- **Fixed: starting, adopting and adding an input work as the docs say**
+  (Design Review 56). The design gate also holds the user needs and the risk
+  documents complete and committed. `rdm adopt` lays down a `.gitignore` of
+  RDM's generated files and `dhf/config.yml`, never writes through a
+  symbolic link, and its template links no C4 view the project lacks. `rdm
+  init` refuses an existing directory and prints next steps; its Dockerfile
+  installs the pinned RDM release from git when no wheel is given; Word files
+  rebuild when the reference document changes; templates use local images.
+  `new-input` never reuses an id a test is tagged with, never shadows a
+  same-named test module, and keeps CRLF and comments. Gap output says
+  *gaps*.
+- **Docs, from two usability tests:** install lines agree and are pinned;
+  adopting tags existing acceptance-level tests only; Allure links need a web
+  remote; the risk example shows an `acceptance`, and risk tracing is the
+  graph's; authoring covers the Markdown extensions (auditor's and engineers'
+  copies), PDF branding and fonts, and making a reference document; the
+  glossary adds frontmatter, checklist reference, data file, audit note,
+  reference document and DMR index.
+
 - **Fixed: gap analysis and publishing say what is wrong** (Design Review
   55). Gap analysis against a checklist with no clauses (ISO 14971 2019) or a
   file that cannot be read exits 2 instead of saying *Success* or showing a

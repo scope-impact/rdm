@@ -87,7 +87,7 @@ own API (`allure.dynamic`), so the labels can never drift from it:
 | --- | --- |
 | `epic` | each user need the design input traces to |
 | `feature` | the bounded context that owns it |
-| `link` | each Markdown document that declares it, at the commit under test: its design document, the V&V plan, the risk document of each risk it controls |
+| `link` | each Markdown document that declares it, at the commit under test: its design document, the V&V plan, the risk document of each risk it controls. Links need a web remote (`origin` on GitHub, GitLab or Bitbucket) and a commit; without one, none is written |
 | `severity` | `critical` when the design input controls a risk |
 | `commit` | the commit under test, with `worktree=dirty` when the working tree had uncommitted changes |
 | attachment `requirement DI-n` | the design input's text |

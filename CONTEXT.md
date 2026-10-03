@@ -59,8 +59,16 @@ _Avoid_: database, docs, spec
 
 **Design history file**:
 The design record as a regulator receives it: the documents rendered from the
-record, with their evidence. Abbreviated DHF.
+record, with their evidence. Abbreviated DHF. The `dhf/` directory `rdm adopt`
+and `rdm init` lay down holds the record those documents are rendered from;
+it is named for what it becomes.
 _Avoid_: the record (for the rendered output)
+
+**Frontmatter**:
+The YAML block between `---` lines at the top of a Markdown document: its id,
+revision and title, and the record's declarations (user needs, design inputs,
+risks). The gates read the record from it.
+_Avoid_: header, metadata block
 
 **Design document**:
 The one controlled document per bounded context that declares the design
@@ -268,6 +276,12 @@ A checklist clause that no controlled document references. Coverage is the
 share of a checklist's clauses that are referenced.
 _Avoid_: finding, missing item (unqualified)
 
+**Checklist reference**:
+A checklist clause's key written in a controlled document inside `[[ … ]]`
+(`[[62304:5.1.1]]`), saying where the document meets the clause. Only text
+inside the brackets counts; a bare mention does not.
+_Avoid_: tag (a tag names a design input on a test), citation
+
 ## Risk
 
 **Risk analysis**:
@@ -348,6 +362,27 @@ _Avoid_: rendering (for the context), export
 A controlled document's source, with placeholders that generated data fills.
 The rendered document is output, not source.
 _Avoid_: form, the document (for the source)
+
+**Data file**:
+A YAML file whose content a template renders, named in the template by the
+file's name without its extension (`data/device.yml` is `device`).
+_Avoid_: config (a render configuration names the extensions, not data)
+
+**Audit note**:
+Any `[[ … ]]` text in a template, checklist references among them: kept in
+the auditor's copy of a rendered document, removed from the engineers' copy
+by the audit-note extension.
+_Avoid_: comment, annotation
+
+**Reference document**:
+A Word file whose styles, header and footer Pandoc gives every rendered Word
+document.
+_Avoid_: Word template (it is not a template of the record)
+
+**Device master record index**:
+The generated list of controlled documents (id, title, path, revision) a DMR
+document renders. Abbreviated DMR index.
+_Avoid_: document list, register (the risk register is another thing)
 
 ## Knowledge graph
 

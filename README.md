@@ -65,11 +65,12 @@ Two choices shape it:
 ## Install
 
 ```sh
-uv tool install git+https://github.com/scope-impact/rdm
+uv tool install "rdm @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha"
 ```
 
 Python 3.10+ and [uv](https://github.com/astral-sh/uv). PyPI's `rdm` is another
-project; install from this repository, and upgrade with `uv tool upgrade rdm`.
+project; install from this repository, pinned to a release tag, and upgrade by
+installing again with the newer tag (`--force`).
 Rendering documents needs Pandoc 2.14+, Typst and Make: use the Docker image
 (Ubuntu 26.04 LTS, Pandoc 3.12, Typst 0.15, the fonts, and RDM with the graph
 extra) or install them natively (`brew install pandoc typst`).

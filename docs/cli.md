@@ -6,10 +6,10 @@
 
 | Command | What it does |
 |---|---|
-| `rdm init [-o DIR]` | scaffold a **new** documentation project (templates, Makefile, render config; default `-o dhf`) |
-| `rdm adopt [TARGET]` | bring an **existing** repository under design controls: DHF skeleton, runbook, pre-commit gate, session bootstrap, CI workflow — skips (never overwrites) existing files |
+| `rdm init [-o DIR]` | scaffold a **new** documentation project (templates, Makefile, render config; default `-o dhf`) into a directory that does not exist yet, and print the next steps |
+| `rdm adopt [TARGET]` | bring an **existing** repository under design controls: DHF skeleton and render config, runbook, design-gate hooks, session bootstrap, CI workflow, `.gitignore` — skips (never overwrites) existing files |
 | `rdm render TEMPLATE CONFIG [DATA…]` | render a Jinja2 Markdown template with the data files (each file's stem becomes a template variable) → stdout |
-| `rdm gap [-l] [-c] [-v] CHECKLIST [FILES…]` | audit documents for required `[[KEY]]` references; `-l` list built-ins, `-c` coverage table, `-v` name missing items; exit 0 covered / 3 gaps |
+| `rdm gap [-l] [-c] [-v] CHECKLIST [FILES…]` | report the gaps: the clauses of a checklist no document references with `[[KEY]]`; `-l` list built-ins, `-c` coverage table (several checklists), `-v` name the gaps; exit 0 none / 3 gaps / 2 nothing could be checked |
 | `rdm collect [FILES…]` | extract `RDOC name … ENDRDOC` snippets from source files into YAML → stdout |
 | `rdm translate FORMAT IN OUT` | convert test-runner XML (`auto`, `gtest`, `qttest`, `xunit`) into a YAML data file |
 | `rdm hooks [DEST] [--with-issue-hooks]` | install the design-gate hooks (pre-commit, and pre-merge-commit for merges) into `DEST` or `.git/hooks`; the issue-reference hooks only with the flag |
