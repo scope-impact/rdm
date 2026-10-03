@@ -39,15 +39,14 @@ def join_to(foreign_keys, table, primary_key='id'):
     '''
     Given a set of ids for an object, and a list of the objects these ids refer
     to, select out the objects by joining using the specified primary key
-    (which defaults to 'id').
+    (which defaults to 'id'). An id the table lacks is refused (ValueError),
+    naming it, rather than rendered as a blank row.
     '''
     joined = []
     for foreign_key in foreign_keys:
-        selected_row = None
-        for row in table:
-            if row[primary_key] == foreign_key:
-                selected_row = row
-                break
+        selected_row = next((row for row in table if row.get(primary_key) == foreign_key), None)
+        if selected_row is None:
+            raise ValueError(f"join_to: no row with {primary_key} {foreign_key!r} in the table")
         joined.append(selected_row)
     return joined
 

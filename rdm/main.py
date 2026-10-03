@@ -58,8 +58,13 @@ def cli(raw_arguments):
     elif args.command == 'hooks':
         install_hooks(args.dest, with_issue_hooks=args.with_issue_hooks)
     elif args.command == 'collect':
-        snippets = collect_from_files(args.files)
-        yaml.dump(snippets, sys.stdout, default_style='|')
+        try:
+            snippets = collect_from_files(args.files)
+        except (ValueError, OSError) as error:  # a malformed or repeated snippet, or a file it cannot read
+            print_error(f"Error: cannot collect snippets: {error}")
+            exit_code = 2
+        else:
+            yaml.dump(snippets, sys.stdout, default_style='|')
     elif args.command == 'translate':
         from xml.etree.ElementTree import ParseError
 

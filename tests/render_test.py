@@ -27,8 +27,10 @@ def test_join_to_basic():
         {'id': '1', 'data': 'a'},
         {'id': '2', 'data': 'b'},
     ]
-    assert join_to(foreign_keys, table) == [{'id': '1', 'data': 'a'}, None]
-    assert join_to(foreign_keys, table, 'data') == [None, None]
+    assert join_to(['1'], table) == [{'id': '1', 'data': 'a'}]
+    assert join_to(['b'], table, 'data') == [{'id': '2', 'data': 'b'}]
+    with raises(ValueError, match="'3'"):
+        join_to(foreign_keys, table)
 
 
 def test_undefined():

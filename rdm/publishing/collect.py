@@ -11,9 +11,15 @@ def _error(line, line_number, filename, message):
 
 def collect_from_files(input_filenames):
     snippets = {}
+    collected_from = {}
     for filename in input_filenames:
         with open(filename, 'r') as f:
             snippets_in_file = collect_from_lines(f, filename=filename)
+        for key in snippets_in_file:
+            if key in collected_from:
+                raise ValueError('Multiple snippets with the key: "{}" in {} and {}'.format(
+                    key, collected_from[key], filename))
+            collected_from[key] = filename
         snippets.update(snippets_in_file)
     return snippets
 
