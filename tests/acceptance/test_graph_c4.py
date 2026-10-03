@@ -261,8 +261,8 @@ def test_the_c4_model_and_the_record_are_checked_against_each_other(tmp_path: Pa
 @allure.label("output", "rdm/graph/agent.py")
 def test_the_trace_names_the_components_a_design_input_exercises(tmp_path: Path) -> None:
     """DI-69: RDM's agent server shall show, in the trace of a design input, the components
-    its runs name and, apart, the components they reach and the components their coverage
-    shows they ran, each with its container and owning bounded context."""
+    its runs name and, apart, the components they reach, each with its container and owning
+    bounded context."""
     from rdm.graph.agent import Record, trace
 
     dhf, results = _record(tmp_path)
@@ -276,15 +276,6 @@ def test_the_trace_names_the_components_a_design_input_exercises(tmp_path: Path)
             {"component": "app", "name": "Device app", "container": "Firmware", "context": "ui"}]
     with verification_step("an input no run exercises names none"):
         assert trace(Record(dhf, results), "DI-2")["design_input"]["components"] == []
-    with verification_step("the components their coverage shows they ran are listed apart from named and reached"):
-        from tests.acceptance.test_coverage import _covered_run
-
-        _covered_run(results, "ran", "DI-2", "coverage", "SF:src/speaker.py\nDA:1,1\nend_of_record\n")
-        traced = trace(Record(dhf, results), "DI-2")["design_input"]
-        attach("trace DI-2, coverage only", traced)
-        assert traced["covered_components"] == [
-            {"component": "app", "name": "Device app", "container": "Firmware", "context": "ui"}]
-        assert traced["components"] == [] and traced["reached_components"] == []
     with verification_step("the components its runs reach are listed apart from those they name"):
         _named_run(results, "reaching", "DI-2", "alarms")  # alarms -> app
         traced = trace(Record(dhf, results), "DI-2")["design_input"]

@@ -121,7 +121,7 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | `rdm:Risk`, `rdm:controlledBy`, `rdm:evaluatedAgainst` | the risk register ([risk register](risk.md)) |
 | `rdm:Person`, `rdm:SoftwareSystem`, `rdm:Container`, `rdm:Component` ⊂ `rdm:ArchitectureElement`; `rdm:containedIn`, `rdm:inContext`, `rdm:code`, `rdm:Relationship` | the C4 model (`?c a rdm:Component ; rdm:inContext ?ctx`) |
 | `rdm:inComponent`, `rdm:dependsOn`, `rdm:Dependency`, `rdm:dependenciesNotRead` | a source file's component; one component's code importing another's (read from Python only: a component whose code holds none is marked not read) |
-| `rdm:namesComponent`, `rdm:unknownComponent`; `rdm:reaches` (derived); `rdm:covers` | the components a run names; a `component` label naming none; the components its named ones lead to by declared relationships; the files its coverage shows it ran |
+| `rdm:namesComponent`, `rdm:unknownComponent`; `rdm:reaches` (derived) | the components a run names; a `component` label naming none; the components its named ones lead to by declared relationships |
 | `rdm:landedIn`, `rdm:landedBy`, `rdm:atCommit` | the commit that landed a document's change; the commit the record was built at |
 
 ## Test results, in full
@@ -139,7 +139,6 @@ design controls:
 | a `commit` label (`rdm.pytest_plugin`, DI-59) | `rdm:testedAt` that commit; `worktree=dirty` → `rdm:uncommittedChanges` (DI-60) |
 | an `output` label | `rdm:exercisesOutput` an `rdm:SourceFile` — the code the run exercises — and `rdm:namesComponent` the component holding it |
 | a `component` label | `rdm:namesComponent` the C4 component with that key; a key the model does not declare is `rdm:unknownComponent`, a warning (DI-56) |
-| a coverage attachment (named `coverage`, `lcov` or `cobertura`, LCOV or Cobertura XML) | `rdm:covers` each `rdm:SourceFile` with an executed line; one that cannot be read is `rdm:unreadableCoverage`, a warning (DI-74) |
 | `parameters` | `rdm:parameter`, each a name and a value |
 | `steps`, `attachments` | `rdm:step` (nested, ordered), `rdm:attachment` (name, media type, file) |
 | other labels, `links`, `historyId`, containers | not projected: `epic` / `feature` and the links are written from the record (DI-57), the rest is runner metadata, a test case is one-to-one with its run, and fixtures (`tmp_path`, `capsys`) say nothing about a design input. The raw files stay in the evidence bundle. |

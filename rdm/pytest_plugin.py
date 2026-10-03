@@ -46,8 +46,6 @@ from rdm.specification.tags import DESIGN_INPUT_LABELS
 def pytest_addoption(parser):
     parser.addoption("--rdm-dhf", default=None,
                      help="RDM design history file the acceptance tests verify (default: dhf under the pytest root)")
-    parser.addoption("--rdm-coverage", action="store_true", default=False,
-                     help="attach each tagged test's own coverage, as LCOV, to its Allure result (needs coverage.py)")
 
 
 @lru_cache(maxsize=4)
@@ -163,66 +161,9 @@ def _record_run(config, record: dict | None) -> None:
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item):
     """Label in the call phase, so the labels and the attachment belong to the
-    test result (in set-up they would land on a fixture); and, when asked,
-    measure the test's own coverage around it (DI-75)."""
+    test result (in set-up they would land on a fixture)."""
     _label(item)
-    measuring = _start_coverage(item)
     yield
-    if measuring is not None:
-        _attach_coverage(*measuring)
-
-
-# The name DI-74 reads a run's coverage attachment by.
-COVERAGE_ATTACHMENT = "coverage.lcov"
-_COVERAGE_SAID = pytest.StashKey[bool]()
-
-
-def _say_once(config, message: str) -> None:
-    """Say why no coverage is measured, once a run."""
-    if not config.stash.get(_COVERAGE_SAID, False):
-        config.stash[_COVERAGE_SAID] = True
-        import warnings
-
-        warnings.warn(pytest.PytestWarning(f"rdm: {message}"))
-
-
-def _start_coverage(item):
-    """Start measuring a tagged test's coverage of its project's code, when the
-    run asks for it and coverage.py can measure it undisturbed (DI-75)."""
-    if not getattr(item.config.option, "rdm_coverage", False) or not story_ids(item):
-        return None
-    try:
-        import coverage
-    except ImportError:
-        _say_once(item.config, "coverage.py is not installed: no coverage measured (pip install coverage)")
-        return None
-    if coverage.Coverage.current() is not None:
-        _say_once(item.config, "another coverage measurement is running: no per-test coverage measured")
-        return None
-    dhf = Path(item.config.getoption("--rdm-dhf", default=None) or item.config.rootpath / "dhf")
-    root = dhf.resolve().parent  # the project: the DHF's parent, whose paths components name
-    measure = coverage.Coverage(data_file=None, config_file=False, source=[str(root)],
-                                omit=["*/.venv/*", "*/site-packages/*", "*/.tox/*"])
-    measure.start()
-    return measure, root
-
-
-def _attach_coverage(measure, root: Path) -> None:
-    """Stop measuring and attach what the test ran, as LCOV, to its result."""
-    import tempfile
-
-    import allure
-    from coverage.exceptions import NoDataError
-
-    measure.stop()
-    with tempfile.TemporaryDirectory() as scratch:
-        lcov = Path(scratch) / COVERAGE_ATTACHMENT
-        try:
-            measure.lcov_report(outfile=str(lcov))
-        except NoDataError:  # the test ran none of the project's code in this process
-            return
-        allure.attach(lcov.read_text(encoding="utf-8"), name=COVERAGE_ATTACHMENT,
-                      attachment_type=allure.attachment_type.TEXT)
 
 
 def _label(item) -> None:

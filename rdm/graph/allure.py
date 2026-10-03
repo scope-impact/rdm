@@ -6,9 +6,7 @@ what counts as evidence: uuid, full name, start and end times, status and its
 message and trace, parameters, steps and attachments. ``story`` labels link a
 run to the design inputs it verifies, ``output`` labels to the source files it
 exercises, and ``component`` labels name C4 components by key (linked, or
-recorded as unknown, once the model is read: rdm/graph/c4.py). A coverage
-attachment (LCOV or Cobertura XML) links the run to each file it ran (DI-74),
-apart from what it names; one that cannot be read is recorded. Nothing else
+recorded as unknown, once the model is read: rdm/graph/c4.py). Nothing else
 is projected (Design Review 18): other labels, links,
 test cases and container fixtures repeat the record or say nothing about
 design controls; the raw results keep them, in the evidence bundle.
@@ -23,8 +21,7 @@ from pathlib import Path
 import pyoxigraph as ox
 
 from rdm.graph.project import _DCT, _PROV, _XSD, _Dataset, _term, rdm
-from rdm.evidence.allure import (COMMIT_LABEL, WORKTREE_LABEL, coverage_attachments, named_results, read_coverage,
-                                 run_status, run_version)
+from rdm.evidence.allure import COMMIT_LABEL, WORKTREE_LABEL, named_results, run_status, run_version
 from rdm.specification.tags import DESIGN_INPUT_LABELS
 from rdm.kernel.ids import is_id
 
@@ -76,8 +73,7 @@ def _source(ds: _Dataset, value: str) -> ox.NamedNode:
     return source
 
 
-def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode], declared: set[str],
-            root: Path) -> None:
+def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
     stem = path.stem
     run = ds.thing(ds.node("run", stem), rdm("TestRun"), str(raw.get("name") or stem), GRAPH)
     ds.add(run, rdm("status"), run_status(raw), GRAPH)  # a failed step fails the run, as the gates read it
@@ -115,12 +111,6 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode],
             ds.add(run, rdm("exercisesOutput"), _source(ds, value), GRAPH)
         elif name == "component" and value:  # DI-56: a component the run names, by its key in the model
             ds.component_labels.append((run, value))
-    for item in coverage_attachments(raw):  # DI-74: the files the run ran, by its coverage
-        covered = read_coverage(path.parent / str(item["source"]), root)
-        if covered is None:
-            ds.add(run, rdm("unreadableCoverage"), str(item.get("name") or item["source"]), GRAPH)
-        for value in sorted(covered or ()):
-            ds.add(run, rdm("covers"), _source(ds, value), GRAPH)
     test = tests.get(str(raw.get("fullName") or ""))
     if test is not None:  # DI-61: the test this run ran
         ds.add(run, rdm("runOf"), test, GRAPH)
@@ -128,13 +118,11 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode],
 
 
 def project_results(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode] | None = None,
-                    declared: set[str] = frozenset(), root: Path | None = None) -> None:
+                    declared: set[str] = frozenset()) -> None:
     """Every result in an Allure results directory, read as the gates read it
     (one that cannot be read is the record's finding, not a run), as quads;
     ``tests`` maps the full names Allure gives runs to the tests in the tests
-    graph, ``declared`` is the design input ids a story may name, and ``root``
-    the project coverage paths are relative to (the results' parent if not given)."""
+    graph, and ``declared`` is the design input ids a story may name."""
     named, _ = named_results(Path(results_dir))
     for raw, name in named:
-        _result(ds, Path(results_dir) / name, raw, tests or {}, declared,
-                Path(root) if root is not None else Path(results_dir).parent)
+        _result(ds, Path(results_dir) / name, raw, tests or {}, declared)

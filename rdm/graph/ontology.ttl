@@ -160,11 +160,7 @@ rdm:position a owl:DatatypeProperty ; rdfs:label "position" ; rdfs:domain rdm:St
 
 rdm:SourceFile a owl:Class ;
     rdfs:label "Source file" ;
-    rdfs:comment "A file a test run exercises, named by its output label (DI-56), or a file its coverage shows it ran (DI-74)." .
-rdm:covers a owl:ObjectProperty ; rdfs:label "covers" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:SourceFile ;
-    rdfs:comment "A file with a line the run executed, by the coverage (LCOV or Cobertura XML) it attached; its component is rdm:covers/rdm:inComponent, apart from the components the run names or reaches (DI-74)." .
-rdm:unreadableCoverage a owl:DatatypeProperty ; rdfs:label "unreadable coverage" ; rdfs:domain rdm:TestRun ;
-    rdfs:comment "A coverage attachment of the run that could not be read as LCOV or Cobertura XML: never taken as covering nothing (DI-74)." .
+    rdfs:comment "A file a test run exercises, named by its output label (DI-56)." .
 rdm:Parameter a owl:Class ; rdfs:label "Parameter" ;
     rdfs:comment "One parameter of a parametrised run: a name and a value (DI-54)." .
 rdm:parameter a owl:ObjectProperty ; rdfs:label "parameter" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Parameter .

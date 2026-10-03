@@ -236,11 +236,10 @@ def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
     return by_full_name
 
 
-def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode], declared: set[str],
-                root: Path) -> None:
+def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
     from rdm.graph.allure import project_results
 
-    project_results(ds, Path(results_dir), tests, declared, root)
+    project_results(ds, Path(results_dir), tests, declared)
 
 
 def _record_findings(ds: _Dataset, dhf: Path, results: Path | None) -> None:
@@ -425,7 +424,7 @@ def project(
     tests = _tests(ds, dhf, root)
     verified: set[str] = set()
     if results is not None:
-        _executions(ds, results, tests, design_input_ids(dhf), dhf.parent)  # coverage is the project's
+        _executions(ds, results, tests, design_input_ids(dhf))
         verified = set(reconcile(design_input_ids(dhf), results).verified)
     if repo is not None:
         _git(ds, dhf, root)

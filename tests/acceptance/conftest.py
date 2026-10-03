@@ -9,8 +9,3 @@ the acceptance tests.
 """
 
 from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
-
-
-def pytest_configure(config):
-    """RDM's own acceptance runs attach each tagged test's coverage (DI-75)."""
-    config.option.rdm_coverage = True

@@ -127,7 +127,6 @@ def _input(store: ox.Store, node: str) -> dict:
             store, f"SELECT ?id WHERE {{ ?r rdm:controlledBy <{node}> ; dcterms:identifier ?id }}")),
         "components": _components(store, node, "rdm:namesComponent"),  # DI-69: named...
         "reached_components": _components(store, node, "rdm:reaches"),  # ...and, apart, reached (DI-73)
-        "covered_components": _components(store, node, "rdm:covers/rdm:inComponent"),  # ...and ran (DI-74)
         "runs": sorted(({"test": r["name"], "status": r["status"], **_evidence(store, r["r"])} for r in _select(
             store, f"SELECT ?r ?name ?status WHERE {{ ?r rdm:exercises <{node}> ; rdfs:label ?name ; "
                    f"rdm:status ?status }}")), key=lambda r: (r["test"], r["status"])),
@@ -232,7 +231,7 @@ def server(record: Record):
     @app.tool(name="trace", annotations=read_only,
               description="Trace a user need (UN-n), design input (DI-n) or risk id: text, contexts, owning document "
                           "and last commit, needs refined, tagged tests, runs (with steps and attachments), the source "
-                          "files they exercise, the components they name and, apart, reach and cover, "
+                          "files they exercise, the components they name and, apart, reach, "
                           "risks controlled; for a risk, its chain, scores, levels, acceptance and each "
                           "controlling design input.")
     def _trace(id: str) -> dict:

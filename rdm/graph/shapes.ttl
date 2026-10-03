@@ -189,15 +189,6 @@ rdm:RunVersionShape a sh:NodeShape ;
             FILTER NOT EXISTS { ?test rdm:verifies ?input } }""" ;
     ] .
 
-rdm:CoverageReadShape a sh:NodeShape ;
-    sh:targetSubjectsOf rdm:unreadableCoverage ;
-    sh:severity sh:Warning ;
-    sh:sparql [
-        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "test run's coverage attachment {?name} could not be read as LCOV or Cobertura XML" ;
-        sh:select """SELECT $this ?name WHERE { $this rdm:unreadableCoverage ?name }""" ;
-    ] .
-
 rdm:TestRanShape a sh:NodeShape ;
     sh:targetClass rdm:Test ;
     sh:severity sh:Warning ;

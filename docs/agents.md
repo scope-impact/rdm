@@ -32,7 +32,7 @@ settings.
 
 | Tool | Answers |
 | --- | --- |
-| `trace` | a `UN-n`, `DI-n` or risk id: text, contexts, owning document and last commit, needs refined, tagged tests and runs, the components its runs name and, apart, reach and cover, risks controlled; for a risk, its chain, scores and controlling inputs ([risk register](risk.md)) |
+| `trace` | a `UN-n`, `DI-n` or risk id: text, contexts, owning document and last commit, needs refined, tagged tests and runs, the components its runs name and, apart, reach, risks controlled; for a risk, its chain, scores and controlling inputs ([risk register](risk.md)) |
 | `query` | any read-only SPARQL (SELECT, ASK, CONSTRUCT, DESCRIBE), prefixes predeclared, capped at 200 rows by default with `truncated` saying when |
 | `schema` | the vocabulary, prefixes and the rules for derived relations, so the agent can write its own queries |
 | `validate` | the gate shapes' results: violations and warnings |
