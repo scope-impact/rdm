@@ -123,7 +123,7 @@ analysis against checklists) → the knowledge graph and the documents are
 derived from the same record. Agent skills (how to author design inputs, test-first,
 risk analysis) are maintained outside RDM, in `scope-impact/agent-skills`.
 RDM ships no planning tooling: tasks and issues live in their own tools,
-outside the record (see `docs/plan-vs-record.md`).
+outside the record (see `docs/about/plan-vs-record.md`).
 
 ## Not yet in scope
 

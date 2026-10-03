@@ -55,7 +55,7 @@ reverse-engineering it under a red build.
 
 One boundary to keep in mind throughout: **Backlog tasks, GitHub issues, and
 plans are coordination, never evidence.** The record is only the design docs,
-the executed test results, and git history (`docs/plan-vs-record.md`).
+the executed test results, and git history (`docs/about/plan-vs-record.md`).
 
 ## Do I need a design input?
 
@@ -299,7 +299,7 @@ now the PR reviewer's to catch.
 | release-gate: *DI-n untested* | no executed result for the tag | write/tag the test, re-run the acceptance suite |
 | release-gate: *DI-n failed* | the tagged test failed | fix the implementation (or the test) |
 | release-gate: *user need addressed by no design input* | a UN nothing traces to | add a DI with `traces_to`, or remove the need |
-| release-gate: *no risk_policy is declared* | the register has risks but no acceptability criteria | declare a `risk_policy` (see `docs/risk.md`); an agent's draft is `status: proposed` |
+| release-gate: *no risk_policy is declared* | the register has risks but no acceptability criteria | declare a `risk_policy` (see `docs/use/risk-register.md`); an agent's draft is `status: proposed` |
 | release-gate: *risk … residual not evaluated* | a controlling design input has no passing test | make that DI's tagged test pass |
 | release-gate: *risk … needs an acceptance* / *unacceptable residual* | the policy does not accept the residual as it stands | add or strengthen a control (a DI), or — where the policy says `justify` — record who accepted it and why |
 | release-gate: *risk is proposed* (warning) | no person has approved that rating | a maintainer reviews it and sets `status: approved` |

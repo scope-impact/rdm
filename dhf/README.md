@@ -5,7 +5,7 @@ this directory is the record. Every change to RDM goes through the loop RDM
 asks of a device team: record first, then a tagged test, then the gates, then
 a reviewed pull request. The procedure is `AGENT_WORKFLOW.md` (this
 directory); the method is the docs' *How RDM works*
-(`docs/record-first-architecture.md`), and the decision behind user needs and
+(`docs/about/how-rdm-works.md`), and the decision behind user needs and
 bounded contexts is ADR 0001 (`decisions/`).
 
 Scope note: RDM is not a medical device, so this DHF deliberately implements

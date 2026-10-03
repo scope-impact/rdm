@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 77
+revision: 78
 title: Design Review — RDM
 ---
 
@@ -2329,6 +2329,9 @@ one document.
   operating instructions, troubleshooting, reference. The rest move,
   unchanged in substance. "RDM on RDM" stays outside the IFU: it publishes
   this DHF.
+- **Paths:** the record's references to moved pages follow them (the DHF
+  overview, the agent workflow, the system architecture, and document
+  control, which goes to revision 2).
 - **Not done here:** rendering the IFU as one PDF.
 
 # Approval
