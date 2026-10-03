@@ -166,6 +166,7 @@ def handle_story_command(args):
                 dhf_dir=Path(args.dhf) if args.dhf else None,
                 allure_results_dir=Path(args.allure_results) if args.allure_results else None,
                 output=Path(args.output) if args.output else None,
+                unit_coverage_report=Path(args.unit_coverage) if args.unit_coverage else None,
             )
 
         elif args.story_command == 'release-gate':
@@ -307,6 +308,9 @@ def parse_arguments(arguments):
     story_verify_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     story_verify_parser.add_argument('--allure-results', help='Path to an Allure results directory')
     story_verify_parser.add_argument('-o', '--output', help='Output data file (default: verification.yml)')
+    story_verify_parser.add_argument('--unit-coverage', metavar='REPORT',
+                                     help="the unit tests' code coverage, one Cobertura XML or LCOV report: "
+                                          "added per C4 component as unit-test evidence (never acceptance evidence)")
 
     # rdm story release-gate
     release_gate_help = ('block release unless design is approved and every design input is '

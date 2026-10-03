@@ -23,4 +23,11 @@ jobs:
       # workflow does not install it a second time.
       install-rdm: false
       install-command: uv sync --all-extras && echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
-      test-command: uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+      # The unit tests run under coverage first: their code coverage per
+      # component is unit-test evidence verify adds (DI-76), never acceptance
+      # evidence, so it is measured apart from the acceptance run.
+      test-command: >-
+        uv run coverage run --source=rdm -m pytest tests --ignore=tests/acceptance -q &&
+        uv run coverage xml -q -o dhf/data/unit-coverage.xml &&
+        uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+      unit-coverage: dhf/data/unit-coverage.xml
