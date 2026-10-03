@@ -1750,6 +1750,13 @@ whose last run passed. **Changes requested:**
 - The output label names the record reader only.
 - One verification step's name is cut off mid-sentence.
 
+**Decision (C):** narrow DI-1 to reading the user needs and design inputs
+from frontmatter with no project-management dependency; ingesting Allure
+results is left to DI-40 and DI-4. Its test is to show that reading the
+record imports no planning tool and needs no `backlog/` directory, its output
+label to name what it exercises, and its step names to be whole. To be made
+once the pass is complete.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input
