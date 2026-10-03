@@ -1472,8 +1472,8 @@ installed package. No design input changed.
 - Outside git the gate passed saying the design was "approved (committed) in
   version control". It still passes, as the design says, but says approval
   could not be checked.
-- `PHOTODOCUMENTATION` read as a placeholder: a marker is the word TODO or
-  ENDTODO, not part of a longer word.
+- `PHOTODOCUMENTATION` read as a placeholder: a placeholder marker is now a
+  whole word, never part of a longer one.
 - Two design documents for one context passed, and `new-input` wrote into one
   of them without saying why. The gate warns, naming both, and `new-input`
   refuses until one remains.
