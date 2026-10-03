@@ -1,31 +1,37 @@
 ---
 id: IFU-001
 kind: manual
-revision: 2
+revision: 3
 title: "Instructions for use (IFU) — RDM's user manual"
-# The pages of the manual, from the project root (DI-77). The "RDM on RDM"
-# pages are not here: they publish this DHF, which is the record, not the manual.
+# The pages of the manual in reading order, from the project root (DI-77,
+# DI-80). The "RDM on RDM" pages are not here: they publish this DHF.
 pages:
   - docs/index.md
-  - docs/get-started.md
-  - docs/record-first-architecture.md
-  - docs/glossary.md
-  - docs/plan-vs-record.md
-  - docs/design-controls.md
-  - docs/agent-workflow.md
-  - docs/risk.md
-  - docs/ai-persona-usability-validation.md
-  - docs/gates.md
-  - docs/gap-analysis.md
-  - docs/reusable-ci.md
-  - docs/graph.md
-  - docs/graph-explorer.md
-  - docs/agents.md
-  - docs/authoring.md
-  - docs/example-traceability-map.md
-  - docs/cli.md
-  - docs/reference.md
-  - docs/changelog.md
+  - docs/about/intended-use.md
+  - docs/about/how-rdm-works.md
+  - docs/about/plan-vs-record.md
+  - docs/about/safety.md
+  - docs/install/installation.md
+  - docs/install/getting-started.md
+  - docs/use/index.md
+  - docs/use/design-inputs-and-tests.md
+  - docs/use/changing-the-record.md
+  - docs/use/risk-register.md
+  - docs/use/validation-evidence.md
+  - docs/use/gates.md
+  - docs/use/gap-analysis.md
+  - docs/use/ci.md
+  - docs/use/graph.md
+  - docs/use/graph-explorer.md
+  - docs/use/agents.md
+  - docs/use/documents.md
+  - docs/troubleshooting.md
+  - docs/reference/index.md
+  - docs/reference/cli.md
+  - docs/reference/api.md
+  - docs/reference/glossary.md
+  - docs/reference/worked-example.md
+  - docs/revision-history.md
 ---
 
 # Purpose
