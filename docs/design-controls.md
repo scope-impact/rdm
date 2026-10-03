@@ -102,6 +102,9 @@ the file it runs (`@allure.label("output", "rdm/release/gate.py")`), and
 declare is a warning). Either *names* the component; the graph adds the
 components a named one *reaches* through the relationships the workspace
 declares, so a test need not name every module behind its entry point.
+Reaching is derived by a rule, not stored: `rdm graph build` and `query` add
+it with `--infer`, and the agent server always does
+([derived relations](graph.md#derived-relations-rules-not-facts)).
 Neither is evidence of coverage: code coverage is the unit tests' measure
 ([gates](gates.md#unit-test-code-coverage-optional)), never an acceptance
 test's.
