@@ -125,7 +125,6 @@ def test_an_example_without_a_component_label_is_a_warning(tmp_path: Path) -> No
 
 @allure.story("DI-79")
 @allure.label("component", "user_manual")
-@allure.label("component", "manual_reader")
 def test_rdm_manual_examples_name_their_component() -> None:
     """DI-79: every tagged-test example in RDM's own user manual names the C4
     component it exercises by a component label."""
@@ -143,3 +142,65 @@ def test_rdm_manual_examples_name_their_component() -> None:
         assert [e for e, labels in examples if "component" not in labels] == []
     with verification_step("the gate shapes raise no example warning on RDM's manual"):
         assert [r.label for r in validate(quads) if r.message.endswith(NO_COMPONENT)] == []
+
+
+CHAPTERS = ["RDM — Instructions for use", "Intended use", "How RDM works", "Safety and limitations", "Installation",
+            "Getting started", "Operating instructions", "Troubleshooting", "Reference", "Revision history"]
+
+
+def _ifu() -> tuple[dict, list[tuple[str, str]]]:
+    """RDM's IFU-001: its frontmatter, and each listed page with its title (the
+    first level-one heading of the page and the files it includes whole)."""
+    from rdm.graph.manual import manual_pages, page_text
+    from rdm.graph.project import controlled_documents
+
+    front = next(e["front"] for e in controlled_documents(ROOT / "dhf", ROOT) if e["id"] == "IFU-001")
+    titled = []
+    for page in manual_pages(front):
+        text, _ = page_text(ROOT, page)
+        title = next((line[2:].strip() for line in text.splitlines() if line.startswith("# ")), "")
+        titled.append((page, title))
+    return front, titled
+
+
+@allure.story("DI-80")
+@allure.label("component", "user_manual")
+def test_the_ifu_is_one_manual_in_reading_order() -> None:
+    """DI-80: IFU-001 lists RDM's manual in the reading order of instructions
+    for use, behind a cover naming the product, its release and the manual's
+    id and revision."""
+    from rdm.kernel.version import release_version
+
+    front, titled = _ifu()
+    attach("IFU-001 pages and titles", titled)
+    titles = [title for _, title in titled]
+
+    with verification_step("the chapters appear in the order of instructions for use"):
+        found = [t for t in titles if t in CHAPTERS]
+        assert found == CHAPTERS, found
+    with verification_step("the first page is the cover, naming the product, the release, and the manual's id and "
+                           "revision"):
+        cover = (ROOT / titled[0][0]).read_text()
+        assert titles[0] == CHAPTERS[0]
+        assert f"v{release_version()}" in cover
+        assert f"IFU-001, revision {front['revision']}" in cover
+
+
+@allure.story("DI-81")
+@allure.label("component", "user_manual")
+def test_the_ifu_discloses_each_residual_risk() -> None:
+    """DI-81: the IFU's safety chapter names every risk of RDM's register, each
+    with what the user must do about its residual risk."""
+    from rdm.risk.register import risks
+
+    _, titled = _ifu()
+    safety = (ROOT / next(page for page, title in titled if title == "Safety and limitations")).read_text()
+    rows = {cells[1]: cells for cells in ([c.strip() for c in line.split("|")] for line in safety.splitlines()
+                                          if line.startswith("| RISK-"))}
+    ids = sorted(r.id for r in risks(ROOT / "dhf"))
+    attach("register risks and disclosed rows", {"register": ids, "disclosed": sorted(rows)})
+
+    with verification_step("every risk of the register is disclosed by its id, and no other"):
+        assert ids and sorted(rows) == ids
+    with verification_step("each disclosure says what the user must do"):
+        assert all(len(cells) >= 6 and cells[-2] for cells in rows.values()), rows

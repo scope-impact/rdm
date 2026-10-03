@@ -4,7 +4,7 @@ The gates decide pass or block from the record; they never change it. Each
 runs the same way locally and in CI. The CI workflow `rdm adopt` installs runs
 the design gate from day one; its acceptance tests and release gate are
 inputs set to `false` until your first design input and its test land
-([phased adoption](reusable-ci.md)).
+([phased adoption](ci.md)).
 
 | Gate | Blocks | Runs |
 | --- | --- | --- |
@@ -14,11 +14,11 @@ inputs set to `false` until your first design input and its test land
 | **Graph validation** — `rdm graph validate` | the same rules, as SHACL shapes over the graph (what the release gate blocks about the whole record, such as an unreadable document or result, is on the record's node), plus warnings the coded gates do not give | on demand; add it to CI |
 
 The rules each gate applies, and what it reports, are its design:
-[design gate](dhf/documents/design/specification.md),
-[release gate](dhf/documents/design/release.md),
-[risk rules](dhf/documents/design/risk.md),
-[gap analysis](dhf/documents/design/compliance.md),
-[graph shapes](dhf/documents/design/graph.md).
+[design gate](../dhf/documents/design/specification.md),
+[release gate](../dhf/documents/design/release.md),
+[risk rules](../dhf/documents/design/risk.md),
+[gap analysis](../dhf/documents/design/compliance.md),
+[graph shapes](../dhf/documents/design/graph.md).
 
 ## Design gate
 
@@ -27,7 +27,7 @@ rdm story design-gate --dhf dhf
 ```
 
 The pre-commit hook (`rdm hooks .githooks && git config core.hooksPath
-.githooks`, or set up by [`rdm adopt`](get-started.md)) blocks
+.githooks`, or set up by [`rdm adopt`](../install/getting-started.md)) blocks
 implementation commits while the gate is red, and its `pre-merge-commit` twin
 blocks a merge that would bring implementation in. Committing only design documents
 is always allowed: that commit is the approval of the design.
@@ -68,7 +68,7 @@ design inputs. No threshold is set and nothing blocks. A report that cannot be
 read is an error (exit 2), never no coverage. `rdm story evidence-bundle` takes
 the same `--unit-coverage` report, so the retained matrix carries it, and keeps
 the report with the evidence. In CI, pass the report to the
-[reusable workflow or gates action](reusable-ci.md) as `unit-coverage`.
+[reusable workflow or gates action](ci.md) as `unit-coverage`.
 
 ## Gap analysis
 
@@ -98,7 +98,7 @@ coded gates stay authoritative. It exits 1 on any violation.
 | a clause without a key or a standard; a checklist member that is not a clause | malformed checklist data |
 | a user-need or design-input id declared more than once | defined once |
 | a risk with no id, hazard, situation, harm or category; a security risk with no STRIDE category; a risk id declared twice | an incomplete register |
-| a risk not evaluated against a risk policy; a recorded level the policy contradicts; controls with no residual score; a control or link naming nothing declared; an unknown status; a residual that does not allow release | the risk rules ([risk register](risk.md)) |
+| a risk not evaluated against a risk policy; a recorded level the policy contradicts; controls with no residual score; a control or link naming nothing declared; an unknown status; a residual that does not allow release | the risk rules ([risk register](risk-register.md)) |
 | a document referencing a document the record does not hold | a dangling reference |
 
 **Warnings**, reported, never blocking:
@@ -137,7 +137,7 @@ rdm graph validate --shapes team-rules.ttl
 
 A passing test proves code ran, not that the requirement is met. That
 judgment belongs to the pull-request reviewer, who must not be the change's
-author ([the review step](agent-workflow.md)). To back it with an executed
+author ([the review step](changing-the-record.md)). To back it with an executed
 check, break what the design input requires on purpose and see whether its
 test notices:
 
@@ -166,9 +166,9 @@ The **verification report** shows what was run to verify each design input,
 for someone who did not run it: an auditor, a notified body, the reviewer. It
 says whether the evidence is release-grade and why not, and ends with every
 result file's SHA-256 so it can be checked against the bundle. What it holds
-is DI-64 in the [publishing design](dhf/documents/design/publishing.md). It
+is DI-64 in the [publishing design](../dhf/documents/design/publishing.md). It
 needs Typst: install `rdm[report]`, or have `typst` on `PATH` as the RDM
-image does. The [reusable gates](reusable-ci.md) upload it in `rdm-evidence`.
+image does. The [reusable gates](ci.md) upload it in `rdm-evidence`.
 
 `dmr` writes the device-master-record index (id, title, path and revision of
 each controlled document) from the documents' own frontmatter.

@@ -11,7 +11,7 @@ IMPORTANT -- this is NOT summative validation. Summative usability validation
 persona cannot be the validation record of truth. Persona runs are *formative*
 evidence: they surface use errors and usability problems early and act as
 continuous simulated-use regression. The human summative study remains the
-record. See docs/ai-persona-usability-validation.md.
+record. See docs/use/validation-evidence.md.
 """
 
 from __future__ import annotations

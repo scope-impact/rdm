@@ -19,8 +19,8 @@ change something, edit the Markdown and rebuild.
 | [Browsing in Graph Explorer](graph-explorer.md) | seeing the record as a picture |
 | [For agents](agents.md) | the read-only MCP server |
 
-It needs the `graph` extra ([get started](get-started.md)). What the graph
-holds and why is its design: [the knowledge graph](dhf/documents/design/graph.md).
+It needs the `graph` extra ([get started](../install/getting-started.md)). What the graph
+holds and why is its design: [the knowledge graph](../dhf/documents/design/graph.md).
 
 ## Build, query, serve
 
@@ -94,7 +94,7 @@ The endpoint's default graph is the union of all of them.
 | `…graph/executions` | Allure results (only with `--allure-results`): each run's status, times, failure message and trace, parameters, steps and attachments, the design inputs it exercises and the source files it exercises |
 | `…graph/git` | each controlled document's latest commit and its author, the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`), and the commit the record was built at |
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
-| `…graph/architecture` | the C4 model of the [architecture workspace](authoring.md#architecture-c4): each person, software system, container and component with its name, technology, description, container and external flag; each component's bounded context and code; each relationship; and the component each source file in the graph belongs to |
+| `…graph/architecture` | the C4 model of the [architecture workspace](documents.md#architecture-c4): each person, software system, container and component with its name, technology, description, container and external flag; each component's bounded context and code; each relationship; and the component each source file in the graph belongs to |
 | `…graph/code` | Python imports from one component's code into another's, as dependencies between the components: the coupling the code actually has |
 | `…graph/unit-coverage` | each component's lines its unit tests ran and lines measured (`rdm:unitLinesRun`, `rdm:unitLinesMeasured`; only with `--unit-coverage REPORT`, a Cobertura XML or LCOV report): the component's own unit-test evidence, linked to no run and no design input |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
@@ -120,7 +120,7 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 | `prov:wasGeneratedBy`, `prov:Activity`, `prov:Agent`, `prov:endedAtTime` | commits and authors (PROV-O) |
 | `rdm:Clause` ⊂ `skos:Concept`, `rdm:Checklist` ⊂ `skos:Collection`, `skos:ConceptScheme` | clauses, checklists, standards (SKOS) |
 | `dcterms:references` | a document claims a clause with a `[[KEY]]` tag, or names a document it relies on |
-| `rdm:Risk`, `rdm:controlledBy`, `rdm:evaluatedAgainst` | the risk register ([risk register](risk.md)) |
+| `rdm:Risk`, `rdm:controlledBy`, `rdm:evaluatedAgainst` | the risk register ([risk register](risk-register.md)) |
 | `rdm:Person`, `rdm:SoftwareSystem`, `rdm:Container`, `rdm:Component` ⊂ `rdm:ArchitectureElement`; `rdm:containedIn`, `rdm:inContext`, `rdm:code`, `rdm:Relationship` | the C4 model (`?c a rdm:Component ; rdm:inContext ?ctx`) |
 | `rdm:inComponent`, `rdm:dependsOn`, `rdm:Dependency`, `rdm:dependenciesNotRead` | a source file's component; one component's code importing another's (read from Python only: a component whose code holds none is marked not read) |
 | `rdm:namesComponent`, `rdm:unknownComponent`; `rdm:reaches` (derived) | the components a run names; a `component` label naming none; the components its named ones lead to by declared relationships |

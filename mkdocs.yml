@@ -70,26 +70,36 @@ hooks:
   - docs/_hooks/dhf.py
 
 nav:
-  - Home: index.md
-  - Get started: get-started.md
-  - How RDM works: record-first-architecture.md
-  - Glossary: glossary.md
-  - Plan vs. record: plan-vs-record.md
-  - Record:
-      - Design inputs and tests: design-controls.md
-      - Changing the record: agent-workflow.md
-      - Risk register: risk.md
-      - Validation evidence: ai-persona-usability-validation.md
-  - Gates:
-      - The gates: gates.md
-      - Gap analysis and checklists: gap-analysis.md
-      - The gates in your CI: reusable-ci.md
-  - Graph:
-      - The record as a graph: graph.md
-      - Browsing in Graph Explorer: graph-explorer.md
-      - For agents (MCP): agents.md
-  - Documents:
-      - Authoring and rendering: authoring.md
+  - Instructions for use:
+      - Cover: index.md
+      - 1. Intended use: about/intended-use.md
+      - 2. How RDM works:
+          - How RDM works: about/how-rdm-works.md
+          - Plan vs. record: about/plan-vs-record.md
+      - 3. Safety and limitations: about/safety.md
+      - 4. Installation: install/installation.md
+      - 5. Getting started: install/getting-started.md
+      - 6. Operating instructions:
+          - Overview: use/index.md
+          - Design inputs and tests: use/design-inputs-and-tests.md
+          - Changing the record: use/changing-the-record.md
+          - Risk register: use/risk-register.md
+          - Validation evidence: use/validation-evidence.md
+          - The gates: use/gates.md
+          - Gap analysis: use/gap-analysis.md
+          - The gates in your CI: use/ci.md
+          - The record as a graph: use/graph.md
+          - Browsing in Graph Explorer: use/graph-explorer.md
+          - For agents (MCP): use/agents.md
+          - Authoring and rendering: use/documents.md
+      - 7. Troubleshooting: troubleshooting.md
+      - 8. Reference:
+          - Overview: reference/index.md
+          - CLI: reference/cli.md
+          - API: reference/api.md
+          - Glossary: reference/glossary.md
+          - "Worked example: Part 11": reference/worked-example.md
+      - 9. Revision history: revision-history.md
   - RDM on RDM:
       - Overview: dhf/README.md
       - Changing RDM: dhf/AGENT_WORKFLOW.md
@@ -111,8 +121,3 @@ nav:
       - Document control: dhf/documents/document_control.md
       - Instructions for use (IFU): dhf/documents/user_manual.md
       - "ADR 0001: user needs across bounded contexts": dhf/decisions/adr-0001-bounded-context-user-needs.md
-  - "Worked example: Part 11": example-traceability-map.md
-  - Reference:
-      - CLI: cli.md
-      - API: reference.md
-      - Changelog: changelog.md

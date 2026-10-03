@@ -99,7 +99,7 @@ monitors it).
 
 The release gate blocks on a register it cannot evaluate or whose residuals
 the policy does not accept, and warns on proposed ratings; the rules are
-DI-44 and DI-50 in the [risk design](dhf/documents/design/risk.md), and
+DI-44 and DI-50 in the [risk design](../dhf/documents/design/risk.md), and
 `rdm graph validate` reports the same through its shapes. Whether a control
 is *effective*, whether a residual is as low as reasonably practicable, and
 whether the analysis is honest are the reviewer's, using the skills.
@@ -119,7 +119,7 @@ risks it controls. That is the graph's trace: `rdm story trace` takes a user
 need or a design input and does not list risks, so from the command line use
 the query above.
 
-RDM's own [policy](dhf/documents/risk/policy.md) and
-[register](dhf/documents/risk/tool_risks.md) list the ways RDM itself could
+RDM's own [policy](../dhf/documents/risk/policy.md) and
+[register](../dhf/documents/risk/tool_risks.md) list the ways RDM itself could
 misreport evidence; an agent wrote them, so they are proposed until a
 maintainer approves them.

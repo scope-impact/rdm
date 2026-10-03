@@ -31,7 +31,7 @@ what passed, and who changed what, when. RDM reads them; nobody writes them.
 Every entity is declared **once**, in one place, with one id. Every link is
 either **written** in a reviewed pull request or **derived** by RDM; a fact
 that can be derived is never also written, because two copies of one fact
-drift. The words are the [glossary](glossary.md)'s.
+drift. The words are the [glossary](../reference/glossary.md)'s.
 
 ```mermaid
 flowchart LR
@@ -91,7 +91,7 @@ Derived, never declared:
 | the traceability matrix | design inputs, user needs and test results |
 
 The order of a change (design input, approval, implementation, test, review)
-is the runbook: [Changing the record](agent-workflow.md).
+is the runbook: [Changing the record](../use/changing-the-record.md).
 
 ## A record-first repository
 
@@ -118,7 +118,7 @@ flowchart TD
 ```
 
 `rdm adopt` lays down the record skeleton and the enforcement without
-touching existing files ([get started](get-started.md)). Planning tools stay
+touching existing files ([get started](../install/getting-started.md)). Planning tools stay
 outside the record: [Plan vs. record](plan-vs-record.md).
 
 ## What RDM depends on
@@ -129,4 +129,4 @@ outside the record: [Plan vs. record](plan-vs-record.md).
 
 Nothing about how the work was planned, which tracker is used, or who (or
 what) wrote the change. How RDM's own code is laid out, one package per
-bounded context, is its [system architecture](dhf/documents/architecture.md).
+bounded context, is its [system architecture](../dhf/documents/architecture.md).
