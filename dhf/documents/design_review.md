@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 49
+revision: 50
 title: Design Review — RDM
 ---
 
@@ -1429,7 +1429,21 @@ reader (DI-1), gap analysis (DI-10, DI-12). No design input changed.
   built-in FDA cybersecurity checklist listed V.A.1.b.ii twice and
   V.A.1.b.iii never.
 
-# Approval
+# Design Review 49 — A run finds its test in a nested project
+
+**Scope reviewed:** the knowledge graph's link from a test run to its test
+(DI-61). No design input changed.
+
+**Disposition:** Approved.
+
+- Drawing the worked example's traceability from its graph found none of its
+  eleven runs linked to a test. A test is named by its path from the
+  repository root, and a run by the full name Allure gives it, which starts
+  where pytest runs: the project, the DHF's parent. For RDM the two are the
+  same directory; for a project nested in another repository, such as the
+  example, they are not, so no run found its test and each tagged test was
+  warned as never run. A test is also found by the full name of its path from
+  its project; the test keeps its repository path as its name.
 
 Recorded in version control (the merged, reviewed PR), per the design-input
 approval model. No sign-off table is duplicated here.
