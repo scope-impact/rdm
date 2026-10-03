@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 54
+revision: 55
 title: Design Review — RDM
 ---
 
@@ -1582,6 +1582,32 @@ design input changed.
 - In a repository with no remote whose one branch is not `main` or
   `master`, every document was warned as not landed. The default branch is
   now also git's `init.defaultBranch`, or the only local branch.
+
+# Design Review 54 — The hook gates every way implementation is committed
+
+**Scope reviewed:** the pre-commit hook (DI-2) and `rdm hooks` (DI-26),
+against an adversarial behaviour test of the installed package. DI-26's text
+changed: it now names the merge hook.
+
+**Disposition:** Approved.
+
+- Implementation files whose names hold a tab or a double quote committed
+  through a red gate: git quoted the names, and the hook's pattern did not
+  match the quotes. The hook now reads names NUL-separated, exactly as
+  written.
+- Upper-case extensions (`app.PY`) and common configuration, template and
+  source types (`config.json`, `settings.ini`, `setup.cfg`, `Dockerfile`,
+  `Makefile`, `index.html`, `App.vue`, `stubs.pyi`, `analysis.R`,
+  `deploy.ps1`) were not gated. The pattern now matches extensions in any
+  case and includes these.
+- A file replaced by a symbolic link was not gated: the hook looked only at
+  added, copied, modified and renamed files. A type change is now gated too.
+- A merge brought implementation into a branch whose gate was red, because
+  git runs `pre-merge-commit` for a merge, not `pre-commit`. RDM now ships a
+  `pre-merge-commit` hook that runs the same gate, and installs it with the
+  pre-commit hook (DI-26).
+- The hook told a person without RDM to `pip install rdm`, which installs an
+  unrelated package of that name. It now names RDM's own install.
 
 # Approval
 
