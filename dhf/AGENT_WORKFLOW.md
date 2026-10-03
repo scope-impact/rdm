@@ -105,7 +105,9 @@ file's validation-approach table.
 **Why:** the design input is the verifiable requirement, the acceptance
 criterion the test will be judged against as a whole. Write each thing it
 requires so a test can check it; vague inputs produce unreviewable tests. What
-must be accepted on its own is a separate design input.
+must be accepted on its own is a separate design input: write one `shall`, and
+never join with "and" two behaviours that could be accepted apart — a joined
+text invites a test of one half (Design Review 59).
 
 **Do:**
 ```bash
@@ -179,7 +181,16 @@ as an attachment. Never hand-write `@allure.feature`/`@allure.epic` for these. T
 attachments. Both land in the Allure results, which the release
 bundle retains and the graph projects (`trace` lists them).
 
-**Done when:** `uv run pytest tests/acceptance -q` passes.
+**Changing an existing test:** before adding a step to a test that already
+verifies a design input, read that input's text. If the text does not state
+what the new step checks, the step does not belong there yet: amend the text,
+or declare a new design input with its own test, in the same design review
+entry as the fix. Never let a test grow past its text — that is how DI-2's
+test reached fourteen steps under a text that named none of them (Design
+Review 59).
+
+**Done when:** `uv run pytest tests/acceptance -q` passes, and each step
+checks something the input's text states.
 
 ### Step 6 — run the gates as CI will
 
@@ -210,6 +221,11 @@ uv run rdm story mutation-probe --file <impl> --find '<code it requires>' \
   --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
 ```
 
+The reviewer says, in the review, that each changed design input's text was
+read beside its test (the pull-request template asks). Keep a fix pull request
+to one bounded context: no reviewer reads every input against its test inside
+a change that spans them all.
+
 The merged, reviewed PR completes the approval record.
 
 **Merge with a merge commit — never squash or rebase.** A squash folds the
@@ -218,6 +234,15 @@ history no longer shows the design was approved before the code; a rebase
 rewrites the commits that were reviewed. Configure the repository to allow
 merge commits only, as `examples/github-document-control/` does
 (`allow_squash_merge: false`, `allow_rebase_merge: false`).
+
+## Before a release — the chain review
+
+No gate judges whether a test proves its design input; a person does. Before
+each release, read every design input with its whole chain — its user needs,
+its design prose, its tagged test and that test's verification steps, its
+output labels and its last run — and record what was found and decided as a
+design review, one input at a time (Design Review 58 is the first). Changes it
+asks for go through this loop like any other.
 
 ## A worked example — from this repository's own history
 
@@ -249,6 +274,9 @@ now the PR reviewer's to catch.
 | Allure tags, steps and attachments go in acceptance tests only | unit tests are not evidence of record; `tests/allure_scope_test.py` holds the line |
 | Merge PRs with a merge commit, never squash or rebase | a squash erases the design-before-code order the record-first commits prove |
 | A DI is declared once; other contexts use `realises` | duplicated requirements drift apart |
+| A test checks only what its DI's text states | a step the text does not state is a requirement nobody approved |
+| One bounded context per fix PR | a reviewer cannot read every input against its test in one diff |
+| A chain review, recorded as a design review, before each release | no gate judges whether a test proves its input |
 | `dhf/allure-results/`, `dhf/data/` are generated, gitignored | evidence is produced by running, not by committing |
 | Backlog/issues/plans are never cited as evidence | plan-vs-record boundary; the record is SDD + Allure + git |
 | Backlog task files change only via the `backlog` CLI | see `AGENTS.md` |
