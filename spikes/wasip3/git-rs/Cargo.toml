@@ -1,0 +1,14 @@
+[package]
+name = "rdm-git"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gix = { version = "0.88.0", default-features = false, features = ["sha1", "status", "revision"] }
+
+[patch.crates-io]
+memmap2 = { path = ".work/memmap2" }
+filetime = { path = ".work/filetime" }
+
+[profile.release]
+opt-level = "s"

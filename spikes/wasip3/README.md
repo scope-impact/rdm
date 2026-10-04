@@ -78,17 +78,17 @@ untested.
 
 | Need | Best candidate | Kind | Status |
 |---|---|---|---|
-| Git reads (finding 1) | [dulwich](https://pypi.org/project/dulwich/) 1.2.17, pure-Python git | Bundled into the same component | Probed: HEAD, log, tags and status matched `git`. Needs an `mmap` stub, because CPython on WASI has none. [gitoxide](https://github.com/GitoxideLabs/gitoxide) builds for wasip2 but cannot read objects (its `memmap2` is a stub on WASI). |
+| Git reads (finding 1) | [gitoxide](https://github.com/GitoxideLabs/gitoxide) 0.88 (Rust), as its own wasip2 component: `git-rs/` | Separate Rust component, 3.2 MB | **Built and run here.** On a clone of RDM with one edited and one new file, HEAD, log, tags and the gate's two questions per file (tracked? changed?) matched `git`, with the network off, in 0.8 s. Two crates gitoxide uses don't support WASI, so `git-rs/build.sh` replaces their WASI part: `memmap2` (maps files into memory; on WASI it now reads them into memory) and `filetime` (file times; on WASI it panicked and now reads them through `std`). In-Python alternative: [dulwich](https://pypi.org/project/dulwich/) 1.2.17, probed with an `mmap` stub. |
 | RDF, SPARQL, SHACL (graph extra) | [rdflib](https://pypi.org/project/rdflib/) 7.6 + pyshacl 0.40 + owlrl, all pure Python | Bundled | Probed: parse, SELECT, SHACL. Plugins load lazily, so import them up front (as in finding 4). Upgrade path: [Oxigraph](https://github.com/oxigraph/oxigraph)'s Rust core built for wasip2 with no RocksDB, wrapped in WIT (probed: 4.4 MB, query correct). |
 | PDF report | [typst](https://github.com/typst/typst) 0.15.1 through [typst-as-lib](https://crates.io/crates/typst-as-lib), built for `wasm32-wasip2` | Separate Rust component | Probed: valid PDF in about 10 ms. 48 MB with fonts, smaller with fewer fonts. Needs a WIT wrapper such as `compile(source, files) -> pdf`. |
 | Markdown to DOCX/Typst | Official [pandoc.wasm](https://github.com/pandoc/pandoc-wasm) (Pandoc 3.9) | wasip1 module; becomes a 0.2 command with the stock adapter | Probed: md → docx and md → typst. No Lua filters. For PDF, pair it with Typst above. |
 | SPARQL endpoint, MCP | componentize-py's [`examples/http-p3`](https://github.com/bytecodealliance/componentize-py) (`wasi:http/service@0.3.0`) | Same toolchain | Not probed. Write the MCP JSON-RPC by hand: the `mcp` SDK needs pydantic-core, which is native. Alternative host: [Wassette](https://github.com/microsoft/wassette), which turns WIT exports into MCP tools (early). |
 | Graphviz | [wasi-graphviz](https://github.com/pablormier/wasi-graphviz) 0.1.4 | wasip1 module with a C ABI | Rendered from the host. As a component its exports are lost, so it needs a WIT wrapper. Very new. |
-| Structurizr | None | Java | Stays native. Its CLI is [end of life](https://docs.structurizr.com/eol). |
+| Structurizr | None | Java | Stays native. The Structurizr CLI that `rdm c4 draw` runs is [end of life](https://docs.structurizr.com/eol), replaced by separate `pull`, `push` and [`export`](https://docs.structurizr.com/export) commands (binaries v2026.09.19). The DSL is not deprecated. The new `export` lists JSON, PlantUML, Mermaid, HTML, PNG and SVG; it does not list DOT, which `draw` uses for Graphviz. Check that before moving. |
 | Native wheels | None needed | n/a | PyYAML and MarkupSafe fall back to pure Python. [dicej/wasi-wheels](https://github.com/dicej/wasi-wheels) is unmaintained, and the WASIX index targets Wasmer, not WASI. |
 
 Order to try them in:
-1. dulwich in place of `git_facts.py`.
+1. gitoxide (`git-rs/`) in place of `git_facts.py`: a WIT interface `record-state(paths) -> list<file-state>` exported by a Rust component and imported by RDM's. Or dulwich, to stay in one Python component.
 2. rdflib/pyshacl for the graph, if its speed is acceptable.
 3. Typst and Pandoc as sibling components the host calls.
 
