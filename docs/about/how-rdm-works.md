@@ -1,4 +1,4 @@
-# How RDM works
+# How it works
 
 ## One idea
 

@@ -13,6 +13,10 @@
   security and data; troubleshooting quotes the real messages; the safety
   table states what the controls do; no public-bind example; one answer to
   what the approval is; glossary terms.
+- **The docs in a developer's words** (Design Review 70, DI-80 amended): What
+  RDM is for, How it works, Limits and risks, Install, Quick start, Guides,
+  Troubleshooting, Reference, Changelog; no citations of standards in the
+  opening chapters.
 - **Fixed: landing commits** (Design Review 68, DI-51): a change merged with
   later commits on its branch now shows the merge that landed it; before, it
   showed none. Found by six agents checking the graph with no other context.

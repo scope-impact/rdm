@@ -1,42 +1,30 @@
-# RDM — Instructions for use
+# RDM documentation
 
-| **Product** | RDM, the design record of regulated software |
+| **Release** | v2.0.0-alpha (these docs describe `main` after that tag; the next release will carry them) |
 |---|---|
-| **Release** | v2.0.0-alpha |
-| **Status** | describes `main` after the v2.0.0-alpha tag; the next release tag will carry this revision |
-| **Document** | IFU-001, revision 4 |
-| **Maintained by** | Scope Impact, [scope-impact/rdm](https://github.com/scope-impact/rdm) (MIT licence; first written by Innolitics, LLC) |
-| **Issues and questions** | [github.com/scope-impact/rdm/issues](https://github.com/scope-impact/rdm/issues) |
+| **Docs revision** | IFU-001, revision 4 |
+| **Source and issues** | [scope-impact/rdm](https://github.com/scope-impact/rdm) · [report a problem](https://github.com/scope-impact/rdm/issues) |
 
 --8<-- "README.md:intro"
 
-## About this manual
+## Read these first
 
-These are RDM's instructions for use. Read [Intended use](about/intended-use.md)
-and [Safety and limitations](about/safety.md) before you rely on a gate's
-verdict; then install, get started, and use the operating instructions for
-each task.
+- [What RDM is for](about/intended-use.md): who it is for, and what it does not do.
+- [Limits and risks](about/safety.md): what a green gate does and does not
+  tell you. Read it before you rely on one.
+
+Then [install](install/installation.md), follow the [quick start](install/getting-started.md),
+and use the [guides](use/index.md) as you work.
 
 !!! warning
-    Boxes like this one mark a warning: what can go wrong, and what you must
-    do about it.
+    Boxes like this one say what can go wrong, and what to do about it.
 
-`Code in this face` is a command, a file or a value you type. Paths are from
-your repository's root.
+## About these docs
 
-## Contents
+These docs are RDM's instructions for use: a controlled document
+(`dhf/documents/user_manual.md`, IFU-001) lists their pages in this order,
+and every change to them goes through a reviewed pull request, like the
+code. RDM's own design history is published beside them, in the *Design
+history* tab; it is how RDM is built, not how to use it.
 
-1. [Intended use](about/intended-use.md)
-2. [How RDM works](about/how-rdm-works.md), and [plan vs. record](about/plan-vs-record.md)
-3. [Safety and limitations](about/safety.md)
-4. [Installation](install/installation.md)
-5. [Getting started](install/getting-started.md)
-6. [Operating instructions](use/index.md)
-7. [Troubleshooting](troubleshooting.md)
-8. [Reference](reference/index.md)
-9. [Revision history](revision-history.md)
-
-RDM is developed with RDM. Its own [design history file](dhf/README.md), with
-its [traceability](traceability-map.md) drawn from its graph after a live test
-run, is published beside this manual; it is RDM's record, not part of these
-instructions.
+Maintained by Scope Impact (MIT licence; first written by Innolitics, LLC).

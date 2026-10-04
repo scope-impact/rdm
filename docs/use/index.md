@@ -1,7 +1,7 @@
-# Operating instructions
+# Guides
 
-Each change to a product runs through the same loop. The pages of this
-chapter follow it.
+Every change goes round the same loop. Start with *Changing the record*;
+the other guides go deeper on one part of it.
 
 ```
  write the record ──► tag the tests ──► run the gates ──► review and merge

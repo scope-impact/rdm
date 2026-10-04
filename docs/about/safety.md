@@ -1,12 +1,12 @@
-# Safety and limitations
+# Limits and risks
 
-Read this chapter before relying on a gate's verdict.
+Read this before you trust a green gate.
 
-## Limitations
+## What RDM does not do
 
 --8<-- "README.md:limits"
 
-## Warnings
+## Things to get right
 
 !!! warning "A green gate is not proof"
     The release gate passes when every design input has a passing tagged
@@ -31,11 +31,11 @@ Read this chapter before relying on a gate's verdict.
     access to the protected branch. Every change to the record goes through
     a pull request a person other than its author approves.
 
-## Residual risks
+## Known risks, and what you do about them
 
-RDM's own risk register (ISO 14971) names the ways RDM could misreport a
-team's evidence. Each is reduced by a control RDM verifies on every release;
-what is left is listed here with what you must do. The ratings are
+RDM keeps its own risk register: the ways RDM itself could misreport your
+evidence. Each has a control that RDM's tests check on every release; this
+table is what is left over, and what you do about it. The ratings are
 **proposed**: an agent drafted them, and they await a maintainer's approval.
 
 | Risk | What could happen | RDM's control | What you must do |

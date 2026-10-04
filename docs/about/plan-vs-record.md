@@ -1,52 +1,35 @@
-# Plan vs. record: the boundary
+# Plan vs. record
 
-RDM separates two kinds of data. Confusing them is the main way this system can
-fail an audit, so the boundary is stated explicitly here.
+Two kinds of data live near a project, and only one of them is evidence.
+Mixing them up is the easiest way to get design controls wrong.
 
-## System of record (controlled)
+## The record: evidence
 
-These are the controlled inputs RDM compiles into the DHF. They carry the full
-weight of design controls (review, approval, retention, validation):
-
-| Store | What it is | Source of truth for |
+| Where | What it is | It is the truth for |
 |-------|------------|---------------------|
-| **design documents and V&V plan** (`dhf/documents/…`) | the design inputs and the user needs | requirements / design |
-| **Allure results** | executed verification evidence | design-input status (pass/fail) |
-| **git history** | reviewed, merged pull requests | approval, change history, baselines |
+| design documents and the V&V plan (`dhf/documents/…`) | design inputs and user needs | what the product must do |
+| Allure results | test runs | whether each design input passes |
+| git history | reviewed, merged pull requests | who approved what, and when |
 
-The DHF (rendered Markdown → PDF/DOCX), including the generated traceability
-matrix, is derived **only** from these.
+Everything RDM renders — the documents, the traceability matrix, the graph —
+is built from these and nothing else.
 
-## Planning data (NOT a record)
+## The plan: not evidence
 
-These exist for coordination and visibility. They are **derived planning data,
-not controlled records**, and must never be cited as evidence:
+| Where | What it is | It is not |
+|-------|------------|-----------|
+| task trackers (Backlog.md, issues, project boards) | who does what, and when | a design input, or an approval |
 
-| Store | What it is | NOT |
-|-------|------------|-----|
-| **Backlog.md tasks** | work breakdown / status | not a design input; a task acceptance criterion at most |
-| **GitHub Issues / Projects** | team-visibility mirror of the plan | not the DHF, not approval |
+- Work reaches the record only through git: a commit in a pull request. RDM
+  never reads a planning tool.
+- Never quote, link or screenshot a task or issue as evidence. Evidence
+  comes from the design documents, the test results or git.
 
-Rules:
+Keeping them apart also keeps your planning tools simple: since nothing
+relies on them as evidence, you never have to validate or retain them like
+a record.
 
-- The **only** path from planning to the record is via **git** (commits/PRs).
-  RDM never ingests a PM tool directly.
-- A planning artifact is **never** screenshotted, quoted, or linked as
-  verification/approval evidence. If you need evidence, it comes from the design documents,
-  the Allure results, or git.
+## The test
 
-## Why this matters
-
-- **Validation scope.** Software used in the quality system must be validated
-  for intended use (ISO 13485 §4.1.6 / 21 CFR 820.70(i)). Because the planning
-  pipeline produces no relied-upon record, it falls **outside** that scope. The
-  moment a planning output is treated as evidence, it crosses the line and
-  inherits record obligations it was not built for.
-- **Detachability.** RDM ships no planning tooling at all (Design Review
-  11): the DHF, traceability, approval and audit posture never depended on
-  it, which is the test that proves planning is not a record.
-
-## Litmus test
-
-> If you deleted every planning artifact, would the DHF or the audit posture
-> change? If no, it is plan. If yes, it is record and belongs above.
+> If you deleted every task and issue, would your evidence change? If not,
+> it is plan. If it would, it is record, and belongs in the repository.

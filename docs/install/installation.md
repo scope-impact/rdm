@@ -1,6 +1,6 @@
-# Installation
+# Install
 
-## System requirements
+## You need
 
 | Need | For | Version |
 |---|---|---|
@@ -42,7 +42,7 @@ RDM's reusable workflow instead of installing it:
 pre-commit hook and the bootstrap script are bash, so on Windows run them
 under Git Bash or WSL.
 
-## Check the installation
+## Check it works
 
 ```bash
 rdm --version              # the release you pinned, in Python's form: v2.0.0-alpha prints 2.0.0a0
@@ -61,7 +61,7 @@ If `rdm` is not found, the tool directory of `uv` is not on `PATH`: run
    `.github/workflows/design-controls.yml` (the `uses:` line and `rdm-ref`).
 4. Run the gates on your record, restart any running agent server, and
    repeat your validation of RDM for the new release
-   ([Validating RDM for your use](../about/intended-use.md#validating-rdm-for-your-use)).
+   ([using RDM in a regulated quality system](../about/intended-use.md#using-rdm-in-a-regulated-quality-system)).
 
 ## Uninstall
 

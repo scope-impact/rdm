@@ -1,8 +1,8 @@
-# Getting started
+# Quick start
 
-Two ways in: bring an existing repository under design controls
-(`rdm adopt`), or start a documentation project from nothing (`rdm init`).
-Install RDM first ([Installation](installation.md)).
+Two ways in: add RDM to a repository you already have (`rdm adopt`), or
+start a documentation project from nothing (`rdm init`). [Install](installation.md)
+RDM first.
 
 ## An existing repository: `rdm adopt`
 

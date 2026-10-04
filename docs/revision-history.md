@@ -1,7 +1,6 @@
-# Revision history
+# Changelog
 
-This manual is revised with RDM: each release lists what changed, and the
-manual's own revision is on its [cover](index.md). Earlier releases of the
-manual are kept with their release tags.
+What changed in each release. These docs are revised with RDM; their own
+revision is on the [first page](index.md).
 
 --8<-- "CHANGELOG.md:history"

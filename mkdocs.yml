@@ -80,16 +80,16 @@ hooks:
   - docs/_hooks/dhf.py
 
 nav:
-  - Instructions for use:
-      - Cover: index.md
-      - 1. Intended use: about/intended-use.md
-      - 2. How RDM works:
-          - How RDM works: about/how-rdm-works.md
+  - Docs:
+      - Start here: index.md
+      - 1. What RDM is for: about/intended-use.md
+      - 2. How it works:
+          - How it works: about/how-rdm-works.md
           - Plan vs. record: about/plan-vs-record.md
-      - 3. Safety and limitations: about/safety.md
-      - 4. Installation: install/installation.md
-      - 5. Getting started: install/getting-started.md
-      - 6. Operating instructions:
+      - 3. Limits and risks: about/safety.md
+      - 4. Install: install/installation.md
+      - 5. Quick start: install/getting-started.md
+      - 6. Guides:
           - use/index.md
           - Changing the record: use/changing-the-record.md
           - Design inputs and tests: use/design-inputs-and-tests.md
@@ -109,7 +109,7 @@ nav:
           - API: reference/api.md
           - Glossary: reference/glossary.md
           - "Worked example: Part 11": reference/worked-example.md
-      - 9. Revision history: revision-history.md
+      - 9. Changelog: revision-history.md
   - Design history (RDM on RDM):
       - Overview: dhf/README.md
       - Changing RDM: dhf/AGENT_WORKFLOW.md

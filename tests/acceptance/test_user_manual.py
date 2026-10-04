@@ -145,8 +145,8 @@ def test_rdm_manual_examples_name_their_component() -> None:
         assert [r.label for r in validate(quads) if r.message.endswith(NO_COMPONENT)] == []
 
 
-CHAPTERS = ["RDM — Instructions for use", "Intended use", "How RDM works", "Safety and limitations", "Installation",
-            "Getting started", "Operating instructions", "Troubleshooting", "Reference", "Revision history"]
+CHAPTERS = ["RDM documentation", "What RDM is for", "How it works", "Limits and risks", "Install", "Quick start", "Guides",
+            "Troubleshooting", "Reference", "Changelog"]
 
 
 def _ifu() -> tuple[dict, list[tuple[str, str]]]:
@@ -187,9 +187,9 @@ def test_the_ifu_is_one_manual_in_reading_order() -> None:
             elif Path(page).parent != chapter_folder:
                 misplaced.append((page, title))
         assert misplaced == [], misplaced
-    with verification_step("the site's instructions-for-use tab shows exactly these pages, in this order"):
+    with verification_step("the site's docs tab shows exactly these pages, in this order"):
         nav = (ROOT / "mkdocs.yml").read_text()
-        tab = nav[nav.index("  - Instructions for use:"):nav.index("  - Design history")]
+        tab = nav[nav.index("  - Docs:"):nav.index("  - Design history")]
         shown = ["docs/" + p for p in re.findall(r"([\w./-]+\.md)\s*$", tab, re.M)]
         assert shown == [page for page, _ in titled], shown
     with verification_step("the first page is the cover, naming the product, the release, and the manual's id and "
@@ -208,7 +208,7 @@ def test_the_ifu_discloses_each_residual_risk() -> None:
     from rdm.risk.register import risks
 
     _, titled = _ifu()
-    safety = (ROOT / next(page for page, title in titled if title == "Safety and limitations")).read_text()
+    safety = (ROOT / next(page for page, title in titled if title == "Limits and risks")).read_text()
     rows = {cells[1]: cells for cells in ([c.strip() for c in line.split("|")] for line in safety.splitlines()
                                           if line.startswith("| RISK-"))}
     ids = sorted(r.id for r in risks(ROOT / "dhf"))
