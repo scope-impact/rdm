@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 80
+revision: 81
 title: Design Review — RDM
 ---
 
@@ -2354,6 +2354,24 @@ developers and the people who review their pull requests.
   analysis, the risk register, the worked example).
 - **Unchanged:** IFU-001 as the controlled document, its reading order, and
   every residual risk disclosed with what the user must do (DI-81).
+
+# Design Review 71 — One copy of the docs per release
+
+**Scope reviewed:** how IFU-001 reaches its readers. One site, rebuilt from
+`main`, described a release that its own install commands could not give.
+
+**Disposition:** Approved.
+
+- **New DI-82:** the docs are published once per release tag and once for
+  the development version (`main`), with `mike`; every release stays
+  readable and selectable, and the newest release is the default.
+- **DI-80 amended:** the cover's release is filled in by the build: the tag
+  a release build is made from, or the development version. Install
+  commands take the same value, so a reader always installs the release the
+  page describes.
+- **Publishing moves to a `gh-pages` branch** (mike's store of versions).
+  The repository's Pages source must be switched to that branch once, by a
+  maintainer.
 
 # Approval
 
