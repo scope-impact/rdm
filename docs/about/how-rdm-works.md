@@ -1,4 +1,4 @@
-# How RDM works
+# How it works
 
 ## One idea
 
@@ -8,8 +8,8 @@ release evidence bundle — is derived from it by a tool, and none of it is ever
 edited by hand or fed back in.
 
 The record is Markdown frontmatter and tests in git. It changes only through
-a pull request that someone other than the author reviews; the merge is the
-approval. That holds for people and for agents alike: an agent that wants to
+a pull request that someone other than the author reviews; that review is the
+approval, and the merge records it. That holds for people and for agents alike: an agent that wants to
 change the record edits the Markdown and the tests and opens a pull request,
 the same as a person.
 
@@ -31,7 +31,7 @@ what passed, and who changed what, when. RDM reads them; nobody writes them.
 Every entity is declared **once**, in one place, with one id. Every link is
 either **written** in a reviewed pull request or **derived** by RDM; a fact
 that can be derived is never also written, because two copies of one fact
-drift. The words are the [glossary](glossary.md)'s.
+drift. The words are the [glossary](../reference/glossary.md)'s.
 
 ```mermaid
 flowchart LR
@@ -66,7 +66,7 @@ flowchart LR
 | **User need** | the V&V plan, `user_needs:` | `UN-nnn` | its text |
 | **Bounded context** | its design document (`kind: design`, `context:`); listed with its part in the architecture's `contexts:` | the context name | — |
 | **Design input** | the design document of the context that owns it, `design_inputs:` | `DI-n` | its text, and the needs it `traces_to` |
-| **Controlled document** | any Markdown file in the DHF with a frontmatter `id` | its `id` | `title`, `revision`, `references:` (documents it relies on), `[[KEY]]` clause tags |
+| **Controlled document** | any Markdown file in the DHF with a frontmatter `id` | its `id` | `title`, `revision`, `references:` (documents it relies on), checklist references (`[[KEY]]`) |
 | **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (design inputs), residual, acceptance |
 | **Risk policy** | a document's `risk_policy:` | — | severities, probabilities, levels, acceptability |
 | **Checklist, clause** | a checklist file (text or RDF) | the clause key, e.g. `62304:5.2.2` | each clause's description; includes |
@@ -91,7 +91,7 @@ Derived, never declared:
 | the traceability matrix | design inputs, user needs and test results |
 
 The order of a change (design input, approval, implementation, test, review)
-is the runbook: [Changing the record](agent-workflow.md).
+is the runbook: [Changing the record](../use/changing-the-record.md).
 
 ## A record-first repository
 
@@ -118,7 +118,7 @@ flowchart TD
 ```
 
 `rdm adopt` lays down the record skeleton and the enforcement without
-touching existing files ([get started](get-started.md)). Planning tools stay
+touching existing files ([get started](../install/getting-started.md)). Planning tools stay
 outside the record: [Plan vs. record](plan-vs-record.md).
 
 ## What RDM depends on
@@ -129,4 +129,4 @@ outside the record: [Plan vs. record](plan-vs-record.md).
 
 Nothing about how the work was planned, which tracker is used, or who (or
 what) wrote the change. How RDM's own code is laid out, one package per
-bounded context, is its [system architecture](dhf/documents/architecture.md).
+bounded context, is its [system architecture](../dhf/documents/architecture.md).

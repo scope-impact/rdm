@@ -2,8 +2,8 @@
 
 How to write the record: declare a design input (an acceptance criterion),
 write the test that verifies it, and let RDM label the test runs from the
-record. The words are the [glossary](glossary.md)'s. The
-step-by-step change procedure is [Changing the record](agent-workflow.md);
+record. The words are the [glossary](../reference/glossary.md)'s. The
+step-by-step change procedure is [Changing the record](changing-the-record.md);
 what the gates then check is [The gates](gates.md).
 
 ## The model in one breath
@@ -11,7 +11,7 @@ what the gates then check is [The gates](gates.md).
 A user need (`UN-nnn`, in the V&V plan) is refined by design inputs (`DI-n`,
 in the design document of the bounded context that owns them); each design
 input is verified by an acceptance test tagged `@allure.story("DI-n")`. Every
-entity and link is in [the data model](record-first-architecture.md#the-data-model).
+entity and link is in [the data model](../about/how-rdm-works.md#the-data-model).
 
 ```yaml
 # dhf/documents/verification_and_validation_plan.md
@@ -102,7 +102,7 @@ code-agnostic: a file can move without the test changing. An `output` label,
 the file it runs (`@allure.label("output", "rdm/release/gate.py")`), is
 optional and names the component holding that file. Either *names* the
 component; the graph adds the components a named one *reaches* through the relationships the workspace
-declares, so a test need not name every module behind its entry point.
+declares, so a test need not name every component behind its entry point.
 Reaching is derived by a rule, not stored: `rdm graph build` and `query` add
 it with `--infer`, and the agent server always does
 ([derived relations](graph.md#derived-relations-rules-not-facts)).
@@ -131,4 +131,4 @@ rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verifica
 ```
 
 Validation, by people and by AI personas, is recorded against the user needs:
-[validation evidence](ai-persona-usability-validation.md).
+[validation evidence](validation-evidence.md).

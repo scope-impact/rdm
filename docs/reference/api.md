@@ -2,7 +2,7 @@
 
 Generated from the source docstrings by [mkdocstrings](https://mkdocstrings.github.io/),
 one section per bounded context, in the order of the dependency rule
-([system architecture](dhf/documents/architecture.md)): a context imports only
+([system architecture](../dhf/documents/architecture.md)): a context imports only
 contexts listed before it. `rdm/main.py`, the command, is the composition root.
 
 ## Shared kernel

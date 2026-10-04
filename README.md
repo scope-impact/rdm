@@ -107,7 +107,7 @@ This runs your acceptance tests, then the design gate, verify, the release
 gate, graph validation and the evidence bundle, with RDM installed from the
 pinned revision; `rdm adopt` lays this workflow down. For PDFs, add a step
 `uses: scope-impact/rdm@v2.0.0-alpha`. Inputs and options are in
-[the gates in your CI](docs/reusable-ci.md).
+[the gates in your CI](docs/use/ci.md).
 
 ## Documentation
 
@@ -118,9 +118,9 @@ and the CLI and API reference.
 
 | | `docs/` | `dhf/` |
 |---|---|---|
-| **What it is** | RDM's user documentation, the site above | RDM's own design history file: the record RDM develops itself under |
-| **Controlled?** | No: ordinary docs | Yes: the design gate and the release gate hold it |
-| **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the evidence |
+| **What it is** | RDM's instructions for use (IFU-001), the site above | RDM's own design history file: the record RDM develops itself under |
+| **Controlled?** | Yes, as one document: IFU-001 lists its pages; each change is a reviewed pull request | Yes: the design gate and the release gate hold it |
+| **Read by RDM's tools?** | The graph reads its pages: the design inputs each names, its test examples | Yes: the gates, `trace`, the graph, the evidence |
 
 `docs/` explains; `dhf/` decides. The full comparison is in
 [the DHF's overview](dhf/README.md).

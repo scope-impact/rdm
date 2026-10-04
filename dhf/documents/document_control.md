@@ -1,6 +1,6 @@
 ---
 id: DC-001
-revision: 1
+revision: 2
 title: "Document Control — git as the document control system for RDM's record"
 ---
 
@@ -20,7 +20,7 @@ The master copy of every controlled record is the repository's default branch.
 Drafts are branches; review and approval happen on the pull request; releases
 are tags; the revision history is the git history itself. Planning artifacts
 (Backlog.md tasks, issues) are coordination, never part of the record
-(`docs/plan-vs-record.md`).
+(`docs/about/plan-vs-record.md`).
 
 # Controls
 

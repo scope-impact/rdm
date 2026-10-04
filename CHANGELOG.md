@@ -1,7 +1,25 @@
 # Changelog
 
+<!-- --8<-- [start:history] -->
 ## Unreleased
 
+- **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
+  one manual in IFU order (cover, intended use, how RDM works, safety and
+  limitations with each residual risk, installation, getting started,
+  operating instructions, troubleshooting, reference, revision history).
+  Pages moved into chapter folders under `docs/`.
+- **IFU corrections** (from a five-way review): a numbered path to the first
+  passing design gate; validating RDM for your use; upgrade, uninstall,
+  security and data; troubleshooting quotes the real messages; the safety
+  table states what the controls do; no public-bind example; one answer to
+  what the approval is; glossary terms.
+- **The docs in a developer's words** (Design Review 70, DI-80 amended): What
+  RDM is for, How it works, Limits and risks, Install, Quick start, Guides,
+  Troubleshooting, Reference, Changelog; no citations of standards in the
+  opening chapters.
+- **Versioned docs** (Design Review 71, DI-82): each release tag publishes its
+  own copy of the docs and `main` publishes the development version, with a
+  version selector (mike); the build fills in the release and the install ref.
 - **Fixed: landing commits** (Design Review 68, DI-51): a change merged with
   later commits on its branch now shows the merge that landed it; before, it
   showed none. Found by six agents checking the graph with no other context.
@@ -593,3 +611,4 @@ From the project RDM was forked from.
 - SVGs no longer in PDFs (the conversion was unreliable).
 - The first 510(k) documents.
 - Release files ignored by default.
+<!-- --8<-- [end:history] -->

@@ -13,7 +13,11 @@ site_dir: site
 theme:
   name: material
   features:
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.indexes
+    - navigation.footer
     - navigation.top
     - content.code.copy
     - toc.follow
@@ -26,8 +30,20 @@ theme:
     text: Nunito Sans
     code: JetBrains Mono
 
+# One copy of the docs per release (DI-82): mike publishes them; Material shows the selector.
+extra:
+  version:
+    provider: mike
+    default: latest
+
 extra_css:
   - stylesheets/rdm-theme.css
+  - stylesheets/traceability-map.css   # scoped to .rdm-map
+
+# The traceability map's script: on every page, so its path resolves at any depth; it does
+# nothing on a page without a map.
+extra_javascript:
+  - javascripts/traceability-map.js
 
 plugins:
   - search
@@ -68,29 +84,40 @@ exclude_docs: |
 hooks:
   - docs/_hooks/traceability.py
   - docs/_hooks/dhf.py
+  - docs/_hooks/version.py
 
 nav:
-  - Home: index.md
-  - Get started: get-started.md
-  - How RDM works: record-first-architecture.md
-  - Glossary: glossary.md
-  - Plan vs. record: plan-vs-record.md
-  - Record:
-      - Design inputs and tests: design-controls.md
-      - Changing the record: agent-workflow.md
-      - Risk register: risk.md
-      - Validation evidence: ai-persona-usability-validation.md
-  - Gates:
-      - The gates: gates.md
-      - Gap analysis and checklists: gap-analysis.md
-      - The gates in your CI: reusable-ci.md
-  - Graph:
-      - The record as a graph: graph.md
-      - Browsing in Graph Explorer: graph-explorer.md
-      - For agents (MCP): agents.md
-  - Documents:
-      - Authoring and rendering: authoring.md
-  - RDM on RDM:
+  - Docs:
+      - Start here: index.md
+      - 1. What RDM is for: about/intended-use.md
+      - 2. How it works:
+          - How it works: about/how-rdm-works.md
+          - Plan vs. record: about/plan-vs-record.md
+      - 3. Limits and risks: about/safety.md
+      - 4. Install: install/installation.md
+      - 5. Quick start: install/getting-started.md
+      - 6. Guides:
+          - use/index.md
+          - Changing the record: use/changing-the-record.md
+          - Design inputs and tests: use/design-inputs-and-tests.md
+          - Risk register: use/risk-register.md
+          - Validation evidence: use/validation-evidence.md
+          - The gates: use/gates.md
+          - Gap analysis: use/gap-analysis.md
+          - The gates in your CI: use/ci.md
+          - The record as a graph: use/graph.md
+          - Browsing in Graph Explorer: use/graph-explorer.md
+          - For agents (MCP): use/agents.md
+          - Authoring and rendering: use/documents.md
+      - 7. Troubleshooting: troubleshooting.md
+      - 8. Reference:
+          - reference/index.md
+          - CLI: reference/cli.md
+          - API: reference/api.md
+          - Glossary: reference/glossary.md
+          - "Worked example: Part 11": reference/worked-example.md
+      - 9. Changelog: revision-history.md
+  - Design history (RDM on RDM):
       - Overview: dhf/README.md
       - Changing RDM: dhf/AGENT_WORKFLOW.md
       - Traceability (from the graph): traceability-map.md
@@ -111,8 +138,3 @@ nav:
       - Document control: dhf/documents/document_control.md
       - Instructions for use (IFU): dhf/documents/user_manual.md
       - "ADR 0001: user needs across bounded contexts": dhf/decisions/adr-0001-bounded-context-user-needs.md
-  - "Worked example: Part 11": example-traceability-map.md
-  - Reference:
-      - CLI: cli.md
-      - API: reference.md
-      - Changelog: changelog.md

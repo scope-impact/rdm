@@ -19,9 +19,9 @@
 | Command | What it does |
 |---|---|
 | `new-input --context C --text T --traces-to UN[,UN…] [--test-file F]` | scaffold a traced design input: next free `DI-n`, frontmatter entry, failing stub test (in `F` if given), checklist; `--list` shows contexts / taken ids / user needs |
-| `design-gate [--allure-results DIR]` | design docs + review present, complete, approved (committed); every user-need and design-input id declared once; the architecture's views drawn from the current workspace; warnings for DI↔tag mismatches; with results, also checks the user needs against them |
-| `verify --allure-results DIR -o FILE [--unit-coverage REPORT]` | reconcile executed Allure results against declared design inputs → verification data for the matrix; with the unit tests' coverage report (Cobertura XML or LCOV), each component's unit lines run of those measured, beside the inputs, never inside them ([gates](gates.md)) |
-| `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed + every risk evaluated, its risk controls verified and its residual acceptable ([risk register](risk.md)) |
+| `design-gate [--allure-results DIR]` | design documents + review present, complete, approved (committed); every user-need and design-input id declared once; the architecture's views drawn from the current workspace; warnings for DI↔tag mismatches; with results, also checks the user needs against them |
+| `verify --allure-results DIR -o FILE [--unit-coverage REPORT]` | reconcile executed Allure results against declared design inputs → verification data for the matrix; with the unit tests' coverage report (Cobertura XML or LCOV), each component's unit lines run of those measured, beside the inputs, never inside them ([gates](../use/gates.md)) |
+| `release-gate --allure-results DIR` | hard gate: approved + every design input verified by a passing tagged test + every user need addressed + every risk evaluated, its risk controls verified and its residual acceptable ([risk register](../use/risk-register.md)) |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
 | `evidence-bundle --allure-results DIR -o DIR [--unit-coverage REPORT]` | write the retained release evidence set: verification data, rendered matrix, Allure results, verification report, manifest; refuses a record with no matrix template; with a coverage report, carries it as `verify` does and keeps the report |
 | `evidence-report --allure-results DIR -o FILE` | render the verification report (PDF): every run behind each design input, with its steps, labels, links and attachments |
@@ -29,7 +29,8 @@
 | `trace UN-nnn \| DI-n [--allure-results DIR]` | the traceability slice for one need or input (forward + backward); with results, each input's verification status |
 | `persona --vv-plan F --persona-results DIR` | reconcile formative AI-persona usability runs against the user-need registry (never gates) |
 
-Common flag: `--dhf DIR` (default `dhf/`).
+Common flag: `--dhf DIR` (default `dhf/`), on every command above except `dmr`, `mutation-probe` and `persona`.
+The `rdm graph` commands that read the record (`build`, `query`, `validate`, `explorer-file`, `mcp`) take it too.
 
 ## The architecture — `rdm c4 …`
 
@@ -48,9 +49,9 @@ Common flag: `--dhf DIR` (default `dhf/`).
 | `serve [--store DIR] [--bind HOST:PORT]` | read-only SPARQL 1.1 endpoint (union default graph, CORS) for AWS Graph Explorer and other SPARQL clients |
 | `mcp [--allure-results DIR] [--checklist NAME\|FILE]…` | serve the record to agents as a read-only MCP server over stdio: `schema`, `query`, `trace`, `validate`, each from a fresh projection |
 
-See [The record as a graph](graph.md).
+See [The record as a graph](../use/graph.md).
 
 ## Planning
 
 RDM ships no planning tooling: tasks and issues live in their own tools
-([Plan vs. record](plan-vs-record.md)).
+([Plan vs. record](../about/plan-vs-record.md)).

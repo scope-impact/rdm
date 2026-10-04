@@ -29,7 +29,7 @@ version:
 
 The Backlog.md tasks below are **planning, never the record**: coordination
 scaffolding only, never cited as design, verification, or approval evidence
-(see `docs/plan-vs-record.md`).
+(see `docs/about/plan-vs-record.md`).
 
 <!-- BACKLOG.MD GUIDELINES START -->
 # Instructions for the usage of Backlog.md CLI Tool

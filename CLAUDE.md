@@ -116,7 +116,7 @@ layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 - `rdm/risk/`, `rdm/architecture/`, `rdm/compliance/` — the leaves: the risk register; the C4 model and `rdm c4 draw`; gap analysis and the built-in checklists.
 - `rdm/release/` — the release gate and trace (`gate.py`), the verification data (`verify.py`).
 - `rdm/publishing/` and `rdm/md_extensions/` — templates and data to Markdown (`render.py`, two-pass, filters `invert_dependencies`, `join_to`, `md_indent`), snippets, the DMR index, the verification report, the evidence bundle; Markdown post-processing.
-- `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | validate | serve | explorer-file | mcp`, extra `graph`): named graphs per source, embedded Oxigraph store, SHACL gate shapes, SPARQL endpoint for AWS Graph Explorer, and a read-only MCP server for agents (`agent.py`, registered in `.mcp.json`). See `docs/graph.md`.
+- `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | validate | serve | explorer-file | mcp`, extra `graph`): named graphs per source, embedded Oxigraph store, SHACL gate shapes, SPARQL endpoint for AWS Graph Explorer, and a read-only MCP server for agents (`agent.py`, registered in `.mcp.json`). See `docs/use/graph.md`.
 
 ### Optional extras
 
@@ -124,7 +124,7 @@ layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 - `validation` — Playwright, for the usability-persona runs.
 
 RDM ships no planning tooling: Backlog.md (below) is used through its own CLI,
-and nothing in RDM reads it (`docs/plan-vs-record.md`).
+and nothing in RDM reads it (`docs/about/plan-vs-record.md`).
 
 ## Task Management
 

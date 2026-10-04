@@ -1,11 +1,11 @@
-# Gap analysis — audit documents against a standard
+# Gap analysis — check documents against a standard
 
 `rdm gap` checks that your documents reference every clause a standard's
 checklist lists. A reference is a `[[KEY]]` block in a document, such as
 `[[62304:5.1.1]]` or `[[This section fulfills X-1 and X-2]]`; the checklist
 maps keys to the standard's clauses. Only text inside `[[ … ]]` counts, and a
 dotted descendant covers its parent. The exact reading and matching rules are
-the [compliance design](dhf/documents/design/compliance.md#design-outputs).
+the [compliance design](../dhf/documents/design/compliance.md#design-outputs).
 
 ```bash
 rdm gap --list                                          # the built-in checklists
@@ -29,7 +29,7 @@ procedure against it:
 rdm gap part11_document_control documents/document_control_procedure.md
 ```
 
-RDM holds [its own](dhf/documents/document_control.md) to the same checklist,
+RDM holds [its own](../dhf/documents/document_control.md) to the same checklist,
 and the [worked example](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
 is a complete project built on it.
 
@@ -59,4 +59,4 @@ clause no document references:
 ```
 
 The worked example verifies its DI-5 with exactly this, including a check
-that the audit does detect a gap.
+that the check does detect a gap.

@@ -20,6 +20,15 @@ design_inputs:
   - id: DI-79
     text: "RDM's user manual shall show each tagged-test example naming the C4 component it exercises by a component label."
     traces_to: [UN-018]
+  - id: DI-80
+    text: "RDM's instructions for use shall be one manual whose controlled document lists its pages in reading order: a cover naming the product, the release it is for (filled in by the build: the release tag it is built from, or the development version otherwise), and the manual's own id and revision; then what RDM is for (its intended use); how it works; limits and risks; install; quick start; guides (the operating instructions); troubleshooting; reference; and changelog (the revision history)."
+    traces_to: [UN-018]
+  - id: DI-82
+    text: "RDM's instructions for use shall be published once per release tag and once for the development version, every published release kept and selectable beside the others, the newest release being the default."
+    traces_to: [UN-018]
+  - id: DI-81
+    text: "RDM's instructions for use shall disclose each risk of RDM's risk register by its id, with what the user must do about its residual risk."
+    traces_to: [UN-018, UN-016]
   - id: DI-29
     text: "RDM shall generate device-master-record index data from controlled documents' frontmatter, writing one entry per document (id, title, path, revision) to a data file the DMR index renders from."
     traces_to: [UN-012]
@@ -63,7 +72,7 @@ each component to its code.
 | Report layout | Sets the report's pages, every value as text | DI-64 |
 | Evidence bundle | Writes the retained release evidence, the verification report among it, and, given the unit tests' coverage report, carries it as verify does and keeps it; refuses a record with no matrix template before writing anything | DI-64; realises DI-30 |
 | PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | realises part of DI-63 |
-| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; each tagged-test example names its component by key | DI-79 |
+| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; each tagged-test example names its component by key; chapters in the order of an IFU, a cover naming its release and revision, and each residual risk disclosed | DI-79, DI-80, DI-81, DI-82 |
 | Docs build hooks | Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual | — |
 
 The PDF action is in the Reusable gates container; the others are in `rdm`.

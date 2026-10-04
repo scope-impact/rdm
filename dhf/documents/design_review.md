@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 76
+revision: 81
 title: Design Review — RDM
 ---
 
@@ -2307,6 +2307,71 @@ risks, and the user manual.
   back; every run tested the record's commit with a clean worktree; every
   code dependency has a declared relationship; reached components match the
   rule exactly; unit coverage is linked to no run or input.
+
+# Design Review 69 — The instructions for use as one document
+
+**Scope reviewed:** IFU-001 after Design Review 67: a list of the site's
+pages in the order the site happened to have, which nobody could read as
+one document.
+
+**Disposition:** Approved.
+
+- **The IFU is restructured as instructions for use** (ISO 20417, IEC
+  82304-1 accompanying documents): a cover with the release and the
+  manual's revision; intended use; how RDM works; safety and limitations;
+  installation; getting started; operating instructions; troubleshooting;
+  reference; revision history (DI-80). The pages move into chapter folders
+  under `docs/`, and IFU-001 lists them in reading order.
+- **Residual risks are disclosed** in the safety chapter, each by its
+  register id with what the user must do (DI-81, ISO 14971 disclosure of
+  residual risk).
+- **New pages:** the cover, intended use, safety and limitations,
+  operating instructions, troubleshooting, reference. The rest move,
+  unchanged in substance. "RDM on RDM" stays outside the IFU: it publishes
+  this DHF.
+- **Paths:** the record's references to moved pages follow them (the DHF
+  overview, the agent workflow, the system architecture, and document
+  control, which goes to revision 2).
+- **IFU-001 revision 4:** *Changing the record* comes first in the operating
+  instructions, before the page that details design inputs and tests.
+- **Not done here:** rendering the IFU as one PDF.
+
+# Design Review 70 — The IFU in a developer's words
+
+**Scope reviewed:** IFU-001 after Design Review 69, read by its users:
+developers and the people who review their pull requests.
+
+**Disposition:** Approved.
+
+- **DI-80 amended:** the chapters keep their place and purpose but take
+  the names developer documentation uses: *What RDM is for* (intended use),
+  *How it works*, *Limits and risks*, *Install*, *Quick start*, *Guides*
+  (operating instructions), *Troubleshooting*, *Reference*, *Changelog*
+  (revision history). The cover says it is RDM's documentation, and that
+  it is the controlled IFU-001.
+- **Plain words:** the opening chapters drop citations of standards and say
+  what to do instead. Standards stay where RDM checks against them (gap
+  analysis, the risk register, the worked example).
+- **Unchanged:** IFU-001 as the controlled document, its reading order, and
+  every residual risk disclosed with what the user must do (DI-81).
+
+# Design Review 71 — One copy of the docs per release
+
+**Scope reviewed:** how IFU-001 reaches its readers. One site, rebuilt from
+`main`, described a release that its own install commands could not give.
+
+**Disposition:** Approved.
+
+- **New DI-82:** the docs are published once per release tag and once for
+  the development version (`main`), with `mike`; every release stays
+  readable and selectable, and the newest release is the default.
+- **DI-80 amended:** the cover's release is filled in by the build: the tag
+  a release build is made from, or the development version. Install
+  commands take the same value, so a reader always installs the release the
+  page describes.
+- **Publishing moves to a `gh-pages` branch** (mike's store of versions).
+  The repository's Pages source must be switched to that branch once, by a
+  maintainer.
 
 # Approval
 
