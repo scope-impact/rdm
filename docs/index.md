@@ -1,6 +1,6 @@
 # RDM documentation
 
-| **Release** | v2.0.0-alpha (these docs describe `main` after that tag; the next release will carry them) |
+| **Release** | {{ rdm.release }} (other versions: the selector at the top) |
 |---|---|
 | **Docs revision** | IFU-001, revision 4 |
 | **Source and issues** | [scope-impact/rdm](https://github.com/scope-impact/rdm) · [report a problem](https://github.com/scope-impact/rdm/issues) |

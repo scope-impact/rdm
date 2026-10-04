@@ -17,6 +17,9 @@
   RDM is for, How it works, Limits and risks, Install, Quick start, Guides,
   Troubleshooting, Reference, Changelog; no citations of standards in the
   opening chapters.
+- **Versioned docs** (Design Review 71, DI-82): each release tag publishes its
+  own copy of the docs and `main` publishes the development version, with a
+  version selector (mike); the build fills in the release and the install ref.
 - **Fixed: landing commits** (Design Review 68, DI-51): a change merged with
   later commits on its branch now shows the merge that landed it; before, it
   showed none. Found by six agents checking the graph with no other context.

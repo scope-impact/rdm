@@ -30,6 +30,12 @@ theme:
     text: Nunito Sans
     code: JetBrains Mono
 
+# One copy of the docs per release (DI-82): mike publishes them; Material shows the selector.
+extra:
+  version:
+    provider: mike
+    default: latest
+
 extra_css:
   - stylesheets/rdm-theme.css
   - stylesheets/traceability-map.css   # scoped to .rdm-map
@@ -78,6 +84,7 @@ exclude_docs: |
 hooks:
   - docs/_hooks/traceability.py
   - docs/_hooks/dhf.py
+  - docs/_hooks/version.py
 
 nav:
   - Docs:

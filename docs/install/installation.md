@@ -20,13 +20,12 @@ RDM is a Python CLI (Python 3.10+). Install it from its repository, pinned to
 a release; PyPI's `rdm` is another project.
 
 ```bash
-uv tool install "rdm @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha"
-uv tool install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha"   # with the extras
+uv tool install "rdm @ git+https://github.com/scope-impact/rdm@{{ rdm.ref }}"
+uv tool install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm@{{ rdm.ref }}"   # with the extras
 rdm --version
 ```
 
-The `v2.0.0-alpha` tag predates this revision of the manual. Until the next
-release is tagged, install from `@main` to get everything described here.
+These docs are for {{ rdm.release }}; pick another version from the selector at the top.
 
 | Extra | Adds |
 |---|---|
@@ -45,7 +44,7 @@ under Git Bash or WSL.
 ## Check it works
 
 ```bash
-rdm --version              # the release you pinned, in Python's form: v2.0.0-alpha prints 2.0.0a0
+rdm --version              # the release you pinned, in Python's form (a tag v2.1.0-beta prints 2.1.0b0)
 rdm story design-gate --help
 ```
 

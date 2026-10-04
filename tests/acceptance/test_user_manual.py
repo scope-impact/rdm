@@ -170,8 +170,6 @@ def test_the_ifu_is_one_manual_in_reading_order() -> None:
     """DI-80: IFU-001 lists RDM's manual in the reading order of instructions
     for use, behind a cover naming the product, its release and the manual's
     id and revision."""
-    from rdm.kernel.version import release_version
-
     front, titled = _ifu()
     attach("IFU-001 pages and titles", titled)
     titles = [title for _, title in titled]
@@ -196,8 +194,54 @@ def test_the_ifu_is_one_manual_in_reading_order() -> None:
                            "revision"):
         cover = (ROOT / titled[0][0]).read_text()
         assert titles[0] == CHAPTERS[0]
-        assert f"v{release_version()}" in cover
+        assert "{{ rdm.release }}" in cover
+    with verification_step("the build fills in the release: the tag of a release build, the development version "
+                           "otherwise; install commands take the same ref"):
+        version = _version_hook()
+        assert version.fill("{{ rdm.release }} @{{ rdm.ref }}", {"RDM_DOCS_VERSION": "v9.1.0"}) == "v9.1.0 @v9.1.0"
+        development = version.fill("{{ rdm.release }} @{{ rdm.ref }}", {"RDM_DOCS_VERSION": "dev"})
+        assert development.startswith("development version") and development.endswith("@main")
+        stale = [str(p) for p in (ROOT / "docs").rglob("*.md") if "_hooks" not in p.parts
+                 and re.search(r"@v\d+\.\d+\.\d+", p.read_text())]
+        assert stale == [], stale  # no page pins a release by hand
         assert f"IFU-001, revision {front['revision']}" in cover
+
+
+def _version_hook():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("docs_version", ROOT / "docs" / "_hooks" / "version.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@allure.story("DI-82")
+@allure.label("component", "user_manual")
+def test_the_docs_are_published_once_per_release() -> None:
+    """DI-82: the docs are published once per release tag and once for the
+    development version, every release kept and selectable, the newest release
+    the default."""
+    import yaml
+
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "docs.yml").read_text())
+    nav = (ROOT / "mkdocs.yml").read_text()
+    deploy = workflow["jobs"]["deploy"]
+    script = "\n".join(step.get("run", "") for step in deploy["steps"])
+    attach("deploy job", deploy)
+
+    with verification_step("a release tag and a push to main both publish"):
+        assert "v*" in workflow[True]["push"]["tags"] and workflow[True]["push"]["branches"] == ["main"]
+        assert "refs/tags/v" in deploy["if"] and "refs/heads/main" in deploy["if"]
+    with verification_step("a tag publishes under its own name and as latest; main publishes the development version"):
+        assert "mike deploy --push --update-aliases \"$RDM_DOCS_VERSION\" latest" in script
+        assert "mike deploy --push dev" in script
+        assert "github.ref_type == 'tag' && github.ref_name || 'dev'" in deploy["env"]["RDM_DOCS_VERSION"]
+    with verification_step("published versions are kept (pushed to one branch, never replaced) and selectable; the "
+                           "newest release is the default"):
+        assert "--push" in script and "rm -rf" not in script and "gh-pages" in script
+        assert "provider: mike" in nav and "default: latest" in nav
+        assert "mike set-default --push latest" in script
 
 
 @allure.story("DI-81")
