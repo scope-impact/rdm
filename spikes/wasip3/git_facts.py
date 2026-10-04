@@ -8,6 +8,7 @@ stored relative to the record's root, so the host's checkout and the
 component's mounted ``/`` match.
 
     python git_facts.py record FACTS.json -- story design-gate --dhf dhf
+    python git_facts.py snapshot FACTS.json    # what a test run's labels ask
 """
 
 import json
@@ -61,7 +62,20 @@ def record(path: str, argv: list[str]) -> int:
     return code
 
 
+# The questions RDM's pytest plugin asks of the repository a run is in (its commit and worktree labels).
+SNAPSHOT = (("rev-parse", "HEAD"), ("status", "--porcelain"), ("remote", "get-url", "origin"))
+
+
+def snapshot(path: str) -> None:
+    """Save the answers to SNAPSHOT for the current directory's repository."""
+    facts = {_key(".", args): rdm.kernel.git.git(".", *args) for args in SNAPSHOT}
+    with open(path, "w", encoding="utf-8") as stream:
+        json.dump(facts, stream, indent=1, sort_keys=True)
+
+
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["snapshot"] and len(sys.argv) == 3:
+        sys.exit(snapshot(sys.argv[2]))
     if sys.argv[1:2] != ["record"] or sys.argv[3:4] != ["--"]:
-        sys.exit("usage: git_facts.py record FACTS.json -- RDM-ARGS...")
+        sys.exit("usage: git_facts.py record FACTS.json -- RDM-ARGS... | snapshot FACTS.json")
     sys.exit(record(sys.argv[2], sys.argv[4:]))

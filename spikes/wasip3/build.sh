@@ -50,5 +50,17 @@ find pkgs -name '*.so' -delete
 venv/bin/componentize-py -d wit -w rdm:spike/gate componentize app \
     -p "$HERE" -p pkgs -p "$ROOT" -o rdm-core.wasm
 ls -l rdm-core.wasm
+
+# The test component: pytest and allure-pytest too (pytest/test_app.py, run with pytest/run.sh).
+rm -rf pkgs-test
+uv pip install -q --target pkgs-test --python-version "$PYTHON" \
+    "$(cd "$ROOT" && uv export -q --no-hashes --all-extras --no-emit-project | grep -i '^pytest==')" \
+    "$(cd "$ROOT" && uv export -q --no-hashes --all-extras --no-emit-project | grep -i '^allure-pytest==')" \
+    "$(cd "$ROOT" && uv export -q --no-hashes --all-extras --no-emit-project | grep -i '^mock==')" \
+    $(cd "$ROOT" && uv export -q --no-hashes --no-dev --no-emit-project | grep -iE '^(jinja2|pyyaml|markupsafe)==')
+find pkgs-test -name '*.so' -delete
+venv/bin/componentize-py -d wit -w rdm:spike/gate componentize test_app \
+    -p "$HERE/pytest" -p pkgs-test -p "$ROOT" -p "$HERE" -o rdm-test.wasm   # RDM third: /2/rdm, as run.sh mounts
+ls -l rdm-test.wasm
 echo "Imports (from the component's own type):"
 ./wasm-tools component wit rdm-core.wasm | grep -E '^\s*import' | sort

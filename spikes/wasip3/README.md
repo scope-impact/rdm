@@ -70,6 +70,43 @@ The component is 28 MB.
 7. **Native speed-ups dropped.** PyYAML and MarkupSafe ship compiled speed-ups that cannot be bundled. Both fall back
    to pure Python, with no difference in results. GitPython is not needed at all: the core never imports it.
 
+## Allure: tests and their results inside WASI
+
+RDM uses Allure in three ways. In the spike:
+
+| Use | What it is | In WASI |
+|---|---|---|
+| Reading results (`verify`, `release-gate`, `trace`) | RDM's own JSON reader | **Same as the command line** (table above) |
+| Writing results | pytest + allure-pytest + RDM's plugin, all pure Python | **Runs**: `pytest/` (`rdm-test.wasm`, 48 MB) |
+| The HTML report | `allure-commandline` 2.46.1 (Java, `npx`) in `gates.yml` | Not tried; stays a CI step |
+
+`pytest/run.sh <test files>` runs RDM's tests in the component, writing Allure results to `.work/allure-wasm`.
+Run on the 21 acceptance tests that start no process and need no graph extra:
+
+```
+                      native     WASI
+passed                    33       15
+failed (WASI limits)       -        6   4 start a process; 1 uses capfd; 1 makes a link
+skipped (no graph/typst)  -       12   in 4 files
+Allure results            33       21
+same status, labels, steps:  15 of the 15 that pass in both, commit and worktree labels included
+verify, per design input:    14 the same; the 6 that differ are the 6 failures above
+```
+
+What it took, beyond the core component:
+- **Lazy imports, again and more.** pytest reads `tomllib` and Jinja2 its `debug` module only when it needs them, and
+  codecs (`unicode-escape`) and `importlib.resources._adapters` load on first use. `test_app.py` imports the whole
+  standard library and every submodule of the bundled packages up front: 48 MB.
+- **No file descriptor duplication.** pytest's default capture and its faulthandler plugin `dup` descriptors, which WASI
+  cannot. Hence `--capture=sys` and `-p no:faulthandler`. Tests using `capfd` fail.
+- **What the host supplies.** `/tmp`, a `/dev/null` (pytest's logging opens it), `--basetemp` (pytest's default checks
+  `os.getuid`, which WASI lacks), `USER` (the plugin records who ran the tests), and the repository's commit and
+  worktree state (`git_facts.py snapshot`), which the plugin labels each result with.
+- **Entry points are not bundled.** The Allure plugin is named with `-p allure_pytest.plugin`.
+
+What stays on the host: tests that start a process (10 of 39 acceptance files, plus 4 tests here), the graph extra's
+tests, the PDF report's test, and the Allure HTML report.
+
 ## Components to build on (checked 2026-10-04)
 
 For each thing that stays native (finding 5), an existing wasm build that could replace it. "Probed" means a small
