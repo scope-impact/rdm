@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#
+# Spike: the rdm command line as a WASI 0.3 component.
+#   spikes/wasip3/rdm-wasm story design-gate --dhf dhf
+#
+# Needs Wasmtime and git on the host, nothing else: no Python, no RDM. Run it
+# from the repository's root; the component sees that directory at / (and may
+# write in it, as rdm does), RDM's package data at /2/rdm, and no network.
+# git cannot run inside, so this takes a snapshot of the repository's state
+# first (git_snapshot.py says what is in it and how RDM's questions are answered).
+set -uo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+WORK="$HERE/.work"
+WASM="${RDM_WASM:-$WORK/rdm-core.wasm}"
+DATA="${RDM_WASM_DATA:-$WORK/rdm-data}"   # build.sh copies RDM's package data here
+WASMTIME="${WASMTIME:-$WORK/wasmtime}"
+
+state=$(mktemp -d)
+trap 'rm -f "$state/git"; rmdir "$state"' EXIT
+"$HERE/git-snapshot.sh" "$state/git"
+
+args=()   # paths given relative to here are the same inside; absolute ones are not
+for arg in "$@"; do
+    case "$arg" in "$PWD"/*) args+=("/${arg#"$PWD"/}") ;; "$PWD") args+=("/") ;; *) args+=("$arg") ;; esac
+done
+exec "$WASMTIME" run -S tcp=n,udp=n,allow-ip-name-lookup=n \
+    --dir "$PWD::/" --dir "$DATA::/2/rdm" --dir "$state::/.rdm-wasm" --env RDM_GIT_SNAPSHOT=/.rdm-wasm/git --env RDM_GIT_SNAPSHOT_TRACE="${RDM_GIT_SNAPSHOT_TRACE:-}" \
+    "$WASM" "${args[@]}"

@@ -1,12 +1,13 @@
-# Spike: RDM's core as a WASI 0.3 component
+# Spike: the rdm command line as a WASI 0.3 component
 
-**Question.** Can RDM's core, meaning the record reader, the gates and rendering, run as a
-[WASI 0.3](https://wasi.dev/releases/wasi-p3) Component Model component, sandboxed, with the same results as the
-command line?
+**Question.** Can the `rdm` command line run as a [WASI 0.3](https://wasi.dev/releases/wasi-p3) Component Model
+component, sandboxed, with the same results as the native one?
 
-**Answer.** Yes, unchanged: no line of `rdm/` was edited. Every command tried gives the same exit code, output and
-files as the native run (table below). Three things have to come from the host: git answers, RDM's package data, and
-turning sockets off.
+**Answer.** Yes, for everything that needs no other program, and unchanged: no line of `rdm/` was edited.
+`rdm-wasm` is the command: it needs Wasmtime and git on the host, nothing else (no Python, no RDM). Every command
+compared gives the same exit code, output and files as the native run, in a clean repository and in one with an
+uncommitted edit (table below). What needs another program (Structurizr, Graphviz, Typst, pytest) or the graph extra
+says so with RDM's own message.
 
 This is a spike: throwaway code outside the product. It is not under design control, and nothing in RDM depends on
 it. Making it part of RDM starts, as any change does, with a design review entry and a design input
@@ -15,8 +16,10 @@ it. Making it part of RDM starts, as any change does, with a design review entry
 ## Run it
 
 ```bash
-spikes/wasip3/build.sh     # fetches pinned tools into .work/, builds .work/rdm-core.wasm (~10 s)
-spikes/wasip3/compare.sh   # each command natively and as the component, compared
+spikes/wasip3/build.sh                    # pinned tools into .work/; builds rdm-core.wasm and rdm-test.wasm (~20 s)
+spikes/wasip3/rdm-wasm story design-gate --dhf dhf     # from a repository's root, like rdm
+spikes/wasip3/compare.sh [REPO]           # each command natively and through rdm-wasm, compared
+spikes/wasip3/pytest/run.sh FILES...      # RDM's tests inside a component, Allure results out
 ```
 
 | Tool | Version | Why that one |
@@ -26,45 +29,65 @@ spikes/wasip3/compare.sh   # each command natively and as the component, compare
 | wasm-tools | 1.261.0 | Prints the component's imports |
 | WASI spec | 0.3.0 (spec is at 0.3.1; 0.3.2 due 2026-10-13) | What componentize-py targets |
 
+`rdm-wasm` is the whole interface between host and component:
+
+```
+host                                         component (rdm-core.wasm, 42 MB)
+-------------------------------------------  -----------------------------------------
+the current directory (a repository's root)  /          read and written, as rdm does
+.work/rdm-data (RDM's package data)          /2/rdm     where the bundled package looks
+git-snapshot.sh: the repository's git state  /.rdm-wasm/git  -> git_snapshot.py answers
+network                                      none (-S tcp=n,udp=n,allow-ip-name-lookup=n)
+```
+
 ## Results (`compare.sh`)
 
 ```
 command                            native  wasm  native_s  wasm_s  same
-story design-gate --dhf dhf             0     0      0.34    3.57  yes   (first run compiles; cached after)
-story release-gate --dhf dhf ...        0     0      0.24    0.40  yes
-story verify ... -o OUT/verification    0     0      0.18    0.35  yes   (file identical)
-story trace --dhf dhf DI-1              0     0      0.15    0.32  yes
-story dmr -o OUT/dmr.md dhf/documents   0     0      0.15    0.20  yes   (file identical)
-gap --list                              0     0      0.16    0.18  yes
-story design-gate --dhf no-such-dhf     2     2      0.14    0.17  yes   (a failing gate fails the same)
-story design-gate --no-such-option      2     2      0.16    0.19  yes   (usage error keeps code 2)
+story design-gate --dhf dhf             0     0      0.34    4.22  yes   (first run compiles; cached after)
+story release-gate --dhf dhf ...        0     0      0.24    0.93  yes
+story verify ... -o OUT/verification    0     0      0.17    0.49  yes   (file identical)
+story trace --dhf dhf DI-1              0     0      0.15    0.43  yes
+story dmr -o OUT/dmr.md dhf/documents   0     0      0.13    0.34  yes   (file identical)
+gap --list                              0     0      0.13    0.29  yes
+story new-input --list --dhf dhf        0     0      0.25    0.61  yes
+story design-gate --dhf no-such-dhf     2     2      0.13    0.32  yes   (a failing gate fails the same)
+story design-gate --no-such-option      2     2      0.12    0.32  yes   (usage error keeps code 2)
+init (empty repository)                 0     0         -       -  yes   (50 files, identical)
 ```
 
-The component is 28 MB.
+On a clone with one design document edited and one added, all ten match too: the design gate fails (1) and the
+release gate and verify refuse (2), natively and in the component alike.
+
+`c4 draw`, `graph ...`, `story evidence-report` and `story mutation-probe` stop with RDM's own message (a tool not
+installed, the graph extra missing); they need programs or native code WASI cannot run.
 
 ## What the spike found
 
-1. **Git is two questions.** The core asks git only through `rdm.kernel.git.git`, and across every command above it
-   asked only `git ls-files -v -- <file>` and `git status --porcelain --ignored -- <file>`, both per controlled
-   document. The host interface the core needs is therefore "the tracked and committed state of these paths". The
-   spike stands it in with `git_facts.py`, which records the answers on the host and replays them in the component.
-   An unanswered question gets `None`, as when git is missing. The gate then says "approval could not be verified"
-   and never "approved": it fails safe.
+1. **Git is a snapshot.** Outside the graph extra, RDM asks git few questions: per controlled document, `status
+   --porcelain --ignored` and `ls-files -v` (on a file or a directory); for a run, `rev-parse HEAD`, `remote get-url
+   origin` and whether the tree is dirty; during a merge, `MERGE_HEAD` and where a commit holds staged content.
+   `git-snapshot.sh` takes the repository's whole state once with git (HEAD, origin, merging, status and the index),
+   and `git_snapshot.py` answers each question from it as git would. The one it cannot answer (the merge's `log
+   --find-object`) gets `None`, as when git is missing, and the gate then says "approval could not be verified",
+   never "approved": it fails safe. `RDM_GIT_SNAPSHOT_TRACE=1` prints each question and answer. A first version
+   matched only exact file paths and failed the architecture views, which the gate asks about as a directory:
+   `compare.sh` caught it.
 2. **Package data is not bundled.** componentize-py snapshots modules at build time under `/<n>/` (one per `-p`) and
-   keeps no data files. RDM reads its checklists and its `init`/`adopt` templates from beside its code (`__file__`), so
-   `gap --list` printed nothing until the host mounted the package at `/2/rdm`. A real port would read data through
-   `importlib.resources` from something bundled, or have the host supply it.
+   keeps no data files. RDM reads its checklists and its `init`/`adopt` templates from beside its code (`__file__`),
+   so `build.sh` copies them to `.work/rdm-data`, shipped beside the component, and `rdm-wasm` mounts them at
+   `/2/rdm`. A real port would read data through `importlib.resources` from something bundled.
 3. **WASI 0.2 sockets are still imported.** The bundled CPython's wasi-libc speaks WASI 0.2.9, so the component
    imports both 0.2.9 (`wasi:io`, `wasi:sockets/*` and others) and 0.3.0. The narrower world in `wit/gate.wit` drops
-   sockets from RDM's side only. "No network" is therefore the host's choice (`-S tcp=n,udp=n,allow-ip-name-lookup=n`)
-   and cannot be seen in the component's type. Removing it from the type would need a wasi-libc on 0.3, or composing in
-   a component that refuses sockets.
-4. **Lazy imports and codecs.** The build bundles only what is imported while it runs `app.py`, but RDM imports its
-   subcommands lazily and Python loads codecs (`utf-8-sig`) lazily. `app.py` therefore imports every RDM module and
-   those codecs up front. Without that, a subcommand or `release-gate` fails at run time.
-5. **What stays native.** The graph extra (pyoxigraph has no wasm build), the pytest plugin and acceptance runs, and
-   everything that starts a program: `c4 draw` (Structurizr, Graphviz), the PDF report (Typst), and `mutation-probe`.
-   WASI 0.3.1 has no way to start a program. `app.py --skipped` lists the modules that could not be bundled.
+   sockets from RDM's side only. "No network" is therefore the host's choice and cannot be seen in the component's
+   type. Removing it from the type would need a wasi-libc on 0.3, or composing in a component that refuses sockets.
+4. **Lazy imports.** The build bundles only what is imported while it runs the app, but RDM imports its subcommands
+   lazily and Python loads codecs, `tomllib` and `importlib.resources`' adapters on first use (`init` failed on the
+   last). `bundle.py` imports the whole standard library and every submodule of the bundled packages up front: 28 MB
+   became 42 MB.
+5. **What stays native.** The graph extra (pyoxigraph has no wasm build), and everything that starts a program: `c4
+   draw` (Structurizr, Graphviz), the PDF report (Typst), `mutation-probe` (pytest). WASI 0.3.1 has no way to start
+   a program. `rdm-wasm --skipped` lists the modules that could not be bundled.
 6. **Exit codes survive.** `wasi:cli/exit.exit-with-code` (WASI 0.3.0) carries argparse's 2. `run` itself returns
    only success or failure.
 7. **Native speed-ups dropped.** PyYAML and MarkupSafe ship compiled speed-ups that cannot be bundled. Both fall back
@@ -101,7 +124,7 @@ What it took, beyond the core component:
   cannot. Hence `--capture=sys` and `-p no:faulthandler`. Tests using `capfd` fail.
 - **What the host supplies.** `/tmp`, a `/dev/null` (pytest's logging opens it), `--basetemp` (pytest's default checks
   `os.getuid`, which WASI lacks), `USER` (the plugin records who ran the tests), and the repository's commit and
-  worktree state (`git_facts.py snapshot`), which the plugin labels each result with.
+  worktree state (`git-snapshot.sh`), which the plugin labels each result with.
 - **Entry points are not bundled.** The Allure plugin is named with `-p allure_pytest.plugin`.
 
 What stays on the host: tests that start a process (10 of 39 acceptance files, plus 4 tests here), the graph extra's
@@ -125,7 +148,7 @@ untested.
 | Native wheels | None needed | n/a | PyYAML and MarkupSafe fall back to pure Python. [dicej/wasi-wheels](https://github.com/dicej/wasi-wheels) is unmaintained, and the WASIX index targets Wasmer, not WASI. |
 
 Order to try them in:
-1. gitoxide (`git-rs/`) in place of `git_facts.py`: a WIT interface `record-state(paths) -> list<file-state>` exported by a Rust component and imported by RDM's. Or dulwich, to stay in one Python component.
+1. gitoxide (`git-rs/`) in place of `git-snapshot.sh`, if git must not be needed on the host: a WIT interface `record-state(paths) -> list<file-state>` exported by a Rust component and imported by RDM's. Or dulwich, to stay in one Python component.
 2. rdflib/pyshacl for the graph, if its speed is acceptable.
 3. Typst and Pandoc as sibling components the host calls.
 
@@ -136,6 +159,6 @@ Packaging and composing: [wkg](https://github.com/bytecodealliance/wasm-pkg-tool
 
 - A design input and its tagged test: the gates run as a component, and their result matches the command line
   (`compare.sh` is that test's shape).
-- A WIT interface for record state (finding 1), answered by the host from git, in place of `git_facts.py`.
+- The git snapshot (finding 1) as a WIT interface for record state, answered by the host, in place of a mounted file.
 - Package data read through `importlib.resources` (finding 2), a small change to `rdm/`.
 - CI that builds the component with pinned tools and runs the comparison.

@@ -47,6 +47,11 @@ uv pip install -q --target pkgs --python-version "$PYTHON" \
     "$(cd "$ROOT" && uv export -q --no-hashes --no-dev --no-emit-project | grep -i '^markupsafe==')"
 find pkgs -name '*.so' -delete
 
+# RDM's package data (checklists, init/adopt templates): the build keeps modules only, so it ships beside the
+# component and rdm-wasm mounts it where the bundled package thinks it lives.
+rm -rf rdm-data && (cd "$ROOT/rdm" && find . -type f ! -name '*.py' ! -path '*/__pycache__/*' -print0 \
+    | xargs -0 -I{} install -D -m 644 {} "$WORK/rdm-data/{}")
+
 venv/bin/componentize-py -d wit -w rdm:spike/gate componentize app \
     -p "$HERE" -p pkgs -p "$ROOT" -o rdm-core.wasm
 ls -l rdm-core.wasm
