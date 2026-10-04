@@ -7,6 +7,7 @@ trace. Skips cleanly if allure-pytest or the `graph` extra is not installed.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -178,6 +179,19 @@ def test_the_ifu_is_one_manual_in_reading_order() -> None:
     with verification_step("the chapters appear in the order of instructions for use"):
         found = [t for t in titles if t in CHAPTERS]
         assert found == CHAPTERS, found
+    with verification_step("every other page sits inside its chapter: in the folder of the chapter page before it"):
+        chapter_folder, misplaced = None, []
+        for page, title in titled:
+            if title in CHAPTERS:
+                chapter_folder = Path(page).parent
+            elif Path(page).parent != chapter_folder:
+                misplaced.append((page, title))
+        assert misplaced == [], misplaced
+    with verification_step("the site's instructions-for-use tab shows exactly these pages, in this order"):
+        nav = (ROOT / "mkdocs.yml").read_text()
+        tab = nav[nav.index("  - Instructions for use:"):nav.index("  - Design history")]
+        shown = ["docs/" + p for p in re.findall(r"([\w./-]+\.md)\s*$", tab, re.M)]
+        assert shown == [page for page, _ in titled], shown
     with verification_step("the first page is the cover, naming the product, the release, and the manual's id and "
                            "revision"):
         cover = (ROOT / titled[0][0]).read_text()
