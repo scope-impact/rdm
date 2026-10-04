@@ -145,8 +145,8 @@ def test_rdm_manual_examples_name_their_component() -> None:
         assert [r.label for r in validate(quads) if r.message.endswith(NO_COMPONENT)] == []
 
 
-CHAPTERS = ["RDM documentation", "What RDM is for", "How it works", "Limits and risks", "Install", "Quick start", "Guides",
-            "Troubleshooting", "Reference", "Changelog"]
+CHAPTERS = ["RDM documentation", "What RDM is for", "How it works", "Limits and risks", "Install", "Quick start",
+            "Guides", "Troubleshooting", "Reference", "Changelog"]
 
 
 def _ifu() -> tuple[dict, list[tuple[str, str]]]:
