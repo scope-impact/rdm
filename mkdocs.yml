@@ -91,8 +91,8 @@ nav:
       - 5. Getting started: install/getting-started.md
       - 6. Operating instructions:
           - use/index.md
-          - Design inputs and tests: use/design-inputs-and-tests.md
           - Changing the record: use/changing-the-record.md
+          - Design inputs and tests: use/design-inputs-and-tests.md
           - Risk register: use/risk-register.md
           - Validation evidence: use/validation-evidence.md
           - The gates: use/gates.md

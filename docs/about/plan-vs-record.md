@@ -11,7 +11,7 @@ weight of design controls (review, approval, retention, validation):
 | Store | What it is | Source of truth for |
 |-------|------------|---------------------|
 | **design documents and V&V plan** (`dhf/documents/…`) | the design inputs and the user needs | requirements / design |
-| **Allure results** | executed verification evidence | acceptance-criteria status (pass/fail) |
+| **Allure results** | executed verification evidence | design-input status (pass/fail) |
 | **git history** | reviewed, merged pull requests | approval, change history, baselines |
 
 The DHF (rendered Markdown → PDF/DOCX), including the generated traceability
@@ -24,7 +24,7 @@ not controlled records**, and must never be cited as evidence:
 
 | Store | What it is | NOT |
 |-------|------------|-----|
-| **Backlog.md tasks** | work breakdown / status | not the requirement or AC of record |
+| **Backlog.md tasks** | work breakdown / status | not a design input; a task acceptance criterion at most |
 | **GitHub Issues / Projects** | team-visibility mirror of the plan | not the DHF, not approval |
 
 Rules:

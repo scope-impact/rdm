@@ -8,8 +8,8 @@ release evidence bundle — is derived from it by a tool, and none of it is ever
 edited by hand or fed back in.
 
 The record is Markdown frontmatter and tests in git. It changes only through
-a pull request that someone other than the author reviews; the merge is the
-approval. That holds for people and for agents alike: an agent that wants to
+a pull request that someone other than the author reviews; that review is the
+approval, and the merge records it. That holds for people and for agents alike: an agent that wants to
 change the record edits the Markdown and the tests and opens a pull request,
 the same as a person.
 
@@ -66,7 +66,7 @@ flowchart LR
 | **User need** | the V&V plan, `user_needs:` | `UN-nnn` | its text |
 | **Bounded context** | its design document (`kind: design`, `context:`); listed with its part in the architecture's `contexts:` | the context name | — |
 | **Design input** | the design document of the context that owns it, `design_inputs:` | `DI-n` | its text, and the needs it `traces_to` |
-| **Controlled document** | any Markdown file in the DHF with a frontmatter `id` | its `id` | `title`, `revision`, `references:` (documents it relies on), `[[KEY]]` clause tags |
+| **Controlled document** | any Markdown file in the DHF with a frontmatter `id` | its `id` | `title`, `revision`, `references:` (documents it relies on), checklist references (`[[KEY]]`) |
 | **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (design inputs), residual, acceptance |
 | **Risk policy** | a document's `risk_policy:` | — | severities, probabilities, levels, acceptability |
 | **Checklist, clause** | a checklist file (text or RDF) | the clause key, e.g. `62304:5.2.2` | each clause's description; includes |

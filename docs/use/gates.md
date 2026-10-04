@@ -30,7 +30,7 @@ The pre-commit hook (`rdm hooks .githooks && git config core.hooksPath
 .githooks`, or set up by [`rdm adopt`](../install/getting-started.md)) blocks
 implementation commits while the gate is red, and its `pre-merge-commit` twin
 blocks a merge that would bring implementation in. Committing only design documents
-is always allowed: that commit is the approval of the design.
+is always allowed: committing records the design; the pull-request review that merges it, by someone other than its author, is the approval.
 
 ## Release gate
 
@@ -53,7 +53,7 @@ apart from the acceptance tests, and give verify the one report, Cobertura XML
 (coverage.py, JaCoCo through a converter, Istanbul) or LCOV (gcov, Istanbul):
 
 ```bash
-coverage run --source=rdm -m pytest tests --ignore=tests/acceptance
+coverage run --source=<your package> -m pytest tests --ignore=tests/acceptance
 coverage xml -o dhf/data/unit-coverage.xml
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml \
   --unit-coverage dhf/data/unit-coverage.xml
@@ -114,7 +114,9 @@ coded gates stay authoritative. It exits 1 on any violation.
 | a document whose latest change has not landed on the default branch | not yet merged |
 | a risk with `status: proposed` | no person has approved its rating |
 | a bounded context with a design document but missing from the architecture's `contexts:` | the architecture fell behind |
-| the C4 model disagreeing with the record (DI-68) | the architecture fell behind |
+| the C4 model disagreeing with the record | the architecture fell behind |
+| a page the manual document lists that does not exist | the manual fell behind |
+| a test example in the manual writing no `component` label | the manual teaches an old convention |
 
 Add your own rules as more shape files, with no code change:
 
@@ -135,7 +137,7 @@ rdm graph validate --shapes team-rules.ttl
 
 ## Independent review
 
-A passing test proves code ran, not that the requirement is met. That
+A passing test proves code ran, not that the design input is met. That
 judgment belongs to the pull-request reviewer, who must not be the change's
 author ([the review step](changing-the-record.md)). To back it with an executed
 check, break what the design input requires on purpose and see whether its

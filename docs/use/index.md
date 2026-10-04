@@ -12,8 +12,8 @@ chapter follow it.
 
 | Task | Page |
 |---|---|
-| Declare user needs and design inputs, write and tag the tests | [Design inputs and tests](design-inputs-and-tests.md) |
 | Make a change the record-first way, step by step | [Changing the record](changing-the-record.md) |
+| Declare user needs and design inputs, write and tag the tests | [Design inputs and tests](design-inputs-and-tests.md) |
 | Keep the risk register and its controls | [Risk register](risk-register.md) |
 | Record formative usability evidence | [Validation evidence](validation-evidence.md) |
 | Run the design gate and the release gate | [The gates](gates.md) |

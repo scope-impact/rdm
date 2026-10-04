@@ -3,7 +3,8 @@
 | **Product** | RDM, the design record of regulated software |
 |---|---|
 | **Release** | v2.0.0-alpha |
-| **Document** | IFU-001, revision 3 |
+| **Status** | describes `main` after the v2.0.0-alpha tag; the next release tag will carry this revision |
+| **Document** | IFU-001, revision 4 |
 | **Maintained by** | Scope Impact, [scope-impact/rdm](https://github.com/scope-impact/rdm) (MIT licence; first written by Innolitics, LLC) |
 | **Issues and questions** | [github.com/scope-impact/rdm/issues](https://github.com/scope-impact/rdm/issues) |
 

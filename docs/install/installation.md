@@ -25,11 +25,15 @@ uv tool install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm@v2.
 rdm --version
 ```
 
+The `v2.0.0-alpha` tag predates this revision of the manual. Until the next
+release is tagged, install from `@main` to get everything described here.
+
 | Extra | Adds |
 |---|---|
 | (none) | the record, the gates (`rdm story …`), `gap`, `render`, `init`, `adopt` |
 | `graph` | the record as an RDF graph and the agent server (`rdm graph …`) |
-| `report` | the verification report as a PDF (`rdm story evidence-report`) |
+| `report` | the verification report as a PDF (`rdm story evidence-report`); without it the evidence bundle records the report as not rendered |
+| `validation` | Playwright, for formative usability-persona runs ([validation evidence](../use/validation-evidence.md)) |
 
 The tests need `pytest` and `allure-pytest`. Rendering PDFs needs Pandoc,
 Typst and Make, or the RDM Docker image, which has them all. In CI, call
@@ -41,9 +45,31 @@ under Git Bash or WSL.
 ## Check the installation
 
 ```bash
-rdm --version              # the release you pinned
+rdm --version              # the release you pinned, in Python's form: v2.0.0-alpha prints 2.0.0a0
 rdm story design-gate --help
 ```
 
 If `rdm` is not found, the tool directory of `uv` is not on `PATH`: run
 `uv tool update-shell` and open a new shell.
+
+## Upgrade
+
+1. Read the [revision history](../revision-history.md) for the releases
+   between yours and the new one.
+2. Reinstall at the new tag: `uv tool install --force "rdm @ git+https://github.com/scope-impact/rdm@<tag>"`.
+3. In CI, change both references to the old tag in
+   `.github/workflows/design-controls.yml` (the `uses:` line and `rdm-ref`).
+4. Run the gates on your record, restart any running agent server, and
+   repeat your validation of RDM for the new release
+   ([Validating RDM for your use](../about/intended-use.md#validating-rdm-for-your-use)).
+
+## Uninstall
+
+```bash
+uv tool uninstall rdm
+git config --unset core.hooksPath     # in each clone, to turn the hooks off
+```
+
+Uninstalling loses no record: it is Markdown, tests and git history, readable
+without RDM. Remove `.githooks/` and the CI workflow from the repository only
+if you stop keeping the record under design controls.

@@ -113,12 +113,6 @@ traceability; what an acceptance test exercises is the components it names
 or reaches. Not checklist coverage (the clauses the documents reference).
 _Avoid_: coverage (unqualified), test coverage (for the design inputs a test verifies)
 
-**Design input lifecycle**:
-The stages of one design input: declared, approved, verified, released; and
-amended or retired from any of them. Stages of one design input, not bounded
-contexts.
-_Avoid_: phase, status (unqualified), workflow context
-
 **Design gate**:
 The check that blocks implementation until the design record is complete and
 approved, and every id in it is declared once.
@@ -482,11 +476,12 @@ once, a design input never restated).
 _Avoid_: object, record (for one entity), model
 
 **Design input lifecycle**:
-*Declared* (in an uncommitted design document) → *approved* (committed) →
-*verified* (a passing tagged test) → *released* (the release gate permits the
-commit). An edit to its design document re-opens approval until the edit is
-committed.
-_Avoid_: status (unqualified), draft, done
+*Declared* (in an uncommitted design document) → *approved* (committed, and
+merged through a reviewed pull request) → *verified* (a passing tagged test)
+→ *released* (the release gate permits the commit); and amended or retired
+from any stage. An edit to its design document re-opens approval until the
+edit is approved. Stages of one design input, not bounded contexts.
+_Avoid_: phase, status (unqualified), draft, done, workflow context
 
 **Reaction**:
 "Whenever this event, then that command", with no actor of its own: whenever

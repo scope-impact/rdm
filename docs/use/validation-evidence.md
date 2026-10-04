@@ -22,7 +22,8 @@ the validation record. It is good for finding use errors early, for checking
 that a UI change did not break a journey, and for use-error hypotheses that
 feed the use-related risk analysis.
 
-The `usability-persona` skill (`.claude/skills/usability-persona/`) does the
+The `usability-persona` skill (from [scope-impact/agent-skills](https://github.com/scope-impact/agent-skills),
+which needs RDM's `validation` extra for Playwright) does the
 run: given a persona spec and the app's URL, it drives the UI with Playwright
 in character until it reaches the goal, fails or times out, and writes one
 `*-persona.json` per run:

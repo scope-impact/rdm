@@ -10,14 +10,20 @@ team uses it to:
 - tie each design input to the acceptance test that verifies it, and each
   test run to the commit it tested;
 - stop implementation before its design is approved, and a release before
-  every design input is verified and every risk controlled (the gates);
+  every design input is verified and every risk control verified with an
+  acceptable residual (the gates);
+- keep its architecture as C4 diagrams in the record, and be warned where
+  the code, the tests and the diagrams disagree;
 - render the regulatory documents from the record, and keep the release
   evidence with each release;
 - query the whole record as one read-only graph, by person or by agent.
 
 It is written for medical-device software under IEC 62304 first, with risk
-management under ISO 14971 and health software under IEC 82304-1; its
-checklists also cover 21 CFR Part 11 and ISO 13485 document control.
+management under ISO 14971. Its built-in checklists cover IEC 62304 (2006,
+2015 and the base text, per safety class), ISO 14971 (2007, 2019), FDA
+software, cybersecurity and human-factors guidance, and 21 CFR Part 11
+document control (`rdm gap --list`); other standards need a checklist you
+write.
 
 ## Intended users
 
@@ -48,6 +54,21 @@ None of them needs to know RDF or SPARQL to use the gates.
 - **Not a substitute for summative usability validation** with
   representative users; its persona runs are formative only.
 
-A team that uses RDM within its quality system validates it for that use
-(ISO 13485 §4.1.6). RDM's own design history file, with its verification
-evidence, is published with this manual to help.
+## Validating RDM for your use
+
+RDM is software in your quality system, so you validate it for the way you
+use it (ISO 13485 §4.1.6), in proportion to the risk of that use:
+
+1. **State your use.** Which gates you rely on, for which decisions, and
+   which outputs (documents, verification report, evidence bundle) you put
+   in your records.
+2. **Assess the risk of that use.** Start from RDM's own residual risks
+   ([Safety and limitations](safety.md)) and add any your use introduces.
+3. **Reuse RDM's evidence.** Each release's design inputs are verified by
+   tagged tests; its design history file and traceability are published
+   beside this manual (the *Design history* tab). Read what covers your use.
+4. **Check it on your record.** Run the gates on a copy of your record with
+   a known defect (a failing test, an unapproved design document) and confirm
+   they block it; `rdm story mutation-probe` checks your own tests the same way.
+5. **Record the result** in your quality system, and repeat steps 2 to 5 when
+   you upgrade RDM, change how you use it, or add an extra.

@@ -1,4 +1,4 @@
-# Gap analysis — audit documents against a standard
+# Gap analysis — check documents against a standard
 
 `rdm gap` checks that your documents reference every clause a standard's
 checklist lists. A reference is a `[[KEY]]` block in a document, such as
@@ -59,4 +59,4 @@ clause no document references:
 ```
 
 The worked example verifies its DI-5 with exactly this, including a check
-that the audit does detect a gap.
+that the check does detect a gap.
