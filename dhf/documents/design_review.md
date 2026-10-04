@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 78
+revision: 79
 title: Design Review — RDM
 ---
 
@@ -2332,6 +2332,8 @@ one document.
 - **Paths:** the record's references to moved pages follow them (the DHF
   overview, the agent workflow, the system architecture, and document
   control, which goes to revision 2).
+- **IFU-001 revision 4:** *Changing the record* comes first in the operating
+  instructions, before the page that details design inputs and tests.
 - **Not done here:** rendering the IFU as one PDF.
 
 # Approval

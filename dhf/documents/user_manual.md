@@ -1,7 +1,7 @@
 ---
 id: IFU-001
 kind: manual
-revision: 3
+revision: 4
 title: "Instructions for use (IFU) — RDM's user manual"
 # The pages of the manual in reading order, from the project root (DI-77,
 # DI-80). The "RDM on RDM" pages are not here: they publish this DHF.
@@ -14,8 +14,8 @@ pages:
   - docs/install/installation.md
   - docs/install/getting-started.md
   - docs/use/index.md
-  - docs/use/design-inputs-and-tests.md
   - docs/use/changing-the-record.md
+  - docs/use/design-inputs-and-tests.md
   - docs/use/risk-register.md
   - docs/use/validation-evidence.md
   - docs/use/gates.md
