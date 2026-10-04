@@ -1,0 +1,17 @@
+[package]
+name = "rdm-c4"
+version = "0.1.0"
+edition = "2021"
+
+# structurizrx (Apache-2.0), pinned: its parser, model, view generation and renderers only;
+# its CLI also needs a web and a language server, which do not build for WASI.
+[dependencies]
+structurizr-model = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
+structurizr-dsl = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
+structurizr-renderer = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
+structurizr-query = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
+serde_json = "1"
+anyhow = "1"
+
+[profile.release]
+opt-level = "s"
