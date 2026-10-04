@@ -1,0 +1,2749 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The design record of regulated software as Markdown and tests in git — gated, rendered into regulatory documents, and built into a read-only graph for people and agents.">
+      
+      
+      
+        <link rel="canonical" href="https://scope-impact.github.io/rdm/dev/use/graph/">
+      
+      
+        <link rel="prev" href="../ci/">
+      
+      
+        <link rel="next" href="../graph-explorer/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>The record as a graph - RDM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito+Sans:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Nunito Sans";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/rdm-theme.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/traceability-map.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="rdm" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-design-record-as-a-graph" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="RDM" class="md-header__button md-logo" aria-label="RDM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RDM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              The record as a graph
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/scope-impact/rdm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scope-impact/rdm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../dhf/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Design history (RDM on RDM)
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="RDM" class="md-nav__button md-logo" aria-label="RDM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    RDM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/scope-impact/rdm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scope-impact/rdm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docs
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/intended-use/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. What RDM is for
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_3" id="__nav_1_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. How it works
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2. How it works
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/how-rdm-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How it works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/plan-vs-record/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan vs. record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Limits and risks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_7" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_7" id="__nav_1_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    6. Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changing-the-record/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing the record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../design-inputs-and-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design inputs and tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../risk-register/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The gates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gap-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gap analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The gates in your CI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The record as a graph
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The record as a graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#build-query-serve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build, query, serve
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-whole-chain-in-one-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The whole chain in one query
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-in-the-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is in the graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-results-in-full" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test results, in full
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-tied-to-its-version-and-its-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence tied to its version and its test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#links-between-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Links between documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checklists-are-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checklists are data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#derived-relations-rules-not-facts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derived relations: rules, not facts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-world" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open world
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../graph-explorer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browsing in Graph Explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For agents (MCP)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring and rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_9" id="__nav_1_9_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    8. Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/worked-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worked example: Part 11
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../revision-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../dhf/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design history (RDM on RDM)
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design history (RDM on RDM)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/AGENT_WORKFLOW/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing RDM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../traceability-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Traceability (from the graph)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/verification_and_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V plan and user needs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compliance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/risk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/specification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/test_evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/risk/policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/risk/tool_risks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design_review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design review
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/document_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Document control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/user_manual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Instructions for use (IFU)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/decisions/adr-0001-bounded-context-user-needs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001: user needs across bounded contexts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#build-query-serve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build, query, serve
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-whole-chain-in-one-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The whole chain in one query
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-in-the-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is in the graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-results-in-full" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test results, in full
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-tied-to-its-version-and-its-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence tied to its version and its test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#links-between-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Links between documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checklists-are-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checklists are data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#derived-relations-rules-not-facts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derived relations: rules, not facts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-world" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open world
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="the-design-record-as-a-graph">The design record as a graph<a class="headerlink" href="#the-design-record-as-a-graph" title="Permanent link">&para;</a></h1>
+<p><code>rdm graph</code> projects the design record into RDF — user needs, bounded
+contexts, design inputs, controlled documents, test tags, test results, git
+commits, the risk register, and the regulatory checklists your documents are
+held to — so you can query it with SPARQL, check it against the gate rules as
+SHACL shapes, browse it visually in
+<a href="https://github.com/aws/graph-explorer">AWS Graph Explorer</a>, and let agents
+read it through a read-only MCP server.</p>
+<p>The Markdown record stays the only thing you edit. The graph is derived: it is
+rebuilt from the record on every run, and Graph Explorer only browses it. To
+change something, edit the Markdown and rebuild.</p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>this page</td>
+<td>building, querying and serving the graph, and what is in it</td>
+</tr>
+<tr>
+<td><a href="../gates/#graph-validation">The gates</a></td>
+<td><code>rdm graph validate</code>: the gate rules as shapes, and adding your own</td>
+</tr>
+<tr>
+<td><a href="../graph-explorer/">Browsing in Graph Explorer</a></td>
+<td>seeing the record as a picture</td>
+</tr>
+<tr>
+<td><a href="../agents/">For agents</a></td>
+<td>the read-only MCP server</td>
+</tr>
+</tbody>
+</table>
+<p>It needs the <code>graph</code> extra (<a href="../../install/installation/">installation</a>). What the graph
+holds and why is its design: <a href="../../dhf/documents/design/graph/">the knowledge graph</a>.</p>
+<h2 id="build-query-serve">Build, query, serve<a class="headerlink" href="#build-query-serve" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Project the record (add --allure-results to include test runs,</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># --checklist to include the checklists your documents are held to)</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>rdm<span class="w"> </span>graph<span class="w"> </span>build<span class="w"> </span>--dhf<span class="w"> </span>dhf<span class="w"> </span>--allure-results<span class="w"> </span>dhf/allure-results<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--checklist<span class="w"> </span>part11_document_control<span class="w"> </span>--store<span class="w"> </span>.rdm/graph
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>rdm<span class="w"> </span>graph<span class="w"> </span>build<span class="w"> </span>--dhf<span class="w"> </span>dhf<span class="w"> </span>-o<span class="w"> </span>dhf.nq<span class="w">          </span><span class="c1"># or: sorted N-Quads, diffable</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Ask questions (rdm:, rdf:, rdfs:, xsd:, dcterms:, prov:, oslc_rm: are predeclared)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>rdm<span class="w"> </span>graph<span class="w"> </span>query<span class="w"> </span>--store<span class="w"> </span>.rdm/graph<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="s1">'SELECT ?id ?text WHERE { ?i a rdm:DesignInput ; dcterms:identifier ?id ; rdm:text ?text } ORDER BY ?id'</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Serve it, read-only, as a SPARQL 1.1 endpoint at http://localhost:7878/sparql</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>rdm<span class="w"> </span>graph<span class="w"> </span>serve<span class="w"> </span>--store<span class="w"> </span>.rdm/graph<span class="w">            </span><span class="c1"># localhost only; never bind a public address</span>
+</code></pre></div>
+<p><code>--store</code> is an embedded <a href="https://github.com/oxigraph/oxigraph">Oxigraph</a>
+database. Each build clears it first, so a removed design input never lingers.
+Without <code>--store</code>, <code>rdm graph query</code> builds an in-memory projection on the fly.
+Add <code>.rdm/</code> to <code>.gitignore</code>; the store is generated, like Allure results.
+A built store, and the endpoint serving it, is as current as its last build;
+the agent server (<code>rdm graph mcp</code>) projects the record afresh on every call.</p>
+<p>The endpoint is read-only. It allows requests from any origin so Graph
+Explorer can reach it, which is exactly why it accepts no update and no
+<code>SERVICE</code> call: any web page you have open could otherwise clear or forge the
+graph you are reviewing, or have it fetch addresses on your network.
+Every query is over the union of the named graphs, so <code>FROM</code> is refused
+rather than silently ignored: name a graph with <code>GRAPH &lt;…&gt; { … }</code>.</p>
+<h2 id="the-whole-chain-in-one-query">The whole chain in one query<a class="headerlink" href="#the-whole-chain-in-one-query" title="Permanent link">&para;</a></h2>
+<p>Run the acceptance suite, then project everything the record knows: needs,
+design inputs, contexts, documents, tests, test runs, commits, and the
+checklists your documents are held to.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pytest<span class="w"> </span>tests/acceptance<span class="w"> </span>--clean-alluredir<span class="w"> </span>--alluredir<span class="o">=</span>dhf/allure-results
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>rdm<span class="w"> </span>graph<span class="w"> </span>build<span class="w"> </span>--allure-results<span class="w"> </span>dhf/allure-results<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--checklist<span class="w"> </span>part11_document_control<span class="w"> </span>--store<span class="w"> </span>.rdm/graph
+</code></pre></div>
+<p>The whole chain — need → design input → owner → verifying tests → results —
+is one query:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">SELECT</span> <span class="nv">?need</span> <span class="nv">?input</span> <span class="nv">?owner</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>       <span class="p">(</span><span class="nf">GROUP_CONCAT</span><span class="p">(</span><span class="k">DISTINCT</span> <span class="nv">?path</span><span class="p">;</span> <span class="nf">separator</span><span class="o">=</span><span class="s">" "</span><span class="p">)</span> <span class="k">AS</span> <span class="nv">?tests</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>       <span class="p">(</span><span class="nf">GROUP_CONCAT</span><span class="p">(</span><span class="k">DISTINCT</span> <span class="nv">?status</span><span class="p">;</span> <span class="nf">separator</span><span class="o">=</span><span class="s">"/"</span><span class="p">)</span> <span class="k">AS</span> <span class="nv">?results</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">WHERE</span> <span class="p">{</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  <span class="nv">?i</span> <span class="k">a</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">DesignInput</span> <span class="p">;</span> <span class="nn">dcterms</span><span class="p">:</span><span class="nt">identifier</span> <span class="nv">?input</span> <span class="p">;</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">ownedBy</span><span class="o">/</span><span class="nn">rdfs</span><span class="p">:</span><span class="nt">label</span> <span class="nv">?owner</span> <span class="p">.</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  <span class="k">OPTIONAL</span> <span class="p">{</span> <span class="nv">?i</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">tracesTo</span><span class="o">/</span><span class="nn">rdfs</span><span class="p">:</span><span class="nt">label</span> <span class="nv">?need</span> <span class="p">}</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  <span class="k">OPTIONAL</span> <span class="p">{</span> <span class="nv">?t</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">verifies</span> <span class="nv">?i</span> <span class="p">;</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">definedIn</span><span class="o">/</span><span class="nn">rdm</span><span class="p">:</span><span class="nt">path</span> <span class="nv">?path</span> <span class="p">}</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  <span class="k">OPTIONAL</span> <span class="p">{</span> <span class="nv">?r</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">exercises</span> <span class="nv">?i</span> <span class="p">;</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">status</span> <span class="nv">?status</span> <span class="p">}</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">}</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="k">GROUP BY</span> <span class="nv">?need</span> <span class="nv">?input</span> <span class="nv">?owner</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="k">ORDER BY</span> <span class="nv">?need</span> <span class="nn">xsd</span><span class="p">:</span><span class="nt">integer</span><span class="p">(</span><span class="nf">STRAFTER</span><span class="p">(</span><span class="nv">?input</span><span class="p">,</span> <span class="s">"-"</span><span class="p">))</span>
+</code></pre></div>
+<h2 id="what-is-in-the-graph">What is in the graph<a class="headerlink" href="#what-is-in-the-graph" title="Permanent link">&para;</a></h2>
+<p>One named graph per source, so a query can always tell where a fact came from.
+The endpoint's default graph is the union of all of them.</p>
+<table>
+<thead>
+<tr>
+<th>Graph</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>urn:dhf:&lt;project&gt;:graph/record</code></td>
+<td>user needs, bounded contexts, design inputs, controlled documents</td>
+</tr>
+<tr>
+<td><code>…graph/tests</code></td>
+<td>tagged tests found in test sources: each test, the file that defines it, and the design inputs it verifies</td>
+</tr>
+<tr>
+<td><code>…graph/executions</code></td>
+<td>Allure results (only with <code>--allure-results</code>): each run's status, times, failure message and trace, parameters, steps and attachments, the design inputs it exercises and the source files it exercises</td>
+</tr>
+<tr>
+<td><code>…graph/git</code></td>
+<td>each controlled document's latest commit and its author, the commit that landed it on the default branch (<code>rdm:landedIn</code>, <code>rdm:landedBy</code>), and the commit the record was built at</td>
+</tr>
+<tr>
+<td><code>…graph/risks</code></td>
+<td>the risk register: each risk's chain, scores, computed levels, controls (<code>rdm:controlledBy</code>) and acceptance</td>
+</tr>
+<tr>
+<td><code>…graph/architecture</code></td>
+<td>the C4 model of the <a href="../documents/#architecture-c4">architecture workspace</a>: each person, software system, container and component with its name, technology, description, container and external flag; each component's bounded context and code; each relationship; and the component each source file in the graph belongs to</td>
+</tr>
+<tr>
+<td><code>…graph/code</code></td>
+<td>Python imports from one component's code into another's, as dependencies between the components: the coupling the code actually has</td>
+</tr>
+<tr>
+<td><code>…graph/unit-coverage</code></td>
+<td>each component's lines its unit tests ran and lines measured (<code>rdm:unitLinesRun</code>, <code>rdm:unitLinesMeasured</code>; only with <code>--unit-coverage REPORT</code>, a Cobertura XML or LCOV report): the component's own unit-test evidence, linked to no run and no design input</td>
+</tr>
+<tr>
+<td><code>…graph/checklists</code></td>
+<td>the requested checklists: standards, clauses, checklists (<code>--checklist</code>)</td>
+</tr>
+<tr>
+<td><code>…graph/references</code></td>
+<td>documents' checklist references (<code>[[KEY]]</code>), linked to the clauses they name</td>
+</tr>
+<tr>
+<td><code>…graph/manual</code></td>
+<td>the user manual: each page a <code>kind: manual</code> document lists, the design inputs it names, and the labels of each test example it shows</td>
+</tr>
+<tr>
+<td><code>…graph/ontology</code></td>
+<td>RDM's vocabulary, so browsers can label classes and properties, and the rules for derived relations</td>
+</tr>
+<tr>
+<td><code>…graph/inferred</code></td>
+<td>what the rules derive (only with <code>--infer</code>, and always for the agent server); never stated by the record</td>
+</tr>
+</tbody>
+</table>
+<p>Instances are named <code>urn:dhf:&lt;project&gt;:&lt;kind&gt;/&lt;id&gt;</code>, for example
+<code>urn:dhf:rdm:input/DI-3</code>. <code>&lt;project&gt;</code> defaults to the repository name, so
+graphs from several repositories can be loaded into one store without
+collisions (<code>--project</code> overrides it).</p>
+<p>The vocabulary (<code>rdm/graph/ontology.ttl</code>) reuses standards where they exist:</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rdm:DesignInput</code></td>
+<td>a design input; a subclass of <code>oslc_rm:Requirement</code> (OSLC Requirements Management)</td>
+</tr>
+<tr>
+<td><code>rdm:UserNeed</code>, <code>rdm:BoundedContext</code>, <code>rdm:Document</code></td>
+<td>the other record entities</td>
+</tr>
+<tr>
+<td><code>rdm:tracesTo</code>, <code>rdm:ownedBy</code>, <code>rdm:realises</code>, <code>rdm:declaredIn</code></td>
+<td>how they relate (a context's needs: <code>?i rdm:ownedBy ?c ; rdm:tracesTo ?need</code>)</td>
+</tr>
+<tr>
+<td><code>rdm:Test</code> <code>rdm:verifies</code>, <code>rdm:definedIn</code> <code>rdm:TestFile</code> / <code>rdm:TestRun</code> <code>rdm:exercises</code>, <code>rdm:runOf</code>, <code>rdm:testedAt</code>, <code>rdm:status</code></td>
+<td>tests and results: a test is a function (or a whole file read by pattern); a run is a run of a test, at a commit</td>
+</tr>
+<tr>
+<td><code>dcterms:identifier</code>, <code>dcterms:title</code>, <code>rdm:revision</code></td>
+<td>document metadata (Dublin Core)</td>
+</tr>
+<tr>
+<td><code>prov:wasGeneratedBy</code>, <code>prov:Activity</code>, <code>prov:Agent</code>, <code>prov:endedAtTime</code></td>
+<td>commits and authors (PROV-O)</td>
+</tr>
+<tr>
+<td><code>rdm:Clause</code> ⊂ <code>skos:Concept</code>, <code>rdm:Checklist</code> ⊂ <code>skos:Collection</code>, <code>skos:ConceptScheme</code></td>
+<td>clauses, checklists, standards (SKOS)</td>
+</tr>
+<tr>
+<td><code>dcterms:references</code></td>
+<td>a document claims a clause with a checklist reference (<code>[[KEY]]</code>), or names a document it relies on</td>
+</tr>
+<tr>
+<td><code>rdm:Risk</code>, <code>rdm:controlledBy</code>, <code>rdm:evaluatedAgainst</code></td>
+<td>the risk register (<a href="../risk-register/">risk register</a>)</td>
+</tr>
+<tr>
+<td><code>rdm:Person</code>, <code>rdm:SoftwareSystem</code>, <code>rdm:Container</code>, <code>rdm:Component</code> ⊂ <code>rdm:ArchitectureElement</code>; <code>rdm:containedIn</code>, <code>rdm:inContext</code>, <code>rdm:code</code>, <code>rdm:Relationship</code></td>
+<td>the C4 model (<code>?c a rdm:Component ; rdm:inContext ?ctx</code>)</td>
+</tr>
+<tr>
+<td><code>rdm:inComponent</code>, <code>rdm:dependsOn</code>, <code>rdm:Dependency</code>, <code>rdm:dependenciesNotRead</code></td>
+<td>a source file's component; one component's code importing another's (read from Python only: a component whose code holds none is marked not read)</td>
+</tr>
+<tr>
+<td><code>rdm:namesComponent</code>, <code>rdm:unknownComponent</code>; <code>rdm:reaches</code> (derived)</td>
+<td>the components a run names; a <code>component</code> label naming none; the components its named ones lead to by declared relationships</td>
+</tr>
+<tr>
+<td><code>rdm:landedIn</code>, <code>rdm:landedBy</code>, <code>rdm:atCommit</code></td>
+<td>the commit that landed a document's change; the commit the record was built at</td>
+</tr>
+</tbody>
+</table>
+<h2 id="test-results-in-full">Test results, in full<a class="headerlink" href="#test-results-in-full" title="Permanent link">&para;</a></h2>
+<p><code>--allure-results</code> brings in what each run says as evidence, not just pass or
+fail — and leaves out what the record already holds or what says nothing about
+design controls:</p>
+<table>
+<thead>
+<tr>
+<th>In Allure</th>
+<th>In the graph</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a result file</td>
+<td>an <code>rdm:TestRun</code> (a <code>prov:Activity</code>) with <code>dcterms:identifier</code> (uuid), <code>rdm:fullName</code>, <code>rdm:status</code>, <code>prov:startedAtTime</code> / <code>prov:endedAtTime</code></td>
+</tr>
+<tr>
+<td><code>statusDetails</code></td>
+<td><code>rdm:statusMessage</code>, <code>rdm:statusTrace</code></td>
+</tr>
+<tr>
+<td>a <code>story</code> label</td>
+<td><code>rdm:exercises</code> the design input</td>
+</tr>
+<tr>
+<td><code>fullName</code></td>
+<td><code>rdm:runOf</code> the <code>rdm:Test</code> (<code>tests/x.py::TestClass::test_y</code>) it ran (DI-61)</td>
+</tr>
+<tr>
+<td>a <code>commit</code> label (<code>rdm.pytest_plugin</code>, DI-59)</td>
+<td><code>rdm:testedAt</code> that commit; <code>worktree=dirty</code> → <code>rdm:uncommittedChanges</code> (DI-60)</td>
+</tr>
+<tr>
+<td>a <code>component</code> label (the way a test names what it exercises)</td>
+<td><code>rdm:namesComponent</code> the C4 component with that key; a key the model does not declare is <code>rdm:unknownComponent</code>, a warning (DI-56)</td>
+</tr>
+<tr>
+<td>an <code>output</code> label (optional, a file path)</td>
+<td><code>rdm:exercisesOutput</code> an <code>rdm:SourceFile</code> — the code the run exercises — and <code>rdm:namesComponent</code> the component holding it</td>
+</tr>
+<tr>
+<td><code>parameters</code></td>
+<td><code>rdm:parameter</code>, each a name and a value</td>
+</tr>
+<tr>
+<td><code>steps</code>, <code>attachments</code></td>
+<td><code>rdm:step</code> (nested, ordered), <code>rdm:attachment</code> (name, media type, file)</td>
+</tr>
+<tr>
+<td>other labels, <code>links</code>, <code>historyId</code>, containers</td>
+<td>not projected: <code>epic</code> / <code>feature</code> and the links are written from the record (DI-57), the rest is runner metadata, a test case is one-to-one with its run, and fixtures (<code>tmp_path</code>, <code>capsys</code>) say nothing about a design input. The raw files stay in the evidence bundle.</td>
+</tr>
+</tbody>
+</table>
+<p>So the chain runs all the way to code — design input → test → run → source
+file — from labels the tests already carry, and <code>trace</code> lists a design
+input's source files. Attachment content stays in the files (which the
+release bundle keeps); the graph holds the reference.</p>
+<h2 id="evidence-tied-to-its-version-and-its-test">Evidence tied to its version and its test<a class="headerlink" href="#evidence-tied-to-its-version-and-its-test" title="Permanent link">&para;</a></h2>
+<p>Each run links to the commit it tested and to the test function it ran, and
+<code>rdm graph validate</code> warns on stale or unclaimed evidence (DI-60, DI-61).</p>
+<h2 id="links-between-documents">Links between documents<a class="headerlink" href="#links-between-documents" title="Permanent link">&para;</a></h2>
+<p>For each controlled document the graph records the commit that landed its
+latest change on the default branch, and who landed it; git does not know who
+reviewed it (DI-51). Two links come from frontmatter you write once (DI-58):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># architecture.md — the bounded contexts, each with its part</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">contexts</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="nv">specification</span><span class="p p-Indicator">,</span><span class="nt"> part</span><span class="p">:</span><span class="w"> </span><span class="nv">Record</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="nv">release</span><span class="p p-Indicator">,</span><span class="nt"> part</span><span class="p">:</span><span class="w"> </span><span class="nv">Gates</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># any controlled document — the controlled documents it relies on</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nt">references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">DC-001</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>Naming a document the record does not hold is a violation; a context whose
+design document the architecture does not declare is a warning.</p>
+<h2 id="checklists-are-data">Checklists are data<a class="headerlink" href="#checklists-are-data" title="Permanent link">&para;</a></h2>
+<p>A standard, its clauses and the checklists that select them are instances,
+never classes, so a new standard is a new file and nothing else:</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>In the graph</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Standard</td>
+<td><code>skos:ConceptScheme</code>, named by the key prefix</td>
+<td><code>urn:rdm:standard:62304</code></td>
+</tr>
+<tr>
+<td>Clause</td>
+<td><code>rdm:Clause</code> with <code>skos:notation</code> (key), <code>skos:definition</code>, <code>skos:inScheme</code>, <code>skos:broader</code> (nearest listed dotted parent), <code>rdm:edition</code></td>
+<td><code>urn:rdm:clause:62304:5.6.2</code></td>
+</tr>
+<tr>
+<td>Checklist</td>
+<td><code>rdm:Checklist</code> with <code>skos:member</code> (its own items) and <code>rdm:includes</code> (its includes)</td>
+<td><code>urn:rdm:checklist:62304_2015_class_b</code></td>
+</tr>
+</tbody>
+</table>
+<p>A checklist's full contents are <code>rdm:includes*/skos:member</code>. Includes are
+kept as links, not flattened. Clause, standard and checklist IRIs carry no
+project name, so graphs from several repositories share one node per clause:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c"># Which documents, in which projects, claim each Part 11 clause?</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">SELECT</span> <span class="nv">?key</span> <span class="nv">?doc</span> <span class="k">WHERE</span> <span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  <span class="nl">&lt;urn:rdm:checklist:part11_document_control&gt;</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">includes</span><span class="o">*/</span><span class="nn">skos</span><span class="p">:</span><span class="nt">member</span> <span class="nv">?c</span> <span class="p">.</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  <span class="nv">?c</span> <span class="nn">skos</span><span class="p">:</span><span class="nt">notation</span> <span class="nv">?key</span> <span class="p">.</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  <span class="k">OPTIONAL</span> <span class="p">{</span> <span class="nv">?d</span> <span class="nn">dcterms</span><span class="p">:</span><span class="nt">references</span> <span class="nv">?c</span> <span class="p">.</span> <span class="k">BIND</span> <span class="p">(</span><span class="nf">STR</span><span class="p">(</span><span class="nv">?d</span><span class="p">)</span> <span class="k">AS</span> <span class="nv">?doc</span><span class="p">)</span> <span class="p">}</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">}</span> <span class="k">ORDER BY</span> <span class="nv">?key</span>
+</code></pre></div>
+<p>To add a checklist, pass any of these to <code>--checklist</code>:</p>
+<ul>
+<li>a built-in name (<code>rdm gap --list</code>);</li>
+<li>a <code>.txt</code> file in <a href="../gap-analysis/#your-own-checklists"><code>rdm gap</code>'s checklist format</a>;</li>
+<li>an RDF file (<code>.ttl</code>, <code>.nt</code>, <code>.jsonld</code>, …) using the terms above, which is
+  loaded as-is, so it can carry more than the text format, such as a
+  standard's full title:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">@prefix</span><span class="w"> </span><span class="nn">rdm:</span><span class="w">  </span><span class="nv">&lt;https://github.com/scope-impact/rdm/ns#&gt;</span><span class="w"> </span><span class="p">.</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">@prefix</span><span class="w"> </span><span class="nn">skos:</span><span class="w"> </span><span class="nv">&lt;http://www.w3.org/2004/02/skos/core#&gt;</span><span class="w"> </span><span class="p">.</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nv">&lt;urn:rdm:standard:IEC81001-5-1&gt;</span> <span class="kt">a</span> <span class="nn">skos</span><span class="p">:</span><span class="nt">ConceptScheme</span> <span class="p">;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="nn">skos</span><span class="p">:</span><span class="nt">prefLabel</span> <span class="s">"IEC 81001-5-1:2021 Health software security"</span> <span class="p">.</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nv">&lt;urn:rdm:clause:IEC81001-5-1:5.1.1&gt;</span> <span class="kt">a</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">Clause</span> <span class="p">;</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="nn">skos</span><span class="p">:</span><span class="nt">notation</span> <span class="s">"IEC81001-5-1:5.1.1"</span> <span class="p">;</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="nn">skos</span><span class="p">:</span><span class="nt">definition</span> <span class="s">"secure software development process"</span> <span class="p">;</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="nn">skos</span><span class="p">:</span><span class="nt">inScheme</span> <span class="nv">&lt;urn:rdm:standard:IEC81001-5-1&gt;</span> <span class="p">.</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="nv">&lt;urn:rdm:checklist:security&gt;</span> <span class="kt">a</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">Checklist</span> <span class="p">;</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="nn">skos</span><span class="p">:</span><span class="nt">member</span> <span class="nv">&lt;urn:rdm:clause:IEC81001-5-1:5.1.1&gt;</span> <span class="p">.</span>
+</code></pre></div>
+<p>References are matched with <code>rdm gap</code>'s own key matcher: a descendant key
+covers its parent (<code>[[62304:5.6.2.a]]</code> covers <code>62304:5.6.2</code>), a longer sibling
+never matches a shorter key, and only <code>[[…]]</code> blocks count. So a clause no
+document references in the graph is exactly an item <code>rdm gap</code> reports
+missing.</p>
+<h2 id="derived-relations-rules-not-facts">Derived relations: rules, not facts<a class="headerlink" href="#derived-relations-rules-not-facts" title="Permanent link">&para;</a></h2>
+<p>A relation that follows from others, such as the user needs a bounded context
+serves, is not stored a second time; the vocabulary declares it with the
+SPARQL rule that derives it (DI-62). <code>--infer</code> adds what the rules derive, in
+its own named graph, so a stated fact and a derived one are never confused:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>rdm<span class="w"> </span>graph<span class="w"> </span>build<span class="w"> </span>--infer<span class="w"> </span>--store<span class="w"> </span>.rdm/graph
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>rdm<span class="w"> </span>graph<span class="w"> </span>query<span class="w"> </span>--infer<span class="w"> </span><span class="s1">'SELECT ?c ?n WHERE { ?c rdm:serves ?n }'</span>
+</code></pre></div>
+<p>A second rule derives <code>rdm:reaches</code> (DI-73): a run reaches each component the
+declared relationships lead to, at any depth, from a component it names, and
+that it does not name itself. Reaching over-approximates, so only a named
+component counts for the C4 warnings (DI-68).</p>
+<p>Why rules rather than stored copies: in Fatemi, Ravanbakhsh and Poole's
+experiment (<a href="https://arxiv.org/abs/1812.03235">arXiv:1812.03235</a>), a model
+given the rules over a graph stripped of rule-implied triples beat both a
+plain model and rule inference alone.</p>
+<h2 id="open-world">Open world<a class="headerlink" href="#open-world" title="Permanent link">&para;</a></h2>
+<p>The graph states only what the record states. A missing <code>rdm:verifies</code> edge
+means <em>no tag was found</em>, not <em>unverified</em>; the absence of a fact is unknown,
+never false. Pass/fail judgments stay in the gates (<code>rdm story release-gate</code>).
+For example, this lists design inputs with no tagged test:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">SELECT</span> <span class="nv">?id</span> <span class="k">WHERE</span> <span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  <span class="nv">?i</span> <span class="k">a</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">DesignInput</span> <span class="p">;</span> <span class="nn">dcterms</span><span class="p">:</span><span class="nt">identifier</span> <span class="nv">?id</span> <span class="p">.</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  <span class="k">FILTER</span> <span class="nf">NOT EXISTS</span> <span class="p">{</span> <span class="nv">?t</span> <span class="nn">rdm</span><span class="p">:</span><span class="nt">verifies</span> <span class="nv">?i</span> <span class="p">}</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">}</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../ci/" class="md-footer__link md-footer__link--prev" aria-label="Previous: The gates in your CI">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                The gates in your CI
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../graph-explorer/" class="md-footer__link md-footer__link--next" aria-label="Next: Browsing in Graph Explorer">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Browsing in Graph Explorer
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer", "navigation.top", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/traceability-map.js"></script>
+      
+    
+  </body>
+</html>

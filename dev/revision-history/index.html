@@ -1,0 +1,3931 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The design record of regulated software as Markdown and tests in git — gated, rendered into regulatory documents, and built into a read-only graph for people and agents.">
+      
+      
+      
+        <link rel="canonical" href="https://scope-impact.github.io/rdm/dev/revision-history/">
+      
+      
+        <link rel="prev" href="../reference/worked-example/">
+      
+      
+        <link rel="next" href="../dhf/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>9. Changelog - RDM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito+Sans:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Nunito Sans";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/rdm-theme.css">
+    
+      <link rel="stylesheet" href="../stylesheets/traceability-map.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="rdm" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#changelog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="RDM" class="md-header__button md-logo" aria-label="RDM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RDM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              9. Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/scope-impact/rdm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scope-impact/rdm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href=".." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../dhf/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Design history (RDM on RDM)
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="RDM" class="md-nav__button md-logo" aria-label="RDM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    RDM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/scope-impact/rdm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scope-impact/rdm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href=".." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docs
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/intended-use/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. What RDM is for
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_3" id="__nav_1_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. How it works
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2. How it works
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/how-rdm-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How it works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/plan-vs-record/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan vs. record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Limits and risks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../use/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_7" id="__nav_1_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    6. Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/changing-the-record/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing the record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/design-inputs-and-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design inputs and tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/risk-register/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/validation-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/gates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The gates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/gap-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gap analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The gates in your CI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The record as a graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/graph-explorer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browsing in Graph Explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For agents (MCP)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../use/documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring and rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../reference/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_9" id="__nav_1_9_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    8. Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/worked-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worked example: Part 11
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Changelog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unreleased
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#200-alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.0.0-alpha
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2.0.0-alpha">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-pdfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — PDFs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-what-an-exploratory-test-of-every-command-found-design-reviews-4448" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — what an exploratory test of every command found (Design Reviews 44–48)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-adoption-pins-the-release-tag-design-review-43" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — adoption pins the release tag (Design Review 43)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-one-package-per-bounded-context-design-review-32" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — one package per bounded context (Design Review 32)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-the-architecture-in-the-graph-di-67" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — the architecture in the graph (DI-67)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-the-architecture-as-one-workspace-its-views-as-images-di-66-di-70" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — the architecture as one workspace, its views as images (DI-66, DI-70)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-pdf-titles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — PDF titles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-the-worked-example-uses-all-of-rdm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — the worked example uses all of RDM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-the-worked-example-follows-current-rdm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — the worked example follows current RDM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-document-control-and-traceability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — document control and traceability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-one-vocabulary-with-the-requirements-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — one vocabulary with the requirements skill
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-the-verification-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — the verification report
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-rdms-gates-as-reusable-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — RDM's gates as reusable CI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-dependencies-upgraded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — dependencies upgraded
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-allure-labels-from-the-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — Allure labels from the record
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-one-home-for-each-rule-and-helper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — one home for each rule and helper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-rules-for-derived-relations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — rules for derived relations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-evidence-tied-to-its-version-and-its-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — evidence tied to its version and its test
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-noise-from-the-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed — noise from the graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-a-contexts-user-needs-are-derived" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — a context's user needs are derived
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-rdmreviewedin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed — rdm:reviewedIn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-no-island-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — no island documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-graph-explorer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — Graph Explorer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-only-the-story-names-a-design-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — only the story names a design input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-allure-results-as-rdf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — Allure results as RDF
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-test-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — test evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-duckdb-and-the-planning-tooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed — DuckDB and the planning tooling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-rdm-as-four-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — RDM as four parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-read-only-agent-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — read-only agent interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-risk-register" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — risk register
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-the-design-record-as-a-linked-data-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — the design record as a linked-data graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-rdm-story-mutation-probe-is-a-standalone-reviewer-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — rdm story mutation-probe is a standalone reviewer tool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-the-faithfulness-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed — the faithfulness gate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#120" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.0
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.2.0">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added-rdm-story-design-controls-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — rdm story design-controls commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.0.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0110" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.11.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../dhf/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design history (RDM on RDM)
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design history (RDM on RDM)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/AGENT_WORKFLOW/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing RDM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../traceability-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Traceability (from the graph)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/verification_and_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V plan and user needs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compliance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design/graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design/publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design/release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design/risk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design/specification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design/test_evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/risk/policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/risk/tool_risks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/design_review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design review
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/document_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Document control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/documents/user_manual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Instructions for use (IFU)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhf/decisions/adr-0001-bounded-context-user-needs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001: user needs across bounded contexts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unreleased
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#200-alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.0.0-alpha
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2.0.0-alpha">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-pdfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — PDFs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-what-an-exploratory-test-of-every-command-found-design-reviews-4448" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — what an exploratory test of every command found (Design Reviews 44–48)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-adoption-pins-the-release-tag-design-review-43" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — adoption pins the release tag (Design Review 43)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-one-package-per-bounded-context-design-review-32" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — one package per bounded context (Design Review 32)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-the-architecture-in-the-graph-di-67" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — the architecture in the graph (DI-67)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-the-architecture-as-one-workspace-its-views-as-images-di-66-di-70" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — the architecture as one workspace, its views as images (DI-66, DI-70)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-pdf-titles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — PDF titles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-the-worked-example-uses-all-of-rdm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — the worked example uses all of RDM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-the-worked-example-follows-current-rdm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — the worked example follows current RDM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-document-control-and-traceability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — document control and traceability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-one-vocabulary-with-the-requirements-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — one vocabulary with the requirements skill
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-the-verification-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — the verification report
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-rdms-gates-as-reusable-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — RDM's gates as reusable CI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-dependencies-upgraded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — dependencies upgraded
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-allure-labels-from-the-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — Allure labels from the record
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-one-home-for-each-rule-and-helper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — one home for each rule and helper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-rules-for-derived-relations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — rules for derived relations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-evidence-tied-to-its-version-and-its-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — evidence tied to its version and its test
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-noise-from-the-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed — noise from the graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-a-contexts-user-needs-are-derived" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — a context's user needs are derived
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-rdmreviewedin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed — rdm:reviewedIn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-no-island-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — no island documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-graph-explorer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — Graph Explorer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-only-the-story-names-a-design-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — only the story names a design input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-allure-results-as-rdf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — Allure results as RDF
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-test-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — test evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed — security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-duckdb-and-the-planning-tooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed — DuckDB and the planning tooling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-rdm-as-four-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — RDM as four parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-read-only-agent-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — read-only agent interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-risk-register" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — risk register
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-the-design-record-as-a-linked-data-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — the design record as a linked-data graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed-rdm-story-mutation-probe-is-a-standalone-reviewer-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed — rdm story mutation-probe is a standalone reviewer tool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed-the-faithfulness-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed — the faithfulness gate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#120" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2.0
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.2.0">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added-rdm-story-design-controls-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — rdm story design-controls commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added — model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.0.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0110" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.11.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<p>What changed in each release. These docs are revised with RDM; their own
+revision is on the <a href="../">first page</a>.</p>
+<h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>The docs are RDM's instructions for use</strong> (Design Review 69, DI-80, DI-81):
+  one manual in IFU order (cover, intended use, how RDM works, safety and
+  limitations with each residual risk, installation, getting started,
+  operating instructions, troubleshooting, reference, revision history).
+  Pages moved into chapter folders under <code>docs/</code>.</li>
+<li><strong>IFU corrections</strong> (from a five-way review): a numbered path to the first
+  passing design gate; validating RDM for your use; upgrade, uninstall,
+  security and data; troubleshooting quotes the real messages; the safety
+  table states what the controls do; no public-bind example; one answer to
+  what the approval is; glossary terms.</li>
+<li><strong>The docs in a developer's words</strong> (Design Review 70, DI-80 amended): What
+  RDM is for, How it works, Limits and risks, Install, Quick start, Guides,
+  Troubleshooting, Reference, Changelog; no citations of standards in the
+  opening chapters.</li>
+<li><strong>Versioned docs</strong> (Design Review 71, DI-82): each release tag publishes its
+  own copy of the docs and <code>main</code> publishes the development version, with a
+  version selector (mike); the build fills in the release and the install ref.</li>
+<li><strong>Fixed: landing commits</strong> (Design Review 68, DI-51): a change merged with
+  later commits on its branch now shows the merge that landed it; before, it
+  showed none. Found by six agents checking the graph with no other context.</li>
+<li><strong>Chain review of every design input</strong> (Design Reviews 58, 60): texts now
+  state what their tests check; new DI-71 (commit and merge hooks) and DI-72
+  (reading Allure results). Nine defects fixed, among them an empty ISO
+  14971:2019 checklist.</li>
+<li><strong>Process</strong> (Design Review 59): a test checks only what its input states;
+  one <code>shall</code> per input; a chain review before each release.</li>
+<li><strong>Named and reached components</strong> (Design Review 61, DI-73): what an
+  acceptance test exercises, from labels and the C4 model, without reading code.</li>
+<li><strong>Unit-test code coverage per component</strong> (Design Reviews 63–65, DI-76):
+  <code>verify --unit-coverage</code>; shown in the matrix, the bundle and the map; never
+  acceptance evidence.</li>
+<li>
+<p><strong>The user manual is the IFU, a design output</strong> (Design Review 67, DI-77–79): a
+  <code>kind: manual</code> document lists its pages, so the DMR index holds it; the
+  graph reads the pages, <code>trace</code> lists those naming a design input, and a test
+  example without a <code>component</code> label is a warning. <code>new-input</code>'s stub writes
+  a <code>component</code> label.</p>
+</li>
+<li>
+<p><strong>Fixed: review findings on the behaviour fixes</strong> (Design Review 57). The
+  merge hook no longer blocks a valid merge of an approved design change
+  with its code: during a merge, a document staged exactly as a commit holds
+  it is approved. A blank user-need string fails the design gate. <code>rdm
+  translate</code> refuses a result file whose suites hold no test.</p>
+</li>
+<li>
+<p><strong>Fixed: starting, adopting and adding an input work as the docs say</strong>
+  (Design Review 56). The design gate also holds the user needs and the risk
+  documents complete and committed. <code>rdm adopt</code> lays down a <code>.gitignore</code> of
+  RDM's generated files and <code>dhf/config.yml</code>, never writes through a
+  symbolic link, and its template links no C4 view the project lacks. <code>rdm
+  init</code> refuses an existing directory and prints next steps; its Dockerfile
+  installs the pinned RDM release from git when no wheel is given; Word files
+  rebuild when the reference document changes; templates use local images.
+  <code>new-input</code> never reuses an id a test is tagged with, never shadows a
+  same-named test module, and keeps CRLF and comments. Gap output says
+  <em>gaps</em>.</p>
+</li>
+<li>
+<p><strong>Docs, from two usability tests:</strong> install lines agree and are pinned;
+  adopting tags existing acceptance-level tests only; Allure links need a web
+  remote; the risk example shows an <code>acceptance</code>, and risk tracing is the
+  graph's; authoring covers the Markdown extensions (auditor's and engineers'
+  copies), PDF branding and fonts, and making a reference document; the
+  glossary adds frontmatter, checklist reference, data file, audit note,
+  reference document and DMR index.</p>
+</li>
+<li>
+<p><strong>Fixed: gap analysis and publishing say what is wrong</strong> (Design Review
+  55). Gap analysis against a checklist with no clauses (ISO 14971 2019) or a
+  file that cannot be read exits 2 instead of saying <em>Success</em> or showing a
+  traceback; coverage exits 3 on a gap, as the audit does; a checklist
+  reached by two paths is read once; a byte-order mark no longer hides a key;
+  documents still holding placeholders are named. <code>rdm translate</code> keeps
+  same-named tests of different modules apart, reads Qt5 skips and failure
+  text, and refuses a file with no test results. Code fences in blockquotes
+  and list items are left alone; snippet markers are whole words; a blank DMR
+  id is skipped; <code>rdm render</code> reports a missing value or template instead of
+  a traceback and reads an empty configuration as none; output piped into
+  <code>head</code> ends quietly.</p>
+</li>
+<li>
+<p><strong>Fixed: the hook gates every way implementation is committed</strong> (Design
+  Review 54). Names with a tab or a quote, upper-case extensions, more source,
+  template and configuration types (JSON, INI, HTML, Vue, R, PowerShell,
+  Dockerfile, Makefile, …) and a type change to a symbolic link are gated; a
+  new <code>pre-merge-commit</code> hook, installed by <code>rdm hooks</code> and <code>rdm adopt</code>, gates
+  a merge. The hook no longer suggests <code>pip install rdm</code>, an unrelated package.</p>
+</li>
+<li>
+<p><strong>Fixed: the graph blocks what the gates block</strong> (Design Review 53).
+  <code>rdm graph validate</code> now fails on what the release gate blocks about the
+  whole record (unreadable frontmatter, a malformed declaration, an
+  uncommitted edit, no design review, no design input, an unreadable result),
+  reads results with the gates' reader (a byte-order mark, a failed step), and
+  links declared ids of any shape (<code>DI-2a</code>), which <code>trace</code> now answers. <code>FROM</code>
+  is refused instead of ignored; <code>SERVICE</code> as a variable or prefix name is
+  accepted; a shapes or checklist file that is not RDF exits 2; <code>--infer</code> with
+  <code>--store</code> and an unknown <code>--exclude</code> class are refused; a repository whose
+  one branch is not <code>main</code> takes it as the default branch.</p>
+</li>
+<li>
+<p><strong>Fixed: every reader of the results agrees with the release gate</strong> (Design
+  Review 52). A result file that cannot be read is named by <code>verify</code> (which
+  exits 1), <code>trace</code>, the evidence bundle's manifest and the verification
+  report, which is then not release-grade. A result with a status Allure does
+  not write, malformed labels, a symbolic link or JSON nested too deep is
+  unreadable, not skipped or a traceback. A failed verification step fails its
+  test. A mistyped tag (<code>di-1</code>, <code>DI_1</code>) is an orphan warning. The report
+  counts every run, tagged or not, and a record with uncommitted changes is
+  not release-grade. The bundle refuses an output that overlaps the results.
+  Tags come only from tests, including <code>from allure import story</code>. <code>trace</code>
+  refuses a missing results directory and says "tested by" for an input that
+  is not verified. An approved validation record needs a reviewer.</p>
+</li>
+<li>
+<p><strong>Fixed: a risk rating no one approved is never read as approved</strong> (Design
+  Review 51). A risk or policy with no status is proposed and warns; an acceptance needs text for who and
+  why; a <code>kind: risk</code> document without a <code>risks</code> list blocks; a policy that
+  lists a severity or probability twice is malformed; a recorded residual
+  level is checked; a non-scalar risk id is no id; and <code>rdm graph validate</code>
+  blocks register and policy findings when there is no risk to carry them.</p>
+</li>
+<li><strong>Fixed: the record says what it holds, or the design gate fails</strong> (Design
+  Review 50). A design input the reader could not read (<code>design_inputs</code> not a
+  list of entries each with one id, or outside a design document), a user need
+  with no id, a repeated frontmatter key and a non-UTF-8 document were dropped
+  without a word, so a requirement nothing tests passed every gate. Each is now
+  a failure. Approval needs a document git tracks and can see: ignored,
+  untracked, skip-worktree and assume-unchanged files, and links to them, are
+  not approved. Outside git the verdict says approval was not checked. A
+  placeholder is a whole word. A context with two design documents is a
+  warning, and <code>new-input</code> refuses it.</li>
+<li><strong>Fixed: in a project nested in its repository, a test run now finds its
+  test</strong> (DI-61, Design Review 49). Tests were named from the repository root
+  and runs from the project, so none linked, and every tagged test was warned
+  as never run.</li>
+<li><strong>Traceability, once, from the graph.</strong> The rendered traceability-matrix
+  page is gone; <em>Traceability</em> draws RDM's from its graph, and a second page
+  draws the Part 11 worked example's the same way, each after a live run of
+  its acceptance tests at every docs build (<code>docs/_hooks/traceability.py</code>).</li>
+<li><strong>The docs say each thing once.</strong> Where the design history file already
+  says it, a page links to it instead: 31 pages are now 21. <em>Get started</em>
+  replaces the installation page and both quickstarts; the data model is in
+  <em>How RDM works</em>; the SHACL rules are in <em>The gates</em>; the checklist format
+  and the useful FAQ answers are in <em>Gap analysis</em>; <em>Changing the record</em> is
+  now the runbook <code>rdm adopt</code> installs. The history, FAQ, document-control
+  and dogfood pages are gone (their content is in the CHANGELOG, the DHF and
+  its overview); ADR 0001 moved into the DHF; the research notes stay in
+  <code>docs/research/</code>, off the site. The API reference covers every module, by
+  bounded context. Fixed on the way: an install line that installed PyPI's
+  other <code>rdm</code>, missing CLI flags and CI inputs, and stale paths.</li>
+</ul>
+<h2 id="200-alpha">2.0.0-alpha<a class="headerlink" href="#200-alpha" title="Permanent link">&para;</a></h2>
+<p>A major version: the code is one package per bounded context, so module paths
+changed (below). The package version is <code>2.0.0a0</code>; the release is tagged
+<code>v2.0.0-alpha</code> and its image <code>2.0.0-alpha</code>.</p>
+<h3 id="added-docs">Added — docs<a class="headerlink" href="#added-docs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Traceability map</strong> (Graph → Traceability map): an interactive map of the
+  record, built from the knowledge graph on every docs build (a build hook,
+  <code>docs/_hooks/traceability_map.py</code>, writes its data; the page draws it) — C3 components in their bounded
+  contexts, and every user need and risk traced through design inputs and
+  tests to the components those tests exercise.</li>
+<li><strong>The design history file in the docs</strong> (RDM on RDM → Design history
+  file): every document of <code>dhf/</code> is published as it is in git, by a build
+  hook (<code>docs/_hooks/dhf.py</code>), with its frontmatter — design inputs, user
+  needs, risks, the risk policy — shown as sections, since the record's
+  substance lives there.</li>
+<li><strong>PDFs of the design history file</strong>: each published DHF page links a PDF of
+  the document, rendered with the template <code>rdm init</code> ships, in the RDM image.</li>
+<li><strong>One PDF build in CI</strong>: the Docs workflow's <code>pdfs</code> job builds the RDM
+  image once, through a scaffolded project's <code>docker compose</code>, and renders
+  both that project's PDFs and RDM's own design history file's; the docs
+  build takes the latter as an artifact. It replaces the separate <em>Test PDF
+  Generation</em> workflow.</li>
+<li><strong>One theme for documents too</strong>: the <code>rdm init</code> Typst template and the
+  verification report use the docs site's palette and fonts — Nunito Sans
+  text, JetBrains Mono headings (Maroon) and code, Nexus links, Ivory pages,
+  and a Maroon cover. The RDM image ships Nunito Sans in place of Inter.</li>
+<li><strong>One theme for the docs</strong>: <code>docs/stylesheets/rdm-theme.css</code> holds the
+  colours and fonts as CSS variables; the docs and the map both use them.</li>
+</ul>
+<h3 id="fixed-pdfs">Fixed — PDFs<a class="headerlink" href="#fixed-pdfs" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>rdm init</code> Pandoc PDF config reads Markdown without citations: a
+  document that mentioned a tag such as <code>@allure.story</code> in prose failed to
+  build, as Typst found no bibliography for the "citation".</li>
+</ul>
+<h3 id="fixed-what-an-exploratory-test-of-every-command-found-design-reviews-4448">Fixed — what an exploratory test of every command found (Design Reviews 44–48)<a class="headerlink" href="#fixed-what-an-exploratory-test-of-every-command-found-design-reviews-4448" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Gates over what they cannot read.</strong> Frontmatter is read from a <code>---</code> line
+  to the next, a byte-order mark ignored; the design gate fails on a document
+  whose frontmatter is not YAML, not a mapping or unclosed (<em>Unreadable
+  Frontmatter</em>), and the release gate blocks on a result file it cannot read
+  (<em>Unreadable Result</em>). Before, either silently dropped out and the gates
+  passed.</li>
+<li><strong>Risk.</strong> Only a control reduces a risk; a risk document whose risks are not
+  a list blocks (<em>Malformed Register</em>); only text is a hazard, situation or
+  harm; numbered severities are read.</li>
+<li><strong>Graph.</strong> <code>rdm graph serve</code> is RDM's own read-only endpoint: it refuses
+  SPARQL Update and <code>SERVICE</code>, serves the last build, and needs no oxigraph
+  CLI (no longer a dependency). <code>rdm graph query</code> refuses them too, and the
+  agent server's guard ends a comment at a carriage return as well.</li>
+<li><strong>Evidence.</strong> The report and bundle never read a symbolic link; the bundle
+  keeps every plain result file, replaces an earlier bundle, and lists missing
+  attachments. Audit notes and section numbers leave code alone. <code>rdm
+  translate</code> counts errored and skipped cases as such. The mutation probe
+  restores exact bytes and never overwrites a later edit from its journal.</li>
+<li><strong>Specification and architecture.</strong> View freshness covers <code>!include</code>d
+  files; <code>new-input</code> refuses an edit it would misread; the pre-commit hook
+  gates the common languages and non-ASCII names; a persona run that does not
+  say it completed did not; the FDA cybersecurity checklist's V.A.1.b.iii key.</li>
+</ul>
+<h3 id="changed-adoption-pins-the-release-tag-design-review-43">Changed — adoption pins the release tag (Design Review 43)<a class="headerlink" href="#changed-adoption-pins-the-release-tag-design-review-43" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The CI workflow <code>rdm adopt</code> lays down pins the installed version's release
+  tag: a pre-release such as <code>2.0.0a0</code> as <code>v2.0.0-alpha</code>, the tag the release
+  and its image carry.</li>
+</ul>
+<h3 id="changed-one-package-per-bounded-context-design-review-32">Changed — one package per bounded context (Design Review 32)<a class="headerlink" href="#changed-one-package-per-bounded-context-design-review-32" title="Permanent link">&para;</a></h3>
+<ul>
+<li>RDM's code is in one package per context: <code>rdm.specification</code>,
+  <code>rdm.evidence</code>, <code>rdm.risk</code>, <code>rdm.architecture</code>, <code>rdm.compliance</code>,
+  <code>rdm.release</code>, <code>rdm.publishing</code> and <code>rdm.graph</code>, over a shared kernel
+  (<code>rdm.kernel</code>). A test holds the code to the dependency rule of the
+  architecture: a context imports only the contexts below it.</li>
+<li>The <code>rdm</code> command, <code>rdm.pytest_plugin</code> (for a project's <code>conftest.py</code>) and
+  <code>rdm.md_extensions</code> (named in a project's <code>config.yml</code>) keep their paths.
+  Other modules moved; code that imported them directly (<code>rdm.render</code>,
+  <code>rdm.util</code>, <code>rdm.record.*</code>, <code>rdm.gates.*</code>) imports them from their package
+  (<code>rdm.publishing.render</code>, <code>rdm.kernel.util</code>, …).</li>
+<li>The test tags (<code>rdm.specification.tags</code>), the release gate and trace
+  (<code>rdm.release.gate</code>) and the frontmatter parser (<code>rdm.kernel.frontmatter</code>)
+  are modules of their own.</li>
+</ul>
+<h3 id="added-the-architecture-in-the-graph-di-67">Added — the architecture in the graph (DI-67)<a class="headerlink" href="#added-the-architecture-in-the-graph-di-67" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The graph has two more named graphs: <code>architecture</code>, the C4 model (every
+  element typed, contained and described; each component's bounded context and
+  code; each relationship; the component each source file a test run exercises
+  belongs to), and <code>code</code>, the Python imports between components' code. So a
+  query can follow a design input to its tests, the files they exercise, and
+  the components and contexts those files belong to.</li>
+</ul>
+<h3 id="added-the-architecture-as-one-workspace-its-views-as-images-di-66-di-70">Added — the architecture as one workspace, its views as images (DI-66, DI-70)<a class="headerlink" href="#added-the-architecture-as-one-workspace-its-views-as-images-di-66-di-70" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The C4 architecture is one Structurizr workspace, <code>dhf/c4/workspace.dsl</code>:
+  the model, each component's bounded context as its group and its code as a
+  property, and the views. RDM reads the model from its JSON export, with no
+  parser and no Java.</li>
+<li><code>rdm c4 draw</code> exports the model and draws each view with Graphviz to
+  <code>dhf/c4/views/&lt;view&gt;.svg</code>, stamped with the workspace's hash; documents show
+  their views as images, so GitHub, the docs site and PDFs show one picture,
+  and no browser draws it. The design gate fails on a stale drawn file.</li>
+<li>RDM's own architecture moved from twelve Mermaid diagrams to the workspace.
+  The Mermaid rendering tried first (Design Review 28) is retired.</li>
+</ul>
+<h3 id="fixed-pdf-titles">Fixed — PDF titles<a class="headerlink" href="#fixed-pdf-titles" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A rendered PDF's cover and running header showed the document's first heading
+  (usually "Purpose") instead of its <code>title:</code>: <code>pandoc_pdf.yml</code> shifted every
+  heading up a level, which made the first one the title. Headings now keep
+  their level and are numbered from 1.</li>
+<li>A title's em dash printed as <code>---</code>: the template quoted Pandoc's Typst markup
+  as a string. It now passes the title as content.</li>
+<li>A long table ran over the footer, its last rows printed on top of each other:
+  Pandoc wraps a table in a figure, which does not break across pages. Tables
+  now continue on the next page.</li>
+<li>Inline code was boxed, so a long path or name could not wrap and ran into the
+  next table column; identifiers and paths now also break after <code>/</code> and <code>_</code>.</li>
+<li>The cover title is no longer justified, which spread a short line wide.</li>
+<li>The traceability matrix has five columns, with most of the width for the
+  tests and outputs (in <code>rdm adopt</code>'s template and the example as well).</li>
+</ul>
+<h3 id="changed-the-worked-example-uses-all-of-rdm">Changed — the worked example uses all of RDM<a class="headerlink" href="#changed-the-worked-example-uses-all-of-rdm" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>examples/github-document-control/</code> is laid out as <code>rdm init</code> and
+  <code>rdm adopt</code> lay a project out (<code>.github/</code>, <code>dhf/</code> with its Makefile,
+  procedures under <code>dhf/documents/procedures/</code>), with the agent workflow,
+  hooks and session bootstrap <code>rdm adopt</code> adds.</li>
+<li>Three bounded contexts with an architecture document and <code>realises</code>; a
+  proposed risk policy and register (six risks, three STRIDE threats linked to
+  a safety risk, one residual accepted with a reason); pending validation
+  records; DI-11, a daily drift audit, scaffolded with <code>rdm story new-input</code>.</li>
+<li>The DMR index data is generated by <code>rdm story dmr</code>; the documents render
+  with the vocabulary and audit-note extensions; releases attach the evidence
+  bundle and every document as PDF through RDM's action.</li>
+<li>Its own SHACL shapes (<code>dhf/shapes/</code>), an <code>.mcp.json</code> for the agent server,
+  and README commands for <code>trace</code>, <code>query</code>, Graph Explorer and
+  <code>mutation-probe</code>. RDM's CI runs the example's gates.</li>
+<li><code>rdm adopt</code>'s session bootstrap no longer suggests <code>pip install rdm</code>, which
+  installs another project from PyPI.</li>
+</ul>
+<h3 id="changed-the-worked-example-follows-current-rdm">Changed — the worked example follows current RDM<a class="headerlink" href="#changed-the-worked-example-follows-current-rdm" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>examples/github-document-control/</code> runs RDM's reusable gates, pinned to
+  <code>v1.2.0</code>, and the Part 11 gap analysis on every pull request, and its ruleset
+  requires exactly those checks (DI-9): it used to require two checks no
+  workflow reported, which would have blocked every merge.</li>
+<li>Its release is published only if the release gate passes at the tag, with the
+  verification report attached (DI-10); the SOP is at revision 2.</li>
+<li>Its tests record named verification steps with what each checked, and RDM's
+  pytest plugin labels each run from the example's own record. Design Review 2
+  also reviews DI-6..DI-8, which had none.</li>
+</ul>
+<h3 id="added-document-control-and-traceability">Added — document control and traceability<a class="headerlink" href="#added-document-control-and-traceability" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>part11_document_control</code> built-in checklist and RDM's own Part 11-mapped
+  document-control statement, held by an acceptance test.</li>
+<li>The <code>examples/github-document-control/</code> example: git as document control with
+  GitHub as the provider — rulesets and settings as code, pull-request approval
+  as the Part 11 signature, DMR/DHR analogs, a drift-audit script, its own gated
+  DHF.</li>
+<li>Sound gap matching: a reference counts only inside <code>[[ … ]]</code>, by exact key
+  with a descendant covering its parent; prose mentions and sibling keys no
+  longer count.</li>
+<li>Polyglot traceability: JS/TS and Java test tags are found for linkage.</li>
+<li><code>rdm hooks</code> installs the design-gate hook only (<code>--with-issue-hooks</code> adds the
+  legacy pair).</li>
+</ul>
+<h3 id="changed-one-vocabulary-with-the-requirements-skill">Changed — one vocabulary with the requirements skill<a class="headerlink" href="#changed-one-vocabulary-with-the-requirements-skill" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>CONTEXT.md</code> is the glossary, in the domain-modeling skill's format, and the
+  docs site shows it (Glossary). A design input <em>is</em> the acceptance criterion,
+  a system or subsystem <code>shall</code> requirement: <em>baseline</em> from a user need,
+  <em>risk-based</em> when a risk allocates it as a control. The test verifies it as a
+  whole; its verification steps are the test's own checks, never acceptance
+  criteria, and the test helper is <code>verification_step(...)</code>. "Clause" means a
+  checklist clause only. "Risk control" replaces "measure"; "verified" is kept
+  apart from "effective".</li>
+<li>The verification report heads test steps "Verification steps", marks each
+  design input baseline or risk-based, shows each risk it is a control for with
+  that risk's status and residual decision (a residual on a proposed rating
+  says so), summarises the risk register on page 1, and leaves out Allure's
+  severity label. The release gate's message no longer calls risks
+  "controlled".</li>
+</ul>
+<h3 id="added-the-verification-report">Added — the verification report<a class="headerlink" href="#added-the-verification-report" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm story evidence-report</code> renders a PDF for an auditor (DI-64):
+  identification (repository, record commit, commits tested, executor and
+  environment, RDM version, one SHA-256 over the results); an evidence status,
+  release-grade or each reason not; the anomalies; a traceability table with
+  the risks each design input controls; then each run with its steps as
+  acceptance criteria and the attachments the test made; and an appendix of
+  every result file's SHA-256. Runner internals, repeated labels and captured
+  output are left out.</li>
+<li><code>rdm.pytest_plugin</code> writes Allure's <code>executor.json</code> and
+  <code>environment.properties</code>: the CI run or local user, the OS and tool
+  versions, the commit and worktree state (DI-65).</li>
+<li>The evidence bundle includes the report, and the reusable gates upload it.
+  Typst comes from the new <code>report</code> extra or a <code>typst</code> executable on PATH.</li>
+</ul>
+<h3 id="added-rdms-gates-as-reusable-ci">Added — RDM's gates as reusable CI<a class="headerlink" href="#added-rdms-gates-as-reusable-ci" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A reusable workflow (<code>.github/workflows/gates.yml</code>) runs a repository's
+  acceptance tests, then the design gate, verify, the release gate, graph
+  validation and the evidence bundle. A composite action (<code>actions/gates</code>)
+  runs the same gates in a workflow of your own. Both install RDM from the
+  pinned revision, not a package index (DI-63).</li>
+<li>The workflow <code>rdm adopt</code> lays down calls the reusable workflow pinned to the
+  installed RDM's version. RDM's own CI calls it pinned to the commit under test.</li>
+<li>The PDF action renders with the image of the release it is pinned to.</li>
+<li>CI: tests on the latest stable Python on every push and pull request; a
+  multi-arch Docker image (amd64, arm64) with provenance and SBOM; Dependabot
+  for uv; a pinned Allure CLI.</li>
+<li>CI hardening: every action pinned to a full commit sha (its release as a
+  comment, for Dependabot), <code>contents: read</code> by default, no persisted checkout
+  credentials, job timeouts, inputs passed to scripts through the environment,
+  and the Pages lock held by deployments only.</li>
+</ul>
+<h3 id="changed-dependencies-upgraded">Changed — dependencies upgraded<a class="headerlink" href="#changed-dependencies-upgraded" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Docker image: Ubuntu 26.04 LTS instead of Alpine, Pandoc 3.6.1 → 3.12,
+  Typst 0.12.0 → 0.15.1, Inter 4.0 → 4.1; RDM installed with the <code>graph</code>
+  extra, so the graph commands, including <code>rdm graph serve</code> (whose oxigraph
+  server has no Alpine build), run in the image.</li>
+<li>The PDF template names the font family <code>Inter</code>: Typst 0.15 no longer lists
+  the variable font as <code>Inter Variable</code>, so it fell back to the default font.</li>
+<li>Python dependencies upgraded to their latest releases.</li>
+</ul>
+<h3 id="added-allure-labels-from-the-record">Added — Allure labels from the record<a class="headerlink" href="#added-allure-labels-from-the-record" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm.pytest_plugin</code> labels each acceptance run with Allure's API: epic (user
+  need), feature (bounded context), links to the Markdown documents that
+  declare it (design document, V&amp;V plan, risk document) at the commit, severity critical for a risk control, and the requirement text as an
+  attachment (DI-57).</li>
+</ul>
+<h3 id="changed-one-home-for-each-rule-and-helper">Changed — one home for each rule and helper<a class="headerlink" href="#changed-one-home-for-each-rule-and-helper" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The risk rules are written once (<code>rdm.record.risk.assess</code>): the release gate
+  reports their findings and the graph carries them on each risk
+  (<code>rdm:finding</code>, <code>rdm:riskWarning</code>), so the risk shapes report the gate's own
+  messages and cannot drift from it (DI-45).</li>
+<li>One id grammar (<code>rdm.record.ids</code>), one git helper (<code>rdm.record.git</code>), one
+  namespace module (<code>rdm.graph.ns</code>), and a public <code>rdm.gaps</code> API the graph
+  uses; orphan test tags are projected as data (<code>rdm:undeclaredTag</code>).</li>
+<li>A projection parses each document once and asks git for every document's
+  latest commit in one call — about 1 s to 0.2 s per MCP call; the release
+  gate about 1.1 s to 0.06 s. <code>rdm graph</code> subcommands share their record
+  options, and <code>query</code> reports a missing checklist instead of a traceback.</li>
+</ul>
+<h3 id="added-rules-for-derived-relations">Added — rules for derived relations<a class="headerlink" href="#added-rules-for-derived-relations" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Each relation the graph derives rather than stores is declared in the
+  vocabulary with its SPARQL CONSTRUCT (<code>rdm:Rule</code>); the first,
+  <code>rdm:serves</code>, gives a context's user needs. The agent server's <code>schema</code>
+  lists the rules and its queries see the results; <code>rdm graph build --infer</code>
+  and <code>query --infer</code> add them to a separate inferred graph (DI-62).</li>
+</ul>
+<h3 id="added-evidence-tied-to-its-version-and-its-test">Added — evidence tied to its version and its test<a class="headerlink" href="#added-evidence-tied-to-its-version-and-its-test" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm.pytest_plugin</code> labels each tagged run with the commit under test and a
+  dirty working tree (DI-59); the graph links run → commit and the record →
+  the commit it was built at, and warns on an unversioned or stale run
+  (DI-60).</li>
+<li>A test is a function (<code>rdm:Test</code>, defined in its file), and a run links to
+  the test it ran; warnings for a test that never ran and a run whose test
+  does not claim its design input (DI-61).</li>
+<li>Every controlled document, not only design documents, carries its latest
+  commit and its landing (DI-35, DI-51).</li>
+</ul>
+<h3 id="removed-noise-from-the-graph">Removed — noise from the graph<a class="headerlink" href="#removed-noise-from-the-graph" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Allure labels as nodes (565 in RDM's own graph), links (<code>rdfs:seeAlso</code>),
+  test cases (<code>rdm:runOf</code>) and container fixtures (DI-55, retired) are no
+  longer projected: they repeated the record or said nothing about design
+  controls. <code>story</code> and <code>output</code> labels still become <code>rdm:exercises</code> and
+  <code>rdm:exercisesOutput</code>; the raw results stay in the evidence bundle (DI-54).</li>
+<li>The traceability matrix template is not projected, and its
+  <code>prov:wasDerivedFrom</code> edges are gone (DI-58).</li>
+</ul>
+<h3 id="changed-a-contexts-user-needs-are-derived">Changed — a context's user needs are derived<a class="headerlink" href="#changed-a-contexts-user-needs-are-derived" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>satisfies</code> is gone from design documents: the needs a context serves follow
+  from its design inputs' <code>traces_to</code> (owned or realised). The design gate's
+  coverage warning reads the inputs, <code>rdm story new-input</code> no longer edits a
+  context list, and the graph has no <code>rdm:satisfies</code> edge. A legacy key is
+  ignored (DI-1, DI-22).</li>
+</ul>
+<h3 id="removed-rdmreviewedin">Removed — <code>rdm:reviewedIn</code><a class="headerlink" href="#removed-rdmreviewedin" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Every design document was linked to the one design review because the gate
+  requires a review to exist, not because the review covered it (DI-52).</li>
+</ul>
+<h3 id="added-no-island-documents">Added — no island documents<a class="headerlink" href="#added-no-island-documents" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The architecture declares the bounded contexts and their parts
+  (<code>contexts:</code>), a document names the documents it relies on
+  (<code>references:</code>); a context the architecture omits warns, a dangling reference fails
+  <code>rdm graph validate</code> (DI-58).</li>
+</ul>
+<h3 id="fixed-graph-explorer">Fixed — Graph Explorer<a class="headerlink" href="#fixed-graph-explorer" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm graph explorer-file --exclude TestRun</code> left a run's details (steps,
+  attachments, labels, fixtures, test cases) as about a thousand islands; they
+  now go with the excluded runs (DI-39).</li>
+</ul>
+<h3 id="changed-only-the-story-names-a-design-input">Changed — only the story names a design input<a class="headerlink" href="#changed-only-the-story-names-a-design-input" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Tag discovery reads <code>@allure.story</code> (Python), <code>allure.story</code> (JS/TS) and
+  <code>@Story</code> (Java) only; a feature carries the context, not a design input
+  (DI-31, DI-40).</li>
+</ul>
+<h3 id="added-allure-results-as-rdf">Added — Allure results as RDF<a class="headerlink" href="#added-allure-results-as-rdf" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm/graph/allure.py</code>: each result's uuid, full name, times, status
+  message and trace, and parameters (DI-54); output labels linking runs to
+  source files, listed by <code>trace</code> (DI-56).</li>
+</ul>
+<h3 id="added-test-evidence">Added — test evidence<a class="headerlink" href="#added-test-evidence" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm story evidence-bundle</code> keeps the executed Allure results, with every
+  attachment and container they reference, in <code>allure-results/</code> (DI-30).</li>
+<li>The graph carries each test run's steps and attachments, and <code>trace</code> lists
+  them with each run (DI-53).</li>
+</ul>
+<h3 id="fixed-security">Fixed — security<a class="headerlink" href="#fixed-security" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm graph serve</code> ran Oxigraph read-write with CORS open: a cross-origin
+  <code>CLEAR ALL</code> emptied the store. It now serves read-only (DI-36).</li>
+<li>The agent server's <code>query</code> refuses <code>SERVICE</code>, which made HTTP requests, and
+  <code>trace</code> takes only id-shaped input (DI-42). Recorded as RISK-TOOL-006/007.</li>
+</ul>
+<h3 id="added-graph">Added — graph<a class="headerlink" href="#added-graph" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Who landed each design document's latest change on the default branch
+  (<code>rdm:landedIn</code>, <code>rdm:landedBy</code>), with a warning while it has not (DI-51).</li>
+<li>User needs, risks and design documents link to the documents that declare,
+  evaluate and review them (DI-52).</li>
+</ul>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>DI-34, DI-37, DI-38 and DI-44 are split into DI-47..50, one clause group and
+  one test each (Design Review 12).</li>
+</ul>
+<h3 id="removed-duckdb-and-the-planning-tooling">Removed — DuckDB and the planning tooling<a class="headerlink" href="#removed-duckdb-and-the-planning-tooling" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm story audit</code>, <code>sync</code>, <code>backlog-validate</code>, <code>check-ids</code>, <code>validate</code>;
+  <code>rdm pm sync</code>; <code>rdm pull</code>; the <code>duckdb</code> query in templates; the
+  <code>story-audit</code>, <code>analytics</code>, <code>github</code> and <code>plan</code> extras. The record and its
+  RDF graph are the only data model (Design Review 11). DI-6, DI-13, DI-14,
+  DI-23 and DI-32 retired.</li>
+<li>The gates (<code>design_gate</code>, <code>new_input</code>, <code>mutation</code>) move to <code>rdm/gates/</code> and
+  are part of the core install.</li>
+</ul>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A user-need or design-input id declared more than once fails the design
+  gate, naming every declaring document; the graph counts declarations and
+  its shapes report a repeat (DI-46, UN-007).</li>
+</ul>
+<h3 id="changed-rdm-as-four-parts">Changed — RDM as four parts<a class="headerlink" href="#changed-rdm-as-four-parts" title="Permanent link">&para;</a></h3>
+<ul>
+<li>README, docs home and navigation describe RDM as Record, Gates, Graph and
+  Documents, with a plain "what it does not do" list; the intended use is in
+  the V&amp;V plan (Design Review 6).</li>
+</ul>
+<h3 id="added-read-only-agent-interface">Added — read-only agent interface<a class="headerlink" href="#added-read-only-agent-interface" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm graph mcp</code>: an MCP stdio server with <code>schema</code>, <code>query</code>, <code>trace</code> and
+  <code>validate</code>, each answering from a fresh projection of the record; no write
+  tool, SPARQL Update refused, rows capped (UN-015, DI-41, DI-42).
+  <code>.mcp.json</code> registers it for this repository.</li>
+</ul>
+<h3 id="added-risk-register">Added — risk register<a class="headerlink" href="#added-risk-register" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Risks as frontmatter in <code>kind: risk</code> documents: safety or security (with a
+  STRIDE category), hazard → situation → harm, severity, probability,
+  controls (design inputs), residual, acceptance, <code>status: proposed |
+  approved</code> (UN-016, DI-43).</li>
+<li>No default matrix: risks are evaluated only against a declared
+  <code>risk_policy</code> with per-level acceptability (<code>acceptable</code>, <code>justify</code>,
+  <code>unacceptable</code>).</li>
+<li>The release gate blocks missing criteria, a broken chain, an undefined or
+  mis-scored risk, an undeclared or unverified control, and an unacceptable
+  or unaccepted residual; proposed ratings warn (DI-44).</li>
+<li>Risks in the graph (<code>risks</code> named graph, <code>rdm:controlledBy</code>, residual
+  decision), risk shapes in agreement with the gate, risk ids in <code>trace</code>
+  (DI-45). Design Reviews 9 and 10.</li>
+</ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Python test tags are read from decorators and <code>pytestmark</code> only, never
+  from strings or comments (DI-40); every acceptance command passes
+  <code>--clean-alluredir</code>, so repeated runs no longer double the results.</li>
+<li><code>rdm story mutation-probe</code> runs the test once unmutated and refuses a test
+  that does not pass — an already-failing test was reported KILLED (DI-34).</li>
+<li><code>rdm story new-input</code> fills an empty <code>design_inputs: []</code> in place instead of
+  writing a second key, and wraps its stub test's docstring (DI-22).</li>
+<li>User needs carry their text in the graph (DI-35).</li>
+</ul>
+<h3 id="added-the-design-record-as-a-linked-data-graph">Added — the design record as a linked-data graph<a class="headerlink" href="#added-the-design-record-as-a-linked-data-graph" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm graph build | query | serve</code> (optional extra <code>graph</code>): projects the
+  record into RDF named graphs (record, tests, executions, git, ontology),
+  stores it in an embedded Oxigraph database, answers SPARQL, and serves a
+  SPARQL 1.1 endpoint for AWS Graph Explorer. DI-35, DI-36, user need UN-014.</li>
+<li>Checklists and <code>[[KEY]]</code> reference tags in the graph, as SKOS data: a new
+  standard or checklist is a <code>.txt</code> or RDF file, never a code change; matched
+  with <code>rdm gap</code>'s own reader and matcher (DI-37).</li>
+<li><code>rdm graph validate</code>: the gate rules as SHACL shapes (plus <code>--shapes</code> for
+  your own), held by test to agreement with the release gate (DI-38).</li>
+<li><code>rdm graph explorer-file</code>: the whole record as an AWS Graph Explorer graph
+  file, so the full traceability graph opens in one step (DI-39).</li>
+</ul>
+<h3 id="changed-rdm-story-mutation-probe-is-a-standalone-reviewer-tool">Changed — <code>rdm story mutation-probe</code> is a standalone reviewer tool<a class="headerlink" href="#changed-rdm-story-mutation-probe-is-a-standalone-reviewer-tool" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Same command and restore guarantees, now recorded as DI-34 (user need
+  UN-013): a reviewer proves a test catches a specific defect. It records no
+  verdict and gates nothing.</li>
+</ul>
+<h3 id="removed-the-faithfulness-gate">Removed — the faithfulness gate<a class="headerlink" href="#removed-the-faithfulness-gate" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>rdm story faithfulness</code> and <code>rdm story verdict</code>, faithfulness verdicts (<code>dhf/faithfulness/*.json</code>), probe replay, verdict hash
+  scope, the <code>test-faithfulness</code> skill and <code>contrib/mutmut_by_design_input.py</code>.
+  Retired design inputs DI-19, DI-20, DI-21, DI-27, DI-28 and user need UN-009
+  (ids are not reused).</li>
+<li>Why: the verdicts were RDM's own construct, not a §820.30 or IEC 62304
+  requirement, and their hash pins re-opened reviews on edits that changed no
+  requirement or product behavior. Independent verification is now the
+  human-reviewed pull request, with git as the controlled record (Design
+  Review 4).</li>
+</ul>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>CI runs design-gate → acceptance tests (Allure) → verify → release-gate.</li>
+<li><code>release-gate</code> requires the design approved, every design input verified by
+  a passing tagged test, and every user need addressed — no verdicts.</li>
+<li><code>rdm story evidence-bundle</code> no longer includes verdicts.</li>
+</ul>
+<h2 id="120">1.2.0<a class="headerlink" href="#120" title="Permanent link">&para;</a></h2>
+<p>Record-first design controls and an agentic faithfulness pipeline — RDM now
+compiles and gates a Design History File from the system of record (per-context
+design documents + executed Allure results + git), and dogfoods this on its own
+development (<code>dhf/</code>, <code>.github/workflows/design-controls.yml</code>).</p>
+<h3 id="added-rdm-story-design-controls-commands">Added — <code>rdm story</code> design-controls commands<a class="headerlink" href="#added-rdm-story-design-controls-commands" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>design-gate</code> — block the transition into implementation until the per-context
+  design documents (<code>kind: design</code>) and the design review are present, complete,
+  and approved (committed) in git; an edit re-opens the gate.</li>
+<li><code>verify</code> — reconcile design inputs against executed Allure results into a
+  render-ready <code>verification.yml</code> (the generated traceability matrix).</li>
+<li><code>release-gate</code> — block release unless every design input is verified by a
+  passing test, independently confirmed <em>faithful</em>, and every user need is
+  addressed.</li>
+<li><code>faithfulness</code> — reconcile design inputs against independent verdicts
+  (faithful / partial / unfaithful / stale / unreviewed); only <code>faithful</code> passes.</li>
+<li><code>verdict</code> — record an independent faithfulness verdict, hash-pinned to the
+  current verifying-test source (replaces a bundled skill script).</li>
+<li><code>mutation-probe</code> — apply a one-line source mutation, run a test, report
+  killed/survived, always restore the file (executed proof a test catches a defect).</li>
+<li><code>trace</code> — show the traceability slice for a user need or design input
+  (forward + backward).</li>
+</ul>
+<h3 id="added-model">Added — model<a class="headerlink" href="#added-model" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Per-context design documents discovered by a <code>kind: design</code> frontmatter marker;
+  each owns its <code>design_inputs</code> (verified by <code>@allure.story("DI-…")</code> tests, "live
+  BDD"), <code>satisfies</code> user needs, and may <code>realises</code> a shared design input.</li>
+<li>The <code>record/</code> core (reconcile, sdd, allure, verify, persona, faithfulness) is
+  dependency-light (no project-management extra).</li>
+<li>AI-persona formative usability ingest (<code>persona</code>) — never gates release.</li>
+</ul>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>[plan]</code> extra; planning tooling (Backlog.md / GitHub) is fenced as non-record.</li>
+</ul>
+<h2 id="110">1.1.0<a class="headerlink" href="#110" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Story Audit module (<code>rdm[story-audit]</code>): Backlog.md parser, schema
+  validation, traceability audit and duplicate-id detection (removed since).</li>
+<li>Bidirectional GitHub sync (<code>rdm[github]</code>): Backlog.md tasks to GitHub
+  Issues, Milestones and Projects v2, pull requests into DuckDB (removed since).</li>
+<li>The VitalView example: a software-only medical device worked example for the
+  record-first model (removed since; RDM's own <code>dhf/</code> is the worked example).</li>
+<li>Alias-based status normalization with fix hints in the validator.</li>
+<li>Codebase simplification; CLAUDE.md for Claude Code; PyGithub 2.8.1, Ruff 0.14.13.</li>
+</ul>
+<h2 id="100">1.0.0<a class="headerlink" href="#100" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Installation with <code>uv tool install</code> straight from GitHub.</li>
+<li>Typst instead of LaTeX for PDF generation.</li>
+<li>A lightweight Docker image (Alpine, Pandoc 3.6, Typst 0.12).</li>
+<li>The GitHub Action for PDFs (<code>scope-impact/rdm@v1</code>).</li>
+<li>Fixed cross-references in the <code>software_plan.md</code> template.</li>
+</ul>
+<h2 id="0110">0.11.0<a class="headerlink" href="#0110" title="Permanent link">&para;</a></h2>
+<p>From the project RDM was forked from.</p>
+<ul>
+<li>PDFs through Pandoc in place of the <code>rdm tex</code> command.</li>
+<li>Folders inside the documents folder.</li>
+<li>Word documents.</li>
+<li>SVGs no longer in PDFs (the conversion was unreliable).</li>
+<li>The first 510(k) documents.</li>
+<li>Release files ignored by default.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../reference/worked-example/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Worked example: Part 11">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Worked example: Part 11
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../dhf/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Overview
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer", "navigation.top", "content.code.copy", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../javascripts/traceability-map.js"></script>
+      
+    
+  </body>
+</html>

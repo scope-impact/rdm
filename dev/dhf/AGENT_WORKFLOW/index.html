@@ -1,0 +1,2881 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The design record of regulated software as Markdown and tests in git — gated, rendered into regulatory documents, and built into a read-only graph for people and agents.">
+      
+      
+      
+        <link rel="canonical" href="https://scope-impact.github.io/rdm/dev/dhf/AGENT_WORKFLOW/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../../traceability-map/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Changing RDM - RDM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito+Sans:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Nunito Sans";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/rdm-theme.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/traceability-map.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="rdm" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#changing-rdm-the-traceable-loop" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="RDM" class="md-header__button md-logo" aria-label="RDM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RDM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changing RDM
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/scope-impact/rdm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scope-impact/rdm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Design history (RDM on RDM)
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="RDM" class="md-nav__button md-logo" aria-label="RDM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    RDM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/scope-impact/rdm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scope-impact/rdm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docs
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/intended-use/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. What RDM is for
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_3" id="__nav_1_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. How it works
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2. How it works
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/how-rdm-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How it works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/plan-vs-record/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan vs. record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Limits and risks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../use/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_7" id="__nav_1_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    6. Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/changing-the-record/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing the record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/design-inputs-and-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design inputs and tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/risk-register/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/validation-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/gates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The gates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/gap-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gap analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The gates in your CI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The record as a graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/graph-explorer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browsing in Graph Explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For agents (MCP)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring and rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_9" id="__nav_1_9_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    8. Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/worked-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worked example: Part 11
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../revision-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design history (RDM on RDM)
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design history (RDM on RDM)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing RDM
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing RDM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-intent-what-a-complete-traceable-implementation-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The intent — what a "complete, traceable implementation" means
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#do-i-need-a-design-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Do I need a design input?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-0-see-the-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 0 — see the landscape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-the-user-need-the-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 — the user need (the WHY)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-declare-the-design-input-the-what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — declare the design input (the WHAT)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-commit-the-design-docs-first-the-approval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 — commit the design docs FIRST (the approval)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-implement-the-how" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 — implement (the HOW)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-make-the-test-real-the-proof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 — make the test real (the PROOF)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-run-the-gates-as-ci-will" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6 — run the gates as CI will
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-commit-push-pr-the-independent-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7 — commit, push, PR (the independent review)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#before-a-release-the-chain-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before a release — the chain review
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-worked-example-from-this-repositorys-own-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A worked example — from this repository's own history
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hard-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hard rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-gate-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a gate fails
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../traceability-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Traceability (from the graph)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/verification_and_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V plan and user needs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compliance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design/graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design/publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design/release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design/risk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design/specification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design/test_evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/risk/policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/risk/tool_risks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/design_review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design review
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/document_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Document control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user_manual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Instructions for use (IFU)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/adr-0001-bounded-context-user-needs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001: user needs across bounded contexts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-intent-what-a-complete-traceable-implementation-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The intent — what a "complete, traceable implementation" means
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#do-i-need-a-design-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Do I need a design input?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-0-see-the-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 0 — see the landscape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-the-user-need-the-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1 — the user need (the WHY)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-declare-the-design-input-the-what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2 — declare the design input (the WHAT)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-commit-the-design-docs-first-the-approval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3 — commit the design docs FIRST (the approval)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-implement-the-how" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4 — implement (the HOW)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-make-the-test-real-the-proof" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5 — make the test real (the PROOF)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-run-the-gates-as-ci-will" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6 — run the gates as CI will
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-commit-push-pr-the-independent-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7 — commit, push, PR (the independent review)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#before-a-release-the-chain-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before a release — the chain review
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-worked-example-from-this-repositorys-own-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A worked example — from this repository's own history
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hard-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hard rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-gate-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a gate fails
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="changing-rdm-the-traceable-loop">Changing RDM: the traceable loop<a class="headerlink" href="#changing-rdm-the-traceable-loop" title="Permanent link">&para;</a></h1>
+<p><a href="../AGENT_WORKFLOW.pdf">Download as PDF</a></p>
+<p><strong>Audience:</strong> anyone — human or AI agent — about to change RDM.
+<strong>Promise:</strong> follow this once, top to bottom, and your change passes CI's
+design-controls pipeline on the first try, with a complete evidence chain
+behind it.</p>
+<h2 id="the-intent-what-a-complete-traceable-implementation-means">The intent — what a "complete, traceable implementation" means<a class="headerlink" href="#the-intent-what-a-complete-traceable-implementation-means" title="Permanent link">&para;</a></h2>
+<p>RDM is a design-controls tool for medical-device software, and it governs its
+own development with the same controls. The goal of any change here is <strong>not
+just working code</strong> — it is working code plus an unbroken, machine-checkable
+chain of evidence:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a> WHY the product exists          WHAT it must do              PROOF it does it
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>┌─────────────────────┐      ┌──────────────────────┐      ┌──────────────────────┐
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│ User need   UN-nnn  │◄─────│ Design input   DI-n  │◄─────│ Acceptance test      │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│ (V&amp;V plan            │traces│ (owned by ONE context │verify│ @allure.story("DI-n")│
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  frontmatter)        │ _to  │  doc, kind: design)  │      │ tests/acceptance/    │
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>└─────────────────────┘      └──────────────────────┘      └──────────┬───────────┘
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                                  approval = the git                  │ executed
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                                  commit of the doc                   │ results
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                                                                      ▼
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>┌─────────────────────┐      ┌──────────────────────┐      ┌──────────────────────┐
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│ Traceability matrix │◄─────│ verification.yml     │◄─────│ Allure results       │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│ (rendered, never    │      │ (generated from       │      │ (one per tagged-test │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│  hand-edited)       │      │  executed results)    │      │  run, gitignored)    │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>└─────────────────────┘      └──────────────────────┘      └──────────────────────┘
+</code></pre></div>
+<p>Whether the test actually <em>means</em> anything is judged by a human: the change
+lands through a pull request that a reviewer other than the author approves.</p>
+<p>Every arrow is checked by a gate. A change is <strong>complete</strong> when:</p>
+<ol>
+<li>its behavior is stated as a <strong>design input</strong> (<code>DI-n</code>) tracing to a <strong>user
+   need</strong> (<code>UN-nnn</code>) — so anyone can ask <em>why does this code exist?</em> and get an
+   answer;</li>
+<li>the design doc declaring it is <strong>committed before the implementation</strong> —
+   the commit <em>is</em> the approval; there is no separate sign-off bureaucracy;</li>
+<li>a test tagged <code>@allure.story("DI-n")</code> <strong>passes</strong> — executed evidence, not a
+   claim;</li>
+<li>the change is merged through a <strong>pull request approved by a reviewer other
+   than the author</strong>, who judges whether the test actually verifies the
+   requirement — because a test can pass without proving anything, and an
+   agent grading its own homework reliably over-grades;</li>
+<li>the traceability matrix regenerates cleanly — it is derived from the record,
+   so it can never drift from reality.</li>
+</ol>
+<p>Skip a link and CI fails — not as punishment, but because a missing link means
+someone later (an auditor, a reviewer, another agent) can no longer walk the
+chain. This document exists so you build the chain <em>as you go</em> instead of
+reverse-engineering it under a red build.</p>
+<p>One boundary to keep in mind throughout: <strong>Backlog tasks, GitHub issues, and
+plans are coordination, never evidence.</strong> The record is only the design docs,
+the executed test results, and git history (<code>docs/about/plan-vs-record.md</code>).</p>
+<h2 id="do-i-need-a-design-input">Do I need a design input?<a class="headerlink" href="#do-i-need-a-design-input" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Does the change alter what RDM does (behavior, CLI, output, gate logic)?
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── YES → it is governed by a design input
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│   ├── an existing DI already covers it
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│   │     → find it: uv run rdm story trace &lt;DI-n | UN-nnn&gt;
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│   │     → skip to step 3 (edit its design doc prose if the "how" changed,
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│   │       then implementation → test → PR review)
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│   └── nothing covers it → full loop, step 1
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>└── NO (refactor, docs, comments, CI plumbing)
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    → no DI work; commit as usual (the gates still run and should stay green)
+</code></pre></div>
+<h2 id="the-loop">The loop<a class="headerlink" href="#the-loop" title="Permanent link">&para;</a></h2>
+<p>Each step says <strong>why</strong> it exists, <strong>do</strong> exactly what, and <strong>done when</strong> you
+can verify it. The commands assume the repo root; agent sessions have
+dependencies synced and the local gate active automatically (session bootstrap).</p>
+<h3 id="step-0-see-the-landscape">Step 0 — see the landscape<a class="headerlink" href="#step-0-see-the-landscape" title="Permanent link">&para;</a></h3>
+<p><strong>Do:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>rdm<span class="w"> </span>story<span class="w"> </span>new-input<span class="w"> </span>--dhf<span class="w"> </span>dhf<span class="w"> </span>--list
+</code></pre></div>
+This prints the bounded contexts, every taken <code>DI</code> id, the next free id, and
+the registered user needs — the vocabulary you need for every step below.
+An agent with the <code>rdm</code> MCP server (<code>.mcp.json</code>) can also <code>trace</code> a UN, DI
+or risk id, or <code>query</code> the record, read-only, before changing anything.</p>
+<h3 id="step-1-the-user-need-the-why">Step 1 — the user need (the WHY)<a class="headerlink" href="#step-1-the-user-need-the-why" title="Permanent link">&para;</a></h3>
+<p><strong>Why:</strong> validation anchors on user needs; a design input that refines no need
+is unexplainable, and the release gate blocks any need no input traces to.</p>
+<p><strong>Do:</strong> most changes refine an <em>existing</em> need — reuse it. Only a genuinely new
+validated journey gets a new <code>UN-nnn</code>, added to the <code>user_needs</code> frontmatter of
+<code>dhf/documents/verification_and_validation_plan.md</code> <strong>plus</strong> a row in that
+file's validation-approach table.</p>
+<p><strong>Done when:</strong> the need you'll cite appears in <code>--list</code> output above.</p>
+<h3 id="step-2-declare-the-design-input-the-what">Step 2 — declare the design input (the WHAT)<a class="headerlink" href="#step-2-declare-the-design-input-the-what" title="Permanent link">&para;</a></h3>
+<p><strong>Why:</strong> the design input is the verifiable requirement, the acceptance
+criterion the test will be judged against as a whole. Write each thing it
+requires so a test can check it; vague inputs produce unreviewable tests. What
+must be accepted on its own is a separate design input: write one <code>shall</code>, and
+never join with "and" two behaviours that could be accepted apart — a joined
+text invites a test of one half (Design Review 59).</p>
+<p><strong>Do:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>rdm<span class="w"> </span>story<span class="w"> </span>new-input<span class="w"> </span>--dhf<span class="w"> </span>dhf<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--context<span class="w"> </span>&lt;ctx&gt;<span class="w"> </span>--text<span class="w"> </span><span class="s2">"RDM shall &lt;what it must do&gt;, …"</span><span class="w"> </span>--traces-to<span class="w"> </span>UN-nnn
+</code></pre></div>
+This allocates the next <code>DI-n</code>, inserts it into that context's <code>design_inputs</code>
+frontmatter, writes a stub tagged test (it <em>fails on purpose</em> — see step 5),
+and prints your remaining checklist. Then, by hand, describe the intended
+output in that document's <code>## Design Outputs</code>, naming the input by id. The
+frontmatter is the input's only statement: the body never restates it. A context that helps realise an input owned elsewhere lists it under
+<code>realises</code> — an input is declared once, never duplicated.</p>
+<p><strong>Done when:</strong> <code>uv run rdm story trace DI-n</code> shows your input, its need, and
+its owning context.</p>
+<h3 id="step-3-commit-the-design-docs-first-the-approval">Step 3 — commit the design docs FIRST (the approval)<a class="headerlink" href="#step-3-commit-the-design-docs-first-the-approval" title="Permanent link">&para;</a></h3>
+<p><strong>Why:</strong> §820.30 requires design review before implementation; here the
+reviewed, committed doc <em>is</em> the approval. The pre-commit hook enforces the
+order: implementation commits are blocked while the design record is
+incomplete or uncommitted — but committing <em>only</em> design docs is always
+allowed (that's how they become approved).</p>
+<p><strong>Do:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>git<span class="w"> </span>add<span class="w"> </span>dhf/<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"Approve design record: DI-n &lt;what&gt;"</span>
+</code></pre></div></p>
+<p><strong>Done when:</strong> <code>uv run rdm story design-gate --dhf dhf</code> prints <code>PASSED</code>.</p>
+<h3 id="step-4-implement-the-how">Step 4 — implement (the HOW)<a class="headerlink" href="#step-4-implement-the-how" title="Permanent link">&para;</a></h3>
+<p><strong>Do:</strong> build what the <code>## Design Outputs</code> prose names. If you discover the
+design was wrong, edit the design doc — the gate re-opens until the edit is
+committed. That friction is the feature: the record stays true.</p>
+<h3 id="step-5-make-the-test-real-the-proof">Step 5 — make the test real (the PROOF)<a class="headerlink" href="#step-5-make-the-test-real-the-proof" title="Permanent link">&para;</a></h3>
+<p><strong>Why:</strong> the design input is the acceptance criterion and the tagged test
+verifies it ("live BDD") — there is no separate spec to drift out of date. The
+test's verification steps are its own: one for each thing the design input
+requires, but never criteria of their own (a part that must be accepted
+separately is a separate design input). The scaffolded stub fails on purpose so
+the release gate stays honestly red until real proof exists; a stub that
+passed would be a lie the pipeline could not see.</p>
+<p><strong>Do:</strong> replace the stub body in <code>tests/acceptance/</code> with real assertions
+against the real code path — <strong>one verification step for each thing the DI text requires</strong> —
+keeping the tag and naming the C4 component it exercises:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nd">@allure</span><span class="o">.</span><span class="n">story</span><span class="p">(</span><span class="s2">"DI-n"</span><span class="p">)</span>                      <span class="c1"># the link the whole chain hangs on</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nd">@allure</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">"component"</span><span class="p">,</span> <span class="s2">"&lt;c4 key&gt;"</span><span class="p">)</span>    <span class="c1"># the component it exercises (dhf/c4/workspace.dsl)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_</span><span class="o">&lt;</span><span class="n">behavior</span><span class="o">&gt;</span><span class="p">(</span><span class="o">...</span><span class="p">):</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="sd">"""DI-n: &lt;the requirement in one line&gt;."""</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="k">with</span> <span class="n">verification_step</span><span class="p">(</span><span class="s2">"&lt;what this step checks&gt;"</span><span class="p">):</span>   <span class="c1"># tests/acceptance/evidence.py</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="n">result</span> <span class="o">=</span> <span class="o">...</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        <span class="n">attach</span><span class="p">(</span><span class="s2">"&lt;what was checked&gt;"</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>       <span class="c1"># kept in the Allure results</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>        <span class="k">assert</span> <span class="o">...</span>
+</code></pre></div>
+<p>A named verification step makes a failure say what it checked; an attachment
+keeps what the assertion looked at. The steps belong to the test, never to the
+criterion. Declare only the story: <code>rdm.pytest_plugin</code> (hooked in
+<code>tests/acceptance/conftest.py</code>) labels every run from the record with Allure's
+API — epic (user need), feature (context), links to the Markdown that declares
+it (design document, V&amp;V plan, risk document) at the commit, severity critical for a risk control, and the design input's text
+as an attachment. Never hand-write <code>@allure.feature</code>/<code>@allure.epic</code> for these. This is for acceptance
+(end-to-end) tests only: unit tests carry no Allure tags, steps or
+attachments. Both land in the Allure results, which the release
+bundle retains and the graph projects (<code>trace</code> lists them).</p>
+<p><strong>Changing an existing test:</strong> before adding a step to a test that already
+verifies a design input, read that input's text. If the text does not state
+what the new step checks, the step does not belong there yet: amend the text,
+or declare a new design input with its own test, in the same design review
+entry as the fix. Never let a test grow past its text — that is how DI-2's
+test reached fourteen steps under a text that named none of them (Design
+Review 59).</p>
+<p><strong>Done when:</strong> <code>uv run pytest tests/acceptance -q</code> passes, and each step
+checks something the input's text states.</p>
+<h3 id="step-6-run-the-gates-as-ci-will">Step 6 — run the gates as CI will<a class="headerlink" href="#step-6-run-the-gates-as-ci-will" title="Permanent link">&para;</a></h3>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>rdm<span class="w"> </span>story<span class="w"> </span>design-gate<span class="w"> </span>--dhf<span class="w"> </span>dhf
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>uv<span class="w"> </span>run<span class="w"> </span>coverage<span class="w"> </span>run<span class="w"> </span>--source<span class="o">=</span>rdm<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests<span class="w"> </span>--ignore<span class="o">=</span>tests/acceptance<span class="w"> </span>-q<span class="w">   </span><span class="c1"># unit tests, under coverage</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>uv<span class="w"> </span>run<span class="w"> </span>coverage<span class="w"> </span>xml<span class="w"> </span>-q<span class="w"> </span>-o<span class="w"> </span>dhf/data/unit-coverage.xml
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/acceptance<span class="w"> </span>--clean-alluredir<span class="w"> </span>--alluredir<span class="o">=</span>dhf/allure-results
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>uv<span class="w"> </span>run<span class="w"> </span>rdm<span class="w"> </span>story<span class="w"> </span>verify<span class="w"> </span>--dhf<span class="w"> </span>dhf<span class="w"> </span>--allure-results<span class="w"> </span>dhf/allure-results<span class="w"> </span>-o<span class="w"> </span>dhf/data/verification.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--unit-coverage<span class="w"> </span>dhf/data/unit-coverage.xml
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>uv<span class="w"> </span>run<span class="w"> </span>rdm<span class="w"> </span>story<span class="w"> </span>release-gate<span class="w"> </span>--dhf<span class="w"> </span>dhf<span class="w"> </span>--allure-results<span class="w"> </span>dhf/allure-results
+</code></pre></div>
+The unit tests' coverage is unit-test evidence the matrix shows beside the
+design inputs; it never verifies one (Design Review 63).
+Plus the general suite: <code>uv run pytest tests</code>, <code>uv run ruff check .</code>, and
+<code>uv run --extra docs mkdocs build --strict</code> if docs changed.</p>
+<p><strong>Done when:</strong> all four print <code>PASSED</code> (the matrix can then be rendered from
+the generated data: <code>uv run rdm render dhf/documents/traceability_matrix.md
+dhf/config.yml dhf/data/verification.yml</code> — generated output, never hand-edited).</p>
+<h3 id="step-7-commit-push-pr-the-independent-review">Step 7 — commit, push, PR (the independent review)<a class="headerlink" href="#step-7-commit-push-pr-the-independent-review" title="Permanent link">&para;</a></h3>
+<p>Ordinary git from here. The pull request <strong>is</strong> the independent verification:
+a reviewer other than the author reads each DI's text against its tagged test
+and asks whether the test would fail if the behavior broke — a tautology, a
+mocked-out code path, or a test that checks two of the three things the DI
+requires is a reason to request changes. To check rather than eyeball, break
+one of them and run its test:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>run<span class="w"> </span>rdm<span class="w"> </span>story<span class="w"> </span>mutation-probe<span class="w"> </span>--file<span class="w"> </span>&lt;impl&gt;<span class="w"> </span>--find<span class="w"> </span><span class="s1">'&lt;code it requires&gt;'</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--replace<span class="w"> </span><span class="s1">'&lt;one-line break&gt;'</span><span class="w"> </span>--test<span class="w"> </span>&lt;test_name&gt;<span class="w">   </span><span class="c1"># KILLED = the test catches it</span>
+</code></pre></div>
+<p>The reviewer says, in the review, that each changed design input's text was
+read beside its test (the pull-request template asks). Keep a fix pull request
+to one bounded context: no reviewer reads every input against its test inside
+a change that spans them all.</p>
+<p>The merged, reviewed PR completes the approval record.</p>
+<p><strong>Merge with a merge commit — never squash or rebase.</strong> A squash folds the
+record-first commits (design document, then implementation) into one, so the
+history no longer shows the design was approved before the code; a rebase
+rewrites the commits that were reviewed. Configure the repository to allow
+merge commits only, as <code>examples/github-document-control/</code> does
+(<code>allow_squash_merge: false</code>, <code>allow_rebase_merge: false</code>).</p>
+<h2 id="before-a-release-the-chain-review">Before a release — the chain review<a class="headerlink" href="#before-a-release-the-chain-review" title="Permanent link">&para;</a></h2>
+<p>No gate judges whether a test proves its design input; a person does. Before
+each release, read every design input with its whole chain — its user needs,
+its design prose, its tagged test and that test's verification steps, its
+component labels and its last run — and record what was found and decided as a
+design review, one input at a time (Design Review 58 is the first). Changes it
+asks for go through this loop like any other.</p>
+<h2 id="a-worked-example-from-this-repositorys-own-history">A worked example — from this repository's own history<a class="headerlink" href="#a-worked-example-from-this-repositorys-own-history" title="Permanent link">&para;</a></h2>
+<p><code>rdm story new-input</code> itself was added exactly this way; every artifact is in
+the repo to inspect:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happened</th>
+<th>Where to look</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>UN-010 registered ("a contributor is guided to author a fully traced design input")</td>
+<td><code>verification_and_validation_plan.md</code> frontmatter</td>
+</tr>
+<tr>
+<td>2</td>
+<td>DI-22 declared in the scaffolding context (since Design Review 30, <code>specification</code>), its text requiring six behaviours</td>
+<td><code>dhf/documents/design/specification.md</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Design docs committed <em>before</em> any code</td>
+<td>commit <code>Approve design record: UN-010, DI-22, …</code></td>
+</tr>
+<tr>
+<td>4–5</td>
+<td>Implementation + tagged test</td>
+<td><code>rdm/gates/new_input.py</code> (since Design Review 32, <code>rdm/specification/new_input.py</code>), <code>tests/acceptance/test_scaffolding.py</code></td>
+</tr>
+<tr>
+<td>6–7</td>
+<td>All gates green, pushed, PR reviewed</td>
+<td>CI run on the PR</td>
+</tr>
+</tbody>
+</table>
+<p>History: at the time, an independent review step (the since-retired
+faithfulness gate, Design Review 4) found that the test passed with a
+one-context fixture even though a mutant ignoring <code>--context</code> survived; the
+author strengthened the fixture to two contexts (commit <code>Strengthen the DI-22
+test …</code>). That kind of gap — a passing test that does not prove what its DI requires — is
+now the PR reviewer's to catch.</p>
+<h2 id="hard-rules">Hard rules<a class="headerlink" href="#hard-rules" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Because</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Never hand-edit the traceability matrix</td>
+<td>it is generated from executed results; edits would be fiction</td>
+</tr>
+<tr>
+<td>Never approve a PR you authored</td>
+<td>self-review over-rates; independence is the entire point of the PR review</td>
+</tr>
+<tr>
+<td>Design docs commit before implementation</td>
+<td>the commit is the approval; the hook and CI enforce the order</td>
+</tr>
+<tr>
+<td>Allure tags, steps and attachments go in acceptance tests only</td>
+<td>unit tests are not evidence of record; <code>tests/allure_scope_test.py</code> holds the line</td>
+</tr>
+<tr>
+<td>Code coverage stays with the unit tests, never in Allure</td>
+<td>acceptance evidence proves design inputs end to end; which lines ran is a unit-level measure</td>
+</tr>
+<tr>
+<td>Merge PRs with a merge commit, never squash or rebase</td>
+<td>a squash erases the design-before-code order the record-first commits prove</td>
+</tr>
+<tr>
+<td>A DI is declared once; other contexts use <code>realises</code></td>
+<td>duplicated requirements drift apart</td>
+</tr>
+<tr>
+<td>A test checks only what its DI's text states</td>
+<td>a step the text does not state is a requirement nobody approved</td>
+</tr>
+<tr>
+<td>One bounded context per fix PR</td>
+<td>a reviewer cannot read every input against its test in one diff</td>
+</tr>
+<tr>
+<td>A chain review, recorded as a design review, before each release</td>
+<td>no gate judges whether a test proves its input</td>
+</tr>
+<tr>
+<td><code>dhf/allure-results/</code>, <code>dhf/data/</code> are generated, gitignored</td>
+<td>evidence is produced by running, not by committing</td>
+</tr>
+<tr>
+<td>Backlog/issues/plans are never cited as evidence</td>
+<td>plan-vs-record boundary; the record is SDD + Allure + git</td>
+</tr>
+<tr>
+<td>Backlog task files change only via the <code>backlog</code> CLI</td>
+<td>see <code>AGENTS.md</code></td>
+</tr>
+<tr>
+<td><code>RDM_SKIP_DESIGN_GATE=1</code> is for emergencies, and CI still runs everything</td>
+<td>the bypass is loud and local-only</td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-a-gate-fails">When a gate fails<a class="headerlink" href="#when-a-gate-fails" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Failure message (abridged)</th>
+<th>It means</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>design-gate: <em>unresolved placeholders</em></td>
+<td><code>TODO</code>/<code>ENDTODO</code> left in a design doc</td>
+<td>finish the doc</td>
+</tr>
+<tr>
+<td>design-gate: <em>uncommitted changes</em></td>
+<td>a design doc is edited but not committed</td>
+<td>commit it (that commit is the approval)</td>
+</tr>
+<tr>
+<td>pre-commit: <em>commit blocked</em></td>
+<td>implementation staged while the design gate fails</td>
+<td>fix/commit the design record first</td>
+</tr>
+<tr>
+<td>pre-commit: <em>'rdm' not on PATH … blocked</em></td>
+<td>gate runner missing</td>
+<td><code>uv sync --all-extras</code> (elsewhere: <code>uv tool install "rdm @ git+https://github.com/scope-impact/rdm"</code>; PyPI's <code>rdm</code> is another project)</td>
+</tr>
+<tr>
+<td>release-gate: <em>DI-n untested</em></td>
+<td>no executed result for the tag</td>
+<td>write/tag the test, re-run the acceptance suite</td>
+</tr>
+<tr>
+<td>release-gate: <em>DI-n failed</em></td>
+<td>the tagged test failed</td>
+<td>fix the implementation (or the test)</td>
+</tr>
+<tr>
+<td>release-gate: <em>user need addressed by no design input</em></td>
+<td>a UN nothing traces to</td>
+<td>add a DI with <code>traces_to</code>, or remove the need</td>
+</tr>
+<tr>
+<td>release-gate: <em>no risk_policy is declared</em></td>
+<td>the register has risks but no acceptability criteria</td>
+<td>declare a <code>risk_policy</code> (see <code>docs/use/risk-register.md</code>); an agent's draft is <code>status: proposed</code></td>
+</tr>
+<tr>
+<td>release-gate: <em>risk … residual not evaluated</em></td>
+<td>a controlling design input has no passing test</td>
+<td>make that DI's tagged test pass</td>
+</tr>
+<tr>
+<td>release-gate: <em>risk … needs an acceptance</em> / <em>unacceptable residual</em></td>
+<td>the policy does not accept the residual as it stands</td>
+<td>add or strengthen a control (a DI), or — where the policy says <code>justify</code> — record who accepted it and why</td>
+</tr>
+<tr>
+<td>release-gate: <em>risk is proposed</em> (warning)</td>
+<td>no person has approved that rating</td>
+<td>a maintainer reviews it and sets <code>status: approved</code></td>
+</tr>
+<tr>
+<td><em>orphan tag</em> (warning)</td>
+<td><code>@allure.story</code> id matches no declared DI</td>
+<td>declare the DI or fix the tag</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Overview">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Overview
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../traceability-map/" class="md-footer__link md-footer__link--next" aria-label="Next: Traceability (from the graph)">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Traceability (from the graph)
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer", "navigation.top", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/traceability-map.js"></script>
+      
+    
+  </body>
+</html>

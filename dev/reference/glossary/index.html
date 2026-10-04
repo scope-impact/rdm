@@ -1,0 +1,2773 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The design record of regulated software as Markdown and tests in git — gated, rendered into regulatory documents, and built into a read-only graph for people and agents.">
+      
+      
+      
+        <link rel="canonical" href="https://scope-impact.github.io/rdm/dev/reference/glossary/">
+      
+      
+        <link rel="prev" href="../api/">
+      
+      
+        <link rel="next" href="../worked-example/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Glossary - RDM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito+Sans:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Nunito Sans";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/rdm-theme.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/traceability-map.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="rdm" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#rdm" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="RDM" class="md-header__button md-logo" aria-label="RDM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RDM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Glossary
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/scope-impact/rdm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scope-impact/rdm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+    
+  
+  Docs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../dhf/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Design history (RDM on RDM)
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="RDM" class="md-nav__button md-logo" aria-label="RDM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    RDM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/scope-impact/rdm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scope-impact/rdm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../.." class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docs
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/intended-use/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. What RDM is for
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_3" id="__nav_1_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. How it works
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2. How it works
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/how-rdm-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How it works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/plan-vs-record/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan vs. record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. Limits and risks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. Install
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../use/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    6. Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_7" id="__nav_1_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    6. Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/changing-the-record/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing the record
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/design-inputs-and-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design inputs and tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/risk-register/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/validation-evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/gates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The gates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/gap-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gap analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/ci/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The gates in your CI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The record as a graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/graph-explorer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browsing in Graph Explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For agents (MCP)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../use/documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring and rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    7. Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_9" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    8. Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_9" id="__nav_1_9_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    8. Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#needs-and-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Needs and requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-record-and-its-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The record and its gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-and-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification and validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compliance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#publishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publishing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#knowledge-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#domain-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain model
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../worked-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worked example: Part 11
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../revision-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    9. Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../dhf/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design history (RDM on RDM)
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design history (RDM on RDM)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/AGENT_WORKFLOW/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changing RDM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../traceability-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Traceability (from the graph)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/verification_and_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V plan and user needs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/compliance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compliance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge graph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publishing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/risk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/specification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design/test_evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test evidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/risk/policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/risk/tool_risks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/design_review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design review
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/document_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Document control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/documents/user_manual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Instructions for use (IFU)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dhf/decisions/adr-0001-bounded-context-user-needs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001: user needs across bounded contexts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#needs-and-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Needs and requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-record-and-its-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The record and its gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-and-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification and validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compliance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#publishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publishing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#knowledge-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#domain-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain model
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="rdm">RDM<a class="headerlink" href="#rdm" title="Permanent link">&para;</a></h1>
+<p>RDM keeps the design record of regulated health software as Markdown and tests
+in git: user needs, the design inputs that meet them, the risks and the controls
+that reduce them, and the evidence that each was verified. This glossary is the
+language of that record, aligned with the requirements and risk-analysis skills.</p>
+<h2 id="needs-and-requirements">Needs and requirements<a class="headerlink" href="#needs-and-requirements" title="Permanent link">&para;</a></h2>
+<p><strong>User need</strong>:
+What an intended user must be able to do, and the result they need, stated
+without reference to a solution. It is validated, not verified.
+<em>Avoid</em>: user story, feature, epic</p>
+<p><strong>Design input</strong>:
+A uniquely identified <code>shall</code> requirement on the system or one of its
+subsystems, owned by one bounded context and traced to the user need it refines.
+It is one acceptance criterion, accepted or not as a whole; what must be
+accepted separately is a separate design input. One <code>shall</code>: behaviours that
+could be accepted apart are never joined with "and".
+<em>Avoid</em>: spec item, story, ticket, the test, sub-criterion</p>
+<p><strong>Baseline acceptance criterion</strong>:
+A design input that follows from a user need alone and mentions no risk.
+<em>Avoid</em>: functional requirement, happy path</p>
+<p><strong>Risk-based acceptance criterion</strong>:
+A design input allocated as a risk control. It counts as met only when it is
+verified and the residual risk of the risk it controls is acceptable.
+<em>Avoid</em>: safety requirement, mitigation requirement</p>
+<p><strong>Bounded context</strong>:
+The unit of design that owns design inputs and the components that implement
+them; what the requirements skill calls a subsystem. Exactly one design
+document describes each. In the architecture it is a boundary around
+components, which may sit in more than one container. It is drawn where the
+language changes, not where the workflow does: the stages of a design input's
+lifecycle are one context, and a context is named for its domain, never for
+what its code does or the technology it uses.
+<em>Avoid</em>: module, component, service, container, stage, layer</p>
+<p><strong>Realising context</strong>:
+A bounded context that implements part of a design input another context owns.
+It does not own the input and is not where the input is declared.
+<em>Avoid</em>: co-owner, contributor</p>
+<p><strong>Task acceptance criterion</strong>:
+A checklist item on a planning task. Planning, never the record: it is not a
+design input and nothing verifies it.
+<em>Avoid</em>: acceptance criterion (unqualified), requirement</p>
+<h2 id="the-record-and-its-gates">The record and its gates<a class="headerlink" href="#the-record-and-its-gates" title="Permanent link">&para;</a></h2>
+<p><strong>Design record</strong>:
+Everything authored under control: user needs, design inputs, design
+documents, the design review, the risk register, the architecture workspace and
+the tagged tests, in git. It is the only source of truth, and only a reviewed
+pull request changes it.
+<em>Avoid</em>: database, docs, spec</p>
+<p><strong>Design history file</strong>:
+The design record as a regulator receives it: the documents rendered from the
+record, with their evidence. Abbreviated DHF. The <code>dhf/</code> directory <code>rdm adopt</code>
+and <code>rdm init</code> lay down holds the record those documents are rendered from;
+it is named for what it becomes.
+<em>Avoid</em>: the record (for the rendered output)</p>
+<p><strong>Frontmatter</strong>:
+The YAML block between <code>---</code> lines at the top of a Markdown document: its id,
+revision and title, and the record's declarations (user needs, design inputs,
+risks). The gates read the record from it.
+<em>Avoid</em>: header, metadata block</p>
+<p><strong>Design document</strong>:
+The one controlled document per bounded context that declares the design
+inputs it owns and describes how the context meets them.
+<em>Avoid</em>: spec, SDD (unqualified)</p>
+<p><strong>Design output</strong>:
+The architecture that meets a bounded context's design inputs: its components
+and their relationships in the C4 model (the component view), and a dynamic
+view where the order of interactions matters. It names components, never
+source files or functions: the architecture workspace maps each component to
+its code.
+<em>Avoid</em>: implementation notes, module list, code walkthrough</p>
+<p><strong>Controlled document</strong>:
+A document with an id and a revision whose every change goes through review.
+<em>Avoid</em>: doc, file</p>
+<p><strong>Approved</strong>:
+Said of a design document or design review that is committed and merged
+through a reviewed pull request. Git is the approval record; no sign-off table
+repeats it.
+<em>Avoid</em>: signed off, accepted</p>
+<p><strong>Independent review</strong>:
+Approval of a pull request by someone other than its author: the record's
+independent verification. An agent never gives it.
+<em>Avoid</em>: code review (unqualified), self-review</p>
+<p><strong>Chain review</strong>:
+Reading one design input together with its user needs, its design prose, its
+tagged test and verification steps, its component labels and its last run, and
+deciding whether the test proves the text; recorded as a design review, input
+by input, before each release. A person's judgement, never a gate.
+<em>Avoid</em>: faithfulness gate, audit, test review</p>
+<p><strong>Code coverage</strong>:
+How much of a unit's code its unit tests run: a unit-test measure. Never
+acceptance evidence, never carried in Allure, never in the record's
+traceability; what an acceptance test exercises is the components it names
+or reaches. Not checklist coverage (the clauses the documents reference).
+<em>Avoid</em>: coverage (unqualified), test coverage (for the design inputs a test verifies)</p>
+<p><strong>Design gate</strong>:
+The check that blocks implementation until the design record is complete and
+approved, and every id in it is declared once.
+<em>Avoid</em>: pre-commit check, lint</p>
+<p><strong>Release gate</strong>:
+The check that blocks a release until the design gate passes, every design
+input is verified, every user need is refined by a design input, and the risk
+rules raise no blocking finding. It warns, never blocks, on a user need with no
+approved validation record. Whether the runs are release-grade evidence is
+shown by the verification report and the knowledge graph, not decided by the
+gate.
+<em>Avoid</em>: CI, green build</p>
+<p><strong>Design specification</strong>:
+The core bounded context: user needs, design inputs, tagged tests, the design
+review, and the design gate that guards them. It depends on no other context;
+every other context conforms to its ids.
+<em>Avoid</em>: design controls (for this context; the term names the regulatory
+process RDM as a whole implements), requirements module</p>
+<p><strong>Release</strong>:
+The bounded context that decides whether a release may go ahead: the release
+gate over verified status, risk and validation. It reads the specification,
+test evidence and risk; none of them reads it. The evidence a release keeps
+is published by publishing.
+<em>Avoid</em>: deployment, CI (for the context)</p>
+<p><strong>Shared kernel</strong>:
+The helpers every bounded context may use and that use none: YAML and files,
+ids, git, frontmatter, the reconcile helpers. Not a context: it has no
+language of its own and owns no design input.
+<em>Avoid</em>: utils, common, core (the core is the design specification)</p>
+<p><strong>Composition root</strong>:
+The one place that wires the command line to every context (<code>rdm/main.py</code>).
+It is in no context, so it may import any.
+<em>Avoid</em>: main module, glue</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<p><strong>Software system</strong>:
+The product in scope, or a significant external system it depends on; the
+top level of the C4 model.
+<em>Avoid</em>: application, platform, project</p>
+<p><strong>Container</strong>:
+Something that runs or stores data within a software system: an application,
+a command-line process, a data store, a queue. Not a Docker image unless the
+image is the thing that runs.
+<em>Avoid</em>: service, module, deployment, image</p>
+<p><strong>Component</strong>:
+A logical building block inside exactly one container, owned by one bounded
+context and naming the code that implements it.
+<em>Avoid</em>: module, class, bounded context, service</p>
+<p><strong>Person</strong>:
+A human role that uses the software system.
+<em>Avoid</em>: user (unqualified), actor, account</p>
+<p><strong>Relationship</strong>:
+A directed dependency between two architecture elements, labelled with what
+the source does to the target.
+<em>Avoid</em>: link, connection, arrow</p>
+<p><strong>Architecture workspace</strong>:
+The one Structurizr workspace (<code>dhf/c4/workspace.dsl</code>) that holds the C4 model
+and its views. It is written by people and is the source of every view.
+<em>Avoid</em>: diagram (for the model), architecture file</p>
+<p><strong>Architecture view</strong>:
+One view of the architecture workspace at one level: system context,
+container or component. Its image is drawn from the workspace and stamped with
+it; it is never edited.
+<em>Avoid</em>: diagram (for the model), picture</p>
+<p><strong>Dynamic view</strong>:
+An architecture view of one important runtime scenario: the same elements,
+their interactions numbered in order, each step along a relationship the model
+declares. Added only when the order matters and a component view cannot show
+it, never one per feature.
+<em>Avoid</em>: sequence diagram (it is drawn as numbered steps, not lifelines), flow</p>
+<p><strong>Architecture</strong>:
+The bounded context that owns the architecture workspace, its views, and the
+conformance of the code and the record to it. The system architecture document
+describes the system; this context keeps its C4 model.
+<em>Avoid</em>: c4 (for the context), diagrams</p>
+<h2 id="verification-and-validation">Verification and validation<a class="headerlink" href="#verification-and-validation" title="Permanent link">&para;</a></h2>
+<p><strong>Test</strong>:
+An automated check tagged with the design input it verifies. It verifies the
+acceptance criterion; it is not the criterion.
+<em>Avoid</em>: acceptance criterion, scenario, spec</p>
+<p><strong>Verification step</strong>:
+One named check within a test, with its own result; a test is the ordered set
+of its verification steps. It belongs to the test, never to the acceptance
+criterion: a failed step fails the test, and the design input stays one
+criterion however many steps check it.
+<em>Avoid</em>: acceptance criterion, clause, sub-criterion, assertion</p>
+<p><strong>Test run</strong>:
+One execution of a test, at one commit, by one executor.
+<em>Avoid</em>: build, job, test case</p>
+<p><strong>Executor</strong>:
+Who or what ran a test run: a CI job or a person's machine, recorded with the
+run.
+<em>Avoid</em>: runner, agent (for the executor)</p>
+<p><strong>Test evidence</strong>:
+The bounded context that takes test results in the formats tools write them
+(Allure, xunit) and translates them into test runs of the record's tests,
+labelled with the record at test time. The tools' own words (result, label,
+container) stop at its boundary.
+<em>Avoid</em>: test results (for the context), reports</p>
+<p><strong>Mutation probe</strong>:
+A reviewer's check that one test fails when the behaviour it verifies is
+deliberately broken: evidence that the test proves its design input.
+<em>Avoid</em>: mutation testing (for a whole suite)</p>
+<p><strong>Verified</strong>:
+Said of a design input with a passing run of a test tagged with it and no
+failed one. It shows the requirement is met, not that the test proves it.
+<em>Avoid</em>: validated, tested, done</p>
+<p><strong>Release-grade evidence</strong>:
+Verification in which every design input is verified, no run failed, and every
+run tested the record's commit with no uncommitted changes.
+<em>Avoid</em>: green build, passing CI</p>
+<p><strong>Validated</strong>:
+Said of a user need whose intended users, in its intended use, were shown to
+reach its result.
+<em>Avoid</em>: verified, accepted</p>
+<p><strong>Traceability matrix</strong>:
+The table from user need to design input to test to result, generated from the
+record and the test runs. It is never edited.
+<em>Avoid</em>: trace table, RTM (unqualified)</p>
+<p><strong>Evidence bundle</strong>:
+A release's verification data, traceability matrix and executed results with
+every attachment they reference, in one archive with a manifest.
+<em>Avoid</em>: artifact, report</p>
+<h2 id="compliance">Compliance<a class="headerlink" href="#compliance" title="Permanent link">&para;</a></h2>
+<p><strong>Compliance</strong>:
+The bounded context that holds standards as checklists and checks the
+controlled documents against them.
+<em>Avoid</em>: gap analysis (for the context; it is the activity), audit</p>
+<p><strong>Checklist</strong>:
+A selection of a standard's clauses that a set of documents must reference,
+composable by including other checklists.
+<em>Avoid</em>: standard (for the selection), template</p>
+<p><strong>Checklist clause</strong>:
+One requirement of a standard, as a checklist lists it, named by its key. A
+controlled document references it; nothing in a test does.
+<em>Avoid</em>: clause (unqualified), requirement, criterion</p>
+<p><strong>Gap</strong>:
+A checklist clause that no controlled document references. Coverage is the
+share of a checklist's clauses that are referenced.
+<em>Avoid</em>: finding, missing item (unqualified)</p>
+<p><strong>Checklist reference</strong>:
+A checklist clause's key written in a controlled document inside <code>[[ … ]]</code>
+(<code>[[62304:5.1.1]]</code>), saying where the document meets the clause. Only text
+inside the brackets counts; a bare mention does not.
+<em>Avoid</em>: tag (a tag names a design input on a test), citation</p>
+<h2 id="risk">Risk<a class="headerlink" href="#risk" title="Permanent link">&para;</a></h2>
+<p><strong>Risk analysis</strong>:
+Identifying the hazard, the sequence of events, the hazardous situation, the
+harm, and the estimate of its probability and severity.
+<em>Avoid</em>: risk assessment (for this step alone)</p>
+<p><strong>Risk evaluation</strong>:
+Comparing a risk estimate with the risk acceptability criteria, giving
+acceptable or unacceptable. Without approved criteria it is blocked, not
+guessed.
+<em>Avoid</em>: risk scoring, risk rating</p>
+<p><strong>Risk acceptability criteria</strong>:
+The project's own severities, probabilities, levels and the acceptability of
+each level, approved before any risk is evaluated against them. Not a universal
+matrix.
+<em>Avoid</em>: standard risk matrix, ISO matrix</p>
+<p><strong>Hazardous situation</strong>:
+A circumstance in which people, property or the environment are exposed to one
+or more hazards. Not the harm, and not the cause.
+<em>Avoid</em>: hazard, threat, scenario</p>
+<p><strong>Harm</strong>:
+The injury or damage that a hazardous situation can lead to. Defined once and
+referenced, so its severity cannot diverge between the risks that share it.
+<em>Avoid</em>: impact, consequence</p>
+<p><strong>Harm pathway</strong>:
+One pair of a hazardous situation and a harm, carrying its own probability.
+One situation can have several, each with its own severity and probability.
+<em>Avoid</em>: risk line, risk row</p>
+<p><strong>STRIDE threat</strong>:
+A security threat classified as spoofing, tampering, repudiation, information
+disclosure, denial of service or elevation of privilege. It complements safety
+analysis and may link to a safety risk; it does not replace it.
+<em>Avoid</em>: vulnerability, attack (for the classified threat)</p>
+<p><strong>Risk control</strong>:
+Something done to reduce a risk, allocated to a design input that implements it.
+Defined once and referenced from every harm pathway it bears on.
+<em>Avoid</em>: measure, mitigation, safeguard</p>
+<p><strong>Control effect</strong>:
+What one risk control does to one harm pathway's probability, whether relative
+or absolute, and where it sits in the order controls are applied.
+<em>Avoid</em>: measure effect, reduction, impact</p>
+<p><strong>Effective</strong>:
+Said of a risk control that is verified and whose risk has been evaluated again
+with an acceptable residual. A passing test alone makes a control verified, not
+effective. The record shows both facts; judging that the control does what it
+is meant to stays a person's.
+<em>Avoid</em>: controlled, mitigated, done</p>
+<p><strong>Initial risk / residual risk</strong>:
+The same assessment at two stages: before any risk control, and after the
+applied controls fold together. Stages are rows, not a before-and-after pair of
+columns.
+<em>Avoid</em>: gross risk, net risk, pre/post mitigation</p>
+<p><strong>Proposal</strong>:
+A rating, a control, an acceptability criterion or a verification plan that no
+person has approved yet. It is shown as a proposal until someone approves it.
+<em>Avoid</em>: draft, assumption, default</p>
+<h2 id="publishing">Publishing<a class="headerlink" href="#publishing" title="Permanent link">&para;</a></h2>
+<p><strong>Publishing</strong>:
+The bounded context that renders the design record into controlled documents:
+templates filled with data generated from the record, then Markdown, PDF and
+DOCX. It reads the record; it never changes it.
+<em>Avoid</em>: rendering (for the context), export</p>
+<p><strong>Template</strong>:
+A controlled document's source, with placeholders that generated data fills.
+The rendered document is output, not source.
+<em>Avoid</em>: form, the document (for the source)</p>
+<p><strong>Data file</strong>:
+A YAML file whose content a template renders, named in the template by the
+file's name without its extension (<code>data/device.yml</code> is <code>device</code>).
+<em>Avoid</em>: config (a render configuration names the extensions, not data)</p>
+<p><strong>Audit note</strong>:
+Any <code>[[ … ]]</code> text in a template, checklist references among them: kept in
+the auditor's copy of a rendered document, removed from the engineers' copy
+by the audit-note extension.
+<em>Avoid</em>: comment, annotation</p>
+<p><strong>Reference document</strong>:
+A Word file whose styles, header and footer Pandoc gives every rendered Word
+document.
+<em>Avoid</em>: Word template (it is not a template of the record)</p>
+<p><strong>Device master record index</strong>:
+The generated list of controlled documents (id, title, path, revision) a DMR
+document renders. Abbreviated DMR index.
+<em>Avoid</em>: document list, register (the risk register is another thing)</p>
+<p><strong>Instructions for use (IFU)</strong>:
+The product's instructions for anyone who uses it; in plain words, its user
+manual (RDM's is its documentation site). A design output, listed page by page
+by a controlled document of kind <code>manual</code>, so the DMR index holds it. Its
+pages are projected into the knowledge graph with the design inputs they name
+and the labels of the test examples they show. What it must teach is stated
+as design inputs.
+<em>Avoid</em>: docs (unqualified), help</p>
+<h2 id="knowledge-graph">Knowledge graph<a class="headerlink" href="#knowledge-graph" title="Permanent link">&para;</a></h2>
+<p><strong>Knowledge graph</strong>:
+The design record, with its test runs, history, risks, checklists and
+architecture, projected into RDF with RDM's vocabulary, rules and derived
+relations, for people and agents to query. Read-only and rebuilt from the
+record: never edited, never the source of a fact. <code>graph</code> names it in commands
+and code.
+<em>Avoid</em>: database, knowledge base, graph model, the record (for the graph)</p>
+<p><strong>Projection</strong>:
+Turning one source of the record into facts of the knowledge graph, one named
+graph per source.
+<em>Avoid</em>: import, sync, export</p>
+<p><strong>Vocabulary</strong>:
+The classes and properties the knowledge graph uses: the published language
+that queries and agents rely on.
+<em>Avoid</em>: schema (for the vocabulary), data model</p>
+<p><strong>Gate rule</strong>:
+A shape over the knowledge graph. A violation blocks a release; a warning only
+informs the reviewer.
+<em>Avoid</em>: lint, constraint (unqualified)</p>
+<p><strong>Derived relation</strong>:
+A fact a rule infers, kept apart from what the record states and never stated
+by it.
+<em>Avoid</em>: computed field, cache</p>
+<h2 id="domain-model">Domain model<a class="headerlink" href="#domain-model" title="Permanent link">&para;</a></h2>
+<p>The tactical terms each design document's <em>Commands and events</em> use, after
+the PensionBee DDD workshop: an actor issues a command, resulting in one of
+its events, which affects an entity.</p>
+<p><strong>Command</strong>:
+An intent to change something or to reach a verdict, issued by an actor:
+declare a design input, commit the design record, decide a release. A command
+a user types (<code>rdm story release-gate</code>) is an interface, named only where a
+reviewer needs it.
+<em>Avoid</em>: action, request, function</p>
+<p><strong>Domain event</strong>:
+A fact a command produced, named in the past tense: <em>Design Input Declared</em>,
+<em>Release Permitted</em>. A <strong>success event</strong> is the command's intended outcome; a
+<strong>fail event</strong> names the business rule that refused it, after a slash:
+<em>Release Blocked / Input Untested</em>. A <strong>warning</strong> names its rule the same way,
+with <em>Warned</em> before the slash (<em>Release Warned / Orphan Tag</em>), and never
+fails a command. A gate concludes every event its rules
+produce, not the first: a verdict such as <em>Release Permitted</em> is a conclusion
+over all of them, and a warning does not withhold it.
+<em>Avoid</em>: message, log line, error (for a fail event), notification</p>
+<p><strong>Business rule</strong>:
+What a command checks before its success event may happen; each one broken is
+named by a fail event. The rules of a gate are its checks.
+<em>Avoid</em>: invariant (in prose), validation, guard</p>
+<p><strong>Actor</strong>:
+Whoever issues a command: a contributor (a person or an agent), a reviewer,
+CI. A command with no actor is a reaction's.
+<em>Avoid</em>: user (unqualified), role</p>
+<p><strong>Entity</strong>:
+A thing of the domain with an id and a lifecycle: a user need (UN-nnn), a
+design input (DI-n), a risk, a design document, a test result. An
+<strong>aggregate</strong> is the entity whose rules must hold as one: a design document
+and the design inputs it owns, the risk register and its risk policy, and
+the record as a whole for the rules that cross documents (an id declared
+once, a design input never restated).
+<em>Avoid</em>: object, record (for one entity), model</p>
+<p><strong>Design input lifecycle</strong>:
+<em>Declared</em> (in an uncommitted design document) → <em>approved</em> (committed, and
+merged through a reviewed pull request) → <em>verified</em> (a passing tagged test)
+→ <em>released</em> (the release gate permits the commit); and amended or retired
+from any stage. An edit to its design document re-opens approval until the
+edit is approved. Stages of one design input, not bounded contexts.
+<em>Avoid</em>: phase, status (unqualified), draft, done, workflow context</p>
+<p><strong>Reaction</strong>:
+"Whenever this event, then that command", with no actor of its own: whenever
+a design input is declared, a stub test is written; whenever a commit is made,
+the design gate runs (the hook); whenever a branch is pushed, the gates run
+(CI).
+<em>Avoid</em>: policy (RDM's only policy is the risk policy), trigger, handler</p>
+<p><strong>Read model</strong>:
+A view built from events and the record for someone to read, never changed
+directly: the traceability matrix, the verification data, the verification
+report, the knowledge graph. Publishing and the knowledge graph hold only
+read models.
+<em>Avoid</em>: report (unqualified), dashboard, cache</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../api/" class="md-footer__link md-footer__link--prev" aria-label="Previous: API">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                API
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../worked-example/" class="md-footer__link md-footer__link--next" aria-label="Next: Worked example: Part 11">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Worked example: Part 11
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer", "navigation.top", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/traceability-map.js"></script>
+      
+    
+  </body>
+</html>
