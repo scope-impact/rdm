@@ -3,6 +3,9 @@
 <!-- --8<-- [start:history] -->
 ## Unreleased
 
+- **Fixed: the versioned docs go live** (Design Review 72): the docs workflow
+  uploads the published versions as the Pages site after each publish; no
+  Pages settings change is needed.
 - **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
   one manual in IFU order (cover, intended use, how RDM works, safety and
   limitations with each residual risk, installation, getting started,

@@ -116,8 +116,8 @@ jobs:
         run: uv run --extra docs mkdocs build --strict
 
   # One copy of the docs per release tag, and the development version from main
-  # (DI-82): mike keeps every published version on the gh-pages branch, and the
-  # repository's Pages site serves that branch.
+  # (DI-82): mike keeps every published version on the gh-pages branch, and this
+  # job uploads that branch as the Pages site (Design Review 72).
   deploy:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: build
@@ -125,10 +125,15 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write       # mike pushes the built version to gh-pages
+      pages: write          # deploy the published versions to GitHub Pages
+      id-token: write       # verify the deployment originates from this workflow
     # One deployment at a time; never cancel one in progress.
     concurrency:
       group: pages
       cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     env:
       RDM_DHF_PDFS: dhf-pdfs
       RDM_DOCS_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
@@ -160,3 +165,15 @@ jobs:
             uv run --extra docs mike deploy --push --update-aliases "$RDM_DOCS_VERSION" latest
             uv run --extra docs mike set-default --push latest
           fi
+      - name: Every published version, as the site
+        run: |
+          git fetch origin gh-pages --depth=1
+          mkdir -p pages && git archive origin/gh-pages | tar -x -C pages
+          test -f pages/versions.json
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
