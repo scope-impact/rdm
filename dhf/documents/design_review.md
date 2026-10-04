@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 81
+revision: 82
 title: Design Review — RDM
 ---
 
@@ -2372,6 +2372,23 @@ developers and the people who review their pull requests.
 - **Publishing moves to a `gh-pages` branch** (mike's store of versions).
   The repository's Pages source must be switched to that branch once, by a
   maintainer.
+
+# Design Review 72 — Serve the published versions without a settings change
+
+**Scope reviewed:** the first publish after Design Review 71. `mike` wrote
+the development version to `gh-pages`, but the site still showed the last
+upload: Pages serves the workflow's upload, not a branch, and switching it
+was a manual step nobody had taken.
+
+**Disposition:** Approved.
+
+- **The deploy job uploads the `gh-pages` branch's contents as the Pages
+  site,** right after `mike` updates it. Every published version, the
+  selector's `versions.json` and the default redirect go live on each
+  publish, with the repository's Pages setting and its `github-pages`
+  environment unchanged. DI-82's text stands.
+- **Superseded:** Design Review 71's note that a maintainer must switch the
+  Pages source to the branch.
 
 # Approval
 
