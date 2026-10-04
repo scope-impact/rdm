@@ -70,6 +70,31 @@ The component is 28 MB.
 7. **Native speed-ups dropped.** PyYAML and MarkupSafe ship compiled speed-ups that cannot be bundled. Both fall back
    to pure Python, with no difference in results. GitPython is not needed at all: the core never imports it.
 
+## Components to build on (checked 2026-10-04)
+
+For each thing that stays native (finding 5), an existing wasm build that could replace it. "Probed" means a small
+throwaway build ran under Wasmtime 49 on **WASI 0.2**, not 0.3. Running a 0.2 helper beside this 0.3 component is
+untested.
+
+| Need | Best candidate | Kind | Status |
+|---|---|---|---|
+| Git reads (finding 1) | [dulwich](https://pypi.org/project/dulwich/) 1.2.17, pure-Python git | Bundled into the same component | Probed: HEAD, log, tags and status matched `git`. Needs an `mmap` stub, because CPython on WASI has none. [gitoxide](https://github.com/GitoxideLabs/gitoxide) builds for wasip2 but cannot read objects (its `memmap2` is a stub on WASI). |
+| RDF, SPARQL, SHACL (graph extra) | [rdflib](https://pypi.org/project/rdflib/) 7.6 + pyshacl 0.40 + owlrl, all pure Python | Bundled | Probed: parse, SELECT, SHACL. Plugins load lazily, so import them up front (as in finding 4). Upgrade path: [Oxigraph](https://github.com/oxigraph/oxigraph)'s Rust core built for wasip2 with no RocksDB, wrapped in WIT (probed: 4.4 MB, query correct). |
+| PDF report | [typst](https://github.com/typst/typst) 0.15.1 through [typst-as-lib](https://crates.io/crates/typst-as-lib), built for `wasm32-wasip2` | Separate Rust component | Probed: valid PDF in about 10 ms. 48 MB with fonts, smaller with fewer fonts. Needs a WIT wrapper such as `compile(source, files) -> pdf`. |
+| Markdown to DOCX/Typst | Official [pandoc.wasm](https://github.com/pandoc/pandoc-wasm) (Pandoc 3.9) | wasip1 module; becomes a 0.2 command with the stock adapter | Probed: md → docx and md → typst. No Lua filters. For PDF, pair it with Typst above. |
+| SPARQL endpoint, MCP | componentize-py's [`examples/http-p3`](https://github.com/bytecodealliance/componentize-py) (`wasi:http/service@0.3.0`) | Same toolchain | Not probed. Write the MCP JSON-RPC by hand: the `mcp` SDK needs pydantic-core, which is native. Alternative host: [Wassette](https://github.com/microsoft/wassette), which turns WIT exports into MCP tools (early). |
+| Graphviz | [wasi-graphviz](https://github.com/pablormier/wasi-graphviz) 0.1.4 | wasip1 module with a C ABI | Rendered from the host. As a component its exports are lost, so it needs a WIT wrapper. Very new. |
+| Structurizr | None | Java | Stays native. Its CLI is [end of life](https://docs.structurizr.com/eol). |
+| Native wheels | None needed | n/a | PyYAML and MarkupSafe fall back to pure Python. [dicej/wasi-wheels](https://github.com/dicej/wasi-wheels) is unmaintained, and the WASIX index targets Wasmer, not WASI. |
+
+Order to try them in:
+1. dulwich in place of `git_facts.py`.
+2. rdflib/pyshacl for the graph, if its speed is acceptable.
+3. Typst and Pandoc as sibling components the host calls.
+
+Packaging and composing: [wkg](https://github.com/bytecodealliance/wasm-pkg-tools) (OCI and registries) and
+[wac](https://github.com/bytecodealliance/wac).
+
 ## What a real port would take
 
 - A design input and its tagged test: the gates run as a component, and their result matches the command line
