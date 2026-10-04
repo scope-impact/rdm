@@ -21,7 +21,7 @@ design_inputs:
     text: "RDM's user manual shall show each tagged-test example naming the C4 component it exercises by a component label."
     traces_to: [UN-018]
   - id: DI-80
-    text: "RDM's instructions for use shall be one manual whose controlled document lists its pages in reading order: a cover naming the product, the release it is for, and the manual's own id and revision; then intended use; how RDM works; safety and limitations; installation; getting started; operating instructions; troubleshooting; reference; and revision history."
+    text: "RDM's instructions for use shall be one manual whose controlled document lists its pages in reading order: a cover naming the product, the release it is for, and the manual's own id and revision; then what RDM is for (its intended use); how it works; limits and risks; install; quick start; guides (the operating instructions); troubleshooting; reference; and changelog (the revision history)."
     traces_to: [UN-018]
   - id: DI-81
     text: "RDM's instructions for use shall disclose each risk of RDM's risk register by its id, with what the user must do about its residual risk."

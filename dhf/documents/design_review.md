@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 79
+revision: 80
 title: Design Review — RDM
 ---
 
@@ -2335,6 +2335,25 @@ one document.
 - **IFU-001 revision 4:** *Changing the record* comes first in the operating
   instructions, before the page that details design inputs and tests.
 - **Not done here:** rendering the IFU as one PDF.
+
+# Design Review 70 — The IFU in a developer's words
+
+**Scope reviewed:** IFU-001 after Design Review 69, read by its users:
+developers and the people who review their pull requests.
+
+**Disposition:** Approved.
+
+- **DI-80 amended:** the chapters keep their place and purpose but take
+  the names developer documentation uses: *What RDM is for* (intended use),
+  *How it works*, *Limits and risks*, *Install*, *Quick start*, *Guides*
+  (operating instructions), *Troubleshooting*, *Reference*, *Changelog*
+  (revision history). The cover says it is RDM's documentation, and that
+  it is the controlled IFU-001.
+- **Plain words:** the opening chapters drop citations of standards and say
+  what to do instead. Standards stay where RDM checks against them (gap
+  analysis, the risk register, the worked example).
+- **Unchanged:** IFU-001 as the controlled document, its reading order, and
+  every residual risk disclosed with what the user must do (DI-81).
 
 # Approval
 
