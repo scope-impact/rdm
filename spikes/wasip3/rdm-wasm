@@ -11,7 +11,7 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORK="$HERE/.work"
-WASM="${RDM_WASM:-$WORK/rdm-core.wasm}"
+WASM="${RDM_WASM:-$WORK/rdm.wasm}"   # rdm-core composed with rdm-c4 (build.sh)
 DATA="${RDM_WASM_DATA:-$WORK/rdm-data}"   # build.sh copies RDM's package data here
 WASMTIME="${WASMTIME:-$WORK/wasmtime}"
 

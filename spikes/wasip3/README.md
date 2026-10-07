@@ -16,10 +16,11 @@ it. Making it part of RDM starts, as any change does, with a design review entry
 ## Run it
 
 ```bash
-spikes/wasip3/build.sh                    # pinned tools into .work/; builds rdm-core.wasm and rdm-test.wasm (~20 s)
+spikes/wasip3/build.sh                    # pinned tools into .work/; builds and composes the components (~30 s)
 spikes/wasip3/rdm-wasm story design-gate --dhf dhf     # from a repository's root, like rdm
 spikes/wasip3/compare.sh [REPO]           # each command natively and through rdm-wasm, compared
 spikes/wasip3/pytest/run.sh FILES...      # RDM's tests inside a component, Allure results out
+spikes/wasip3/c4-rs/check.sh              # rdm c4 draw on the example project, checked by RDM natively
 ```
 
 | Tool | Version | Why that one |
@@ -27,12 +28,15 @@ spikes/wasip3/pytest/run.sh FILES...      # RDM's tests inside a component, Allu
 | componentize-py | 0.25.1 (2026-09-11) | Its WIT files are `wasi:*@0.3.0` |
 | Wasmtime | 49.0.2 (2026-10-02) | WASI 0.3 on by default since 46 |
 | wasm-tools | 1.261.0 | Prints the component's imports |
+| wkg | 0.16.1 | Fetches the WASI WIT the package names; `wkg.lock` pins it |
+| wac | 0.12.0 | Composes the components |
+| wit-bindgen (Rust) | 0.62.0 | rdm-c4's export |
 | WASI spec | 0.3.0 (spec is at 0.3.1; 0.3.2 due 2026-10-13) | What componentize-py targets |
 
 `rdm-wasm` is the whole interface between host and component:
 
 ```
-host                                         component (rdm-core.wasm, 42 MB)
+host                                         component (rdm.wasm, 43 MB)
 -------------------------------------------  -----------------------------------------
 the current directory (a repository's root)  /          read and written, as rdm does
 .work/rdm-data (RDM's package data)          /2/rdm     where the bundled package looks
@@ -59,8 +63,62 @@ init (empty repository)                 0     0         -       -  yes   (50 fil
 On a clone with one design document edited and one added, all ten match too: the design gate fails (1) and the
 release gate and verify refuse (2), natively and in the component alike.
 
-`c4 draw`, `graph ...`, `story evidence-report` and `story mutation-probe` stop with RDM's own message (a tool not
-installed, the graph extra missing); they need programs or native code WASI cannot run.
+`graph ...`, `story evidence-report` and `story mutation-probe` stop with RDM's own message (the graph extra
+missing, a tool not installed); they need programs or native code WASI cannot run. `c4 draw` runs: see below.
+
+## The WIT package and the composed CLI
+
+`wit/` is one package, `rdm:component@0.1.0`, laid out as wasmCloud's docs suggest. Its WASI dependencies are
+fetched by `wkg` from the `wasi.dev` registry into `wit/deps/` (gitignored), with `wkg.lock` (committed) pinning
+each by digest.
+
+```
+wit/imports.wit        world imports    what any RDM component may be given: WASI 0.3, no sockets
+wit/c4.wit             interface c4     draw(dsl) -> result<drawing, string>
+wit/record-state.wit   interface record-state   the record's git state (designed, not wired yet)
+wit/world.wit          world core       the CLI: imports + c4, exports wasi:cli/run
+                       world tests      RDM's tests: imports, exports wasi:cli/run
+                       world draw       rdm-c4: exports c4
+                       world git        rdm-git: exports record-state (not built yet)
+```
+
+`build.sh` builds two components for `rdm c4 draw` and composes them:
+
+```
+rdm-core.wasm (componentize-py, world core) --import c4--+
+                                                         +--wac plug--> rdm.wasm --> wasi:cli/run
+rdm-c4.wasm   (Rust, structurizrx, world draw) --export c4+   (no rdm:component imports left)
+```
+
+`c4_component.py` puts the `c4` import where RDM's `draw()` runs Structurizr's CLI and Graphviz. Everything else
+is RDM's own code: the stamps, the files written, the removal of images of views the workspace no longer has. So
+`rdm c4 draw` runs in the sandbox with no Java and no Graphviz. `c4-rs/check.sh` draws the example project's
+workspace and checks the result with RDM natively:
+
+```
+rdm c4 draw (example project)   Drew 5 view(s), 0.3 s
+drawn files from the current workspace (the design gate's check)   true
+model RDM reads, against the Structurizr export the example commits
+  elements 20 = 20   relationships 25 = 25   views 5 = 5           identical
+```
+
+On RDM's own workspace it stops: `Structurizr exported no DOT for view D_specification_commit`. structurizrx does
+not draw dynamic views yet, and RDM refuses rather than writing a partial set: nothing is written. (The message
+still names Structurizr; it is RDM's.)
+
+Running a WASI 0.2 component (rdm-c4, from Rust's `wasm32-wasip2`) composed with a WASI 0.3 one (rdm-core) in one
+Wasmtime works. Both see the host's preopened directories, so rdm-c4 reads the workspace at the path rdm-core gives.
+
+What wasmCloud's guidance changed, and what it cost:
+- **Package layout and `wkg`.** One file per interface, an `imports` world, WASI from a registry pinned by
+  `wkg.lock`. This replaced copying componentize-py's vendored WIT.
+- **A shared `types` interface is an import.** wasmCloud's docs suggest a `types.wit`. An interface holding only
+  type aliases still becomes an import of every component that `use`s it, and nothing provides it: not Wasmtime,
+  not `wac`. So `repo-path` is defined in each interface that needs it.
+- **Name clash.** A function and a record may not share a name in one interface (`head`), which `wkg fetch` reported.
+  The record became `head-state`.
+- **Capabilities.** The core's world asks for no sockets, but the bundled CPython still imports WASI 0.2 sockets
+  (finding 3). WIT has no read-only filesystem import yet, so read-only is still the host's to enforce.
 
 ## What the spike found
 
@@ -78,7 +136,7 @@ installed, the graph extra missing); they need programs or native code WASI cann
    so `build.sh` copies them to `.work/rdm-data`, shipped beside the component, and `rdm-wasm` mounts them at
    `/2/rdm`. A real port would read data through `importlib.resources` from something bundled.
 3. **WASI 0.2 sockets are still imported.** The bundled CPython's wasi-libc speaks WASI 0.2.9, so the component
-   imports both 0.2.9 (`wasi:io`, `wasi:sockets/*` and others) and 0.3.0. The narrower world in `wit/gate.wit` drops
+   imports both 0.2.9 (`wasi:io`, `wasi:sockets/*` and others) and 0.3.0. The world in `wit/imports.wit` drops
    sockets from RDM's side only. "No network" is therefore the host's choice and cannot be seen in the component's
    type. Removing it from the type would need a wasi-libc on 0.3, or composing in a component that refuses sockets.
 4. **Lazy imports.** The build bundles only what is imported while it runs the app, but RDM imports its subcommands
@@ -144,11 +202,11 @@ untested.
 | Markdown to DOCX/Typst | Official [pandoc.wasm](https://github.com/pandoc/pandoc-wasm) (Pandoc 3.9) | wasip1 module; becomes a 0.2 command with the stock adapter | Probed: md → docx and md → typst. No Lua filters. For PDF, pair it with Typst above. |
 | SPARQL endpoint, MCP | componentize-py's [`examples/http-p3`](https://github.com/bytecodealliance/componentize-py) (`wasi:http/service@0.3.0`) | Same toolchain | Not probed. Write the MCP JSON-RPC by hand: the `mcp` SDK needs pydantic-core, which is native. Alternative host: [Wassette](https://github.com/microsoft/wassette), which turns WIT exports into MCP tools (early). |
 | Graphviz | [wasi-graphviz](https://github.com/pablormier/wasi-graphviz) 0.1.4 | wasip1 module with a C ABI | Rendered from the host. As a component its exports are lost, so it needs a WIT wrapper. Very new. |
-| Structurizr | [structurizrx](https://github.com/pomali/structurizrx) (Apache-2.0), a Rust Structurizr, pinned at 46a5daa: `c4-rs/` | Separate Rust component, 1.2 MB, no patches | **Built and run here.** It parsed RDM's `dhf/c4/workspace.dsl` in 0.4 s with the network off. RDM's own reader (`read_model`) gets an **identical** model from its export: 62 elements, 122 relationships and 13 views. That needed one addition: the DSL identifiers (`structurizr.dsl.identifier`), which its export leaves out. They come from its parser's identifier register. Drawing uses its own layout engine, no Graphviz and no Java. 10 of 13 views were drawn: dynamic views are not rendered yet. Bounded-context groups are not drawn, long descriptions are cut short with an ellipsis, and DOT came out for one view only. The DSL is not deprecated, but the Java Structurizr CLI that `rdm c4 draw` runs today is [end of life](https://docs.structurizr.com/eol). Its replacement [`export`](https://docs.structurizr.com/export) does not list DOT. |
+| Structurizr | **Wired in: `rdm c4 draw` runs in the component** (above). [structurizrx](https://github.com/pomali/structurizrx) (Apache-2.0), a Rust Structurizr, pinned at 46a5daa: `c4-rs/` | Separate Rust component, 1.2 MB, no patches | **Built and run here.** It parsed RDM's `dhf/c4/workspace.dsl` in 0.4 s with the network off. RDM's own reader (`read_model`) gets an **identical** model from its export: 62 elements, 122 relationships and 13 views. That needed one addition: the DSL identifiers (`structurizr.dsl.identifier`), which its export leaves out. They come from its parser's identifier register. Drawing uses its own layout engine, no Graphviz and no Java. 10 of 13 views were drawn: dynamic views are not rendered yet. Bounded-context groups are not drawn, long descriptions are cut short with an ellipsis, and DOT came out for one view only. The DSL is not deprecated, but the Java Structurizr CLI that `rdm c4 draw` runs today is [end of life](https://docs.structurizr.com/eol). Its replacement [`export`](https://docs.structurizr.com/export) does not list DOT. |
 | Native wheels | None needed | n/a | PyYAML and MarkupSafe fall back to pure Python. [dicej/wasi-wheels](https://github.com/dicej/wasi-wheels) is unmaintained, and the WASIX index targets Wasmer, not WASI. |
 
 Order to try them in:
-1. gitoxide (`git-rs/`) in place of `git-snapshot.sh`, if git must not be needed on the host: a WIT interface `record-state(paths) -> list<file-state>` exported by a Rust component and imported by RDM's. Or dulwich, to stay in one Python component.
+1. gitoxide (`git-rs/`) behind `record-state`, in place of `git-snapshot.sh`, so the host needs no git: a WIT interface `record-state(paths) -> list<file-state>` exported by a Rust component and imported by RDM's. Or dulwich, to stay in one Python component.
 2. rdflib/pyshacl for the graph, if its speed is acceptable.
 3. Typst and Pandoc as sibling components the host calls.
 

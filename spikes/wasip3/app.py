@@ -6,12 +6,16 @@ repository with git on the host and the component answers RDM's git
 questions from it (``git_snapshot.py``, ``RDM_GIT_SNAPSHOT``). A question it
 cannot answer gets ``None``: the same answer as "git is not installed", which
 the gates already treat as "approval could not be verified", never as approved.
+
+``rdm c4 draw`` goes through the ``rdm:component/c4`` import (``c4_component.py``),
+which ``build.sh`` composes from rdm-c4: no Structurizr, no Java, no Graphviz.
 """
 
 import os
 import sys
 
 import bundle
+import c4_component
 import git_snapshot
 from rdm.main import cli
 from wit_world import exports
@@ -26,6 +30,7 @@ def _main(argv: list[str]) -> int:
         return 0
     if os.environ.get("RDM_GIT_SNAPSHOT"):
         git_snapshot.replay(os.environ["RDM_GIT_SNAPSHOT"])
+    c4_component.install()  # rdm c4 draw through the rdm:component/c4 import
     try:
         return cli(argv)
     except SystemExit as stop:  # argparse exits on a usage error

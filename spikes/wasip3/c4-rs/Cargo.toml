@@ -5,12 +5,16 @@ edition = "2021"
 
 # structurizrx (Apache-2.0), pinned: its parser, model, view generation and renderers only;
 # its CLI also needs a web and a language server, which do not build for WASI.
+[lib]
+crate-type = ["cdylib"]   # a library component: exports rdm:component/c4 (../wit), no main
+
 [dependencies]
 structurizr-model = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
 structurizr-dsl = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
 structurizr-renderer = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
 structurizr-query = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
 serde_json = "1"
+wit-bindgen = "0.62.0"
 anyhow = "1"
 
 [profile.release]

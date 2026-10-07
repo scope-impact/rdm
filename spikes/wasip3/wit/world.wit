@@ -1,0 +1,24 @@
+package rdm:component@0.1.0;
+
+/// The rdm command line.
+world core {
+    include imports;
+    import c4;
+    export wasi:cli/run@0.3.0;
+}
+
+/// RDM's tests under pytest, Allure results out.
+world tests {
+    include imports;
+    export wasi:cli/run@0.3.0;
+}
+
+/// rdm-c4: the C4 workspace drawn by structurizrx.
+world draw {
+    export c4;
+}
+
+/// rdm-git: the record's state read by gitoxide. Not built yet.
+world git {
+    export record-state;
+}

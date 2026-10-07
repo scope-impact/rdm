@@ -1,0 +1,30 @@
+package rdm:component@0.1.0;
+
+/// The repository state RDM's gates read: what git would say of the record.
+/// Exported by rdm-git (gitoxide); imported by the core. Not wired yet.
+interface record-state {
+    /// A path relative to the repository root, which every RDM component sees at /.
+    type repo-path = string;
+    type commit-id = string;
+
+    /// Adding a case changes the encoding: a new major version of this package.
+    enum tracking { tracked, untracked, ignored, skip-worktree, assume-unchanged }
+
+    record file-state {
+        path: repo-path,
+        tracking: tracking,
+        /// Differs from HEAD, in the index or in the working tree.
+        changed: bool,
+    }
+
+    record head-state {
+        commit: option<commit-id>,
+        origin: option<string>,
+        dirty: bool,
+        merging: bool,
+    }
+
+    head: func() -> head-state;
+    /// A path may be a directory: every file under it.
+    files: func(paths: list<repo-path>) -> list<file-state>;
+}
