@@ -31,11 +31,22 @@ def _walk(module, report: bool) -> None:
                     SKIPPED.append(f"{sub.name}: {type(error).__name__}: {error}")
 
 
-def everything(*packages: str) -> None:
-    for name in sorted(set(sys.stdlib_module_names) - _NOT_FOR_WASI):
-        try:
-            _walk(importlib.import_module(name), report=False)
-        except Exception:  # noqa: BLE001 - not every module exists on WASI
-            pass
+def everything(*packages: str, stdlib: str | None = None) -> None:
+    """Import the standard library (all of it, or the modules listed one per line in the file ``stdlib``,
+    with every codec, which load lazily) and every submodule of ``packages``."""
+    if stdlib is None:
+        for name in sorted(set(sys.stdlib_module_names) - _NOT_FOR_WASI):
+            try:
+                _walk(importlib.import_module(name), report=False)
+            except Exception:  # noqa: BLE001 - not every module exists on WASI
+                pass
+    else:
+        with open(stdlib, encoding="utf-8") as listed:
+            for name in [line.strip() for line in listed if line.strip()]:
+                try:
+                    importlib.import_module(name)
+                except Exception:  # noqa: BLE001 - recorded on the host; not every module exists on WASI
+                    pass
+        _walk(importlib.import_module("encodings"), report=False)
     for name in packages:
         _walk(importlib.import_module(name), report=True)

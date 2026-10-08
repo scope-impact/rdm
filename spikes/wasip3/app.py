@@ -8,6 +8,7 @@ from rdm-c4: structurizrx). ``build.sh`` composes both in, so the host needs
 Wasmtime only: no git, no Structurizr, no Java, no Graphviz.
 """
 
+import os
 import sys
 
 import bundle
@@ -17,7 +18,10 @@ from rdm.main import cli
 from wit_world import exports
 from wit_world.imports import exit as wasi_exit
 
-bundle.everything("jinja2", "markupsafe", "yaml", "rdm")
+# The standard library RDM's commands load (stdlib-cli.txt, recorded natively), not all of it: the build
+# snapshots the interpreter's memory, so every module imported here is size in the component.
+STDLIB = os.path.join(os.path.dirname(__file__), "stdlib-cli.txt")
+bundle.everything("jinja2", "markupsafe", "yaml", "rdm", stdlib=STDLIB)
 
 
 def _main(argv: list[str]) -> int:

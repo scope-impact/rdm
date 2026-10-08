@@ -36,7 +36,7 @@ spikes/wasip3/c4-rs/check.sh              # rdm c4 draw on the example project, 
 `rdm-wasm` is the whole interface between host and component:
 
 ```
-host                                         components (rdm.wasm, 46 MB: rdm-core + rdm-git + rdm-c4)
+host                                         components (rdm.wasm, 35 MB: rdm-core + rdm-git + rdm-c4)
 -------------------------------------------  -----------------------------------------
 the current directory (a repository's root)  /          read and written, as rdm does; rdm-git
                                                         reads .git there with gitoxide
@@ -66,6 +66,30 @@ release gate and verify refuse (2), natively and in the component alike.
 `graph ...`, `story evidence-report` and `story mutation-probe` stop with RDM's own message (the graph extra
 missing, a tool not installed); they need programs or native code WASI cannot run. `c4 draw` runs: see below.
 
+## Why it is big
+
+`wasm-tools objdump`, after `stdlib-cli.txt` (below):
+
+```
+rdm.wasm 34.7 MB (12.4 MB gzipped)
+  rdm-core 30.4 MB
+     5.9 MB  CPython, compiled to wasm (code)
+    ~23.8 MB memory snapshot (data): 12.3 MB of it is a bare Python after start-up (hello world is 19.7 MB)
+              and the rest what app.py imports: RDM, Jinja2, PyYAML, MarkupSafe, the standard library it uses
+     0.7 MB  componentize-py runtime, libc, glue
+  rdm-git   3.2 MB  gitoxide (Rust)
+  rdm-c4    1.1 MB  structurizrx (Rust)
+```
+
+componentize-py ships no Python source: it runs CPython at build time, imports what the app imports, and saves the
+interpreter's whole memory into the component. Every module imported up front is size. Importing the whole standard
+library (to catch lazy imports, finding 4) made the CLI 46 MB; `stdlib-cli.sh` records the 180 standard-library
+modules RDM's commands load natively into `stdlib-cli.txt`, and `app.py` bundles those and every codec: 46.2 MB to
+34.7 MB, with `compare.sh` and `c4-rs/check.sh` unchanged. The cost: a command that loads an unlisted module fails
+at run time, so the list is rerun when RDM changes. The test component still bundles all of it.
+
+Smaller still would mean less Python: the Rust components are a tenth the size because they ship compiled code only.
+
 ## The WIT package and the composed CLI
 
 `wit/` is one package, `rdm:component@0.1.0`, laid out as wasmCloud's docs suggest. Its WASI dependencies are
@@ -86,7 +110,7 @@ wit/world.wit          world core       the CLI: imports + record-state + c4, ex
 
 ```
 rdm-git.wasm  (Rust, gitoxide, world git, 3.2 MB)     --export record-state--+
-                                                                             +--> rdm.wasm (46 MB) --> wasi:cli/run
+                                                                             +--> rdm.wasm (35 MB) --> wasi:cli/run
 rdm-c4.wasm   (Rust, structurizrx, world draw, 1.1 MB) --export c4-----------+    (rdm-wasm)
 rdm-core.wasm (componentize-py, world core)  imports record-state and c4 ----+
 
