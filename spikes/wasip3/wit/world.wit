@@ -4,12 +4,14 @@ package rdm:component@0.1.0;
 world core {
     include imports;
     import c4;
+    import record-state;
     export wasi:cli/run@0.3.0;
 }
 
 /// RDM's tests under pytest, Allure results out.
 world tests {
     include imports;
+    import record-state;
     export wasi:cli/run@0.3.0;
 }
 
@@ -18,7 +20,7 @@ world draw {
     export c4;
 }
 
-/// rdm-git: the record's state read by gitoxide. Not built yet.
+/// rdm-git: the record's state read by gitoxide.
 world git {
     export record-state;
 }

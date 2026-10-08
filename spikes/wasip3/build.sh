@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 #
 # Spike: build the rdm command line as WASI components and compose them (see README.md):
-#   rdm-core.wasm   the rdm CLI (componentize-py), world rdm:component/core: imports c4
-#   rdm-c4.wasm     structurizrx (Rust), world rdm:component/draw: exports c4
-#   rdm.wasm        the two composed with wac: what rdm-wasm runs
-#   rdm-test.wasm   RDM's tests under pytest, world rdm:component/tests
+#   rdm-core.wasm   the rdm CLI (componentize-py), world core: imports record-state and c4
+#   rdm-git.wasm    gitoxide (Rust), world git: exports record-state
+#   rdm-c4.wasm     structurizrx (Rust), world draw: exports c4
+#   rdm.wasm        rdm-core with both plugged in (wac): what rdm-wasm runs
+#   rdm-test.wasm   RDM's tests under pytest, world tests: imports record-state
+#   rdm-tests.wasm  rdm-test with rdm-git plugged in: what pytest/run.sh runs
 # Everything it fetches lands in .work/ (gitignored); nothing is installed.
 #
 set -euo pipefail
@@ -66,12 +68,14 @@ venv/bin/componentize-py -d "$WIT" -w rdm:component/core componentize app \
     -p "$HERE" -p pkgs -p "$ROOT" -o rdm-core.wasm
 ls -l rdm-core.wasm
 
-# rdm-c4, then the CLI composed with it: rdm-core's c4 import plugged by rdm-c4's export.
+# rdm-git and rdm-c4, then the CLI composed with them: its imports plugged by their exports.
+"$HERE/git-rs/build.sh" > /dev/null
+cp "$HERE/git-rs/target/wasm32-wasip2/release/rdm_git.wasm" rdm-git.wasm
 rustup target add wasm32-wasip2 > /dev/null
 (cd "$HERE/c4-rs" && cargo build -q --release --locked --target wasm32-wasip2)
 cp "$HERE/c4-rs/target/wasm32-wasip2/release/rdm_c4.wasm" rdm-c4.wasm
-./wac plug rdm-core.wasm --plug rdm-c4.wasm -o rdm.wasm
-ls -l rdm-c4.wasm rdm.wasm
+./wac plug rdm-core.wasm --plug rdm-git.wasm --plug rdm-c4.wasm -o rdm.wasm
+ls -l rdm-git.wasm rdm-c4.wasm rdm.wasm
 
 # The test component: pytest and allure-pytest too (pytest/test_app.py, run with pytest/run.sh).
 rm -rf pkgs-test
@@ -83,6 +87,7 @@ uv pip install -q --target pkgs-test --python-version "$PYTHON" \
 find pkgs-test -name '*.so' -delete
 venv/bin/componentize-py -d "$WIT" -w rdm:component/tests componentize test_app \
     -p "$HERE/pytest" -p pkgs-test -p "$ROOT" -p "$HERE" -o rdm-test.wasm   # RDM third: /2/rdm, as run.sh mounts
-ls -l rdm-test.wasm
+./wac plug rdm-test.wasm --plug rdm-git.wasm -o rdm-tests.wasm
+ls -l rdm-test.wasm rdm-tests.wasm
 echo "rdm.wasm imports and exports (from the component's own type):"
 ./wasm-tools component wit rdm.wasm | grep -E '^\s*(import|export) ' | sort

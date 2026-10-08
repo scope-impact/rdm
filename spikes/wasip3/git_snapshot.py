@@ -1,21 +1,17 @@
 """
-Spike: RDM's git questions answered from one snapshot the host takes with git
-alone (``rdm-wasm`` writes it; no RDM on the host).
+Spike: RDM's git questions answered as git would answer them, from a snapshot
+of the record's state: what git's status and index say of some paths.
 
-The snapshot is the whole repository's state, taken from its root, one fact
-per line so that the host needs nothing but git and a shell to write it:
+    head <commit>, origin <url>, merging
+    status: lines of git status --porcelain --ignored
+    files:  lines of git ls-files -v
 
-    head <git rev-parse HEAD>
-    origin <git remote get-url origin>
-    merging                     (present only while MERGE_HEAD exists)
-    S <a line of git status --porcelain --ignored --untracked-files=all>
-    F <a line of git ls-files -v>
-
-Each question RDM asks (``rdm.kernel.git.git``) is answered from it as git
-would answer it. A question the snapshot cannot answer gets None, as when git
-is missing: the gates then say approval could not be verified, never that it
-was. The one such question is where a merge commit holds a document's staged
-content (``log --find-object``), asked only while a merge is being made.
+``git_component.py`` builds such a snapshot for each question from the
+``record-state`` import (rdm-git). A question a snapshot cannot answer gets
+None, as when git is missing: the gates then say approval could not be
+verified, never that it was. The one such question is where a merge commit
+holds a document's staged content (``log --find-object``), asked only while a
+merge is being made.
 """
 
 import os
@@ -34,9 +30,15 @@ def _under(path: str, scope: str) -> bool:
         (scope + "/").startswith(path) and path.endswith("/")  # an untracked or ignored directory
 
 
+def pathspec(where, args: tuple) -> list[str]:
+    """The paths a git question names (after ``--``), as the repository names them."""
+    args = list(args)
+    return [_path(os.path.join(str(where), a)) for a in args[args.index("--") + 1:]] if "--" in args else []
+
+
 def answer(snapshot: dict, where, args: tuple) -> str | None:
     args = list(args)
-    pathspec = [_path(os.path.join(str(where), a)) for a in args[args.index("--") + 1:]] if "--" in args else []
+    pathspec_ = pathspec(where, args)
     options = args[:args.index("--")] if "--" in args else args
     if options == ["rev-parse", "HEAD"]:
         return snapshot["head"]
@@ -47,30 +49,20 @@ def answer(snapshot: dict, where, args: tuple) -> str | None:
     if options and options[0] == "status" and snapshot["head"] is not None:
         ignored = "--ignored" in options
         lines = [line for line in snapshot["status"] if ignored or not line.startswith("!!")]
-        if pathspec:
-            lines = [line for line in lines if any(_under(line[3:], scope) for scope in pathspec)]
+        if pathspec_:
+            lines = [line for line in lines if any(_under(line[3:], scope) for scope in pathspec_)]
         return "\n".join(lines)
     if options == ["ls-files", "-v"] and snapshot["head"] is not None:
-        return "\n".join(line for line in snapshot["files"] if any(_under(line[2:], scope) for scope in pathspec))
+        return "\n".join(line for line in snapshot["files"] if any(_under(line[2:], scope) for scope in pathspec_))
     return None  # not in the snapshot: as if git could not say
 
 
-def replay(path: str) -> None:
-    """Answer RDM's git questions from the snapshot at ``path``."""
-    snapshot = {"head": None, "origin": None, "merging": False, "status": [], "files": []}
-    with open(path, encoding="utf-8") as stream:
-        for line in stream.read().splitlines():
-            kind, _, rest = line.partition(" ")
-            if kind in ("head", "origin"):
-                snapshot[kind] = rest or None
-            elif kind == "merging":
-                snapshot["merging"] = True
-            elif kind in ("S", "F"):
-                snapshot["status" if kind == "S" else "files"].append(rest)
-    trace = bool(os.environ.get("RDM_GIT_SNAPSHOT_TRACE"))
+def install(answering) -> None:
+    """Make ``answering(where, args)`` the git RDM asks."""
+    trace = bool(os.environ.get("RDM_GIT_TRACE"))
 
     def git(where, *args):
-        result = answer(snapshot, where, args)
+        result = answering(where, args)
         if trace:  # each question and its answer, to stderr
             print(f"git -C {where} {' '.join(args)} -> {result!r}", file=sys.stderr)
         return result

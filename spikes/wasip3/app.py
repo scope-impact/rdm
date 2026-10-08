@@ -1,22 +1,18 @@
 """
 Spike: RDM's command line as a WASI 0.3 component (see README.md).
 
-The component cannot start ``git``, so ``rdm-wasm`` takes a snapshot of the
-repository with git on the host and the component answers RDM's git
-questions from it (``git_snapshot.py``, ``RDM_GIT_SNAPSHOT``). A question it
-cannot answer gets ``None``: the same answer as "git is not installed", which
-the gates already treat as "approval could not be verified", never as approved.
-
-``rdm c4 draw`` goes through the ``rdm:component/c4`` import (``c4_component.py``),
-which ``build.sh`` composes from rdm-c4: no Structurizr, no Java, no Graphviz.
+The component cannot start programs. RDM's git questions go through the
+``rdm:component/record-state`` import (``git_component.py``, from rdm-git:
+gitoxide), and ``rdm c4 draw`` through ``rdm:component/c4`` (``c4_component.py``,
+from rdm-c4: structurizrx). ``build.sh`` composes both in, so the host needs
+Wasmtime only: no git, no Structurizr, no Java, no Graphviz.
 """
 
-import os
 import sys
 
 import bundle
 import c4_component
-import git_snapshot
+import git_component
 from rdm.main import cli
 from wit_world import exports
 from wit_world.imports import exit as wasi_exit
@@ -28,8 +24,7 @@ def _main(argv: list[str]) -> int:
     if argv[:1] == ["--skipped"]:
         print("\n".join(bundle.SKIPPED) or "none")
         return 0
-    if os.environ.get("RDM_GIT_SNAPSHOT"):
-        git_snapshot.replay(os.environ["RDM_GIT_SNAPSHOT"])
+    git_component.install()  # git through the rdm:component/record-state import
     c4_component.install()  # rdm c4 draw through the rdm:component/c4 import
     try:
         return cli(argv)

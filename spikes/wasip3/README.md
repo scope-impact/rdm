@@ -4,7 +4,7 @@
 component, sandboxed, with the same results as the native one?
 
 **Answer.** Yes, for everything that needs no other program, and unchanged: no line of `rdm/` was edited.
-`rdm-wasm` is the command: it needs Wasmtime and git on the host, nothing else (no Python, no RDM). Every command
+`rdm-wasm` is the command: it needs Wasmtime on the host, nothing else (no Python, no RDM, no git). Every command
 compared gives the same exit code, output and files as the native run, in a clean repository and in one with an
 uncommitted edit (table below). What needs another program (Structurizr, Graphviz, Typst, pytest) or the graph extra
 says so with RDM's own message.
@@ -36,11 +36,11 @@ spikes/wasip3/c4-rs/check.sh              # rdm c4 draw on the example project, 
 `rdm-wasm` is the whole interface between host and component:
 
 ```
-host                                         component (rdm.wasm, 43 MB)
+host                                         components (rdm.wasm, 46 MB: rdm-core + rdm-git + rdm-c4)
 -------------------------------------------  -----------------------------------------
-the current directory (a repository's root)  /          read and written, as rdm does
+the current directory (a repository's root)  /          read and written, as rdm does; rdm-git
+                                                        reads .git there with gitoxide
 .work/rdm-data (RDM's package data)          /2/rdm     where the bundled package looks
-git-snapshot.sh: the repository's git state  /.rdm-wasm/git  -> git_snapshot.py answers
 network                                      none (-S tcp=n,udp=n,allow-ip-name-lookup=n)
 ```
 
@@ -75,20 +75,25 @@ each by digest.
 ```
 wit/imports.wit        world imports    what any RDM component may be given: WASI 0.3, no sockets
 wit/c4.wit             interface c4     draw(dsl) -> result<drawing, string>
-wit/record-state.wit   interface record-state   the record's git state (designed, not wired yet)
-wit/world.wit          world core       the CLI: imports + c4, exports wasi:cli/run
-                       world tests      RDM's tests: imports, exports wasi:cli/run
+wit/record-state.wit   interface record-state   the record's git state: head(), files(paths)
+wit/world.wit          world core       the CLI: imports + record-state + c4, exports wasi:cli/run
+                       world tests      RDM's tests: imports + record-state, exports wasi:cli/run
                        world draw       rdm-c4: exports c4
-                       world git        rdm-git: exports record-state (not built yet)
+                       world git        rdm-git: exports record-state
 ```
 
-`build.sh` builds two components for `rdm c4 draw` and composes them:
+`build.sh` builds the helpers and plugs them into the CLI and the test runner:
 
 ```
-rdm-core.wasm (componentize-py, world core) --import c4--+
-                                                         +--wac plug--> rdm.wasm --> wasi:cli/run
-rdm-c4.wasm   (Rust, structurizrx, world draw) --export c4+   (no rdm:component imports left)
+rdm-git.wasm  (Rust, gitoxide, world git, 3.2 MB)     --export record-state--+
+                                                                             +--> rdm.wasm (46 MB) --> wasi:cli/run
+rdm-c4.wasm   (Rust, structurizrx, world draw, 1.1 MB) --export c4-----------+    (rdm-wasm)
+rdm-core.wasm (componentize-py, world core)  imports record-state and c4 ----+
+
+rdm-git.wasm --export record-state--> rdm-test.wasm (world tests) --> rdm-tests.wasm (pytest/run.sh)
 ```
+
+No `rdm:component` import is left after `wac plug`: the host provides WASI only.
 
 `c4_component.py` puts the `c4` import where RDM's `draw()` runs Structurizr's CLI and Graphviz. Everything else
 is RDM's own code: the stamps, the files written, the removal of images of views the workspace no longer has. So
@@ -122,15 +127,18 @@ What wasmCloud's guidance changed, and what it cost:
 
 ## What the spike found
 
-1. **Git is a snapshot.** Outside the graph extra, RDM asks git few questions: per controlled document, `status
-   --porcelain --ignored` and `ls-files -v` (on a file or a directory); for a run, `rev-parse HEAD`, `remote get-url
-   origin` and whether the tree is dirty; during a merge, `MERGE_HEAD` and where a commit holds staged content.
-   `git-snapshot.sh` takes the repository's whole state once with git (HEAD, origin, merging, status and the index),
-   and `git_snapshot.py` answers each question from it as git would. The one it cannot answer (the merge's `log
-   --find-object`) gets `None`, as when git is missing, and the gate then says "approval could not be verified",
-   never "approved": it fails safe. `RDM_GIT_SNAPSHOT_TRACE=1` prints each question and answer. A first version
-   matched only exact file paths and failed the architecture views, which the gate asks about as a directory:
-   `compare.sh` caught it.
+1. **Git is `record-state`, from gitoxide.** Outside the graph extra, RDM asks git few questions: per controlled
+   document, `status --porcelain --ignored` and `ls-files -v` (on a file or a directory); for a run, `rev-parse HEAD`,
+   `remote get-url origin` and whether the tree is dirty; during a merge, `MERGE_HEAD` and where a commit holds staged
+   content. `rdm-git` (gitoxide, `git-rs/`) answers `head()` and `files(paths)` from the mounted `.git`, reading the
+   status once per run. `git_component.py` turns each answer back into git's words, through `git_snapshot.py`, so
+   RDM's code is unchanged. The one question it cannot answer (the merge's `log --find-object`) gets `None`, as when
+   git is missing, and the gate then says "approval could not be verified", never "approved": it fails safe.
+   `RDM_GIT_TRACE=1` prints each question and answer. Run with no git and no Python on the `PATH`, `rdm-wasm`
+   passes this repository's gate (0.9 s) and fails a clone with an edited design review, as native RDM does.
+   Before this, the spike took a snapshot with git on the host (`git-snapshot.sh`); a first version of it matched
+   only exact file paths and failed the architecture views, which the gate asks about as a directory: `compare.sh`
+   caught it.
 2. **Package data is not bundled.** componentize-py snapshots modules at build time under `/<n>/` (one per `-p`) and
    keeps no data files. RDM reads its checklists and its `init`/`adopt` templates from beside its code (`__file__`),
    so `build.sh` copies them to `.work/rdm-data`, shipped beside the component, and `rdm-wasm` mounts them at
@@ -182,7 +190,7 @@ What it took, beyond the core component:
   cannot. Hence `--capture=sys` and `-p no:faulthandler`. Tests using `capfd` fail.
 - **What the host supplies.** `/tmp`, a `/dev/null` (pytest's logging opens it), `--basetemp` (pytest's default checks
   `os.getuid`, which WASI lacks), `USER` (the plugin records who ran the tests), and the repository's commit and
-  worktree state (`git-snapshot.sh`), which the plugin labels each result with.
+  worktree state, which the plugin labels each result with: from rdm-git, plugged into `rdm-tests.wasm`.
 - **Entry points are not bundled.** The Allure plugin is named with `-p allure_pytest.plugin`.
 
 What stays on the host: tests that start a process (10 of 39 acceptance files, plus 4 tests here), the graph extra's
@@ -206,7 +214,7 @@ untested.
 | Native wheels | None needed | n/a | PyYAML and MarkupSafe fall back to pure Python. [dicej/wasi-wheels](https://github.com/dicej/wasi-wheels) is unmaintained, and the WASIX index targets Wasmer, not WASI. |
 
 Order to try them in:
-1. gitoxide (`git-rs/`) behind `record-state`, in place of `git-snapshot.sh`, so the host needs no git: a WIT interface `record-state(paths) -> list<file-state>` exported by a Rust component and imported by RDM's. Or dulwich, to stay in one Python component.
+1. ~~gitoxide behind `record-state`~~: done (finding 1).
 2. rdflib/pyshacl for the graph, if its speed is acceptable.
 3. Typst and Pandoc as sibling components the host calls.
 
@@ -217,6 +225,6 @@ Packaging and composing: [wkg](https://github.com/bytecodealliance/wasm-pkg-tool
 
 - A design input and its tagged test: the gates run as a component, and their result matches the command line
   (`compare.sh` is that test's shape).
-- The git snapshot (finding 1) as a WIT interface for record state, answered by the host, in place of a mounted file.
+- `record-state` and `c4` called by RDM's code, in place of `git()` and the Structurizr CLI, rather than swapped in.
 - Package data read through `importlib.resources` (finding 2), a small change to `rdm/`.
 - CI that builds the component with pinned tools and runs the comparison.

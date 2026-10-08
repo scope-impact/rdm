@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Spike: gitoxide answering RDM's git questions inside WASI (see ../README.md).
+# Spike: rdm-git, gitoxide exporting rdm:component/record-state (see ../README.md).
 # gitoxide maps files into memory and reads file times through crates that do
 # not support WASI; this copies those two crates and replaces their WASI part
 # (patches/), then builds for wasm32-wasip2.
@@ -23,4 +23,4 @@ for crate in memmap2-0.9.11:memmap2:src/stub.rs:memmap2-stub.rs filetime-0.2.29:
     cp "patches/$patch" ".work/$name/$file"
 done
 cargo build -q --release --locked --target wasm32-wasip2
-ls -l target/wasm32-wasip2/release/rdm-git.wasm
+ls -l target/wasm32-wasip2/release/rdm_git.wasm

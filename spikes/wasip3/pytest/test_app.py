@@ -7,11 +7,10 @@ pytest, allure-pytest and RDM are bundled. Entry points are not bundled, so
 the Allure plugin is named with -p.
 """
 
-import os
 import sys
 
 import bundle
-import git_snapshot
+import git_component
 import pytest
 from wit_world import exports
 from wit_world.imports import exit as wasi_exit
@@ -24,8 +23,7 @@ class Run(exports.Run):
         if sys.argv[1:2] == ["--skipped"]:
             print("\n".join(bundle.SKIPPED) or "none")
             return
-        if os.environ.get("RDM_GIT_SNAPSHOT"):  # the host's git state, for the run's commit and worktree labels
-            git_snapshot.replay(os.environ["RDM_GIT_SNAPSHOT"])
+        git_component.install()  # the run's commit and worktree labels, from rdm-git
         sys.dont_write_bytecode = True  # the repository is not ours to write .pyc into
         # --capture=sys and no faulthandler: both duplicate file descriptors, which WASI cannot.
         options = ["-p", "allure_pytest.plugin", "-p", "no:cacheprovider", "-p", "no:faulthandler", "--capture=sys"]

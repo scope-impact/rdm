@@ -1,7 +1,7 @@
 package rdm:component@0.1.0;
 
 /// The repository state RDM's gates read: what git would say of the record.
-/// Exported by rdm-git (gitoxide); imported by the core. Not wired yet.
+/// Exported by rdm-git (gitoxide); imported by the core.
 interface record-state {
     /// A path relative to the repository root, which every RDM component sees at /.
     type repo-path = string;

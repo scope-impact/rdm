@@ -3,8 +3,12 @@ name = "rdm-git"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib"]   # a library component: exports rdm:component/record-state (../wit), no main
+
 [dependencies]
 gix = { version = "0.88.0", default-features = false, features = ["sha1", "status", "revision"] }
+wit-bindgen = "0.62.0"
 
 [patch.crates-io]
 memmap2 = { path = ".work/memmap2" }
