@@ -21,6 +21,11 @@ COMMANDS=(
     "story dmr -o OUT/dmr.md dhf/documents"
     "gap --list"
     "story new-input --list --dhf dhf"
+    "graph build --dhf dhf --allure-results dhf/allure-results -o OUT/record.nq"
+    "graph build --dhf dhf --infer -o OUT/inferred.nq"
+    "graph validate --dhf dhf --allure-results dhf/allure-results"
+    "graph validate --dhf dhf"
+    "graph explorer-file --dhf dhf -o OUT/explorer.json"
     "story design-gate --dhf no-such-dhf"
     "story design-gate --no-such-option"
 )
@@ -46,14 +51,37 @@ for i in "${!COMMANDS[@]}"; do
     wasm_code=$? wasm_s=$(echo "$(date +%s.%N) - $start" | bc)
 
     # The same text but for where each run saw the repository and its output.
-    sed -i -e "s|$REPO/|/|g" -e "s|$REPO|/|g" -e "s|\.rdm-wasm-compare/$i/native|OUT|g" "$native"/*
+    # Natively the repository is at $REPO; in the component, at /<its name>.
+    sed -i -e "s|$(dirname "$REPO")/|/|g" -e "s|\.rdm-wasm-compare/$i/native|OUT|g" "$native"/*
     sed -i -e "s|\.rdm-wasm-compare/$i/wasm|OUT|g" "$wasm"/*
+    sed -i -E 's/"timestamp": ?"[^"]*"/"timestamp":"T"/' "$native"/* "$wasm"/*   # explorer-file stamps the time
     if [ "$native_code" = "$wasm_code" ] && diff -r -q "$native" "$wasm" > /dev/null; then
         same=yes
     else
         same=NO; status=1
     fi
     printf '%-34.34s %6s %6s %8.2f %8.2f  %s\n' "$command" "$native_code" "$wasm_code" "$native_s" "$wasm_s" "$same"
+done
+# SPARQL through rdm graph query (Oxigraph natively, rdflib in the component): SELECT in each format, ASK, CONSTRUCT.
+QUERIES=(
+    "SELECT ?i ?text WHERE { ?i a rdm:DesignInput ; rdm:text ?text } ORDER BY ?i"
+    "SELECT ?need (COUNT(?i) AS ?n) WHERE { ?i rdm:tracesTo ?need } GROUP BY ?need ORDER BY ?need"
+    "ASK { ?x a rdm:DesignInput }"
+    "CONSTRUCT { ?i rdm:tracesTo ?need } WHERE { ?i rdm:tracesTo ?need }"
+)
+for i in "${!QUERIES[@]}"; do
+    for format in tsv csv json; do
+        uv run --project "$ROOT" --quiet rdm graph query --dhf dhf --format "$format" "${QUERIES[$i]}" > "$CMP/q$i.native" 2>&1
+        native_code=$?
+        "$HERE/rdm-wasm" graph query --dhf dhf --format "$format" "${QUERIES[$i]}" > "$CMP/q$i.wasm" 2>&1
+        wasm_code=$?
+        # The same rows, and for SELECT the same header; CONSTRUCT's order is not defined, so it is not compared.
+        header=yes
+        case "${QUERIES[$i]}" in SELECT*) head -1 "$CMP/q$i.native" | cmp -s - <(head -1 "$CMP/q$i.wasm") || header=no ;; esac
+        if [ "$native_code" = "$wasm_code" ] && cmp -s <(sort "$CMP/q$i.native") <(sort "$CMP/q$i.wasm") \
+            && [ $header = yes ]; then same=yes; else same=NO; status=1; fi
+        printf '%-34.34s %6s %6s %8s %8s  %s\n' "query $format: ${QUERIES[$i]}" "$native_code" "$wasm_code" - - "$same"
+    done
 done
 # rdm init, each into an empty repository: the files it lays down must be the same.
 for side in native wasm; do rm -rf "${CMP:?}/init-$side" && mkdir -p "$CMP/init-$side" && git -C "$CMP/init-$side" init -q; done

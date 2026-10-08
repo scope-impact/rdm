@@ -17,9 +17,10 @@ ALLURE="${ALLURE:-$WORK/allure-wasm}"
 RUN=$(mktemp -d -p "$WORK" run.XXXXXX)
 mkdir -p "$RUN/tmp" "$RUN/dev" "$ALLURE" && : > "$RUN/dev/null"
 cd "$ROOT"
-args=()   # paths in the repository are under / in the component
-for arg in "$@"; do [ -e "$arg" ] && args+=("/${arg#/}") || args+=("$arg"); done
+REPO="/$(basename "$ROOT")"
+args=()   # paths in the repository are under $REPO in the component
+for arg in "$@"; do [ -e "$arg" ] && args+=("$REPO/${arg#/}") || args+=("$arg"); done
 "$WORK/wasmtime" run -S tcp=n,udp=n,allow-ip-name-lookup=n \
-    --dir "$ROOT::/" --dir "$WORK/rdm-data::/2/rdm" --dir "$RUN/tmp::/tmp" --dir "$RUN/dev::/dev" \
+    --dir "$ROOT::$REPO" --env RDM_REPO="$REPO" --dir "$WORK/rdm-data::/2/rdm" --dir "$RUN/tmp::/tmp" --dir "$RUN/dev::/dev" \
     --dir "$ALLURE::/allure" --env TMPDIR=/tmp --env HOME=/tmp --env USER="${USER:-$(id -un)}" \
     "$WORK/rdm-tests.wasm" --basetemp=/tmp/pytest --alluredir=/allure "${args[@]}"

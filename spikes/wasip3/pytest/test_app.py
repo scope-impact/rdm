@@ -7,6 +7,7 @@ pytest, allure-pytest and RDM are bundled. Entry points are not bundled, so
 the Allure plugin is named with -p.
 """
 
+import os
 import sys
 
 import bundle
@@ -15,7 +16,8 @@ import pytest
 from wit_world import exports
 from wit_world.imports import exit as wasi_exit
 
-bundle.everything("_pytest", "pluggy", "allure_pytest", "allure_commons", "jinja2", "markupsafe", "yaml", "rdm")
+bundle.everything("_pytest", "pluggy", "allure_pytest", "allure_commons", "jinja2", "markupsafe", "yaml", "rdflib",
+                  "pyshacl", "owlrl", "pyparsing", "prettytable", "packaging", "html5rdf", "pyoxigraph", "rdm")
 
 
 class Run(exports.Run):
@@ -23,6 +25,7 @@ class Run(exports.Run):
         if sys.argv[1:2] == ["--skipped"]:
             print("\n".join(bundle.SKIPPED) or "none")
             return
+        os.chdir(os.environ.get("RDM_REPO", "/"))  # the repository, mounted under its own name (run.sh)
         git_component.install()  # the run's commit and worktree labels, from rdm-git
         sys.dont_write_bytecode = True  # the repository is not ours to write .pyc into
         # --capture=sys and no faulthandler: both duplicate file descriptors, which WASI cannot.

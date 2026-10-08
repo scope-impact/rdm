@@ -6,8 +6,10 @@
 #
 # Needs Wasmtime on the host, nothing else: no Python, no RDM, no git, no
 # Java, no Graphviz. Run it from the repository's root; the components see
-# that directory at / (and may write in it, as rdm does), RDM's package data at
-# /2/rdm, and no network. RDM_GIT_TRACE=1 prints each git question and answer.
+# that directory under its own name (/<name>, so RDM names the project as it
+# does natively) and start there, may write in it as rdm does, see RDM's
+# package data at /2/rdm, and have no network. RDM_GIT_TRACE=1 prints each
+# git question and answer.
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORK="$HERE/.work"
@@ -15,10 +17,11 @@ WASM="${RDM_WASM:-$WORK/rdm.wasm}"
 DATA="${RDM_WASM_DATA:-$WORK/rdm-data}"   # build.sh copies RDM's package data here
 WASMTIME="${WASMTIME:-$WORK/wasmtime}"
 
-args=()   # paths given relative to here are the same inside; absolute ones are not
+REPO="/$(basename "$PWD")"
+args=()   # paths given relative to here are the same inside; absolute ones move under $REPO
 for arg in "$@"; do
-    case "$arg" in "$PWD"/*) args+=("/${arg#"$PWD"/}") ;; "$PWD") args+=("/") ;; *) args+=("$arg") ;; esac
+    case "$arg" in "$PWD"/*) args+=("$REPO/${arg#"$PWD"/}") ;; "$PWD") args+=("$REPO") ;; *) args+=("$arg") ;; esac
 done
 exec "$WASMTIME" run -S tcp=n,udp=n,allow-ip-name-lookup=n \
-    --dir "$PWD::/" --dir "$DATA::/2/rdm" --env RDM_GIT_TRACE="${RDM_GIT_TRACE:-}" \
+    --dir "$PWD::$REPO" --dir "$DATA::/2/rdm" --env RDM_REPO="$REPO" --env RDM_GIT_TRACE="${RDM_GIT_TRACE:-}" \
     "$WASM" "${args[@]}"

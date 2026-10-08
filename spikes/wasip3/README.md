@@ -36,7 +36,7 @@ spikes/wasip3/c4-rs/check.sh              # rdm c4 draw on the example project, 
 `rdm-wasm` is the whole interface between host and component:
 
 ```
-host                                         components (rdm.wasm, 35 MB: rdm-core + rdm-git + rdm-c4)
+host                                         components (rdm.wasm, 55 MB: rdm-core + rdm-git + rdm-c4)
 -------------------------------------------  -----------------------------------------
 the current directory (a repository's root)  /          read and written, as rdm does; rdm-git
                                                         reads .git there with gitoxide
@@ -63,8 +63,46 @@ init (empty repository)                 0     0         -       -  yes   (50 fil
 On a clone with one design document edited and one added, all ten match too: the design gate fails (1) and the
 release gate and verify refuse (2), natively and in the component alike.
 
-`graph ...`, `story evidence-report` and `story mutation-probe` stop with RDM's own message (the graph extra
-missing, a tool not installed); they need programs or native code WASI cannot run. `c4 draw` runs: see below.
+`story evidence-report` and `story mutation-probe` stop with RDM's own message (a tool not installed); they need
+programs WASI cannot run. `c4 draw` and `graph` run: see below.
+
+## The graph: RDF on rdflib, in the component
+
+`rdm graph` (build, query, validate, explorer-file) runs in the component. pyoxigraph's native code cannot be
+bundled, so `rdf/pyoxigraph/` stands in for it: the part of pyoxigraph's API RDM uses (terms, `Quad`, `parse`,
+`serialize`, `Store` with `query`), on rdflib, which is pure Python and already came with pyshacl. RDM's code is
+unchanged: `import pyoxigraph as ox` finds the stand-in. What it keeps of Oxigraph's behaviour, because RDM or its
+users see it:
+
+- terms print as pyoxigraph prints them (RDM sorts the record's quads by `str`), and N-Triples and N-Quads are
+  written as Oxigraph writes them: the built record is byte-identical;
+- SPARQL by rdflib, results written as Oxigraph writes them (JSON, CSV, TSV with Turtle's short numbers);
+- a malformed query or RDF document raises `SyntaxError`, which RDM turns into its refusals;
+- a store on disk (`--store`) is one N-Quads file in its directory, not RocksDB.
+
+The graph also asks git what the gates do not: each controlled document's latest commit, commit details, the default
+branch, the first-parent line and where a change landed (DI-51). `record-state` grew those (`latest-commits`,
+`commit`, `resolve`, `branches`, `config`, `first-parents`, `ancestry-path`), answered by gitoxide; a shallow
+clone's boundary is treated as git treats it. And RDM names the project after the repository's directory, so the
+host mounts it under its own name (`/<name>`, `RDM_REPO`), not at `/`.
+
+Checked:
+
+```
+natively, the stand-in in place of pyoxigraph     all 142 tests of RDM's suite pass
+compare.sh (Oxigraph natively vs rdflib in WASI)  27/27 the same, here and in a clone with edits:
+  graph build (9,186 quads, with git history)       byte-identical N-Quads
+  graph build --infer                               byte-identical
+  graph validate, with and without results          same verdicts and exit codes
+  graph explorer-file                               same (but the timestamp)
+  graph query: SELECT x2, ASK, CONSTRUCT            same rows in TSV, CSV and JSON
+graph acceptance tests inside rdm-tests.wasm      7 pass; 20 need a fixture repository made by
+                                                  running git (tests/util.git_run): WASI limit
+```
+
+The cost: rdflib and pyshacl are Python, so the CLI is 55 MB (was 35) and a graph command takes about twice as long
+as natively with Oxigraph (graph build 3.0 s against 0.9 s; validate 15 s against 8 s). `rdm graph serve` (HTTP) and
+`rdm graph mcp` (the `mcp` SDK needs pydantic-core, native) stay outside.
 
 ## Why it is big
 
@@ -110,7 +148,7 @@ wit/world.wit          world core       the CLI: imports + record-state + c4, ex
 
 ```
 rdm-git.wasm  (Rust, gitoxide, world git, 3.2 MB)     --export record-state--+
-                                                                             +--> rdm.wasm (35 MB) --> wasi:cli/run
+                                                                             +--> rdm.wasm (55 MB) --> wasi:cli/run
 rdm-c4.wasm   (Rust, structurizrx, world draw, 1.1 MB) --export c4-----------+    (rdm-wasm)
 rdm-core.wasm (componentize-py, world core)  imports record-state and c4 ----+
 
@@ -239,7 +277,7 @@ untested.
 
 Order to try them in:
 1. ~~gitoxide behind `record-state`~~: done (finding 1).
-2. rdflib/pyshacl for the graph, if its speed is acceptable.
+2. ~~rdflib/pyshacl for the graph~~: done ("The graph" above).
 3. Typst and Pandoc as sibling components the host calls.
 
 Packaging and composing: [wkg](https://github.com/bytecodealliance/wasm-pkg-tools) (OCI and registries) and

@@ -27,4 +27,35 @@ interface record-state {
     head: func() -> head-state;
     /// A path may be a directory: every file under it.
     files: func(paths: list<repo-path>) -> list<file-state>;
+
+    // History, for the graph (rdm graph build): who changed the record, when, and where it landed.
+
+    record commit-info {
+        id: commit-id,
+        author: string,
+        /// The author's time, as git's %aI writes it (strict ISO 8601, with the offset).
+        time: string,
+        subject: string,
+    }
+
+    record reference {
+        target: commit-id,
+        /// The reference it names, when it is symbolic (refs/remotes/origin/HEAD -> refs/remotes/origin/main).
+        symbolic: option<string>,
+    }
+
+    /// Each path's latest commit, as `git log -1 -- <path>` finds it; a path no commit has is left out.
+    latest-commits: func(paths: list<repo-path>) -> list<tuple<repo-path, commit-id>>;
+    /// A commit named by its id or a revision (HEAD, a branch).
+    commit: func(revision: string) -> option<commit-info>;
+    /// A full reference name (refs/heads/main), resolved.
+    resolve: func(name: string) -> option<reference>;
+    /// The local branches, by short name.
+    branches: func() -> list<string>;
+    /// A configuration value (init.defaultBranch).
+    config: func(key: string) -> option<string>;
+    /// `git rev-list --first-parent <revision>`: newest first.
+    first-parents: func(revision: string) -> list<commit-id>;
+    /// `git rev-list --ancestry-path <ancestor>..<revision>`: the commits on a path from one to the other.
+    ancestry-path: func(ancestor: commit-id, revision: string) -> list<commit-id>;
 }

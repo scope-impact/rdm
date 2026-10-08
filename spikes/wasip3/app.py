@@ -21,13 +21,15 @@ from wit_world.imports import exit as wasi_exit
 # The standard library RDM's commands load (stdlib-cli.txt, recorded natively), not all of it: the build
 # snapshots the interpreter's memory, so every module imported here is size in the component.
 STDLIB = os.path.join(os.path.dirname(__file__), "stdlib-cli.txt")
-bundle.everything("jinja2", "markupsafe", "yaml", "rdm", stdlib=STDLIB)
+bundle.everything("jinja2", "markupsafe", "yaml", "rdflib", "pyshacl", "owlrl", "pyparsing", "prettytable",
+                  "packaging", "html5rdf", "pyoxigraph", "rdm", stdlib=STDLIB)
 
 
 def _main(argv: list[str]) -> int:
     if argv[:1] == ["--skipped"]:
         print("\n".join(bundle.SKIPPED) or "none")
         return 0
+    os.chdir(os.environ.get("RDM_REPO", "/"))  # the repository, mounted under its own name (rdm-wasm)
     git_component.install()  # git through the rdm:component/record-state import
     c4_component.install()  # rdm c4 draw through the rdm:component/c4 import
     try:

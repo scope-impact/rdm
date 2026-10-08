@@ -50,13 +50,12 @@ fi
 (cd "$HERE" && "$WORK/wkg" fetch)
 WIT="$HERE/wit"
 
-# RDM's runtime dependencies, as pure Python: the compiled speed-ups of PyYAML
-# and MarkupSafe are for the host, and both fall back without them.
+# RDM's runtime dependencies, as pure Python, at the versions uv.lock pins: Jinja2 and PyYAML, and for the graph
+# rdflib and pyshacl (rdf/pyoxigraph stands in for pyoxigraph, whose native code cannot be bundled). The
+# compiled speed-ups of PyYAML and MarkupSafe are for the host, and both fall back without them.
+(cd "$ROOT" && uv export -q --no-hashes --all-extras --no-emit-project | sed 's/ ;.*//' | grep '==') > constraints.txt
 rm -rf pkgs
-uv pip install -q --target pkgs --python-version "$PYTHON" \
-    "$(cd "$ROOT" && uv export -q --no-hashes --no-dev --no-emit-project | grep -i '^jinja2==')" \
-    "$(cd "$ROOT" && uv export -q --no-hashes --no-dev --no-emit-project | grep -i '^pyyaml==')" \
-    "$(cd "$ROOT" && uv export -q --no-hashes --no-dev --no-emit-project | grep -i '^markupsafe==')"
+uv pip install -q --target pkgs --python-version "$PYTHON" -c constraints.txt jinja2 pyyaml rdflib pyshacl
 find pkgs -name '*.so' -delete
 
 # RDM's package data (checklists, init/adopt templates): the build keeps modules only, so it ships beside the
@@ -65,7 +64,7 @@ rm -rf rdm-data && (cd "$ROOT/rdm" && find . -type f ! -name '*.py' ! -path '*/_
     | xargs -0 -I{} install -D -m 644 {} "$WORK/rdm-data/{}")
 
 venv/bin/componentize-py -d "$WIT" -w rdm:component/core componentize app \
-    -p "$HERE" -p pkgs -p "$ROOT" -o rdm-core.wasm
+    -p "$HERE" -p pkgs -p "$ROOT" -p "$HERE/rdf" -o rdm-core.wasm   # RDM third: /2/rdm, as rdm-wasm mounts
 ls -l rdm-core.wasm
 
 # rdm-git and rdm-c4, then the CLI composed with them: its imports plugged by their exports.
@@ -79,14 +78,11 @@ ls -l rdm-git.wasm rdm-c4.wasm rdm.wasm
 
 # The test component: pytest and allure-pytest too (pytest/test_app.py, run with pytest/run.sh).
 rm -rf pkgs-test
-uv pip install -q --target pkgs-test --python-version "$PYTHON" \
-    "$(cd "$ROOT" && uv export -q --no-hashes --all-extras --no-emit-project | grep -i '^pytest==')" \
-    "$(cd "$ROOT" && uv export -q --no-hashes --all-extras --no-emit-project | grep -i '^allure-pytest==')" \
-    "$(cd "$ROOT" && uv export -q --no-hashes --all-extras --no-emit-project | grep -i '^mock==')" \
-    $(cd "$ROOT" && uv export -q --no-hashes --no-dev --no-emit-project | grep -iE '^(jinja2|pyyaml|markupsafe)==')
+uv pip install -q --target pkgs-test --python-version "$PYTHON" -c constraints.txt \
+    pytest allure-pytest mock jinja2 pyyaml rdflib pyshacl
 find pkgs-test -name '*.so' -delete
 venv/bin/componentize-py -d "$WIT" -w rdm:component/tests componentize test_app \
-    -p "$HERE/pytest" -p pkgs-test -p "$ROOT" -p "$HERE" -o rdm-test.wasm   # RDM third: /2/rdm, as run.sh mounts
+    -p "$HERE/pytest" -p pkgs-test -p "$ROOT" -p "$HERE" -p "$HERE/rdf" -o rdm-test.wasm   # RDM third: /2/rdm
 ./wac plug rdm-test.wasm --plug rdm-git.wasm -o rdm-tests.wasm
 ls -l rdm-test.wasm rdm-tests.wasm
 echo "rdm.wasm imports and exports (from the component's own type):"

@@ -17,12 +17,17 @@ merge is being made.
 import os
 import sys
 
-_USERS = ("rdm.kernel.git", "rdm.specification.design_gate", "rdm.publishing.report")
+_USERS = ("rdm.kernel.git", "rdm.specification.design_gate", "rdm.publishing.report", "rdm.graph.project")
+
+
+def root() -> str:
+    """Where the host mounts the repository; read when asked, never at build time (the build snapshots memory)."""
+    return os.environ.get("RDM_REPO", "/")
 
 
 def _path(text: str) -> str:
-    """A path as the repository names it: relative to its root, which the component mounts at /."""
-    return os.path.relpath(os.path.abspath(text), "/")
+    """A path as the repository names it: relative to its root (RDM_REPO in the component)."""
+    return os.path.relpath(os.path.abspath(text), root())
 
 
 def _under(path: str, scope: str) -> bool:
