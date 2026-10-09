@@ -345,6 +345,11 @@ workspace "RDM" "The design record of regulated software." {
           "code" "providers/c4/"
         }
       }
+      typeset_provider = container "rdm-typst" "The typeset provider: the verification report's layout, data and attachments compiled to PDF by Typst's crates, with the layout's fonts embedded; the native program and the WASI component" "Rust, typst" {
+        properties {
+          "code" "providers/typst/"
+        }
+      }
     }
     product_repo = softwareSystem "Product repository" "git: the Markdown record, the tests and their Allure results" "External"
     forge = softwareSystem "GitHub" "Pull requests, Actions and the image registry" "External"
@@ -367,6 +372,8 @@ workspace "RDM" "The design record of regulated software." {
     rdm_wasm -> product_repo "reads the record granted by the host from"
     rdm_wasm -> record_state_provider "asks the record's state of" "rdm:component/record-state"
     rdm_wasm -> c4_provider "draws the architecture workspace with" "rdm:component/c4"
+    rdm_cli -> typeset_provider "typesets the verification report with"
+    rdm_wasm -> typeset_provider "typesets the verification report with" "rdm:component/typeset"
     rdm_wasm -> graph_store "builds"
     component_root -> kernel "chooses the record-state provider through the port of"
     component_root -> architecture_drawing "chooses the c4 provider through the port of"

@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 82
+revision: 83
 title: Design Review — RDM
 ---
 
@@ -2423,6 +2423,30 @@ stand-in at start-up; this review makes each a design input instead.
 - **The architecture workspace** gains the `rdm.wasm` container and the two
   providers when the component is built, not in this review: a view drawn
   before its code exists would fail the conformance check.
+
+# Design Review 73 — The verification report typeset inside the component
+
+**Scope reviewed:** the one output of the gates that `rdm.wasm` still could
+not make: the verification report's PDF (DI-64), compiled by the `typst`
+Python package or a `typst` executable, neither of which a component can
+carry or start. Design Review 72 left it out of scope. The spike had probed
+Typst's own Rust crates on `wasm32-wasip2`: a valid PDF, in milliseconds.
+
+**Disposition:** Approved.
+
+- **New DI-88 (publishing):** one typeset interface, given the layout, its
+  data and its attachments, returning the PDF; answered by the same Typst
+  library natively (`rdm-typst`, built from Typst's crates like `rdm-c4` is
+  from structurizrx) and inside the component. The provider embeds the
+  fonts the layout names (Nunito Sans and JetBrains Mono, both OFL), so the
+  report does not depend on the host's fonts and is the same wherever it is
+  made. DI-64's last clause stands: with no provider the report says so.
+- **The `typst` Python package and the `typst` executable leave** the report's
+  path: one implementation on both sides, as for the c4 port. The `report`
+  extra goes; the documents pipeline (Pandoc and Typst in the image) is
+  untouched.
+- **Out of scope:** Pandoc as a component; the fonts of documents other than
+  the report.
 
 # Approval
 

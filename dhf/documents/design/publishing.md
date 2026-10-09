@@ -35,6 +35,9 @@ design_inputs:
   - id: DI-64
     text: "RDM shall render a verification report to PDF from the record and the Allure results it is given, for review by someone who did not run the tests: a header naming the repository, the record's commit, the commits tested, the executor and environment the results record, the RDM version and one SHA-256 over the result files; an evidence status that is release-grade only when every design input has a passing run, no run failed, and every run tested the record's commit with no uncommitted changes, and that otherwise names each reason; the anomalies (failed, broken or skipped runs, design inputs with no run, attachments not found, and tags naming no design input); a summary of the risk register's state; a traceability table of user need, design input, the risks it is a control for, its tests and their result; per design input, its text, context, user needs, outputs, whether it is a baseline or a risk-based acceptance criterion, and each risk it is a control for with that risk's status and residual decision, and for each run of a test tagged with it the test's file and function, its result, date and duration, its commit and worktree state where they differ from the header, any failure message and trace, its labels other than those the report already shows, its links, each step as a verification step with its own result, and the attachments the test made (text inline up to a limit, images embedded, any other file named with its SHA-256), with captured output and the copy of the requirement listed by name and SHA-256 only, and the Allure severity label left out; and an appendix listing every result file with its SHA-256. An unreadable result file or uncommitted changes to the record is a reason the evidence is not release-grade; text from the results is set as text, never markup; a symbolic link in the results is never read; and with no Typst available the report says so."
     traces_to: [UN-012]
+  - id: DI-88
+    text: "RDM shall typeset the verification report through one typeset interface that takes the layout, its data and its attachments and returns the PDF, answered by the same Typst library on the command line (the rdm-typst program) and inside the component, with the fonts the layout names embedded in the provider, so that the report is the same wherever it is made; with no provider the report says so."
+    traces_to: [UN-019]
 ---
 
 # Publishing — Software Design
@@ -68,7 +71,7 @@ each component to its code.
 | First-pass output | Holds the words a first render produced, for the second pass to test against | DI-9 |
 | Code snippets | Collects the delimited snippets of source files, by key, as a data file, refusing a key used twice, in one file or two | DI-16 |
 | DMR index | Writes one index entry per controlled document from its frontmatter | DI-29 |
-| Verification report | Builds the report's data from the record and the results it is given, and has it laid out as a PDF | DI-64 |
+| Verification report | Builds the report's data from the record and the results it is given, and has it laid out as a PDF through the typeset interface | DI-64, DI-88 |
 | Report layout | Sets the report's pages, every value as text | DI-64 |
 | Evidence bundle | Writes the retained release evidence, the verification report among it, and, given the unit tests' coverage report, carries it as verify does and keeps it; refuses a record with no matrix template before writing anything | DI-64; realises DI-30 |
 | PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | realises part of DI-63 |
@@ -118,7 +121,16 @@ The rules a reviewer needs to judge the design:
   counts, tagged with a declared input or not. The anomalies are a design
   input with no run, a run that did not pass, an unreadable result file, a
   missing attachment and an orphan tag. With no Typst available the report is refused, and the
-  command says so, rather than written without its layout. Because the
+  command says so, rather than written without its layout.
+- **One typeset interface (DI-88).** The report hands the layout, its data
+  file and the attachments it copied in to the typeset port and receives the
+  PDF. On the command line the port is answered by `rdm-typst` (`RDM_TYPST`,
+  or on the PATH), Typst's own crates compiled as RDM's typeset provider;
+  inside the component (`release`'s DI-87) by the same crate as the
+  `rdm:component/typeset` import. The provider carries the fonts the layout
+  names, so the PDF never depends on the fonts of the machine that made it,
+  and a layout error is refused with Typst's message. No Python Typst
+  package and no `typst` executable are used. Because the
   layout sets every value as text, never markup, nothing a test printed can
   change the document.
 - **Evidence bundle.** It holds the verification data, the rendered

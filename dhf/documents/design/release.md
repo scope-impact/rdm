@@ -98,7 +98,8 @@ never spliced into the script text, so an input cannot inject shell.
 **The component build (DI-87).** `rdm.wasm` is the `rdm` container
 compiled as one WASI 0.3 component: the RDM core (the Python package and
 its dependencies, componentized), composed with the record-state provider
-(`specification`'s DI-83) and the c4 provider (`architecture`'s DI-84) so
+(`specification`'s DI-83), the c4 provider (`architecture`'s DI-84) and the
+typeset provider (`publishing`'s DI-88) so
 that the composed component imports only the WASI interfaces the host gives
 it (filesystem, clock, random, environment, stdio and exit) and no network
 interface of its own (the bundled CPython's C library imports WASI 0.2
@@ -113,9 +114,10 @@ command the design input lists the exit code, the standard output and the
 written files are compared, and a difference fails the build. The entry
 (`rdm/component/`) is a second composition root: it chooses the two
 composed-in providers through the ports and runs the same command line.
-`graph serve`, `graph mcp`, the evidence report's PDF and the mutation probe
-are not in the component (they need a network, a process or a renderer the
-component does not have) and exit saying so.
+`graph serve`, `graph mcp` and the mutation probe are not in the component
+(they need a network or a process the component does not have) and exit
+saying so; the verification report's PDF is, through the typeset provider
+(`publishing`'s DI-88).
 
 Relationships that matter, in the direction of the arrow:
 
