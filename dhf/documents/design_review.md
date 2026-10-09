@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 83
+revision: 84
 title: Design Review — RDM
 ---
 
@@ -2447,6 +2447,38 @@ Typst's own Rust crates on `wasm32-wasip2`: a valid PDF, in milliseconds.
   untouched.
 - **Out of scope:** Pandoc as a component; the fonts of documents other than
   the report.
+
+# Design Review 74 — Document PDFs without Pandoc
+
+**Scope reviewed:** the one road to a document PDF, `rdm render` then Pandoc
+to Typst markup then Typst, and whether the component can take it. A spike
+ran the official pandoc.wasm (3.12.1) under Wasmtime: Markdown to Typst in
+a second, and as a WASI 0.2 command component with the stock adapter. But
+it is a 61 MB command, not a library the core can call, and its only
+runnable build is unpinned. A second spike looked for Markdown-to-Typst
+converters: `md2typst` (Python) carried every construct RDM's documents use,
+but it declares no licence, so it cannot be a dependency.
+
+**Disposition:** Approved.
+
+- **New DI-89 (publishing):** `rdm typeset` makes a document's PDF: RDM's
+  own Markdown-to-Typst converter, written for the constructs RDM's
+  documents use (inventoried across the record and the `rdm init`
+  templates: headings, lists at any depth, tables, images, code, quotes,
+  footnotes, links, emphasis, rules), the project's Typst template as a
+  module, and the typeset interface (DI-88). It runs unchanged inside the
+  component, so document PDFs come out of `rdm.wasm` too. A construct it
+  does not carry is refused by name, never dropped.
+- **The Typst template becomes a Typst module.** `template.typ` keeps its
+  look and fonts and loses Pandoc's `$variables$`; `rdm init` lays the new
+  one down, and the project Makefile's PDF rule calls `rdm typeset`.
+- **Pandoc stays for DOCX only.** The documents image keeps Pandoc for Word
+  output; it no longer needs Typst for the PDF.
+- **Not adopted:** pandoc.wasm (a command, unpinned, 61 MB) and `md2typst`
+  (no licence). Revisit when either changes.
+- **Out of scope:** Pandoc's Markdown extensions beyond CommonMark and GFM
+  tables (fenced divs, bracketed spans), which no RDM document uses; DOCX in
+  the component.
 
 # Approval
 

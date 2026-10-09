@@ -38,6 +38,9 @@ design_inputs:
   - id: DI-88
     text: "RDM shall typeset the verification report through one typeset interface that takes the layout, its data and its attachments and returns the PDF, answered by the same Typst library on the command line (the rdm-typst program) and inside the component, with the fonts the layout names embedded in the provider, so that the report is the same wherever it is made; with no provider the report says so."
     traces_to: [UN-019]
+  - id: DI-89
+    text: "RDM shall typeset a rendered document to PDF with one command, converting its Markdown — headings, paragraphs, emphasis, links, inline and fenced code, bullet and numbered lists at any depth, tables, images, block quotes, footnotes and rules — to Typst markup with RDM's own converter, setting the document's id, revision, title, date and status from its frontmatter into the project's Typst template, and compiling through the typeset interface, so that the PDF is the same on the command line and inside the component; a construct the converter does not carry, an image it cannot find or a template Typst rejects is refused, naming it, and nothing is written."
+    traces_to: [UN-019]
 ---
 
 # Publishing — Software Design
@@ -73,6 +76,7 @@ each component to its code.
 | DMR index | Writes one index entry per controlled document from its frontmatter | DI-29 |
 | Verification report | Builds the report's data from the record and the results it is given, and has it laid out as a PDF through the typeset interface | DI-64, DI-88 |
 | Report layout | Sets the report's pages, every value as text | DI-64 |
+| Document typesetter | `rdm typeset`: a rendered document's Markdown to Typst markup with RDM's converter, its frontmatter into the project's Typst template, the PDF through the typeset interface; refuses, by name, what it cannot carry | DI-89 |
 | Evidence bundle | Writes the retained release evidence, the verification report among it, and, given the unit tests' coverage report, carries it as verify does and keeps it; refuses a record with no matrix template before writing anything | DI-64; realises DI-30 |
 | PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | realises part of DI-63 |
 | User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; each tagged-test example names its component by key; chapters in the order of an IFU, a cover naming its release and revision, and each residual risk disclosed | DI-79, DI-80, DI-81, DI-82 |
@@ -130,7 +134,20 @@ The rules a reviewer needs to judge the design:
   `rdm:component/typeset` import. The provider carries the fonts the layout
   names, so the PDF never depends on the fonts of the machine that made it,
   and a layout error is refused with Typst's message. No Python Typst
-  package and no `typst` executable are used. Because the
+  package and no `typst` executable are used.
+- **Document PDFs (DI-89).** The Document typesetter reads a rendered
+  document, takes id, revision, title, date and status from its
+  frontmatter, converts the body with RDM's own Markdown-to-Typst converter
+  (markdown-it-py parses, the converter emits Typst, escaping every
+  character Typst would read as markup, so text stays text), and wraps it
+  in the project's `template.typ`, a Typst module whose `template` function
+  the generated document shows with. Images the document names are read
+  relative to it and handed to the typeset port with the layout, so the
+  provider reads no file; one that is missing is refused by name. A
+  Markdown construct the converter has no rule for is refused by name, so
+  nothing silently vanishes from a controlled document. The PDF is the same
+  on the command line and in the component, because every step is Python
+  and the typeset provider. Because the
   layout sets every value as text, never markup, nothing a test printed can
   change the document.
 - **Evidence bundle.** It holds the verification data, the rendered

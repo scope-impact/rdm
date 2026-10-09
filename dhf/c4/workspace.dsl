@@ -223,6 +223,12 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:publishing"
           }
+          document_typesetter = component "Document typesetter" "rdm typeset: a rendered document's Markdown to Typst markup with RDM's converter, its frontmatter into the project's Typst template, the PDF through the typeset interface" "Python" {
+            properties {
+              "code" "rdm/publishing/typeset.py"
+            }
+            tags "context:publishing"
+          }
           report_layout = component "Report layout" "The report's page layout" "Typst" {
             properties {
               "code" "rdm/publishing/verification_report.typ"
@@ -416,6 +422,8 @@ workspace "RDM" "The design record of regulated software." {
     verification_report -> verification_data "builds on"
     verification_report -> risk_register "reads risk status and residual decisions with"
     verification_report -> report_layout "lays out with"
+    document_typesetter -> verification_report "typesets through the port of"
+    document_typesetter -> kernel "parses frontmatter with"
     pytest_plugin -> risk_register "finds the risks each design input controls with"
     architecture_drawing -> architecture_model "takes the paths, view keys, stamp format and workspace digest from"
     design_gate -> architecture_model "checks the views are fresh with"
@@ -562,7 +570,7 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_publishing" {
       title "Publishing: components (C3)"
-      include renderer markdown_extensions first_pass_output evidence_bundle snippets dmr_index user_manual docs_hooks verification_report report_layout pdf_action allure_reader documents_image gates_action record_reader risk_register test_tags verification_data
+      include renderer markdown_extensions first_pass_output evidence_bundle snippets dmr_index user_manual docs_hooks verification_report report_layout document_typesetter pdf_action allure_reader documents_image gates_action record_reader risk_register test_tags verification_data
       exclude "allure_reader -> test_tags"
       exclude "gates_action -> verification_data"
       exclude "verification_data -> allure_reader"
