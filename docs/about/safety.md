@@ -47,6 +47,9 @@ table is what is left over, and what you do about it. The ratings are
 | RISK-TOOL-005 | A test passes without checking everything its input requires. This residual risk stays Medium; its acceptance is proposed, awaiting a maintainer. | The mutation probe shows, on demand, whether a test catches a defect. | Review each input beside its test; probe the doubtful ones; hold a chain review of every input before each release. |
 | RISK-TOOL-006 | A web page you have open sends an update to the served graph. | `rdm graph serve` is read-only and refuses every update. | Serve on `localhost` (the default), never on a public address; stop the server when you are done. |
 | RISK-TOOL-007 | A query makes RDM reach other services on your network. | Queries with `SERVICE` are refused by the endpoint and the agent server. | Keep the endpoint local as above; report any network access RDM makes. |
+| RISK-TOOL-008 | The WebAssembly component decides differently from the command line. | The component is built from the same code and compared with the command line, command by command, in RDM's own CI. | Run the gates the same way in CI and locally; when the two disagree, trust neither and report it. |
+| RISK-TOOL-009 | Inside the component, the record's state cannot be read and a document is reported as committed. | A question the record-state provider cannot answer is reported as unknown, never as approved. | Give the component the whole repository, `.git` included; a gate that says approval could not be checked has not approved anything. |
+| RISK-TOOL-010 | The component's toolchain drifts from the one the release was reviewed with. | The build pins every tool and dependency it fetches. | Build the component from a release tag, with the pinned tools, never from a floating version. |
 
 ## Security and data
 

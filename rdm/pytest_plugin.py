@@ -39,7 +39,8 @@ from pathlib import Path
 import pytest
 
 from rdm.evidence.allure import COMMIT_LABEL, DIRTY, REQUIREMENT_ATTACHMENT, WORKTREE_LABEL, write_run_facts
-from rdm.kernel.git import head, repo_root, repository_url
+from rdm.kernel.git import web_url
+from rdm.kernel.record_state import record_state
 from rdm.specification.tags import DESIGN_INPUT_LABELS
 
 
@@ -56,8 +57,9 @@ def _record(dhf: str) -> dict:
     from rdm.specification.sdd import declarations, design_inputs
 
     path = Path(dhf)
-    root = (repo_root(path) or path.parent).resolve()
-    commit, dirty = head(root)
+    state = record_state(path)
+    root = (state.root if state else path.parent).resolve()
+    head = state.head() if state else None
 
     def rel(doc: Path) -> str:
         return doc.resolve().relative_to(root).as_posix()
@@ -71,9 +73,9 @@ def _record(dhf: str) -> dict:
         "declared": {id_: list(dict.fromkeys(rel(path / d) for d in docs))
                      for id_, docs in declarations(path).items()},
         "controls": controls,
-        "web": repository_url(root),
-        "commit": commit,
-        "dirty": dirty,
+        "web": web_url(head.origin) if head else None,
+        "commit": head.commit if head else None,
+        "dirty": bool(head and head.dirty),
     }
 
 

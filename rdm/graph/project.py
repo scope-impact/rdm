@@ -37,7 +37,7 @@ from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
 from rdm.evidence.allure import full_name, reconcile
 from rdm.specification.tags import find_tests_dir, scan_source_tests
 from rdm.kernel.frontmatter import frontmatter_of
-from rdm.kernel.git import git, repo_root
+from rdm.kernel.record_state import RecordState, record_state
 from rdm.kernel.ids import is_id, relevant_orphans
 from rdm.specification.sdd import (
     MATRIX_DOC,
@@ -257,28 +257,29 @@ def _record_findings(ds: _Dataset, dhf: Path, results: Path | None) -> None:
             ds.add(record, rdm("finding"), message, "record")
 
 
-def default_branch(root: Path) -> str | None:
+def default_branch(state: RecordState) -> str | None:
     """The branch changes land on: origin's HEAD, else origin's or the local
     main or master (origin first: a local branch may be stale), else git's
     ``init.defaultBranch``, else the only local branch."""
-    remote = git(root, "rev-parse", "--abbrev-ref", "origin/HEAD")
-    if remote and remote != "origin/HEAD":
-        return remote
+    remote = state.resolve("refs/remotes/origin/HEAD")
+    if remote and remote.symbolic:
+        return remote.symbolic.removeprefix("refs/remotes/")
     for ref in ("refs/remotes/origin/main", "refs/remotes/origin/master", "refs/heads/main", "refs/heads/master"):
-        if git(root, "rev-parse", "--verify", "--quiet", ref):
+        if state.resolve(ref):
             return ref.split("/", 2)[2]
-    configured = git(root, "config", "init.defaultBranch")
-    if configured and git(root, "rev-parse", "--verify", "--quiet", f"refs/heads/{configured}"):
+    configured = state.config("init.defaultBranch")
+    if configured and state.resolve(f"refs/heads/{configured}"):
         return configured
-    local = (git(root, "for-each-ref", "--format=%(refname:short)", "refs/heads") or "").split()
+    local = state.branches()
     return local[0] if len(local) == 1 else None
 
 
 @lru_cache(maxsize=4096)
 def _commit_facts(root: Path, sha: str) -> tuple[str, str, str, str]:
     """A commit's full sha, author, time and subject. A commit never changes, so
-    one git call per commit serves every projection that names it."""
-    return tuple(git(root, "log", "-1", "--format=%H%x1f%an%x1f%aI%x1f%s", sha).split("\x1f", 3))
+    one question per commit serves every projection that names it."""
+    found = record_state(root).commit(sha)
+    return found.id, found.author, found.time, found.subject
 
 
 def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, ox.NamedNode]:
@@ -292,7 +293,7 @@ def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, o
     return commit, agent
 
 
-def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str | None:
+def _landing(state: RecordState, sha: str, branch: str, first_parent: set[str]) -> str | None:
     """The first-parent commit of ``branch`` that brought ``sha`` in (DI-51):
     ``sha`` itself when it is on that line (a direct or squash commit), else
     the oldest first-parent commit descending from it (the merge). Descent is
@@ -300,35 +301,22 @@ def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str |
     descends from the change only when the change is its branch's last commit."""
     if sha in first_parent:
         return sha
-    descendants = (git(root, "rev-list", "--ancestry-path", f"{sha}..{branch}") or "").split()
+    descendants = state.ancestry_path(sha, branch)
     landed = [c for c in descendants if c in first_parent]  # newest first
     return landed[-1] if landed else None
 
 
-def _latest_commits(root: Path, paths: list[str]) -> dict[str, str]:
-    """Each path's latest commit — what ``git log -1 -- <path>`` gives — from one
-    ``git log`` over all of them: newest first, the first commit naming a path
-    is its latest."""
-    latest: dict[str, str] = {}
-    wanted, sha = set(paths), None
-    for line in (git(root, "log", "--format=%x00%H", "--name-only", "--", *paths) or "").splitlines():
-        if line.startswith("\x00"):
-            sha = line[1:]
-        elif line in wanted and sha:
-            latest.setdefault(line, sha)
-    return latest
-
-
-def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
-    g = "git"
-    head = git(root, "rev-parse", "HEAD")
+def _git(ds: _Dataset, dhf: Path, state: RecordState) -> None:
+    g, root = "git", state.root
+    head = state.head()
+    head = head.commit if head else None
     if head:  # DI-60: the commit the record was built at
         record = ds.thing(_term(ds.base + "record"), rdm("Record"), ds.base.split(":")[2], g)
         ds.add(record, rdm("atCommit"), _commit(ds, root, head, g)[0], g)
-    branch = default_branch(root)
-    first_parent = set((git(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
+    branch = default_branch(state)
+    first_parent = set(state.first_parents(branch)) if branch else set()
     documents = controlled_documents(dhf, root)  # DI-35, DI-51: every controlled document
-    latest = _latest_commits(root, [entry["path"] for entry in documents])
+    latest = state.latest_commits([entry["path"] for entry in documents])
     landings: dict[str, str | None] = {}  # documents often share a commit
     for entry in documents:
         sha = latest.get(entry["path"])
@@ -338,7 +326,7 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
         commit, _ = _commit(ds, root, sha, g)
         ds.add(doc, _term(_PROV + "wasGeneratedBy"), commit, g)
         if branch and sha not in landings:
-            landings[sha] = _landing(root, sha, branch, first_parent)
+            landings[sha] = _landing(state, sha, branch, first_parent)
         landed = landings.get(sha)
         if landed:
             landing, who = _commit(ds, root, landed, g)
@@ -428,7 +416,8 @@ def project(
         from rdm.release.verify import unit_coverage as component_coverage
 
         coverage = component_coverage(dhf, Path(unit_coverage))
-    repo = repo_root(dhf.parent)
+    state = record_state(dhf.parent)
+    repo = state.root if state else None
     root = repo or dhf.parent
     results = Path(allure_results_dir) if allure_results_dir is not None and Path(allure_results_dir).exists() else None
     ds = _Dataset(project_name or (repo or dhf.parent).name)
@@ -440,8 +429,8 @@ def project(
     if results is not None:
         _executions(ds, results, tests, design_input_ids(dhf))
         verified = set(reconcile(design_input_ids(dhf), results).verified)
-    if repo is not None:
-        _git(ds, dhf, root)
+    if state is not None:
+        _git(ds, dhf, state)
     _risks(ds, dhf, root, verified)
     project_architecture(ds, dhf, root, rdm, coverage)  # after the runs: their source files belong to components
     if checklists:

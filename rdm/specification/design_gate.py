@@ -30,7 +30,6 @@ Part of the core install: it reads only the record (``rdm.specification``).
 
 from __future__ import annotations
 
-import os
 import re
 
 from dataclasses import dataclass, field
@@ -38,7 +37,7 @@ from pathlib import Path
 
 from rdm.kernel.events import Event
 from rdm.kernel.frontmatter import documents, unreadable_documents
-from rdm.kernel.git import git
+from rdm.kernel.record_state import FileState, Tracking, record_state
 from rdm.kernel.ids import relevant_orphans
 from rdm.specification import tags
 from rdm.specification.sdd import (
@@ -160,14 +159,14 @@ def has_uncommitted_changes(path: Path) -> bool | None:
     it unchanged (so ``git status`` hides its edits), and a link whose target
     is any of these.
     """
-    # git status fails (None) outside a work tree, so it needs no prior check.
-    status = git(path.parent, "status", "--porcelain", "--ignored", "--", str(path))
-    if status is None:
+    state = record_state(path.parent)
+    files = state.files([path]) if state else None
+    if files is None:
         return None
-    if status and not _merged_as_committed(path, status):
-        return True
-    listed = git(path.parent, "ls-files", "-v", "--", str(path))
-    if not listed or listed[0] == "S" or listed[0].islower():  # untracked; skip-worktree; assume-unchanged
+    if path.is_dir():  # every file under it, and at least one
+        return not files or any(_uncommitted(state, f) for f in files)
+    mine = next((f for f in files if path.resolve() == state.root / f.path), None)
+    if mine is None or _uncommitted(state, mine):
         return True
     target = path.resolve()
     if path.is_symlink() and target != path.absolute():
@@ -175,21 +174,24 @@ def has_uncommitted_changes(path: Path) -> bool | None:
     return False
 
 
-def _merged_as_committed(path: Path, status: str) -> bool:
+def _uncommitted(state, file: FileState) -> bool:
+    """Whether one file, as the record-state provider reports it, is not what
+    a commit holds: untracked or ignored, hidden from git, edited, or staged
+    other than by a merge of a commit that holds it."""
+    if file.tracking is not Tracking.TRACKED or file.modified:
+        return True
+    return file.staged and not _merged_as_committed(state, state.root / file.path)
+
+
+def _merged_as_committed(state, path: Path) -> bool:
     """Whether ``path`` is staged only because a merge is being made, exactly
     as a commit holds it at its path: committed and reviewed there, so
     approved. Git names the merged commit (MERGE_HEAD) only after the merge
     hook has run, so the commit is found by the document's content. A merge
     result no commit holds (a resolved conflict) is new content, and an edit
     in the working tree is uncommitted, as ever."""
-    staged_only = all(line[:1] in "MA" and line[1:2] == " " for line in status.splitlines())
-    merging = bool(git(path.parent, "rev-parse", "-q", "--verify", "MERGE_HEAD")) or \
-        os.environ.get("GIT_REFLOG_ACTION", "").startswith("merge")
-    if not (staged_only and merging):
-        return False
-    staged = git(path.parent, "rev-parse", "-q", "--verify", f":./{path.name}")
-    return bool(staged) and bool(git(path.parent, "log", "--all", "-n1", "--format=%H",
-                                     f"--find-object={staged}", "--", path.name))
+    head = state.head()
+    return bool(head and head.merging) and state.staged_in_history(path)
 
 
 def _approval(path: Path, events: list[Event]) -> bool | None:
