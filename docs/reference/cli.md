@@ -36,7 +36,7 @@ The `rdm graph` commands that read the record (`build`, `query`, `validate`, `ex
 
 | Command | What it does |
 | --- | --- |
-| `draw [--dhf DIR]` | export the architecture workspace (`<dhf>/c4/workspace.dsl`): its model to `c4/workspace.json`, each view drawn by Graphviz to `c4/views/<view>.svg`, all stamped with the workspace's hash (needs Java, Structurizr's CLI and Graphviz; the design gate fails on a stale one) |
+| `draw [--dhf DIR]` | export the architecture workspace (`<dhf>/c4/workspace.dsl`): its model to `c4/workspace.json`, each view drawn to `c4/views/<view>.svg`, all stamped with the workspace's hash (needs `rdm-c4`, and Java, Structurizr's CLI and Graphviz for dynamic views; the design gate fails on a stale one) |
 
 ## The record as a graph — `rdm graph …` (extra: `graph`)
 

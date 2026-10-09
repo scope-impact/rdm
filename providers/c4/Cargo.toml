@@ -1,0 +1,29 @@
+[package]
+name = "rdm-c4"
+version = "0.1.0"
+edition = "2021"
+description = "RDM's c4 provider (DI-84): the architecture workspace exported and drawn by structurizrx, natively and as a WASI component"
+license = "Apache-2.0"
+
+# structurizrx (Apache-2.0), pinned: its parser, model, view generation and renderers only.
+[dependencies]
+structurizr-model = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
+structurizr-dsl = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
+structurizr-renderer = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
+structurizr-query = { git = "https://github.com/pomali/structurizrx", rev = "46a5daaeb647bee5a61e28db25876c66c38ebf4b" }
+serde_json = "1"
+wit-bindgen = { version = "0.62.0", optional = true }
+
+[features]
+# The WASI component: exports rdm:component/c4 (../../wit). Off for the native program.
+component = ["dep:wit-bindgen"]
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "rdm-c4"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "s"

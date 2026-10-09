@@ -22,7 +22,11 @@ jobs:
       # One install: the synced environment is RDM at this commit, so the
       # workflow does not install it a second time.
       install-rdm: false
-      install-command: uv sync --all-extras && echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      # rdm-c4 (DI-84): the c4 provider, built from its pinned sources.
+      install-command: >-
+        uv sync --all-extras && echo "$PWD/.venv/bin" >> "$GITHUB_PATH" &&
+        cargo build --release --locked --manifest-path providers/c4/Cargo.toml &&
+        echo "$PWD/providers/c4/target/release" >> "$GITHUB_PATH"
       # The unit tests run under coverage first: their code coverage per
       # component is unit-test evidence verify adds (DI-76), never acceptance
       # evidence, so it is measured apart from the acceptance run.

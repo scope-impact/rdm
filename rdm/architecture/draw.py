@@ -1,18 +1,23 @@
 """``rdm c4 draw``: the architecture workspace's model and views, drawn and
-stamped (DI-70).
+stamped (DI-70), through one c4 interface (DI-84).
 
 The architecture is one Structurizr workspace, ``<dhf>/c4/workspace.dsl``
-(DI-66). Drawing exports it with Structurizr's CLI: the model as
-``<dhf>/c4/workspace.json`` (what RDM reads), and each view as DOT, drawn by
-Graphviz to ``<dhf>/c4/views/<view>.svg`` (what the design documents show, so
-GitHub, the docs site and a PDF show one picture, and no browser draws it).
-Every drawn file is stamped with the SHA-256 of the workspace; reading the
-model and checking the stamps is the record's (rdm/architecture/model.py), and needs
-none of the tools below.
+(DI-66). Drawing hands the workspace's sources (the file and every file it
+includes) to the c4 port and receives the exported model, written as
+``<dhf>/c4/workspace.json`` (what RDM reads), and each view's SVG, written to
+``<dhf>/c4/views/<view>.svg`` (what the design documents show, so GitHub, the
+docs site and a PDF show one picture, and no browser draws it). Every drawn
+file is stamped with the SHA-256 of the workspace; reading the model and
+checking the stamps is the record's (rdm/architecture/model.py), and needs no
+provider.
 
-Drawing needs Java, Structurizr's CLI (``RDM_STRUCTURIZR``, or
-``structurizr.sh`` / ``structurizr`` on the PATH) and Graphviz's ``dot``
-(``RDM_DOT``, or on the PATH).
+Providers: ``rdm-c4`` (``RDM_C4``, or on the PATH), structurizrx compiled as
+RDM's c4 provider, the same code the component carries; and, for the views
+it cannot draw yet (dynamic views), Structurizr's command line with Java and
+Graphviz (``RDM_STRUCTURIZR`` / ``RDM_DOT``, or ``structurizr.sh``,
+``structurizr`` and ``dot`` on the PATH), which also draws everything when
+``rdm-c4`` is absent. A view no provider draws is refused, by name, and
+nothing is written.
 """
 
 from __future__ import annotations
@@ -23,40 +28,140 @@ import re
 import shutil
 import subprocess
 import tempfile
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable, Protocol
 
-from rdm.architecture.model import MODEL, STAMP_KEY, SVG_STAMP, VIEWS, WORKSPACE, view_keys, workspace_digest
+from rdm.architecture.model import (
+    MODEL, STAMP_KEY, SVG_STAMP, VIEWS, WORKSPACE, included_files, view_keys, workspace_digest,
+)
 
 # Structurizr's DOT export leaves a bare & in its HTML labels (e.g. "V&V"), which
 # Graphviz rejects as malformed; escape it until the exporter does.
 _BARE_AMPERSAND = re.compile(r"&(?!(?:[a-zA-Z]+|#\d+|#x[0-9a-fA-F]+);)")
+
+ENTRY = "workspace.dsl"  # the key of the workspace itself among the sources
 
 
 class DrawError(RuntimeError):
     """The workspace could not be exported or drawn."""
 
 
-def _tool(env: str, *names: str) -> list[str]:
+@dataclass
+class Drawing:
+    """What a provider returns: the exported model and the SVG of each view it drew."""
+
+    model: dict
+    views: dict[str, str] = field(default_factory=dict)
+
+
+class C4(Protocol):
+    """The c4 port: the workspace's sources (path relative to the workspace's
+    directory, POSIX, to text; ``workspace.dsl`` the entry) exported and drawn."""
+
+    name: str
+
+    def draw(self, sources: dict[str, str]) -> Drawing: ...
+
+
+def _unpack(sources: dict[str, str], into: Path) -> Path:
+    for name, text in sources.items():
+        target = into / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+    return into / ENTRY
+
+
+class RdmC4:
+    """structurizrx as RDM's c4 provider, the native program ``rdm-c4``."""
+
+    name = "rdm-c4"
+
+    def __init__(self, program: str) -> None:
+        self.program = program
+
+    def draw(self, sources: dict[str, str]) -> Drawing:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = _unpack(sources, Path(tmp))
+            done = subprocess.run([self.program, str(workspace)], capture_output=True, text=True)
+        if done.returncode != 0:
+            reason = done.stderr.strip().replace(str(workspace), ENTRY) or "no output"
+            raise DrawError(f"{self.name} could not export the workspace: {reason}")
+        drawn = json.loads(done.stdout)
+        return Drawing(model=drawn["workspace"], views=dict(drawn["views"]))
+
+
+class StructurizrCli:
+    """Structurizr's command line (Java) exporting JSON and DOT, Graphviz drawing the DOT."""
+
+    name = "Structurizr"
+
+    def __init__(self, cli: list[str], dot: list[str]) -> None:
+        self.cli, self.dot = cli, dot
+
+    def draw(self, sources: dict[str, str], only: list[str] | None = None) -> Drawing:
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            workspace = _unpack(sources, work / "src")
+            self._export(workspace, work)
+            model = json.loads(next((work / "json").glob("*.json")).read_text(encoding="utf-8"))
+            views = {}
+            for key in view_keys(model) if only is None else only:
+                source = work / "dot" / f"structurizr-{key}.dot"
+                if not source.is_file():
+                    raise DrawError(f"{self.name} exported no DOT for view {key}")
+                text = _BARE_AMPERSAND.sub("&amp;", source.read_text(encoding="utf-8"))
+                done = subprocess.run([*self.dot, "-Tsvg"], input=text, capture_output=True, text=True)
+                if done.returncode != 0:
+                    raise DrawError(f"Graphviz could not draw view {key}: {done.stderr.strip()}")
+                views[key] = done.stdout
+        return Drawing(model=model, views=views)
+
+    def _export(self, workspace: Path, work: Path) -> None:
+        """The workspace as JSON and as DOT, the two CLI runs side by side (each
+        starts a JVM, and the CLI exports one format per run)."""
+        runs = {fmt: subprocess.Popen([*self.cli, "export", "-w", str(workspace), "-f", fmt, "-o", str(work / fmt)],
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                for fmt in ("json", "dot")}
+        for fmt, run in runs.items():
+            out, err = run.communicate()
+            if run.returncode != 0:
+                lines = [line for line in (err + out).splitlines() if line.strip()]
+                raise DrawError(f"{self.name} could not export {fmt}: {lines[-1] if lines else 'no output'}")
+
+
+def _tool(env: str, *names: str) -> list[str] | None:
     configured = os.environ.get(env)
     if configured:
         return [configured]
     for name in names:
         if (found := shutil.which(name)):
             return [found]
-    raise DrawError(f"{names[0]} is not installed (or set {env})")
+    return None
 
 
-def _export(cli: list[str], workspace: Path, work: Path) -> None:
-    """The workspace as JSON and as DOT, the two CLI runs side by side (each
-    starts a JVM, and the CLI exports one format per run)."""
-    runs = {fmt: subprocess.Popen([*cli, "export", "-w", str(workspace), "-f", fmt, "-o", str(work / fmt)],
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            for fmt in ("json", "dot")}
-    for fmt, run in runs.items():
-        out, err = run.communicate()
-        if run.returncode != 0:
-            lines = [line for line in (err + out).splitlines() if line.strip()]
-            raise DrawError(f"{workspace}: Structurizr could not export {fmt}: {lines[-1] if lines else 'no output'}")
+def providers() -> tuple[C4 | None, StructurizrCli | None]:
+    """The providers found: rdm-c4, and Structurizr's command line with Graphviz."""
+    program = _tool("RDM_C4", "rdm-c4")
+    cli, dot = _tool("RDM_STRUCTURIZR", "structurizr.sh", "structurizr"), _tool("RDM_DOT", "dot")
+    return (RdmC4(program[0]) if program else None), (StructurizrCli(cli, dot) if cli and dot else None)
+
+
+_providers: Callable[[], tuple[C4 | None, StructurizrCli | None]] = providers
+
+
+def use(find: Callable[[], tuple[C4 | None, StructurizrCli | None]]) -> None:
+    """Choose how the providers are found, once, when RDM starts (the component)."""
+    global _providers
+    _providers = find
+
+
+def sources_of(dhf_dir: Path) -> dict[str, str]:
+    """The workspace and every local file it includes, by path relative to its directory."""
+    workspace = Path(dhf_dir) / WORKSPACE
+    files = [workspace.resolve(), *included_files(workspace)]
+    return {os.path.relpath(f, workspace.parent.resolve()).replace(os.sep, "/"): f.read_text(encoding="utf-8")
+            for f in files}
 
 
 def draw(dhf_dir: Path) -> list[str]:
@@ -65,35 +170,36 @@ def draw(dhf_dir: Path) -> list[str]:
     workspace = dhf_dir / WORKSPACE
     if not workspace.is_file():
         raise DrawError(f"no architecture workspace: {workspace}")
-    cli = _tool("RDM_STRUCTURIZR", "structurizr.sh", "structurizr")
-    dot = _tool("RDM_DOT", "dot")
+    first, legacy = _providers()
+    if first is None and legacy is None:
+        raise DrawError("rdm-c4 is not installed (or set RDM_C4), nor Structurizr's command line with Graphviz "
+                        "(RDM_STRUCTURIZR, RDM_DOT)")
     stamp = workspace_digest(dhf_dir)
-    with tempfile.TemporaryDirectory() as tmp:
-        work = Path(tmp)
-        _export(cli, workspace, work)
-        model = json.loads(next((work / "json").glob("*.json")).read_text(encoding="utf-8"))
-        (model.get("properties") or {}).pop("structurizr.dsl", None)  # the workspace again, base64; the stamp says it
-        model[STAMP_KEY] = {"workspace_sha256": stamp}
-        keys = view_keys(model)
-        drawn = {}
-        for key in keys:
-            source = work / "dot" / f"structurizr-{key}.dot"
-            if not source.is_file():
-                raise DrawError(f"{workspace}: Structurizr exported no DOT for view {key}")
-            text = _BARE_AMPERSAND.sub("&amp;", source.read_text(encoding="utf-8"))
-            done = subprocess.run([*dot, "-Tsvg"], input=text, capture_output=True, text=True)
-            if done.returncode != 0:
-                raise DrawError(f"{workspace}: Graphviz could not draw view {key}: {done.stderr.strip()}")
-            head, _, rest = done.stdout.partition("\n")  # the stamp goes after the XML declaration
-            drawn[key] = f"{head}\n{SVG_STAMP.format(view=key, digest=stamp)}\n{rest}"
+    sources = sources_of(dhf_dir)
+    try:
+        drawing = (first or legacy).draw(sources)
+        keys = view_keys(drawing.model)
+        missing = [key for key in keys if key not in drawing.views]
+        if missing and first is not None and legacy is not None:
+            drawing.views.update(legacy.draw(sources, only=missing).views)
+            missing = [key for key in keys if key not in drawing.views]
+        if missing:
+            raise DrawError(f"{(first or legacy).name} cannot draw view(s) {', '.join(missing)}")
+    except DrawError as error:
+        raise DrawError(f"{workspace}: {error}") from None
+    model = drawing.model
+    (model.get("properties") or {}).pop("structurizr.dsl", None)  # the workspace again, base64; the stamp says it
+    model[STAMP_KEY] = {"workspace_sha256": stamp}
     (dhf_dir / MODEL).write_text(json.dumps(model, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     views = dhf_dir / VIEWS
     views.mkdir(parents=True, exist_ok=True)
     for old in views.glob("*.svg"):
-        if old.stem not in drawn:
+        if old.stem not in drawing.views:
             old.unlink()
-    for key, svg in drawn.items():
-        (views / f"{key}.svg").write_text(svg, encoding="utf-8")
+    for key, svg in drawing.views.items():
+        head, _, rest = svg.partition("\n")  # the stamp goes after the XML declaration
+        (views / f"{key}.svg").write_text(f"{head}\n{SVG_STAMP.format(view=key, digest=stamp)}\n{rest}",
+                                          encoding="utf-8")
     return keys
 
 

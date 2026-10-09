@@ -97,13 +97,18 @@ def _included(path: Path, seen: set[Path]) -> list[Path]:
     return found
 
 
+def included_files(workspace: Path) -> list[Path]:
+    """Every local file the workspace includes, at any depth, resolved."""
+    return _included(workspace, {workspace.resolve()})
+
+
 def workspace_digest(dhf_dir: Path) -> str | None:
     """The SHA-256 of the workspace, and of every local file it includes."""
     workspace = Path(dhf_dir) / WORKSPACE
     if not workspace.is_file():
         return None
     digest = hashlib.sha256(workspace.read_bytes())
-    for file in _included(workspace, {workspace.resolve()}):
+    for file in included_files(workspace):
         name = Path(os.path.relpath(file, workspace.parent.resolve())).as_posix()
         digest.update(b"\0" + name.encode() + b"\0" + file.read_bytes())
     return digest.hexdigest()
