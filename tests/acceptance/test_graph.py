@@ -249,3 +249,12 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
 
     with verification_step("A missing store is refused, not created"):
         assert graph_cli.graph_serve_command(store=tmp_path / "nope") == 2
+
+
+@allure.story("DI-85")
+@allure.label("component", "TODO")
+def test_di_85_not_implemented() -> None:
+    """DI-85: RDM shall project, store, query and validate the record's RDF through one RDF
+    library written in Python, so that the built record is byte-identical on the command
+    line and inside the component, and no graph command needs native code."""
+    pytest.fail("DI-85 acceptance test not implemented -- replace this stub with real assertions")
