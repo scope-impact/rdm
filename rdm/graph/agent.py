@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.cli import PREFIXES, with_prefixes
 from rdm.graph.ns import ReadOnlyError, read_only_query

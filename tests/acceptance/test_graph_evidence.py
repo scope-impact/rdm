@@ -15,7 +15,7 @@ import pytest
 allure = pytest.importorskip("allure")
 
 from tests.acceptance.evidence import verification_step  # noqa: E402
-pytest.importorskip("pyoxigraph")
+pytest.importorskip("rdflib")
 
 from rdm.graph.agent import Record, trace  # noqa: E402
 from rdm.graph.project import project  # noqa: E402

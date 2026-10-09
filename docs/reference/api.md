@@ -169,6 +169,10 @@ Needs the `graph` extra.
 
 ::: rdm.graph.project
 
+### `rdm.graph.rdf`
+
+::: rdm.graph.rdf
+
 ### `rdm.graph.rules`
 
 ::: rdm.graph.rules

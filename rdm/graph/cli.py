@@ -78,11 +78,11 @@ def graph_query_command(
 ) -> int:
     """Answer a SPARQL query over a store, or over a fresh in-memory projection."""
     try:
-        import pyoxigraph as ox
+        from rdm.graph import rdf as ox
     except ImportError:
         return _missing_extra()
     if store is not None:
-        if not Path(store).exists():
+        if not ox.is_store(store):
             print(f"Error: store not found: {store} (run `rdm graph build --store {store}` first)")
             return 2
         if infer or unit_coverage is not None:
@@ -119,8 +119,10 @@ def graph_serve_command(store: Path | None = None, bind: str = "localhost:7878")
         from rdm.graph.endpoint import endpoint
     except ImportError:
         return _missing_extra()
+    from rdm.graph.rdf import is_store
+
     location = Path(store or DEFAULT_STORE)
-    if not location.exists():
+    if not is_store(location):
         print(f"Error: store not found: {location} (run `rdm graph build --store {location}` first)")
         return 2
     host, _, port = bind.rpartition(":")
@@ -152,13 +154,13 @@ def graph_explorer_file_command(
 ) -> int:
     """Write the whole record as a Graph Explorer graph file (DI-39)."""
     try:
-        import pyoxigraph as ox
+        from rdm.graph import rdf as ox
 
         from rdm.graph.explorer import DEFAULT_ENDPOINT, write_explorer_file
     except ImportError:
         return _missing_extra()
     if store is not None:
-        if not Path(store).exists():
+        if not ox.is_store(store):
             print(f"Error: store not found: {store}")
             return 2
         if unit_coverage is not None:

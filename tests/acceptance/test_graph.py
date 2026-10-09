@@ -1,6 +1,6 @@
 """Acceptance tests for the graph context's design inputs (see dhf/).
 
-DI-35 (the record projected into named RDF graphs) and DI-36 (Oxigraph store,
+DI-35 (the record projected into named RDF graphs) and DI-36 (the graph store,
 SPARQL query, SPARQL endpoint), tagged `@allure.story`, over the real
 projection, the `rdm graph` commands and the served endpoint. Skips cleanly
 if allure-pytest or the `graph` extra is not installed.
@@ -24,7 +24,8 @@ from tests.util import git_run
 allure = pytest.importorskip("allure")
 
 from tests.acceptance.evidence import verification_step  # noqa: E402
-ox = pytest.importorskip("pyoxigraph")
+pytest.importorskip("rdflib")
+from rdm.graph import rdf as ox  # noqa: E402
 
 from rdm.graph import cli as graph_cli  # noqa: E402
 from rdm.graph.project import build_store, nquads, project  # noqa: E402
@@ -252,9 +253,55 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
 
 
 @allure.story("DI-85")
-@allure.label("component", "TODO")
-def test_di_85_not_implemented() -> None:
-    """DI-85: RDM shall project, store, query and validate the record's RDF through one RDF
-    library written in Python, so that the built record is byte-identical on the command
-    line and inside the component, and no graph command needs native code."""
-    pytest.fail("DI-85 acceptance test not implemented -- replace this stub with real assertions")
+@allure.label("component", "Projection")
+def test_the_graph_stands_on_one_rdf_library_in_python(tmp_path: Path) -> None:
+    """DI-85: the record's RDF is projected, stored, queried and validated through
+    one RDF library written in Python; the built record is byte-identical wherever
+    it is built, and no graph command needs native code."""
+    import sys
+
+    from rdm.graph.validate import validate
+
+    dhf, results = _record(tmp_path)
+    quads = project(dhf, results)
+    with verification_step("the graph imports no native code of its own: every module it loads is Python"):
+        import rdm.graph.agent  # noqa: F401 (every graph module loaded)
+        import rdm.graph.endpoint  # noqa: F401
+        import rdm.graph.explorer  # noqa: F401
+        validate(quads)
+        native = sorted(name for name, module in sys.modules.items()
+                        if name.split(".")[0] in ("rdm", "rdflib", "pyshacl", "pyoxigraph", "owlrl", "pyparsing")
+                        and str(getattr(module, "__file__", "")).endswith((".so", ".pyd", ".dylib")))
+        assert native == [] and "pyoxigraph" not in sys.modules
+
+    with verification_step("the built record is sorted N-Quads, byte-identical across builds, and read back whole"):
+        text = nquads(quads)
+        assert text == nquads(project(dhf, results)) and text.splitlines() == sorted(text.splitlines())
+        assert set(ox.parse(text.encode(), format=ox.RdfFormat.N_QUADS)) == set(quads)
+        store_dir = tmp_path / "store"
+        assert build_store(store_dir, quads) == len(set(quads))
+        assert (store_dir / "store.nq").read_text(encoding="utf-8") == text
+        assert set(ox.Store.read_only(str(store_dir))) == set(quads)
+
+    with verification_step("queries answer in every format the command line and the endpoint write"):
+        store = _store(quads)
+        select = PREFIXES + "SELECT ?id WHERE { ?i a rdm:DesignInput ; dcterms:identifier ?id } ORDER BY ?id"
+        rows = store.query(select, use_default_graph_as_union=True)
+        ids = [str(row["id"].value) for row in rows]
+        assert ids == ["DI-1", "DI-2"]
+        as_json = json.loads(rows.serialize(format=ox.QueryResultsFormat.JSON))
+        assert [b["id"]["value"] for b in as_json["results"]["bindings"]] == ids
+        assert rows.serialize(format=ox.QueryResultsFormat.TSV).decode() == '?id\n"DI-1"\n"DI-2"\n'
+        assert rows.serialize(format=ox.QueryResultsFormat.CSV).decode() == "id\r\nDI-1\r\nDI-2\r\n"
+        xml = rows.serialize(format=ox.QueryResultsFormat.XML).decode()
+        assert xml.count("<result>") == 2 and "<literal>DI-1</literal>" in xml
+        assert bool(store.query(PREFIXES + "ASK { ?i a rdm:DesignInput }", use_default_graph_as_union=True))
+        built = store.query(PREFIXES + "CONSTRUCT { ?i a rdm:DesignInput } WHERE { ?i a rdm:DesignInput }",
+                            use_default_graph_as_union=True)
+        assert ox.serialize(built, format=ox.RdfFormat.N_TRIPLES).decode().count("\n") == 2
+
+    with verification_step("what is not a query, or not RDF, is refused as a syntax error, as before"):
+        with pytest.raises(SyntaxError):
+            store.query("this is not sparql")
+        with pytest.raises(SyntaxError):
+            list(ox.parse(b"<a> <b> .", format=ox.RdfFormat.TURTLE))

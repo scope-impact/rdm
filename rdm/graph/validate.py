@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.ns import RDFS, SHACL, SKOS
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.ns import with_prefixes
 from rdm.graph.project import ONTOLOGY_FILE

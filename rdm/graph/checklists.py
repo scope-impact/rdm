@@ -23,7 +23,7 @@ import re
 from pathlib import Path
 from urllib.parse import quote
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.ns import DCTERMS, SKOS
 

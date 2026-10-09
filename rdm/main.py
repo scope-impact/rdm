@@ -407,9 +407,9 @@ def _add_graph_parser(subparsers):
                                "component's unit lines run and measured")
 
     build = graph_sub.add_parser('build', parents=[record, coverage],
-                                 help='project the record into RDF (sorted N-Quads and/or an Oxigraph store)')
+                                 help='project the record into RDF (sorted N-Quads and/or a store)')
     build.add_argument('-o', '--output', help='write sorted N-Quads here (default: stdout, unless --store)')
-    build.add_argument('--store', help='(re)build an Oxigraph store in this directory, e.g. .rdm/graph')
+    build.add_argument('--store', help='(re)build the graph store in this directory, e.g. .rdm/graph')
     build.add_argument('--project', help='project name in instance IRIs (default: the repository name)')
     build.add_argument('--infer', action='store_true',
                        help="add what the vocabulary's rules derive, in a separate inferred graph")

@@ -30,7 +30,7 @@ from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.c4 import project_architecture
 from rdm.graph.manual import project_manual
@@ -464,6 +464,4 @@ def build_store(location: Path, quads: list[ox.Quad]) -> int:
     store.clear()
     store.extend(quads)
     store.flush()
-    count = len(store)
-    del store  # release the on-disk lock so `rdm graph serve` can open it
-    return count
+    return len(store)

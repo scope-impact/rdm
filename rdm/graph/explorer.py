@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.allure import GRAPH as EXECUTIONS_GRAPH
 from rdm.graph.ns import RDF

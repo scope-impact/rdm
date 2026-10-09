@@ -2,9 +2,9 @@
 `rdm graph serve`: the store as a read-only SPARQL 1.1 endpoint for graph
 browsers such as AWS Graph Explorer (DI-36).
 
-The endpoint is RDM's own rather than Oxigraph's server, which runs federated
-SERVICE calls: with CORS open, any web page the user has open could have it
-fetch addresses on their network. Every query goes through the same guard as
+The endpoint is RDM's own rather than a store's own server, which would run
+federated SERVICE calls: with CORS open, any web page the user has open could
+have it fetch addresses on their network. Every query goes through the same guard as
 the agent server's (`read_only_query`), over the store opened afresh, so the
 endpoint serves the last build. Updates are refused.
 """
@@ -15,7 +15,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.ns import ReadOnlyError, read_only_query
 

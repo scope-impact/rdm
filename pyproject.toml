@@ -36,12 +36,13 @@ dependencies = [
 # Browsers are provided by the environment; if the preinstalled browser version
 # differs, launch with executable_path.
 validation = ["playwright==1.63.0"]
-# The design record as a linked-data graph (DI-35/36): an embedded RDF store
-# (pyoxigraph), which RDM also serves as a read-only SPARQL endpoint for
-# graph browsers such as AWS Graph Explorer; pyshacl runs the gate shapes
-# (DI-38); mcp serves it to agents, read-only (DI-41/42). Optional: the record core keeps
-# no RDF dependency.
-graph = ["pyoxigraph==0.5.11", "pyshacl==0.40.1", "mcp==2.2.0"]
+# The design record as a linked-data graph (DI-35/36): RDF, SPARQL and the
+# store on rdflib, written in Python so the graph runs inside the component
+# too (DI-85), which RDM also serves as a read-only SPARQL endpoint for graph
+# browsers such as AWS Graph Explorer; pyshacl runs the gate shapes (DI-38);
+# mcp serves it to agents, read-only (DI-41/42). Optional: the record core
+# keeps no RDF dependency.
+graph = ["rdflib==7.6.0", "pyshacl==0.40.1", "mcp==2.2.0"]
 # The verification report as PDF (DI-64): Typst compiled in-process, so CI
 # needs no Pandoc. Without it, a `typst` executable on PATH is used.
 report = ["typst==0.15.0"]
@@ -68,7 +69,7 @@ dev = [
     "coverage==7.16.2",
     "playwright==1.63.0",
     "allure-pytest==2.16.2",
-    "pyoxigraph==0.5.11",
+    "rdflib==7.6.0",
     "pyshacl==0.40.1",
     "mcp==2.2.0",
     "typst==0.15.0",

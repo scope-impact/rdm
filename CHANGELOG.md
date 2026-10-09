@@ -3,6 +3,13 @@
 <!-- --8<-- [start:history] -->
 ## Unreleased
 
+- **One record-state interface, one RDF library, package resources** (Design
+  Review 72, DI-83, DI-85, DI-86): every question RDM asks git goes through
+  the shared kernel's record-state interface, the only place that runs
+  `git`; the graph stands on rdflib, written in Python, so the store is one
+  N-Quads file and `pyoxigraph` is no longer a dependency; the shapes, the
+  vocabulary and the checklists are read as package resources. First steps
+  towards running RDM as one WASI component (UN-019).
 - **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
   one manual in IFU order (cover, intended use, how RDM works, safety and
   limitations with each residual risk, installation, getting started,

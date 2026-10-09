@@ -17,7 +17,7 @@ import pytest
 allure = pytest.importorskip("allure")
 
 from tests.acceptance.evidence import verification_step  # noqa: E402
-pytest.importorskip("pyoxigraph")
+pytest.importorskip("rdflib")
 mcp = pytest.importorskip("mcp")
 
 from rdm.graph.agent import ROW_LIMIT, Record, query  # noqa: E402

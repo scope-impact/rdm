@@ -13,7 +13,8 @@ from pathlib import Path
 import pytest
 
 allure = pytest.importorskip("allure")
-ox = pytest.importorskip("pyoxigraph")
+pytest.importorskip("rdflib")
+from rdm.graph import rdf as ox  # noqa: E402
 
 from rdm.graph.agent import Record, trace  # noqa: E402
 from rdm.graph.project import project  # noqa: E402

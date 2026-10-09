@@ -43,7 +43,7 @@ UNIT_COVERAGE: dict[str, Path | str] = {}
 def graph_data(dhf: Path, results: Path, unit_coverage: Path | None = None) -> dict:
     """The map's data, every value from a SPARQL query over the projected graph,
     with what its rules derive and, given the report, each component's unit coverage."""
-    import pyoxigraph as ox
+    from rdm.graph import rdf as ox
 
     from rdm.graph.ns import with_prefixes
     from rdm.graph.project import project

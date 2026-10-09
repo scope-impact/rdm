@@ -39,8 +39,8 @@ rdm graph query --store .rdm/graph \
 rdm graph serve --store .rdm/graph            # localhost only; never bind a public address
 ```
 
-`--store` is an embedded [Oxigraph](https://github.com/oxigraph/oxigraph)
-database. Each build clears it first, so a removed design input never lingers.
+`--store` is a directory holding the built record as one N-Quads file. Each
+build replaces it, so a removed design input never lingers.
 Without `--store`, `rdm graph query` builds an in-memory projection on the fly.
 Add `.rdm/` to `.gitignore`; the store is generated, like Allure results.
 A built store, and the endpoint serving it, is as current as its last build;

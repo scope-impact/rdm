@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.ns import DCTERMS, RDF, XSD
 from rdm.architecture.model import component_dependencies, component_of, python_files, read_model

@@ -18,7 +18,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pyoxigraph as ox
+from rdm.graph import rdf as ox
 
 from rdm.graph.project import _DCT, _PROV, _XSD, _Dataset, _term, rdm
 from rdm.evidence.allure import COMMIT_LABEL, WORKTREE_LABEL, named_results, run_status, run_version
