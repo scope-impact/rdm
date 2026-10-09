@@ -32,6 +32,10 @@ COMMANDS=(
     "story design-gate --no-such-option"
 )
 
+# The native providers, as CI puts them on the PATH.
+for provider in "$ROOT"/providers/*/target/release; do [ -d "$provider" ] && PATH="$provider:$PATH"; done
+export PATH
+
 cd "$REPO"
 mkdir -p "$CMP"
 status=0
