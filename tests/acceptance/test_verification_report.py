@@ -5,7 +5,7 @@ results are rendered to PDF and read back: once clean (release-grade), once
 with every kind of problem an auditor must see (a failed run, a skipped one, a
 design input with no run, uncommitted changes, another commit, a missing
 attachment, an orphan tag, and an attempt to inject Typst markup). Skips
-cleanly if allure-pytest, typst or pypdf is not installed.
+cleanly if allure-pytest or pypdf is not installed, or rdm-typst is not built.
 """
 
 from __future__ import annotations
@@ -14,14 +14,12 @@ import hashlib
 import json
 import shutil
 import struct
-import sys
 import zlib
 from pathlib import Path
 
 import pytest
 
 allure = pytest.importorskip("allure")
-pytest.importorskip("typst")
 pypdf = pytest.importorskip("pypdf")
 
 from rdm.main import cli  # noqa: E402
@@ -35,6 +33,7 @@ from rdm.publishing.report import (  # noqa: E402
 )
 from rdm.kernel.version import __version__  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
+from tests.acceptance.test_publishing import rdm_typst  # noqa: E402
 from tests.util import git_run  # noqa: E402
 
 OTHER = "f" * 40
@@ -150,6 +149,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     """DI-64: identification, evidence status, anomalies and traceability first;
     then per design input every run with its verification steps and the
     attachments the test made; then every result file by SHA-256."""
+    monkeypatch.setenv("RDM_TYPST", rdm_typst())
     clean_dhf, clean_commit = _record(tmp_path / "clean", DI_1)
     clean_results = tmp_path / "clean-results"
     clean_results.mkdir()
@@ -281,20 +281,14 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert '#panic("injected")' in text and "#set page(width: 1cm)" in text
         assert {round(float(p.mediabox.width)) for p in pypdf.PdfReader(pdf).pages} == {595}  # A4, unchanged
 
-    with verification_step("without the typst package a typst executable is used, and with neither the report says so"):
-        monkeypatch.setitem(sys.modules, "typst", None)
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        (bin_dir / "typst").write_text('#!/bin/sh\n[ "$1" = compile ] && [ "$2" = --root ] && '
-                                       '[ -f "$3/report.json" ] && echo "%PDF-stub" > "$5"\n')
-        (bin_dir / "typst").chmod(0o755)
-        monkeypatch.setenv("PATH", str(bin_dir))
-        assert render_pdf(report, results, tmp_path / "stub.pdf").read_text() == "%PDF-stub\n"
+    with verification_step("with no Typst available the report says so"):
+        monkeypatch.delenv("RDM_TYPST")
         monkeypatch.setenv("PATH", str(tmp_path / "nowhere"))
-        with pytest.raises(ReportUnavailable, match=r"rdm\[report\]"):
+        with pytest.raises(ReportUnavailable, match=r"rdm-typst"):
             render_pdf(report, results, tmp_path / "none.pdf")
         assert evidence_bundle(dhf, results, tmp_path / "bare")["verification_report"].startswith("not rendered")
         monkeypatch.undo()
+        monkeypatch.setenv("RDM_TYPST", rdm_typst())
     with verification_step("the evidence bundle includes the report, and rdm story evidence-report writes it"):
         manifest = evidence_bundle(dhf, results, tmp_path / "bundle")
         assert manifest["verification_report"] == "verification_report.pdf"

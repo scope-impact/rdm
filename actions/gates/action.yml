@@ -52,8 +52,17 @@ runs:
         PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
         uv tool install --python "$PYTHON_VERSION" \
-          "rdm[graph,report] @ file://$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+          "rdm[graph] @ file://$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
         rdm --version
+
+    # The verification report's typeset provider (DI-88), built from this action's revision.
+    - name: Build rdm-typst from this action's revision
+      if: inputs.install-rdm == 'true'
+      shell: bash
+      run: |
+        RDM_ROOT="$(cd "$GITHUB_ACTION_PATH/../.." && pwd)"
+        cargo build --release --locked --manifest-path "$RDM_ROOT/providers/typst/Cargo.toml"
+        echo "$RDM_ROOT/providers/typst/target/release" >> "$GITHUB_PATH"
 
     - name: Find the Allure results
       id: results

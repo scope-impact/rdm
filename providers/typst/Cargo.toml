@@ -1,0 +1,26 @@
+[package]
+name = "rdm-typst"
+version = "0.1.0"
+edition = "2021"
+description = "RDM's typeset provider (DI-88): the verification report compiled to PDF by Typst's crates, natively and as a WASI component"
+license = "Apache-2.0"
+
+[dependencies]
+typst = "0.14"
+typst-pdf = "0.14"
+comemo = "0.5"
+wit-bindgen = { version = "0.62.0", optional = true }
+
+[features]
+# The WASI component: exports rdm:component/typeset (../../wit). Off for the native program.
+component = ["dep:wit-bindgen"]
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "rdm-typst"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "s"

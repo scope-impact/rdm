@@ -5,6 +5,7 @@
 #   rdm-core.wasm  the rdm command line (componentize-py), world core: imports record-state and c4
 #   rdm-git.wasm   the record-state provider (Rust, gitoxide), world git
 #   rdm-c4.wasm    the c4 provider (Rust, structurizrx), world draw
+#   rdm-typst.wasm the typeset provider (Rust, Typst's crates), world typeset
 #   rdm.wasm       rdm-core with both plugged in (wac): what scripts/rdm-wasm runs
 # Everything it fetches lands in build/component/ (gitignored); nothing is installed.
 # Every tool is pinned (RISK-TOOL-010).
@@ -68,7 +69,9 @@ cp "$ROOT/providers/record-state/target/wasm32-wasip2/release/rdm_git.wasm" rdm-
 rustup target add wasm32-wasip2 > /dev/null
 (cd "$ROOT/providers/c4" && cargo build -q --release --locked --lib --features component --target wasm32-wasip2)
 cp "$ROOT/providers/c4/target/wasm32-wasip2/release/rdm_c4.wasm" rdm-c4.wasm
-./wac plug rdm-core.wasm --plug rdm-git.wasm --plug rdm-c4.wasm -o rdm.wasm
-ls -l rdm-git.wasm rdm-c4.wasm rdm.wasm
+(cd "$ROOT/providers/typst" && cargo build -q --release --locked --lib --features component --target wasm32-wasip2)
+cp "$ROOT/providers/typst/target/wasm32-wasip2/release/rdm_typst.wasm" rdm-typst.wasm
+./wac plug rdm-core.wasm --plug rdm-git.wasm --plug rdm-c4.wasm --plug rdm-typst.wasm -o rdm.wasm
+ls -l rdm-git.wasm rdm-c4.wasm rdm-typst.wasm rdm.wasm
 echo "rdm.wasm imports and exports (from the component's own type):"
 ./wasm-tools component wit rdm.wasm | grep -E '^\s*(import|export) ' | sort

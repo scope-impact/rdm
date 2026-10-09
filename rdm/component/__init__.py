@@ -4,7 +4,9 @@
 providers the component was composed with, through the ports the contexts
 define: the record-state port (``rdm.kernel.record_state``) answered by the
 ``rdm:component/record-state`` import, and the c4 port
-(``rdm.architecture.draw``) answered by the ``rdm:component/c4`` import. The
+(``rdm.architecture.draw``) answered by the ``rdm:component/c4`` import, and
+the typeset port (``rdm.publishing.report``) answered by the
+``rdm:component/typeset`` import. The
 rest of RDM is the same code the command line runs. Built by
 ``scripts/build-component.sh``; this package is never imported natively.
 """

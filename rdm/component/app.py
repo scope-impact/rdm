@@ -32,12 +32,15 @@ def _main(argv: list[str]) -> int:
     from rdm.architecture import draw
     from rdm.component.c4 import WitC4
     from rdm.component.record_state import WitRecordState
+    from rdm.component.typeset import WitTypeset
     from rdm.kernel import record_state
     from rdm.main import cli
+    from rdm.publishing import report
 
     os.chdir(os.environ.get("RDM_REPO", "/"))
     record_state.use(WitRecordState)
     draw.use(lambda: (WitC4(), None))
+    report.use(WitTypeset)
     try:
         return cli(argv)
     except SystemExit as stop:  # argparse exits on a usage error

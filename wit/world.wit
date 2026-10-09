@@ -5,6 +5,7 @@ world core {
     include imports;
     import c4;
     import record-state;
+    import typeset;
     export wasi:cli/run@0.3.0;
 }
 
@@ -18,6 +19,11 @@ world tests {
 /// rdm-c4: the C4 workspace drawn by structurizrx.
 world draw {
     export c4;
+}
+
+/// rdm-typst: the verification report compiled by Typst.
+world typesetter {
+    export typeset;
 }
 
 /// rdm-git: the record's state read by gitoxide.

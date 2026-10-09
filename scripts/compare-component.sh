@@ -27,6 +27,7 @@ COMMANDS=(
     "graph validate --dhf dhf --allure-results dhf/allure-results"
     "graph validate --dhf dhf"
     "graph explorer-file --dhf dhf -o OUT/explorer.json"
+    "story evidence-report --dhf dhf --allure-results dhf/allure-results -o OUT/report.pdf"
     "story design-gate --dhf no-such-dhf"
     "story design-gate --no-such-option"
 )

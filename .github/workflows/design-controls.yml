@@ -22,12 +22,14 @@ jobs:
       # One install: the synced environment is RDM at this commit, so the
       # workflow does not install it a second time.
       install-rdm: false
-      # rdm-c4 (DI-84): the c4 provider, built from its pinned sources; then rdm.wasm
+      # rdm-c4 (DI-84) and rdm-typst (DI-88), built from their pinned sources; then rdm.wasm
       # (DI-87), which the acceptance test compares with the command line.
       install-command: >-
         uv sync --all-extras && echo "$PWD/.venv/bin" >> "$GITHUB_PATH" &&
         cargo build --release --locked --manifest-path providers/c4/Cargo.toml &&
         echo "$PWD/providers/c4/target/release" >> "$GITHUB_PATH" &&
+        cargo build --release --locked --manifest-path providers/typst/Cargo.toml &&
+        echo "$PWD/providers/typst/target/release" >> "$GITHUB_PATH" &&
         scripts/build-component.sh
       # The unit tests run under coverage first: their code coverage per
       # component is unit-test evidence verify adds (DI-76), never acceptance

@@ -36,7 +36,7 @@
 |---|---|---|
 | `rdm: command not found` | the tool directory is not on `PATH` | `uv tool update-shell`, then open a new shell |
 | the hook fails with *rdm not on PATH* | the hook runs outside the environment RDM is installed in | install RDM as a tool, or run git from a shell where `uv run rdm` works |
-| *the verification report needs Typst* | Typst is missing | install the `report` extra (`rdm[report]`) or a `typst` executable, or render in the RDM Docker image |
+| *the verification report needs rdm-typst* | the typeset provider is missing | build it: `cargo build --release --manifest-path providers/typst/Cargo.toml`, and put it on `PATH` or in `RDM_TYPST` |
 | no document PDFs | Pandoc or Typst is missing | install them, or render in the RDM Docker image |
 
 Still stuck: open an issue on

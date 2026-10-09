@@ -169,8 +169,9 @@ for someone who did not run it: an auditor, a notified body, the reviewer. It
 says whether the evidence is release-grade and why not, and ends with every
 result file's SHA-256 so it can be checked against the bundle. What it holds
 is DI-64 in the [publishing design](../dhf/documents/design/publishing.md). It
-needs Typst: install `rdm[report]`, or have `typst` on `PATH` as the RDM
-image does. The [reusable gates](ci.md) upload it in `rdm-evidence`.
+needs `rdm-typst`, RDM's typeset provider with the report's fonts built in,
+on `PATH` or in `RDM_TYPST`; the [reusable gates](ci.md) build it and upload
+the report in `rdm-evidence`.
 
 `dmr` writes the device-master-record index (id, title, path and revision of
 each controlled document) from the documents' own frontmatter.

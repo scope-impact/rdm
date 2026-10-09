@@ -11,6 +11,7 @@
 | Pandoc, Typst, Make | rendering documents to PDF | as in the RDM image |
 | bash | the pre-commit hook and the agent bootstrap | Git Bash or WSL on Windows |
 | `rdm-c4` | drawing the architecture views (`rdm c4 draw`); Java, Structurizr's CLI and Graphviz for dynamic views | built from `providers/c4` |
+| `rdm-typst` | the verification report's PDF (`rdm story evidence-report`); its fonts are built in | built from `providers/typst` |
 
 The RDM Docker image carries Pandoc, Typst, the fonts and RDM itself; use it
 when you render PDFs and do not want to install them.
@@ -30,7 +31,7 @@ a release; PyPI's `rdm` is another project.
 
 ```bash
 uv tool install "rdm @ git+https://github.com/scope-impact/rdm@{{ rdm.ref }}"
-uv tool install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm@{{ rdm.ref }}"   # with the extras
+uv tool install "rdm[graph] @ git+https://github.com/scope-impact/rdm@{{ rdm.ref }}"   # with the graph extra
 rdm --version
 ```
 

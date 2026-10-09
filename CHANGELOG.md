@@ -17,6 +17,10 @@
   with the command line, command by command. `rdm c4 draw` goes through one
   c4 interface: `rdm-c4` draws natively too (not dynamic views yet, which
   Structurizr's command line still draws).
+- **The verification report typeset by one provider** (Design Review 73,
+  DI-88): `rdm-typst`, Typst's crates with the layout's fonts built in,
+  compiles the report natively and inside `rdm.wasm`; the `report` extra and
+  the `typst` executable are no longer used for it.
 - **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
   one manual in IFU order (cover, intended use, how RDM works, safety and
   limitations with each residual risk, installation, getting started,

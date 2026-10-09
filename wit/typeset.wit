@@ -1,0 +1,14 @@
+package rdm:component@0.1.0;
+
+/// The verification report's layout compiled to PDF (DI-88).
+/// Exported by rdm-typst (Typst's crates, the layout's fonts embedded); imported by the core.
+interface typeset {
+    record file {
+        /// Relative to the layout's root, POSIX.
+        path: string,
+        data: list<u8>,
+    }
+
+    /// Compile `main`, one of the files, to a PDF; a layout Typst rejects is refused with its messages.
+    typeset: func(main: string, files: list<file>) -> result<list<u8>, string>;
+}

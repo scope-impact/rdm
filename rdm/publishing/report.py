@@ -24,20 +24,23 @@ What would only repeat the report or bury it is left out: labels it already
 shows, runner internals, and pytest's captured output, which is listed by
 checksum. The data is written as JSON next to a Typst layout that reads it,
 never spliced into markup, so nothing a test prints can change the document.
-It is compiled with the ``typst`` package (extra ``report``) or, failing that,
-a ``typst`` executable on PATH (the RDM image has one).
+It is compiled through the typeset port (DI-88): ``rdm-typst`` (``RDM_TYPST``,
+or on the PATH), Typst's crates as RDM's typeset provider with the layout's
+fonts embedded; the component answers it with the same crate.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import tempfile
 import time
 from importlib.resources import files
 from pathlib import Path
+from typing import Callable, Protocol
 
 from rdm.evidence.allure import (
     FAILING, REQUIREMENT_ATTACHMENT, design_input_tags, full_name, read_results, read_run_facts, run_status,
@@ -68,7 +71,7 @@ RUNNER_LABELS = {"host", "thread", "framework", "language", "suite", "parentSuit
 
 
 class ReportUnavailable(RuntimeError):
-    """Neither the ``typst`` package nor a ``typst`` executable is available."""
+    """No typeset provider is available."""
 
 
 def result_files(results_dir: Path) -> list[dict]:
@@ -331,18 +334,57 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
     }
 
 
+class Typesetter(Protocol):
+    """The typeset port: the layout's files (path relative to its root, POSIX)
+    and the one to compile, to a PDF."""
+
+    name: str
+
+    def typeset(self, main: str, files: dict[str, bytes]) -> bytes: ...
+
+
+class RdmTypst:
+    """Typst's crates as RDM's typeset provider, the native program ``rdm-typst``."""
+
+    name = "rdm-typst"
+
+    def __init__(self, program: str) -> None:
+        self.program = program
+
+    def typeset(self, main: str, files: dict[str, bytes]) -> bytes:
+        with tempfile.TemporaryDirectory() as tmp:
+            for path, data in files.items():
+                target = Path(tmp) / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            done = subprocess.run([self.program, tmp, main], capture_output=True)
+        if done.returncode != 0:
+            raise ReportUnavailable(f"{self.name} could not compile the report: "
+                                    f"{done.stderr.decode('utf-8', 'replace').strip() or 'no output'}")
+        return done.stdout
+
+
+def typesetter() -> Typesetter | None:
+    """The provider found: ``RDM_TYPST``, or ``rdm-typst`` on the PATH."""
+    program = os.environ.get("RDM_TYPST") or shutil.which("rdm-typst")
+    return RdmTypst(program) if program else None
+
+
+_typesetter: Callable[[], Typesetter | None] = typesetter
+
+
+def use(find: Callable[[], Typesetter | None]) -> None:
+    """Choose how the provider is found, once, when RDM starts (the component)."""
+    global _typesetter
+    _typesetter = find
+
+
 def _compile(workdir: Path, output: Path) -> None:
-    try:
-        import typst
-    except ImportError:
-        executable = shutil.which("typst")
-        if executable is None:
-            raise ReportUnavailable(
-                "the verification report needs Typst: install the extra (rdm[report]) or a typst executable")
-        subprocess.run([executable, "compile", "--root", str(workdir), str(workdir / LAYOUT), str(output)],
-                       check=True, capture_output=True, text=True)
-        return
-    output.write_bytes(typst.compile(str(workdir / LAYOUT), root=str(workdir)))
+    provider = _typesetter()
+    if provider is None:
+        raise ReportUnavailable("the verification report needs rdm-typst on the PATH (or RDM_TYPST)")
+    files = {p.relative_to(workdir).as_posix(): p.read_bytes() for p in workdir.rglob("*") if p.is_file()}
+    output.write_bytes(provider.typeset(LAYOUT, files))
 
 
 def render_pdf(report: dict, results_dir: Path, output: Path) -> Path:

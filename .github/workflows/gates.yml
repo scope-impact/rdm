@@ -106,8 +106,15 @@ jobs:
       - name: Install RDM from the pinned revision
         if: inputs.install-rdm
         run: |
-          uv pip install --system "./.rdm[graph,report]" pytest allure-pytest
+          uv pip install --system "./.rdm[graph]" pytest allure-pytest
           rdm --version
+
+      # The verification report's typeset provider (DI-88), built from the same revision.
+      - name: Build rdm-typst from the pinned revision
+        if: inputs.install-rdm
+        run: |
+          cargo build --release --locked --manifest-path ./.rdm/providers/typst/Cargo.toml
+          echo "$PWD/.rdm/providers/typst/target/release" >> "$GITHUB_PATH"
 
       # Inputs reach the scripts as environment variables, never spliced into
       # the script text.
