@@ -278,6 +278,10 @@ def test_the_graph_stands_on_one_rdf_library_in_python(tmp_path: Path) -> None:
         text = nquads(quads)
         assert text == nquads(project(dhf, results)) and text.splitlines() == sorted(text.splitlines())
         assert set(ox.parse(text.encode(), format=ox.RdfFormat.N_QUADS)) == set(quads)
+        when = ox.Quad(ox.NamedNode("urn:a"), ox.NamedNode("urn:b"),
+                       ox.Literal("2026-10-09T19:50:47Z", datatype=ox.NamedNode("http://www.w3.org/2001/XMLSchema#dateTime")))
+        validate(quads)  # pyshacl turns rdflib's normalisation back on; the round trip must not change a term
+        assert list(ox.parse(nquads([when]).encode(), format=ox.RdfFormat.N_QUADS)) == [when]
         store_dir = tmp_path / "store"
         assert build_store(store_dir, quads) == len(set(quads))
         assert (store_dir / "store.nq").read_text(encoding="utf-8") == text

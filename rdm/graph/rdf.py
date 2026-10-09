@@ -26,7 +26,15 @@ from rdflib.term import BNode as _RBNode
 from rdflib.term import Literal as _RLiteral
 from rdflib.term import URIRef as _RURIRef
 
-rdflib.NORMALIZE_LITERALS = False  # keep each literal's lexical form, as a store does
+def _keep_lexical() -> None:
+    """Keep each literal's lexical form, as a store does. Set before every
+    parse and query, never once at import: pyshacl turns rdflib's
+    normalisation back on after each validation, and a normalised literal
+    ("...Z" read back as "...+00:00") is a different term."""
+    rdflib.NORMALIZE_LITERALS = False
+
+
+_keep_lexical()
 
 _XSD_STRING = "http://www.w3.org/2001/XMLSchema#string"
 _LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
@@ -241,7 +249,7 @@ def _to_rdflib(term):
             return _RLiteral(term.value, lang=term.language)
         if term.datatype.value == _XSD_STRING:
             return _RLiteral(term.value)  # RDF 1.1: a simple literal is an xsd:string
-        return _RLiteral(term.value, datatype=_RURIRef(term.datatype.value))
+        return _RLiteral(term.value, datatype=_RURIRef(term.datatype.value), normalize=False)
     raise TypeError(f"unexpected term: {term!r}")
 
 
@@ -263,6 +271,7 @@ def parse(input=None, format: RdfFormat | None = None, *, path=None, base_iri=No
         data = input
     if isinstance(data, str):
         data = data.encode("utf-8")
+    _keep_lexical()
     try:  # a document that cannot be read is a SyntaxError, whichever parser found it
         if format in (RdfFormat.N_QUADS, RdfFormat.TRIG):
             dataset = rdflib.Dataset()
@@ -524,6 +533,7 @@ class Store:
         return iter({q.graph_name for q in self._quads if not isinstance(q.graph_name, DefaultGraph)})
 
     def _rdflib(self, union: bool) -> rdflib.Dataset:
+        _keep_lexical()
         if union not in self._dataset:
             dataset = rdflib.Dataset(default_union=union)
             for q in self._quads:

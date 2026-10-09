@@ -51,7 +51,7 @@ class HeadState:
 class Commit:
     id: str
     author: str
-    time: str  # strict ISO 8601 with the offset, as git's %aI
+    time: str  # strict ISO 8601 with a numeric offset (+00:00 for UTC, never Z)
     subject: str
 
 

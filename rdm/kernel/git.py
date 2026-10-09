@@ -115,7 +115,11 @@ class GitCommand:
 
     def commit(self, revision: str) -> Commit | None:
         out = self._git("log", "-1", "--format=%H%x1f%an%x1f%aI%x1f%s", revision)
-        return Commit(*out.split("\x1f", 3)) if out else None
+        if not out:
+            return None
+        sha, author, when, subject = out.split("\x1f", 3)
+        # Recent git writes a UTC time as "Z", older git as "+00:00": one form, the offset, on every provider.
+        return Commit(sha, author, when[:-1] + "+00:00" if when.endswith("Z") else when, subject)
 
     def resolve(self, name: str) -> Reference | None:
         target = self._git("rev-parse", "--verify", "--quiet", name)

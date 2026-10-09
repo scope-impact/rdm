@@ -8,7 +8,9 @@ if allure-pytest is not installed.
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 import tomllib
 from importlib.resources import files
 from pathlib import Path
@@ -85,7 +87,14 @@ def test_record_state_is_one_interface(tmp_path: Path, monkeypatch, capsys) -> N
         merge = git_run(repo, "rev-parse", "HEAD")
         assert state.latest_commits(["dhf/clean.md", "dhf/edited.md", "nothing.md"]) == \
             {"dhf/clean.md": first, "dhf/edited.md": topic}
-        assert state.commit("HEAD") == Commit(merge, "t", git_run(repo, "log", "-1", "--format=%aI"), "merge topic")
+        written = git_run(repo, "log", "-1", "--format=%aI")  # recent git writes UTC as "Z", older as "+00:00"
+        assert state.commit("HEAD") == Commit(merge, "t", written.removesuffix("Z") + ("+00:00" if written.endswith("Z")
+                                                                                     else ""), "merge topic")
+        utc = subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty",
+                              "-m", "utc"], cwd=repo, env={**os.environ, "GIT_AUTHOR_DATE": "2026-01-02T03:04:05Z",
+                                                          "GIT_COMMITTER_DATE": "2026-01-02T03:04:05Z", "TZ": "UTC"})
+        assert utc.returncode == 0 and state.commit("HEAD").time == "2026-01-02T03:04:05+00:00"
+        git_run(repo, "reset", "-q", "--hard", merge)
         assert state.commit("nope") is None
         assert state.resolve("refs/heads/main") == Reference(merge, None) and state.resolve("refs/heads/none") is None
         git_run(repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/heads/main")
