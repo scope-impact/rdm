@@ -1,6 +1,6 @@
 import os
 import re
-from pathlib import Path
+from importlib.resources import files
 
 
 class GapError(ValueError):
@@ -18,7 +18,8 @@ _PLACEHOLDER = re.compile(r"\b(ENDTODO|TODO)\b")
 
 def builtin_checklists():
     """Each built-in checklist's name (``rdm gap --list``) and file."""
-    return {path.stem: str(path) for path in (Path(__file__).parent / "checklists").glob("*.txt")}
+    checklists = files("rdm.compliance").joinpath("checklists")  # a package resource (DI-86)
+    return {entry.name[:-4]: str(entry) for entry in checklists.iterdir() if entry.name.endswith(".txt")}
 
 
 def parse_checklist(text, directory):

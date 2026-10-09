@@ -8,6 +8,7 @@ authoritative — an acceptance test holds the shapes to agreement with them.
 
 from __future__ import annotations
 
+from importlib.resources import files
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -16,7 +17,7 @@ import pyoxigraph as ox
 
 from rdm.graph.ns import RDFS, SHACL, SKOS
 
-SHAPES_FILE = Path(__file__).with_name("shapes.ttl")
+SHAPES_FILE = files("rdm.graph").joinpath("shapes.ttl")  # a package resource (DI-86)
 _SH, _LABEL, _NOTATION = SHACL, RDFS + "label", SKOS + "notation"
 SEVERITY_ORDER = {"Violation": 0, "Warning": 1, "Info": 2}
 
@@ -43,7 +44,7 @@ def _gate_shapes():
     """RDM's gate shapes, parsed once per process."""
     import rdflib
 
-    return rdflib.Graph().parse(SHAPES_FILE, format="turtle")
+    return rdflib.Graph().parse(data=SHAPES_FILE.read_text(encoding="utf-8"), format="turtle")
 
 
 def validate(quads: list[ox.Quad], extra_shapes: list[Path] | None = None) -> list[Result]:

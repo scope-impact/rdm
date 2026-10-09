@@ -28,7 +28,7 @@ def rules() -> list[dict]:
 def _declared_rules() -> tuple[dict, ...]:
     """The vocabulary's rules, read once per process (the vocabulary ships with RDM)."""
     store = ox.Store()
-    store.load(path=str(ONTOLOGY_FILE), format=ox.RdfFormat.TURTLE)
+    store.load(ONTOLOGY_FILE.read_bytes(), format=ox.RdfFormat.TURTLE)
     rows = store.query(with_prefixes("""SELECT ?rule ?label ?comment ?derives ?construct WHERE {
         ?rule a rdm:Rule ; rdfs:label ?label ; rdm:derives ?derives ; rdm:construct ?construct .
         OPTIONAL { ?rule rdfs:comment ?comment } } ORDER BY ?rule"""))

@@ -9,6 +9,8 @@ if allure-pytest is not installed.
 from __future__ import annotations
 
 import re
+import tomllib
+from importlib.resources import files
 from pathlib import Path
 
 import pytest
@@ -133,10 +135,34 @@ def test_record_state_is_one_interface(tmp_path: Path, monkeypatch, capsys) -> N
 
 
 @allure.story("DI-86")
-@allure.label("component", "TODO")
-def test_di_86_not_implemented() -> None:
-    """DI-86: RDM shall read its own shipped files — the document and project templates, the
-    checklists, the SHACL shapes and the vocabulary — as package resources of the installed
-    package, never by a path relative to its source, so that a component or a zipped install
+@allure.label("component", "Project templates")
+def test_shipped_files_are_package_resources() -> None:
+    """DI-86: RDM's shipped files are read as resources of the installed package,
+    never by a path relative to its source, so a component or a zipped install
     finds them."""
-    pytest.fail("DI-86 acceptance test not implemented -- replace this stub with real assertions")
+    with verification_step("no module of the package locates a file beside its own source"):
+        by_source = sorted(str(f.relative_to(ROOT)) for f in (ROOT / "rdm").rglob("*.py")
+                           if "__file__" in f.read_text())
+        attach("modules reading beside __file__", by_source)
+        assert by_source == []
+
+    with verification_step("every shipped file the package declares is a resource the installed package finds"):
+        declared = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["setuptools"]["package-data"]["rdm"]
+        package = files("rdm")
+        missing = [pattern for pattern in declared
+                   if not any(e.is_file() for e in package.joinpath(pattern.rsplit("/", 1)[0]).iterdir())]
+        attach("declared package data", declared)
+        assert not missing, missing
+
+    with verification_step("the shapes, the vocabulary, the checklists and the templates are read through resources"):
+        from rdm.compliance.gaps import builtin_checklists
+        from rdm.graph.project import ONTOLOGY_FILE
+        from rdm.graph.validate import SHAPES_FILE
+
+        assert "sh:NodeShape" in SHAPES_FILE.read_text(encoding="utf-8")
+        assert "rdm:Rule" in ONTOLOGY_FILE.read_text(encoding="utf-8")
+        checklists = builtin_checklists()
+        assert "62304_2015_class_b" in checklists and Path(checklists["62304_2015_class_b"]).read_text()
+        assert (files("rdm.specification") / "init_files").is_dir()
+        assert (files("rdm.specification") / "adopt_files").is_dir()
+        assert (files("rdm.publishing") / "verification_report.typ").is_file()

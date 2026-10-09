@@ -24,6 +24,7 @@ judgments stay in the gates.
 
 from __future__ import annotations
 
+from importlib.resources import files
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -54,7 +55,7 @@ from rdm.specification.sdd import (
 
 
 NS = RDM
-ONTOLOGY_FILE = Path(__file__).with_name("ontology.ttl")
+ONTOLOGY_FILE = files("rdm.graph").joinpath("ontology.ttl")  # a package resource (DI-86)
 _RDF, _RDFS, _XSD, _DCT, _PROV = RDF, RDFS, XSD, DCTERMS, PROV
 
 
@@ -392,7 +393,7 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
 
 
 def _ontology(ds: _Dataset) -> None:
-    for triple in ox.parse(path=str(ONTOLOGY_FILE), format=ox.RdfFormat.TURTLE):
+    for triple in ox.parse(ONTOLOGY_FILE.read_bytes(), format=ox.RdfFormat.TURTLE):
         ds.quads.append(ox.Quad(triple.subject, triple.predicate, triple.object, ds.graph("ontology")))
 
 
