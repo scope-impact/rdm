@@ -377,6 +377,7 @@ workspace "RDM" "The design record of regulated software." {
     rdm_wasm -> graph_store "builds"
     component_root -> kernel "chooses the record-state provider through the port of"
     component_root -> architecture_drawing "chooses the c4 provider through the port of"
+    component_root -> verification_report "chooses the typeset provider through the port of"
     sparql_endpoint -> graph_store "serves, read-only"
     graph_explorer -> sparql_endpoint "queries" "SPARQL over HTTP"
     agent_harness -> rdm_cli "calls the agent server of" "MCP over stdio"
