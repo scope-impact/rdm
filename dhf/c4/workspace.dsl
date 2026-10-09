@@ -423,6 +423,8 @@ workspace "RDM" "The design record of regulated software." {
     verification_report -> risk_register "reads risk status and residual decisions with"
     verification_report -> report_layout "lays out with"
     document_typesetter -> verification_report "typesets through the port of"
+    docs_hooks -> document_typesetter "typesets each DHF document's PDF with"
+    docs_hooks -> verification_report "finds the typeset provider through"
     document_typesetter -> kernel "parses frontmatter with"
     pytest_plugin -> risk_register "finds the risks each design input controls with"
     architecture_drawing -> architecture_model "takes the paths, view keys, stamp format and workspace digest from"
