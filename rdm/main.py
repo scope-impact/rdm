@@ -50,6 +50,10 @@ def cli(raw_arguments):
             # OSError includes a template that does not exist (TemplateNotFound)
             print_error(f"Error: cannot render {args.template}: {error}")
             exit_code = 2
+    elif args.command == 'typeset':
+        from rdm.publishing.typeset import typeset_command
+
+        exit_code = typeset_command(args.document, args.output, args.template)
     elif args.command == 'init':
         exit_code = init_command(args.output)
     elif args.command == 'adopt':
@@ -265,6 +269,15 @@ def parse_arguments(arguments):
     render_parser.add_argument('template')
     render_parser.add_argument('config', help='Path to project `config.yml` file')
     render_parser.add_argument('data_files', nargs='*')
+
+    typeset_help = ("typeset a rendered document to PDF: its Markdown to Typst with RDM's converter, "
+                    "the project's template.typ, rdm-typst")
+    typeset_parser = subparsers.add_parser('typeset', help=typeset_help)
+    typeset_parser.add_argument('document',
+                                help='a rendered Markdown document (frontmatter: id, revision, title, date, status)')
+    typeset_parser.add_argument('-o', '--output', required=True, help='the PDF to write')
+    typeset_parser.add_argument('--template',
+                                help='the Typst template module (default: template.typ in the current directory)')
 
     gap_help = 'use checklist to verify documents have expected references to particular standard(s)'
     gap_parser = subparsers.add_parser('gap', help=gap_help)

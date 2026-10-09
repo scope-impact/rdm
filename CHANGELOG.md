@@ -21,6 +21,12 @@
   DI-88): `rdm-typst`, Typst's crates with the layout's fonts built in,
   compiles the report natively and inside `rdm.wasm`; the `report` extra and
   the `typst` executable are no longer used for it.
+- **Document PDFs without Pandoc** (Design Review 74, DI-89): `rdm typeset`
+  converts a rendered document's Markdown to Typst with RDM's own converter,
+  fills the project's `template.typ` (now a Typst module, no Pandoc
+  variables) from the frontmatter and compiles with `rdm-typst`, natively
+  and inside `rdm.wasm`. The project Makefile's PDF rule uses it; Pandoc
+  stays for DOCX. `pandoc_pdf.yml` is no longer laid down.
 - **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
   one manual in IFU order (cover, intended use, how RDM works, safety and
   limitations with each residual risk, installation, getting started,

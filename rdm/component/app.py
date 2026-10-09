@@ -22,7 +22,8 @@ from rdm.component import bundle
 # scripts/component-stdlib.sh), not all of it: the build snapshots the
 # interpreter's memory, so every module imported here is size in the component.
 bundle.everything("jinja2", "markupsafe", "yaml", "rdflib", "pyshacl", "owlrl", "pyparsing", "prettytable",
-                  "packaging", "html5rdf", "rdm", stdlib=str(files("rdm.component").joinpath("stdlib.txt")))
+                  "packaging", "html5rdf", "markdown_it", "mdit_py_plugins", "mdurl", "rdm",
+                  stdlib=str(files("rdm.component").joinpath("stdlib.txt")))
 
 
 def _main(argv: list[str]) -> int:

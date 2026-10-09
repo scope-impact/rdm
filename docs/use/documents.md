@@ -4,7 +4,7 @@ RDM's core pipeline turns **YAML data + Jinja2 Markdown templates** into
 regulatory documents:
 
 ```
-data/*.yml  +  documents/*.md (Jinja2)  →  rdm render  →  Markdown  →  Pandoc/Typst → PDF/DOCX
+data/*.yml  +  documents/*.md (Jinja2)  →  rdm render  →  Markdown  →  rdm typeset → PDF   (Pandoc → DOCX)
 ```
 
 ## Rendering
@@ -143,12 +143,18 @@ Design documents additionally carry `kind: design`, `context` and
 ## PDF and Word
 
 A project from `rdm init` builds its documents with `make`:
-`make` renders `release/*.md`, `make pdfs` the PDFs (Pandoc to Typst, styled
-by `template.typ`) and `make docs` Word files. In CI, the
-[PDF action](ci.md) runs `make pdfs` in the RDM image.
+`make` renders `release/*.md`, `make pdfs` the PDFs (`rdm typeset`: RDM's
+own Markdown-to-Typst converter, styled by `template.typ`, compiled by
+`rdm-typst`) and `make docs` Word files with Pandoc. In CI, the
+[PDF action](ci.md) runs `make pdfs` in the RDM image. The PDF path runs
+inside `rdm.wasm` too, so a document PDF needs no Pandoc anywhere.
 
-Pandoc's table model has no column or row spans and no vertical rules; raw
-Typst in the Markdown is the way out when a table needs them.
+`rdm typeset` carries what RDM's documents use: headings, paragraphs,
+emphasis, links, inline and fenced code, lists at any depth, tables, images,
+block quotes, footnotes and rules. Anything else, raw HTML among it, is
+refused by name rather than dropped: a controlled document loses nothing
+silently. Markdown's table model has no column or row spans; keep such a
+table simple or split it.
 
 The PDF's look is `template.typ`'s: the palette at its top (`maroon` for
 headings and the cover, `charcoal`, `ivory`, `nexus`), `body-font` and
@@ -156,9 +162,8 @@ headings and the cover, `charcoal`, `ivory`, `nexus`), `body-font` and
 the image in the project and add `image("logo.svg", width: 3cm)` to the cover
 block. The cover and header read the document's frontmatter: `id`,
 `revision`, `title`, `date` (the build date when absent) and `status`
-("Draft" when absent). The fonts must be installed where the PDF is built:
-Nunito Sans and JetBrains Mono, with Noto Sans and DejaVu Sans Mono standing
-in; the Docker setup has them.
+("Draft" when absent). The fonts, Nunito Sans and JetBrains Mono, are built
+into `rdm-typst`, so the PDF looks the same wherever it is made.
 
 For Word, give Pandoc your company template as a
 [reference document](https://pandoc.org/MANUAL.html#option--reference-doc):

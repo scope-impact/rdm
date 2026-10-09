@@ -28,18 +28,14 @@ release/%.md: documents/%.md $(CONFIG) $(DATA_FILES)
 	@mkdir -p $(@D)
 	rdm render $< $(CONFIG) $(DATA_FILES) > $@
 
-release/%.pdf: release/%.md pandoc_pdf.yml template.typ
+release/%.pdf: release/%.md template.typ
 	@mkdir -p $(@D)
-	pandoc --defaults=./pandoc_pdf.yml --resource-path=$(RESOURCE_PATH) $< -o $@
+	rdm typeset $< --template template.typ -o $@
 
 release/%.docx: release/%.md pandoc_docx.yml $(wildcard reference.docx)  # the Word template, if any
 	@mkdir -p $(@D)
 	pandoc --defaults=./pandoc_docx.yml --resource-path=$(RESOURCE_PATH) $< -o $@
 
-# useful for debugging
-release/%.typ: release/%.md pandoc_pdf.yml template.typ
-	@mkdir -p $(@D)
-	pandoc --defaults=./pandoc_pdf.yml --resource-path=$(RESOURCE_PATH) -t typst $< -o $@
 
 .PHONY: all pdfs docs clean
 

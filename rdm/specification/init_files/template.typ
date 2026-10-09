@@ -201,13 +201,5 @@
   body
 }
 
-// Export for Pandoc
-#show: template.with(
-  $if(id)$id: "$id$",$endif$
-  $if(revision)$revision: "$revision$",$endif$
-  $if(title)$title: [$title$],$endif$
-  $if(date)$date: "$date$",$endif$
-  $if(status)$status: "$status$",$endif$
-)
-
-$body$
+// `rdm typeset` imports this module and shows the document with `template`,
+// passing the document's frontmatter: id, revision, title, date and status.

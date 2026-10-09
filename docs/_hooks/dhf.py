@@ -181,25 +181,29 @@ def pdf_source(text: str, path: Path) -> str:
 
 
 def build_pdfs(documents: dict[str, Path], out: Path) -> dict[str, Path]:
-    """Each document's PDF, built with the template ``rdm init`` ships; none
-    without pandoc and typst on PATH. A document that fails is a warning."""
-    pandoc = shutil.which("pandoc")
-    if not (pandoc and shutil.which("typst")):
-        log.info("dhf: no PDFs (pandoc and typst are not both on PATH)")
+    """Each document's PDF, typeset with the template ``rdm init`` ships (DI-89);
+    none without the typeset provider. A document that fails is a warning."""
+    from rdm.publishing.report import ReportUnavailable, typesetter
+    from rdm.publishing.typeset import TypesetError, typeset_document
+
+    if typesetter() is None:
+        log.info("dhf: no PDFs (rdm-typst is not on PATH)")
         return {}
-    for name in ("template.typ", "pandoc_pdf.yml"):
-        shutil.copy(TEMPLATES / name, out / name)
+    template = out / "template.typ"
+    shutil.copy(TEMPLATES / "template.typ", template)
 
     def one(rel: str, md: Path) -> tuple[str, Path | None]:
-        source, pdf = out / "src" / rel, out / "pdf" / Path(rel).with_suffix(".pdf")
-        source.parent.mkdir(parents=True, exist_ok=True)
+        # The source sits where the document does, so its images resolve as they do in the record.
+        source, pdf = md.with_name(f".{md.stem}.pdf-source.md"), out / "pdf" / Path(rel).with_suffix(".pdf")
         pdf.parent.mkdir(parents=True, exist_ok=True)
         source.write_text(pdf_source(md.read_text(encoding="utf-8"), md), encoding="utf-8")
-        result = subprocess.run([pandoc, "--defaults=pandoc_pdf.yml", f"--resource-path={md.parent}:{DHF}",
-                                 str(source), "-o", str(pdf)], cwd=out, capture_output=True, text=True)
-        if result.returncode:
-            log.warning("dhf: no PDF of %s: %s", rel, result.stderr.strip()[-500:])
+        try:
+            pdf.write_bytes(typeset_document(source, template))
+        except (TypesetError, ReportUnavailable, OSError) as error:
+            log.warning("dhf: no PDF of %s: %s", rel, str(error)[-500:])
             return rel, None
+        finally:
+            source.unlink(missing_ok=True)
         return rel, pdf
 
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:

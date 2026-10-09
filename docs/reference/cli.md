@@ -9,6 +9,7 @@
 | `rdm init [-o DIR]` | scaffold a **new** documentation project (templates, Makefile, render config; default `-o dhf`) into a directory that does not exist yet, and print the next steps |
 | `rdm adopt [TARGET]` | bring an **existing** repository under design controls: DHF skeleton and render config, runbook, design-gate hooks, session bootstrap, CI workflow, `.gitignore` — skips (never overwrites) existing files |
 | `rdm render TEMPLATE CONFIG [DATA…]` | render a Jinja2 Markdown template with the data files (each file's stem becomes a template variable) → stdout |
+| `rdm typeset DOCUMENT -o PDF [--template template.typ]` | typeset a rendered document: its Markdown to Typst with RDM's converter, its frontmatter (`id`, `revision`, `title`, `date`, `status`) into the project's Typst template, the PDF by `rdm-typst`; refuses, by name, a construct it cannot carry or an image it cannot find |
 | `rdm gap [-l] [-c] [-v] CHECKLIST [FILES…]` | report the gaps: the clauses of a checklist no document references with `[[KEY]]`; `-l` list built-ins, `-c` coverage table (several checklists), `-v` name the gaps; exit 0 none / 3 gaps / 2 nothing could be checked |
 | `rdm collect [FILES…]` | extract `RDOC name … ENDRDOC` snippets from source files into YAML → stdout |
 | `rdm translate FORMAT IN OUT` | convert test-runner XML (`auto`, `gtest`, `qttest`, `xunit`) into a YAML data file |

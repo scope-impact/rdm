@@ -28,6 +28,7 @@ COMMANDS=(
     "graph validate --dhf dhf"
     "graph explorer-file --dhf dhf -o OUT/explorer.json"
     "story evidence-report --dhf dhf --allure-results dhf/allure-results -o OUT/report.pdf"
+    "typeset dhf/documents/design/graph.md --template rdm/specification/init_files/template.typ -o OUT/graph.pdf"
     "story design-gate --dhf no-such-dhf"
     "story design-gate --no-such-option"
 )

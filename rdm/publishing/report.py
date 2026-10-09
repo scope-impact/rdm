@@ -382,12 +382,17 @@ def use(find: Callable[[], Typesetter | None]) -> None:
     _typesetter = find
 
 
-def _compile(workdir: Path, output: Path) -> None:
+def typeset_files(main: str, files: dict[str, bytes]) -> bytes:
+    """``main``, one of ``files``, compiled to a PDF by the typeset provider; none is refused."""
     provider = _typesetter()
     if provider is None:
-        raise ReportUnavailable("the verification report needs rdm-typst on the PATH (or RDM_TYPST)")
+        raise ReportUnavailable("typesetting needs rdm-typst on the PATH (or RDM_TYPST)")
+    return provider.typeset(main, files)
+
+
+def _compile(workdir: Path, output: Path) -> None:
     files = {p.relative_to(workdir).as_posix(): p.read_bytes() for p in workdir.rglob("*") if p.is_file()}
-    output.write_bytes(provider.typeset(LAYOUT, files))
+    output.write_bytes(typeset_files(LAYOUT, files))
 
 
 def render_pdf(report: dict, results_dir: Path, output: Path) -> Path:

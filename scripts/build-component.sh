@@ -51,7 +51,8 @@ fi
 # and MarkupSafe are for the host; both fall back without them.
 (cd "$ROOT" && uv export -q --no-hashes --all-extras --no-emit-project | sed 's/ ;.*//' | grep '==') > constraints.txt
 rm -rf pkgs
-uv pip install -q --target pkgs --python-version "$PYTHON" -c constraints.txt jinja2 pyyaml rdflib pyshacl
+uv pip install -q --target pkgs --python-version "$PYTHON" -c constraints.txt jinja2 pyyaml rdflib pyshacl \
+    markdown-it-py mdit-py-plugins
 find pkgs -name '*.so' -delete
 
 # RDM's shipped files (templates, checklists, shapes, vocabulary): componentize-py bundles modules only, so they
