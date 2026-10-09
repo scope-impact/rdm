@@ -55,8 +55,27 @@ impl World for Files {
     fn font(&self, index: usize) -> Option<Font> {
         self.fonts.get(index).cloned()
     }
-    fn today(&self, _offset: Option<i64>) -> Option<Datetime> {
-        None // the report carries its own dates; the PDF is the same whenever it is made
+    fn today(&self, offset: Option<i64>) -> Option<Datetime> {
+        // SOURCE_DATE_EPOCH (the reproducible-builds convention) fixes the date; else the clock.
+        let seconds = std::env::var("SOURCE_DATE_EPOCH")
+            .ok()
+            .and_then(|s| s.trim().parse::<i64>().ok())
+            .or_else(|| {
+                std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok().map(|d| d.as_secs() as i64)
+            })?;
+        let days = (seconds + offset.unwrap_or(0) * 3600).div_euclid(86_400);
+        // Civil date from days since 1970-01-01 (Howard Hinnant's algorithm).
+        let z = days + 719_468;
+        let era = z.div_euclid(146_097);
+        let doe = z - era * 146_097;
+        let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+        let y = yoe + era * 400;
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        let mp = (5 * doy + 2) / 153;
+        let d = doy - (153 * mp + 2) / 5 + 1;
+        let m = if mp < 10 { mp + 3 } else { mp - 9 };
+        let y = if m <= 2 { y + 1 } else { y };
+        Datetime::from_ymd(y as i32, m as u8, d as u8)
     }
 }
 
