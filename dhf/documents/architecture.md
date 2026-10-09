@@ -17,8 +17,10 @@ contexts:
   - {id: publishing, part: Documents, layer: 5}
 # Below every context: any context may import it, and it imports none.
 kernel: rdm/kernel/
-# Wires the command line to every context; in no context.
-composition_root: rdm/main.py
+# Wires the command line to every context; in no context. The component's
+# entry (rdm.wasm, DI-87) wires the same contexts to the providers it is
+# composed with.
+composition_root: [rdm/main.py, rdm/component/]
 # The record is controlled as DC-001 states.
 references: [DC-001]
 ---
@@ -59,7 +61,12 @@ not built yet.
 
 What runs or stores data. The bounded contexts are logical slices of these
 containers: most of their components run in `rdm`, the pytest plugin in the
-acceptance test run, and the reusable CI in GitHub Actions.
+acceptance test run, and the reusable CI in GitHub Actions. `rdm.wasm` is the
+same contexts compiled as one WASI component (DI-87), composed with two
+providers: `rdm-git`, which answers the record-state port with gitoxide, and
+`rdm-c4`, which answers the c4 port with structurizrx, natively and inside
+the component alike. The component's entry is a second composition root; it
+belongs to no context.
 
 ![Containers: RDM](../c4/views/C2.svg)
 

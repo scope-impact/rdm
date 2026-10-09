@@ -59,6 +59,7 @@ repositories' pipelines call.
 | Verification data | Every declared design input reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from; given the unit tests' coverage report, each component's unit lines run of those measured, beside the inputs, never inside them | DI-4, DI-30, DI-76 |
 | Reusable workflow | Runs a repository's acceptance tests, then the gates, with RDM installed from the revision the caller pinned | DI-63 |
 | Gates action | The gate steps, written once: design gate, verification data, release gate, graph validation and the evidence bundle | DI-63, DI-30 |
+| Component root (`rdm.wasm`) | The entry the WASI host runs: chooses the record-state and c4 providers the build composed in, through their ports, runs the command and exits with its code; in no bounded context | DI-87 |
 
 **Release gate.** It blocks a release when the design gate's pass/fail
 checks fail; when no design input is declared; when a design input failed
@@ -100,12 +101,18 @@ its dependencies, componentized), composed with the record-state provider
 (`specification`'s DI-83) and the c4 provider (`architecture`'s DI-84) so
 that the composed component imports only the WASI interfaces the host gives
 it (filesystem, clock, random, environment, stdio and exit) and no network
-interface of its own; the host grants one directory, the record, and
-nothing else. The build is one script in the repository, pinned to its
-tools (componentize-py, wasm-tools, wac, wkg, the Rust target), and CI
-builds the component and runs it beside the command line on RDM's own
-record: for each command the design input lists the exit code, the standard
-output and the written files are compared, and a difference fails the build.
+interface of its own (the bundled CPython's C library imports WASI 0.2
+sockets it never uses; the launcher denies them, and they leave when the
+toolchain's CPython does); the host grants the record, and RDM's shipped files
+read-only, and nothing else. The build is one script in the repository
+(`scripts/build-component.sh`), pinned to its tools (componentize-py,
+wasm-tools, wac, wkg, the Rust target); `scripts/rdm-wasm` runs the component
+on Wasmtime with those grants. CI builds the component and runs it beside the
+command line on RDM's own record (`scripts/compare-component.sh`): for each
+command the design input lists the exit code, the standard output and the
+written files are compared, and a difference fails the build. The entry
+(`rdm/component/`) is a second composition root: it chooses the two
+composed-in providers through the ports and runs the same command line.
 `graph serve`, `graph mcp`, the evidence report's PDF and the mutation probe
 are not in the component (they need a network, a process or a renderer the
 component does not have) and exit saying so.

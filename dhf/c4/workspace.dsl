@@ -231,7 +231,7 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
         group "graph" {
-          projection = component "Projection" "The record into RDF, one named graph per source, de-duplicated and sorted; replaces the store on each build; rdm graph build, query, serve (read-only) and explorer-file" "Python, pyoxigraph" {
+          projection = component "Projection" "The record into RDF, one named graph per source, de-duplicated and sorted; replaces the store on each build; rdm graph build, query, serve (read-only) and explorer-file" "Python, rdflib" {
             properties {
               "code" "rdm/graph/"
             }
@@ -325,9 +325,26 @@ workspace "RDM" "The design record of regulated software." {
           }
         }
       }
-      graph_store = container "Graph store" "The record projected into RDF" "Oxigraph" "Database"
-      sparql_endpoint = container "SPARQL endpoint" "rdm graph serve: the store, read-only, refusing updates and SERVICE" "Python, pyoxigraph"
+      graph_store = container "Graph store" "The record projected into RDF: one N-Quads file, replaced on each build" "N-Quads" "Database"
+      sparql_endpoint = container "SPARQL endpoint" "rdm graph serve: the store, read-only, refusing updates and SERVICE" "Python, rdflib"
       documents_image = container "Documents image" "Renders the documents to PDF" "Docker: Ubuntu, Pandoc, Typst"
+      rdm_wasm = container "rdm.wasm" "The command line as one WASI 0.3 component: the same contexts, composed with the two providers; reads the record the host grants and reaches nothing else" "WASI component (componentize-py)" {
+        component_root = component "Component root" "The entry the WASI host runs: chooses the composed-in providers through the record-state and c4 ports, then runs the command; in no bounded context" "Python" {
+          properties {
+            "code" "rdm/component/"
+          }
+        }
+      }
+      record_state_provider = container "rdm-git" "The record-state provider of the component: what git would say of the record, read by gitoxide" "Rust, gitoxide, WASI component" {
+        properties {
+          "code" "providers/record-state/"
+        }
+      }
+      c4_provider = container "rdm-c4" "The c4 provider: the workspace exported and drawn by structurizrx; the native program for the command line and the WASI component for rdm.wasm" "Rust, structurizrx" {
+        properties {
+          "code" "providers/c4/"
+        }
+      }
     }
     product_repo = softwareSystem "Product repository" "git: the Markdown record, the tests and their Allure results" "External"
     forge = softwareSystem "GitHub" "Pull requests, Actions and the image registry" "External"
@@ -345,6 +362,14 @@ workspace "RDM" "The design record of regulated software." {
     rdm_cli -> product_repo "reads the record, results and git history from"
     test_run -> product_repo "writes Allure results to"
     rdm_cli -> graph_store "builds"
+    rdm_cli -> c4_provider "draws the architecture workspace with"
+    engineer -> rdm_wasm "runs the gates and the graph on a WASI host with"
+    rdm_wasm -> product_repo "reads the record granted by the host from"
+    rdm_wasm -> record_state_provider "asks the record's state of" "rdm:component/record-state"
+    rdm_wasm -> c4_provider "draws the architecture workspace with" "rdm:component/c4"
+    rdm_wasm -> graph_store "builds"
+    component_root -> kernel "chooses the record-state provider through the port of"
+    component_root -> architecture_drawing "chooses the c4 provider through the port of"
     sparql_endpoint -> graph_store "serves, read-only"
     graph_explorer -> sparql_endpoint "queries" "SPARQL over HTTP"
     agent_harness -> rdm_cli "calls the agent server of" "MCP over stdio"
