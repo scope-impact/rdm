@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 81
+revision: 82
 title: Design Review — RDM
 ---
 
@@ -2372,6 +2372,57 @@ developers and the people who review their pull requests.
 - **Publishing moves to a `gh-pages` branch** (mike's store of versions).
   The repository's Pages source must be switched to that branch once, by a
   maintainer.
+
+# Design Review 72 — RDM as one WASI component
+
+**Scope reviewed:** running RDM's gates and graph as one sandboxed
+WebAssembly component (UN-019). A spike (`spikes/wasip3/`) ran the command
+line's commands inside a WASI 0.3 component, composed from a componentized
+CPython core, a gitoxide provider for git and a `structurizrx` provider for
+C4, and compared them with the command line on this repository: the gates,
+verify, trace, the DMR index, gap analysis, new-input, init and the graph
+build, validation, explorer file and SPARQL queries gave the same results.
+Three places in the code reached outside the component by habit, not by
+need: the shell-out to `git`, the shell-out to Structurizr's Java command
+line, and the native Oxigraph store. The spike replaced each with a
+stand-in at start-up; this review makes each a design input instead.
+
+**Disposition:** Approved.
+
+- **New UN-019:** a team runs the gates and the graph as one sandboxed
+  component that reads only the record it is given, with the command line's
+  results, on any host that runs WASI components.
+- **New DI-83 (specification):** one record-state interface for every
+  question about the record in git, answered by `git` natively and by the
+  record-state provider in the component; unknown is never approved.
+- **New DI-84 (architecture):** one c4 interface, given the workspace's
+  sources, answered by `structurizrx` on both sides; a view it cannot draw
+  is refused by name. Structurizr's command line stays as the drawing tool
+  for dynamic views until the library draws them.
+- **New DI-85 (graph):** one RDF library written in Python; the built record
+  byte-identical on both sides. **DI-36 amended:** the store is a persistent
+  store, not Oxigraph's. Oxigraph leaves the dependencies.
+- **New DI-86 (specification):** RDM's shipped files are read as package
+  resources, never by a path beside the source.
+- **New DI-87 (release):** `rdm.wasm` is built and composed in CI, imports no
+  network interface of its own, and gives the command line's exit code,
+  output and files for the commands it lists.
+- **Why two implementations only for record state:** git is the record's
+  store, and the command line must keep using the user's `git` (hooks,
+  credentials, worktrees); the component cannot spawn it. Every other port
+  has one implementation that runs on both sides.
+- **Tool risks RISK-TOOL-008 to 010** are proposed: a verdict that differs
+  between the component and the command line; a stand-in that answers
+  "approved" where it cannot know; the component toolchain drifting from
+  the pinned versions.
+- **Out of scope** of this review: `graph serve` and `graph mcp` in the
+  component (they need `wasi:http` and a JSON-RPC transport), the evidence
+  report's PDF (Typst), the mutation probe (it spawns pytest), dynamic views
+  in `structurizrx`, a native binary, CPython's unused socket imports (the
+  host denies them), and the component's size and speed.
+- **The architecture workspace** gains the `rdm.wasm` container and the two
+  providers when the component is built, not in this review: a view drawn
+  before its code exists would fail the conformance check.
 
 # Approval
 

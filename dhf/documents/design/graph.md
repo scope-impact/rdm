@@ -8,7 +8,7 @@ design_inputs:
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each controlled document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
     traces_to: [UN-014]
   - id: DI-36
-    text: "RDM shall load the projected dataset into a persistent Oxigraph store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a read-only SPARQL 1.1 HTTP endpoint whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer; the endpoint and the query command shall refuse SPARQL Update and federated SERVICE calls, so neither changes the store or reaches the network; the query command shall refuse FROM, which the union default graph would ignore, and neither command shall create a store that does not exist."
+    text: "RDM shall load the projected dataset into a persistent store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a read-only SPARQL 1.1 HTTP endpoint whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer; the endpoint and the query command shall refuse SPARQL Update and federated SERVICE calls, so neither changes the store or reaches the network; the query command shall refuse FROM, which the union default graph would ignore, and neither command shall create a store that does not exist."
     traces_to: [UN-014]
   - id: DI-37
     text: "RDM shall add regulatory checklists to the graph on request, as data: each checklist — in rdm gap's text format, resolving includes and built-in names as rdm gap does, or an RDF file — becomes a SKOS collection of its own items that links the checklists it includes, and each item a clause with its key, description, standard (named by the key prefix), edition when the key names one, and nearest listed parent clause."
@@ -76,6 +76,9 @@ design_inputs:
   - id: DI-69
     text: "RDM's agent server shall show, in the trace of a design input, the components its runs name and, apart, the components they reach, each with its container and owning bounded context."
     traces_to: [UN-017, UN-015]
+  - id: DI-85
+    text: "RDM shall project, store, query and validate the record's RDF through one RDF library written in Python, so that the built record is byte-identical on the command line and inside the component, and no graph command needs native code."
+    traces_to: [UN-019]
 ---
 
 # Knowledge graph — Software Design
@@ -140,6 +143,16 @@ How the components relate, in the direction of the arrows:
   an id with the shared kernel. It never uses the graph store, so an agent
   never reads a stale graph. The agent harness calls it over MCP stdio; RDM's
   own repository registers it for its agents.
+
+**One RDF library (DI-85).** The Projection, the store, the queries, the
+endpoint and SHACL validation stand on one RDF library written in Python
+(`rdflib`, with `pyshacl` for the shapes), so the graph needs no native
+code and runs unchanged inside the component (`release`'s DI-87). The
+built record is sorted N-Quads, byte-identical on the command line and in
+the component; query results keep their formats (JSON, TSV, CSV, XML) and a
+query the library cannot parse is refused as a syntax error, as before. The
+graph store is the N-Quads file itself, replaced on each build. Oxigraph is
+no longer a dependency; the `graph` extra now names the Python library.
 
 The behaviour a reviewer needs to judge the design:
 

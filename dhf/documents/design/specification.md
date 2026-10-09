@@ -41,6 +41,12 @@ design_inputs:
   - id: DI-33
     text: "RDM shall ingest per-user-need validation records (user need, disposition, reviewer) from the DHF's validation directory and report, at the release gate, each user need lacking an approved validation record (an approved disposition with a named reviewer) as a warning that does not block release."
     traces_to: [UN-005]
+  - id: DI-83
+    text: "RDM shall ask every question about the state of the record in git — the commit checked out and whether the worktree is clean, whether a file is tracked, unchanged, changed or hidden from git, what a commit holds at a path, the repository's origin, and the commits that reach a commit — through one record-state interface, answered by git on the command line and by the record-state provider inside the component, so that both give the same answer and a question that cannot be answered is never reported as approved."
+    traces_to: [UN-019]
+  - id: DI-86
+    text: "RDM shall read its own shipped files — the document and project templates, the checklists, the SHACL shapes and the vocabulary — as package resources of the installed package, never by a path relative to its source, so that a component or a zipped install finds them."
+    traces_to: [UN-019]
 ---
 
 # Design specification — Software Design
@@ -101,6 +107,27 @@ gate uses, and the components of other contexts that use this one's.
 - The persona command classifies runs with formative usability and reads the
   V&V plan with the record reader; validation records read the registry with
   it.
+
+**Record state (DI-83).** Every question RDM asks git goes through the
+shared kernel's one record-state interface: the design gate's approval
+check, the pytest plugin's commit and worktree state, the verification
+report's record commit, the graph's landed commits and reachability, and the
+repository's origin. On the command line the interface is answered by the
+`git` command; inside the component (`release`'s DI-87) it is answered by
+the record-state provider, which reads the repository through the directory
+the host granted. The interface answers in the record's terms (tracked,
+unchanged, changed, hidden from git; what a commit holds at a path), never
+in git's output text, so the two answers are compared as values. A question
+no provider can answer is "unknown", and the design gate reports unknown as
+approval it could not check, never as approved (DI-2).
+
+**Package resources (DI-86).** The project and adoption templates, the
+built-in checklists (`compliance`), the SHACL shapes and the vocabulary
+(`graph`) are read as resources of the installed `rdm` package, through
+`importlib.resources`, never by a path beside the module that reads them.
+A component, a zipped install and a wheel then find the same files, and a
+missing resource is a packaging error named by its resource, not a wrong
+path.
 
 Realised here for other contexts: the test tags' list of tagged tests by name
 is this context's part of `graph`'s DI-61, and the design gate's view check

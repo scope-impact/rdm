@@ -80,6 +80,37 @@ risks:
     probability: Unlikely
     controls: [DI-42, DI-36]
     residual: {probability: Rare}
+  - id: RISK-TOOL-008
+    category: safety
+    status: proposed
+    hazard: "The component decides differently from the command line."
+    situation: "A team runs the gates as rdm.wasm in CI and the command line locally; a provider inside the component answers a record-state, C4 or RDF question differently from the native tool."
+    harm: "A release is permitted in one place and blocked in the other, and the team trusts the one that passed."
+    severity: Serious
+    probability: Possible
+    controls: [DI-87, DI-83, DI-84, DI-85]
+    residual: {probability: Rare}
+  - id: RISK-TOOL-009
+    category: safety
+    status: proposed
+    hazard: "A provider answers approved where it cannot know."
+    situation: "The record-state provider cannot read the repository (no .git in the granted directory, an unsupported object format) and reports the documents as committed rather than as unknown."
+    harm: "The design gate passes on an unapproved record."
+    severity: Serious
+    probability: Unlikely
+    controls: [DI-83, DI-2]
+    residual: {probability: Rare}
+  - id: RISK-TOOL-010
+    category: security
+    stride: Tampering
+    status: proposed
+    hazard: "The component toolchain drifts from what was reviewed."
+    situation: "A build fetches a newer componentize-py, wasm-tools, wac, WASI WIT package or Rust crate than the one the record was verified with, or a provider's patch is dropped."
+    harm: "rdm.wasm behaves differently from the reviewed build without a change in RDM's own code or record."
+    severity: Minor
+    probability: Possible
+    controls: [DI-87]
+    residual: {probability: Unlikely}
 ---
 
 # Risk register — RDM as a tool

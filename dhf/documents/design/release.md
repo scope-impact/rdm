@@ -23,6 +23,9 @@ design_inputs:
   - id: DI-63
     text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then the design gate, verify, the release gate, graph validation over the named checklists and the evidence bundle with the verification report, uploading the bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the release it is pinned to (the latest image for a branch or commit). The CI workflow rdm adopt lays down, and RDM's own CI, shall call the reusable workflow, pinned to the installed RDM's version and to the commit under test respectively."
     traces_to: [UN-011, UN-003]
+  - id: DI-87
+    text: "RDM shall build rdm.wasm, one WASI 0.3 component composed from the RDM core and its record-state and c4 providers, that imports no network interface of its own and that, for design-gate, verify, release-gate, trace, dmr, gap, new-input, init and graph build, query, validate and explorer-file, gives the same exit code, output and written files as the command line on the same record."
+    traces_to: [UN-019]
 ---
 
 # Release — Software Design
@@ -90,6 +93,22 @@ for a record that is not yet ready for it; the verification data and the
 evidence bundle run only when there are results, and the bundle is uploaded
 for retention. Inputs reach the steps' scripts as environment variables,
 never spliced into the script text, so an input cannot inject shell.
+
+**The component build (DI-87).** `rdm.wasm` is the `rdm` container
+compiled as one WASI 0.3 component: the RDM core (the Python package and
+its dependencies, componentized), composed with the record-state provider
+(`specification`'s DI-83) and the c4 provider (`architecture`'s DI-84) so
+that the composed component imports only the WASI interfaces the host gives
+it (filesystem, clock, random, environment, stdio and exit) and no network
+interface of its own; the host grants one directory, the record, and
+nothing else. The build is one script in the repository, pinned to its
+tools (componentize-py, wasm-tools, wac, wkg, the Rust target), and CI
+builds the component and runs it beside the command line on RDM's own
+record: for each command the design input lists the exit code, the standard
+output and the written files are compared, and a difference fails the build.
+`graph serve`, `graph mcp`, the evidence report's PDF and the mutation probe
+are not in the component (they need a network, a process or a renderer the
+component does not have) and exit saying so.
 
 Relationships that matter, in the direction of the arrow:
 

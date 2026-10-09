@@ -203,6 +203,30 @@ conformance of the code and the record to it. The system architecture document
 describes the system; this context keeps its C4 model.
 _Avoid_: c4 (for the context), diagrams
 
+**Port**:
+A question RDM asks of something outside its own code — the state of the
+record in git, the drawing of a workspace, RDF storage and queries — named
+as one interface in RDM's terms (a WIT interface where the component is
+built), with one implementation unless the record says why two.
+_Avoid_: abstraction layer, backend, driver
+
+**Provider**:
+The implementation that answers a port: the `git` command or the
+record-state provider, `structurizrx`, the RDF library. A provider is
+chosen once when RDM starts and is never swapped under a running command.
+_Avoid_: stand-in, shim, mock (for a provider in production)
+
+**Component (WebAssembly)**:
+RDM compiled as one WASI component (`rdm.wasm`): the `rdm` container
+composed with its providers, importing only the WASI interfaces the host
+grants. Said in full where it could be read as a C4 component.
+_Avoid_: wasm build, binary, plugin
+
+**Host**:
+The runtime that runs the component and grants it a directory and nothing
+else; a team's host, never one RDM ships.
+_Avoid_: sandbox (for the runtime), VM
+
 ## Verification and validation
 
 **Test**:

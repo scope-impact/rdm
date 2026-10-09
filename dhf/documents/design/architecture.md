@@ -12,6 +12,9 @@ design_inputs:
   - id: DI-70
     text: "RDM shall draw each view of the architecture workspace to an image in the record, stamped with the workspace it was drawn from, removing the image of a view the workspace no longer has and refusing, saying why, a workspace Structurizr rejects; and the design gate shall fail when the workspace's exported model or any view's image was not drawn from the current workspace, a view has no image, or an image is of no view."
     traces_to: [UN-017, UN-001]
+  - id: DI-84
+    text: "RDM shall export and draw the architecture workspace through one c4 interface that takes the workspace's sources and returns the exported model and each view's drawing, so that the command line and the component build the same model from the same workspace, and a view the drawing provider cannot draw is refused, naming the view."
+    traces_to: [UN-019]
 ---
 
 # Architecture — Software Design
@@ -103,10 +106,24 @@ which also checks RDM's own record: DI-66's reads its workspace whole,
 DI-70's, with stand-ins for Structurizr and Graphviz, checks that its views
 are current, and DI-68's that its own C4 model and record agree.
 
+**One c4 interface (DI-84).** The architecture drawing hands the
+workspace's sources (the DSL file and the files it includes) to one c4
+interface and receives the exported model and each view's drawing; it
+writes them into the record and stamps them (DI-70). On the command line the
+interface is answered by `structurizrx`, a Structurizr DSL parser and
+renderer in Rust with no Java; inside the component (`release`'s DI-87) by
+the same library compiled as the c4 provider, so both build the same model
+from the same workspace. A view the provider cannot draw (a dynamic view,
+until the library draws them) is refused by name, and the drawing writes
+nothing, so the gate's freshness check never passes on a half-drawn
+workspace. Until every view RDM's own workspace holds is drawn this way,
+Structurizr's command line stays as the drawing tool for dynamic views only.
+
 Assumptions and open questions:
 
-- Structurizr's command line, Java and Graphviz are tools on the drawing
-  machine, not elements of the model, and the view does not show them.
+- The drawing tool (`structurizrx`, or Structurizr's command line with Java
+  and Graphviz for dynamic views) is a tool on the drawing machine, not an
+  element of the model, and the view does not show it.
 - Every module is named by some component's code; a test fails on a module
   no component names (the dependency rule).
 - Code dependencies are found for Python only, relative imports included.
