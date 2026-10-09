@@ -48,7 +48,7 @@ from rdm.evidence.allure import (
 )
 from rdm.specification.tags import find_tests_dir, scan_source_tests
 from rdm.kernel.git import repo_root, web_url
-from rdm.kernel.record_state import record_state
+from rdm.kernel.record_state import Tracking, record_state
 from rdm.kernel.ids import sort_key
 from rdm.risk.register import NOT_EVALUATED, policy_or_none, residual_decision, risks
 from rdm.specification.sdd import design_inputs
@@ -303,13 +303,16 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
     head = state.head() if state else None
     record_commit = head.commit if head else None
     # Uncommitted changes to the record itself: what the runs verified is in no commit.
-    record_dirty = any(f.changed for f in (state.files([dhf_dir]) if state else None) or [])
+    record_dirty = any(f.changed and f.tracking is not Tracking.IGNORED  # generated files under the DHF are ignored
+                       for f in (state.files([dhf_dir]) if state else None) or [])
     commits = sorted({run["commit"] for run in [*others, *(r for di in inputs for r in di["runs"])] if run["commit"]})
     reasons, anomalies = _assess(inputs, others, commits, (record_commit, record_dirty), verification["orphans"],
                                  unreadable)
     executor, environment = read_run_facts(results_dir)
     return {
-        "generated_at": _time(time.time() * 1000),
+        # SOURCE_DATE_EPOCH (the reproducible-builds convention) fixes the time, so two
+        # reports of one record can be compared byte for byte.
+        "generated_at": _time(float(os.environ.get("SOURCE_DATE_EPOCH") or time.time()) * 1000),
         "rdm_version": __version__,
         "repository": (web_url(head.origin) if head else None) or (root or dhf_dir.resolve()).name,
         "record_commit": record_commit,

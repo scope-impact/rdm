@@ -182,6 +182,7 @@ def test_architecture_views_are_drawn_from_the_workspace_and_kept_current(tmp_pa
     (dhf / "c4" / "views").mkdir(parents=True)
     (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n  }\n}\n')
     (dhf / "c4" / "views" / "C3_retired.svg").write_text("<svg/>")
+    monkeypatch.setenv("RDM_C4", "")  # Structurizr's command line alone: the stand-ins below
     monkeypatch.setenv("RDM_STRUCTURIZR", str(_tool(tmp_path, "structurizr.sh", FAKE_STRUCTURIZR)))
     monkeypatch.setenv("RDM_DOT", str(_tool(tmp_path, "dot", FAKE_DOT)))
 

@@ -32,6 +32,8 @@ COMMANDS=(
     "story design-gate --no-such-option"
 )
 
+# The report's generation time, fixed on both sides (SOURCE_DATE_EPOCH, as RDM honours it).
+export SOURCE_DATE_EPOCH=1700000000
 # The native providers, as CI puts them on the PATH.
 for provider in "$ROOT"/providers/*/target/release; do [ -d "$provider" ] && PATH="$provider:$PATH"; done
 export PATH
@@ -58,8 +60,9 @@ for i in "${!COMMANDS[@]}"; do
 
     # The same text but for where each run saw the repository and its output.
     # Natively the repository is at $REPO; in the component, at /<its name>.
+    # (The results may quote the repository's native path too: an attachment a test wrote.)
     sed -i -e "s|$(dirname "$REPO")/|/|g" -e "s|\.rdm-wasm-compare/$i/native|OUT|g" "$native"/*
-    sed -i -e "s|\.rdm-wasm-compare/$i/wasm|OUT|g" "$wasm"/*
+    sed -i -e "s|$(dirname "$REPO")/|/|g" -e "s|\.rdm-wasm-compare/$i/wasm|OUT|g" "$wasm"/*
     sed -i -E 's/"timestamp": ?"[^"]*"/"timestamp":"T"/' "$native"/* "$wasm"/*   # explorer-file stamps the time
     if [ "$native_code" = "$wasm_code" ] && diff -r -q "$native" "$wasm" > /dev/null; then
         same=yes

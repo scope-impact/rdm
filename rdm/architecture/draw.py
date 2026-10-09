@@ -11,7 +11,8 @@ file is stamped with the SHA-256 of the workspace; reading the model and
 checking the stamps is the record's (rdm/architecture/model.py), and needs no
 provider.
 
-Providers: ``rdm-c4`` (``RDM_C4``, or on the PATH), structurizrx compiled as
+Providers: ``rdm-c4`` (``RDM_C4``, or on the PATH; ``RDM_C4=`` empty leaves it
+out), structurizrx compiled as
 RDM's c4 provider, the same code the component carries; and, for the views
 it cannot draw yet (dynamic views), Structurizr's command line with Java and
 Graphviz (``RDM_STRUCTURIZR`` / ``RDM_DOT``, or ``structurizr.sh``,
@@ -115,9 +116,10 @@ class StructurizrCli:
 
 
 def _tool(env: str, *names: str) -> list[str] | None:
+    """The program ``env`` names; set empty, none at all; unset, the first of ``names`` on the PATH."""
     configured = os.environ.get(env)
-    if configured:
-        return [configured]
+    if configured is not None:
+        return [configured] if configured else None
     for name in names:
         if (found := shutil.which(name)):
             return [found]
