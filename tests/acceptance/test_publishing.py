@@ -104,3 +104,17 @@ def test_the_report_is_typeset_through_one_interface(tmp_path: Path, monkeypatch
         monkeypatch.setattr(report_module, "_typesetter", lambda: None)
         with pytest.raises(ReportUnavailable, match="needs rdm-typst"):
             render_pdf({"design_inputs": []}, results, tmp_path / "none.pdf")
+
+
+@allure.story("DI-89")
+@allure.label("component", "TODO")
+def test_di_89_not_implemented() -> None:
+    """DI-89: RDM shall typeset a rendered document to PDF with one command, converting its
+    Markdown — headings, paragraphs, emphasis, links, inline and fenced code, bullet and
+    numbered lists at any depth, tables, images, block quotes, footnotes and rules — to
+    Typst markup with RDM's own converter, setting the document's id, revision, title, date
+    and status from its frontmatter into the project's Typst template, and compiling through
+    the typeset interface, so that the PDF is the same on the command line and inside the
+    component; a construct the converter does not carry, an image it cannot find or a
+    template Typst rejects is refused, naming it, and nothing is written."""
+    pytest.fail("DI-89 acceptance test not implemented -- replace this stub with real assertions")
