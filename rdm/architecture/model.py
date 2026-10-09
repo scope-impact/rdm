@@ -102,6 +102,19 @@ def included_files(workspace: Path) -> list[Path]:
     return _included(workspace, {workspace.resolve()})
 
 
+def inlined(path: Path) -> str:
+    """The DSL at ``path`` with each local ``!include`` replaced by what it names
+    (a file, or every file of a directory), at any depth; a URL is left as it is."""
+    def replace(match: re.Match) -> str:
+        target = match.group(1)
+        if "://" in target:
+            return match.group(0)
+        named = (path.parent / target.strip("\"'")).resolve()
+        files = sorted(f for f in named.rglob("*") if f.is_file()) if named.is_dir() else [named]
+        return "\n".join(inlined(f) for f in files)
+    return _INCLUDE.sub(replace, path.read_text(encoding="utf-8"))
+
+
 def workspace_digest(dhf_dir: Path) -> str | None:
     """The SHA-256 of the workspace, and of every local file it includes."""
     workspace = Path(dhf_dir) / WORKSPACE

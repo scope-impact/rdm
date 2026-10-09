@@ -2,8 +2,8 @@
 stamped (DI-70), through one c4 interface (DI-84).
 
 The architecture is one Structurizr workspace, ``<dhf>/c4/workspace.dsl``
-(DI-66). Drawing hands the workspace's sources (the file and every file it
-includes) to the c4 port and receives the exported model, written as
+(DI-66). Drawing hands the workspace's text, every file it includes inlined,
+to the c4 port and receives the exported model, written as
 ``<dhf>/c4/workspace.json`` (what RDM reads), and each view's SVG, written to
 ``<dhf>/c4/views/<view>.svg`` (what the design documents show, so GitHub, the
 docs site and a PDF show one picture, and no browser draws it). Every drawn
@@ -32,16 +32,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Protocol
 
-from rdm.architecture.model import (
-    MODEL, STAMP_KEY, SVG_STAMP, VIEWS, WORKSPACE, included_files, view_keys, workspace_digest,
-)
+from rdm.architecture.model import MODEL, STAMP_KEY, SVG_STAMP, VIEWS, WORKSPACE, inlined, view_keys, workspace_digest
 
 # Structurizr's DOT export leaves a bare & in its HTML labels (e.g. "V&V"), which
 # Graphviz rejects as malformed; escape it until the exporter does.
 _BARE_AMPERSAND = re.compile(r"&(?!(?:[a-zA-Z]+|#\d+|#x[0-9a-fA-F]+);)")
-
-ENTRY = "workspace.dsl"  # the key of the workspace itself among the sources
-
 
 class DrawError(RuntimeError):
     """The workspace could not be exported or drawn."""
@@ -56,20 +51,11 @@ class Drawing:
 
 
 class C4(Protocol):
-    """The c4 port: the workspace's sources (path relative to the workspace's
-    directory, POSIX, to text; ``workspace.dsl`` the entry) exported and drawn."""
+    """The c4 port: the workspace's DSL text, every include inlined, exported and drawn."""
 
     name: str
 
-    def draw(self, sources: dict[str, str]) -> Drawing: ...
-
-
-def _unpack(sources: dict[str, str], into: Path) -> Path:
-    for name, text in sources.items():
-        target = into / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(text, encoding="utf-8")
-    return into / ENTRY
+    def draw(self, dsl: str) -> Drawing: ...
 
 
 class RdmC4:
@@ -80,13 +66,10 @@ class RdmC4:
     def __init__(self, program: str) -> None:
         self.program = program
 
-    def draw(self, sources: dict[str, str]) -> Drawing:
-        with tempfile.TemporaryDirectory() as tmp:
-            workspace = _unpack(sources, Path(tmp))
-            done = subprocess.run([self.program, str(workspace)], capture_output=True, text=True)
+    def draw(self, dsl: str) -> Drawing:
+        done = subprocess.run([self.program], input=dsl, capture_output=True, text=True)
         if done.returncode != 0:
-            reason = done.stderr.strip().replace(str(workspace), ENTRY) or "no output"
-            raise DrawError(f"{self.name} could not export the workspace: {reason}")
+            raise DrawError(f"{self.name} could not export the workspace: {done.stderr.strip() or 'no output'}")
         drawn = json.loads(done.stdout)
         return Drawing(model=drawn["workspace"], views=dict(drawn["views"]))
 
@@ -99,10 +82,11 @@ class StructurizrCli:
     def __init__(self, cli: list[str], dot: list[str]) -> None:
         self.cli, self.dot = cli, dot
 
-    def draw(self, sources: dict[str, str], only: list[str] | None = None) -> Drawing:
+    def draw(self, dsl: str, only: list[str] | None = None) -> Drawing:
         with tempfile.TemporaryDirectory() as tmp:
             work = Path(tmp)
-            workspace = _unpack(sources, work / "src")
+            workspace = work / "workspace.dsl"
+            workspace.write_text(dsl, encoding="utf-8")
             self._export(workspace, work)
             model = json.loads(next((work / "json").glob("*.json")).read_text(encoding="utf-8"))
             views = {}
@@ -156,12 +140,9 @@ def use(find: Callable[[], tuple[C4 | None, StructurizrCli | None]]) -> None:
     _providers = find
 
 
-def sources_of(dhf_dir: Path) -> dict[str, str]:
-    """The workspace and every local file it includes, by path relative to its directory."""
-    workspace = Path(dhf_dir) / WORKSPACE
-    files = [workspace.resolve(), *included_files(workspace)]
-    return {os.path.relpath(f, workspace.parent.resolve()).replace(os.sep, "/"): f.read_text(encoding="utf-8")
-            for f in files}
+def workspace_text(dhf_dir: Path) -> str:
+    """The workspace's DSL with every local file it includes inlined: what the port is given."""
+    return inlined(Path(dhf_dir) / WORKSPACE)
 
 
 def draw(dhf_dir: Path) -> list[str]:
@@ -175,13 +156,13 @@ def draw(dhf_dir: Path) -> list[str]:
         raise DrawError("rdm-c4 is not installed (or set RDM_C4), nor Structurizr's command line with Graphviz "
                         "(RDM_STRUCTURIZR, RDM_DOT)")
     stamp = workspace_digest(dhf_dir)
-    sources = sources_of(dhf_dir)
+    dsl = workspace_text(dhf_dir)
     try:
-        drawing = (first or legacy).draw(sources)
+        drawing = (first or legacy).draw(dsl)
         keys = view_keys(drawing.model)
         missing = [key for key in keys if key not in drawing.views]
         if missing and first is not None and legacy is not None:
-            drawing.views.update(legacy.draw(sources, only=missing).views)
+            drawing.views.update(legacy.draw(dsl, only=missing).views)
             missing = [key for key in keys if key not in drawing.views]
         if missing:
             raise DrawError(f"{(first or legacy).name} cannot draw view(s) {', '.join(missing)}")

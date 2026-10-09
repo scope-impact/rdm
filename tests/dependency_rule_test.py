@@ -29,12 +29,13 @@ def _owners() -> tuple[dict[str, str], list[str]]:
     """Each module's context ('kernel' and 'root' for the two that are not
     contexts), and the modules no component names."""
     arch = _architecture()
-    kernel, root = arch["kernel"], arch["composition_root"]
+    kernel, roots = arch["kernel"], arch["composition_root"]
+    roots = [roots] if isinstance(roots, str) else roots  # a file, or a package, each
     components = read_model(DHF, ROOT).code_components
     owners, unowned = {}, []
     for path in sorted((ROOT / "rdm").rglob("*.py")):
         rel = path.relative_to(ROOT).as_posix()
-        if rel == root or rel == "rdm/__init__.py":
+        if rel == "rdm/__init__.py" or any(rel == r or rel.startswith(r) for r in roots):
             owners[rel] = "root"
         elif rel.startswith(kernel):
             owners[rel] = "kernel"

@@ -16,10 +16,10 @@ pub struct Drawing {
     pub views: Vec<View>,
 }
 
-/// Export and draw the workspace at `dsl` (a path).
+/// Export and draw the workspace from its DSL text (every include inlined).
 pub fn draw(dsl: &str) -> Result<Drawing, String> {
     let (mut workspace, register) =
-        structurizr_dsl::parse_file_with_identifiers(dsl).map_err(|e| format!("{dsl}: {e}"))?;
+        structurizr_dsl::parse_str_with_identifiers(dsl).map_err(|e| e.to_string())?;
     // Structurizr writes each element's DSL identifier as a property; RDM keys the model by it.
     let ids: HashMap<String, String> =
         register.identifiers.iter().map(|(name, (id, _))| (id.clone(), name.clone())).collect();
@@ -27,7 +27,7 @@ pub fn draw(dsl: &str) -> Result<Drawing, String> {
     if let Some(model) = json.get_mut("model") {
         name_elements(model, &ids);
     }
-    structurizr_query::generate_views(&mut workspace).map_err(|e| format!("{dsl}: views: {e}"))?;
+    structurizr_query::generate_views(&mut workspace).map_err(|e| format!("views: {e}"))?;
     use structurizr_renderer::exporter::DiagramExporter;
     let views = structurizr_renderer::svg::SvgExporter
         .export_workspace(&workspace)

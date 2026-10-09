@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#
+# Run RDM's command line as the WASI component (rdm.wasm, scripts/build-component.sh):
+#   scripts/rdm-wasm story design-gate --dhf dhf
+#
+# Needs Wasmtime on the host, nothing else: no Python, no RDM, no git, no Java,
+# no Graphviz. Run it from the repository's root; the component sees that
+# directory under its own name (/<name>, so RDM names the project as it does
+# natively) and starts there, may write in it as rdm does, sees RDM's shipped
+# files read-only at /1/rdm, and has no network: the host denies sockets.
+set -uo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+WORK="$ROOT/build/component"
+WASM="${RDM_WASM:-$WORK/rdm.wasm}"
+DATA="${RDM_WASM_DATA:-$WORK/rdm-data}"
+WASMTIME="${WASMTIME:-$WORK/wasmtime}"
+
+REPO="/$(basename "$PWD")"
+args=()   # paths given relative to here are the same inside; absolute ones move under $REPO
+for arg in "$@"; do
+    case "$arg" in "$PWD"/*) args+=("$REPO/${arg#"$PWD"/}") ;; "$PWD") args+=("$REPO") ;; *) args+=("$arg") ;; esac
+done
+exec "$WASMTIME" run -S tcp=n,udp=n,allow-ip-name-lookup=n \
+    --dir "$PWD::$REPO" --dir "$DATA::/1/rdm" --env RDM_REPO="$REPO" "$WASM" "${args[@]}"

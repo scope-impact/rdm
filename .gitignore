@@ -38,3 +38,5 @@ var
 
 # the c4 provider, built from providers/c4
 providers/*/target/
+wit/deps/
+.rdm-wasm-compare/

@@ -8,8 +8,15 @@
   the shared kernel's record-state interface, the only place that runs
   `git`; the graph stands on rdflib, written in Python, so the store is one
   N-Quads file and `pyoxigraph` is no longer a dependency; the shapes, the
-  vocabulary and the checklists are read as package resources. First steps
-  towards running RDM as one WASI component (UN-019).
+  vocabulary and the checklists are read as package resources.
+- **RDM as one WASI component** (Design Review 72, DI-84, DI-87, UN-019):
+  `scripts/build-component.sh` builds `rdm.wasm`, the command line composed
+  with two providers, `rdm-git` (gitoxide) for the record's state and
+  `rdm-c4` (structurizrx) for the architecture workspace; `scripts/rdm-wasm`
+  runs it on Wasmtime with the record as its only grant, and CI compares it
+  with the command line, command by command. `rdm c4 draw` goes through one
+  c4 interface: `rdm-c4` draws natively too (not dynamic views yet, which
+  Structurizr's command line still draws).
 - **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
   one manual in IFU order (cover, intended use, how RDM works, safety and
   limitations with each residual risk, installation, getting started,

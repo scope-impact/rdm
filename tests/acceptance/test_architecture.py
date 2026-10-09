@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from rdm.architecture import draw as drawing
-from rdm.architecture.draw import DrawError, Drawing, RdmC4, draw, sources_of
+from rdm.architecture.draw import DrawError, Drawing, RdmC4, draw, workspace_text
 from rdm.architecture.model import read_model
 
 allure = pytest.importorskip("allure")
@@ -68,10 +68,10 @@ def test_the_workspace_is_drawn_through_one_c4_interface(tmp_path: Path, monkeyp
     (dhf / "c4" / "workspace.dsl").write_text(WORKSPACE)
     (dhf / "c4" / "views.dsl").write_text(VIEWS)
 
-    with verification_step("the interface takes the workspace's sources, the files it includes among them"):
-        sources = sources_of(dhf)
-        assert sorted(sources) == ["views.dsl", "workspace.dsl"]
-        drawn = provider.draw(sources)
+    with verification_step("the interface takes the workspace's text, the files it includes inlined"):
+        dsl = workspace_text(dhf)
+        assert "!include" not in dsl and 'dynamic ui "D_alarm"' in dsl and 'person "Clinician"' in dsl
+        drawn = provider.draw(dsl)
         attach("drawing", {"views": sorted(drawn.views), "model": drawn.model})
         assert isinstance(drawn, Drawing) and sorted(drawn.views) == ["C1", "C3_ui"]
         assert all(svg.lstrip().startswith("<") and "</svg>" in svg for svg in drawn.views.values())
@@ -86,7 +86,7 @@ def test_the_workspace_is_drawn_through_one_c4_interface(tmp_path: Path, monkeyp
 
     with verification_step("the same workspace gives the same model on both sides: RDM's own, "
                            "exported by structurizrx, equals the model in the record"):
-        own = provider.draw(sources_of(ROOT / "dhf"))
+        own = provider.draw(workspace_text(ROOT / "dhf"))
         again = tmp_path / "own" / "dhf"
         (again / "c4").mkdir(parents=True)
         shutil.copy(ROOT / "dhf" / "c4" / "workspace.dsl", again / "c4" / "workspace.dsl")
@@ -110,7 +110,7 @@ def test_the_workspace_is_drawn_through_one_c4_interface(tmp_path: Path, monkeyp
         class Legacy:
             name = "Structurizr"
 
-            def draw(self, sources, only=None):
+            def draw(self, dsl, only=None):
                 return Drawing(model={}, views={k: "<?xml?>\n<svg>legacy</svg>" for k in only})
 
         monkeypatch.setattr(drawing, "_providers", lambda: (provider, Legacy()))

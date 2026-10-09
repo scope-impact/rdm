@@ -10,9 +10,18 @@
 | `pytest`, `allure-pytest` | running tagged acceptance tests | current |
 | Pandoc, Typst, Make | rendering documents to PDF | as in the RDM image |
 | bash | the pre-commit hook and the agent bootstrap | Git Bash or WSL on Windows |
+| `rdm-c4` | drawing the architecture views (`rdm c4 draw`); Java, Structurizr's CLI and Graphviz for dynamic views | built from `providers/c4` |
 
 The RDM Docker image carries Pandoc, Typst, the fonts and RDM itself; use it
 when you render PDFs and do not want to install them.
+
+The gates and the graph also run as one WebAssembly component, `rdm.wasm`,
+on any host with [Wasmtime](https://wasmtime.dev): no Python, git or Java on
+the host, and the component reads only the repository it is given.
+`scripts/build-component.sh` builds it and `scripts/rdm-wasm` runs it from a
+repository's root; CI checks that it decides what the command line decides.
+`rdm graph serve`, `rdm graph mcp`, the PDF report and the mutation probe stay
+on the command line.
 
 ## Install
 

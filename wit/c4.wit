@@ -1,11 +1,8 @@
 package rdm:component@0.1.0;
 
-/// The C4 workspace, exported and drawn: what `rdm c4 draw` needs.
+/// The C4 workspace, exported and drawn: what `rdm c4 draw` needs (DI-84).
 /// Exported by rdm-c4 (structurizrx); imported by the core.
 interface c4 {
-    /// A path relative to the repository root, which every RDM component sees at /.
-    type repo-path = string;
-
     record view {
         key: string,
         svg: string,
@@ -14,9 +11,11 @@ interface c4 {
     record drawing {
         /// Structurizr's workspace JSON, with each element's DSL identifier.
         workspace-json: string,
+        /// Every view the renderer draws; one it cannot draw is left out.
         views: list<view>,
     }
 
-    /// Parse and draw the workspace at `dsl`, a file the component can read.
-    draw: func(dsl: repo-path) -> result<drawing, string>;
+    /// Parse, export and draw the workspace: its DSL text, with every file it
+    /// includes inlined, so the provider reads no file.
+    draw: func(dsl: string) -> result<drawing, string>;
 }

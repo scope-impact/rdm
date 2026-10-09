@@ -13,8 +13,10 @@ interface record-state {
     record file-state {
         path: repo-path,
         tracking: tracking,
-        /// Differs from HEAD, in the index or in the working tree.
-        changed: bool,
+        /// The index differs from the last commit.
+        staged: bool,
+        /// The working tree differs from the index.
+        modified: bool,
     }
 
     record head-state {
@@ -24,9 +26,12 @@ interface record-state {
         merging: bool,
     }
 
-    head: func() -> head-state;
-    /// A path may be a directory: every file under it.
-    files: func(paths: list<repo-path>) -> list<file-state>;
+    /// None when the record's state cannot be known (not a repository): never approved.
+    head: func() -> option<head-state>;
+    /// A path may be a directory: every file under it. None when it cannot be known.
+    files: func(paths: list<repo-path>) -> option<list<file-state>>;
+    /// Whether some commit holds, at this path, exactly what is staged.
+    staged-in-history: func(path: repo-path) -> bool;
 
     // History, for the graph (rdm graph build): who changed the record, when, and where it landed.
 
