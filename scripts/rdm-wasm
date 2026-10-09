@@ -20,5 +20,7 @@ args=()   # paths given relative to here are the same inside; absolute ones move
 for arg in "$@"; do
     case "$arg" in "$PWD"/*) args+=("$REPO/${arg#"$PWD"/}") ;; "$PWD") args+=("$REPO") ;; *) args+=("$arg") ;; esac
 done
+env=()   # SOURCE_DATE_EPOCH reaches the component when set: a reproducible report
+[ -n "${SOURCE_DATE_EPOCH:-}" ] && env+=(--env "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH")
 exec "$WASMTIME" run -S tcp=n,udp=n,allow-ip-name-lookup=n \
-    --dir "$PWD::$REPO" --dir "$DATA::/1/rdm" --env RDM_REPO="$REPO" "$WASM" "${args[@]}"
+    --dir "$PWD::$REPO" --dir "$DATA::/1/rdm" --env RDM_REPO="$REPO" "${env[@]}" "$WASM" "${args[@]}"
