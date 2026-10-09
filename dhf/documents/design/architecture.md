@@ -71,9 +71,9 @@ judge them:
   another view or another workspace; or when an image is no view's. Reading
   the stamps needs neither Structurizr nor Graphviz, so the design gate can
   check freshness on any machine.
-- **Drawing is all or nothing.** The drawing exports the workspace with
-  Structurizr and draws each view with Graphviz, then writes the exported
-  model and one image per view (`dhf/c4/views/<view>.svg`), each stamped
+- **Drawing is all or nothing.** The drawing hands the workspace's sources
+  to the c4 interface (DI-84) and receives the exported model and each
+  view's image, then writes the exported model and one image per view (`dhf/c4/views/<view>.svg`), each stamped
   with the workspace's digest, and removes the image of a view the
   workspace no longer has. A workspace that cannot be exported or drawn is
   refused with the tool's reason, and nothing is written. Every kind of
