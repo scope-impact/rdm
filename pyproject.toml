@@ -41,7 +41,7 @@ validation = ["playwright==1.63.0"]
 # graph browsers such as AWS Graph Explorer; pyshacl runs the gate shapes
 # (DI-38); mcp serves it to agents, read-only (DI-41/42). Optional: the record core keeps
 # no RDF dependency.
-graph = ["pyoxigraph==0.5.11", "pyshacl==0.40.1", "mcp==2.2.0"]
+graph = ["pyoxigraph==0.5.11", "pyshacl==0.40.1", "mcp==2.3.0"]
 # The verification report as PDF (DI-64): Typst compiled in-process, so CI
 # needs no Pandoc. Without it, a `typst` executable on PATH is used.
 report = ["typst==0.15.0"]
@@ -70,7 +70,7 @@ dev = [
     "allure-pytest==2.16.2",
     "pyoxigraph==0.5.11",
     "pyshacl==0.40.1",
-    "mcp==2.2.0",
+    "mcp==2.3.0",
     "typst==0.15.0",
     "pypdf==6.19.0",  # the DI-64 test reads the rendered report back
 ]
