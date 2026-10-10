@@ -40,3 +40,6 @@ var
 providers/*/target/
 wit/deps/
 .rdm-wasm-compare/
+
+# CI copies rdm-typst's source beside the image's Dockerfile; never committed there
+rdm/specification/init_files/providers/

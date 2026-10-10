@@ -1757,7 +1757,6 @@ name = "rdm"
 version = "2.0.0a0"
 source = { editable = "." }
 dependencies = [
-    { name = "gitpython" },
     { name = "jinja2" },
     { name = "markdown-it-py" },
     { name = "mdit-py-plugins" },
@@ -1770,6 +1769,7 @@ dev = [
     { name = "check-manifest" },
     { name = "coverage" },
     { name = "docutils" },
+    { name = "gitpython" },
     { name = "mcp" },
     { name = "mkdocs" },
     { name = "mkdocs-material" },
@@ -1804,7 +1804,7 @@ requires-dist = [
     { name = "check-manifest", marker = "extra == 'dev'", specifier = "==0.51" },
     { name = "coverage", marker = "extra == 'dev'", specifier = "==7.16.2" },
     { name = "docutils", marker = "extra == 'dev'", specifier = "==0.23" },
-    { name = "gitpython", specifier = "==3.2.0" },
+    { name = "gitpython", marker = "extra == 'dev'", specifier = "==3.2.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "markdown-it-py", specifier = "==4.2.0" },
     { name = "mcp", marker = "extra == 'dev'", specifier = "==2.2.0" },

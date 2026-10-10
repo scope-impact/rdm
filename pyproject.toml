@@ -28,7 +28,6 @@ requires-python = ">=3.10"
 dependencies = [
     "jinja2==3.1.6",
     "pyyaml==6.0.3",
-    "gitpython==3.2.0",
     # The document typesetter's Markdown parser (DI-89): pure Python, so it runs in the component.
     "markdown-it-py==4.2.0",
     "mdit-py-plugins==0.6.1",
@@ -59,6 +58,7 @@ docs = [
 ]
 dev = [
     "pytest==9.1.1",
+    "gitpython==3.2.0",  # two unit tests drive git through it; RDM itself runs git (rdm/kernel/git.py)
     "ruff==0.16.10",
     "check-manifest==0.51",
     "mkdocs==1.6.1",

@@ -1,6 +1,6 @@
 # ============================================================================
 # Regulatory Documentation Build Image
-# RDM (with the graph extra) + Pandoc + Typst, on Ubuntu LTS
+# RDM (with the graph extra) + rdm-typst (PDF) + Pandoc (Word), on Ubuntu LTS
 # ============================================================================
 
 # Pinned to an LTS release, never `latest`: the base changes only when we
@@ -10,33 +10,29 @@ ARG UBUNTU_VERSION=26.04
 FROM ubuntu:${UBUNTU_VERSION} AS builder
 
 ARG PANDOC_VERSION=3.12
-ARG TYPST_VERSION=0.15.1
-ARG JETBRAINS_MONO_VERSION=2.304
+ARG RUST_VERSION=1.97.0
 # Docker provides TARGETARCH (amd64 or arm64).
 ARG TARGETARCH
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip xz-utils \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl build-essential git \
     && rm -rf /var/lib/apt/lists/*
 
+# Pandoc, for the Word copies (make docs).
 RUN PANDOC_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") && \
     curl -fsSL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-${PANDOC_ARCH}.tar.gz" \
     | tar xzf - --strip-components=2 -C /usr/local/bin "pandoc-${PANDOC_VERSION}/bin/pandoc"
 
-RUN TYPST_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64") && \
-    curl -fsSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${TYPST_ARCH}-unknown-linux-musl.tar.xz" \
-    | tar xJf - --strip-components=1 -C /usr/local/bin "typst-${TYPST_ARCH}-unknown-linux-musl/typst"
-
-# The fonts of the document template: Nunito Sans (text; Google Fonts' static
-# files of version v19, one per weight and style) and JetBrains Mono (headings
-# and code).
-RUN mkdir -p /fonts/nunito-sans /fonts/jetbrains-mono && \
-    curl -fsSL -o /fonts/nunito-sans/NunitoSans-Regular.ttf "https://fonts.gstatic.com/s/nunitosans/v19/pe1mMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfGWVpNn64CL7U8upHZIbMV51Q42ptCp5F5bxqqtQ1yiU4G1ilntA.ttf" && \
-    curl -fsSL -o /fonts/nunito-sans/NunitoSans-SemiBold.ttf "https://fonts.gstatic.com/s/nunitosans/v19/pe1mMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfGWVpNn64CL7U8upHZIbMV51Q42ptCp5F5bxqqtQ1yiU4GCC5ntA.ttf" && \
-    curl -fsSL -o /fonts/nunito-sans/NunitoSans-Bold.ttf "https://fonts.gstatic.com/s/nunitosans/v19/pe1mMImSLYBIv1o4X1M8ce2xCx3yop4tQpF_MeTm0lfGWVpNn64CL7U8upHZIbMV51Q42ptCp5F5bxqqtQ1yiU4GMS5ntA.ttf" && \
-    curl -fsSL -o /fonts/nunito-sans/NunitoSans-Italic.ttf "https://fonts.gstatic.com/s/nunitosans/v19/pe1kMImSLYBIv1o4X1M8cce4OdVisMz5nZRqy6cmmmU3t2FQWEAEOvV9wNvrwlNstMKW3Y6K5WMwXeVy3GboJ0kTHmqP91Ug.ttf" && \
-    curl -fsSL -o /fonts/nunito-sans/NunitoSans-BoldItalic.ttf "https://fonts.gstatic.com/s/nunitosans/v19/pe1kMImSLYBIv1o4X1M8cce4OdVisMz5nZRqy6cmmmU3t2FQWEAEOvV9wNvrwlNstMKW3Y6K5WMwXeVy3GboJ0kTHmpo8FUg.ttf" && \
-    curl -fsSL -o /tmp/jbmono.zip "https://github.com/JetBrains/JetBrainsMono/releases/download/v${JETBRAINS_MONO_VERSION}/JetBrainsMono-${JETBRAINS_MONO_VERSION}.zip" && \
-    unzip -q /tmp/jbmono.zip -d /tmp/jbmono && cp /tmp/jbmono/fonts/ttf/*.ttf /fonts/jetbrains-mono/
+# rdm-typst, RDM's typeset provider (DI-88), for the PDFs (make pdfs, rdm typeset): Typst with the
+# template's fonts built in. From providers/typst next to this Dockerfile when there is one (RDM's
+# own CI), else from the RDM release this project was laid down with, from git.
+ARG RDM_REPOSITORY=https://github.com/scope-impact/rdm
+ARG RDM_TAG=v{rdm_version}
+COPY Dockerfile providers* /tmp/providers/
+RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain "${RUST_VERSION}" && \
+    . "$HOME/.cargo/env" && \
+    if [ -d /tmp/providers/typst ]; then cargo install --locked --path /tmp/providers/typst --root /usr/local; \
+    else cargo install --locked --git "${RDM_REPOSITORY}" --tag "${RDM_TAG}" rdm-typst --root /usr/local; fi && \
+    rdm-typst 2>&1 | grep -q usage
 
 # ============================================================================
 # Final image
@@ -55,9 +51,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/local/bin/pandoc /usr/local/bin/typst /usr/local/bin/
-COPY --from=builder /fonts/ /usr/share/fonts/truetype/
-RUN fc-cache -f && pandoc --version && typst --version
+COPY --from=builder /usr/local/bin/pandoc /usr/local/bin/rdm-typst /usr/local/bin/
+RUN fc-cache -f && pandoc --version
 
 # RDM, with the graph extra (build, query, validate, serve, mcp), in its own
 # virtualenv (Ubuntu's system Python does not take pip installs): from a

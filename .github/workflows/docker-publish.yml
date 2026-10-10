@@ -30,6 +30,10 @@ jobs:
       - name: Build wheel
         run: uv build --wheel --out-dir rdm/specification/init_files/dist
 
+      # rdm-typst (DI-88) is built in the image from this revision's source, as the wheel is.
+      - name: Put rdm-typst's source beside the Dockerfile
+        run: mkdir -p rdm/specification/init_files/providers && cp -r providers/typst rdm/specification/init_files/providers/typst
+
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
