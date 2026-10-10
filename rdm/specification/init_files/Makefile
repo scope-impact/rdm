@@ -30,7 +30,7 @@ release/%.md: documents/%.md $(CONFIG) $(DATA_FILES)
 
 release/%.pdf: release/%.md template.typ
 	@mkdir -p $(@D)
-	rdm typeset $< --template template.typ -o $@
+	rdm typeset $< --template template.typ --resource-path=$(RESOURCE_PATH) -o $@
 
 release/%.docx: release/%.md pandoc_docx.yml $(wildcard reference.docx)  # the Word template, if any
 	@mkdir -p $(@D)

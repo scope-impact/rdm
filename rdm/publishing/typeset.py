@@ -216,9 +216,21 @@ def markdown_to_typst(markdown: str) -> tuple[str, list[str]]:
 
 # --- the document
 
-def typeset_document(markdown_file: Path, template: Path) -> bytes:
-    """The PDF of a rendered document, through the typeset port."""
+def _find(image: str, places: list[Path]) -> Path | None:
+    """The first file ``image`` names in the places searched, in order."""
+    for place in places:
+        candidate = (place / image).resolve()
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def typeset_document(markdown_file: Path, template: Path, resource_path: list[Path] | None = None) -> bytes:
+    """The PDF of a rendered document, through the typeset port. Images are
+    found beside the document, then in each directory of ``resource_path`` in
+    order, as Pandoc's ``--resource-path`` finds them."""
     markdown_file, template = Path(markdown_file), Path(template)
+    places = [markdown_file.parent, *(Path(p) for p in resource_path or [])]
     if not template.is_file():
         raise TypesetError(f"no Typst template: {template}")
     text = markdown_file.read_text(encoding="utf-8")
@@ -227,9 +239,10 @@ def typeset_document(markdown_file: Path, template: Path) -> bytes:
     typst, images = markdown_to_typst(body)
     files: dict[str, bytes] = {TEMPLATE: template.read_bytes()}
     for n, image in enumerate(dict.fromkeys(images)):
-        source = (markdown_file.parent / image).resolve()
-        if "://" in image or not source.is_file():
-            raise TypesetError(f"image not found: {image} (relative to {markdown_file})")
+        source = None if "://" in image else _find(image, places)
+        if source is None:
+            searched = ", ".join(str(p) for p in places)
+            raise TypesetError(f"image not found: {image} (searched {searched})")
         name = f"images/{n}-{source.name}"
         files[name] = source.read_bytes()
         typst = typst.replace(f"#image({_string(image)}", f"#image({_string(name)}")
@@ -240,10 +253,11 @@ def typeset_document(markdown_file: Path, template: Path) -> bytes:
     return typeset_files(MAIN, files)
 
 
-def typeset_command(document: str, output: str, template: str | None) -> int:
+def typeset_command(document: str, output: str, template: str | None, resource_path: str | None = None) -> int:
     template_path = Path(template) if template else Path(TEMPLATE)
+    places = [Path(p) for p in (resource_path or "").split(":") if p]
     try:
-        pdf = typeset_document(Path(document), template_path)
+        pdf = typeset_document(Path(document), template_path, places)
     except (TypesetError, ReportUnavailable, OSError) as error:
         print(f"Error: cannot typeset {document}: {error}")
         return 2

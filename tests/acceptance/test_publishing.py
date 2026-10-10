@@ -191,6 +191,13 @@ print("fenced ``` inside")
     with verification_step("made again, the same bytes: the PDF depends on the document and the template only"):
         assert typeset_document(document, template) == pdf
 
+    with verification_step("a document rendered apart from its images finds them on the resource path, in order"):
+        elsewhere = tmp_path / "release" / "doc.md"  # as the project Makefile renders into release/
+        elsewhere.parent.mkdir()
+        elsewhere.write_text(document.read_text())
+        assert cli(["typeset", "release/doc.md", "--resource-path", "nowhere:.", "-o", "out/release.pdf"]) == 0
+        assert (tmp_path / "out" / "release.pdf").read_bytes() == pdf
+
     with verification_step("a construct the converter does not carry, a missing image, a bad template: "
                            "refused by name"):
         html = tmp_path / "html.md"
@@ -201,6 +208,8 @@ print("fenced ``` inside")
         gone.write_text("---\nid: X\n---\n\n![x](img/none.png)\n")
         with pytest.raises(TypesetError, match="image not found: img/none.png"):
             typeset_document(gone, template)
+        with pytest.raises(TypesetError, match="image not found: img/dot.png"):
+            typeset_document(elsewhere, template)
         template.write_text("#let template(..args, body) = { nonsense }\n")
         with pytest.raises(ReportUnavailable, match="unknown variable: nonsense"):
             typeset_document(document, template)

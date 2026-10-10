@@ -53,7 +53,7 @@ def cli(raw_arguments):
     elif args.command == 'typeset':
         from rdm.publishing.typeset import typeset_command
 
-        exit_code = typeset_command(args.document, args.output, args.template)
+        exit_code = typeset_command(args.document, args.output, args.template, args.resource_path)
     elif args.command == 'init':
         exit_code = init_command(args.output)
     elif args.command == 'adopt':
@@ -278,6 +278,8 @@ def parse_arguments(arguments):
     typeset_parser.add_argument('-o', '--output', required=True, help='the PDF to write')
     typeset_parser.add_argument('--template',
                                 help='the Typst template module (default: template.typ in the current directory)')
+    typeset_parser.add_argument('--resource-path', metavar='DIR:DIR…',
+                                help="where else to find the document's images, after its own directory, in order")
 
     gap_help = 'use checklist to verify documents have expected references to particular standard(s)'
     gap_parser = subparsers.add_parser('gap', help=gap_help)
