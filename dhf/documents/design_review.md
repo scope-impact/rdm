@@ -2471,7 +2471,10 @@ but it declares no licence, so it cannot be a dependency.
   does not carry is refused by name, never dropped.
 - **The Typst template becomes a Typst module.** `template.typ` keeps its
   look and fonts and loses Pandoc's `$variables$`; `rdm init` lays the new
-  one down, and the project Makefile's PDF rule calls `rdm typeset`.
+  one down, and the project Makefile's PDF rule calls `rdm typeset`,
+  passing the resource path it gave Pandoc: the release copies are rendered
+  apart from the project's images, so images are found beside the document,
+  then on that path, in order.
 - **Pandoc stays for DOCX only.** The documents image keeps Pandoc for Word
   output; it no longer needs Typst for the PDF.
 - **Not adopted:** pandoc.wasm (a command, unpinned, 61 MB) and `md2typst`

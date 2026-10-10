@@ -39,7 +39,7 @@ design_inputs:
     text: "RDM shall typeset the verification report through one typeset interface that takes the layout, its data and its attachments and returns the PDF, answered by the same Typst library on the command line (the rdm-typst program) and inside the component, with the fonts the layout names embedded in the provider, so that the report is the same wherever it is made; with no provider the report says so."
     traces_to: [UN-019]
   - id: DI-89
-    text: "RDM shall typeset a rendered document to PDF with one command, converting its Markdown — headings, paragraphs, emphasis, links, inline and fenced code, bullet and numbered lists at any depth, tables, images, block quotes, footnotes and rules — to Typst markup with RDM's own converter, setting the document's id, revision, title, date and status from its frontmatter into the project's Typst template, and compiling through the typeset interface, so that the PDF is the same on the command line and inside the component; a construct the converter does not carry, an image it cannot find or a template Typst rejects is refused, naming it, and nothing is written."
+    text: "RDM shall typeset a rendered document to PDF with one command, converting its Markdown — headings, paragraphs, emphasis, links, inline and fenced code, bullet and numbered lists at any depth, tables, images, block quotes, footnotes and rules — to Typst markup with RDM's own converter, setting the document's id, revision, title, date and status from its frontmatter into the project's Typst template, and finding each image the document names beside it, then on the resource path given, in order, and compiling through the typeset interface, so that the PDF is the same on the command line and inside the component; a construct the converter does not carry, an image it cannot find or a template Typst rejects is refused, naming it, and nothing is written."
     traces_to: [UN-019]
 ---
 
@@ -141,9 +141,11 @@ The rules a reviewer needs to judge the design:
   (markdown-it-py parses, the converter emits Typst, escaping every
   character Typst would read as markup, so text stays text), and wraps it
   in the project's `template.typ`, a Typst module whose `template` function
-  the generated document shows with. Images the document names are read
-  relative to it and handed to the typeset port with the layout, so the
-  provider reads no file; one that is missing is refused by name. A
+  the generated document shows with. Images the document names are found
+  beside it, then in each directory of the resource path given, in order
+  (as Pandoc's `--resource-path`; the project Makefile passes the same one),
+  and handed to the typeset port with the layout, so the provider reads no
+  file; one found nowhere is refused by name, with the places searched. A
   Markdown construct the converter has no rule for is refused by name, so
   nothing silently vanishes from a controlled document. The PDF is the same
   on the command line and in the component, because every step is Python
