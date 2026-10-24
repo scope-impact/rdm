@@ -111,6 +111,26 @@ risks:
     probability: Possible
     controls: [DI-87]
     residual: {probability: Unlikely}
+  - id: RISK-TOOL-011
+    category: safety
+    status: proposed
+    hazard: "The harness gate ratifies a build that is not done."
+    situation: "The suite is red but prints success, an old process answers on the port, a broken instrument grades the build, or the build round rewrote the spec it was measured against."
+    harm: "A team takes an unverified build as done and builds on it, or releases it."
+    severity: Serious
+    probability: Possible
+    controls: [DI-95, DI-96, DI-97, DI-98, DI-99]
+    residual: {probability: Rare}
+  - id: RISK-TOOL-012
+    category: safety
+    status: proposed
+    hazard: "The harness overstates how much of the spec a build carries."
+    situation: "An unreached scenario is dropped from the denominator, a hand-kept checklist misses a scenario, or a net hides a regression behind a gain."
+    harm: "A team trusts a spec, or a build, that carries less than the score says."
+    severity: Minor
+    probability: Possible
+    controls: [DI-92, DI-93, DI-94]
+    residual: {probability: Unlikely}
 ---
 
 # Risk register — RDM as a tool

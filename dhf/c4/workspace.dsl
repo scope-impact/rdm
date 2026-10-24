@@ -25,6 +25,12 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:specification"
           }
+          spec_reader = component "Spec reader" "The slices' plans and Gherkin specs: each Rule tagged with a design-input id as a design input, each scenario with its item id and line; the Rules and specs it cannot read, at their line" "Python" {
+            properties {
+              "code" "rdm/specification/spec.py"
+            }
+            tags "context:specification"
+          }
           test_tags = component "Test tags" "The design-input tags in test sources, in every language RDM reads" "Python" {
             properties {
               "code" "rdm/specification/tags.py"
@@ -236,6 +242,44 @@ workspace "RDM" "The design record of regulated software." {
             tags "context:publishing"
           }
         }
+        group "harness" {
+          harness_config = component "Harness configuration" "Everything the harness knows about a project, from one file; an unknown or missing setting refused by name" "Python" {
+            properties {
+              "code" "rdm/harness/config.py"
+            }
+            tags "context:harness"
+          }
+          stamper = component "Stamper" "rdm harness stamp: the next free item id on each unstamped scenario; never renumbers" "Python" {
+            properties {
+              "code" "rdm/harness/stamp.py"
+            }
+            tags "context:harness"
+          }
+          checklist = component "Checklist" "rdm harness checklist: one item per stamped scenario of the slices not planned, from the specs alone" "Python" {
+            properties {
+              "code" "rdm/harness/checklist.py"
+            }
+            tags "context:harness"
+          }
+          scorer = component "Scorer" "rdm harness score: a cycle's verdicts, from a file or an acceptance run, filed against its checklist; an unreached item is a failure" "Python" {
+            properties {
+              "code" "rdm/harness/score.py"
+            }
+            tags "context:harness"
+          }
+          scoreboard = component "Scoreboard" "rdm harness scoreboard: the pass rate, got better and got worse on shared items, the denominator's move" "Python" {
+            properties {
+              "code" "rdm/harness/scoreboard.py"
+            }
+            tags "context:harness"
+          }
+          harness_gate = component "Harness gate" "rdm harness verify: admits the round, then checks the instrument, runs the suite, starts the served graph inside its boot budget and proves its identity; Build Ratified or not" "Python" {
+            properties {
+              "code" "rdm/harness/verify.py"
+            }
+            tags "context:harness"
+          }
+        }
         group "graph" {
           projection = component "Projection" "The record into RDF, one named graph per source, de-duplicated and sorted; replaces the store on each build; rdm graph build, query, serve (read-only) and explorer-file" "Python, rdflib" {
             properties {
@@ -429,6 +473,22 @@ workspace "RDM" "The design record of regulated software." {
     pytest_plugin -> risk_register "finds the risks each design input controls with"
     architecture_drawing -> architecture_model "takes the paths, view keys, stamp format and workspace digest from"
     design_gate -> architecture_model "checks the views are fresh with"
+    record_reader -> spec_reader "reads the slices' design inputs with"
+    design_gate -> spec_reader "checks the slices' specs with"
+    test_tags -> spec_reader "finds the slices' scenarios with"
+    spec_reader -> kernel "reads files with"
+    stamper -> spec_reader "finds the slices' specs with"
+    checklist -> spec_reader "reads the slices' scenarios with"
+    scorer -> checklist "scores against"
+    scorer -> allure_reader "grades from an acceptance run with"
+    scoreboard -> scorer "reads the cycles' records of"
+    harness_gate -> harness_config "reads the project's settings with"
+    harness_gate -> design_gate "checks the instrument's known answers with"
+    harness_gate -> release_gate "checks a known answer with results with"
+    harness_gate -> record_reader "reads the record's design input text with"
+    harness_gate -> sparql_endpoint "starts and asks for a design input's text" "SPARQL over HTTP"
+    harness_gate -> kernel "asks git what changed since the base with"
+    engineer -> harness_gate "ratifies a build round with"
     projection -> allure_reader "reads results and test tags with"
     projection -> architecture_model "reads the C4 model and code dependencies with"
     pytest_plugin -> allure_reader "writes run labels and facts with"
@@ -513,7 +573,7 @@ workspace "RDM" "The design record of regulated software." {
     }
     component rdm_cli "C3_specification" {
       title "Design specification: components (C3)"
-      include record_reader test_tags design_gate hooks precommit_hook new_input project_scaffold project_templates adoption adoption_templates validation_records formative_usability persona_command allure_reader architecture_model evidence_bundle gates_action projection pytest_plugin release_gate verification_data verification_report
+      include record_reader spec_reader test_tags design_gate hooks precommit_hook new_input project_scaffold project_templates adoption adoption_templates validation_records formative_usability persona_command allure_reader architecture_model evidence_bundle gates_action projection pytest_plugin release_gate verification_data verification_report
       exclude "evidence_bundle -> verification_data"
       exclude "evidence_bundle -> verification_report"
       exclude "gates_action -> evidence_bundle"
@@ -577,6 +637,11 @@ workspace "RDM" "The design record of regulated software." {
       exclude "gates_action -> verification_data"
       exclude "verification_data -> allure_reader"
       exclude "verification_data -> record_reader"
+      autolayout tb
+    }
+    component rdm_cli "C3_harness" {
+      title "Harness: components (C3)"
+      include harness_config stamper checklist scorer scoreboard harness_gate spec_reader design_gate release_gate record_reader allure_reader sparql_endpoint engineer
       autolayout tb
     }
     component rdm_cli "C3_graph" {

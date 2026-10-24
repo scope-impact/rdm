@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1210" height="1336" viewBox="0 0 1210 1336" font-family="Arial, sans-serif">
+<!-- rdm c4 draw: view C3_harness, workspace sha256:49921f09638c9579af278f7c3663dad791d69dacaef6beac07e8926eed033982 -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#555555"/></marker>
+    <marker id="arrow-added" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2e7d32"/></marker>
+    <marker id="arrow-removed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#c62828"/></marker>
+  </defs>
+  <rect width="1210" height="1336" fill="#f8f8f8"/>
+  <text x="605" y="30" font-size="18" font-weight="bold" fill="#333333" text-anchor="middle">C3_harness</text>
+  <g transform="translate(66,110)">
+    <rect x="-26" y="-22" width="830" height="1208" fill="#ffffff" stroke="#bbbbbb" stroke-width="1" stroke-dasharray="6,4" rx="6"/>
+    <text x="-16" y="-6" font-size="11" fill="#888888" font-style="italic">rdm</text>
+    <line x1="879.8" y1="150.0" x2="641.0" y2="250.6" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="389.0" y1="958.0" x2="389.0" y2="1054.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="508.0" y1="756.0" x2="407.0" y2="1054.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="490.1" y1="756.0" x2="424.9" y2="852.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="389.0" y1="554.0" x2="389.0" y2="852.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="424.9" y1="554.0" x2="490.1" y2="650.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="353.1" y1="554.0" x2="287.9" y2="650.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="259.0" y1="128.0" x2="382.0" y2="1054.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="139.0" y1="554.0" x2="365.0" y2="1054.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="216.1" y1="352.0" x2="150.9" y2="448.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="252.0" y1="352.0" x2="252.0" y2="650.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="461.2" y1="128.0" x2="316.8" y2="246.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="561.9" y1="352.0" x2="627.1" y2="448.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="526.0" y1="352.0" x2="526.0" y2="650.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="490.1" y1="352.0" x2="424.9" y2="448.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="514.0" y1="352.0" x2="401.0" y2="852.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="641.0" y1="349.2" x2="883.6" y2="455.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <circle cx="989" cy="30" r="30" fill="#08427b" stroke="#052E56" stroke-width="1.5"/>
+    <rect x="874" y="58" width="230" height="92" rx="14" ry="14" fill="#08427b" stroke="#052E56" stroke-width="1.5"/>
+    <text x="989" y="84" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Engineer</text>
+    <text x="989" y="99" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Person]</text>
+    <text x="989" y="119" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Changes the product and its tagged</text>
+    <text x="989" y="133" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">acceptance tests</text>
+    <rect x="274" y="852" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="389" y="878" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Record reader</text>
+    <text x="389" y="893" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="389" y="913" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">User needs, design inputs, realises</text>
+    <text x="389" y="927" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">and declarations, from the design</text>
+    <text x="389" y="941" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">documents&#39; and V&amp;V plan&#39;s…</text>
+    <rect x="274" y="1054" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="389" y="1080" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Spec reader</text>
+    <text x="389" y="1095" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="389" y="1115" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">The slices&#39; plans and Gherkin specs:</text>
+    <text x="389" y="1129" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">each Rule tagged with a design-input</text>
+    <text x="389" y="1143" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">id as a design input, each scenario…</text>
+    <rect x="411" y="650" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="526" y="676" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Design gate</text>
+    <text x="526" y="691" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="526" y="711" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">The record complete, approved and</text>
+    <text x="526" y="725" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">declared once; the architecture views</text>
+    <text x="526" y="739" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">fresh</text>
+    <rect x="274" y="448" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="389" y="474" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Release gate</text>
+    <text x="389" y="489" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="389" y="509" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">Blocks a release on design-gate</text>
+    <text x="389" y="523" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">failures, failed or untested design</text>
+    <text x="389" y="537" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">inputs, blocking risk findings or an…</text>
+    <rect x="137" y="650" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="252" y="676" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Allure reader</text>
+    <text x="252" y="691" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="252" y="711" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">Allure results into test runs and a</text>
+    <text x="252" y="725" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">status per design input (failed, else</text>
+    <text x="252" y="739" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">verified, else untested; undeclared…</text>
+    <rect x="548" y="448" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="663" y="474" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Harness configuration</text>
+    <text x="663" y="489" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="663" y="509" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">Everything the harness knows about a</text>
+    <text x="663" y="523" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">project, from one file; an unknown or</text>
+    <text x="663" y="537" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">missing setting refused by name</text>
+    <rect x="137" y="22" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="252" y="48" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Stamper</text>
+    <text x="252" y="63" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="252" y="83" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">rdm harness stamp: the next free</text>
+    <text x="252" y="97" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">item id on each unstamped scenario;</text>
+    <text x="252" y="111" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">never renumbers</text>
+    <rect x="0" y="448" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="115" y="474" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Checklist</text>
+    <text x="115" y="489" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="115" y="509" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">rdm harness checklist: one item per</text>
+    <text x="115" y="523" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">stamped scenario of the slices not</text>
+    <text x="115" y="537" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">planned, from the specs alone</text>
+    <rect x="137" y="246" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="252" y="272" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Scorer</text>
+    <text x="252" y="287" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="252" y="307" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">rdm harness score: a cycle&#39;s verdicts,</text>
+    <text x="252" y="321" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">from a file or an acceptance run, filed</text>
+    <text x="252" y="335" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">against its checklist; an unreached…</text>
+    <rect x="411" y="22" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="526" y="48" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Scoreboard</text>
+    <text x="526" y="63" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="526" y="83" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">rdm harness scoreboard: the pass</text>
+    <text x="526" y="97" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">rate, got better and got worse on</text>
+    <text x="526" y="111" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">shared items, the denominator&#39;s move</text>
+    <rect x="411" y="246" width="230" height="106" rx="4" ry="4" fill="#85bbf0" stroke="#5D82A8" stroke-width="1.5"/>
+    <text x="526" y="272" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Harness gate</text>
+    <text x="526" y="287" font-size="11" font-style="italic" fill="#000000" opacity="0.85" text-anchor="middle">[Component: Python]</text>
+    <text x="526" y="307" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">rdm harness verify: admits the round,</text>
+    <text x="526" y="321" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">then checks the instrument, runs the</text>
+    <text x="526" y="335" font-size="11" fill="#000000" opacity="0.9" text-anchor="middle">suite, starts the served graph inside…</text>
+    <rect x="874" y="455" width="230" height="92" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
+    <text x="989" y="481" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">SPARQL endpoint</text>
+    <text x="989" y="496" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Python, rdflib]</text>
+    <text x="989" y="516" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">rdm graph serve: the store, read-only,</text>
+    <text x="989" y="530" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">refusing updates and SERVICE</text>
+    <rect x="691.3" y="193.8" width="138.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="760.4" y="203.8" font-size="10.5" fill="#555555" text-anchor="middle">ratifies a build round with</text>
+    <rect x="295.6" y="999.5" width="186.7" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="389.0" y="1009.5" font-size="10.5" fill="#555555" text-anchor="middle">reads the slices&#39; design inputs with</text>
+    <rect x="379.3" y="898.5" width="156.5" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="457.5" y="908.5" font-size="10.5" fill="#555555" text-anchor="middle">checks the slices&#39; specs with</text>
+    <rect x="399.6" y="797.5" width="115.7" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="457.5" y="807.5" font-size="10.5" fill="#555555" text-anchor="middle">reads the record with</text>
+    <rect x="331.1" y="696.5" width="115.7" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="389.0" y="706.5" font-size="10.5" fill="#555555" text-anchor="middle">reads the record with</text>
+    <rect x="371.9" y="595.5" width="171.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="457.5" y="605.5" font-size="10.5" fill="#555555" text-anchor="middle">runs the design gate&#39;s checks of</text>
+    <rect x="259.3" y="595.5" width="122.5" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="320.5" y="605.5" font-size="10.5" fill="#555555" text-anchor="middle">reconciles results with</text>
+    <rect x="247.1" y="584.5" width="146.8" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="320.5" y="594.5" font-size="10.5" fill="#555555" text-anchor="middle">finds the slices&#39; specs with</text>
+    <rect x="168.0" y="797.5" width="168.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="252.0" y="807.5" font-size="10.5" fill="#555555" text-anchor="middle">reads the slices&#39; scenarios with</text>
+    <rect x="143.3" y="393.5" width="80.5" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="183.5" y="403.5" font-size="10.5" fill="#555555" text-anchor="middle">scores against</text>
+    <rect x="158.0" y="494.5" width="188.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="252.0" y="504.5" font-size="10.5" fill="#555555" text-anchor="middle">grades from an acceptance run with</text>
+    <rect x="314.8" y="180.5" width="148.5" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="389.0" y="190.5" font-size="10.5" fill="#555555" text-anchor="middle">reads the cycles&#39; records of</text>
+    <rect x="508.6" y="393.5" width="171.8" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="594.5" y="403.5" font-size="10.5" fill="#555555" text-anchor="middle">reads the project&#39;s settings with</text>
+    <rect x="444.5" y="488.0" width="163.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="526.0" y="498.0" font-size="10.5" fill="#555555" text-anchor="middle">checks the instrument&#39;s known</text>
+    <rect x="488.5" y="501.0" width="75.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="526.0" y="511.0" font-size="10.5" fill="#555555" text-anchor="middle">answers with</text>
+    <rect x="381.1" y="387.0" width="152.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="457.5" y="397.0" font-size="10.5" fill="#555555" text-anchor="middle">checks a known answer with</text>
+    <rect x="423.5" y="400.0" width="68.1" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="457.5" y="410.0" font-size="10.5" fill="#555555" text-anchor="middle">results with</text>
+    <rect x="364.0" y="589.0" width="186.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="457.5" y="599.0" font-size="10.5" fill="#555555" text-anchor="middle">reads the record&#39;s design input text</text>
+    <rect x="442.7" y="602.0" width="29.6" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="457.5" y="612.0" font-size="10.5" fill="#555555" text-anchor="middle">with</text>
+    <rect x="668.8" y="389.1" width="186.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="762.3" y="399.1" font-size="10.5" fill="#555555" text-anchor="middle">starts and asks for a design input&#39;s</text>
+    <rect x="691.6" y="402.1" width="141.3" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="762.3" y="412.1" font-size="10.5" fill="#555555" text-anchor="middle">text [SPARQL over HTTP]</text>
+  </g>
+</svg>

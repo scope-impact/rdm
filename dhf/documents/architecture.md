@@ -15,6 +15,7 @@ contexts:
   - {id: compliance, part: Gates, layer: 1}
   - {id: graph, part: Graph, layer: 5}
   - {id: publishing, part: Documents, layer: 5}
+  - {id: harness, part: Gates, layer: 5}
 # Below every context: any context may import it, and it imports none.
 kernel: rdm/kernel/
 # Wires the command line to every context; in no context. The component's
@@ -85,6 +86,7 @@ ten contexts named for what their code did or for a workflow stage.
 | Record | `architecture` | `design/architecture.md` | person, software system, container, component, relationship, view | `rdm/architecture/`: the model reader, `rdm c4 draw` |
 | Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's and xunit's words stop here | `rdm/evidence/`: Allure results, `translate`, the mutation probe; and `rdm/pytest_plugin.py` |
 | Gates | `release` | `design/release.md` | verified, release gate, trace slice | `rdm/release/`: the release gate, the verification data; and the reusable CI |
+| Gates | `harness` | `design/harness.md` | slice, spec, scenario, item id, checklist, cycle, ratify, spec-lock | `rdm/harness/`: the stamper, the checklist, the scorer, the scoreboard, the harness gate, its configuration |
 | Gates | `compliance` | `design/compliance.md` | standard, checklist, checklist clause, gap, coverage | `rdm/compliance/` |
 | Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule, derived relation | `rdm/graph/` |
 | Documents | `publishing` | `design/publishing.md` | template, data, rendered document, evidence bundle | `rdm/publishing/`: render, snippets, DMR index, the verification report, the evidence bundle; and `rdm/md_extensions/` and the PDF action |
@@ -106,7 +108,7 @@ module that no component of the workspace names
 (`tests/dependency_rule_test.py`).
 
 ```
- 5  publishing · graph              read models: read every context, feed none back
+ 5  publishing · graph · harness    read models, and the harness that ratifies builds: feed none back
  4  release                         decides: verified status, risk and validation → release
  3  test_evidence                   translates test results into runs of the record's tests
  2  specification                   the core: needs, inputs, tagged tests, review, design gate

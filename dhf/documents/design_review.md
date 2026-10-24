@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 85
+revision: 86
 title: Design Review — RDM
 ---
 
@@ -2493,8 +2493,9 @@ returns `{id, text, traces_to, context}`, so a second source of design inputs
 leaves the gates, matrix, graph and risk controls unchanged; and found ADR 0001
 rejecting Gherkin on purpose.
 
-**Disposition:** Approved as a plan; slice 01 is `planned` until this review's
-PR merges, then `ready-for-development`.
+**Disposition:** Approved. Slice 01 was `planned` until the maintainer asked
+to finish the harness (`dhf/raw/2026-10-24-finish-the-harness.md`); it is now
+`ready-for-development`, and the PR that builds it is its review.
 
 - **ADR 0002** supersedes ADR 0001 in part: new work is planned as slices
   (`dhf/plan/NN-slug/`: plan, `spec.feature`, decisions); a Gherkin `Rule:` is a
@@ -2520,12 +2521,19 @@ PR merges, then `ready-for-development`.
 - **Not adopted now:** carrying Löyly's harness byte for byte as a member of
   its ring (the slice's D1); the fence (D4); moving the eight existing contexts
   into slices (D5); a perception step (D6).
-- **Before implementation:** the harness context's design document (taking
-  over the slice's commands-and-events table, and stating that each harness
-  command keeps RDM's handler shape: read the state, derive the events with no
-  side effect, then apply a success event), its place
-  in `architecture.md` and the C4 workspace, and the tool risks of a gate that
-  ratifies wrongly, recorded with ticket 1.
+- **Recorded before implementation:** the **harness** context
+  (`design/harness.md`, Gates, layer 5) with six components (configuration,
+  stamper, checklist, scorer, scoreboard, harness gate) and its
+  commands-and-events table; each command keeps RDM's handler shape (read the
+  state, derive the events with no side effect, then apply a success event).
+  The **Spec reader** joins the specification context (DI-90), and Test tags
+  count a scenario as a test of its Rule's design input. C4: the components,
+  their relations and `C3_harness`, redrawn. Risks **RISK-TOOL-011** (the gate
+  ratifies a build that is not done; controls DI-95 to DI-99) and
+  **RISK-TOOL-012** (the harness overstates what a build carries; controls
+  DI-92 to DI-94), proposed.
+- **Workshop patterns not taken yet:** always-valid entities and repositories
+  for the record reader; a later slice.
 
 # Approval
 

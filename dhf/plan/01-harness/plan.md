@@ -1,6 +1,6 @@
 # Slice 01: The harness
 
-status: planned
+status: ready-for-development
 
 ## Goal
 
