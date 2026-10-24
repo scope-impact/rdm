@@ -1,0 +1,9 @@
+;; Cycle 00: the bootstrap (ADR 0002). No release of rdm-spec exists to cut,
+;; fence, ratify or score, so the clean room was built by hand from the branch
+;; at :cut, and the build is reviewed by a person only. Never a baseline.
+{:cut "3603a1a"
+ :scope :project
+ :bootstrap true
+ :builder {:name "builder subagents, one per bounded context" :actor :agent}
+ :grader nil
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
