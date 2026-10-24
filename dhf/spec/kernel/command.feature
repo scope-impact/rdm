@@ -3,8 +3,9 @@
 # The one entry point a hook, CI, an agent and a person all use: the rdm-spec
 # command, installed once, with nothing per project. It belongs to no bounded
 # context: it dispatches each task to the context that owns it.
-# Specs are written by editing files; the command only checks, cuts, fences,
-# runs, ratifies, scores and publishes them.
+# Specs are written by editing files; the command only checks, stamps, draws,
+# cuts, fences, runs, ratifies, derives checklists, files scores and publishes.
+# Grading is not a task: a grader grades, however they grade.
 
 @UN-009
 Feature: Command
@@ -26,15 +27,15 @@ Feature: Command
         | stamp      | stamp                                                    | give every unstamped scenario its id                                 |
         | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the views' freshness, sources, wiki  |
         | views      | views                                                    | generate and render every view to dhf/views/                         |
-        | cut        | cut                                                      | tag the current merge on the default branch spec-N                   |
+        | cut        | cut                                                      | tag HEAD spec-N when it is origin/HEAD, and push the tag             |
         | fence      | fence ROOM CUT [--context C \| --component C/N]          | build a clean room from a cut                                        |
         | run        | run [--results DIR]                                      | run the scenarios against a project's step definitions               |
-        | ratify     | ratify ROOM CYCLE                                        | ratify the room's implementation against its cycle's cut             |
+        | ratify     | ratify ROOM CYCLE                                        | run the builder's tests on the room's code in a checkout of the cut  |
         | checklist  | checklist CYCLE                                          | derive the cycle's checklist into dhf/cycles/CYCLE/checklist.json    |
         | status     | status [--results DIR]                                   | each scenario's status                                               |
         | trace      | trace ID [--results DIR]                                 | a need or a scenario with everything linked to it                    |
         | release    | release [--results DIR]                                  | the release check                                                    |
-        | score      | score CYCLE --verdicts FILE                              | file a grader's verdicts into dhf/cycles/CYCLE/score.edn             |
+        | score      | score CYCLE --verdicts FILE                              | file a grader's verdicts on a ratified cycle into its score.edn      |
         | scoreboard | scoreboard CYCLE CYCLE                                   | compare two cycles                                                   |
         | publish    | publish [--results DIR]                                  | write the site and build it                                          |
 
