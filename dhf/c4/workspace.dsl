@@ -338,41 +338,43 @@ workspace "RDM" "The design record of regulated software." {
         }
       }
       harness_tool = container "Harness" "bb harness: stamps the slices' specs, derives the checklist, scores cycles and ratifies a build round; a program apart from RDM, after Löyly's" "Clojure, babashka" {
-        harness_config = component "Harness configuration" "Everything the harness knows about a project, from one file; an unknown or missing setting refused by name" "Clojure" {
-          properties {
-            "code" "harness/src/harness/config.clj"
+        group "harness" {
+          harness_config = component "Harness configuration" "Everything the harness knows about a project, from one file; an unknown or missing setting refused by name" "Clojure" {
+            properties {
+              "code" "harness/src/harness/config.clj"
+            }
+            tags "context:harness"
           }
-          tags "context:harness"
-        }
-        stamper = component "Stamper" "harness stamp: the next free item id on each unstamped scenario; never renumbers" "Clojure" {
-          properties {
-            "code" "harness/src/harness/stamp.clj"
+          stamper = component "Stamper" "harness stamp: the next free item id on each unstamped scenario; never renumbers" "Clojure" {
+            properties {
+              "code" "harness/src/harness/stamp.clj"
+            }
+            tags "context:harness"
           }
-          tags "context:harness"
-        }
-        checklist = component "Checklist" "harness checklist: one item per stamped scenario of the slices not planned, from the specs alone" "Clojure" {
-          properties {
-            "code" "harness/src/harness/checklist.clj"
+          checklist = component "Checklist" "harness checklist: one item per stamped scenario of the slices not planned, from the specs alone" "Clojure" {
+            properties {
+              "code" "harness/src/harness/checklist.clj"
+            }
+            tags "context:harness"
           }
-          tags "context:harness"
-        }
-        scorer = component "Scorer" "harness score: a cycle's verdicts, from a file or an acceptance run, filed against its checklist; an unreached item is a failure" "Clojure" {
-          properties {
-            "code" "harness/src/harness/score.clj"
+          scorer = component "Scorer" "harness score: a cycle's verdicts, from a file or an acceptance run, filed against its checklist; an unreached item is a failure" "Clojure" {
+            properties {
+              "code" "harness/src/harness/score.clj"
+            }
+            tags "context:harness"
           }
-          tags "context:harness"
-        }
-        scoreboard = component "Scoreboard" "harness scoreboard: the pass rate, got better and got worse on shared items, the denominator's move" "Clojure" {
-          properties {
-            "code" "harness/src/harness/scoreboard.clj"
+          scoreboard = component "Scoreboard" "harness scoreboard: the pass rate, got better and got worse on shared items, the denominator's move" "Clojure" {
+            properties {
+              "code" "harness/src/harness/scoreboard.clj"
+            }
+            tags "context:harness"
           }
-          tags "context:harness"
-        }
-        harness_gate = component "Harness gate" "harness verify: admits the round, then checks the instrument, runs the suite, starts the served graph inside its boot budget and proves its identity; Build Ratified or not" "Clojure" {
-          properties {
-            "code" "harness/src/harness/verify.clj"
+          harness_gate = component "Harness gate" "harness verify: admits the round, then checks the instrument, runs the suite, starts the served graph inside its boot budget and proves its identity; Build Ratified or not" "Clojure" {
+            properties {
+              "code" "harness/src/harness/verify.clj"
+            }
+            tags "context:harness"
           }
-          tags "context:harness"
         }
       }
       graph_store = container "Graph store" "The record projected into RDF: one N-Quads file, replaced on each build" "N-Quads" "Database"

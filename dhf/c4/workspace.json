@@ -1627,6 +1627,7 @@
             "components": [
               {
                 "description": "Everything the harness knows about a project, from one file; an unknown or missing setting refused by name",
+                "group": "harness",
                 "id": "59",
                 "name": "Harness configuration",
                 "properties": {
@@ -1638,6 +1639,7 @@
               },
               {
                 "description": "harness stamp: the next free item id on each unstamped scenario; never renumbers",
+                "group": "harness",
                 "id": "60",
                 "name": "Stamper",
                 "properties": {
@@ -1658,6 +1660,7 @@
               },
               {
                 "description": "harness checklist: one item per stamped scenario of the slices not planned, from the specs alone",
+                "group": "harness",
                 "id": "61",
                 "name": "Checklist",
                 "properties": {
@@ -1678,6 +1681,7 @@
               },
               {
                 "description": "harness score: a cycle's verdicts, from a file or an acceptance run, filed against its checklist; an unreached item is a failure",
+                "group": "harness",
                 "id": "62",
                 "name": "Scorer",
                 "properties": {
@@ -1705,6 +1709,7 @@
               },
               {
                 "description": "harness scoreboard: the pass rate, got better and got worse on shared items, the denominator's move",
+                "group": "harness",
                 "id": "63",
                 "name": "Scoreboard",
                 "properties": {
@@ -1725,6 +1730,7 @@
               },
               {
                 "description": "harness verify: admits the round, then checks the instrument, runs the suite, starts the served graph inside its boot budget and proves its identity; Build Ratified or not",
+                "group": "harness",
                 "id": "64",
                 "name": "Harness gate",
                 "properties": {
@@ -2069,7 +2075,7 @@
   },
   "name": "RDM",
   "rdm": {
-    "workspace_sha256": "69f843cb576ba5c35b811b672c475867c0fa08add01e49900ba37ccd7a3f4c66"
+    "workspace_sha256": "3e1b175b2919c2d9eec25de1f075012365f42d98c34fc074e92790d67ceb362d"
   },
   "views": {
     "componentViews": [
@@ -2085,58 +2091,10 @@
         "containerId": "5",
         "elements": [
           {
-            "id": "19"
-          },
-          {
-            "id": "11"
-          },
-          {
-            "id": "9"
-          },
-          {
-            "id": "20"
-          },
-          {
-            "id": "10"
-          },
-          {
-            "id": "16"
-          },
-          {
-            "id": "22"
-          },
-          {
-            "id": "13"
-          },
-          {
-            "id": "53"
-          },
-          {
-            "id": "29"
-          },
-          {
-            "id": "8"
-          },
-          {
-            "id": "36"
-          },
-          {
-            "id": "15"
-          },
-          {
             "id": "14"
           },
           {
-            "id": "42"
-          },
-          {
-            "id": "7"
-          },
-          {
-            "id": "17"
-          },
-          {
-            "id": "12"
+            "id": "36"
           },
           {
             "id": "23"
@@ -2148,10 +2106,58 @@
             "id": "39"
           },
           {
-            "id": "50"
+            "id": "16"
+          },
+          {
+            "id": "7"
+          },
+          {
+            "id": "22"
+          },
+          {
+            "id": "15"
+          },
+          {
+            "id": "17"
+          },
+          {
+            "id": "13"
+          },
+          {
+            "id": "20"
+          },
+          {
+            "id": "10"
+          },
+          {
+            "id": "9"
+          },
+          {
+            "id": "29"
+          },
+          {
+            "id": "11"
+          },
+          {
+            "id": "12"
           },
           {
             "id": "18"
+          },
+          {
+            "id": "19"
+          },
+          {
+            "id": "53"
+          },
+          {
+            "id": "42"
+          },
+          {
+            "id": "50"
+          },
+          {
+            "id": "8"
           }
         ],
         "key": "C3_specification",
@@ -2311,43 +2317,43 @@
         "containerId": "5",
         "elements": [
           {
-            "id": "45"
-          },
-          {
-            "id": "10"
-          },
-          {
-            "id": "28"
-          },
-          {
-            "id": "23"
-          },
-          {
             "id": "21"
-          },
-          {
-            "id": "18"
-          },
-          {
-            "id": "39"
-          },
-          {
-            "id": "36"
           },
           {
             "id": "53"
           },
           {
-            "id": "7"
+            "id": "23"
+          },
+          {
+            "id": "10"
+          },
+          {
+            "id": "36"
+          },
+          {
+            "id": "28"
+          },
+          {
+            "id": "45"
           },
           {
             "id": "49"
           },
           {
-            "id": "52"
+            "id": "18"
+          },
+          {
+            "id": "7"
+          },
+          {
+            "id": "39"
           },
           {
             "id": "22"
+          },
+          {
+            "id": "52"
           }
         ],
         "key": "C3_release",
@@ -2447,43 +2453,43 @@
         "containerId": "5",
         "elements": [
           {
-            "id": "25"
-          },
-          {
-            "id": "49"
-          },
-          {
-            "id": "21"
-          },
-          {
-            "id": "27"
-          },
-          {
-            "id": "50"
-          },
-          {
-            "id": "22"
-          },
-          {
-            "id": "39"
-          },
-          {
-            "id": "28"
+            "id": "7"
           },
           {
             "id": "42"
           },
           {
+            "id": "21"
+          },
+          {
             "id": "23"
           },
           {
-            "id": "7"
+            "id": "27"
+          },
+          {
+            "id": "25"
+          },
+          {
+            "id": "26"
+          },
+          {
+            "id": "49"
+          },
+          {
+            "id": "28"
           },
           {
             "id": "9"
           },
           {
-            "id": "26"
+            "id": "50"
+          },
+          {
+            "id": "39"
+          },
+          {
+            "id": "22"
           }
         ],
         "key": "C3_test_evidence",
@@ -2571,19 +2577,19 @@
         "containerId": "5",
         "elements": [
           {
-            "id": "50"
-          },
-          {
             "id": "28"
           },
           {
-            "id": "39"
+            "id": "42"
+          },
+          {
+            "id": "50"
           },
           {
             "id": "22"
           },
           {
-            "id": "42"
+            "id": "39"
           }
         ],
         "key": "C3_risk",
@@ -2617,19 +2623,19 @@
         "containerId": "5",
         "elements": [
           {
-            "id": "29"
-          },
-          {
-            "id": "42"
-          },
-          {
-            "id": "30"
+            "id": "10"
           },
           {
             "id": "73"
           },
           {
-            "id": "10"
+            "id": "42"
+          },
+          {
+            "id": "29"
+          },
+          {
+            "id": "30"
           }
         ],
         "key": "C3_architecture",
@@ -2691,16 +2697,31 @@
         "containerId": "5",
         "elements": [
           {
-            "id": "21"
+            "id": "57"
           },
           {
-            "id": "35"
+            "id": "53"
           },
           {
             "id": "37"
           },
           {
-            "id": "57"
+            "id": "38"
+          },
+          {
+            "id": "35"
+          },
+          {
+            "id": "23"
+          },
+          {
+            "id": "9"
+          },
+          {
+            "id": "21"
+          },
+          {
+            "id": "34"
           },
           {
             "id": "28"
@@ -2709,40 +2730,25 @@
             "id": "56"
           },
           {
-            "id": "53"
-          },
-          {
-            "id": "40"
-          },
-          {
-            "id": "34"
-          },
-          {
-            "id": "33"
+            "id": "54"
           },
           {
             "id": "41"
           },
           {
-            "id": "38"
-          },
-          {
-            "id": "54"
-          },
-          {
-            "id": "36"
-          },
-          {
-            "id": "23"
+            "id": "7"
           },
           {
             "id": "67"
           },
           {
-            "id": "7"
+            "id": "36"
           },
           {
-            "id": "9"
+            "id": "40"
+          },
+          {
+            "id": "33"
           },
           {
             "id": "39"
@@ -2836,34 +2842,34 @@
         "containerId": "58",
         "elements": [
           {
-            "id": "2"
-          },
-          {
-            "id": "63"
-          },
-          {
             "id": "73"
-          },
-          {
-            "id": "62"
-          },
-          {
-            "id": "64"
-          },
-          {
-            "id": "61"
-          },
-          {
-            "id": "66"
-          },
-          {
-            "id": "60"
           },
           {
             "id": "59"
           },
           {
+            "id": "62"
+          },
+          {
+            "id": "63"
+          },
+          {
+            "id": "2"
+          },
+          {
+            "id": "64"
+          },
+          {
             "id": "5"
+          },
+          {
+            "id": "66"
+          },
+          {
+            "id": "61"
+          },
+          {
+            "id": "60"
           }
         ],
         "key": "C3_harness",
@@ -2918,55 +2924,55 @@
         "containerId": "5",
         "elements": [
           {
-            "id": "46"
-          },
-          {
-            "id": "65"
-          },
-          {
-            "id": "53"
-          },
-          {
-            "id": "42"
-          },
-          {
-            "id": "48"
-          },
-          {
-            "id": "29"
-          },
-          {
-            "id": "43"
-          },
-          {
-            "id": "7"
-          },
-          {
-            "id": "9"
-          },
-          {
-            "id": "44"
-          },
-          {
             "id": "75"
           },
           {
             "id": "47"
           },
           {
-            "id": "56"
+            "id": "48"
+          },
+          {
+            "id": "46"
           },
           {
             "id": "31"
           },
           {
-            "id": "28"
+            "id": "56"
+          },
+          {
+            "id": "44"
           },
           {
             "id": "23"
           },
           {
+            "id": "43"
+          },
+          {
             "id": "45"
+          },
+          {
+            "id": "29"
+          },
+          {
+            "id": "9"
+          },
+          {
+            "id": "7"
+          },
+          {
+            "id": "65"
+          },
+          {
+            "id": "28"
+          },
+          {
+            "id": "42"
+          },
+          {
+            "id": "53"
           }
         ],
         "key": "C3_graph",
@@ -3082,37 +3088,13 @@
         },
         "elements": [
           {
-            "id": "75"
-          },
-          {
-            "id": "58"
-          },
-          {
-            "id": "55"
-          },
-          {
-            "id": "72"
-          },
-          {
-            "id": "65"
-          },
-          {
-            "id": "51"
-          },
-          {
-            "id": "68"
+            "id": "5"
           },
           {
             "id": "73"
           },
           {
-            "id": "74"
-          },
-          {
-            "id": "2"
-          },
-          {
-            "id": "5"
+            "id": "49"
           },
           {
             "id": "76"
@@ -3121,10 +3103,16 @@
             "id": "71"
           },
           {
-            "id": "49"
+            "id": "74"
           },
           {
-            "id": "66"
+            "id": "72"
+          },
+          {
+            "id": "51"
+          },
+          {
+            "id": "68"
           },
           {
             "id": "70"
@@ -3134,6 +3122,24 @@
           },
           {
             "id": "1"
+          },
+          {
+            "id": "65"
+          },
+          {
+            "id": "66"
+          },
+          {
+            "id": "58"
+          },
+          {
+            "id": "75"
+          },
+          {
+            "id": "2"
+          },
+          {
+            "id": "55"
           }
         ],
         "key": "C2",
@@ -3254,13 +3260,13 @@
             "id": "10"
           },
           {
-            "id": "7"
+            "id": "29"
           },
           {
             "id": "12"
           },
           {
-            "id": "29"
+            "id": "7"
           }
         ],
         "key": "D_specification_commit",
@@ -3299,19 +3305,19 @@
         "elementId": "4",
         "elements": [
           {
-            "id": "51"
+            "id": "73"
           },
           {
             "id": "74"
-          },
-          {
-            "id": "73"
           },
           {
             "id": "5"
           },
           {
             "id": "49"
+          },
+          {
+            "id": "51"
           }
         ],
         "key": "D_release_pipeline",
@@ -3355,16 +3361,16 @@
         "elementId": "5",
         "elements": [
           {
-            "id": "34"
-          },
-          {
-            "id": "35"
-          },
-          {
             "id": "33"
           },
           {
+            "id": "34"
+          },
+          {
             "id": "6"
+          },
+          {
+            "id": "35"
           }
         ],
         "key": "D_publishing_render",
@@ -3404,15 +3410,6 @@
         },
         "elements": [
           {
-            "id": "74"
-          },
-          {
-            "id": "75"
-          },
-          {
-            "id": "76"
-          },
-          {
             "id": "4"
           },
           {
@@ -3423,6 +3420,15 @@
           },
           {
             "id": "73"
+          },
+          {
+            "id": "74"
+          },
+          {
+            "id": "75"
+          },
+          {
+            "id": "76"
           }
         ],
         "key": "C1",

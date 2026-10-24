@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1210" height="892" viewBox="0 0 1210 892" font-family="Arial, sans-serif">
-<!-- rdm c4 draw: view C3_harness, workspace sha256:69f843cb576ba5c35b811b672c475867c0fa08add01e49900ba37ccd7a3f4c66 -->
+<!-- rdm c4 draw: view C3_harness, workspace sha256:3e1b175b2919c2d9eec25de1f075012365f42d98c34fc074e92790d67ceb362d -->
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#555555"/></marker>
     <marker id="arrow-added" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2e7d32"/></marker>
