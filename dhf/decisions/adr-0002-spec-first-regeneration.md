@@ -54,26 +54,31 @@ executes is one representation.
   readable at the `pre-spec` tag, created at cutover.
 - **The spec is organised by the C4 model.** An event storm produces the
   domain events, commands, policies and aggregates; from them come the C4
-  system context (level 1) and containers (level 2), and for each container its
-  components (level 3). **Level 3 and the `.feature` files its components own
+  system context (level 1) and containers (level 2), and for each bounded
+  context its components (level 3). **Level 3 and the `.feature` files its components own
   are the spec.** Level 4 (code) is never specified: it is what regeneration
   produces.
-- **Each bounded context is its own container.** A container is something that
-  runs or stores data (the C4 definition); each context has its own tasks and
-  its own namespaces, and containers relate only through the events in
-  `dhf/spec/events.edn`. That makes each context regenerable on its own.
+- **rdm-spec is a modular monolith.** One container, the `rdm-spec` command,
+  made of bounded contexts that are composable rather than separately run:
+  each has its own components, namespaces and vocabulary, and contexts relate
+  only through the events in `dhf/spec/events.edn`. A context is drawn as a
+  boundary around its components, as the C4 skill advises. **Composable** means
+  each context can be regenerated alone while the others stand, and the whole
+  still ratifies; that is the test, not a lint. *This ADR first made each
+  context its own container; the single command made that untrue, and the
+  owner chose the modular monolith (second review).*
 - **Every scenario belongs to exactly one component**, by its file's location:
-  `dhf/spec/<container>/<component>.feature`. The component's design prose
+  `dhf/spec/<context>/<component>.feature`. The component's design prose
   sits beside it as `<component>.md`.
 - **The C4 model is one EDN file**, `dhf/spec/model.edn`. Every view is
   generated from it as Mermaid C4 and rendered with `mmdr`
   (mermaid-rs-renderer). Hand-written Mermaid was rejected because each
   diagram would repeat the elements of the others: three hand-kept copies of
   one container. Structurizr DSL was rejected because parsing it needs the Java
-  CLI. A linter, part of `rdm-spec check`, holds the model to the C4 skill's quality
-  checklist (`scope-impact/agent-skills`, `skills/engineering/c4-diagrams`) and
-  to this ADR's container rules, and a render check fails a view whose computed
-  layout overlaps a label with a box.
+  CLI. A linter, part of `rdm-spec check`, holds the model to the C4 skill's
+  quality checklist (`scope-impact/agent-skills`, `skills/engineering/c4-diagrams`)
+  and to this ADR's context rules; views are kept small, and a person looks at
+  each render.
 
 ### The harness
 
@@ -100,10 +105,18 @@ executes is one representation.
   command, the files it reads and writes, and the runner's step API) and never
   load other implementation code. They survive every clean room; the
   implementation does not.
-- **The build under test never judges itself.** Ratify and score run from the
-  rdm-spec installed outside the clean room, never from the build in it.
-  *Simplified after the first review: this ADR first had the previous release
-  pinned as a judge, with a bootstrap exception.*
+- **The build under test never judges itself, and ratify trusts only the cut.**
+  As Löyly ratifies `impl/` in its trusted repository, ratify takes only the
+  room's implementation paths into a fresh checkout of the cut, so the spec,
+  the configuration and the step definitions are always the cut's. The step
+  definitions run the build's own entry point (`:command-under-test`); the
+  installed `rdm-spec` only judges. Ratify passes on exactly one condition: the
+  test command exits 0, wrote results, and the step definitions are black box.
+- **The first build is a bootstrap.** Before any rdm-spec release exists, the
+  first cycle is ratified the same way by the bootstrap: its
+  `cycle.edn` is marked `:bootstrap true`, its reviewer reads every result, and
+  the scoreboard never measures against it. Its build, once accepted, is the
+  first release installed.
 - **One command, `rdm-spec <task>`, installed once.** Hooks, CI, agents, people
   and step definitions all run the same tasks (`dhf/spec/project/tasks.feature`),
   which exit 0 on pass, 1 on a finding and 2 when they cannot run, and name each
@@ -130,9 +143,11 @@ executes is one representation.
   merge. The merge commit, tagged `spec-N`, is the **cut**: regeneration reads
   that tag and nothing else, in a clean room that is an allow-list (the spec,
   the harness configuration, the raw records, the wiki, the step definitions
-  and this ADR), one fresh commit with no history and no network.
-- **Regenerate the project, one container or one component.** The model fixes
-  where each component's code and unit tests live, so a clean room can drop
+  and this ADR), one fresh commit with no history. Giving the builder no
+  network is the builder's obligation; the fence cannot enforce it.
+- **Regenerate the project, one bounded context or one component.** The
+  configuration's `:code-layout` fixes where each component's code and unit
+  tests live, so a clean room can drop
   just one part and keep the rest as it was at the cut. Ratify and score always
   run the whole spec, and the scoreboard reports the rebuilt part apart from
   the rest.
@@ -164,23 +179,22 @@ executes is one representation.
   network to fetch one.
 - **A domain wiki sits between the sources and the spec** (`dhf/wiki/`), as in
   Löyly: the domain distilled, every claim footnoted to a source, no page
-  naming an implementation. Sources and wiki are the `knowledge` container.
+  naming an implementation. Sources and wiki are the `knowledge` context.
 
 ### Events
 
-- **Containers meet only on an in-process event bus**, written in Clojure and
-  shared by every container as a kernel component (`kernel/bus`), not as a
-  container of its own. This is design, not requirement: delivery is
+- **Contexts meet only on an in-process event bus, within one run.** The bus is
+  written in Clojure and shared by every context as a kernel component
+  (`kernel/bus`). Steps that run at different times (cut, fence, ratify, score)
+  never share a process, so they meet through files: the tag, the clean room,
+  `cycle.edn` and the results directory, as Löyly's tools meet through files. This is design, not requirement: delivery is
   synchronous and in subscription order, and the bus refuses an event the
   catalogue does not declare, one missing a key it carries, or one from the
   wrong publisher. What the spec requires of it is only what a black box can
   see: every run can print its events, and the same inputs print the same
   events in the same order.
-- **How this reads beside "each bounded context is its own container".** A
-  task that needs another context's events loads that context into its
-  process, and the two meet only on the bus. The lint checks the code keeps to
-  this: a container's namespaces never require another container's, and the
-  kernel requires no container.
+- **No code-boundary lint.** Löyly has none either. Whether the boundaries hold
+  is tested by regenerating one context while the rest stands.
 
 ### Scope of the first version
 
@@ -229,16 +243,16 @@ other.
   clean room and starts again at ratification; how a builder, human or agent,
   is run in between is the builder's business. Fewer moving parts in the first
   version, and nothing in rdm-spec that the builder could steer.
-- **H7, the first judge:** *simplified after the first review:* there is no
-  pinned judge; the installed rdm-spec ratifies and scores, never the build
-  under test.
+- **H7, the first judge:** *revised twice by review:* no pinned judge; the
+  installed rdm-spec ratifies against the cut, and the very first cycle is a
+  marked bootstrap (see "The harness").
 - **H9, unit tests:** run by the declared test command; a failing one refuses
   ratification; their results verify no scenario.
 - **H10, the Gherkin runner:** kernel code beside the bus, writing Allure
   results labelled with scenario, component and container. Discovered, never
   listed; refuses a run that finds nothing.
-- **H13, label placement:** views stay under the element limit and the render
-  check fails what cannot be read; nothing else is built around it.
+- **H13, label placement:** views stay under the element limit and a person
+  looks at each render; the render check was removed by the second review.
 - **A third source:** `scope-impact/agent-skills`, for what a C4 model is
   (UN-005 now rests on it). It holds no implementation, so nothing is fenced.
 

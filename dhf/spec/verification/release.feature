@@ -1,4 +1,4 @@
-# Component Release check, container verification: dhf/spec/model.edn.
+# Component Release check, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-004
 Feature: Release check

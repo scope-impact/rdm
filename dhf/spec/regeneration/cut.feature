@@ -1,11 +1,11 @@
-# Component Cut, container regeneration: dhf/spec/model.edn.
+# Component Cut, bounded context regeneration of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-006
 Feature: Cut
   Tags a merged spec change; a regeneration reads nothing else.
 
   # At a fixed time the spec is cut, tagged and frozen, and a regeneration reads
-  # that and nothing else (skallinen/loyly harness/README.md@17d68d2, "The idea
+  # that and nothing else (loyly:harness/README.md@17d68d2, "The idea
   # in five lines" 1).
   Rule: A cut is a tagged merge, and regeneration reads only a cut
 

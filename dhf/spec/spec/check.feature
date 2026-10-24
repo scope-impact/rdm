@@ -1,4 +1,4 @@
-# Component Spec check, container spec: dhf/spec/model.edn.
+# Component Spec check, bounded context spec of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-002
 Feature: Spec check
@@ -54,10 +54,10 @@ Feature: Spec check
     # Decided by the event storm's hotspot H4 (dhf/storm/2026-10-24-rdm.md):
     # there is no persona level.
     @spec-0150 @e2e
-    Scenario: A scenario tagged with a level that is not one of the four fails the spec check
+    Scenario: A tag that is not an id, a level, a need or @wip fails the spec check
       Given a stamped scenario tagged @persona
       When "rdm-spec check" is run
-      Then it fails and names the scenario's id, @persona and the four levels
+      Then it fails, names the scenario's id and @persona, and lists the tags a scenario may carry
 
   Rule: Every scenario traces to a user need
 

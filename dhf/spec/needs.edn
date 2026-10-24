@@ -24,7 +24,7 @@
                      "innolitics-rdm:README.md@f21b508"]}
  "UN-006" {:text "A team regenerates its implementation from a merged cut of the spec, in a clean room that provably holds no earlier implementation or measurement."
            :sources ["loyly:harness/README.md@17d68d2"]}
- "UN-007" {:text "A build counts as done only when a gate the builder does not control says so."
+ "UN-007" {:text "A build counts as done only when a check the builder does not control says so."
            :sources ["loyly:harness/README.md@17d68d2"]}
  "UN-008" {:text "Someone other than the builder, human or agent, sees, cycle over cycle, how completely the spec carries the product, and the instrument never overstates it."
            :sources ["loyly:harness/README.md@17d68d2"

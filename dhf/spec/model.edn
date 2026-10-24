@@ -1,27 +1,32 @@
 ;; rdm-spec's C4 model: the one source every architecture view is generated from
-;; (dhf/decisions/adr-0002-spec-first-regeneration.md). Proposed by the first
-;; event storm (dhf/storm/2026-10-24-rdm.md), with the knowledge container
-;; and the event bus added when hotspots H1 and H11 were decided.
+;; (dhf/decisions/adr-0002-spec-first-regeneration.md). From the first event
+;; storm (dhf/storm/2026-10-24-rdm.md), revised by its decided hotspots and by
+;; two independent reviews.
 ;;
-;; Shape, one key per C4 element kind; ids are keywords, unique across the
-;; model, components namespaced by their container.
+;; rdm-spec is a modular monolith: one runnable container, the rdm-spec
+;; command, made of bounded contexts that are composable rather than separately
+;; run. A context is drawn as a boundary around its components (the C4 skill:
+;; bounded contexts as boundaries around C4 elements). Composable means each
+;; context can be regenerated alone while the others stand, and the whole still
+;; ratifies.
+;;
+;; Shape; ids are keywords, unique across the model, components namespaced by
+;; their context.
 ;;
 ;;   :system         {:id :name :description}
 ;;   :people         [{:id :name :description :actor #{:human :agent}}]
-;;                   ; a role, filled by a human, an agent, or either: the machinery
-;;                   ; treats both the same
+;;                   ; a role, filled by a human, an agent, or either
 ;;   :external       [{:id :name :description}]
-;;   :containers     [{:id :name :description :technology
-;;                     :kind :runs | :stores
-;;                     :context "<bounded context>"     ; :runs containers only, one each
-;;                     :components [{:id :name :description
-;;                                   :spec "<container>/<component>"}]}]  ; dhf/spec/<spec>.feature
+;;   :containers     [{:id :name :description :technology :kind :runs | :stores
+;;                     :contexts [{:id :name :description
+;;                                 :components [{:id :name :description
+;;                                               :spec "<context>/<component>"}]}]}]
+;;                   ; :contexts only on a :runs container; dhf/spec/<spec>.feature
 ;;   :kernel         [{:id :name :description :spec "kernel/<component>"}]
-;;                   ; shared code every container may use; in no container, never drawn
-;;                   ; as one (the C4 skill: a shared library is not a container)
-;;   :relationships  [{:from :to :description [:event]}]  ; :event names one in events.edn
-;;   :views          [{:key :level :description [:container] [:steps]
-;;                     [:show #{:events :actors :store}]}]   ; container views: which relationships, default all
+;;                   ; shared code of the rdm-spec container, in no context
+;;   :relationships  [{:from :to :description [:event]}]
+;;                   ; :event names one in events.edn; events travel only within one run
+;;   :views          [{:key :level :description [:context] [:steps]}]
 {:system {:id :rdm-spec
           :name "rdm-spec"
           :description "Regenerates a build from its spec, scores it"}
@@ -43,151 +48,146 @@
    :description "Runs step definitions, writes Allure results"}]
 
  :containers
- [{:id :project :name "project" :kind :runs :context "project" :technology "Babashka"
-   :description "Sets a repository up in this structure and installs the task interface and hooks"
-   :components
-   [{:id :project/init :name "Init" :spec "project/init"
-     :description "Writes a new project's skeleton into a path that does not exist"}
-    {:id :project/adopt :name "Adopt" :spec "project/adopt"
-     :description "Adds the skeleton to an existing repository, never overwriting a file"}
-    {:id :project/hooks :name "Hooks" :spec "project/hooks"
-     :description "Installs the pre-commit hook that runs the check task"}
-    {:id :project/tasks :name "Tasks" :spec "project/tasks"
-     :description "The rdm-spec command and its tasks: the one entry point"}]}
+ [{:id :rdm-spec :name "rdm-spec" :kind :runs :technology "Babashka; runs git, mmdr and MkDocs"
+   :description "The one command: bounded contexts in one program, meeting on an in-process bus"
+   :contexts
+   [{:id :project :name "project"
+      :description "Sets a repository up in this structure and installs the hook and the cut workflow"
+      :components
+      [{:id :project/init :name "Init" :spec "project/init"
+        :description "Writes a new project's skeleton into a path that does not exist"}
+       {:id :project/adopt :name "Adopt" :spec "project/adopt"
+        :description "Adds the skeleton to an existing repository, never overwriting a file"}
+       {:id :project/hooks :name "Hooks" :spec "project/hooks"
+        :description "Installs the pre-commit hook that runs rdm-spec check"}
+       {:id :project/tasks :name "Tasks" :spec "project/tasks"
+        :description "The rdm-spec command and its tasks: the one entry point"}]}
 
-  {:id :spec :name "spec" :kind :runs :context "specification" :technology "Babashka"
-   :description "Reads the spec, stamps scenario ids and checks the spec's rules"
-   :components
-   [{:id :spec/parser :name "Parser" :spec "spec/parser"
-     :description "Reads the declared Gherkin subset and refuses anything outside it"}
-    {:id :spec/stamper :name "Stamper" :spec "spec/stamper"
-     :description "Hands out scenario ids from the ledger, never twice"}
-    {:id :spec/check :name "Spec check" :spec "spec/check"
-     :description "Ids, levels, needs, citations and planned work: the rules a spec must keep"}]}
+     {:id :spec :name "spec"
+      :description "Reads the spec, stamps scenario ids and checks the spec's rules"
+      :components
+      [{:id :spec/parser :name "Parser" :spec "spec/parser"
+        :description "Reads the declared Gherkin subset and refuses anything outside it"}
+       {:id :spec/stamper :name "Stamper" :spec "spec/stamper"
+        :description "Hands out scenario ids from the ledger, never twice"}
+       {:id :spec/check :name "Spec check" :spec "spec/check"
+        :description "Ids, levels, needs, citations and planned work: the rules a spec must keep"}]}
 
-  {:id :architecture :name "architecture" :kind :runs :context "architecture" :technology "Babashka, mmdr"
-   :description "Reads the C4 model, lints it, and generates and checks its views"
-   :components
-   [{:id :architecture/model :name "Model" :spec "architecture/model"
-     :description "Reads model.edn and the event catalogue"}
-    {:id :architecture/lint :name "Lint" :spec "architecture/lint"
-     :description "The C4 skill's checklist and the one-context-per-container rules"}
-    {:id :architecture/views :name "Views" :spec "architecture/views"
-     :description "Generates Mermaid C4 for each view and renders it"}
-    {:id :architecture/render-check :name "Render check" :spec "architecture/render-check"
-     :description "Fails a render whose layout overlaps a label with a box"}]}
+     {:id :knowledge :name "knowledge"
+      :description "Keeps the raw sources and the domain wiki, and checks every citation"
+      :components
+      [{:id :knowledge/sources :name "Sources" :spec "knowledge/sources"
+        :description "Reads the provenance records and resolves citations against their pins"}
+       {:id :knowledge/wiki :name "Wiki" :spec "knowledge/wiki"
+        :description "The domain wiki: every page indexed, every claim footnoted to a source"}]}
 
-  {:id :verification :name "verification" :kind :runs :context "verification" :technology "Babashka"
-   :description "Derives each scenario's status from Allure results and traces it"
-   :components
-   [{:id :verification/results :name "Results reader" :spec "verification/results"
-     :description "Reads a run's Allure results, naming what it cannot read"}
-    {:id :verification/status :name "Status" :spec "verification/status"
-     :description "Verified, failed or unverified, for every stamped scenario"}
-    {:id :verification/trace :name "Trace" :spec "verification/trace"
-     :description "A need or scenario with everything linked to it"}
-    {:id :verification/release :name "Release check" :spec "verification/release"
-     :description "Refuses a release with an unverified, failed or planned scenario"}]}
+     {:id :architecture :name "architecture"
+      :description "Reads the C4 model, lints it, and generates and checks its views"
+      :components
+      [{:id :architecture/model :name "Model" :spec "architecture/model"
+        :description "Reads model.edn and the event catalogue"}
+       {:id :architecture/lint :name "Lint" :spec "architecture/lint"
+        :description "The C4 skill's checklist and the bounded-context rules"}
+       {:id :architecture/views :name "Views" :spec "architecture/views"
+        :description "Generates Mermaid C4 for each view and renders it"}]}
 
-  {:id :regeneration :name "regeneration" :kind :runs :context "regeneration" :technology "Babashka, git"
-   :description "Cuts merged spec changes and builds clean rooms from them, for the project, a container or a component"
-   :components
-   [{:id :regeneration/cut :name "Cut" :spec "regeneration/cut"
-     :description "Tags a merge on the default branch spec-N"}
-    {:id :regeneration/fence :name "Fence" :spec "regeneration/fence"
-     :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}]}
+     {:id :verification :name "verification"
+      :description "Derives each scenario's status from Allure results and traces it"
+      :components
+      [{:id :verification/results :name "Results reader" :spec "verification/results"
+        :description "Reads a run's Allure results, naming what it cannot read"}
+       {:id :verification/status :name "Status" :spec "verification/status"
+        :description "Verified, failed or unverified, for every stamped scenario"}
+       {:id :verification/trace :name "Trace" :spec "verification/trace"
+        :description "A need or scenario with everything linked to it"}
+       {:id :verification/release :name "Release check" :spec "verification/release"
+        :description "Refuses a release with an unverified, failed or planned scenario"}]}
 
-  {:id :ratification :name "ratification" :kind :runs :context "ratification" :technology "Babashka"
-   :description "Ratifies a build in a clean room: its tests ran and wrote results, and its steps are black box"
-   :components
-   [{:id :ratification/ratify :name "Ratify" :spec "ratification/ratify"
-     :description "Runs the declared test command in the clean room and requires results"}
-    {:id :ratification/black-box :name "Black-box check" :spec "ratification/black-box"
-     :description "Refuses step definitions that load implementation code"}]}
+     {:id :regeneration :name "regeneration"
+      :description "Cuts merged spec changes and builds clean rooms from them, for the project, one context or one component"
+      :components
+      [{:id :regeneration/cut :name "Cut" :spec "regeneration/cut"
+        :description "Tags a merge on the default branch spec-N"}
+       {:id :regeneration/fence :name "Fence" :spec "regeneration/fence"
+        :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}]}
 
-  {:id :measurement :name "measurement" :kind :runs :context "measurement" :technology "Babashka"
-   :description "Derives the checklist, scores each cycle and compares cycles, for the spec owner, never the builder"
-   :components
-   [{:id :measurement/checklist :name "Checklist" :spec "measurement/checklist"
-     :description "One item per stamped scenario, derived, never written"}
-    {:id :measurement/scorer :name "Scorer" :spec "measurement/scorer"
-     :description "Files a cycle's score, and nothing when nothing was measured"}
-    {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
-     :description "Better and worse over shared items, a moved denominator said aloud"}]}
+     {:id :ratification :name "ratification"
+      :description "Ratifies a build in a clean room: its tests ran and wrote results, and its steps are black box"
+      :components
+      [{:id :ratification/ratify :name "Ratify" :spec "ratification/ratify"
+        :description "Runs the declared test command in the clean room and requires results"}
+       {:id :ratification/black-box :name "Black-box check" :spec "ratification/black-box"
+        :description "Refuses step definitions that load implementation code"}]}
 
-  {:id :publishing :name "publishing" :kind :runs :context "publishing" :technology "Babashka, MkDocs"
-   :description "Publishes the spec, its views and its status as one site, built by MkDocs"
-   :components
-   [{:id :publishing/site :name "Site" :spec "publishing/site"
-     :description "One page per component, and the MkDocs configuration that builds them"}]}
+     {:id :measurement :name "measurement"
+      :description "Derives the checklist, scores each cycle and compares cycles, for the spec owner, never the builder"
+      :components
+      [{:id :measurement/checklist :name "Checklist" :spec "measurement/checklist"
+        :description "One item per stamped scenario, derived, never written"}
+       {:id :measurement/scorer :name "Scorer" :spec "measurement/scorer"
+        :description "Files a cycle's score, and nothing when nothing was measured"}
+       {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
+        :description "Better and worse over shared items, a moved denominator said aloud"}]}
 
-  {:id :knowledge :name "knowledge" :kind :runs :context "knowledge" :technology "Babashka"
-   :description "Keeps the raw sources and the domain wiki, and checks every citation"
-   :components
-   [{:id :knowledge/sources :name "Sources" :spec "knowledge/sources"
-     :description "Reads the provenance records and resolves citations against their pins"}
-    {:id :knowledge/wiki :name "Wiki" :spec "knowledge/wiki"
-     :description "The domain wiki: every page indexed, every claim footnoted to a source"}]}
+     {:id :publishing :name "publishing"
+      :description "Publishes the spec, its views and its status as one site, built by MkDocs"
+      :components
+      [{:id :publishing/site :name "Site" :spec "publishing/site"
+        :description "One page per component, and the MkDocs configuration that builds them"}]}]}
 
   {:id :repository :name "Repository" :kind :stores :technology "git"
    :description "The spec, the model, the ledger, cuts, cycles and results"}]
 
- ;; Events travel between containers on an in-process event bus (ADR 0002,
- ;; "Events"): a container's entry point loads the containers it needs events
- ;; from into its own process, and they meet only on the bus.
  :kernel
  [{:id :kernel/bus :name "Event bus" :spec "kernel/bus"
-   :description "Delivers each catalogued event to its subscribers, in process"}
+   :description "Delivers each catalogued event to its subscribers, within one run"}
   {:id :kernel/runner :name "Gherkin runner" :spec "kernel/runner"
    :description "Runs the scenarios' steps and writes Allure results"}]
 
  :relationships
  [;; people and external systems
-  {:from :engineer :to :spec :description "Writes and stamps scenarios with"}
-  {:from :engineer :to :architecture :description "Models the architecture with"}
-  {:from :engineer :to :project :description "Sets projects up with"}
-  {:from :engineer :to :knowledge :description "Records sources and writes the wiki with"}
+  {:from :engineer :to :rdm-spec :description "Writes, checks and publishes the spec with"}
   {:from :reviewer :to :git-host :description "Approves spec merges in"}
-  {:from :spec-owner :to :measurement :description "Reads the scoreboard from"}
-  {:from :regeneration :to :git-host :description "Tags cuts on merges in"}
-  {:from :builder :to :regeneration :description "Regenerates the build in a clean room from"}
-  {:from :ratification :to :test-runner :description "Runs the declared test command through"}
+  {:from :builder :to :rdm-spec :description "Builds a clean room and is ratified by"}
+  {:from :spec-owner :to :rdm-spec :description "Reads the scoreboard from"}
+  {:from :rdm-spec :to :git-host :description "Tags cuts on merges in"}
+  {:from :rdm-spec :to :test-runner :description "Runs the declared test command through"}
   {:from :test-runner :to :repository :description "Writes Allure results to"}
+  {:from :rdm-spec :to :repository :description "Reads the spec and writes views, cycles, scores and the site to"}
 
-  ;; containers and the store
-  {:from :project :to :repository :description "Writes the project skeleton to"}
-  {:from :spec :to :repository :description "Reads features and writes the ledger in"}
-  {:from :architecture :to :repository :description "Reads the model and writes views to"}
-  {:from :verification :to :repository :description "Reads Allure results from"}
-  {:from :measurement :to :repository :description "Files cycle scores in"}
-  {:from :publishing :to :repository :description "Writes the site to"}
-  {:from :knowledge :to :repository :description "Reads the sources and the wiki from"}
+  ;; components and the store: how steps that run at different times meet
+  {:from :project/init :to :repository :description "Writes the skeleton to"}
+  {:from :project/adopt :to :repository :description "Adds the skeleton to"}
+  {:from :spec/stamper :to :repository :description "Stamps features and advances the ledger in"}
+  {:from :architecture/views :to :repository :description "Writes views to"}
+  {:from :regeneration/cut :to :repository :description "Tags merges spec-N in"}
+  {:from :regeneration/fence :to :repository :description "Builds clean rooms from cuts in"}
+  {:from :ratification/ratify :to :repository :description "Reads the cut and writes the cycle's results to"}
+  {:from :measurement/scorer :to :repository :description "Reads cycle.edn and results from, writes score.edn to"}
+  {:from :measurement/scoreboard :to :repository :description "Reads scores from"}
+  {:from :publishing/site :to :repository :description "Writes the site to"}
 
-  ;; events between containers: the contracts
-  {:from :spec :to :architecture :description "Publishes" :event :SpecParsed}
-  {:from :spec :to :verification :description "Publishes" :event :SpecParsed}
-  {:from :spec :to :measurement :description "Publishes" :event :SpecParsed}
-  {:from :spec :to :publishing :description "Publishes" :event :SpecGated}
-  {:from :spec :to :publishing :description "Publishes" :event :SpecParsed}
-  {:from :knowledge :to :spec :description "Publishes" :event :KnowledgeIndexed}
-  {:from :knowledge :to :publishing :description "Publishes" :event :KnowledgeIndexed}
-  {:from :architecture :to :publishing :description "Publishes" :event :ViewsGenerated}
-  {:from :regeneration :to :measurement :description "Publishes" :event :SpecCut}
-  {:from :regeneration :to :ratification :description "Publishes" :event :CleanRoomProved}
-  {:from :ratification :to :measurement :description "Publishes" :event :BuildRatified}
-  {:from :verification :to :measurement :description "Publishes" :event :VerificationDerived}
-  {:from :verification :to :publishing :description "Publishes" :event :VerificationDerived}
+  ;; events between contexts, within one run: the contracts
+  {:from :knowledge/sources :to :spec/check :description "Publishes" :event :KnowledgeIndexed}
+  {:from :knowledge/sources :to :publishing/site :description "Publishes" :event :KnowledgeIndexed}
+  {:from :spec/parser :to :architecture/lint :description "Publishes" :event :SpecParsed}
+  {:from :spec/parser :to :verification/status :description "Publishes" :event :SpecParsed}
+  {:from :spec/parser :to :measurement/checklist :description "Publishes" :event :SpecParsed}
+  {:from :spec/parser :to :publishing/site :description "Publishes" :event :SpecParsed}
+  {:from :spec/check :to :publishing/site :description "Publishes" :event :SpecGated}
+  {:from :architecture/views :to :publishing/site :description "Publishes" :event :ViewsGenerated}
+  {:from :verification/status :to :measurement/scorer :description "Publishes" :event :VerificationDerived}
+  {:from :verification/status :to :publishing/site :description "Publishes" :event :VerificationDerived}
 
-  ;; inside containers
+  ;; within contexts
   {:from :project/adopt :to :project/hooks :description "Installs hooks with"}
   {:from :project/init :to :project/hooks :description "Installs hooks with"}
   {:from :project/hooks :to :project/tasks :description "Runs rdm-spec check through"}
   {:from :spec/stamper :to :spec/parser :description "Reads scenarios with"}
-  {:from :knowledge/wiki :to :knowledge/sources :description "Resolves footnotes with"}
   {:from :spec/check :to :spec/parser :description "Reads scenarios with"}
+  {:from :knowledge/wiki :to :knowledge/sources :description "Resolves footnotes with"}
   {:from :architecture/lint :to :architecture/model :description "Checks"}
   {:from :architecture/views :to :architecture/model :description "Generates views from"}
-  {:from :architecture/render-check :to :architecture/views :description "Checks the layout of"}
   {:from :verification/status :to :verification/results :description "Derives statuses from"}
   {:from :verification/trace :to :verification/status :description "Reads statuses from"}
   {:from :verification/release :to :verification/status :description "Refuses on"}
@@ -199,35 +199,30 @@
  :views
  [{:key "context" :level :context
    :description "rdm-spec, the people who use it and the systems around it"}
-  {:key "containers" :level :container :show #{:events}
-   :description "One runnable container per bounded context, and the events between them"}
-  {:key "containers-actors" :level :container :show #{:actors}
-   :description "Who and what uses each container"}
-  {:key "containers-store" :level :container :show #{:store}
-   :description "What each container reads from and writes to the repository"}
-  {:key "knowledge-components" :level :component :container :knowledge
-   :description "The raw sources and the domain wiki"}
-  {:key "project-components" :level :component :container :project
+  {:key "containers" :level :container
+   :description "The one command and the repository it reads and writes"}
+  {:key "project-components" :level :component :context :project
    :description "Setting a repository up"}
-  {:key "spec-components" :level :component :container :spec
-   :description "Reading, stamping and gating the spec"}
-  {:key "architecture-components" :level :component :container :architecture
+  {:key "spec-components" :level :component :context :spec
+   :description "Reading, stamping and checking the spec"}
+  {:key "knowledge-components" :level :component :context :knowledge
+   :description "The raw sources and the domain wiki"}
+  {:key "architecture-components" :level :component :context :architecture
    :description "The C4 model, its lint and its views"}
-  {:key "verification-components" :level :component :container :verification
+  {:key "verification-components" :level :component :context :verification
    :description "From Allure results to status, trace and the release check"}
-  {:key "regeneration-components" :level :component :container :regeneration
+  {:key "regeneration-components" :level :component :context :regeneration
    :description "The cut and the fence"}
-  {:key "ratification-components" :level :component :container :ratification
-   :description "Ratifying a build in a clean room"}
-  {:key "measurement-components" :level :component :container :measurement
+  {:key "ratification-components" :level :component :context :ratification
+   :description "Ratifying a build"}
+  {:key "measurement-components" :level :component :context :measurement
    :description "The checklist, the score and the scoreboard"}
-  {:key "publishing-components" :level :component :container :publishing
+  {:key "publishing-components" :level :component :context :publishing
    :description "The published site"}
   {:key "regeneration-cycle" :level :dynamic
    :description "One cycle, from a merged spec change to a score the spec owner reads"
-   :steps [[:regeneration :git-host "1. Tags the merge spec-N"]
-           [:builder :regeneration "2. Regenerates the build in the proved clean room"]
-           [:ratification :test-runner "3. Runs the declared test command"]
-           [:ratification :measurement "4. BuildRatified"]
-           [:verification :measurement "5. VerificationDerived"]
-           [:spec-owner :measurement "6. Reads the scoreboard"]]}]}
+   :steps [[:regeneration/cut :repository "1. Tags the merge spec-N"]
+           [:regeneration/fence :repository "2. Builds the clean room from the cut"]
+           [:ratification/ratify :repository "3. Ratifies the room's implementation against the cut"]
+           [:measurement/scorer :repository "4. Scores the cycle into score.edn"]
+           [:spec-owner :rdm-spec "5. Reads the scoreboard"]]}]}

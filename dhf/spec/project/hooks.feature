@@ -1,4 +1,4 @@
-# Component Hooks, container project: dhf/spec/model.edn.
+# Component Hooks, bounded context project of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-002 @UN-009
 Feature: Hooks
@@ -7,7 +7,7 @@ Feature: Hooks
   Rule: Every commit is checked
 
     @spec-0025 @e2e
-    Scenario: The pre-commit hook runs the check, and needs no shell
+    Scenario: The pre-commit hook runs the check
       Given the pre-commit hook is installed
       When a commit is made
       Then the hook runs "rdm-spec check"

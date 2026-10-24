@@ -1,19 +1,17 @@
-;; The sources index: what the knowledge container reads (dhf/spec/knowledge/
+;; The sources index: what the knowledge context reads (dhf/spec/knowledge/
 ;; sources.feature). Each source's provenance record (the .md beside this file)
 ;; says in prose what it is evidence for; this index says what a machine needs:
 ;; the repository, every pin ever cited (a pin is never dropped), and the
 ;; source's fenced paths.
 ;;
-;; scope-impact/rdm is not a source: it holds today's implementation, and its
-;; own history is fenced by dhf/harness/config.edn, :fenced-paths.
+;; scope-impact/rdm is not a source: it holds today's implementation, and none
+;; of it is on the clean room's allow-list.
 ;;
 ;; FENCED PATHS. A source that holds an implementation of what rdm-spec
 ;; regenerates would hand a coding agent the answer, however clean its room
 ;; (the event storm's hotspot H14, dhf/storm/2026-10-24-rdm.md). So each
-;; source's implementation is fenced like rdm-spec's own: never cited, and
-;; removed, in tree and history, from the checkout the clean room carries
-;; (dhf/spec/regeneration/fence.feature). Specs, documentation and
-;; configuration stay readable.
+;; source's implementation is fenced: never cited. No source checkout ever
+;; reaches a clean room. Specs, documentation and configuration stay citable.
 {:innolitics-rdm
  {:repository "https://github.com/innolitics/rdm"
   :record "innolitics-rdm.md"

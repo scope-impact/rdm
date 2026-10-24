@@ -1,4 +1,4 @@
-# Component Black-box check, container ratification: dhf/spec/model.edn.
+# Component Black-box check, bounded context ratification of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-007
 Feature: Black-box check

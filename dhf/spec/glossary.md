@@ -57,27 +57,32 @@ _Avoid_: documentation, notes.
 ## The design
 
 **Event storm**: the design step that turns the spec's needs into domain
-events, commands, actors, policies and aggregates, from which the containers
-and components follow. Its board is a working product, not part of the spec.
+events, commands, actors, policies and aggregates, from which the bounded
+contexts and components follow. Its board is a working product, not part of the spec.
 
-**Bounded context**: a part of the domain with its own language and model.
-Each one is exactly one container.
+**Bounded context**: a part of the domain with its own language and model,
+and a composable module of the rdm-spec container: it can be regenerated alone
+while the others stand. Drawn as a boundary around its components.
 
-**Container**: something that runs or stores data (C4 level 2). Here, one per
-bounded context, each with its own entry point and black-box contract.
+**Container**: something that runs or stores data (C4 level 2). rdm-spec has
+one, the `rdm-spec` command (a modular monolith), beside the repository.
 
-**Component**: a logical building block inside one container (C4 level 3).
-Each owns one feature file, `dhf/spec/<container>/<component>.feature`, and
-its design prose beside it.
+**Component**: a logical building block inside one bounded context (C4 level
+3). Each owns one feature file, `dhf/spec/<context>/<component>.feature`.
 
-**Event**: a domain event that crosses a container boundary, declared in
-`dhf/spec/events.edn`. Events are the contracts between containers.
+**Event**: a domain event that passes between bounded contexts within one run,
+declared in `dhf/spec/events.edn`. Steps that run at different times meet
+through files instead.
 
 **Event bus**: the in-process bus every event travels on, synchronous and in
 subscription order. It refuses an event the catalogue does not declare.
 
-**Kernel**: shared code every container may use and that belongs to none of
-them, such as the event bus. Specified under `dhf/spec/kernel/`, never drawn as
+**Skeleton**: what `rdm-spec init` writes and `rdm-spec adopt` adds: the spec,
+the harness configuration, the raw, wiki and steps directories, decisions, the
+pre-commit hook and the cut workflow.
+
+**Kernel**: shared code every bounded context may use and that belongs to none
+of them, such as the event bus. Specified under `dhf/spec/kernel/`, never drawn as
 a container.
 
 **Model**: `dhf/spec/model.edn`, the one C4 source. Every view is generated
@@ -135,13 +140,15 @@ fence.
 **Spec check**: `rdm-spec check` on the spec: ids, levels, needs, citations,
 the model's lint and the views' freshness.
 
-**Ratify**: `rdm-spec ratify` on a clean room: the declared test command ran,
-wrote results, its unit tests passed and its step definitions are black box.
-Run by the installed rdm-spec, never by the build under test.
+**Ratify**: `rdm-spec ratify ROOM CYCLE`: the room's implementation, put into a
+fresh checkout of the cut, passes the declared test command, writes results
+and has black-box step definitions. Run by the installed rdm-spec, never by the
+build under test.
 _Avoid_: gate, on its own (say spec check or ratify).
 
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn` (cut,
-scope, builder, spec owner, results) and `score.edn` beside it.
+scope, builder, spec owner, results, and `:bootstrap` for the very first),
+with `checklist.json` and `score.edn` beside it.
 
 **Scoreboard**: the comparison of two cycles over the items both scored,
 counting what got better and what got worse, never a net.

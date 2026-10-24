@@ -1,4 +1,4 @@
-# Component Scoreboard, container measurement: dhf/spec/model.edn.
+# Component Scoreboard, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-008
 Feature: Scoreboard
@@ -28,7 +28,18 @@ Feature: Scoreboard
 
     @spec-0172 @e2e
     Scenario: The target's scenarios are reported apart from the rest
-      Given cycle 02 regenerated the container verification and cycle 01 is its baseline
+      Given cycle 02 regenerated the bounded context verification and cycle 01 is its baseline
       When "rdm-spec scoreboard 01 02" is run
       Then it reports better and worse for verification's scenarios first
       And then, separately, better and worse for every other scenario
+
+  # Before any rdm-spec release exists, the first build is ratified by a reviewed
+  # bootstrap cycle (ADR 0002). It says so, and nothing is measured against it.
+  Rule: A bootstrap cycle is never a baseline
+
+    @spec-0192 @e2e
+    Scenario: The scoreboard marks a bootstrap cycle and compares nothing against it
+      Given cycle 00's cycle.edn holds :bootstrap true
+      When "rdm-spec scoreboard 00 01" is run
+      Then it marks cycle 00 as bootstrap
+      And it reports no better or worse count against it

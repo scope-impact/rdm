@@ -1,4 +1,4 @@
-# Component Site, container publishing: dhf/spec/model.edn.
+# Component Site, bounded context publishing of the rdm-spec container: dhf/spec/model.edn.
 #
 # The site is Markdown, built to HTML by MkDocs: decided by the event storm's
 # hotspot H6 (dhf/storm/2026-10-24-rdm.md). MkDocs is an external tool rdm-spec
@@ -13,9 +13,9 @@ Feature: Site
 
     @spec-0092 @e2e
     Scenario: Each component gets one page
-      Given a model with two containers holding five components
+      Given a model with two bounded contexts holding five components
       When the site is published
-      Then it holds five component pages, each named for its container and component
+      Then it holds five component pages, each named for its bounded context and component
 
     @spec-0093 @e2e
     Scenario: A component page carries the component's prose and scenarios
@@ -24,15 +24,15 @@ Feature: Site
       Then Lint's page holds its description, its prose and every scenario with its id, level and steps
 
     @spec-0094 @e2e
-    Scenario: Each container gets an index page with its component view
-      Given the container architecture and its rendered component view
+    Scenario: Each bounded context gets an index page with its component view
+      Given the bounded context architecture and its rendered component view
       When the site is published
       Then the architecture page shows the view and links to each of its components' pages
 
     @spec-0095 @e2e
     Scenario: The home page shows the context and container views and the needs
       When the site is published
-      Then the home page shows the context view, the container views and every user need with the scenarios tracing to it
+      Then the home page shows the context view, the container view and every user need with the scenarios tracing to it
 
   Rule: The site shows status, and never decides it
 
@@ -50,7 +50,8 @@ Feature: Site
 
     @spec-0098 @e2e
     Scenario: Without results, the site says no status was derived
-      When the site is published with no results
+      Given the configured results directory does not exist
+      When "rdm-spec publish" is run with no --results
       Then every page says no status was derived because no results were given
 
   Rule: The site is a reading of the spec, never a copy that can drift
@@ -84,10 +85,10 @@ Feature: Site
 
     @spec-0146 @e2e
     Scenario: The site's navigation follows the model
-      Given a model with the containers spec and architecture, in that order, each with its components
+      Given a model with the bounded contexts spec and architecture, in that order, each with its components
       When the site is published
-      Then the MkDocs configuration is written with the home page first, then a section for spec and one for architecture
-      And each section lists its container's page and then its components' pages, in the model's order
+      Then the MkDocs configuration is written with the home page first, then a section for spec and one for architecture, then one for the kernel
+      And each section lists its context's page and then its components' pages, in the model's order
 
     @spec-0147 @e2e
     Scenario: The site builds under strict mode
@@ -102,8 +103,7 @@ Feature: Site
       Then the build fails and names the page and the link
 
     # Incident: a gate once reported success because a missing tool turned its
-    # command into a no-op that exited 0 (skallinen/loyly
-    # harness/README.md@17d68d2, "The failure modes this shape was learned from").
+    # command into a no-op that exited 0 (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
     @spec-0149 @e2e
     Scenario: Without MkDocs, building fails and names the missing tool
       Given MkDocs is not installed

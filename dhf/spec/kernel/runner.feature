@@ -37,11 +37,11 @@ Feature: Gherkin runner
   Rule: Every scenario run leaves one result, labelled with what it verifies
 
     @spec-0151 @contract
-    Scenario: A scenario's result is labelled with its id, component and container
-      Given the scenario @spec-0012 in the component Lint of the container architecture
+    Scenario: A scenario's result is labelled with its id, component and context
+      Given the scenario @spec-0012 in the component Lint of the bounded context architecture
       When the runner runs it
-      Then it writes one Allure result labelled spec=spec-0012, component=Lint and container=architecture
-      And the label is named spec whatever the configured id prefix
+      Then it writes one Allure result labelled spec=spec-0012, component=Lint and context=architecture
+      And a kernel scenario's result is labelled context=kernel
       And each step is a step of the result, with its own status
 
     @spec-0152 @contract
@@ -72,8 +72,7 @@ Feature: Gherkin runner
       And its result is skipped and labelled planned
 
   # Incident: a test runner named its suites twice, once in imports and once in
-  # a run list, so a forgotten suite was silently green (skallinen/loyly
-  # harness/README.md@17d68d2, "The failure modes this shape was learned from").
+  # a run list, so a forgotten suite was silently green (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
   Rule: The runner discovers, and refuses to find nothing
 
     @spec-0155 @e2e

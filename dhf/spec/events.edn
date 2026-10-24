@@ -1,58 +1,33 @@
-;; The event catalogue: the domain events that cross container boundaries,
-;; which are the contracts between bounded contexts. A relationship in
-;; model.edn that publishes or subscribes to an event must name one declared
-;; here (rule c4-events-named, dhf/spec/architecture/lint.feature).
+;; The event catalogue: the domain events that pass between bounded contexts,
+;; which are the contracts between them. A relationship in model.edn that
+;; publishes an event must name one declared here, from its declared publisher
+;; (rule c4-events-named, dhf/spec/architecture/lint.feature).
 ;;
-;; From the first event storm (dhf/storm/2026-10-24-rdm.md). Events that stay
-;; inside one container are on the board, not here. Every event travels on the
-;; in-process event bus (kernel/bus); the bus refuses an event declared nowhere
-;; here, or one missing a key it carries.
+;; Events travel on the in-process bus (kernel/bus), so only within one run of
+;; the rdm-spec command. Steps that run at different times (cut, fence, ratify,
+;; score) meet through files instead: the spec-N tag, the clean room, the
+;; cycle's cycle.edn and results directory (the model's store relationships).
 {:KnowledgeIndexed
  {:description "The raw sources and the wiki were read: every pinned source, every page, and which citations resolve"
-  :published-by :knowledge
+  :published-by :knowledge/sources
   :carries [:revision :sources :pages :citations :findings]}
 
  :SpecParsed
  {:description "The spec at a revision was read: every scenario with its id, tags, steps and owning component"
-  :published-by :spec
+  :published-by :spec/parser
   :carries [:revision :scenarios :needs :refusals]}
 
  :SpecGated
  {:description "The spec at a revision passed or failed the spec check, with every finding"
-  :published-by :spec
+  :published-by :spec/check
   :carries [:revision :passed? :findings]}
 
  :ViewsGenerated
  {:description "Every view of the model was generated and rendered, stamped with the model's hash; carries the model itself for its readers"
-  :published-by :architecture
+  :published-by :architecture/views
   :carries [:model :model-hash :views]}
 
- :SpecCut
- {:description "A merged spec change was tagged spec-N, the only thing a regeneration may read"
-  :published-by :regeneration
-  :carries [:tag :commit]}
-
- :CleanRoomProved
- {:description "A clean room was built from a cut for a scope, holding only the allowed paths and the code the scope keeps"
-  :published-by :regeneration
-  :carries [:cut :scope :path]}
-
- :BuildRatified
- {:description "A build in a clean room was ratified: its test command ran and wrote results, and its step definitions are black box"
-  :published-by :ratification
-  :carries [:cut :scope :results-dir]}
-
- :RatificationRefused
- {:description "A build failed ratification, with the reason"
-  :published-by :ratification
-  :carries [:cut :reason]}
-
  :VerificationDerived
- {:description "Each scenario's status (verified, failed, unverified) was derived from a run's Allure results"
-  :published-by :verification
-  :carries [:revision :statuses :unknown-results :unreadable-files]}
-
- :CycleScored
- {:description "A cycle's checklist was scored and filed, unverified items counted as fails"
-  :published-by :measurement
-  :carries [:cycle :cut :passed :total]}}
+ {:description "Each scenario's status (verified, failed, unverified, planned) was derived from a run's Allure results"
+  :published-by :verification/status
+  :carries [:revision :statuses :unknown-results :unreadable-files]}}

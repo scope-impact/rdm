@@ -1,19 +1,12 @@
-# Component Sources, container knowledge: dhf/spec/model.edn.
+# Component Sources, bounded context knowledge of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-011
 Feature: Sources
   Reads the provenance records and resolves citations against their pins.
 
   # The chain of citations has to bottom out in something no generation step
-  # can quietly rewrite (skallinen/loyly docs/wow/invariants.md@17d68d2, INV-1).
+  # can quietly rewrite (loyly:docs/wow/invariants.md@17d68d2, INV-1).
   Rule: A source is indexed with its repository, its pins and its record
-
-    @spec-0119 @e2e
-    Scenario: A source is read with its repository, its pins and what it is evidence for
-      Given the sources index names loyly with the repository skallinen/loyly, the pin 17d68d2 and the record loyly.md
-      And loyly.md has an evidence table
-      When the sources are read
-      Then the source loyly is known with its repository, its pin 17d68d2 and its evidence rows
 
     @spec-0120 @e2e
     Scenario: A source with no pin fails the check

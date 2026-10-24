@@ -1,4 +1,4 @@
-# Component Views, container architecture: dhf/spec/model.edn.
+# Component Views, bounded context architecture of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-005
 Feature: Views

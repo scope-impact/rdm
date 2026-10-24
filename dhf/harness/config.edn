@@ -33,19 +33,24 @@
  :steps-dir "dhf/steps"
  :implementation-ns-prefix "rdm-spec."
  :step-api "rdm-spec.kernel.runner"
+ ;; How a step definition runs the build under test: its own entry point in the
+ ;; checkout being ratified, never the installed rdm-spec
+ ;; (dhf/spec/ratification/ratify.feature).
+ :command-under-test ["bb" "-m" "rdm-spec.main"]
 
- ;; The implementation: every path a regeneration rebuilds. Each component's code
- ;; is src/rdm_spec/<container>/<component>.clj and its unit tests
- ;; test/rdm_spec/<container>/<component>_test.clj; the kernel's are under
- ;; .../kernel/ (dhf/spec/regeneration/fence.feature,
- ;; dhf/spec/architecture/lint.feature). test.clj runs them.
- :implementation ["src" "test" "test.clj"]
+ ;; The implementation: every path a regeneration rebuilds, and where each
+ ;; context's and component's code and unit tests live, so one context or one
+ ;; component can be rebuilt while the rest stands
+ ;; (dhf/spec/regeneration/fence.feature). test.clj runs the tests.
+ :implementation ["src" "test" "test.clj" "bb.edn"]
+ :code-layout {:context ["src/rdm_spec/{context}/" "test/rdm_spec/{context}/"]
+               :component ["src/rdm_spec/{context}/{component}.clj"
+                           "test/rdm_spec/{context}/{component}_test.clj"]}
 
  ;; The clean room is an allow-list (dhf/spec/regeneration/fence.feature): these
  ;; paths, plus the implementation a scoped regeneration keeps, and nothing
- ;; else. It has no network, or it could fetch what was left out.
- :clean-room {:network :none
-              :allow ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/steps"
+ ;; else. Giving the builder no network is the builder's obligation.
+ :clean-room {:allow ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/steps"
                       "dhf/decisions/adr-0002-spec-first-regeneration.md"]}
 
  ;; What ratify runs in the clean room (dhf/spec/ratification/ratify.feature):
@@ -53,7 +58,7 @@
  :test-command ["bb" "test.clj"]
  :results-dir "dhf/allure-results"
 
- ;; Cycles: dhf/cycles/NN/cycle.edn and score.edn
+ ;; Cycles: dhf/cycles/NN/cycle.edn, checklist.json and score.edn
  ;; (dhf/spec/measurement/scorer.feature).
  :cycles-dir "dhf/cycles"
 
@@ -65,7 +70,4 @@
  :c4 {:view-element-limit 20
       ;; People and systems only: mmdr overlaps a longer description with the
       ;; name (@spec-0009).
-      :description-max-chars 45
-      :skill {:repo "scope-impact/agent-skills"
-              :path "skills/engineering/c4-diagrams/reference/c4-guide.md"
-              :commit "da65901"}}}
+      :description-max-chars 45}}

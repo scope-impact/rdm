@@ -1,4 +1,4 @@
-# Component Scorer, container measurement: dhf/spec/model.edn.
+# Component Scorer, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-008
 Feature: Scorer
@@ -8,19 +8,25 @@ Feature: Scorer
 
     @spec-0173 @contract
     Scenario: A cycle is declared in dhf/cycles/NN/cycle.edn
-      Given dhf/cycles/03/cycle.edn holds the cut spec-3, the scope container verification, the builder builder-a as an agent, the spec owner Sami as a human, and the results directory
+      Given dhf/cycles/03/cycle.edn holds:
+        """
+        {:cut "spec-3"
+         :scope {:context :verification}
+         :builder {:name "builder-a" :actor :agent}
+         :spec-owner {:name "Sami" :actor :human}
+         :results "dhf/cycles/03/results"}
+        """
       When "rdm-spec score 03" is run
-      Then the cycle is scored over those results, for that cut and scope
+      Then the cycle is scored over those results, against the spec at spec-3, for that scope
 
     @spec-0174 @contract
     Scenario: The score is written beside the cycle
       Given cycle 03 scored with 11 of 12 scenarios passing
       When "rdm-spec score 03" is run
-      Then dhf/cycles/03/score.edn holds each scenario's id and verdict, the 11 passed and the 12 scored
+      Then dhf/cycles/03/score.edn holds each scored scenario's id and verdict (passed or failed), the 11 passed, the 12 scored, the cycle's builder and spec owner, and its scope
 
   # Incident: a scoring run whose every batch failed on a network outage once
-  # committed "scored" over an empty record (skallinen/loyly
-  # harness/README.md@17d68d2, "The failure modes this shape was learned from").
+  # committed "scored" over an empty record (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
   Rule: The instrument refuses to record what it did not measure
 
     @spec-0022 @e2e
@@ -36,21 +42,10 @@ Feature: Scorer
       When "rdm-spec score 03" is run
       Then the score is 11 of 12
 
-  # The build under test never judges itself. Ratify and score run from the
-  # rdm-spec installed outside the clean room.
-  Rule: The build under test never scores itself
-
-    @spec-0175 @e2e
-    Scenario: The installed rdm-spec scores, never the regenerated one
-      Given a clean room whose regenerated build includes its own rdm-spec
-      When "rdm-spec score 03" is run
-      Then the installed rdm-spec writes the score
-      And the regenerated build's own scorer is never run
-
   # Every role may be a human or an agent (UN-012), so the instrument cannot
   # rely on "a person" to stay out of the loop. What it relies on is that the
   # one who reads the score is not the one who built what was scored
-  # (skallinen/loyly harness/README.md@17d68d2, "The idea in five lines").
+  # (loyly:harness/README.md@17d68d2, "The idea in five lines").
   Rule: The builder never reads its own score
 
     @spec-0142 @e2e @UN-012

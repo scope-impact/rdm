@@ -1,4 +1,4 @@
-# Component Trace, container verification: dhf/spec/model.edn.
+# Component Trace, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
 
 @UN-003
 Feature: Trace
@@ -22,10 +22,10 @@ Feature: Trace
   Rule: A scenario traces to its need and its evidence
 
     @spec-0104 @e2e
-    Scenario: Tracing a scenario names its needs, its component and its container
-      Given the scenario @spec-0012 in the component Lint of the container architecture, under a feature tagged UN-005
+    Scenario: Tracing a scenario names its needs, its component and its bounded context
+      Given the scenario @spec-0012 in the component Lint of the bounded context architecture, under a feature tagged UN-005
       When spec-0012 is traced
-      Then the trace names UN-005, the component Lint and the container architecture, and the scenario's level
+      Then the trace names UN-005, the component Lint and the bounded context architecture, and the scenario's level
 
     @spec-0105 @contract
     Scenario: With results, the trace gives each scenario's status and the results behind it
@@ -49,6 +49,7 @@ Feature: Trace
 
     @spec-0108 @e2e
     Scenario: Without results, the trace says no status was derived
-      When spec-0012 is traced with no results directory
+      Given the configured results directory does not exist
+      When "rdm-spec trace spec-0012" is run with no --results
       Then the trace lists the scenario's needs, component and level
       And it says no status was derived because no results were given
