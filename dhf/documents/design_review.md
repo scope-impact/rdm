@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 86
+revision: 87
 title: Design Review — RDM
 ---
 
@@ -2532,6 +2532,14 @@ to finish the harness (`dhf/raw/2026-10-24-finish-the-harness.md`); it is now
   ratifies a build that is not done; controls DI-95 to DI-99) and
   **RISK-TOOL-012** (the harness overstates what a build carries; controls
   DI-92 to DI-94), proposed.
+- **The harness in Clojure** (`dhf/raw/2026-10-24-harness-in-clojure.md`,
+  slice D10): a program apart from RDM, run by babashka (`bb harness
+  <command>`, code under `harness/`, configuration `harness/config.edn`), as
+  Löyly's is. It imports nothing of RDM and runs RDM's commands; it reads a
+  spec line by line, as Löyly's tools do, while the record keeps RDM's Gherkin
+  reader (DI-90, in Python). The spec names the harness's own command line
+  (`harness verify`), not how it runs. C4: a Harness container holds the six
+  components.
 - **Workshop patterns not taken yet:** always-valid entities and repositories
   for the record reader; a later slice.
 

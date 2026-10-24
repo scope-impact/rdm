@@ -78,7 +78,7 @@ fail event (the business rule broken, after the slash), which affects an entity.
 policy): whenever a round is admitted, the instrument is checked; whenever the
 instrument is checked, the suite runs; whenever the suite passes, the served
 graph is started; whenever it answers, identity is proven. Together they are
-"rdm harness verify": its verdict is *Build Ratified* when *Identity Proven*
+"harness verify": its verdict is *Build Ratified* when *Identity Proven*
 happens, else *Build Not Ratified*, naming the fail event (D9).
 
 **Entities:** a spec and its scenarios (ids stamped once), a cycle (its number,

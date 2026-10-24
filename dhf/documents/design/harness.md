@@ -21,30 +21,44 @@ spec-lock), the instrument checked against its known answers, the suite run
 through the one command the project declares, the served graph started
 inside a boot budget, and proved to serve this record. Its language
 (`CONTEXT.md`): slice, spec, scenario, item id, checklist, cycle, ratify,
-spec-lock. It reads the specification and the test evidence; nothing reads
-it.
+spec-lock. It is a program apart from RDM, written in Clojure and run by
+babashka, as Löyly's is (slice 01, decision D10): `bb harness <command>` from
+a project's root, its code under `harness/` and its tasks in `bb.edn`. It
+imports nothing of RDM: it reads the slices' specs and an acceptance run's
+results itself, and runs RDM's commands for the gates and the served graph.
+Nothing reads it.
 
 ## Design Outputs
 
 The design outputs are this context's components in the architecture
-workspace; the workspace maps each to its code.
+workspace, in the Harness container; the workspace maps each to its code
+(`harness/src/harness/`).
 
 ![Components: harness](../../c4/views/C3_harness.svg)
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Harness configuration | Everything the harness knows about a project, from one file (`harness/config.yml`), each setting documented; an unknown or missing setting refused by name; printed on every gate run | DI-100 |
+| Harness configuration | Everything the harness knows about a project, from one EDN file (`harness/config.edn`), each setting documented; an unknown or missing setting refused by name; printed on every gate run | DI-100 |
 | Stamper | Gives each unstamped scenario of a slice's spec the next free item id of its slice, on its own line above it at its indentation; never changes an id already there | DI-91 |
 | Checklist | Derives the checklist (`harness/cycles/NN/checklist.json`) from the specs of the slices not `planned`, one item per stamped scenario with its slice, Rule and design input; refuses an unstamped scenario or an empty spec | DI-92 |
 | Scorer | Files a cycle's verdicts, from a verdicts file or an acceptance run's results, against its checklist as the cycle's record (`harness/cycles/NN/score.json`); an item no verdict reached is a failure marked unreached | DI-93 |
 | Scoreboard | Reads two cycles' records: the pass rate over every item, got-better and got-worse on the shared items, the denominator's move and the new items | DI-94 |
-| Harness gate | `rdm harness verify`: admits the round, then runs the chain of reactions (instrument, suite, served graph, identity) and concludes *Build Ratified* or *Build Not Ratified* | DI-95, DI-96, DI-97, DI-98, DI-99 |
+| Harness gate | `harness verify`: admits the round, then runs the chain of reactions (instrument, suite, served graph, identity) and concludes *Build Ratified* or *Build Not Ratified* | DI-95, DI-96, DI-97, DI-98, DI-99 |
 
 Each command keeps RDM's handler shape (the release gate's, after the
-PensionBee DDD workshop): read the state, derive the events with no side
-effect, then apply only a success event (write the file) and report every
-event. The events are the kernel's (`Event`): a name with a slash is a fail
-event, *Warned* before the slash a warning.
+PensionBee DDD workshop), in Clojure: read the state, derive the events with
+a pure function, then apply only a success event (write the file) and report
+every event. An event is a map of a name and a message; a name with a slash
+is a fail event, *Warned* before the slash a warning, as in RDM's kernel. A
+fail event exits 1 with its message on standard error; the harness never
+writes on one.
+
+**Reading a spec.** Line by line, as Löyly's tools do: a scenario is a line
+whose first word is `Scenario:` or `Scenario Outline:`, its tags the tag
+lines directly above it, its Rule the last `Rule:` line above it with that
+Rule's own tag lines. RDM's spec reader parses the same file fully for the
+record (DI-90); the two meet in the acceptance run, where each scenario's
+result carries its item id and its Rule's design input.
 
 **Stamper.** The slice number is the slice directory's name up to its first
 `-`; the next running number is one past the highest the spec carries, with
@@ -102,13 +116,12 @@ Ratified* when *Identity Proven* happens, else *Build Not Ratified*.
 
 ## Dependencies
 
-Layer 5 of the dependency rule, in the Gates part. Depends on
-`specification` (the spec reader, the record reader, the design gate),
-`release` (the release gate, for a known answer with results) and
-`test_evidence` (the Allure reader, to grade a cycle), all below it, and on
-the shared kernel. It starts `rdm graph serve` as a command and asks it over
-HTTP; that is a run, not an import of `graph`. Nothing depends on it but the
-composition root.
+In the Gates part, outside RDM's package: the dependency rule's layers govern
+imports, and the harness imports nothing of RDM. It runs `rdm story
+design-gate` and `rdm story release-gate` on its known records, `rdm graph
+build` and `rdm graph serve` for the served graph, and git for spec-lock, all
+as commands, and asks the served graph over HTTP. It reads Allure result
+files itself. Nothing depends on it.
 
 ## Out of scope
 

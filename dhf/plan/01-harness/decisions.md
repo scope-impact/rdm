@@ -82,3 +82,20 @@ listens to a fail event, so "nothing is started" after a failure follows from
 the structure, not from a check. *Pruned:* one command that runs every step and
 concludes them all (it would boot a build whose suite is red), and steps that
 skip themselves by testing an earlier result.
+
+## D10: The harness is written in Clojure, run by babashka
+
+The maintainer chose Clojure for the harness
+(`dhf/raw/2026-10-24-harness-in-clojure.md`), as Löyly's is (`loyly/harness/`,
+run by babashka). The harness is a program apart from RDM: it imports nothing
+of RDM and runs RDM's commands (`rdm story design-gate`, `rdm graph build`,
+`rdm graph serve`), so the dependency between them is a command line, as
+Löyly's gate's is with the application it ratifies. The spec names the
+harness's own command line (`harness stamp`, `harness verify`) and nothing of
+how it runs. The spec reader of DI-90 stays RDM's, because RDM's gates, graph
+and matrix read the record through it; the harness reads a spec line by line,
+as Löyly's tools do (a Scenario or Scenario Outline heading, the tag lines
+above it, the `Rule:` lines), so two readers see the same spec, and a scenario
+one finds and the other does not would show as a checklist item with no result
+or a result with no item. *Pruned:* Python inside RDM (the first plan), and a
+Clojure harness that parses Gherkin with a Java library babashka cannot load.

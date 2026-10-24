@@ -1,56 +1,58 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1758" height="1328" viewBox="0 0 1758 1328" font-family="Arial, sans-serif">
-<!-- rdm c4 draw: view C2, workspace sha256:49921f09638c9579af278f7c3663dad791d69dacaef6beac07e8926eed033982 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1458" height="1302" viewBox="0 0 1458 1302" font-family="Arial, sans-serif">
+<!-- rdm c4 draw: view C2, workspace sha256:69f843cb576ba5c35b811b672c475867c0fa08add01e49900ba37ccd7a3f4c66 -->
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#555555"/></marker>
     <marker id="arrow-added" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2e7d32"/></marker>
     <marker id="arrow-removed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#c62828"/></marker>
   </defs>
-  <rect width="1758" height="1328" fill="#f8f8f8"/>
-  <text x="879" y="30" font-size="18" font-weight="bold" fill="#333333" text-anchor="middle">C2</text>
+  <rect width="1458" height="1302" fill="#f8f8f8"/>
+  <text x="729" y="30" font-size="18" font-weight="bold" fill="#333333" text-anchor="middle">C2</text>
   <g transform="translate(66,88)">
-    <rect x="-26" y="202" width="1378" height="998" fill="#ffffff" stroke="#bbbbbb" stroke-width="1" stroke-dasharray="6,4" rx="6"/>
+    <rect x="-26" y="202" width="1378" height="810" fill="#ffffff" stroke="#bbbbbb" stroke-width="1" stroke-dasharray="6,4" rx="6"/>
     <text x="-16" y="218" font-size="11" fill="#888888" font-style="italic">RDM</text>
     <line x1="155.2" y1="150.0" x2="616.7" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="663.0" y1="150.0" x2="663.0" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="631.8" y1="150.0" x2="566.7" y2="246.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="647.8" y1="150.0" x2="404.2" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="663.0" y1="150.0" x2="663.0" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="909.7" y1="121.0" x2="827.3" y2="260.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="921.8" y1="150.0" x2="678.2" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="937.0" y1="150.0" x2="937.0" y2="246.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="906.6" y1="150.0" x2="419.4" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="822.0" y1="146.4" x2="504.0" y2="263.6" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="663.0" y1="121.0" x2="663.0" y2="260.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
     <line x1="408.2" y1="121.0" x2="640.9" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="1211.0" y1="114.0" x2="1211.0" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="778.0" y1="783.2" x2="1435.7" y2="1082.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="1187.1" y1="114.0" x2="965.2" y2="476.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
     <line x1="663.0" y1="784.0" x2="663.0" y2="1082.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="778.0" y1="773.4" x2="1096.0" y2="890.6" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
     <line x1="548.0" y1="773.4" x2="230.0" y2="890.6" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
     <line x1="734.9" y1="784.0" x2="865.1" y2="880.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="678.0" y1="784.0" x2="678.0" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="778.0" y1="773.4" x2="1096.0" y2="890.6" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="648.0" y1="784.0" x2="648.0" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
     <line x1="616.4" y1="784.0" x2="476.7" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="778.0" y1="958.7" x2="1422.0" y2="1102.3" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="648.0" y1="887.0" x2="648.0" y2="784.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="789.9" y1="352.0" x2="673.1" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="785.2" y1="352.0" x2="680.1" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="800.0" y1="352.0" x2="800.0" y2="476.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="663.0" y1="979.0" x2="663.0" y2="1082.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="678.0" y1="887.0" x2="678.0" y2="784.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="663.0" y1="352.0" x2="663.0" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="663.0" y1="352.0" x2="663.0" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="663.0" y1="352.0" x2="663.0" y2="476.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
     <line x1="426.1" y1="887.0" x2="565.8" y2="784.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="1096.0" y1="973.9" x2="778.0" y2="1087.1" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="769.8" y1="568.0" x2="697.7" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="599.8" y1="366.0" x2="1480.4" y2="1082.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="526.0" y1="366.0" x2="526.0" y2="462.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="486.7" y1="366.0" x2="149.7" y2="880.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="565.3" y1="366.0" x2="902.3" y2="880.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="536.0" y1="366.0" x2="655.3" y2="1082.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
-    <line x1="545.3" y1="366.0" x2="645.9" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="406.7" y1="359.0" x2="647.7" y2="1082.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="423.2" y1="359.0" x2="628.8" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="504.0" y1="351.3" x2="822.0" y2="476.7" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="967.7" y1="568.0" x2="1180.3" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="663.0" y1="568.0" x2="663.0" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="917.0" y1="366.0" x2="678.3" y2="1082.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="822.0" y1="351.3" x2="504.0" y2="476.7" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="858.3" y1="366.0" x2="184.5" y2="880.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="937.0" y1="366.0" x2="937.0" y2="880.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="963.2" y1="366.0" x2="1190.9" y2="887.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <line x1="898.3" y1="366.0" x2="697.2" y2="678.0" stroke="#555555" stroke-width="1.4" marker-end="url(#arrow)"/>
     <circle cx="115" cy="30" r="30" fill="#08427b" stroke="#052E56" stroke-width="1.5"/>
     <rect x="0" y="58" width="230" height="92" rx="14" ry="14" fill="#08427b" stroke="#052E56" stroke-width="1.5"/>
     <text x="115" y="84" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Regulatory author</text>
     <text x="115" y="99" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Person]</text>
     <text x="115" y="119" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Writes the record; renders and checks</text>
     <text x="115" y="133" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">the regulatory documents</text>
-    <circle cx="663" cy="30" r="30" fill="#08427b" stroke="#052E56" stroke-width="1.5"/>
-    <rect x="548" y="58" width="230" height="92" rx="14" ry="14" fill="#08427b" stroke="#052E56" stroke-width="1.5"/>
-    <text x="663" y="84" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Engineer</text>
-    <text x="663" y="99" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Person]</text>
-    <text x="663" y="119" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Changes the product and its tagged</text>
-    <text x="663" y="133" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">acceptance tests</text>
+    <circle cx="937" cy="30" r="30" fill="#08427b" stroke="#052E56" stroke-width="1.5"/>
+    <rect x="822" y="58" width="230" height="92" rx="14" ry="14" fill="#08427b" stroke="#052E56" stroke-width="1.5"/>
+    <text x="937" y="84" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Engineer</text>
+    <text x="937" y="99" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Person]</text>
+    <text x="937" y="119" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Changes the product and its tagged</text>
+    <text x="937" y="133" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">acceptance tests</text>
     <rect x="548" y="678" width="230" height="106" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
     <text x="663" y="704" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">rdm</text>
     <text x="663" y="719" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Python]</text>
@@ -62,45 +64,51 @@
     <text x="663" y="928" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: pytest, allure-pytest]</text>
     <text x="663" y="948" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Runs the tagged tests; RDM&#39;s plugin</text>
     <text x="663" y="962" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">labels each run from the record</text>
-    <rect x="685" y="260" width="230" height="92" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
-    <text x="800" y="286" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Reusable gates</text>
-    <text x="800" y="301" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: GitHub Actions]</text>
-    <text x="800" y="321" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The workflow and actions other</text>
-    <text x="800" y="335" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">repositories call</text>
+    <rect x="548" y="260" width="230" height="92" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
+    <text x="663" y="286" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Reusable gates</text>
+    <text x="663" y="301" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: GitHub Actions]</text>
+    <text x="663" y="321" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The workflow and actions other</text>
+    <text x="663" y="335" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">repositories call</text>
     <rect x="274" y="887" width="230" height="92" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
     <text x="389" y="913" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Documentation site</text>
     <text x="389" y="928" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: MkDocs]</text>
     <text x="389" y="948" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The user manual, built with MkDocs;</text>
     <text x="389" y="962" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">a controlled document lists its pages</text>
-    <path d="M 548.0,1094.9 a 115.0,12.9 0,0,0 230.0 0 a 115.0,12.9 0,0,0 -230.0 0 l 0,66.2 a 115.0,12.9 0,0,0 230.0 0 l 0,-66.2" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
-    <text x="663" y="1115" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Graph store</text>
-    <text x="663" y="1130" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: N-Quads]</text>
-    <text x="663" y="1150" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The record projected into RDF: one</text>
-    <text x="663" y="1164" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">N-Quads file, replaced on each build</text>
-    <rect x="1096" y="887" width="230" height="92" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
-    <text x="1211" y="913" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">SPARQL endpoint</text>
-    <text x="1211" y="928" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Python, rdflib]</text>
-    <text x="1211" y="948" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">rdm graph serve: the store, read-only,</text>
-    <text x="1211" y="962" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">refusing updates and SERVICE</text>
-    <rect x="685" y="476" width="230" height="92" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
-    <text x="800" y="502" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Documents image</text>
-    <text x="800" y="517" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Docker: Ubuntu, Pandoc,</text>
-    <text x="800" y="531" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">Typst]</text>
-    <text x="800" y="551" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Renders the documents to PDF</text>
-    <rect x="411" y="246" width="230" height="120" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
-    <text x="526" y="272" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">rdm.wasm</text>
-    <text x="526" y="287" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: WASI component</text>
-    <text x="526" y="301" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">(componentize-py)]</text>
-    <text x="526" y="321" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The command line as one WASI 0.3</text>
-    <text x="526" y="335" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">component: the same contexts,</text>
-    <text x="526" y="349" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">composed with the two providers;…</text>
-    <rect x="411" y="462" width="230" height="120" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
-    <text x="526" y="488" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">rdm-git</text>
-    <text x="526" y="503" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Rust, gitoxide, WASI</text>
-    <text x="526" y="517" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">component]</text>
-    <text x="526" y="537" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The record-state provider of the</text>
-    <text x="526" y="551" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">component: what git would say of the</text>
-    <text x="526" y="565" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">record, read by gitoxide</text>
+    <rect x="274" y="253" width="230" height="106" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
+    <text x="389" y="279" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Harness</text>
+    <text x="389" y="294" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Clojure, babashka]</text>
+    <text x="389" y="314" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">bb harness: stamps the slices&#39; specs,</text>
+    <text x="389" y="328" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">derives the checklist, scores cycles</text>
+    <text x="389" y="342" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">and ratifies a build round; a program…</text>
+    <path d="M 1096.0,899.9 a 115.0,12.9 0,0,0 230.0 0 a 115.0,12.9 0,0,0 -230.0 0 l 0,66.2 a 115.0,12.9 0,0,0 230.0 0 l 0,-66.2" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
+    <text x="1211" y="920" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Graph store</text>
+    <text x="1211" y="935" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: N-Quads]</text>
+    <text x="1211" y="955" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The record projected into RDF: one</text>
+    <text x="1211" y="969" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">N-Quads file, replaced on each build</text>
+    <rect x="822" y="476" width="230" height="92" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
+    <text x="937" y="502" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">SPARQL endpoint</text>
+    <text x="937" y="517" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Python, rdflib]</text>
+    <text x="937" y="537" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">rdm graph serve: the store, read-only,</text>
+    <text x="937" y="551" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">refusing updates and SERVICE</text>
+    <rect x="548" y="476" width="230" height="92" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
+    <text x="663" y="502" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Documents image</text>
+    <text x="663" y="517" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Docker: Ubuntu, Pandoc,</text>
+    <text x="663" y="531" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">Typst]</text>
+    <text x="663" y="551" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Renders the documents to PDF</text>
+    <rect x="822" y="246" width="230" height="120" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
+    <text x="937" y="272" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">rdm.wasm</text>
+    <text x="937" y="287" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: WASI component</text>
+    <text x="937" y="301" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">(componentize-py)]</text>
+    <text x="937" y="321" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The command line as one WASI 0.3</text>
+    <text x="937" y="335" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">component: the same contexts,</text>
+    <text x="937" y="349" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">composed with the two providers;…</text>
+    <rect x="274" y="462" width="230" height="120" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
+    <text x="389" y="488" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">rdm-git</text>
+    <text x="389" y="503" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Rust, gitoxide, WASI</text>
+    <text x="389" y="517" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">component]</text>
+    <text x="389" y="537" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The record-state provider of the</text>
+    <text x="389" y="551" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">component: what git would say of the</text>
+    <text x="389" y="565" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">record, read by gitoxide</text>
     <rect x="0" y="880" width="230" height="106" rx="4" ry="4" fill="#438dd5" stroke="#2E6295" stroke-width="1.5"/>
     <text x="115" y="906" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">rdm-c4</text>
     <text x="115" y="921" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Container: Rust, structurizrx]</text>
@@ -113,16 +121,16 @@
     <text x="937" y="941" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">The typeset provider: the verification</text>
     <text x="937" y="955" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">report&#39;s layout, data and attachments</text>
     <text x="937" y="969" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">compiled to PDF by Typst&#39;s crates,…</text>
-    <rect x="1422" y="1082" width="230" height="92" rx="4" ry="4" fill="#999999" stroke="#6B6B6B" stroke-width="1.5"/>
-    <text x="1537" y="1108" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Product repository</text>
-    <text x="1537" y="1123" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Software System]</text>
-    <text x="1537" y="1143" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">git: the Markdown record, the tests</text>
-    <text x="1537" y="1157" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">and their Allure results</text>
-    <rect x="822" y="29" width="230" height="92" rx="4" ry="4" fill="#999999" stroke="#6B6B6B" stroke-width="1.5"/>
-    <text x="937" y="55" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">GitHub</text>
-    <text x="937" y="70" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Software System]</text>
-    <text x="937" y="90" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Pull requests, Actions and the image</text>
-    <text x="937" y="104" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">registry</text>
+    <rect x="548" y="1082" width="230" height="92" rx="4" ry="4" fill="#999999" stroke="#6B6B6B" stroke-width="1.5"/>
+    <text x="663" y="1108" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Product repository</text>
+    <text x="663" y="1123" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Software System]</text>
+    <text x="663" y="1143" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">git: the Markdown record, the tests</text>
+    <text x="663" y="1157" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">and their Allure results</text>
+    <rect x="548" y="29" width="230" height="92" rx="4" ry="4" fill="#999999" stroke="#6B6B6B" stroke-width="1.5"/>
+    <text x="663" y="55" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">GitHub</text>
+    <text x="663" y="70" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Software System]</text>
+    <text x="663" y="90" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">Pull requests, Actions and the image</text>
+    <text x="663" y="104" font-size="11" fill="#ffffff" opacity="0.9" text-anchor="middle">registry</text>
     <rect x="274" y="29" width="230" height="92" rx="4" ry="4" fill="#999999" stroke="#6B6B6B" stroke-width="1.5"/>
     <text x="389" y="55" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Agent harness</text>
     <text x="389" y="70" font-size="11" font-style="italic" fill="#ffffff" opacity="0.85" text-anchor="middle">[Software System]</text>
@@ -136,30 +144,32 @@
     <text x="385.9" y="411.0" font-size="10.5" fill="#555555" text-anchor="middle">renders documents and checks the</text>
     <rect x="353.5" y="414.0" width="64.9" height="13" fill="#f8f8f8" opacity="0.88"/>
     <text x="385.9" y="424.0" font-size="10.5" fill="#555555" text-anchor="middle">record with</text>
-    <rect x="648.4" y="512.0" width="29.2" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="663.0" y="522.0" font-size="10.5" fill="#555555" text-anchor="middle">runs</text>
-    <rect x="510.5" y="185.0" width="177.5" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="599.2" y="195.0" font-size="10.5" fill="#555555" text-anchor="middle">runs the gates and the graph on a</text>
-    <rect x="555.4" y="198.0" width="87.7" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="599.2" y="208.0" font-size="10.5" fill="#555555" text-anchor="middle">WASI host with</text>
-    <rect x="445.6" y="512.0" width="160.9" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="526.0" y="522.0" font-size="10.5" fill="#555555" text-anchor="middle">learns to keep the record from</text>
-    <rect x="593.9" y="407.5" width="138.2" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="663.0" y="417.5" font-size="10.5" fill="#555555" text-anchor="middle">ratifies a build round with</text>
-    <rect x="775.1" y="184.0" width="186.7" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="868.5" y="194.0" font-size="10.5" fill="#555555" text-anchor="middle">runs on every push and pull request</text>
+    <rect x="785.4" y="512.0" width="29.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="800.0" y="522.0" font-size="10.5" fill="#555555" text-anchor="middle">runs</text>
+    <rect x="848.3" y="185.0" width="177.5" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="937.0" y="195.0" font-size="10.5" fill="#555555" text-anchor="middle">runs the gates and the graph on a</text>
+    <rect x="893.2" y="198.0" width="87.7" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="937.0" y="208.0" font-size="10.5" fill="#555555" text-anchor="middle">WASI host with</text>
+    <rect x="582.6" y="512.0" width="160.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="522.0" font-size="10.5" fill="#555555" text-anchor="middle">learns to keep the record from</text>
+    <rect x="584.0" y="192.0" width="157.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="202.0" font-size="10.5" fill="#555555" text-anchor="middle">ratifies a build round with [bb</text>
+    <rect x="621.4" y="205.0" width="83.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="215.0" font-size="10.5" fill="#555555" text-anchor="middle">harness verify]</text>
+    <rect x="569.6" y="184.0" width="186.7" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="194.0" font-size="10.5" fill="#555555" text-anchor="middle">runs on every push and pull request</text>
     <rect x="442.5" y="386.5" width="164.1" height="13" fill="#f8f8f8" opacity="0.88"/>
     <text x="524.5" y="396.5" font-size="10.5" fill="#555555" text-anchor="middle">calls the agent server of [MCP</text>
     <rect x="493.6" y="399.5" width="62.0" height="13" fill="#f8f8f8" opacity="0.88"/>
     <text x="524.5" y="409.5" font-size="10.5" fill="#555555" text-anchor="middle">over stdio]</text>
-    <rect x="1132.3" y="494.0" width="157.3" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="1211.0" y="504.0" font-size="10.5" fill="#555555" text-anchor="middle">queries [SPARQL over HTTP]</text>
-    <rect x="1021.9" y="919.6" width="169.9" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="1106.9" y="929.6" font-size="10.5" fill="#555555" text-anchor="middle">reads the record, results and git</text>
-    <rect x="1072.3" y="932.6" width="69.1" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="1106.9" y="942.6" font-size="10.5" fill="#555555" text-anchor="middle">history from</text>
-    <rect x="644.5" y="926.5" width="37.0" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="663.0" y="936.5" font-size="10.5" fill="#555555" text-anchor="middle">builds</text>
+    <rect x="997.5" y="288.5" width="157.3" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="1076.1" y="298.5" font-size="10.5" fill="#555555" text-anchor="middle">queries [SPARQL over HTTP]</text>
+    <rect x="578.0" y="920.0" width="169.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="930.0" font-size="10.5" fill="#555555" text-anchor="middle">reads the record, results and git</text>
+    <rect x="628.4" y="933.0" width="69.1" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="943.0" font-size="10.5" fill="#555555" text-anchor="middle">history from</text>
+    <rect x="918.5" y="825.5" width="37.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="937.0" y="835.5" font-size="10.5" fill="#555555" text-anchor="middle">builds</text>
     <rect x="299.9" y="819.0" width="178.1" height="13" fill="#f8f8f8" opacity="0.88"/>
     <text x="389.0" y="829.0" font-size="10.5" fill="#555555" text-anchor="middle">draws the architecture workspace</text>
     <rect x="374.2" y="832.0" width="29.6" height="13" fill="#f8f8f8" opacity="0.88"/>
@@ -168,59 +178,67 @@
     <text x="800.0" y="829.0" font-size="10.5" fill="#555555" text-anchor="middle">typesets the verification report</text>
     <rect x="785.2" y="832.0" width="29.6" height="13" fill="#f8f8f8" opacity="0.88"/>
     <text x="800.0" y="842.0" font-size="10.5" fill="#555555" text-anchor="middle">with</text>
-    <rect x="608.9" y="822.5" width="158.2" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="688.0" y="832.5" font-size="10.5" fill="#555555" text-anchor="middle">runs one test, unmutated then</text>
-    <rect x="604.5" y="835.5" width="167.0" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="688.0" y="845.5" font-size="10.5" fill="#555555" text-anchor="middle">mutated, in [pytest subprocess]</text>
-    <rect x="843.5" y="819.0" width="186.9" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="937.0" y="829.0" font-size="10.5" fill="#555555" text-anchor="middle">starts and asks for a design input&#39;s</text>
-    <rect x="866.3" y="832.0" width="141.3" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="937.0" y="842.0" font-size="10.5" fill="#555555" text-anchor="middle">text [SPARQL over HTTP]</text>
+    <rect x="558.9" y="822.5" width="158.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="638.0" y="832.5" font-size="10.5" fill="#555555" text-anchor="middle">runs one test, unmutated then</text>
+    <rect x="554.5" y="835.5" width="167.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="638.0" y="845.5" font-size="10.5" fill="#555555" text-anchor="middle">mutated, in [pytest subprocess]</text>
     <rect x="501.8" y="837.0" width="101.2" height="13" fill="#f8f8f8" opacity="0.88"/>
     <text x="552.5" y="847.0" font-size="10.5" fill="#555555" text-anchor="middle">reads the pages of</text>
-    <rect x="1037.4" y="1024.0" width="125.2" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="1100.0" y="1034.0" font-size="10.5" fill="#555555" text-anchor="middle">writes Allure results to</text>
-    <rect x="552.1" y="822.5" width="171.8" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="638.0" y="832.5" font-size="10.5" fill="#555555" text-anchor="middle">finds the risks each design input</text>
-    <rect x="601.1" y="835.5" width="73.7" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="638.0" y="845.5" font-size="10.5" fill="#555555" text-anchor="middle">controls with</text>
-    <rect x="716.9" y="613.0" width="29.2" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="731.5" y="623.0" font-size="10.5" fill="#555555" text-anchor="middle">runs</text>
-    <rect x="687.2" y="508.5" width="91.0" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="732.6" y="518.5" font-size="10.5" fill="#555555" text-anchor="middle">installs and runs</text>
-    <rect x="712.4" y="401.0" width="175.2" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="800.0" y="411.0" font-size="10.5" fill="#555555" text-anchor="middle">renders the documents in [docker</text>
-    <rect x="758.5" y="414.0" width="83.0" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="800.0" y="424.0" font-size="10.5" fill="#555555" text-anchor="middle">run make pdfs]</text>
+    <rect x="600.4" y="1024.0" width="125.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="1034.0" font-size="10.5" fill="#555555" text-anchor="middle">writes Allure results to</text>
+    <rect x="602.1" y="822.5" width="171.8" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="688.0" y="832.5" font-size="10.5" fill="#555555" text-anchor="middle">finds the risks each design input</text>
+    <rect x="651.1" y="835.5" width="73.7" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="688.0" y="845.5" font-size="10.5" fill="#555555" text-anchor="middle">controls with</text>
+    <rect x="648.4" y="613.0" width="29.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="623.0" font-size="10.5" fill="#555555" text-anchor="middle">runs</text>
+    <rect x="617.5" y="508.5" width="91.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="518.5" font-size="10.5" fill="#555555" text-anchor="middle">installs and runs</text>
+    <rect x="575.4" y="401.0" width="175.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="411.0" font-size="10.5" fill="#555555" text-anchor="middle">renders the documents in [docker</text>
+    <rect x="621.5" y="414.0" width="83.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="424.0" font-size="10.5" fill="#555555" text-anchor="middle">run make pdfs]</text>
     <rect x="402.8" y="814.5" width="174.5" height="13" fill="#f8f8f8" opacity="0.88"/>
     <text x="490.0" y="824.5" font-size="10.5" fill="#555555" text-anchor="middle">draws the traceability maps from</text>
     <rect x="455.7" y="827.5" width="68.7" height="13" fill="#f8f8f8" opacity="0.88"/>
     <text x="490.0" y="837.5" font-size="10.5" fill="#555555" text-anchor="middle">the graph of</text>
-    <rect x="889.5" y="1024.0" width="94.9" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="937.0" y="1034.0" font-size="10.5" fill="#555555" text-anchor="middle">serves, read-only</text>
-    <rect x="698.5" y="616.5" width="70.6" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="733.8" y="626.5" font-size="10.5" fill="#555555" text-anchor="middle">renders with</text>
-    <rect x="957.0" y="711.0" width="166.1" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="1040.1" y="721.0" font-size="10.5" fill="#555555" text-anchor="middle">reads the record granted by the</text>
-    <rect x="1012.1" y="724.0" width="56.1" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="1040.1" y="734.0" font-size="10.5" fill="#555555" text-anchor="middle">host from</text>
-    <rect x="456.9" y="401.0" width="138.2" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="526.0" y="411.0" font-size="10.5" fill="#555555" text-anchor="middle">asks the record&#39;s state of</text>
-    <rect x="447.6" y="414.0" width="156.9" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="526.0" y="424.0" font-size="10.5" fill="#555555" text-anchor="middle">[rdm:component/record-state]</text>
-    <rect x="229.2" y="610.0" width="178.1" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="318.2" y="620.0" font-size="10.5" fill="#555555" text-anchor="middle">draws the architecture workspace</text>
-    <rect x="252.2" y="623.0" width="132.1" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="318.2" y="633.0" font-size="10.5" fill="#555555" text-anchor="middle">with [rdm:component/c4]</text>
-    <rect x="651.7" y="610.0" width="164.2" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="733.8" y="620.0" font-size="10.5" fill="#555555" text-anchor="middle">typesets the verification report</text>
-    <rect x="655.1" y="623.0" width="157.3" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="733.8" y="633.0" font-size="10.5" fill="#555555" text-anchor="middle">with [rdm:component/typeset]</text>
-    <rect x="577.2" y="717.5" width="37.0" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="595.7" y="727.5" font-size="10.5" fill="#555555" text-anchor="middle">builds</text>
-    <rect x="506.7" y="509.0" width="177.9" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="595.6" y="519.0" font-size="10.5" fill="#555555" text-anchor="middle">chooses the record-state provider</text>
-    <rect x="544.4" y="522.0" width="102.5" height="13" fill="#f8f8f8" opacity="0.88"/>
-    <text x="595.6" y="532.0" font-size="10.5" fill="#555555" text-anchor="middle">through the port of</text>
+    <rect x="454.6" y="714.0" width="145.1" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="527.2" y="724.0" font-size="10.5" fill="#555555" text-anchor="middle">stamps the slices&#39; specs in</text>
+    <rect x="450.6" y="499.0" width="150.8" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="526.0" y="509.0" font-size="10.5" fill="#555555" text-anchor="middle">runs the gates on the known</text>
+    <rect x="436.0" y="512.0" width="180.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="526.0" y="522.0" font-size="10.5" fill="#555555" text-anchor="middle">records, and builds and serves the</text>
+    <rect x="454.1" y="525.0" width="143.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="526.0" y="535.0" font-size="10.5" fill="#555555" text-anchor="middle">graph, with [command line]</text>
+    <rect x="585.1" y="401.0" width="155.8" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="411.0" font-size="10.5" fill="#555555" text-anchor="middle">asks for a design input&#39;s text</text>
+    <rect x="604.3" y="414.0" width="117.4" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="424.0" font-size="10.5" fill="#555555" text-anchor="middle">[SPARQL over HTTP]</text>
+    <rect x="1026.5" y="721.0" width="94.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="1074.0" y="731.0" font-size="10.5" fill="#555555" text-anchor="middle">serves, read-only</text>
+    <rect x="627.7" y="616.5" width="70.6" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="626.5" font-size="10.5" fill="#555555" text-anchor="middle">renders with</text>
+    <rect x="714.6" y="711.0" width="166.1" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="797.7" y="721.0" font-size="10.5" fill="#555555" text-anchor="middle">reads the record granted by the</text>
+    <rect x="769.6" y="724.0" width="56.1" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="797.7" y="734.0" font-size="10.5" fill="#555555" text-anchor="middle">host from</text>
+    <rect x="593.9" y="401.0" width="138.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="411.0" font-size="10.5" fill="#555555" text-anchor="middle">asks the record&#39;s state of</text>
+    <rect x="584.6" y="414.0" width="156.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="663.0" y="424.0" font-size="10.5" fill="#555555" text-anchor="middle">[rdm:component/record-state]</text>
+    <rect x="432.4" y="610.0" width="178.1" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="521.4" y="620.0" font-size="10.5" fill="#555555" text-anchor="middle">draws the architecture workspace</text>
+    <rect x="455.4" y="623.0" width="132.1" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="521.4" y="633.0" font-size="10.5" fill="#555555" text-anchor="middle">with [rdm:component/c4]</text>
+    <rect x="854.9" y="610.0" width="164.2" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="937.0" y="620.0" font-size="10.5" fill="#555555" text-anchor="middle">typesets the verification report</text>
+    <rect x="858.3" y="623.0" width="157.3" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="937.0" y="633.0" font-size="10.5" fill="#555555" text-anchor="middle">with [rdm:component/typeset]</text>
+    <rect x="1058.6" y="620.0" width="37.0" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="1077.1" y="630.0" font-size="10.5" fill="#555555" text-anchor="middle">builds</text>
+    <rect x="708.8" y="509.0" width="177.9" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="797.7" y="519.0" font-size="10.5" fill="#555555" text-anchor="middle">chooses the record-state provider</text>
+    <rect x="746.5" y="522.0" width="102.5" height="13" fill="#f8f8f8" opacity="0.88"/>
+    <text x="797.7" y="532.0" font-size="10.5" fill="#555555" text-anchor="middle">through the port of</text>
   </g>
 </svg>

@@ -242,44 +242,6 @@ workspace "RDM" "The design record of regulated software." {
             tags "context:publishing"
           }
         }
-        group "harness" {
-          harness_config = component "Harness configuration" "Everything the harness knows about a project, from one file; an unknown or missing setting refused by name" "Python" {
-            properties {
-              "code" "rdm/harness/config.py"
-            }
-            tags "context:harness"
-          }
-          stamper = component "Stamper" "rdm harness stamp: the next free item id on each unstamped scenario; never renumbers" "Python" {
-            properties {
-              "code" "rdm/harness/stamp.py"
-            }
-            tags "context:harness"
-          }
-          checklist = component "Checklist" "rdm harness checklist: one item per stamped scenario of the slices not planned, from the specs alone" "Python" {
-            properties {
-              "code" "rdm/harness/checklist.py"
-            }
-            tags "context:harness"
-          }
-          scorer = component "Scorer" "rdm harness score: a cycle's verdicts, from a file or an acceptance run, filed against its checklist; an unreached item is a failure" "Python" {
-            properties {
-              "code" "rdm/harness/score.py"
-            }
-            tags "context:harness"
-          }
-          scoreboard = component "Scoreboard" "rdm harness scoreboard: the pass rate, got better and got worse on shared items, the denominator's move" "Python" {
-            properties {
-              "code" "rdm/harness/scoreboard.py"
-            }
-            tags "context:harness"
-          }
-          harness_gate = component "Harness gate" "rdm harness verify: admits the round, then checks the instrument, runs the suite, starts the served graph inside its boot budget and proves its identity; Build Ratified or not" "Python" {
-            properties {
-              "code" "rdm/harness/verify.py"
-            }
-            tags "context:harness"
-          }
-        }
         group "graph" {
           projection = component "Projection" "The record into RDF, one named graph per source, de-duplicated and sorted; replaces the store on each build; rdm graph build, query, serve (read-only) and explorer-file" "Python, rdflib" {
             properties {
@@ -373,6 +335,44 @@ workspace "RDM" "The design record of regulated software." {
             }
             tags "context:publishing"
           }
+        }
+      }
+      harness_tool = container "Harness" "bb harness: stamps the slices' specs, derives the checklist, scores cycles and ratifies a build round; a program apart from RDM, after Löyly's" "Clojure, babashka" {
+        harness_config = component "Harness configuration" "Everything the harness knows about a project, from one file; an unknown or missing setting refused by name" "Clojure" {
+          properties {
+            "code" "harness/src/harness/config.clj"
+          }
+          tags "context:harness"
+        }
+        stamper = component "Stamper" "harness stamp: the next free item id on each unstamped scenario; never renumbers" "Clojure" {
+          properties {
+            "code" "harness/src/harness/stamp.clj"
+          }
+          tags "context:harness"
+        }
+        checklist = component "Checklist" "harness checklist: one item per stamped scenario of the slices not planned, from the specs alone" "Clojure" {
+          properties {
+            "code" "harness/src/harness/checklist.clj"
+          }
+          tags "context:harness"
+        }
+        scorer = component "Scorer" "harness score: a cycle's verdicts, from a file or an acceptance run, filed against its checklist; an unreached item is a failure" "Clojure" {
+          properties {
+            "code" "harness/src/harness/score.clj"
+          }
+          tags "context:harness"
+        }
+        scoreboard = component "Scoreboard" "harness scoreboard: the pass rate, got better and got worse on shared items, the denominator's move" "Clojure" {
+          properties {
+            "code" "harness/src/harness/scoreboard.clj"
+          }
+          tags "context:harness"
+        }
+        harness_gate = component "Harness gate" "harness verify: admits the round, then checks the instrument, runs the suite, starts the served graph inside its boot budget and proves its identity; Build Ratified or not" "Clojure" {
+          properties {
+            "code" "harness/src/harness/verify.clj"
+          }
+          tags "context:harness"
         }
       }
       graph_store = container "Graph store" "The record projected into RDF: one N-Quads file, replaced on each build" "N-Quads" "Database"
@@ -477,18 +477,17 @@ workspace "RDM" "The design record of regulated software." {
     design_gate -> spec_reader "checks the slices' specs with"
     test_tags -> spec_reader "finds the slices' scenarios with"
     spec_reader -> kernel "reads files with"
-    stamper -> spec_reader "finds the slices' specs with"
-    checklist -> spec_reader "reads the slices' scenarios with"
+    stamper -> product_repo "stamps the slices' specs in"
+    checklist -> product_repo "reads the slices' specs from"
     scorer -> checklist "scores against"
-    scorer -> allure_reader "grades from an acceptance run with"
+    scorer -> product_repo "grades from an acceptance run's results in"
     scoreboard -> scorer "reads the cycles' records of"
     harness_gate -> harness_config "reads the project's settings with"
-    harness_gate -> design_gate "checks the instrument's known answers with"
-    harness_gate -> release_gate "checks a known answer with results with"
-    harness_gate -> record_reader "reads the record's design input text with"
-    harness_gate -> sparql_endpoint "starts and asks for a design input's text" "SPARQL over HTTP"
-    harness_gate -> kernel "asks git what changed since the base with"
-    engineer -> harness_gate "ratifies a build round with"
+    harness_gate -> checklist "finds the record's first design input with"
+    harness_gate -> rdm_cli "runs the gates on the known records, and builds and serves the graph, with" "command line"
+    harness_gate -> sparql_endpoint "asks for a design input's text" "SPARQL over HTTP"
+    harness_gate -> product_repo "asks git what changed since the base in"
+    engineer -> harness_gate "ratifies a build round with" "bb harness verify"
     projection -> allure_reader "reads results and test tags with"
     projection -> architecture_model "reads the C4 model and code dependencies with"
     pytest_plugin -> allure_reader "writes run labels and facts with"
@@ -639,9 +638,9 @@ workspace "RDM" "The design record of regulated software." {
       exclude "verification_data -> record_reader"
       autolayout tb
     }
-    component rdm_cli "C3_harness" {
+    component harness_tool "C3_harness" {
       title "Harness: components (C3)"
-      include harness_config stamper checklist scorer scoreboard harness_gate spec_reader design_gate release_gate record_reader allure_reader sparql_endpoint engineer
+      include * rdm_cli sparql_endpoint product_repo engineer
       autolayout tb
     }
     component rdm_cli "C3_graph" {

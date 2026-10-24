@@ -86,7 +86,7 @@ ten contexts named for what their code did or for a workflow stage.
 | Record | `architecture` | `design/architecture.md` | person, software system, container, component, relationship, view | `rdm/architecture/`: the model reader, `rdm c4 draw` |
 | Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's and xunit's words stop here | `rdm/evidence/`: Allure results, `translate`, the mutation probe; and `rdm/pytest_plugin.py` |
 | Gates | `release` | `design/release.md` | verified, release gate, trace slice | `rdm/release/`: the release gate, the verification data; and the reusable CI |
-| Gates | `harness` | `design/harness.md` | slice, spec, scenario, item id, checklist, cycle, ratify, spec-lock | `rdm/harness/`: the stamper, the checklist, the scorer, the scoreboard, the harness gate, its configuration |
+| Gates | `harness` | `design/harness.md` | slice, spec, scenario, item id, checklist, cycle, ratify, spec-lock | `harness/` (Clojure, run by babashka; outside RDM's package, D10 of slice 01): the stamper, the checklist, the scorer, the scoreboard, the harness gate, its configuration |
 | Gates | `compliance` | `design/compliance.md` | standard, checklist, checklist clause, gap, coverage | `rdm/compliance/` |
 | Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule, derived relation | `rdm/graph/` |
 | Documents | `publishing` | `design/publishing.md` | template, data, rendered document, evidence bundle | `rdm/publishing/`: render, snippets, DMR index, the verification report, the evidence bundle; and `rdm/md_extensions/` and the PDF action |
@@ -108,13 +108,16 @@ module that no component of the workspace names
 (`tests/dependency_rule_test.py`).
 
 ```
- 5  publishing · graph · harness    read models, and the harness that ratifies builds: feed none back
+ 5  publishing · graph              read models: read every context, feed none back
  4  release                         decides: verified status, risk and validation → release
  3  test_evidence                   translates test results into runs of the record's tests
  2  specification                   the core: needs, inputs, tagged tests, review, design gate
  1  architecture · risk · compliance   leaves: their own languages, nothing but the kernel
  0  shared kernel                   util · ids · git · frontmatter · reconcile
 ```
+
+The harness is no layer: it is a program of its own, in Clojure, that runs
+RDM's commands and imports none of its code.
 
 The leaves sit below the core because the core uses them and they use
 nothing: the design gate checks the architecture views are fresh, the

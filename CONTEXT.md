@@ -184,7 +184,7 @@ _Avoid_: reference material, notes
 
 **Harness**:
 The machinery that ratifies a build and measures the spec: the stamper, the
-checklist, the scorer, the scoreboard and the gate (`rdm harness`). Not the
+checklist, the scorer, the scoreboard and the gate (`harness`). Not the
 program an agent runs in, which is an _agent harness_.
 _Avoid_: test harness, framework
 
