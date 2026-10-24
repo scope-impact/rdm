@@ -2,7 +2,7 @@
 
 @UN-008
 Feature: Scoreboard
-  Compares cycles honestly, for a person.
+  Compares cycles honestly, for the spec owner, never the builder.
 
   Rule: The scoreboard compares cycles honestly
 

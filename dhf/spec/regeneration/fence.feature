@@ -4,7 +4,7 @@
 Feature: Fence
   Builds a clean room from a cut and proves every fenced path gone.
 
-  # Incident: an agent that can read last cycle's scores can aim at the
+  # Incident: a builder that can read last cycle's scores can aim at the
   # checklist instead of the spec. Regeneration reads a cut, nothing else.
   Rule: A cut is a tagged merge, and regeneration reads only a cut
 
@@ -40,14 +40,14 @@ Feature: Fence
   Rule: The scoreboard compares cycles honestly
 
     @spec-0041 @e2e
-    Scenario: The scoreboard is for a person, never for the regenerating agent
+    Scenario: The scoreboard is for the spec owner, never for the builder
       When the fence builds a clean room from a cut
       Then no scoreboard and no cycle score is present in it
 
   # Decided by the event storm's hotspot H14 (dhf/storm/2026-10-24-rdm.md). The
   # fence proves files; it cannot see a network. So the clean room carries what
-  # the agent may read of each source, and refuses to be handed out where the
-  # agent could fetch the rest.
+  # the builder may read of each source, and refuses to be handed out where the
+  # builder could fetch the rest.
   Rule: The fence covers the sources too
 
     @spec-0139 @e2e

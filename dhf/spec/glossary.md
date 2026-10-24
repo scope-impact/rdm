@@ -84,6 +84,19 @@ from it.
 **View**: a generated diagram of the model at one level: context, container,
 component or dynamic. Never drawn by hand.
 
+**Role**: who acts on the spec: engineer, reviewer, builder or spec owner.
+Every role can be filled by a human or an agent, and the machinery treats both
+the same. Two rules hold whoever fills them: a reviewer is not the author of
+what is reviewed, and the builder of a cycle never reads its score.
+_Avoid_: user (for a role), person (when either is meant).
+
+**Builder**: the role that regenerates the build from a cut, inside a clean
+room. A human or an agent.
+_Avoid_: coding agent (as the role's name).
+
+**Spec owner**: the role that reads the scoreboard and decides what the spec
+must learn next. Never the builder of the cycle it reads.
+
 ## The harness
 
 **Harness**: the containers that check the spec, ratify a build and score it.

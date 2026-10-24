@@ -4,7 +4,7 @@
 Feature: Cut
   Tags a merged spec change; a regeneration reads nothing else.
 
-  # Incident: an agent that can read last cycle's scores can aim at the
+  # Incident: a builder that can read last cycle's scores can aim at the
   # checklist instead of the spec. Regeneration reads a cut, nothing else.
   Rule: A cut is a tagged merge, and regeneration reads only a cut
 

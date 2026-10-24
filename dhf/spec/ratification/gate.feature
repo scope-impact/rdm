@@ -37,3 +37,12 @@ Feature: Gate
       When the regeneration is ratified
       Then release 0.4.0 runs the gate
       And the regenerated build runs only as the thing under test
+
+  Rule: The gate does not know who built
+
+    @spec-0145 @e2e @UN-012
+    Scenario: The same build gets the same verdict whether a human or an agent built it
+      Given two clean rooms from the same cut holding byte-identical builds
+      And one cycle declares a human builder and the other an agent builder
+      When the gate ratifies both
+      Then both verdicts are the same, with the same reasons

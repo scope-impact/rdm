@@ -103,6 +103,19 @@ executes is one representation.
   gates and the scoreboard are run by the pinned previous release, never by
   the build under test.
 
+### Roles
+
+- **Every role can be filled by a human or an agent**: engineer, reviewer,
+  builder (who regenerates the build) and spec owner (who reads the scoreboard).
+  The machinery treats both the same, as Löyly's tutorial says of its builder.
+- **Two independence rules hold whoever fills the roles.** A reviewer is not
+  the author of the change reviewed. The builder of a cycle never reads that
+  cycle's score: the scorer refuses a cycle whose builder is its spec owner.
+- **Where this departs from a source.** Löyly's harness says the instrument
+  "reports to a person ... and never into the loop". rdm-spec reads "a person"
+  as "someone outside the loop", which an agent can be; the independence rule
+  is what keeps the instrument out of the loop.
+
 ### The way of working
 
 - **Spec first, merge, then regenerate.** A spec change lands as a reviewed

@@ -20,6 +20,7 @@
 | A slice is done only when every scenario in its spec passes against the real interface | `docs/plan/01-booking-core/plan.md`, "Acceptance" | UN-004 |
 | Learning not written into the spec dies with the implementation | `README.md`, "What to steal" 5 | the cut and the fence |
 | Raw sources, immutable and cited; a domain wiki whose every claim footnotes a source | `README.md`, "How to read the repo"; `docs/wow/invariants.md`, INV-1 | this directory |
+| The builder may be an agent or a person, and the machinery treats both the same | `README.md`, "The tutorial: one full loop"; "4. Regenerate" | UN-012 |
 | Harness against instrument: what feeds the agent and what reports to a person | `harness/README.md`, "The idea in five lines" | ratification and measurement as separate containers |
 
 ## Fenced

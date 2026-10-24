@@ -7,7 +7,9 @@
 ;; model, components namespaced by their container.
 ;;
 ;;   :system         {:id :name :description}
-;;   :people         [{:id :name :description}]
+;;   :people         [{:id :name :description :actor #{:human :agent}}]
+;;                   ; a role, filled by a human, an agent, or either: the machinery
+;;                   ; treats both the same
 ;;   :external       [{:id :name :description}]
 ;;   :containers     [{:id :name :description :technology
 ;;                     :kind :runs | :stores
@@ -25,18 +27,18 @@
           :description "Regenerates a build from its spec, scores it"}
 
  :people
- [{:id :engineer :name "Engineer"
+ [{:id :engineer :name "Engineer" :actor #{:human :agent}
    :description "Writes the spec and its architecture"}
-  {:id :reviewer :name "Reviewer"
+  {:id :reviewer :name "Reviewer" :actor #{:human :agent}
    :description "Approves each spec change"}
-  {:id :spec-owner :name "Spec owner"
+  {:id :builder :name "Builder" :actor #{:human :agent}
+   :description "Regenerates the build in a clean room"}
+  {:id :spec-owner :name "Spec owner" :actor #{:human :agent}
    :description "Decides what the spec must learn next"}]
 
  :external
  [{:id :git-host :name "Git host"
    :description "Holds merges and pull requests"}
-  {:id :coding-agent :name "Coding agent"
-   :description "Regenerates the build in a clean room"}
   {:id :test-runner :name "Test runner"
    :description "Runs step definitions, writes Allure results"}]
 
@@ -108,7 +110,7 @@
      :description "Refuses step definitions that load implementation code"}]}
 
   {:id :measurement :name "measurement" :kind :runs :context "measurement" :technology "Babashka"
-   :description "Derives the checklist, scores each cycle and compares cycles, for a person"
+   :description "Derives the checklist, scores each cycle and compares cycles, for the spec owner, never the builder"
    :components
    [{:id :measurement/checklist :name "Checklist" :spec "measurement/checklist"
      :description "One item per stamped scenario, derived, never written"}
@@ -150,7 +152,7 @@
   {:from :reviewer :to :git-host :description "Approves spec merges in"}
   {:from :spec-owner :to :measurement :description "Reads the scoreboard from"}
   {:from :regeneration :to :git-host :description "Tags cuts on merges in"}
-  {:from :coding-agent :to :regeneration :description "Regenerates the build in a clean room from"}
+  {:from :builder :to :regeneration :description "Regenerates the build in a clean room from"}
   {:from :ratification :to :test-runner :description "Runs the declared test command through"}
   {:from :test-runner :to :repository :description "Writes Allure results to"}
 
@@ -225,9 +227,9 @@
   {:key "publishing-components" :level :component :container :publishing
    :description "The published site"}
   {:key "regeneration-cycle" :level :dynamic
-   :description "One cycle, from a merged spec change to a score a person reads"
+   :description "One cycle, from a merged spec change to a score the spec owner reads"
    :steps [[:regeneration :git-host "1. Tags the merge spec-N"]
-           [:coding-agent :regeneration "2. Regenerates the build in the proved clean room"]
+           [:builder :regeneration "2. Regenerates the build in the proved clean room"]
            [:ratification :test-runner "3. Runs the declared test command"]
            [:ratification :measurement "4. BuildRatified"]
            [:verification :measurement "5. VerificationDerived"]

@@ -24,7 +24,7 @@
            :sources ["loyly:harness/README.md@17d68d2"]}
  "UN-007" {:text "A build counts as done only when a gate the builder does not control says so."
            :sources ["loyly:harness/README.md@17d68d2"]}
- "UN-008" {:text "A person sees, cycle over cycle, how completely the spec carries the product, and the instrument never overstates it."
+ "UN-008" {:text "Someone other than the builder, human or agent, sees, cycle over cycle, how completely the spec carries the product, and the instrument never overstates it."
            :sources ["loyly:harness/README.md@17d68d2"
                      "loyly:README.md@17d68d2"]}
  "UN-009" {:text "A team starts a new project, or brings an existing repository, under this structure with one command, without anything already there being overwritten."
@@ -33,4 +33,6 @@
            :sources ["innolitics-rdm:README.md@f21b508"]}
  "UN-011" {:text "A team keeps the sources its spec is distilled from, and a domain wiki whose every claim cites one, so no rule in the spec rests on nothing."
            :sources ["loyly:docs/wow/invariants.md@17d68d2"
-                     "loyly:README.md@17d68d2"]}}
+                     "loyly:README.md@17d68d2"]}
+ "UN-012" {:text "Every role, engineer, reviewer, builder and spec owner, can be filled by a human or an agent, and the machinery treats both the same."
+           :sources ["loyly:README.md@17d68d2"]}}
