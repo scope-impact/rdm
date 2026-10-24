@@ -51,7 +51,7 @@
    :description "Runs step definitions, writes Allure results"}]
 
  :containers
- [{:id :rdm-spec :name "rdm-spec" :kind :runs :technology "Babashka; runs git, mmdr and MkDocs"
+ [{:id :rdm-spec :name "rdm-spec" :kind :runs :technology "Command-line program; the stack is in dhf/harness/stack.md"
    :description "The one command: bounded contexts in one program, meeting on an in-process bus"
    :contexts
    [{:id :project :name "project"
@@ -90,7 +90,7 @@
        {:id :architecture/lint :name "Lint" :spec "architecture/lint"
         :description "The C4 skill's checklist and the bounded-context rules"}
        {:id :architecture/views :name "Views" :spec "architecture/views"
-        :description "Generates Mermaid C4 for each view and renders it"}]}
+        :description "Generates each view as diagram source and renders it"}]}
 
      {:id :verification :name "verification"
       :description "Derives each scenario's status from Allure results and traces it"
@@ -129,10 +129,10 @@
         :description "Better and worse over shared items, a moved denominator said aloud"}]}
 
      {:id :publishing :name "publishing"
-      :description "Publishes the spec, its views and its status as one site, built by MkDocs"
+      :description "Publishes the spec, its views and its status as one site"
       :components
       [{:id :publishing/site :name "Site" :spec "publishing/site"
-        :description "One page per component, and the MkDocs configuration that builds them"}]}]}
+        :description "One page per component, and the site builder's configuration"}]}]}
 
   {:id :repository :name "Repository" :kind :stores :technology "git"
    :description "The spec, the model, the ledger, cuts, cycles and results"}]

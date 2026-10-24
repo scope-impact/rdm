@@ -33,7 +33,7 @@ Feature: Results reader
     Scenario: The stack that wrote the results does not matter
       Given Allure results labelled with spec ids written by a JavaScript test run
       When the results are read
-      Then the scenarios they name are verified exactly as if Clojure had written them
+      Then the scenarios they name are verified exactly as if any other stack had written them
 
   Rule: Unit test results verify nothing
 

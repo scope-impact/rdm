@@ -108,3 +108,16 @@ Feature: Spec check
       Given a stamped scenario tagged @wip with no passing result
       When "rdm-spec check" is run
       Then it passes
+
+  # The spec never names its stack: a spec that names one has become a
+  # description of one implementation, and regenerating from it measures
+  # nothing (loyly:docs/wow/invariants.md@17d68d2, INV-2). The stack lives in
+  # dhf/harness/stack.md.
+  Rule: The spec never names an implementation
+
+    @spec-0209 @e2e
+    Scenario: A spec file naming a configured stack word fails the spec check
+      Given the configured stack words include "Cobalt"
+      And a feature file whose description says the parser is written in Cobalt
+      When "rdm-spec check" is run
+      Then it fails and names the file, the line and the word

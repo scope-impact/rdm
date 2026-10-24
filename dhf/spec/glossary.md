@@ -9,7 +9,7 @@ or changes, this file changes in the same commit.
 
 **rdm-spec**: the product this spec describes: RDM rebuilt around this
 decision. The suffix says what changed: the spec is the source and the code is
-built from it. Until cutover the Python package and the `rdm` command keep
+built from it. Until cutover today's implementation and the `rdm` command keep
 their name; `RDM` alone means today's implementation.
 
 **Spec**: the source of truth for what the product does: the C4 model, the
@@ -168,5 +168,5 @@ counting what got better and what got worse, never a net.
 **Gherkin runner**: the kernel code that runs scenarios against their step
 definitions and writes Allure results labelled with each scenario's id.
 
-**Cutover**: the moment the regenerated Clojure core, passing the whole spec
+**Cutover**: the moment the regenerated core, passing the whole spec
 at a cut, takes over this repository from the current record.

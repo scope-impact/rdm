@@ -128,10 +128,11 @@ executes is one representation.
   only checks, cuts, fences, runs, ratifies, scores and publishes. Nothing per
   project: no task file. The command is kernel code, in no context: it
   dispatches each task to the context that owns it.
-- **The spec names its own tools.** Löyly keeps every stack name out of its
-  spec (INV-2) because its product could be built in any stack. rdm-spec's
-  tools are part of its interface (a user runs Babashka, git, MkDocs and the
-  renderer), so the spec names them; the domain wiki stays stack-free.
+- **The spec never names its stack**, as in Löyly (INV-2). The stack is
+  recorded beside the spec in `dhf/harness/stack.md`, which the clean room
+  carries; the spec check refuses a stack word anywhere in the spec or the
+  wiki. *This ADR first let the spec name its tools; the owner chose Löyly's
+  firewall.*
 
 ### Roles
 

@@ -10,7 +10,7 @@ Feature: Views
     Scenario: Every view in the model is generated and rendered
       Given a model with a context view, a container view and two component views
       When "rdm-spec views" is run
-      Then each view is written as dhf/views/<key>.mmd in Mermaid C4 and rendered to dhf/views/<key>.svg
+      Then each view's diagram source is written to dhf/views/<key> and rendered beside it, in the formats dhf/harness/stack.md names
       And each output carries the hash of the model it came from
 
     @spec-0018 @e2e

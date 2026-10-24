@@ -15,7 +15,7 @@ Feature: Gherkin runner
 
     @spec-0168 @contract
     Scenario: A step is defined by a pattern and a function
-      Given a step definition file in the project's configured step directory that calls (defstep #"the spec holds (\d+) features" (fn [ctx n] ...)) from rdm-spec.kernel.runner
+      Given a step definition file in the project's configured step directory that defines a step by the pattern "the spec holds (\d+) features" and a function of the context and the captured text, through the runner's step API
       When the runner runs a scenario with the step "Given the spec holds 20 features"
       Then the function is called with the scenario's context and "20"
 

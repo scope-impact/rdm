@@ -50,7 +50,7 @@ Feature: Wiki
 
     @spec-0132 @e2e
     Scenario: A page naming a configured stack word fails the check
-      Given the configured stack words include "Babashka"
-      And a wiki page that says the gate is written in Babashka
+      Given the configured stack words include "Cobalt"
+      And a wiki page that says the check is written in Cobalt
       When "rdm-spec check" is run
       Then the check fails and names the page, the line and the word

@@ -54,7 +54,7 @@ Feature: Lint
       Then it warns under rule c4-view-size and names the view and both counts
 
     # Found by the first event storm's render (dhf/storm/2026-10-24-rdm.md):
-    # mmdr draws a person's or system's name over a description that wraps
+    # The renderer draws a person's or system's name over a description that wraps
     # past two lines.
     @spec-0009 @e2e
     Scenario: A person or system description longer than the configured limit fails the lint
