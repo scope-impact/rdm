@@ -16,20 +16,20 @@ Feature: Gherkin runner
     @spec-0168 @contract
     Scenario: A step is defined by a pattern and a function
       Given a step definition file in the project's configured step directory that defines a step by the pattern "the spec holds (\d+) features" and a function of the context and the captured text, through the runner's step API
-      When the runner runs a scenario with the step "Given the spec holds 20 features"
+      When "rdm-spec run" runs a scenario with the step "Given the spec holds 20 features"
       Then the function is called with the scenario's context and "20"
 
     @spec-0169 @contract
     Scenario: Each step's return is the next step's context, and each scenario starts empty
       Given two steps whose functions each add a key to the context they are given
-      When the runner runs a scenario with both steps
+      When "rdm-spec run" runs a scenario with both steps
       Then the second function receives the key the first added
       And the next scenario's first step receives an empty context
 
     @spec-0170 @contract
     Scenario: A step two definitions match makes the result broken, naming both
       Given two step definitions whose patterns both match "Given a spec"
-      When the runner runs a scenario with that step
+      When "rdm-spec run" runs a scenario with that step
       Then its result is broken and names both definitions
 
   Rule: Every scenario run leaves one result, labelled with what it verifies
@@ -37,7 +37,7 @@ Feature: Gherkin runner
     @spec-0151 @contract
     Scenario: A scenario's result is labelled with its id, component and context
       Given the scenario @spec-0012 in the component Lint of the bounded context architecture
-      When the runner runs it
+      When "rdm-spec run" is run
       Then it writes one Allure result labelled spec=spec-0012, component=Lint and context=architecture
       And a kernel scenario's result is labelled context=kernel
       And each step is a step of the result, with its own status
@@ -45,20 +45,20 @@ Feature: Gherkin runner
     @spec-0152 @contract
     Scenario: A scenario outline writes one result per example row, all with the outline's id
       Given a stamped scenario outline with three example rows
-      When the runner runs it
+      When "rdm-spec run" is run
       Then it writes three Allure results, each labelled with the outline's id and naming its row
 
     @spec-0153 @e2e
     Scenario: A failing step fails the result and names the step
       Given a scenario whose second step's definition throws
-      When the runner runs it
+      When "rdm-spec run" is run
       Then the result is failed and names the second step and the error
       And the steps after it are reported as not run
 
     @spec-0032 @e2e
     Scenario: A step with no definition makes the result broken
       Given a stamped scenario with a step no step definition matches
-      When the runner runs it
+      When "rdm-spec run" is run
       Then the scenario's Allure result is broken
       And the result names the unmatched step
 
@@ -83,4 +83,4 @@ Feature: Gherkin runner
     Scenario: A run that finds no feature file is refused
       Given a spec directory holding no feature file
       When "rdm-spec run" is run
-      Then it refuses and says no scenario was found, and writes no result
+      Then it exits 2, says no scenario was found, and writes no result

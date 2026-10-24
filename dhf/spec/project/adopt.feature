@@ -46,7 +46,7 @@ Feature: Adopt
     Scenario: Adopt refuses a directory that is not a git repository
       Given a directory that is not a git repository
       When "rdm-spec adopt" is run in it
-      Then adopt refuses, says the hook needs a git repository, and writes nothing
+      Then it exits 2, says the hook needs a git repository, and writes nothing
 
   Rule: Adopt never reads the existing code into the spec
 

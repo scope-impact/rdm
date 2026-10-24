@@ -11,7 +11,7 @@ Feature: Sources
     @spec-0120 @e2e
     Scenario: A source with no pin fails the check
       Given the sources index names a source with a repository and no pin
-      When the sources are read
+      When "rdm-spec check" is run
       Then the check fails and names the source
 
     @spec-0121 @e2e
@@ -34,32 +34,32 @@ Feature: Sources
     @spec-0122 @e2e
     Scenario: A citation naming no recorded source fails
       Given a citation "innolitix:README.md@f21b508" and no source innolitix
-      When citations are resolved
+      When "rdm-spec check" is run
       Then the citation fails and names innolitix and where it was cited
 
     @spec-0123 @e2e
     Scenario: A citation at a commit that is not one of its source's pins fails
       Given the source loyly is pinned only at 17d68d2
       And a citation "loyly:README.md@0000000"
-      When citations are resolved
+      When "rdm-spec check" is run
       Then the citation fails and names the commit and the source's pins
 
     @spec-0124 @e2e
     Scenario: A citation resolves when its path exists at its pin
       Given a checkout of skallinen/loyly, holding README.md at 17d68d2, given with --sources
-      When the citation "loyly:README.md@17d68d2" is resolved
+      When "rdm-spec check --sources DIR" resolves the citation "loyly:README.md@17d68d2"
       Then it resolves
 
     @spec-0125 @e2e
     Scenario: A path that does not exist at its pin fails
       Given a checkout of skallinen/loyly, with no file docs/plan.md at 17d68d2, given with --sources
-      When the citation "loyly:docs/plan.md@17d68d2" is resolved
+      When "rdm-spec check --sources DIR" resolves the citation "loyly:docs/plan.md@17d68d2"
       Then the citation fails and names the path and the pin
 
     @spec-0126 @e2e
     Scenario: Without a checkout, a citation's path is reported unchecked, never passed
       Given no checkout of skallinen/loyly is given with --sources
-      When the citation "loyly:README.md@17d68d2" is resolved
+      When "rdm-spec check" resolves the citation "loyly:README.md@17d68d2"
       Then it is reported as unchecked, with the reason
 
   # Decided by the event storm's hotspot H14 (dhf/storm/2026-10-24-rdm.md): a
@@ -71,21 +71,21 @@ Feature: Sources
     Scenario: A citation of a fenced path fails
       Given the sources index fences "harness/fence.sh" in loyly
       And a citation "loyly:harness/fence.sh@17d68d2"
-      When citations are resolved
+      When "rdm-spec check" is run
       Then the citation fails and names the fenced path and where it was cited
 
     @spec-0137 @e2e
     Scenario: A citation inside a fenced directory fails
       Given the sources index fences "rdm" in innolitics-rdm
       And a citation "innolitics-rdm:rdm/render.py@f21b508"
-      When citations are resolved
+      When "rdm-spec check" is run
       Then the citation fails and names the fenced directory and where it was cited
 
     @spec-0138 @e2e
     Scenario: A fenced path that matches nothing at a pin fails the check
       Given a checkout of skallinen/loyly at 17d68d2, given with --sources
       And the sources index fences "harness/missing.clj" in loyly
-      When the sources are read
+      When "rdm-spec check" is run
       Then the check fails and names the source, the pin and the path
 
   Rule: Citations are read from the needs and the wiki, nothing else

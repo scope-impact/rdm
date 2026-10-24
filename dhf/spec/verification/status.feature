@@ -32,7 +32,7 @@ Feature: Status
     Scenario: A scenario outline is one requirement, verified by all its rows
       Given a stamped scenario outline with three example rows
       And Allure results for two rows passed and one failed
-      When the results are read
+      When "rdm-spec status" is run
       Then the scenario is failed
 
   # Incident: a test runner named its suites twice, once in imports and once in
@@ -44,14 +44,14 @@ Feature: Status
     Scenario: A passed result with the scenario's id verifies it
       Given a stamped scenario @spec-0007
       And an Allure result labelled spec=spec-0007 with status passed
-      When the results are read
+      When "rdm-spec status" is run
       Then the scenario is verified
 
     @spec-0068 @contract
     Scenario Outline: Any status but passed does not verify
       Given a stamped scenario @spec-0007
       And an Allure result labelled spec=spec-0007 with status <status>
-      When the results are read
+      When "rdm-spec status" is run
       Then the scenario is failed
 
       Examples:
@@ -65,13 +65,13 @@ Feature: Status
     Scenario: One failing result among several fails the scenario
       Given a stamped scenario @spec-0007
       And two Allure results labelled spec=spec-0007, one passed and one failed
-      When the results are read
+      When "rdm-spec status" is run
       Then the scenario is failed
 
     @spec-0070 @contract
     Scenario: A scenario with no result is unverified, never left out
       Given ten stamped scenarios
       And Allure results for nine of them
-      When the results are read
+      When "rdm-spec status" is run
       Then the report counts ten scenarios
       And the tenth is unverified
