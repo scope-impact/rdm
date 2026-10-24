@@ -4,7 +4,8 @@ What rdm-spec's spec is distilled from. Every user need cites at least one
 source here (`dhf/spec/needs.edn`, `:sources`), so a rule that rests on nothing
 is visible as one.
 
-The sources are three repositories. Each file here is a **provenance record**:
+The sources are three repositories, indexed for machines in `sources.edn`.
+Each `.md` file here is a **provenance record**:
 the repository, the commit it is pinned to, and what it is evidence for. The
 repositories themselves are not copied in: a citation names
 `<source>:<path>@<commit>`, and anyone can read the cited file at that commit.
@@ -16,6 +17,9 @@ repositories themselves are not copied in: a citation names
 - **Cited, never paraphrased into authority.** A need or a scenario may restate
   what a source says; where they disagree, the source wins and the spec is the
   bug.
+- **A source's implementation is fenced.** Its code is never cited, and the
+  checkout a clean room carries has it removed from tree and history
+  (`sources.edn`, `:fenced`). Cite what a source says, never how it is built.
 - **Where sources conflict, say so** in the need or the decision that follows
   one, and say which one is followed and why.
 

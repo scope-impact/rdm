@@ -44,7 +44,8 @@ _Avoid_: task, ticket, backlog item.
 **Raw source**: what the spec is distilled from, never edited: for rdm-spec,
 three repositories, each recorded in `dhf/raw/` with the commit it is pinned
 to. Cited as `<source>:<path>@<commit>`. Where a source and the spec disagree,
-the source wins and the spec is the bug.
+the source wins and the spec is the bug. A source's implementation is fenced:
+never cited, and absent from the clean room.
 
 **Domain wiki**: the domain distilled from the raw sources, `dhf/wiki/`: every
 claim footnoted to a source, every page in the index, no implementation named.

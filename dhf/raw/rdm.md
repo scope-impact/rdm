@@ -19,5 +19,10 @@
 | The architecture as C4 in the record, checked against code and tests | `dhf/documents/verification_and_validation_plan.md`, UN-017; `docs/reference/cli.md`, `rdm c4 draw` | UN-005 |
 | Independent review: a reviewer other than the author approves | `dhf/AGENT_WORKFLOW.md`, "The intent" item 4 | UN-007 |
 | Scaffolding a new project; adopting an existing repository without overwriting | `dhf/documents/verification_and_validation_plan.md`, UN-008, UN-011; `docs/reference/cli.md`, `init`, `adopt` | UN-009 |
-| A published documentation site | `mkdocs.yml`; `docs/` | UN-010 |
+| A published documentation site | `mkdocs.yml`; `docs/index.md` | UN-010 |
 | One design document per bounded context; user needs across contexts | `dhf/decisions/adr-0001-bounded-context-user-needs.md` | the model (one container per context) |
+
+## Fenced
+
+This source's implementation is fenced: never cited, and removed from the
+checkout a clean room carries. The paths are in `sources.edn`, `:rdm`.

@@ -40,6 +40,10 @@
  ;;   dhf/allure-results   the last run's verdicts
  ;;   dhf/data             verification data derived from them
  :fenced-paths ["rdm" "tests" "src" "dhf/cycles" "dhf/allure-results" "dhf/data"]
+ ;; The sources' own fenced paths are in dhf/raw/sources.edn. The fence proves
+ ;; files and cannot see a network, so the clean room must have none: a room
+ ;; with a network can fetch what was removed (hotspot H14).
+ :clean-room {:network :none}
 
  ;; The gate's contract with the build (dhf/spec/ratification/).
  :surface :cli

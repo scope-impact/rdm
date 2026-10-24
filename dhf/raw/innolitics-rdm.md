@@ -11,9 +11,14 @@
 | Topic | Where | Used by |
 |---|---|---|
 | Documents written as code, reviewed in pull requests beside the code | `README.md`, "Benefits of Using RDM" | UN-001 |
-| A project started from one command (`rdm init`), templates kept in the repository | `README.md`, "Typical Workflow" steps 1 to 3; `rdm/init.py`; `rdm/init_files/` | UN-009 |
-| Git hooks installed by a command (`rdm hooks`) | `README.md`, "Git Hooks"; `rdm/hooks.py` | UN-002 |
+| A project started from one command (`rdm init`), templates kept in the repository | `README.md`, "Typical Workflow" steps 1 to 3, and "The Init Files" | UN-009 |
+| Git hooks installed by a command (`rdm hooks`) | `README.md`, "Git Hooks" | UN-002 |
 | Traceability generated, never written | `README.md`, "Benefits of Using RDM" | UN-003 |
 | Developer-first, readable documents; easy to migrate away from | `README.md`, "Our Design Goals for RDM" 1, 3, 5 | UN-010 |
-| Templates plus data rendered to Markdown, then PDF or Word | `README.md`, "Templating and Data Files"; `rdm/render.py` | UN-010 |
-| Gap checks against audit checklists | `README.md`, "Audit Checklists"; `rdm/gaps.py` | (regulated profile, not in the first version) |
+| Templates plus data rendered to Markdown, then PDF or Word | `README.md`, "Templating and Data Files" | UN-010 |
+| Gap checks against audit checklists | `README.md`, "Audit Checklists" | (regulated profile, not in the first version) |
+
+## Fenced
+
+This source's implementation is fenced: never cited, and removed from the
+checkout a clean room carries. The paths are in `sources.edn`, `:innolitics-rdm`.

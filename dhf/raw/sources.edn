@@ -1,0 +1,36 @@
+;; The sources index: what the knowledge container reads (dhf/spec/knowledge/
+;; sources.feature). Each source's provenance record (the .md beside this file)
+;; says in prose what it is evidence for; this index says what a machine needs:
+;; the repository, every pin ever cited (a pin is never dropped), and the
+;; source's fenced paths.
+;;
+;; FENCED PATHS. A source that holds an implementation of what rdm-spec
+;; regenerates would hand a coding agent the answer, however clean its room
+;; (the event storm's hotspot H14, dhf/storm/2026-10-24-rdm.md). So each
+;; source's implementation is fenced like rdm-spec's own: never cited, and
+;; removed, in tree and history, from the checkout the clean room carries
+;; (dhf/spec/regeneration/fence.feature). Specs, documentation and
+;; configuration stay readable.
+{:innolitics-rdm
+ {:repository "https://github.com/innolitics/rdm"
+  :record "innolitics-rdm.md"
+  :pins ["f21b508"]
+  :fenced ["rdm" "tests" "contrib" "setup.py"]}
+
+ :rdm
+ {:repository "https://github.com/scope-impact/rdm"
+  :record "rdm.md"
+  :pins ["3763e08"]
+  :fenced ["rdm" "tests" "scripts" ".githooks" "docs/_hooks" "docs/javascripts"]}
+
+ :loyly
+ {:repository "https://github.com/skallinen/loyly"
+  :record "loyly.md"
+  :pins ["17d68d2"]
+  ;; The harness tools are an implementation of rdm-spec's own components;
+  ;; their spec (harness/spec.feature) and README stay readable.
+  :fenced ["impl" "harness/cycles" "harness/oracle" "harness/check.sh"
+           "harness/config.sh" "harness/fence.sh" "harness/gen_checklist.clj"
+           "harness/hjson.clj" "harness/modules.sh" "harness/oracle.sh"
+           "harness/probe.sh" "harness/score.clj" "harness/scoreboard.clj"
+           "harness/stamp_item_ids.clj" "harness/verify.sh"]}}

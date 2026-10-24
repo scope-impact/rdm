@@ -43,3 +43,30 @@ Feature: Fence
     Scenario: The scoreboard is for a person, never for the regenerating agent
       When the fence builds a clean room from a cut
       Then no scoreboard and no cycle score is present in it
+
+  # Decided by the event storm's hotspot H14 (dhf/storm/2026-10-24-rdm.md). The
+  # fence proves files; it cannot see a network. So the clean room carries what
+  # the agent may read of each source, and refuses to be handed out where the
+  # agent could fetch the rest.
+  Rule: The fence covers the sources too
+
+    @spec-0139 @e2e
+    Scenario: The clean room carries each source without its fenced paths, in tree or history
+      Given the sources index fences "harness/fence.sh" in loyly
+      And a local checkout of skallinen/loyly at 17d68d2
+      When the fence builds a clean room from a cut
+      Then the clean room holds loyly at 17d68d2 as a single root commit
+      And harness/fence.sh is in neither its working tree nor any object reachable in it
+      And loyly's README.md is present and unchanged
+
+    @spec-0140 @e2e
+    Scenario: A source with no local checkout is refused, never fetched
+      Given no local checkout of innolitics/rdm is configured
+      When the fence builds a clean room from a cut
+      Then it refuses and names innolitics-rdm and the missing checkout
+
+    @spec-0141 @e2e
+    Scenario: The fence refuses a clean room configured to reach the network
+      Given the clean room is configured with network access
+      When the fence builds a clean room from a cut
+      Then it refuses and says a clean room with a network can fetch what the fence removed

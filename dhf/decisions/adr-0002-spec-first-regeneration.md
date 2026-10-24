@@ -125,6 +125,12 @@ executes is one representation.
   `skallinen/loyly`, each recorded in `dhf/raw/` with the commit it is pinned
   to and what it is evidence for. They are cited, never copied in and never
   edited, and every user need names the sources it rests on.
+- **A source's implementation is fenced** like rdm-spec's own: two of the
+  sources hold implementations of what rdm-spec regenerates, and an agent that
+  can read them is copying, not rebuilding. Their code paths are listed in
+  `dhf/raw/sources.edn`, never cited, and removed in tree and history from the
+  source checkouts the clean room carries; the clean room has no network, so
+  nothing removed can be fetched back.
 - **A domain wiki sits between the sources and the spec** (`dhf/wiki/`), as in
   Löyly: the domain distilled, every claim footnoted to a source, no page
   naming an implementation. Sources and wiki are the `knowledge` container.

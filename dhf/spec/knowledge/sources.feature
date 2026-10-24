@@ -6,25 +6,26 @@ Feature: Sources
 
   # The chain of citations has to bottom out in something no generation step
   # can quietly rewrite (skallinen/loyly docs/wow/invariants.md@17d68d2, INV-1).
-  Rule: A source is a provenance record with a pin
+  Rule: A source is indexed with its repository, its pins and its record
 
     @spec-0119 @e2e
-    Scenario: A record is read with its repository, its pins and what it is evidence for
-      Given the record loyly.md naming skallinen/loyly, pinned at 17d68d2, with an evidence table
+    Scenario: A source is read with its repository, its pins and what it is evidence for
+      Given the sources index names loyly with the repository skallinen/loyly, the pin 17d68d2 and the record loyly.md
+      And loyly.md has an evidence table
       When the sources are read
       Then the source loyly is known with its repository, its pin 17d68d2 and its evidence rows
 
     @spec-0120 @e2e
-    Scenario: A record with no pin fails the check
-      Given a record naming a repository and no pinned commit
+    Scenario: A source with no pin fails the check
+      Given the sources index names a source with a repository and no pin
       When the sources are read
-      Then the check fails and names the record
+      Then the check fails and names the source
 
     @spec-0121 @e2e
-    Scenario: A record that drops a pin it had fails the check
-      Given the record loyly.md was pinned at 17d68d2 at the last commit
+    Scenario: A source that drops a pin it had fails the check
+      Given the sources index pinned loyly at 17d68d2 at the last commit
       When its pin is replaced by a newer one and 17d68d2 is no longer listed
-      Then the check fails and names the record and the dropped pin
+      Then the check fails and names the source and the dropped pin
 
   Rule: A citation resolves to a source, a pin and a path
 
@@ -58,3 +59,29 @@ Feature: Sources
       Given no local checkout of skallinen/loyly is configured
       When the citation "loyly:README.md@17d68d2" is resolved
       Then it is reported as unchecked, with the reason
+
+  # Decided by the event storm's hotspot H14 (dhf/storm/2026-10-24-rdm.md): a
+  # source holding an implementation of what is regenerated hands the coding
+  # agent the answer. What a source says may be cited; how it is built may not.
+  Rule: A source's implementation is fenced
+
+    @spec-0136 @e2e
+    Scenario: A citation of a fenced path fails
+      Given the sources index fences "harness/fence.sh" in loyly
+      And a citation "loyly:harness/fence.sh@17d68d2"
+      When citations are resolved
+      Then the citation fails and names the fenced path and where it was cited
+
+    @spec-0137 @e2e
+    Scenario: A citation inside a fenced directory fails
+      Given the sources index fences "rdm" in rdm
+      And a citation "rdm:rdm/specification/sdd.py@3763e08"
+      When citations are resolved
+      Then the citation fails and names the fenced directory and where it was cited
+
+    @spec-0138 @e2e
+    Scenario: A fenced path that matches nothing at a pin fails the check
+      Given a local checkout of skallinen/loyly at 17d68d2
+      And the sources index fences "harness/missing.clj" in loyly
+      When the sources are read
+      Then the check fails and names the source, the pin and the path
