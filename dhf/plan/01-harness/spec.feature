@@ -18,9 +18,16 @@
 # - Commands are named as RDM's command line names them. Nothing here names how
 #   RDM is built.
 #
+# COMMANDS AND EVENTS, after the PensionBee DDD workshop (CONTEXT.md, "Domain
+# model"; plan.md, "Commands and events"): each Then names the domain event the
+# command produced. A success event is named in the past tense; a fail event
+# names the business rule broken after a slash ("Checklist Not Derived /
+# Unstamped Scenario"); a warning has "Warned" before the slash and never fails
+# a command.
+#
 # EXIT AND STREAM DISCIPLINE, uniform across every command in this slice:
-# - A refusal prints its message to standard error and exits non-zero.
-# - Nothing is written to disk on a refusal.
+# - A fail event prints its message to standard error and exits non-zero.
+# - Nothing is written to disk on a fail event.
 # - A command's product goes to the file it is told to write, or to standard
 #   output when it is told none; its report goes to standard error.
 
@@ -56,27 +63,31 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
       Given DI-500 is declared by a Rule in a slice's spec
       And DI-500 is also declared in a design document's design inputs
       When the design gate runs
-      Then it fails on a duplicate declaration of DI-500
+      Then the event is "Design Controls Not Approved / Duplicate Id"
       And it names both the spec and the design document
 
     @item-01-003
     Scenario: A Rule in a slice's spec with no design-input id is refused
       Given a slice's spec with a Rule tagged with no design-input id
       When the design gate runs
-      Then it fails, naming the spec, the Rule's line and the missing design-input id
+      Then the event is "Design Controls Not Approved / Untagged Rule"
+      And it names the spec and the Rule's line
 
     @item-01-004
     Scenario: A Rule with no owner or no traced need is refused
       Given a slice's spec with a Rule tagged "@DI-500" and no context tag
       When the design gate runs
-      Then it fails, naming DI-500 and the missing owning context
-      # The same holds for a Rule with no user-need tag: it names the missing need.
+      Then the event is "Design Controls Not Approved / Rule Without Owner"
+      And it names DI-500
+      # A Rule with no user-need tag gives "Design Controls Not Approved / Rule
+      # Without Need", naming the design input the same way.
 
     @item-01-005
     Scenario: A spec that cannot be read is refused at its line
       Given a slice's spec whose third line is not Gherkin
       When the design gate runs
-      Then it fails, naming the spec and line 3
+      Then the event is "Design Controls Not Approved / Unreadable Spec"
+      And it names the spec and line 3
       And no design input is read from that spec
 
   # -------------------------------------------------------------------------------
@@ -90,7 +101,8 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
     Scenario: An unstamped scenario is given the next free id in its slice
       Given a slice "dhf/plan/07-example/spec.feature" whose only scenario carries no item id
       When "rdm harness stamp" runs
-      Then the line above that scenario is "@item-07-001", indented as the scenario is
+      Then the event is "Scenarios Stamped"
+      And the line above that scenario is "@item-07-001", indented as the scenario is
       # The slice number is the slice directory's name up to its first "-", verbatim.
       # The running number has at least three digits, zero padded.
 
@@ -118,7 +130,8 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
     Scenario: The stamper says where it looked when it finds no spec
       Given a record with no slice's spec under "dhf/plan/"
       When "rdm harness stamp" runs
-      Then it refuses, naming the directory it searched
+      Then the event is "Scenarios Not Stamped / No Spec"
+      And it names the directory it searched
 
   # -------------------------------------------------------------------------------
   # The checklist
@@ -131,7 +144,8 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
     Scenario: The checklist has one item per stamped scenario
       Given a slice's spec with two Rules over three stamped scenarios
       When "rdm harness checklist" runs
-      Then the checklist has three items, in the order of the spec
+      Then the event is "Checklist Derived"
+      And the checklist has three items, in the order of the spec
       And each item carries its item id, slice, scenario title, Rule title and design-input id
       And the counts of slices and items are reported on standard error
 
@@ -139,7 +153,8 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
     Scenario: An unstamped scenario stops the checklist rather than shrinking it
       Given a slice's spec with a scenario that carries no item id
       When "rdm harness checklist" runs
-      Then it refuses, naming the scenario and its line
+      Then the event is "Checklist Not Derived / Unstamped Scenario"
+      And it names the scenario and its line
       And it says to run "rdm harness stamp"
       And no checklist is written
 
@@ -147,7 +162,8 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
     Scenario: A spec with no scenario stops the checklist rather than producing an empty one
       Given a slice's spec with a Feature and no scenario
       When "rdm harness checklist" runs
-      Then it refuses, naming the spec
+      Then the event is "Checklist Not Derived / Empty Spec"
+      And it names the spec
       And no checklist is written
 
     @item-01-014
@@ -155,8 +171,9 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
       Given a slice whose plan's status is "planned"
       And a slice whose plan's status is "ready-for-development"
       When "rdm harness checklist" runs
-      Then only the ready slice's scenarios are items
-      And the planned slice is named on standard error as skipped
+      Then the event is "Checklist Derived"
+      And only the ready slice's scenarios are items
+      And the warning "Checklist Warned / Planned Slice Skipped" names the planned slice
 
     @item-01-015
     Scenario: The checklist is the same bytes from the same spec
@@ -175,20 +192,22 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
     Scenario: Verdicts are filed against the checklist as the cycle's record
       Given a checklist of three items and a verdict of pass or fail for each
       When "rdm harness score 03" runs with those verdicts
-      Then the record of cycle 03 holds each item's verdict, with the checklist it was scored against
+      Then the event is "Cycle Scored"
+      And the record of cycle 03 holds each item's verdict, with the checklist it was scored against
 
     @item-01-017
     Scenario: Zero verdicts means the grading did not happen
       Given a checklist of three items and no verdicts at all
       When "rdm harness score 03" runs
-      Then it refuses, saying no grading happened
+      Then the event is "Cycle Not Scored / No Verdicts"
       And no record of cycle 03 is written
 
     @item-01-018
     Scenario: An item no verdict reached is a failure, never a smaller denominator
       Given a checklist of three items and verdicts for two of them
       When "rdm harness score 03" runs
-      Then the third item is recorded as a failure marked unreached
+      Then the event is "Cycle Scored"
+      And the third item is recorded as a failure marked unreached
       And the cycle's pass rate is over three items
 
     @item-01-019
@@ -196,7 +215,8 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
       Given a checklist that does not carry @item-07-099
       And a verdict for @item-07-099
       When "rdm harness score 03" runs
-      Then it refuses, naming @item-07-099
+      Then the event is "Cycle Not Scored / Unknown Item"
+      And it names @item-07-099
       And no record of cycle 03 is written
 
     @item-01-020
@@ -237,6 +257,15 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
   # The gate
   # -------------------------------------------------------------------------------
 
+  # THE GATE IS A CHAIN (decisions.md D9). "rdm harness verify" first admits the
+  # round (configuration and spec-lock, every rule concluded together), then each
+  # step is a command a reaction issues on the previous step's success event:
+  #   Round Admitted -> Check Instrument; Instrument Checked -> Run Suite;
+  #   Suite Passed -> Start Served Graph; Served Graph Answered -> Prove Identity.
+  # No reaction listens to a fail event, so a step that fails starts nothing after
+  # it. The verdict is "Build Ratified" when "Identity Proven" happens, and
+  # "Build Not Ratified" naming the fail event otherwise.
+
   # GUARD. A gate that grades with an instrument nobody checked ratifies a number,
   # not a build (Löyly: harness/verify.sh, step [0]).
   @DI-95 @UN-020 @context-harness
@@ -246,15 +275,17 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
     Scenario: The instrument is checked before the suite runs
       Given the harness's known answers: a record that must pass the gates and records that must fail them, each with the verdict it must get
       When "rdm harness verify" runs
-      Then the gates are run on each known record before anything else
-      And the suite runs only after every known record got its verdict
+      Then the event "Instrument Checked" happens before any other step's event
+      And the suite runs only because the instrument was checked
 
     @item-01-025
     Scenario: A wrong known answer stops the gate
       Given a known record that must fail the design gate passes it
       When "rdm harness verify" runs
-      Then it fails, naming the known record and the verdict it got
+      Then the event is "Instrument Not Checked / Wrong Known Answer"
+      And it names the known record and the verdict it got
       And no suite is run and nothing is started
+      And the verdict is "Build Not Ratified"
 
   @DI-96 @UN-020 @context-harness
   Rule: RDM shall run the project's suite through the one command the project declares for it, and trust only that command's exit status
@@ -264,20 +295,22 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
       Given the project declares its suite command in its harness configuration
       And that command exits 0
       When "rdm harness verify" runs
-      Then the suite step passes
+      Then the event "Suite Passed" happens
 
     @item-01-027
     Scenario: A red suite fails the gate, whatever it prints
       Given the suite command prints "all passed" and exits 1
       When "rdm harness verify" runs
-      Then it fails with the suite red
+      Then the event is "Suite Not Passed / Suite Red"
       And nothing is started
+      And the verdict is "Build Not Ratified"
 
     @item-01-028
     Scenario: No declared suite means nothing to ratify
       Given the harness configuration declares no suite command
       When "rdm harness verify" runs
-      Then it fails, saying nothing is declared to ratify and naming the missing setting
+      Then the event is "Round Not Admitted / No Suite Declared"
+      And it names the missing setting
 
   # GUARD. An HTTP probe cannot tell this run's server from any other process on
   # the port (Löyly: harness/verify.sh, step [1]).
@@ -289,21 +322,23 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
       Given a boot budget of 10 seconds polled every half second
       And the served graph answers on the third poll
       When "rdm harness verify" runs
-      Then the boot step passes
+      Then the event "Served Graph Answered" happens
       And it reports that it answered on poll 3 of 20, leaving 17 unused
 
     @item-01-030
     Scenario: A port already taken is refused, not reused
       Given another process is listening on the configured port
       When "rdm harness verify" runs
-      Then it fails, naming the port and the process holding it
+      Then the event is "Served Graph Not Started / Port Taken"
+      And it names the port and the process holding it
       And it starts nothing and stops nothing
 
     @item-01-031
     Scenario: No answer inside the budget fails the gate
       Given the served graph does not answer within the boot budget
       When "rdm harness verify" runs
-      Then it fails, naming the budget
+      Then the event is "Served Graph Not Started / Boot Budget Exceeded"
+      And it names the budget
       And the process it started is stopped
 
   # GUARD. A name is not evidence: a starter page carrying the product's name passes
@@ -316,13 +351,15 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
       Given the record declares DI-90 with its text
       When "rdm harness verify" asks the served graph for DI-90's text
       Then the answer is the record's text for DI-90
-      And the identity step passes, naming the design input it asked about
+      And the event "Identity Proven" happens, naming the design input it asked about
+      And the verdict is "Build Ratified"
 
     @item-01-033
     Scenario: A served graph of another record fails the gate
       Given the served graph answers with a different text for DI-90
       When "rdm harness verify" runs
-      Then it fails, showing the text served and the text the record holds
+      Then the event is "Identity Not Proven / Not This Record"
+      And it shows the text served and the text the record holds
 
   # GUARD. Specs change in planning rounds, on purpose, never during a build
   # (Löyly: docs/wow/harness.md, spec-lock).
@@ -334,13 +371,15 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
       Given a build round based on a commit
       And a slice's spec has changed since that commit
       When "rdm harness verify --base" that commit runs
-      Then it fails, naming each plan or spec file changed since the base
+      Then the event is "Round Not Admitted / Spec Changed"
+      And it names each plan or spec file changed since the base
+      And nothing else is run
 
     @item-01-035
     Scenario: A build round that left the plan alone passes this step
       Given a build round whose changes since its base touch only code and tests
       When "rdm harness verify --base" that commit runs
-      Then the spec-lock step passes
+      Then the event "Round Admitted" happens
 
   # -------------------------------------------------------------------------------
   # Configuration
@@ -359,4 +398,5 @@ Feature: RDM's harness: the spec is read, stamped, derived, scored and ratified
     Scenario: An unknown setting is refused
       Given a harness configuration with a setting the harness does not know
       When any "rdm harness" command runs
-      Then it refuses, naming the setting
+      Then the event is "Round Not Admitted / Unknown Setting"
+      And it names the setting

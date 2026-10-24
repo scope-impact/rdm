@@ -59,3 +59,26 @@ Löyly's probe in that repository can only check a name, and says so. RDM has a
 domain question only the right record answers: a design input's text. The gate
 asks the served graph for one and compares it with the record read from its
 files. *Pruned:* a name or marker check.
+
+## D8: Every outcome is a domain event, after the DDD workshop
+
+RDM's record and gates already speak the PensionBee DDD workshop's language
+(`CONTEXT.md`, "Domain model"): commands, success events, fail events naming the
+business rule after a slash, reactions, read models. The slice's first draft
+said "refuses" and "fails"; every Then now names the event, so the spec, the
+design document's table and the messages the commands print share one set of
+names. *Pruned:* free-text refusals, and treating a technical error (a file that
+cannot be written) as a fail event: those are errors, not business rules.
+
+## D9: The gate is a chain of reactions, not a list of checks
+
+RDM's design and release gates conclude every event their rules produce, because
+their rules are independent. The harness gate's steps are not: a suite run on an
+unchecked instrument, or an identity probe of a graph that never started, means
+nothing. So admitting the round concludes its independent rules together
+(spec-lock, configuration), and each later step is a command a reaction issues
+on the previous step's success event, the workshop's policy pattern. No reaction
+listens to a fail event, so "nothing is started" after a failure follows from
+the structure, not from a check. *Pruned:* one command that runs every step and
+concludes them all (it would boot a build whose suite is red), and steps that
+skip themselves by testing an earlier result.

@@ -29,6 +29,9 @@ slice rests on:
   `loyly/docs/wow/invariants.md` (enforcement points)
 - `dhf/documents/verification_and_validation_plan.md`, UN-020
 - `dhf/decisions/adr-0002-gherkin-slices.md` (why the spec is Gherkin now)
+- `ddd-workshop/` (PensionBee's DDD workshop: EventStorming, command handlers,
+  success and fail events, policies) and `CONTEXT.md`, "Domain model" (RDM's
+  adaptation of it)
 
 ## Scope
 
@@ -50,6 +53,38 @@ slice rests on:
 - Moving the existing eight contexts' design inputs into slices: a later slice
   (D5)
 - A perception step (an unjudged look at the running product): D6
+
+## Commands and events
+
+Found by EventStorming the harness, after the PensionBee DDD workshop
+(`ddd-workshop/`, branch `02-eventstorming`; RDM's own terms in `CONTEXT.md`,
+"Domain model"): an actor issues a command, resulting in its success event or a
+fail event (the business rule broken, after the slash), which affects an entity.
+
+| Actor | Command | Success event | Fail events | Entity |
+|-------|---------|---------------|-------------|--------|
+| Contributor, or the commit hook | Check design controls (DI-90 adds four rules) | Design Controls Approved | Not Approved / Untagged Rule · Rule Without Owner · Rule Without Need · Unreadable Spec · Duplicate Id | The record |
+| Maintainer or agent | Stamp scenarios | Scenarios Stamped | Not Stamped / No Spec | Spec |
+| Maintainer, agent or CI | Derive checklist | Checklist Derived (warned: Planned Slice Skipped) | Not Derived / Unstamped Scenario · Empty Spec | Checklist |
+| Maintainer or CI | Score cycle | Cycle Scored | Not Scored / No Verdicts · Unknown Item | Cycle |
+| Maintainer | Compare cycles | Cycles Compared | — | Scoreboard |
+| Builder (agent or person) or CI | Admit round | Round Admitted | Not Admitted / Spec Changed · Unknown Setting · No Suite Declared | Build round |
+| — (reaction) | Check instrument | Instrument Checked | Not Checked / Wrong Known Answer | Build round |
+| — (reaction) | Run suite | Suite Passed | Not Passed / Suite Red | Build round |
+| — (reaction) | Start served graph | Served Graph Answered | Not Started / Port Taken · Boot Budget Exceeded | Build round |
+| — (reaction) | Prove identity | Identity Proven | Not Proven / Not This Record | Build round |
+
+**Reactions** (the workshop's *policies*; RDM keeps "policy" for the risk
+policy): whenever a round is admitted, the instrument is checked; whenever the
+instrument is checked, the suite runs; whenever the suite passes, the served
+graph is started; whenever it answers, identity is proven. Together they are
+"rdm harness verify": its verdict is *Build Ratified* when *Identity Proven*
+happens, else *Build Not Ratified*, naming the fail event (D9).
+
+**Entities:** a spec and its scenarios (ids stamped once), a cycle (its number,
+its checklist, a verdict per item), a build round (its base commit, its events).
+**Read models**, derived and never edited: the checklist (from the specs), the
+scoreboard (from two cycles).
 
 ## Acceptance
 

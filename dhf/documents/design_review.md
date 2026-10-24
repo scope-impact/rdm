@@ -2511,10 +2511,19 @@ PR merges, then `ready-for-development`.
   configuration), owned by a new **harness** context. 37 scenarios.
 - **Glossary:** slice, spec, scenario, item id, raw source, harness, checklist,
   cycle, ratify, spec-lock.
+- **In the workshop's terms** (`ddd-workshop/`, the PensionBee DDD workshop,
+  already adapted in `CONTEXT.md`, "Domain model"): every scenario's outcome is
+  a named domain event, success or fail (*Checklist Not Derived / Unstamped
+  Scenario*), and the slice's plan carries its commands-and-events table. The
+  gate is a chain of reactions on success events (slice D9), unlike the design
+  and release gates, which conclude every independent rule.
 - **Not adopted now:** carrying Löyly's harness byte for byte as a member of
   its ring (the slice's D1); the fence (D4); moving the eight existing contexts
   into slices (D5); a perception step (D6).
-- **Before implementation:** the harness context's design document, its place
+- **Before implementation:** the harness context's design document (taking
+  over the slice's commands-and-events table, and stating that each harness
+  command keeps RDM's handler shape: read the state, derive the events with no
+  side effect, then apply a success event), its place
   in `architecture.md` and the C4 workspace, and the tool risks of a gate that
   ratifies wrongly, recorded with ticket 1.
 

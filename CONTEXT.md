@@ -190,7 +190,7 @@ _Avoid_: test harness, framework
 
 **Checklist**:
 The list of items a cycle is scored on, derived from the slices' specs alone,
-one item per stamped scenario. Never written by hand.
+one item per stamped scenario: a read model, never written by hand.
 _Avoid_: test plan, task list
 
 **Cycle**:
