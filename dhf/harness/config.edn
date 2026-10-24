@@ -1,0 +1,46 @@
+;; RDM's own harness configuration: everything the harness must not know by
+;; heart. A difference between projects lives here, declared, and nowhere in
+;; the harness code. Specified in dhf/harness/spec.feature; decided in
+;; dhf/decisions/adr-0002-spec-first-regeneration.md.
+{;; Stamped scenario ids are @<id-prefix>-NNNN (@harness-007).
+ :id-prefix "spec"
+
+ ;; Where the product spec, the id ledger and the C4 model live.
+ :spec-dir "dhf/spec"
+ :ledger "dhf/spec/ids.edn"
+ :model "dhf/spec/model.edn"
+ :events "dhf/spec/events.edn"
+ :needs "dhf/spec/needs.edn"
+
+ ;; The step definitions: black box, they survive the fence (@harness-029, -036).
+ :steps-dir "dhf/steps"
+ ;; A step definition requiring a namespace with this prefix fails the gate.
+ :implementation-ns-prefix "rdm."
+
+ ;; Where the Clojure implementation is regenerated. Open: ADR 0002, "Open".
+ :implementation-dirs ["src"]
+
+ ;; What the clean room must not contain, in its tree or its history
+ ;; (@harness-034). Each entry earns its place:
+ ;;   rdm, tests, src      every implementation, Python and Clojure: the answer
+ ;;   dhf/cycles           every score the answer has been given
+ ;;   dhf/allure-results   the last run's verdicts
+ ;;   dhf/data             verification data derived from them
+ :fenced-paths ["rdm" "tests" "src" "dhf/cycles" "dhf/allure-results" "dhf/data"]
+
+ ;; The gate's contract with the build (@harness-037 to -041).
+ :surface :cli
+ :test-command ["bb" "test"]
+ :results-dir "dhf/allure-results"
+ :boot-budget-seconds 10
+ :identity-probe "dhf/harness/probe.clj"
+
+ ;; The release that judges a regenerated RDM (@harness-048). Unset until the
+ ;; first Clojure release exists.
+ :judge nil
+
+ ;; C4 lint (@harness-052 to -065).
+ :c4 {:view-element-limit 20
+      :skill {:repo "scope-impact/agent-skills"
+              :path "skills/engineering/c4-diagrams/reference/c4-guide.md"
+              :commit "da65901"}}}

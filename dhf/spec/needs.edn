@@ -1,0 +1,10 @@
+;; User needs: what a user requires, independent of any solution. Every
+;; scenario traces to at least one, by a @UN-nnn tag on itself, its rule or its
+;; feature (dhf/harness/spec.feature, "Every scenario traces to a user need").
+;; Empty until the event storm restates them; today's needs are in
+;; dhf/documents/verification_and_validation_plan.md and stay there until
+;; cutover.
+;;
+;; Shape:
+;;   {"UN-001" {:text "..."}}
+{}

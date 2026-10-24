@@ -1,0 +1,4 @@
+;; The id ledger. The stamper hands out the next scenario id from here and
+;; records it, so an id is never issued twice, not even after its scenario is
+;; deleted (dhf/harness/spec.feature, @harness-001 to -003). Never edit by hand.
+{:issued 0}

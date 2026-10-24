@@ -1,0 +1,11 @@
+;; The event catalogue: the domain events that cross container boundaries,
+;; which are the contracts between bounded contexts. A relationship in
+;; model.edn that publishes or subscribes to an event must name one declared
+;; here (rule c4-events-named, dhf/harness/spec.feature). Empty until the
+;; event storm.
+;;
+;; Shape:
+;;   {:SpecCut {:description "A spec change was merged and tagged spec-N"
+;;              :published-by :spec
+;;              :carries [:tag :commit]}}
+{}

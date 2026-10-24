@@ -1,0 +1,28 @@
+;; RDM's C4 model: the one source every architecture view is generated from
+;; (dhf/decisions/adr-0002-spec-first-regeneration.md). Empty until the event
+;; storm: the containers come out of it, not out of today's code.
+;;
+;; Shape, one key per C4 element kind; ids are keywords, unique across the model.
+;;
+;;   :system         {:id :rdm :name "RDM" :description "..."}
+;;   :people         [{:id :engineer :name "Engineer" :description "..."}]
+;;   :external       [{:id :github :name "GitHub" :description "..."}]
+;;   :containers     [{:id :spec :name "spec" :description "..." :technology "Babashka"
+;;                     :kind :runs                 ; :runs or :stores, never anything else
+;;                     :context "specification"    ; the bounded context, one per container
+;;                     :components [{:id :reader :name "Reader" :description "..."
+;;                                   :spec "spec/reader"}]}]  ; dhf/spec/<container>/<component>.feature
+;;   :relationships  [{:from :engineer :to :spec :description "Runs the gate with"}
+;;                    {:from :spec :to :harness :description "Publishes" :event :SpecCut}]
+;;   :views          [{:key "context" :level :context :description "..."}
+;;                    {:key "containers" :level :container :description "..."}
+;;                    {:key "spec-components" :level :component :container :spec :description "..."}
+;;                    {:key "regeneration" :level :dynamic :description "..." :steps [...]}]
+{:system {:id :rdm
+          :name "RDM"
+          :description "Keeps a project's spec as the source of truth, gates it, regenerates the build from it and scores the result"}
+ :people []
+ :external []
+ :containers []
+ :relationships []
+ :views []}
