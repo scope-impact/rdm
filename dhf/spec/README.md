@@ -11,15 +11,15 @@ The spec of rdm-spec, the source of truth for what it does
 | `needs.edn` | The user needs every scenario traces to |
 | `ids.edn` | The id ledger; only the stamper writes it |
 | `<container>/<component>.feature` | The scenarios a component owns |
-| `kernel/<component>.feature` | The scenarios of shared code no container owns: the event bus |
+| `kernel/<component>.feature` | The scenarios of shared code no container owns: the event bus and the Gherkin runner |
 | `<component>.md` beside a feature | The component's design prose, where it has any |
 
 ## Conventions
 
 - **One scenario is one requirement**, tagged with exactly one id
   (`@spec-NNNN`) and one level (`@e2e`, `@contract`, `@example` or
-  `@property`). A need tag (`@UN-nnn`) on the feature covers every scenario in
-  it.
+  `@property`). A need tag (`@UN-nnn`) on a feature or a rule covers every
+  scenario under it, and a scenario may carry its own.
 - **Ids are handed out by the stamper and never reused.** Until the stamper
   exists they are stamped by hand, following its rules
   (`spec/stamper.feature`) and advancing `ids.edn`.

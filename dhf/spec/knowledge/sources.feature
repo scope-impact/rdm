@@ -27,7 +27,16 @@ Feature: Sources
       When its pin is replaced by a newer one and 17d68d2 is no longer listed
       Then the check fails and names the source and the dropped pin
 
+  # Checkouts are machine-local, so they are never committed: they are given on
+  # the command line, a directory holding one checkout per source, named by
+  # the source's id.
   Rule: A citation resolves to a source, a pin and a path
+
+    @spec-0171 @contract
+    Scenario: Source checkouts are given as one directory, one checkout per source
+      Given a directory holding loyly/ and innolitics-rdm/, checkouts of those sources
+      When "rdm-spec check --sources" is run with that directory
+      Then citations of loyly and innolitics-rdm are checked against those checkouts
 
     @spec-0122 @e2e
     Scenario: A citation naming no recorded source fails
@@ -44,19 +53,19 @@ Feature: Sources
 
     @spec-0124 @e2e
     Scenario: A citation resolves when its path exists at its pin
-      Given a local checkout of skallinen/loyly holding README.md at 17d68d2
+      Given a checkout of skallinen/loyly, holding README.md at 17d68d2, given with --sources
       When the citation "loyly:README.md@17d68d2" is resolved
       Then it resolves
 
     @spec-0125 @e2e
     Scenario: A path that does not exist at its pin fails
-      Given a local checkout of skallinen/loyly with no file docs/plan.md at 17d68d2
+      Given a checkout of skallinen/loyly, with no file docs/plan.md at 17d68d2, given with --sources
       When the citation "loyly:docs/plan.md@17d68d2" is resolved
       Then the citation fails and names the path and the pin
 
     @spec-0126 @e2e
     Scenario: Without a checkout, a citation's path is reported unchecked, never passed
-      Given no local checkout of skallinen/loyly is configured
+      Given no checkout of skallinen/loyly is given with --sources
       When the citation "loyly:README.md@17d68d2" is resolved
       Then it is reported as unchecked, with the reason
 
@@ -81,7 +90,7 @@ Feature: Sources
 
     @spec-0138 @e2e
     Scenario: A fenced path that matches nothing at a pin fails the check
-      Given a local checkout of skallinen/loyly at 17d68d2
+      Given a checkout of skallinen/loyly at 17d68d2, given with --sources
       And the sources index fences "harness/missing.clj" in loyly
       When the sources are read
       Then the check fails and names the source, the pin and the path

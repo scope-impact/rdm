@@ -5,13 +5,12 @@ Feature: Lint
   Holds the model to the C4 skill's checklist and to one container per bounded context.
 
   # The rules below are the C4 skill's quality checklist where a machine can
-  # judge it (scope-impact/agent-skills, skills/engineering/c4-diagrams). The
-  # linter records the skill commit it was written against and warns when the
-  # skill's guide has changed since, so a new checklist item is noticed.
+  # judge it (agent-skills:skills/engineering/c4-diagrams/reference/c4-guide.md@da65901,
+  # "Quality Checklist").
   Rule: The C4 model passes the C4 lint
 
     @spec-0001 @e2e
-    Scenario: A view with no title or description fails the lint
+    Scenario: A view with no description fails the lint
       Given a view with no description
       When the lint runs
       Then it fails rule c4-scope and names the view
@@ -78,7 +77,7 @@ Feature: Lint
   Rule: Each bounded context is one container, and the model owns the spec
 
     @spec-0011 @e2e
-    Scenario: A bounded context with no container, or two, fails the lint
+    Scenario: Two containers declaring one bounded context fail the lint
       Given two internal containers that declare the same bounded context
       When the lint runs
       Then it fails rule a-context-container and names both containers
@@ -114,17 +113,24 @@ Feature: Lint
     @spec-0109 @e2e
     Scenario: A namespace of one container requiring another container's namespace fails
       Given the namespace rdm-spec.measurement.scorer requires rdm-spec.verification.status
-      When the lint runs over the code
+      When "rdm-spec ratify" checks the code
       Then it fails rule a-code-contract-only and names both namespaces
 
     @spec-0110 @e2e
     Scenario: Any container may require the kernel
-      Given the namespace rdm-spec.spec.gate requires rdm-spec.kernel.bus
-      When the lint runs over the code
+      Given the namespace rdm-spec.spec.check requires rdm-spec.kernel.bus
+      When "rdm-spec ratify" checks the code
       Then the requirement passes
 
     @spec-0111 @e2e
     Scenario: A kernel namespace requiring a container's namespace fails
       Given the namespace rdm-spec.kernel.bus requires rdm-spec.spec.parser
-      When the lint runs over the code
+      When "rdm-spec ratify" checks the code
       Then it fails rule a-kernel-leaf and names both namespaces
+
+    @spec-0165 @e2e
+    Scenario: A code file that maps to no component fails the lint
+      Given the model has no component orphan in the container spec
+      And the code holds src/rdm_spec/spec/orphan.clj
+      When "rdm-spec ratify" checks the code
+      Then it fails rule a-code-location and names the file

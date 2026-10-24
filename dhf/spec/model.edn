@@ -47,23 +47,23 @@
    :description "Sets a repository up in this structure and installs the task interface and hooks"
    :components
    [{:id :project/init :name "Init" :spec "project/init"
-     :description "Writes a new project's skeleton into an empty directory"}
+     :description "Writes a new project's skeleton into a path that does not exist"}
     {:id :project/adopt :name "Adopt" :spec "project/adopt"
      :description "Adds the skeleton to an existing repository, never overwriting a file"}
     {:id :project/hooks :name "Hooks" :spec "project/hooks"
      :description "Installs the pre-commit hook that runs the check task"}
     {:id :project/tasks :name "Tasks" :spec "project/tasks"
-     :description "The task interface every other container is run through"}]}
+     :description "The rdm-spec command and its tasks: the one entry point"}]}
 
   {:id :spec :name "spec" :kind :runs :context "specification" :technology "Babashka"
-   :description "Reads the spec, stamps scenario ids and gates the spec's rules"
+   :description "Reads the spec, stamps scenario ids and checks the spec's rules"
    :components
    [{:id :spec/parser :name "Parser" :spec "spec/parser"
      :description "Reads the declared Gherkin subset and refuses anything outside it"}
     {:id :spec/stamper :name "Stamper" :spec "spec/stamper"
      :description "Hands out scenario ids from the ledger, never twice"}
-    {:id :spec/gate :name "Spec gate" :spec "spec/gate"
-     :description "Ids, levels, needs and planned work: the rules a spec must keep"}]}
+    {:id :spec/check :name "Spec check" :spec "spec/check"
+     :description "Ids, levels, needs, citations and planned work: the rules a spec must keep"}]}
 
   {:id :architecture :name "architecture" :kind :runs :context "architecture" :technology "Babashka, mmdr"
    :description "Reads the C4 model, lints it, and generates and checks its views"
@@ -90,22 +90,18 @@
      :description "Refuses a release with an unverified, failed or planned scenario"}]}
 
   {:id :regeneration :name "regeneration" :kind :runs :context "regeneration" :technology "Babashka, git"
-   :description "Cuts merged spec changes and builds proved clean rooms from them"
+   :description "Cuts merged spec changes and builds clean rooms from them, for the project, a container or a component"
    :components
    [{:id :regeneration/cut :name "Cut" :spec "regeneration/cut"
      :description "Tags a merge on the default branch spec-N"}
     {:id :regeneration/fence :name "Fence" :spec "regeneration/fence"
-     :description "Builds a clean room from a cut and proves every fenced path gone"}]}
+     :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}]}
 
   {:id :ratification :name "ratification" :kind :runs :context "ratification" :technology "Babashka"
-   :description "Ratifies a build: runs its tests, boots it, and proves what answers is this project"
+   :description "Ratifies a build in a clean room: its tests ran and wrote results, and its steps are black box"
    :components
-   [{:id :ratification/gate :name "Gate" :spec "ratification/gate"
-     :description "Runs the declared test command and requires results"}
-    {:id :ratification/boot :name "Boot" :spec "ratification/boot"
-     :description "Starts the build on a free port within the boot budget"}
-    {:id :ratification/identity :name "Identity" :spec "ratification/identity"
-     :description "Runs the project's probe against what answers"}
+   [{:id :ratification/ratify :name "Ratify" :spec "ratification/ratify"
+     :description "Runs the declared test command in the clean room and requires results"}
     {:id :ratification/black-box :name "Black-box check" :spec "ratification/black-box"
      :description "Refuses step definitions that load implementation code"}]}
 
@@ -172,6 +168,7 @@
   {:from :spec :to :verification :description "Publishes" :event :SpecParsed}
   {:from :spec :to :measurement :description "Publishes" :event :SpecParsed}
   {:from :spec :to :publishing :description "Publishes" :event :SpecGated}
+  {:from :spec :to :publishing :description "Publishes" :event :SpecParsed}
   {:from :knowledge :to :spec :description "Publishes" :event :KnowledgeIndexed}
   {:from :knowledge :to :publishing :description "Publishes" :event :KnowledgeIndexed}
   {:from :architecture :to :publishing :description "Publishes" :event :ViewsGenerated}
@@ -184,10 +181,10 @@
   ;; inside containers
   {:from :project/adopt :to :project/hooks :description "Installs hooks with"}
   {:from :project/init :to :project/hooks :description "Installs hooks with"}
-  {:from :project/hooks :to :project/tasks :description "Runs the check task through"}
+  {:from :project/hooks :to :project/tasks :description "Runs rdm-spec check through"}
   {:from :spec/stamper :to :spec/parser :description "Reads scenarios with"}
   {:from :knowledge/wiki :to :knowledge/sources :description "Resolves footnotes with"}
-  {:from :spec/gate :to :spec/parser :description "Reads scenarios with"}
+  {:from :spec/check :to :spec/parser :description "Reads scenarios with"}
   {:from :architecture/lint :to :architecture/model :description "Checks"}
   {:from :architecture/views :to :architecture/model :description "Generates views from"}
   {:from :architecture/render-check :to :architecture/views :description "Checks the layout of"}
@@ -195,9 +192,7 @@
   {:from :verification/trace :to :verification/status :description "Reads statuses from"}
   {:from :verification/release :to :verification/status :description "Refuses on"}
   {:from :regeneration/fence :to :regeneration/cut :description "Builds clean rooms only from"}
-  {:from :ratification/gate :to :ratification/black-box :description "Checks step definitions with"}
-  {:from :ratification/gate :to :ratification/boot :description "Starts the build with"}
-  {:from :ratification/boot :to :ratification/identity :description "Hands what answers to"}
+  {:from :ratification/ratify :to :ratification/black-box :description "Checks step definitions with"}
   {:from :measurement/scorer :to :measurement/checklist :description "Scores"}
   {:from :measurement/scoreboard :to :measurement/scorer :description "Compares the filed scores of"}]
 
@@ -223,7 +218,7 @@
   {:key "regeneration-components" :level :component :container :regeneration
    :description "The cut and the fence"}
   {:key "ratification-components" :level :component :container :ratification
-   :description "Ratifying a build"}
+   :description "Ratifying a build in a clean room"}
   {:key "measurement-components" :level :component :container :measurement
    :description "The checklist, the score and the scoreboard"}
   {:key "publishing-components" :level :component :container :publishing

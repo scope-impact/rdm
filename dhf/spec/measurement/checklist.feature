@@ -4,9 +4,9 @@
 Feature: Checklist
   Derives one item per stamped scenario, never written by hand.
 
-  # Incident: a scoring run whose every batch failed on a network outage once
-  # committed "scored" over an empty record.
-  Rule: The instrument refuses to record what it did not measure
+  # The checklist is derived from the spec, never written by hand
+  # (skallinen/loyly README.md@17d68d2, "What to steal" 1).
+  Rule: The checklist is derived
 
     @spec-0019 @e2e
     Scenario: The checklist is derived from the spec, one item per stamped scenario

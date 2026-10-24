@@ -4,10 +4,28 @@
 Feature: Release check
   Refuses a release while any scenario is not verified.
 
-  Rule: Planned work is a scenario tagged @wip
+  Rule: A release needs every scenario verified
 
     @spec-0059 @e2e
     Scenario: The release check refuses while any scenario is tagged @wip
       Given a stamped scenario tagged @wip
-      When the release check runs
-      Then it fails and names the scenario's id
+      When "rdm-spec release" is run
+      Then it exits 1 and names the scenario's id
+
+    @spec-0188 @e2e
+    Scenario: The release check refuses a failed scenario
+      Given a stamped scenario whose result failed
+      When "rdm-spec release" is run
+      Then it exits 1 and names the scenario's id and its status
+
+    @spec-0189 @e2e
+    Scenario: The release check refuses an unverified scenario
+      Given a stamped scenario with no result
+      When "rdm-spec release" is run
+      Then it exits 1 and names the scenario's id and its status
+
+    @spec-0190 @e2e
+    Scenario: The release check passes when every scenario is verified
+      Given every stamped scenario has a passing result and none is tagged @wip
+      When "rdm-spec release" is run
+      Then it exits 0

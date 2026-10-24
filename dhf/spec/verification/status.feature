@@ -9,19 +9,24 @@ Feature: Status
     @spec-0064 @e2e
     Scenario: The status report lists a scenario tagged @wip as planned
       Given a stamped scenario tagged @wip with no passing result
-      When the status report runs
+      When "rdm-spec status" is run
       Then it lists the scenario as planned
+
+    @spec-0191 @e2e
+    Scenario: A scenario tagged @wip is planned whatever its results say
+      Given a stamped scenario tagged @wip
+      And an Allure result for it with status skipped, and another with status passed
+      When "rdm-spec status" is run
+      Then it lists the scenario as planned, not as verified, failed or unverified
 
     @spec-0065 @e2e
     Scenario: Status is derived from the results, never written
       Given three stamped scenarios: one passing, one failing, one with no result
-      When the status report runs
+      When "rdm-spec status" is run
       Then it lists one as verified, one as failed and one as unverified
       And no file in the spec changes
 
-  # The parser is ours. A construct it does not know is refused, never skipped:
-  # a scenario the parser silently drops is a requirement nothing checks.
-  Rule: The spec is written in a declared subset of Gherkin
+  Rule: An outline is one requirement
 
     @spec-0066 @contract
     Scenario: A scenario outline is one requirement, verified by all its rows
@@ -31,7 +36,8 @@ Feature: Status
       Then the scenario is failed
 
   # Incident: a test runner named its suites twice, once in imports and once in
-  # a run list, so a forgotten suite was silently green.
+  # a run list, so a forgotten suite was silently green
+  # (skallinen/loyly harness/README.md@17d68d2, "The failure modes this shape was learned from").
   Rule: Allure results are the oracle, whoever wrote them
 
     @spec-0067 @contract

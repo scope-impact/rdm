@@ -10,7 +10,7 @@ Feature: Adopt
     Scenario: Adopt adds the skeleton beside what is already there
       Given a git repository holding source code and a README
       When the repository is adopted
-      Then it holds the spec skeleton, the harness configuration, the decisions directory and the task file
+      Then it holds the spec skeleton, the harness configuration and the decisions directory
       And its source code and README are unchanged
       And adopt lists every file it wrote
 

@@ -12,7 +12,7 @@
 |---|---|---|
 | Documents written as code, reviewed in pull requests beside the code | `README.md`, "Benefits of Using RDM" | UN-001 |
 | A project started from one command (`rdm init`), templates kept in the repository | `README.md`, "Typical Workflow" steps 1 to 3, and "The Init Files" | UN-009 |
-| Git hooks installed by a command (`rdm hooks`) | `README.md`, "Git Hooks" | UN-002 |
+| Git hooks installed by a command (`rdm hooks`) | `README.md`, "Git Hooks" | UN-009 |
 | Traceability generated, never written | `README.md`, "Benefits of Using RDM" | UN-003 |
 | Developer-first, readable documents; easy to migrate away from | `README.md`, "Our Design Goals for RDM" 1, 3, 5 | UN-010 |
 | A top-level architecture document kept in the repository, subdividing the project into software items | `README.md`, "Typical Workflow" steps 5 and 9 | UN-005 |
@@ -21,5 +21,5 @@
 
 ## Fenced
 
-This source's implementation is fenced: never cited, and removed from the
-checkout a clean room carries. The paths are in `sources.edn`, `:innolitics-rdm`.
+This source's implementation is fenced: never cited. No source checkout ever
+reaches a clean room. The paths are in `sources.edn`, `:innolitics-rdm`.

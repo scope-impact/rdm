@@ -18,14 +18,14 @@
   :carries [:revision :scenarios :needs :refusals]}
 
  :SpecGated
- {:description "The spec at a revision passed or failed the spec gate, with every finding"
+ {:description "The spec at a revision passed or failed the spec check, with every finding"
   :published-by :spec
   :carries [:revision :passed? :findings]}
 
  :ViewsGenerated
- {:description "Every view of the model was generated and rendered, stamped with the model's hash"
+ {:description "Every view of the model was generated and rendered, stamped with the model's hash; carries the model itself for its readers"
   :published-by :architecture
-  :carries [:model-hash :views]}
+  :carries [:model :model-hash :views]}
 
  :SpecCut
  {:description "A merged spec change was tagged spec-N, the only thing a regeneration may read"
@@ -33,17 +33,17 @@
   :carries [:tag :commit]}
 
  :CleanRoomProved
- {:description "A clean room was built from a cut and proved to hold no fenced path in its tree or history"
+ {:description "A clean room was built from a cut for a scope, holding only the allowed paths and the code the scope keeps"
   :published-by :regeneration
-  :carries [:cut :path :fenced-paths]}
+  :carries [:cut :scope :path]}
 
  :BuildRatified
- {:description "A build in a clean room passed the gate: its tests ran, wrote results, and the thing answering is this project"
+ {:description "A build in a clean room was ratified: its test command ran and wrote results, and its step definitions are black box"
   :published-by :ratification
-  :carries [:cut :results-dir :boot-seconds :budget-seconds]}
+  :carries [:cut :scope :results-dir]}
 
  :RatificationRefused
- {:description "A build failed the gate, with the reason"
+ {:description "A build failed ratification, with the reason"
   :published-by :ratification
   :carries [:cut :reason]}
 

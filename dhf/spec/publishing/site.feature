@@ -70,7 +70,7 @@ Feature: Site
     Scenario: The same inputs publish the same site
       Given a spec, its views and a results directory
       When the site is published twice
-      Then both sites are byte for byte the same
+      Then both sites' Markdown and MkDocs configuration are byte for byte the same
 
   Rule: The site publishes the domain wiki beside the spec
 

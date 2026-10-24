@@ -17,9 +17,9 @@ repositories themselves are not copied in: a citation names
 - **Cited, never paraphrased into authority.** A need or a scenario may restate
   what a source says; where they disagree, the source wins and the spec is the
   bug.
-- **A source's implementation is fenced.** Its code is never cited, and the
-  checkout a clean room carries has it removed from tree and history
-  (`sources.edn`, `:fenced`). Cite what a source says, never how it is built.
+- **A source's implementation is fenced.** Its code is never cited
+  (`sources.edn`, `:fenced`), and no source checkout reaches a clean room: the
+  builder reads the records and the wiki, never a source's code. Cite what a source says, never how it is built.
 - **Where sources conflict, say so** in the need or the decision that follows
   one, and say which one is followed and why.
 
@@ -29,10 +29,10 @@ repositories themselves are not copied in: a citation names
 |---|---|---|---|
 | [innolitics-rdm.md](innolitics-rdm.md) | `innolitics/rdm` | `f21b508` (2022-09-06) | documentation as code: templates and data to documents, `init`, hooks, the developer-first design goals |
 | [agent-skills.md](agent-skills.md) | `scope-impact/agent-skills` | `da65901` (2026-10-12) | what a C4 model is, its levels and views, and the quality checklist the lint enforces |
-| [loyly.md](loyly.md) | `skallinen/loyly` | `17d68d2` (2026-09-08) | spec first and regenerate: the fence, the ratifying gate, the honest instrument, sources and a cited domain wiki |
+| [loyly.md](loyly.md) | `skallinen/loyly` | `17d68d2` (2026-09-08) | spec first and regenerate: the fence, ratification, the honest instrument, sources and a cited domain wiki |
 
 `scope-impact/rdm`, this repository before rdm-spec, is deliberately not a
 source: it holds today's implementation of what rdm-spec regenerates, so
-citing it would point a coding agent at the answer. Its own history is fenced
-(`dhf/harness/config.edn`, `:fenced-paths`), and what it decided reaches the
+citing it would point a coding agent at the answer. It never reaches a clean room
+(`dhf/harness/config.edn`, `:clean-room`, is an allow-list), and what it decided reaches the
 spec through ADR 0002, not through citations.

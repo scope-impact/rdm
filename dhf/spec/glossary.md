@@ -37,8 +37,9 @@ and is not itself a requirement.
 **User need**: what a user requires, independent of any solution. Declared
 in `dhf/spec/needs.edn`; every scenario traces to at least one.
 
-**Planned**: a scenario tagged `@wip`. The gate accepts it, the release check
-refuses it. There is no planning tool besides this.
+**Planned**: a scenario tagged `@wip`. It is not run, it is planned whatever
+any result says, the spec check accepts it and the release check refuses it.
+There is no planning tool besides this.
 _Avoid_: task, ticket, backlog item.
 
 **Raw source**: what the spec is distilled from, never edited: for rdm-spec,
@@ -106,38 +107,44 @@ component, under `dhf/spec/`; only its configuration lives in
 `dhf/harness/config.edn`.
 
 **Step definition**: the code that executes a scenario's steps. It drives the
-public surface only (the command, its files, its events) and survives the
-fence.
+public surface only (the command, the files it reads and writes, and the
+runner's step API) and survives every clean room.
 
 **Oracle**: the Allure results of a run. A scenario is verified when a result
 labelled with its id passed, and no result labelled with its id failed.
 
-**Verified / failed / unverified**: a scenario's status, derived from the
-oracle: a passing result; a result that did not pass; no result at all. An
-unverified scenario counts as a fail when a cycle is scored.
+**Verified / failed / unverified / planned**: a scenario's status, derived
+from the oracle: a passing result and none that did not pass; a result that did
+not pass; no result at all; tagged `@wip`, whatever the results. An unverified
+scenario counts as a fail when a cycle is scored.
 
 **Cut**: a merged spec change tagged `spec-N`. Regeneration reads a cut and
 nothing else.
 
-**Fence**: the step that builds a clean room from a cut, with every
-implementation and every measurement deleted from its tree and its history,
-and proves it.
+**Fence**: the step that builds a clean room from a cut: one fresh commit
+holding only the allowed paths (`:clean-room :allow`) and whatever
+implementation its scope keeps.
+
+**Scope**: what a regeneration rebuilds: the whole project, one container or
+one component. The rest of the implementation stays in the clean room as it
+was at the cut.
 
 **Regeneration**: building the implementation again from a cut, inside the
 fence.
 
-**Gate**: the check that ratifies a build: the declared test command ran,
-wrote results, and the thing answering is this project.
+**Spec check**: `rdm-spec check` on the spec: ids, levels, needs, citations,
+the model's lint and the views' freshness.
 
-**Cycle**: one regeneration and its score.
+**Ratify**: `rdm-spec ratify` on a clean room: the declared test command ran,
+wrote results, its unit tests passed and its step definitions are black box.
+Run by the installed rdm-spec, never by the build under test.
+_Avoid_: gate, on its own (say spec check or ratify).
+
+**Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn` (cut,
+scope, builder, spec owner, results) and `score.edn` beside it.
 
 **Scoreboard**: the comparison of two cycles over the items both scored,
 counting what got better and what got worse, never a net.
-
-**Judge**: the pinned previous release that gates and scores a regenerated
-rdm-spec. Before the first release there is none: the bootstrap build is
-ratified unjudged, its record says so, and its reviewer's acceptance stands in
-for a judge once.
 
 **Gherkin runner**: the kernel code that runs scenarios against their step
 definitions and writes Allure results labelled with each scenario's id.

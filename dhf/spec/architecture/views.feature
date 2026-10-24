@@ -9,12 +9,12 @@ Feature: Views
     @spec-0017 @e2e
     Scenario: Every view in the model is generated and rendered
       Given a model with a context view, a container view and two component views
-      When the views are generated
-      Then each view is written as Mermaid C4 and rendered to SVG
+      When "rdm-spec views" is run
+      Then each view is written as dhf/views/<key>.mmd in Mermaid C4 and rendered to dhf/views/<key>.svg
       And each output carries the hash of the model it came from
 
     @spec-0018 @e2e
-    Scenario: A view older than the model fails the gate
+    Scenario: A view older than the model fails the check
       Given a rendered view whose recorded hash differs from the model's
-      When the gate runs
+      When "rdm-spec check" is run
       Then it fails and names the stale view

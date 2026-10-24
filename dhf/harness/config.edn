@@ -2,7 +2,9 @@
 ;; heart. A difference between projects lives here, declared, and nowhere in
 ;; the harness code. Each value is used by a component specified under
 ;; dhf/spec/, named beside it; decided in
-;; dhf/decisions/adr-0002-spec-first-regeneration.md.
+;; dhf/decisions/adr-0002-spec-first-regeneration.md. Everything here is
+;; committed, so nothing machine-local belongs here: source checkouts, for one,
+;; are given on the command line (rdm-spec check --sources DIR).
 {;; Stamped scenario ids are @<id-prefix>-NNNN (dhf/spec/spec/stamper.feature).
  :id-prefix "spec"
 
@@ -12,12 +14,12 @@
  :model "dhf/spec/model.edn"
  :events "dhf/spec/events.edn"
  :needs "dhf/spec/needs.edn"
- ;; The raw sources every need cites (dhf/raw/README.md), and local checkouts
- ;; of them at their pins, where a citation's path is checked
- ;; (dhf/spec/knowledge/sources.feature). A source with no checkout here is
- ;; reported unchecked, never passed.
+ ;; Generated views (dhf/spec/architecture/views.feature).
+ :views-dir "dhf/views"
+
+ ;; The raw sources every need cites (dhf/raw/README.md,
+ ;; dhf/spec/knowledge/sources.feature).
  :raw-dir "dhf/raw"
- :source-checkouts {}
 
  ;; The domain wiki, and the words no page of it may use
  ;; (dhf/spec/knowledge/wiki.feature).
@@ -25,37 +27,35 @@
  :stack-words ["Babashka" "Clojure" "Python" "EDN" "Mermaid" "mmdr" "MkDocs" "pytest" "git"]
 
  ;; The step definitions: black box, and they survive the fence
- ;; (dhf/spec/ratification/black-box.feature, dhf/spec/regeneration/fence.feature).
+ ;; (dhf/spec/ratification/black-box.feature, dhf/spec/kernel/runner.feature).
+ ;; A step definition requiring a namespace with the implementation prefix fails
+ ;; ratification, except the runner's step API.
  :steps-dir "dhf/steps"
- ;; A step definition requiring a namespace with this prefix fails the gate.
  :implementation-ns-prefix "rdm-spec."
+ :step-api "rdm-spec.kernel.runner"
 
- ;; Where the Clojure implementation is regenerated. Open: ADR 0002, "Open".
- :implementation-dirs ["src"]
+ ;; The implementation: every path a regeneration rebuilds. Each component's code
+ ;; is src/rdm_spec/<container>/<component>.clj and its unit tests
+ ;; test/rdm_spec/<container>/<component>_test.clj; the kernel's are under
+ ;; .../kernel/ (dhf/spec/regeneration/fence.feature,
+ ;; dhf/spec/architecture/lint.feature). test.clj runs them.
+ :implementation ["src" "test" "test.clj"]
 
- ;; What the clean room must not contain, in its tree or its history
- ;; (dhf/spec/regeneration/fence.feature). Each entry earns its place:
- ;;   rdm, tests, src      every implementation, Python and Clojure: the answer
- ;;   dhf/cycles           every score the answer has been given
- ;;   dhf/allure-results   the last run's verdicts
- ;;   dhf/data             verification data derived from them
- :fenced-paths ["rdm" "tests" "src" "dhf/cycles" "dhf/allure-results" "dhf/data"]
- ;; The sources' own fenced paths are in dhf/raw/sources.edn. The fence proves
- ;; files and cannot see a network, so the clean room must have none: a room
- ;; with a network can fetch what was removed (hotspot H14).
- :clean-room {:network :none}
+ ;; The clean room is an allow-list (dhf/spec/regeneration/fence.feature): these
+ ;; paths, plus the implementation a scoped regeneration keeps, and nothing
+ ;; else. It has no network, or it could fetch what was left out.
+ :clean-room {:network :none
+              :allow ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/steps"
+                      "dhf/decisions/adr-0002-spec-first-regeneration.md"]}
 
- ;; The gate's contract with the build (dhf/spec/ratification/).
- :surface :cli
- :test-command ["bb" "test"]
+ ;; What ratify runs in the clean room (dhf/spec/ratification/ratify.feature):
+ ;; the build provides test.clj, which runs its unit tests and "rdm-spec run".
+ :test-command ["bb" "test.clj"]
  :results-dir "dhf/allure-results"
- :boot-budget-seconds 10
- :identity-probe "dhf/harness/probe.clj"
 
- ;; The release that judges a regenerated rdm-spec (dhf/spec/ratification/gate.feature,
- ;; dhf/spec/measurement/scorer.feature). Unset until the first Clojure release
- ;; exists.
- :judge nil
+ ;; Cycles: dhf/cycles/NN/cycle.edn and score.edn
+ ;; (dhf/spec/measurement/scorer.feature).
+ :cycles-dir "dhf/cycles"
 
  ;; The site (dhf/spec/publishing/site.feature): MkDocs builds it, strictly, so
  ;; a broken link fails the build.

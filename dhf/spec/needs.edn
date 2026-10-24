@@ -1,6 +1,6 @@
 ;; User needs: what a user requires, independent of any solution. Every
 ;; scenario traces to at least one, by a @UN-nnn tag on itself, its rule or its
-;; feature (dhf/spec/spec/gate.feature, "Every scenario traces to a user need").
+;; feature (dhf/spec/spec/check.feature, "Every scenario traces to a user need").
 ;;
 ;; Each need cites the raw sources it rests on (dhf/raw/README.md), as
 ;; <source>:<path>@<commit>.
@@ -13,10 +13,11 @@
            :sources ["loyly:README.md@17d68d2"
                      "innolitics-rdm:README.md@f21b508"]}
  "UN-002" {:text "A contributor is stopped before a spec that breaks its rules is committed, and told exactly which scenario and why."
-           :sources ["innolitics-rdm:README.md@f21b508"]}
+           :sources ["loyly:harness/README.md@17d68d2"]}
  "UN-003" {:text "A team sees each scenario's verification status, derived from executed test results, whatever stack ran the tests."
-           :sources ["innolitics-rdm:README.md@f21b508"]}
- "UN-004" {:text "A release is blocked until every scenario is verified and none is still planned."
+           :sources ["loyly:README.md@17d68d2"
+                     "innolitics-rdm:README.md@f21b508"]}
+ "UN-004" {:text "A release is blocked until every scenario is verified."
            :sources ["loyly:docs/plan/01-booking-core/plan.md@17d68d2"]}
  "UN-005" {:text "A team keeps its architecture as one C4 model whose views are generated and checked, and whose components own the scenarios."
            :sources ["agent-skills:skills/engineering/c4-diagrams/reference/c4-guide.md@da65901"

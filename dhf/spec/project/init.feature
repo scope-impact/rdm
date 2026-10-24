@@ -11,7 +11,7 @@ Feature: Init
       Given no directory at the path "sauna"
       When a project is initialised at "sauna"
       Then "sauna" holds the spec skeleton: an empty model, event catalogue, needs and ledger, the glossary and the spec's README
-      And it holds the harness configuration, the decisions directory and the task file
+      And it holds the harness configuration and the decisions directory
       And init lists every file it wrote and the next steps
 
     @spec-0087 @e2e
@@ -25,7 +25,7 @@ Feature: Init
     Scenario: A new project is a git repository with the hook installed
       When a project is initialised at "sauna"
       Then "sauna" is a git repository
-      And its pre-commit hook runs the check task
+      And its pre-commit hook runs "rdm-spec check"
 
     @spec-0089 @e2e
     Scenario: The id prefix is chosen at init
@@ -37,7 +37,7 @@ Feature: Init
     @spec-0090 @e2e
     Scenario: The check passes on a skeleton nobody has touched
       Given a project just initialised at "sauna"
-      When the check task runs in "sauna"
+      When "rdm-spec check" is run in "sauna"
       Then it passes
 
     @spec-0091 @e2e
@@ -51,4 +51,4 @@ Feature: Init
     @spec-0158 @e2e
     Scenario: A new project's CI cuts every merge to the default branch
       When a project is initialised at "sauna"
-      Then "sauna" holds a CI workflow that runs the cut task on every push to the default branch
+      Then "sauna" holds the GitHub Actions workflow .github/workflows/cut.yml, which runs "rdm-spec cut" on every push to the default branch

@@ -2,71 +2,76 @@
 
 @UN-006
 Feature: Fence
-  Builds a clean room from a cut and proves every fenced path gone.
+  Builds a clean room from a cut, for the whole project, one container or one
+  component, and proves it holds nothing else.
 
-  # Incident: a builder that can read last cycle's scores can aim at the
-  # checklist instead of the spec. Regeneration reads a cut, nothing else.
-  Rule: A cut is a tagged merge, and regeneration reads only a cut
+  # Every prior implementation and every measurement is out of the clean room,
+  # so nothing can be copied, only rebuilt (skallinen/loyly
+  # harness/README.md@17d68d2, "The idea in five lines" 2).
+  Rule: A clean room is built only from a cut
 
     @spec-0037 @e2e
     Scenario: The fence refuses a source that is not a cut
       Given a commit that carries no spec-N tag
-      When the fence is asked to build a clean room from it
-      Then it refuses and says regeneration reads only a cut
+      When "rdm-spec fence /tmp/room" is run on it
+      Then it exits 2 and says regeneration reads only a cut
 
   # Incident: a weaker fence probe once passed while the previous implementation
-  # was still reachable from an older commit.
-  Rule: The fence is physical and proved
+  # was still reachable from an older commit (skallinen/loyly
+  # harness/README.md@17d68d2, "The failure modes this shape was learned from").
+  # A clean room is an allow-list, so nothing reaches it by being forgotten.
+  Rule: A clean room holds what is allowed, and nothing else
 
     @spec-0038 @e2e
-    Scenario: The clean room holds no fenced path, in the tree or in history
-      Given the configuration fences the implementation and every measurement
-      When the fence builds a clean room from cut spec-3
-      Then the clean room has a single root commit
-      And no fenced path exists in its working tree
-      And no object reachable in its repository belongs to a fenced path
-
-    @spec-0039 @e2e
-    Scenario: A fenced path that matches nothing is a hard failure
-      Given the configuration fences a path that does not exist at the cut
-      When the fence builds a clean room
-      Then it fails and names the path
+    Scenario: The clean room holds only the allowed paths, as one root commit
+      Given the configuration allows dhf/spec, dhf/harness, dhf/raw, dhf/wiki, dhf/steps and dhf/decisions/adr-0002-spec-first-regeneration.md
+      When "rdm-spec fence /tmp/room" builds a clean room from cut spec-3
+      Then /tmp/room is a repository with a single root commit
+      And its working tree holds the allowed paths, unchanged, and no other file
+      And no object reachable in it belongs to any other path
 
     @spec-0040 @e2e
-    Scenario: The clean room keeps the spec, the step definitions and the harness configuration
-      When the fence builds a clean room from a cut
-      Then the spec, the step definitions and the harness configuration are present and unchanged
-
-  Rule: The scoreboard compares cycles honestly
+    Scenario: An allowed path missing at the cut is refused
+      Given the configuration allows dhf/steps and the cut holds no dhf/steps
+      When "rdm-spec fence /tmp/room" is run
+      Then it exits 2 and names dhf/steps
 
     @spec-0041 @e2e
-    Scenario: The scoreboard is for the spec owner, never for the builder
-      When the fence builds a clean room from a cut
-      Then no scoreboard and no cycle score is present in it
-
-  # Decided by the event storm's hotspot H14 (dhf/storm/2026-10-24-rdm.md). The
-  # fence proves files; it cannot see a network. So the clean room carries what
-  # the builder may read of each source, and refuses to be handed out where the
-  # builder could fetch the rest.
-  Rule: The fence covers the sources too
-
-    @spec-0139 @e2e
-    Scenario: The clean room carries each source without its fenced paths, in tree or history
-      Given the sources index fences "harness/fence.sh" in loyly
-      And a local checkout of skallinen/loyly at 17d68d2
-      When the fence builds a clean room from a cut
-      Then the clean room holds loyly at 17d68d2 as a single root commit
-      And harness/fence.sh is in neither its working tree nor any object reachable in it
-      And loyly's README.md is present and unchanged
-
-    @spec-0140 @e2e
-    Scenario: A source with no local checkout is refused, never fetched
-      Given no local checkout of innolitics/rdm is configured
-      When the fence builds a clean room from a cut
-      Then it refuses and names innolitics-rdm and the missing checkout
+    Scenario: No cycle, score or result reaches the clean room
+      Given the cut holds dhf/cycles/03/score.edn and the configured results directory
+      When "rdm-spec fence /tmp/room" builds a clean room
+      Then neither is in it
 
     @spec-0141 @e2e
     Scenario: The fence refuses a clean room configured to reach the network
       Given the clean room is configured with network access
-      When the fence builds a clean room from a cut
-      Then it refuses and says a clean room with a network can fetch what the fence removed
+      When "rdm-spec fence /tmp/room" is run
+      Then it exits 2 and says a clean room with a network can fetch what the fence left out
+
+  # The model places each component's code at src/rdm_spec/<container>/<component>.clj
+  # and its unit tests at test/rdm_spec/<container>/<component>_test.clj, and the
+  # configuration lists every implementation path. So any part can be rebuilt
+  # while the rest stands.
+  Rule: A clean room can rebuild the project, one container or one component
+
+    @spec-0182 @e2e
+    Scenario: The project scope keeps no implementation
+      When "rdm-spec fence /tmp/room" builds a clean room from cut spec-3
+      Then /tmp/room holds none of the configured implementation paths
+
+    @spec-0183 @e2e
+    Scenario: A container scope removes that container's code and keeps the rest
+      When "rdm-spec fence /tmp/room --container verification" builds a clean room from cut spec-3
+      Then /tmp/room holds no file under src/rdm_spec/verification/ or test/rdm_spec/verification/
+      And it holds every other implementation file at the cut, unchanged
+
+    @spec-0184 @e2e
+    Scenario: A component scope removes that component's code and keeps the rest
+      When "rdm-spec fence /tmp/room --component spec/parser" builds a clean room from cut spec-3
+      Then /tmp/room holds neither src/rdm_spec/spec/parser.clj nor test/rdm_spec/spec/parser_test.clj
+      And it holds every other implementation file at the cut, unchanged
+
+    @spec-0185 @e2e
+    Scenario: A scope the model does not name is refused
+      When "rdm-spec fence /tmp/room --container archive" is run
+      Then it exits 2 and names archive and the model's containers

@@ -58,11 +58,10 @@ executes is one representation.
   components (level 3). **Level 3 and the `.feature` files its components own
   are the spec.** Level 4 (code) is never specified: it is what regeneration
   produces.
-- **Each bounded context is its own runnable container.** A container is
-  something that runs or stores data (the C4 definition), so each context gets
-  its own entry point and its own black-box contract, and containers relate
-  only through the events and contracts in `dhf/spec/events.edn`. That makes
-  each context testable and regenerable on its own.
+- **Each bounded context is its own container.** A container is something that
+  runs or stores data (the C4 definition); each context has its own tasks and
+  its own namespaces, and containers relate only through the events in
+  `dhf/spec/events.edn`. That makes each context regenerable on its own.
 - **Every scenario belongs to exactly one component**, by its file's location:
   `dhf/spec/<container>/<component>.feature`. The component's design prose
   sits beside it as `<component>.md`.
@@ -71,7 +70,7 @@ executes is one representation.
   (mermaid-rs-renderer). Hand-written Mermaid was rejected because each
   diagram would repeat the elements of the others: three hand-kept copies of
   one container. Structurizr DSL was rejected because parsing it needs the Java
-  CLI. A linter, `bb c4 lint`, holds the model to the C4 skill's quality
+  CLI. A linter, part of `rdm-spec check`, holds the model to the C4 skill's quality
   checklist (`scope-impact/agent-skills`, `skills/engineering/c4-diagrams`) and
   to this ADR's container rules, and a render check fails a view whose computed
   layout overlaps a label with a box.
@@ -80,8 +79,8 @@ executes is one representation.
 
 - **The harness is specified like every other component.** It defines the
   tags, the verification levels, the Gherkin subset, the Allure contract, the
-  black-box rule, the cut, the fence, scoring, the C4 lint and the task
-  interface. In a product like Löyly's the harness is apart from the product
+  black-box rule, the cut, the fence, scoring, the C4 lint and the one
+  command. In a product like Löyly's the harness is apart from the product
   and its scenarios must stay out of the product's checklist; in RDM the
   harness *is* the product, so its scenarios are the components' feature
   files under `dhf/spec/`, and `dhf/harness/` holds only its configuration.
@@ -98,12 +97,19 @@ executes is one representation.
   runner, so a project built on RDM may write its step definitions in any
   stack.
 - **Step definitions are black box.** They drive the public surface only (the
-  command, the files it reads and writes, the events between containers) and
-  never load implementation code. They survive the fence; the implementation
-  does not.
-- **The previous release judges the next.** When RDM regenerates itself, the
-  gates and the scoreboard are run by the pinned previous release, never by
-  the build under test.
+  command, the files it reads and writes, and the runner's step API) and never
+  load other implementation code. They survive every clean room; the
+  implementation does not.
+- **The build under test never judges itself.** Ratify and score run from the
+  rdm-spec installed outside the clean room, never from the build in it.
+  *Simplified after the first review: this ADR first had the previous release
+  pinned as a judge, with a bootstrap exception.*
+- **One command, `rdm-spec <task>`, installed once.** Hooks, CI, agents, people
+  and step definitions all run the same tasks (`dhf/spec/project/tasks.feature`),
+  which exit 0 on pass, 1 on a finding and 2 when they cannot run, and name each
+  finding on the error stream. Writing the spec is editing files; the command
+  only checks, cuts, fences, runs, ratifies, scores and publishes. Nothing per
+  project: no task file.
 
 ### Roles
 
@@ -122,8 +128,14 @@ executes is one representation.
 
 - **Spec first, merge, then regenerate.** A spec change lands as a reviewed
   merge. The merge commit, tagged `spec-N`, is the **cut**: regeneration reads
-  that tag and nothing else, inside a fence that deletes every implementation
-  and every measurement from the working tree and from history, and proves it.
+  that tag and nothing else, in a clean room that is an allow-list (the spec,
+  the harness configuration, the raw records, the wiki, the step definitions
+  and this ADR), one fresh commit with no history and no network.
+- **Regenerate the project, one container or one component.** The model fixes
+  where each component's code and unit tests live, so a clean room can drop
+  just one part and keep the rest as it was at the cut. Ratify and score always
+  run the whole spec, and the scoreboard reports the rebuilt part apart from
+  the rest.
 - **Anything the delta teaches goes back into the spec** as a new merge. A fix
   made only in regenerated code dies at the next cut, on purpose.
 - **There is no planning tool.** A scenario tagged `@wip` is planned work; a
@@ -138,18 +150,18 @@ executes is one representation.
 ### The sources
 
 - **The spec is distilled from raw sources, and says which.** rdm-spec's are
-  two repositories, `innolitics/rdm` and `skallinen/loyly`, each recorded in `dhf/raw/` with the commit it is pinned
-  to and what it is evidence for. They are cited, never copied in and never
+  three repositories, `innolitics/rdm`, `scope-impact/agent-skills` and
+  `skallinen/loyly`, each recorded in `dhf/raw/` with the commit it is pinned to
+  and what it is evidence for. They are cited, never copied in and never
   edited, and every user need names the sources it rests on.
 - **`scope-impact/rdm` is not a source.** It holds today's implementation of
   what rdm-spec regenerates; its decisions reach the spec through this ADR,
-  and its history is fenced as rdm-spec's own.
-- **A source's implementation is fenced** like rdm-spec's own: both sources
-  hold implementations of what rdm-spec regenerates, and an agent that
-  can read them is copying, not rebuilding. Their code paths are listed in
-  `dhf/raw/sources.edn`, never cited, and removed in tree and history from the
-  source checkouts the clean room carries; the clean room has no network, so
-  nothing removed can be fetched back.
+  and none of it is on the clean room's allow-list.
+- **A source's implementation is fenced.** Two sources hold implementations of
+  what rdm-spec regenerates, and a builder that can read them is copying, not
+  rebuilding. Their code paths are listed in `dhf/raw/sources.edn` and never
+  cited; no source checkout reaches a clean room, and the clean room has no
+  network to fetch one.
 - **A domain wiki sits between the sources and the spec** (`dhf/wiki/`), as in
   Löyly: the domain distilled, every claim footnoted to a source, no page
   naming an implementation. Sources and wiki are the `knowledge` container.
@@ -158,22 +170,21 @@ executes is one representation.
 
 - **Containers meet only on an in-process event bus**, written in Clojure and
   shared by every container as a kernel component (`kernel/bus`), not as a
-  container of its own. Delivery is synchronous and in subscription order, so
-  a run is deterministic. The bus refuses an event the catalogue does not
-  declare, one missing a key it carries, and one published by a container
-  other than its declared publisher, and a failing subscriber fails the
-  publish.
-- **How this reads beside "each bounded context is its own runnable
-  container".** Each context keeps its own entry point (its own task) and its
-  own namespaces, and is run on its own. When one context needs another's
-  events, its entry point loads that context into the same process and the two
-  meet only on the bus. The lint checks the code keeps to this: a container's
-  namespaces require another container's only through the bus, and the kernel
-  requires no container.
+  container of its own. This is design, not requirement: delivery is
+  synchronous and in subscription order, and the bus refuses an event the
+  catalogue does not declare, one missing a key it carries, or one from the
+  wrong publisher. What the spec requires of it is only what a black box can
+  see: every run can print its events, and the same inputs print the same
+  events in the same order.
+- **How this reads beside "each bounded context is its own container".** A
+  task that needs another context's events loads that context into its
+  process, and the two meet only on the bus. The lint checks the code keeps to
+  this: a container's namespaces never require another container's, and the
+  kernel requires no container.
 
 ### Scope of the first version
 
-- **In:** reading and gating the spec, stamping, verification and trace from
+- **In:** reading and checking the spec, stamping, verification and trace from
   Allure results, the cut and the fence, scoring and the scoreboard, the C4
   model with its lint and rendering, publishing a site (Markdown, built to
   HTML by MkDocs).
@@ -194,7 +205,7 @@ removed.
 
 - The current record keeps governing until cutover. Until then, nothing
   checks the new spec except review and the Gherkin parser, so the components
-  that check a spec (parser, stamper, spec gate) come first: they are what the
+  that check a spec (parser, stamper, spec check) come first: they are what the
   rest of the spec is held to.
 - The regulated features leave RDM's own record at cutover and return as an
   optional profile. `rdm init` stops scaffolding them by default.
@@ -209,19 +220,19 @@ The remaining hotspots were handed to the agent to decide (2026-10-24). Each
 is written into the spec; each can be reversed by a spec change like any
 other.
 
-- **The implementation lives in `src/`** (namespaces `rdm-spec.*`); step
-  definitions in `dhf/steps/`.
+- **The implementation lives in `src/`, `test/` and `test.clj`** (namespaces
+  `rdm-spec.*`); step definitions in `dhf/steps/`, which must be written before
+  the first regeneration can be ratified.
 - **H2, who cuts:** CI, on every merge to the default branch. A cut never
   waits on anyone; cutting twice changes nothing.
 - **H3, who drives the builder:** not rdm-spec. rdm-spec stops at a proved
   clean room and starts again at ratification; how a builder, human or agent,
   is run in between is the builder's business. Fewer moving parts in the first
   version, and nothing in rdm-spec that the builder could steer.
-- **H7, the first judge:** the bootstrap build is ratified unjudged and its
-  record says so; its reviewer's acceptance stands in for a judge once, and an
-  unjudged cycle is never a baseline on the scoreboard. From the first release
-  on, the previous release judges.
-- **H9, unit tests:** run by the gate's test command; a failing one refuses
+- **H7, the first judge:** *simplified after the first review:* there is no
+  pinned judge; the installed rdm-spec ratifies and scores, never the build
+  under test.
+- **H9, unit tests:** run by the declared test command; a failing one refuses
   ratification; their results verify no scenario.
 - **H10, the Gherkin runner:** kernel code beside the bus, writing Allure
   results labelled with scenario, component and container. Discovered, never

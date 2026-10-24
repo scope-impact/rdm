@@ -5,7 +5,8 @@ Feature: Results reader
   Reads a run's Allure results, whatever stack wrote them, naming what it cannot read.
 
   # Incident: a test runner named its suites twice, once in imports and once in
-  # a run list, so a forgotten suite was silently green.
+  # a run list, so a forgotten suite was silently green
+  # (skallinen/loyly harness/README.md@17d68d2, "The failure modes this shape was learned from").
   Rule: Allure results are the oracle, whoever wrote them
 
     @spec-0060 @contract

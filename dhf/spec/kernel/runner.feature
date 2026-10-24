@@ -9,6 +9,31 @@
 Feature: Gherkin runner
   Runs the scenarios' steps against their step definitions and writes Allure results.
 
+  # Step definitions survive the fence and the runner does not, so the way a
+  # step is defined is a contract between them, and the one namespace of the
+  # implementation a step definition may require (dhf/harness/config.edn,
+  # :step-api).
+  Rule: Step definitions are written against one small API
+
+    @spec-0168 @contract
+    Scenario: A step is defined by a pattern and a function
+      Given a step definition file in dhf/steps that calls (defstep #"the spec holds (\d+) features" (fn [ctx n] ...)) from the step API namespace
+      When the runner runs a scenario with the step "Given the spec holds 20 features"
+      Then the function is called with the scenario's context and "20"
+
+    @spec-0169 @contract
+    Scenario: Each step's return is the next step's context, and each scenario starts empty
+      Given two steps whose functions each add a key to the context they are given
+      When the runner runs a scenario with both steps
+      Then the second function receives the key the first added
+      And the next scenario's first step receives an empty context
+
+    @spec-0170 @contract
+    Scenario: A step two definitions match makes the result broken, naming both
+      Given two step definitions whose patterns both match "Given a spec"
+      When the runner runs a scenario with that step
+      Then its result is broken and names both definitions
+
   Rule: Every scenario run leaves one result, labelled with what it verifies
 
     @spec-0151 @contract
@@ -16,6 +41,7 @@ Feature: Gherkin runner
       Given the scenario @spec-0012 in the component Lint of the container architecture
       When the runner runs it
       Then it writes one Allure result labelled spec=spec-0012, component=Lint and container=architecture
+      And the label is named spec whatever the configured id prefix
       And each step is a step of the result, with its own status
 
     @spec-0152 @contract
@@ -32,7 +58,7 @@ Feature: Gherkin runner
       And the steps after it are reported as not run
 
     @spec-0032 @e2e
-    Scenario: A step with no definition fails the run, not the scenario's absence
+    Scenario: A step with no definition makes the result broken
       Given a stamped scenario with a step no step definition matches
       When the runner runs it
       Then the scenario's Allure result is broken
@@ -41,7 +67,7 @@ Feature: Gherkin runner
     @spec-0154 @e2e
     Scenario: A planned scenario is not run, and its result says it is planned
       Given a stamped scenario tagged @wip
-      When the runner runs the spec
+      When "rdm-spec run" is run
       Then the scenario's steps are not run
       And its result is skipped and labelled planned
 
@@ -53,11 +79,11 @@ Feature: Gherkin runner
     @spec-0155 @e2e
     Scenario: The runner runs every feature file the spec holds, found by looking, never listed
       Given a spec holding twenty feature files
-      When the runner runs the spec
+      When "rdm-spec run" is run
       Then it runs the scenarios of all twenty
 
     @spec-0156 @e2e
     Scenario: A run that finds no feature file is refused
       Given a spec directory holding no feature file
-      When the runner runs the spec
+      When "rdm-spec run" is run
       Then it refuses and says no scenario was found, and writes no result
