@@ -476,6 +476,16 @@ Feature: The harness
       When the lint runs
       Then it warns under rule c4-view-size and names the view and both counts
 
+    # Found by the first event storm's render (dhf/storm/2026-10-24-rdm.md):
+    # mmdr draws a person's or system's name over a description that wraps
+    # past two lines.
+    @harness-068
+    Scenario: A person or system description longer than the configured limit fails the lint
+      Given the configured description limit is 45 characters
+      And a person whose description is 60 characters
+      When the lint runs
+      Then it fails rule c4-description-length and names the person and both lengths
+
     @harness-060
     Scenario: The lint prints the checklist items no machine can judge
       When the lint runs

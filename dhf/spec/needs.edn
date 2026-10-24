@@ -1,10 +1,18 @@
 ;; User needs: what a user requires, independent of any solution. Every
 ;; scenario traces to at least one, by a @UN-nnn tag on itself, its rule or its
 ;; feature (dhf/harness/spec.feature, "Every scenario traces to a user need").
-;; Empty until the event storm restates them; today's needs are in
-;; dhf/documents/verification_and_validation_plan.md and stay there until
-;; cutover.
 ;;
-;; Shape:
-;;   {"UN-001" {:text "..."}}
-{}
+;; Restated by the first event storm (dhf/storm/2026-10-24-rdm.md) for the
+;; first version's scope (ADR 0002). Numbered afresh: greenfield, no aliases.
+;; The needs of today's record stay in
+;; dhf/documents/verification_and_validation_plan.md until cutover.
+{"UN-001" {:text "A team keeps its product's requirements as executable scenarios, the one source of truth for what the product does."}
+ "UN-002" {:text "A contributor is stopped before a spec that breaks its rules is committed, and told exactly which scenario and why."}
+ "UN-003" {:text "A team sees each scenario's verification status, derived from executed test results, whatever stack ran the tests."}
+ "UN-004" {:text "A release is blocked until every scenario is verified and none is still planned."}
+ "UN-005" {:text "A team keeps its architecture as one C4 model whose views are generated and checked, and whose components own the scenarios."}
+ "UN-006" {:text "A team regenerates its implementation from a merged cut of the spec, in a clean room that provably holds no earlier implementation or measurement."}
+ "UN-007" {:text "A build counts as done only when a gate the builder does not control says so."}
+ "UN-008" {:text "A person sees, cycle over cycle, how completely the spec carries the product, and the instrument never overstates it."}
+ "UN-009" {:text "A team starts a new project, or brings an existing repository, under this structure with one command, without anything already there being overwritten."}
+ "UN-010" {:text "A reader reads the spec, its architecture and its verification status as one published site."}}

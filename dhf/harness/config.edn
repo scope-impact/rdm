@@ -41,6 +41,9 @@
 
  ;; C4 lint (@harness-052 to -065).
  :c4 {:view-element-limit 20
+      ;; People and systems only: mmdr overlaps a longer description with the
+      ;; name (@harness-068).
+      :description-max-chars 45
       :skill {:repo "scope-impact/agent-skills"
               :path "skills/engineering/c4-diagrams/reference/c4-guide.md"
               :commit "da65901"}}}
