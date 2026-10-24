@@ -36,5 +36,5 @@
  "UN-011" {:text "A team keeps the sources its spec is distilled from, and a domain wiki whose every claim cites one, so no rule in the spec rests on nothing."
            :sources ["loyly:docs/wow/invariants.md@17d68d2"
                      "loyly:README.md@17d68d2"]}
- "UN-012" {:text "Every role, engineer, reviewer, builder and spec owner, can be filled by a human or an agent, and the machinery treats both the same."
+ "UN-012" {:text "Every role, engineer, reviewer, builder, grader and spec owner, can be filled by a human or an agent, and the machinery treats both the same."
            :sources ["loyly:README.md@17d68d2"]}}

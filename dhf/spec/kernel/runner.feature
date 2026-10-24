@@ -9,15 +9,13 @@
 Feature: Gherkin runner
   Runs the scenarios' steps against their step definitions and writes Allure results.
 
-  # Step definitions survive the fence and the runner does not, so the way a
-  # step is defined is a contract between them, and the one namespace of the
-  # implementation a step definition may require (dhf/harness/config.edn,
-  # :step-api).
+  # rdm-spec run is offered to any project whose step definitions are written
+  # for it, so the way a step is defined is a public contract.
   Rule: Step definitions are written against one small API
 
     @spec-0168 @contract
     Scenario: A step is defined by a pattern and a function
-      Given a step definition file in dhf/steps that calls (defstep #"the spec holds (\d+) features" (fn [ctx n] ...)) from the step API namespace
+      Given a step definition file in the project's configured step directory that calls (defstep #"the spec holds (\d+) features" (fn [ctx n] ...)) from rdm-spec.kernel.runner
       When the runner runs a scenario with the step "Given the spec holds 20 features"
       Then the function is called with the scenario's context and "20"
 

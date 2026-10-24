@@ -16,8 +16,8 @@ Feature: Sources
 
     @spec-0121 @e2e
     Scenario: A source that drops a pin it had fails the check
-      Given the sources index pinned loyly at 17d68d2 at the last commit
-      When its pin is replaced by a newer one and 17d68d2 is no longer listed
+      Given the sources index at HEAD pins loyly at 17d68d2
+      When the index is changed so that 17d68d2 is no longer listed, and "rdm-spec check" is run
       Then the check fails and names the source and the dropped pin
 
   # Checkouts are machine-local, so they are never committed: they are given on
@@ -63,8 +63,8 @@ Feature: Sources
       Then it is reported as unchecked, with the reason
 
   # Decided by the event storm's hotspot H14 (dhf/storm/2026-10-24-rdm.md): a
-  # source holding an implementation of what is regenerated hands the coding
-  # agent the answer. What a source says may be cited; how it is built may not.
+  # source holding an implementation of what is regenerated hands the builder
+  # the answer. What a source says may be cited; how it is built may not.
   Rule: A source's implementation is fenced
 
     @spec-0136 @e2e
@@ -87,3 +87,11 @@ Feature: Sources
       And the sources index fences "harness/missing.clj" in loyly
       When the sources are read
       Then the check fails and names the source, the pin and the path
+
+  Rule: Citations are read from the needs and the wiki, nothing else
+
+    @spec-0199 @e2e
+    Scenario: Only needs.edn and the wiki's pages are scanned for citations
+      Given a feature file whose example step quotes a citation of a fenced path
+      When "rdm-spec check" is run
+      Then the quoted citation is not resolved, and the check passes

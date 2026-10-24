@@ -22,7 +22,7 @@ Feature: Fence
 
     @spec-0038 @e2e
     Scenario: The clean room holds only the allowed paths, as one root commit
-      Given the configuration allows dhf/spec, dhf/harness, dhf/raw, dhf/wiki, dhf/steps and dhf/decisions/adr-0002-spec-first-regeneration.md
+      Given the configuration allows dhf/spec, dhf/harness, dhf/raw, dhf/wiki and dhf/decisions/adr-0002-spec-first-regeneration.md
       When "rdm-spec fence /tmp/room spec-3" is run
       Then /tmp/room is a repository with a single root commit
       And its working tree holds the allowed paths, unchanged, and no other file
@@ -30,9 +30,9 @@ Feature: Fence
 
     @spec-0040 @e2e
     Scenario: An allowed path missing at the cut is refused
-      Given the configuration allows dhf/steps and the cut holds no dhf/steps
+      Given the configuration allows dhf/wiki and the cut holds no dhf/wiki
       When "rdm-spec fence /tmp/room spec-3" is run
-      Then it exits 2 and names dhf/steps
+      Then it exits 2 and names dhf/wiki
 
   # The configuration's :code-layout places each component's code and unit
   # tests by context and component, and :implementation lists every

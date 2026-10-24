@@ -23,7 +23,9 @@
 | The builder may be an agent or a person, and the machinery treats both the same | `README.md`, "The tutorial: one full loop"; "4. Regenerate" | UN-012 |
 | A commit is refused when a check the commit stages fails, through the pre-commit hook | `harness/README.md`, "What makes the checks run" | UN-002 |
 | The slice is built in any stack; only the gate's contract is fixed | `README.md`, "1. Build from the docs" | UN-003 |
-| Harness against instrument: what feeds the agent and what reports to a person | `harness/README.md`, "The idea in five lines" | ratification and measurement as separate containers |
+| Scoring by grading each checklist item against the running build, however you grade, independent of the builder's suite | `README.md`, "3. Measure"; `harness/README.md`, "Walkthrough" | UN-008 |
+| Every scenario has a test, written before the code | `docs/wow/invariants.md`, INV-5 | ratification |
+| Harness against instrument: what feeds the agent and what reports to a person | `harness/README.md`, "The idea in five lines" | ratification and measurement as separate bounded contexts |
 
 ## Fenced
 

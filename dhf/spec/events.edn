@@ -22,10 +22,6 @@
   :published-by :spec/check
   :carries [:revision :passed? :findings]}
 
- :ViewsGenerated
- {:description "Every view of the model was generated and rendered, stamped with the model's hash; carries the model itself for its readers"
-  :published-by :architecture/views
-  :carries [:model :model-hash :views]}
 
  :VerificationDerived
  {:description "Each scenario's status (verified, failed, unverified, planned) was derived from a run's Allure results"

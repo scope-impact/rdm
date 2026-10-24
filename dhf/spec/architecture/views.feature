@@ -18,3 +18,18 @@ Feature: Views
       Given a rendered view whose recorded hash differs from the model's
       When "rdm-spec check" is run
       Then it fails and names the stale view
+
+  Rule: Each level of view holds what C4 says it holds
+
+    @spec-0198 @contract
+    Scenario Outline: A view of a level holds exactly its elements
+      Given a model with a view of level <level>
+      When "rdm-spec views" is run
+      Then the view holds <elements>
+
+      Examples:
+        | level     | elements                                                                                              |
+        | context   | the system, every person and every external system, and the relationships between them               |
+        | container | every container, every person and every external system, and the relationships between them        |
+        | component | one context's components inside its boundary, and the elements outside it they relate to, drawn as external |
+        | dynamic   | the elements its steps name, and its steps in order                                                   |

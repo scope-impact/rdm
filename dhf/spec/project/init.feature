@@ -2,29 +2,38 @@
 
 @UN-009
 Feature: Init
-  Writes a new project's skeleton into a directory that does not exist yet.
+  Writes a new project's skeleton into a path that does not exist yet.
 
   Rule: Init starts a project from nothing
 
-    @spec-0086 @e2e
+    @spec-0086 @contract
     Scenario: Init writes the skeleton and names what it wrote
       Given no directory at the path "sauna"
       When "rdm-spec init sauna" is run
-      Then "sauna" holds the skeleton: dhf/spec with an empty model, event catalogue, needs and ledger, a glossary and a README; dhf/harness/config.edn; dhf/raw, dhf/wiki and dhf/steps, each with a README; dhf/decisions; the pre-commit hook; and .github/workflows/cut.yml
+      Then "sauna" is a git repository holding exactly:
+        | path                              | holds                                                                    |
+        | dhf/spec/model.edn                | a model with the system and nothing else                                 |
+        | dhf/spec/events.edn               | an empty event catalogue                                                 |
+        | dhf/spec/needs.edn                | no needs                                                                 |
+        | dhf/spec/ids.edn                  | the ledger at 0                                                          |
+        | dhf/spec/glossary.md              | an empty glossary                                                        |
+        | dhf/spec/README.md                | the spec's conventions                                                   |
+        | dhf/harness/config.edn            | the id prefix, the allow-list dhf/spec, dhf/harness, dhf/raw, dhf/wiki and dhf/decisions, and no implementation paths |
+        | dhf/raw/README.md                 | the rules for raw sources                                                |
+        | dhf/raw/sources.edn               | no sources                                                               |
+        | dhf/wiki/index.md                 | the wiki's rules and an empty list of pages                              |
+        | dhf/decisions/README.md           | how decisions are recorded                                               |
+        | .githooks/pre-commit              | a hook that runs "rdm-spec check", with core.hooksPath set to .githooks  |
+        | .github/workflows/cut.yml         | a workflow that runs "rdm-spec cut" on every push to the default branch  |
+        | .gitignore                        | dhf/allure-results/, dhf/cycles/*/results/ and site/                     |
       And init lists every file it wrote and the next steps
 
     @spec-0087 @e2e
     Scenario: Init refuses a path that already exists
       Given a directory at the path "sauna"
       When "rdm-spec init sauna" is run
-      Then init refuses and names the path
+      Then it exits 2 and names the path
       And nothing in "sauna" changes
-
-    @spec-0088 @e2e
-    Scenario: A new project is a git repository with the hook installed
-      When "rdm-spec init sauna" is run
-      Then "sauna" is a git repository
-      And its pre-commit hook runs "rdm-spec check"
 
     @spec-0089 @e2e
     Scenario: The id prefix is chosen at init
@@ -38,10 +47,3 @@ Feature: Init
       Given a project just initialised at "sauna"
       When "rdm-spec check" is run in "sauna"
       Then it passes
-
-  Rule: A new project cuts every merge
-
-    @spec-0158 @e2e
-    Scenario: A new project's CI cuts every merge to the default branch
-      When "rdm-spec init sauna" is run
-      Then "sauna" holds the GitHub Actions workflow .github/workflows/cut.yml, which runs "rdm-spec cut" on every push to the default branch

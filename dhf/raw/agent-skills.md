@@ -15,7 +15,7 @@
 | The architecture as a C4 model: system context, containers, components | `skills/engineering/c4-diagrams/reference/c4-guide.md`, "Core Model", "Diagram Levels" | UN-005 |
 | One model with views generated from it; the textual source authoritative | `skills/engineering/c4-diagrams/reference/c4-guide.md`, "Scale And Freshness", "Rendered Artifacts" | UN-005 |
 | The quality checklist the lint enforces | `skills/engineering/c4-diagrams/reference/c4-guide.md`, "Quality Checklist", "Common Mistakes" | the C4 lint |
-| A container runs or stores data; a shared library is not one | `skills/engineering/c4-diagrams/reference/c4-guide.md`, "Core Model", "Microservices And Shared Libraries" | one container per context; the kernel |
+| A container runs or stores data; a shared library is not one | `skills/engineering/c4-diagrams/reference/c4-guide.md`, "Core Model", "Microservices And Shared Libraries" | one runnable container; the kernel |
 
 ## Fenced
 

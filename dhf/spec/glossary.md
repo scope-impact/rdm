@@ -32,7 +32,8 @@ writes it.
 and is not itself a requirement.
 
 **Level**: how a scenario is verified, exactly one per scenario: `@e2e`,
-`@contract`, `@example` or `@property`. There is no persona level.
+or `@contract` (a file format or an interface others build on). There are no
+others.
 
 **User need**: what a user requires, independent of any solution. Declared
 in `dhf/spec/needs.edn`; every scenario traces to at least one.
@@ -78,8 +79,9 @@ through files instead.
 subscription order. It refuses an event the catalogue does not declare.
 
 **Skeleton**: what `rdm-spec init` writes and `rdm-spec adopt` adds: the spec,
-the harness configuration, the raw, wiki and steps directories, decisions, the
-pre-commit hook and the cut workflow.
+the harness configuration, the raw and wiki directories, decisions, the
+pre-commit hook, the cut workflow and `.gitignore`, as listed by
+`dhf/spec/project/init.feature`.
 
 **Kernel**: shared code every bounded context may use and that belongs to none
 of them, such as the event bus. Specified under `dhf/spec/kernel/`, never drawn as
@@ -91,10 +93,12 @@ from it.
 **View**: a generated diagram of the model at one level: context, container,
 component or dynamic. Never drawn by hand.
 
-**Role**: who acts on the spec: engineer, reviewer, builder or spec owner.
+**Role**: who acts on the spec: engineer, reviewer, builder, grader or spec
+owner.
 Every role can be filled by a human or an agent, and the machinery treats both
 the same. Two rules hold whoever fills them: a reviewer is not the author of
-what is reviewed, and the builder of a cycle never reads its score.
+what is reviewed, and the builder of a cycle neither grades it nor reads its
+score.
 _Avoid_: user (for a role), person (when either is meant).
 
 **Builder**: the role that regenerates the build from a cut, inside a clean
@@ -106,17 +110,25 @@ must learn next. Never the builder of the cycle it reads.
 
 ## The harness
 
-**Harness**: the containers that check the spec, ratify a build and score it.
+**Harness**: the bounded contexts that check the spec, ratify a build and score
+it.
 In rdm-spec the harness is the product, so it is specified like every other
 component, under `dhf/spec/`; only its configuration lives in
 `dhf/harness/config.edn`.
 
-**Step definition**: the code that executes a scenario's steps. It drives the
-public surface only (the command, the files it reads and writes, and the
-runner's step API) and survives every clean room.
+**Step definition**: the code that executes a scenario's steps, for a project
+that runs its scenarios with `rdm-spec run`. For rdm-spec itself they are the
+builder's tests: implementation, rebuilt with the code, never scored.
 
 **Oracle**: the Allure results of a run. A scenario is verified when a result
-labelled with its id passed, and no result labelled with its id failed.
+labelled with its id passed, and no result labelled with its id did not pass
+(failed, broken, skipped or unknown).
+
+**Grader**: the role that grades each checklist item against a ratified build,
+however they grade. A human or an agent, never the builder of what is graded.
+
+**Verdict**: a grader's passed or failed for one checklist item. Verdicts are
+the score; the builder's tests never are.
 
 **Verified / failed / unverified / planned**: a scenario's status, derived
 from the oracle: a passing result and none that did not pass; a result that did
@@ -130,8 +142,8 @@ nothing else.
 holding only the allowed paths (`:clean-room :allow`) and whatever
 implementation its scope keeps.
 
-**Scope**: what a regeneration rebuilds: the whole project, one container or
-one component. The rest of the implementation stays in the clean room as it
+**Scope**: what a regeneration rebuilds: the whole project, one bounded context
+or one component. The rest of the implementation stays in the clean room as it
 was at the cut.
 
 **Regeneration**: building the implementation again from a cut, inside the
@@ -140,15 +152,15 @@ fence.
 **Spec check**: `rdm-spec check` on the spec: ids, levels, needs, citations,
 the model's lint and the views' freshness.
 
-**Ratify**: `rdm-spec ratify ROOM CYCLE`: the room's implementation, put into a
-fresh checkout of the cut, passes the declared test command, writes results
-and has black-box step definitions. Run by the installed rdm-spec, never by the
-build under test.
+**Ratify**: `rdm-spec ratify ROOM CYCLE`: the room's implementation, in place
+of the implementation of a fresh checkout of the cut, passes the builder's
+test command, which writes results naming every scenario. Run by the installed
+rdm-spec; it gates and never scores.
 _Avoid_: gate, on its own (say spec check or ratify).
 
-**Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn` (cut,
-scope, builder, spec owner, results, and `:bootstrap` for the very first),
-with `checklist.json` and `score.edn` beside it.
+**Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
+by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
+first), with `results/`, `checklist.json` and `score.edn` beside it.
 
 **Scoreboard**: the comparison of two cycles over the items both scored,
 counting what got better and what got worse, never a net.

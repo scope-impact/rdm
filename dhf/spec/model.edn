@@ -23,7 +23,8 @@
 ;;                                               :spec "<context>/<component>"}]}]}]
 ;;                   ; :contexts only on a :runs container; dhf/spec/<spec>.feature
 ;;   :kernel         [{:id :name :description :spec "kernel/<component>"}]
-;;                   ; shared code of the rdm-spec container, in no context
+;;                   ; shared code of the rdm-spec container, in no context: the command,
+;;                   ; the bus and the runner
 ;;   :relationships  [{:from :to :description [:event]}]
 ;;                   ; :event names one in events.edn; events travel only within one run
 ;;   :views          [{:key :level :description [:context] [:steps]}]
@@ -38,6 +39,8 @@
    :description "Approves each spec change"}
   {:id :builder :name "Builder" :actor #{:human :agent}
    :description "Regenerates the build in a clean room"}
+  {:id :grader :name "Grader" :actor #{:human :agent}
+   :description "Grades a ratified build, never their own"}
   {:id :spec-owner :name "Spec owner" :actor #{:human :agent}
    :description "Decides what the spec must learn next"}]
 
@@ -59,9 +62,7 @@
        {:id :project/adopt :name "Adopt" :spec "project/adopt"
         :description "Adds the skeleton to an existing repository, never overwriting a file"}
        {:id :project/hooks :name "Hooks" :spec "project/hooks"
-        :description "Installs the pre-commit hook that runs rdm-spec check"}
-       {:id :project/tasks :name "Tasks" :spec "project/tasks"
-        :description "The rdm-spec command and its tasks: the one entry point"}]}
+        :description "Installs the pre-commit hook that runs rdm-spec check"}]}
 
      {:id :spec :name "spec"
       :description "Reads the spec, stamps scenario ids and checks the spec's rules"
@@ -112,20 +113,18 @@
         :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}]}
 
      {:id :ratification :name "ratification"
-      :description "Ratifies a build in a clean room: its tests ran and wrote results, and its steps are black box"
+      :description "Ratifies a build against its cut: the builder's tests pass, write results and name every scenario"
       :components
       [{:id :ratification/ratify :name "Ratify" :spec "ratification/ratify"
-        :description "Runs the declared test command in the clean room and requires results"}
-       {:id :ratification/black-box :name "Black-box check" :spec "ratification/black-box"
-        :description "Refuses step definitions that load implementation code"}]}
+        :description "Puts the room's implementation into a checkout of the cut and runs the builder's tests"}]}
 
      {:id :measurement :name "measurement"
-      :description "Derives the checklist, scores each cycle and compares cycles, for the spec owner, never the builder"
+      :description "Derives the checklist, files a grader's verdicts and compares cycles, never for the builder"
       :components
       [{:id :measurement/checklist :name "Checklist" :spec "measurement/checklist"
         :description "One item per stamped scenario, derived, never written"}
        {:id :measurement/scorer :name "Scorer" :spec "measurement/scorer"
-        :description "Files a cycle's score, and nothing when nothing was measured"}
+        :description "Files a grader's verdicts, and nothing when nothing was graded"}
        {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
         :description "Better and worse over shared items, a moved denominator said aloud"}]}
 
@@ -139,7 +138,9 @@
    :description "The spec, the model, the ledger, cuts, cycles and results"}]
 
  :kernel
- [{:id :kernel/bus :name "Event bus" :spec "kernel/bus"
+ [{:id :kernel/command :name "Command" :spec "kernel/command"
+   :description "The rdm-spec command: dispatches each task to the context that owns it"}
+  {:id :kernel/bus :name "Event bus" :spec "kernel/bus"
    :description "Delivers each catalogued event to its subscribers, within one run"}
   {:id :kernel/runner :name "Gherkin runner" :spec "kernel/runner"
    :description "Runs the scenarios' steps and writes Allure results"}]
@@ -149,6 +150,7 @@
   {:from :engineer :to :rdm-spec :description "Writes, checks and publishes the spec with"}
   {:from :reviewer :to :git-host :description "Approves spec merges in"}
   {:from :builder :to :rdm-spec :description "Builds a clean room and is ratified by"}
+  {:from :grader :to :rdm-spec :description "Grades each checklist item of a ratified build for"}
   {:from :spec-owner :to :rdm-spec :description "Reads the scoreboard from"}
   {:from :rdm-spec :to :git-host :description "Tags cuts on merges in"}
   {:from :rdm-spec :to :test-runner :description "Runs the declared test command through"}
@@ -162,10 +164,11 @@
   {:from :architecture/views :to :repository :description "Writes views to"}
   {:from :regeneration/cut :to :repository :description "Tags merges spec-N in"}
   {:from :regeneration/fence :to :repository :description "Builds clean rooms from cuts in"}
-  {:from :ratification/ratify :to :repository :description "Reads the cut and writes the cycle's results to"}
-  {:from :measurement/scorer :to :repository :description "Reads cycle.edn and results from, writes score.edn to"}
+  {:from :ratification/ratify :to :repository :description "Reads cycle.edn and the cut, writes the cycle's results to"}
+  {:from :measurement/checklist :to :repository :description "Writes checklist.json to"}
+  {:from :measurement/scorer :to :repository :description "Reads cycle.edn, the checklist and verdicts, writes score.edn to"}
   {:from :measurement/scoreboard :to :repository :description "Reads scores from"}
-  {:from :publishing/site :to :repository :description "Writes the site to"}
+  {:from :publishing/site :to :repository :description "Reads views from and writes the site to"}
 
   ;; events between contexts, within one run: the contracts
   {:from :knowledge/sources :to :spec/check :description "Publishes" :event :KnowledgeIndexed}
@@ -175,14 +178,12 @@
   {:from :spec/parser :to :measurement/checklist :description "Publishes" :event :SpecParsed}
   {:from :spec/parser :to :publishing/site :description "Publishes" :event :SpecParsed}
   {:from :spec/check :to :publishing/site :description "Publishes" :event :SpecGated}
-  {:from :architecture/views :to :publishing/site :description "Publishes" :event :ViewsGenerated}
-  {:from :verification/status :to :measurement/scorer :description "Publishes" :event :VerificationDerived}
   {:from :verification/status :to :publishing/site :description "Publishes" :event :VerificationDerived}
 
   ;; within contexts
   {:from :project/adopt :to :project/hooks :description "Installs hooks with"}
   {:from :project/init :to :project/hooks :description "Installs hooks with"}
-  {:from :project/hooks :to :project/tasks :description "Runs rdm-spec check through"}
+  {:from :project/hooks :to :kernel/command :description "Runs rdm-spec check through"}
   {:from :spec/stamper :to :spec/parser :description "Reads scenarios with"}
   {:from :spec/check :to :spec/parser :description "Reads scenarios with"}
   {:from :knowledge/wiki :to :knowledge/sources :description "Resolves footnotes with"}
@@ -192,7 +193,6 @@
   {:from :verification/trace :to :verification/status :description "Reads statuses from"}
   {:from :verification/release :to :verification/status :description "Refuses on"}
   {:from :regeneration/fence :to :regeneration/cut :description "Builds clean rooms only from"}
-  {:from :ratification/ratify :to :ratification/black-box :description "Checks step definitions with"}
   {:from :measurement/scorer :to :measurement/checklist :description "Scores"}
   {:from :measurement/scoreboard :to :measurement/scorer :description "Compares the filed scores of"}]
 
@@ -224,5 +224,6 @@
    :steps [[:regeneration/cut :repository "1. Tags the merge spec-N"]
            [:regeneration/fence :repository "2. Builds the clean room from the cut"]
            [:ratification/ratify :repository "3. Ratifies the room's implementation against the cut"]
-           [:measurement/scorer :repository "4. Scores the cycle into score.edn"]
-           [:spec-owner :rdm-spec "5. Reads the scoreboard"]]}]}
+           [:grader :rdm-spec "4. Grades each checklist item of the ratified build"]
+           [:measurement/scorer :repository "5. Files the verdicts into score.edn"]
+           [:spec-owner :rdm-spec "6. Reads the scoreboard"]]}]}

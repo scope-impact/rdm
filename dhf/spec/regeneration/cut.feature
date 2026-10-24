@@ -11,9 +11,10 @@ Feature: Cut
 
     @spec-0036 @e2e
     Scenario: The cut is a tag on a commit of the default branch
-      Given the merge commit of a spec change on the default branch
+      Given HEAD is the commit origin/HEAD names, and the last cut is spec-6
       When "rdm-spec cut" is run
-      Then the commit is tagged spec-N, with N one more than the last cut
+      Then HEAD is tagged spec-7
+      And the tag is pushed to origin
 
   # Decided by the event storm's hotspot H2 (dhf/storm/2026-10-24-rdm.md): every
   # merge to the default branch is cut, by CI, so a cut never waits on anyone.
@@ -27,6 +28,6 @@ Feature: Cut
 
     @spec-0163 @e2e
     Scenario: A commit off the default branch is refused
-      Given a commit on a branch other than the default branch
+      Given HEAD is not the commit origin/HEAD names
       When "rdm-spec cut" is run on it
       Then it exits 2 and names the branch

@@ -84,7 +84,7 @@ executes is one representation.
 
 - **The harness is specified like every other component.** It defines the
   tags, the verification levels, the Gherkin subset, the Allure contract, the
-  black-box rule, the cut, the fence, scoring, the C4 lint and the one
+  cut, the fence, ratification, grading and scoring, the C4 lint and the one
   command. In a product like Löyly's the harness is apart from the product
   and its scenarios must stay out of the product's checklist; in RDM the
   harness *is* the product, so its scenarios are the components' feature
@@ -93,36 +93,45 @@ executes is one representation.
   (`dhf/storm/2026-10-24-rdm.md`): this ADR first kept them in a separate
   `dhf/harness/spec.feature`.*
 - **Verification is not only end to end.** Each scenario carries exactly one
-  level: `@e2e`, `@contract`, `@example` or `@property`. Persona runs
+  level: `@e2e` (through the command) or `@contract` (a file format or an
+  interface others build on). Persona runs
   (simulated usability) and the mutation probe (a reviewer's tool) are not
   part of rdm-spec: decided by the event storm's hotspots H4 and H5.
-- **Allure results are the oracle.** A scenario is verified when a test run
-  in any language writes an Allure result whose `spec` label is its id and
-  whose status is `passed`. RDM reads only Allure results, never a test
-  runner, so a project built on RDM may write its step definitions in any
-  stack.
-- **Step definitions are black box.** They drive the public surface only (the
-  command, the files it reads and writes, and the runner's step API) and never
-  load other implementation code. They survive every clean room; the
-  implementation does not.
-- **The build under test never judges itself, and ratify trusts only the cut.**
-  As Löyly ratifies `impl/` in its trusted repository, ratify takes only the
-  room's implementation paths into a fresh checkout of the cut, so the spec,
-  the configuration and the step definitions are always the cut's. The step
-  definitions run the build's own entry point (`:command-under-test`); the
-  installed `rdm-spec` only judges. Ratify passes on exactly one condition: the
-  test command exits 0, wrote results, and the step definitions are black box.
-- **The first build is a bootstrap.** Before any rdm-spec release exists, the
-  first cycle is ratified the same way by the bootstrap: its
-  `cycle.edn` is marked `:bootstrap true`, its reviewer reads every result, and
-  the scoreboard never measures against it. Its build, once accepted, is the
-  first release installed.
+- **Allure results are the oracle for status.** A scenario is verified when a
+  test run in any language writes an Allure result whose `spec` label is its id
+  with status `passed`, and no result for it that did not pass. RDM reads only
+  Allure results, never a test runner, so a project built on RDM may test in
+  any stack.
+- **Tests are the builder's, as in Löyly.** The builder writes its own tests
+  from the spec; they are implementation, rebuilt with the code (Löyly's
+  INV-5: every scenario has a test, written before the code). There are no
+  step definitions in the spec. *Revised by the third review: this ADR first
+  kept black-box step definitions beside the spec.*
+- **Ratify trusts only the cut.** As Löyly ratifies `impl/` in its trusted
+  repository, ratify deletes a fresh checkout's implementation paths and copies
+  in the room's, so the spec and the configuration are always the cut's. It
+  passes on exactly one condition: the builder's test command exits 0, writes
+  Allure results into the cycle, and names every scenario not tagged `@wip`.
+  Ratification only gates; it is never the score.
+- **Scoring is independent of the builder's tests.** As in Löyly, a grader,
+  human or agent and never the builder, grades each item of the checklist
+  against the ratified build, however they grade, and `rdm-spec score` files
+  the verdicts. No verdicts, no score; an ungraded item is a fail.
+- **The first build is a bootstrap.** Before any rdm-spec release exists, no
+  installed rdm-spec can ratify or score. The first cycle is marked
+  `:bootstrap true` in its `cycle.edn`, is reviewed by a person only, and is
+  never a baseline. Its build, once accepted, is the first release installed.
 - **One command, `rdm-spec <task>`, installed once.** Hooks, CI, agents, people
-  and step definitions all run the same tasks (`dhf/spec/project/tasks.feature`),
+  all run the same tasks (`dhf/spec/kernel/command.feature`),
   which exit 0 on pass, 1 on a finding and 2 when they cannot run, and name each
   finding on the error stream. Writing the spec is editing files; the command
   only checks, cuts, fences, runs, ratifies, scores and publishes. Nothing per
-  project: no task file.
+  project: no task file. The command is kernel code, in no context: it
+  dispatches each task to the context that owns it.
+- **The spec names its own tools.** Löyly keeps every stack name out of its
+  spec (INV-2) because its product could be built in any stack. rdm-spec's
+  tools are part of its interface (a user runs Babashka, git, MkDocs and the
+  renderer), so the spec names them; the domain wiki stays stack-free.
 
 ### Roles
 
@@ -142,8 +151,8 @@ executes is one representation.
 - **Spec first, merge, then regenerate.** A spec change lands as a reviewed
   merge. The merge commit, tagged `spec-N`, is the **cut**: regeneration reads
   that tag and nothing else, in a clean room that is an allow-list (the spec,
-  the harness configuration, the raw records, the wiki, the step definitions
-  and this ADR), one fresh commit with no history. Giving the builder no
+  the harness configuration, the raw records, the wiki and this ADR), one fresh
+  commit with no history. Giving the builder no
   network is the builder's obligation; the fence cannot enforce it.
 - **Regenerate the project, one bounded context or one component.** The
   configuration's `:code-layout` fixes where each component's code and unit
@@ -235,21 +244,20 @@ is written into the spec; each can be reversed by a spec change like any
 other.
 
 - **The implementation lives in `src/`, `test/` and `test.clj`** (namespaces
-  `rdm-spec.*`); step definitions in `dhf/steps/`, which must be written before
-  the first regeneration can be ratified.
+  `rdm-spec.*`), the builder's tests among them.
 - **H2, who cuts:** CI, on every merge to the default branch. A cut never
   waits on anyone; cutting twice changes nothing.
 - **H3, who drives the builder:** not rdm-spec. rdm-spec stops at a proved
   clean room and starts again at ratification; how a builder, human or agent,
   is run in between is the builder's business. Fewer moving parts in the first
   version, and nothing in rdm-spec that the builder could steer.
-- **H7, the first judge:** *revised twice by review:* no pinned judge; the
-  installed rdm-spec ratifies against the cut, and the very first cycle is a
-  marked bootstrap (see "The harness").
+- **H7, the first judge:** *revised by review:* no pinned judge; the installed
+  rdm-spec ratifies against the cut and a grader scores, and the very first
+  cycle is a bootstrap reviewed by a person (see "The harness").
 - **H9, unit tests:** run by the declared test command; a failing one refuses
   ratification; their results verify no scenario.
 - **H10, the Gherkin runner:** kernel code beside the bus, writing Allure
-  results labelled with scenario, component and container. Discovered, never
+  results labelled with scenario, component and context. Discovered, never
   listed; refuses a run that finds nothing.
 - **H13, label placement:** views stay under the element limit and a person
   looks at each render; the render check was removed by the second review.

@@ -36,14 +36,12 @@ Feature: Spec check
         | level     |
         | @e2e      |
         | @contract |
-        | @example  |
-        | @property |
 
     @spec-0045 @e2e
     Scenario: A scenario with no level fails the spec check
       Given a stamped scenario with no level tag
       When "rdm-spec check" is run
-      Then it fails and names the scenario's id and the four levels
+      Then it fails and names the scenario's id and the two levels
 
     @spec-0046 @e2e
     Scenario: A scenario with two levels fails the spec check

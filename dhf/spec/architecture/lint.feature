@@ -27,12 +27,6 @@ Feature: Lint
       When "rdm-spec check" is run
       Then it fails rule c4-arrow-labelled and names both ends
 
-    @spec-0004 @e2e
-    Scenario: A component view that shows another context's components fails the lint
-      Given the component view of one bounded context includes a component of another
-      When "rdm-spec check" is run
-      Then it fails rule c4-one-level and names the view and the component
-
     @spec-0005 @e2e
     Scenario: A context view with no person fails the lint
       Given a context view that includes no person
@@ -77,12 +71,6 @@ Feature: Lint
   # rdm-spec is a modular monolith: one container whose bounded contexts are
   # composable modules, each drawn as a boundary around its components.
   Rule: Bounded contexts are modules of one container, and the model owns the spec
-
-    @spec-0011 @e2e
-    Scenario: Two bounded contexts with the same id fail the lint
-      Given two bounded contexts in the rdm-spec container both with the id spec
-      When "rdm-spec check" is run
-      Then it fails rule a-context-unique and names both
 
     @spec-0012 @e2e
     Scenario: A bounded context with no component view fails the lint

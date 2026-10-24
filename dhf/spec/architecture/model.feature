@@ -37,20 +37,22 @@ Feature: Model
     Scenario: A component's spec path names its feature file
       Given the component :spec/parser with the spec path "spec/parser"
       When "rdm-spec check" is run
-      Then the component owns the feature file dhf/spec/spec/parser.feature
+      Then the component owns the feature file dhf/spec/spec/parser.feature, and "rdm-spec check" passes only when that file exists
 
   # A hash of the text would mark every view stale after a reformat that
   # changed nothing, and a gate that cries wolf is a gate that gets skipped.
   Rule: The model's hash follows its content, not its formatting
 
     @spec-0077 @e2e
-    Scenario: Reformatting the model leaves its hash unchanged
-      Given a model and its hash
+    Scenario: Reformatting the model leaves its views fresh
+      Given views generated from the model
       When the model's comments and whitespace are changed and nothing else
-      Then the model's hash is unchanged
+      And "rdm-spec check" is run
+      Then it reports no stale view
 
     @spec-0078 @e2e
-    Scenario: Changing any value changes the model's hash
-      Given a model and its hash
+    Scenario: Changing any value makes the views stale
+      Given views generated from the model
       When one element's description is changed
-      Then the model's hash changes
+      And "rdm-spec check" is run
+      Then it fails and names every view as stale

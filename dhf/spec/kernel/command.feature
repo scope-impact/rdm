@@ -1,12 +1,13 @@
-# Component Tasks, bounded context project of the rdm-spec container: dhf/spec/model.edn.
+# Kernel component Command: dhf/spec/model.edn, :kernel.
 #
-# The one entry point a hook, CI, an agent, a person and the step definitions
-# all use: the rdm-spec command, installed once, with nothing per project.
+# The one entry point a hook, CI, an agent and a person all use: the rdm-spec
+# command, installed once, with nothing per project. It belongs to no bounded
+# context: it dispatches each task to the context that owns it.
 # Specs are written by editing files; the command only checks, cuts, fences,
 # runs, ratifies, scores and publishes them.
 
 @UN-009
-Feature: Tasks
+Feature: Command
   The one command, rdm-spec, and its tasks.
 
   Rule: Everything runs through one command
@@ -19,6 +20,7 @@ Feature: Tasks
 
       Examples:
         | task       | usage                                                    | does                                                                 |
+        | help       | help                                                     | list every task with its usage                                       |
         | init       | init PATH [--id-prefix P]                                | write the skeleton into a path that does not exist                   |
         | adopt      | adopt                                                    | add the skeleton to the current repository, overwriting nothing      |
         | stamp      | stamp                                                    | give every unstamped scenario its id                                 |
@@ -26,12 +28,13 @@ Feature: Tasks
         | views      | views                                                    | generate and render every view to dhf/views/                         |
         | cut        | cut                                                      | tag the current merge on the default branch spec-N                   |
         | fence      | fence ROOM CUT [--context C \| --component C/N]          | build a clean room from a cut                                        |
-        | run        | run [--results DIR]                                      | run the scenarios and write Allure results                           |
-        | ratify     | ratify ROOM CYCLE                                        | judge the room's implementation against its cycle's cut              |
+        | run        | run [--results DIR]                                      | run the scenarios against a project's step definitions               |
+        | ratify     | ratify ROOM CYCLE                                        | ratify the room's implementation against its cycle's cut             |
+        | checklist  | checklist CYCLE                                          | derive the cycle's checklist into dhf/cycles/CYCLE/checklist.json    |
         | status     | status [--results DIR]                                   | each scenario's status                                               |
         | trace      | trace ID [--results DIR]                                 | a need or a scenario with everything linked to it                    |
         | release    | release [--results DIR]                                  | the release check                                                    |
-        | score      | score CYCLE                                              | score a cycle into dhf/cycles/CYCLE/                                 |
+        | score      | score CYCLE --verdicts FILE                              | file a grader's verdicts into dhf/cycles/CYCLE/score.edn             |
         | scoreboard | scoreboard CYCLE CYCLE                                   | compare two cycles                                                   |
         | publish    | publish [--results DIR]                                  | write the site and build it                                          |
 
