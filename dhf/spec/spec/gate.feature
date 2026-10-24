@@ -68,6 +68,20 @@ Feature: Spec gate
       When the gate runs
       Then it fails and names UN-009 and the scenario's id
 
+  Rule: Every user need rests on a source
+
+    @spec-0134 @e2e
+    Scenario: A user need citing no source fails the gate
+      Given the need UN-004 with no sources
+      When the gate runs
+      Then it fails and names UN-004
+
+    @spec-0135 @e2e
+    Scenario: A user need citing a source that does not resolve fails the gate
+      Given the need UN-004 citing "rdm:docs/nothing.md@3763e08", which the sources report as not resolving
+      When the gate runs
+      Then it fails and names UN-004, the citation and why it did not resolve
+
   Rule: Planned work is a scenario tagged @wip
 
     @spec-0050 @e2e

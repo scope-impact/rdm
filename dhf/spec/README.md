@@ -11,6 +11,7 @@ The spec of rdm-spec, the source of truth for what it does
 | `needs.edn` | The user needs every scenario traces to |
 | `ids.edn` | The id ledger; only the stamper writes it |
 | `<container>/<component>.feature` | The scenarios a component owns |
+| `kernel/<component>.feature` | The scenarios of shared code no container owns: the event bus |
 | `<component>.md` beside a feature | The component's design prose, where it has any |
 
 ## Conventions

@@ -12,8 +12,17 @@
  :model "dhf/spec/model.edn"
  :events "dhf/spec/events.edn"
  :needs "dhf/spec/needs.edn"
- ;; The raw sources every need cites (dhf/raw/README.md).
+ ;; The raw sources every need cites (dhf/raw/README.md), and local checkouts
+ ;; of them at their pins, where a citation's path is checked
+ ;; (dhf/spec/knowledge/sources.feature). A source with no checkout here is
+ ;; reported unchecked, never passed.
  :raw-dir "dhf/raw"
+ :source-checkouts {}
+
+ ;; The domain wiki, and the words no page of it may use
+ ;; (dhf/spec/knowledge/wiki.feature).
+ :wiki-dir "dhf/wiki"
+ :stack-words ["Babashka" "Clojure" "Python" "EDN" "Mermaid" "mmdr" "pytest" "git"]
 
  ;; The step definitions: black box, and they survive the fence
  ;; (dhf/spec/ratification/black-box.feature, dhf/spec/regeneration/fence.feature).

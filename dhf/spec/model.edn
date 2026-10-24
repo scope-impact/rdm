@@ -1,6 +1,7 @@
 ;; rdm-spec's C4 model: the one source every architecture view is generated from
 ;; (dhf/decisions/adr-0002-spec-first-regeneration.md). Proposed by the first
-;; event storm (dhf/storm/2026-10-24-rdm.md); its hotspots are open.
+;; event storm (dhf/storm/2026-10-24-rdm.md), with the knowledge container
+;; and the event bus added when hotspots H1 and H11 were decided.
 ;;
 ;; Shape, one key per C4 element kind; ids are keywords, unique across the
 ;; model, components namespaced by their container.
@@ -13,6 +14,9 @@
 ;;                     :context "<bounded context>"     ; :runs containers only, one each
 ;;                     :components [{:id :name :description
 ;;                                   :spec "<container>/<component>"}]}]  ; dhf/spec/<spec>.feature
+;;   :kernel         [{:id :name :description :spec "kernel/<component>"}]
+;;                   ; shared code every container may use; in no container, never drawn
+;;                   ; as one (the C4 skill: a shared library is not a container)
 ;;   :relationships  [{:from :to :description [:event]}]  ; :event names one in events.edn
 ;;   :views          [{:key :level :description [:container] [:steps]
 ;;                     [:show #{:events :actors :store}]}]   ; container views: which relationships, default all
@@ -119,14 +123,30 @@
    [{:id :publishing/site :name "Site" :spec "publishing/site"
      :description "One page per component: its prose, its scenarios and their status"}]}
 
+  {:id :knowledge :name "knowledge" :kind :runs :context "knowledge" :technology "Babashka"
+   :description "Keeps the raw sources and the domain wiki, and checks every citation"
+   :components
+   [{:id :knowledge/sources :name "Sources" :spec "knowledge/sources"
+     :description "Reads the provenance records and resolves citations against their pins"}
+    {:id :knowledge/wiki :name "Wiki" :spec "knowledge/wiki"
+     :description "The domain wiki: every page indexed, every claim footnoted to a source"}]}
+
   {:id :repository :name "Repository" :kind :stores :technology "git"
    :description "The spec, the model, the ledger, cuts, cycles and results"}]
+
+ ;; Events travel between containers on an in-process event bus (ADR 0002,
+ ;; "Events"): a container's entry point loads the containers it needs events
+ ;; from into its own process, and they meet only on the bus.
+ :kernel
+ [{:id :kernel/bus :name "Event bus" :spec "kernel/bus"
+   :description "Delivers each catalogued event to its subscribers, in process"}]
 
  :relationships
  [;; people and external systems
   {:from :engineer :to :spec :description "Writes and stamps scenarios with"}
   {:from :engineer :to :architecture :description "Models the architecture with"}
   {:from :engineer :to :project :description "Sets projects up with"}
+  {:from :engineer :to :knowledge :description "Records sources and writes the wiki with"}
   {:from :reviewer :to :git-host :description "Approves spec merges in"}
   {:from :spec-owner :to :measurement :description "Reads the scoreboard from"}
   {:from :regeneration :to :git-host :description "Tags cuts on merges in"}
@@ -141,12 +161,15 @@
   {:from :verification :to :repository :description "Reads Allure results from"}
   {:from :measurement :to :repository :description "Files cycle scores in"}
   {:from :publishing :to :repository :description "Writes the site to"}
+  {:from :knowledge :to :repository :description "Reads the sources and the wiki from"}
 
   ;; events between containers: the contracts
   {:from :spec :to :architecture :description "Publishes" :event :SpecParsed}
   {:from :spec :to :verification :description "Publishes" :event :SpecParsed}
   {:from :spec :to :measurement :description "Publishes" :event :SpecParsed}
   {:from :spec :to :publishing :description "Publishes" :event :SpecGated}
+  {:from :knowledge :to :spec :description "Publishes" :event :KnowledgeIndexed}
+  {:from :knowledge :to :publishing :description "Publishes" :event :KnowledgeIndexed}
   {:from :architecture :to :publishing :description "Publishes" :event :ViewsGenerated}
   {:from :regeneration :to :measurement :description "Publishes" :event :SpecCut}
   {:from :regeneration :to :ratification :description "Publishes" :event :CleanRoomProved}
@@ -159,6 +182,7 @@
   {:from :project/init :to :project/hooks :description "Installs hooks with"}
   {:from :project/hooks :to :project/tasks :description "Runs the check task through"}
   {:from :spec/stamper :to :spec/parser :description "Reads scenarios with"}
+  {:from :knowledge/wiki :to :knowledge/sources :description "Resolves footnotes with"}
   {:from :spec/gate :to :spec/parser :description "Reads scenarios with"}
   {:from :architecture/lint :to :architecture/model :description "Checks"}
   {:from :architecture/views :to :architecture/model :description "Generates views from"}
@@ -182,6 +206,8 @@
    :description "Who and what uses each container"}
   {:key "containers-store" :level :container :show #{:store}
    :description "What each container reads from and writes to the repository"}
+  {:key "knowledge-components" :level :component :container :knowledge
+   :description "The raw sources and the domain wiki"}
   {:key "project-components" :level :component :container :project
    :description "Setting a repository up"}
   {:key "spec-components" :level :component :container :spec

@@ -69,3 +69,11 @@ Feature: Site
       Given a spec, its views and a results directory
       When the site is published twice
       Then both sites are byte for byte the same
+
+  Rule: The site publishes the domain wiki beside the spec
+
+    @spec-0133 @e2e
+    Scenario: Every wiki page is published with its footnotes linked to their sources
+      Given a wiki page whose footnote cites "loyly:README.md@17d68d2"
+      When the site is published
+      Then the page is published and the footnote links to README.md at 17d68d2 in skallinen/loyly

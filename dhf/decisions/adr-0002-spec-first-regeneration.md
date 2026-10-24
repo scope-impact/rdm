@@ -125,6 +125,26 @@ executes is one representation.
   `skallinen/loyly`, each recorded in `dhf/raw/` with the commit it is pinned
   to and what it is evidence for. They are cited, never copied in and never
   edited, and every user need names the sources it rests on.
+- **A domain wiki sits between the sources and the spec** (`dhf/wiki/`), as in
+  Löyly: the domain distilled, every claim footnoted to a source, no page
+  naming an implementation. Sources and wiki are the `knowledge` container.
+
+### Events
+
+- **Containers meet only on an in-process event bus**, written in Clojure and
+  shared by every container as a kernel component (`kernel/bus`), not as a
+  container of its own. Delivery is synchronous and in subscription order, so
+  a run is deterministic. The bus refuses an event the catalogue does not
+  declare, one missing a key it carries, and one published by a container
+  other than its declared publisher, and a failing subscriber fails the
+  publish.
+- **How this reads beside "each bounded context is its own runnable
+  container".** Each context keeps its own entry point (its own task) and its
+  own namespaces, and is run on its own. When one context needs another's
+  events, its entry point loads that context into the same process and the two
+  meet only on the bus. The lint checks the code keeps to this: a container's
+  namespaces require another container's only through the bus, and the kernel
+  requires no container.
 
 ### Scope of the first version
 

@@ -46,6 +46,11 @@ three repositories, each recorded in `dhf/raw/` with the commit it is pinned
 to. Cited as `<source>:<path>@<commit>`. Where a source and the spec disagree,
 the source wins and the spec is the bug.
 
+**Domain wiki**: the domain distilled from the raw sources, `dhf/wiki/`: every
+claim footnoted to a source, every page in the index, no implementation named.
+The spec rests on it.
+_Avoid_: documentation, notes.
+
 ## The design
 
 **Event storm**: the design step that turns the spec's needs into domain
@@ -64,6 +69,13 @@ its design prose beside it.
 
 **Event**: a domain event that crosses a container boundary, declared in
 `dhf/spec/events.edn`. Events are the contracts between containers.
+
+**Event bus**: the in-process bus every event travels on, synchronous and in
+subscription order. It refuses an event the catalogue does not declare.
+
+**Kernel**: shared code every container may use and that belongs to none of
+them, such as the event bus. Specified under `dhf/spec/kernel/`, never drawn as
+a container.
 
 **Model**: `dhf/spec/model.edn`, the one C4 source. Every view is generated
 from it.

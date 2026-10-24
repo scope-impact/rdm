@@ -106,3 +106,25 @@ Feature: Lint
       Given a relationship from a component of one container to a component of another
       When the lint runs
       Then it fails rule a-contract-only and names the relationship
+
+  # Checked against the regenerated code, not the model: the model says which
+  # containers meet only through events, and the code has to agree.
+  Rule: The code keeps the model's boundaries
+
+    @spec-0109 @e2e
+    Scenario: A namespace of one container requiring another container's namespace fails
+      Given the namespace rdm-spec.measurement.scorer requires rdm-spec.verification.status
+      When the lint runs over the code
+      Then it fails rule a-code-contract-only and names both namespaces
+
+    @spec-0110 @e2e
+    Scenario: Any container may require the kernel
+      Given the namespace rdm-spec.spec.gate requires rdm-spec.kernel.bus
+      When the lint runs over the code
+      Then the requirement passes
+
+    @spec-0111 @e2e
+    Scenario: A kernel namespace requiring a container's namespace fails
+      Given the namespace rdm-spec.kernel.bus requires rdm-spec.spec.parser
+      When the lint runs over the code
+      Then it fails rule a-kernel-leaf and names both namespaces

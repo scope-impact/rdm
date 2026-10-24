@@ -37,4 +37,7 @@
                      "rdm:docs/reference/cli.md@3763e08"]}
  "UN-010" {:text "A reader reads the spec, its architecture and its verification status as one published site."
            :sources ["innolitics-rdm:README.md@f21b508"
-                     "rdm:mkdocs.yml@3763e08"]}}
+                     "rdm:mkdocs.yml@3763e08"]}
+ "UN-011" {:text "A team keeps the sources its spec is distilled from, and a domain wiki whose every claim cites one, so no rule in the spec rests on nothing."
+           :sources ["loyly:docs/wow/invariants.md@17d68d2"
+                     "loyly:README.md@17d68d2"]}}

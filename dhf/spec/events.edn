@@ -4,9 +4,15 @@
 ;; here (rule c4-events-named, dhf/spec/architecture/lint.feature).
 ;;
 ;; From the first event storm (dhf/storm/2026-10-24-rdm.md). Events that stay
-;; inside one container are on the board, not here. How an event travels
-;; between containers is open (hotspot H11).
-{:SpecParsed
+;; inside one container are on the board, not here. Every event travels on the
+;; in-process event bus (kernel/bus); the bus refuses an event declared nowhere
+;; here, or one missing a key it carries.
+{:KnowledgeIndexed
+ {:description "The raw sources and the wiki were read: every pinned source, every page, and which citations resolve"
+  :published-by :knowledge
+  :carries [:revision :sources :pages :citations :findings]}
+
+ :SpecParsed
  {:description "The spec at a revision was read: every scenario with its id, tags, steps and owning component"
   :published-by :spec
   :carries [:revision :scenarios :needs :refusals]}
