@@ -1,3 +1,6 @@
 [submodule "loyly"]
 	path = loyly
 	url = https://github.com/skallinen/loyly
+[submodule "ddd-workshop"]
+	path = ddd-workshop
+	url = https://github.com/pensionbee/ddd-workshop
