@@ -25,7 +25,7 @@ Feature: Init
         | dhf/decisions/README.md           | how decisions are recorded                                               |
         | .githooks/pre-commit              | a hook that runs "rdm-spec check", with core.hooksPath set to .githooks  |
         | .github/workflows/cut.yml         | a workflow that runs "rdm-spec cut" on every push to the default branch  |
-        | .gitignore                        | dhf/allure-results/, dhf/cycles/*/results/ and site/                     |
+        | .gitignore                        | dhf/allure-results/, dhf/cycles/*/results/, dhf/cycles/*/build/, site-src/ and site/ |
       And init lists every file it wrote and the next steps
 
     @spec-0087 @e2e

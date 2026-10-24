@@ -44,7 +44,7 @@ Feature: Ratify
     @spec-0206 @contract
     Scenario: The builder's tests are told where to write their results
       When "rdm-spec ratify /tmp/room 03" runs the declared test command
-      Then the command runs with the environment variable RESULTS_DIR set to dhf/cycles/03/results
+      Then the command runs with the environment variable RESULTS_DIR set to the absolute path of dhf/cycles/03/results in the repository rdm-spec ratify was run in
 
     @spec-0207 @e2e
     Scenario: Ratify passes when the builder's tests pass, wrote results, and name every scenario
@@ -73,3 +73,30 @@ Feature: Ratify
       And no result in dhf/cycles/03/results is labelled spec=spec-0012
       When "rdm-spec ratify /tmp/room 03" is run
       Then it exits 1 and names spec-0012
+
+  # The grader grades the build that was ratified, and only that build.
+  Rule: Ratify records what it ratified
+
+    @spec-0215 @contract
+    Scenario: Ratify writes ratified.edn with the cut, the room's tree and the outcome
+      Given the room's implementation has the tree hash 4b825dc
+      When "rdm-spec ratify /tmp/room 03" is run and passes
+      Then dhf/cycles/03/ratified.edn holds:
+        """
+        {:cut "spec-3"
+         :room-tree "4b825dc"
+         :outcome :passed
+         :checkout "dhf/cycles/03/build"}
+        """
+      And dhf/cycles/03/build is the ratified checkout, which the grader grades
+
+    @spec-0216 @contract
+    Scenario: A refused ratification is recorded with its reason
+      When "rdm-spec ratify /tmp/room 03" is run and the test command exits 1
+      Then dhf/cycles/03/ratified.edn holds :outcome :refused and the reason
+
+    @spec-0217 @e2e
+    Scenario: A cut holding an unstamped scenario is not ratified
+      Given the spec at cut spec-3 holds a scenario with no id
+      When "rdm-spec ratify /tmp/room 03" is run
+      Then it exits 1 and names the file and line of the unstamped scenario

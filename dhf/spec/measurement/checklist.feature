@@ -15,3 +15,28 @@ Feature: Checklist
       When "rdm-spec checklist 03" is run
       Then dhf/cycles/03/checklist.json holds 11 items to grade, each with the scenario's id, title, context, component and level
       And it lists the @wip scenario separately, as planned
+
+    @spec-0210 @contract
+    Scenario: checklist.json has one shape
+      Given cycle 03 of cut spec-3, with one item to grade and one planned scenario
+      When "rdm-spec checklist 03" is run
+      Then dhf/cycles/03/checklist.json holds:
+        """
+        {"cycle": "03",
+         "cut": "spec-3",
+         "items": [{"id": "spec-0012", "title": "A view with no description fails the lint",
+                    "context": "architecture", "component": "Lint", "level": "e2e"}],
+         "planned": [{"id": "spec-0013", "title": "A component that owns no feature file fails the lint"}]}
+        """
+      And its keys appear in that order, items and planned sorted by id
+
+  # A scenario the checklist cannot name would shrink the denominator without
+  # anyone noticing (loyly:harness/spec.feature@17d68d2, "An unstamped scenario
+  # stops the checklist rather than shrinking it").
+  Rule: An unstamped scenario stops the checklist
+
+    @spec-0211 @e2e
+    Scenario: A cut holding an unstamped scenario has no checklist
+      Given the spec at cut spec-3 holds a scenario with no id
+      When "rdm-spec checklist 03" is run
+      Then it exits 1, writes nothing, and names the file and line of the unstamped scenario

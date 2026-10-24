@@ -33,7 +33,7 @@ Feature: Adopt
       Given a git repository with its own .gitignore
       When "rdm-spec adopt" is run in it
       Then the .gitignore is unchanged
-      And adopt names the lines it would have added: dhf/allure-results/ and site/
+      And adopt names the lines it would have added, those init writes to .gitignore
 
     @spec-0083 @e2e
     Scenario: Adopting twice changes nothing

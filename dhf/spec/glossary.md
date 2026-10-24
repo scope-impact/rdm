@@ -127,13 +127,13 @@ labelled with its id passed, and no result labelled with its id did not pass
 **Grader**: the role that grades each checklist item against a ratified build,
 however they grade. A human or an agent, never the builder of what is graded.
 
-**Verdict**: a grader's passed or failed for one checklist item. Verdicts are
+**Verdict**: a grader's pass or fail for one checklist item, with the evidence. Verdicts are
 the score; the builder's tests never are.
 
 **Verified / failed / unverified / planned**: a scenario's status, derived
 from the oracle: a passing result and none that did not pass; a result that did
-not pass; no result at all; tagged `@wip`, whatever the results. An unverified
-scenario counts as a fail when a cycle is scored.
+not pass; no result at all; tagged `@wip`, whatever the results. Status never
+enters a score: only a grader's verdicts do.
 
 **Cut**: a merged spec change tagged `spec-N`. Regeneration reads a cut and
 nothing else.
@@ -160,7 +160,8 @@ _Avoid_: gate, on its own (say spec check or ratify).
 
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
-first), with `results/`, `checklist.json` and `score.edn` beside it.
+first), with `results/`, `build/` and `ratified.edn` (ratify), `checklist.json`
+and `score.edn` beside it.
 
 **Scoreboard**: the comparison of two cycles over the items both scored,
 counting what got better and what got worse, never a net.

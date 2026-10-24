@@ -38,10 +38,48 @@ Feature: Scorer
 
     @spec-0174 @contract
     Scenario: The score is written beside the cycle
-      Given cycle 03's checklist holds 12 items
-      And a verdicts file grading 11 of them passed and 1 failed
+      Given cycle 03's checklist holds 2 items and its ratification passed on the room tree 4b825dc
+      And a verdicts file grading spec-0012 pass and spec-0014 fail
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
-      Then dhf/cycles/03/score.edn holds each item's id and verdict, the 11 passed, the 12 scored, and the cycle's builder, grader, spec owner and scope
+      Then dhf/cycles/03/score.edn holds:
+        """
+        {:cycle "03"
+         :cut "spec-3"
+         :scope :project
+         :room-tree "4b825dc"
+         :builder {:name "builder-a" :actor :agent}
+         :grader {:name "grader-b" :actor :agent}
+         :spec-owner {:name "Sami" :actor :human}
+         :items [{:id "spec-0012" :verdict :pass :evidence "check exited 1 naming the view"}
+                 {:id "spec-0014" :verdict :fail :evidence "no finding was printed"}]
+         :passed 1
+         :scored 2}
+        """
+
+  Rule: Verdicts have one shape
+
+    @spec-0212 @contract
+    Scenario: A verdicts file is a vector of id, verdict and evidence
+      Given a verdicts file holding:
+        """
+        [{:id "spec-0012" :verdict :pass :evidence "check exited 1 naming the view"}
+         {:id "spec-0014" :verdict :fail :evidence "no finding was printed"}]
+        """
+      When "rdm-spec score 03 --verdicts verdicts.edn" is run
+      Then both verdicts are filed
+
+    @spec-0213 @e2e
+    Scenario Outline: A malformed verdicts file is refused and nothing is written
+      Given a verdicts file that <is malformed>
+      When "rdm-spec score 03 --verdicts verdicts.edn" is run
+      Then it exits 1, writes nothing, and says what is malformed
+
+      Examples:
+        | is malformed                                  |
+        | is a map, not a vector                         |
+        | grades spec-0012 twice                         |
+        | gives spec-0012 the verdict :maybe             |
+        | gives spec-0012 no evidence                    |
 
   # Incident: a scoring run whose every batch failed on a network outage once
   # committed "scored" over an empty record (loyly:harness/README.md@17d68d2,
@@ -90,3 +128,11 @@ Feature: Scorer
       Given cycle 03 declares a builder and a grader and no spec owner
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then it exits 1, writes nothing, and names the missing role
+
+  Rule: Only a ratified build is scored
+
+    @spec-0214 @e2e
+    Scenario: A cycle whose ratification did not pass is not scored
+      Given dhf/cycles/03/ratified.edn holds :outcome :refused, or does not exist
+      When "rdm-spec score 03 --verdicts verdicts.edn" is run
+      Then it exits 1, writes nothing, and says the cycle has no passing ratification

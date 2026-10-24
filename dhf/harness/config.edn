@@ -56,14 +56,15 @@
  :test-command ["bb" "test.clj"]
  :results-dir "dhf/allure-results"
 
- ;; Cycles: dhf/cycles/NN/ holds cycle.edn (written by hand), results/ (ratify),
- ;; checklist.json (checklist) and score.edn (score, from a grader's verdicts)
+ ;; Cycles: dhf/cycles/NN/ holds cycle.edn (written by hand), results/, build/
+ ;; and ratified.edn (ratify), checklist.json (checklist) and score.edn (score,
+ ;; from a grader's verdicts)
  ;; (dhf/spec/measurement/).
  :cycles-dir "dhf/cycles"
 
  ;; The site (dhf/spec/publishing/site.feature): MkDocs builds it, strictly, so
  ;; a broken link fails the build.
- :site {:dir "site" :builder ["mkdocs" "build" "--strict"]}
+ :site {:dir "site" :source "site-src" :builder ["mkdocs" "build" "--strict" "-f" "site-src/mkdocs.yml"]}
 
  ;; C4 lint (dhf/spec/architecture/lint.feature).
  :c4 {:view-element-limit 20
