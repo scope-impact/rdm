@@ -1,0 +1,6 @@
+;; The harness (dhf/documents/design/harness.md): a program apart from RDM, run
+;; by babashka from a project's root as `bb harness <command>`.
+{:paths ["harness/src"]
+ :tasks {harness {:doc "The harness: stamp, checklist, score, scoreboard, verify"
+                  :requires ([harness.main :as main])
+                  :task (apply main/-main *command-line-args*)}}}

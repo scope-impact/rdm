@@ -638,6 +638,18 @@ wheels = [
 ]
 
 [[package]]
+name = "gherkin-official"
+version = "42.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9f/7a/fbc8bd486d1ede3805542e01be84cdfc0726f1d10647b2db20abafebf50f/gherkin_official-42.0.1.tar.gz", hash = "sha256:adcc1f392d97dc044861bb645a614e335632330cc2653d23acb7097c923f75cd", size = 35497, upload-time = "2026-08-05T20:03:18.768Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4b/04/1f16eba1ffc5e0f5ae7b5bfd1847e8f0355c03bf67c34381d6cc5b7b2b2b/gherkin_official-42.0.1-py3-none-any.whl", hash = "sha256:6bf291733d126712eb167f6f75be57931dd8b9c9eb606de28013f3669007ec06", size = 40041, upload-time = "2026-08-05T20:03:17.765Z" },
+]
+
+[[package]]
 name = "ghp-import"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -911,6 +923,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe", size = 18437, upload-time = "2025-09-08T01:34:57.871Z" },
+]
+
+[[package]]
+name = "mako"
+version = "1.4.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/09/e07c4b5579a79f4b16f8d4f29f6c54514ac787c4ad506b8c4f28a0e6b0bf/mako-1.4.3.tar.gz", hash = "sha256:cd6537fe88d5fec315c55c2f8529bc4ce7a9a352ad7db3eeaa6a66e2dd4ec37a", size = 412799, upload-time = "2026-09-22T20:54:31.509Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6d/a0/053d6af3e8f871e0073b4a36732d9e65be77a72e5434c31b94f6af78a6bb/mako-1.4.3-py3-none-any.whl", hash = "sha256:723296007c870bfd6b3f0c3230dba7198096e5269297ebf5e4eff9e7ffa39d4f", size = 80164, upload-time = "2026-09-22T20:54:33.128Z" },
 ]
 
 [[package]]
@@ -1299,6 +1323,28 @@ wheels = [
 ]
 
 [[package]]
+name = "parse"
+version = "1.22.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/0f/4bada23d2848aaa61f3577181dbd83895fa49fb9beb406835ed7eaca1b96/parse-1.22.4.tar.gz", hash = "sha256:706d458feed5a81b02768d3156e8070baf6cee7d150a3a3c0cd43101a875c3b5", size = 40279, upload-time = "2026-10-20T21:16:07.702Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/5f/fbe039e06108eefad9e6b1f7d915a9c73ca0451700c7d48ce05eaa3a2833/parse-1.22.4-py2.py3-none-any.whl", hash = "sha256:ae430a4477316eed4a9710f642b2db968ec89d5d82e6b0908b8169673b476847", size = 21919, upload-time = "2026-10-20T21:16:06.547Z" },
+]
+
+[[package]]
+name = "parse-type"
+version = "0.6.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "parse" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/ea/42ba6ce0abba04ab6e0b997dcb9b528a4661b62af1fe1b0d498120d5ea78/parse_type-0.6.6.tar.gz", hash = "sha256:513a3784104839770d690e04339a8b4d33439fcd5dd99f2e4580f9fc1097bfb2", size = 98012, upload-time = "2025-08-11T22:53:48.066Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/85/8d/eef3d8cdccc32abdd91b1286884c99b8c3a6d3b135affcc2a7a0f383bb32/parse_type-0.6.6-py2.py3-none-any.whl", hash = "sha256:3ca79bbe71e170dfccc8ec6c341edfd1c2a0fc1e5cfd18330f93af938de2348c", size = 27085, upload-time = "2025-08-11T22:53:46.396Z" },
+]
+
+[[package]]
 name = "pathspec"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1613,6 +1659,24 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-bdd"
+version = "9.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "gherkin-official" },
+    { name = "mako" },
+    { name = "packaging" },
+    { name = "parse" },
+    { name = "parse-type" },
+    { name = "pytest" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/69/3313981067b212025b6b71a374114590afce235267cff891307c5790f26f/pytest_bdd-9.0.0.tar.gz", hash = "sha256:f22450a98345590c2b3aac5ed3412662788e0a7afac34aa8d650c14445b87046", size = 56311, upload-time = "2026-09-30T18:28:10.91Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/92/af52b4afa6d27689de69bebc6c582142e8e552a2070abfc6fe7d04f997b1/pytest_bdd-9.0.0-py3-none-any.whl", hash = "sha256:e407a361d8a07bff7d37df2ae0bf93e6b3542ed57e2c6bb89ba46b786ac7984e", size = 49855, upload-time = "2026-09-30T18:28:09.334Z" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1757,6 +1821,7 @@ name = "rdm"
 version = "2.0.0a0"
 source = { editable = "." }
 dependencies = [
+    { name = "gherkin-official" },
     { name = "jinja2" },
     { name = "markdown-it-py" },
     { name = "mdit-py-plugins" },
@@ -1779,6 +1844,7 @@ dev = [
     { name = "pypdf" },
     { name = "pyshacl" },
     { name = "pytest" },
+    { name = "pytest-bdd" },
     { name = "rdflib" },
     { name = "ruff" },
 ]
@@ -1804,6 +1870,7 @@ requires-dist = [
     { name = "check-manifest", marker = "extra == 'dev'", specifier = "==0.51" },
     { name = "coverage", marker = "extra == 'dev'", specifier = "==7.16.2" },
     { name = "docutils", marker = "extra == 'dev'", specifier = "==0.23" },
+    { name = "gherkin-official", specifier = "==42.0.1" },
     { name = "gitpython", marker = "extra == 'dev'", specifier = "==3.2.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "markdown-it-py", specifier = "==4.2.0" },
@@ -1824,6 +1891,7 @@ requires-dist = [
     { name = "pyshacl", marker = "extra == 'dev'", specifier = "==0.40.1" },
     { name = "pyshacl", marker = "extra == 'graph'", specifier = "==0.40.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==9.1.1" },
+    { name = "pytest-bdd", marker = "extra == 'dev'", specifier = "==9.0.0" },
     { name = "pyyaml", specifier = "==6.0.3" },
     { name = "rdflib", marker = "extra == 'dev'", specifier = "==7.6.0" },
     { name = "rdflib", marker = "extra == 'graph'", specifier = "==7.6.0" },

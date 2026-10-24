@@ -17,6 +17,7 @@ from pathlib import Path
 
 from rdm.kernel.git import repo_root
 from rdm.kernel.ids import is_id
+from rdm.specification.spec import spec_design_inputs, where
 
 # Matches @allure.story("ID"): only the story names a design input. Single
 # home for the pattern; group(1) is the ID.
@@ -267,3 +268,11 @@ def scan_source_tags(tests_dir: Path) -> dict[str, list[str]]:
     return refs
 
 
+def scan_spec_tags(dhf_dir: Path) -> dict[str, list[str]]:
+    """Map each design input a slice's Rule declares to its spec, when the Rule
+    has a scenario: a scenario is a test of its Rule's design input (ADR 0002)."""
+    refs: dict[str, list[str]] = {}
+    for spec, rule in spec_design_inputs(dhf_dir):
+        if rule.scenarios:
+            refs.setdefault(rule.design_input, []).append(where(dhf_dir, spec))
+    return refs

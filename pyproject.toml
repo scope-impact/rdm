@@ -31,6 +31,8 @@ dependencies = [
     # The document typesetter's Markdown parser (DI-89): pure Python, so it runs in the component.
     "markdown-it-py==4.2.0",
     "mdit-py-plugins==0.6.1",
+    # A slice's spec is Gherkin (ADR 0002, DI-90): the official parser, pure Python.
+    "gherkin-official==42.0.1",
 ]
 
 [project.optional-dependencies]
@@ -69,6 +71,7 @@ dev = [
     "coverage==7.16.2",
     "playwright==1.63.0",
     "allure-pytest==2.16.2",
+    "pytest-bdd==9.0.0",  # runs the slices' scenarios (ADR 0002)
     "rdflib==7.6.0",
     "pyshacl==0.40.1",
     "mcp==2.2.0",
@@ -125,4 +128,5 @@ universal = true
 # The example is its own project, run from its own directory (CI does).
 testpaths = ["tests"]
 norecursedirs = [".venv", "build", "dist"]
+
 

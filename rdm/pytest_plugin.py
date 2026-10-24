@@ -41,7 +41,11 @@ import pytest
 from rdm.evidence.allure import COMMIT_LABEL, DIRTY, REQUIREMENT_ATTACHMENT, WORKTREE_LABEL, write_run_facts
 from rdm.kernel.git import web_url
 from rdm.kernel.record_state import record_state
+import re
+
 from rdm.specification.tags import DESIGN_INPUT_LABELS
+
+DESIGN_INPUT_TAG = re.compile(r"DI-\d+")
 
 
 def pytest_addoption(parser):
@@ -199,3 +203,18 @@ def _label(item) -> None:
         allure.attach(f"{di} ({requirement['context']}): {requirement['text']}\n"
                       f"Traces to: {', '.join(requirement['traces_to']) or '—'}\n",
                       name=REQUIREMENT_ATTACHMENT.format(di), attachment_type=allure.attachment_type.TEXT)
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_bdd_apply_tag(tag, function):
+    """A slice's scenario carries its Rule's tags (ADR 0002): the design-input
+    id becomes the story, as ``@allure.story("DI-n")`` does on a test; every
+    other tag (the item id, the need, the context) an Allure tag, which the
+    scorer reads the item id from (DI-93). Only with pytest-bdd installed."""
+    import allure
+
+    if DESIGN_INPUT_TAG.fullmatch(tag):
+        allure.story(tag)(function)
+    else:
+        allure.tag(tag)(function)
+    return True

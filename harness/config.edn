@@ -1,0 +1,10 @@
+;; RDM's own harness configuration (harness/src/harness/config.clj documents
+;; each setting). `bb harness verify` ratifies a build round of RDM.
+{:suite "uv run pytest tests -q -p no:cacheprovider"
+ :port 8901
+ :boot-budget-seconds 10
+ :poll-seconds 0.5
+ :known-answers [{:record "harness/known/good" :gate :design :verdict :pass}
+                 {:record "harness/known/duplicate" :gate :design :verdict :fail}]
+ :rdm ["uv" "run" "--quiet" "rdm"]
+ :dhf "dhf"}

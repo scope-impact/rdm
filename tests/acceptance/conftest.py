@@ -8,4 +8,4 @@ which pytest accepts only in a top-level conftest; this keeps it scoped to
 the acceptance tests.
 """
 
-from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
+from rdm.pytest_plugin import pytest_bdd_apply_tag, pytest_runtest_call  # noqa: F401

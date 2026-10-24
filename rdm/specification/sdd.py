@@ -20,6 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rdm.kernel.frontmatter import documents, frontmatter_of
+from rdm.specification.spec import spec_design_inputs, where
 
 # The traceability-matrix template: an output, rendered from the record, never
 # part of it (DI-58) — the graph leaves it out, the evidence bundle renders it.
@@ -98,13 +99,15 @@ def declarations(dhf_dir: Path) -> dict[str, list[str]]:
     twice in one document lists that document twice (DI-46)."""
     found: dict[str, list[str]] = {}
     for md, front in documents(dhf_dir):
-        where = str(md.relative_to(dhf_dir))
+        declaring = str(md.relative_to(dhf_dir))
         entries = _listed(front, "user_needs")
         if front.get("kind") == DESIGN_KIND:
             entries += _listed(front, "design_inputs")
         for item in entries:
             if ident := _entry_id(item):
-                found.setdefault(ident, []).append(where)
+                found.setdefault(ident, []).append(declaring)
+    for spec, rule in spec_design_inputs(dhf_dir):  # a slice's Rules (DI-90)
+        found.setdefault(rule.design_input, []).append(where(dhf_dir, spec))
     return found
 
 
@@ -166,7 +169,8 @@ def user_need_texts(dhf_dir: Path) -> dict[str, str]:
 
 
 def design_inputs(dhf_dir: Path) -> list[dict]:
-    """Return the design inputs declared across all per-context design docs.
+    """Return the design inputs declared across all per-context design docs,
+    then those the slices' specs declare as tagged Rules (DI-90).
 
     Each design document owns its design inputs in a ``design_inputs``
     frontmatter list of ``{id, text, traces_to}`` (``traces_to`` is the user
@@ -198,6 +202,12 @@ def design_inputs(dhf_dir: Path) -> list[dict]:
                     "context": context,
                 }
             )
+    for _, rule in spec_design_inputs(dhf_dir):  # a slice's Rules (DI-90); a duplicate keeps the first
+        if rule.design_input in seen:
+            continue
+        seen.add(rule.design_input)
+        inputs.append({"id": rule.design_input, "text": rule.title, "traces_to": rule.needs,
+                       "context": rule.context or ""})
     return inputs
 
 

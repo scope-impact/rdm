@@ -29,6 +29,9 @@ jobs:
         env:
           PYTHON: ${{ steps.python.outputs.python-path }}
         run: uv sync --all-extras --python "$PYTHON"
+      # The harness (slice 01) runs on babashka, pinned with its checksum.
+      - name: Install babashka
+        run: scripts/install-babashka.sh "$HOME/.local/bin" && echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Lint
         run: uv run ruff check .
       - name: Tests

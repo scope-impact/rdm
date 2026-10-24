@@ -40,6 +40,13 @@ from rdm.kernel.frontmatter import documents, unreadable_documents
 from rdm.kernel.record_state import FileState, Tracking, record_state
 from rdm.kernel.ids import relevant_orphans
 from rdm.specification import tags
+from rdm.specification.spec import (
+    RULE_WITHOUT_NEED,
+    RULE_WITHOUT_OWNER,
+    UNREADABLE_SPEC,
+    UNTAGGED_RULE,
+    spec_problems,
+)
 from rdm.specification.sdd import (
     context_of,
     design_input_ids,
@@ -75,6 +82,9 @@ DUPLICATE_ID = "Design Controls Not Approved / Duplicate Id"
 MALFORMED_DECLARATION = "Design Controls Not Approved / Malformed Declaration"
 UNREADABLE_FRONTMATTER = "Design Controls Not Approved / Unreadable Frontmatter"
 VIEWS_STALE = "Design Controls Not Approved / Views Stale"
+# The slices' specs (DI-90): the rule each names is the spec reader's.
+SPEC_RULES = {rule: f"Design Controls Not Approved / {rule}"
+              for rule in (UNTAGGED_RULE, RULE_WITHOUT_OWNER, RULE_WITHOUT_NEED, UNREADABLE_SPEC)}
 NEED_UNTRACED = "Design Controls Warned / Need Untraced"
 UNKNOWN_NEED = "Design Controls Warned / Unknown Need"
 UNKNOWN_REALISED_INPUT = "Design Controls Warned / Unknown Realised Input"
@@ -313,6 +323,8 @@ def _traceability_warnings(dhf_dir: Path) -> list[Event]:
                                 f"{len(di_ids)} design input(s)")]
 
     tagged = tags.scan_source_tags(tests_dir)
+    for ident, specs in tags.scan_spec_tags(dhf_dir).items():  # a slice's scenarios (ADR 0002)
+        tagged.setdefault(ident, []).extend(specs)
     tagged_ids = set(tagged)
     warnings = [Event(INPUT_UNTAGGED, f"design input {di} has no @allure.story tag in tests")
                 for di in sorted(di_ids - tagged_ids)]
@@ -338,6 +350,15 @@ def check_declarations(dhf_dir: Path) -> ArtifactCheck:
     events = [Event(MALFORMED_DECLARATION, f"{md.relative_to(dhf_dir)}: {problem}")
               for md, problem in malformed_declarations(Path(dhf_dir))]
     return ArtifactCheck(name="Declarations", path=Path(dhf_dir),
+                         complete=not events, events=events, uncommitted=False)
+
+
+def check_specs(dhf_dir: Path) -> ArtifactCheck:
+    """Every Rule of a slice's spec is a design input the record can read: an
+    id, an owning context and a traced need; and every spec can be parsed
+    (DI-90). One that cannot would drop out of every gate unseen."""
+    events = [Event(SPEC_RULES[rule], message) for rule, message in spec_problems(Path(dhf_dir))]
+    return ArtifactCheck(name="Slices' specs", path=Path(dhf_dir) / "plan",
                          complete=not events, events=events, uncommitted=False)
 
 
@@ -386,7 +407,7 @@ def design_artifacts(dhf_dir: Path) -> list[ArtifactCheck]:
     drawn views."""
     return [*check_design_docs(dhf_dir), check_artifact(dhf_dir, DESIGN_REVIEW_DOC, "Design Review"),
             *check_record_docs(dhf_dir),
-            check_unique_ids(dhf_dir), check_declarations(dhf_dir), check_frontmatter(dhf_dir),
+            check_unique_ids(dhf_dir), check_declarations(dhf_dir), check_specs(dhf_dir), check_frontmatter(dhf_dir),
             *check_architecture_views(dhf_dir)]
 
 
