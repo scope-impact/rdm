@@ -35,7 +35,7 @@ Feature: Results reader
       When "rdm-spec status" is run
       Then the scenarios they name are verified exactly as if any other stack had written them
 
-  Rule: Unit test results verify nothing
+  Rule: A result with no spec label verifies nothing
 
     @spec-0164 @contract
     Scenario: A result with no spec label counts toward nothing and is not reported as unknown

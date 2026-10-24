@@ -72,7 +72,7 @@
        {:id :spec/stamper :name "Stamper" :spec "spec/stamper"
         :description "Hands out scenario ids from the ledger, never twice"}
        {:id :spec/check :name "Spec check" :spec "spec/check"
-        :description "Ids, levels, needs, citations and planned work: the rules a spec must keep"}]}
+        :description "Ids, levels, tags, needs, citations, planned work and no stack words"}]}
 
      {:id :knowledge :name "knowledge"
       :description "Keeps the raw sources and the domain wiki, and checks every citation"
@@ -98,7 +98,7 @@
       [{:id :verification/results :name "Results reader" :spec "verification/results"
         :description "Reads a run's Allure results, naming what it cannot read"}
        {:id :verification/status :name "Status" :spec "verification/status"
-        :description "Verified, failed or unverified, for every stamped scenario"}
+        :description "Verified, failed, unverified or planned, for every stamped scenario"}
        {:id :verification/trace :name "Trace" :spec "verification/trace"
         :description "A need or scenario with everything linked to it"}
        {:id :verification/release :name "Release check" :spec "verification/release"
@@ -108,7 +108,7 @@
       :description "Cuts merged spec changes and builds clean rooms from them, for the project, one context or one component"
       :components
       [{:id :regeneration/cut :name "Cut" :spec "regeneration/cut"
-        :description "Tags a merge on the default branch spec-N"}
+        :description "Tags HEAD spec-N when it is origin/HEAD, and pushes the tag"}
        {:id :regeneration/fence :name "Fence" :spec "regeneration/fence"
         :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}]}
 
@@ -122,7 +122,7 @@
       :description "Derives the checklist, files a grader's verdicts and compares cycles, never for the builder"
       :components
       [{:id :measurement/checklist :name "Checklist" :spec "measurement/checklist"
-        :description "One item per stamped scenario, derived, never written"}
+        :description "One item per stamped scenario at the cut, into checklist.json"}
        {:id :measurement/scorer :name "Scorer" :spec "measurement/scorer"
         :description "Files a grader's verdicts, and nothing when nothing was graded"}
        {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
@@ -132,7 +132,7 @@
       :description "Publishes the spec, its views and its status as one site"
       :components
       [{:id :publishing/site :name "Site" :spec "publishing/site"
-        :description "One page per component, and the site builder's configuration"}]}]}
+        :description "One page per component and context, and the site builder's configuration"}]}]}
 
   {:id :repository :name "Repository" :kind :stores :technology "git"
    :description "The spec, the model, the ledger, cuts, cycles and results"}]

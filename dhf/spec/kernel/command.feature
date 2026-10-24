@@ -9,7 +9,7 @@
 
 @UN-009
 Feature: Command
-  The one command, rdm-spec, and its tasks.
+  The one command, rdm-spec: its tasks, their usage and how every task reports.
 
   Rule: Everything runs through one command
 

@@ -10,14 +10,18 @@ The spec of rdm-spec, the source of truth for what it does
 | `events.edn` | The events between bounded contexts, within one run: their contracts |
 | `needs.edn` | The user needs every scenario traces to |
 | `ids.edn` | The id ledger; only the stamper writes it |
+| `glossary.md` | The vocabulary |
 | `<context>/<component>.feature` | The scenarios a component owns |
+| `<context>/<component>.md` | The component's design prose, where it has any |
 | `kernel/<component>.feature` | The scenarios of shared code no context owns: the command, the event bus and the Gherkin runner |
 
 ## Conventions
 
 - **One scenario is one requirement**, tagged with exactly one id
-  (`@spec-NNNN`) and one level (`@e2e` or `@contract`). A need tag (`@UN-nnn`) on a feature or a rule covers every
-  scenario under it, and a scenario may carry its own.
+  (`@spec-NNNN`) and one level (`@e2e` or `@contract`). A need tag
+  (`@UN-nnn`) on a feature or a rule covers every scenario under it, and a
+  scenario may carry its own. `@wip` marks planned work. No other tag is
+  allowed.
 - **Ids are handed out by the stamper and never reused.** Until the stamper
   exists they are stamped by hand, following its rules
   (`spec/stamper.feature`) and advancing `ids.edn`.
@@ -25,4 +29,8 @@ The spec of rdm-spec, the source of truth for what it does
   something once lied says so in a comment above it, with where the incident
   is recorded. A scenario that only says what a component does when nothing
   is wrong cites nothing.
+- **The spec never names its stack.** Tools and languages are in
+  `dhf/harness/stack.md`; the spec check refuses the configured stack words.
+- **Every When runs the command** (`rdm-spec <task>`) unless the step edits a
+  file or makes a commit; every refusal says its exit code.
 - **"A project" means any repository set up this way,** rdm-spec itself included.

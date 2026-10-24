@@ -2,7 +2,8 @@
 
 @UN-002
 Feature: Spec check
-  The rules every scenario in the spec must keep: one id, one level, a known need.
+  The rules a spec must keep: one id and one level per scenario, only known tags, a
+  need resting on a source, planned work marked, and no stack named.
 
   Rule: A scenario is the unit of requirement and carries exactly one id
 

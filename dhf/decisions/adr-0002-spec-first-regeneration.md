@@ -158,8 +158,8 @@ executes is one representation.
 - **Regenerate the project, one bounded context or one component.** The
   configuration's `:code-layout` fixes where each component's code and unit
   tests live, so a clean room can drop
-  just one part and keep the rest as it was at the cut. Ratify and score always
-  run the whole spec, and the scoreboard reports the rebuilt part apart from
+  just one part and keep the rest as it was at the cut. Ratify and the
+  checklist always cover the whole spec, and the scoreboard reports the rebuilt part apart from
   the rest.
 - **Anything the delta teaches goes back into the spec** as a new merge. A fix
   made only in regenerated code dies at the next cut, on purpose.
@@ -219,8 +219,8 @@ executes is one representation.
 ### Cutover
 
 The Clojure core is built by regeneration from a cut of this spec. It takes
-over this repository only when it passes the whole spec at a cut, the harness
-spec included. A partial pass means the build is unfinished; the two sets of
+over this repository only when a build from a cut is ratified and graded with
+every item passing. A partial pass means the build is unfinished; the two sets of
 gates never run side by side. At cutover the current record is tagged
 `pre-spec`, and the design inputs, the Python gates and Backlog.md are
 removed.
@@ -255,8 +255,9 @@ other.
 - **H7, the first judge:** *revised by review:* no pinned judge; the installed
   rdm-spec ratifies against the cut and a grader scores, and the very first
   cycle is a bootstrap reviewed by a person (see "The harness").
-- **H9, unit tests:** run by the declared test command; a failing one refuses
-  ratification; their results verify no scenario.
+- **H9, unit tests:** run by the declared test command with the builder's
+  other tests; a failing one refuses ratification; no test ever counts toward a
+  score.
 - **H10, the Gherkin runner:** kernel code beside the bus, writing Allure
   results labelled with scenario, component and context. Discovered, never
   listed; refuses a run that finds nothing.

@@ -90,7 +90,7 @@ Feature: Site
       And each section lists its context's page and then its components' pages, in the model's order
 
     @spec-0147 @e2e
-    Scenario: The site builds under strict mode
+    Scenario: The site builds when every link resolves
       Given a published site whose pages all link to pages that exist
       When "rdm-spec publish" is run
       Then the configured site builder builds it, failing on any broken link, and the HTML is written

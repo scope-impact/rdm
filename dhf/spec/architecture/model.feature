@@ -41,7 +41,7 @@ Feature: Model
 
   # A hash of the text would mark every view stale after a reformat that
   # changed nothing, and a gate that cries wolf is a gate that gets skipped.
-  Rule: The model's hash follows its content, not its formatting
+  Rule: Views go stale when the model's content changes, never its formatting
 
     @spec-0077 @e2e
     Scenario: Reformatting the model leaves its views fresh

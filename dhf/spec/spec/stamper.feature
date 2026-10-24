@@ -4,7 +4,7 @@
 Feature: Stamper
   Hands out scenario ids from the ledger, never twice.
 
-  Rule: A scenario is the unit of requirement and carries exactly one id
+  Rule: The stamper hands out each id once, from the ledger
 
     @spec-0054 @e2e
     Scenario: The stamper gives every unstamped scenario the next id from the ledger

@@ -10,7 +10,7 @@ Feature: Fence
   Rule: A clean room is built only from a cut
 
     @spec-0037 @e2e
-    Scenario: The fence refuses a source that is not a cut
+    Scenario: A commit that is not a cut is refused
       Given the commit 1a2b3c4 carries no spec-N tag
       When "rdm-spec fence /tmp/room 1a2b3c4" is run
       Then it exits 2 and says regeneration reads only a cut

@@ -14,7 +14,8 @@ their name; `RDM` alone means today's implementation.
 
 **Spec**: the source of truth for what the product does: the C4 model, the
 event catalogue, the user needs, and the feature files the model's components
-own. Everything under `dhf/spec/`. The code is built from it, never the other
+own. Everything under `dhf/spec/`; it never names its stack, which is in
+`dhf/harness/stack.md`. The code is built from it, never the other
 way round.
 
 **Scenario**: one requirement, written in Gherkin and accepted as a whole. Its
@@ -31,9 +32,9 @@ writes it.
 **Rule**: a heading in a feature file grouping scenarios. It carries no id
 and is not itself a requirement.
 
-**Level**: how a scenario is verified, exactly one per scenario: `@e2e`,
-or `@contract` (a file format or an interface others build on). There are no
-others.
+**Level**: how a scenario is verified, exactly one per scenario: `@e2e`
+(through the command) or `@contract` (a file format or an interface others
+build on). There are no others.
 
 **User need**: what a user requires, independent of any solution. Declared
 in `dhf/spec/needs.edn`; every scenario traces to at least one.
@@ -69,7 +70,8 @@ while the others stand. Drawn as a boundary around its components.
 one, the `rdm-spec` command (a modular monolith), beside the repository.
 
 **Component**: a logical building block inside one bounded context (C4 level
-3). Each owns one feature file, `dhf/spec/<context>/<component>.feature`.
+3). Each owns one feature file, `dhf/spec/<context>/<component>.feature`, and
+may have design prose beside it as `<component>.md`.
 
 **Event**: a domain event that passes between bounded contexts within one run,
 declared in `dhf/spec/events.edn`. Steps that run at different times meet
@@ -113,8 +115,8 @@ must learn next. Never the builder of the cycle it reads.
 **Harness**: the bounded contexts that check the spec, ratify a build and score
 it.
 In rdm-spec the harness is the product, so it is specified like every other
-component, under `dhf/spec/`; only its configuration lives in
-`dhf/harness/config.edn`.
+component, under `dhf/spec/`; only its configuration (`dhf/harness/config.edn`)
+and its stack (`dhf/harness/stack.md`) live apart.
 
 **Step definition**: the code that executes a scenario's steps, for a project
 that runs its scenarios with `rdm-spec run`. For rdm-spec itself they are the
@@ -149,8 +151,10 @@ was at the cut.
 **Regeneration**: building the implementation again from a cut, inside the
 fence.
 
-**Spec check**: `rdm-spec check` on the spec: ids, levels, needs, citations,
-the model's lint and the views' freshness.
+**Spec check**: the rules `rdm-spec check` holds a spec to: one id and one
+level per scenario, only known tags, needs resting on resolving sources,
+planned work marked and no stack word. `rdm-spec check` also runs the model's
+lint, the views' freshness and the wiki check.
 
 **Ratify**: `rdm-spec ratify ROOM CYCLE`: the room's implementation, in place
 of the implementation of a fresh checkout of the cut, passes the builder's

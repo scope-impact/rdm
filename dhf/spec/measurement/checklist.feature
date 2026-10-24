@@ -2,7 +2,8 @@
 
 @UN-008
 Feature: Checklist
-  Derives one item per stamped scenario, never written by hand.
+  Derives one item per stamped scenario at the cycle's cut, never written by
+  hand, for a grader to grade.
 
   # The checklist is derived from the spec, never written by hand
   # (loyly:README.md@17d68d2, "What to steal" 1).

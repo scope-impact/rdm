@@ -2,15 +2,16 @@
 
 @UN-006
 Feature: Cut
-  Tags a merged spec change; a regeneration reads nothing else.
+  Tags HEAD spec-N when it is origin/HEAD and pushes the tag; a regeneration
+  reads nothing else.
 
   # At a fixed time the spec is cut, tagged and frozen, and a regeneration reads
   # that and nothing else (loyly:harness/README.md@17d68d2, "The idea
   # in five lines" 1).
-  Rule: A cut is a tagged merge, and regeneration reads only a cut
+  Rule: A cut is a pushed tag on the default branch, and regeneration reads only a cut
 
     @spec-0036 @e2e
-    Scenario: The cut is a tag on a commit of the default branch
+    Scenario: HEAD on origin/HEAD is tagged spec-N and the tag is pushed
       Given HEAD is the commit origin/HEAD names, and the last cut is spec-6
       When "rdm-spec cut" is run
       Then HEAD is tagged spec-7
@@ -27,7 +28,7 @@ Feature: Cut
       Then no tag is added and the cut says the commit is already spec-7
 
     @spec-0163 @e2e
-    Scenario: A commit off the default branch is refused
+    Scenario: A HEAD that is not origin/HEAD is refused
       Given HEAD is not the commit origin/HEAD names
       When "rdm-spec cut" is run on it
       Then it exits 2 and names the branch
