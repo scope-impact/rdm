@@ -1,6 +1,6 @@
 ---
 id: DR-001
-revision: 84
+revision: 85
 title: Design Review — RDM
 ---
 
@@ -2482,6 +2482,41 @@ but it declares no licence, so it cannot be a dependency.
 - **Out of scope:** Pandoc's Markdown extensions beyond CommonMark and GFM
   tables (fenced divs, bracketed spans), which no RDM document uses; DOCX in
   the component.
+
+# Design Review 75 — Slices, Gherkin, and the harness, specified first
+
+**Scope reviewed:** the maintainer's direction (`dhf/raw/2026-10-maintainer-requests.md`):
+align RDM's record with Löyly's layout (`loyly/`, a submodule), with Gherkin
+scenarios as the acceptance criteria, and build a harness for RDM from a spec.
+A survey of RDM found every reader of design inputs behind one function that
+returns `{id, text, traces_to, context}`, so a second source of design inputs
+leaves the gates, matrix, graph and risk controls unchanged; and found ADR 0001
+rejecting Gherkin on purpose.
+
+**Disposition:** Approved as a plan; slice 01 is `planned` until this review's
+PR merges, then `ready-for-development`.
+
+- **ADR 0002** supersedes ADR 0001 in part: new work is planned as slices
+  (`dhf/plan/NN-slug/`: plan, `spec.feature`, decisions); a Gherkin `Rule:` is a
+  design input, tagged `@DI-n @UN-n @context-<name>`; each scenario accepts it
+  and carries a stable `@item-NN-SSS`. Sources are kept, immutable, in
+  `dhf/raw/`.
+- **New UN-020:** a maintainer can trust a build is done only when a check its
+  builder does not control ratifies it, and can measure, cycle over cycle, how
+  much of the specification a build carries.
+- **Slice 01, the harness** (`dhf/plan/01-harness/`): DI-90 (the record reads
+  Rules as design inputs, owned by specification), DI-91 to DI-100 (the
+  stamper, the checklist, scoring, the scoreboard, the gate's instrument check,
+  suite contract, boot budget, identity proof and spec-lock, and one
+  configuration), owned by a new **harness** context. 37 scenarios.
+- **Glossary:** slice, spec, scenario, item id, raw source, harness, checklist,
+  cycle, ratify, spec-lock.
+- **Not adopted now:** carrying Löyly's harness byte for byte as a member of
+  its ring (the slice's D1); the fence (D4); moving the eight existing contexts
+  into slices (D5); a perception step (D6).
+- **Before implementation:** the harness context's design document, its place
+  in `architecture.md` and the C4 workspace, and the tool risks of a gate that
+  ratifies wrongly, recorded with ticket 1.
 
 # Approval
 

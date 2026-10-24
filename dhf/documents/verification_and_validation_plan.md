@@ -42,6 +42,8 @@ user_needs:
     text: "A user learns from RDM's user manual, a controlled document of each release, how to keep the record the way that release's gates enforce, and a reviewer can see which pages of the manual name what a change touches."
   - id: UN-019
     text: "A team can run RDM's gates and graph as one sandboxed WebAssembly component that reads only the record it is given and reaches nothing else, with the same results as the command line, on any host that runs WASI components."
+  - id: UN-020
+    text: "A maintainer can trust that a build is done only when a check its builder does not control ratifies it, and can measure, cycle over cycle, how much of the specification a build carries."
 ---
 
 # Purpose
@@ -101,5 +103,6 @@ criterion counts once it is verified and its risk's residual is acceptable.
 | UN-017 | maintainer review that RDM's own C4 diagrams, rendered, match the code they name, and that each conformance warning on them points at a real disagreement | dogfooding: RDM's own architecture and design documents carry C1–C3, held to `rdm graph validate` |
 | UN-018 | maintainer review that the manual's pages teach what the gates enforce, and that each page the graph flags, or names for a changed design input, is one to re-read | dogfooding: RDM's own manual (`dhf/documents/user_manual.md`) projected and held to `rdm graph validate` |
 | UN-019 | maintainer review that the component, run on a repository, decides what the command line decides, and that the host's grants are the only files and network it can reach | dogfooding: RDM's own gates and graph run as `rdm.wasm` in CI beside the command line, and the two are compared |
+| UN-020 | maintainer review that the gate refuses each case it guards against (a wrong known answer, a red suite, a taken port, a slow boot, another record, a changed spec) and that the scoreboard's comparison agrees with the cycles' records | dogfooding: RDM's own build rounds ratified by `rdm harness verify` and scored cycle over cycle |
 
 Formative evidence never gates release.

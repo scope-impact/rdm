@@ -1,5 +1,9 @@
 # ADR 0001 — User needs across bounded contexts
 
+> **Superseded in part (Design Review 75, ADR 0002).** New work is specified as
+> slices whose Gherkin Rules are the design inputs; the "no `.feature`" section
+> below holds only for the design inputs still declared in design documents.
+
 > **Vocabulary note (Design Review 25).** Where this ADR says the test *is* the
 > acceptance criterion, read: the design input is the acceptance criterion and
 > its tagged test verifies it (the glossary, `CONTEXT.md`). The decision is unchanged.

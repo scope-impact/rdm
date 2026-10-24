@@ -152,6 +152,62 @@ The one place that wires the command line to every context (`rdm/main.py`).
 It is in no context, so it may import any.
 _Avoid_: main module, glue
 
+## Slices and the harness
+
+**Slice**:
+One coherent increment of behaviour, planned before it is built, in
+`dhf/plan/NN-slug/`: its plan (goal, references, scope, status), its spec and
+its decisions. A slice whose status is `planned` is scope, not yet built.
+_Avoid_: epic, sprint, milestone
+
+**Spec** (of a slice):
+The slice's `spec.feature`: Gherkin whose Rules are design inputs and whose
+scenarios accept them. Complete enough to build the slice from without reading
+its code.
+_Avoid_: specification document, requirements file
+
+**Scenario**:
+One example, in a slice's spec, that accepts the Rule above it; stamped with an
+item id. A design input is verified when every one of its scenarios passes.
+_Avoid_: test case, verification step, acceptance criterion
+
+**Item id**:
+A scenario's `@item-NN-SSS`: the slice number, then a running number, stamped
+once and never renumbered. The instrument joins cycles on it; the regulatory
+trace joins on the Rule's design-input id.
+_Avoid_: scenario number, test id
+
+**Raw source**:
+A document under `dhf/raw/` that the record cites and nobody edits: a
+maintainer's request in their words, an interview, an incident.
+_Avoid_: reference material, notes
+
+**Harness**:
+The machinery that ratifies a build and measures the spec: the stamper, the
+checklist, the scorer, the scoreboard and the gate (`rdm harness`). Not the
+program an agent runs in, which is an _agent harness_.
+_Avoid_: test harness, framework
+
+**Checklist**:
+The list of items a cycle is scored on, derived from the slices' specs alone,
+one item per stamped scenario. Never written by hand.
+_Avoid_: test plan, task list
+
+**Cycle**:
+One scored build: the checklist it was scored against and a verdict per item.
+An item no verdict reached is a failure, never a smaller denominator.
+_Avoid_: run, iteration, sprint
+
+**Ratify**:
+To accept a "done" claim because a check its claimant does not control passed:
+the gate. A claim nobody ratified is not done.
+_Avoid_: sign off, self-certify
+
+**Spec-lock**:
+The rule that a build round does not change the plan or spec it is building
+from; specs change in planning rounds.
+_Avoid_: freeze, baseline
+
 ## Architecture
 
 **Software system**:
