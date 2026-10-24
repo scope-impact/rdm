@@ -89,7 +89,9 @@ executes is one representation.
   (`dhf/storm/2026-10-24-rdm.md`): this ADR first kept them in a separate
   `dhf/harness/spec.feature`.*
 - **Verification is not only end to end.** Each scenario carries exactly one
-  level: `@e2e`, `@contract`, `@example`, `@property` or `@persona`.
+  level: `@e2e`, `@contract`, `@example` or `@property`. Persona runs
+  (simulated usability) and the mutation probe (a reviewer's tool) are not
+  part of rdm-spec: decided by the event storm's hotspots H4 and H5.
 - **Allure results are the oracle.** A scenario is verified when a test run
   in any language writes an Allure result whose `spec` label is its id and
   whose status is `passed`. RDM reads only Allure results, never a test

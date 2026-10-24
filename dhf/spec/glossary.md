@@ -32,7 +32,7 @@ writes it.
 and is not itself a requirement.
 
 **Level**: how a scenario is verified, exactly one per scenario: `@e2e`,
-`@contract`, `@example`, `@property` or `@persona`.
+`@contract`, `@example` or `@property`. There is no persona level.
 
 **User need**: what a user requires, independent of any solution. Declared
 in `dhf/spec/needs.edn`; every scenario traces to at least one.

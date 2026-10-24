@@ -32,19 +32,26 @@ Feature: Spec gate
         | @contract |
         | @example  |
         | @property |
-        | @persona  |
 
     @spec-0045 @e2e
     Scenario: A scenario with no level fails the gate
       Given a stamped scenario with no level tag
       When the gate runs
-      Then it fails and names the scenario's id and the five levels
+      Then it fails and names the scenario's id and the four levels
 
     @spec-0046 @e2e
     Scenario: A scenario with two levels fails the gate
       Given a stamped scenario tagged both @e2e and @contract
       When the gate runs
       Then it fails and names the scenario's id and both levels
+
+    # Decided by the event storm's hotspot H4 (dhf/storm/2026-10-24-rdm.md):
+    # there is no persona level.
+    @spec-0150 @e2e
+    Scenario: A scenario tagged with a level that is not one of the four fails the gate
+      Given a stamped scenario tagged @persona
+      When the gate runs
+      Then it fails and names the scenario's id, @persona and the four levels
 
   Rule: Every scenario traces to a user need
 

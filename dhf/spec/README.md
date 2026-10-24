@@ -17,8 +17,8 @@ The spec of rdm-spec, the source of truth for what it does
 ## Conventions
 
 - **One scenario is one requirement**, tagged with exactly one id
-  (`@spec-NNNN`) and one level (`@e2e`, `@contract`, `@example`, `@property`,
-  `@persona`). A need tag (`@UN-nnn`) on the feature covers every scenario in
+  (`@spec-NNNN`) and one level (`@e2e`, `@contract`, `@example` or
+  `@property`). A need tag (`@UN-nnn`) on the feature covers every scenario in
   it.
 - **Ids are handed out by the stamper and never reused.** Until the stamper
   exists they are stamped by hand, following its rules
