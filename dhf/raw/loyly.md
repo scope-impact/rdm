@@ -17,6 +17,7 @@
 | "Done" ratified by a script the claimant does not control | `README.md`, "What to steal" 2; `harness/README.md`, "The gate's boot budget" | UN-007 |
 | The instrument refuses to record what it did not measure; unreached items fail; both directions, never the net | `README.md`, "What to steal" 4; `harness/README.md`; `harness/spec.feature` | UN-008 |
 | The incidents each guard was learned from | `harness/README.md`, "The failure modes this shape was learned from" | the guards cited in the spec |
+| A slice is done only when every scenario in its spec passes against the real interface | `docs/plan/01-booking-core/plan.md`, "Acceptance" | UN-004 |
 | Learning not written into the spec dies with the implementation | `README.md`, "What to steal" 5 | the cut and the fence |
 | Raw sources, immutable and cited; a domain wiki whose every claim footnotes a source | `README.md`, "How to read the repo"; `docs/wow/invariants.md`, INV-1 | this directory |
 | Harness against instrument: what feeds the agent and what reports to a person | `harness/README.md`, "The idea in five lines" | ratification and measurement as separate containers |

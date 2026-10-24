@@ -121,12 +121,14 @@ executes is one representation.
 ### The sources
 
 - **The spec is distilled from raw sources, and says which.** rdm-spec's are
-  three repositories, `innolitics/rdm`, `scope-impact/rdm` and
-  `skallinen/loyly`, each recorded in `dhf/raw/` with the commit it is pinned
+  two repositories, `innolitics/rdm` and `skallinen/loyly`, each recorded in `dhf/raw/` with the commit it is pinned
   to and what it is evidence for. They are cited, never copied in and never
   edited, and every user need names the sources it rests on.
-- **A source's implementation is fenced** like rdm-spec's own: two of the
-  sources hold implementations of what rdm-spec regenerates, and an agent that
+- **`scope-impact/rdm` is not a source.** It holds today's implementation of
+  what rdm-spec regenerates; its decisions reach the spec through this ADR,
+  and its history is fenced as rdm-spec's own.
+- **A source's implementation is fenced** like rdm-spec's own: both sources
+  hold implementations of what rdm-spec regenerates, and an agent that
   can read them is copying, not rebuilding. Their code paths are listed in
   `dhf/raw/sources.edn`, never cited, and removed in tree and history from the
   source checkouts the clean room carries; the clean room has no network, so

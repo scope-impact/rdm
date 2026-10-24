@@ -74,8 +74,8 @@ Feature: Sources
 
     @spec-0137 @e2e
     Scenario: A citation inside a fenced directory fails
-      Given the sources index fences "rdm" in rdm
-      And a citation "rdm:rdm/specification/sdd.py@3763e08"
+      Given the sources index fences "rdm" in innolitics-rdm
+      And a citation "innolitics-rdm:rdm/render.py@f21b508"
       When citations are resolved
       Then the citation fails and names the fenced directory and where it was cited
 

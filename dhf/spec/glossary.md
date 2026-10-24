@@ -42,7 +42,7 @@ refuses it. There is no planning tool besides this.
 _Avoid_: task, ticket, backlog item.
 
 **Raw source**: what the spec is distilled from, never edited: for rdm-spec,
-three repositories, each recorded in `dhf/raw/` with the commit it is pinned
+two repositories (`innolitics/rdm` and `skallinen/loyly`), each recorded in `dhf/raw/` with the commit it is pinned
 to. Cited as `<source>:<path>@<commit>`. Where a source and the spec disagree,
 the source wins and the spec is the bug. A source's implementation is fenced:
 never cited, and absent from the clean room.

@@ -4,6 +4,9 @@
 ;; the repository, every pin ever cited (a pin is never dropped), and the
 ;; source's fenced paths.
 ;;
+;; scope-impact/rdm is not a source: it holds today's implementation, and its
+;; own history is fenced by dhf/harness/config.edn, :fenced-paths.
+;;
 ;; FENCED PATHS. A source that holds an implementation of what rdm-spec
 ;; regenerates would hand a coding agent the answer, however clean its room
 ;; (the event storm's hotspot H14, dhf/storm/2026-10-24-rdm.md). So each
@@ -16,12 +19,6 @@
   :record "innolitics-rdm.md"
   :pins ["f21b508"]
   :fenced ["rdm" "tests" "contrib" "setup.py"]}
-
- :rdm
- {:repository "https://github.com/scope-impact/rdm"
-  :record "rdm.md"
-  :pins ["3763e08"]
-  :fenced ["rdm" "tests" "scripts" ".githooks" "docs/_hooks" "docs/javascripts"]}
 
  :loyly
  {:repository "https://github.com/skallinen/loyly"

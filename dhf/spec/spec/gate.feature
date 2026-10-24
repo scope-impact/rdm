@@ -78,7 +78,7 @@ Feature: Spec gate
 
     @spec-0135 @e2e
     Scenario: A user need citing a source that does not resolve fails the gate
-      Given the need UN-004 citing "rdm:docs/nothing.md@3763e08", which the sources report as not resolving
+      Given the need UN-004 citing "innolitics-rdm:docs/nothing.md@f21b508", which the sources report as not resolving
       When the gate runs
       Then it fails and names UN-004, the citation and why it did not resolve
 

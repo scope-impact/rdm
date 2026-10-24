@@ -15,6 +15,7 @@
 | Git hooks installed by a command (`rdm hooks`) | `README.md`, "Git Hooks" | UN-002 |
 | Traceability generated, never written | `README.md`, "Benefits of Using RDM" | UN-003 |
 | Developer-first, readable documents; easy to migrate away from | `README.md`, "Our Design Goals for RDM" 1, 3, 5 | UN-010 |
+| A top-level architecture document kept in the repository, subdividing the project into software items | `README.md`, "Typical Workflow" steps 5 and 9 | UN-005 |
 | Templates plus data rendered to Markdown, then PDF or Word | `README.md`, "Templating and Data Files" | UN-010 |
 | Gap checks against audit checklists | `README.md`, "Audit Checklists" | (regulated profile, not in the first version) |
 
