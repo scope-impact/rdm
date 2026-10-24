@@ -141,7 +141,9 @@
  ;; from into its own process, and they meet only on the bus.
  :kernel
  [{:id :kernel/bus :name "Event bus" :spec "kernel/bus"
-   :description "Delivers each catalogued event to its subscribers, in process"}]
+   :description "Delivers each catalogued event to its subscribers, in process"}
+  {:id :kernel/runner :name "Gherkin runner" :spec "kernel/runner"
+   :description "Runs the scenarios' steps and writes Allure results"}]
 
  :relationships
  [;; people and external systems

@@ -19,7 +19,8 @@
  "UN-004" {:text "A release is blocked until every scenario is verified and none is still planned."
            :sources ["loyly:docs/plan/01-booking-core/plan.md@17d68d2"]}
  "UN-005" {:text "A team keeps its architecture as one C4 model whose views are generated and checked, and whose components own the scenarios."
-           :sources ["innolitics-rdm:README.md@f21b508"]}
+           :sources ["agent-skills:skills/engineering/c4-diagrams/reference/c4-guide.md@da65901"
+                     "innolitics-rdm:README.md@f21b508"]}
  "UN-006" {:text "A team regenerates its implementation from a merged cut of the spec, in a clean room that provably holds no earlier implementation or measurement."
            :sources ["loyly:harness/README.md@17d68d2"]}
  "UN-007" {:text "A build counts as done only when a gate the builder does not control says so."

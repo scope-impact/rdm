@@ -42,7 +42,8 @@ refuses it. There is no planning tool besides this.
 _Avoid_: task, ticket, backlog item.
 
 **Raw source**: what the spec is distilled from, never edited: for rdm-spec,
-two repositories (`innolitics/rdm` and `skallinen/loyly`), each recorded in `dhf/raw/` with the commit it is pinned
+three repositories (`innolitics/rdm`, `scope-impact/agent-skills` and
+`skallinen/loyly`), each recorded in `dhf/raw/` with the commit it is pinned
 to. Cited as `<source>:<path>@<commit>`. Where a source and the spec disagree,
 the source wins and the spec is the bug. A source's implementation is fenced:
 never cited, and absent from the clean room.
@@ -134,7 +135,12 @@ wrote results, and the thing answering is this project.
 counting what got better and what got worse, never a net.
 
 **Judge**: the pinned previous release that gates and scores a regenerated
-rdm-spec.
+rdm-spec. Before the first release there is none: the bootstrap build is
+ratified unjudged, its record says so, and its reviewer's acceptance stands in
+for a judge once.
+
+**Gherkin runner**: the kernel code that runs scenarios against their step
+definitions and writes Allure results labelled with each scenario's id.
 
 **Cutover**: the moment the regenerated Clojure core, passing the whole spec
 at a cut, takes over this repository from the current record.

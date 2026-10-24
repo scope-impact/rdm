@@ -33,3 +33,12 @@ Feature: Results reader
       Given Allure results labelled with spec ids written by a JavaScript test run
       When the results are read
       Then the scenarios they name are verified exactly as if Clojure had written them
+
+  Rule: Unit test results verify nothing
+
+    @spec-0164 @contract
+    Scenario: A result with no spec label counts toward nothing and is not reported as unknown
+      Given an Allure result from a unit test, with no spec label
+      When the results are read
+      Then it counts toward no scenario
+      And it is not listed as an unknown result

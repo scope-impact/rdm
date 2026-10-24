@@ -203,11 +203,39 @@ removed.
 - The graph and its MCP server either stay on a frozen Python release after
   cutover or are switched off until rebuilt. That is decided before cutover.
 
+## Decided by the agent, on delegation
+
+The remaining hotspots were handed to the agent to decide (2026-10-24). Each
+is written into the spec; each can be reversed by a spec change like any
+other.
+
+- **The implementation lives in `src/`** (namespaces `rdm-spec.*`); step
+  definitions in `dhf/steps/`.
+- **H2, who cuts:** CI, on every merge to the default branch. A cut never
+  waits on anyone; cutting twice changes nothing.
+- **H3, who drives the builder:** not rdm-spec. rdm-spec stops at a proved
+  clean room and starts again at ratification; how a builder, human or agent,
+  is run in between is the builder's business. Fewer moving parts in the first
+  version, and nothing in rdm-spec that the builder could steer.
+- **H7, the first judge:** the bootstrap build is ratified unjudged and its
+  record says so; its reviewer's acceptance stands in for a judge once, and an
+  unjudged cycle is never a baseline on the scoreboard. From the first release
+  on, the previous release judges.
+- **H9, unit tests:** run by the gate's test command; a failing one refuses
+  ratification; their results verify no scenario.
+- **H10, the Gherkin runner:** kernel code beside the bus, writing Allure
+  results labelled with scenario, component and container. Discovered, never
+  listed; refuses a run that finds nothing.
+- **H13, label placement:** views stay under the element limit and the render
+  check fails what cannot be read; nothing else is built around it.
+- **A third source:** `scope-impact/agent-skills`, for what a C4 model is
+  (UN-005 now rests on it). It holds no implementation, so nothing is fenced.
+
 ## Open
 
-- Where the Clojure implementation lives in the tree (`src/` is assumed in
-  `dhf/harness/config.edn`).
-- The containers themselves: they come out of the event storm, not this ADR.
+- The spec review. A reviewer other than its author approves the spec before
+  it is merged and cut; the author of this spec is an agent, so that agent
+  cannot be the reviewer.
 
 ## References
 

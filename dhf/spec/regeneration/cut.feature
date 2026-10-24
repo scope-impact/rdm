@@ -13,3 +13,19 @@ Feature: Cut
       Given the merge commit of a spec change on the default branch
       When the cut is made
       Then the commit is tagged spec-N, with N one more than the last cut
+
+  # Decided by the event storm's hotspot H2 (dhf/storm/2026-10-24-rdm.md): every
+  # merge to the default branch is cut, by CI, so a cut never waits on anyone.
+  Rule: Every merge to the default branch is cut, once
+
+    @spec-0162 @e2e
+    Scenario: Cutting a commit already cut changes nothing
+      Given the commit tagged spec-7
+      When the cut is made again on it
+      Then no tag is added and the cut says the commit is already spec-7
+
+    @spec-0163 @e2e
+    Scenario: A commit off the default branch is refused
+      Given a commit on a branch other than the default branch
+      When the cut is made on it
+      Then the cut refuses and names the branch

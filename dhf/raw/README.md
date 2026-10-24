@@ -4,7 +4,7 @@ What rdm-spec's spec is distilled from. Every user need cites at least one
 source here (`dhf/spec/needs.edn`, `:sources`), so a rule that rests on nothing
 is visible as one.
 
-The sources are two repositories, indexed for machines in `sources.edn`.
+The sources are three repositories, indexed for machines in `sources.edn`.
 Each `.md` file here is a **provenance record**:
 the repository, the commit it is pinned to, and what it is evidence for. The
 repositories themselves are not copied in: a citation names
@@ -28,6 +28,7 @@ repositories themselves are not copied in: a citation names
 | Record | Repository | Pinned at | Evidence for |
 |---|---|---|---|
 | [innolitics-rdm.md](innolitics-rdm.md) | `innolitics/rdm` | `f21b508` (2022-09-06) | documentation as code: templates and data to documents, `init`, hooks, the developer-first design goals |
+| [agent-skills.md](agent-skills.md) | `scope-impact/agent-skills` | `da65901` (2026-10-12) | what a C4 model is, its levels and views, and the quality checklist the lint enforces |
 | [loyly.md](loyly.md) | `skallinen/loyly` | `17d68d2` (2026-09-08) | spec first and regenerate: the fence, the ratifying gate, the honest instrument, sources and a cited domain wiki |
 
 `scope-impact/rdm`, this repository before rdm-spec, is deliberately not a

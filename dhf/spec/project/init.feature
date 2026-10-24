@@ -45,3 +45,10 @@ Feature: Init
       Given no network is reachable
       When a project is initialised at "sauna"
       Then the skeleton is written in full
+
+  Rule: A new project cuts every merge
+
+    @spec-0158 @e2e
+    Scenario: A new project's CI cuts every merge to the default branch
+      When a project is initialised at "sauna"
+      Then "sauna" holds a CI workflow that runs the cut task on every push to the default branch

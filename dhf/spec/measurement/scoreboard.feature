@@ -21,3 +21,12 @@ Feature: Scoreboard
       Then it compares only the 12 items both scored
       And it states that the denominator moved from 12 to 15
       And it counts the 3 new items separately
+
+  Rule: An unjudged cycle is never a baseline
+
+    @spec-0157 @e2e
+    Scenario: The scoreboard marks an unjudged cycle and compares nothing against it
+      Given cycle 00 was ratified unjudged and cycle 01 by a pinned judge
+      When the scoreboard compares them
+      Then it marks cycle 00 as unjudged
+      And it reports no better or worse count against cycle 00

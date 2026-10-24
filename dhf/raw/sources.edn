@@ -20,6 +20,12 @@
   :pins ["f21b508"]
   :fenced ["rdm" "tests" "contrib" "setup.py"]}
 
+ :agent-skills
+ {:repository "https://github.com/scope-impact/agent-skills"
+  :record "agent-skills.md"
+  :pins ["da65901"]
+  :fenced []}
+
  :loyly
  {:repository "https://github.com/skallinen/loyly"
   :record "loyly.md"
