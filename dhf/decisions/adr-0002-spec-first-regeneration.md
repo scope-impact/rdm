@@ -32,6 +32,14 @@ executes is one representation.
 
 ## Decision
 
+### The name
+
+- **The product this ADR describes is rdm-spec.** The suffix says what
+  changed: the spec is the source and the code is built from it. `RDM` alone
+  keeps meaning today's Python implementation, whose package and `rdm`
+  command keep their name until cutover. The Clojure namespaces are
+  `rdm-spec.*`.
+
 ### The spec
 
 - **Requirements are Gherkin scenarios.** One scenario is one requirement,

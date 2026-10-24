@@ -7,6 +7,11 @@ or changes, this file changes in the same commit.
 
 ## The spec
 
+**rdm-spec**: the product this spec describes: RDM rebuilt around this
+decision. The suffix says what changed: the spec is the source and the code is
+built from it. Until cutover the Python package and the `rdm` command keep
+their name; `RDM` alone means today's implementation.
+
 **Spec**: the source of truth for what the product does: the C4 model, the
 event catalogue, the user needs, and the feature files the model's components
 own. Everything under `dhf/spec/`. The code is built from it, never the other
@@ -64,7 +69,7 @@ component or dynamic. Never drawn by hand.
 ## The harness
 
 **Harness**: the containers that check the spec, ratify a build and score it.
-In RDM the harness is the product, so it is specified like every other
+In rdm-spec the harness is the product, so it is specified like every other
 component, under `dhf/spec/`; only its configuration lives in
 `dhf/harness/config.edn`.
 
@@ -98,7 +103,7 @@ wrote results, and the thing answering is this project.
 counting what got better and what got worse, never a net.
 
 **Judge**: the pinned previous release that gates and scores a regenerated
-RDM.
+rdm-spec.
 
 **Cutover**: the moment the regenerated Clojure core, passing the whole spec
 at a cut, takes over this repository from the current record.

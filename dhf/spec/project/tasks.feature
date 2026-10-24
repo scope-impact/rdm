@@ -8,7 +8,7 @@ Feature: Tasks
 
     @spec-0026 @e2e
     Scenario Outline: Each task is a Babashka task
-      Given a project set up by RDM
+      Given a project set up by rdm-spec
       When the task list is printed
       Then it includes <task>
 

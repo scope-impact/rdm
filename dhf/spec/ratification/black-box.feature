@@ -10,8 +10,8 @@ Feature: Black-box check
 
     @spec-0027 @e2e
     Scenario: A step definition that requires an implementation namespace fails the gate
-      Given the configuration declares the implementation namespace prefix "rdm."
-      And a step definition namespace requires rdm.spec.reader
+      Given the configuration declares the implementation namespace prefix "rdm-spec."
+      And a step definition namespace requires rdm-spec.spec.reader
       When the gate runs
       Then it fails and names the step file and the required namespace
 

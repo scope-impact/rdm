@@ -1,4 +1,4 @@
-;; RDM's own harness configuration: everything the harness must not know by
+;; rdm-spec's own harness configuration: everything the harness must not know by
 ;; heart. A difference between projects lives here, declared, and nowhere in
 ;; the harness code. Each value is used by a component specified under
 ;; dhf/spec/, named beside it; decided in
@@ -17,7 +17,7 @@
  ;; (dhf/spec/ratification/black-box.feature, dhf/spec/regeneration/fence.feature).
  :steps-dir "dhf/steps"
  ;; A step definition requiring a namespace with this prefix fails the gate.
- :implementation-ns-prefix "rdm."
+ :implementation-ns-prefix "rdm-spec."
 
  ;; Where the Clojure implementation is regenerated. Open: ADR 0002, "Open".
  :implementation-dirs ["src"]
@@ -37,7 +37,7 @@
  :boot-budget-seconds 10
  :identity-probe "dhf/harness/probe.clj"
 
- ;; The release that judges a regenerated RDM (dhf/spec/ratification/gate.feature,
+ ;; The release that judges a regenerated rdm-spec (dhf/spec/ratification/gate.feature,
  ;; dhf/spec/measurement/scorer.feature). Unset until the first Clojure release
  ;; exists.
  :judge nil

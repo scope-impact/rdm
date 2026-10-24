@@ -31,9 +31,9 @@ Feature: Gate
   Rule: The previous release judges the next
 
     @spec-0034 @e2e
-    Scenario: Regenerated RDM is ratified by the pinned release
-      Given the configuration pins RDM release 0.4.0 as the judge
-      And a regenerated RDM in the clean room
+    Scenario: Regenerated rdm-spec is ratified by the pinned release
+      Given the configuration pins rdm-spec release 0.4.0 as the judge
+      And a regenerated rdm-spec in the clean room
       When the regeneration is ratified
       Then release 0.4.0 runs the gate
       And the regenerated build runs only as the thing under test

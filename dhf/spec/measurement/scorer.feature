@@ -25,9 +25,9 @@ Feature: Scorer
   Rule: The previous release judges the next
 
     @spec-0024 @e2e
-    Scenario: Regenerated RDM is scored by the pinned release
-      Given the configuration pins RDM release 0.4.0 as the judge
-      And a regenerated RDM that has been ratified
+    Scenario: Regenerated rdm-spec is scored by the pinned release
+      Given the configuration pins rdm-spec release 0.4.0 as the judge
+      And a regenerated rdm-spec that has been ratified
       When the cycle is scored
       Then release 0.4.0 runs the scorer
       And the regenerated build's own scorer is never run

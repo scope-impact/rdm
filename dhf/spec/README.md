@@ -1,6 +1,6 @@
 # The spec
 
-RDM's spec, the source of truth for what RDM does
+The spec of rdm-spec, the source of truth for what it does
 (`dhf/decisions/adr-0002-spec-first-regeneration.md`). The vocabulary is
 `glossary.md`.
 
@@ -26,4 +26,4 @@ RDM's spec, the source of truth for what RDM does
   something once lied says so in a comment above it, with where the incident
   is recorded. A scenario that only says what a component does when nothing
   is wrong cites nothing.
-- **"A project" means any repository set up this way,** RDM itself included.
+- **"A project" means any repository set up this way,** rdm-spec itself included.

@@ -1,4 +1,4 @@
-;; RDM's C4 model: the one source every architecture view is generated from
+;; rdm-spec's C4 model: the one source every architecture view is generated from
 ;; (dhf/decisions/adr-0002-spec-first-regeneration.md). Proposed by the first
 ;; event storm (dhf/storm/2026-10-24-rdm.md); its hotspots are open.
 ;;
@@ -16,8 +16,8 @@
 ;;   :relationships  [{:from :to :description [:event]}]  ; :event names one in events.edn
 ;;   :views          [{:key :level :description [:container] [:steps]
 ;;                     [:show #{:events :actors :store}]}]   ; container views: which relationships, default all
-{:system {:id :rdm
-          :name "RDM"
+{:system {:id :rdm-spec
+          :name "rdm-spec"
           :description "Regenerates a build from its spec, scores it"}
 
  :people
@@ -175,7 +175,7 @@
 
  :views
  [{:key "context" :level :context
-   :description "RDM, the people who use it and the systems around it"}
+   :description "rdm-spec, the people who use it and the systems around it"}
   {:key "containers" :level :container :show #{:events}
    :description "One runnable container per bounded context, and the events between them"}
   {:key "containers-actors" :level :container :show #{:actors}
