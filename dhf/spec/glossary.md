@@ -63,8 +63,10 @@ component or dynamic. Never drawn by hand.
 
 ## The harness
 
-**Harness**: the tools that check the spec, ratify a build and score it,
-specified in `dhf/harness/spec.feature`.
+**Harness**: the containers that check the spec, ratify a build and score it.
+In RDM the harness is the product, so it is specified like every other
+component, under `dhf/spec/`; only its configuration lives in
+`dhf/harness/config.edn`.
 
 **Step definition**: the code that executes a scenario's steps. It drives the
 public surface only (the command, its files, its events) and survives the

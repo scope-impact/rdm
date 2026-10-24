@@ -70,11 +70,16 @@ executes is one representation.
 
 ### The harness
 
-- **The harness is specified** in `dhf/harness/spec.feature`, outside
-  `dhf/spec/`, so its scenarios never count toward the product's checklist.
-  It defines the tags, the verification levels, the Gherkin subset, the
-  Allure contract, the black-box rule, the cut, the fence, scoring, the C4
-  lint, and the task interface.
+- **The harness is specified like every other component.** It defines the
+  tags, the verification levels, the Gherkin subset, the Allure contract, the
+  black-box rule, the cut, the fence, scoring, the C4 lint and the task
+  interface. In a product like Löyly's the harness is apart from the product
+  and its scenarios must stay out of the product's checklist; in RDM the
+  harness *is* the product, so its scenarios are the components' feature
+  files under `dhf/spec/`, and `dhf/harness/` holds only its configuration.
+  *Amended by the first event storm, hotspot H12
+  (`dhf/storm/2026-10-24-rdm.md`): this ADR first kept them in a separate
+  `dhf/harness/spec.feature`.*
 - **Verification is not only end to end.** Each scenario carries exactly one
   level: `@e2e`, `@contract`, `@example`, `@property` or `@persona`.
 - **Allure results are the oracle.** A scenario is verified when a test run
@@ -126,8 +131,9 @@ removed.
 ## Consequences
 
 - The current record keeps governing until cutover. Until then, nothing
-  checks the new spec except review and the Gherkin parser, so the harness spec
-  comes first: its stamper and gate are what the product spec is held to.
+  checks the new spec except review and the Gherkin parser, so the components
+  that check a spec (parser, stamper, spec gate) come first: they are what the
+  rest of the spec is held to.
 - The regulated features leave RDM's own record at cutover and return as an
   optional profile. `rdm init` stops scaffolding them by default.
 - `CONTEXT.md` describes the current record and is replaced at cutover by

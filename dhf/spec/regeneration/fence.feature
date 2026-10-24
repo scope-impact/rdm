@@ -1,0 +1,45 @@
+# Component Fence, container regeneration: dhf/spec/model.edn.
+
+@UN-006
+Feature: Fence
+  Builds a clean room from a cut and proves every fenced path gone.
+
+  # Incident: an agent that can read last cycle's scores can aim at the
+  # checklist instead of the spec. Regeneration reads a cut, nothing else.
+  Rule: A cut is a tagged merge, and regeneration reads only a cut
+
+    @spec-0037 @e2e
+    Scenario: The fence refuses a source that is not a cut
+      Given a commit that carries no spec-N tag
+      When the fence is asked to build a clean room from it
+      Then it refuses and says regeneration reads only a cut
+
+  # Incident: a weaker fence probe once passed while the previous implementation
+  # was still reachable from an older commit.
+  Rule: The fence is physical and proved
+
+    @spec-0038 @e2e
+    Scenario: The clean room holds no fenced path, in the tree or in history
+      Given the configuration fences the implementation and every measurement
+      When the fence builds a clean room from cut spec-3
+      Then the clean room has a single root commit
+      And no fenced path exists in its working tree
+      And no object reachable in its repository belongs to a fenced path
+
+    @spec-0039 @e2e
+    Scenario: A fenced path that matches nothing is a hard failure
+      Given the configuration fences a path that does not exist at the cut
+      When the fence builds a clean room
+      Then it fails and names the path
+
+    @spec-0040 @e2e
+    Scenario: The clean room keeps the spec, the step definitions and the harness configuration
+      When the fence builds a clean room from a cut
+      Then the spec, the step definitions and the harness configuration are present and unchanged
+
+  Rule: The scoreboard compares cycles honestly
+
+    @spec-0041 @e2e
+    Scenario: The scoreboard is for a person, never for the regenerating agent
+      When the fence builds a clean room from a cut
+      Then no scoreboard and no cycle score is present in it

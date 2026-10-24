@@ -1,7 +1,7 @@
 ;; The event catalogue: the domain events that cross container boundaries,
 ;; which are the contracts between bounded contexts. A relationship in
 ;; model.edn that publishes or subscribes to an event must name one declared
-;; here (rule c4-events-named, dhf/harness/spec.feature).
+;; here (rule c4-events-named, dhf/spec/architecture/lint.feature).
 ;;
 ;; From the first event storm (dhf/storm/2026-10-24-rdm.md). Events that stay
 ;; inside one container are on the board, not here. How an event travels
