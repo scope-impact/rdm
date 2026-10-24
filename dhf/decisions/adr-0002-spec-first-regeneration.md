@@ -118,6 +118,14 @@ executes is one representation.
   definitions and every script. Shell survives only to install Babashka
   itself.
 
+### The sources
+
+- **The spec is distilled from raw sources, and says which.** rdm-spec's are
+  three repositories, `innolitics/rdm`, `scope-impact/rdm` and
+  `skallinen/loyly`, each recorded in `dhf/raw/` with the commit it is pinned
+  to and what it is evidence for. They are cited, never copied in and never
+  edited, and every user need names the sources it rests on.
+
 ### Scope of the first version
 
 - **In:** reading and gating the spec, stamping, verification and trace from

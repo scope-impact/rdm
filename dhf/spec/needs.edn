@@ -2,17 +2,39 @@
 ;; scenario traces to at least one, by a @UN-nnn tag on itself, its rule or its
 ;; feature (dhf/spec/spec/gate.feature, "Every scenario traces to a user need").
 ;;
+;; Each need cites the raw sources it rests on (dhf/raw/README.md), as
+;; <source>:<path>@<commit>.
+;;
 ;; Restated by the first event storm (dhf/storm/2026-10-24-rdm.md) for the
 ;; first version's scope (ADR 0002). Numbered afresh: greenfield, no aliases.
 ;; The needs of today's record stay in
 ;; dhf/documents/verification_and_validation_plan.md until cutover.
-{"UN-001" {:text "A team keeps its product's requirements as executable scenarios, the one source of truth for what the product does."}
- "UN-002" {:text "A contributor is stopped before a spec that breaks its rules is committed, and told exactly which scenario and why."}
- "UN-003" {:text "A team sees each scenario's verification status, derived from executed test results, whatever stack ran the tests."}
- "UN-004" {:text "A release is blocked until every scenario is verified and none is still planned."}
- "UN-005" {:text "A team keeps its architecture as one C4 model whose views are generated and checked, and whose components own the scenarios."}
- "UN-006" {:text "A team regenerates its implementation from a merged cut of the spec, in a clean room that provably holds no earlier implementation or measurement."}
- "UN-007" {:text "A build counts as done only when a gate the builder does not control says so."}
- "UN-008" {:text "A person sees, cycle over cycle, how completely the spec carries the product, and the instrument never overstates it."}
- "UN-009" {:text "A team starts a new project, or brings an existing repository, under this structure with one command, without anything already there being overwritten."}
- "UN-010" {:text "A reader reads the spec, its architecture and its verification status as one published site."}}
+{"UN-001" {:text "A team keeps its product's requirements as executable scenarios, the one source of truth for what the product does."
+           :sources ["loyly:README.md@17d68d2"
+                     "rdm:dhf/decisions/adr-0001-bounded-context-user-needs.md@3763e08"
+                     "innolitics-rdm:README.md@f21b508"]}
+ "UN-002" {:text "A contributor is stopped before a spec that breaks its rules is committed, and told exactly which scenario and why."
+           :sources ["rdm:dhf/AGENT_WORKFLOW.md@3763e08"
+                     "innolitics-rdm:rdm/hooks.py@f21b508"]}
+ "UN-003" {:text "A team sees each scenario's verification status, derived from executed test results, whatever stack ran the tests."
+           :sources ["rdm:docs/reference/cli.md@3763e08"
+                     "innolitics-rdm:README.md@f21b508"]}
+ "UN-004" {:text "A release is blocked until every scenario is verified and none is still planned."
+           :sources ["rdm:dhf/documents/verification_and_validation_plan.md@3763e08"]}
+ "UN-005" {:text "A team keeps its architecture as one C4 model whose views are generated and checked, and whose components own the scenarios."
+           :sources ["rdm:dhf/documents/verification_and_validation_plan.md@3763e08"]}
+ "UN-006" {:text "A team regenerates its implementation from a merged cut of the spec, in a clean room that provably holds no earlier implementation or measurement."
+           :sources ["loyly:harness/README.md@17d68d2"
+                     "loyly:harness/fence.sh@17d68d2"]}
+ "UN-007" {:text "A build counts as done only when a gate the builder does not control says so."
+           :sources ["loyly:harness/verify.sh@17d68d2"
+                     "rdm:dhf/AGENT_WORKFLOW.md@3763e08"]}
+ "UN-008" {:text "A person sees, cycle over cycle, how completely the spec carries the product, and the instrument never overstates it."
+           :sources ["loyly:harness/README.md@17d68d2"
+                     "loyly:harness/score.clj@17d68d2"]}
+ "UN-009" {:text "A team starts a new project, or brings an existing repository, under this structure with one command, without anything already there being overwritten."
+           :sources ["innolitics-rdm:rdm/init.py@f21b508"
+                     "rdm:docs/reference/cli.md@3763e08"]}
+ "UN-010" {:text "A reader reads the spec, its architecture and its verification status as one published site."
+           :sources ["innolitics-rdm:README.md@f21b508"
+                     "rdm:mkdocs.yml@3763e08"]}}

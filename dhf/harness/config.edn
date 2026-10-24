@@ -12,6 +12,8 @@
  :model "dhf/spec/model.edn"
  :events "dhf/spec/events.edn"
  :needs "dhf/spec/needs.edn"
+ ;; The raw sources every need cites (dhf/raw/README.md).
+ :raw-dir "dhf/raw"
 
  ;; The step definitions: black box, and they survive the fence
  ;; (dhf/spec/ratification/black-box.feature, dhf/spec/regeneration/fence.feature).
