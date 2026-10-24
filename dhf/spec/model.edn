@@ -119,11 +119,11 @@
     {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
      :description "Better and worse over shared items, a moved denominator said aloud"}]}
 
-  {:id :publishing :name "publishing" :kind :runs :context "publishing" :technology "Babashka"
-   :description "Publishes the spec, its views and its status as one Markdown site"
+  {:id :publishing :name "publishing" :kind :runs :context "publishing" :technology "Babashka, MkDocs"
+   :description "Publishes the spec, its views and its status as one site, built by MkDocs"
    :components
    [{:id :publishing/site :name "Site" :spec "publishing/site"
-     :description "One page per component: its prose, its scenarios and their status"}]}
+     :description "One page per component, and the MkDocs configuration that builds them"}]}
 
   {:id :knowledge :name "knowledge" :kind :runs :context "knowledge" :technology "Babashka"
    :description "Keeps the raw sources and the domain wiki, and checks every citation"

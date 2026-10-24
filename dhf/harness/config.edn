@@ -22,7 +22,7 @@
  ;; The domain wiki, and the words no page of it may use
  ;; (dhf/spec/knowledge/wiki.feature).
  :wiki-dir "dhf/wiki"
- :stack-words ["Babashka" "Clojure" "Python" "EDN" "Mermaid" "mmdr" "pytest" "git"]
+ :stack-words ["Babashka" "Clojure" "Python" "EDN" "Mermaid" "mmdr" "MkDocs" "pytest" "git"]
 
  ;; The step definitions: black box, and they survive the fence
  ;; (dhf/spec/ratification/black-box.feature, dhf/spec/regeneration/fence.feature).
@@ -56,6 +56,10 @@
  ;; dhf/spec/measurement/scorer.feature). Unset until the first Clojure release
  ;; exists.
  :judge nil
+
+ ;; The site (dhf/spec/publishing/site.feature): MkDocs builds it, strictly, so
+ ;; a broken link fails the build.
+ :site {:dir "site" :builder ["mkdocs" "build" "--strict"]}
 
  ;; C4 lint (dhf/spec/architecture/lint.feature).
  :c4 {:view-element-limit 20

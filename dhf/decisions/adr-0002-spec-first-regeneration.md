@@ -129,7 +129,9 @@ executes is one representation.
   is removed at cutover.
 - **Everything is Clojure, run by Babashka**: the core, the harness, the step
   definitions and every script. Shell survives only to install Babashka
-  itself.
+  itself. External tools rdm-spec runs but does not write (git, the diagram
+  renderer, MkDocs for the site, decided by hotspot H6) are not exceptions:
+  rdm-spec writes their input, never their code.
 
 ### The sources
 
@@ -171,7 +173,8 @@ executes is one representation.
 
 - **In:** reading and gating the spec, stamping, verification and trace from
   Allure results, the cut and the fence, scoring and the scoreboard, the C4
-  model with its lint and rendering, publishing to Markdown.
+  model with its lint and rendering, publishing a site (Markdown, built to
+  HTML by MkDocs).
 - **Out, for now:** the regulated profile (risk register, risk controls,
   compliance checklists, design reviews, the evidence bundle and PDFs), and the
   graph with its MCP server. Each returns later as its own decision.
