@@ -1,0 +1,378 @@
+{
+  "checklist" : [ {
+    "design_input" : "DI-90",
+    "item" : "item-01-001",
+    "rule" : "RDM shall read each Rule tagged with a design-input id in a slice's spec as a design input, with the Rule's title as its text, the user needs tagged on it as its traces and the context tagged on it as its owner",
+    "scenario" : "A tagged Rule is a design input of the record",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-90",
+    "item" : "item-01-002",
+    "rule" : "RDM shall read each Rule tagged with a design-input id in a slice's spec as a design input, with the Rule's title as its text, the user needs tagged on it as its traces and the context tagged on it as its owner",
+    "scenario" : "A design input declared in a spec and in a design document is a duplicate",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-90",
+    "item" : "item-01-003",
+    "rule" : "RDM shall read each Rule tagged with a design-input id in a slice's spec as a design input, with the Rule's title as its text, the user needs tagged on it as its traces and the context tagged on it as its owner",
+    "scenario" : "A Rule in a slice's spec with no design-input id is refused",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-90",
+    "item" : "item-01-004",
+    "rule" : "RDM shall read each Rule tagged with a design-input id in a slice's spec as a design input, with the Rule's title as its text, the user needs tagged on it as its traces and the context tagged on it as its owner",
+    "scenario" : "A Rule with no owner or no traced need is refused",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-90",
+    "item" : "item-01-005",
+    "rule" : "RDM shall read each Rule tagged with a design-input id in a slice's spec as a design input, with the Rule's title as its text, the user needs tagged on it as its traces and the context tagged on it as its owner",
+    "scenario" : "A spec that cannot be read is refused at its line",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-91",
+    "item" : "item-01-006",
+    "rule" : "RDM shall give every scenario in a slice's spec an item id that is stamped once and never renumbered",
+    "scenario" : "An unstamped scenario is given the next free id in its slice",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-91",
+    "item" : "item-01-007",
+    "rule" : "RDM shall give every scenario in a slice's spec an item id that is stamped once and never renumbered",
+    "scenario" : "The next free id is one past the highest the spec carries",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-91",
+    "item" : "item-01-008",
+    "rule" : "RDM shall give every scenario in a slice's spec an item id that is stamped once and never renumbered",
+    "scenario" : "Stamping again changes nothing",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-91",
+    "item" : "item-01-009",
+    "rule" : "RDM shall give every scenario in a slice's spec an item id that is stamped once and never renumbered",
+    "scenario" : "Rewording or reordering scenarios keeps their ids",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-91",
+    "item" : "item-01-010",
+    "rule" : "RDM shall give every scenario in a slice's spec an item id that is stamped once and never renumbered",
+    "scenario" : "The stamper says where it looked when it finds no spec",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-92",
+    "item" : "item-01-011",
+    "rule" : "RDM shall derive the checklist from the slices' specs alone, one item per stamped scenario, each carrying its slice, its Rule and its design input",
+    "scenario" : "The checklist has one item per stamped scenario",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-92",
+    "item" : "item-01-012",
+    "rule" : "RDM shall derive the checklist from the slices' specs alone, one item per stamped scenario, each carrying its slice, its Rule and its design input",
+    "scenario" : "An unstamped scenario stops the checklist rather than shrinking it",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-92",
+    "item" : "item-01-013",
+    "rule" : "RDM shall derive the checklist from the slices' specs alone, one item per stamped scenario, each carrying its slice, its Rule and its design input",
+    "scenario" : "A spec with no scenario stops the checklist rather than producing an empty one",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-92",
+    "item" : "item-01-014",
+    "rule" : "RDM shall derive the checklist from the slices' specs alone, one item per stamped scenario, each carrying its slice, its Rule and its design input",
+    "scenario" : "A slice still planned is scope, and is skipped out loud",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-92",
+    "item" : "item-01-015",
+    "rule" : "RDM shall derive the checklist from the slices' specs alone, one item per stamped scenario, each carrying its slice, its Rule and its design input",
+    "scenario" : "The checklist is the same bytes from the same spec",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-93",
+    "item" : "item-01-016",
+    "rule" : "RDM shall score a cycle by filing a verdict for every checklist item, recording an item no verdict reached as a failure",
+    "scenario" : "Verdicts are filed against the checklist as the cycle's record",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-93",
+    "item" : "item-01-017",
+    "rule" : "RDM shall score a cycle by filing a verdict for every checklist item, recording an item no verdict reached as a failure",
+    "scenario" : "Zero verdicts means the grading did not happen",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-93",
+    "item" : "item-01-018",
+    "rule" : "RDM shall score a cycle by filing a verdict for every checklist item, recording an item no verdict reached as a failure",
+    "scenario" : "An item no verdict reached is a failure, never a smaller denominator",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-93",
+    "item" : "item-01-019",
+    "rule" : "RDM shall score a cycle by filing a verdict for every checklist item, recording an item no verdict reached as a failure",
+    "scenario" : "A verdict for an item not on the checklist is refused",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-93",
+    "item" : "item-01-020",
+    "rule" : "RDM shall score a cycle by filing a verdict for every checklist item, recording an item no verdict reached as a failure",
+    "scenario" : "An acceptance run is a grader",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-94",
+    "item" : "item-01-021",
+    "rule" : "RDM shall compare two cycles on the items both scored, reporting what got better and what got worse apart and never as a net, and stating it when the denominator moved",
+    "scenario" : "The pass rate is over every item the cycle's checklist carried",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-94",
+    "item" : "item-01-022",
+    "rule" : "RDM shall compare two cycles on the items both scored, reporting what got better and what got worse apart and never as a net, and stating it when the denominator moved",
+    "scenario" : "Better and worse are counted apart",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-94",
+    "item" : "item-01-023",
+    "rule" : "RDM shall compare two cycles on the items both scored, reporting what got better and what got worse apart and never as a net, and stating it when the denominator moved",
+    "scenario" : "A moved denominator is said out loud, and new items are counted apart",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-95",
+    "item" : "item-01-024",
+    "rule" : "RDM shall check the harness against its own known answers before the gate grades anything, and grade nothing when the check fails",
+    "scenario" : "The instrument is checked before the suite runs",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-95",
+    "item" : "item-01-025",
+    "rule" : "RDM shall check the harness against its own known answers before the gate grades anything, and grade nothing when the check fails",
+    "scenario" : "A wrong known answer stops the gate",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-96",
+    "item" : "item-01-026",
+    "rule" : "RDM shall run the project's suite through the one command the project declares for it, and trust only that command's exit status",
+    "scenario" : "A green suite passes this step",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-96",
+    "item" : "item-01-027",
+    "rule" : "RDM shall run the project's suite through the one command the project declares for it, and trust only that command's exit status",
+    "scenario" : "A red suite fails the gate, whatever it prints",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-96",
+    "item" : "item-01-028",
+    "rule" : "RDM shall run the project's suite through the one command the project declares for it, and trust only that command's exit status",
+    "scenario" : "No declared suite means nothing to ratify",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-97",
+    "item" : "item-01-029",
+    "rule" : "RDM shall start the record's served graph on a free port and require it to answer within the boot budget declared once, reporting the margin left",
+    "scenario" : "The served graph answers inside the budget, and the margin is reported",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-97",
+    "item" : "item-01-030",
+    "rule" : "RDM shall start the record's served graph on a free port and require it to answer within the boot budget declared once, reporting the margin left",
+    "scenario" : "A port already taken is refused, not reused",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-97",
+    "item" : "item-01-031",
+    "rule" : "RDM shall start the record's served graph on a free port and require it to answer within the boot budget declared once, reporting the margin left",
+    "scenario" : "No answer inside the budget fails the gate",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-98",
+    "item" : "item-01-032",
+    "rule" : "RDM shall prove the served graph is this record by asking it for a design input's text and comparing the answer with the text the record holds",
+    "scenario" : "The served graph gives the record's own text",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-98",
+    "item" : "item-01-033",
+    "rule" : "RDM shall prove the served graph is this record by asking it for a design input's text and comparing the answer with the text the record holds",
+    "scenario" : "A served graph of another record fails the gate",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-99",
+    "item" : "item-01-034",
+    "rule" : "RDM shall refuse to ratify a build round whose changes since its declared base touch a slice's plan or spec",
+    "scenario" : "A build round that changed a spec is refused",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-99",
+    "item" : "item-01-035",
+    "rule" : "RDM shall refuse to ratify a build round whose changes since its declared base touch a slice's plan or spec",
+    "scenario" : "A build round that left the plan alone passes this step",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-100",
+    "item" : "item-01-036",
+    "rule" : "RDM shall read everything the harness knows about a project from one declared configuration, and refuse a missing or unknown setting by name",
+    "scenario" : "The configuration is printed on every run",
+    "slice" : "01-harness"
+  }, {
+    "design_input" : "DI-100",
+    "item" : "item-01-037",
+    "rule" : "RDM shall read everything the harness knows about a project from one declared configuration, and refuse a missing or unknown setting by name",
+    "scenario" : "An unknown setting is refused",
+    "slice" : "01-harness"
+  } ],
+  "cycle" : "01",
+  "passed" : 37,
+  "total" : 37,
+  "verdicts" : {
+    "item-01-001" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-002" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-003" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-004" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-005" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-006" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-007" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-008" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-009" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-010" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-011" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-012" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-013" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-014" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-015" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-016" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-017" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-018" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-019" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-020" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-021" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-022" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-023" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-024" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-025" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-026" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-027" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-028" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-029" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-030" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-031" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-032" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-033" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-034" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-035" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-036" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    },
+    "item-01-037" : {
+      "unreached" : false,
+      "verdict" : "pass"
+    }
+  }
+}
