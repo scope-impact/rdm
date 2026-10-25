@@ -1,0 +1,22 @@
+;; Cycle 08: cycles 06 and 07's findings folded in, cut as spec-11 (tagged
+;; locally). Run by cycle 05's release; cycle 07's build is the cut's
+;; implementation. Its scopes are what `rdm-spec scopes spec-10 spec-11`
+;; listed, plus two the person judged the changed README reaches: a step text
+;; used by more than one context is now the kernel's, so kernel/command takes
+;; them over, and verification/trace gives up its own "results directory as
+;; DIR". Built in two phases: kernel/command first, then four builders in
+;; parallel on top of it.
+{:cut "spec-11"
+ :scope [{:context :compliance}
+         {:component :kernel/command}
+         {:component :knowledge/sources}
+         {:component :measurement/checklist}
+         {:component :measurement/oracle}
+         {:component :project/init}
+         {:component :publishing/site}
+         {:component :regeneration/fence}
+         {:component :spec/check}
+         {:component :verification/trace}]
+ :builder {:name "builder subagents: the kernel first, then one per group of scopes" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
