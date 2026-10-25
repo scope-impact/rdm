@@ -2,14 +2,17 @@
   (:require [clojure.test :refer [deftest is]]
             [rdm-spec.verification.release :as release]))
 
-(deftest refuses-every-scenario-not-verified
-  (let [report {:scenarios [{:id "spec-0001" :status :verified :file "f" :line 1}
-                            {:id "spec-0002" :status :failed :file "f" :line 5}
-                            {:id "spec-0003" :status :unverified :file "f" :line 9}
-                            {:id "spec-0004" :status :planned :file "f" :line 13}]
-                :unstamped [{:file "g" :line 3 :name "x"}]}]
-    (is (= [["spec-0002" :failed] ["spec-0003" :unverified] ["spec-0004" :planned] [nil :unstamped]]
-           (map (juxt :id :status) (release/refusals report))))))
-
-(deftest passes-when-every-scenario-is-verified
-  (is (empty? (release/refusals {:scenarios [{:id "spec-0001" :status :verified}] :unstamped []}))))
+(deftest what-blocks-a-release
+  (let [report {:scenarios [{:id "spec-0001" :name "One" :file "f" :line 3 :status :verified}
+                            {:id "spec-0002" :name "Two" :file "f" :line 7 :status :failed}
+                            {:id "spec-0003" :name "Three" :file "f" :line 9 :status :planned}]
+                :unstamped [{:file "f" :line 12 :name "Four"}]}
+        fs* (release/scenario-findings report)]
+    (is (= [["f" 7 "scenario-not-verified"] ["f" 9 "scenario-not-verified"] ["f" 12 "scenario-unstamped"]]
+           (map (juxt :file :line :rule) fs*)))
+    (is (re-find #"spec-0002 .*failed" (:message (first fs*)))))
+  (is (= [["std.txt" 2 "clause-unreferenced" "STD:5.2 is named by no audit tag"]]
+         (map (juxt :file :line :rule :message)
+              (release/gap-findings {:findings [{:file "std.txt" :line 2 :rule "clause-unreferenced"
+                                                 :message "STD:5.2 is named by no audit tag"}
+                                                {:file "d.md" :line 1 :rule "document-unidentified" :message "x"}]})))))

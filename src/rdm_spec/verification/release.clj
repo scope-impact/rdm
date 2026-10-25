@@ -1,51 +1,66 @@
 (ns rdm-spec.verification.release
-  "Release check (dhf/spec/verification/release.feature): refuses a release
-  while any scenario is not verified: failed, unverified, planned (tagged
-  @wip), or with no single id, so no status at all. Statuses come from Status;
-  an unreadable result file refuses too, as Status reports it.
+  "Release check (dhf/spec/verification/release.feature): `rdm-spec release
+  [--results DIR]` refuses a release while any stamped scenario is not
+  verified (failed, unverified or planned) and, under the regulated profile,
+  while any clause is named by no audit tag.
 
-  Each refused scenario is one finding, `FILE:LINE: release-<status>: id is
-  <status>, not verified`. The result:
+  Statuses come from Status (derive!, which publishes VerificationDerived);
+  the clauses arrive as ClausesIndexed from the compliance context's gap
+  stage, which the command runs before this one only under :regulated. A
+  release check that reads no ClausesIndexed checks no clause.
 
-    {:results \"dir\" :released? bool
-     :counts {:scenarios n :verified n ...}
-     :refused [{:id :status :file :line}]}"
+  Findings (exit 1), each relaying where it is:
+    scenario-not-verified   FILE:LINE of the scenario, naming its id and status
+    scenario-unstamped      a scenario with no single id, which no status can name
+    clause-unreferenced     relayed from ClausesIndexed unchanged: the clause and its list
+  and Status's own (an unreadable result file; an unknown result, a warning).
+
+  The result: {:release {:releasable? bool :results dir :scenarios n
+                         :blocked [{:id :status}] :gaps [key]}}."
   (:require [rdm-spec.kernel.command :as command]
             [rdm-spec.verification.status :as status]))
 
-(defn subscriptions [req] (status/subscriptions req))
+(defn subscriptions
+  "Status's subscriptions (SpecParsed), and ClausesIndexed kept in the run's
+  state."
+  [req]
+  (concat (status/subscriptions req)
+          [[:ClausesIndexed (fn [payload] (swap! (:state req) assoc ::clauses payload) nil)]]))
 
-(def ^:private why
-  {:failed "a result labelled with its id did not pass"
-   :unverified "no result is labelled with its id"
-   :planned "it is tagged @wip, planned work"})
-
-(defn refusals
-  "Pure: [{:id :status :file :line}] for every scenario the report does not
-  give verified, and every scenario with no single id."
+(defn scenario-findings
+  "Pure: a finding for every scenario of the status report that is not
+  verified, and every unstamped one."
   [report]
   (vec (concat
-        (for [sc (:scenarios report) :when (not= :verified (:status sc))]
-          (select-keys sc [:id :status :file :line]))
+        (for [sc (:scenarios report)
+              :let [st (:status sc)]
+              :when (not= :verified st)]
+          (command/finding (:file sc) (:line sc) "scenario-not-verified"
+                           (str (:id sc) " " (pr-str (:name sc)) " is " (name st)
+                                ": a release needs every scenario verified")))
         (for [sc (:unstamped report)]
-          (assoc (select-keys sc [:file :line]) :id nil :status :unstamped)))))
+          (command/finding (:file sc) (:line sc) "scenario-unstamped"
+                           (str "the scenario " (pr-str (:name sc)) " carries no single id, so no status names it:"
+                                " a release needs every scenario verified"))))))
 
-(defn- refusal-finding [{:keys [id status file line]}]
-  (if (= :unstamped status)
-    (command/finding file line "release-unstamped"
-                     "a scenario with no single id has no status, so it cannot be verified")
-    (command/finding file line (str "release-" (name status))
-                     (str id " is " (name status) ", not verified: " (why status)))))
+(defn gap-findings
+  "Pure: ClausesIndexed's clause-unreferenced findings, relayed unchanged."
+  [clauses]
+  (vec (for [f (:findings clauses) :when (= "clause-unreferenced" (:rule f))]
+         (command/finding (:file f) (:line f) (:rule f) (:message f)))))
 
 (defn release
-  "The release task: `rdm-spec release [--results DIR]`."
+  "The release stage."
   [req]
   (let [{:keys [report findings]} (status/derive! req)
-        refused (refusals report)
-        own (mapv refusal-finding refused)
-        errors (remove command/warning? (concat findings own))]
-    {:result {:results (:results report)
-              :released? (empty? errors)
-              :counts (:counts report)
-              :refused refused}
-     :findings (vec (concat own findings))}))
+        clauses (some-> (:state req) deref ::clauses)
+        blocked (scenario-findings report)
+        gaps (gap-findings clauses)
+        all (vec (concat blocked gaps findings))]
+    {:result {:release {:releasable? (empty? (remove command/warning? all))
+                        :results (:results report)
+                        :scenarios (count (:scenarios report))
+                        :blocked (vec (for [sc (:scenarios report) :when (not= :verified (:status sc))]
+                                        {:id (:id sc) :status (:status sc)}))
+                        :gaps (vec (for [c (:clauses clauses) :when (empty? (:named-at c))] (:key c)))}}
+     :findings all}))

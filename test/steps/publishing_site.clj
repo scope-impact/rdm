@@ -467,13 +467,14 @@
 (defstep #"a wiki whose index lists two pages"
   (fn [ctx]
     (needs-site!)
-    (let [dir (s/copy-of-room!)
-          index (slurp (str (fs/file dir "dhf/wiki/index.md")))
-          listed (count (re-seq #"\]\(pages/[^)]+\.md\)" index))]
-      ;; the room's index lists its pages; one more page makes two
-      (s/check! (= 1 listed) (str "the room's wiki index lists " listed " pages, not one"))
-      (wiki-page! dir "cycles" "Cycles"
-                  (str "# Cycles\n\n" footnoted-paragraph "\n\n[^1]: `loyly:README.md@17d68d2`, \"What to steal\" 1.\n"))
+    (let [dir (s/copy-of-room!)]
+      ;; the fixture's own wiki: an index listing exactly the two pages made
+      ;; here, whatever the room's wiki holds
+      (fs/delete-tree (fs/file dir "dhf/wiki/pages"))
+      (s/write! dir "dhf/wiki/index.md" "# Wiki\n\n## Pages\n\n")
+      (doseq [[name title] [["regeneration" "Regeneration"] ["cycles" "Cycles"]]]
+        (wiki-page! dir name title
+                    (str "# " title "\n\n" footnoted-paragraph "\n\n[^1]: `loyly:README.md@17d68d2`, \"What to steal\" 1.\n")))
       (assoc ctx :dir dir
              :wiki-pages (vec (for [[_ p] (re-seq #"\]\((pages/[^)]+\.md)\)" (slurp (str (fs/file dir "dhf/wiki/index.md"))))]
                                 p))))))
