@@ -1,0 +1,7 @@
+$ bb test.clj
+
+Unit tests: 130 run, 0 failed
+Scenarios: {:scenarios 213, :passed 213, :failed 0, :broken 0, :skipped 0}
+Results written to /home/user/rdm/dhf/cycles/02/results
+
+exit status 0
