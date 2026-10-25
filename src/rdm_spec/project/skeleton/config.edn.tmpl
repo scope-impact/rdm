@@ -29,8 +29,11 @@
  :implementation []
 
  ;; The clean room is an allow-list: these paths, plus the implementation a
- ;; scoped regeneration keeps, and nothing else.
- :clean-room {:allow ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"]}
+ ;; scoped regeneration keeps, and nothing else. dhf/harness is allowed file by
+ ;; file, this configuration only: dhf/harness/oracle, where the instrument's
+ ;; goldens are recorded, is never allowed, so a builder never sees the
+ ;; measurements it is measured by.
+ :clean-room {:allow ["dhf/spec" "dhf/harness/config.edn" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"]}
 
  ;; Test results, cycles and the site.
  :results-dir "dhf/allure-results"

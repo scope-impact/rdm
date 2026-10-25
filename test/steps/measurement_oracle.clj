@@ -175,7 +175,9 @@
     (needs-oracle-task!)
     (kc/exits! ctx 2)
     (s/check! (re-find #"cannot-run: .*a reason is required" (:err (run ctx))) (str "it does not say a reason is required\n" (s/show (run ctx))))
-    (s/check! (= (snapshot s/room-root) (snapshot (:dir ctx))) "the oracle directory changed")))
+    ;; the run's project is a fresh copy of the room (kernel_command/run-line):
+    ;; another fresh copy is what it held before the run
+    (s/check! (= (snapshot (s/copy-of-room!)) (snapshot (:dir ctx))) "the oracle directory changed")))
 
 ;; ---------------------------------------------------------------------------
 ;; Nothing is fenced or ratified while the oracle is red

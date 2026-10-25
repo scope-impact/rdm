@@ -1,19 +1,20 @@
 (ns rdm-spec.project.init
   "Init (dhf/spec/project/init.feature): `rdm-spec init PATH [--id-prefix P]`
-  writes a new project's skeleton into a path that does not exist yet, makes it
-  a git repository and installs the pre-commit hook (rdm-spec.project.hooks).
+  writes a new project's skeleton into a path that does not exist yet, makes
+  it a git repository, installs the pre-commit hook (rdm-spec.project.hooks),
+  and names every file it wrote and the next steps.
 
-  The skeleton is the table of init.feature's first scenario: each file is
-  written from a template under rdm_spec/project/skeleton/, filled with the
-  project's name (the path's last part), its system id and its id prefix.
-  Adopt (rdm-spec.project.adopt) writes the same skeleton into an existing
-  repository with `write-skeleton!`, which never overwrites a destination that
-  exists in any form, a symbolic link included.
+  The skeleton is the table of init.feature's first scenario: the spec (an
+  empty model, event catalogue, needs, ledger at 0, glossary and the spec's
+  conventions), the harness configuration, the raw and wiki directories,
+  decisions, the hook, the cut workflow and .gitignore. Its texts are the
+  templates under skeleton/, shared with Adopt (rdm-spec.project.adopt), which
+  writes the same files into an existing repository through `write-skeleton!`,
+  never overwriting one.
 
-  The result names every file written, in the skeleton's order, and the next
-  steps. A path that exists, in any form, is refused (exit 2) before anything is
-  written, and so is an id prefix that could not start a tag: a prefix starts
-  with a letter and holds letters, digits and single hyphens."
+  Templates carry {{placeholders}}: name, name-edn, prefix, prefix-edn and
+  system-id (see `vars-for`). A placeholder with no value is a bug, never
+  written out."
   (:require [babashka.fs :as fs]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -23,167 +24,187 @@
 (def default-id-prefix "spec")
 
 (def skeleton
-  "Every file of the skeleton, in the order the spec lists it: its path, its
-  template, and whether it is executable."
-  [{:path "dhf/spec/model.edn" :template "model.edn.tmpl"}
-   {:path "dhf/spec/events.edn" :template "events.edn.tmpl"}
-   {:path "dhf/spec/needs.edn" :template "needs.edn.tmpl"}
-   {:path "dhf/spec/ids.edn" :template "ids.edn.tmpl"}
-   {:path "dhf/spec/glossary.md" :template "glossary.md.tmpl"}
-   {:path "dhf/spec/README.md" :template "spec-README.md.tmpl"}
-   {:path "dhf/harness/config.edn" :template "config.edn.tmpl"}
-   {:path "dhf/raw/README.md" :template "raw-README.md.tmpl"}
-   {:path "dhf/raw/sources.edn" :template "sources.edn.tmpl"}
-   {:path "dhf/wiki/index.md" :template "wiki-index.md.tmpl"}
-   {:path "dhf/decisions/README.md" :template "decisions-README.md.tmpl"}
-   {:path hooks/hook-path :template "pre-commit.tmpl" :executable? true}
-   {:path ".github/workflows/cut.yml" :template "cut.yml.tmpl"}
-   {:path ".gitignore" :template "gitignore.tmpl"}])
+  "Every file of the skeleton, in the order written: [path template]."
+  [["dhf/spec/model.edn" "model.edn.tmpl"]
+   ["dhf/spec/events.edn" "events.edn.tmpl"]
+   ["dhf/spec/needs.edn" "needs.edn.tmpl"]
+   ["dhf/spec/ids.edn" "ids.edn.tmpl"]
+   ["dhf/spec/glossary.md" "glossary.md.tmpl"]
+   ["dhf/spec/README.md" "spec-README.md.tmpl"]
+   ["dhf/harness/config.edn" "config.edn.tmpl"]
+   ["dhf/raw/README.md" "raw-README.md.tmpl"]
+   ["dhf/raw/sources.edn" "sources.edn.tmpl"]
+   ["dhf/wiki/index.md" "wiki-index.md.tmpl"]
+   ["dhf/decisions/README.md" "decisions-README.md.tmpl"]
+   [hooks/hook-path "pre-commit.tmpl"]
+   [".github/workflows/cut.yml" "cut.yml.tmpl"]
+   [".gitignore" "gitignore.tmpl"]])
 
-(def skeleton-paths (mapv :path skeleton))
+(def executable
+  "The skeleton's files that are programs."
+  #{hooks/hook-path})
 
-(defn- template [name]
-  (let [r (io/resource (str "rdm_spec/project/skeleton/" name))]
-    (when-not r
-      (command/cannot-run! (str "the skeleton template " name " is missing from rdm-spec")))
-    (slurp r)))
-
-(defn gitignore-lines
-  "The lines Init writes to .gitignore, blank lines left out."
-  []
-  (vec (remove str/blank? (map str/trim (str/split-lines (template "gitignore.tmpl"))))))
+(defn skeleton-paths [] (mapv first skeleton))
 
 ;; ---------------------------------------------------------------------------
 ;; The id prefix
 
-(def prefix-rule "a prefix starts with a letter and holds letters, digits and single hyphens")
+(def prefix-rule
+  "What a prefix must be, as the refusal says it."
+  "a prefix starts with a letter and holds letters, digits and single hyphens")
 
 (defn valid-prefix?
-  "True when `p` can start a scenario id tag: a letter, then letters, digits
-  and single hyphens, never ending with a hyphen."
+  "True when `p` can start a scenario tag @<p>-NNNN: an ASCII letter, then
+  letters and digits, a hyphen only between two of them."
   [p]
-  (boolean (and (string? p) (re-matches #"[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*" p))))
-
-(defn require-prefix!
-  "`p`, or cannot run when it could not start a tag."
-  [p]
-  (when-not (valid-prefix? p)
-    (command/cannot-run! (str "the id prefix " (pr-str p) " is refused: " prefix-rule)))
-  p)
+  (boolean (and (string? p) (re-matches #"[A-Za-z](?:-?[A-Za-z0-9])*" p))))
 
 ;; ---------------------------------------------------------------------------
-;; Filling the templates
+;; Templates
 
-(defn system-id
-  "The model's id for a system named `name`: a keyword of its lowercase
-  letters and digits joined by single hyphens, starting with a letter."
+(defn- system-id
+  "A keyword for the system, made from the project's name: lower case, every
+  run of other characters one hyphen; :system when nothing is left."
   [name]
-  (let [slug (-> (str/lower-case (str name))
-                 (str/replace #"[^a-z0-9]+" "-")
-                 (str/replace #"^-+|-+$" ""))
-        slug (cond (str/blank? slug) "system"
-                   (re-find #"^[a-z]" slug) slug
-                   :else (str "system-" slug))]
-    (keyword slug)))
+  (let [s (-> (str/lower-case (str name))
+              (str/replace #"[^a-z0-9]+" "-")
+              (str/replace #"^-+|-+$" ""))]
+    (keyword (cond (str/blank? s) "system"
+                   (re-find #"^[0-9]" s) (str "system-" s)
+                   :else s))))
 
 (defn vars-for
-  "The values the templates are filled with, for a project named `name` with
-  the id prefix `prefix`."
+  "The template values of a project named `name` whose ids are @<prefix>-NNNN."
   [name prefix]
-  {"name" (str name)
-   "name-edn" (pr-str (str name))
-   "system-id" (pr-str (system-id name))
-   "prefix" (str prefix)
-   "prefix-edn" (pr-str (str prefix))})
+  (let [one-line (str/replace (str name) #"\s*[\r\n]+\s*" " ")
+        id (system-id name)]
+    {:name one-line
+     :name-edn (pr-str (str name))
+     :prefix prefix
+     :prefix-edn (pr-str prefix)
+     :system-id (pr-str id)
+     :system-id-kw id}))
 
-(defn fill
-  "The template text `t` with every {{key}} replaced by its value in `vars`;
-  a key with no value is left as written."
-  [t vars]
-  (str/replace t #"\{\{([a-z-]+)\}\}" (fn [[whole k]] (get vars k whole))))
+(defn- template [file]
+  (let [r (io/resource (str "rdm_spec/project/skeleton/" file))]
+    (when-not r (throw (ex-info (str "the skeleton template " file " is missing") {})))
+    (slurp r)))
+
+(defn render
+  "The text init writes at the skeleton path `rel`, with `vars`."
+  [rel vars]
+  (let [file (or (some (fn [[p t]] (when (= p rel) t)) skeleton)
+                 (throw (ex-info (str rel " is not in the skeleton") {})))]
+    (str/replace (template file) #"\{\{([a-z-]+)\}\}"
+                 (fn [[_ k]]
+                   (let [v (get vars (keyword k))]
+                     (when (nil? v) (throw (ex-info (str "the template " file " needs " k) {})))
+                     (str v))))))
+
+(defn gitignore-lines
+  "The lines init writes to .gitignore."
+  []
+  (vec (remove str/blank? (map str/trim (str/split-lines (template "gitignore.tmpl"))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Writing
 
-(defn- exists-in-any-form? [f]
-  (or (fs/exists? f {:nofollow-links true}) (fs/sym-link? f)))
+(defn- exists? [f] (or (fs/exists? f {:nofollow-links true}) (fs/sym-link? f)))
 
 (defn- blocked-by
-  "The ancestor of `rel` under `root` that exists and is not a directory, or nil."
+  "The first directory on the way from `root` to the file `rel` that is a
+  link or not a directory, relative to root; nil when every one is a plain
+  directory or not there yet."
   [root rel]
   (let [parts (butlast (str/split rel #"/"))]
-    (some (fn [n]
-            (let [p (str/join "/" (take n parts))
-                  f (fs/file root p)]
-              (when (and (exists-in-any-form? f) (not (fs/directory? f))) p)))
-          (range 1 (inc (count parts))))))
+    (loop [[p & more] parts acc []]
+      (when p
+        (let [acc (conj acc p)
+              f (apply fs/file root acc)]
+          (cond (fs/sym-link? f) (str/join "/" acc)
+                (and (exists? f) (not (fs/directory? f {:nofollow-links true}))) (str/join "/" acc)
+                :else (recur more acc)))))))
 
 (defn write-skeleton!
-  "Writes every file of the skeleton under `root`, filled with `vars`, never
-  overwriting: a destination that exists in any form is kept, and one that
-  cannot be written because a parent path is a file is skipped, with a
-  warning. Returns {:wrote [path] :kept [path] :skipped [path] :findings [..]},
-  each in the skeleton's order."
+  "Writes every skeleton file under `root` that is not there yet, in any form
+  (a link included): those are kept. A file whose directory is a link or a
+  file is skipped, never written through, with a warning. Returns {:wrote
+  [rel] :kept [rel] :skipped [rel] :findings [warning]}."
   [root vars]
   (reduce
-   (fn [acc {tmpl :template :keys [path executable?]}]
-     (let [f (fs/file root path)]
+   (fn [out [rel _]]
+     (let [f (fs/file root rel)]
        (cond
-         (exists-in-any-form? f)
-         (update acc :kept conj path)
+         (exists? f) (update out :kept conj rel)
 
-         (blocked-by root path)
-         (-> acc
-             (update :skipped conj path)
-             (update :findings conj (command/warning path nil "skeleton-skipped"
-                                                     (str "not written: " (blocked-by root path)
-                                                          " is a file, not a directory"))))
+         (blocked-by root rel)
+         (let [b (blocked-by root rel)]
+           (-> out
+               (update :skipped conj rel)
+               (update :findings conj
+                       (command/warning rel nil "skeleton-skipped"
+                                        (str rel " is not written: " b
+                                             (if (fs/sym-link? (fs/file root b)) " is a link" " is not a directory"))))))
 
          :else
          (do (fs/create-dirs (fs/parent f))
-             (spit f (fill (template tmpl) vars))
-             (when executable?
-               (fs/set-posix-file-permissions f "rwxr-xr-x"))
-             (update acc :wrote conj path)))))
+             (spit f (render rel vars))
+             (when (executable rel) (fs/set-posix-file-permissions f "rwxr-xr-x"))
+             (update out :wrote conj rel)))))
    {:wrote [] :kept [] :skipped [] :findings []}
    skeleton))
 
 (defn next-steps
-  "What to do after the skeleton is written; `path` is the new project's
-  path as given, or nil when the skeleton was added where the command ran."
+  "What to do after init (in the new project at `path`) or adopt (nil)."
   [path]
   (vec (concat
         (when path [(str "cd " path)])
         ["describe the system in dhf/spec/model.edn"
-         "record the raw sources in dhf/raw/ and distil the domain into dhf/wiki/"
-         "declare the user needs in dhf/spec/needs.edn, each citing a source"
-         "write scenarios in dhf/spec/<context>/<component>.feature, then run \"rdm-spec stamp\""
+         "record each raw source the spec rests on in dhf/raw/ and declare the user needs in dhf/spec/needs.edn"
+         "write scenarios in dhf/spec/<context>/<component>.feature, then run \"rdm-spec stamp\" to give each its id"
          "run \"rdm-spec check\"; the pre-commit hook runs it on every commit"
-         "commit and push: the cut workflow tags each push to the default branch"])))
+         "commit the skeleton: git add -A && git commit"])))
+
+;; ---------------------------------------------------------------------------
+;; The task
+
+(defn- refuse-path!
+  "Cannot run unless `target` (given as `given`) can be made: it does not
+  exist, and no directory on the way to it is a file."
+  [given target]
+  (when (exists? target)
+    (command/cannot-run! (str "the path " given " already exists; init writes only into a path that does not exist yet"
+                              " (\"rdm-spec adopt\" adds the skeleton to an existing repository)")))
+  (when-let [blocker (->> (iterate fs/parent (fs/parent target))
+                          (take-while some?)
+                          (filter #(and (exists? %) (not (fs/directory? %))))
+                          first)]
+    (command/cannot-run! (str "the path " given " cannot be made: " blocker " is not a directory"))))
 
 (defn init
   "The init task: `rdm-spec init PATH [--id-prefix P]`."
   [req]
-  (let [[path] (:args req)
-        prefix (require-prefix! (get-in req [:opts :id-prefix] default-id-prefix))
-        target (command/path req path)]
-    (when (exists-in-any-form? target)
-      (command/cannot-run! (str path " already exists: init writes only into a path that does not exist"
-                                " (\"rdm-spec adopt\" adds the skeleton to an existing repository)")))
-    (when-let [blocked (some #(when (and (exists-in-any-form? %) (not (fs/directory? %))) %)
-                             (take-while some? (rest (iterate fs/parent (fs/absolutize target)))))]
-      (command/cannot-run! (str "cannot write " path ": " blocked " is not a directory")))
-    (fs/create-dirs target)
-    (let [r (hooks/git target "init" "--quiet")]
-      (when-not (zero? (:exit r))
-        (command/cannot-run! (str "git init failed in " path ": " (:err r)))))
-    (let [root (str (fs/canonicalize target))
-          name (fs/file-name root)
-          {:keys [wrote findings]} (write-skeleton! root (vars-for name prefix))
-          activated (hooks/activate! root)]
-      {:result {:root root
-                :id-prefix prefix
-                :wrote wrote
-                :hooks-path (:hooks-path activated)
-                :next-steps (next-steps path)}
-       :findings (vec (concat findings (:findings activated)))})))
+  (let [given (first (:args req))
+        prefix (get-in req [:opts :id-prefix] default-id-prefix)
+        _ (when-not (valid-prefix? prefix)
+            (command/cannot-run! (str "the id prefix " prefix " is refused: " prefix-rule)))
+        target (fs/absolutize (fs/file (:root req) given))
+        _ (refuse-path! given target)
+        name (fs/file-name (fs/normalize target))]
+    (try
+      (fs/create-dirs target)
+      (let [g (hooks/git target "init" "--quiet")]
+        (when-not (zero? (:exit g))
+          (command/cannot-run! (str "git could not make " given " a repository: " (:err g)))))
+      (let [{:keys [wrote findings]} (write-skeleton! (str target) (vars-for name prefix))
+            activated (hooks/activate! (str target))]
+        {:result {:path given
+                  :id-prefix prefix
+                  :wrote wrote
+                  :hooks-path (:hooks-path activated)
+                  :next-steps (next-steps given)}
+         :findings (vec (concat findings (:findings activated)))})
+      (catch Throwable e
+        ;; nothing is left half-written: the path did not exist before
+        (try (fs/delete-tree target) (catch Exception _ nil))
+        (throw e)))))
