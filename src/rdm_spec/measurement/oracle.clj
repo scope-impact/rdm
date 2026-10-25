@@ -1,43 +1,42 @@
 (ns rdm-spec.measurement.oracle
-  "Oracle (dhf/spec/measurement/oracle.feature): `rdm-spec oracle [record
-  --reason R]` judges the instrument (the checklist, the scorer and the
-  scoreboard) against recorded goldens. It is also the gate stage the kernel
-  runs before fence and ratify: with findings it stops the task. The stage
-  only judges, reports and, when asked, records: what stops a task is the
-  kernel's task table.
+  "Oracle (dhf/spec/measurement/oracle.feature): the instrument's own judge.
+  `rdm-spec oracle` runs the checklist, the scorer and the scoreboard on the
+  recorded fixture cycles under dhf/harness/oracle/ and compares what they
+  produce with the recorded goldens; `rdm-spec oracle record --reason R`
+  re-records the goldens the instrument no longer reproduces and appends the
+  reason, with the date, to dhf/harness/oracle/RECORDED.md. It is also the
+  first stage, a gate, of fence and ratify: nothing is fenced or ratified
+  while it has findings.
 
-  The stage is `oracle`, a function of the request. It reads :root, :task,
-  :args (empty, or [\"record\"] on the oracle task), :opts :reason, and
-  :config (read from the root when the request carries none, as fence's
-  does). Run as the oracle task it returns {:result {:oracle {...}}}; run
-  for any other task (a gate) its result is {} and only its findings count.
+  The oracle directory (the configured :oracle-dir, else dhf/harness/oracle)
+  holds one directory per fixture cycle, its name the cycle's name:
 
-  The oracle lives in dhf/harness/oracle/:
+    <cycle>/project/        the fixture project's files at the cut (its
+                            dhf/harness/config.edn, its spec, ...)
+    <cycle>/cycle.edn       the cycle as declared; its :cut is the tag the
+                            oracle puts on project/
+    <cycle>/ratified.edn    optional; else a passed ratification of the cut
+                            on the empty tree
+    <cycle>/verdicts.edn    the grader's verdicts
+    <cycle>/checklist.json  golden: what `checklist CYCLE` writes
+    <cycle>/score.edn       golden: what `score CYCLE --verdicts` writes
+    <cycle>/scoreboard.edn  golden: the :scoreboard `scoreboard P CYCLE`
+                            gives, P the fixture cycle before it by name (the
+                            first's P is the last; with one cycle, itself)
 
-    project/              a project tree (the spec, the model; a
-                          dhf/harness/config.edn of its own, else the
-                          project's): committed in a scratch repository and
-                          tagged with every cut the fixture cycles name
-    cycles/NN/cycle.edn   a fixture cycle, as written by hand
-    cycles/NN/ratified.edn  its ratification record
-    cycles/NN/verdicts.edn  a grader's verdicts (optional)
-    goldens/NN/checklist.json  what `rdm-spec checklist NN` must write
-    goldens/NN/score.edn       what `rdm-spec score NN --verdicts ...` must
-                               write (for a cycle with verdicts)
-    goldens/scoreboard-A-B.edn the :scoreboard `rdm-spec scoreboard A B`
-                               must give, for each pair of consecutive
-                               fixture cycles that were scored or are
-                               bootstrap, and any other pair a golden names
-    RECORDED.md           why each golden was re-recorded, dated
+  Each fixture cycle runs in a throwaway git repository of its own, through
+  the command itself (rdm-spec.kernel.command/execute), so what is judged is
+  the instrument as installed. Goldens are compared as data (JSON or EDN):
+  items of a sequence that carry an id are matched by id. Each difference is
+  a finding `GOLDEN:LINE: golden-differs: item ID KEY: golden G, produced P`;
+  a golden that is missing is golden-missing; a fixture that cannot be run
+  is fixture-malformed or fixture-run-failed. An oracle directory with no
+  fixture cycle is no oracle.
 
-  Goldens are compared as data (JSON or EDN), so their layout may differ; a
-  difference names the golden, where (an item by its id) and both values.
-
-  `record --reason R` rewrites every golden the instrument no longer
-  reproduces (or that is missing), names each, and appends the date, the
-  reason and those names to RECORDED.md. Without a reason it cannot run and
-  rewrites nothing; when the instrument cannot produce an output it records
-  nothing. No dhf/harness/oracle/: nothing to judge, a pass."
+  The result: {:oracle {:fixtures [cycle] :compared [golden] :differs n}},
+  with record also :recorded [golden]. No oracle directory: exit 0, saying
+  there is no oracle to run. `oracle record` with no reason cannot run and
+  rewrites nothing."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [cheshire.core :as json]
@@ -46,282 +45,317 @@
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]))
 
-(def oracle-dir "dhf/harness/oracle")
+(def default-dir "dhf/harness/oracle")
 
-(defn- rel-in [& parts] (str/join "/" (cons oracle-dir parts)))
+(def recorded-file "RECORDED.md")
 
-;; ---------------------------------------------------------------------------
-;; Fixtures
+(def empty-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904")
 
-(defn- read-edn-safe [f]
-  (try {:value (edn/read-string (slurp (str f)))}
-       (catch Exception e {:error (ex-message e)})))
+(def goldens
+  "The goldens of a fixture cycle, in the order they are compared."
+  ["checklist.json" "score.edn" "scoreboard.edn"])
 
-(defn fixture-cycles
-  "The fixture cycles, sorted: [{:cycle \"01\" :dir file :cycle-edn map
-  :verdicts? bool}], and the findings on unreadable ones."
-  [root]
-  (let [dir (fs/file root oracle-dir "cycles")
-        names (if (fs/directory? dir)
-                (sort (for [d (fs/list-dir dir) :when (fs/directory? d)] (fs/file-name d)))
-                [])]
-    (reduce (fn [acc n]
-              (let [d (fs/file dir n)
-                    f (fs/file d "cycle.edn")
-                    rel (rel-in "cycles" n "cycle.edn")
-                    {:keys [value error]} (when (fs/regular-file? f) (read-edn-safe f))]
-                (cond
-                  (not (fs/regular-file? f))
-                  (update acc :findings conj (command/finding rel nil "oracle-fixture" "the fixture cycle has no cycle.edn"))
-                  (or error (not (map? value)))
-                  (update acc :findings conj (command/finding rel nil "oracle-fixture"
-                                                              (str "not an EDN map" (when error (str ": " error)))))
-                  :else
-                  (update acc :cycles conj {:cycle n :dir d :cycle-edn value
-                                            :verdicts? (fs/regular-file? (fs/file d "verdicts.edn"))}))))
-            {:cycles [] :findings []}
-            names)))
-
-(defn golden-names
-  "Every golden the fixture cycles call for: [{:kind :checklist|:score|:scoreboard
-  :cycles [..] :rel path}]."
-  [root cycles]
-  (let [comparable (filter #(or (:verdicts? %) (true? (get-in % [:cycle-edn :bootstrap]))) cycles)
-        pairs (map (fn [[a b]] [(:cycle a) (:cycle b)]) (partition 2 1 comparable))
-        known (set (map :cycle cycles))
-        named (for [f (fs/glob (fs/file root oracle-dir "goldens") "scoreboard-*.edn")
-                    :let [[_ a b] (re-matches #"scoreboard-([^-]+)-([^-]+)\.edn" (fs/file-name f))]
-                    :when (and a (known a) (known b))]
-                [a b])]
-    (vec (concat
-          (for [{c :cycle v? :verdicts?} cycles
-                g (cons {:kind :checklist :cycles [c] :rel (rel-in "goldens" c "checklist.json")}
-                        (when v? [{:kind :score :cycles [c] :rel (rel-in "goldens" c "score.edn")}]))]
-            g)
-          (for [[a b] (distinct (concat pairs (sort named)))]
-            {:kind :scoreboard :cycles [a b] :rel (rel-in "goldens" (str "scoreboard-" a "-" b ".edn"))})))))
-
-;; ---------------------------------------------------------------------------
-;; Running the instrument in a scratch project
-
-(def ^:private identity-env
-  {"GIT_AUTHOR_NAME" "rdm-spec oracle" "GIT_AUTHOR_EMAIL" "oracle@rdm-spec.invalid"
-   "GIT_COMMITTER_NAME" "rdm-spec oracle" "GIT_COMMITTER_EMAIL" "oracle@rdm-spec.invalid"})
-
-(defn- git! [dir & args]
-  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
-                          :extra-env identity-env} "git" args)]
-    (when-not (zero? (:exit r))
-      (throw (ex-info (str "git " (str/join " " args) " failed: " (str/trim (:err r))) {})))
-    r))
-
-(defn- run-env []
-  (dissoc (into {} (System/getenv)) "RESULTS_DIR"))
-
-(defn- scratch!
-  "A scratch project: the project's configuration, the fixture project tree
-  over it, committed and tagged with every cut the cycles name, then the
-  fixture cycles copied under its cycles directory."
-  [root config cycles]
-  (let [dir (str (fs/create-temp-dir {:prefix "rdm-spec-oracle-"}))
-        cfg (fs/file dir command/config-file)
-        tree (fs/file root oracle-dir "project")]
-    (fs/create-dirs (fs/parent cfg))
-    (spit (str cfg) (pr-str (or config {})))
-    (when (fs/directory? tree)
-      (fs/copy-tree tree dir {:replace-existing true}))
-    (git! dir "init" "-q")
-    (git! dir "add" "-A" ".")
-    (git! dir "commit" "-q" "--allow-empty" "-m" "the oracle's fixture project")
-    (doseq [cut (distinct (keep #(get-in % [:cycle-edn :cut]) cycles)) :when (string? cut)]
-      (git! dir "tag" "-f" cut))
-    (let [sconfig (or (command/read-config dir) {})
-          cycles-dir (str/replace (str (or (:cycles-dir sconfig) "dhf/cycles")) #"/+$" "")]
-      (doseq [{c :cycle d :dir} cycles]
-        (fs/copy-tree d (fs/file dir cycles-dir c) {:replace-existing true}))
-      {:dir dir :cycles-dir cycles-dir})))
-
-(defn- first-lines [s] (str/join " | " (take 3 (remove str/blank? (str/split-lines (str s))))))
-
-(defn- instrument! [dir argv]
-  (let [r (command/run-task argv dir (run-env))]
-    (assoc r :line (str "rdm-spec " (str/join " " argv)))))
-
-(defn- failed [r]
-  {:error (str (:line r) " exited " (:exit r) ": " (first-lines (str/join "\n" (:err r))))})
-
-(defn produce
-  "What the instrument produces for each golden: {rel {:text :value} or
-  {:error why}}."
-  [root config cycles goldens]
-  (let [{:keys [dir cycles-dir]} (scratch! root config cycles)]
-    (try
-      (let [out (atom {})
-            put! (fn [rel v] (swap! out assoc rel v))
-            by-cycle (group-by :cycles goldens)]
-        (doseq [{c :cycle v? :verdicts?} cycles]
-          (let [cl-rel (:rel (first (filter #(= :checklist (:kind %)) (get by-cycle [c]))))
-                r (instrument! dir ["checklist" c])
-                f (fs/file dir cycles-dir c "checklist.json")]
-            (put! cl-rel (if (and (zero? (:exit r)) (fs/regular-file? f))
-                           (let [t (slurp (str f))] {:text t :value (json/parse-string t)})
-                           (failed r)))
-            (when v?
-              (let [sc-rel (:rel (first (filter #(= :score (:kind %)) (get by-cycle [c]))))
-                    r (if (zero? (:exit r))
-                        (instrument! dir ["score" c "--verdicts" (str cycles-dir "/" c "/verdicts.edn")])
-                        r)
-                    f (fs/file dir cycles-dir c "score.edn")]
-                (put! sc-rel (if (and (zero? (:exit r)) (fs/regular-file? f))
-                               (let [t (slurp (str f))] {:text t :value (edn/read-string t)})
-                               (failed r)))))))
-        (doseq [{:keys [cycles rel]} (filter #(= :scoreboard (:kind %)) goldens)]
-          (let [r (instrument! dir (into ["scoreboard"] cycles))]
-            (put! rel (if (zero? (:exit r))
-                        (let [v (:scoreboard (edn/read-string (:out r)))]
-                          {:value v :text (with-out-str (pprint/pprint v))})
-                        (failed r)))))
-        @out)
-      (finally (fs/delete-tree dir)))))
+(defn oracle-dir [req]
+  (str/replace (str (or (get-in req [:config :oracle-dir]) default-dir)) #"/+$" ""))
 
 ;; ---------------------------------------------------------------------------
 ;; Comparing
 
-(defn- id-of [x] (when (map? x) (or (:id x) (get x "id"))))
+(defn- id-of [x]
+  (when (map? x) (or (get x :id) (get x "id"))))
 
-(defn- by-id? [v] (and (sequential? v) (seq v) (every? #(string? (id-of %)) v)
-                       (apply distinct? (map id-of v))))
+(defn- id-seq? [xs]
+  (and (sequential? xs) (seq xs) (every? id-of xs)
+       (apply distinct? (map id-of xs))))
 
-(defn differences
-  "The differences between `golden` and `actual`: [{:path [..] :golden :actual}].
-  Vectors of maps with ids are aligned by id; a path element {:item id}
-  names one."
-  ([golden actual] (differences [] golden actual))
-  ([path g a]
+(defn diff
+  "Pure: every difference between the golden `g` and the produced `p`:
+  [{:path [segment] :golden :produced}], a segment a map key, an index, or
+  {:item id} for a sequence item matched by its id. A value absent on one
+  side is ::absent."
+  ([g p] (diff [] g p))
+  ([path g p]
    (cond
-     (= g a) []
-     (and (map? g) (map? a))
-     (vec (mapcat (fn [k] (differences (conj path k) (get g k ::absent) (get a k ::absent)))
-                  (sort-by pr-str (distinct (concat (keys g) (keys a))))))
-     (and (sequential? g) (sequential? a) (or (by-id? g) (by-id? a)) (every? id-of (concat g a)))
+     (= g p) []
+
+     (and (map? g) (map? p))
+     (vec (mapcat (fn [k] (diff (conj path k) (get g k ::absent) (get p k ::absent)))
+                  (distinct (concat (keys g) (keys p)))))
+
+     (and (sequential? g) (sequential? p) (or (id-seq? g) (empty? g)) (or (id-seq? p) (empty? p))
+          (or (seq g) (seq p)))
      (let [gm (into {} (map (juxt id-of identity) g))
-           am (into {} (map (juxt id-of identity) a))
-           ids (distinct (concat (map id-of g) (map id-of a)))]
-       (vec (mapcat (fn [id] (differences (conj path {:item id}) (get gm id ::absent) (get am id ::absent))) ids)))
-     (and (sequential? g) (sequential? a) (= (count g) (count a)))
-     (vec (mapcat (fn [i] (differences (conj path i) (nth g i) (nth a i))) (range (count g))))
-     :else [{:path path :golden g :actual a}])))
+           pm (into {} (map (juxt id-of identity) p))
+           ids (distinct (concat (map id-of g) (map id-of p)))
+           moved (when (and (= (set (keys gm)) (set (keys pm))) (not= (map id-of g) (map id-of p)))
+                   [{:path (conj path :order) :golden (mapv id-of g) :produced (mapv id-of p)}])]
+       (vec (concat (mapcat (fn [id] (diff (conj path {:item id}) (get gm id ::absent) (get pm id ::absent))) ids)
+                    moved)))
+
+     (and (sequential? g) (sequential? p) (= (count g) (count p)))
+     (vec (mapcat (fn [i] (diff (conj path i) (nth g i) (nth p i))) (range (count g))))
+
+     :else [{:path path :golden g :produced p}])))
 
 (defn- show [v] (if (= ::absent v) "nothing" (pr-str v)))
 
-(defn- path-text [path]
-  (str/join " " (for [p path] (if (map? p) (str "item " (:item p)) (pr-str p)))))
+(defn path-text
+  "Pure: a difference's path as a finding names it."
+  [path]
+  (if (empty? path)
+    "the whole file"
+    (str/join " " (for [s path]
+                    (cond (map? s) (str "item " (:item s))
+                          (= :order s) "the order of the items"
+                          (integer? s) (str "[" s "]")
+                          :else (pr-str s))))))
 
-(defn- line-in [text path]
-  (when-let [id (some #(when (map? %) (:item %)) (reverse path))]
-    (some (fn [[i l]] (when (str/includes? l (pr-str id)) (inc i)))
-          (map-indexed vector (str/split-lines (str text))))))
+(defn- line-of [text needle]
+  (when (and text needle)
+    (some (fn [[i l]] (when (str/includes? l needle) (inc i)))
+          (map-indexed vector (str/split-lines text)))))
 
-(defn- read-golden [root {:keys [rel kind]}]
-  (let [f (fs/file root rel)]
-    (when (fs/regular-file? f)
-      (let [t (slurp (str f))]
-        (try {:text t :value (if (= :checklist kind) (json/parse-string t) (edn/read-string t))}
-             (catch Exception e {:text t :error (ex-message e)}))))))
-
-(defn judge
-  "Findings for every golden the instrument does not reproduce."
-  [root goldens produced]
-  (vec (for [{:keys [rel] :as g} goldens
-             :let [golden (read-golden root g)
-                   actual (get produced rel)]
-             f (cond
-                 (nil? golden)
-                 [(command/finding rel nil "golden-missing"
-                                   "no golden is recorded; record one with rdm-spec oracle record --reason R")]
-                 (:error golden)
-                 [(command/finding rel nil "golden-unreadable" (:error golden))]
-                 (:error actual)
-                 [(command/finding rel nil "golden-not-reproduced" (str "the instrument produced nothing: " (:error actual)))]
-                 :else
-                 (for [{:keys [path] gv :golden av :actual} (differences (:value golden) (:value actual))]
-                   (command/finding rel (line-in (:text golden) path) "golden-differs"
-                                    (str (if (seq path) (path-text path) "the whole output")
-                                         ": the golden says " (show gv) ", the instrument gives " (show av)))))]
-         f)))
+(defn difference-findings
+  "Pure: a finding per difference, at the golden `file` holding `text`."
+  [file text diffs]
+  (vec (for [{:keys [path golden produced]} diffs
+             :let [item (some #(when (map? %) (:item %)) path)
+                   line (when item (line-of text (pr-str (str item))))]]
+         (command/finding file line "golden-differs"
+                          (str (path-text path) ": golden " (show golden) ", produced " (show produced))))))
 
 ;; ---------------------------------------------------------------------------
-;; Recording
+;; Running a fixture cycle
 
-(defn- today [] (str (java.time.LocalDate/now)))
+(defn- git! [dir & args]
+  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
+                          :extra-env {"GIT_AUTHOR_NAME" "rdm-spec oracle" "GIT_AUTHOR_EMAIL" "oracle@rdm-spec.invalid"
+                                      "GIT_COMMITTER_NAME" "rdm-spec oracle" "GIT_COMMITTER_EMAIL" "oracle@rdm-spec.invalid"
+                                      "GIT_CONFIG_NOSYSTEM" "1"}}
+                 "git" "-c" "core.hooksPath=/dev/null" "-c" "commit.gpgsign=false" "-c" "tag.gpgsign=false" args)]
+    (when-not (zero? (:exit r))
+      (command/cannot-run! (str "git " (str/join " " args) " failed: " (str/trim (str (:err r))))))
+    (str/trim (:out r))))
 
-(defn- append-record! [root reason rels]
-  (let [f (fs/file root oracle-dir "RECORDED.md")
-        head (when-not (fs/exists? f)
-               "# Recorded goldens\n\nEvery re-recording of a golden, with the date and the stated reason.\n")
-        entry (str "\n## " (today) "\n\n" (str/trim reason) "\n\nRe-recorded:\n"
-                   (str/join (for [r rels] (str "- " r "\n"))))]
-    (spit (str f) (str head entry) :append true)))
+(defn- read-edn-text [text]
+  (try (edn/read-string text) (catch Exception _ ::unreadable)))
 
-(defn record!
-  "Rewrites every golden the instrument does not reproduce; returns the
-  rewritten paths."
-  [root goldens produced reason]
-  (let [changed (vec (for [{:keys [rel] :as g} goldens
-                           :let [golden (read-golden root g)
-                                 actual (get produced rel)]
-                           :when (or (nil? golden) (:error golden) (not= (:value golden) (:value actual)))]
-                       rel))]
-    (doseq [rel changed]
-      (let [f (fs/file root rel)]
-        (fs/create-dirs (fs/parent f))
-        (spit (str f) (:text (get produced rel)))))
-    (when (seq changed) (append-record! root reason changed))
-    changed))
+(defn- read-json-text [text]
+  (try (json/parse-string text) (catch Exception _ ::unreadable)))
+
+(defn- run-lines [outcome]
+  (let [{:keys [err]} (command/render outcome false)]
+    (str/join "; " err)))
+
+(defn- execute [argv dir]
+  (let [execute (requiring-resolve 'rdm-spec.kernel.command/execute)]
+    (execute argv {:root (str dir) :env (dissoc (into {} (System/getenv)) "RESULTS_DIR")})))
+
+(defn- fixture-cycles
+  "The fixture cycles: [name] of every directory under the oracle directory."
+  [dir]
+  (vec (sort (for [d (fs/list-dir dir) :when (fs/directory? d)] (str (fs/file-name d))))))
+
+(defn- cycles-dir-of [project]
+  (let [f (fs/file project command/config-file)
+        c (when (fs/regular-file? f) (read-edn-text (slurp (str f))))]
+    (str/replace (str (or (when (map? c) (:cycles-dir c)) "dhf/cycles")) #"/+$" "")))
+
+(defn- scrub
+  "`text` with the throwaway directory `tmp` named as `as`."
+  [text tmp as]
+  (-> (str text)
+      (str/replace (str (fs/canonicalize tmp)) as)
+      (str/replace (str tmp) as)))
+
+(defn run-fixture
+  "Runs the checklist and the scorer on the fixture cycle `name` (its files
+  under `fixture`, a directory): {:name :produced {golden text} :findings}.
+  Leaves nothing behind."
+  [rel-fixture fixture name]
+  (let [project (fs/file fixture "project")
+        cycle-f (fs/file fixture "cycle.edn")
+        bad (fn [msg] {:name name :produced {}
+                       :findings [(command/finding rel-fixture nil "fixture-malformed" msg)]})]
+    (cond
+      (not (fs/directory? project)) (bad "the fixture cycle holds no project/: the fixture project at its cut")
+      (not (fs/regular-file? cycle-f)) (bad "the fixture cycle holds no cycle.edn")
+      (not (fs/regular-file? (fs/file fixture "verdicts.edn"))) (bad "the fixture cycle holds no verdicts.edn")
+      :else
+      (let [cycle (read-edn-text (slurp (str cycle-f)))]
+        (if-not (and (map? cycle) (string? (:cut cycle)))
+          (bad "its cycle.edn is not a map naming a :cut")
+          (let [tmp (fs/create-temp-dir {:prefix "rdm-spec-oracle-"})]
+            (try
+              (let [dir (fs/file tmp "project")
+                    as (str rel-fixture "/project")
+                    _ (fs/copy-tree project dir)
+                    cycles (cycles-dir-of dir)
+                    cyc (fn [f] (fs/file dir cycles name f))]
+                (git! dir "init" "-q")
+                (git! dir "add" "-A" "-f" ".")
+                (git! dir "commit" "-q" "--allow-empty" "-m" (str "the fixture cut " (:cut cycle)))
+                (git! dir "tag" "-f" (:cut cycle))
+                (fs/create-dirs (cyc ""))
+                (fs/copy cycle-f (cyc "cycle.edn") {:replace-existing true})
+                (if (fs/regular-file? (fs/file fixture "ratified.edn"))
+                  (fs/copy (fs/file fixture "ratified.edn") (cyc "ratified.edn") {:replace-existing true})
+                  (spit (str (cyc "ratified.edn"))
+                        (pr-str {:cut (:cut cycle) :room-tree empty-tree :outcome :passed})))
+                (fs/copy (fs/file fixture "verdicts.edn") (fs/file dir "verdicts.edn") {:replace-existing true})
+                (let [failed (fn [task outcome]
+                               (command/finding rel-fixture nil "fixture-run-failed"
+                                                (scrub (str "rdm-spec " task " exited " (:exit outcome) ": "
+                                                            (run-lines outcome))
+                                                       dir as)))
+                      cl (execute ["checklist" name] dir)
+                      cl-text (when (zero? (:exit cl)) (slurp (str (cyc "checklist.json"))))
+                      sc (when cl-text (execute ["score" name "--verdicts" "verdicts.edn"] dir))
+                      sc-text (when (and sc (zero? (:exit sc))) (slurp (str (cyc "score.edn"))))]
+                  {:name name
+                   :cycle-text (slurp (str cycle-f))
+                   :config-text (let [f (fs/file project command/config-file)] (when (fs/regular-file? f) (slurp (str f))))
+                   :produced (cond-> {}
+                               cl-text (assoc "checklist.json" cl-text)
+                               sc-text (assoc "score.edn" sc-text))
+                   :findings (vec (concat (when-not (zero? (:exit cl)) [(failed (str "checklist " name) cl)])
+                                          (when (and sc (not (zero? (:exit sc)))) [(failed (str "score " name) sc)])))}))
+              (finally (fs/delete-tree tmp)))))))))
+
+(defn- scoreboard-text [m]
+  (with-out-str (binding [*print-namespace-maps* false] (pprint/pprint m))))
+
+(defn run-scoreboards
+  "Runs the scoreboard of each fixture cycle against the one before it, in
+  one throwaway project holding every cycle's cycle.edn and produced score:
+  {name text}, plus :findings."
+  [rel-dir runs]
+  (let [scored (filter #(get-in % [:produced "score.edn"]) runs)
+        names (mapv :name runs)]
+    (if (or (empty? scored) (nil? (:config-text (first scored))))
+      {:texts {} :findings []}
+      (let [tmp (fs/create-temp-dir {:prefix "rdm-spec-oracle-"})]
+        (try
+          (let [dir (fs/file tmp "scoreboard")
+                _ (fs/create-dirs (fs/file dir "dhf/harness"))
+                _ (spit (str (fs/file dir command/config-file)) (:config-text (first scored)))
+                cycles (cycles-dir-of dir)
+                by-name (into {} (map (juxt :name identity) runs))]
+            (doseq [r scored]
+              (fs/create-dirs (fs/file dir cycles (:name r)))
+              (spit (str (fs/file dir cycles (:name r) "cycle.edn")) (:cycle-text r))
+              (spit (str (fs/file dir cycles (:name r) "score.edn")) (get-in r [:produced "score.edn"])))
+            (reduce (fn [acc [i n]]
+                      (let [prev (nth names (mod (dec i) (count names)))]
+                        (if (and (get-in by-name [n :produced "score.edn"]) (get-in by-name [prev :produced "score.edn"]))
+                          (let [o (execute ["scoreboard" prev n] dir)]
+                            (if (zero? (:exit o))
+                              (assoc-in acc [:texts n] (scoreboard-text (get-in o [:result :scoreboard])))
+                              (update acc :findings conj
+                                      (command/finding (str rel-dir "/" n) nil "fixture-run-failed"
+                                                       (scrub (str "rdm-spec scoreboard " prev " " n " exited " (:exit o)
+                                                                   ": " (run-lines o))
+                                                              dir rel-dir)))))
+                          acc)))
+                    {:texts {} :findings []}
+                    (map-indexed vector names)))
+          (finally (fs/delete-tree tmp)))))))
 
 ;; ---------------------------------------------------------------------------
-;; The stage
+;; Judging
+
+(defn- read-golden [file text]
+  (if (str/ends-with? file ".json") (read-json-text text) (read-edn-text text)))
+
+(defn judge-golden
+  "Pure: the findings of one golden: `rel` its project path, `golden-text`
+  nil when it does not exist, `produced-text` nil when nothing was produced."
+  [rel golden-text produced-text]
+  (cond
+    (nil? produced-text) []
+    (nil? golden-text) [(command/finding rel nil "golden-missing"
+                                         "no golden is recorded: record it with rdm-spec oracle record --reason R")]
+    :else (let [g (read-golden rel golden-text)
+                p (read-golden rel produced-text)]
+            (if (= ::unreadable g)
+              [(command/finding rel nil "golden-unreadable" "the golden is not readable")]
+              (difference-findings rel golden-text (diff g p))))))
+
+(defn- judge
+  "Runs every fixture cycle and compares: {:fixtures :compared :findings
+  :stale [{:rel :file :text}]}."
+  [req dir]
+  (let [rel-dir (oracle-dir req)
+        names (fixture-cycles dir)
+        runs (mapv #(run-fixture (str rel-dir "/" %) (fs/file dir %) %) names)
+        boards (run-scoreboards rel-dir runs)
+        runs (mapv #(if-let [t (get-in boards [:texts (:name %)])] (assoc-in % [:produced "scoreboard.edn"] t) %) runs)
+        per (for [r runs
+                  g goldens
+                  :let [rel (str rel-dir "/" (:name r) "/" g)
+                        f (fs/file dir (:name r) g)
+                        golden-text (when (fs/regular-file? f) (slurp (str f)))
+                        produced (get-in r [:produced g])]
+                  :when produced]
+              {:rel rel :file f :text produced :findings (judge-golden rel golden-text produced)})]
+    {:fixtures names
+     :compared (vec (for [x per :when (fs/regular-file? (:file x))] (:rel x)))
+     :findings (vec (concat (mapcat :findings runs) (:findings boards) (mapcat :findings per)))
+     :stale (vec (filter #(seq (:findings %)) per))}))
+
+(defn- record! [req dir reason stale]
+  (doseq [{:keys [file text]} stale]
+    (spit (str file) text))
+  (when (seq stale)
+    (let [f (fs/file dir recorded-file)
+          head (if (fs/regular-file? f) "" "# Recorded goldens\n\nEach re-recording of a golden, with its date and reason.\n\n")]
+      (spit (str f)
+            (str head "- " (str (java.time.LocalDate/now)) ": " (str/trim reason)
+                 " (re-recorded " (str/join ", " (map :rel stale)) ")\n")
+            :append true)))
+  (vec (map :rel stale)))
 
 (defn oracle
-  "The oracle stage: judges (or, on `oracle record`, records) the instrument
-  against the goldens in dhf/harness/oracle/."
+  "The oracle stage: the oracle task, and the gate of fence and ratify."
   [req]
-  (let [root (:root req)
-        own? (= "oracle" (:task req))
-        [mode & more] (when own? (:args req))
-        record? (= "record" mode)
+  (let [task? (= "oracle" (:task req))
+        [sub & more] (when task? (:args req))
         reason (get-in req [:opts :reason])
-        _ (when (and own? (or (seq more) (and mode (not record?))))
-            (command/cannot-run! (str "unknown argument " (str/join " " (cons mode more)) "; usage: rdm-spec oracle [record --reason R]")))
-        _ (when (and record? (or (not (string? reason)) (str/blank? reason)))
-            (command/cannot-run! "a reason is required to record goldens: rdm-spec oracle record --reason R; nothing was rewritten"))
-        _ (when (and own? (not record?) reason)
-            (command/cannot-run! "--reason is given only with record: rdm-spec oracle record --reason R"))
-        wrap (fn [m findings] {:result (if own? {:oracle m} {}) :findings (vec findings)})]
-    (if-not (fs/directory? (fs/file root oracle-dir))
-      (if record?
-        (command/cannot-run! (str "there is no oracle to record: no " oracle-dir "/"))
-        (wrap {:compared [] :statement (str "there is no oracle to run: no " oracle-dir "/")} []))
-      (let [config (or (:config req) (command/read-config root))
-            {:keys [cycles findings]} (fixture-cycles root)
-            goldens (golden-names root cycles)]
-        (if (seq findings)
-          (wrap {:compared []} findings)
-          (let [produced (produce root config cycles goldens)
-                errors (vec (for [{:keys [rel]} goldens
-                                  :let [e (:error (get produced rel))]
-                                  :when e]
-                              (command/finding rel nil "golden-not-reproduced" (str "the instrument produced nothing: " e))))]
-            (if record?
-              (if (seq errors)
-                (wrap {:recorded []} errors)
-                (let [changed (record! root goldens produced reason)]
-                  (wrap {:recorded changed
-                         :unchanged (vec (remove (set changed) (map :rel goldens)))
-                         :reason reason
-                         :statement (if (seq changed)
-                                      (str "re-recorded " (count changed) " golden(s); the reason is appended to "
-                                           (rel-in "RECORDED.md"))
-                                      "every golden is reproduced: nothing was re-recorded")}
-                        [])))
-              (wrap {:compared (mapv :rel goldens)} (judge root goldens produced)))))))))
+        record? (= "record" sub)
+        _ (when task?
+            (cond
+              (and sub (not record?)) (command/cannot-run! (str "unknown argument " sub "; usage: rdm-spec oracle [record --reason R]"))
+              (seq more) (command/cannot-run! (str "unexpected argument " (str/join " " more)))
+              (and record? (or (not (string? reason)) (str/blank? reason)))
+              (command/cannot-run! "a reason is required to record goldens: rdm-spec oracle record --reason R; nothing was rewritten")
+              (and (not record?) (some? reason))
+              (command/cannot-run! "--reason is given only with record: rdm-spec oracle record --reason R")))
+        rel-dir (oracle-dir req)
+        dir (command/path req rel-dir)]
+    (cond
+      (not (fs/directory? dir))
+      (cond
+        record? (command/cannot-run! (str "there is no oracle to record: " rel-dir "/ does not exist"))
+        task? {:result {:oracle {:fixtures [] :compared [] :message (str "there is no oracle to run: " rel-dir "/ does not exist")}}
+               :findings [(command/warning rel-dir nil "no-oracle" "there is no oracle to run")]}
+        :else {:result {} :findings []})
+
+      ;; an oracle with no fixture cycle is no oracle, as a project without one is not refused
+      (empty? (fixture-cycles dir))
+      (cond
+        record? (command/cannot-run! (str "there is no oracle to record: " rel-dir "/ holds no fixture cycle"))
+        task? {:result {:oracle {:fixtures [] :compared [] :message (str "there is no oracle to run: " rel-dir "/ holds no fixture cycle")}}
+               :findings [(command/warning rel-dir nil "no-oracle" "there is no oracle to run: it holds no fixture cycle")]}
+        :else {:result {} :findings []})
+
+      :else
+      (let [{:keys [fixtures compared findings stale]} (judge req dir)]
+        (if record?
+          (let [recorded (record! req dir reason stale)
+                rest-findings (vec (remove #(#{"golden-differs" "golden-missing" "golden-unreadable"} (:rule %)) findings))]
+            {:result {:oracle {:fixtures fixtures :compared compared :recorded recorded
+                               :reason (str/trim reason)}}
+             :findings rest-findings})
+          {:result (if task? {:oracle {:fixtures fixtures :compared compared
+                                       :differs (count (remove command/warning? findings))}} {})
+           :findings findings})))))

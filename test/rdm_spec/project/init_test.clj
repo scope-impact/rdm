@@ -2,79 +2,44 @@
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is]]
+            [rdm-spec.kernel.command :as command]
             [rdm-spec.project.init :as init]))
 
-(defn- tmp [] (str (fs/create-temp-dir {:prefix "rdm-spec-init-test-"})))
+(defn- with-tmp [f]
+  (let [d (str (fs/create-temp-dir {:prefix "init-test-"}))]
+    (try (f d) (finally (fs/delete-tree d)))))
 
-(deftest a-prefix-starts-with-a-letter-and-holds-letters-digits-and-single-hyphens
-  (doseq [ok ["spec" "sauna" "loyly" "a" "A1" "sauna-2" "x-y-z" "Spec9"]]
-    (is (init/valid-prefix? ok) ok))
-  (doseq [bad ["9lives" "" "-a" "a-" "a--b" "a_b" "a b" "sä" "a.b" nil]]
-    (is (not (init/valid-prefix? bad)) (pr-str bad))))
+(deftest the-id-prefix
+  (is (nil? (init/prefix-problem "spec")))
+  (is (nil? (init/prefix-problem "a-b2-c")))
+  (is (str/includes? (init/prefix-problem "9lives") "starts with a letter"))
+  (is (some? (init/prefix-problem "a--b")))
+  (is (some? (init/prefix-problem "a-")))
+  (is (str/includes? (init/prefix-problem "UN") "the prefix UN is taken by need tags")))
 
-(deftest the-system-id-is-a-keyword-made-from-the-name
-  (is (= :sauna (:system-id-kw (init/vars-for "sauna" "spec"))))
-  (is (= :my-sauna (:system-id-kw (init/vars-for "My Sauna!" "spec"))))
-  (is (= :system (:system-id-kw (init/vars-for "___" "spec"))))
-  (is (= :system-2 (:system-id-kw (init/vars-for "2" "spec")))))
+(deftest every-template-renders
+  (let [vs (init/vars "Sauna 2" "sauna")]
+    (is (= ":sauna-2" (get vs "system-id")))
+    (doseq [e init/skeleton]
+      (is (not (str/includes? (init/content e vs) "{{")) (:path e)))
+    (let [cfg (edn/read-string (init/content {:template "config.edn.tmpl"} vs))]
+      (is (= "sauna" (:id-prefix cfg)))
+      (is (some #{"dhf/harness/stack.md"} (get-in cfg [:clean-room :allow]))))))
 
-(deftest rendering-fills-every-placeholder
-  (let [vars (init/vars-for "sauna" "loyly")]
-    (doseq [rel (init/skeleton-paths)]
-      (let [text (init/render rel vars)]
-        (is (string? text) rel)
-        (is (not (re-find #"\{\{" text)) rel)))
-    (is (= "loyly" (:id-prefix (edn/read-string (init/render "dhf/harness/config.edn" vars)))))
-    (is (= {:id :sauna :name "sauna" :description "Describe what the system does"}
-           (:system (edn/read-string (init/render "dhf/spec/model.edn" vars)))))))
-
-(deftest a-name-with-quotes-still-renders-readable-edn
-  (let [vars (init/vars-for "the \"best\" sauna" "spec")]
-    (is (= "the \"best\" sauna" (get-in (edn/read-string (init/render "dhf/spec/model.edn" vars)) [:system :name])))))
-
-(deftest the-allow-list-never-admits-the-oracle
-  (let [c (edn/read-string (init/render "dhf/harness/config.edn" (init/vars-for "sauna" "spec")))]
-    (is (= ["dhf/spec" "dhf/harness/config.edn" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"]
-           (get-in c [:clean-room :allow])))
-    (is (= [] (:implementation c)))))
-
-(deftest the-gitignore-lines-are-the-template-s
-  (is (= ["dhf/allure-results/" "dhf/cycles/*/results/" "dhf/cycles/*/build/" "site-src/" "site/"]
-         (init/gitignore-lines))))
-
-(deftest next-steps-start-in-the-new-project-when-one-was-made
-  (is (str/includes? (first (init/next-steps "sauna")) "cd sauna"))
-  (is (not-any? #(str/includes? % "cd ") (init/next-steps nil)))
-  (is (some #(str/includes? % "rdm-spec check") (init/next-steps nil))))
-
-(deftest write-skeleton-writes-every-path-and-keeps-what-exists
-  (let [dir (tmp)
-        vars (init/vars-for "sauna" "spec")]
-    (fs/create-dirs (fs/file dir "dhf/spec"))
-    (spit (str (fs/file dir "dhf/spec/glossary.md")) "ours\n")
-    (let [{:keys [wrote kept skipped findings]} (init/write-skeleton! dir vars)]
-      (is (= ["dhf/spec/glossary.md"] kept))
-      (is (= (sort (remove #{"dhf/spec/glossary.md"} (init/skeleton-paths))) (sort wrote)))
-      (is (empty? skipped))
-      (is (empty? findings))
-      (is (= "ours\n" (slurp (str (fs/file dir "dhf/spec/glossary.md")))))
-      (is (fs/executable? (fs/file dir ".githooks/pre-commit"))))))
-
-(deftest write-skeleton-never-writes-through-a-file-or-a-link
-  (testing "a file where a directory should be"
-    (let [dir (tmp)]
-      (spit (str (fs/file dir "dhf")) "a file\n")
-      (let [{:keys [wrote skipped findings]} (init/write-skeleton! dir (init/vars-for "x" "spec"))]
-        (is (not-any? #(str/starts-with? % "dhf/") wrote))
-        (is (every? #(str/starts-with? % "dhf/") skipped))
-        (is (seq findings))
-        (is (every? #(= :warning (:severity %)) findings))
-        (is (= "a file\n" (slurp (str (fs/file dir "dhf"))))))))
-  (testing "a directory that is a link"
-    (let [dir (tmp)
-          elsewhere (tmp)]
-      (fs/create-sym-link (fs/file dir ".github") elsewhere)
-      (let [{:keys [skipped]} (init/write-skeleton! dir (init/vars-for "x" "spec"))]
-        (is (= [".github/workflows/cut.yml"] skipped))
-        (is (empty? (fs/list-dir elsewhere)))))))
+(deftest init-writes-the-skeleton-and-refuses-an-existing-path
+  (with-tmp
+    (fn [dir]
+      (let [out (command/execute ["init" "sauna"] {:root dir})]
+        (is (= 0 (:exit out)))
+        (is (= (map :path init/skeleton) (get-in out [:result :init :wrote])))
+        (is (fs/executable? (fs/file dir "sauna/.githooks/pre-commit"))))
+      (let [out (command/execute ["init" "sauna"] {:root dir})]
+        (is (= 2 (:exit out)))
+        (is (str/includes? (:cannot-run out) "sauna")))
+      (let [abs (str (fs/file dir "abs" "x"))
+            out (command/execute ["init" abs "--id-prefix" "x"] {:root dir})]
+        (is (= 0 (:exit out)))
+        (is (fs/regular-file? (fs/file abs "dhf/harness/stack.md"))))
+      (is (= 2 (:exit (command/execute ["init" "un" "--id-prefix" "UN"] {:root dir}))))
+      (is (not (fs/exists? (fs/file dir "un")))))))

@@ -1,389 +1,421 @@
 (ns rdm-spec.compliance.gap
-  "Gap analysis (dhf/spec/compliance/gap.feature): under the regulated
-  profile, every clause of every declared clause list is named by an audit
-  tag in a controlled document. A stage of `rdm-spec check`, run only when
-  the configuration holds :regulated
+  "Gap analysis (dhf/spec/compliance/gap.feature), a stage of `rdm-spec
+  check` and a quiet stage of checklist, release and audit, run only under
+  the regulated profile: every clause of every declared clause list is named
+  by an audit tag in a controlled document (dhf/spec/glossary.md, \"The
+  regulated profile\").
 
-    {:regulated {:clause-lists [\"dhf/clauses/std.txt\" ...] :documents \"dhf/documents\"}}
+  The configuration's :regulated is {:clause-lists [path ..] :documents dir}.
+  Clause lists and documents are read at the revision SpecParsed carries (a
+  cut, for checklist), else in the working tree. The stage publishes
+  ClausesIndexed:
 
-  It reads the clause lists and the controlled documents, in the working
-  tree or, for a task over a cycle (checklist), at the cycle's cut, and
-  publishes ClausesIndexed:
-
-    {:revision  commit | :working-tree
-     :clauses   [{:key :description :clause-list :line :named-at [{:file :line}]}]
-                ; in the lists' order, includes in place, each key once;
-                ; :clause-list is the file holding the clause's line
+    {:revision  \"<commit>\" | :working-tree
+     :clauses   [{:key :description :clause-list :line :declared :named-at [{:file :line}]}]
      :documents [{:file :id :revision :title}]
-     :findings  [{:file :line :rule :message}]}   ; the warnings included
+     :findings  [{:file :line :rule :message :severity}]}
 
-  Findings (exit 1): clause-unreferenced (a clause no audit tag names, at its
-  clause list's line), clause-line-malformed, document-unidentified (no id,
-  revision or title in its frontmatter), document-id-duplicate. Warnings:
-  clause-unknown (an audit tag that is one key no clause list holds),
-  document-placeholder (a line still holding TODO). Cannot run (exit 2): a
-  :regulated of another shape, a clause list or include that names no
-  readable file, a declared clause list holding no clause, no documents
-  directory.
+  :clause-list and :line are where the clause's line stands (an included
+  file, for an included clause); :declared is the declared list it was
+  reached through. Clauses come in the declared lists' order, includes in
+  place, each key once.
 
-  The Markdown reading here (frontmatter, code, audit tags) is shared with
-  the audit copy, in this context."
+  Findings (exit 1):
+    clause-unreferenced   CLAUSE-LIST:LINE, a clause no audit tag names (a gap)
+    clause-line-malformed CLAUSE-LIST:LINE, a line that is no clause, include or comment
+    document-unidentified DOCUMENT, frontmatter without an id, a revision or a title
+    document-duplicate-id DOCUMENT, an id another controlled document has too
+  Warnings:
+    clause-unknown        DOCUMENT:LINE, an audit tag that is one key no clause list holds
+    document-placeholder  DOCUMENT:LINE, a line still holding TODO
+  Refusals (exit 2): no :regulated as declared, a clause list or include that
+  is no readable file, a declared list holding no clause, a missing documents
+  directory. Under release and audit, which relay gaps only, a document's own
+  finding (any finding but a gap or a warning) stops the task as a refusal.
+
+  Audit tags (also used by the audit copy): `[[ ... ]]` in a document's body,
+  outside inline code and fenced code blocks, never running past a blank
+  line (`audit-tags`); `strip-tags` removes them with the space before."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
-            [clojure.edn :as edn]
+            [clj-yaml.core :as yaml]
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]))
 
 ;; ---------------------------------------------------------------------------
-;; Keys
+;; Reading files: the working tree or a revision
 
-(def key-char "A-Za-z0-9._:-")
+(defn- git [root & args]
+  (let [r (apply p/shell {:dir (str root) :out :string :err :string :continue true :in ""} "git" args)]
+    {:exit (:exit r) :out (:out r)}))
 
-(def ^:private key-re (re-pattern (str "[" key-char "]+")))
+(defn- strip-slash [s] (str/replace (str s) #"/+$" ""))
 
-(defn names-key?
-  "Pure: whether the audit tag text `text` names the clause `k`: it holds the
-  key or a dotted descendant of it, bounded by characters that are not key
-  characters; a `: note` after the key is allowed."
-  [text k]
-  (let [q (java.util.regex.Pattern/quote k)
-        re (re-pattern (str "(?<![" key-char "])" q
-                            "(?=$|[^" key-char "]|\\.[" key-char "]|\\.(?![" key-char "])|:(?:\\s|$))"))]
-    (boolean (re-find re (str text)))))
+(defn reader
+  "{:list (fn [dir] [rel]) :read (fn [rel] text-or-nil) :dir? (fn [dir])}:
+  the working tree under `root`, or `commit` of its repository."
+  [root commit]
+  (if commit
+    {:list (fn [dir]
+             (let [r (git root "ls-tree" "-r" "--name-only" "-z" commit "--" (str (strip-slash dir) "/"))]
+               (if (zero? (:exit r))
+                 (vec (sort (remove str/blank? (str/split (:out r) #"\u0000"))))
+                 [])))
+     :read (fn [rel]
+             (let [r (git root "show" (str commit ":./" rel))]
+               (when (zero? (:exit r)) (:out r))))
+     :dir? (constantly true)}
+    {:list (fn [dir]
+             (let [d (command/path root dir)]
+               (if (fs/directory? d)
+                 (vec (sort (for [f (fs/glob d "**") :when (fs/regular-file? f)]
+                              (command/rel root f))))
+                 [])))
+     :read (fn [rel]
+             (let [f (command/path root rel)]
+               (when (fs/regular-file? f) (slurp (str f)))))
+     :dir? (fn [dir] (fs/directory? (command/path root dir)))}))
 
-(defn single-key
-  "Pure: the key when the tag text is one key (a `: note` after it allowed),
-  else nil."
-  [text]
-  (second (re-matches (re-pattern (str "(?s)\\s*([" key-char "]*[A-Za-z0-9._-])(?::\\s.*)?\\s*")) (str text))))
+(defn- lines-of [text] (str/split (str text) #"\r?\n" -1))
 
 ;; ---------------------------------------------------------------------------
 ;; Clause lists
 
+(def key-chars "A-Za-z0-9._:\\-")
+
+(def key-re (re-pattern (str "[" key-chars "]+")))
+
+(defn- key-char? [c] (boolean (and c (re-matches (re-pattern (str "[" key-chars "]")) (str c)))))
+
+(defn normalize-rel [rel]
+  (str/replace (str (fs/normalize (fs/path rel))) "\\" "/"))
+
 (defn parse-clause-list
-  "Pure: the lines of a clause list: [{:kind :clause :key :description :line}
-  | {:kind :include :file :line} | {:kind :malformed :text :line}]; comments
-  and blank lines are dropped."
-  [text]
+  "Pure: the lines of a clause list's `text` (the file `file`) as
+  [{:line n :clause {:key :description}} | {:line n :include rel} |
+  {:line n :malformed text}], comments and blanks left out. An include is
+  resolved relative to `file`."
+  [file text]
   (vec (keep-indexed
         (fn [i raw]
           (let [l (str/trim raw)
                 n (inc i)]
             (cond
               (or (str/blank? l) (str/starts-with? l "#")) nil
-              (re-matches #"include\s+\S.*" l) {:kind :include :file (str/trim (subs l 7)) :line n}
-              :else (if-let [[_ k d] (re-matches (re-pattern (str "([" key-char "]+)(?:\\s+(.*))?")) l)]
-                      {:kind :clause :key k :description (str/trim (or d "")) :line n}
-                      {:kind :malformed :text l :line n}))))
-        (str/split-lines (str text)))))
+              (re-matches #"include\s+\S.*" l)
+              (let [target (str/trim (subs l (count "include")))
+                    parent (fs/parent (fs/path file))]
+                {:line n :include (normalize-rel (if parent (str (fs/path parent target)) target))})
+              :else
+              (if-let [[_ k d] (re-matches (re-pattern (str "([" key-chars "]+)(?:\\s+(.*))?")) l)]
+                {:line n :clause {:key k :description (str/trim (str d))}}
+                {:line n :malformed l}))))
+        (lines-of text))))
 
-(defn- normalize [rel]
-  (let [parts (reduce (fn [acc part]
-                        (cond (or (= "" part) (= "." part)) acc
-                              (and (= ".." part) (seq acc) (not= ".." (peek acc))) (pop acc)
-                              :else (conj acc part)))
-                      [] (str/split (str rel) #"/"))]
-    (str/join "/" parts)))
+(declare parse-all)
 
-(defn- parent-of [rel]
-  (let [i (str/last-index-of rel "/")] (if i (subs rel 0 i) "")))
-
-(defn read-clause-lists
-  "The clauses of the declared lists `lists`, read with `read-text` (rel ->
-  text or nil): {:clauses [..] :findings [..]}, each key once, in order with
-  includes in place. Cannot run on a list or include naming no readable file
-  and on a declared list holding no clause."
-  [read-text lists]
-  (let [seen (atom #{})
-        counts (atom {})
+(defn read-clauses
+  "Every clause of the declared `lists`, read with `rd`, in order, includes
+  in place, each key once: {:clauses [..] :findings [..]}. Refuses an
+  unreadable list or include, and a declared list holding no clause."
+  [rd lists]
+  (let [seen-keys (atom #{})
         clauses (atom [])
         findings (atom [])
-        walk (fn walk [rel from]
-               (if-let [n (get @counts rel)]
-                 n
-                 (let [text (read-text rel)]
-                   (when (nil? text)
-                     (command/cannot-run! (if from
-                                            (str "the clause list " (:file from) " includes " rel " (line " (:line from)
-                                                 "), which names no readable file")
-                                            (str "the clause list " rel ", which :regulated declares, names no readable file"))))
-                   ;; an include cycle counts nothing twice
-                   (swap! counts assoc rel 0)
-                   (let [n (reduce (fn [n {:keys [kind] :as l}]
-                                     (case kind
-                                       :include (+ n (walk (normalize (str (parent-of rel) "/" (:file l)))
-                                                           {:file rel :line (:line l)}))
-                                       :malformed (do (swap! findings conj
-                                                             (command/finding rel (:line l) "clause-line-malformed"
-                                                                              (str "the line " (pr-str (:text l))
-                                                                                   " is no clause (KEY description),"
-                                                                                   " include FILE, comment or blank line")))
-                                                      n)
-                                       :clause (do (when-not (@seen (:key l))
-                                                     (swap! seen conj (:key l))
-                                                     (swap! clauses conj {:key (:key l) :description (:description l)
-                                                                          :clause-list rel :line (:line l)}))
-                                                   (inc n))))
-                                   0 (parse-clause-list text))]
-                     (swap! counts assoc rel n)
-                     n))))]
-    (doseq [rel lists]
-      (when (zero? (walk (normalize rel) nil))
-        (command/cannot-run! (str "the clause list " rel " holds no clause: a declared list names at least one"))))
+        walk (fn walk [file declared visiting from]
+               (let [text ((:read rd) file)]
+                 (when (nil? text)
+                   (command/cannot-run!
+                    (if from
+                      (str (:file from) ":" (:line from) ": the include names " file ", which is not a readable file")
+                      (str "the clause list " file " is not a readable file"))))
+                 (doseq [{:keys [line clause include malformed]} (parse-clause-list file text)]
+                   (cond
+                     include (when-not (contains? visiting include)
+                               (walk include declared (conj visiting include) {:file file :line line}))
+                     malformed (swap! findings conj
+                                      (command/finding file line "clause-line-malformed"
+                                                       (str "the line " (pr-str malformed)
+                                                            " is no clause (KEY description), include or comment")))
+                     (contains? @seen-keys (:key clause)) nil
+                     :else (do (swap! seen-keys conj (:key clause))
+                               (swap! clauses conj (assoc clause :clause-list file :line line
+                                                          :declared declared)))))))]
+    (doseq [l lists]
+      (let [l (normalize-rel l)]
+        (walk l l #{l} nil)
+        (when (empty? (filter :clause (parse-all rd l)))
+          (command/cannot-run! (str "the clause list " l " holds no clause")))))
     {:clauses @clauses :findings @findings}))
 
-;; ---------------------------------------------------------------------------
-;; Markdown: frontmatter, code and audit tags
+(defn- parse-all
+  "Every parsed line of the list `file` and its includes (for counting)."
+  ([rd file] (parse-all rd file #{file}))
+  ([rd file visiting]
+   (let [ls (parse-clause-list file (or ((:read rd) file) ""))]
+     (vec (mapcat (fn [{:keys [include] :as l}]
+                    (if (and include (not (contains? visiting include)))
+                      (parse-all rd include (conj visiting include))
+                      [l]))
+                  ls)))))
 
-(defn frontmatter
-  "Pure: the document's frontmatter, {:fields {\"id\" ..} :end offset} where
-  :end is the offset just after its closing line; nil when it has none."
+;; ---------------------------------------------------------------------------
+;; Documents: frontmatter and body
+
+(defn split-frontmatter
+  "Pure: {:frontmatter text-or-nil :body-offset n :body-line n} of a
+  document's `text`: the frontmatter between a first line --- and the next
+  --- (or ...); the body starts after it (offset into text, 1-based line)."
   [text]
   (let [text (str text)]
-    (when (re-find #"^---[ \t]*\r?\n" text)
-      (let [m (re-matcher #"(?m)^(---|\.\.\.)[ \t]*$" text)
-            first-end (do (.find m) (.end m))]
-        (when (.find m first-end)
-          (let [body (subs text first-end (.start m))
-                end (let [e (.end m)] (if (and (< e (count text)) (= \newline (.charAt text e))) (inc e) e))
-                fields (into {} (for [l (str/split-lines body)
-                                      :let [[_ k v] (re-matches #"\s*([A-Za-z0-9_-]+)\s*:\s*(.*?)\s*" l)]
-                                      :when k]
-                                  [k (let [v (str v)]
-                                       (if-let [[_ q] (or (re-matches #"\"(.*)\"" v) (re-matches #"'(.*)'" v))] q v))]))]
-            {:fields fields :end end}))))))
+    (if-let [m (re-find #"^---[ \t]*\r?\n" text)]
+      (let [rest-text (subs text (count m))
+            matcher (re-matcher #"(?m)^(?:---|\.\.\.)[ \t]*(?:\r?\n|$)" rest-text)]
+        (if (.find matcher)
+          (let [fm (subs rest-text 0 (.start matcher))
+                off (+ (count m) (.end matcher))]
+            {:frontmatter fm :body-offset off
+             :body-line (inc (count (filter #(= \newline %) (subs text 0 off))))})
+          {:frontmatter nil :body-offset 0 :body-line 1}))
+      {:frontmatter nil :body-offset 0 :body-line 1})))
 
-(defn- line-starts [text]
-  (vec (cons 0 (keep-indexed (fn [i c] (when (= \newline c) (inc i))) (str text)))))
+(defn identity-of
+  "Pure: {:id :revision :title :error} from a document's frontmatter text;
+  each value a string, nil when missing."
+  [fm]
+  (if (nil? fm)
+    {:error "it has no frontmatter"}
+    (let [m (try (yaml/parse-string fm) (catch Exception e {::error (ex-message e)}))]
+      (cond
+        (::error m) {:error (str "its frontmatter is not readable YAML: " (::error m))}
+        (not (map? m)) {:error "its frontmatter is not a map"}
+        :else (into {} (for [k [:id :revision :title]
+                             :let [v (get m k)]]
+                         [k (when (and (some? v) (not (str/blank? (str v)))) (str v))]))))))
 
-(defn line-at
-  "Pure: the 1-based line of the offset `i` in a text whose line starts are `starts`."
-  [starts i]
-  (let [n (count (take-while #(<= % i) starts))] (max 1 n)))
+;; ---------------------------------------------------------------------------
+;; Audit tags
 
-(defn- fence-open [line]
-  (second (re-matches #" {0,3}(`{3,}|~{3,}).*" line)))
+(defn- fence-line? [l] (re-find #"^ {0,3}(```|~~~)" l))
 
-(defn- paragraphs
-  "Pure: [[start end] ...] offsets of the runs of prose lines of `text` from
-  `from`: no blank line inside one, fenced code blocks left out."
-  [text from]
-  (let [starts (line-starts text)
+(defn paragraphs
+  "Pure: the paragraphs of `text` from `offset` on, as [start end) offsets
+  into text: runs of lines that are neither blank nor in a fenced code block
+  (fence lines included)."
+  [text offset]
+  (let [text (str text)
         n (count text)]
-    (loop [ls (filter #(>= % from) starts) fence nil para nil out []]
-      (if (empty? ls)
-        (if para (conj out [para n]) out)
-        (let [s (first ls)
-              e (let [i (str/index-of text "\n" s)] (if i i n))
-              line (subs text s e)
-              close-para (fn [o] (if para (conj o [para s]) o))]
+    (loop [pos offset fence nil cur nil out []]
+      (if (>= pos n)
+        (if cur (conj out [cur n]) out)
+        (let [nl (str/index-of text "\n" pos)
+              end (if nl nl n)
+              next-pos (if nl (inc nl) n)
+              l (subs text pos end)
+              fl (fence-line? l)]
           (cond
-            fence (recur (rest ls)
-                         (when-not (let [t (str/trim line)]
-                                     (and (str/starts-with? t (subs fence 0 1))
-                                          (re-matches (re-pattern (str (java.util.regex.Pattern/quote (subs fence 0 1)) "{" (count fence) ",}\\s*")) t)))
-                           fence)
-                         nil out)
-            (fence-open line) (recur (rest ls) (fence-open line) nil (close-para out))
-            (str/blank? line) (recur (rest ls) nil nil (close-para out))
-            :else (recur (rest ls) nil (or para s) out)))))))
+            fence (recur next-pos (if (and fl (str/starts-with? (str/triml l) fence)) nil fence) nil out)
+            fl (recur next-pos (subs (str/triml l) 0 3) nil (if cur (conj out [cur pos]) out))
+            (str/blank? l) (recur next-pos nil nil (if cur (conj out [cur pos]) out))
+            :else (recur next-pos nil (or cur pos) out)))))))
+
+(defn- code-mask
+  "Pure: the set of offsets in [start end) of `text` inside inline code
+  spans (backticks included)."
+  [text start end]
+  (loop [i start masked (transient #{})]
+    (if (>= i end)
+      (persistent! masked)
+      (if (= \` (.charAt ^String text i))
+        (let [j (loop [j i] (if (and (< j end) (= \` (.charAt ^String text j))) (recur (inc j)) j))
+              run (- j i)
+              close (loop [k j]
+                      (when (< k end)
+                        (if (= \` (.charAt ^String text k))
+                          (let [e (loop [e k] (if (and (< e end) (= \` (.charAt ^String text e))) (recur (inc e)) e))]
+                            (if (= run (- e k)) k (recur e)))
+                          (recur (inc k)))))]
+          (if close
+            (recur (+ close run) (reduce conj! masked (range i (+ close run))))
+            (recur j masked)))
+        (recur (inc i) masked)))))
+
+(defn- line-at [text offset]
+  (inc (count (filter #(= \newline %) (subs text 0 offset)))))
 
 (defn audit-tags
-  "Pure: every audit tag of the Markdown `text`: [{:start :end :line :text}],
-  :start at its [[ and :end just after its ]]. Outside fenced code and code
-  spans, the frontmatter included (a title may carry one); a tag never runs
-  past a blank line."
+  "Pure: every audit tag of a document's `text`: [{:start :end :text :line}],
+  start and end offsets of [[ and past ]], text what is between, line the
+  line of [[. Frontmatter holds none."
   [text]
   (let [text (str text)
-        from 0
-        starts (line-starts text)]
-    (vec
-     (for [[ps pe] (paragraphs text from)
-           tag (loop [i ps out []]
-                 (if (>= i pe)
-                   out
-                   (let [c (.charAt text i)]
-                     (cond
-                       (= \` c)
-                       (let [run (count (take-while #(= \` %) (subs text i pe)))
-                             closing (re-matcher (re-pattern (str "(?<!`)`{" run "}(?!`)")) (subs text (+ i run) pe))]
-                         (if (.find closing)
-                           (recur (+ i run (.end closing)) out)
-                           (recur (+ i run) out)))
+        {:keys [body-offset]} (split-frontmatter text)]
+    (vec (mapcat
+          (fn [[s e]]
+            (let [masked (code-mask text s e)
+                  free? (fn [i] (and (not (masked i)) (not (masked (inc i)))))
+                  find-from (fn [token from]
+                              (loop [i from]
+                                (when-let [j (str/index-of text token i)]
+                                  (when (< (+ j 1) e)
+                                    (if (free? j) j (recur (inc j)))))))]
+              (loop [from s out []]
+                (if-let [o (find-from "[[" from)]
+                  (if-let [c (find-from "]]" (+ o 2))]
+                    (recur (+ c 2) (conj out {:start o :end (+ c 2) :text (subs text (+ o 2) c)
+                                              :line (line-at text o)}))
+                    out)
+                  out))))
+          (paragraphs text body-offset)))))
 
-                       (and (= \[ c) (< (inc i) pe) (= \[ (.charAt text (inc i))))
-                       (let [close (str/index-of text "]]" (+ i 2))]
-                         (if (and close (<= (+ close 2) pe))
-                           (recur (+ close 2) (conj out {:start i :end (+ close 2) :line (line-at starts i)
-                                                          :text (subs text (+ i 2) close)}))
-                           (recur (+ i 2) out)))
+(defn names?
+  "Pure: true when the audit tag text `tag-text` names the clause `k`: it
+  holds k, or a dotted descendant of it, bounded by characters that are not
+  key characters, a `: note` after the key allowed."
+  [tag-text k]
+  (let [t (str tag-text)]
+    (loop [from 0]
+      (if-let [i (str/index-of t k from)]
+        (let [before (when (pos? i) (.charAt t (dec i)))
+              after (subs t (+ i (count k)))
+              run (or (re-find (re-pattern (str "^[" key-chars "]+")) after) "")]
+          (if (and (not (key-char? before))
+                   (or (= "" run) (str/starts-with? run ".") (= ":" run)))
+            true
+            (recur (inc i))))
+        false))))
 
-                       :else (recur (inc i) out)))))]
-       tag))))
+(defn single-key
+  "Pure: the one key a tag text is (a `: note` after it allowed), or nil."
+  [tag-text]
+  (let [t (str/trim (str tag-text))
+        t (if-let [[_ k] (re-matches #"(\S+?):\s.*" t)] k t)
+        t (str/replace t #"[:.]$" "")]
+    (when (re-matches key-re t) t)))
 
 (defn strip-tags
-  "Pure: the engineer's copy of `text`: every audit tag removed with the
-  white space before it on its line; a tag's own line breaks are kept, so
-  every other line stays where it was."
+  "Pure: `text` with every audit tag removed, with the space before it; a
+  tag running over lines leaves its line breaks, so the lines stay."
   [text]
-  (let [text (str text)]
-    (loop [tags (audit-tags text) pos 0 sb (StringBuilder.)]
-      (if (empty? tags)
-        (str (.append sb (subs text pos)))
-        (let [{:keys [start end]} (first tags)
-              ws-start (loop [j start]
-                         (if (and (> j pos) (#{\space \tab} (.charAt text (dec j)))) (recur (dec j)) j))
-              breaks (apply str (filter #(= \newline %) (subs text start end)))]
-          (.append sb (subs text pos ws-start))
-          (.append sb breaks)
-          (recur (rest tags) end sb))))))
+  (let [text (str text)
+        tags (audit-tags text)]
+    (loop [ts (reverse tags) out text]
+      (if-let [{:keys [start end]} (first ts)]
+        (let [inner (subs out start end)
+              breaks (count (filter #(= \newline %) inner))
+              s (loop [s start]
+                  (if (and (pos? s) (#{\space \tab} (.charAt ^String out (dec s)))) (recur (dec s)) s))
+              e (if (pos? breaks)
+                  (loop [e end] (if (and (< e (count out)) (#{\space \tab} (.charAt ^String out e))) (recur (inc e)) e))
+                  end)]
+          (recur (rest ts) (str (subs out 0 s) (apply str (repeat breaks "\n")) (subs out e))))
+        out))))
 
 ;; ---------------------------------------------------------------------------
-;; Reading the project, in the working tree or at a cut
+;; The analysis
 
-(defn- git [root & args]
-  (apply p/shell {:dir (str root) :out :string :err :string :continue true :in ""} "git" args))
-
-(defn commit-of
-  "The commit `rev` names in the repository at `root`, or nil."
-  [root rev]
-  (let [r (git root "rev-parse" "--verify" "--quiet" (str rev "^{commit}"))]
-    (when (zero? (:exit r)) (str/trim (:out r)))))
-
-(defn reader
-  "{:read (fn [rel] text-or-nil) :list (fn [dir] [rel])} of the project at
-  `root`, in the working tree (commit nil) or at `commit`."
-  [root commit]
-  (if commit
-    {:read (fn [rel] (let [r (git root "show" (str commit ":" rel))] (when (zero? (:exit r)) (:out r))))
-     :list (fn [dir] (let [r (git root "ls-tree" "-r" "--name-only" commit "--" (str dir "/"))]
-                       (if (zero? (:exit r)) (vec (sort (remove str/blank? (str/split-lines (:out r))))) [])))
-     :dir? (fn [dir] (let [r (git root "cat-file" "-t" (str commit ":" dir))]
-                       (and (zero? (:exit r)) (= "tree" (str/trim (:out r))))))}
-    {:read (fn [rel] (let [f (command/path root rel)] (when (fs/regular-file? f) (slurp (str f)))))
-     :list (fn [dir] (let [d (command/path root dir)]
-                       (if (fs/directory? d)
-                         (vec (sort (for [f (fs/glob d "**") :when (fs/regular-file? f)] (command/rel root f))))
-                         [])))
-     :dir? (fn [dir] (fs/directory? (command/path root dir)))}))
-
-(defn- cycle-cut
-  "The cut a cycle's cycle.edn names, for a task over a cycle; nil when none."
-  [req]
-  (when (= "checklist" (:task req))
-    (let [cycle (first (:args req))
-          cycles (str/replace (str (or (get-in req [:config :cycles-dir]) "dhf/cycles")) #"/+$" "")]
-      (when (and (string? cycle) (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]*" cycle))
-        (let [f (command/path req (str cycles "/" cycle "/cycle.edn"))]
-          (when (fs/regular-file? f)
-            (let [c (try (edn/read-string (slurp (str f))) (catch Exception _ nil))]
-              (when (and (map? c) (string? (:cut c))) (:cut c)))))))))
-
-(defn profile
-  "The configuration's :regulated, {:clause-lists [..] :documents dir}, or
-  cannot run."
-  [config]
-  (let [r (:regulated config)
-        lists (:clause-lists r)]
-    (when-not (and (map? r) (vector? lists) (seq lists) (every? #(and (string? %) (not (str/blank? %))) lists)
-                   (string? (:documents r)) (not (str/blank? (:documents r))))
-      (command/cannot-run! (str "the configuration " command/config-file " has :regulated " (pr-str r)
-                                ": it must be {:clause-lists [\"FILE\" ...] :documents \"DIR\"}")))
-    {:clause-lists lists :documents (str/replace (:documents r) #"/+$" "")}))
-
-;; ---------------------------------------------------------------------------
-;; Documents
-
-(def identity-keys ["id" "revision" "title"])
-
-(defn read-document
-  "Pure: a controlled document `file` holding `text`, against the clause
-  `keys`: {:file :id :revision :title :tags [{:line :text :names [key]}]
-  :findings [..]}."
-  [file text keys]
-  (let [fm (frontmatter text)
-        fields (:fields fm)
-        missing (vec (remove #(not (str/blank? (get fields %))) identity-keys))
-        tags (for [t (audit-tags text)]
-               (assoc t :names (vec (filter #(names-key? (:text t) %) keys))))
-        unidentified (when (seq missing)
-                       [(command/finding file (when fm 1) "document-unidentified"
-                                         (str "the controlled document has no " (str/join ", no " missing)
-                                              (if fm " in its frontmatter" " (it has no frontmatter)")
-                                              ": its frontmatter gives its id, revision and title"))])
-        unknown (for [t tags
+(defn analyse
+  "Pure: the analysis of `clauses` (read-clauses') against `documents`
+  ([{:file :text}], sorted): {:clauses :documents :findings}."
+  [clauses documents]
+  (let [docs (for [{:keys [file text]} documents
+                   :let [{:keys [frontmatter]} (split-frontmatter text)]]
+               (merge {:file file :text text :tags (audit-tags text)} (identity-of frontmatter)))
+        keys* (map :key clauses)
+        named-at (fn [k] (vec (for [d docs t (:tags d) :when (names? (:text t) k)]
+                                {:file (:file d) :line (:line t)})))
+        clauses (mapv #(assoc % :named-at (vec (distinct (named-at (:key %))))) clauses)
+        by-id (group-by :id (filter :id docs))
+        unidentified (for [d docs
+                           :let [missing (if (:error d) [] (filter #(nil? (get d %)) [:id :revision :title]))]
+                           :when (or (:error d) (seq missing))]
+                       (command/finding (:file d) nil "document-unidentified"
+                                        (if (:error d)
+                                          (str "the document is not controlled: " (:error d)
+                                               "; a controlled document carries an id, a revision and a title")
+                                          (str "the document has no " (str/join ", no " (map name missing))
+                                               ": a controlled document carries an id, a revision and a title"))))
+        duplicates (for [d docs
+                         :let [others (remove #(= (:file d) (:file %)) (get by-id (:id d)))]
+                         :when (and (:id d) (seq others))]
+                     (command/finding (:file d) nil "document-duplicate-id"
+                                      (str "the id " (:id d) " is also the id of "
+                                           (str/join ", " (map :file others))
+                                           ": a controlled document's id is unique")))
+        gaps (for [c clauses :when (empty? (:named-at c))]
+               (command/finding (:clause-list c) (:line c) "clause-unreferenced"
+                                (str (:key c) " " (:description c)
+                                     ": no audit tag in a controlled document names this clause")))
+        unknown (for [d docs t (:tags d)
+                      :when (not-any? #(names? (:text t) %) keys*)
                       :let [k (single-key (:text t))]
-                      :when (and k (empty? (:names t)))]
-                  (command/warning file (:line t) "clause-unknown"
-                                   (str "the audit tag [[" (str/trim (:text t)) "]] names " k ", which no clause list holds")))
-        body-start (or (:end fm) 0)
-        starts (line-starts text)
-        placeholders (for [[i l] (map-indexed vector (str/split-lines (subs (str text) body-start)))
-                           :when (str/includes? l "TODO")]
-                       (command/warning file (+ (line-at starts body-start) i) "document-placeholder"
+                      :when k]
+                  (command/warning (:file d) (:line t) "clause-unknown"
+                                   (str "the audit tag names " k ", which no declared clause list holds")))
+        placeholders (for [d docs
+                           [i l] (map-indexed vector (lines-of (:text d)))
+                           :when (re-find #"\bTODO\b" l)]
+                       (command/warning (:file d) (inc i) "document-placeholder"
                                         (str "the document still holds a placeholder: " (str/trim l))))]
-    {:file file
-     :id (get fields "id") :revision (get fields "revision") :title (get fields "title")
-     :tags (mapv #(select-keys % [:line :text :names]) tags)
-     :findings (vec (concat unidentified unknown placeholders))}))
-
-(defn duplicate-findings
-  "Pure: a finding for every document whose id an earlier one carries."
-  [docs]
-  (vec (for [[id ds] (group-by :id (filter #(not (str/blank? (:id %))) docs))
-             :when (> (count ds) 1)
-             d (rest ds)]
-         (command/finding (:file d) 1 "document-id-duplicate"
-                          (str "the id " id " is also the id of " (:file (first ds))
-                               ": a controlled document's id is unique")))))
+    {:clauses clauses
+     :documents (mapv #(select-keys % [:file :id :revision :title]) docs)
+     :findings (vec (concat gaps unidentified duplicates unknown placeholders))}))
 
 ;; ---------------------------------------------------------------------------
-;; The index
+;; The stage
+
+(defn subscriptions
+  "Keeps the revision SpecParsed read, so the clauses are read there too."
+  [req]
+  [[:SpecParsed (fn [payload] (swap! (:state req) assoc ::revision (:revision payload)) nil)]])
+
+(defn regulated
+  "The configuration's :regulated, checked: {:clause-lists [..] :documents dir}."
+  [req]
+  (let [r (get-in req [:config :regulated])]
+    (when-not (map? r)
+      (command/cannot-run! (str "the configuration " command/config-file " holds no :regulated")))
+    (when-not (and (sequential? (:clause-lists r)) (seq (:clause-lists r)) (every? string? (:clause-lists r)))
+      (command/cannot-run! (str "the configuration's :regulated declares no :clause-lists, a vector of paths")))
+    (when-not (and (string? (:documents r)) (not (str/blank? (:documents r))))
+      (command/cannot-run! (str "the configuration's :regulated declares no :documents directory")))
+    r))
 
 (defn index
-  "Pure over `read`: the clause index of the profile `prof` read with the
-  reader `rd`: the ClausesIndexed payload less :revision, with :all-findings
-  (findings and warnings, as findings) beside it."
-  [rd prof]
-  (let [{:keys [clauses findings]} (read-clause-lists (:read rd) (:clause-lists prof))
-        docs-dir (:documents prof)
+  "Reads and analyses the clause lists and documents of the request at
+  `revision` (a commit, or nil/:working-tree): the ClausesIndexed payload."
+  [req revision]
+  (let [{:keys [clause-lists documents]} (regulated req)
+        commit (when (string? revision) revision)
+        rd (reader (:root req) commit)
+        docs-dir (strip-slash documents)
         _ (when-not ((:dir? rd) docs-dir)
-            (command/cannot-run! (str "the documents directory " docs-dir ", which :regulated names, does not exist")))
-        keys (mapv :key clauses)
+            (command/cannot-run! (str "the documents directory " docs-dir " does not exist")))
+        {:keys [clauses findings]} (read-clauses rd clause-lists)
         docs (vec (for [f ((:list rd) docs-dir) :when (str/ends-with? f ".md")]
-                    (read-document f ((:read rd) f) keys)))
-        named (reduce (fn [m {:keys [file tags]}]
-                        (reduce (fn [m t] (reduce #(update %1 %2 (fnil conj []) {:file file :line (:line t)}) m (:names t)))
-                                m tags))
-                      {} docs)
-        indexed (mapv #(assoc % :named-at (get named (:key %) [])) clauses)
-        gaps (for [c indexed :when (empty? (:named-at c))]
-               (command/finding (:clause-list c) (:line c) "clause-unreferenced"
-                                (str (:key c) " " (pr-str (:description c)) " is named by no audit tag in a controlled document")))
-        all (vec (concat findings gaps (mapcat :findings docs) (duplicate-findings docs)))]
-    {:clauses indexed
-     :documents (mapv #(select-keys % [:file :id :revision :title]) docs)
-     :all-findings all}))
+                    {:file f :text ((:read rd) f)}))
+        out (analyse clauses docs)]
+    (assoc out :revision (or commit :working-tree)
+           :findings (vec (concat findings (:findings out))))))
+
+(def ^:private relays-gaps-only #{"release" "audit"})
 
 (defn gap
-  "The gap stage: indexes the clause lists and the controlled documents
-  (at the cycle's cut for a task over a cycle), publishes ClausesIndexed and
-  reports every finding."
+  "The gap stage: indexes the clauses, publishes ClausesIndexed, and reports
+  every finding. Under release and audit a document's own finding refuses."
   [req]
-  (let [prof (profile (:config req))
-        cut (or (get-in req [:opts :cut]) (cycle-cut req))
-        commit (when cut (commit-of (:root req) cut))]
-    (if (and cut (nil? commit))
-      ;; a cut the repository does not hold is the task's to refuse
-      {:result {} :findings []}
-      (let [{:keys [clauses documents all-findings]} (index (reader (:root req) commit) prof)]
-        (command/publish! req :compliance/gap :ClausesIndexed
-                          {:revision (or commit :working-tree)
-                           :clauses clauses
-                           :documents documents
-                           :findings (mapv #(select-keys % [:file :line :rule :message]) all-findings)})
-        {:result {:clauses {:lists (:clause-lists prof)
-                            :clauses (count clauses)
-                            :gaps (vec (keep #(when (empty? (:named-at %)) (:key %)) clauses))
-                            :documents (count documents)}}
-         :findings all-findings}))))
+  (let [revision (some-> (:state req) deref ::revision)
+        payload (index req revision)
+        findings (:findings payload)
+        own (remove #(or (command/warning? %) (= "clause-unreferenced" (:rule %))) findings)]
+    (when (and (relays-gaps-only (:task req)) (seq own))
+      (command/cannot-run! (str "the controlled documents are not releasable: "
+                                (str/join "; " (map command/format-finding own)))))
+    (command/publish! req :compliance/gap :ClausesIndexed
+                      (update payload :findings (fn [fs] (mapv #(select-keys % [:file :line :rule :message :severity]) fs))))
+    (swap! (:state req) assoc ::indexed payload)
+    {:result {:gap {:revision (:revision payload)
+                    :clauses (count (:clauses payload))
+                    :documents (count (:documents payload))
+                    :gaps (vec (for [c (:clauses payload) :when (empty? (:named-at c))] (:key c)))}}
+     :findings findings}))

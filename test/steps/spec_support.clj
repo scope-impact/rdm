@@ -6,7 +6,6 @@
             [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.gherkin :as gherkin]
-            [rdm-spec.kernel.runner :as runner]
             [steps.support :as s]))
 
 (def check-stages
@@ -197,26 +196,10 @@
 
 ;; --- steps the spec shares with other contexts' features -----------------------
 
-(defn ensure-step!
-  "Registers the step `pattern` -> `f` unless a definition already matches
-  `text`. Called from a scenario's earlier step, at run time, when every step
-  file is loaded: a step another context's step file also defines is then
-  never defined twice (which would make both scenarios broken)."
-  [text pattern f]
-  (when-not (some #(re-matches (:pattern %) text) @runner/*registry*)
-    (runner/register! pattern f "test/steps/spec_support.clj" (hash text))))
-
 (defn ensure-shared-steps!
-  "The steps the spec context's features share with others': \"it passes\"
-  (dhf/spec/project/init.feature) and \"no file in the spec changes\"
-  (dhf/spec/verification/status.feature)."
+  "Defines nothing: \"it passes\" and \"no file in the spec changes\", which
+  the spec context's features share with other contexts', are the kernel's
+  (steps.kernel-command), defined once when its step file loads. Kept so the
+  step files that still call it load."
   []
-  (ensure-step! "it passes" #"it passes"
-                (fn [ctx]
-                  (let [r (:run ctx)]
-                    (s/check! r "no command was run")
-                    (s/check! (= 0 (:exit r)) (str "expected exit 0\n" (s/show r))))))
-  (ensure-step! "no file in the spec changes" #"no file in the spec changes"
-                (fn [ctx]
-                  (s/check! (:spec-before ctx) "no snapshot of the spec was taken")
-                  (s/check! (= (:spec-before ctx) (spec-snapshot (:dir ctx))) "a file under dhf/spec changed"))))
+  nil)

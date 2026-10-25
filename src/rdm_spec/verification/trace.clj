@@ -1,149 +1,94 @@
 (ns rdm-spec.verification.trace
   "Trace (dhf/spec/verification/trace.feature): a need or a scenario, with
-  everything linked to it, in both directions. `rdm-spec trace ID [--results
-  DIR]`, ID a scenario id (spec-NNNN, the configured :id-prefix) or a need
-  (UN-n); a leading @ is accepted.
+  everything linked to it, in both directions.
 
-  The spec arrives as SpecParsed (subscriptions); statuses come from Status
-  (rdm-spec.verification.status/derive!), only when a results directory was
-  given (or the configured one exists).
+  `rdm-spec trace ID [--results DIR]`, after the parser's stage:
+    - ID a need (UN-n): every stamped scenario that traces to it, however the
+      need is tagged (on the feature, the rule or the scenario), each with its
+      id, title, component, context and level;
+    - ID a scenario (<prefix>-NNNN, with or without @): its needs, its
+      component and bounded context, its level and title.
+  With results (--results, RESULTS_DIR, else the configured directory when it
+  exists), each scenario carries its status, read from the Status component,
+  and a scenario trace lists the results behind it, each with its status and
+  file. Without results the trace says no status was derived because no
+  results were given; a scenario tagged @wip still shows planned, as the
+  glossary defines it (planned whatever the results).
 
-  The result (standard output):
+  The result:
+    {:trace {:kind :need | :scenario :id ..
+             ;; a need
+             :text .. :declared? bool :scenarios [entry] [:message ..]
+             ;; a scenario
+             :title :needs [..] :component :context :level :file :line
+             :status .. :results [{:file :status :name}]
+             ;; either
+             :derived? bool :results-dir dir-or-nil [:no-status ..]}}
 
-    {:trace \"UN-003\" | \"spec-0012\"
-     :kind :need | :scenario
-     :need {:id :text :sources :declared?}       ; a need's trace only
-     :scenarios [{:id :title :file :line :component :context :level
-                  :needs [UN-n] :planned?
-                  :status :verified|:failed|:unverified|:planned   ; with results
-                  :results [{:file :status :name}]}]              ; with results
-     :needs [{:id :text :sources :declared?}]    ; a scenario's trace only
-     :results \"dir\" | nil
-     :derived? bool
-     :note \"no scenario traces to UN-007\" | \"no status was derived because no results were given\" ...}
-
-  A need's scenarios are every scenario that traces to it: tagged with it
-  on the scenario, its rule or its feature (the parser's :needs). A
-  scenario with no single id is listed with :id nil and never has a status.
-
-  Cannot run (exit 2): an ID that is neither a scenario id nor a need, a
-  scenario id no scenario carries, a need neither declared nor tagged, and,
-  through Status, a results directory that does not exist or holds no result."
+  Refusals (exit 2): an ID that names no scenario and no need, a results
+  directory that does not exist (the Results reader names it)."
   (:require [clojure.string :as str]
             [rdm-spec.kernel.command :as command]
             [rdm-spec.verification.status :as status]))
 
-;; ---------------------------------------------------------------------------
-;; The spec, as SpecParsed carries it
+(def no-status "no status was derived because no results were given")
 
 (defn subscriptions
-  "Keeps SpecParsed's payload in the run's state, for the trace and for
-  Status (whose own subscription is not wired by a task it is no stage of)."
+  "The spec arrives as SpecParsed, kept as the Status component keeps it."
   [req]
-  (concat (status/subscriptions req)
-          [[:SpecParsed (fn [payload] (swap! (:state req) assoc ::spec-parsed payload) nil)]]))
+  (status/subscriptions req))
 
-(defn- spec-parsed [req]
-  (or (some-> (:state req) deref ::spec-parsed)
-      (command/cannot-run! "the spec was not read: no SpecParsed event reached the verification context")))
+(defn- need-id? [id] (boolean (re-matches status/need-re id)))
 
-;; ---------------------------------------------------------------------------
-;; Pure: what an id names and what traces to it
+(defn- entry
+  "Pure: a scenario as the trace lists it, with its status when one is known."
+  [sc row derived?]
+  (cond-> {:id (:id sc) :title (:name sc) :component (:component sc) :context (:context sc)
+           :level (:level sc) :file (:file sc) :line (:line sc)}
+    true (assoc :needs (:needs sc))
+    derived? (assoc :status (:status row))
+    (and (not derived?) (:planned? sc)) (assoc :status :planned)))
 
-(def no-results-note "no status was derived because no results were given")
+(defn trace-need
+  "Pure: the trace of the need `id` over the stamped scenarios `scs`, with the
+  needs declared and the report's rows by id (nil without results)."
+  [id scs needs rows]
+  (let [traced (filter #(some #{id} (:needs %)) scs)
+        derived? (some? rows)
+        entries (mapv #(entry % (get rows (:id %)) derived?) traced)]
+    (cond-> {:kind :need :id id
+             :text (get-in needs [id :text])
+             :declared? (contains? needs id)
+             :scenarios entries
+             :derived? derived?}
+      (empty? entries) (assoc :message (str "no scenario traces to " id))
+      (not derived?) (assoc :no-status no-status))))
 
-(defn id-kind
-  "Pure: [:scenario \"spec-0012\"], [:need \"UN-003\"] or nil, for the ID as
-  given (a leading @ is dropped)."
-  [prefix id]
-  (let [id (str/replace (str id) #"^@" "")
-        prefix (or prefix "spec")]
-    (cond
-      (re-matches (re-pattern (str (java.util.regex.Pattern/quote prefix) "-\\d+")) id) [:scenario id]
-      (re-matches status/need-re id) [:need id]
-      :else nil)))
-
-(defn entry
-  "Pure: a parsed scenario as the trace lists it."
-  [sc]
-  (-> (status/scenario-entry sc)
-      (assoc :title (or (:title sc) (:name sc)))
-      (select-keys [:id :title :file :line :component :context :level :needs :planned?])))
-
-(defn carries?
-  "Pure: true when the parsed scenario carries the id `id` (its single id,
-  or one of several)."
-  [id sc]
-  (boolean (or (= id (:id sc)) (some #{id} (:ids sc)))))
-
-(defn traces-to?
-  "Pure: true when the parsed scenario traces to the need (on it, its rule
-  or its feature)."
-  [need sc]
-  (boolean (some #{need} (:needs sc))))
-
-(defn need-of
-  "Pure: the need `id` as declared ({:id :text :sources :declared? true}),
-  or {:id :declared? false}."
-  [declared id]
-  (if-let [n (get declared id)]
-    (assoc (select-keys (merge {:id id} n) [:id :text :sources]) :declared? true)
-    {:id id :declared? false}))
-
-(defn with-statuses
-  "Pure: the entries with each one's status and results from Status's
-  report; with no derived report, the entries unchanged."
-  [entries report]
-  (if-not (:derived? report)
-    entries
-    (let [by-id (into {} (map (juxt :id identity)) (:scenarios report))]
-      (vec (for [e entries
-                 :let [row (get by-id (:id e))]]
-             (if row
-               (assoc e :status (:status row) :results (:results row))
-               e))))))
-
-;; ---------------------------------------------------------------------------
-;; The task
-
-(defn- trace-need [req need]
-  (let [parsed (spec-parsed req)
-        declared (status/declared-needs req)
-        scs (filter #(traces-to? need %) (:scenarios parsed))]
-    (when (and (empty? scs) (not (contains? declared need)))
-      (command/cannot-run! (str need " names nothing: no need " need " is declared in the needs file"
-                                " and no scenario is tagged @" need)))
-    {:kind :need
-     :need (need-of declared need)
-     :scenarios (mapv entry scs)
-     :empty-note (when (empty? scs) (str "no scenario traces to " need))}))
-
-(defn- trace-scenario [req id]
-  (let [parsed (spec-parsed req)
-        declared (status/declared-needs req)
-        scs (filter #(carries? id %) (:scenarios parsed))]
-    (when (empty? scs)
-      (command/cannot-run! (str id " names nothing: no scenario is tagged @" id)))
-    {:kind :scenario
-     :scenarios (mapv entry scs)
-     :needs (vec (for [n (distinct (mapcat :needs scs))] (need-of declared n)))}))
+(defn trace-scenario
+  "Pure: the trace of the stamped scenario `sc`, with its row of the report
+  (nil without results)."
+  [sc row derived?]
+  (let [e (entry sc row derived?)]
+    (cond-> (assoc e :kind :scenario :derived? derived?)
+      derived? (assoc :results (vec (:results row)))
+      (not derived?) (assoc :no-status no-status))))
 
 (defn trace
-  "The trace task: `rdm-spec trace ID [--results DIR]`."
+  "The trace task's stage."
   [req]
-  (let [given (first (:args req))
-        [kind id] (or (id-kind (get-in req [:config :id-prefix]) given)
-                      (command/cannot-run! (str given " is neither a scenario id ("
-                                                (or (get-in req [:config :id-prefix]) "spec")
-                                                "-NNNN) nor a need (UN-n)")))
-        t (if (= :need kind) (trace-need req id) (trace-scenario req id))
-        {:keys [report findings]} (status/derive! req)
-        derived? (boolean (:derived? report))
-        note (str/join "; " (remove nil? [(:empty-note t) (when-not derived? no-results-note)]))]
-    {:result (cond-> (-> (dissoc t :empty-note)
-                         (assoc :trace id
-                                :scenarios (with-statuses (:scenarios t) report)
-                                :results (:results report)
-                                :derived? derived?))
-               (not (str/blank? note)) (assoc :note note))
-     :findings (vec findings)}))
+  (let [raw (str (first (:args req)))
+        id (str/replace raw #"^@" "")
+        scs (status/scenarios req)
+        needs (status/declared-needs req)
+        sc (first (filter #(= id (:id %)) scs))
+        need? (and (need-id? id) (or (contains? needs id) (some #(some #{id} (:needs %)) scs)))]
+    (when-not (or sc need?)
+      (command/cannot-run! (str "the id " id " names no stamped scenario and no need of the spec")))
+    (let [{:keys [report findings]} (status/derive! req)
+          derived? (boolean (:derived? report))
+          rows (when derived? (into {} (map (juxt :id identity)) (:scenarios report)))
+          t (if sc
+              (trace-scenario sc (get rows id) derived?)
+              (trace-need id scs needs rows))]
+      {:result {:trace (assoc t :results-dir (when derived? (:results report)))}
+       :findings findings})))

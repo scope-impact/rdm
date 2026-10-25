@@ -31,6 +31,7 @@ from it, never the other way round. The vocabulary is `glossary.md`.
 - **A guard cites its incident.** A rule or scenario that exists because
   something once went wrong says so in a comment above it, with where the
   incident is recorded.
-- **The spec never names its stack.** The words of the stack are listed in
-  `dhf/harness/config.edn` (`:stack-words`), and the spec check refuses them.
+- **The spec never names its stack.** The stack is recorded beside the spec in
+  `dhf/harness/stack.md`, its words in `dhf/harness/config.edn`
+  (`:stack-words`), and the spec check refuses them.
 - `rdm-spec check` holds the spec to these rules, on every commit.

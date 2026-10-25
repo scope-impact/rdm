@@ -1,13 +1,15 @@
 (ns rdm-spec.project.adopt
-  "Adopt (dhf/spec/project/adopt.feature): `rdm-spec adopt` adds the skeleton,
-  as Init writes it (rdm-spec.project.init), to the git repository the command
-  runs in, at its top level, never overwriting a file.
+  "The Adopt component of the project context (dhf/spec/project/adopt.feature):
+  `rdm-spec adopt` adds the skeleton (rdm-spec.project.init) to the git
+  repository holding the current directory, at its top, and never overwrites
+  anything: a destination that exists, a symbolic link included, is kept and
+  named. An existing .gitignore is kept, and the lines init would have added
+  to it are named. The hook is installed as init installs it, unless a hooks
+  path is already set (rdm-spec.project.hooks). Adopt never reads the
+  repository's code: the spec it adds is the empty one init writes.
 
-  A destination that exists in any form, a symbolic link included, is kept and
-  named as kept. An existing .gitignore is kept too, and the lines Init writes
-  that it lacks are named for the person to add. Nothing of the existing code is
-  read into the spec: the model, the needs and the ledger start empty, and no
-  feature file is written."
+  A directory that is not in a git repository is refused before anything is
+  written: the hook needs one."
   (:require [babashka.fs :as fs]
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]
@@ -15,42 +17,30 @@
             [rdm-spec.project.init :as init]))
 
 (defn missing-gitignore-lines
-  "The lines Init writes to .gitignore that the text `existing` lacks."
-  [existing]
-  (let [have (set (map str/trim (str/split-lines (or existing ""))))]
+  "The lines init writes to .gitignore that `text` (an existing one) lacks."
+  [text]
+  (let [have (set (map str/trim (str/split-lines (or text ""))))]
     (vec (remove have (init/gitignore-lines)))))
 
-(defn- gitignore-lines-to-add
-  "When .gitignore was kept: the lines to add to it, as {:lines [...]
-  :findings [...]}."
-  [root kept]
-  (if (some #{".gitignore"} kept)
-    (let [f (fs/file root ".gitignore")
-          text (try (slurp f) (catch Exception _ nil))
-          lines (if text (missing-gitignore-lines text) (init/gitignore-lines))]
-      {:lines lines
-       :findings (if (seq lines)
-                   [(command/warning ".gitignore" nil "gitignore-kept"
-                                     (str "the .gitignore already there is kept; add these lines to it: "
-                                          (str/join " " lines)))]
-                   [])})
-    {:lines [] :findings []}))
-
 (defn adopt
-  "The adopt task: `rdm-spec adopt`, in the repository to adopt."
+  "The adopt task's stage. Result {:adopt {:root :wrote [path] :kept [path]
+  :gitignore-lines [line]}}; warnings name what was kept that matters."
   [req]
-  (let [root (hooks/require-repository! (:root req))
-        name (fs/file-name root)
-        vars (init/vars-for name init/default-id-prefix)
-        {:keys [wrote kept skipped findings]} (init/write-skeleton! root vars)
-        ignore (gitignore-lines-to-add root kept)
-        activated (hooks/activate! root)
-        hook-findings (when (some #{hooks/hook-path} kept) (hooks/check-kept-hook root))]
-    {:result (cond-> {:root root
+  (let [top (hooks/require-repository! (:root req))
+        gi (fs/file top ".gitignore")
+        gi-before (when (and (init/exists? gi) (fs/regular-file? gi)) (slurp (str gi)))
+        gi-existed? (init/exists? gi)
+        {:keys [wrote kept]} (init/write-skeleton! top (init/vars (str (fs/file-name top)) init/default-prefix))
+        lines (if gi-existed? (missing-gitignore-lines gi-before) [])
+        hook (hooks/activate! top)]
+    {:result {:adopt {:root (command/rel req top)
                       :wrote wrote
                       :kept kept
-                      :gitignore-lines-to-add (:lines ignore)
-                      :hooks-path (:hooks-path activated)
-                      :next-steps (init/next-steps nil)}
-               (seq skipped) (assoc :skipped skipped))
-     :findings (vec (concat findings (:findings ignore) (:findings activated) hook-findings))}))
+                      :gitignore-lines lines}}
+     :findings (vec (concat
+                     (when (seq lines)
+                       [(command/warning ".gitignore" nil "gitignore-kept"
+                                         (str "the .gitignore already there is kept; add the lines init writes: "
+                                              (str/join ", " lines)))])
+                     (hooks/check-kept-hook top)
+                     (:findings hook)))}))

@@ -1,110 +1,126 @@
 (ns rdm-spec.kernel.command
   "Command (dhf/spec/kernel/command.feature): the one entry point, `rdm-spec
-  <task> ...`, and the composition root. It belongs to no bounded context: it
-  dispatches each task to the stages of the contexts that own it, wires their
-  subscriptions on one in-process bus (kernel/bus), and reports every task the
-  same way (dhf/spec/README.md, \"How every task reports\").
+  <task>`. It belongs to no bounded context: it is the composition root that
+  reads the configuration, builds the run's request and event bus, and runs
+  each task's stages, which live in the contexts that own them.
+
+  A request (`req`), what every stage receives:
+
+    {:task    \"check\"                  ; the task's name
+     :args    [\"03\"]                    ; its positional arguments
+     :opts    {:results \"DIR\" :events true ...}   ; its options, by name
+     :root    \"/abs/project\"            ; the project: where the command runs
+     :config  {..} | nil                  ; dhf/harness/config.edn, as read
+     :env     {\"PATH\" ..}               ; the environment the task's processes get
+     :results \"dhf/allure-results\" | nil ; the results directory, as given
+     :state   (atom {})                   ; the run's state, shared by its stages
+     :bus     bus}                        ; the run's event bus (kernel/bus)
 
   A stage is a function of the request returning {:result map :findings
-  [finding]}; it says it cannot run by throwing (cannot-run! why). The task
-  table (`tasks`) names each stage by symbol, resolved when the task runs, so
-  a context that is not built only stops the tasks that need it. A stage row:
+  [finding]} (either may be left out); it refuses with `cannot-run!`. A
+  finding is {:file :line :rule :message :severity :error}, a warning the
+  same with :severity :warning (`finding`, `warning`).
 
-    {:stage sym            ; (f req)
-     :subscribe sym        ; (f req) -> [[event handler] ...], wired before any stage runs
-     :gate true            ; findings stop the task: the stages after it never run
-     :quiet true           ; neither its result nor its findings are reported
-     :when :regulated}     ; runs only when the configuration holds that key
+  The task table (`tasks`) gives each task its usage, what it does, and its
+  stages in order. A stage entry is {:stage 'ns/fn} plus
+    :gate?   its findings (warnings aside) stop the task: the stages after it
+             never run. A gate whose code is not built refuses the task.
+    :quiet?  it runs for its events only: its result and findings are dropped
+             (a refusal still stops the task).
+    :when    :regulated: it runs only when the configuration holds :regulated.
+  Before any stage runs, every stage's namespace that defines `subscriptions`
+  (a function of the request returning [[event handler] ..]) is subscribed
+  on the bus, in stage order. A task with no gate reports every stage's
+  findings, so one run names them all.
 
-  The request every stage receives:
+  The results directory of a task that reads one is --results, else the
+  environment's RESULTS_DIR, else the configured :results-dir. A task that
+  only may read results (:results :optional) reads none when neither is given
+  and the configured directory does not exist.
 
-    {:task \"check\" :args [positional] :opts {:sources .. :events true ..}
-     :root \"project dir\" :config {..} or nil :env {\"VAR\" \"value\"}
-     :results \"dir\" or nil :bus bus :state (atom {})}
-
-  A finding: {:file :line :rule :message :severity :error|:warning}.
-
-  Exit 0: a pass; 1: a finding; 2: the task cannot run (`cannot-run: why` on
-  the error stream, nothing on standard output)."
+  Reporting (dhf/spec/README.md): standard output holds the result as EDN
+  (`{}` when there is none); the error stream one line per finding, then per
+  warning, then, with --events, one line per event. Exit 0 a pass, 1 a
+  finding, 2 a task that cannot run (`cannot-run: why`, and nothing on
+  standard output)."
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.bus :as bus]))
 
-(def config-file
-  "Where a project's harness configuration lives, relative to its root."
-  "dhf/harness/config.edn")
-
 ;; ---------------------------------------------------------------------------
-;; Refusing to run
+;; Refusals
 
 (defn cannot-run!
-  "Stops the task: it cannot run as asked (exit 2), because `why`."
-  ([why] (cannot-run! why {}))
-  ([why data]
-   (throw (ex-info (str why) (assoc data ::cannot-run true)))))
+  "Refuses the task: it cannot run as asked (exit 2), saying why."
+  [message]
+  (throw (ex-info (str message) {::cannot-run true})))
 
 (defn cannot-run?
-  "True when `e` is a refusal thrown by cannot-run! (or carrying its mark)."
+  "True when the exception `e` is a refusal (`cannot-run!`, or ex-data
+  carrying ::cannot-run)."
   [e]
-  (boolean (and (instance? clojure.lang.ExceptionInfo e) (::cannot-run (ex-data e)))))
+  (boolean (::cannot-run (ex-data e))))
 
 ;; ---------------------------------------------------------------------------
 ;; Findings
 
 (defn finding
-  "An error finding: (finding rule message), (finding file rule message) or
-  (finding file line rule message)."
+  "A finding: what is wrong in `file` at `line` (either may be nil) under the
+  stable name `rule`. (finding rule message) when no file applies."
   ([rule message] (finding nil nil rule message))
-  ([file rule message] (finding file nil rule message))
   ([file line rule message]
    {:file (some-> file str) :line line :rule (str rule) :message (str message) :severity :error}))
 
 (defn warning
-  "A warning, with the arities of `finding`."
+  "A warning: a finding that never fails the task. (warning rule message)
+  when no file applies."
   ([rule message] (warning nil nil rule message))
-  ([file rule message] (warning file nil rule message))
   ([file line rule message]
    (assoc (finding file line rule message) :severity :warning)))
 
 (defn warning? [f] (= :warning (:severity f)))
 
 (defn format-finding
-  "A finding's line on the error stream: `FILE:LINE: RULE: what`, FILE and
-  LINE left out where none applies; a warning says `warning:` before its
-  rule."
+  "The finding's line on the error stream: `FILE:LINE: RULE: what`, FILE
+  and LINE left out where none applies; a warning `FILE:LINE: warning: RULE:
+  what`."
   [{:keys [file line rule message] :as f}]
-  (let [where (cond
-                (and file line) (str file ":" line ": ")
-                file (str file ": ")
-                :else "")]
-    (str where (when (warning? f) "warning: ") (when rule (str rule ": ")) message)))
+  (let [where (cond (and (not (str/blank? (str file))) line) (str file ":" line ": ")
+                    (not (str/blank? (str file))) (str file ": ")
+                    :else "")]
+    (str where (when (warning? f) "warning: ") rule ": " message)))
 
 ;; ---------------------------------------------------------------------------
-;; Paths and configuration
+;; Paths and the configuration
+
+(def config-file "dhf/harness/config.edn")
 
 (defn- root-of [root-or-req]
   (str (if (map? root-or-req) (:root root-or-req) root-or-req)))
 
 (defn path
-  "The file `rel` names: itself when absolute, else under the project root
-  (`root-or-req` is the root or a request)."
+  "The file `rel` names, relative to the project (a root or a request); an
+  absolute `rel` is kept."
   [root-or-req rel]
-  (let [rel (str rel)]
-    (if (fs/absolute? rel)
-      (fs/file rel)
-      (fs/file (root-of root-or-req) rel))))
+  (let [r (str rel)]
+    (if (fs/absolute? r)
+      (fs/file r)
+      (fs/file (root-of root-or-req) r))))
 
 (defn rel
-  "`f` relative to the project root, with / separators."
+  "`f` relative to the project, with / between names; a path outside the
+  project stays absolute."
   [root-or-req f]
-  (let [root (fs/absolutize (root-of root-or-req))
-        f (fs/absolutize (str f))]
-    (str/replace (str (fs/relativize root f)) "\\" "/")))
+  (let [root (fs/normalize (fs/absolutize (root-of root-or-req)))
+        abs (fs/normalize (fs/absolutize (path root-or-req f)))]
+    (if (str/starts-with? (str abs) (str root))
+      (str/replace (str (fs/relativize root abs)) "\\" "/")
+      (str abs))))
 
 (defn read-config
-  "The configuration of the project at `root`: a map, nil when there is none.
-  Cannot run when it is not one EDN map."
+  "The configuration under `root`, or nil when there is none. One that is not
+  an EDN map cannot be run with."
   [root]
   (let [f (path root config-file)]
     (when (fs/regular-file? f)
@@ -112,285 +128,292 @@
                    (catch Exception e
                      (cannot-run! (str "the configuration " config-file " is not readable EDN: " (ex-message e)))))]
         (when-not (map? v)
-          (cannot-run! (str "the configuration " config-file " is not one EDN map")))
+          (cannot-run! (str "the configuration " config-file " is not an EDN map")))
         v))))
 
 (defn config-value
-  "The configuration's value for `k`; cannot run when it sets none."
+  "The configured value `k` of the request, or a refusal naming it."
   [req k]
   (let [v (get (:config req) k)]
-    (when (nil? v)
-      (cannot-run! (str "the configuration " config-file " sets no " k)))
-    v))
+    (if (nil? v)
+      (cannot-run! (str "the configuration " config-file " sets no " k))
+      v)))
 
 ;; ---------------------------------------------------------------------------
 ;; Events
 
 (defn publish!
-  "Publishes `event` from `publisher` on the request's bus (nothing when the
-  request has none)."
+  "Publishes `event` from `publisher` on the run's bus (kernel/bus)."
   [req publisher event payload]
   (when-let [b (:bus req)]
     (bus/publish! b publisher event payload))
   nil)
 
-;; ---------------------------------------------------------------------------
-;; The task table
-
-(def ^:private gate-oracle
-  {:stage 'rdm-spec.measurement.oracle/oracle :gate true})
-
-(def ^:private parse
-  {:stage 'rdm-spec.spec.parser/parse})
-
-(def ^:private gap-quiet
-  {:stage 'rdm-spec.compliance.gap/gap :when :regulated :quiet true})
-
-(def tasks
-  "Every task, in the order help lists them: its usage, what it does, its
-  arguments and options, where its results directory comes from, and its
-  stages in order."
-  [{:task "help" :usage "help" :does "list every task with its usage"
-    :args [0 0] :config :none :stages []}
-   {:task "init" :usage "init PATH [--id-prefix P]" :does "write the skeleton into a path that does not exist"
-    :args [1 1] :options {"--id-prefix" :id-prefix} :config :none
-    :stages [{:stage 'rdm-spec.project.init/init}]}
-   {:task "adopt" :usage "adopt" :does "add the skeleton to the current repository, overwriting nothing"
-    :args [0 0] :stages [{:stage 'rdm-spec.project.adopt/adopt}]}
-   {:task "stamp" :usage "stamp" :does "give every unstamped scenario its id"
-    :args [0 0] :stages [{:stage 'rdm-spec.spec.stamper/stamp}]}
-   {:task "check" :usage "check [--sources DIR] [--events]"
-    :does "the spec check, the model lint, the views' freshness, sources, wiki, clauses"
-    :args [0 0] :options {"--sources" :sources}
-    :stages [{:stage 'rdm-spec.knowledge.sources/check}
-             {:stage 'rdm-spec.spec.check/check}
-             {:stage 'rdm-spec.architecture.lint/check :subscribe 'rdm-spec.architecture.lint/subscriptions}
-             {:stage 'rdm-spec.architecture.views/check}
-             {:stage 'rdm-spec.compliance.gap/gap :when :regulated}]}
-   {:task "views" :usage "views" :does "generate and render every view to dhf/views/"
-    :args [0 0] :stages [{:stage 'rdm-spec.architecture.views/views}]}
-   {:task "cut" :usage "cut" :does "tag HEAD spec-N when it is origin/HEAD, and push the tag"
-    :args [0 0] :stages [{:stage 'rdm-spec.regeneration.cut/cut}]}
-   {:task "scopes" :usage "scopes CUT CUT" :does "list the scopes a spec change touched between two cuts"
-    :args [2 2] :stages [{:stage 'rdm-spec.regeneration.scopes/scopes}]}
-   {:task "fence" :usage "fence ROOM CUT [--context C,...] [--component C/N,...]" :does "build a clean room from a cut"
-    :args [2 2] :options {"--context" :context "--component" :component}
-    :stages [gate-oracle {:stage 'rdm-spec.regeneration.fence/fence}]}
-   {:task "run" :usage "run [--results DIR]" :does "run the scenarios against a project's step definitions"
-    :args [0 0] :options {"--results" :results} :results :any
-    :stages [{:stage 'rdm-spec.kernel.runner/run}]}
-   {:task "ratify" :usage "ratify ROOM CYCLE"
-    :does "run the builder's tests on the room's code in a checkout of the cut"
-    :args [2 2] :stages [gate-oracle {:stage 'rdm-spec.ratification.ratify/ratify}]}
-   {:task "checklist" :usage "checklist CYCLE" :does "derive the cycle's checklist into dhf/cycles/CYCLE/checklist.json"
-    :args [1 1]
-    :stages [parse gap-quiet
-             {:stage 'rdm-spec.measurement.checklist/checklist
-              :subscribe 'rdm-spec.measurement.checklist/subscriptions}]}
-   {:task "status" :usage "status [--results DIR]" :does "each scenario's status"
-    :args [0 0] :options {"--results" :results} :results :required
-    :stages [parse {:stage 'rdm-spec.verification.status/status
-                    :subscribe 'rdm-spec.verification.status/subscriptions}]}
-   {:task "trace" :usage "trace ID [--results DIR]" :does "a need or a scenario with everything linked to it"
-    :args [1 1] :options {"--results" :results} :results :optional
-    :stages [parse {:stage 'rdm-spec.verification.trace/trace
-                    :subscribe 'rdm-spec.verification.trace/subscriptions}]}
-   {:task "release" :usage "release [--results DIR]" :does "the release check"
-    :args [0 0] :options {"--results" :results} :results :required
-    :stages [parse gap-quiet
-             {:stage 'rdm-spec.verification.release/release
-              :subscribe 'rdm-spec.verification.release/subscriptions}]}
-   {:task "score" :usage "score CYCLE --verdicts FILE"
-    :does "file a grader's verdicts on a ratified cycle into its score.edn"
-    :args [1 1] :options {"--verdicts" :verdicts} :required-options [:verdicts]
-    :stages [{:stage 'rdm-spec.measurement.scorer/score}]}
-   {:task "scoreboard" :usage "scoreboard CYCLE CYCLE" :does "compare two cycles"
-    :args [2 2] :stages [{:stage 'rdm-spec.measurement.scoreboard/scoreboard}]}
-   {:task "oracle" :usage "oracle [record --reason R]" :does "judge the instrument against its recorded goldens"
-    :args [0 1] :options {"--reason" :reason}
-    :stages [{:stage 'rdm-spec.measurement.oracle/oracle}]}
-   {:task "publish" :usage "publish [--results DIR]" :does "write the site and build it"
-    :args [0 0] :options {"--results" :results} :results :optional
-    :stages [{:stage 'rdm-spec.knowledge.sources/check :quiet true}
-             {:stage 'rdm-spec.spec.check/check :quiet true}
-             {:stage 'rdm-spec.architecture.views/check :gate true}
-             {:stage 'rdm-spec.verification.status/derive! :quiet true
-              :subscribe 'rdm-spec.verification.status/subscriptions}
-             {:stage 'rdm-spec.publishing.site/publish :subscribe 'rdm-spec.publishing.site/subscriptions}]}
-   {:task "audit" :usage "audit OUT [--results DIR]"
-    :does "write the auditor's and the engineer's copy, with their evidence, to OUT"
-    :args [1 1] :options {"--results" :results} :results :required
-    :stages [{:stage 'rdm-spec.compliance.audit/prepare}
-             parse gap-quiet
-             {:stage 'rdm-spec.verification.release/release :gate true
-              :subscribe 'rdm-spec.verification.release/subscriptions}
-             {:stage 'rdm-spec.compliance.audit/audit :subscribe 'rdm-spec.compliance.audit/subscriptions}]}])
-
-(defn task-names [] (mapv :task tasks))
-
-(defn- task-row [name] (first (filter #(= name (:task %)) tasks)))
-
-(defn- tasks-text []
-  (str "the tasks are: " (str/join ", " (task-names)) " (rdm-spec help lists each with its usage)"))
-
-;; ---------------------------------------------------------------------------
-;; Arguments
-
-(def ^:private global-flags
-  "Flags every task takes: --events prints the events the run published."
-  #{"--events"})
-
-(defn parse-args
-  "{:args [positional] :opts {..}} of the task `row`'s arguments; cannot run
-  on an unknown option, a missing option value or a wrong number of
-  arguments."
-  [row argv]
-  (let [usage (str "usage: rdm-spec " (:usage row))
-        options (:options row)]
-    (loop [xs argv args [] opts {}]
-      (if (empty? xs)
-        (let [[lo hi] (:args row)]
-          (when-not (<= lo (count args) hi)
-            (cannot-run! (str "rdm-spec " (:task row) " takes "
-                              (if (= lo hi) lo (str lo " to " hi)) " argument" (when-not (= 1 hi) "s")
-                              ", not " (count args) " (" (str/join " " args) "); " usage)))
-          (doseq [k (:required-options row)]
-            (when-not (contains? opts k)
-              (cannot-run! (str "rdm-spec " (:task row) " needs --" (name k) "; " usage))))
-          {:args args :opts opts})
-        (let [[x & more] xs]
-          (cond
-            (contains? global-flags x)
-            (recur more args (assoc opts (keyword (subs x 2)) true))
-
-            (contains? options x)
-            (do (when (or (empty? more) (str/starts-with? (first more) "--"))
-                  (cannot-run! (str x " needs a value; " usage)))
-                (recur (rest more) args (assoc opts (get options x) (first more))))
-
-            (str/starts-with? x "--")
-            (cannot-run! (str "rdm-spec " (:task row) " has no option " x "; " usage))
-
-            :else (recur more (conj args x) opts)))))))
-
-;; ---------------------------------------------------------------------------
-;; The results directory
-
-(defn results-dir
-  "The task's results directory: --results, else RESULTS_DIR, else the
-  configured one. For a task whose results are optional, the configured one
-  only when it exists (else nil)."
-  [row opts config env root]
-  (let [given (:results opts)
-        from-env (get env "RESULTS_DIR")
-        configured (:results-dir config)]
-    (case (:results row)
-      nil nil
-      :any (or given (not-empty from-env) configured)
-      :required (or given (not-empty from-env) configured
-                    (cannot-run! (str "no results directory: give --results DIR, set RESULTS_DIR or configure"
-                                      " :results-dir in " config-file)))
-      :optional (or given (not-empty from-env)
-                    (when (and configured (fs/directory? (path root configured))) configured)))))
-
-;; ---------------------------------------------------------------------------
-;; Running a task
-
-(defn- resolve-stage! [task sym]
-  (or (try (requiring-resolve sym) (catch Exception _ nil))
-      (cannot-run! (str "rdm-spec " task " needs " sym ", which is not built"))))
-
-(defn- read-catalogue [root config]
+(defn- read-catalogue
+  "The configured event catalogue, or nil when none is configured or it
+  cannot be read (the model's lint names why)."
+  [root config]
   (when-let [rel (:events config)]
     (let [f (path root rel)]
       (when (fs/regular-file? f)
         (let [v (try (edn/read-string (slurp (str f))) (catch Exception _ nil))]
-          (when (map? v) {:catalogue v :catalogue-file (str rel)}))))))
+          (when (map? v) v))))))
 
-(defn- active-stages [row config]
-  (filterv #(or (nil? (:when %)) (contains? config (:when %))) (:stages row)))
+;; ---------------------------------------------------------------------------
+;; The task table
 
-(defn- run-stages
-  "Runs the request's stages in order: {:result :findings}."
-  [req stages]
-  (let [subs (distinct (keep :subscribe stages))]
-    (doseq [s subs
-            :let [f (resolve-stage! (:task req) s)]
-            [event handler] (f req)]
-      (bus/subscribe! (:bus req) event (symbol (namespace s)) handler))
-    (loop [ss stages result {} findings []]
-      (if (empty? ss)
-        {:result result :findings findings}
-        (let [{:keys [stage gate quiet]} (first ss)
-              out ((resolve-stage! (:task req) stage) req)
-              fs* (vec (:findings out))]
+(defn- stage [sym & {:as more}] (merge {:stage sym} more))
+
+(def ^:private parse (stage 'rdm-spec.spec.parser/parse :quiet? true))
+(def ^:private gap-quiet (stage 'rdm-spec.compliance.gap/gap :when :regulated :quiet? true))
+(def ^:private oracle-gate (stage 'rdm-spec.measurement.oracle/oracle :gate? true))
+
+(def tasks
+  "Every task: {:task :usage :does :stages [stage] :config :required|:optional|:none
+  :results :required|:optional (only for a task that reads results)}."
+  [{:task "help" :usage "help" :does "list every task with its usage"
+    :config :none :stages []}
+   {:task "init" :usage "init PATH [--id-prefix P]"
+    :does "write the skeleton into a path that does not exist"
+    :config :none :stages [(stage 'rdm-spec.project.init/init)]}
+   {:task "adopt" :usage "adopt"
+    :does "add the skeleton to the current repository, overwriting nothing"
+    :config :none :stages [(stage 'rdm-spec.project.adopt/adopt)]}
+   {:task "stamp" :usage "stamp" :does "give every unstamped scenario its id"
+    :config :required :stages [(stage 'rdm-spec.spec.stamper/stamp)]}
+   {:task "check" :usage "check [--sources DIR] [--events]"
+    :does "the spec check, the model lint, the views' freshness, sources, wiki, clauses"
+    :config :required
+    :stages [(stage 'rdm-spec.knowledge.sources/check)
+             (stage 'rdm-spec.spec.check/check)
+             (stage 'rdm-spec.architecture.lint/check)
+             (stage 'rdm-spec.architecture.views/check)
+             (stage 'rdm-spec.compliance.gap/gap :when :regulated)]}
+   {:task "views" :usage "views" :does "generate and render every view to dhf/views/"
+    :config :required :stages [(stage 'rdm-spec.architecture.views/views)]}
+   {:task "cut" :usage "cut" :does "tag HEAD spec-N when it is origin/HEAD, and push the tag"
+    :config :optional :stages [(stage 'rdm-spec.regeneration.cut/cut)]}
+   {:task "scopes" :usage "scopes CUT CUT" :does "list the scopes a spec change touched between two cuts"
+    :config :optional :stages [(stage 'rdm-spec.regeneration.scopes/scopes)]}
+   {:task "fence" :usage "fence ROOM CUT [--context C,...] [--component C/N,...]"
+    :does "build a clean room from a cut"
+    :config :optional :stages [oracle-gate (stage 'rdm-spec.regeneration.fence/fence)]}
+   {:task "run" :usage "run [--results DIR]" :does "run the scenarios against a project's step definitions"
+    :config :required :results :required :stages [(stage 'rdm-spec.kernel.runner/run)]}
+   {:task "ratify" :usage "ratify ROOM CYCLE"
+    :does "run the builder's tests on the room's code in a checkout of the cut"
+    :config :optional :stages [oracle-gate (stage 'rdm-spec.ratification.ratify/ratify)]}
+   {:task "checklist" :usage "checklist CYCLE"
+    :does "derive the cycle's checklist into dhf/cycles/CYCLE/checklist.json"
+    :config :required
+    :stages [parse gap-quiet (stage 'rdm-spec.measurement.checklist/checklist)]}
+   {:task "status" :usage "status [--results DIR]" :does "each scenario's status"
+    :config :required :results :required
+    :stages [parse (stage 'rdm-spec.verification.status/status)]}
+   {:task "trace" :usage "trace ID [--results DIR]" :does "a need or a scenario with everything linked to it"
+    :config :required :results :optional
+    :stages [parse (stage 'rdm-spec.verification.trace/trace)]}
+   {:task "release" :usage "release [--results DIR]" :does "the release check"
+    :config :required :results :required
+    :stages [parse gap-quiet (stage 'rdm-spec.verification.release/release)]}
+   {:task "score" :usage "score CYCLE --verdicts FILE"
+    :does "file a grader's verdicts on a ratified cycle into its score.edn"
+    :config :required :stages [(stage 'rdm-spec.measurement.scorer/score)]}
+   {:task "scoreboard" :usage "scoreboard CYCLE CYCLE" :does "compare two cycles"
+    :config :required :stages [(stage 'rdm-spec.measurement.scoreboard/scoreboard)]}
+   {:task "oracle" :usage "oracle [record --reason R]"
+    :does "judge the instrument against its recorded goldens"
+    :config :optional :stages [(stage 'rdm-spec.measurement.oracle/oracle)]}
+   {:task "publish" :usage "publish [--results DIR]" :does "write the site and build it"
+    :config :required :results :optional
+    :stages [(stage 'rdm-spec.architecture.views/check :gate? true)
+             (stage 'rdm-spec.knowledge.sources/check :quiet? true)
+             (stage 'rdm-spec.spec.check/check :quiet? true)
+             (stage 'rdm-spec.verification.status/status :quiet? true)
+             (stage 'rdm-spec.publishing.site/publish)]}
+   {:task "audit" :usage "audit OUT [--results DIR]"
+    :does "write the auditor's and the engineer's copy, with their evidence, to OUT"
+    :config :required :results :required
+    :stages [(stage 'rdm-spec.compliance.audit/prepare)
+             parse gap-quiet
+             (stage 'rdm-spec.verification.release/release :gate? true)
+             (stage 'rdm-spec.compliance.audit/audit)]}])
+
+(defn task-row [task] (first (filter #(= task (:task %)) tasks)))
+
+(defn- task-list [] (str/join ", " (map :task tasks)))
+
+;; ---------------------------------------------------------------------------
+;; The command line
+
+(defn- usage-words [usage] (str/split usage #"\s+"))
+
+(defn- usage-options
+  "{\"--results\" true} for an option taking a value, false for a flag, as
+  the usage gives them; --events is every task's."
+  [usage]
+  (let [ws (vec (map #(str/replace % #"[\[\]]" "") (rest (usage-words usage))))]
+    (into {"--events" false}
+          (keep-indexed (fn [i w]
+                          (when (str/starts-with? w "--")
+                            [w (boolean (some->> (get ws (inc i)) (re-matches #"[A-Z][A-Z0-9/,.]*")))])))
+          ws)))
+
+(defn- usage-positionals
+  "[required n, optional? bool] of the usage's positional arguments."
+  [usage]
+  (let [ws (vec (rest (usage-words usage)))
+        required (count (keep-indexed (fn [i w]
+                                        (when (and (re-matches #"[A-Z][A-Z0-9]*" w)
+                                                   (not (and (pos? i) (str/starts-with? (get ws (dec i)) "--"))))
+                                          w))
+                                      ws))
+        optional? (boolean (re-find #"\[[a-z]" usage))]
+    [required optional?]))
+
+(defn parse-args
+  "The task's command line `argv` (after the task's name) as {:args :opts},
+  or a refusal naming what is wrong and the usage."
+  [{:keys [task usage]} argv]
+  (let [known (usage-options usage)
+        bad #(cannot-run! (str % "; usage: rdm-spec " usage))]
+    (loop [xs (seq argv) args [] opts {}]
+      (if-let [[x & more] (seq xs)]
+        (if (and (str/starts-with? x "--") (> (count x) 2))
+          (if-not (contains? known x)
+            (bad (str "unknown option " x " for " task))
+            (if (get known x)
+              (if (and more (not (str/starts-with? (first more) "--")))
+                (recur (rest more) args (assoc opts (keyword (subs x 2)) (first more)))
+                (bad (str "the option " x " needs a value")))
+              (recur more args (assoc opts (keyword (subs x 2)) true))))
+          (recur more (conj args x) opts))
+        (let [[required optional?] (usage-positionals usage)]
           (cond
-            quiet (recur (rest ss) result findings)
-            (and gate (seq (remove warning? fs*))) {:result (merge result (:result out)) :findings (into findings fs*)}
-            :else (recur (rest ss) (merge result (:result out)) (into findings fs*))))))))
+            (< (count args) required) (bad (str task " needs " required " argument" (when (not= 1 required) "s")))
+            (and (> (count args) required) (not optional?))
+            (bad (str "unexpected argument " (str/join " " (drop required args))))
+            :else {:args args :opts opts}))))))
 
-(defn- env-of [env]
-  (or env (into {} (System/getenv))))
+(defn- results-dir
+  "The results directory the task reads: --results, else RESULTS_DIR, else
+  the configured one (nil for an optional one that does not exist)."
+  [row opts env root config]
+  (when-let [mode (:results row)]
+    (let [given (or (:results opts) (not-empty (get env "RESULTS_DIR")))]
+      (cond
+        given given
+        (= :required mode) (:results-dir config)
+        :else (let [d (:results-dir config)]
+                (when (and d (fs/directory? (path root d))) d))))))
+
+;; ---------------------------------------------------------------------------
+;; Running a task
+
+(defn- stage-ns [sym] (symbol (namespace sym)))
+
+(defn- component-of
+  "The component a stage belongs to, as the bus names a subscriber:
+  rdm-spec.spec.check/check is :spec/check."
+  [sym]
+  (let [parts (str/split (str (stage-ns sym)) #"\.")]
+    (keyword (str/join "." (butlast (rest parts))) (last parts))))
+
+(defn- resolve-stage
+  "The stage's function, or a refusal: a task whose code is not built cannot run."
+  [{:keys [stage gate?]}]
+  (or (try (requiring-resolve stage) (catch Throwable _ nil))
+      (cannot-run! (str (if gate? "the gate " "the stage ") stage " is not built, so the task cannot run"))))
+
+(defn- runs? [{w :when} config]
+  (case w
+    :regulated (contains? config :regulated)
+    true))
+
+(defn- subscribe!
+  [req stages]
+  (doseq [s (reduce (fn [out s] (if (some #(= (stage-ns (:stage s)) (stage-ns (:stage %))) out) out (conj out s)))
+                    [] stages)
+          :let [sub (try (requiring-resolve (symbol (str (stage-ns (:stage s))) "subscriptions"))
+                         (catch Throwable _ nil))]
+          :when sub
+          [event handler] (sub req)]
+    (bus/subscribe! (:bus req) event (component-of (:stage s)) handler)))
+
+(defn- help-result []
+  {:tasks (mapv #(select-keys % [:task :usage :does]) tasks)})
 
 (defn execute
-  "Runs the task `argv` names in the project at `root`, in process:
-  {:exit 0|1|2 :result map :findings [..] :events [..] :cannot-run why|nil}.
-  `env` (default: this process's) is the environment the task sees."
+  "Runs the task `argv` (its name first) in the project `root` with the
+  environment `env` (nil: this process's): {:exit :result :findings :events
+  :cannot-run}. Never throws."
   [argv {:keys [root env]}]
-  (let [root (str (or root (fs/cwd)))
-        env (env-of env)
-        b (atom nil)]
+  (let [root (str (fs/absolutize (or root ".")))
+        env (or env (into {} (System/getenv)))
+        [task & argv] argv
+        state (atom {})
+        the-bus (atom nil)
+        done (fn [m] (merge {:result {} :findings [] :events (some-> @the-bus bus/events)} m))]
     (try
-      (let [[task & more] argv
-            _ (when (str/blank? task) (cannot-run! (str "no task was given; " (tasks-text))))
-            row (or (task-row task) (cannot-run! (str "unknown task " task "; " (tasks-text))))
-            {:keys [args opts]} (parse-args row (vec more))
-            ;; a stage that needs a value the project does not configure
-            ;; says so itself (config-value); cut, fence, scopes and ratify
-            ;; read the configuration at a cut, adopt has none yet
+      (let [row (or (task-row task)
+                    (cannot-run! (str (if (str/blank? task) "no task given" (str "unknown task " task))
+                                      "; the tasks are: " (task-list)
+                                      (str/join (for [t tasks] (str "\n  rdm-spec " (:usage t)))))))
+            {:keys [args opts]} (parse-args row argv)
             config (when-not (= :none (:config row)) (read-config root))
-            the-bus (bus/make-bus (or (read-catalogue root config) {}))
-            _ (reset! b the-bus)
+            _ (when (and (= :required (:config row)) (nil? config))
+                (cannot-run! (str "no configuration " config-file " in " root
+                                  ": rdm-spec " task " runs in a project set up by rdm-spec")))
+            b (bus/make-bus {:catalogue (read-catalogue root config) :catalogue-file (:events config)})
+            _ (reset! the-bus b)
             req {:task task :args args :opts opts :root root :config config :env env
-                 :results (results-dir row opts config env root)
-                 :bus the-bus :state (atom {})}]
+                 :results (results-dir row opts env root config) :state state :bus b}
+            stages (filter #(runs? % config) (:stages row))]
         (if (= "help" task)
-          {:exit 0 :result {:tasks (mapv #(select-keys % [:task :usage :does]) tasks)} :findings [] :events []}
-          (let [{:keys [result findings]} (run-stages req (active-stages row config))]
-            {:exit (if (some (complement warning?) findings) 1 0)
-             :result result
-             :findings findings
-             :events (bus/events the-bus)
-             :events? (boolean (:events opts))})))
-      (catch Exception e
-        {:exit 2
-         :cannot-run (if (cannot-run? e)
-                       (ex-message e)
-                       (str "the task failed unexpectedly: " (.getName (class e)) ": " (ex-message e)))
-         :findings []
-         :events (some-> @b bus/events)}))))
+          (done {:exit 0 :result (help-result)})
+          (do
+            (subscribe! req stages)
+            (loop [ss stages result {} findings []]
+              (if-let [[s & more] (seq ss)]
+                (let [f (resolve-stage s)
+                      out (f req)
+                      out (if (map? out) out {})
+                      fs* (vec (:findings out))
+                      result (if (:quiet? s) result (merge result (:result out)))
+                      findings (if (:quiet? s) findings (into findings fs*))]
+                  (if (and (:gate? s) (seq (remove warning? fs*)))
+                    (done {:exit 1 :result result :findings findings})
+                    (recur more result findings)))
+                (done {:exit (if (seq (remove warning? findings)) 1 0)
+                       :result result :findings findings}))))))
+      (catch Throwable e
+        (done {:exit 2 :result nil :findings []
+               :cannot-run (if (cannot-run? e)
+                             (ex-message e)
+                             (str "the task failed unexpectedly: " (.getName (class e)) ": " (ex-message e)))})))))
 
-(defn report-lines
-  "What an executed task prints: {:out \"stdout\" :err [line]}."
-  [{:keys [exit result findings events events? cannot-run]}]
-  (if (= 2 exit)
-    {:out "" :err [(str "cannot-run: " cannot-run)]}
-    {:out (str (pr-str (or result {})) "\n")
-     :err (vec (concat (map format-finding (remove warning? findings))
-                       (map format-finding (filter warning? findings))
-                       (when events? (map bus/format-event events))))}))
+(defn render
+  "What an outcome prints: {:out text :err [line]}."
+  [{:keys [exit result findings events cannot-run]} events?]
+  (let [lines (concat (map format-finding (remove warning? findings))
+                      (map format-finding (filter warning? findings))
+                      (when cannot-run (str/split-lines (str "cannot-run: " cannot-run)))
+                      (when events? (map bus/format-event events)))]
+    {:out (if (= 2 exit) "" (str (binding [*print-namespace-maps* false] (pr-str (or result {}))) "\n"))
+     :err (vec lines)}))
 
 (defn run-task
-  "Runs `argv` in the project at `dir` with the environment `env` (nil: this
-  process's): {:exit :out :err [line] :result :findings}."
+  "Runs the task `argv` in `dir` with the environment `env` (nil: this
+  process's), as the command would: {:exit :out :err [line]}."
   [argv dir env]
-  (let [r (execute (vec argv) {:root dir :env env})]
-    (merge (select-keys r [:exit :result :findings :cannot-run]) (report-lines r))))
+  (let [outcome (execute argv {:root dir :env env})
+        events? (boolean (some #{"--events"} (rest argv)))]
+    (assoc (render outcome events?) :exit (:exit outcome))))
 
 (defn -main
-  "The rdm-spec command: `rdm-spec <task> ...` in the current directory."
+  "The rdm-spec command: runs the task in the current directory."
   [& argv]
-  (let [{:keys [exit out err]} (run-task (vec argv) (str (fs/cwd)) nil)]
+  (let [{:keys [exit out err]} (run-task (vec argv) (System/getProperty "user.dir") nil)]
     (print out)
     (flush)
     (binding [*out* *err*]
