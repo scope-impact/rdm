@@ -28,7 +28,7 @@ Feature: Command
         | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the views' freshness, sources, wiki  |
         | views      | views                                                    | generate and render every view to dhf/views/                         |
         | cut        | cut                                                      | tag HEAD spec-N when it is origin/HEAD, and push the tag             |
-        | fence      | fence ROOM CUT [--context C \| --component C/N]          | build a clean room from a cut                                        |
+        | fence      | fence ROOM CUT [--context C,...] [--component C/N,...]   | build a clean room from a cut                                        |
         | run        | run [--results DIR]                                      | run the scenarios against a project's step definitions               |
         | ratify     | ratify ROOM CYCLE                                        | run the builder's tests on the room's code in a checkout of the cut  |
         | checklist  | checklist CYCLE                                          | derive the cycle's checklist into dhf/cycles/CYCLE/checklist.json    |

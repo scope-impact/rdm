@@ -12,7 +12,7 @@ Feature: Parser
 
     @spec-0220 @contract
     Scenario: A task that names a cut reads the spec as it was at that cut
-      Given dhf/cycles/03/cycle.edn names the cut spec-3
+      Given dhf/cycles/03/cycle.edn names the cut spec-3 and the scope :project
       And the spec at spec-3 holds 12 stamped scenarios and the working tree's spec holds 13
       When "rdm-spec checklist 03" is run
       Then the checklist holds the 12 scenarios of spec-3

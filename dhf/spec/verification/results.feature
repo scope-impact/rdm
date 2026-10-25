@@ -27,7 +27,7 @@ Feature: Results reader
     Scenario: A results file that cannot be read is named, never skipped
       Given a results directory holding one result file that is not valid JSON
       When "rdm-spec status" is run
-      Then the report names that file as unreadable
+      Then the report names that file as unreadable, in one line on the error stream
 
     @spec-0063 @contract
     Scenario: The stack that wrote the results does not matter

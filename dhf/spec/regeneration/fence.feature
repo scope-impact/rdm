@@ -60,6 +60,13 @@ Feature: Fence
       Then ROOM holds neither src/rdm_spec/spec/parser.clj nor test/rdm_spec/spec/parser_test.clj
       And it holds every other implementation file at the cut, unchanged
 
+    @spec-0226 @e2e
+    Scenario: A list of scopes removes the code of each, and keeps the rest
+      Given a project whose commit tagged spec-3 holds an implementation
+      When "rdm-spec fence ROOM spec-3 --context knowledge,publishing --component spec/parser" is run
+      Then ROOM holds no file of the bounded contexts knowledge and publishing or of the component spec/parser
+      And it holds every other implementation file at the cut, unchanged
+
     @spec-0185 @e2e
     Scenario: A scope the model does not name is refused
       Given a project whose commit tagged spec-3 holds an implementation

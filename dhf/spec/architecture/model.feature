@@ -13,6 +13,12 @@ Feature: Model
       When "rdm-spec check" is run
       Then it exits 1 and names the file and line 12
 
+    @spec-0227 @e2e
+    Scenario: A closing bracket with no opening one is refused with its line
+      Given a model file with a "}" on line 7 that closes nothing
+      When "rdm-spec check" is run
+      Then it exits 1 and names the file, line 7 and the "}"
+
     @spec-0073 @e2e
     Scenario: A key the model's shape does not declare is refused
       Given a container carrying the key :owner, which the model's shape does not declare
@@ -21,7 +27,7 @@ Feature: Model
 
     @spec-0074 @e2e
     Scenario: An id used twice anywhere in the model is refused
-      Given a container and a component both with the id :spec
+      Given a container and a component both with the id :alpha
       When "rdm-spec check" is run
       Then it exits 1 and names the id and both elements
 

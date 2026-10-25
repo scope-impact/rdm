@@ -27,6 +27,14 @@ Feature: Cut
       When "rdm-spec cut" is run again on it
       Then no tag is added and the cut says the commit is already spec-7
 
+    # Incident: spec-2 was cut holding views older than its own model, so its
+    # regeneration could not ratify (cycle 02, A2).
+    @spec-0224 @e2e
+    Scenario: A HEAD whose spec fails the check is not cut
+      Given HEAD is the commit origin/HEAD names, and "rdm-spec check" exits 1 on it
+      When "rdm-spec cut" is run
+      Then it exits 1, tags nothing, and names the check's findings
+
     @spec-0163 @e2e
     Scenario: A HEAD that is not origin/HEAD is refused
       Given HEAD is not the commit origin/HEAD names

@@ -30,6 +30,6 @@ Feature: Event bus
 
     @spec-0221 @e2e
     Scenario: Publishing an event the catalogue does not declare is refused
-      Given the configured event catalogue declares events, but not SpecParsed
+      Given the configured event catalogue declares every other event, each with its publisher, but not SpecParsed
       When "rdm-spec check" is run
       Then it exits 2 and names SpecParsed and the configured catalogue

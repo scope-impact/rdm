@@ -16,7 +16,7 @@
   :shape {:revision "the commit read, or :working-tree"
           :sources "[{:id :repository :pins [pin] :fenced [path]}]"
           :pages "[path] of every wiki page"
-          :citations "[{:citation :file :line :need :status :reasons}]; :need is the citing need's id or nil, :status :resolved | :unresolved | :unchecked"
+          :citations "[{:citation :source :path :commit :file :line :need :status :reasons}]; :citation as written (id:path@commit) and its three parts; :need is the citing need's id or nil, :status :resolved | :unresolved | :unchecked"
           :findings "[{:file :line :rule :message}]"}}
 
  :SpecParsed

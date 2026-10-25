@@ -23,15 +23,25 @@ Feature: Scoreboard
       And it counts the 3 new items separately
 
   # A partial regeneration can break what it did not rebuild; the scoreboard
-  # shows that apart from what it did.
+  # shows that apart from what it did. A scoped cycle's checklist holds only
+  # its scope, so the rest is compared only where both cycles scored it, as a
+  # project cycle does (cycle 02, dhf/cycles/02/proposed-spec-changes.md, A1).
   Rule: A scoped cycle is reported target first
 
     @spec-0172 @e2e
     Scenario: The target's scenarios are reported apart from the rest
       Given cycle 02 regenerated the bounded context verification and cycle 01 is its baseline
+      And both cycles scored every scenario
       When "rdm-spec scoreboard 01 02" is run
       Then it reports better and worse for verification's scenarios first
-      And then, separately, better and worse for every other scenario
+      And then, separately, better and worse for every other scenario both scored
+
+    @spec-0225 @e2e
+    Scenario: A scoped cycle is compared over its scope only
+      Given cycle 01 scored every scenario and cycle 02 scored only the bounded context verification's
+      When "rdm-spec scoreboard 01 02" is run
+      Then it reports better and worse for verification's scenarios
+      And it states that the rest was not scored in cycle 02
 
   # Before any rdm-spec release exists, the first build is ratified by a reviewed
   # bootstrap cycle (ADR 0002). It says so, and nothing is measured against it.

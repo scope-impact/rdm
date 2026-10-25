@@ -93,7 +93,8 @@ a container.
 from it.
 
 **Model hash**: the SHA-256, as lowercase hex, of the model read as EDN and
-printed back with every map's keys sorted, so reformatting the file keeps it.
+printed back with every map's keys and every set's elements sorted by their
+printed form, so reformatting the file keeps it.
 A view records it on its first line, in a comment of the view's format:
 `model-sha256: <hex>`. A view is fresh when it records the current one.
 
@@ -161,7 +162,8 @@ implementation its scope keeps.
 **Scope**: what a regeneration rebuilds: the whole project, one bounded context
 or one component, or a list of contexts and components. The kernel counts as
 a context named `kernel`. The rest of the implementation stays in the clean
-room as it was at the cut. A cycle's checklist holds the items of its scope.
+room as it was at the cut. A cycle's checklist holds the items of its scope,
+and nothing else: a scoped cycle is graded on its scope only.
 
 **Regeneration**: building the implementation again from a cut, inside the
 fence.
