@@ -1,0 +1,23 @@
+;; Cycle 01: the spec change folding in cycle 00's findings (30fbad6),
+;; regenerated scope by scope. Still built by hand: a cut is a spec-N tag on
+;; the default branch, and this work lives on a branch, so no cut, fence,
+;; ratify or score by an installed rdm-spec is possible yet. The clean room was
+;; refreshed to the allow-listed paths at :cut, and each scope's code, unit
+;; tests and step definitions removed before its builder rebuilt them.
+;; Phase 1 rebuilds the kernel scope; phase 2 the rest, in parallel.
+;; The spec allows one scope per cycle; this one lists several (a finding).
+{:cut "30fbad6"
+ :scope [{:kernel [:command :bus :runner]}
+         {:component :project/init}
+         {:component :spec/parser} {:component :spec/check}
+         {:context :knowledge}
+         {:component :architecture/views}
+         {:component :verification/status} {:component :verification/release}
+         {:component :regeneration/fence}
+         {:context :ratification}
+         {:component :measurement/scorer}
+         {:context :publishing}]
+ :bootstrap true
+ :builder {:name "builder subagents, one per scope group" :actor :agent}
+ :grader nil
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
