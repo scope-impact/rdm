@@ -68,6 +68,12 @@ The spec of rdm-spec, the source of truth for what it does
 - **A fixture never carries the room's oracle** unless its scenario sets
   one: the oracle a fixture's configuration names is the scenario's (cycle
   09: 22 fixtures reached for the room's registry).
+- **A Given builds on the project an earlier Given of its scenario made;**
+  only the first Given makes one (cycle 11: a shared Given threw away the
+  history spec-0236's first Given made).
+- **A Then that says nothing changed is paired with the outcome the command
+  must have,** so a command that never ran cannot pass it (cycle 11:
+  spec-0100 passed while publish exited 2).
 - **A shared step's context keys are the kernel's.** The kernel's step file
   names, beside each shared step, the keys it sets; another step file reads
   only those (cycle 09: `:wiki-file` read as `:wiki-rel`).

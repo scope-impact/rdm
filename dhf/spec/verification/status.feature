@@ -37,6 +37,15 @@ Feature: Status
       When "rdm-spec status" is run
       Then the scenario is failed
 
+    # An outline with fewer results than rows, all passing, counted as
+    # verified (cycle 11, builder): a release could pass on rows never run.
+    @spec-0285 @contract
+    Scenario: An outline with a row that has no result is unverified
+      Given a stamped scenario outline with three example rows
+      And Allure results for two rows, both passed, and none for the third
+      When "rdm-spec status" is run
+      Then the scenario is unverified
+
   # Incident: a test runner named its suites twice, once in imports and once in
   # a run list, so a forgotten suite was silently green
   # (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").

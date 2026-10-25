@@ -69,7 +69,8 @@ Feature: Site
     Scenario: Publishing writes nothing in the spec
       Given a project set up by rdm-spec, its spec as it is before the publish kept aside
       When "rdm-spec publish" is run
-      Then no file in the spec changes
+      Then it passes
+      And no file in the spec changes
 
     @spec-0101 @e2e
     Scenario: The same inputs publish the same site

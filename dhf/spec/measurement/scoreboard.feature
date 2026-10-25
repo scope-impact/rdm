@@ -47,3 +47,41 @@ Feature: Scoreboard
       When "rdm-spec scoreboard 00 01" is run
       Then it marks cycle 00 as bootstrap
       And it reports no better or worse count against it
+
+  # The scoreboard's result was pinned only by the oracle's goldens, which no
+  # builder sees, and the first rebuild of the scoreboard since they were
+  # recorded drifted from them in 25 places (dhf/cycles/11/proposed-spec-changes.md,
+  # 1). The shape is the spec's, as the goldens record it.
+  Rule: The scoreboard's result has one shape
+
+    @spec-0283 @contract
+    Scenario: Two cycles of the whole project give one comparison
+      Given cycle 01 and cycle 02 each scored 5 items of the whole project, 1 better and 1 worse
+      When "rdm-spec scoreboard 01 02" is run
+      Then standard output is exactly:
+        """
+        {:scoreboard {:cycles ["01" "02"]
+                      :scored {"01" 5 "02" 5}
+                      :compared 5
+                      :better 1 :worse 1
+                      :better-items ["spec-0002"] :worse-items ["spec-0001"]
+                      :only-in {"01" [] "02" []}
+                      :statements []}}
+        """
+
+    @spec-0284 @contract
+    Scenario: A scoped cycle gives its target first and the rest apart
+      Given cycle 02 scored 5 items of the whole project and cycle 03, scoped to the component shop/till, scored 2 of them, 1 better
+      When "rdm-spec scoreboard 02 03" is run
+      Then standard output is exactly:
+        """
+        {:scoreboard {:cycles ["02" "03"]
+                      :target {:scope {:component :shop/till} :cycle "03"
+                               :compared 2 :better 1 :worse 0
+                               :better-items ["spec-0005"] :worse-items []}
+                      :rest {:compared 0 :better 0 :worse 0
+                             :better-items [] :worse-items []
+                             :not-scored {"03" 3}}
+                      :statements ["cycle 03 is scoped to {:component :shop/till}: its scope is reported first"
+                                   "the rest was not scored in cycle 03: 3 items of cycle 02 outside the scope are not compared"]}}
+        """

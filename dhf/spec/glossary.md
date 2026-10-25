@@ -157,7 +157,9 @@ the score; the builder's tests never are.
 
 **Verified / failed / unverified / planned**: a scenario's status, derived
 from the oracle: a passing result and none that did not pass; a result that did
-not pass; no result at all; tagged `@wip`, whatever the results. Status never
+not pass; no result at all; tagged `@wip`, whatever the results. An outline is
+one scenario: verified only when every row has a passing result, failed when
+any row's result did not pass, else unverified. Status never
 enters a score: only a grader's verdicts do.
 
 **Cut**: a merged spec change tagged `spec-N`. Regeneration reads a cut and
@@ -272,7 +274,7 @@ id; warnings aside) blocks the release check, exit 1.
 
 **Audit copy**: what `rdm-spec audit OUT` writes, only for a record the
 release check passes and only of one commit: while any file it is made from
-(the configuration, the spec, the clause lists, the documents) differs from HEAD, untracked
+(the configuration, the spec, the clause lists, the documents) differs from HEAD's tree, untracked and ignored files
 included, it refuses (exit 1, naming each). It writes the auditor's copy (`OUT/auditor/`, every audit tag
 kept) and the engineer's copy (`OUT/engineer/`, every audit tag removed with
 the space before it, in the frontmatter too, its line breaks kept so each

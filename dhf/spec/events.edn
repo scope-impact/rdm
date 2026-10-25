@@ -24,7 +24,7 @@
   :published-by :spec/parser
   :carries [:revision :scenarios :needs :refusals]
   :shape {:revision "the commit read, or :working-tree"
-          :scenarios "[{:id :title :file :line :level :needs [UN-n] :wip? :outline? :rows :steps [{:keyword :text}] :context :component :context-name :component-name}]; :context and :component are the model's ids, the -name keys its :name"
+          :scenarios "[{:id :title :name :keyword :file :line :level :needs [UN-n] :wip? :outline? :rows :examples :background :rule :steps [{:keyword :text}] :context :component :context-name :component-name}]; :name is the title as written, :keyword Scenario or Scenario Outline, :rule the rule's name or nil, :background the feature's background steps, :examples the outline's tables; :context and :component are the model's ids, the -name keys its :name"
           :needs "[{:id :text :sources [citation]}]"
           :refusals "[{:file :line :rule :message}]"}}
 

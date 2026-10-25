@@ -124,7 +124,8 @@ Feature: Audit copy
     # the audit read two revisions and disagreed (cycle 09, grading); then a
     # clause list removed from the configuration in the working tree only let
     # the audit pin a commit the release check refuses (cycle 10, grading).
-    # An audit copy is of one commit or of nothing.
+    # Then a document git ignores did the same (cycle 11, grading). An audit
+    # copy is of one commit or of nothing: every file it reads is HEAD's.
     @spec-0274 @e2e
     Scenario Outline: The audit copy is refused while what it is made from is not committed
       Given a releasable regulated project, all committed
@@ -135,6 +136,7 @@ Feature: Audit copy
       Examples:
         | change                                                   | file                       |
         | an untracked document dhf/documents/draft.md             | dhf/documents/draft.md     |
+        | a document dhf/documents/draft.md that git ignores       | dhf/documents/draft.md     |
         | an uncommitted change to a document                      | that document              |
         | an uncommitted change to a scenario's title              | that feature file          |
         | an uncommitted change to the clause list                 | dhf/clauses/std.txt        |

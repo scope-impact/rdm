@@ -99,6 +99,7 @@ Feature: Scorer
       And a verdicts file grading 11 of them, all passed
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then the score is 11 of 12, and the ungraded item is recorded as failed
+      And score.edn holds that item as {:id ID :verdict :fail :evidence "ungraded: no verdict was given" :ungraded true}
 
     @spec-0201 @e2e
     Scenario: A verdict for an item not on the checklist is refused
