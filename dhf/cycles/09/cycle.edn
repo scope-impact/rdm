@@ -1,0 +1,20 @@
+;; Cycle 09: cycle 08's findings folded in, cut as spec-12 (tagged locally).
+;; Run by cycle 05's release; cycle 08's build is the cut's implementation.
+;; Its scopes are what `rdm-spec scopes spec-11 spec-12` listed, plus two the
+;; person judged the changed README reaches: kernel/command (the environment a
+;; scenario's commands inherit) and spec/check (its step reads trace's result,
+;; now a contract). The leftover run-time step registrations in components
+;; outside these scopes wait for their next rebuild. Three builders in
+;; parallel; the kernel's interface does not change.
+{:cut "spec-12"
+ :scope [{:context :compliance}
+         {:component :kernel/command}
+         {:component :knowledge/sources}
+         {:component :measurement/oracle}
+         {:component :publishing/site}
+         {:component :spec/check}
+         {:component :verification/release}
+         {:component :verification/trace}]
+ :builder {:name "builder subagents, one per group of scopes" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
