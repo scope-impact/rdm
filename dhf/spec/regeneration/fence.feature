@@ -42,6 +42,7 @@ Feature: Fence
 
     @spec-0182 @e2e
     Scenario: The project scope keeps no implementation
+      Given a project whose commit tagged spec-3 holds an implementation
       When "rdm-spec fence ROOM spec-3" is run
       Then ROOM holds none of the configured implementation paths
 
@@ -61,5 +62,15 @@ Feature: Fence
 
     @spec-0185 @e2e
     Scenario: A scope the model does not name is refused
+      Given a project whose commit tagged spec-3 holds an implementation
       When "rdm-spec fence ROOM spec-3 --context archive" is run
-      Then it exits 2 and names archive and the model's bounded contexts
+      Then it exits 2 and names archive and the model's bounded contexts and kernel
+
+    # The kernel is shared code in no bounded context, but it changes with the
+    # spec like any other (cycle 01, D).
+    @spec-0222 @e2e
+    Scenario: The kernel is a scope like a bounded context
+      Given a project whose commit tagged spec-3 holds an implementation
+      When "rdm-spec fence ROOM spec-3 --component kernel/bus" is run
+      Then ROOM holds neither src/rdm_spec/kernel/bus.clj nor test/rdm_spec/kernel/bus_test.clj
+      And it holds every other implementation file at the cut, unchanged

@@ -20,8 +20,9 @@ Feature: Wiki
 
     @spec-0128 @e2e
     Scenario: A footnote whose citation does not resolve fails the check
-      Given a wiki page whose footnote cites "loyly:docs/plan.md@17d68d2", which does not resolve
-      When "rdm-spec check" is run
+      Given a checkout of skallinen/loyly at 17d68d2, given with --sources, with no docs/plan.md
+      And a wiki page whose footnote cites "loyly:docs/plan.md@17d68d2"
+      When "rdm-spec check --sources DIR" is run
       Then the check fails and names the page, the footnote and why it did not resolve
 
     @spec-0129 @e2e

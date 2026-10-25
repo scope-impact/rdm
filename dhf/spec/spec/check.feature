@@ -88,21 +88,6 @@ Feature: Spec check
       When "rdm-spec check" is run
       Then it fails and names UN-004
 
-    @spec-0135 @e2e
-    Scenario: A user need citing a source that does not resolve fails the spec check
-      Given the recorded source demo, pinned at the commit of a checkout given with --sources
-      And the need UN-004 citing "demo:docs/nothing.md" at that pin, a path the checkout does not hold
-      When "rdm-spec check --sources DIR" is run
-      Then it fails and names UN-004, the citation and why it did not resolve
-
-    @spec-0187 @e2e
-    Scenario: A citation that could not be checked passes the spec check with a warning
-      Given the need UN-004 citing "loyly:README.md@17d68d2"
-      And no checkout of loyly is given
-      When "rdm-spec check" is run
-      Then it passes
-      And it warns that the citation was not checked, and why
-
   Rule: Planned work is a scenario tagged @wip
 
     @spec-0050 @e2e

@@ -40,6 +40,16 @@ Feature: Init
       When "rdm-spec init sauna --id-prefix sauna" is run
       Then the harness configuration sets the id prefix to "sauna"
 
+    @spec-0223 @e2e
+    Scenario Outline: The id prefix defaults to spec and must start a tag
+      When "rdm-spec init sauna <flag>" is run
+      Then it <outcome>
+
+      Examples:
+        | flag                | outcome                                         |
+        |                     | sets the id prefix to "spec"                    |
+        | --id-prefix 9lives  | exits 2 and says a prefix starts with a letter and holds letters, digits and single hyphens |
+
   Rule: A new project is green before anything is written in it
 
     @spec-0090 @e2e

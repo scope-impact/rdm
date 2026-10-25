@@ -3,6 +3,8 @@
 @UN-003
 Feature: Status
   Derives verified, failed, unverified or planned for every stamped scenario.
+  Status is a report: it exits 0 whatever the statuses; only the release
+  check refuses.
 
   Rule: Planned work is a scenario tagged @wip
 

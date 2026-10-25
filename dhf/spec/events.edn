@@ -14,9 +14,9 @@
   :published-by :knowledge/sources
   :carries [:revision :sources :pages :citations :findings]
   :shape {:revision "the commit read, or :working-tree"
-          :sources "[{:id :repository :pin :fenced [path]}]"
+          :sources "[{:id :repository :pins [pin] :fenced [path]}]"
           :pages "[path] of every wiki page"
-          :citations "[{:citation :file :line :resolved? :checked? :why}]"
+          :citations "[{:citation :file :line :need :status :reasons}]; :need is the citing need's id or nil, :status :resolved | :unresolved | :unchecked"
           :findings "[{:file :line :rule :message}]"}}
 
  :SpecParsed
@@ -24,7 +24,7 @@
   :published-by :spec/parser
   :carries [:revision :scenarios :needs :refusals]
   :shape {:revision "the commit read, or :working-tree"
-          :scenarios "[{:id :title :file :line :level :needs [UN-n] :wip? :outline? :rows :steps [{:keyword :text}] :context :component}]"
+          :scenarios "[{:id :title :file :line :level :needs [UN-n] :wip? :outline? :rows :steps [{:keyword :text}] :context :component :context-name :component-name}]; :context and :component are the model's ids, the -name keys its :name"
           :needs "[{:id :text :sources [citation]}]"
           :refusals "[{:file :line :rule :message}]"}}
 

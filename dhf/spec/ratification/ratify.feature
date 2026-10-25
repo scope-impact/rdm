@@ -88,12 +88,12 @@ Feature: Ratify
 
     @spec-0215 @contract
     Scenario: Ratify writes ratified.edn with the cut, the room's tree and the outcome
-      Given the room's implementation has the tree hash 4b825dc
+      Given the room's implementation has the tree hash 4b825dc642cb6eb9a060e54bf8d69288fbee4904
       When "rdm-spec ratify ROOM 03" is run and passes
       Then dhf/cycles/03/ratified.edn holds:
         """
         {:cut "spec-3"
-         :room-tree "4b825dc"
+         :room-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
          :outcome :passed
          :checkout "dhf/cycles/03/build"}
         """

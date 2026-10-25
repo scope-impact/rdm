@@ -85,7 +85,7 @@ Feature: Sources
     Scenario: A fenced path that matches nothing at a pin fails the check
       Given a checkout of skallinen/loyly at 17d68d2, given with --sources
       And the sources index fences "harness/missing.clj" in loyly
-      When "rdm-spec check" is run
+      When "rdm-spec check --sources DIR" is run
       Then the check fails and names the source, the pin and the path
 
   Rule: Citations are read from the needs and the wiki, nothing else
@@ -95,3 +95,23 @@ Feature: Sources
       Given a feature file whose example step quotes a citation of a fenced path
       When "rdm-spec check" is run
       Then the quoted citation is not resolved, and the check passes
+
+  # A need's citations are resolved here, with the wiki's, so one component
+  # reports them (cycle 01, C20). The spec check keeps only "a need cites no
+  # source".
+  Rule: A need's citations resolve
+
+    @spec-0135 @e2e
+    Scenario: A user need citing a source that does not resolve fails the check
+      Given the recorded source demo, pinned at the commit of a checkout given with --sources
+      And the need UN-004 citing "demo:docs/nothing.md" at that pin, a path the checkout does not hold
+      When "rdm-spec check --sources DIR" is run
+      Then it fails and names UN-004, the citation and why it did not resolve
+
+    @spec-0187 @e2e
+    Scenario: A citation that could not be checked passes the check with a warning
+      Given the need UN-004 citing "loyly:README.md@17d68d2"
+      And no checkout of loyly is given
+      When "rdm-spec check" is run
+      Then it passes
+      And it warns that the citation was not checked, and why

@@ -23,11 +23,13 @@ Feature: Event bus
       Then both runs list the same events in the same order
 
   # One catalogue: the project's, so the bus and the lint can never disagree
-  # (cycle 00, dhf/cycles/00/proposed-spec-changes.md, A5).
+  # (cycle 00, dhf/cycles/00/proposed-spec-changes.md, A5). An empty
+  # catalogue, as init writes, declares nothing and so checks nothing
+  # (cycle 01, A2).
   Rule: The bus carries only the events the project's catalogue declares
 
     @spec-0221 @e2e
     Scenario: Publishing an event the catalogue does not declare is refused
-      Given the configured event catalogue does not declare SpecParsed
+      Given the configured event catalogue declares events, but not SpecParsed
       When "rdm-spec check" is run
       Then it exits 2 and names SpecParsed and the configured catalogue

@@ -12,7 +12,7 @@ Feature: Site
 
     @spec-0092 @e2e
     Scenario: Each component gets one page
-      Given a model with two bounded contexts holding five components
+      Given a model with two bounded contexts holding five components, and no kernel
       When "rdm-spec publish" is run
       Then it holds five component pages, each named for its bounded context and component
 

@@ -92,6 +92,11 @@ a container.
 **Model**: `dhf/spec/model.edn`, the one C4 source. Every view is generated
 from it.
 
+**Model hash**: the SHA-256, as lowercase hex, of the model read as EDN and
+printed back with every map's keys sorted, so reformatting the file keeps it.
+A view records it on its first line, in a comment of the view's format:
+`model-sha256: <hex>`. A view is fresh when it records the current one.
+
 **View**: a generated diagram of the model at one level: context, container,
 component or dynamic. Never drawn by hand.
 
@@ -154,8 +159,9 @@ holding only the allowed paths (`:clean-room :allow`) and whatever
 implementation its scope keeps.
 
 **Scope**: what a regeneration rebuilds: the whole project, one bounded context
-or one component. The rest of the implementation stays in the clean room as it
-was at the cut.
+or one component, or a list of contexts and components. The kernel counts as
+a context named `kernel`. The rest of the implementation stays in the clean
+room as it was at the cut. A cycle's checklist holds the items of its scope.
 
 **Regeneration**: building the implementation again from a cut, inside the
 fence.

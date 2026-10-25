@@ -22,10 +22,10 @@ Feature: Scorer
          :spec-owner {:name "Sami" :actor :human}}
         """
       When "rdm-spec checklist 03" and "rdm-spec ratify ROOM 03" are run
-      Then both work on the cut spec-3, for that scope
+      Then both work on the cut spec-3, and the checklist holds the items of that scope
 
     @spec-0200 @contract
-    Scenario Outline: A scope is the project, one context or one component
+    Scenario Outline: A scope is the project, one context or one component, or a list of contexts and components
       Given dhf/cycles/03/cycle.edn holds the scope <scope>
       When "rdm-spec checklist 03" is run
       Then it accepts the scope
@@ -35,10 +35,11 @@ Feature: Scorer
         | :project                       |
         | {:context :verification}       |
         | {:component :spec/parser}      |
+        | [{:context :knowledge} {:component :spec/parser}] |
 
     @spec-0174 @contract
     Scenario: The score is written beside the cycle
-      Given cycle 03's checklist holds 2 items and its ratification passed on the room tree 4b825dc
+      Given cycle 03's checklist holds 2 items and its ratification passed on the room tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904
       And a verdicts file grading spec-0012 pass and spec-0014 fail
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then dhf/cycles/03/score.edn holds:
@@ -46,7 +47,7 @@ Feature: Scorer
         {:cycle "03"
          :cut "spec-3"
          :scope :project
-         :room-tree "4b825dc"
+         :room-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
          :builder {:name "builder-a" :actor :agent}
          :grader {:name "grader-b" :actor :agent}
          :spec-owner {:name "Sami" :actor :human}
@@ -132,7 +133,12 @@ Feature: Scorer
   Rule: Only a ratified build is scored
 
     @spec-0214 @e2e
-    Scenario: A cycle whose ratification did not pass is not scored
-      Given dhf/cycles/03/ratified.edn holds :outcome :refused, or does not exist
+    Scenario Outline: A cycle whose ratification did not pass is not scored
+      Given dhf/cycles/03/ratified.edn <state>
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then it exits 1, writes nothing, and says the cycle has no passing ratification
+
+      Examples:
+        | state                     |
+        | holds :outcome :refused   |
+        | does not exist            |
