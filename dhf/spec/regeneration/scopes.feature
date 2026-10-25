@@ -17,6 +17,14 @@ Feature: Scopes
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists the scopes {:component :architecture/views} and {:component :kernel/bus}, and nothing else
 
+    @spec-0241 @e2e
+    Scenario: A component's design prose is its own
+      Given the cuts spec-3 and spec-4, between which only architecture/views.md changed
+      When "rdm-spec scopes spec-3 spec-4" is run
+      Then it lists the scope {:component :architecture/views}
+
+    # A shared file is one on the clean room's allow-list that no component
+    # owns; it is named as a warning, and the task exits 0.
     @spec-0238 @e2e
     Scenario: A changed file no component owns is named for a person to judge
       Given the cuts spec-3 and spec-4, between which only dhf/spec/events.edn and dhf/spec/glossary.md changed

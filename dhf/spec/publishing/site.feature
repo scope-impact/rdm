@@ -73,8 +73,9 @@ Feature: Site
     @spec-0101 @e2e
     Scenario: The same inputs publish the same site
       Given a spec, its views and a results directory
-      When "rdm-spec publish" is run twice
+      When "rdm-spec publish" is run twice, the first site kept aside
       Then both sites' Markdown and site builder configuration are byte for byte the same
+      And no page names a path outside the project
 
   Rule: The site publishes the domain wiki beside the spec
 
@@ -83,6 +84,14 @@ Feature: Site
       Given a wiki page whose footnote cites "loyly:README.md@17d68d2"
       When "rdm-spec publish" is run
       Then the page is published and the footnote links to README.md at 17d68d2 in skallinen/loyly
+
+    # Wiki pages were published but reachable by no link (cycle 05, 1); three
+    # builders read spec-0146 and spec-0133 three ways.
+    @spec-0239 @e2e
+    Scenario: The wiki is reachable from the home page and the navigation
+      Given a wiki whose index lists two pages
+      When "rdm-spec publish" is run
+      Then the home page links to the wiki's index, the index links to both pages, and the navigation holds a wiki section after the kernel
 
   Rule: The site builder builds the site, from a configuration the model writes
 

@@ -202,7 +202,7 @@ judges the instrument; the Allure results remain the oracle of a project's
 scenarios.
 
 **Gate**: a stage the task table runs first and that stops the task when it
-has findings; the stages after it never see it. Every other stage reports, so
+has findings that are not warnings; the stages after it never see it. Every other stage reports, so
 one run names every finding. A gate whose code is not built refuses the task
 (exit 2), as Löyly's gate refuses an instrument nobody checked
 (loyly:harness/README.md@17d68d2, "What makes the checks run"). Publish runs

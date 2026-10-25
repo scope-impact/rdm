@@ -18,7 +18,7 @@ Feature: Init
         | dhf/spec/ids.edn                  | the ledger at 0                                                          |
         | dhf/spec/glossary.md              | an empty glossary                                                        |
         | dhf/spec/README.md                | the spec's conventions                                                   |
-        | dhf/harness/config.edn            | the id prefix, every directory the tasks read, the allow-list dhf/spec, dhf/harness, dhf/raw, dhf/wiki, dhf/views and dhf/decisions, and no implementation paths |
+        | dhf/harness/config.edn            | the id prefix, every directory the tasks read, the allow-list dhf/spec, dhf/harness/config.edn, dhf/raw, dhf/wiki, dhf/views and dhf/decisions (never dhf/harness/oracle), and no implementation paths |
         | dhf/raw/README.md                 | the rules for raw sources                                                |
         | dhf/raw/sources.edn               | no sources                                                               |
         | dhf/wiki/index.md                 | the wiki's rules and an empty list of pages                              |

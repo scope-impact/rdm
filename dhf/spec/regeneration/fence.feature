@@ -22,7 +22,7 @@ Feature: Fence
 
     @spec-0038 @e2e
     Scenario: The clean room holds only the allowed paths, as one root commit
-      Given the configuration allows dhf/spec, dhf/harness, dhf/raw, dhf/wiki, dhf/views and dhf/decisions/adr-0002-spec-first-regeneration.md
+      Given the configuration allows dhf/spec, dhf/harness/config.edn, dhf/raw, dhf/wiki, dhf/views and dhf/decisions/adr-0002-spec-first-regeneration.md, and the cut also holds dhf/harness/oracle/
       When "rdm-spec fence ROOM spec-3" is run
       Then ROOM is a repository with a single root commit
       And its working tree holds the allowed paths, unchanged, and no other file

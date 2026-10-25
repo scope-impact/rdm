@@ -57,8 +57,8 @@ Feature: Command
       Examples:
         | env     | flag            | dir              |
         | unset   |                 | dhf/allure-results |
-        | /tmp/r1 |                 | /tmp/r1          |
-        | /tmp/r1 | --results other | other            |
+        | R1      |                 | R1               |
+        | R1      | --results other | other            |
 
   # A task runs its stages in order and every stage reports, so one run names
   # every finding. A gate is the exception: a stage the task table marks as a

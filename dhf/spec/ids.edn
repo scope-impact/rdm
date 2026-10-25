@@ -1,4 +1,4 @@
 ;; The id ledger. The stamper hands out the next scenario id from here and
 ;; records it, so an id is never issued twice, not even after its scenario is
 ;; deleted (dhf/spec/spec/stamper.feature). Never edit by hand.
-{:issued 238}
+{:issued 241}

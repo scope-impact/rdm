@@ -42,7 +42,10 @@ The spec of rdm-spec, the source of truth for what it does
   on a scenario or scenario outline only. A need tag goes on a feature, a rule
   or a scenario. `@wip` goes on a scenario only.
 - **ROOM in a step is a new directory the scenario makes for itself,** never a
-  fixed path, so runs never share one.
+  fixed path, so runs never share one; so is any other upper-case path
+  placeholder (R1, DIR).
+- **Published output names paths relative to the project,** never a path of
+  the machine it was made on.
 - **A scenario's commands see only the environment its steps set,** never
   the one the tests themselves run in (RESULTS_DIR included).
 - **Step definitions are the scope's own.** A step file uses only the
@@ -57,11 +60,13 @@ The spec of rdm-spec, the source of truth for what it does
   kebab-case name the owning component chooses, unless a scenario names it.
   A finding about a file with no line says `FILE: RULE: what`; a relayed
   finding keeps its line unchanged; on exit 1 standard output still holds the
-  result, `{}` when there is none. A warning line is `FILE:LINE: warning: RULE: what`, or `warning: RULE: what`
-when no file applies; a task that cannot
+  result, `{}` when there is none. A warning line is `FILE:LINE: warning: RULE: what`, `FILE: warning: RULE:
+what` when no line applies, or `warning: RULE: what` when no file applies; a task that cannot
   run says `cannot-run: why` and prints nothing on standard output; with
   `--events`, each event is a line `event: NAME published-by PUBLISHER`, after
   the findings and warnings. Exit 0 is a pass; 1 a finding in what the task checked (the spec, the
   model, the sources, the results, a build); 2 a task that cannot run as
-  asked: an unknown task, argument or id, a missing file, directory or tool,
-  an unreadable configuration, a state that forbids it.
+  asked: an unknown task, argument or id, a missing directory or tool, a
+  missing or unreadable configuration, a state that forbids it. A missing or
+  unreadable file of the spec itself (the ledger, the needs, the model) is a
+  finding, exit 1: it is part of what the task checked.

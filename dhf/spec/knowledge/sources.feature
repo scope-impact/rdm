@@ -23,11 +23,17 @@ Feature: Sources
     # A source removed on purpose once read as dropped pins (cycle 04).
     @spec-0236 @e2e
     Scenario: A source is retired, never deleted, and nothing may cite it
-      Given the sources index keeps rdm with its pins and :retired "holds today's implementation"
+      Given a commit of the sources index lists rdm with its pins, and a later commit keeps them and adds :retired "holds today's implementation"
       And a wiki page whose footnote cites "rdm:README.md@3763e08"
       When "rdm-spec check" is run
       Then the check reports no dropped pin for rdm
       And it fails and names the citation and that its source is retired
+
+    @spec-0240 @e2e
+    Scenario: A need's source that is not a citation fails the check
+      Given the need UN-004 whose sources hold "the loyly README"
+      When "rdm-spec check" is run
+      Then it fails rule citation-malformed and names UN-004 and the source
 
   # Checkouts are machine-local, so they are never committed: they are given on
   # the command line, a directory holding one checkout per source, named by
