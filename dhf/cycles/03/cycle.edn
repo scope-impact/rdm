@@ -1,0 +1,17 @@
+;; Cycle 03: the spec change folding in cycle 02's findings, cut as spec-4
+;; (tagged locally). Run by the installed rdm-spec (cycle 01's build): one
+;; clean room per scope, fenced by rdm-spec fence, one builder each, merged,
+;; ratified, checklisted per scope and graded by graders who are no builder.
+{:cut "spec-4"
+ :scope [{:context :measurement}
+         {:context :regeneration}
+         {:context :architecture}
+         {:context :publishing}
+         {:component :knowledge/sources}
+         {:component :verification/results}
+         {:component :kernel/command}
+         {:component :spec/parser}
+         {:component :kernel/bus}]
+ :builder {:name "builder subagents, one per scope" :actor :agent}
+ :grader {:name "grader subagents" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
