@@ -60,6 +60,14 @@ Feature: Gap analysis
       When "rdm-spec check" is run
       Then it exits 2 and names dhf/clauses/missing.txt
 
+    # A stray prose line in a clause list became a clause (cycle 10, builder).
+    @spec-0282 @e2e
+    Scenario: A line of prose in a clause list is malformed, never a clause
+      Given a regulated project
+      And dhf/clauses/std.txt holds "STD:5.1 Development plan" and the line "Quality system"
+      When "rdm-spec check" is run
+      Then it exits 1 with a finding naming dhf/clauses/std.txt and the line of "Quality system", and STD:5.1 is the only clause
+
   Rule: A clause is met only by an audit tag naming it
 
     @spec-0259 @e2e

@@ -121,8 +121,10 @@ Feature: Audit copy
     # An untracked document closed a gap while the manifest said :clean true
     # at a commit that did not hold it (cycle 08, grading); then an uncommitted
     # scenario title reached the traceability page, and the release check and
-    # the audit read two revisions and disagreed (cycle 09, grading). An audit
-    # copy is of one commit or of nothing.
+    # the audit read two revisions and disagreed (cycle 09, grading); then a
+    # clause list removed from the configuration in the working tree only let
+    # the audit pin a commit the release check refuses (cycle 10, grading).
+    # An audit copy is of one commit or of nothing.
     @spec-0274 @e2e
     Scenario Outline: The audit copy is refused while what it is made from is not committed
       Given a releasable regulated project, all committed
@@ -136,6 +138,7 @@ Feature: Audit copy
         | an uncommitted change to a document                      | that document              |
         | an uncommitted change to a scenario's title              | that feature file          |
         | an uncommitted change to the clause list                 | dhf/clauses/std.txt        |
+        | an uncommitted change to the configuration               | dhf/harness/config.edn     |
 
     @spec-0254 @e2e
     Scenario: Same commit, same results, same audit copy

@@ -205,7 +205,8 @@ path and text, committed in a scratch repository and tagged with every cut
 the cycles name), `:cycles` (`{"NN" {:cycle :ratified :verdicts}}`), one key
 per instrument component with its goldens (`:checklist {"NN" ...}`,
 `:scorer {"NN" ...}`, `:scoreboard {"NN-MM" ...}`, compared as data) and
-`:recorded`. No `:oracle` in the configuration is no oracle; one holding no
+`:recorded`. No `:oracle` in the configuration is no oracle, said on
+standard output only, so the gates stay quiet; one holding no
 fixture cycle is a finding, since it judged nothing; one that cannot be read
 cannot run (exit 2). It is the gate before fence and ratify: the command runs
 it first and stops the task when it has findings. A golden is re-recorded
@@ -243,7 +244,8 @@ standard (dhf/wiki/pages/regulated-profile.md).
 **Clause list**: a standard reduced to its clauses, one file of lines: `KEY
 description`, `include FILE` (relative to the including file), a comment
 starting `#`, or blank. Any other line is a finding, and so is an include
-that leads back to a list already being read. A key is one run of letters, digits and `. _ : -`.
+that leads back to a list already being read. A key is one run of letters, digits and `. _ : -` holding at least one
+digit or colon, so a line of prose is a malformed line, never a clause.
 The non-functional spec: what scenarios cannot run. Not the cycle's
 checklist, which only grades.
 
@@ -255,7 +257,8 @@ one list or through includes, is one clause.
 block, an indented block of four spaces or a tab that is not a list item's
 continuation, or an inline code span),
 never running past a blank line. It names a clause when its text holds the key, or
-a dotted descendant of it (`STD:5.1.a` names `STD:5.1`), bounded by
+a dotted descendant of it, so every ancestor of the key it holds
+(`STD:5.1.a` names `STD:5.1` and `STD:5`), bounded by
 characters that are not key characters, a `: note` after the key allowed. A
 key outside an audit tag names nothing, and neither does a tag in a
 document's frontmatter: a clause is met in a document's body.
@@ -269,11 +272,12 @@ id; warnings aside) blocks the release check, exit 1.
 
 **Audit copy**: what `rdm-spec audit OUT` writes, only for a record the
 release check passes and only of one commit: while any file it is made from
-(the spec, the clause lists, the documents) differs from HEAD, untracked
+(the configuration, the spec, the clause lists, the documents) differs from HEAD, untracked
 included, it refuses (exit 1, naming each). It writes the auditor's copy (`OUT/auditor/`, every audit tag
 kept) and the engineer's copy (`OUT/engineer/`, every audit tag removed with
 the space before it, in the frontmatter too, its line breaks kept so each
-line keeps its number) of every controlled document, each also as a PDF; the
+line keeps its number; the text after a tag that ends a line is left as it
+was, a leading space included) of every controlled document, each also as a PDF; the
 clauses page (`OUT/clauses.md`, one section per declared clause list, included clauses in
 place); the traceability page
 (`OUT/traceability.md`); the results (`OUT/results/`); and `OUT/manifest.edn`,
