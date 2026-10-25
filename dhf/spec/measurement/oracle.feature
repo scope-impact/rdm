@@ -10,6 +10,33 @@ Feature: Oracle
   Runs the checklist, the scorer and the scoreboard on recorded fixture cycles
   and compares what they produce with recorded goldens.
 
+  # The layout was never written down, and the oracle never enters a clean
+  # room, so cycle 08's builder invented one and its oracle refused this
+  # repository's own goldens (dhf/cycles/08/proposed-spec-changes.md, 1).
+  Rule: The oracle's directory has one layout
+
+    @spec-0276 @contract
+    Scenario: The oracle reads one fixture project, its cycles and their goldens
+      Given dhf/harness/oracle/ holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
+      When "rdm-spec oracle" is run
+      Then it reads dhf/harness/oracle/ as:
+        | path                                  | holds                                                        |
+        | project/                              | the one fixture project, a git repository whose cuts the cycles name |
+        | cycles/NN/cycle.edn                   | the fixture cycle NN's record                                |
+        | cycles/NN/ratified.edn                | its ratification                                             |
+        | cycles/NN/verdicts.edn                | its verdicts                                                 |
+        | goldens/NN/checklist.json             | the checklist the instrument must derive for cycle NN        |
+        | goldens/NN/score.edn                  | the score it must file for cycle NN                          |
+        | goldens/scoreboard-NN-MM.edn          | the scoreboard it must give from cycle NN to cycle MM        |
+        | RECORDED.md                           | each recording, its date and its reason                      |
+      And it exits 0 and names each golden it compared
+
+    @spec-0277 @e2e
+    Scenario: An oracle directory that holds no fixture cycle fails
+      Given a project whose dhf/harness/oracle/ holds only RECORDED.md
+      When "rdm-spec oracle" is run
+      Then it exits 1 and says the oracle holds no fixture cycle, so it judged nothing
+
   Rule: The instrument is judged against recorded goldens
 
     @spec-0228 @e2e

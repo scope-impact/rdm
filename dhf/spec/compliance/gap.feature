@@ -90,6 +90,15 @@ Feature: Gap analysis
         | We plan [[STD:5]].                          | not named |
         | `[[STD:5.1]]`                               | not named |
 
+    # A tag inside an indented code block named a clause (cycle 08, grading).
+    @spec-0275 @e2e
+    Scenario: An audit tag in an indented code block names nothing
+      Given a regulated project
+      And dhf/clauses/std.txt holds the one clause STD:5.1
+      And dhf/documents/plan.md holds, after a blank line, a line of four spaces then "[[STD:5.1]]"
+      When "rdm-spec check" is run
+      Then the clause STD:5.1 is not named
+
     @spec-0261 @e2e
     Scenario: An audit tag never runs past a blank line
       Given a regulated project

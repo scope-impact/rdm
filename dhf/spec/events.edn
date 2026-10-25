@@ -51,6 +51,6 @@
   :published-by :compliance/gap
   :carries [:revision :clauses :documents :findings]
   :shape {:revision "the commit read, or :working-tree"
-          :clauses "[{:key :description :clause-list :line :named-at [{:file :line}]}] in the clause lists' order, includes in place, each key once; :named-at empty is a gap"
+          :clauses "[{:key :description :clause-list :line :declared :named-at [{:file :line}]}] in the clause lists' order, includes in place, each key once; :clause-list and :line where the clause is written, :declared the declared list it was reached through; :named-at empty is a gap"
           :documents "[{:file :id :revision :title}]"
           :findings "[{:file :line :rule :message}] including the warnings"}}}

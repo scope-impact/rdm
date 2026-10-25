@@ -196,7 +196,11 @@ and `score.edn` beside it, and `test.log`, the test command's output
 
 **Oracle (instrument)**: `rdm-spec oracle`: the checklist, the scorer and the
 scoreboard run on recorded fixture cycles under `dhf/harness/oracle/` and
-compared with their recorded goldens. It is the gate before fence and ratify:
+compared with their recorded goldens. Its layout: `project/` (the one fixture
+project), `cycles/NN/` (`cycle.edn`, `ratified.edn`, `verdicts.edn`),
+`goldens/NN/` (`checklist.json`, `score.edn`), `goldens/scoreboard-NN-MM.edn`
+and `RECORDED.md`. No `dhf/harness/oracle/` at all is no oracle; one holding
+no fixture cycle is a finding, since it judged nothing. It is the gate before fence and ratify:
 the command runs it first and stops the task when it has findings.
 A golden is re-recorded only with a stated reason, kept in `RECORDED.md`. It
 judges the instrument; the Allure results remain the oracle of a project's
@@ -237,8 +241,9 @@ checklist, which only grades.
 clause, never a substitute for reading the standard. A key listed twice, in
 one list or through includes, is one clause.
 
-**Audit tag**: `[[ ... ]]` in a controlled document, outside code, never
-running past a blank line. It names a clause when its text holds the key, or
+**Audit tag**: `[[ ... ]]` in a controlled document, outside code (a fenced
+block, an indented block of four spaces or a tab, or an inline code span),
+never running past a blank line. It names a clause when its text holds the key, or
 a dotted descendant of it (`STD:5.1.a` names `STD:5.1`), bounded by
 characters that are not key characters, a `: note` after the key allowed. A
 key outside an audit tag names nothing, and neither does a tag in a
@@ -248,13 +253,14 @@ document's frontmatter: a clause is met in a document's body.
 frontmatter `id`, `revision` and `title`. Its id is unique among them.
 
 **Gap**: a clause no audit tag names. Gap analysis is a stage of `rdm-spec
-check`, and a gap blocks the release check. The release check relays gaps
-only; a document's own findings (no id, a duplicate id) stop the check.
+check`, and every finding of it (a gap, a document with no id or a duplicate
+id; warnings aside) blocks the release check, exit 1.
 
 **Audit copy**: what `rdm-spec audit OUT` writes, only for a record the
-release check passes: the auditor's copy (`OUT/auditor/`, every audit tag
+release check passes, from the clause lists and documents as committed at
+HEAD (an uncommitted document is not in it): the auditor's copy (`OUT/auditor/`, every audit tag
 kept) and the engineer's copy (`OUT/engineer/`, every audit tag removed with
-the space before it) of every controlled document, each also as a PDF; the
+the space before it, in the frontmatter too) of every controlled document, each also as a PDF; the
 clauses page (`OUT/clauses.md`, one section per declared clause list, included clauses in
 place); the traceability page
 (`OUT/traceability.md`); the results (`OUT/results/`); and `OUT/manifest.edn`,

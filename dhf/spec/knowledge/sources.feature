@@ -28,7 +28,7 @@ Feature: Sources
 
     @spec-0121 @e2e
     Scenario: A source that drops a pin it had fails the check
-      Given a commit of the sources index pins loyly at 17d68d2, and a later commit no longer lists it
+      Given a commit of the sources index pins loyly at 17d68d2, and a later commit keeps loyly with that pin replaced by another
       When "rdm-spec check" is run
       Then the check fails and names the source, the dropped pin and the commit that dropped it
 
@@ -85,7 +85,7 @@ Feature: Sources
 
     @spec-0126 @e2e
     Scenario: Without a checkout, a citation's path is reported unchecked, never passed
-      Given no checkout of skallinen/loyly is given with --sources
+      Given "rdm-spec check" is given no --sources at all
       When "rdm-spec check" resolves the citation "loyly:README.md@17d68d2"
       Then it is reported as unchecked, with the reason
 
@@ -119,7 +119,7 @@ Feature: Sources
 
     @spec-0199 @e2e
     Scenario: Only needs.edn and the wiki's pages are scanned for citations
-      Given a feature file whose example step quotes a citation of a fenced path
+      Given a feature file whose Given step quotes a citation of a fenced path
       When "rdm-spec check" is run
       Then the quoted citation is not resolved, and the check passes
 

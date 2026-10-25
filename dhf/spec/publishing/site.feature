@@ -67,6 +67,7 @@ Feature: Site
 
     @spec-0100 @e2e
     Scenario: Publishing writes nothing in the spec
+      Given a project set up by rdm-spec, its spec as it is before the publish kept aside
       When "rdm-spec publish" is run
       Then no file under dhf/spec changes
 

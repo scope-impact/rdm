@@ -46,8 +46,13 @@ The spec of rdm-spec, the source of truth for what it does
   placeholder (R1, DIR).
 - **Published output names paths relative to the project,** never a path of
   the machine it was made on.
-- **A scenario's commands see only the environment its steps set,** never
-  the one the tests themselves run in (RESULTS_DIR included).
+- **A scenario's commands inherit the tests' environment, PATH and HOME
+  included, except RESULTS_DIR, plus what its steps set;** a variable a
+  scenario depends on is set by a step (cycle 08: git and the site builder
+  need PATH).
+- **A task's result shape is the spec's.** Where another context's step reads
+  a task's standard output, the task's feature holds a contract scenario for
+  that shape, and the step reads only what it states (cycle 08: spec-0047).
 - **Step definitions are the scope's own.** A step file uses only the
   kernel's shared steps and its own context's step files; a helper it needs
   from elsewhere is copied in. A step text used by the features of more than

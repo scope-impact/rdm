@@ -34,6 +34,17 @@ Feature: Trace
       Then the trace gives the status failed
       And it lists both results with their status and file
 
+  # Cycle 08: spec/check's step read trace's result in one shape and the
+  # rebuilt trace wrote another; the shape is now the spec's.
+  Rule: The trace's result has one shape
+
+    @spec-0279 @contract
+    Scenario: A need's trace is one map under :trace
+      Given UN-003 tagged on one scenario, and a results directory with a passing result for it
+      When "rdm-spec trace UN-003 --results DIR" is run
+      Then standard output is {:trace {:kind :need :id "UN-003" :text ... :scenarios [...]}}
+      And each of its scenarios is a map with :id, :title, :component, :context, :level and :status
+
   Rule: The trace refuses what it cannot read
 
     @spec-0106 @e2e

@@ -73,6 +73,8 @@ Feature: Audit copy
         | the line "We plan `[[STD:5.1]]`."                              | that line unchanged                     |
         | a "[[" with no "]]" before the paragraph's blank line          | the paragraph unchanged                 |
         | a fenced code block holding [[STD:5.1]]                        | the code block unchanged                |
+        | an indented code block holding [[STD:5.1]]                     | the code block unchanged                |
+        | the title "Development plan [[STD:5.1]]" in its frontmatter    | the title "Development plan"            |
 
     @spec-0248 @e2e
     Scenario: The documents directory's layout is kept
@@ -114,7 +116,17 @@ Feature: Audit copy
     Scenario: The manifest pins every file of the audit copy
       Given a releasable regulated project
       When "rdm-spec audit OUT" is run
-      Then OUT/manifest.edn holds exactly {:commit :clean :files}: the commit HEAD resolves to, :clean true when no tracked file differs from it (untracked files never count), and every other file of OUT as {:path :sha256}, its path relative to OUT, sorted by path
+      Then OUT/manifest.edn holds exactly {:commit :clean :files}: the commit HEAD resolves to, :clean true when no file under the clause lists' and documents' directories differs from it, untracked files included, and every other file of OUT as {:path :sha256}, its path relative to OUT, sorted by path
+
+    # An untracked document closed a gap and entered the audit copy while the
+    # manifest said :clean true at a commit that did not hold it (cycle 08,
+    # grading).
+    @spec-0274 @e2e
+    Scenario: The audit copy is made from what is committed at HEAD
+      Given a releasable regulated project whose every clause is named in committed documents
+      And an untracked document dhf/documents/draft.md
+      When "rdm-spec audit OUT" is run
+      Then OUT holds no copy of draft.md, and OUT/manifest.edn says :clean false
 
     @spec-0254 @e2e
     Scenario: Same commit, same results, same audit copy
