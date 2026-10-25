@@ -188,7 +188,6 @@
   {:from :compliance/audit :to :repository :description "Reads documents and results from"}
 
   ;; events between contexts, within one run: the contracts
-  {:from :knowledge/sources :to :spec/check :description "Publishes" :event :KnowledgeIndexed}
   {:from :knowledge/sources :to :publishing/site :description "Publishes" :event :KnowledgeIndexed}
   {:from :spec/parser :to :architecture/lint :description "Publishes" :event :SpecParsed}
   {:from :spec/parser :to :verification/status :description "Publishes" :event :SpecParsed}

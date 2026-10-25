@@ -70,6 +70,7 @@ Feature: Spec check
     Scenario: A need tag on the feature is inherited by every scenario under it
       Given a feature tagged @UN-003
       And a scenario under it carries no need tag of its own
+      And no results directory exists
       When "rdm-spec trace UN-003" is run
       Then it lists the scenario
 

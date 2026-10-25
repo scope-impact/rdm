@@ -50,7 +50,7 @@ Feature: Checklist
 
     @spec-0266 @contract
     Scenario: Each clause of the cut's clause lists is an item after the scenarios
-      Given cycle 03 of cut spec-3 in a regulated project whose clause list dhf/clauses/std.txt at the cut holds "STD:5.1 Development plan"
+      Given cycle 03 of cut spec-3, scoped to the whole project, in a regulated project whose clause list dhf/clauses/std.txt at the cut holds "STD:5.1 Development plan"
       When "rdm-spec checklist 03" is run
       Then the items of dhf/cycles/03/checklist.json end with:
         """
@@ -58,3 +58,9 @@ Feature: Checklist
          "context": "compliance", "component": "dhf/clauses/std.txt", "level": "clause"}
         """
       And the clause items come after every scenario item, in the clause lists' order with includes in place, each key once
+
+    @spec-0271 @e2e
+    Scenario: A cycle scoped away from the compliance context carries no clause item
+      Given cycle 03 of cut spec-3, scoped to the context architecture, in a regulated project whose clause list at the cut holds clauses
+      When "rdm-spec checklist 03" is run
+      Then dhf/cycles/03/checklist.json holds no item at the level clause

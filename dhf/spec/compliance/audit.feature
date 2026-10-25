@@ -92,10 +92,11 @@ Feature: Audit copy
 
     @spec-0250 @e2e
     Scenario: The clauses page names where each clause is met
-      Given a releasable regulated project whose clause STD:5.1 "Development plan" is named on line 6 of dhf/documents/plan.md and line 3 of dhf/documents/risk/register.md
+      Given a releasable regulated project whose dhf/clauses/std.txt holds "include base.txt" then "STD:5.1 Development plan", and whose dhf/clauses/base.txt holds "STD:4.1 Quality system"
+      And STD:5.1 is named on line 8 of dhf/documents/plan.md and line 9 of dhf/documents/risk/register.md
       When "rdm-spec audit OUT" is run
-      Then OUT/clauses.md has, under dhf/clauses/std.txt, a row for STD:5.1 with "Development plan", dhf/documents/plan.md:6 and dhf/documents/risk/register.md:3
-      And its clauses are in the clause list's order, includes in place
+      Then OUT/clauses.md has one section per declared clause list, dhf/clauses/std.txt, and no section for dhf/clauses/base.txt
+      And under it STD:4.1 comes first, where its include stands, then a row for STD:5.1 with "Development plan", dhf/documents/plan.md:8 and dhf/documents/risk/register.md:9
 
     @spec-0251 @e2e
     Scenario: The traceability page links each need to its scenarios and their status
@@ -111,12 +112,12 @@ Feature: Audit copy
 
     @spec-0253 @contract
     Scenario: The manifest pins every file of the audit copy
-      Given a releasable regulated project at a commit C
+      Given a releasable regulated project
       When "rdm-spec audit OUT" is run
-      Then OUT/manifest.edn holds the commit C, whether the working tree was clean, and every other file of OUT with its path relative to OUT and its SHA-256, sorted by path
+      Then OUT/manifest.edn holds exactly {:commit :clean :files}: the commit HEAD resolves to, :clean true when no tracked file differs from it (untracked files never count), and every other file of OUT as {:path :sha256}, its path relative to OUT, sorted by path
 
     @spec-0254 @e2e
     Scenario: Same commit, same results, same audit copy
       Given a releasable regulated project
       When "rdm-spec audit OUT" is run, then "rdm-spec audit OUT2"
-      Then every Markdown file, and the manifest's entry for it, is byte for byte the same in OUT and OUT2
+      Then every file, the PDFs and the manifest included, is byte for byte the same in OUT and OUT2

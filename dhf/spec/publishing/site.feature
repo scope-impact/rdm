@@ -85,6 +85,14 @@ Feature: Site
       When "rdm-spec publish" is run
       Then the page is published and the footnote links to README.md at 17d68d2 in skallinen/loyly
 
+    # The index's own footnote was published unlinked while the pages' were
+    # linked (cycle 06, grading).
+    @spec-0273 @e2e
+    Scenario: The wiki's index is published with its footnotes linked, as a page is
+      Given the wiki's index holds a footnote citing "loyly:README.md@17d68d2"
+      When "rdm-spec publish" is run
+      Then the published index's footnote links to README.md at 17d68d2 in skallinen/loyly
+
     # Wiki pages were published but reachable by no link (cycle 05, 1); three
     # builders read spec-0146 and spec-0133 three ways.
     @spec-0239 @e2e
@@ -119,6 +127,7 @@ Feature: Site
     # command into a no-op that exited 0 (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
     @spec-0149 @e2e
     Scenario: Without the site builder, building fails and names the missing tool
-      Given the configured site builder is not installed
+      Given the configured site builder is not installed, and a site directory left by an earlier publish
       When "rdm-spec publish" is run
       Then it exits 2, names the missing site builder, and says no HTML was written
+      And no HTML is left in the site directory

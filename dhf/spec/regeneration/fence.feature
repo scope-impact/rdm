@@ -11,8 +11,8 @@ Feature: Fence
 
     @spec-0037 @e2e
     Scenario: A commit that is not a cut is refused
-      Given the commit 1a2b3c4 carries no spec-N tag
-      When "rdm-spec fence ROOM 1a2b3c4" is run
+      Given the project's commit HEAD carries no spec-N tag
+      When "rdm-spec fence ROOM HEAD" is run
       Then it exits 2 and says regeneration reads only a cut
 
   # Incident: a weaker fence probe once passed while the previous implementation
@@ -22,7 +22,7 @@ Feature: Fence
 
     @spec-0038 @e2e
     Scenario: The clean room holds only the allowed paths, as one root commit
-      Given the configuration allows dhf/spec, dhf/harness/config.edn, dhf/raw, dhf/wiki, dhf/views and dhf/decisions/adr-0002-spec-first-regeneration.md, and the cut also holds dhf/harness/oracle/
+      Given the configuration allows dhf/spec, dhf/harness/config.edn, dhf/harness/stack.md, dhf/raw, dhf/wiki, dhf/views and dhf/decisions/adr-0002-spec-first-regeneration.md, and the cut also holds dhf/harness/oracle/
       When "rdm-spec fence ROOM spec-3" is run
       Then ROOM is a repository with a single root commit
       And its working tree holds the allowed paths, unchanged, and no other file

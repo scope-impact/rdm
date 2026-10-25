@@ -50,8 +50,20 @@ The spec of rdm-spec, the source of truth for what it does
   the one the tests themselves run in (RESULTS_DIR included).
 - **Step definitions are the scope's own.** A step file uses only the
   kernel's shared steps and its own context's step files; a helper it needs
-  from elsewhere is copied in. Each shared step text is defined once, by the
-  kernel or by the context that owns it (cycle 03: four integration fixes).
+  from elsewhere is copied in. A step text used by the features of more than
+  one context is the kernel's; one used within one context is that
+  context's. Its owner defines it once, when its step file loads, never only
+  inside another step's body (cycle 03: four integration fixes; cycle 06:
+  spec-0090 and spec-0187 found no definition).
+- **A scenario's project is one the scenario makes,** a fixture, never the
+  room or the repository the tests run in, whose files change from cut to
+  cut and differ in ratify's checkout. The ids, needs, pages and commits a
+  scenario names are its fixture's (cycle 06: spec-0231; cycle 07:
+  spec-0239).
+- **A suite removes every fixture it makes,** unit tests included (cycle 06:
+  the disk filled; cycle 07: 8,934 directories left behind).
+- **Each rule a file breaks is its own finding,** so one file may have
+  several.
 - **One step text, one meaning.** A Given worded the same in two feature files
   sets up the same thing in both.
 - **How every task reports.** Standard output holds only the task's result, as

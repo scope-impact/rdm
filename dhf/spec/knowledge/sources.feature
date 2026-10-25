@@ -14,6 +14,18 @@ Feature: Sources
       When "rdm-spec check" is run
       Then the check fails and names the source
 
+    @spec-0270 @e2e
+    Scenario: A source with no repository fails the check
+      Given the sources index names a source with a pin and no repository
+      When "rdm-spec check" is run
+      Then it fails rule source-no-repository and names the source
+
+    @spec-0269 @e2e
+    Scenario: A source whose record is missing fails the check
+      Given the sources index names a source whose record file is not in dhf/raw
+      When "rdm-spec check" is run
+      Then it fails rule source-no-record and names the source and the record file
+
     @spec-0121 @e2e
     Scenario: A source that drops a pin it had fails the check
       Given a commit of the sources index pins loyly at 17d68d2, and a later commit no longer lists it

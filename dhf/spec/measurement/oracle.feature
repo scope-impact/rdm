@@ -34,6 +34,7 @@ Feature: Oracle
 
     @spec-0231 @e2e
     Scenario: Recording without a reason is refused
+      Given dhf/harness/oracle/ holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
       When "rdm-spec oracle record" is run
       Then it exits 2, says a reason is required, and rewrites nothing
 

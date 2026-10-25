@@ -18,7 +18,8 @@ Feature: Init
         | dhf/spec/ids.edn                  | the ledger at 0                                                          |
         | dhf/spec/glossary.md              | an empty glossary                                                        |
         | dhf/spec/README.md                | the spec's conventions                                                   |
-        | dhf/harness/config.edn            | the id prefix, every directory the tasks read, the allow-list dhf/spec, dhf/harness/config.edn, dhf/raw, dhf/wiki, dhf/views and dhf/decisions (never dhf/harness/oracle), and no implementation paths |
+        | dhf/harness/config.edn            | the id prefix, every directory the tasks read, the allow-list dhf/spec, dhf/harness/config.edn, dhf/harness/stack.md, dhf/raw, dhf/wiki, dhf/views and dhf/decisions (never dhf/harness/oracle), and no implementation paths |
+        | dhf/harness/stack.md              | a stack table with no rows yet                                           |
         | dhf/raw/README.md                 | the rules for raw sources                                                |
         | dhf/raw/sources.edn               | no sources                                                               |
         | dhf/wiki/index.md                 | the wiki's rules and an empty list of pages                              |
@@ -27,6 +28,13 @@ Feature: Init
         | .github/workflows/cut.yml         | a workflow that runs "rdm-spec cut" on every push to the default branch  |
         | .gitignore                        | dhf/allure-results/, dhf/cycles/*/results/, dhf/cycles/*/build/, site-src/ and site/ |
       And init lists every file it wrote and the next steps
+
+    # An absolute path leaked an exception (cycle 07, grading).
+    @spec-0272 @e2e
+    Scenario: Init takes an absolute path as well as a relative one
+      Given no directory at DIR/sauna
+      When "rdm-spec init DIR/sauna" is run
+      Then DIR/sauna is a git repository holding the skeleton
 
     @spec-0087 @e2e
     Scenario: Init refuses a path that already exists
@@ -49,6 +57,7 @@ Feature: Init
         | flag                | outcome                                         |
         |                     | sets the id prefix to "spec"                    |
         | --id-prefix 9lives  | exits 2 and says a prefix starts with a letter and holds letters, digits and single hyphens |
+        | --id-prefix UN      | exits 2 and says the prefix UN is taken by need tags                     |
 
   Rule: A new project is green before anything is written in it
 

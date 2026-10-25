@@ -107,6 +107,18 @@ Feature: Gap analysis
       Then it exits 0
       And it prints a clause-unknown warning naming dhf/documents/plan.md, the line of the tag and STD:9.9
 
+  # A title is not where a clause is met: cycle 07's spec-0250 put a tag on a
+  # line that could only be frontmatter, and it counted.
+  Rule: Frontmatter names no clause
+
+    @spec-0268 @e2e
+    Scenario: An audit tag in a document's frontmatter names nothing
+      Given a regulated project
+      And dhf/clauses/std.txt holds the one clause STD:5.1
+      And dhf/documents/plan.md has the title "Development plan [[STD:5.1]]" and a body that names no clause
+      When "rdm-spec check" is run
+      Then the clause STD:5.1 is not named
+
   # A document that still says nothing meets no clause, however many it names.
   Rule: A placeholder is a warning
 

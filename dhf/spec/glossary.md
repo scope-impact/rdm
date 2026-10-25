@@ -241,22 +241,27 @@ one list or through includes, is one clause.
 running past a blank line. It names a clause when its text holds the key, or
 a dotted descendant of it (`STD:5.1.a` names `STD:5.1`), bounded by
 characters that are not key characters, a `: note` after the key allowed. A
-key outside an audit tag names nothing.
+key outside an audit tag names nothing, and neither does a tag in a
+document's frontmatter: a clause is met in a document's body.
 
 **Controlled document**: a Markdown file under the documents directory with
 frontmatter `id`, `revision` and `title`. Its id is unique among them.
 
 **Gap**: a clause no audit tag names. Gap analysis is a stage of `rdm-spec
-check`, and a gap blocks the release check.
+check`, and a gap blocks the release check. The release check relays gaps
+only; a document's own findings (no id, a duplicate id) stop the check.
 
 **Audit copy**: what `rdm-spec audit OUT` writes, only for a record the
 release check passes: the auditor's copy (`OUT/auditor/`, every audit tag
 kept) and the engineer's copy (`OUT/engineer/`, every audit tag removed with
 the space before it) of every controlled document, each also as a PDF; the
-clauses page (`OUT/clauses.md`); the traceability page
+clauses page (`OUT/clauses.md`, one section per declared clause list, included clauses in
+place); the traceability page
 (`OUT/traceability.md`); the results (`OUT/results/`); and `OUT/manifest.edn`,
-every other file with its SHA-256.
+every other file with its SHA-256. The same commit and results give the
+same bytes, PDFs included.
 
 **Clause item**: a clause as an item of the cycle's checklist, at the level
-`clause`. Its grader reads the sections whose audit tags name it and passes it
+`clause`, in a cycle scoped to the whole project or naming the context
+compliance. Its grader reads the sections whose audit tags name it and passes it
 only if they meet the clause. Named is not met.
