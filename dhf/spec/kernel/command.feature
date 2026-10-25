@@ -59,6 +59,20 @@ Feature: Command
         | /tmp/r1 |                 | /tmp/r1          |
         | /tmp/r1 | --results other | other            |
 
+  # A task runs its stages in order and every stage reports, so one run names
+  # every finding. A gate is the exception: a stage the task table marks as a
+  # gate stops the task when it has findings, and the stages after it never
+  # run. The oracle is the gate before fence and ratify (dhf/spec/measurement/
+  # oracle.feature, spec-0232). It replaces an event the gated stages would
+  # each have had to interpret (cycle 04).
+  Rule: A gate stops the task
+
+    @spec-0235 @contract
+    Scenario: A task with no gate reports the findings of every stage
+      Given a project whose spec has a scenario with no level and a view older than the model
+      When "rdm-spec check" is run
+      Then it exits 1 and names both the missing level and the stale view
+
   Rule: Every task reports the same way
 
     @spec-0177 @contract

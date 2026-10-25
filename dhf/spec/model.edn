@@ -175,8 +175,6 @@
   {:from :publishing/site :to :repository :description "Reads views from and writes the site to"}
 
   ;; events between contexts, within one run: the contracts
-  {:from :measurement/oracle :to :regeneration/fence :description "Publishes" :event :InstrumentJudged}
-  {:from :measurement/oracle :to :ratification/ratify :description "Publishes" :event :InstrumentJudged}
   {:from :knowledge/sources :to :spec/check :description "Publishes" :event :KnowledgeIndexed}
   {:from :knowledge/sources :to :publishing/site :description "Publishes" :event :KnowledgeIndexed}
   {:from :spec/parser :to :architecture/lint :description "Publishes" :event :SpecParsed}

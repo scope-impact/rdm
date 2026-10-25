@@ -189,10 +189,15 @@ and `score.edn` beside it.
 
 **Oracle (instrument)**: `rdm-spec oracle`: the checklist, the scorer and the
 scoreboard run on recorded fixture cycles under `dhf/harness/oracle/` and
-compared with their recorded goldens. Fence and ratify refuse while it is red.
+compared with their recorded goldens. It is the gate before fence and ratify:
+the command runs it first and stops the task when it has findings.
 A golden is re-recorded only with a stated reason, kept in `RECORDED.md`. It
 judges the instrument; the Allure results remain the oracle of a project's
 scenarios.
+
+**Gate**: a stage the task table runs first and that stops the task when it
+has findings; the stages after it never see it. Every other stage reports, so
+one run names every finding.
 
 **Scoreboard**: the comparison of two cycles over the items both scored,
 counting what got better and what got worse, never a net.

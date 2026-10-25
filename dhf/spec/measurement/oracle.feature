@@ -40,15 +40,16 @@ Feature: Oracle
   # A room built, or a build ratified, by an instrument nobody checked hands
   # the next cycle a judge nobody checked (loyly:harness/README.md@17d68d2,
   # "What makes the checks run").
+  # The oracle is a gate stage of fence and ratify: the command runs it first
+  # and stops the task when it has findings, so neither fence nor ratify knows
+  # the oracle (dhf/spec/kernel/command.feature, "A gate stops the task").
   Rule: Nothing is fenced or ratified while the oracle is red
-  # Fence and ratify run the oracle first, in the same run, and act only on
-  # its InstrumentJudged (dhf/spec/events.edn).
 
     @spec-0232 @e2e
     Scenario Outline: Fence and ratify refuse while the oracle fails
       Given a project whose dhf/harness/oracle/ holds a golden the instrument does not reproduce
       When "rdm-spec <task>" is run
-      Then it exits 1, names the oracle's finding, and <does-nothing>
+      Then it exits 1, prints the oracle's findings unchanged, and <does-nothing>
 
       Examples:
         | task                  | does-nothing                       |

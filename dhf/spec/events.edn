@@ -37,14 +37,6 @@
           :findings "[{:file :line :rule :message}]"}}
 
 
- :InstrumentJudged
- {:description "The instrument was run on the recorded fixture cycles and compared with its goldens; fence and ratify act only on a pass"
-  :published-by :measurement/oracle
-  :carries [:passed? :compared :findings]
-  :shape {:passed? "true when every golden matched, or there is no oracle"
-          :compared "[golden path]"
-          :findings "[{:file :line :rule :message}]"}}
-
  :VerificationDerived
  {:description "Each scenario's status (verified, failed, unverified, planned) was derived from a run's Allure results"
   :published-by :verification/status
