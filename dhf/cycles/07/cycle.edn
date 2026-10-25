@@ -1,0 +1,16 @@
+;; Cycle 07: the regulated profile (the compliance context), cut as spec-10
+;; (tagged locally). Run by cycle 05's release; cycle 06's build is the cut's
+;; implementation. Its scopes are what `rdm-spec scopes spec-9 spec-10` listed.
+;; The shared files it named are read by those scopes: ClausesIndexed in
+;; events.edn by checklist and release, the views by check's freshness stage,
+;; which the model change leaves fresh. One builder takes all five scopes in
+;; one room: the compliance context has no code yet, and the other four
+;; scopes run its stages.
+{:cut "spec-10"
+ :scope [{:context :compliance}
+         {:component :kernel/command}
+         {:component :measurement/checklist}
+         {:component :verification/release}]
+ :builder {:name "a builder subagent, one room for every scope" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
