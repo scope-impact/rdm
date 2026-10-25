@@ -1,0 +1,738 @@
+{
+  "cycle" : "08",
+  "cut" : "spec-11",
+  "items" : [ {
+    "id" : "spec-0019",
+    "title" : "The checklist is derived from the spec at the cut, one item per stamped scenario",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0037",
+    "title" : "A commit that is not a cut is refused",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0038",
+    "title" : "The clean room holds only the allowed paths, as one root commit",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0040",
+    "title" : "An allowed path missing at the cut is refused",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0042",
+    "title" : "A scenario with two ids fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0043",
+    "title" : "An id used by two scenarios fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0044",
+    "title" : "Each level is accepted",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0045",
+    "title" : "A scenario with no level fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0046",
+    "title" : "A scenario with two levels fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0047",
+    "title" : "A need tag on the feature is inherited by every scenario under it",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0048",
+    "title" : "A scenario that traces to no need fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0049",
+    "title" : "A need tag naming no declared need fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0050",
+    "title" : "The spec check accepts a scenario tagged @wip",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0079",
+    "title" : "Adopt adds the skeleton beside what is already there",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0080",
+    "title" : "A destination that already exists is skipped and named",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0081",
+    "title" : "A symbolic link at a destination counts as existing",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0082",
+    "title" : "An existing ignore file is kept, and the lines to add are named",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0083",
+    "title" : "Adopting twice changes nothing",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0084",
+    "title" : "Adopt refuses a directory that is not a git repository",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0085",
+    "title" : "The adopted spec is empty whatever the repository holds",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0086",
+    "title" : "Init writes the skeleton and names what it wrote",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0087",
+    "title" : "Init refuses a path that already exists",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0089",
+    "title" : "The id prefix is chosen at init",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0090",
+    "title" : "The check passes on a skeleton nobody has touched",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0092",
+    "title" : "Each component gets one page",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0093",
+    "title" : "A component page carries the component's prose and scenarios",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0094",
+    "title" : "Each bounded context gets an index page with its component view",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0095",
+    "title" : "The home page shows the context and container views and the needs",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0096",
+    "title" : "With results, each scenario shows its status",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0097",
+    "title" : "A planned scenario shows as planned",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0098",
+    "title" : "Without results, the site says no status was derived",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0099",
+    "title" : "Publishing refuses views older than the model",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0100",
+    "title" : "Publishing writes nothing in the spec",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0101",
+    "title" : "The same inputs publish the same site",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0102",
+    "title" : "Tracing a need lists every scenario that traces to it, however it is tagged",
+    "context" : "verification",
+    "component" : "Trace",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0103",
+    "title" : "A need nothing traces to says so",
+    "context" : "verification",
+    "component" : "Trace",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0104",
+    "title" : "Tracing a scenario names its needs, its component and its bounded context",
+    "context" : "verification",
+    "component" : "Trace",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0105",
+    "title" : "With results, the trace gives each scenario's status and the results behind it",
+    "context" : "verification",
+    "component" : "Trace",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0106",
+    "title" : "An id that names nothing is refused",
+    "context" : "verification",
+    "component" : "Trace",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0107",
+    "title" : "A results directory that does not exist is refused",
+    "context" : "verification",
+    "component" : "Trace",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0108",
+    "title" : "Without results, the trace says no status was derived",
+    "context" : "verification",
+    "component" : "Trace",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0120",
+    "title" : "A source with no pin fails the check",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0121",
+    "title" : "A source that drops a pin it had fails the check",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0122",
+    "title" : "A citation naming no recorded source fails",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0123",
+    "title" : "A citation at a commit that is not one of its source's pins fails",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0124",
+    "title" : "A citation resolves when its path exists at its pin",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0125",
+    "title" : "A path that does not exist at its pin fails",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0126",
+    "title" : "Without a checkout, a citation's path is reported unchecked, never passed",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0133",
+    "title" : "Every wiki page is published with its footnotes linked to their sources",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0134",
+    "title" : "A user need citing no source fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0135",
+    "title" : "A user need citing a source that does not resolve fails the check",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0136",
+    "title" : "A citation of a fenced path fails",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0137",
+    "title" : "A citation inside a fenced directory fails",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0138",
+    "title" : "A fenced path that matches nothing at a pin fails the check",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0146",
+    "title" : "The site's navigation follows the model",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0147",
+    "title" : "The site builds when every link resolves",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0148",
+    "title" : "A broken link fails the build, naming the page and the link",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0149",
+    "title" : "Without the site builder, building fails and names the missing tool",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0150",
+    "title" : "A tag that is not an id, a level, a need or @wip fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0171",
+    "title" : "Source checkouts are given as one directory, one checkout per source",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0176",
+    "title" : "Each task is run as rdm-spec <task>",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0177",
+    "title" : "A task that passes exits 0",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0178",
+    "title" : "A task that finds a problem exits 1 and names it on the error stream",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0179",
+    "title" : "A task that cannot run exits 2 and says why",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0180",
+    "title" : "An unknown task exits 2 and lists the tasks",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0182",
+    "title" : "The project scope keeps no implementation",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0183",
+    "title" : "A context scope removes that context's code and keeps the rest",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0184",
+    "title" : "A component scope removes that component's code and keeps the rest",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0185",
+    "title" : "A scope the model does not name is refused",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0186",
+    "title" : "A scenario with no id fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0187",
+    "title" : "A citation that could not be checked passes the check with a warning",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0193",
+    "title" : "A task's results directory defaults to the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0199",
+    "title" : "Only needs.edn and the wiki's pages are scanned for citations",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0209",
+    "title" : "A spec file naming a configured stack word fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0210",
+    "title" : "checklist.json has one shape",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0211",
+    "title" : "A cut holding an unstamped scenario has no checklist",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0219",
+    "title" : "A task's results directory is --results, else RESULTS_DIR, else the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0222",
+    "title" : "The kernel is a scope like a bounded context",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0223",
+    "title" : "The id prefix defaults to spec and must start a tag",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0226",
+    "title" : "A list of scopes removes the code of each, and keeps the rest",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0228",
+    "title" : "The oracle passes when every output matches its golden",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0229",
+    "title" : "An output that differs from its golden fails the oracle, naming the difference",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0230",
+    "title" : "Recording goldens says which changed, and why",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0231",
+    "title" : "Recording without a reason is refused",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0232",
+    "title" : "Fence and ratify refuse while the oracle fails",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0233",
+    "title" : "A project with no oracle is not refused",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0234",
+    "title" : "An id the ledger never issued fails the spec check",
+    "context" : "spec",
+    "component" : "Spec check",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0235",
+    "title" : "A task with no gate reports the findings of every stage",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0236",
+    "title" : "A source is retired, never deleted, and nothing may cite it",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0239",
+    "title" : "The wiki is reachable from the home page and the navigation",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0240",
+    "title" : "A need's source that is not a citation fails the check",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0242",
+    "title" : "A record the release check refuses has no audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0243",
+    "title" : "A clause no audit tag names refuses the audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0244",
+    "title" : "A project without :regulated has no audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0245",
+    "title" : "An existing directory is never written into",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0246",
+    "title" : "The auditor's copy keeps the audit tags, the engineer's copy drops them",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0247",
+    "title" : "What the engineer's copy drops",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0248",
+    "title" : "The documents directory's layout is kept",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0249",
+    "title" : "Each copy is also a PDF whose first page names the document",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0250",
+    "title" : "The clauses page names where each clause is met",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0251",
+    "title" : "The traceability page links each need to its scenarios and their status",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0252",
+    "title" : "The results the record was verified by are kept",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0253",
+    "title" : "The manifest pins every file of the audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0254",
+    "title" : "Same commit, same results, same audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0255",
+    "title" : "A project without :regulated has no gap stage",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0256",
+    "title" : "Each line is a clause key and its description, an include, a comment or blank",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0257",
+    "title" : "A clause list that holds no clause stops the check",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0258",
+    "title" : "An include that names no readable file stops the check",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0259",
+    "title" : "A clause no audit tag names is a finding",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0260",
+    "title" : "What names a clause",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0261",
+    "title" : "An audit tag never runs past a blank line",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0262",
+    "title" : "An audit tag that is one key no clause list holds is a warning",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0263",
+    "title" : "A document still holding TODO is named in a warning",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0264",
+    "title" : "A document with no id, revision or title is a finding",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0265",
+    "title" : "Two documents with one id is a finding",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0266",
+    "title" : "Each clause of the cut's clause lists is an item after the scenarios",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0268",
+    "title" : "An audit tag in a document's frontmatter names nothing",
+    "context" : "compliance",
+    "component" : "Gap analysis",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0269",
+    "title" : "A source whose record is missing fails the check",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0270",
+    "title" : "A source with no repository fails the check",
+    "context" : "knowledge",
+    "component" : "Sources",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0271",
+    "title" : "A cycle scoped away from the compliance context carries no clause item",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0272",
+    "title" : "Init takes an absolute path as well as a relative one",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0273",
+    "title" : "The wiki's index is published with its footnotes linked, as a page is",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  } ],
+  "planned" : [ ]
+}
