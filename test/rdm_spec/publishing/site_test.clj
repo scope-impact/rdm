@@ -1,52 +1,64 @@
 (ns rdm-spec.publishing.site-test
-  (:require [babashka.fs :as fs]
+  (:require [clj-yaml.core :as yaml]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.publishing.site :as site]))
 
-(deftest text-is-escaped
-  (is (= "An outline over &lt;n&gt;" (site/esc "An outline over <n>")))
-  (is (= "a \\*b\\* \\_c\\_ \\`d\\`" (site/esc "a *b* _c_ `d`"))))
+(deftest prose-headings-sit-under-design
+  (is (= "### Title\n\nText\n\n#### Part" (site/shift-headings "# Title\n\nText\n\n## Part" 3)))
+  (is (= "### Part\n#### Sub" (site/shift-headings "## Part\n### Sub" 3)))
+  (testing "a heading in fenced code is left alone, and the shift is capped"
+    (is (= "### A\n```\n# not a heading\n```\n###### F" (site/shift-headings "# A\n```\n# not a heading\n```\n###### F" 3))))
+  (is (= "no heading" (site/shift-headings "no heading" 3))))
 
-(deftest status-is-shown-never-decided
-  (is (= "verified" (site/status-of {"spec-0001" :verified} {:id "spec-0001"})))
-  (is (= "planned" (site/status-of nil {:id "spec-0001" :wip? true})))
-  (is (= "not derived" (site/status-of nil {:id "spec-0001"}))))
+(deftest links-are-relative
+  (is (= "lint.md" (site/rel-link "architecture/index.md" "architecture/lint.md")))
+  (is (= "../views/a.svg" (site/rel-link "architecture/index.md" "views/a.svg")))
+  (is (= "wiki/index.md" (site/rel-link "index.md" "wiki/index.md"))))
 
-(def repos {"loyly" "https://github.com/skallinen/loyly"})
+(deftest footnotes-link-their-sources
+  (let [repos {"loyly" "https://github.com/skallinen/loyly"}
+        text "A claim.[^1]\n\n[^1]: `loyly:README.md@17d68d2`, \"What to steal\" 1.\n[^2]: `other:a.md@abcdef1`."]
+    (is (= (str "A claim.[^1]\n\n[^1]: [`loyly:README.md@17d68d2`](https://github.com/skallinen/loyly/blob/17d68d2/README.md),"
+                " \"What to steal\" 1.\n[^2]: `other:a.md@abcdef1`.")
+           (site/link-citations text repos)))
+    (is (str/includes? (site/link-citations "loyly:README.md@17d68d2 in the body" repos) "in the body"))
+    (is (= "https://github.com/o/r/blob/c/p.md" (site/source-url "o/r" "p.md" "c")))
+    (is (= "https://x.org/r/blob/c/p.md" (site/source-url "https://x.org/r.git" "p.md" "c")))))
 
-(deftest footnotes-link-their-citations
-  (is (= "[^1]: [`loyly:README.md@17d68d2`](https://github.com/skallinen/loyly/blob/17d68d2/README.md), \"x\" 1."
-         (site/link-footnotes repos "[^1]: `loyly:README.md@17d68d2`, \"x\" 1.")))
-  (testing "only footnote definitions, only known sources"
-    (is (= "See `loyly:README.md@17d68d2`." (site/link-footnotes repos "See `loyly:README.md@17d68d2`.")))
-    (is (= "[^2]: `other:a.md@abc1234`" (site/link-footnotes repos "[^2]: `other:a.md@abc1234`")))))
+(deftest the-status-note-follows-the-title
+  (is (= "# T\n\n> note\n\nbody" (site/with-note "# T\n\nbody" "> note")))
+  (is (= "> note\n\nbody" (site/with-note "body" "> note")))
+  (is (= "body" (site/with-note "body" nil))))
 
-(deftest the-builder-configuration-is-deterministic
-  (let [nav [["Home" "index.md"] ["spec" [["spec" "spec/index.md"] ["Parser" "spec/parser.md"]]]]
-        y (site/mkdocs-yml "Demo" "../site" nav)]
-    (is (= y (site/mkdocs-yml "Demo" "../site" nav)))
-    (is (str/includes? y "site_dir: \"../site\""))
-    (is (str/includes? y "  - \"spec\":\n      - \"spec\": \"spec/index.md\"\n      - \"Parser\": \"spec/parser.md\"\n"))))
+(deftest a-scenario-shows-its-status
+  (is (= "planned" (site/status-text {:id "spec-1" :wip? true} {"spec-1" :verified})))
+  (is (= "not derived" (site/status-text {:id "spec-1"} nil)))
+  (is (= "failed" (site/status-text {:id "spec-1"} {"spec-1" :failed})))
+  (let [md (site/scenario-md {:id "spec-7" :title "A <task> runs" :level :e2e :needs ["UN-001"]
+                              :steps [{:keyword "When" :text "\"rdm-spec <task>\" is run"}]}
+                             {"spec-7" :verified})]
+    (is (str/starts-with? md "### spec-7: A &lt;task> runs"))
+    (is (str/includes? md "`@e2e` · status: **verified** · needs: UN-001"))
+    (is (str/includes? md "```gherkin\nWhen \"rdm-spec <task>\" is run\n```"))))
 
-(deftest a-broken-link-names-the-page
-  (let [[f] (site/builder-findings "site-src/docs"
-                                   "WARNING -  Doc file 'architecture/lint.md' contains a link 'gone.md', but the target is not found among documentation files.")]
+(deftest the-builder-configuration-follows-the-model
+  (let [cfg (yaml/parse-string (site/builder-config {:site-name "Demo" :site-dir "../site"
+                                                     :nav [["Home" "index.md"]
+                                                           ["spec" [["spec" "spec/index.md"] ["Parser" "spec/parser.md"]]]]})
+                               :keywords false)]
+    (is (= "Demo" (get cfg "site_name")))
+    (is (= "../site" (get cfg "site_dir")))
+    (is (= [{"Home" "index.md"} {"spec" [{"spec" "spec/index.md"} {"Parser" "spec/parser.md"}]}] (get cfg "nav")))))
+
+(deftest a-failed-build-names-the-page-and-the-link
+  (let [out (str "INFO    -  Building documentation...\n"
+                 "WARNING -  Doc file 'architecture/lint.md' contains a link 'no-such-page.md', but the target "
+                 "'architecture/no-such-page.md' is not found among documentation files.\n"
+                 "Aborted with 1 warnings in strict mode!\n")
+        [f & more] (site/build-findings "site-src/docs" out 1)]
+    (is (nil? more))
     (is (= "site-src/docs/architecture/lint.md" (:file f)))
     (is (= "site-link-broken" (:rule f)))
-    (is (str/includes? (:message f) "gone.md"))))
-
-(deftest the-wiki-index-comes-first-then-its-order
-  (let [d (fs/create-temp-dir {:prefix "rdm-spec-site-test-"})]
-    (try
-      (spit (str (fs/file d "index.md")) "# W\n\n- [B](pages/b.md)\n- [A](pages/a.md)\n")
-      (fs/create-dirs (fs/file d "pages"))
-      (doseq [n ["a" "b" "c"]] (spit (str (fs/file d "pages" (str n ".md"))) (str "# " n "\n")))
-      (is (= ["index.md" "pages/b.md" "pages/a.md" "pages/c.md"] (map :rel (site/wiki-pages d))))
-      (finally (fs/delete-tree d)))))
-
-(deftest contexts-then-the-kernel
-  (let [m {:containers [{:contexts [{:id :spec :name "spec" :components [{:id :spec/parser :name "Parser" :spec "spec/parser"}]}]}]
-           :kernel [{:id :kernel/command :name "Command" :spec "kernel/command"}]}]
-    (is (= [["spec" ["spec/parser.md"]] ["kernel" ["kernel/command.md"]]]
-           (map (juxt :key #(map :page (:components %))) (site/contexts-of m))))))
+    (is (str/includes? (:message f) "no-such-page.md")))
+  (is (= ["site-build"] (map :rule (site/build-findings "d" "something broke" 2)))))

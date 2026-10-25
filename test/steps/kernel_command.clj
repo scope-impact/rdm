@@ -1,235 +1,251 @@
 (ns steps.kernel-command
-  "Step definitions for dhf/spec/kernel/command.feature, and the kernel's
-  shared steps: every step text the features of more than one bounded
-  context use (dhf/spec/README.md, \"Step definitions are the scope's own\").
+  "Step definitions for dhf/spec/kernel/command.feature, and every step text
+  the features of more than one bounded context share (dhf/spec/README.md,
+  \"Step definitions are the scope's own\"). Each is defined once, here, when
+  this file loads; another step file uses these steps and helpers, and reads
+  only the context keys named beside each shared step below (\"A shared
+  step's context keys are the kernel's\").
 
-  Running the command. `run!` and `run-line` run `rdm-spec` as its own
-  process (the implementation under test on its classpath) in the scenario's
-  project. Its environment is the tests' own, PATH and HOME included, except
-  RESULTS_DIR, plus what the scenario's steps set in the context's :env
-  ({name value}, a nil value unsetting the name): ORACLE_LAYOUT set by a step
-  reaches the command (dhf/spec/README.md, \"A scenario's commands inherit
-  the tests' environment\").
+  The command runs as its own process (`bb -cp <room>/src -m
+  rdm-spec.kernel.command ...`) in the scenario's project, never the room,
+  with the tests' environment, PATH and HOME included, except RESULTS_DIR,
+  plus what the scenario's steps set (:env).
 
-  Placeholders in a command line (dhf/spec/README.md, \"ROOM in a step is a
-  new directory the scenario makes for itself\"): a word the context's
-  :placeholders names stands for its path; else ROOM stands for the
-  context's :room, or a new path; DIR for the directory the option before it
-  takes (--results: :results, --sources: :sources-dir); OUT and OUT2 for new
-  paths; a placeholder may begin a path (DIR/sauna). Each path used is kept
-  in :placeholders, ROOM also as :room.
+  Context keys of the kernel (set by the shared steps, read by any step file):
+    :dir           the scenario's project: a fixture, never the room
+    :run           the last run, {:exit :out :err :args}
+    :env           {NAME value} the steps set for the command's environment
+    :placeholders  {\"DIR\" path, \"OUT\" path, ...} what each upper-case
+                   placeholder of a command line stood for
+    :room          what ROOM stood for: a new directory the scenario names
+    :results       a results directory a Given made (DIR in \"... is run with
+                   that results directory as DIR\")
+    :spec-before   {path text} of every file under the project's dhf/spec,
+                   as spec-snapshot takes it, before the When
+    :page :citation :footnote   the wiki page a shared Given wrote (path
+                   relative to the project), its one citation and footnote
+    :stack-word    the stack word a shared Given configured
 
-  The shared steps (each text owned here, defined once when this file
-  loads):
-    \"rdm-spec ...\" is run [with that results directory as DIR |
-      with that directory as DIR | with no --results]
-    it exits N / it passes
-    no file in the spec changes
-    the configured stack words include \"W\"
-    a copy of rdm-spec's own project in which the configured results
-      directory does not exist
-    a rendered view whose recorded hash differs from the model's
-    a wiki page whose footnote cites \"C\"
-    dhf/cycles/03/cycle.edn names the cut spec-3[ and the scope S]
-    the spec at cut spec-3 holds a scenario with no id
-  Some of these are also defined, with the same meaning, in the step files
-  of a context that used them first. The kernel owns them: a definition of
-  one of the kernel's step patterns from another file is dropped from the
-  registry (`own-shared-steps!`), so a step is never matched twice.
-
-  Context keys: :dir the project, :run the last run ({:exit :out :err
-  :args}), :env, :placeholders, :room, :results, :sources-dir."
+  Keys the kernel's steps read but never set: :sources-dir (DIR, for a
+  scenario whose Given gave checkouts with --sources)."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.gherkin :as gherkin]
-            [rdm-spec.kernel.runner :as runner :refer [defstep]]
+            [rdm-spec.kernel.runner :refer [defstep]]
             [steps.support :as s]))
 
 ;; ---------------------------------------------------------------------------
-;; Helpers (a contract for the step files that use them)
+;; Fixtures: every directory a step makes, removed when the suite ends
+
+;; One directory holds every fixture of the suite's process; it is removed
+;; when the process ends, whatever the outcome.
+(defonce ^:private suite-root
+  (delay
+    (let [d (str (fs/create-temp-dir {:prefix "rdm-spec-suite-"}))]
+      (.addShutdownHook (Runtime/getRuntime)
+                        (Thread. ^Runnable (fn [] (try (fs/delete-tree d) (catch Throwable _ nil)))))
+      d)))
 
 (defn tmp-dir
-  "A new temporary directory (a fixture; the suite removes it)."
+  "A new, empty directory for a fixture, inside the suite's own directory,
+  which is removed when the suite's process ends (a suite removes every
+  fixture it makes)."
   []
-  (s/tmp-dir))
+  (str (fs/create-temp-dir {:dir @suite-root :prefix "rdm-spec-test-"})))
 
-(defn the-run
-  "The scenario's last run, or a failure when no command was run."
-  [ctx]
-  (or (:run ctx) (s/fail! "no command was run")))
+;; steps.support/tmp-dir makes the other step files' fixtures: they go to the
+;; suite's directory too, so the suite removes them, even after the runner
+;; loads that file again.
+(def ^:private routed-tmp-dir (with-meta (fn [] (tmp-dir)) {::routed true}))
 
-(defn stdout-edn
-  "The run's standard output read as one EDN value, or nil."
-  [run]
-  (try (let [out (str/trim (str (:out run)))]
-         (when-not (str/blank? out) (edn/read-string out)))
-       (catch Exception _ nil)))
+(defn- route! [v] (alter-var-root v (constantly routed-tmp-dir)))
 
-(defn exits!
-  "Checks the last run exited `n`; returns the run."
-  [ctx n]
-  (let [r (the-run ctx)
-        n (if (string? n) (parse-long n) n)]
-    (s/check! (= n (:exit r)) (str "expected exit " n "\n" (s/show r)))
-    r))
-
-(defn refused-naming!
-  "Checks the last run could not run (exit 2), printed nothing on standard
-  output, and that its error stream names every one of `parts`."
-  [ctx & parts]
-  (let [r (exits! ctx 2)
-        err (str (:err r))]
-    (s/check! (str/blank? (:out r)) (str "a task that cannot run printed on standard output\n" (s/show r)))
-    (doseq [part parts]
-      (s/check! (str/includes? err (str part)) (str "the error stream does not name " (pr-str part) "\n" (s/show r))))
-    r))
+(add-watch #'s/tmp-dir ::route (fn [_ v _ now] (when-not (::routed (meta now)) (route! v))))
+(route! #'s/tmp-dir)
 
 (defn spec-snapshot
-  "{relative path content} of every file under dhf/spec of `dir`."
+  "{relative path text} of every file under dhf/spec of `dir`: the shape of
+  :spec-before."
   [dir]
   (into (sorted-map)
         (for [f (fs/glob (fs/file dir "dhf/spec") "**") :when (fs/regular-file? f)]
           [(str (fs/relativize dir f)) (slurp (str f))])))
 
-(defn command-env
-  "The environment a scenario's command runs with: the tests' own without
-  RESULTS_DIR, plus the context's :env (a nil value unsets the name)."
-  [ctx]
-  (reduce-kv (fn [m k v] (if (nil? v) (dissoc m k) (assoc m k (str v))))
-             (dissoc (into {} (System/getenv)) "RESULTS_DIR")
-             (or (:env ctx) {})))
+(defn config-of [dir] (edn/read-string (slurp (str (fs/file dir "dhf/harness/config.edn")))))
+
+(defn without-oracle!
+  "Drops :oracle from the configuration of the project `dir`: a fixture
+  never carries the room's oracle unless its scenario sets one."
+  [dir]
+  (let [f (fs/file dir "dhf/harness/config.edn")]
+    (when (fs/exists? f)
+      (let [text (slurp (str f))]
+        (when (:oracle (edn/read-string text))
+          (spit (str f) (str (pr-str (dissoc (edn/read-string text) :oracle)) "\n")))))
+    dir))
+
+(defn copy-of-room!
+  "A fixture holding a copy of the room's allow-listed paths (the spec, the
+  harness configuration, the raw sources, the wiki, the views, the ADR), its
+  configuration naming no :oracle."
+  []
+  (let [dir (tmp-dir)]
+    (doseq [a (get-in (s/room-config) [:clean-room :allow])
+            :let [src (fs/file s/room-root a)]
+            :when (fs/exists? src)]
+      (if (fs/directory? src)
+        (fs/copy-tree src (fs/file dir a))
+        (do (fs/create-dirs (fs/parent (fs/file dir a)))
+            (fs/copy src (fs/file dir a)))))
+    (without-oracle! dir)))
+
+;; ---------------------------------------------------------------------------
+;; Running the command
+
+(defn- command-env
+  "The tests' environment without RESULTS_DIR, plus `extra`."
+  [extra]
+  (merge (into {} (remove (fn [[k _]] (= "RESULTS_DIR" k))) (System/getenv))
+         extra))
 
 (defn run!
-  "Runs `rdm-spec args...` in `dir` with the scenario's environment:
-  {:exit :out :err :args}."
+  "Runs `rdm-spec args...` as its own process in `dir`: {:exit :out :err :args}."
   [ctx dir args]
-  (let [r (apply p/shell {:dir (str dir) :env (command-env ctx) :out :string :err :string
-                          :continue true :in ""}
+  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
+                          :env (command-env (:env ctx))}
                  s/bb "-cp" (str (fs/file s/room-root "src")) "-m" "rdm-spec.kernel.command" args)]
     {:exit (:exit r) :out (:out r) :err (:err r) :args (vec args)}))
 
-(defn split-line
-  "The words of a command line, as a shell splits them: quotes group words
-  and are removed."
-  [line]
-  (let [out (atom []) cur (StringBuilder.) quote (atom nil) any (atom false)]
-    (doseq [c (str line)]
-      (cond
-        @quote (if (= c @quote) (reset! quote nil) (.append cur c))
-        (#{\' \"} c) (do (reset! quote c) (reset! any true))
-        (Character/isWhitespace c) (when (or @any (pos? (.length cur)))
-                                     (swap! out conj (str cur)) (.setLength cur 0) (reset! any false))
-        :else (.append cur c)))
-    (when (or @any (pos? (.length cur))) (swap! out conj (str cur)))
-    @out))
+(def path-placeholder
+  "The upper-case words a command line uses as paths the scenario makes
+  (dhf/spec/README.md: ROOM, and any other upper-case path placeholder):
+  ROOM, DIR and OUT, each perhaps numbered (OUT2). Another upper-case word
+  (UN, as an id prefix) is itself."
+  #"(?:ROOM|DIR|OUT)\d*")
 
 (defn- placeholder
-  "The path `word` stands for in `ctx` (after the word `before`), and ctx
-  with it kept; nil when `word` is no placeholder."
-  [ctx word before]
-  (let [ph (:placeholders ctx)
-        keep* (fn [ctx v] [v (cond-> (assoc-in ctx [:placeholders word] v) (= "ROOM" word) (assoc :room v))])]
-    (cond
-      (contains? ph word) [(get ph word) ctx]
-      (= "ROOM" word) (keep* ctx (or (:room ctx) (str (fs/file (tmp-dir) "room"))))
-      (= "DIR" word) (let [v (case before
-                               "--results" (or (:results ctx) (:sources-dir ctx))
-                               "--sources" (or (:sources-dir ctx) (:results ctx))
-                               (or (:sources-dir ctx) (:results ctx)))]
-                       (s/check! v "no directory was given for DIR")
-                       (keep* ctx (str v)))
-      (#{"OUT" "OUT2"} word) (keep* ctx (str (fs/file (tmp-dir) (str/lower-case word))))
-      :else nil)))
+  "ctx with what the placeholder `ph` stands for in :placeholders."
+  [ctx ph]
+  (if (get-in ctx [:placeholders ph])
+    ctx
+    (let [v (case ph
+              "ROOM" (or (:room ctx) (str (fs/file (tmp-dir) "room")))
+              "DIR" (or (:results ctx) (:sources-dir ctx) (str (fs/file (tmp-dir) "dir")))
+              (str (fs/file (tmp-dir) (str/lower-case ph))))]
+      (cond-> (assoc-in ctx [:placeholders ph] v)
+        (= "ROOM" ph) (assoc :room v)))))
 
-(defn- substitute
-  "`word` with its placeholder replaced (a whole word, or the first part of
-  a path such as DIR/sauna), and ctx; nil when it holds none."
-  [ctx word before]
-  (or (placeholder ctx word before)
-      (let [[head more] (str/split word #"/" 2)]
-        (when (and more (re-matches #"[A-Z][A-Z0-9]*" head))
-          (when-let [[v ctx'] (placeholder ctx head before)]
-            [(str (fs/file v more)) ctx'])))))
+(defn- placeholder-of
+  "The placeholder `word` starts with (ROOM, or DIR in DIR/sauna), or nil."
+  [ctx word]
+  (let [[_ ph] (re-matches #"([A-Z][A-Z0-9]+)(?:/.*)?" word)]
+    (when (and ph (or (re-matches path-placeholder ph) (contains? (:placeholders ctx) ph))) ph)))
+
+(defn words-of
+  "The words of a command line, as a shell splits it: on white space, a
+  '...' or \"...\" being one word without its quotes."
+  [line]
+  (mapv (fn [[_ sq dq w]] (or sq dq w))
+        (re-seq #"'([^']*)'|\"([^\"]*)\"|(\S+)" (str line))))
 
 (defn run-line
-  "Runs the command line `line` (without \"rdm-spec\") in the scenario's
-  project, a copy of the room's allow-list when it has none, its
-  placeholders replaced: ctx with :dir and :run."
+  "Runs the command line `line` (the words after rdm-spec) in the scenario's
+  project (a copy of the room when no Given made one), each path placeholder
+  (ROOM, DIR, OUT, OUT2, or one :placeholders names) standing for what
+  :placeholders names, else a new path the scenario makes. Returns ctx with
+  :run."
   [ctx line]
-  (let [ctx (if (:dir ctx) ctx (assoc ctx :dir (s/copy-of-room!)))
-        words (split-line line)
-        [args ctx] (reduce (fn [[args ctx] [before word]]
-                             (if-let [[v ctx'] (substitute ctx word before)]
-                               [(conj args v) ctx']
-                               [(conj args word) ctx]))
-                           [[] ctx]
-                           (map vector (cons nil words) words))]
+  (let [ctx (if (:dir ctx) ctx (assoc ctx :dir (copy-of-room!)))
+        words (words-of line)
+        ctx (reduce placeholder ctx (keep #(placeholder-of ctx %) words))
+        args (mapv (fn [w] (if-let [ph (placeholder-of ctx w)]
+                             (str (get-in ctx [:placeholders ph]) (subs w (count ph)))
+                             w))
+                   words)]
     (assoc ctx :run (run! ctx (:dir ctx) args))))
 
-(defn err-text [run] (str (:err run)))
+(defn the-run
+  "The last run, or the step fails."
+  [ctx]
+  (or (:run ctx) (s/fail! "no command was run")))
+
+(defn exits!
+  "The last run, having exited `code`, or the step fails."
+  [ctx code]
+  (let [r (the-run ctx)]
+    (s/check! (= code (:exit r)) (str "expected exit " code "\n" (s/show r)))
+    r))
+
+(defn stdout-edn
+  "The run's standard output read as one EDN value, or the step fails."
+  [r]
+  (let [v (try (edn/read-string (:out r)) (catch Exception e (s/fail! (str "standard output is not EDN: " (ex-message e)
+                                                                           "\n" (s/show r)))))]
+    (s/check! (map? v) (str "standard output is not an EDN map\n" (s/show r)))
+    v))
+
+(defn cannot-run-lines [r] (filterv #(str/starts-with? % "cannot-run: ") (s/err-lines r)))
+
+(defn refused-naming!
+  "The last run exited 2, printed nothing on standard output and a
+  cannot-run line naming each of `words`; returns the run."
+  [ctx & words]
+  (let [r (exits! ctx 2)]
+    (s/check! (str/blank? (:out r)) (str "a task that cannot run printed on standard output\n" (s/show r)))
+    (s/check! (some (fn [l] (every? #(str/includes? l (str %)) words)) (cannot-run-lines r))
+              (str "no cannot-run line names " (str/join ", " words) "\n" (s/show r)))
+    r))
+
+(def ^:private event-line #"event: \S+ published-by \S+")
+
+(def finding-line
+  "FILE:LINE: RULE: what, FILE: RULE: what, RULE: what, a warning, or the
+  same with warning: before the rule."
+  #"(?:([^\s:][^:]*?)(?::(\d+))?: )?(?:warning: )?([a-z][a-z0-9]*(?:-[a-z0-9]+)*): \S.*")
+
+(defn finding-lines
+  "The run's finding lines: no warning, no event."
+  [r]
+  (vec (remove #(or (re-matches event-line %) (re-find #"(^|: )warning: " %)) (s/err-lines r))))
 
 ;; ---------------------------------------------------------------------------
-;; The kernel owns its shared steps
+;; Shared: the When. Sets :run, :dir (a copy of the room when no Given made
+;; a project), :placeholders and :room; reads :dir, :env, :placeholders,
+;; :room, :results and :sources-dir.
 
-(def ^:private this-file (str (fs/canonicalize (fs/file s/room-root "test/steps/kernel_command.clj"))))
-
-(def ^:private owned (atom #{}))
-
-(defmacro ^:private defshared
-  "defstep, for a step the kernel owns: a definition of the same pattern
-  from another step file is dropped."
-  [pattern f]
-  `(do (swap! owned conj (str ~pattern))
-       (runner/register! ~pattern ~f ~(str *file*) ~(:line (meta &form)))))
-
-(defn- drop-foreign
-  "The registry without other files' definitions of the kernel's patterns,
-  when the kernel defines them."
-  [defs]
-  (let [ours (set (for [d defs :when (= this-file (:file d))] (str (:pattern d))))]
-    (vec (remove #(and (not= this-file (:file %))
-                       (contains? @owned (str (:pattern %)))
-                       (contains? ours (str (:pattern %))))
-                 defs))))
-
-(defn- own-shared-steps!
-  "Keeps the registry free of other files' definitions of the kernel's
-  patterns, now and as later step files load."
-  []
-  (add-watch runner/*registry* ::kernel-owns
-             (fn [_ reg old new]
-               (when (not= old new)
-                 (let [kept (drop-foreign new)]
-                   (when (not= (count kept) (count new))
-                     (reset! reg kept))))))
-  (swap! runner/*registry* drop-foreign))
-
-;; ---------------------------------------------------------------------------
-;; Shared Whens
-
-(defshared #"\"rdm-spec ([^\"]*)\" is run(?: with that (?:results )?directory as DIR)?"
+(defstep #"\"rdm-spec ([^\"]*)\" is run"
   (fn [ctx line] (run-line ctx line)))
 
-(defshared #"\"rdm-spec ([^\"]*)\" is run with no --results"
+(defstep #"\"rdm-spec ([^\"]*)\" is run with no --results"
   (fn [ctx line]
-    (s/check! (not (re-find #"--results" line)) "the command line gives --results")
-    (run-line (assoc-in ctx [:env "RESULTS_DIR"] nil) line)))
+    (s/check! (not (str/includes? line "--results")) (str "the command line gives --results: " line))
+    (run-line ctx line)))
+
+(defstep #"\"rdm-spec ([^\"]*)\" is run with that (results )?directory as DIR"
+  (fn [ctx line results?]
+    (let [dir (if results? (:results ctx) (or (:results ctx) (:sources-dir ctx)))]
+      (s/check! dir "no Given made the directory DIR stands for")
+      (run-line (assoc-in ctx [:placeholders "DIR"] dir) line))))
 
 ;; ---------------------------------------------------------------------------
-;; Shared Thens
+;; Shared: what a run did. Read :run; set nothing.
 
-(defshared #"it exits (\d+)"
-  (fn [ctx n] (exits! ctx n) nil))
+(defstep #"it exits (\d)"
+  (fn [ctx code] (exits! ctx (parse-long code)) nil))
 
-(defshared #"it exits 2 and names (\S+)"
-  (fn [ctx what] (refused-naming! ctx what) nil))
+(defstep #"it exits 2 and names (\S+)"
+  (fn [ctx word] (refused-naming! ctx word) nil))
 
-(defshared #"it passes"
-  (fn [ctx] (exits! ctx 0) nil))
+(defstep #"it passes"
+  (fn [ctx]
+    (let [r (exits! ctx 0)]
+      (s/check! (empty? (finding-lines r)) (str "a passing run named a finding\n" (s/show r)))
+      nil)))
 
-(defshared #"no file in the spec changes"
+;; Shared: reads :dir and :spec-before, which the scenario's Given set as
+;; spec-snapshot takes it.
+(defstep #"no file in the spec changes"
   (fn [ctx]
     (s/check! (:spec-before ctx) "no snapshot of the spec was taken")
     (s/check! (= (:spec-before ctx) (spec-snapshot (:dir ctx))) "a file under dhf/spec changed")
@@ -238,309 +254,198 @@
 ;; ---------------------------------------------------------------------------
 ;; Shared Givens
 
-(defn- config-of [dir] (edn/read-string (slurp (str (fs/file dir "dhf/harness/config.edn")))))
+(defn- results-dir-of [dir] (:results-dir (config-of dir)))
 
-(defn- write-config! [dir c] (spit (str (fs/file dir "dhf/harness/config.edn")) (pr-str c)))
+;; Sets :dir: a copy of the room whose configured results directory is gone.
+(defstep #"a copy of rdm-spec's own project in which the configured results directory does not exist"
+  (fn [ctx]
+    (let [dir (copy-of-room!)
+          rd (fs/file dir (results-dir-of dir))]
+      (when (fs/exists? rd) (fs/delete-tree rd))
+      (s/check! (not (fs/exists? rd)) "the results directory exists")
+      (assoc ctx :dir dir))))
 
-(defshared #"the configured stack words include \"([^\"]+)\""
+(defn wiki-page!
+  "Writes a wiki page into the project of ctx (a copy of the room when it
+  has none), listed in the wiki's index, its one footnote citing
+  `citation`: ctx with :dir, :page, :citation and :footnote."
+  [ctx citation]
+  (let [ctx (if (:dir ctx) ctx (assoc ctx :dir (copy-of-room!)))
+        dir (:dir ctx)
+        wiki (or (:wiki-dir (config-of dir)) "dhf/wiki")
+        rel "pages/footnoted.md"
+        index (fs/file dir wiki "index.md")]
+    (s/write! dir (str wiki "/" rel)
+              (str "# A footnoted page\n\n"
+                   "The code is built from the spec, and can be deleted and built again.[^1]\n\n"
+                   "[^1]: `" citation "`, \"What to steal\" 1.\n"))
+    (if (fs/exists? index)
+      (spit (str index) (str "\n- [A footnoted page](" rel ")\n") :append true)
+      (s/write! dir (str wiki "/index.md") (str "# Wiki\n\n- [A footnoted page](" rel ")\n")))
+    (assoc ctx :page (str wiki "/" rel) :citation citation :footnote "[^1]")))
+
+;; Sets :dir (kept when a Given made one), :page, :citation, :footnote.
+(defstep #"a wiki page whose footnote cites \"([^\"]+)\""
+  (fn [ctx citation] (wiki-page! ctx citation)))
+
+;; Sets :dir (kept when a Given made one) and :stack-word.
+(defstep #"the configured stack words include \"([^\"]+)\""
   (fn [ctx word]
-    (let [ctx (assoc ctx :dir (or (:dir ctx) (s/copy-of-room!)))
+    (let [ctx (if (:dir ctx) ctx (assoc ctx :dir (copy-of-room!)))
           c (config-of (:dir ctx))]
-      (write-config! (:dir ctx) (update c :stack-words #(vec (distinct (conj (vec %) word)))))
+      (s/write! (:dir ctx) "dhf/harness/config.edn"
+                (str (pr-str (update c :stack-words #(vec (distinct (conj (vec %) word))))) "\n"))
       (assoc ctx :stack-word word))))
 
-(defshared #"a copy of rdm-spec's own project in which the configured results directory does not exist"
-  (fn [ctx]
-    (let [dir (s/copy-of-room!)
-          rd (:results-dir (config-of dir))]
-      (s/check! rd "the configuration names no results directory")
-      (fs/delete-tree (fs/file dir rd))
-      (-> ctx
-          (assoc :dir dir :missing-results rd)
-          (assoc-in [:env "RESULTS_DIR"] nil)))))
-
-(defshared #"a rendered view whose recorded hash differs from the model's"
-  (fn [ctx]
-    (let [dir (or (:dir ctx) (s/copy-of-room!))
-          _ (when (s/built? 'rdm-spec.architecture.views)
-              (let [r (run! ctx dir ["views"])]
-                (s/check! (zero? (:exit r)) (str "rdm-spec views failed\n" (s/show r)))))
-          k "containers"
-          other (apply str (repeat 64 "0"))
-          vd (fs/file dir (or (:views-dir (config-of dir)) "dhf/views"))]
-      (doseq [ext ["mmd" "svg"]
-              :let [f (str (fs/file vd (str k "." ext)))
-                    [first-line & more] (str/split-lines (slurp f))
-                    changed (str/replace first-line #"model-sha256: [0-9a-f]{64}" (str "model-sha256: " other))]]
-        (s/check! (not= first-line changed) (str f " records no model hash: " first-line))
-        (spit f (str (str/join "\n" (cons changed more)) "\n")))
-      (assoc ctx :dir dir :stale-view k))))
-
-(def ^:private footnoted
-  "A paragraph a wiki page footnotes."
-  "The code is built from the spec, and can be deleted and built again.")
-
-(defshared #"a wiki page whose footnote cites \"([^\"]+)\""
-  (fn [ctx citation]
-    (let [dir (or (:dir ctx) (s/copy-of-room!))
-          wd (or (:wiki-dir (config-of dir)) "dhf/wiki")
-          rel "pages/regeneration.md"
-          index (fs/file dir wd "index.md")]
-      (s/write! dir (str wd "/" rel)
-                (str "# Regeneration\n\n" footnoted "[^1]\n\n[^1]: `" citation "`, \"What to steal\" 1.\n"))
-      (if (fs/regular-file? index)
-        (spit (str index) (str "\n- [Regeneration](" rel "): what a regeneration measures.\n") :append true)
-        (s/write! dir (str wd "/index.md") (str "# The wiki\n\n- [Regeneration](" rel ")\n")))
-      (assoc ctx :dir dir :page (str wd "/" rel) :wiki-file rel :citation citation :footnote "[^1]"))))
-
-;; A cycle project (the measurement and ratification contexts' features): a
-;; throwaway git repository holding a copy of the room's allow-list with every
-;; feature file removed and the fixture's own written instead; its tag spec-3
-;; is the cut, and dhf/cycles/03/cycle.edn is written after the cut.
-
-(def ^:private lint-feature "dhf/spec/architecture/lint.feature")
-
-(def ^:private default-scenarios
-  [{:id "spec-0012" :title "A view with no description fails the lint"}
-   {:id "spec-0014" :title "A view over the limit fails the lint" :level "contract"}
-   {:id "spec-0013" :title "A component that owns no feature file fails the lint" :wip? true}])
-
-(def ^:private default-cycle
-  {:cut "spec-3"
-   :scope :project
-   :builder {:name "builder-a" :actor :agent}
-   :grader {:name "grader-b" :actor :agent}
-   :spec-owner {:name "Sami" :actor :human}})
-
-(defn- scenario-text [{:keys [id title level wip? no-id?]}]
-  (str "\n  " (str/join " " (remove nil? [(when-not no-id? (str "@" id)) (str "@" (or level "e2e")) (when wip? "@wip")]))
-       "\n  Scenario: " title
-       "\n    Given a model\n    When \"rdm-spec check\" is run\n    Then it passes\n"))
-
-(defn- feature-text [scenarios]
-  (str "# A fixture feature file of the measurement steps.\n\n@UN-005\nFeature: Lint\n  A fixture.\n"
-       (str/join (map scenario-text scenarios))))
-
-(defn- git! [dir & args]
-  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
-                          :extra-env {"GIT_AUTHOR_NAME" "steps" "GIT_AUTHOR_EMAIL" "steps@rdm-spec.invalid"
-                                      "GIT_COMMITTER_NAME" "steps" "GIT_COMMITTER_EMAIL" "steps@rdm-spec.invalid"}}
-                 "git" args)]
-    (s/check! (zero? (:exit r)) (str "git " (str/join " " args) " failed in " dir ": " (:err r)))
-    (str/trim (:out r))))
-
-(defn- cut! [dir tag]
-  (when-not (fs/exists? (fs/file dir ".git"))
-    (git! dir "init" "-q")
-    (git! dir "config" "user.name" "steps")
-    (git! dir "config" "user.email" "steps@rdm-spec.invalid"))
-  (git! dir "add" "-A" "--" "." ":(exclude)dhf/cycles")
-  (git! dir "commit" "-q" "--allow-empty" "-m" (str "the cut " tag))
-  (git! dir "tag" "-f" tag)
-  dir)
-
-(defn- write-cycle! [dir cycle overrides]
-  (let [m (reduce-kv (fn [m k v] (if (nil? v) (dissoc m k) (assoc m k v))) default-cycle overrides)]
-    (s/write! dir (str "dhf/cycles/" cycle "/cycle.edn") (pr-str m))
-    m))
-
-(defn- cycle-project! [text]
-  (let [dir (s/copy-of-room!)]
-    (doseq [f (fs/glob (fs/file dir "dhf/spec") "**.feature")] (fs/delete f))
-    (s/write! dir lint-feature text)
-    dir))
-
-(defn- small-room! []
-  (let [r (tmp-dir)]
-    (s/write! r "src/rdm_spec/demo.clj" "(ns rdm-spec.demo)\n")
-    (s/write! r "test.clj" "(System/exit 0)\n")
-    r))
-
-(defshared #"dhf/cycles/03/cycle\.edn names the cut spec-3(?: and the scope (.+))?"
-  (fn [ctx scope]
-    (let [ctx (if (:dir ctx)
-                ctx
-                (let [dir (cycle-project! (feature-text default-scenarios))]
-                  (cut! dir "spec-3")
-                  (assoc ctx :dir dir)))]
-      (write-cycle! (:dir ctx) "03" (if scope {:scope (edn/read-string scope)} {}))
-      (assoc ctx :room (or (:room ctx) (small-room!)) :cycle "03"))))
-
-(defshared #"the spec at cut spec-3 holds a scenario with no id"
-  (fn [ctx]
-    (let [scs (conj (vec (remove :wip? default-scenarios))
-                    {:no-id? true :title "A scenario nobody stamped"})
-          text (feature-text scs)
-          dir (cycle-project! text)
-          line (some (fn [[i l]] (when (str/starts-with? (str/trim l) "Scenario: A scenario nobody stamped") (inc i)))
-                     (map-indexed vector (str/split-lines text)))]
-      (cut! dir "spec-3")
-      (write-cycle! dir "03" {})
-      (assoc ctx :dir dir :room (small-room!) :cycle "03"
-             :unstamped {:file lint-feature :line line}))))
-
-;; ---------------------------------------------------------------------------
-;; dhf/spec/kernel/command.feature
-
-(defn task-table
-  "The task table as the spec lists it: [{:task :usage :does}] from the
-  examples of command.feature's @spec-0176."
-  []
-  (let [f (str (fs/file s/room-root "dhf/spec/kernel/command.feature"))
-        sc (first (filter #(some #{"@spec-0176"} (:tags %))
-                          (:scenarios (gherkin/parse-feature "command.feature" (slurp f)))))]
-    (vec (for [c (gherkin/expand sc)
-               :let [v (get-in c [:example :values])]]
-           {:task (get v "task") :usage (get v "usage") :does (get v "does")}))))
+;; Sets :dir: a project `rdm-spec init` wrote.
+(defn project-set-up!
+  "ctx with :dir, a new project `rdm-spec init` wrote."
+  [ctx]
+  (let [parent (tmp-dir)
+        r (run! ctx parent ["init" "project"])]
+    (s/check! (zero? (:exit r)) (str "rdm-spec init failed\n" (s/show r)))
+    (assoc ctx :dir (str (fs/file parent "project")))))
 
 (defstep #"a project set up by rdm-spec"
-  (fn [ctx]
-    (let [parent (tmp-dir)
-          r (run! ctx parent ["init" "project"])]
-      (s/check! (zero? (:exit r)) (str "rdm-spec init failed\n" (s/show r)))
-      (assoc ctx :dir (str (fs/file parent "project"))))))
+  (fn [ctx] (project-set-up! ctx)))
+
+;; ---------------------------------------------------------------------------
+;; dhf/spec/kernel/command.feature: everything runs through one command
 
 (defstep #"it lists the task (\S+) with its usage (.+), described as (.+)"
   (fn [ctx task usage does]
     (let [r (exits! ctx 0)
           tasks (:tasks (stdout-edn r))
           t (first (filter #(= task (:task %)) tasks))]
-      (s/check! (seq tasks) (str "help printed no :tasks\n" (s/show r)))
-      (s/check! t (str "help lists no task " task "\n" (s/show r)))
-      (s/check! (= usage (:usage t)) (str "the usage of " task " is " (pr-str (:usage t))))
-      (s/check! (= does (:does t)) (str task " is described as " (pr-str (:does t))))
+      (s/check! (vector? tasks) (str "the result holds no :tasks\n" (s/show r)))
+      (s/check! t (str "help does not list " task "\n" (s/show r)))
+      (s/check! (= (str/trim usage) (:usage t)) (str task "'s usage is " (pr-str (:usage t))))
+      (s/check! (= (str/trim does) (:does t)) (str task " is described as " (pr-str (:does t))))
       nil)))
 
-;; The results directory
-
-(defn- result-json
-  "An Allure result labelled spec=`id`, passed."
-  [id]
-  (str "{\"uuid\":\"" (java.util.UUID/randomUUID) "\",\"name\":\"a result\",\"status\":\"passed\","
-       "\"labels\":[{\"name\":\"spec\",\"value\":\"" id "\"}],\"steps\":[]}"))
-
-(defn- results-in! [dir]
-  (s/write! dir (str (java.util.UUID/randomUUID) "-result.json") (result-json "spec-0177"))
-  (str dir))
+(defn- result-file! [dir id]
+  (let [uuid (str (random-uuid))]
+    (s/write! dir (str uuid "-result.json")
+              (str "{\"uuid\":\"" uuid "\",\"name\":\"a test\",\"status\":\"passed\","
+                   "\"labels\":[{\"name\":\"spec\",\"value\":\"" id "\"}]}"))))
 
 (defstep #"the configured results directory is (\S+)"
-  (fn [ctx rd]
-    (let [dir (s/copy-of-room!)]
-      (write-config! dir (assoc (config-of dir) :results-dir rd))
-      (results-in! (fs/file dir rd))
-      (results-in! (fs/file dir "other"))
-      (-> ctx
-          (assoc :dir dir)
-          (assoc-in [:env "RESULTS_DIR"] nil)))))
+  (fn [ctx rel]
+    (let [dir (copy-of-room!)]
+      (s/check! (= rel (results-dir-of dir)) (str "the configured results directory is " (results-dir-of dir)))
+      ;; every directory a row may read holds a result, so the task reads it
+      (doseq [d [rel "R1" "other"]] (result-file! (fs/file dir d) "spec-0001"))
+      (assoc ctx :dir dir))))
 
 (defstep #"the environment variable RESULTS_DIR is (\S+)"
   (fn [ctx v]
     (if (= "unset" v)
-      (assoc-in ctx [:env "RESULTS_DIR"] nil)
-      (let [d (results-in! (fs/file (tmp-dir) v))]
-        (-> ctx
-            (assoc-in [:placeholders v] d)
-            (assoc-in [:env "RESULTS_DIR"] d))))))
+      (update ctx :env dissoc "RESULTS_DIR")
+      (assoc-in ctx [:env "RESULTS_DIR"] v))))
 
 (defstep #"it reads (\S+)"
-  (fn [ctx want]
+  (fn [ctx dir]
     (let [r (exits! ctx 0)
-          want (get-in ctx [:placeholders want] want)
-          got (:results (stdout-edn r))]
-      (s/check! (= want got) (str "it read " (pr-str got) ", not " (pr-str want) "\n" (s/show r)))
+          out (stdout-edn r)]
+      (s/check! (= dir (:results out)) (str "it read " (pr-str (:results out)) ", not " dir "\n" (s/show r)))
       nil)))
 
-(defstep #"it exits 2 and names the missing directory"
-  (fn [ctx]
-    (refused-naming! ctx (or (:missing-results ctx) (s/fail! "no directory was removed")))
-    nil))
-
-;; A gate stops the task; every task reports the same way
-
-(defn- views! [ctx dir]
-  (let [r (run! ctx dir ["views"])]
-    (s/check! (zero? (:exit r)) (str "rdm-spec views failed\n" (s/show r)))))
-
-(def ^:private unlevelled
-  "The scenario whose level the fixtures remove, and its feature file."
-  {:file "dhf/spec/kernel/command.feature" :id "@spec-0177"})
+;; ---------------------------------------------------------------------------
+;; A gate stops the task; every other stage reports
 
 (defn- drop-level!
-  "Removes the level of one scenario of the project's spec; ctx with
-  :unlevelled {:file :line}."
-  [ctx]
-  (let [{:keys [file id]} unlevelled
-        f (fs/file (:dir ctx) file)
+  "Removes the level tag of the first scenario of kernel/command.feature in
+  `dir`: {:file :line} of that scenario."
+  [dir]
+  (let [rel "dhf/spec/kernel/command.feature"
+        f (fs/file dir rel)
         lines (str/split-lines (slurp (str f)))
-        i (first (keep-indexed (fn [i l] (when (str/includes? l (str id " @contract")) i)) lines))]
-    (s/check! i (str "no scenario " id " with a level in " file))
-    (spit (str f) (str (str/join "\n" (update lines i #(str/replace % (str id " @contract") id))) "\n"))
-    (assoc ctx :unlevelled {:file file :line (+ i 2)})))
+        i (first (keep-indexed (fn [i l] (when (re-find #"^\s*@spec-\d+ @(e2e|contract)\s*$" l) i)) lines))
+        _ (s/check! i (str rel " holds no tag line with a level"))
+        changed (assoc (vec lines) i (str/replace (nth lines i) #" @(e2e|contract)" ""))]
+    (spit (str f) (str (str/join "\n" changed) "\n"))
+    {:file rel :line (+ i 2)}))
+
+(defn- stale-view!
+  "Makes the view containers record another model hash in `dir`: its path."
+  [dir]
+  (let [rel (str (or (:views-dir (config-of dir)) "dhf/views") "/containers.mmd")
+        f (fs/file dir rel)
+        text (slurp (str f))
+        changed (str/replace-first text #"model-sha256: [0-9a-f]{64}" (str "model-sha256: " (apply str (repeat 64 "0"))))]
+    (s/check! (not= text changed) (str rel " records no model hash"))
+    (spit (str f) changed)
+    rel))
 
 (defstep #"a project whose spec has a scenario with no level and a view older than the model"
   (fn [ctx]
-    (let [dir (s/copy-of-room!)
-          ctx (assoc ctx :dir dir)]
-      (views! ctx dir)
-      (let [m (fs/file dir (:model (config-of dir)))
-            text (slurp (str m))]
-        (spit (str m) (str/replace-first text #":description \"" ":description \"Changed. ")))
-      (drop-level! ctx))))
+    (let [dir (copy-of-room!)
+          {:keys [file line]} (drop-level! dir)]
+      (assoc ctx :dir dir :no-level [file line] :stale (stale-view! dir)))))
 
 (defstep #"it exits 1 and names both the missing level and the stale view"
   (fn [ctx]
     (let [r (exits! ctx 1)
-          lines (s/err-lines r)
-          {:keys [file line]} (:unlevelled ctx)]
+          [file line] (:no-level ctx)
+          lines (finding-lines r)]
       (s/check! (some #(str/starts-with? % (str file ":" line ": scenario-no-level: ")) lines)
-                (str "no scenario-no-level finding at " file ":" line "\n" (s/show r)))
-      (s/check! (some #(re-find #": view-stale: " %) lines) (str "no view-stale finding\n" (s/show r)))
+                (str "no finding names the missing level at " file ":" line "\n" (s/show r)))
+      (s/check! (some #(and (str/includes? % ": view-stale: ") (str/includes? % (:stale ctx))) lines)
+                (str "no finding names the stale view " (:stale ctx) "\n" (s/show r)))
       nil)))
+
+;; ---------------------------------------------------------------------------
+;; Every task reports the same way
 
 (defstep #"a spec that passes every check"
   (fn [ctx]
-    (let [dir (s/copy-of-room!)
-          ctx (assoc ctx :dir dir)]
-      (views! ctx dir)
+    (let [ctx (project-set-up! ctx)
+          v (run! ctx (:dir ctx) ["views"])]
+      (s/check! (zero? (:exit v)) (str "rdm-spec views failed\n" (s/show v)))
       ctx)))
 
 (defstep #"a feature file in which one scenario carries no level tag"
   (fn [ctx]
-    (let [dir (s/copy-of-room!)
-          ctx (assoc ctx :dir dir)]
-      (views! ctx dir)
-      (drop-level! ctx))))
-
-(def ^:private finding-line
-  #"(?:[^\s:][^:]*?(?::\d+)?: )?(?:warning: )?[a-z0-9]+(?:-[a-z0-9]+)*: \S.*")
+    (let [dir (copy-of-room!)
+          {:keys [file line]} (drop-level! dir)]
+      (assoc ctx :dir dir :no-level [file line]))))
 
 (defstep #"the error stream holds one line per finding: \"FILE:LINE: RULE: what is wrong\", FILE and LINE left out where none applies"
   (fn [ctx]
     (let [r (the-run ctx)
-          lines (remove #(str/starts-with? % "event: ") (s/err-lines r))
-          {:keys [file line]} (:unlevelled ctx)]
+          [file line] (:no-level ctx)
+          lines (remove #(re-matches event-line %) (s/err-lines r))]
+      (s/check! (seq lines) (str "the error stream is empty\n" (s/show r)))
       (doseq [l lines]
-        (s/check! (re-matches finding-line l) (str "not a finding line: " (pr-str l) "\n" (s/show r))))
+        (s/check! (re-matches finding-line l) (str "not a finding line: " l "\n" (s/show r))))
       (s/check! (= 1 (count (filter #(str/starts-with? % (str file ":" line ": scenario-no-level: ")) lines)))
-                (str "not one line for the scenario with no level at " file ":" line "\n" (s/show r)))
+                (str "not exactly one line names the missing level at " file ":" line "\n" (s/show r)))
       nil)))
 
 (defstep #"the standard output holds only the task's result, as EDN"
   (fn [ctx]
     (let [r (the-run ctx)
-          rdr (java.io.PushbackReader. (java.io.StringReader. (str (:out r))))
-          v (try (edn/read {:eof ::eof} rdr) (catch Exception e (s/fail! (str "standard output is not EDN: " (ex-message e)))))
-          more (try (edn/read {:eof ::eof} rdr) (catch Exception _ ::bad))]
-      (s/check! (map? v) (str "standard output holds no EDN map\n" (s/show r)))
-      (s/check! (= ::eof more) (str "standard output holds more than the result\n" (s/show r)))
+          v (stdout-edn r)
+          rest-text (try (let [rdr (java.io.PushbackReader. (java.io.StringReader. (:out r)))]
+                           (edn/read rdr)
+                           (edn/read {:eof ::eof} rdr))
+                         (catch Exception e e))]
+      (s/check! (map? v) "standard output is not a map")
+      (s/check! (= ::eof rest-text) (str "standard output holds more than one value\n" (s/show r)))
       nil)))
 
-(defstep #"it exits 2, names (\S+), and lists every task"
-  (fn [ctx task]
-    (let [r (refused-naming! ctx task)]
-      (doseq [{t :task} (task-table)]
-        (s/check! (re-find (re-pattern (str "\\b" t "\\b")) (str (:err r)))
-                  (str "the error stream does not list the task " t "\n" (s/show r))))
-      nil)))
+(defstep #"it exits 2 and names the missing directory"
+  (fn [ctx] (refused-naming! ctx (results-dir-of (:dir ctx))) nil))
 
-(own-shared-steps!)
+(def task-names
+  ["help" "init" "adopt" "stamp" "check" "views" "cut" "scopes" "fence" "run" "ratify" "checklist"
+   "status" "trace" "release" "score" "scoreboard" "oracle" "publish" "audit"])
+
+(defstep #"it exits 2, names frobnicate, and lists every task"
+  (fn [ctx]
+    (let [r (refused-naming! ctx "frobnicate")
+          line (first (filter #(str/includes? % "frobnicate") (cannot-run-lines r)))]
+      (doseq [t task-names]
+        (s/check! (re-find (re-pattern (str "\\b" t "\\b")) (str/replace line "frobnicate" ""))
+                  (str "the refusal does not list " t ": " line)))
+      nil)))

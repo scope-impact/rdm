@@ -1,163 +1,200 @@
 (ns steps.compliance-support
-  "Fixtures the compliance steps share. No step is defined here.
+  "Fixtures the compliance steps share (dhf/spec/compliance/gap.feature and
+  audit.feature), and the one step text both features use.
 
-  \"A regulated project\" (dhf/spec/compliance/gap.feature): a project set up
-  by rdm-spec (`rdm-spec init`) whose configuration holds :regulated with the
-  one clause list dhf/clauses/std.txt and the documents directory
-  dhf/documents; by default the list holds STD:5.1 and dhf/documents/plan.md,
-  with an id, a revision and a title, names it in an audit tag.
+  A regulated project (gap.feature's header): a project set up by `rdm-spec
+  init` whose configuration holds :regulated with the one clause list
+  dhf/clauses/std.txt and the documents directory dhf/documents. By default
+  std.txt holds \"STD:5.1 Development plan\" and dhf/documents/plan.md, with
+  an id, a revision and a title, names it on line 8.
 
-  \"A releasable regulated project\" (dhf/spec/compliance/audit.feature): a
-  regulated project whose own spec (one need, two stamped scenarios) has a
-  passing result for every scenario in its configured results directory, and
-  whose every clause is named, committed.
+  A releasable regulated project (audit.feature): a regulated project with
+  its own spec (one component demo/plan, one need UN-001, two stamped
+  scenarios), a passing result for each in a results directory outside the
+  project (RESULTS_DIR, set for the scenario's commands), everything
+  committed.
 
-  Every directory is made with steps.kernel-command/tmp-dir, so the run
-  removes it."
+  Every directory made here is removed when the suite ends.
+
+  Context keys set here: :dir (the project, as the kernel's), :env
+  RESULTS_DIR, :placeholders OUT and OUT2 (new paths under a directory made
+  here), :results-dir."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.string :as str]
+            [rdm-spec.kernel.runner :refer [defstep]]
             [steps.kernel-command :as kc]
             [steps.support :as s]))
 
-(def config-rel "dhf/harness/config.edn")
-(def std "dhf/clauses/std.txt")
-(def plan "dhf/documents/plan.md")
-(def results-rel "dhf/allure-results")
+;; ---------------------------------------------------------------------------
+;; Fixtures, removed when the suite ends
 
-(defn document
-  "A document's text: frontmatter of the [key value] pairs `front`, then
-  `body`."
-  [front body]
-  (str "---\n" (str/join (for [[k v] front] (str k ": " v "\n"))) "---\n\n" body))
+(defonce ^:private made (atom []))
 
-(def plan-front [["id" "PLAN-001"] ["revision" "1"] ["title" "Development plan"]])
+(defonce ^:private cleanup
+  (.addShutdownHook (Runtime/getRuntime)
+                    (Thread. ^Runnable (fn [] (doseq [d @made] (try (fs/delete-tree d) (catch Exception _ nil)))))))
 
-(defn plan-doc
-  "dhf/documents/plan.md's text with `body` (lines) under the default
-  frontmatter, so its first body line is line 7."
-  [& body-lines]
-  (document plan-front (str (str/join "\n" body-lines) "\n")))
+(defn tmp-dir
+  "A new temporary directory, removed when the suite ends."
+  []
+  (let [d (str (fs/create-temp-dir {:prefix "rdm-spec-compliance-"}))]
+    (swap! made conj d)
+    d))
 
-(def plan-body-start
-  "The line of plan-doc's first body line."
-  7)
+(defn write! [dir rel text] (s/write! dir rel text))
 
-(defn config-of [dir] (edn/read-string (slurp (str (fs/file dir config-rel)))))
+(defn read-config [dir] (edn/read-string (slurp (str (fs/file dir "dhf/harness/config.edn")))))
 
-(defn config! [dir f] (s/write! dir config-rel (pr-str (f (config-of dir)))))
+(defn write-config! [dir c] (spit (str (fs/file dir "dhf/harness/config.edn")) (pr-str c)))
 
-(defn write! [ctx rel text] (s/write! (:dir ctx) rel text) ctx)
+(defn git!
+  "Runs git in `dir`; the step fails when it does."
+  [dir & args]
+  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""}
+                 "git" "-c" "user.name=steps" "-c" "user.email=steps@rdm-spec.invalid"
+                 "-c" "commit.gpgsign=false" args)]
+    (s/check! (zero? (:exit r)) (str "git " (str/join " " args) " failed in " dir ": " (:err r)))
+    (str/trim (:out r))))
 
-(defn initialised!
-  "A project set up by rdm-spec: ctx with :dir."
+(defn commit-all!
+  "Commits everything in the project, the hook off (no installed rdm-spec runs)."
+  [dir]
+  (git! dir "add" "-A")
+  (git! dir "commit" "-q" "--no-verify" "--allow-empty" "-m" "fixture")
+  dir)
+
+(defn init-project!
+  "A project set up by rdm-spec: `rdm-spec init` in a new directory."
   [ctx]
-  (let [parent (kc/tmp-dir)
+  (let [parent (tmp-dir)
         r (kc/run! ctx parent ["init" "project"])]
     (s/check! (zero? (:exit r)) (str "rdm-spec init failed\n" (s/show r)))
-    (assoc ctx :dir (str (fs/file parent "project")))))
+    (str (fs/file parent "project"))))
+
+(defn document
+  "A controlled document: frontmatter `front` ([[k v] ...], in order), a
+  blank line, then `body` lines. With the three fields, the body starts on
+  line 7."
+  [front body]
+  (str "---\n" (str/join (for [[k v] front] (str k ": " v "\n"))) "---\n\n"
+       (str/join (map #(str % "\n") body))))
+
+(defn plan
+  "dhf/documents/plan.md with the id PLAN-001, the revision 1 and the title
+  \"Development plan\", and `body`."
+  [body]
+  (document [["id" "PLAN-001"] ["revision" "1"] ["title" "Development plan"]] body))
+
+(def default-plan
+  "Names STD:5.1 on line 8."
+  (plan ["# Plan" "We plan the work [[STD:5.1]]."]))
 
 (defn regulated!
+  "Makes the project `dir` regulated over dhf/clauses/std.txt and
+  dhf/documents."
+  [dir]
+  (write-config! dir (assoc (read-config dir) :regulated {:clause-lists ["dhf/clauses/std.txt"]
+                                                          :documents "dhf/documents"}))
+  dir)
+
+(defn regulated-project!
   "A regulated project: ctx with :dir."
   [ctx]
-  (let [ctx (initialised! ctx)
-        dir (:dir ctx)]
-    (config! dir #(assoc % :regulated {:clause-lists [std] :documents "dhf/documents"}))
-    (s/write! dir std "STD:5.1 Development plan\n")
-    (s/write! dir plan (plan-doc "# Plan" "" "We plan the work [[STD:5.1]]."))
-    ctx))
+  (let [dir (init-project! ctx)]
+    (regulated! dir)
+    (write! dir "dhf/clauses/std.txt" "STD:5.1 Development plan\n")
+    (write! dir "dhf/documents/plan.md" default-plan)
+    (assoc ctx :dir dir)))
 
 ;; ---------------------------------------------------------------------------
 ;; A releasable regulated project
 
-(def ^:private model
-  {:system {:id :demo :name "Demo" :description "A demo system"}
-   :people [] :external []
-   :containers [{:id :demo-c :name "demo" :kind :runs :description "The demo" :technology "t"
-                 :contexts [{:id :demo :name "demo" :description "The demo context"
-                             :components [{:id :demo/alpha :name "Alpha" :spec "demo/alpha"
-                                           :description "The alpha component"}]}]}]
-   :relationships [] :views []})
+(def demo-model
+  {:system {:id :demo :name "Demo" :description "A demo"}
+   :containers [{:id :demo-c :name "demo" :kind :runs :description "d" :technology "t"
+                 :contexts [{:id :demo :name "demo" :description "d"
+                             :components [{:id :demo/plan :name "Planning" :spec "demo/plan" :description "d"}]}]}]})
 
-(def need-text "An engineer shows an auditor the record.")
+(def need-text "A team shows an auditor where each clause is met.")
 
-(def scenario-titles
-  {"spec-0001" "The first requirement holds"
-   "spec-0002" "The second requirement holds"})
+(def scenarios
+  [{:id "spec-0001" :title "A plan names its clauses"}
+   {:id "spec-0002" :title "A plan is reviewed"}])
 
-(def ^:private feature
-  (str "@UN-001\nFeature: Alpha\n  The demo component.\n\n  Rule: The demo rule\n\n"
-       (str/join "\n" (for [[id title] (sort scenario-titles)]
-                        (str "    @" id " @e2e\n    Scenario: " title "\n      Given a step of " id "\n")))))
+(defn feature-text [scs]
+  (str "@UN-001\nFeature: Planning\n  The plan of the work.\n"
+       (str/join (for [{:keys [id title]} scs]
+                   (str "\n  @" id " @e2e\n  Scenario: " title "\n    Given a plan\n    When it is read\n    Then it names its clauses\n")))))
 
-(defn result!
-  "Writes an Allure result labelled spec=`id` with `status` into the
-  project's results directory."
-  [ctx id status]
-  (let [uuid (str (java.util.UUID/randomUUID))
-        dir (fs/file (:dir ctx) results-rel)]
-    (fs/create-dirs dir)
-    (spit (str (fs/file dir (str uuid "-result.json")))
-          (json/generate-string {:uuid uuid :name (str "a test of " id) :status status :stage "finished"
-                                 :labels [{:name "spec" :value id}] :steps []}))
-    ctx))
+(defn allure-result [id status]
+  {:uuid (str "fixture-" id "-" status)
+   :name (str "a test of " id) :fullName (str "tests/" id)
+   :status status :statusDetails {} :stage "finished" :start 1700000000000 :stop 1700000000100
+   :labels [{:name "spec" :value id} {:name "framework" :value "fixture"}]
+   :steps []})
 
-(defn git!
-  "Runs git in the project; fails the step on an error. The output, trimmed."
-  [dir & args]
-  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
-                          :extra-env {"GIT_AUTHOR_NAME" "steps" "GIT_AUTHOR_EMAIL" "steps@rdm-spec.invalid"
-                                      "GIT_COMMITTER_NAME" "steps" "GIT_COMMITTER_EMAIL" "steps@rdm-spec.invalid"
-                                      "GIT_AUTHOR_DATE" "2026-01-01T00:00:00Z"
-                                      "GIT_COMMITTER_DATE" "2026-01-01T00:00:00Z"}}
-                 "git" args)]
-    (s/check! (zero? (:exit r)) (str "git " (str/join " " args) " failed in " dir ": " (:err r)))
-    (str/trim (:out r))))
-
-(defn commit!
-  "Commits every file of the project (the hook skipped: it would run an
-  installed command)."
-  [ctx]
-  (git! (:dir ctx) "add" "-A")
-  (git! (:dir ctx) "commit" "-q" "--no-verify" "--allow-empty" "-m" "the record")
-  ctx)
-
-(defn with-spec!
-  "Gives the project its own spec: one need, two stamped scenarios."
-  [ctx]
-  (let [cfg (config-of (:dir ctx))]
-    (-> ctx
-        (write! (:model cfg) (pr-str model))
-        (write! (:needs cfg) (pr-str {"UN-001" {:text need-text :sources ["demo:README.md@0000000"]}}))
-        (write! (:ledger cfg) "{:issued 2}\n")
-        (write! (str (:spec-dir cfg) "/demo/alpha.feature") feature))))
+(defn write-results!
+  "A results directory outside the project holding a result for each
+  [id status]."
+  [results]
+  (let [d (str (fs/file (tmp-dir) "results"))]
+    (fs/create-dirs d)
+    (doseq [[id status] results
+            :let [r (allure-result id status)]]
+      (spit (str (fs/file d (str (:uuid r) "-result.json"))) (json/generate-string r {:pretty true})))
+    d))
 
 (defn releasable!
-  "A releasable regulated project, committed. `statuses` {id status}
-  overrides a scenario's passing result."
+  "A releasable regulated project, all committed: ctx with :dir, RESULTS_DIR
+  and the OUT placeholders. `opts`: :clauses {rel text} and :documents {rel
+  text-or-nil} replacing the defaults, :results [[id status]]."
   ([ctx] (releasable! ctx {}))
-  ([ctx statuses]
-   (let [ctx (-> (regulated! ctx) with-spec!)]
-     (doseq [id (sort (keys scenario-titles))]
-       (result! ctx id (get statuses id "passed")))
-     (commit! ctx))))
+  ([ctx {:keys [clauses documents results]}]
+   (let [dir (init-project! ctx)
+         out-parent (tmp-dir)]
+     (regulated! dir)
+     (write! dir "dhf/spec/model.edn" (pr-str demo-model))
+     (write! dir "dhf/spec/needs.edn" (pr-str {"UN-001" {:text need-text :sources ["demo:README.md@0000000"]}}))
+     (write! dir "dhf/spec/demo/plan.feature" (feature-text scenarios))
+     (doseq [[rel text] (merge {"dhf/clauses/std.txt" "STD:5.1 Development plan\n"} clauses)]
+       (write! dir rel text))
+     (doseq [[rel text] (merge {"dhf/documents/plan.md" default-plan} documents)
+             :when text]
+       (write! dir rel text))
+     (commit-all! dir)
+     (let [rd (write-results! (or results (for [{:keys [id]} scenarios] [id "passed"])))]
+       (-> ctx
+           (assoc :dir dir :results-dir rd)
+           (assoc-in [:env "RESULTS_DIR"] rd)
+           (assoc-in [:placeholders "OUT"] (str (fs/file out-parent "out")))
+           (assoc-in [:placeholders "OUT2"] (str (fs/file out-parent "out2"))))))))
 
 (defn out-file
-  "The file `rel` under the placeholder path, as \"OUT/auditor/plan.md\"."
-  [ctx rel]
-  (let [[_ ph more] (re-matches #"(OUT\d*)(?:/(.*))?" rel)
-        base (get-in ctx [:placeholders ph])]
-    (s/check! base (str "no " ph " was given"))
-    (if (str/blank? more) (fs/file base) (fs/file base more))))
+  "The file `rel` under the placeholder `ph` (OUT) of the scenario."
+  [ctx ph rel]
+  (let [o (get-in ctx [:placeholders ph])]
+    (s/check! o (str "no " ph " was given"))
+    (fs/file o rel)))
 
-(defn lines-of [f] (str/split-lines (slurp (str f))))
+(defn creates-no-out! [ctx]
+  (let [o (get-in ctx [:placeholders "OUT"])]
+    (s/check! o "no OUT was given")
+    (s/check! (not (fs/exists? o)) (str "OUT was created: " o "\n" (s/show (kc/the-run ctx))))))
 
-(defn err-line!
-  "Checks some line of the run's error stream holds every one of `words`;
-  returns it."
-  [r & words]
-  (let [l (some (fn [l] (when (every? #(str/includes? l (str %)) words) l)) (s/err-lines r))]
-    (s/check! l (str "no line of the error stream names " (str/join ", " words) "\n" (s/show r)))
-    l))
+(defn line-naming!
+  "Checks some line of the error stream holds every one of `parts`; returns it."
+  [r & parts]
+  (or (some (fn [l] (when (every? #(str/includes? l (str %)) parts) l)) (s/err-lines r))
+      (s/fail! (str "no line of the error stream names " (str/join ", " (map pr-str parts)) "\n" (s/show r)))))
+
+;; ---------------------------------------------------------------------------
+;; The step text both compliance features use
+
+(defstep #"a project set up by rdm-spec whose configuration holds no :regulated"
+  (fn [ctx]
+    (let [dir (init-project! ctx)]
+      (s/check! (not (contains? (read-config dir) :regulated)) "the configuration holds :regulated")
+      (assoc-in (assoc ctx :dir dir) [:placeholders "OUT"] (str (fs/file (tmp-dir) "out"))))))
