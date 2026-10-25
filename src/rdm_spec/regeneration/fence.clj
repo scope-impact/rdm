@@ -1,25 +1,35 @@
 (ns rdm-spec.regeneration.fence
-  "Fence (dhf/spec/regeneration/fence.feature): `rdm-spec fence ROOM CUT
-  [--context C | --component C/N]` builds a clean room from a cut.
+  "Component Fence of the bounded context regeneration
+  (dhf/spec/regeneration/fence.feature): `rdm-spec fence ROOM CUT [--context C
+  | --component C/N]` builds a clean room from a cut.
 
-  The room is a new git repository with one root commit holding, from the
-  cut and nothing else (never the working tree, never history):
-    - every allowed path (the cut configuration's :clean-room :allow), each of
-      which must be at the cut;
-    - for a context or component scope, every implementation file (the
-      configured :implementation) except those the scope removes: each
-      :code-layout entry of the scope's kind, with {context} and {component}
-      filled in ({component} with - written _), is a path prefix, and a file
-      starting with one is removed. The project scope keeps no implementation.
+  Regeneration reads only a cut: CUT must name a commit carrying a spec-N tag
+  (the tag itself, or the commit's id). Everything is read from that commit,
+  never from the working tree: its configuration (dhf/harness/config.edn), its
+  model (for a scope) and its files.
 
-  Blobs are copied byte for byte and keep their mode, so the room's objects are
-  the cut's objects for those paths; the room's store holds nothing else. The
-  room commit is dated as the cut commit, so fencing the same cut and scope
-  twice gives the same commit.
+  The clean room is an allow-list. ROOM becomes a new git repository holding
+  one root commit whose tree is exactly
+    - every file under the cut's :clean-room :allow paths, and
+    - for a context or component scope, every implementation file (under the
+      cut's :implementation paths) except those the scope rebuilds: the files
+      starting with one of the scope's :code-layout prefixes, {context} and
+      {component} filled in with - written _.
+  The project scope (no option) keeps no implementation. Every file is written
+  byte for byte with its mode, and its blob is checked to be the cut's; the
+  room's object database holds only that commit, its trees and those blobs, so
+  nothing else is reachable, not even by history.
 
-  Order of refusals (exit 2): the scope against the project's model, the cut,
-  the cut's configuration and model, the allowed paths at the cut, then the
-  room (absent, or an empty directory). Nothing is written before all pass."
+  A scope names a bounded context of the cut's model, or kernel (the kernel is
+  a scope like a context); a component is <context>/<component> as the
+  model's :spec names it. --context and --component each take one name or a
+  comma-separated list, and may be given together: the scope is then the list.
+
+  Exit 2 (cannot run), with nothing written: not a git repository, a CUT that
+  names no commit or a commit that is not a cut, a cut with no readable
+  configuration, an allowed path the cut does not hold, a scope the model does
+  not name, or a ROOM that exists and is not an empty directory. It publishes
+  no event: the steps that come later meet it through the room."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
@@ -28,257 +38,236 @@
             [rdm-spec.regeneration.cut :as cut]))
 
 ;; ---------------------------------------------------------------------------
-;; Scope
+;; git, with bytes in and out, never prompting, never filtering
 
-(defn parse-scope
-  "The scope the options ask for: {:kind :project}, {:kind :context :context
-  \"c\"} or {:kind :component :context \"c\" :component \"n\"}. Cannot run
-  on both options or a malformed component."
-  [{:keys [context component]}]
-  (cond
-    (and context component)
-    (command/cannot-run! "give --context or --component, not both")
+(def ^:private room-identity
+  {"GIT_AUTHOR_NAME" "rdm-spec fence" "GIT_AUTHOR_EMAIL" "fence@rdm-spec.invalid"
+   "GIT_COMMITTER_NAME" "rdm-spec fence" "GIT_COMMITTER_EMAIL" "fence@rdm-spec.invalid"
+   "GIT_TERMINAL_PROMPT" "0"})
 
-    context {:kind :context :context context}
+(defn- git-raw
+  "Runs git in `dir`: {:exit :out (bytes) :err}. `in` is a string or nil."
+  [dir in & args]
+  (let [r (apply p/shell {:dir (str dir) :out :bytes :err :string :continue true
+                          :in (or in "") :extra-env room-identity}
+                 "git" "-c" "core.autocrlf=false" "-c" "core.safecrlf=false" "-c" "commit.gpgsign=false"
+                 args)]
+    {:exit (:exit r) :out (or (:out r) (byte-array 0)) :err (str/trim (or (:err r) ""))}))
 
-    component
-    (let [parts (str/split component #"/" -1)]
-      (when-not (and (= 2 (count parts)) (every? (complement str/blank?) parts))
-        (command/cannot-run! (str "--component takes CONTEXT/COMPONENT, as spec/parser, not " component)))
-      {:kind :component :context (first parts) :component (second parts)})
-
-    :else {:kind :project}))
-
-(defn scope-label [{:keys [kind context component]}]
-  (case kind
-    :project "the project"
-    :context (str "the context " context)
-    :component (str "the component " context "/" component)))
-
-(defn model-contexts
-  "The bounded contexts the model names, in its order: [\"project\" ...]."
-  [model]
-  (vec (for [c (:containers model) ctx (:contexts c)] (name (:id ctx)))))
-
-(defn model-components
-  "Every component the model names as \"context/component\": those of the
-  bounded contexts, then the kernel's."
-  [model]
-  (vec (concat
-        (for [c (:containers model) ctx (:contexts c) comp (:components ctx)]
-          (str (name (:id ctx)) "/" (name (:id comp))))
-        (for [comp (:kernel model)]
-          (str "kernel/" (name (:id comp)))))))
-
-(defn scope-refusal
-  "Why the model does not name the scope, or nil when it does. The kernel,
-  shared code in no context, is named by the model too."
-  [model {:keys [kind context component]}]
-  (let [contexts (model-contexts model)
-        kernel? (seq (:kernel model))]
-    (case kind
-      :project nil
-      :context (when-not (or (some #{context} contexts) (and kernel? (= "kernel" context)))
-                 (str "the model names no bounded context " context
-                      "; its bounded contexts are " (str/join ", " contexts)
-                      (when kernel? "; the kernel (kernel) is a scope too")))
-      :component (let [c (str context "/" component)]
-                   (when-not (some #{c} (model-components model))
-                     (str "the model names no component " c "; its components are "
-                          (str/join ", " (model-components model))))))))
-
-(defn scope-prefixes
-  "The path prefixes the scope removes, from the configured :code-layout:
-  [] for the project scope (which keeps no implementation at all)."
-  [code-layout {:keys [kind context component]}]
-  (if (= :project kind)
-    []
-    (let [entries (get code-layout kind)]
-      (when-not (seq entries)
-        (command/cannot-run! (str "the configuration's :code-layout places no " (name kind) " code")))
-      (mapv #(-> %
-                 (str/replace "{context}" (str/replace context "-" "_"))
-                 (str/replace "{component}" (str/replace (or component "") "-" "_")))
-            entries))))
+(defn- git-out!
+  "Runs git and returns its standard output as a string; cannot run on an
+  error, saying what was being done."
+  [doing dir in & args]
+  (let [r (apply git-raw dir in args)]
+    (when-not (zero? (:exit r))
+      (command/cannot-run! (str "could not " doing ": git " (str/join " " args) ": " (:err r))))
+    (String. ^bytes (:out r) "UTF-8")))
 
 ;; ---------------------------------------------------------------------------
-;; Selecting the cut's files
+;; Paths
 
 (defn under?
-  "True when `path` is `p` or lies in the directory `p`."
-  [p path]
-  (let [p (str/replace (str p) #"/+$" "")]
-    (or (= p path) (str/starts-with? path (str p "/")))))
+  "True when `path` is `prefix` or lies under it (both relative, with /)."
+  [path prefix]
+  (let [prefix (str/replace (str prefix) #"/+$" "")]
+    (or (= path prefix) (str/starts-with? path (str prefix "/")))))
 
-(defn select-entries
-  "The tree entries ({:mode :type :sha :path}) the room takes: those under an
-  allowed path, plus (unless the scope is the project) those under an
-  implementation path that start with none of `prefixes`."
-  [entries {:keys [allow implementation scope prefixes]}]
-  (let [allowed? (fn [path] (some #(under? % path) allow))
-        impl? (fn [path] (some #(under? % path) implementation))
-        removed? (fn [path] (some #(str/starts-with? path %) prefixes))]
-    (vec (filter (fn [{:keys [path]}]
-                   (or (allowed? path)
-                       (and (not= :project (:kind scope)) (impl? path) (not (removed? path)))))
-                 entries))))
+(defn file-name-part
+  "A context or component name as file names write it: - as _."
+  [s]
+  (str/replace (str s) "-" "_"))
 
-(defn missing-allowed
-  "The allowed paths no entry lies under."
-  [entries allow]
-  (vec (remove (fn [a] (some #(under? a (:path %)) entries)) allow)))
+(defn scope-prefixes
+  "The path prefixes the scope rebuilds, from the :code-layout `layout`:
+  `scope` is {:contexts [..] :components [[context component] ..]}."
+  [layout {:keys [contexts components]}]
+  (vec (distinct
+        (concat
+         (for [c contexts t (:context layout)]
+           (str/replace t "{context}" (file-name-part c)))
+         (for [[c n] components t (:component layout)]
+           (-> t
+               (str/replace "{context}" (file-name-part c))
+               (str/replace "{component}" (file-name-part n))))))))
 
-;; ---------------------------------------------------------------------------
-;; git with bytes
-
-(defn- sh
-  "Runs git in `dir` with `args`; `opts` may give :in (string or bytes),
-  :out :bytes and :env. Returns {:exit :out :err}."
-  [dir opts & args]
-  (let [r (apply p/shell {:dir (str dir) :in (or (:in opts) "") :out (or (:out opts) :string) :err :string
-                          :continue true
-                          :extra-env (merge {"GIT_TERMINAL_PROMPT" "0"} (:env opts))}
-                 "git" args)]
-    {:exit (:exit r) :out (:out r) :err (str/trim (or (:err r) ""))}))
-
-(defn- sh!
-  [dir opts & args]
-  (let [r (apply sh dir opts args)]
-    (when-not (zero? (:exit r))
-      (command/cannot-run! (str "git " (str/join " " args) " failed in " dir ": " (:err r))))
-    (:out r)))
-
-(defn parse-ls-tree
-  "Entries of `git ls-tree -r -z` output."
-  [out]
-  (vec (for [rec (str/split (or out "") #"\x00")
-             :when (not (str/blank? rec))
-             :let [[meta path] (str/split rec #"\t" 2)
-                   [mode type sha] (str/split meta #" ")]]
-         {:mode mode :type type :sha sha :path path})))
-
-(defn tree-entries [dir rev]
-  (parse-ls-tree (sh! dir {} "ls-tree" "-r" "-z" "--full-tree" rev)))
-
-(defn- index-of [^bytes bs b from]
-  (loop [i from]
-    (cond (>= i (alength bs)) -1
-          (= b (aget bs i)) i
-          :else (recur (inc i)))))
-
-(defn parse-batch
-  "{sha bytes} of `git cat-file --batch` output."
-  [^bytes bs]
-  (loop [pos 0 acc {}]
-    (if (>= pos (alength bs))
-      acc
-      (let [nl (index-of bs (byte 10) pos)
-            header (String. bs (int pos) (int (- nl pos)) "UTF-8")
-            [sha type size] (str/split header #" ")]
-        (when (= "missing" type)
-          (command/cannot-run! (str "the object " sha " is missing from the repository")))
-        (let [size (parse-long size)
-              start (inc nl)
-              content (java.util.Arrays/copyOfRange bs (int start) (int (+ start size)))]
-          (recur (+ start size 1) (assoc acc sha content)))))))
-
-(defn- blobs [dir shas]
-  (if (empty? shas)
-    {}
-    (parse-batch (sh! dir {:in (str (str/join "\n" shas) "\n") :out :bytes} "cat-file" "--batch"))))
+(defn room-paths
+  "Which of the cut's files `paths` (relative, with /) the room holds:
+  {:allowed [..] :kept [..] :removed [..] :missing-allowed [..]}. `scope` nil
+  is the project scope, which keeps no implementation."
+  [paths {:keys [allow implementation prefixes]}]
+  (let [impl? (fn [p] (some #(under? p %) implementation))
+        allowed (filterv (fn [p] (some #(under? p %) allow)) paths)
+        impl (filterv #(and (impl? %) (not (some (fn [a] (under? % a)) allow))) paths)
+        removed? (fn [p] (or (nil? prefixes) (some #(str/starts-with? p %) prefixes)))]
+    {:allowed allowed
+     :kept (filterv (complement removed?) impl)
+     :removed (filterv removed? impl)
+     :missing-allowed (filterv (fn [a] (not (some #(under? % a) paths))) allow)}))
 
 ;; ---------------------------------------------------------------------------
 ;; The cut
 
-(defn- resolve-cut
-  "{:commit sha :tag spec-N} for `rev`, or cannot run: regeneration reads only a cut."
+(defn- short-id [sha] (subs sha 0 (min 7 (count sha))))
+
+(defn resolve-cut
+  "{:commit sha :tag spec-N} for `rev` in `root`; cannot run when it names no
+  commit, or a commit no spec-N tag marks."
   [root rev]
-  (when-not (cut/repository? root)
-    (command/cannot-run! (str root " is not a git repository, so it holds no cut " rev
-                              ": regeneration reads only a cut (a commit tagged spec-N)")))
   (let [sha (or (cut/commit-of root rev)
-                (command/cannot-run! (str rev " names no commit here: regeneration reads only a cut"
-                                          " (a commit tagged spec-N)")))
+                (command/cannot-run! (str rev " names no commit in this repository: regeneration reads only a cut,"
+                                          " a commit tagged " cut/cut-prefix "-N")))
         tags (cut/cuts-at root sha)]
     (when (empty? tags)
-      (command/cannot-run! (str rev " (" (subs sha 0 7) ") carries no spec-N tag: regeneration reads only a cut")))
-    {:commit sha :tag (if (cut/cut-tag? rev) rev (first tags))}))
+      (command/cannot-run! (str "the commit " rev " (" (short-id sha) ") carries no " cut/cut-prefix
+                                "-N tag: regeneration reads only a cut")))
+    {:commit sha :tag (if (some #{rev} tags) rev (last tags))}))
 
-(defn- read-at
-  "The EDN map in `path` at the commit `sha`, or cannot run naming why."
-  [root sha tag path what]
-  (let [r (sh root {} "show" (str sha ":" path))]
-    (when-not (zero? (:exit r))
-      (command/cannot-run! (str "the cut " tag " holds no " what " " path)))
-    (let [v (try (edn/read-string (:out r))
-                 (catch Exception e
-                   (command/cannot-run! (str "the " what " " path " at the cut " tag " is not readable EDN: "
-                                             (ex-message e)))))]
-      (when-not (map? v)
-        (command/cannot-run! (str "the " what " " path " at the cut " tag " is not a map")))
-      v)))
+(defn- tree
+  "[{:mode :type :sha :path}] of every entry of the commit `sha`, recursively."
+  [root sha]
+  (let [out (git-out! "list the cut's files" root nil "ls-tree" "-r" "-z" "--full-tree" sha)]
+    (vec (for [e (str/split out #"\u0000")
+               :when (not (str/blank? e))
+               :let [[meta path] (str/split e #"\t" 2)
+                     [mode type obj] (str/split meta #" ")]]
+           {:mode mode :type type :sha obj :path path}))))
 
-(defn- project-model [req]
-  (let [rel (command/config-value req :model)
-        f (command/path req rel)]
-    (when-not (fs/exists? f)
-      (command/cannot-run! (str "the model " rel " does not exist")))
-    (let [m (try (edn/read-string (slurp f))
-                 (catch Exception e (command/cannot-run! (str "the model " rel " is not readable EDN: " (ex-message e)))))]
-      (when-not (map? m) (command/cannot-run! (str "the model " rel " is not a map")))
-      m)))
+(defn- show
+  "The text of `path` at the commit `sha`, or nil when the commit holds none."
+  [root sha path]
+  (let [r (git-raw root nil "show" (str sha ":" path))]
+    (when (zero? (:exit r)) (String. ^bytes (:out r) "UTF-8"))))
+
+(defn- read-edn-at [root {:keys [commit tag]} path what]
+  (let [text (or (show root commit path)
+                 (command/cannot-run! (str "the cut " tag " holds no " path ", so it has no " what)))]
+    (try (edn/read-string text)
+         (catch Exception e
+           (command/cannot-run! (str "the " what " " path " at the cut " tag " is not readable EDN: "
+                                     (ex-message e)))))))
+
+;; ---------------------------------------------------------------------------
+;; The scope
+
+(defn model-scopes
+  "What the model `m` lets a scope name: {:contexts [names, kernel last]
+  :components #{\"context/component\"}}."
+  [m]
+  (let [ctxs (for [c (:containers m) x (:contexts c)] x)
+        spec-of (fn [el ctx-name]
+                  (or (:spec el)
+                      (when (keyword? (:id el))
+                        (str (or (namespace (:id el)) ctx-name) "/" (name (:id el))))))]
+    {:contexts (vec (distinct (concat (keep #(some-> (:id %) name) ctxs) ["kernel"])))
+     :components (set (concat (for [x ctxs c (:components x) :let [s (spec-of c (name (:id x)))] :when s] s)
+                              (for [k (:kernel m) :let [s (spec-of k "kernel")] :when s] s)))}))
+
+(defn- names [v] (when v (vec (remove str/blank? (map str/trim (str/split v #","))))))
+
+(defn scope-of
+  "The scope the options ask for, checked against the model's names: nil for
+  the project, else {:contexts [..] :components [[context component] ..]}.
+  `model-fn` gives the model only when a scope needs it."
+  [opts model-fn tag]
+  (let [ctxs (names (:context opts))
+        comps (names (:component opts))]
+    (when (or (some? (:context opts)) (some? (:component opts)))
+      (when (and (empty? ctxs) (empty? comps))
+        (command/cannot-run! "--context and --component need a name"))
+      (let [{:keys [contexts components]} (model-scopes (model-fn))
+            known (str "the model's bounded contexts are " (str/join ", " (butlast contexts))
+                       ", and " (last contexts) " (the kernel, a scope like a context)")]
+        (doseq [c ctxs :when (not (some #{c} contexts))]
+          (command/cannot-run! (str "the model at " tag " names no bounded context " c "; " known)))
+        (doseq [c comps :when (not (contains? components c))]
+          (command/cannot-run! (str "the model at " tag " names no component " c
+                                    " (written <context>/<component>); its components are "
+                                    (str/join ", " (sort components)) "; " known)))
+        {:contexts ctxs
+         :components (mapv #(str/split % #"/" 2) comps)}))))
+
+(defn- scope-result [scope]
+  (if scope
+    (cond-> {}
+      (seq (:contexts scope)) (assoc :contexts (:contexts scope))
+      (seq (:components scope)) (assoc :components (mapv #(str/join "/" %) (:components scope))))
+    :project))
 
 ;; ---------------------------------------------------------------------------
 ;; The room
 
-(defn- check-room! [room]
-  (when (fs/exists? room)
-    (when-not (fs/directory? room)
-      (command/cannot-run! (str "the room " room " is a file: the room must be a new directory")))
-    (when (seq (fs/list-dir room))
-      (command/cannot-run! (str "the room " room " is not empty: the room must be a new directory")))))
+(defn- room-state
+  "Cannot run unless `room` does not exist or is an empty directory; returns
+  whether it existed."
+  [room]
+  (cond
+    (not (fs/exists? room)) false
+    (not (fs/directory? room))
+    (command/cannot-run! (str "the room " room " exists and is not a directory: a clean room is built in a new one"))
+    (seq (fs/list-dir room))
+    (command/cannot-run! (str "the room " room " is not empty: a clean room is built in a new or empty directory"))
+    :else true))
 
-(defn- write-file! [room {:keys [mode path]} ^bytes content]
+(defn- read-blobs
+  "{sha bytes} of the blobs `shas` in the repository `root`, read in one go."
+  [root shas]
+  (if (empty? shas)
+    {}
+    (let [r (git-raw root (str (str/join "\n" shas) "\n") "cat-file" "--batch")
+          ^bytes out (:out r)
+          n (alength out)]
+      (when-not (zero? (:exit r))
+        (command/cannot-run! (str "could not read the cut's files: " (:err r))))
+      (loop [i 0 acc {}]
+        (if (>= i n)
+          acc
+          (let [nl (loop [j i] (if (= 10 (aget out j)) j (recur (inc j))))
+                header (String. out i (- nl i) "UTF-8")
+                [sha type size] (str/split header #" ")]
+            (when (not= "blob" type)
+              (command/cannot-run! (str "could not read the cut's object " header)))
+            (let [size (parse-long size)
+                  start (inc nl)]
+              (recur (+ start size 1)
+                     (assoc acc sha (java.util.Arrays/copyOfRange out start (+ start size)))))))))))
+
+(defn- write-entry! [room {:keys [mode path]} ^bytes content]
   (let [f (fs/file room path)]
     (fs/create-dirs (fs/parent f))
     (if (= "120000" mode)
       (fs/create-sym-link f (String. content "UTF-8"))
-      (do (with-open [o (java.io.FileOutputStream. f)] (.write o content))
-          (.setExecutable f (= "100755" mode) false)))))
-
-(defn- store-blobs!
-  "Writes the blobs of `entries` into the room's object store from the files
-  just written, checking each object id is the cut's."
-  [room entries contents]
-  (let [{links true files false} (group-by #(= "120000" (:mode %)) entries)
-        stored (concat
-                (when (seq files)
-                  (map vector files
-                       (cut/lines (sh! room {:in (str (str/join "\n" (map :path files)) "\n")}
-                                       "hash-object" "-w" "--no-filters" "--stdin-paths"))))
-                (for [e links]
-                  [e (str/trim (sh! room {:in (get contents (:sha e))} "hash-object" "-w" "--no-filters" "--stdin"))]))]
-    (doseq [[e sha] stored :when (not= (:sha e) sha)]
-      (command/cannot-run! (str (:path e) " did not copy unchanged into the room (" sha ", not " (:sha e) ")")))))
+      (do (fs/write-bytes f content)
+          (when (= "100755" mode) (.setExecutable f true))))))
 
 (defn- build-room!
-  "Writes `entries` (with their contents) into `room` as a new repository
-  with one root commit dated `date`. Returns {:commit :tree}."
-  [room entries contents message date]
-  (fs/create-dirs room)
-  (sh! room {} "init" "-q" "-b" "main")
-  (doseq [e entries] (write-file! room e (get contents (:sha e))))
-  (store-blobs! room entries contents)
-  (sh! room {:in (apply str (map #(str (:mode %) " " (:sha %) "\t" (:path %) "\u0000") entries))}
-       "update-index" "-z" "--add" "--index-info")
-  (let [tree (str/trim (sh! room {} "write-tree"))
-        env {"GIT_AUTHOR_NAME" "rdm-spec fence" "GIT_AUTHOR_EMAIL" "fence@rdm-spec.invalid"
-             "GIT_COMMITTER_NAME" "rdm-spec fence" "GIT_COMMITTER_EMAIL" "fence@rdm-spec.invalid"
-             "GIT_AUTHOR_DATE" date "GIT_COMMITTER_DATE" date}
-        commit (str/trim (sh! room {:env env :in message} "commit-tree" tree))]
-    (sh! room {} "update-ref" "refs/heads/main" commit)
-    (sh room {} "update-index" "-q" "--refresh")
-    {:commit commit :tree tree}))
+  "Writes `entries` into `room` and commits them as its one root commit:
+  the commit's id."
+  [room entries message]
+  (let [blobs (read-blobs (:root (meta entries)) (distinct (map :sha entries)))]
+    (git-out! "make the room a repository" room nil "init" "-q" "--template=" "-b" "main" ".")
+    (doseq [e entries] (write-entry! room e (get blobs (:sha e))))
+    ;; the room's blobs, from the files as written, never filtered
+    (let [files (remove #(= "120000" (:mode %)) entries)
+          links (filter #(= "120000" (:mode %)) entries)
+          hashed (when (seq files)
+                   (cut/lines (git-out! "write the room's files" room
+                                        (str (str/join "\n" (map :path files)) "\n")
+                                        "hash-object" "-w" "--no-filters" "--stdin-paths")))
+          shas (merge (zipmap (map :path files) hashed)
+                      (into {} (for [l links]
+                                 [(:path l) (str/trim (git-out! "write the room's links" room
+                                                                (String. ^bytes (get blobs (:sha l)) "UTF-8")
+                                                                "hash-object" "-w" "--stdin"))])))]
+      (doseq [e entries :when (not= (:sha e) (get shas (:path e)))]
+        (command/cannot-run! (str (:path e) " was not written into the room as the cut holds it")))
+      (git-out! "index the room's files" room
+                (apply str (map #(str (:mode %) " " (:sha %) "\t" (:path %) "\u0000") entries))
+                "update-index" "-z" "--add" "--index-info")
+      (let [tree-sha (str/trim (git-out! "write the room's tree" room nil "write-tree"))
+            commit (str/trim (git-out! "commit the room" room message "commit-tree" tree-sha))]
+        (git-out! "point the room's main at its commit" room nil "update-ref" "refs/heads/main" commit)
+        (git-raw room nil "update-index" "-q" "--refresh")
+        commit))))
 
 ;; ---------------------------------------------------------------------------
 ;; The task
@@ -288,53 +277,55 @@
   [req]
   (let [root (:root req)
         [room-arg rev] (:args req)
-        scope (parse-scope (:opts req))]
-    ;; the scope, against the project's model, before anything else is read
-    (when (not= :project (:kind scope))
-      (when-let [why (scope-refusal (project-model req) scope)]
-        (command/cannot-run! why)))
-    (let [{:keys [commit tag]} (resolve-cut root rev)
-          config (read-at root commit tag command/config-file "configuration")
-          allow (vec (get-in config [:clean-room :allow]))
-          _ (when (empty? allow)
-              (command/cannot-run! (str "the configuration at the cut " tag " allows no path (:clean-room :allow)")))
-          implementation (vec (:implementation config))
-          _ (when (and (not= :project (:kind scope)) (empty? implementation))
-              (command/cannot-run! (str "the configuration at the cut " tag " lists no :implementation")))
-          _ (when (not= :project (:kind scope))
-              (when-let [why (scope-refusal (read-at root commit tag (or (:model config) "dhf/spec/model.edn") "model")
-                                            scope)]
-                (command/cannot-run! (str why " (at the cut " tag ")"))))
-          prefixes (scope-prefixes (:code-layout config) scope)
-          all (tree-entries root commit)
-          missing (missing-allowed all allow)
-          _ (when (seq missing)
-              (command/cannot-run! (str "the cut " tag " holds no " (str/join ", no " missing)
-                                        ": every allowed path must be at the cut")))
-          chosen (select-entries all {:allow allow :implementation implementation :scope scope :prefixes prefixes})
-          gitlinks (filter #(not= "blob" (:type %)) chosen)
-          entries (vec (filter #(= "blob" (:type %)) chosen))
-          room (str (fs/normalize (fs/absolutize (command/path req room-arg))))
-          _ (check-room! room)
-          impl-at-cut (filter (fn [e] (and (= "blob" (:type e)) (some #(under? % (:path e)) implementation))) all)
-          kept (filter (fn [e] (some #(under? % (:path e)) implementation)) entries)
-          removed (if (= :project (:kind scope))
-                    (map :path impl-at-cut)
-                    (keep (fn [e] (when (some #(str/starts-with? (:path e) %) prefixes) (:path e))) impl-at-cut))
-          date (str/trim (sh! root {} "log" "-1" "--format=%cI" commit))
-          message (str "Clean room from " tag " (" commit "), " (scope-label scope) "\n")
-          contents (blobs root (distinct (map :sha entries)))
-          built (build-room! room entries contents message date)]
-      {:result (cond-> {:room room :cut tag :commit commit
-                        :scope (cond-> {:kind (:kind scope)}
-                                 (:context scope) (assoc :context (:context scope))
-                                 (:component scope) (assoc :component (str (:context scope) "/" (:component scope))))
-                        :room-commit (:commit built) :room-tree (:tree built)
-                        :files (count entries)
-                        :allowed allow
-                        :implementation-kept (count kept)
-                        :implementation-removed (vec (sort removed))}
-                 (seq prefixes) (assoc :removed-prefixes prefixes))
-       :findings (vec (for [g gitlinks]
-                        (command/warning "gitlink-skipped"
-                                         (str (:path g) " is a submodule at the cut, not a file: the room does not carry it"))))})))
+        _ (when-not (cut/repository? root)
+            (command/cannot-run! (str root " is not a git repository: there is no cut to build a clean room from")))
+        {:keys [commit tag] :as the-cut} (resolve-cut root rev)
+        config (read-edn-at root the-cut command/config-file "configuration")
+        _ (when-not (map? config)
+            (command/cannot-run! (str "the configuration " command/config-file " at the cut " tag " is not a map")))
+        allow (get-in config [:clean-room :allow])
+        _ (when-not (and (sequential? allow) (seq allow) (every? string? allow))
+            (command/cannot-run! (str "the configuration at the cut " tag " sets no :clean-room :allow paths")))
+        model-fn #(read-edn-at root the-cut (or (:model config) "dhf/spec/model.edn") "model")
+        scope (scope-of (:opts req) model-fn tag)
+        implementation (:implementation config)
+        _ (when (and scope (not (and (sequential? implementation) (seq implementation))))
+            (command/cannot-run! (str "the configuration at the cut " tag " sets no :implementation paths,"
+                                      " so no scope can keep the rest")))
+        layout (:code-layout config)
+        prefixes (when scope
+                   (let [ps (scope-prefixes layout scope)]
+                     (when (empty? ps)
+                       (command/cannot-run! (str "the configuration at the cut " tag " sets no :code-layout"
+                                                 " for the scope, so it cannot say where its code lives")))
+                     ps))
+        entries (filterv #(not= "commit" (:type %)) (tree root commit))
+        {:keys [allowed kept removed missing-allowed]}
+        (room-paths (mapv :path entries) {:allow allow :implementation (or implementation [])
+                                          :prefixes prefixes})
+        _ (when (seq missing-allowed)
+            (command/cannot-run! (str "the cut " tag " holds no " (str/join ", " missing-allowed)
+                                      ", which the configuration allows: the clean room would not hold the whole"
+                                      " allow-list")))
+        room (fs/file (command/path req room-arg))
+        existed? (room-state room)
+        wanted (set (concat allowed kept))
+        chosen (with-meta (filterv #(wanted (:path %)) entries) {:root root})
+        message (str "Clean room from the cut " tag " (" commit ")\n\nScope: " (pr-str (scope-result scope)) "\n")]
+    (fs/create-dirs room)
+    (let [room-commit (try (build-room! room chosen message)
+                           (catch Throwable e
+                             (if existed?
+                               (doseq [f (fs/list-dir room)] (fs/delete-tree f))
+                               (fs/delete-tree room))
+                             (throw e)))]
+      {:result {:room (str (fs/absolutize room))
+                :cut tag
+                :cut-commit commit
+                :scope (scope-result scope)
+                :commit room-commit
+                :allowed (vec allow)
+                :files (count chosen)
+                :implementation-kept (count kept)
+                :implementation-removed (vec removed)}
+       :findings []})))

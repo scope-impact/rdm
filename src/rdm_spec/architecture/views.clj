@@ -1,371 +1,375 @@
 (ns rdm-spec.architecture.views
   "Views (dhf/spec/architecture/views.feature): generates every view of the
-  one model (dhf/spec/model.edn) as diagram source, renders it beside the
-  source, and, as a stage of `rdm-spec check`, fails a view older than the
-  model.
+  C4 model (rdm-spec.architecture.model) and keeps them current.
 
-  What each level of view holds (@spec-0198):
-    context    the system, every person and every external system, and the
-               relationships between them; an end inside the system (a
-               container, a context, a component, kernel code) is drawn as
-               the system
-    container  every container inside the system's boundary, every person
-               and every external system, and the relationships between
-               them; an end inside a container is drawn as its container
-               (kernel code as the first container that runs)
-    component  one context's components inside its boundary, and the
-               elements outside it they relate to, drawn as external; the
-               relationships with an end inside the boundary
+  `rdm-spec views` writes, for every view of the model, its diagram source
+  to <:views-dir>/<key>.mmd (C4 diagrams in the source format
+  dhf/harness/stack.md names) and renders it beside it as <key>.svg with the
+  renderer stack.md names, run as a separate program. Nothing is written
+  unless every view renders. Outputs this task wrote earlier for a view the
+  model no longer has are removed. A refused model is never drawn (exit 1,
+  the model's findings); a renderer that is not on PATH cannot run (exit 2).
+
+  Each output's first line is a comment of its format recording the model
+  hash: `%% model-sha256: <hex>; ...` and `<!-- model-sha256: <hex>; ... -->`.
+  The model hash (the glossary's) is the SHA-256, as lowercase hex, of the
+  model read as EDN and printed back with every map's keys sorted, so
+  reformatting the file keeps it and any changed value changes it.
+
+  Its stage of `rdm-spec check` holds the views to freshness: an output that
+  records another hash, or none, on its first line is views-stale; a view of
+  the model with an output missing is views-missing (both exit 1, each naming
+  the output file and the view as `view \"<key>\"`). A refused model is left
+  to the lint, which reports why.
+
+  What each level holds (what C4 says it holds):
+    context    the system, every person and every external system; every
+               relationship lifted to them (an element inside the system
+               stands for the system), none from the system to itself
+    container  every container, inside the system's boundary, every person
+               and every external system; relationships lifted to them (a
+               bounded context or component stands for its container, the
+               kernel for the container that holds the contexts)
+    component  one context's components inside its boundary, and every
+               element outside it they relate to, drawn as external; the
+               relationships with an end inside
     dynamic    the elements its steps name, and its steps in order
 
-  The hash (@spec-0017): the first line of every output (the source and each
-  render) records the SHA-256 of model.edn's bytes, lowercase hex, as
-  `model-sha256: HEX`. The same line also records the hash of the model's
-  value (`model-value-sha256: HEX`, rdm-spec.architecture.model/model-hash),
-  so that reformatting the model, which changes its bytes and not its value,
-  leaves the views fresh (@spec-0077). A view is stale when neither recorded
-  hash is the current model's (@spec-0018); its outputs are named under the
-  rule views-stale, a missing output under views-missing."
+  The lint (rdm-spec.architecture.lint) reads what a view holds through
+  `view-content` and `element-count`."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
+            [clojure.edn :as edn]
             [clojure.string :as str]
+            [clojure.walk :as walk]
             [rdm-spec.architecture.model :as model]
             [rdm-spec.kernel.command :as command]))
 
 (def renderer "mmdr")
 (def source-ext "mmd")
-(def render-exts
-  "The formats every view is rendered to (dhf/harness/stack.md)."
-  ["svg"])
+(def render-ext "svg")
+(def exts [source-ext render-ext])
+
+;; ---------------------------------------------------------------------------
+;; The model hash
+
+(defn sha256-hex
+  "The SHA-256 of the string `text` (UTF-8), as lowercase hex."
+  [^String text]
+  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes text "UTF-8"))]
+    (apply str (map #(format "%02x" (bit-and % 0xff)) d))))
+
+(defn- key-order [a b]
+  (try (compare a b)
+       (catch Exception _ (compare (pr-str a) (pr-str b)))))
+
+(defn canonical
+  "The model's value printed back with every map's keys sorted."
+  [v]
+  (binding [*print-namespace-maps* false
+            *print-meta* false
+            *print-length* nil
+            *print-level* nil]
+    (pr-str (walk/postwalk #(if (map? %) (into (sorted-map-by key-order) %) %) v))))
+
+(defn model-hash
+  "The model hash of the model's value `v`."
+  [v]
+  (sha256-hex (canonical v)))
+
+(defn model-hash-of-text
+  "The model hash of a model file's text, or nil when it is not one EDN value."
+  [text]
+  (try (model-hash (edn/read-string text))
+       (catch Exception _ nil)))
+
+;; ---------------------------------------------------------------------------
+;; The first line
+
+(defn source-header
+  "The diagram source's first line."
+  [hash model-rel k]
+  (str "%% model-sha256: " hash "; generated by rdm-spec views from " model-rel
+       ", view \"" k "\"; do not edit"))
+
+(defn render-header
+  "The render's first line: an XML comment, which may not hold --."
+  [hash k]
+  (str "<!-- model-sha256: " hash "; generated by rdm-spec views, view \""
+       (str/replace (str k) #"-{2,}" "-") "\"; do not edit -->"))
+
+(defn recorded-hash
+  "The model hash an output records on its first line, or nil."
+  [text]
+  (second (re-find #"model-sha256: ([0-9a-f]{64})(?![0-9a-f])"
+                   (or (first (str/split-lines (or text ""))) ""))))
 
 ;; ---------------------------------------------------------------------------
 ;; What a view holds
 
-(defn- by-id [m] (into {} (map (juxt :id identity)) (model/elements m)))
+(defn- by-id [m] (into {} (map (juxt :id identity) (model/elements m))))
 
-(defn- first-runs-container [m]
-  (or (first (filter #(= :runs (:kind %)) (:containers m))) (first (:containers m))))
+(defn- kernel-container
+  "The container the kernel is shared code of: the one holding the contexts,
+  else the first that runs."
+  [m]
+  (:id (or (first (filter #(seq (:contexts %)) (:containers m)))
+           (first (filter #(= :runs (:kind %)) (:containers m))))))
 
-(defn- dedupe-rels
-  "Relationships with self-loops dropped and duplicates (same ends and label)
-  kept once, in model order."
+(defn- lift
+  "The element of `level` that the element `id` is, or stands in."
+  [m els level id]
+  (let [{:keys [type container]} (get els id)]
+    (case level
+      :context (if (#{:person :external} type) id (get-in m [:system :id]))
+      :container (case type
+                   (:context :component) container
+                   :kernel (kernel-container m)
+                   id))))
+
+(defn- label [r]
+  (let [d (str/trim (str (:description r)))
+        ev (some-> (:event r) name)]
+    (cond
+      (nil? ev) d
+      (str/blank? d) ev
+      (str/includes? d ev) d
+      :else (str d " " ev))))
+
+(defn- merge-rels
+  "One relationship per pair of ends, in first-seen order. Its label is that
+  of the relationships drawn as the model states them, when there are any
+  (a lifted one only repeats, less precisely, what a deeper view shows), else
+  every lifted one's, joined."
   [rels]
-  (let [seen (volatile! #{})]
-    (vec (for [r rels
-               :when (not= (:from r) (:to r))
-               :let [k [(:from r) (:to r) (:description r) (:event r)]]
-               :when (not (@seen k))]
-           (do (vswap! seen conj k) r)))))
+  (let [order (distinct (map (juxt :from :to) rels))
+        grouped (group-by (juxt :from :to) rels)]
+    (vec (for [[f t :as k] order
+               :let [rs (grouped k)
+                     direct (remove :lifted? rs)]]
+           {:from f :to t
+            :label (str/join "; " (distinct (remove str/blank? (map :label (if (seq direct) direct rs)))))}))))
 
-(defn- lifted-rels
-  "The model's relationships with each end replaced by `(lift id)`; a
-  relationship with an end that lifts to nil is left out."
-  [m lift]
-  (let [all (for [r (:relationships m)
-                  :let [f (lift (:from r)) t (lift (:to r))]
-                  :when (and f t)]
-              (assoc r :from f :to t ::direct? (and (= f (:from r)) (= t (:to r)))))
-        direct-pairs (set (for [r all :when (::direct? r)] [(:from r) (:to r)]))
-        ;; a pair joined directly keeps its own arrows; a pair joined only by
-        ;; lifted relationships is drawn once, with the first of them
-        kept (loop [rs all seen #{} acc []]
-               (if-let [[r & more] (seq rs)]
-                 (let [pair [(:from r) (:to r)]]
-                   (cond (::direct? r) (recur more seen (conj acc r))
-                         (or (direct-pairs pair) (seen pair)) (recur more seen acc)
-                         :else (recur more (conj seen pair) (conj acc r))))
-                 acc))]
-    (mapv #(dissoc % ::direct?) (dedupe-rels kept))))
-
-(defn- context-content [m]
-  (let [els (by-id m)
-        sys (first (filter #(= :system (:type %)) (model/elements m)))
-        outside (filterv #(#{:person :external} (:type %)) (model/elements m))
-        outside-ids (set (map :id outside))
-        lift (fn [id]
-               (let [e (get els id)]
-                 (cond (outside-ids id) id
-                       (nil? e) nil
-                       (#{:system :container :context :component :kernel} (:type e)) (:id sys))))]
-    {:boundary nil
-     :inside (if sys [sys] [])
-     :outside outside
-     :rels (if sys (lifted-rels m lift) [])}))
-
-(defn- container-content [m]
-  (let [els (model/elements m)
-        sys (first (filter #(= :system (:type %)) els))
-        containers (filterv #(= :container (:type %)) els)
-        outside (filterv #(#{:person :external} (:type %)) els)
-        runs (:id (first-runs-container m))
-        lift (fn [id]
-               (let [e (first (filter #(= id (:id %)) (remove #(= :system (:type %)) els)))]
-                 (case (:type e)
-                   (:person :external :container) id
-                   (:context :component) (:container e)
-                   :kernel runs
-                   nil)))]
-    {:boundary sys
-     :inside containers
-     :outside outside
-     :rels (lifted-rels m lift)}))
-
-(defn- component-content [m v]
-  (let [els (model/elements m)
-        ctx (first (filter #(and (= :context (:type %)) (= (:context v) (:id %))) els))
-        inside (filterv #(and (= :component (:type %)) (= (:context v) (:context %))) els)
-        inside-ids (set (map :id inside))
-        rels (dedupe-rels (filter #(or (inside-ids (:from %)) (inside-ids (:to %))) (:relationships m)))
-        other-ids (set (remove inside-ids (mapcat (juxt :from :to) rels)))
-        ;; the pun: an id shared by the system and its container is drawn as the container
-        outside (filterv #(and (other-ids (:id %))
-                               (not (and (= :system (:type %))
-                                         (some (fn [e] (and (= :container (:type e)) (= (:id e) (:id %)))) els))))
-                         els)]
-    {:boundary ctx
-     :inside inside
-     :outside outside
-     :rels rels}))
-
-(defn- dynamic-content [m v]
-  (let [els (model/elements m)
-        pick (fn [id] (or (first (filter #(and (= id (:id %)) (not= :system (:type %))) els))
-                          (first (filter #(= id (:id %)) els))))
-        ids (distinct (mapcat (fn [[f t]] [f t]) (:steps v)))]
-    {:boundary nil
-     :inside (vec (keep pick ids))
-     :outside []
-     :rels (vec (for [[f t d] (:steps v)] {:from f :to t :description d}))}))
+(defn- lifted [m level]
+  (let [els (by-id m)]
+    (merge-rels
+     (for [r (:relationships m)
+           :let [f (lift m els level (:from r)) t (lift m els level (:to r))]
+           :when (and f t (not= f t))]
+       {:from f :to t :label (label r) :lifted? (not= [f t] [(:from r) (:to r)])}))))
 
 (defn view-content
-  "What view `v` of model `m` holds: {:boundary element-or-nil :inside
-  [element] :outside [element] :rels [{:from :to :description}]}; elements
-  as rdm-spec.architecture.model/elements gives them. The boundary (the
-  system of a container view, the context of a component view) is drawn
-  around :inside and is not counted among its elements."
+  "What view `v` of model `m` holds: {:inside [element] :outside [element]
+  :rels [{:from :to :label}] :boundary {:id :name :kind} or nil}, each
+  element as model/elements gives it, :external? when drawn as external.
+  Inside is what the view's boundary holds (for a context view, the system;
+  for a dynamic view, which has none, every element)."
   [m v]
-  (case (:level v)
-    :context (context-content m)
-    :container (container-content m)
-    :component (component-content m v)
-    :dynamic (dynamic-content m v)
-    {:boundary nil :inside [] :outside [] :rels []}))
+  (let [els (model/elements m)
+        el-of (by-id m)
+        of-type (fn [& ts] (filterv #((set ts) (:type %)) els))]
+    (case (:level v)
+      :context
+      {:inside (of-type :system)
+       :outside (of-type :person :external)
+       :rels (lifted m :context)
+       :boundary nil}
+
+      :container
+      {:inside (of-type :container)
+       :outside (of-type :person :external)
+       :rels (lifted m :container)
+       :boundary (when-let [s (:system m)] {:id (:id s) :name (:name s) :kind :system})}
+
+      :component
+      (let [inside (filterv #(and (= :component (:type %)) (= (:context v) (:context %))) els)
+            in? (set (map :id inside))
+            rels (filterv #(or (in? (:from %)) (in? (:to %))) (:relationships m))
+            out-ids (set (remove in? (mapcat (juxt :from :to) rels)))
+            ctx-el (first (filter #(and (= :context (:type %)) (= (:context v) (:id %))) els))]
+        {:inside inside
+         :outside (vec (for [e els :when (out-ids (:id e))] (assoc e :external? true)))
+         :rels (merge-rels (map #(assoc % :label (label %)) rels))
+         :boundary {:id (:context v) :name (or (get-in ctx-el [:el :name]) (some-> (:context v) name))
+                    :kind :context}})
+
+      :dynamic
+      (let [steps (filter #(and (sequential? %) (= 3 (count %))) (:steps v))]
+        {:inside (vec (keep el-of (distinct (mapcat #(take 2 %) steps))))
+         :outside []
+         :rels (mapv (fn [[f t l]] {:from f :to t :label (str l)}) steps)
+         :boundary nil})
+
+      {:inside [] :outside [] :rels [] :boundary nil})))
 
 (defn element-count
-  "How many elements view `v` draws (its boundary not counted)."
+  "How many elements view `v` draws (boundaries and arrows not counted)."
   [m v]
   (let [{:keys [inside outside]} (view-content m v)]
     (+ (count inside) (count outside))))
 
 ;; ---------------------------------------------------------------------------
-;; Diagram source
+;; The diagram source
 
 (defn alias-of
-  "A diagram alias for an id: `:architecture/views` is architecture__views."
-  [id]
-  (let [s (if (keyword? id)
-            (str (when (namespace id) (str (namespace id) "__")) (name id))
-            (str id))]
-    (str/replace s #"[^A-Za-z0-9_]" "_")))
+  "An element id as a diagram alias: `:a/b` is a__b, other characters _."
+  [k]
+  (-> (if (and (keyword? k) (namespace k)) (str (namespace k) "__" (name k)) (name k))
+      (str/replace #"[^A-Za-z0-9_]" "_")))
 
-(defn- q [s] (str "\"" (str/replace (str (or s "")) #"[\"\r\n]" (fn [c] (if (= c "\"") "'" " "))) "\""))
+(defn- q
+  "A quoted string of the diagram source."
+  [s]
+  (str "\"" (-> (str s) (str/replace "\"" "'") (str/replace #"\s+" " ") str/trim) "\""))
 
-(defn- element-line [{:keys [type id el]} external?]
-  (let [a (alias-of id)
-        x (if external? "_Ext" "")]
+(defn- element-line [{:keys [type id el external?]}]
+  (let [ext (if external? "_Ext" "")
+        a (alias-of id)
+        nm (q (or (:name el) (name id)))
+        d (q (:description el))]
     (case type
-      :person (str "Person" x "(" a ", " (q (:name el)) ", " (q (:description el)) ")")
-      (:system :external) (str "System" (if (= :external type) "_Ext" x) "(" a ", " (q (:name el)) ", "
-                               (q (:description el)) ")")
-      :container (str (if (= :stores (:kind el)) "ContainerDb" "Container") x
-                      "(" a ", " (q (:name el)) ", " (q (:technology el)) ", " (q (:description el)) ")")
-      :context (str "Container" x "(" a ", " (q (:name el)) ", \"bounded context\", " (q (:description el)) ")")
-      (:component :kernel) (str "Component" x "(" a ", " (q (:name el)) ", "
-                                (q (if (= :kernel type) "kernel" "")) ", " (q (:description el)) ")"))))
+      :person (str "Person" ext "(" a ", " nm ", " d ")")
+      :system (str "System" ext "(" a ", " nm ", " d ")")
+      :external (str "System_Ext(" a ", " nm ", " d ")")
+      :container (str (if (= :stores (:kind el)) "ContainerDb" "Container") ext
+                      "(" a ", " nm ", " (q (:technology el)) ", " d ")")
+      :context (str "Container" ext "(" a ", " nm ", " (q "bounded context") ", " d ")")
+      :component (str "Component" ext "(" a ", " nm ", " (q "") ", " d ")")
+      :kernel (str "Component" ext "(" a ", " nm ", " (q "kernel") ", " d ")"))))
 
-(defn- rel-line [{:keys [from to description event]}]
-  (str "Rel(" (alias-of from) ", " (alias-of to) ", "
-       (q (str description (when event (str " " (name event))))) ")"))
-
-(def ^:private diagram-kind
+(def ^:private diagram-type
   {:context "C4Context" :container "C4Container" :component "C4Component" :dynamic "C4Dynamic"})
 
-(defn hash-line-text
-  "What the first line of every output records: the SHA-256 of the model's
-  bytes and of its value, as lowercase hex."
-  [bytes-hash value-hash]
-  (str "model-sha256: " bytes-hash " model-value-sha256: " value-hash))
-
 (defn source
-  "The diagram source of view `v`, its first line recording the hashes."
-  [m v {:keys [bytes-hash value-hash model-file]}]
-  (let [{:keys [boundary inside outside rels]} (view-content m v)
-        level (:level v)
-        ext? (= :component level)
-        inner (map #(element-line % false) inside)
-        block (cond
-                (and boundary (= :container level))
-                (concat [(str "System_Boundary(boundary__" (alias-of (:id boundary)) ", "
-                              (q (get-in boundary [:el :name])) ") {")]
-                        (map #(str "  " %) inner) ["}"])
-                (and boundary (= :component level))
-                (concat [(str "Boundary(boundary__" (alias-of (:id boundary)) ", "
-                              (q (get-in boundary [:el :name])) ", \"bounded context\") {")]
-                        (map #(str "  " %) inner) ["}"])
-                :else inner)]
-    (str (str/join "\n"
-                   (concat [(str "%% " (hash-line-text bytes-hash value-hash)
-                                 "; generated by rdm-spec views from " model-file ", view " (pr-str (:key v))
-                                 "; do not edit")
-                            (diagram-kind level)
-                            (str "title " (str/replace (str (:description v)) #"[\r\n]" " "))]
-                           block
-                           (map #(element-line % ext?) outside)
-                           (map rel-line rels)))
-         "\n")))
+  "View `v`'s diagram source, its first line recording `hash`."
+  [m v hash model-rel]
+  (let [{:keys [inside outside rels boundary]} (view-content m v)]
+    (str/join
+     "\n"
+     (concat
+      [(source-header hash model-rel (:key v))
+       (diagram-type (:level v))
+       (str "title " (str/replace (str (or (:description v) (:key v))) #"\s+" " "))]
+      (if boundary
+        (concat [(str (if (= :system (:kind boundary)) "System_Boundary" "Boundary")
+                      "(boundary__" (alias-of (:id boundary)) ", " (q (:name boundary))
+                      (when (= :context (:kind boundary)) (str ", " (q "bounded context")))
+                      ") {")]
+                (map #(str "  " (element-line %)) inside)
+                ["}"])
+        (map element-line inside))
+      (map element-line outside)
+      (map (fn [{:keys [from to label]}] (str "Rel(" (alias-of from) ", " (alias-of to) ", " (q label) ")")) rels)
+      [""]))))
 
 ;; ---------------------------------------------------------------------------
-;; Hashes
+;; Freshness
 
-(defn- hex [^bytes d] (apply str (map #(format "%02x" (bit-and % 0xff)) d)))
+(defn freshness-findings
+  "A finding for every output of every view of `m` that is missing or records
+  another hash than `hash`. `read-output` gives an output's text by its path
+  (`views-dir`/<key>.<ext>), or nil when there is none."
+  [m hash views-dir read-output]
+  (vec
+   (for [{k :key} (:views m)
+         ext exts
+         :let [rel (str views-dir "/" k "." ext)
+               text (read-output rel)
+               h (when text (recorded-hash text))]
+         :when (not= h hash)]
+     (cond
+       (nil? text) (command/finding rel nil "views-missing"
+                                    (str "the view \"" k "\" has no " ext " output: run rdm-spec views"))
+       (nil? h) (command/finding rel 1 "views-stale"
+                                 (str "the view \"" k "\" records no model hash on its first line, not the model's "
+                                      hash ": run rdm-spec views"))
+       :else (command/finding rel 1 "views-stale"
+                              (str "the view \"" k "\" records the model hash " h ", not the model's " hash
+                                   ": run rdm-spec views"))))))
 
-(defn bytes-hash
-  "The SHA-256 of `bs` (a byte array), lowercase hex."
-  [^bytes bs]
-  (hex (.digest (java.security.MessageDigest/getInstance "SHA-256") bs)))
+(defn- views-dir-of [req] (str/replace (command/config-value req :views-dir) #"/+$" ""))
 
-(defn first-line [text] (first (str/split-lines (str text))))
+(defn- model-file-hash [req]
+  (let [f (command/path req (command/config-value req :model))]
+    (when (fs/regular-file? f) (model-hash-of-text (slurp f)))))
 
-(defn recorded-hashes
-  "The hashes the first line of an output records: {:bytes hex :value hex},
-  either nil when absent."
-  [text]
-  (let [l (or (first-line text) "")]
-    {:bytes (some->> (re-find #"model-sha256:\s*([0-9a-f]{64})" l) second)
-     :value (some->> (re-find #"model-value-sha256:\s*([0-9a-f]{64})" l) second)}))
-
-(defn fresh?
-  "True when the output `text` records the current model's bytes or value hash."
-  [text {:keys [bytes-hash value-hash]}]
-  (let [{:keys [bytes value]} (recorded-hashes text)]
-    (boolean (or (and bytes (= bytes bytes-hash)) (and value (= value value-hash))))))
+(defn check
+  "The views' stage of `rdm-spec check`: every view's outputs are fresh."
+  [req]
+  (let [{:keys [model]} (model/read-model req)
+        hash (when model (model-file-hash req))]
+    (if-not (and model hash)
+      {:result {:views {:checked false}} :findings []}
+      (let [dir (views-dir-of req)
+            read-output (fn [rel] (let [f (command/path req rel)] (when (fs/regular-file? f) (slurp f))))
+            fs* (freshness-findings model hash dir read-output)]
+        {:result {:views {:checked true :model-sha256 hash
+                          :stale (vec (distinct (keep #(when (= "views-stale" (:rule %)) (:file %)) fs*)))
+                          :missing (vec (distinct (keep #(when (= "views-missing" (:rule %)) (:file %)) fs*)))}}
+         :findings fs*}))))
 
 ;; ---------------------------------------------------------------------------
 ;; Rendering
 
 (defn- render!
-  "Renders `src-file` to `out-file`; nil, or the renderer's complaint."
-  [src-file out-file ext]
-  (let [r (try (p/shell {:out :string :err :string :continue true}
-                        renderer "-i" (str src-file) "-o" (str out-file) "-e" ext)
-               (catch java.io.IOException e
-                 (command/cannot-run! (str "the diagram renderer " renderer " is not installed: " (ex-message e)))))]
-    (when (or (not (zero? (:exit r))) (not (fs/exists? out-file)))
-      (str/trim (str (:err r) " " (:out r))))))
+  "Renders the diagram source file `in` to `out`: nil, or why it failed."
+  [in out]
+  (let [r (try (p/shell {:out :string :err :string :continue true} renderer "-i" (str in) "-o" (str out))
+               (catch Exception e {:exit -1 :err (ex-message e)}))]
+    (cond
+      (not (zero? (:exit r))) (str renderer " exited " (:exit r) ": " (str/trim (str (:err r) " " (:out r))))
+      (not (fs/regular-file? out)) (str renderer " wrote no render")
+      :else nil)))
 
-(defn- stamp-render
-  "The rendered output with the hash line put first."
-  [text hash-text k]
-  (let [text (str/replace-first (str text) #"^\s*<\?xml[^>]*\?>\s*" "")]
-    (str "<!-- " hash-text "; generated by rdm-spec views, view " (pr-str k) "; do not edit -->\n" text)))
-
-(defn- generated? [f]
-  (try (str/includes? (or (first-line (slurp (str f))) "") "generated by rdm-spec views")
-       (catch Exception _ false)))
-
-;; ---------------------------------------------------------------------------
-;; The tasks
-
-(defn- views-dir [req]
-  (str/replace (or (get-in req [:config :views-dir]) "dhf/views") #"/+$" ""))
-
-(defn- hashes [req read]
-  (let [f (command/path req (:file read))]
-    {:bytes-hash (bytes-hash (fs/read-all-bytes f))
-     :value-hash (:hash read)
-     :model-file (:file read)}))
+(defn- orphans
+  "Outputs in `dir` this task wrote (a recorded hash on their first line) for
+  a view the model no longer has."
+  [dir keys]
+  (if-not (fs/directory? dir)
+    []
+    (vec (for [f (sort (map str (fs/list-dir dir)))
+               :let [n (fs/file-name f)
+                     [_ k ext] (re-matches #"(.+)\.([^.]+)" n)]
+               :when (and k ((set exts) ext) (not (keys k)) (fs/regular-file? f)
+                          (recorded-hash (try (slurp f) (catch Exception _ nil))))]
+           f))))
 
 (defn views
-  "The views task: every view of the model generated to <views-dir>/<key>.mmd
-  and rendered beside it. A refused model writes nothing. Generated outputs of
-  views no longer in the model are removed."
+  "`rdm-spec views`: every view of the model written and rendered."
   [req]
-  (let [{:keys [model findings] :as read} (model/read-model req)]
+  (let [{:keys [model findings file]} (model/read-model req)]
     (if-not model
-      {:result {:model-read false :views []} :findings findings}
-      (do
-        (when-not (fs/which renderer)
-          (command/cannot-run! (str "the diagram renderer " renderer " is not on PATH: no view was rendered")))
-        (let [h (hashes req read)
-              dir (views-dir req)
-              ddir (command/path req dir)
-              _ (fs/create-dirs ddir)
-              hash-text (hash-line-text (:bytes-hash h) (:value-hash h))
-              out (vec
-                   (for [v (:views model)
-                         :let [k (:key v)
-                               src (fs/file ddir (str k "." source-ext))
-                               _ (spit src (source model v h))
-                               rendered (for [ext render-exts
-                                              :let [o (fs/file ddir (str k "." ext))
-                                                    tmp (fs/file ddir (str "." k "." ext ".tmp"))
-                                                    _ (fs/delete-if-exists tmp)
-                                                    err (render! src tmp ext)]]
-                                          (if err
-                                            (do (fs/delete-if-exists tmp)
-                                                {:finding (command/finding (command/rel req src) nil "views-render"
-                                                                           (str (model/describe-view v) " could not be rendered to "
-                                                                                ext ": " err))})
-                                            (do (spit o (stamp-render (slurp tmp) hash-text k))
-                                                (fs/delete tmp)
-                                                {:file (command/rel req o)})))]]
-                     {:key k :level (:level v)
-                      :source (command/rel req src)
-                      :rendered (vec (keep :file rendered))
-                      :findings (vec (keep :finding rendered))}))
-              keys* (set (map :key (:views model)))
-              removed (vec (for [f (sort (map str (fs/list-dir ddir)))
-                                 :let [n (fs/file-name f)
-                                       [_ k ext] (re-matches #"(.+)\.([^.]+)" n)]
-                                 :when (and k ((set (cons source-ext render-exts)) ext)
-                                            (not (keys* k)) (generated? f))]
-                             (do (fs/delete f) (command/rel req f))))]
-          {:result {:model-read true
-                    :model-sha256 (:bytes-hash h)
-                    :model-value-sha256 (:value-hash h)
-                    :views (mapv #(dissoc % :findings) out)
-                    :removed removed}
-           :findings (vec (mapcat :findings out))})))))
-
-(defn stale-findings
-  "A finding for every view of the model whose outputs are missing
-  (views-missing) or record no hash of the current model (views-stale)."
-  [req model h]
-  (let [dir (views-dir req)]
-    (vec
-     (for [v (:views model)
-           ext (cons source-ext render-exts)
-           :let [f (command/path req (str dir "/" (:key v) "." ext))
-                 rel (command/rel req f)]
-           :let [x (cond
-                     (not (fs/exists? f))
-                     (command/finding rel nil "views-missing"
-                                      (str (model/describe-view v) " has no " ext " output; run rdm-spec views"))
-                     (not (fresh? (slurp (str f)) h))
-                     (let [{:keys [bytes]} (recorded-hashes (slurp (str f)))]
-                       (command/finding rel 1 "views-stale"
-                                        (str (model/describe-view v) " is older than the model: it records "
-                                             (or bytes "no model hash") ", the model's is " (:bytes-hash h)
-                                             "; run rdm-spec views"))))]
-           :when x]
-       x))))
-
-(defn check
-  "The views' stage of `rdm-spec check`: every view's outputs exist and record
-  the current model's hash. A refused model is the lint's to report."
-  [req]
-  (let [{:keys [model] :as read} (model/read-model req)]
-    (when model
-      (let [fs* (stale-findings req model (hashes req read))]
-        {:result {:views-fresh (empty? fs*)}
-         :findings fs*}))))
+      {:result {:views {:written []}} :findings findings}
+      (let [hash (or (model-file-hash req) (model-hash model))
+            dir-rel (views-dir-of req)
+            dir (command/path req dir-rel)
+            _ (when-not (fs/which renderer)
+                (command/cannot-run! (str "the diagram renderer " renderer " is not on PATH: no view was written")))
+            tmp (fs/create-temp-dir {:prefix "rdm-spec-views-"})]
+        (try
+          (let [drawn (vec (for [v (:views model)
+                                 :let [k (:key v)
+                                       src (fs/file tmp (str k "." source-ext))
+                                       out (fs/file tmp (str k "." render-ext))
+                                       _ (spit src (source model v hash file))
+                                       err (render! src out)]]
+                             {:key k :src src :out out :err err}))
+                failed (filter :err drawn)]
+            (if (seq failed)
+              {:result {:views {:written [] :model-sha256 hash}}
+               :findings (vec (for [{:keys [key err]} failed]
+                                (command/finding (str dir-rel "/" key "." source-ext) nil "views-render"
+                                                 (str "the view \"" key "\" did not render, so no view was written: "
+                                                      err))))}
+              (let [removed (orphans dir (set (map :key drawn)))]
+                (fs/create-dirs dir)
+                (doseq [f removed] (fs/delete f))
+                (doseq [{:keys [key src out]} drawn]
+                  (fs/copy src (fs/file dir (str key "." source-ext)) {:replace-existing true})
+                  (spit (fs/file dir (str key "." render-ext))
+                        (str (render-header hash key) "\n" (slurp out))))
+                {:result {:views {:model-sha256 hash
+                                  :written (vec (for [{k :key} drawn ext exts] (str dir-rel "/" k "." ext)))
+                                  :removed (mapv #(command/rel req %) removed)}}
+                 :findings []})))
+          (finally (fs/delete-tree tmp)))))))

@@ -4,67 +4,65 @@
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.knowledge.wiki :as wiki]))
 
+(def sources [{:id "loyly" :repository "r" :pins ["17d68d2"] :fenced ["impl"]}])
+
 (defn- project [files]
-  (let [dir (str (fs/create-temp-dir {:prefix "wiki-test-"}))]
+  (let [dir (str (fs/create-temp-dir))]
     (doseq [[rel text] files]
       (fs/create-dirs (fs/parent (fs/file dir rel)))
       (spit (str (fs/file dir rel)) text))
     dir))
 
-(defn- req [dir] {:root dir :config {:wiki-dir "dhf/wiki" :stack-words ["Cobalt"]}})
+(defn- check [files & [config]]
+  (wiki/check-wiki (project files) (merge {:wiki-dir "dhf/wiki" :stack-words ["Cobalt"]} config)
+                   {:sources sources :sources-dir nil}))
 
-(defn- resolve-all [status]
-  (fn [c] (assoc c :status status :why (when (not= :resolved status) "a reason"))))
+(defn- rules [r] (set (map :rule (remove #(= :warning (:severity %)) (:findings r)))))
 
-(defn- rules [out] (set (map :rule (:findings out))))
+(def good-page "# A\n\nA claim.[^1]\n\n[^1]: `loyly:README.md@17d68d2`, \"Section\".\n")
 
-(deftest reading-markdown
-  (is (= ["loyly:README.md@17d68d2" "x:a/b.md@abcdef1"]
-         (wiki/citations-in "See `loyly:README.md@17d68d2`, and x:a/b.md@abcdef1.")))
-  (is (= [{:label "1" :line 3 :text "`a:b@1234567`, \"S\".\nmore"}]
-         (wiki/footnotes "Claim.[^1]\n\n[^1]: `a:b@1234567`, \"S\".\n  more\n")))
-  (testing "nothing is read inside a code block"
-    (is (empty? (wiki/footnotes "```\n[^1]: x:y@1234567\n```\n")))
-    (is (empty? (wiki/index-entries "```\n- [A](pages/a.md)\n```\n"))))
-  (is (= [{:target "pages/a.md" :line 1}]
-         (wiki/index-entries "- [A](pages/a.md#top) [B](https://example.org/b.md)\n"))))
+(deftest footnotes-and-references
+  (is (= [{:label "1" :line 3 :text "`loyly:a.md@17d68d2`\n  continued"}]
+         (wiki/footnotes "A.[^1]\n\n[^1]: `loyly:a.md@17d68d2`\n  continued\nNext.")))
+  (is (= [{:label "1" :line 1} {:label "2" :line 1}]
+         (wiki/footnote-references "A.[^1] B.[^2]\n[^1]: c"))))
 
-(deftest a-good-wiki-passes
-  (let [dir (project {"dhf/wiki/index.md" "# W\n\n- [A](pages/a.md)\n"
-                      "dhf/wiki/pages/a.md" "Claim.[^1]\n\n[^1]: `s:p.md@1234567`.\n"})
-        out (wiki/check (req dir) (resolve-all :resolved))]
-    (is (= [] (:findings out)))
-    (is (= ["dhf/wiki/pages/a.md"] (:pages out)))
-    (is (= [{:citation "s:p.md@1234567" :file "dhf/wiki/pages/a.md" :line 3 :footnote "[^1]"
-             :status :resolved :why nil}]
-           (:citations out)))))
+(deftest index-entries-are-relative-links
+  (is (= ["pages/a.md" "b.md"]
+         (map :path (wiki/index-entries "- [A](pages/a.md)\n- [B](./b.md#top) [U](https://x.org/a.md) [H](#here)")))))
 
-(deftest every-rule
-  (let [dir (project {"dhf/wiki/index.md" "# W\n\n- [A](pages/a.md)\n- [S](pages/scoring.md)\n- [N](pages/n.md)\n"
-                      "dhf/wiki/pages/a.md" "Written in Cobalt.[^1] And[^2].\n\n[^1]: no citation\n"
-                      "dhf/wiki/pages/n.md" "No footnote at all.\n"
-                      "dhf/wiki/pages/b.md" "Claim.[^1]\n\n[^1]: `s:p.md@1234567`.\n"})
-        out (wiki/check (req dir) (resolve-all :failed))]
-    (is (= #{"wiki-entry" "wiki-unlisted" "wiki-no-footnote" "wiki-footnote-no-citation"
-             "wiki-footnote-undefined" "wiki-citation" "wiki-stack-word"}
-           (rules out)))
-    (is (some #(and (= "wiki-stack-word" (:rule %)) (= "dhf/wiki/pages/a.md" (:file %)) (= 1 (:line %))) (:findings out)))
-    (is (some #(and (= "wiki-entry" (:rule %)) (= 4 (:line %)) (str/includes? (:message %) "pages/scoring.md"))
-              (:findings out)))
-    (is (some #(and (= "wiki-citation" (:rule %)) (str/includes? (:message %) "[^1]")
-                    (str/includes? (:message %) "does not resolve: a reason"))
-              (:findings out)))))
+(deftest a-good-page-passes
+  (let [r (check {"dhf/wiki/index.md" "# Wiki\n\n- [A](pages/a.md)\n" "dhf/wiki/pages/a.md" good-page})]
+    (is (empty? (rules r)))
+    (is (= ["dhf/wiki/pages/a.md"] (:pages r)))
+    (is (= [["dhf/wiki/pages/a.md" 5 :unchecked]] (map (juxt :file :line :status) (:citations r))))))
 
-(deftest an-unchecked-citation-warns
-  (let [dir (project {"dhf/wiki/index.md" "- [B](pages/b.md)\n"
-                      "dhf/wiki/pages/b.md" "Claim.[^1]\n\n[^1]: `s:p.md@1234567`.\n"})
-        out (wiki/check (req dir) (resolve-all :unchecked))]
-    (is (= [:warning] (map :severity (:findings out))))))
+(deftest page-rules
+  (testing "a page with no footnote"
+    (is (= #{"wiki-no-footnote"}
+           (rules (check {"dhf/wiki/index.md" "- [A](pages/a.md)\n" "dhf/wiki/pages/a.md" "# A\n\nOne.\n\nTwo.\n\nThree.\n"})))))
+  (testing "a footnote citing nothing, and a reference with no footnote"
+    (is (= #{"wiki-footnote-uncited" "wiki-footnote-undefined"}
+           (rules (check {"dhf/wiki/index.md" "- [A](pages/a.md)\n"
+                          "dhf/wiki/pages/a.md" "# A\n\nOne.[^1] Two.[^2]\n\n[^1]: A book.\n"})))))
+  (testing "a footnote whose citation does not resolve names the footnote"
+    (let [r (check {"dhf/wiki/index.md" "- [A](pages/a.md)\n"
+                    "dhf/wiki/pages/a.md" "# A\n\nOne.[^x]\n\n[^x]: `loyly:impl/a.clj@17d68d2`.\n"})
+          f (first (filter #(= "citation-fenced" (:rule %)) (:findings r)))]
+      (is (= ["dhf/wiki/pages/a.md" 5] ((juxt :file :line) f)))
+      (is (str/includes? (:message f) "the footnote [^x] cites loyly:impl/a.clj@17d68d2")))))
 
-(deftest pages-and-no-index
-  (let [dir (project {"dhf/wiki/pages/b.md" "Claim.[^1]\n\n[^1]: `s:p.md@1234567`.\n"})]
-    (is (= #{"wiki-index"} (rules (wiki/check (req dir) (resolve-all :resolved)))))))
+(deftest index-rules
+  (let [r (check {"dhf/wiki/index.md" "- [S](pages/scoring.md)\n" "dhf/wiki/pages/a.md" good-page})]
+    (is (= #{"wiki-index-dangling" "wiki-unindexed"} (rules r)))
+    (is (some #(and (= "dhf/wiki/index.md" (:file %)) (str/includes? (:message %) "pages/scoring.md")) (:findings r)))
+    (is (some #(= "dhf/wiki/pages/a.md" (:file %)) (:findings r))))
+  (is (= #{"wiki-no-index"} (rules (check {"dhf/wiki/pages/a.md" good-page})) ))
+  (is (empty? (:findings (check {})))))
 
-(deftest no-wiki-no-findings
-  (is (= {:pages [] :citations [] :findings []}
-         (wiki/check (req (project {})) (resolve-all :resolved)))))
+(deftest stack-words
+  (let [r (check {"dhf/wiki/index.md" "- [A](pages/a.md)\nNot cobalt-blue.\n"
+                  "dhf/wiki/pages/a.md" (str good-page "Written in Cobalt.\nCobaltic is fine.\n")})
+        fs* (filter #(= "wiki-stack-word" (:rule %)) (:findings r))]
+    (is (= [["dhf/wiki/index.md" 2] ["dhf/wiki/pages/a.md" 6]] (map (juxt :file :line) fs*)))
+    (is (every? #(str/includes? (:message %) "Cobalt") fs*))))

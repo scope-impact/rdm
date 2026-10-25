@@ -1,168 +1,183 @@
 (ns steps.measurement-scoreboard
-  "Step definitions for dhf/spec/measurement/scoreboard.feature. Scored cycles
-  are written by hand into a temporary project (cycle.edn, checklist.json and
-  score.edn per cycle) and compared with `rdm-spec scoreboard`, whose result is
-  the EDN on its standard output."
-  (:require [cheshire.core :as json]
+  "Step definitions for dhf/spec/measurement/scoreboard.feature.
+
+  The scoreboard meets the other steps of a cycle only through its files, so
+  the fixture writes them directly: for each cycle, cycle.edn, checklist.json
+  (each item's context and component) and score.edn (each item's verdict),
+  in a project holding the room's configuration and C4 model. Items are
+  spec-0501 on; :verification items are owned by the component Status of
+  the context verification, the others by Lint of architecture."
+  (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.walk :as walk]
             [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-command :as kc]
             [steps.measurement-cycle :as mc]
             [steps.support :as s]))
 
-(defn ids [from n] (vec (for [i (range n)] (format "spec-%04d" (+ from i)))))
+(defn- id [i] (format "spec-%04d" (+ 501 i)))
 
-(defn write-score!
-  "Writes cycle `cycle`'s cycle.edn and score.edn, `verdicts` {id :pass|:fail}."
-  [dir cycle verdicts & [{:keys [scope] :or {scope :project}}]]
-  (mc/write-cycle! dir cycle {:scope scope})
-  (let [items (vec (for [[id v] (sort-by key verdicts)] {:id id :verdict v :evidence (str "graded " id)}))]
-    (s/write! dir (mc/cycle-path cycle "score.edn")
-              (pr-str {:cycle cycle :cut "spec-3" :scope scope :room-tree "4b825dc"
-                       :builder (:builder mc/roles) :grader (:grader mc/roles) :spec-owner (:spec-owner mc/roles)
-                       :items items
-                       :passed (count (filter #{:pass} (vals verdicts))) :scored (count items)}))))
+(defn board-project!
+  "ctx with a project (the room's configuration and model, no cut needed)."
+  [ctx]
+  (if (:dir ctx)
+    ctx
+    (let [dir (s/tmp-dir)]
+      (s/write! dir "dhf/harness/config.edn" (pr-str (s/room-config)))
+      (s/write! dir "dhf/spec/model.edn" (slurp (str (fs/file s/room-root "dhf/spec/model.edn"))))
+      (assoc ctx :dir dir))))
 
-(defn all [id-list v] (zipmap id-list (repeat v)))
+(defn write-board-cycle!
+  "Writes cycle `cycle` of the project: `verdicts` [[id verdict owner]]
+  (owner :verification or :lint), declared with `extra` (merged into the
+  default cycle), and a score.edn unless :no-score."
+  [ctx cycle verdicts & [{:keys [extra no-score]}]]
+  (let [dir (:dir ctx)
+        decl (merge {:cut "spec-3" :scope :project} extra)
+        owner {:verification ["verification" "Status"] :lint ["architecture" "Lint"]}]
+    (mc/write-cycle! dir cycle decl)
+    (s/write! dir (mc/cycle-path cycle "checklist.json")
+              (json/generate-string
+               (array-map :cycle cycle :cut "spec-3"
+                          :items (vec (for [[i _ o] (sort-by first verdicts)
+                                            :let [[c k] (owner (or o :lint))]]
+                                        (array-map :id i :title (str "Scenario " i) :context c
+                                                   :component k :level "e2e")))
+                          :planned [])
+               {:pretty true}))
+    (when-not no-score
+      (s/write! dir (mc/cycle-path cycle "score.edn")
+                (pr-str {:cycle cycle :cut "spec-3" :scope (:scope decl) :room-tree "4b825dc"
+                         :builder {:name "builder-a" :actor :agent}
+                         :grader {:name "grader-b" :actor :agent}
+                         :spec-owner {:name "Sami" :actor :human}
+                         :items (vec (for [[i v] (sort-by first verdicts)]
+                                       {:id i :verdict v :evidence "graded"}))
+                         :passed (count (filter #(= :pass (second %)) verdicts))
+                         :scored (count verdicts)})))
+    ctx))
 
-(defn result [ctx] (mc/run-result ctx))
+(defn- result [ctx]
+  (let [r (:run ctx)]
+    (s/check! (zero? (:exit r)) (str "expected exit 0\n" (s/show r)))
+    (kc/stdout-edn r)))
 
-(defn passed! [ctx]
-  (s/check! (zero? (:exit (:run ctx))) (s/show (:run ctx))))
-
-;; --- Both directions are counted, never the net -----------------------------
+;; ---------------------------------------------------------------------------
+;; The scoreboard compares cycles honestly
 
 (defstep #"cycle 01 and cycle 02 scored over the same (\d+) items"
-  (fn [ctx n]
-    (let [dir (s/project!)
-          xs (ids 101 (parse-long n))]
-      (write-score! dir "01" (all xs :pass))
-      (write-score! dir "02" (all xs :pass))
-      (mc/settle (assoc ctx :dir dir :ids xs)))))
+  (fn [ctx n] (assoc (board-project! ctx) :n (parse-long n))))
 
 (defstep #"(\d+) items passed in 02 that failed in 01, and (\d+) failed in 02 that passed in 01"
   (fn [ctx better worse]
-    (let [[b w] [(parse-long better) (parse-long worse)]
-          xs (:ids ctx)
-          better-ids (take b xs)
-          worse-ids (take w (drop b xs))
-          ;; one more item failing in both, which neither got better nor worse
-          both-fail (take 1 (drop (+ b w) xs))
-          v01 (merge (all xs :pass) (all better-ids :fail) (all both-fail :fail))
-          v02 (merge (all xs :pass) (all worse-ids :fail) (all both-fail :fail))]
-      (write-score! (:dir ctx) "01" v01)
-      (write-score! (:dir ctx) "02" v02)
-      (mc/settle ctx))))
+    (let [b (parse-long better) w (parse-long worse) n (:n ctx)
+          ;; better, then worse, then passed in both, then (the last two) failed in both
+          v01 (fn [i] (cond (< i b) :fail (< i (+ b w)) :pass (>= i (- n 2)) :fail :else :pass))
+          v02 (fn [i] (cond (< i b) :pass (< i (+ b w)) :fail (>= i (- n 2)) :fail :else :pass))]
+      (s/check! (<= (+ b w 2) n) "too few items for the fixture")
+      (-> ctx
+          (write-board-cycle! "01" (vec (for [i (range n)] [(id i) (v01 i)])))
+          (write-board-cycle! "02" (vec (for [i (range n)] [(id i) (v02 i)])))))))
 
 (defstep #"it reports (\d+) got better and (\d+) got worse"
   (fn [ctx better worse]
-    (passed! ctx)
-    (let [shared (:shared (result ctx))]
-      (s/check! (= [(parse-long better) (parse-long worse)] [(:better shared) (:worse shared)])
-                (str "reported " (pr-str shared))))))
-
-(defn- all-keys [x]
-  (let [ks (atom [])]
-    (walk/postwalk (fn [f] (when (map? f) (swap! ks into (keys f))) f) x)
-    @ks))
+    (let [out (result ctx)]
+      (s/check! (= [(parse-long better) (parse-long worse)] [(:better out) (:worse out)])
+                (str "it reports better " (:better out) " and worse " (:worse out) ": " (pr-str out))))))
 
 (defstep #"it reports no net figure"
   (fn [ctx]
-    (let [r (result ctx)
-          netty (filter #(re-find #"net|delta|change|diff|gain" (name %)) (filter keyword? (all-keys r)))]
-      (s/check! (empty? netty) (str "the result carries a net figure: " (pr-str netty)))
-      (s/check! (not (re-find #"(?i)\bnet\b" (:err (:run ctx)))) (s/show (:run ctx))))))
-
-;; --- A moved denominator is said out loud ----------------------------------
+    (let [out (result ctx)
+          ks (atom [])]
+      (walk/postwalk (fn [x] (when (map? x) (swap! ks into (keys x))) x) out)
+      (s/check! (not-any? #(re-find #"(?i)net|total|delta|diff" (name %)) @ks)
+                (str "the result holds a net figure: " (pr-str out)))
+      (s/check! (not (re-find #"(?i)\bnet\b" (str (:out (:run ctx)) (:err (:run ctx)))))
+                (str "it says net\n" (s/show (:run ctx)))))))
 
 (defstep #"cycle 01 scored (\d+) items and cycle 02 scored (\d+)"
   (fn [ctx a b]
-    (let [dir (s/project!)
-          [a b] [(parse-long a) (parse-long b)]]
-      (write-score! dir "01" (all (ids 101 a) :pass))
-      ;; the shared items: one got worse; the new ones: one failed
-      (write-score! dir "02" (merge (all (ids 101 b) :pass) {"spec-0101" :fail} {(format "spec-%04d" (+ 101 (dec b))) :fail}))
-      (mc/settle (assoc ctx :dir dir :a a :b b)))))
+    (let [a (parse-long a) b (parse-long b)
+          ctx (board-project! ctx)]
+      ;; the first two shared items got better; the new items all pass
+      (-> ctx
+          (write-board-cycle! "01" (vec (for [i (range a)] [(id i) (if (< i 2) :fail :pass)])))
+          (write-board-cycle! "02" (vec (for [i (range b)] [(id i) :pass])))
+          (assoc :shared a :new (- b a))))))
 
 (defstep #"it compares only the (\d+) items both scored"
   (fn [ctx n]
-    (passed! ctx)
-    (let [shared (:shared (result ctx))]
-      (s/check! (= (parse-long n) (:items shared)) (str "compared " (pr-str shared)))
-      (s/check! (= [0 1] [(:better shared) (:worse shared)]) (str "the new items were compared: " (pr-str shared))))))
+    (let [out (result ctx)]
+      (s/check! (= (parse-long n) (:compared out)) (str "it compares " (:compared out) " items: " (pr-str out)))
+      (s/check! (= [2 0] [(:better out) (:worse out)]) (str "better and worse are not over the shared items: " (pr-str out))))))
 
 (defstep #"it states that the denominator moved from (\d+) to (\d+)"
   (fn [ctx from to]
-    (let [r (result ctx)
-          d (:denominator r)]
-      (s/check! (and (= (parse-long from) (:from d)) (= (parse-long to) (:to d)) (true? (:moved d)))
-                (str "denominator " (pr-str d)))
-      (s/check! (str/includes? (:err (:run ctx)) (str "moved from " from " to " to))
-                (str "the error stream does not say it\n" (s/show (:run ctx)))))))
+    (let [out (result ctx)]
+      (s/check! (= {:from (parse-long from) :to (parse-long to)} (select-keys (:denominator out) [:from :to]))
+                (str "the denominator is " (pr-str (:denominator out))))
+      (s/check! (re-find (re-pattern (str "denominator moved from " from " to " to)) (:err (:run ctx)))
+                (str "it does not say so on the error stream\n" (s/show (:run ctx)))))))
 
 (defstep #"it counts the (\d+) new items separately"
   (fn [ctx n]
-    (let [new (:new (result ctx))]
-      (s/check! (= (parse-long n) (:items new) (count (:ids new))) (str "new " (pr-str new))))))
+    (let [out (result ctx)]
+      (s/check! (= (parse-long n) (:new out)) (str "it counts " (pr-str (:new out)) " new items"))
+      (s/check! (= (parse-long n) (count (:new-ids out))) (str "the new items are " (pr-str (:new-ids out)))))))
 
-;; --- A scoped cycle is reported target first --------------------------------
-
-(def verification-ids ["spec-0024" "spec-0025" "spec-0026" "spec-0027"])
-(def other-ids ["spec-0012" "spec-0013" "spec-0014" "spec-0015"])
+;; ---------------------------------------------------------------------------
+;; A scoped cycle is reported target first
 
 (defstep #"cycle 02 regenerated the bounded context verification and cycle 01 is its baseline"
   (fn [ctx]
-    (let [dir (mc/copy-of-room-model!)
-          ;; verification: 2 better, 1 worse; the rest: 1 better, 2 worse
-          v01 (merge (all verification-ids :pass) (all other-ids :pass)
-                     {"spec-0024" :fail "spec-0025" :fail "spec-0012" :fail})
-          v02 (merge (all verification-ids :pass) (all other-ids :pass)
-                     {"spec-0026" :fail "spec-0013" :fail "spec-0014" :fail})]
-      (write-score! dir "01" v01)
-      (write-score! dir "02" v02 {:scope {:context :verification}})
-      (doseq [c ["01" "02"]]
-        (s/write! dir (mc/cycle-path c "checklist.json")
-                  (json/generate-string
-                   {:cycle c :cut "spec-3"
-                    :items (sort-by :id (concat (for [id verification-ids] {:id id :title id :context "verification" :component "Status" :level "e2e"})
-                                                (for [id other-ids] {:id id :title id :context "architecture" :component "Lint" :level "e2e"})))
-                    :planned []})))
-      (mc/settle (assoc ctx :dir dir)))))
+    ;; verification: 2 better, 1 worse; the rest: 1 better, 2 worse
+    (let [rows [[:verification :fail :pass] [:verification :fail :pass] [:verification :pass :fail]
+                [:verification :pass :pass] [:lint :fail :pass] [:lint :pass :fail] [:lint :pass :fail]
+                [:lint :pass :pass] [:lint :fail :fail]]
+          ctx (board-project! ctx)]
+      (-> ctx
+          (write-board-cycle! "01" (vec (map-indexed (fn [i [o a _]] [(id i) a o]) rows)))
+          (write-board-cycle! "02" (vec (map-indexed (fn [i [o _ b]] [(id i) b o]) rows))
+                              {:extra {:scope {:context :verification}}})))))
+
+(defn- part [ctx i]
+  (let [out (result ctx)
+        p (get (:parts out) i)]
+    (s/check! p (str "the result has no part " i ": " (pr-str out)))
+    p))
 
 (defstep #"it reports better and worse for verification's scenarios first"
   (fn [ctx]
-    (passed! ctx)
-    (let [out (:out (:run ctx))
-          r (result ctx)
-          t (:target r)]
-      (s/check! (and t (:rest r)) (str "no target and rest: " out))
-      (s/check! (< (str/index-of out ":target") (str/index-of out ":rest")) (str "the rest is reported first:\n" out))
-      (s/check! (= {:context :verification} (or (:scope t) (:scope r))) (str "the target is " (pr-str t)))
-      (s/check! (= [4 2 1] [(:items t) (:better t) (:worse t)]) (str "target " (pr-str t))))))
+    (let [p (part ctx 0)]
+      (s/check! (= :target (:part p)) (str "the first part is " (pr-str p)))
+      (s/check! (= {:context :verification} (:scope p)) (str "the first part's scope is " (pr-str (:scope p))))
+      (s/check! (= [2 1] [(:better p) (:worse p)]) (str "the first part is " (pr-str p))))))
 
 (defstep #"then, separately, better and worse for every other scenario"
   (fn [ctx]
-    (let [rest (:rest (result ctx))]
-      (s/check! (= [4 1 2] [(:items rest) (:better rest) (:worse rest)]) (str "rest " (pr-str rest))))))
+    (let [p (part ctx 1)]
+      (s/check! (= :rest (:part p)) (str "the second part is " (pr-str p)))
+      (s/check! (= [1 2 5] [(:better p) (:worse p) (:compared p)]) (str "the second part is " (pr-str p))))))
 
-;; --- A bootstrap cycle is never a baseline ---------------------------------
+;; ---------------------------------------------------------------------------
+;; A bootstrap cycle is never a baseline
 
 (defstep #"cycle 00's cycle.edn holds :bootstrap true"
   (fn [ctx]
-    (let [dir (s/project!)
-          xs (ids 101 12)]
-      ;; the bootstrap cycle was reviewed by a person: it has no score.edn
-      (mc/write-cycle! dir "00" {:bootstrap true})
-      (write-score! dir "01" (merge (all xs :pass) {"spec-0101" :fail}))
-      (mc/settle (assoc ctx :dir dir)))))
+    (let [rows (vec (for [i (range 4)] [(id i) :fail]))]
+      (-> (board-project! ctx)
+          (write-board-cycle! "00" rows {:extra {:bootstrap true}})
+          (write-board-cycle! "01" (assoc-in rows [0 1] :pass))))))
 
 (defstep #"it marks cycle 00 as bootstrap"
   (fn [ctx]
-    (passed! ctx)
-    (let [r (result ctx)]
-      (s/check! (= ["00"] (:bootstrap r)) (str "bootstrap: " (pr-str (:bootstrap r)))))))
+    (let [out (result ctx)]
+      (s/check! (= ["00"] (:bootstrap out)) (str "the result marks as bootstrap " (pr-str (:bootstrap out))))
+      (s/check! (str/includes? (:err (:run ctx)) "bootstrap") (str "it does not say so\n" (s/show (:run ctx)))))))
 
 (defstep #"it reports no better or worse count against it"
   (fn [ctx]
-    (let [ks (set (all-keys (result ctx)))]
-      (s/check! (not (or (ks :better) (ks :worse))) (str "it reports " (pr-str (result ctx)))))))
+    (let [out (result ctx)]
+      (s/check! (not-any? #(contains? out %) [:better :worse :parts :compared])
+                (str "it compares against the bootstrap: " (pr-str out))))))

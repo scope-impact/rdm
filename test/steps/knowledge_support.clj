@@ -1,149 +1,172 @@
 (ns steps.knowledge-support
   "Fixtures for the knowledge context's step definitions (knowledge_sources,
-  knowledge_wiki): a copy of the room's spec, sources and wiki; wiki pages;
-  and source checkouts built locally, never fetched.
+  knowledge_wiki): copies of the room's spec, sources index, needs and wiki,
+  changed by the scenario, and local git checkouts of a source.
 
-  A checkout is a git repository named by its source's id under a sources
-  directory (the --sources DIR). Its one commit is tagged with the pin it
-  stands for (a tag named 17d68d2), so git reads the pin as that commit: a
-  real source's commit cannot be made locally, and no network is used."
+  A checkout fixture is a fresh repository holding the files the room's
+  needs and wiki cite of that source, plus its fenced paths, committed once;
+  the pin (a short commit no local commit can be made to have) is a tag on
+  that commit, so `<pin>:<path>` reads the file at it as at the real commit."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
             [clojure.string :as str]
+            [rdm-spec.kernel.runner :as runner]
             [steps.support :as s]))
 
+(def knowledge-ns ['rdm-spec.knowledge.sources 'rdm-spec.knowledge.wiki])
+
+(def check-ns
+  "Every namespace `rdm-spec check` runs."
+  ['rdm-spec.knowledge.sources 'rdm-spec.knowledge.wiki 'rdm-spec.spec.check 'rdm-spec.spec.parser
+   'rdm-spec.architecture.lint 'rdm-spec.architecture.views])
+
+(defn needs-knowledge! [] (apply s/needs-built! knowledge-ns))
+
+(def index-rel "dhf/raw/sources.edn")
+(def needs-rel "dhf/spec/needs.edn")
+(def wiki-rel "dhf/wiki")
+
+(defn generate-views!
+  "Generates the views in `dir` (when they are built), so a whole check of
+  the copy can pass."
+  [dir]
+  (when (s/built? 'rdm-spec.architecture.views)
+    (s/rdm-spec! dir "views"))
+  dir)
+
 (defn ensure-room!
-  "`ctx`'s project: a copy of the room's allow-listed paths unless it has one."
+  "ctx with :dir, a copy of the room's allow-listed paths when it has none."
   [ctx]
-  (s/needs-built! 'rdm-spec.knowledge.sources 'rdm-spec.knowledge.wiki)
-  (if (and (:dir ctx) (fs/exists? (fs/file (:dir ctx) "dhf/raw/sources.edn")))
-    ctx
-    (let [dir (or (:dir ctx) (s/copy-of-room!))]
-      (when-not (fs/exists? (fs/file dir "dhf/raw/sources.edn"))
-        (let [room (s/copy-of-room!)]
-          (doseq [a ["dhf/spec" "dhf/raw" "dhf/wiki" "dhf/views"]
-                  :when (fs/exists? (fs/file room a))]
-            (fs/copy-tree (fs/file room a) (fs/file dir a) {:replace-existing true}))))
-      (assoc ctx :dir (str dir)))))
+  (needs-knowledge!)
+  (if (:dir ctx) ctx (assoc ctx :dir (s/copy-of-room!))))
+
+;; ---------------------------------------------------------------------------
+;; The sources index and the needs
 
 (defn read-edn [dir rel] (edn/read-string (slurp (str (fs/file dir rel)))))
 
-(defn update-edn! [dir rel f]
-  (spit (str (fs/file dir rel)) (pr-str (f (read-edn dir rel)))))
+(defn index [dir] (read-edn dir index-rel))
 
-(defn sources! [dir f] (update-edn! dir "dhf/raw/sources.edn" f))
+(defn update-index!
+  "Rewrites the project's sources index as (f index)."
+  [dir f]
+  (spit (str (fs/file dir index-rel)) (pr-str (f (index dir)))))
 
-(defn sources [dir] (read-edn dir "dhf/raw/sources.edn"))
+(defn source-id
+  "The id of the source whose repository ends with `repo` (owner/name), or
+  `repo` itself when it is already an id."
+  [idx repo]
+  (or (some (fn [[k v]] (when (or (= repo (name k)) (str/ends-with? (str (:repository v)) (str "/" repo))) (name k)))
+            idx)
+      repo))
 
-(defn git! [dir & args]
-  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true}
-                 "git" "-c" "user.name=fixture" "-c" "user.email=fixture@example.org"
-                 "-c" "commit.gpgsign=false" "-c" "init.defaultBranch=main" args)]
+(defn write-needs!
+  "Writes the needs one per line, so each need's citations are on its line."
+  [dir needs]
+  (spit (str (fs/file dir needs-rel))
+        (str ";; needs, rewritten by a scenario\n{"
+             (str/join "\n " (for [[k v] (sort-by key needs)] (str (pr-str k) " " (pr-str v))))
+             "}\n")))
+
+(defn cite!
+  "Adds `citation` to the sources of the need `need` in the project `dir`;
+  returns the line of needs.edn it is on."
+  ([dir citation] (cite! dir "UN-011" citation))
+  ([dir need citation]
+   (let [needs (update-in (read-edn dir needs-rel) [need :sources] #(vec (concat % [citation])))]
+     (write-needs! dir needs)
+     (some (fn [[i l]] (when (str/includes? l (str "\"" citation "\"")) (inc i)))
+           (map-indexed vector (str/split-lines (slurp (str (fs/file dir needs-rel)))))))))
+
+;; ---------------------------------------------------------------------------
+;; Checkouts
+
+(defn git!
+  [dir & args]
+  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true
+                          :extra-env {"GIT_CONFIG_NOSYSTEM" "1" "GIT_CONFIG_GLOBAL" "/dev/null"
+                                      "GIT_AUTHOR_NAME" "fixture" "GIT_AUTHOR_EMAIL" "fixture@example.org"
+                                      "GIT_COMMITTER_NAME" "fixture" "GIT_COMMITTER_EMAIL" "fixture@example.org"}}
+                 "git" "-c" "core.hooksPath=/dev/null" "-c" "commit.gpgsign=false" "-c" "init.defaultBranch=main"
+                 args)]
     (s/check! (zero? (:exit r)) (str "git " (str/join " " args) " failed: " (:err r)))
-    (:out r)))
+    (str/trim (:out r))))
 
-(defn commit-all!
-  "Makes `dir` a git repository (unless it is one) and commits everything."
-  [dir message]
-  (when-not (fs/exists? (fs/file dir ".git")) (git! dir "init" "-q"))
-  (git! dir "add" "-A")
-  (git! dir "commit" "-q" "--allow-empty" "-m" message)
-  dir)
-
-(defn checkout!
-  "A checkout of the source `id` under the sources directory `base`: a git
-  repository holding `paths` (each a file; a path ending in / a directory
-  holding one file), committed once and tagged `pin`. Returns its directory."
-  [base id pin paths]
-  (let [dir (fs/file base id)]
-    (fs/create-dirs dir)
-    (s/write! dir ".keep" "")
-    (doseq [p paths]
-      (if (str/ends-with? p "/")
-        (s/write! dir (str p "file.txt") "fixture\n")
-        (s/write! dir p (str "fixture: " p "\n"))))
-    (commit-all! dir (str "fixture standing for " id " at " pin))
-    (git! dir "tag" pin)
-    (str dir)))
-
-(defn sources-dir! [ctx]
-  (or (:sources-dir ctx) (s/tmp-dir)))
+(def citation-re #"([A-Za-z0-9][\w.-]*):([^\s@`\"'()\[\]<>]+)@([0-9a-fA-F]{4,40})")
 
 (defn cited-paths
-  "Every path the project's needs cite in `source`."
-  [dir source]
-  (let [needs (read-edn dir "dhf/spec/needs.edn")]
-    (vec (distinct (for [[_ n] needs c (:sources n)
-                         :let [[_ src path] (re-matches #"([^:]+):(.+)@.+" (str c))]
-                         :when (= src source)]
-                     path)))))
+  "Every path the room's needs and wiki cite of the source `id`, and its
+  fenced paths: what a faithful checkout of it holds."
+  [id]
+  (let [root s/room-root
+        texts (concat [(slurp (str (fs/file root needs-rel)))]
+                      (for [f (fs/glob (fs/file root wiki-rel) "**.md")] (slurp (str f))))
+        cited (for [t texts [_ src path] (re-seq citation-re t) :when (= src id)] path)
+        fenced (get-in (read-edn root index-rel) [(keyword id) :fenced])]
+    (vec (distinct (concat ["README.md"] cited fenced)))))
 
-(defn fenced-paths [dir source]
-  (vec (get-in (sources dir) [(keyword source) :fenced])))
+(defn checkout!
+  "Makes a git checkout of the source `id` under `sources-dir`, holding
+  `paths` (a fenced directory gets a file inside it), its one commit tagged
+  `pin`. Returns its directory."
+  [sources-dir id pin paths]
+  (let [co (str (fs/file sources-dir id))]
+    (fs/create-dirs co)
+    (doseq [path paths
+            :let [file? (re-find #"\.[A-Za-z0-9]+$" path)]]
+      (s/write! co (if file? path (str path "/kept.txt")) (str "fixture content of " path "\n")))
+    (git! co "init" "-q")
+    (git! co "add" "-A")
+    (git! co "commit" "-q" "-m" (str "a fixture checkout of " id))
+    (git! co "tag" pin)
+    co))
 
-;; --- the wiki --------------------------------------------------------------
+(defn sources-dir! [ctx] (or (:sources-dir ctx) (s/tmp-dir)))
 
-(defn index-file [dir] (str (fs/file dir "dhf/wiki/index.md")))
+;; ---------------------------------------------------------------------------
+;; The run
 
-(defn list-page!
-  "Links `rel` (relative to the wiki directory) from the wiki's index."
-  [dir title rel]
-  (let [f (index-file dir)]
-    (spit f (str (str/trimr (slurp f)) "\n\n- [" title "](" rel ")\n"))))
+(defn run-check
+  "Runs the command line `line` (without rdm-spec) in the scenario's
+  project, DIR standing for its --sources directory: ctx with :run."
+  [ctx line]
+  (let [ctx (ensure-room! ctx)
+        args (mapv #(if (and (= "DIR" %) (:sources-dir ctx)) (:sources-dir ctx) %) (s/split-args line))]
+    (assoc ctx :run (apply s/rdm-spec! (:dir ctx) args))))
 
-(defn page!
-  "Writes the wiki page dhf/wiki/pages/<name>.md holding `text`, listed in
-  the index unless `listed?` is false. Returns its path relative to the
-  project."
-  ([dir name text] (page! dir name text true))
-  ([dir name text listed?]
-   (let [rel (str "dhf/wiki/pages/" name ".md")]
-     (s/write! dir rel text)
-     (when listed? (list-page! dir name (str "pages/" name ".md")))
-     rel)))
+(defn finding-lines
+  "The run's finding lines (no warnings, no events)."
+  [run]
+  (vec (remove #(or (str/starts-with? % "event: ") (str/includes? % "warning: ")) (s/err-lines run))))
 
-(defn footnoted-page
-  "A page's text: a heading, one claim per citation, each footnoted to it."
-  [title citations]
-  (str "# " title "\n\n"
-       (str/join "\n\n" (map-indexed (fn [i _] (str "A claim distilled from a source.[^" (inc i) "]")) citations))
-       "\n\n"
-       (str/join "\n" (map-indexed (fn [i c] (str "[^" (inc i) "]: `" c "`, \"A section\".")) citations))
-       "\n"))
+(defn warning-lines [run] (vec (filter #(str/includes? % "warning: ") (s/err-lines run))))
 
-(defn line-of [dir rel s]
-  (some (fn [[i l]] (when (str/includes? l s) (inc i)))
-        (map-indexed vector (str/split-lines (slurp (str (fs/file dir rel)))))))
-
-;; --- reading a run -----------------------------------------------------------
-
-(defn finding-lines [run]
-  (vec (remove #(str/starts-with? % "event: ") (s/err-lines run))))
-
-(defn error-lines [run]
-  (vec (remove #(re-find #"^(\S+: )?warning: |: warning: " %) (finding-lines run))))
-
-(defn line-with
-  "The first finding line (warnings included) holding every one of `parts`."
-  [run & parts]
-  (first (filter (fn [l] (every? #(str/includes? l %) parts)) (finding-lines run))))
-
-(defn error-with [run & parts]
-  (first (filter (fn [l] (every? #(str/includes? l %) parts)) (error-lines run))))
-
-(defn result [run]
-  (try (edn/read-string (:out run)) (catch Exception _ nil)))
+(defn result
+  "The run's knowledge result (stdout's :knowledge), or nil."
+  [run]
+  (:knowledge (try (edn/read-string (:out run)) (catch Exception _ nil))))
 
 (defn citations-of
-  "The citations the run's result reports."
-  [run]
-  (get-in (result run) [:knowledge :citations]))
+  "The citations the run reported for `citation`."
+  [run citation]
+  (filter #(= citation (:citation %)) (:citations (result run))))
 
 (defn fails-with!
-  "The run exited 1 and one error line holds every one of `parts`."
-  [ctx & parts]
+  "Checks the run exited 1 with a finding line satisfying `pred`; returns it."
+  [ctx pred what]
   (let [r (:run ctx)]
     (s/check! r "no command was run")
     (s/check! (= 1 (:exit r)) (str "expected exit 1\n" (s/show r)))
-    (s/check! (apply error-with r parts) (str "no finding names all of " (pr-str parts) "\n" (s/show r)))))
+    (or (first (filter pred (finding-lines r)))
+        (s/fail! (str "no finding " what "\n" (s/show r))))))
+
+(defn without [line citation] (str/replace line citation ""))
+
+(defn ensure-step!
+  "Registers `pattern` -> `f` at run time unless a definition already
+  matches `text`: a step whose wording another context's feature shares, so
+  it is never defined twice."
+  [text pattern f]
+  (when-not (some #(re-matches (:pattern %) text) @runner/*registry*)
+    (runner/register! pattern f "test/steps/knowledge_support.clj" (hash text))))

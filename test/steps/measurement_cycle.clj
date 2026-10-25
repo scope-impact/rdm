@@ -1,17 +1,19 @@
 (ns steps.measurement-cycle
-  "Step definitions for dhf/spec/measurement/checklist.feature, and the
-  fixtures the measurement context's steps share: throwaway git repositories
-  holding a spec at the cut spec-3, and cycle directories (cycle.edn,
-  checklist.json, ratified.edn, score.edn, verdicts files) built by hand.
+  "Fixtures the measurement steps share, and the cycle Givens other features
+  use too (dhf/spec/spec/parser.feature, dhf/spec/ratification/ratify.feature):
 
-  Two step texts here are also used by dhf/spec/ratification/ratify.feature
-  (\"dhf/cycles/03/cycle.edn names the cut spec-3\" and \"the spec at cut spec-3
-  holds a scenario with no id\"); their definitions are written to serve both:
-  they leave a git repository in :dir whose tag spec-3 holds the spec, with a
-  cycle.edn for cycle 03 naming that cut.
+    \"dhf/cycles/03/cycle.edn names the cut spec-3\"
+    \"the spec at cut spec-3 holds a scenario with no id\"
 
-  Every Given ends by recording a snapshot of the project (:before), so a Then
-  saying \"writes nothing\" can compare the project after the run with it."
+  A fixture project is a throwaway git repository in a temporary directory:
+  the room's harness configuration, its C4 model and needs, and only the
+  feature files a scenario gives, committed and tagged as the cut spec-3.
+  Its cycle 03 is dhf/cycles/03/cycle.edn, written beside the cut (never in
+  it). Each such Given also makes a room (:room), an empty directory of its
+  own, so ROOM is never a fixed path.
+
+  The context keys these steps set: :dir (the project), :room, :cycle,
+  :unstamped {:file :line} (the scenario with no id)."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [cheshire.core :as json]
@@ -21,222 +23,161 @@
             [steps.support :as s]))
 
 ;; ---------------------------------------------------------------------------
-;; Fixtures
+;; git
+
+(def git-env
+  {"GIT_CONFIG_NOSYSTEM" "1" "GIT_CONFIG_GLOBAL" "/dev/null"
+   "GIT_AUTHOR_NAME" "Fixture" "GIT_AUTHOR_EMAIL" "fixture@example.invalid"
+   "GIT_COMMITTER_NAME" "Fixture" "GIT_COMMITTER_EMAIL" "fixture@example.invalid"
+   "GIT_TERMINAL_PROMPT" "0"})
 
 (defn git!
-  "Runs git in `dir`, isolated from any user or system configuration; fails
-  the step when git fails."
+  "Runs git in `dir` and returns its output; fails the step on an error."
   [dir & args]
-  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true
-                          :extra-env {"GIT_CONFIG_NOSYSTEM" "1" "GIT_CONFIG_GLOBAL" "/dev/null"
-                                      "GIT_AUTHOR_NAME" "fixture" "GIT_AUTHOR_EMAIL" "fixture@example.org"
-                                      "GIT_COMMITTER_NAME" "fixture" "GIT_COMMITTER_EMAIL" "fixture@example.org"}}
-                 "git" "-c" "core.hooksPath=/dev/null" "-c" "commit.gpgsign=false" "-c" "tag.gpgsign=false" args)]
-    (s/check! (zero? (:exit r)) (str "git " (str/join " " args) " failed: " (:err r)))
+  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
+                          :extra-env git-env}
+                 "git" "-c" "core.hooksPath=/dev/null" "-c" "commit.gpgsign=false" "-c" "tag.gpgsign=false"
+                 "-c" "init.defaultBranch=main" args)]
+    (s/check! (zero? (:exit r)) (str "git " (str/join " " args) " failed in " dir ": " (:err r)))
     (:out r)))
 
-(defn git-repo?
-  [dir]
-  (fs/directory? (fs/file dir ".git")))
+;; ---------------------------------------------------------------------------
+;; Paths and feature files
+
+(def lint-feature "dhf/spec/architecture/lint.feature")
+(def status-feature "dhf/spec/verification/status.feature")
+
+(defn cycle-path
+  "The path of `name` in cycle `cycle`: dhf/cycles/<cycle>/<name>."
+  [cycle name]
+  (str "dhf/cycles/" cycle "/" name))
+
+(defn feature-text
+  "A feature file holding one scenario per entry of `scenarios`
+  ({:id :title :wip?}; an entry with no :id is an unstamped scenario).
+  With one argument, the Lint feature of the context architecture."
+  ([scenarios] (feature-text "Lint" "UN-005" scenarios))
+  ([feature need scenarios]
+   (str "@" need "\nFeature: " feature "\n  A feature for the measurement tests.\n\n"
+        "  Rule: One rule\n"
+        (str/join
+         (for [{:keys [id title wip?]} scenarios]
+           (str "\n    " (str/join " " (cond-> [] id (conj (str "@" id)) true (conj "@e2e") wip? (conj "@wip")))
+                "\n    Scenario: " (or title (str "Scenario " id))
+                "\n      Given a model\n      When \"rdm-spec check\" is run\n      Then it passes\n"))))))
+
+(defn line-of
+  "The 1-based line of `text` on which `needle` first appears."
+  [text needle]
+  (let [i (str/index-of text needle)]
+    (s/check! i (str "the text holds no " (pr-str needle)))
+    (inc (count (filter #{\newline} (subs text 0 i))))))
+
+(def default-scenarios
+  [{:id "spec-0012" :title "A view with no description fails the lint"}
+   {:id "spec-0013" :title "A component that owns no feature file fails the lint" :wip? true}
+   {:id "spec-0014" :title "A view with a label fails the lint"}])
+
+;; ---------------------------------------------------------------------------
+;; Projects, cuts and cycles
 
 (defn cut!
-  "Commits everything in `dir` (a git repository, made one if it is not) and
-  tags the commit `cut`, as a cut is tagged."
-  [dir cut]
-  (when-not (git-repo? dir) (git! dir "init" "-q" "-b" "main"))
-  (git! dir "add" "-A")
-  (git! dir "commit" "-q" "--allow-empty" "-m" (str "the spec at " cut))
-  (git! dir "tag" "-f" cut)
+  "Commits everything but the cycles (making `dir` a repository first, when
+  it is not one) and tags the commit `tag` (moving the
+  tag when it exists)."
+  [dir tag]
+  (when-not (fs/exists? (fs/file dir ".git")) (git! dir "init" "-q"))
+  (git! dir "add" "-A" "--" "." ":(exclude)dhf/cycles")
+  (git! dir "commit" "-q" "--allow-empty" "-m" (str "the spec at " tag))
+  (git! dir "tag" "-f" tag)
   dir)
 
 (defn spec-project!
-  "A copy of the room's allow-listed paths whose feature files are replaced by
-  `features` ({\"dhf/spec/<context>/<component>.feature\" text}), committed and
-  tagged `cut`."
-  ([features] (spec-project! features "spec-3"))
-  ([features cut]
-   (let [dir (s/copy-of-room!)]
-     (doseq [f (fs/glob (fs/file dir "dhf/spec") "**.feature")] (fs/delete f))
-     (doseq [[path text] features] (s/write! dir path text))
-     (cut! dir cut))))
-
-(defn feature-text
-  "A feature file of the component Lint (bounded context architecture) holding
-  `scenarios`: [{:id \"spec-0012\" :title \"...\" :level \"e2e\" :wip? false}];
-  :id nil writes an unstamped scenario."
-  [scenarios]
-  (str "@UN-005\nFeature: Lint\n  A feature for the measurement steps.\n\n  Rule: The lint holds the model\n"
-       (str/join
-        (for [{:keys [id title level wip?]} scenarios]
-          (str "\n    " (str/join " " (remove nil? [(when id (str "@" id)) (str "@" (or level "e2e")) (when wip? "@wip")]))
-               "\n    Scenario: " title
-               "\n      Given a model\n      When \"rdm-spec check\" is run\n      Then it passes\n")))))
-
-(defn copy-of-room-model!
-  "A project holding the room's configuration and its C4 model, and no git
-  repository."
-  []
-  (let [dir (s/project!)]
-    (s/write! dir "dhf/spec/model.edn" (slurp (str (fs/file s/room-root "dhf/spec/model.edn"))))
+  "A fixture project whose cut spec-3 holds the room's configuration, model
+  and needs, and the feature files `features` ({path text}) and no other.
+  Returns its directory."
+  [features]
+  (let [dir (s/tmp-dir)]
+    (git! dir "init" "-q")
+    (s/write! dir "dhf/harness/config.edn" (pr-str (s/room-config)))
+    (doseq [rel ["dhf/spec/model.edn" "dhf/spec/needs.edn" "dhf/spec/events.edn" "dhf/spec/ids.edn"]
+            :let [f (fs/file s/room-root rel)]
+            :when (fs/exists? f)]
+      (s/write! dir rel (slurp (str f))))
+    (doseq [[rel text] features] (s/write! dir rel text))
+    (cut! dir "spec-3")
     dir))
 
-(def lint-feature "dhf/spec/architecture/lint.feature")
+(def default-cycle
+  [[:cut "spec-3"]
+   [:scope :project]
+   [:builder {:name "builder-a" :actor :agent}]
+   [:grader {:name "grader-b" :actor :agent}]
+   [:spec-owner {:name "Sami" :actor :human}]])
 
-(def roles
-  {:builder {:name "builder-a" :actor :agent}
-   :grader {:name "grader-b" :actor :agent}
-   :spec-owner {:name "Sami" :actor :human}})
-
-(defn cycle-path [cycle name] (str "dhf/cycles/" cycle "/" name))
+(defn cycle-text
+  "cycle.edn's text: the default cycle with `opts` merged in (a nil value
+  leaves its key out), one key per line."
+  [opts]
+  (let [ks (distinct (concat (map first default-cycle) (keys opts)))
+        m (merge (into {} default-cycle) opts)
+        kvs (for [k ks :let [v (get m k)] :when (some? v)] (str k " " (pr-str v)))]
+    (str "{" (str/join "\n " kvs) "}\n")))
 
 (defn write-cycle!
-  "Writes cycle `cycle`'s cycle.edn: the cut, the scope and the three roles,
-  merged with `extra`."
-  [dir cycle extra]
-  (s/write! dir (cycle-path cycle "cycle.edn")
-            (pr-str (merge {:cut "spec-3" :scope :project} roles extra))))
+  "Writes cycle `cycle`'s cycle.edn into `dir`: `opts` merged into the
+  default cycle (cut spec-3, the project scope, builder-a and grader-b as
+  agents, Sami as a human spec owner), or the text `opts` when a string."
+  [dir cycle opts]
+  (s/write! dir (cycle-path cycle "cycle.edn") (if (string? opts) opts (cycle-text opts))))
 
-(defn snapshot
-  "Every file under `dir` but .git, with its content."
-  [dir]
-  (into {} (for [f (fs/glob dir "**" {:hidden true})
-                 :let [rel (str (fs/relativize dir f))]
-                 :when (and (fs/regular-file? f) (not (str/starts-with? rel ".git/")))]
-             [rel (slurp (str f))])))
+(defn cycle-project!
+  "ctx with a fixture project holding `features` at the cut spec-3, cycle 03
+  declared with `cycle-opts`, and an empty room."
+  ([ctx features] (cycle-project! ctx features {}))
+  ([ctx features cycle-opts]
+   (let [dir (spec-project! features)]
+     (write-cycle! dir "03" cycle-opts)
+     (assoc ctx :dir (str dir) :room (s/tmp-dir) :cycle "03"))))
 
-(defn settle
-  "The context with a snapshot of its project taken now."
-  [ctx]
-  (assoc ctx :before (snapshot (:dir ctx))))
-
-(defn wrote-nothing!
-  "Fails unless the project holds exactly what it held before the run."
-  [ctx]
-  (let [before (:before ctx)
-        after (snapshot (:dir ctx))
-        added (remove (set (keys before)) (keys after))
-        removed (remove (set (keys after)) (keys before))
-        changed (filter #(and (contains? after %) (not= (before %) (after %))) (keys before))]
-    (s/check! (and (empty? added) (empty? removed) (empty? changed))
-              (str "the run wrote: added " (vec added) ", removed " (vec removed) ", changed " (vec changed)))))
-
-(defn run-result
-  "The EDN the run printed on stdout."
-  [ctx]
-  (let [r (:run ctx)]
-    (try (edn/read-string (:out r))
-         (catch Exception e (s/fail! (str "stdout is not EDN: " (ex-message e) "\n" (s/show r)))))))
-
-(defn ran-clean!
-  "Fails unless the run passed: exit 0. While the spec parser, a stage the
-  checklist task also runs, is not built, the command reports that as its one
-  finding (exit 1); that run is accepted, nothing else."
-  [r]
-  (let [lines (s/err-lines r)
-        only-not-built? (and (= 1 (:exit r)) (seq lines)
-                             (every? #(re-find #"^not-built: rdm-spec\.spec\.parser/" %) lines))]
-    (s/check! (or (zero? (:exit r)) only-not-built?) (s/show r))))
-
-(defn read-checklist-json [ctx cycle]
+(defn read-checklist
+  "The cycle's checklist.json, parsed with keyword keys; fails when absent."
+  [ctx cycle]
   (let [f (fs/file (:dir ctx) (cycle-path cycle "checklist.json"))]
     (s/check! (fs/exists? f) (str "no " (cycle-path cycle "checklist.json") "\n" (s/show (:run ctx))))
-    {:text (slurp (str f)) :data (json/parse-string (slurp (str f)) true)}))
+    (json/parse-string (slurp (str f)) true)))
+
+(defn read-cycle-edn
+  "The EDN file `name` of the cycle, or nil when absent."
+  [ctx cycle name]
+  (let [f (fs/file (:dir ctx) (cycle-path cycle name))]
+    (when (fs/exists? f) (edn/read-string (slurp (str f))))))
+
+(defn refused!
+  "Fails unless the run exited `code`, wrote no `written` file of cycle 03
+  and its error stream matches every pattern of `res`."
+  [ctx code written & res]
+  (let [r (:run ctx)]
+    (s/check! r "no command was run")
+    (s/check! (= code (:exit r)) (str "expected exit " code "\n" (s/show r)))
+    (s/check! (not (fs/exists? (fs/file (:dir ctx) (cycle-path "03" written))))
+              (str "it wrote " (cycle-path "03" written) "\n" (s/show r)))
+    (doseq [re res]
+      (s/check! (re-find re (:err r)) (str "the error stream does not say " re "\n" (s/show r))))))
 
 ;; ---------------------------------------------------------------------------
-;; Shared with ratify.feature
+;; The shared cycle Givens
 
 (defstep #"dhf/cycles/03/cycle.edn names the cut spec-3"
   (fn [ctx]
-    (let [dir (or (:dir ctx) (cut! (s/copy-of-room!) "spec-3"))]
-      (when-not (and (git-repo? dir)
-                     (zero? (:exit (p/shell {:dir dir :out :string :err :string :continue true}
-                                            "git" "rev-parse" "--verify" "--quiet" "refs/tags/spec-3"))))
-        (cut! dir "spec-3"))
-      (write-cycle! dir "03" {})
-      (settle (assoc ctx :dir dir :cycle "03" :room (or (:room ctx) (str (s/tmp-dir))))))))
+    (if (:dir ctx)
+      (do (write-cycle! (:dir ctx) "03" {})
+          (assoc ctx :room (or (:room ctx) (s/tmp-dir)) :cycle "03"))
+      (cycle-project! ctx {lint-feature (feature-text default-scenarios)}))))
 
 (defstep #"the spec at cut spec-3 holds a scenario with no id"
   (fn [ctx]
-    (let [dir (s/copy-of-room!)
-          file "dhf/spec/measurement/checklist.feature"
-          f (fs/file dir file)
-          lines (vec (str/split-lines (slurp (str f))))
-          i (first (keep-indexed (fn [i l] (when (re-find #"^\s*Scenario:" l) i)) lines))
-          tag-line (nth lines (dec i))]
-      (s/check! (re-find #"@spec-\d+" tag-line) (str "line " i " of " file " carries no id"))
-      (spit (str f) (str (str/join "\n" (assoc lines (dec i) (str/replace tag-line #"@spec-\d+\s*" ""))) "\n"))
-      (cut! dir "spec-3")
-      (write-cycle! dir "03" {})
-      (settle (assoc ctx :dir dir :cycle "03" :room (or (:room ctx) (str (s/tmp-dir)))
-                     :unstamped {:file file :line (inc i)})))))
-
-;; ---------------------------------------------------------------------------
-;; checklist.feature
-
-(defstep #"the spec at cut spec-3 has (\d+) stamped scenarios, one of them tagged @wip"
-  (fn [ctx n]
-    (let [n (parse-long n)
-          scs (vec (for [i (range n)]
-                     {:id (format "spec-%04d" (+ 101 i)) :title (str "Scenario number " (inc i))
-                      :level (if (even? i) "e2e" "contract") :wip? (= i 4)}))
-          dir (spec-project! {lint-feature (feature-text (shuffle scs))})]
-      (settle (assoc ctx :dir dir :scenarios scs)))))
-
-(defstep #"dhf/cycles/03/checklist.json holds (\d+) items to grade, each with the scenario's id, title, context, component and level"
-  (fn [ctx n]
-    (ran-clean! (:run ctx))
-    (let [{:keys [data]} (read-checklist-json ctx "03")
-          expected (for [sc (sort-by :id (remove :wip? (:scenarios ctx)))]
-                     {:id (:id sc) :title (:title sc) :context "architecture" :component "Lint" :level (:level sc)})]
-      (s/check! (= (parse-long n) (count (:items data))) (str (count (:items data)) " items: " (pr-str (:items data))))
-      (doseq [i (:items data)]
-        (s/check! (= #{:id :title :context :component :level} (set (keys i))) (str "an item's keys: " (pr-str i))))
-      (s/check! (= expected (:items data)) (str "items " (pr-str (:items data)) "\nexpected " (pr-str expected))))))
-
-(defstep #"it lists the @wip scenario separately, as planned"
-  (fn [ctx]
-    (let [{:keys [data]} (read-checklist-json ctx "03")
-          wip (first (filter :wip? (:scenarios ctx)))]
-      (s/check! (= [{:id (:id wip) :title (:title wip)}] (:planned data)) (str "planned: " (pr-str (:planned data))))
-      (s/check! (not-any? #(= (:id wip) (:id %)) (:items data)) "the @wip scenario is an item to grade"))))
-
-(defstep #"cycle 03 of cut spec-3, with one item to grade and one planned scenario"
-  (fn [ctx]
-    (let [dir (spec-project! {lint-feature (feature-text [{:id "spec-0013" :title "A component that owns no feature file fails the lint"
-                                                           :level "e2e" :wip? true}
-                                                          {:id "spec-0012" :title "A view with no description fails the lint"
-                                                           :level "e2e"}])})]
-      (write-cycle! dir "03" {})
-      (settle (assoc ctx :dir dir :cycle "03" :room (or (:room ctx) (str (s/tmp-dir))))))))
-
-(defstep #"dhf/cycles/03/checklist.json holds:"
-  (fn [ctx doc]
-    (ran-clean! (:run ctx))
-    (let [{:keys [data text]} (read-checklist-json ctx "03")
-          expected (json/parse-string doc true)]
-      (s/check! (= expected data) (str "checklist.json holds\n" text "\nexpected\n" doc))
-      (assoc ctx :checklist-text text))))
-
-(defn- key-order [text ks]
-  (map #(str/index-of text (str "\"" % "\"")) ks))
-
-(defstep #"its keys appear in that order, items and planned sorted by id"
-  (fn [ctx]
-    (let [text (:checklist-text ctx)
-          {:keys [data]} (read-checklist-json ctx "03")
-          top (key-order text ["cycle" "cut" "items" "planned"])]
-      (s/check! (and (every? some? top) (apply < top)) (str "top-level keys out of order:\n" text))
-      ;; each item's keys: id, title, context, component, level
-      (let [item-text (subs text (str/index-of text "\"items\"") (str/index-of text "\"planned\""))
-            positions (key-order item-text ["id" "title" "context" "component" "level"])]
-        (s/check! (and (every? some? positions) (apply < positions)) (str "an item's keys out of order:\n" text)))
-      (doseq [k [:items :planned]]
-        (s/check! (= (sort (map :id (k data))) (map :id (k data))) (str (name k) " are not sorted by id"))))))
-
-(defstep #"it exits 1, writes nothing, and names the file and line of the unstamped scenario"
-  (fn [ctx]
-    (let [r (:run ctx)
-          {:keys [file line]} (:unstamped ctx)]
-      (s/check! (= 1 (:exit r)) (s/show r))
-      (wrote-nothing! ctx)
-      (s/check! (str/includes? (:err r) (str file ":" line ":")) (str "no finding names " file ":" line "\n" (s/show r))))))
+    (let [scs (conj default-scenarios {:title "A scenario nobody stamped"})
+          text (feature-text scs)
+          ctx (cycle-project! ctx {lint-feature text})]
+      (assoc ctx :unstamped {:file lint-feature :line (line-of text "Scenario: A scenario nobody stamped")}))))

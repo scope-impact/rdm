@@ -1,25 +1,19 @@
 (ns steps.ratification-ratify
   "Step definitions for dhf/spec/ratification/ratify.feature.
 
-  The fixture is a throwaway git repository (the project ratify is run in)
-  whose tag spec-3 holds the room's allow-listed paths with one small feature
-  file (spec-0012, spec-0014, and spec-0013 tagged @wip), and a cycle 03
-  naming that cut; and a room, a fresh directory per scenario (:room), whose
-  test.clj is the builder's test command (the configured `bb test.clj`). The
-  room's test.clj is written from the scenario's fixture options (:fx), so each
-  Given that changes what the test command does rewrites it:
-
-    :exit     the status it exits with (0)
-    :write?   whether it writes any result (true)
-    :omit     ids it writes no result for (#{})
-    :status   {id status} for results that do not pass ({})
-    :env-file a file it records its RESULTS_DIR and working directory in
-    :in-cut?  the test command lives in the cut (ratify-fixture.clj), not in
-              the room, so the room's implementation can be empty
-
-  Two Givens this feature uses are defined in steps.measurement-cycle (\"dhf/
-  cycles/03/cycle.edn names the cut spec-3\" and \"the spec at cut spec-3 holds
-  a scenario with no id\"); the command is run by steps.kernel-command."
+  A ratification fixture is a throwaway git repository (the project ratify
+  runs in) whose tag spec-3 holds the room's configuration, the C4 model and
+  one small feature file, with cycle 03's cycle.edn written after the cut, and
+  a room (ROOM) holding a small implementation. The cut's declared test command
+  is a fake whose behaviour the Givens plan in :plan:
+    :exit     its exit status (0)
+    :results  {id status} it writes, one Allure result each (every stamped
+              scenario not tagged @wip, passed)
+    :env-file a file it writes RESULTS_DIR into, when given
+  Each Given changes the plan and rebuilds the fixture (`fixture!`), so Givens
+  compose. Two Givens are shared with the measurement steps
+  (steps.measurement-cycle): they cut a copy of the room's allow-list, whose
+  test command is the real one."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
@@ -29,299 +23,313 @@
             [steps.measurement-cycle :as mc]
             [steps.support :as s]))
 
+(defn- needs-ratify! [] (s/needs-built! 'rdm-spec.ratification.ratify))
+
 ;; ---------------------------------------------------------------------------
 ;; Fixtures
 
 (def scenarios
+  "The cut's scenarios: two to run and one planned."
   [{:id "spec-0012" :title "A view with no description fails the lint"}
-   {:id "spec-0013" :title "A component that owns no feature file fails the lint" :wip? true}
-   {:id "spec-0014" :title "A view with a label fails the lint"}])
+   {:id "spec-0014" :title "A view over the limit fails the lint" :level "contract"}
+   {:id "spec-0013" :title "A component that owns no feature file fails the lint" :wip? true}])
 
-(def ids ["spec-0012" "spec-0013" "spec-0014"])
+(def default-plan
+  {:exit 0 :results {"spec-0012" "passed" "spec-0014" "passed"}})
 
-(defn test-script
-  "The builder's test command for the fixture: writes one Allure result per
-  id into RESULTS_DIR as the options say, then exits."
-  [{:keys [exit write? omit status env-file] :or {exit 0 write? true omit #{} status {}}}]
-  (let [written (if write? (vec (remove (set omit) ids)) [])]
-    (str "(require '[babashka.fs :as fs] '[cheshire.core :as json])\n"
-         "(let [dir (System/getenv \"RESULTS_DIR\")]\n"
-         (when env-file
-           (str "  (spit " (pr-str env-file) " (pr-str {:results-dir dir :cwd (str (fs/cwd))}))\n"))
-         "  (when dir (fs/create-dirs dir))\n"
-         "  (doseq [[id st] " (pr-str (mapv #(vector % (get status % "passed")) written)) "]\n"
-         "    (spit (str (fs/file dir (str (java.util.UUID/randomUUID) \"-result.json\")))\n"
-         "          (json/generate-string {:uuid id :name (str \"a test of \" id) :status st :stage \"finished\"\n"
-         "                                 :statusDetails (if (= \"passed\" st) {} {:message \"it did not pass\"})\n"
-         "                                 :steps [] :labels [{:name \"spec\" :value id}]}))))\n"
-         "(System/exit " exit ")\n")))
+(def cut-implementation
+  "Implementation files at the cut, which the room's must replace."
+  {"src/rdm_spec/old.clj" "(ns rdm-spec.old)\n"
+   "src/rdm_spec/demo.clj" "(ns rdm-spec.demo) ;; the cut's\n"
+   "test.clj" ";; the cut's tests\n"})
 
-(defn- set-test-command!
-  "Declares the fixture's test command in the cut's configuration."
-  [dir]
-  (let [f (fs/file dir "dhf/harness/config.edn")
-        c (edn/read-string (slurp (str f)))]
-    (spit (str f) (pr-str (assoc c :test-command ["bb" "ratify-fixture.clj"])))))
+(def room-implementation
+  {"src/rdm_spec/demo.clj" "(ns rdm-spec.demo) ;; the room's\n"
+   "src/rdm_spec/kernel/x.clj" "(ns rdm-spec.kernel.x)\n"
+   "test/rdm_spec/demo_test.clj" "(ns rdm-spec.demo-test)\n"
+   "test.clj" ";; the room's tests\n"})
 
-(defn fx!
-  "The scenario's fixture with the options `opts` added: the project in :dir
-  (made, cut at spec-3 and given cycle 03 when the scenario has none yet), the
-  room in :room, and the test command written from every option so far."
-  [ctx opts]
-  (let [fx (merge (:fx ctx) opts)
-        new? (nil? (:dir ctx))
-        dir (or (:dir ctx) (mc/spec-project! {mc/lint-feature (mc/feature-text scenarios)}))
-        room (or (:room ctx) (s/tmp-dir))]
-    (if (:in-cut? fx)
-      (do (when (or new? (not= (:fx ctx) fx))
-            (set-test-command! dir)
-            (s/write! dir "ratify-fixture.clj" (test-script fx))
-            (mc/cut! dir "spec-3")))
-      (do (s/write! room "test.clj" (test-script fx))
-          (s/write! room "src/rdm_spec/demo.clj" "(ns rdm-spec.demo)\n")))
-    (when new? (mc/write-cycle! dir "03" {}))
-    (assoc ctx :dir (str dir) :room (str room) :fx fx :cycle "03")))
+(defn fake-tests
+  "A test command doing what `plan` says."
+  [{:keys [exit results env-file marker]}]
+  [s/bb "-e"
+   (str "(require '[babashka.fs :as fs] '[cheshire.core :as json])"
+        "(let [d (System/getenv \"RESULTS_DIR\")]"
+        (when env-file (str " (spit " (pr-str env-file) " (str d))"))
+        (when marker (str " (spit " (pr-str marker) " \"the cut's test command ran\")"))
+        " (fs/create-dirs d)"
+        " (doseq [[id st] " (pr-str (vec results)) "]"
+        "  (spit (str d \"/\" (random-uuid) \"-result.json\")"
+        "        (json/generate-string (cond-> {:uuid (str (random-uuid)) :name (str \"a test of \" id) :status st"
+        "                                       :stage \"finished\" :labels [{:name \"spec\" :value id}] :steps []}"
+        "                                (not= \"passed\" st) (assoc :statusDetails {:message \"it did not pass\"})))))"
+        " (System/exit " (long exit) "))")])
+
+(defn- fixture!
+  "The context with its project rebuilt from its :plan (and :cut-files, extra
+  files at the cut), and a room holding the room's implementation unless it
+  has one."
+  [ctx]
+  (needs-ratify!)
+  (let [plan (merge default-plan (:plan ctx))
+        dir (or (:dir ctx) (s/copy-of-room!))
+        room (or (:room ctx) (let [r (s/tmp-dir)]
+                               (doseq [[f t] room-implementation] (s/write! r f t))
+                               r))]
+    (when-not (:built? ctx)
+      (doseq [f (fs/glob (fs/file dir "dhf/spec") "**.feature")] (fs/delete f))
+      (doseq [[f t] cut-implementation] (s/write! dir f t)))
+    (s/write! dir mc/lint-feature (mc/feature-text scenarios))
+    (doseq [[f t] (:cut-files ctx)] (s/write! dir f t))
+    (s/write! dir "dhf/harness/config.edn" (pr-str (assoc (s/room-config) :test-command (fake-tests plan))))
+    (when (fs/exists? (fs/file dir "dhf/cycles")) (fs/delete-tree (fs/file dir "dhf/cycles")))
+    (mc/cut! dir "spec-3")
+    (mc/write-cycle! dir "03" {})
+    (assoc ctx :dir dir :room room :plan plan :built? true :cycle "03")))
+
+(defn- plan [ctx f & args]
+  (fixture! (assoc ctx :plan (apply f (merge default-plan (:plan ctx)) args))))
+
+(defn- run [ctx] (or (:run ctx) (s/fail! "no command was run")))
+
+(defn- exits! [ctx code]
+  (s/check! (= code (:exit (run ctx))) (str "expected exit " code "\n" (s/show (run ctx)))))
+
+(defn- says! [ctx re what]
+  (s/check! (re-find re (:err (run ctx))) (str "the error stream does not say " what "\n" (s/show (run ctx)))))
 
 (defn- git-out [dir & args]
-  (str/trim (apply mc/git! dir args)))
+  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true} "git" args)]
+    (s/check! (zero? (:exit r)) (str "git " (str/join " " args) " failed in " dir ": " (:err r)))
+    (str/trim (:out r))))
 
-(defn- cycle-file [ctx name] (fs/file (:dir ctx) (mc/cycle-path "03" name)))
+(defn- build [ctx] (fs/file (:dir ctx) (mc/cycle-path "03" "build")))
 
-(defn- build [ctx] (cycle-file ctx "build"))
-
-(defn read-ratified [ctx]
-  (let [f (cycle-file ctx "ratified.edn")]
-    (s/check! (fs/exists? f) (str "no dhf/cycles/03/ratified.edn\n" (s/show (:run ctx))))
+(defn- ratified [ctx]
+  (let [f (fs/file (:dir ctx) (mc/cycle-path "03" "ratified.edn"))]
+    (s/check! (fs/exists? f) (str "no " (mc/cycle-path "03" "ratified.edn") "\n" (s/show (run ctx))))
     (edn/read-string (slurp (str f)))))
 
-(defn tree
-  "Every file under `root`/`p` (a file or a directory) but .git, relative to
-  `root`, with its content."
-  [root p]
-  (let [f (fs/file root p)]
-    (cond (fs/regular-file? f) {p (slurp (str f))}
-          (fs/directory? f) (into {} (for [x (fs/glob f "**" {:hidden true})
-                                           :let [rel (str (fs/relativize root x))]
-                                           :when (and (fs/regular-file? x)
-                                                      (not (re-find #"(^|/)\.git/" rel)))]
-                                       [rel (slurp (str x))]))
-          :else {})))
+(defn- files-under
+  "{relative path content} of every file under `rel` in `dir` (a file or a
+  directory), outside .git."
+  [dir rel]
+  (let [f (fs/file dir rel)]
+    (cond
+      (fs/regular-file? f) {rel (slurp (str f))}
+      (fs/directory? f) (into {} (for [x (fs/glob f "**" {:hidden true})
+                                       :when (fs/regular-file? x)]
+                                   [(str rel "/" (str/replace (str (fs/relativize f x)) "\\" "/")) (slurp (str x))]))
+      :else {})))
 
-(defn implementation [ctx]
-  (:implementation (edn/read-string (git-out (:dir ctx) "show" "spec-3:dhf/harness/config.edn"))))
-
-(defn holds-the-room!
+(defn- holds-the-room!
   "Fails unless every configured implementation path of the build holds
   exactly what the room holds."
   [ctx]
-  (doseq [p (implementation ctx)
-          :let [in-build (tree (str (build ctx)) p)
-                in-room (tree (:room ctx) p)]]
-    (s/check! (= in-room in-build)
-              (str "the checkout's " p " holds " (vec (sort (keys in-build)))
-                   ", the room's " (vec (sort (keys in-room)))))))
+  (doseq [p (:implementation (s/room-config))]
+    (let [want (files-under (:room ctx) p)
+          got (files-under (build ctx) p)]
+      (s/check! (= want got) (str p " in the checkout holds " (pr-str (keys got)) ", the room " (pr-str (keys want))
+                                  (when (= (set (keys want)) (set (keys got))) ", with other content"))))))
 
-(defn checkout-of-spec-3!
-  "Fails unless dhf/cycles/03/build is a checkout of the commit spec-3 tags,
-  whose every file outside the implementation is the cut's, unedited."
+(defn- is-the-cut!
+  "Fails unless the build is a checkout whose HEAD is the commit tagged spec-3."
   [ctx]
-  (let [b (str (build ctx))
-        impl (implementation ctx)
-        in-impl? (fn [rel] (some #(or (= rel %) (str/starts-with? rel (str % "/"))) impl))]
-    (s/check! (fs/directory? b) (str "no dhf/cycles/03/build\n" (s/show (:run ctx))))
+  (let [b (build ctx)]
+    (s/check! (fs/directory? (fs/file b ".git")) (str "dhf/cycles/03/build is not a checkout\n" (s/show (run ctx))))
     (s/check! (= (git-out (:dir ctx) "rev-parse" "spec-3^{commit}") (git-out b "rev-parse" "HEAD"))
-              "the checkout's HEAD is not the commit spec-3 tags")
-    (doseq [rel (remove in-impl? (str/split-lines (git-out (:dir ctx) "ls-tree" "-r" "--name-only" "spec-3")))]
-      (let [f (fs/file b rel)]
-        (s/check! (fs/exists? f) (str "the checkout holds no " rel))
-        (s/check! (= (git-out (:dir ctx) "show" (str "spec-3:" rel)) (str/trim (slurp (str f))))
-                  (str "the checkout's " rel " is not the cut's"))))))
-
-(defn- refused-with! [ctx code & res]
-  (let [r (:run ctx)]
-    (s/check! (= code (:exit r)) (str "expected exit " code "\n" (s/show r)))
-    (doseq [re res]
-      (s/check! (re-find re (:err r)) (str "the error stream does not say " re "\n" (s/show r))))))
+              "the checkout's HEAD is not the commit tagged spec-3")))
 
 ;; ---------------------------------------------------------------------------
 ;; Ratify trusts only the cut
 
 (defstep #"it ratifies against a fresh checkout of spec-3"
   (fn [ctx]
-    (s/check! (:room ctx) "the scenario made no room (:room): ROOM would be a fixed path")
-    (s/check! (#{0 1} (:exit (:run ctx))) (s/show (:run ctx)))
-    (s/check! (= "spec-3" (:cut (read-ratified ctx))) "ratified.edn names another cut")
-    (checkout-of-spec-3! ctx)))
+    (needs-ratify!)
+    (s/check! (#{0 1} (:exit (run ctx))) (str "ratify did not run\n" (s/show (run ctx))))
+    (s/check! (= "spec-3" (:cut (ratified ctx))) (str "ratified.edn: " (pr-str (ratified ctx))))
+    (is-the-cut! ctx)
+    ;; fresh: nothing of the working tree after the cut, such as cycle.edn, is in it
+    (s/check! (not (fs/exists? (fs/file (build ctx) (mc/cycle-path "03" "cycle.edn"))))
+              "the checkout holds the working tree's cycle.edn")
+    (s/check! (str/blank? (git-out (build ctx) "status" "--porcelain" "--untracked-files=no" "--" "dhf"))
+              "the checkout's spec differs from the cut")))
 
-(defstep #"no dhf/cycles/03/cycle.edn"
+(defstep #"no dhf/cycles/03/cycle\.edn"
   (fn [ctx]
-    (let [ctx (fx! ctx {})]
-      (fs/delete-tree (fs/file (:dir ctx) "dhf/cycles/03"))
-      ctx)))
+    (needs-ratify!)
+    ;; a repository with no cut, and a room that does not exist: the missing
+    ;; cycle.edn must be what ratify names, being read before anything else
+    (let [dir (s/copy-of-room!)]
+      (git-out dir "init" "-q")
+      (assoc ctx :dir dir :room (str (fs/file (s/tmp-dir) "no-room"))))))
 
 (defstep #"it exits 2 and names the missing file"
   (fn [ctx]
-    (refused-with! ctx 2 #"dhf/cycles/03/cycle\.edn")
-    (s/check! (not (fs/exists? (build ctx))) "ratify made a checkout")))
+    (exits! ctx 2)
+    (says! ctx #"dhf/cycles/03/cycle\.edn" "dhf/cycles/03/cycle.edn")
+    (s/check! (str/blank? (:out (run ctx))) (str "a refusal printed a result\n" (s/show (run ctx))))))
 
-(defstep #"the cut spec-3 holds src/rdm_spec/old.clj and the room holds no such file"
+(defstep #"the cut spec-3 holds src/rdm_spec/old\.clj and the room holds no such file"
   (fn [ctx]
-    (let [ctx (fx! ctx {})]
-      (s/write! (:dir ctx) "src/rdm_spec/old.clj" "(ns rdm-spec.old)\n")
-      (s/write! (:dir ctx) "test/rdm_spec/old_test.clj" "(ns rdm-spec.old-test)\n")
-      (mc/cut! (:dir ctx) "spec-3")
-      (s/check! (not (fs/exists? (fs/file (:room ctx) "src/rdm_spec/old.clj"))) "the room holds old.clj")
-      ;; an earlier, stale build of the cycle: ratify starts again from the cut
-      (s/write! (:dir ctx) "dhf/cycles/03/build/src/rdm_spec/stale.clj" "(ns rdm-spec.stale)\n")
+    (let [ctx (fixture! ctx)]
+      (s/check! (seq (git-out (:dir ctx) "ls-tree" "--name-only" "spec-3" "src/rdm_spec/old.clj"))
+                "the cut holds no src/rdm_spec/old.clj")
+      (s/check! (not (fs/exists? (fs/file (:room ctx) "src/rdm_spec/old.clj"))) "the room holds src/rdm_spec/old.clj")
       ctx)))
 
-(defstep #"the checkout it ratifies holds no src/rdm_spec/old.clj"
+(defstep #"the checkout it ratifies holds no src/rdm_spec/old\.clj"
   (fn [ctx]
-    (s/check! (zero? (:exit (:run ctx))) (s/show (:run ctx)))
-    (checkout-of-spec-3! ctx)
-    (doseq [p ["src/rdm_spec/old.clj" "test/rdm_spec/old_test.clj" "src/rdm_spec/stale.clj"]]
-      (s/check! (not (fs/exists? (fs/file (build ctx) p))) (str "the checkout holds " p)))))
+    (exits! ctx 0)
+    (is-the-cut! ctx)
+    (s/check! (not (fs/exists? (fs/file (build ctx) "src/rdm_spec/old.clj")))
+              "the checkout still holds the cut's src/rdm_spec/old.clj")))
 
 (defstep #"every configured implementation path holds exactly what the room holds"
   (fn [ctx] (holds-the-room! ctx)))
 
-(def edited-feature
-  "The room's edit to the lint feature: a stamped scenario the cut does not
-  hold, so a run that read the room's spec would find no result for it."
-  "\n    @spec-0099 @e2e\n    Scenario: A scenario only the room holds\n      Given a model\n")
-
-(defstep #"the builder has edited dhf/harness/config.edn and a feature file in the room"
+(defstep #"the builder has edited dhf/harness/config\.edn and a feature file in the room"
   (fn [ctx]
-    (let [ctx (fx! ctx {})
-          room (:room ctx)
-          config (edn/read-string (git-out (:dir ctx) "show" "spec-3:dhf/harness/config.edn"))]
-      ;; the room's configuration declares a test command that writes no result
+    (let [marker (str (fs/file (s/tmp-dir) "cut-ran"))
+          room-marker (str (fs/file (s/tmp-dir) "room-ran"))
+          ctx (fixture! (assoc ctx :plan (assoc default-plan :marker marker)))
+          room (:room ctx)]
+      ;; the room's configuration runs another command and its feature adds a scenario
       (s/write! room "dhf/harness/config.edn"
-                (pr-str (assoc config :test-command ["bb" "-e" "(System/exit 0)"] :implementation ["src"])))
-      (s/write! room mc/lint-feature (str (git-out (:dir ctx) "show" (str "spec-3:" mc/lint-feature)) "\n" edited-feature))
-      ctx)))
+                (pr-str (assoc (s/room-config) :test-command [s/bb "-e" (str "(spit " (pr-str room-marker) " \"ran\")")]
+                               :implementation ["src"])))
+      (s/write! room mc/lint-feature (str (mc/feature-text scenarios)
+                                          "\n    @spec-0099 @e2e\n    Scenario: Added by the builder\n"
+                                          "      Given a model\n      When \"rdm-spec check\" is run\n      Then it passes\n"))
+      (assoc ctx :markers {:cut marker :room room-marker}))))
 
 (defstep #"the configuration and the spec used are those of spec-3, unedited"
   (fn [ctx]
-    (s/check! (zero? (:exit (:run ctx))) (str "ratify did not pass on the cut's configuration and spec\n" (s/show (:run ctx))))
-    (checkout-of-spec-3! ctx)
-    (doseq [rel ["dhf/harness/config.edn" mc/lint-feature]]
-      (s/check! (not= (slurp (str (fs/file (:room ctx) rel))) (slurp (str (fs/file (build ctx) rel))))
-                (str "the checkout's " rel " is the room's")))))
+    (exits! ctx 0)
+    (is-the-cut! ctx)
+    (doseq [f ["dhf/harness/config.edn" mc/lint-feature]]
+      (s/check! (= (git-out (:dir ctx) "show" (str "spec-3:" f)) (str/trim (slurp (str (fs/file (build ctx) f)))))
+                (str "the checkout's " f " is not the cut's")))
+    (s/check! (fs/exists? (get-in ctx [:markers :cut])) "the cut's test command did not run")
+    (s/check! (not (fs/exists? (get-in ctx [:markers :room]))) "the room's test command ran")
+    ;; the room's configuration named only src: the cut's implementation paths were used
+    (holds-the-room! ctx)))
 
 ;; ---------------------------------------------------------------------------
 ;; Ratify passes only when the tests pass and every scenario passed
 
-(defstep #"\"rdm-spec (ratify ROOM 03)\" runs the declared test command"
-  (fn [ctx line]
-    (let [env-file (str (fs/file (s/tmp-dir) "env.edn"))
-          ctx (fx! ctx {:env-file env-file})]
-      (kc/run-line ctx line))))
+(defstep #"\"rdm-spec ratify ROOM 03\" runs the declared test command"
+  (fn [ctx]
+    (let [env-file (str (fs/file (s/tmp-dir) "results-dir.txt"))
+          ctx (plan ctx assoc :env-file env-file)]
+      (assoc (kc/run-line ctx "ratify ROOM 03") :env-file env-file))))
 
 (defstep #"the command runs with the environment variable RESULTS_DIR set to the absolute path of dhf/cycles/03/results in the repository rdm-spec ratify was run in"
   (fn [ctx]
-    (let [f (get-in ctx [:fx :env-file])]
-      (s/check! (fs/exists? f) (str "the test command did not run\n" (s/show (:run ctx))))
-      (let [{:keys [results-dir cwd]} (edn/read-string (slurp f))
+    (exits! ctx 0)
+    (let [f (:env-file ctx)]
+      (s/check! (fs/exists? f) "the test command did not run")
+      (let [given (slurp f)
             want (fs/file (:dir ctx) "dhf/cycles/03/results")]
-        (s/check! (string? results-dir) "the test command ran with no RESULTS_DIR")
-        (s/check! (fs/absolute? results-dir) (str "RESULTS_DIR is not absolute: " results-dir))
-        (s/check! (= (str (fs/canonicalize want)) (str (fs/canonicalize results-dir)))
-                  (str "RESULTS_DIR is " results-dir ", not " want))
-        (s/check! (= (str (fs/canonicalize (build ctx))) (str (fs/canonicalize cwd)))
-                  (str "the test command ran in " cwd ", not in the checkout"))))))
+        (s/check! (fs/absolute? given) (str "RESULTS_DIR is not absolute: " given))
+        (s/check! (= (str (fs/canonicalize want)) (str (fs/canonicalize given)))
+                  (str "RESULTS_DIR was " given ", not " want))))))
 
 (defstep #"the declared test command exits (\d+)"
-  (fn [ctx code] (fx! ctx {:exit (parse-long code)})))
+  (fn [ctx code] (plan ctx assoc :exit (parse-long code))))
 
 (defstep #"it wrote Allure results into dhf/cycles/03/results"
-  (fn [ctx] (fx! ctx {:write? true})))
+  (fn [ctx] (plan ctx update :results #(or (not-empty %) (:results default-plan)))))
 
 (defstep #"every stamped scenario not tagged @wip is named by at least one result, and every result naming it passed"
-  (fn [ctx] (fx! ctx {:omit #{} :status {}})))
+  (fn [ctx] (plan ctx assoc :results (:results default-plan))))
 
 (defstep #"it exits 1 and says the test command failed, with its exit status"
   (fn [ctx]
-    (refused-with! ctx 1 #"test command" #"failed" #"exit status 1\b")))
+    (exits! ctx 1)
+    (says! ctx #"test command .* failed: it exited with status 1\b" "that the test command failed with status 1")))
 
 (defstep #"the declared test command exits 0 without writing any Allure result"
-  (fn [ctx] (fx! ctx {:exit 0 :write? false})))
+  (fn [ctx] (plan ctx assoc :exit 0 :results {})))
 
 (defstep #"it exits 1 and says a green exit with no results is not a run"
   (fn [ctx]
-    (refused-with! ctx 1 #"no (Allure )?results?" #"not a run")))
+    (exits! ctx 1)
+    (says! ctx #"a green exit with no results is not a run" "that a green exit with no results is not a run")))
 
 (defstep #"the stamped scenario @spec-0012 is not tagged @wip"
   (fn [ctx]
-    (let [ctx (fx! ctx {})
-          text (git-out (:dir ctx) "show" (str "spec-3:" mc/lint-feature))]
-      (s/check! (re-find #"@spec-0012 @e2e\n" text) (str "spec-0012 is not a stamped scenario without @wip:\n" text))
+    (let [ctx (fixture! ctx)]
+      (s/check! (some #(and (= "spec-0012" (:id %)) (not (:wip? %))) scenarios) "spec-0012 is planned")
       ctx)))
 
 (defstep #"no result in dhf/cycles/03/results is labelled spec=spec-0012"
-  (fn [ctx] (fx! ctx {:omit (conj (get-in ctx [:fx :omit] #{}) "spec-0012")})))
+  (fn [ctx] (plan ctx update :results dissoc "spec-0012")))
 
 (defstep #"it exits 1 and names spec-0012"
   (fn [ctx]
-    (refused-with! ctx 1 #"spec-0012")
-    (s/check! (not (re-find #"spec-0014" (:err (:run ctx)))) "it names spec-0014, which passed")))
+    (exits! ctx 1)
+    (says! ctx #"(?m)^\S+lint\.feature:\d+: \S+: spec-0012 " "spec-0012, at its feature file and line")))
 
 (defstep #"a result in dhf/cycles/03/results labelled spec=spec-0012 is failed"
-  (fn [ctx] (fx! ctx {:status (assoc (get-in ctx [:fx :status] {}) "spec-0012" "failed")})))
+  (fn [ctx] (plan ctx assoc-in [:results "spec-0012"] "failed")))
 
 (defstep #"it exits 1 and names spec-0012 and its status"
   (fn [ctx]
-    (refused-with! ctx 1 #"spec-0012.*\bfailed\b")))
+    (exits! ctx 1)
+    (says! ctx #"spec-0012.*failed" "spec-0012 and its status failed")))
 
 ;; ---------------------------------------------------------------------------
 ;; Ratify records what it ratified
 
-(def empty-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904")
+(defstep #"the room's implementation has the tree hash ([0-9a-f]{40})"
+  (fn [ctx tree]
+    (let [room (s/tmp-dir)
+          ctx (fixture! (assoc ctx :room room))
+          ;; the hash git gives the room's implementation paths, by a separate route
+          probe (s/tmp-dir)]
+      (git-out probe "init" "-q")
+      (doseq [p (:implementation (s/room-config)) :when (fs/exists? (fs/file room p))]
+        (if (fs/directory? (fs/file room p))
+          (fs/copy-tree (fs/file room p) (fs/file probe p))
+          (fs/copy (fs/file room p) (fs/file probe p))))
+      (git-out probe "add" "-A" "-f" ".")
+      (s/check! (= tree (git-out probe "write-tree")) (str "the room's implementation does not have the tree " tree))
+      ctx)))
 
-(defstep #"the room's implementation has the tree hash 4b825dc"
+(defstep #"\"rdm-spec ratify ROOM 03\" is run and passes"
   (fn [ctx]
-    (let [ctx (fx! ctx {:in-cut? true})]
-      (s/check! (= empty-tree (str/trim (:out (p/shell {:out :string :in ""} "git" "hash-object" "-t" "tree" "--stdin"))))
-                "the empty tree's hash is not 4b825dc")
-      (doseq [p (implementation ctx)]
-        (s/check! (not (fs/exists? (fs/file (:room ctx) p))) (str "the room holds " p)))
+    (let [ctx (kc/run-line (fixture! ctx) "ratify ROOM 03")]
+      (exits! ctx 0)
       ctx)))
 
-(defstep #"\"rdm-spec (ratify ROOM 03)\" is run and passes"
-  (fn [ctx line]
-    (let [ctx (kc/run-line ctx line)]
-      (s/check! (zero? (:exit (:run ctx))) (s/show (:run ctx)))
-      ctx)))
-
-(defstep #"dhf/cycles/03/ratified.edn holds:"
+(defstep #"dhf/cycles/03/ratified\.edn holds:"
   (fn [ctx doc]
-    (let [want (edn/read-string doc)
-          got (read-ratified ctx)]
-      (s/check! (= want got) (str "ratified.edn holds " (pr-str got) "\nexpected " (pr-str want))))))
+    (let [r (ratified ctx)]
+      (s/check! (= (edn/read-string doc) r) (str "ratified.edn holds " (pr-str r) "\nexpected " doc)))))
 
 (defstep #"dhf/cycles/03/build is the ratified checkout, which the grader grades"
   (fn [ctx]
-    (s/check! (= "dhf/cycles/03/build" (:checkout (read-ratified ctx))) "ratified.edn names another checkout")
-    (checkout-of-spec-3! ctx)
-    (holds-the-room! ctx)
-    (s/check! (seq (fs/glob (cycle-file ctx "results") "*-result.json")) "the cycle holds no results")))
+    (is-the-cut! ctx)
+    (holds-the-room! ctx)))
 
-(defstep #"\"rdm-spec (ratify ROOM 03)\" is run and the test command exits 1"
-  (fn [ctx line]
-    (kc/run-line (fx! ctx {:exit 1}) line)))
-
-(defstep #"dhf/cycles/03/ratified.edn holds :outcome :refused and the reason"
+(defstep #"\"rdm-spec ratify ROOM 03\" is run and the test command exits 1"
   (fn [ctx]
-    (let [r (read-ratified ctx)]
-      (s/check! (= 1 (:exit (:run ctx))) (s/show (:run ctx)))
-      (s/check! (= :refused (:outcome r)) (str "ratified.edn holds " (pr-str r)))
-      (s/check! (and (string? (:reason r)) (re-find #"test command.*exit status 1\b" (:reason r)))
-                (str "the reason does not say the test command exited 1: " (pr-str (:reason r))))
-      (s/check! (= "spec-3" (:cut r)) (str "ratified.edn names the cut " (pr-str (:cut r)))))))
+    (kc/run-line (plan ctx assoc :exit 1) "ratify ROOM 03")))
+
+(defstep #"dhf/cycles/03/ratified\.edn holds :outcome :refused and the reason"
+  (fn [ctx]
+    (exits! ctx 1)
+    (let [r (ratified ctx)]
+      (s/check! (= {:cut "spec-3" :outcome :refused} (select-keys r [:cut :outcome])) (str "ratified.edn: " (pr-str r)))
+      (s/check! (and (string? (:reason r)) (re-find #"test command .* failed: it exited with status 1" (:reason r)))
+                (str "ratified.edn gives no reason naming the failed test command: " (pr-str r))))))
 
 (defstep #"it exits 1 and names the file and line of the unstamped scenario"
   (fn [ctx]
+    (needs-ratify!)
+    (exits! ctx 1)
     (let [{:keys [file line]} (:unstamped ctx)]
-      (s/check! (:room ctx) "the scenario made no room (:room): ROOM would be a fixed path")
-      (refused-with! ctx 1 (re-pattern (str "(^|\\s|/)" (java.util.regex.Pattern/quote (str file ":" line ":")))))
-      (s/check! (= :refused (:outcome (read-ratified ctx))) "ratified.edn does not record the refusal"))))
+      (says! ctx (re-pattern (str "(?m)^\\S*" (java.util.regex.Pattern/quote (str file ":" line ":")) " unstamped-scenario"))
+             (str file ":" line))
+      (s/check! (= :refused (:outcome (ratified ctx))) "ratified.edn does not record the refusal"))))

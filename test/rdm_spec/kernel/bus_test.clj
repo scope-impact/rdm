@@ -1,37 +1,63 @@
 (ns rdm-spec.kernel.bus-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [rdm-spec.kernel.bus :as bus]))
 
 (def catalogue
-  {:SpecParsed {:published-by :spec/parser :carries [:revision :scenarios]}})
+  {:A {:published-by :ctx/one :carries [:x :y]}
+   :B {:published-by :ctx/two :carries []}})
 
-(deftest delivers-in-subscription-order-and-records-events
-  (let [b (bus/make-bus)
+(defn- refusal [f]
+  (try (f) nil
+       (catch clojure.lang.ExceptionInfo e
+         {:message (ex-message e) :cannot-run? (:rdm-spec.kernel.command/cannot-run (ex-data e))})))
+
+(deftest delivers-synchronously-in-subscription-order
+  (let [b (bus/make-bus {:catalogue catalogue})
         seen (atom [])]
-    (bus/subscribe! b :SpecParsed :a/one #(swap! seen conj [:one %]))
-    (bus/subscribe! b :Other :a/two #(swap! seen conj [:other %]))
-    (bus/subscribe! b :SpecParsed :a/three #(swap! seen conj [:three %]))
-    (bus/publish! b :spec/parser :SpecParsed {:x 1})
-    (is (= [[:one {:x 1}] [:three {:x 1}]] @seen))
-    (is (= [{:event :SpecParsed :publisher :spec/parser}] (bus/events b)))
-    (is (= "event: SpecParsed published-by spec/parser" (bus/format-event (first (bus/events b)))))))
+    (bus/subscribe! b :A :s/first #(swap! seen conj [:first %]))
+    (bus/subscribe! b :A :s/second #(swap! seen conj [:second %]))
+    (bus/subscribe! b :B :s/third #(swap! seen conj [:third %]))
+    (bus/publish! b :ctx/one :A {:x 1 :y nil})
+    (is (= [[:first {:x 1 :y nil}] [:second {:x 1 :y nil}]] @seen))))
 
-(deftest checks-against-the-catalogue
-  (let [b (bus/make-bus {:catalogue catalogue :catalogue-file "dhf/spec/events.edn"})]
-    (testing "a declared event from its publisher with every key passes"
-      (bus/publish! b :spec/parser :SpecParsed {:revision nil :scenarios []})
-      (is (= 1 (count (bus/events b)))))
-    (testing "an undeclared event cannot run, naming it and the catalogue"
-      (let [e (try (bus/publish! b :spec/check :SpecGated {}) nil (catch clojure.lang.ExceptionInfo e e))]
-        (is (:rdm-spec.kernel.command/cannot-run (ex-data e)))
-        (is (re-find #"SpecGated.*dhf/spec/events\.edn" (ex-message e)))))
-    (testing "the wrong publisher and a missing key are refused"
-      (is (thrown? clojure.lang.ExceptionInfo (bus/publish! b :spec/check :SpecParsed {:revision nil :scenarios []})))
-      (is (thrown? clojure.lang.ExceptionInfo (bus/publish! b :spec/parser :SpecParsed {:revision nil}))))
-    (is (= 1 (count (bus/events b))) "a refused event is not recorded")))
+(deftest records-every-event-in-publication-order
+  (let [b (bus/make-bus {:catalogue catalogue})]
+    ;; a handler that publishes: its event comes after the one it handles
+    (bus/subscribe! b :A :ctx/two (fn [_] (bus/publish! b :ctx/two :B {})))
+    (bus/publish! b :ctx/one :A {:x 1 :y 2})
+    (is (= [:A :B] (map :event (bus/events b))))
+    (is (= [:ctx/one :ctx/two] (map :publisher (bus/events b))))
+    (is (= {:x 1 :y 2} (:payload (first (bus/events b)))))
+    (is (= ["event: A published-by ctx/one" "event: B published-by ctx/two"]
+           (map bus/format-event (bus/events b))))))
 
-(deftest an-empty-or-absent-catalogue-checks-nothing
-  (doseq [c [nil {}]]
-    (let [b (bus/make-bus {:catalogue c})]
-      (bus/publish! b :x/y :Anything {})
-      (is (= [{:event :Anything :publisher :x/y}] (bus/events b))))))
+(deftest no-catalogue-checks-nothing
+  (doseq [b [(bus/make-bus) (bus/make-bus {:catalogue nil}) (bus/make-bus {:catalogue {}})]]
+    (bus/publish! b :anyone :Undeclared {:whatever 1})
+    (is (= [:Undeclared] (map :event (bus/events b))))))
+
+(deftest refuses-what-the-catalogue-does-not-allow
+  (let [b (bus/make-bus {:catalogue catalogue :catalogue-file "dhf/spec/events.edn"})
+        seen (atom 0)]
+    (bus/subscribe! b :A :s/s (fn [_] (swap! seen inc)))
+    (testing "an undeclared event"
+      (let [r (refusal #(bus/publish! b :ctx/one :C {}))]
+        (is (:cannot-run? r))
+        (is (str/includes? (:message r) "C"))
+        (is (str/includes? (:message r) "dhf/spec/events.edn"))))
+    (testing "a carried key missing"
+      (let [r (refusal #(bus/publish! b :ctx/one :A {:x 1}))]
+        (is (:cannot-run? r))
+        (is (str/includes? (:message r) ":y"))))
+    (testing "the wrong publisher"
+      (let [r (refusal #(bus/publish! b :ctx/two :A {:x 1 :y 2}))]
+        (is (:cannot-run? r))
+        (is (str/includes? (:message r) "ctx/one"))))
+    (testing "a refused event is neither delivered nor recorded"
+      (is (= 0 @seen))
+      (is (empty? (bus/events b))))))
+
+(deftest a-catalogue-file-alone-names-the-catalogue
+  (let [r (refusal #(bus/publish! (bus/make-bus {:catalogue catalogue}) :x/y :Z {}))]
+    (is (str/includes? (:message r) "catalogue"))))

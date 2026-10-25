@@ -1,278 +1,261 @@
 (ns steps.architecture-views
-  "Step definitions for dhf/spec/architecture/views.feature: each Given makes
-  a copy of the room's spec (its committed views removed) whose model holds
-  the views the scenario names, `rdm-spec views` or `rdm-spec check` runs it
-  (the shared When), and each Then reads what was written under the
-  configured :views-dir. What a view holds is read off its diagram source and
-  compared with what the model says it must hold, worked out here
-  independently of the implementation."
+  "Step definitions for dhf/spec/architecture/views.feature: a copy of the
+  room's spec whose model a step trims, `rdm-spec views` (the shared When) to
+  draw it, and each Then reading the outputs back from dhf/views/.
+
+  What is checked is computed here from the model and the glossary, never
+  asked of the implementation: the model hash is the SHA-256, as lowercase
+  hex, of the model read as EDN and printed back with every map's keys sorted;
+  the formats are the ones dhf/harness/stack.md names for dhf/views/<key>."
   (:require [babashka.fs :as fs]
+            [clojure.edn :as edn]
             [clojure.string :as str]
+            [clojure.walk :as walk]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.architecture-support :as a]
             [steps.support :as s]))
 
-;; --- helpers -------------------------------------------------------------------
+;; ---------------------------------------------------------------------------
+;; Helpers
 
-(defn- views-dir [dir] (fs/file dir (or (:views-dir (s/room-config)) "dhf/views")))
+(defn- views-dir [] (:views-dir (s/room-config)))
 
-(defn- fresh-project!
-  "A copy of the room's spec with no views generated yet."
+(defn- sha256-hex [^String text]
+  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes text "UTF-8"))]
+    (apply str (map #(format "%02x" (bit-and % 0xff)) d))))
+
+(defn model-hash
+  "The glossary's model hash of the model file in `dir`."
+  [dir]
+  (let [v (edn/read-string (slurp (str (fs/file dir a/model-rel))))]
+    (sha256-hex (binding [*print-namespace-maps* false]
+                  (pr-str (walk/postwalk #(if (map? %) (into (sorted-map) %) %) v))))))
+
+(defn formats
+  "The extensions dhf/harness/stack.md names for a view's outputs."
   []
-  (let [dir (s/copy-of-room!)]
-    (fs/delete-tree (views-dir dir))
-    dir))
+  (let [text (slurp (str (fs/file s/room-root "dhf/harness/stack.md")))
+        exts (distinct (map second (re-seq #"dhf/views/<key>\.(\w+)" text)))]
+    (s/check! (seq exts) "dhf/harness/stack.md names no format for dhf/views/<key>")
+    (vec exts)))
 
-(defn- with-views
-  "A fresh project whose model holds only the views `(pick views)` returns."
-  [ctx pick]
-  (s/needs-built! 'rdm-spec.architecture.views)
-  (let [dir (fresh-project!)
-        m (a/read-model dir)
-        vs (vec (pick (:views m)))]
-    (a/write-model! dir (assoc m :views vs))
-    (assoc ctx :dir dir :views vs)))
+(defn- output [dir k ext] (fs/file dir (views-dir) (str k "." ext)))
 
-(defn- sha256-hex [^bytes bs]
-  (apply str (map #(format "%02x" (bit-and % 0xff))
-                  (.digest (java.security.MessageDigest/getInstance "SHA-256") bs))))
+(defn- run-views! [ctx]
+  (let [r (s/rdm-spec! (:dir ctx) "views")]
+    (s/check! (= 0 (:exit r)) (str "rdm-spec views failed\n" (s/show r)))
+    r))
 
-(defn- model-bytes-hash [dir] (sha256-hex (fs/read-all-bytes (fs/file dir a/model-rel))))
+;; --- Parsing a diagram source -------------------------------------------------
 
-(defn stack-formats
-  "The diagram source's extension and the rendered formats dhf/harness/stack.md
-  names, read off its row for the diagram source and render:
-  {:source \"mmd\" :rendered [\"svg\"]}."
-  []
-  (let [stack (slurp (str (fs/file s/room-root "dhf/harness/stack.md")))
-        row (first (filter #(str/includes? (str/lower-case %) "diagram source") (str/split-lines stack)))
-        exts (vec (distinct (map second (re-seq #"dhf/views/<key>\.(\w+)" (or row "")))))]
-    (s/check! (>= (count exts) 2) (str "dhf/harness/stack.md names no source and render format: " (pr-str row)))
-    {:source (first exts) :rendered (vec (rest exts))}))
+(defn- alias-of
+  "How a diagram source names an element's id."
+  [k]
+  (-> (if (namespace k) (str (namespace k) "__" (name k)) (name k))
+      (str/replace #"[^A-Za-z0-9_]" "_")))
 
-(defn- the-run [ctx]
-  (or (:run ctx) (s/fail! "no command was run")))
-
-;; --- reading a diagram source -------------------------------------------------------
-
-(defn- alias-of [id]
-  (str/replace (if (namespace id) (str (namespace id) "__" (name id)) (name id)) #"[^A-Za-z0-9_]" "_"))
-
-(defn- parse-source
-  "A diagram source read as {:inside #{alias} :outside #{alias} :external
-  #{alias drawn as external} :boundaries [alias] :rels [[from to label]]}:
-  an element is inside when it is declared within a boundary."
+(defn parse-source
+  "A view's diagram source as {:elements {alias {:macro :inside?}} :rels
+  [[from to label]] :boundaries n}."
   [text]
-  (reduce
-   (fn [acc line]
-     (let [l (str/trim line)]
-       (cond
-         (re-find #"^(\w*Boundary)\((\w+)" l)
-         (-> acc (update :depth inc) (update :boundaries conj (second (re-find #"^\w*Boundary\((\w+)" l))))
-         (= "}" l) (update acc :depth dec)
-         (re-find #"^Rel\w*\(" l)
-         (let [[_ f t label] (re-find #"^Rel\w*\((\w+),\s*(\w+),\s*\"([^\"]*)\"" l)]
-           (update acc :rels conj [f t label]))
-         (re-find #"^(Person|System|Container|ContainerDb|Component)(_Ext)?\((\w+)," l)
-         (let [[_ _ ext al] (re-find #"^(Person|System|Container|ContainerDb|Component)(_Ext)?\((\w+)," l)]
-           (cond-> (update acc (if (pos? (:depth acc)) :inside :outside) conj al)
-             ext (update :external conj al)))
-         :else acc)))
-   {:depth 0 :inside #{} :outside #{} :external #{} :boundaries [] :rels []}
-   (str/split-lines text)))
+  (loop [[l & more :as ls] (str/split-lines text) depth 0 acc {:elements {} :rels [] :boundaries 0}]
+    (if (empty? ls)
+      acc
+      (let [l (str/trim l)]
+        (cond
+          (re-find #"^\w*Boundary\(" l)
+          (recur more (inc depth) (update acc :boundaries inc))
 
-(defn- source-of [ctx v]
-  (let [f (fs/file (views-dir (:dir ctx)) (str (:key v) "." (:source (stack-formats))))]
-    (s/check! (fs/exists? f) (str "no diagram source for the view " (:key v) "\n" (s/show (the-run ctx))))
-    (parse-source (slurp (str f)))))
+          (= "}" l) (recur more (dec depth) acc)
 
-;; --- what the model says a view holds ---------------------------------------------
+          (re-find #"^Rel\w*\(" l)
+          (let [[_ from to label] (re-find #"^Rel\w*\(\s*(\w+)\s*,\s*(\w+)\s*,\s*\"([^\"]*)\"" l)]
+            (recur more depth (update acc :rels conj [from to label])))
 
-(defn- parents
-  "{id {:container id :context id}} for every context and component."
+          (re-find #"^(Person|System|Container|Component)\w*\(" l)
+          (let [[_ macro alias] (re-find #"^(\w+)\(\s*(\w+)" l)]
+            (recur more depth (assoc-in acc [:elements alias] {:macro macro :inside? (pos? depth)})))
+
+          :else (recur more depth acc))))))
+
+;; --- What the model says a view holds ----------------------------------------
+
+(defn- elements-of
+  "{id {:type :container :context}} for every element of model `m`."
   [m]
-  (into {}
-        (for [c (:containers m)
-              ctx (:contexts c)
-              [id cx] (cons [(:id ctx) nil] (map (fn [k] [(:id k) (:id ctx)]) (:components ctx)))]
-          [id {:container (:id c) :context cx}])))
+  (merge
+   {(get-in m [:system :id]) {:type :system}}
+   (into {} (for [p (:people m)] [(:id p) {:type :person}]))
+   (into {} (for [e (:external m)] [(:id e) {:type :external}]))
+   (into {} (for [c (:containers m)] [(:id c) {:type :container}]))
+   (into {} (for [c (:containers m) x (:contexts c)] [(:id x) {:type :context :container (:id c)}]))
+   (into {} (for [c (:containers m) x (:contexts c) y (:components x)]
+              [(:id y) {:type :component :container (:id c) :context (:id x)}]))
+   (into {} (for [k (:kernel m)] [(:id k) {:type :kernel}]))))
 
-(defn- lifted-pairs
-  "The set of [from to] aliases the model's relationships join once each end
-  is drawn as `(lift id)`; ends lifting to nil or to the same element left out."
-  [m lift]
-  (set (for [r (:relationships m)
-             :let [f (lift (:from r)) t (lift (:to r))]
-             :when (and f t (not= f t))]
-         [(alias-of f) (alias-of t)])))
+(defn- kernel-container
+  "The container the kernel is shared code of: the one that holds contexts."
+  [m]
+  (:id (or (first (filter :contexts (:containers m))) (first (filter #(= :runs (:kind %)) (:containers m))))))
 
-(defn- outer-ids [m] (set (concat (map :id (:people m)) (map :id (:external m)))))
+(defn- lift
+  "The element of the level `level` that `id` stands in or is."
+  [m els level id]
+  (let [{:keys [type container]} (get els id)]
+    (case level
+      :context (if (#{:person :external :system} type) id (get-in m [:system :id]))
+      :container (case type
+                   (:context :component) container
+                   :kernel (kernel-container m)
+                   id))))
 
-(defn- check-holds! [ctx expect]
-  (let [v (first (:views ctx))
-        got (source-of ctx v)
-        drawn (into (:inside got) (:outside got))
-        show (str "\nthe view " (:key v) " holds " (pr-str (dissoc got :depth)))]
-    (when-let [i (:inside expect)]
-      (s/check! (= i (:inside got)) (str "inside its boundary it should hold exactly " (pr-str (sort i)) show)))
-    (when-let [o (:outside expect)]
-      (s/check! (= o (:outside got)) (str "outside a boundary it should hold exactly " (pr-str (sort o)) show)))
-    (when-let [e (:external expect)]
-      (s/check! (= e (:external got)) (str "it should draw exactly " (pr-str (sort e)) " as external" show)))
-    (when-let [b (:boundaries expect)]
-      (s/check! (= b (:boundaries got)) (str "its boundaries should be " (pr-str b) show)))
-    (doseq [[f t] (:rels got)]
-      (s/check! (and (drawn f) (drawn t)) (str "the relationship " f " -> " t " joins an element it does not draw" show)))
-    (when-let [p (:pairs expect)]
-      (s/check! (= p (set (map (fn [[f t]] [f t]) (:rels got))))
-                (str "its relationships should join exactly " (pr-str (sort p)) show)))
-    (when-let [r (:rels expect)]
-      (s/check! (= r (:rels got)) (str "its relationships should be, in order, " (pr-str r) show)))
-    ctx))
+(defn- lifted-rels [m level]
+  (let [els (elements-of m)]
+    (set (for [r (:relationships m)
+               :let [f (lift m els level (:from r)) t (lift m els level (:to r))]
+               :when (not= f t)]
+           [(alias-of f) (alias-of t)]))))
 
-(defn- expect-context [m]
-  (let [sys (get-in m [:system :id])
-        outer (outer-ids m)
-        lift (fn [id] (if (outer id) id sys))]
-    ;; a context view draws no boundary: the system stands among the others
-    {:inside #{}
-     :outside (set (map alias-of (cons sys outer)))
-     :external (set (map (comp alias-of :id) (:external m)))
-     :pairs (lifted-pairs m lift)}))
+(defn- the-view [ctx]
+  (let [m (a/read-model (:dir ctx))
+        v (first (filter #(= (:view-key ctx) (:key %)) (:views m)))
+        src (output (:dir ctx) (:key v) "mmd")]
+    (s/check! (fs/exists? src) (str "no diagram source " src))
+    {:m m :v v :parsed (parse-source (slurp (str src)))}))
 
-(defn- expect-container [m]
-  (let [outer (outer-ids m)
-        cs (set (map :id (:containers m)))
-        ps (parents m)
-        runs (:id (or (first (filter #(= :runs (:kind %)) (:containers m))) (first (:containers m))))
-        kernel (set (map :id (:kernel m)))
-        lift (fn [id] (cond (or (outer id) (cs id)) id
-                            (ps id) (:container (ps id))
-                            (kernel id) runs))]
-    {:inside (set (map alias-of cs))
-     :outside (set (map alias-of outer))
-     :external (set (map (comp alias-of :id) (:external m)))
-     :boundaries [(str "boundary__" (alias-of (get-in m [:system :id])))]
-     :pairs (lifted-pairs m lift)}))
+(defn- same! [what want got]
+  (s/check! (= (set want) (set got))
+            (str what " differ: missing " (pr-str (sort (remove (set got) want)))
+                 ", extra " (pr-str (sort (remove (set want) got))))))
 
-(defn- expect-component [m v]
-  (let [cx (:context v)
-        ps (parents m)
-        inside (set (for [[id {:keys [context]}] ps :when (= cx context)] id))
+(defn- holds-context [ctx]
+  (let [{:keys [m parsed]} (the-view ctx)
+        want (map alias-of (concat [(get-in m [:system :id])] (map :id (:people m)) (map :id (:external m))))]
+    (same! "the context view's elements" want (keys (:elements parsed)))
+    (same! "the context view's relationships" (lifted-rels m :context) (map (comp vec (partial take 2)) (:rels parsed)))))
+
+(defn- holds-container [ctx]
+  (let [{:keys [m parsed]} (the-view ctx)
+        containers (map (comp alias-of :id) (:containers m))
+        want (concat containers (map (comp alias-of :id) (:people m)) (map (comp alias-of :id) (:external m)))]
+    (same! "the container view's elements" want (keys (:elements parsed)))
+    (same! "the container view's elements inside the system" containers
+           (keep (fn [[k e]] (when (:inside? e) k)) (:elements parsed)))
+    (same! "the container view's relationships" (lifted-rels m :container)
+           (map (comp vec (partial take 2)) (:rels parsed)))))
+
+(defn- holds-component [ctx]
+  (let [{:keys [m v parsed]} (the-view ctx)
+        els (elements-of m)
+        inside (set (for [[id e] els :when (and (= :component (:type e)) (= (:context v) (:context e)))] id))
         rels (filter #(or (inside (:from %)) (inside (:to %))) (:relationships m))
-        others (set (remove inside (mapcat (juxt :from :to) rels)))]
-    {:inside (set (map alias-of inside))
-     :outside (set (map alias-of others))
-     :external (set (map alias-of others))
-     :boundaries [(str "boundary__" (alias-of cx))]
-     :pairs (set (map (fn [r] [(alias-of (:from r)) (alias-of (:to r))]) rels))}))
+        outside (set (remove inside (mapcat (juxt :from :to) rels)))
+        drawn (:elements parsed)]
+    (s/check! (= 1 (:boundaries parsed)) (str "the component view draws " (:boundaries parsed) " boundaries, not one"))
+    (same! "the components inside the boundary" (map alias-of inside)
+           (keep (fn [[k e]] (when (:inside? e) k)) drawn))
+    (same! "the elements outside the boundary" (map alias-of outside)
+           (keep (fn [[k e]] (when-not (:inside? e) k)) drawn))
+    (doseq [id outside :let [e (get drawn (alias-of id))]]
+      (s/check! (str/ends-with? (:macro e) "_Ext") (str id " is outside the context but drawn as " (:macro e))))
+    (same! "the component view's relationships" (set (map #(mapv alias-of [(:from %) (:to %)]) rels))
+           (map (comp vec (partial take 2)) (:rels parsed)))))
 
-(defn- expect-dynamic [v]
-  {:inside #{}
-   :outside (set (map alias-of (mapcat (fn [[f t]] [f t]) (:steps v))))
-   :rels (mapv (fn [[f t d]] [(alias-of f) (alias-of t) d]) (:steps v))})
+(defn- holds-dynamic [ctx]
+  (let [{:keys [v parsed]} (the-view ctx)
+        steps (:steps v)]
+    (same! "the dynamic view's elements" (map alias-of (distinct (mapcat (partial take 2) steps)))
+           (keys (:elements parsed)))
+    (s/check! (= (mapv (fn [[f t label]] [(alias-of f) (alias-of t) label]) steps) (:rels parsed))
+              (str "the dynamic view's steps are not its relationships, in order: " (pr-str (:rels parsed))))))
 
-;; --- Every view in the model is generated and rendered -------------------------------
+(def ^:private holds
+  {"the system, every person and every external system, and the relationships between them" holds-context
+   "every container, every person and every external system, and the relationships between them" holds-container
+   "one context's components inside its boundary, and the elements outside it they relate to, drawn as external"
+   holds-component
+   "the elements its steps name, and its steps in order" holds-dynamic})
+
+;; ---------------------------------------------------------------------------
+;; The C4 model is one source and every view is generated from it
 
 (defstep #"a model with a context view, a container view and two component views"
   (fn [ctx]
-    (with-views ctx (fn [vs]
-                      (concat (take 1 (filter #(= :context (:level %)) vs))
-                              (take 1 (filter #(= :container (:level %)) vs))
-                              (take 2 (filter #(= :component (:level %)) vs)))))))
+    (let [dir (a/dir-of ctx)
+          m (a/read-model dir)
+          pick (fn [level] (filter #(= level (:level %)) (:views m)))
+          views (vec (concat (take 1 (pick :context)) (take 1 (pick :container)) (take 2 (pick :component))))]
+      (s/check! (= 4 (count views)) "the room's model lacks a view of some level")
+      ;; no earlier output, so everything read back was written by this run
+      (fs/delete-tree (fs/file dir (views-dir)))
+      (a/write-model! dir (assoc m :views views))
+      (assoc ctx :dir dir :view-keys (mapv :key views)))))
 
 (defstep #"each view's diagram source is written to dhf/views/<key> and rendered beside it, in the formats dhf/harness/stack.md names"
   (fn [ctx]
-    (let [r (the-run ctx)
-          {:keys [source rendered]} (stack-formats)
-          dir (views-dir (:dir ctx))
-          keys* (map :key (:views ctx))
-          expected (set (for [k keys* ext (cons source rendered)] (str k "." ext)))]
+    (let [r (:run ctx)]
       (s/check! (= 0 (:exit r)) (s/show r))
-      (s/check! (= 4 (count keys*)) "the model does not hold four views")
-      (s/check! (= expected (set (map (comp str fs/file-name) (fs/list-dir dir))))
-                (str "dhf/views holds " (pr-str (sort (map (comp str fs/file-name) (fs/list-dir dir))))
-                     ", not exactly " (pr-str (sort expected))))
-      (doseq [k keys*]
-        (let [src (slurp (str (fs/file dir (str k "." source))))]
-          (s/check! (re-find #"(?m)^C4(Context|Container|Component|Dynamic)$" src)
-                    (str "the source of " k " is no C4 diagram source")))
-        (doseq [ext rendered
-                :let [text (slurp (str (fs/file dir (str k "." ext))))]]
-          (when (= "svg" ext)
-            (s/check! (re-find #"<svg[\s>]" text) (str k ".svg is not an SVG"))
-            (s/check! (str/includes? text "</svg>") (str k ".svg is not a whole SVG"))))))))
+      (doseq [k (:view-keys ctx) ext (formats) :let [f (output (:dir ctx) k ext)]]
+        (s/check! (fs/regular-file? f) (str "no " ext " output for the view " k "\n" (s/show r)))
+        (when (= "svg" ext)
+          (s/check! (re-find #"<svg[\s>]" (slurp (str f))) (str f " is no SVG render")))
+        (when (= "mmd" ext)
+          (s/check! (re-find #"(?m)^C4\w+$" (slurp (str f))) (str f " is no C4 diagram source")))))))
 
-(defstep #"each output records the SHA-256 of model.edn's bytes, as lowercase hex, on its first line"
+(defstep #"each output's first line is a comment holding \"model-sha256: \" and the model's hash"
   (fn [ctx]
-    (let [{:keys [source rendered]} (stack-formats)
-          h (model-bytes-hash (:dir ctx))]
-      (s/check! (re-matches #"[0-9a-f]{64}" h) "the model's hash is not lowercase hex")
-      (doseq [v (:views ctx)
-              ext (cons source rendered)
-              :let [f (fs/file (views-dir (:dir ctx)) (str (:key v) "." ext))
-                    first-line (first (str/split-lines (slurp (str f))))]]
-        (s/check! (str/includes? first-line h)
-                  (str (fs/file-name f) " does not record " h " on its first line: " first-line))))))
-
-;; --- A view older than the model fails the check -------------------------------------
-;; The same Given is in dhf/spec/publishing/site.feature (@spec-0099), whose
-;; steps reuse this definition: :dir is the project, :stale-view the view.
+    (let [h (model-hash (:dir ctx))]
+      (doseq [k (:view-keys ctx) ext (formats)
+              :let [f (output (:dir ctx) k ext)
+                    line (first (str/split-lines (slurp (str f))))]]
+        (s/check! (case ext
+                    "mmd" (str/starts-with? line "%%")
+                    "svg" (and (str/starts-with? line "<!--") (str/ends-with? line "-->"))
+                    true)
+                  (str f "'s first line is no comment: " line))
+        (s/check! (str/includes? line (str "model-sha256: " h))
+                  (str f "'s first line does not hold the model hash " h ": " line))))))
 
 (defstep #"a rendered view whose recorded hash differs from the model's"
   (fn [ctx]
-    (s/needs-built! 'rdm-spec.architecture.views)
-    (let [dir (fresh-project!)
-          r (s/rdm-spec! dir "views")
-          _ (s/check! (= 0 (:exit r)) (str "rdm-spec views failed\n" (s/show r)))
-          {:keys [source rendered]} (stack-formats)
-          older (sha256-hex (.getBytes "an older model" "UTF-8"))]
-      (doseq [ext (cons source rendered)
-              :let [f (str (fs/file (views-dir dir) (str "context." ext)))
-                    text (slurp f)]]
-        ;; every hash the output records replaced by an older model's
-        (spit f (str/replace text #"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])" older)))
-      (assoc ctx :dir dir :stale-view "context"))))
+    (a/needs-check!)
+    (let [dir (a/dir-of ctx)
+          ctx (assoc ctx :dir dir)
+          _ (run-views! ctx)
+          k "containers"
+          f (output dir k "svg")
+          text (slurp (str f))
+          h (model-hash dir)
+          other (apply str (repeat 64 "0"))]
+      (s/check! (str/includes? text h) (str f " does not record the model hash"))
+      (spit (str f) (str/replace-first text h other))
+      (assoc ctx :stale-view k))))
 
 (defstep #"it fails and names the stale view"
   (fn [ctx]
-    (let [r (the-run ctx)
+    (let [r (:run ctx)
+          k (:stale-view ctx)
           stale (a/rule-lines r "views-stale")]
-      (s/check! (= 1 (:exit r)) (str "expected exit 1\n" (s/show r)))
-      (s/check! (seq stale) (str "no view is named stale\n" (s/show r)))
-      (s/check! (every? #(str/includes? % "view \"context\"") stale)
-                (str "a view other than context is named stale\n" (s/show r)))
-      (s/check! (some #(str/starts-with? % "dhf/views/context.") stale)
-                (str "the stale view's file is not named\n" (s/show r))))))
+      (s/check! (= 1 (:exit r)) (s/show r))
+      (s/check! (some #(str/includes? % (str "view \"" k "\"")) stale)
+                (str "the view " k " is not named stale\n" (s/show r)))
+      (s/check! (every? #(str/includes? % (str "view \"" k "\"")) stale)
+                (str "a fresh view is named stale\n" (s/show r))))))
 
-;; --- A view of a level holds exactly its elements -----------------------------------
+;; ---------------------------------------------------------------------------
+;; Each level of view holds what C4 says it holds
 
-(defstep #"a model with a view of level (context|container|component|dynamic)"
+(defstep #"a model with a view of level (\w+)"
   (fn [ctx level]
-    (with-views ctx (fn [vs] (take 1 (filter #(= (keyword level) (:level %)) vs))))))
+    (let [dir (a/dir-of ctx)
+          v (first (filter #(= (keyword level) (:level %)) (:views (a/read-model dir))))]
+      (s/check! v (str "the room's model has no view of level " level))
+      (fs/delete-tree (fs/file dir (views-dir)))
+      (assoc ctx :dir dir :view-key (:key v)))))
 
-(defn- the-view-holds [ctx]
-  (let [r (the-run ctx)]
-    (s/check! (= 0 (:exit r)) (s/show r))
-    (s/check! (= 1 (count (:views ctx))) "the model does not hold one view")
-    (a/read-model (:dir ctx))))
-
-(defstep #"the view holds the system, every person and every external system, and the relationships between them"
-  (fn [ctx]
-    (let [m (the-view-holds ctx)]
-      (check-holds! ctx (expect-context m)))))
-
-(defstep #"the view holds every container, every person and every external system, and the relationships between them"
-  (fn [ctx]
-    (let [m (the-view-holds ctx)]
-      (check-holds! ctx (expect-container m)))))
-
-(defstep #"the view holds one context's components inside its boundary, and the elements outside it they relate to, drawn as external"
-  (fn [ctx]
-    (let [m (the-view-holds ctx)]
-      (check-holds! ctx (expect-component m (first (:views ctx)))))))
-
-(defstep #"the view holds the elements its steps name, and its steps in order"
-  (fn [ctx]
-    (the-view-holds ctx)
-    (check-holds! ctx (expect-dynamic (first (:views ctx))))))
+(defstep #"the view holds (.+)"
+  (fn [ctx what]
+    (s/check! (= 0 (:exit (:run ctx))) (s/show (:run ctx)))
+    (let [f (or (get holds what) (s/fail! (str "no check for " (pr-str what))))]
+      (f ctx)
+      nil)))

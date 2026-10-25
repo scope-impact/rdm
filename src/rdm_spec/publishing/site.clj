@@ -1,532 +1,551 @@
 (ns rdm-spec.publishing.site
-  "Site (dhf/spec/publishing/site.feature), the one component of the
-  publishing context: `rdm-spec publish [--results DIR]`.
+  "Site, the one component of the publishing context
+  (dhf/spec/publishing/site.feature): `rdm-spec publish [--results DIR]`
+  writes the spec, its views and its status as Markdown and the site
+  builder's configuration under the configured :site :source, then runs the
+  configured :site :builder, which writes the HTML to :site :dir.
 
-  It writes the site as Markdown, with the site builder's configuration,
-  under the configured :site :source (docs/ and mkdocs.yml), then runs the
-  configured :site :builder, which writes the HTML to :site :dir. It never
-  writes anything in the spec.
+  What it reads:
+    the model (the configured :model)  the contexts, components, kernel and views
+    SpecParsed                         every scenario and every user need
+    SpecGated                          whether the spec check passed
+    KnowledgeIndexed                   the sources' repositories and the citations
+    VerificationDerived                each scenario's status, when results were given
+    the views (the configured :views-dir), a component's prose
+    (dhf/spec/<context>/<component>.md) and the wiki (the configured :wiki-dir)
+  It never writes under the spec, and never decides a status: with no
+  results, no status is derived and every page says so (a scenario tagged
+  @wip is planned whatever any result says).
 
-  What it reads, and from where:
-    the scenarios and the needs   SpecParsed (spec/parser), on the bus
-    each scenario's status        VerificationDerived (verification/status),
-                                  when results were given; planned (@wip)
-                                  comes from the scenario itself
-    the sources' repositories     KnowledgeIndexed (knowledge/sources), to link
-                                  the wiki's citations
-    the model, the views, the     the repository: the configured :model,
-    prose, the wiki pages         :views-dir, :spec-dir and :wiki-dir
+  The site:
+    <source>/mkdocs.yml                  the builder's configuration: home, then one
+                                         section per bounded context in the model's
+                                         order, then the kernel, then the wiki
+    <source>/docs/index.md               home: the context, container and dynamic
+                                         views, the contexts, every user need with
+                                         the scenarios tracing to it
+    <source>/docs/<context>/index.md     a context: its component view, its components
+    <source>/docs/<context>/<comp>.md    a component: description, prose, scenarios
+    <source>/docs/kernel/...             the same for the kernel, when the model has one
+    <source>/docs/views/<key>.svg        every rendered view
+    <source>/docs/wiki/...               every wiki page, its citations linked to the
+                                         cited file at its commit in its source's repository
 
-  Views are read as dhf/spec/architecture/views.feature (@spec-0017) records
-  them: each output (dhf/views/<key>.mmd and .svg) carries, on its first
-  line, `model-hash: ` and the SHA-256 of model.edn's bytes as lowercase hex.
-  A view whose output records another hash, or none, is stale; publishing
-  refuses (rule view-stale, exit 1) and writes nothing. A view the model names
-  with no output is view-missing, also exit 1.
+  Freshness (glossary: Model hash): a view is fresh when the first line of
+  each of its outputs (<key>.mmd and <key>.svg) records `model-sha256: <hex>`
+  with the current model hash: the SHA-256, lowercase hex, of the model read
+  as EDN and printed back with every map's keys sorted. Publishing refuses a
+  stale or missing view and then writes nothing.
 
-  The pages, under docs/:
-    index.md                    home: the context and container views (and any
-                                dynamic view), the bounded contexts, every
-                                user need with the scenarios tracing to it, the wiki
-    <context>/index.md          a bounded context: its component view, its components
-    <spec-path>.md              a component (its :spec, e.g. architecture/lint.md):
-                                its description, its prose (<spec-path>.md beside
-                                the feature file), every scenario with its id,
-                                level, status and steps
-    kernel/index.md, kernel/*   the kernel's components, the same way
-    wiki/**                     every wiki page, its citations linked to their source
-    views/<key>.svg             every view's render
-  Every page says how status was derived, or that none was.
-
-  The navigation is the home page, then one section per bounded context in
-  the model's order (its page, then its components' pages in order), then the
-  kernel's. Wiki pages are linked from the home page, not the navigation.
-
-  A missing site builder cannot run (exit 2, naming it, saying no HTML was
-  written); a build that fails is a finding (exit 1): a broken link names
-  the page and the link (rule site-broken-link), anything else is site-build."
+  The rules, each a finding's rule name:
+    site-view-stale     a view whose outputs record another model hash (exit 1)
+    site-view-missing   a view of the model with no output (exit 1)
+    site-broken-link    a page links to a page the site does not hold (exit 1)
+    site-build          the site builder failed otherwise (exit 1)
+  The task cannot run (exit 2) without a readable model, without the spec
+  having been read, or without the site builder installed (then the Markdown
+  is written and no HTML)."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [cheshire.core :as json]
+            [clojure.walk :as walk]
             [rdm-spec.kernel.command :as command]))
 
 ;; ---------------------------------------------------------------------------
 ;; Events
 
 (defn subscriptions
-  "Keeps the run's SpecParsed, KnowledgeIndexed and VerificationDerived."
+  "Keeps the payload of every event the site reads in the run's state."
   [req]
-  (let [keep! (fn [k] (fn [payload] (swap! (:state req) assoc k payload) nil))]
-    [[:SpecParsed (keep! ::spec)]
-     [:KnowledgeIndexed (keep! ::knowledge)]
-     [:VerificationDerived (keep! ::statuses)]]))
+  (vec (for [e [:SpecParsed :SpecGated :KnowledgeIndexed :VerificationDerived]]
+         [e (fn [payload] (swap! (:state req) assoc-in [::events e] payload) nil)])))
+
+(defn- event [req e] (some-> (:state req) deref (get-in [::events e])))
 
 ;; ---------------------------------------------------------------------------
-;; Hashes and views
+;; The model hash and the views' freshness
 
-(defn sha256-hex
-  "The SHA-256 of `bs` (bytes), as lowercase hex."
-  [^bytes bs]
-  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256") bs)]
-    (apply str (map #(format "%02x" (bit-and % 0xff)) d))))
+(defn- hex [^bytes d] (apply str (map #(format "%02x" (bit-and % 0xff)) d)))
 
-(defn first-line [^String text]
-  (first (str/split-lines (or text ""))))
+(defn sha256 [^bytes bs] (hex (.digest (java.security.MessageDigest/getInstance "SHA-256") bs)))
+
+(defn- key-compare
+  "Orders map keys: by value when they compare, else by their printed form."
+  [a b]
+  (try (compare a b)
+       (catch Exception _ (compare (pr-str a) (pr-str b)))))
+
+(defn printed-sorted
+  "`x` printed back as EDN with every map's keys sorted."
+  [x]
+  (binding [*print-namespace-maps* false *print-meta* false *print-length* nil *print-level* nil]
+    (pr-str (walk/postwalk #(if (map? %) (into (sorted-map-by key-compare) %) %) x))))
+
+(defn model-hash
+  "The model hash of the model value `m` (glossary: Model hash)."
+  [m]
+  (sha256 (.getBytes ^String (printed-sorted m) "UTF-8")))
 
 (defn recorded-hash
-  "The model hash a view's output records on its first line, or nil."
+  "The model hash the first line of a view's output records, or nil."
   [text]
-  (second (re-find #"model-(?:hash|sha256): ([0-9a-f]{64})(?![0-9a-f])" (or (first-line text) ""))))
+  (some->> (first (str/split-lines (str text)))
+           (re-find #"(?<![\w-])model-sha256:\s*([0-9a-f]{64})(?![0-9a-f])")
+           second))
+
+(def view-exts
+  "Every output of a view: its diagram source and its rendering."
+  ["mmd" "svg"])
+
+(defn- describe-view [v] (str "view " (pr-str (:key v))))
 
 (defn view-findings
-  "A finding for every view of `model` whose outputs are missing or record
-  another hash than `hash`. `read-output` gives an output's text, or nil when
-  it does not exist; `views-dir` names them."
-  [model hash views-dir read-output]
-  (vec (for [{k :key} (:views model)
-             ext ["mmd" "svg"]
-             :let [rel (str views-dir "/" k "." ext)
-                   text (read-output rel)
-                   h (when text (recorded-hash text))]
-             :when (not= h hash)]
-         (cond
-           (nil? text) (command/finding rel nil "view-missing"
-                                        (str "the view \"" k "\" has no " ext " output: run rdm-spec views"))
-           (nil? h) (command/finding rel 1 "view-stale"
-                                     (str "the view \"" k "\" records no model hash on its first line, so it is older than"
-                                          " the model (" hash "): run rdm-spec views"))
-           :else (command/finding rel 1 "view-stale"
-                                  (str "the view \"" k "\" records the model hash " h ", not the model's " hash
-                                       ": run rdm-spec views"))))))
+  "A finding for every output of every view of model `m` that is missing or
+  records a hash other than `h`. `read-file` returns a file's text or nil."
+  [m h views-dir read-file]
+  (vec
+   (for [v (:views m)
+         ext view-exts
+         :let [rel (str views-dir "/" (:key v) "." ext)
+               text (read-file rel)
+               recorded (when text (recorded-hash text))]
+         :when (not= h recorded)]
+     (if (nil? text)
+       (command/finding rel nil "site-view-missing"
+                        (str (describe-view v) " has no " ext " output, so the site cannot show it; run rdm-spec views"))
+       (command/finding rel 1 "site-view-stale"
+                        (str (describe-view v) " is older than the model: it records "
+                             (or recorded "no model hash") ", the model's hash is " h "; run rdm-spec views"))))))
 
 ;; ---------------------------------------------------------------------------
-;; Markdown helpers
+;; Markdown
 
-(defn escape
-  "Text made safe for a Markdown heading, list item or paragraph."
+(defn esc
+  "`s` as literal Markdown text on one line."
   [s]
-  (-> (str s) (str/replace "&" "&amp;") (str/replace "<" "&lt;") (str/replace ">" "&gt;")))
+  (-> (str s)
+      (str/replace #"[\r\n]+" " ")
+      (str/replace "&" "&amp;")
+      (str/replace "<" "&lt;")
+      (str/replace ">" "&gt;")
+      (str/replace #"([\\`*_\[\]{}#|!])" "\\\\$1")))
 
-(defn fence
-  "A code fence longer than any run of backticks in `text`."
-  [text]
-  (let [longest (reduce max 0 (map count (re-seq #"`+" (or text ""))))]
-    (apply str (repeat (max 3 (inc longest)) "`"))))
-
-(defn demote-headings
-  "Markdown with every ATX heading one level deeper, code blocks untouched."
-  [text]
-  (loop [[l & more :as ls] (str/split-lines (or text "")) in-code nil out []]
-    (if (empty? ls)
-      (str/join "\n" out)
-      (let [opener (second (re-find #"^\s*(`{3,}|~{3,})" l))]
-        (cond
-          (and in-code opener (str/starts-with? opener in-code)) (recur more nil (conj out l))
-          in-code (recur more in-code (conj out l))
-          opener (recur more opener (conj out l))
-          (re-find #"^#{1,5} " l) (recur more nil (conj out (str "#" l)))
-          :else (recur more nil (conj out l)))))))
+(defn- link [text target] (str "[" (esc text) "](" target ")"))
 
 (defn relative
-  "The link from the page `from` to the page `to`, both relative to docs/."
+  "The link from the page `from` to the page or file `to`, both relative to
+  the docs directory."
   [from to]
-  (let [from-parts (vec (butlast (str/split from #"/")))
-        to-parts (str/split to #"/")
-        common (count (take-while true? (map = from-parts to-parts)))]
-    (str/join "/" (concat (repeat (- (count from-parts) common) "..") (drop common to-parts)))))
+  (let [depth (count (re-seq #"/" from))]
+    (str (apply str (repeat depth "../")) to)))
+
+(defn- page-dir [rel] (str/join "/" (butlast (str/split rel #"/"))))
 
 ;; ---------------------------------------------------------------------------
-;; The model's pages
+;; The site, as a value
 
-(defn- slug [s] (-> (str s) str/lower-case (str/replace #"[^a-z0-9]+" "-") (str/replace #"^-|-$" "")))
+(defn- ctx-slug [c] (or (:name c) (name (:id c))))
 
-(defn context-name [c] (or (:name c) (some-> (:id c) name)))
-
-(defn component-page
-  "A component's page, relative to docs/: its :spec, else its context and name."
-  [ctx-name comp]
-  (if (:spec comp)
-    (str (:spec comp) ".md")
-    (str (slug ctx-name) "/" (slug (:name comp)) ".md")))
+(defn- comp-path [slug comp]
+  (str (or (:spec comp) (str slug "/" (name (:id comp)))) ".md"))
 
 (defn sections
-  "The site's sections, in the model's order, the kernel last when it has
-  components: [{:name :description :page :view :components [{.. :page}]}]."
-  [model]
-  (let [views (:views model)
-        view-of (fn [ctx-id] (first (filter #(and (= :component (:level %)) (= ctx-id (:context %))) views)))]
+  "The bounded contexts of model `m`, then the kernel when it has one:
+  [{:id :name :description :page :kernel? :components [{:id :name
+  :description :spec :page}]}], in the model's order."
+  [m]
+  (let [ctxs (for [c (:containers m) ctx (:contexts c)] ctx)
+        section (fn [id nm desc comps kernel?]
+                  {:id id :name nm :description desc :kernel? kernel?
+                   :page (str nm "/index.md")
+                   :components (mapv #(assoc (select-keys % [:id :name :description :spec])
+                                             :page (comp-path nm %))
+                                     comps)})]
     (vec (concat
-          (for [c (:containers model) ctx (:contexts c)
-                :let [n (context-name ctx)]]
-            {:name n :id (:id ctx) :description (:description ctx)
-             :page (str (slug n) "/index.md")
-             :view (view-of (:id ctx))
-             :components (mapv #(assoc % :page (component-page n %)) (:components ctx))})
-          (when (seq (:kernel model))
-            [{:name "kernel" :id :kernel
-              :description "Shared code every bounded context may use and none of them owns."
-              :page "kernel/index.md"
-              :view (view-of :kernel)
-              :components (mapv #(assoc % :page (component-page "kernel" %)) (:kernel model))}])))))
+          (for [c ctxs] (section (:id c) (ctx-slug c) (:description c) (:components c) false))
+          (when (seq (:kernel m))
+            [(section :kernel "kernel" "Shared code no bounded context owns" (:kernel m) true)])))))
 
-(defn- yaml-str [s] (json/generate-string (str s)))
+(defn- status-text
+  "How a scenario's status reads on the site."
+  [sc statuses]
+  (cond
+    (nil? (:id sc)) "none: the scenario carries no single id"
+    statuses (name (get statuses (:id sc) :unverified))
+    (:wip? sc) "planned"
+    :else "no status was derived: no results were given"))
 
-(defn mkdocs-yml
-  "The site builder's configuration: the site's name, where its Markdown is
-  and where the HTML goes, the Markdown extensions the pages use, and the
-  navigation, which follows the model."
-  [{:keys [site-name site-dir sections]}]
-  (str/join
-   "\n"
-   (concat
-    ["# Written by rdm-spec publish from the spec and its model; do not edit."
-     (str "site_name: " (yaml-str site-name))
-     "docs_dir: \"docs\""
-     (str "site_dir: " (yaml-str site-dir))
-     "use_directory_urls: true"
-     "markdown_extensions:"
-     "  - \"toc\""
-     "  - \"tables\""
-     "  - \"fenced_code\""
-     "  - \"footnotes\""
-     "nav:"
-     (str "  - " (yaml-str "Home") ": " (yaml-str "index.md"))]
-    (mapcat (fn [{:keys [name page components]}]
-              (concat [(str "  - " (yaml-str name) ":")
-                       (str "      - " (yaml-str name) ": " (yaml-str page))]
-                      (for [c components]
-                        (str "      - " (yaml-str (:name c)) ": " (yaml-str (:page c))))))
-            sections)
-    [""])))
+(defn banner
+  "The line every page carries about status."
+  [{:keys [statuses results]}]
+  (if statuses
+    (str "> Status is derived from the Allure results in `" results "`; the site never decides it.")
+    "> No status was derived: no results were given (`rdm-spec publish --results DIR`)."))
 
-;; ---------------------------------------------------------------------------
-;; Status
-
-(defn status-of
-  "What the site shows as a scenario's status: planned when tagged @wip,
-  else what was derived from the results, else nil (nothing derived)."
-  [statuses sc]
-  (cond (:wip? sc) "planned"
-        (nil? statuses) nil
-        (nil? (:id sc)) "unverified"
-        :else (name (get statuses (:id sc) :unverified))))
-
-(defn status-notice
-  "The line every page carries about how status was derived."
-  [{:keys [derived? results]}]
-  (if derived?
-    (str "*Status derived from the Allure results in `" results "`; the site shows it and never decides it.*")
-    "*No status was derived because no results were given.*"))
-
-;; ---------------------------------------------------------------------------
-;; Pages
-
-(defn- view-image [from view]
-  (when view
-    (str "![" (escape (str (:key view) ": " (:description view))) "](" (relative from (str "views/" (:key view) ".svg")) ")")))
+(defn- fence-for [lines]
+  (let [longest (reduce max 0 (map count (mapcat #(re-seq #"`+" %) lines)))]
+    (apply str (repeat (max 3 (inc longest)) "`"))))
 
 (defn scenario-md
-  "One scenario on its component's page: an anchor, its id and name, its
-  level, status and needs, and its steps."
-  [sc status]
-  (let [steps (concat (when (seq (:background sc)) [["Background:" (:background sc)]])
-                      [[nil (:steps sc)]])
-        step-lines (fn [st]
-                     (concat [(str (:keyword st) " " (:text st))]
-                             (when-let [t (:data-table st)] (map #(str "  | " (str/join " | " %) " |") t))
-                             (when-let [d (:doc-string st)] (concat ["  \"\"\""] (map #(str "  " %) (str/split-lines (str d))) ["  \"\"\""]))))
-        lines (concat
-               (mapcat (fn [[head sts]]
-                         (concat (when head [head]) (map #(str (when head "  ") %) (mapcat step-lines sts))))
-                       steps)
-               (for [ex (:examples sc)
-                     l (concat ["" "Examples:" (str "  | " (str/join " | " (:header ex)) " |")]
-                               (map #(str "  | " (str/join " | " (:cells %)) " |") (:rows ex)))]
-                 l))
-        body (str/join "\n" lines)
-        f (fence body)]
+  "A scenario's section of its component page."
+  [sc statuses]
+  (let [title (or (:title sc) (:name sc))
+        head (str "### " (when (:id sc) (str (:id sc) ": ")) (esc title)
+                  (when (:id sc) (str " {#" (:id sc) "}")))
+        steps (mapv #(str (:keyword %) " " (:text %)) (:steps sc))
+        examples (for [ex (:examples sc)
+                       :let [rows (cons (:header ex) (map :cells (:rows ex)))]]
+                   (cons "Examples:"
+                         (for [r rows] (str "  | " (str/join " | " r) " |"))))
+        body (concat steps (when (seq examples) (cons "" (apply concat (interpose [""] examples)))))
+        fence (fence-for body)]
     (str/join "\n"
-              [(str "<a id=\"" (or (:id sc) (str "line-" (:line sc))) "\"></a>")
-               ""
-               (str "#### " (or (:id sc) "(no id)") ": " (escape (:name sc)))
-               ""
-               (str "**Level:** " (if (:level sc) (name (:level sc)) "none")
-                    " · **Status:** " (or status "not derived")
-                    (when (seq (:needs sc)) (str " · **Needs:** " (str/join ", " (:needs sc))))
-                    (when (:wip? sc) " · planned (@wip)"))
-               ""
-               (str f "gherkin")
+              (concat
+               [head ""
+                (str "- **Level:** " (some-> (:level sc) name))
+                (str "- **Status:** " (status-text sc statuses))
+                (str "- **Needs:** " (if (seq (:needs sc)) (str/join ", " (:needs sc)) "none"))]
+               (when (:rule sc) [(str "- **Rule:** " (esc (:rule sc)))])
+               [(str "- **Feature file:** `" (:file sc) ":" (:line sc) "`")
+                ""
+                (str fence "text")]
                body
-               f
-               ""])))
+               [fence ""]))))
 
-(defn component-md
-  "A component's page."
-  [{:keys [section comp prose scenarios statuses notice]}]
+(defn component-page
+  "The page of component `comp` of `section`."
+  [section comp scs prose site]
+  (str/join "\n"
+            (concat
+             [(str "# " (esc (:name comp)) " (" (esc (:name section)) ")")
+              ""
+              (str "Component " (esc (:name comp)) " of "
+                   (if (:kernel? section) "the kernel" (str "the bounded context " (esc (:name section))))
+                   ": " (link (:name section) "index.md") ".")
+              ""
+              (esc (:description comp))
+              ""
+              (banner site)
+              ""]
+             (when prose ["## Design" "" (str/trimr prose) ""])
+             [(str "## Scenarios") ""]
+             (if (seq scs)
+               (map #(scenario-md % (:statuses site)) scs)
+               ["No scenario belongs to this component." ""]))))
+
+(defn context-page
+  "The index page of `section`, showing `view` (a view of the model, or nil)."
+  [section view site]
+  (str/join "\n"
+            (concat
+             [(str "# " (esc (:name section)))
+              ""
+              (str (if (:kernel? section) "The kernel. " "Bounded context. ") (esc (:description section)))
+              ""
+              (banner site)
+              ""]
+             (when view
+               ["## Component view" ""
+                (str "![" (esc (:description view)) "](" (relative (:page section) (str "views/" (:key view) ".svg")) ")")
+                ""])
+             ["## Components" ""]
+             (for [c (:components section)]
+               (str "- " (link (:name c) (subs (:page c) (inc (count (page-dir (:page c)))))) ": " (esc (:description c))))
+             [""])))
+
+(defn citation-url
+  "Where a citation's file is, at its commit, in its source's repository, or
+  nil when the source has no web repository."
+  [repository path commit]
+  (when (and repository (re-find #"^https?://" repository) path commit)
+    (str (str/replace repository #"(\.git)?/*$" "") "/blob/" commit "/" path)))
+
+(defn link-citations
+  "`text` with every citation `cites` names ({citation url}) linked to its url."
+  [text cites]
+  (reduce (fn [t [c url]]
+            (let [q (java.util.regex.Pattern/quote c)
+                  u (str/re-quote-replacement url)]
+              (-> t
+                  (str/replace (re-pattern (str "(?<!\\[)`" q "`")) (str "[`" (str/re-quote-replacement c) "`](" u ")"))
+                  (str/replace (re-pattern (str "(?<![`\\[\\w/])" q "(?![`\\]\\w])"))
+                               (str "[" (str/re-quote-replacement c) "](" u ")")))))
+          text
+          (sort-by (comp - count key) cites)))
+
+(defn- citations-by-file
+  "{file {citation url}} from KnowledgeIndexed."
+  [k]
+  (let [repos (into {} (map (juxt (comp str :id) :repository)) (:sources k))]
+    (reduce (fn [acc {:keys [citation file]}]
+              ;; KnowledgeIndexed carries the citation as written,
+              ;; id:path@commit (dhf/spec/events.edn), so its parts are read here.
+              (let [[_ source path commit] (some->> citation (re-matches #"([^:\s]+):([^@\s]+)@([0-9a-f]{7,40})"))]
+                (if-let [url (when source (citation-url (get repos source) path commit))]
+                  (assoc-in acc [file citation] url)
+                  acc)))
+            {} (:citations k))))
+
+(defn home-page
+  "The home page."
+  [m sections scs needs site]
+  (let [view-of (fn [lvl] (filter #(= lvl (:level %)) (:views m)))
+        img (fn [v] (str "![" (esc (:description v)) "](views/" (:key v) ".svg)"))
+        page-of (into {} (for [s sections c (:components s)] [(:id c) (:page c)]))
+        cite-urls (into {} (map (fn [[_ cs]] cs)) (:citations site))
+        gated (:gated site)]
+    (str/join
+     "\n"
+     (concat
+      [(str "# " (esc (get-in m [:system :name] "The spec")))
+       ""
+       (esc (get-in m [:system :description]))
+       ""
+       (banner site)
+       ""]
+      (when gated
+        [(if (:passed? gated)
+           "The spec check passed."
+           (str "The spec check found " (count (remove #(= :warning (:severity %)) (:findings gated)))
+                " findings: run `rdm-spec check`."))
+         ""])
+      (when-let [c (:counts site)]
+        [(str "Scenarios: " (str/join ", " (for [k [:verified :failed :unverified :planned]] (str (get c k 0) " " (name k)))) ".")
+         ""])
+      (for [[title lvl] [["System context" :context] ["Containers" :container] ["Dynamic views" :dynamic]]
+            :let [vs (view-of lvl)]
+            :when (seq vs)
+            line (concat [(str "## " title) ""] (mapcat (fn [v] [(img v) ""]) vs))]
+        line)
+      ["## Bounded contexts" ""]
+      (for [s sections] (str "- " (link (:name s) (:page s)) ": " (esc (:description s))))
+      ["" "## User needs" ""]
+      (mapcat
+       (fn [n]
+         (let [tracing (filter #(some #{(:id n)} (:needs %)) scs)]
+           (concat
+            [(str "### " (:id n) " {#" (str/lower-case (:id n)) "}") "" (esc (:text n)) ""]
+            (when (seq (:sources n))
+              [(str "Sources: "
+                    (str/join ", " (for [c (:sources n)]
+                                     (if-let [u (get cite-urls c)] (str "[`" c "`](" u ")") (str "`" c "`")))))
+               ""])
+            (if (seq tracing)
+              (concat ["Scenarios tracing to it:" ""]
+                      (for [sc tracing
+                            :let [id (or (:id sc) "unstamped")
+                                  pg (get page-of (:component sc))]]
+                        (str "- " (if pg (str "[" id "](" pg (when (:id sc) (str "#" id)) ")") id)
+                             " " (esc (or (:title sc) (:name sc)))
+                             (when (or (:statuses site) (:wip? sc))
+                               (str ": " (status-text sc (:statuses site)))))))
+              ["No scenario traces to it."])
+            [""])))
+       needs)
+      (when (:wiki site)
+        ["## Domain wiki" "" (str "The domain, distilled from the raw sources: " (link "the wiki" "wiki/index.md") ".") ""])))))
+
+(defn wiki-page
+  "A wiki page as published: its citations linked, the status line last."
+  [text cites site]
+  (str (str/trimr (link-citations text cites)) "\n\n" (banner site) "\n"))
+
+(defn- yq [s] (pr-str (str s)))
+
+(defn builder-config
+  "The site builder's configuration (YAML): docs in docs/, HTML to `site-dir`
+  (relative to the configuration), the navigation in the model's order."
+  [site-name site-dir sections wiki-pages]
   (str/join
    "\n"
    (concat
-    [(str "# " (escape (:name section)) ": " (escape (:name comp)))
-     ""
-     (escape (:description comp))
-     ""
-     notice
-     ""
-     (str "Bounded context: [" (escape (:name section)) "](" (relative (:page comp) (:page section)) ")")
-     ""]
-    (when (some? prose)
-      ["## Design" "" (demote-headings (str/trim prose)) ""])
-    ["## Scenarios" ""]
-    (if (empty? scenarios)
-      ["No scenario is specified for this component." ""]
-      (loop [[sc & more :as scs] scenarios rule ::none out []]
-        (if (empty? scs)
-          out
-          (let [r (:rule sc)
-                head (when (not= r rule) (if r [(str "### Rule: " (escape r)) ""] []))]
-            (recur more r (into (into out head) [(scenario-md sc (status-of statuses sc))]))))))
+    [(str "site_name: " (yq site-name))
+     "docs_dir: docs"
+     (str "site_dir: " (yq site-dir))
+     "markdown_extensions:"
+     "  - toc"
+     "  - tables"
+     "  - fenced_code"
+     "  - footnotes"
+     "  - attr_list"
+     "nav:"
+     (str "  - " (yq "Home") ": " (yq "index.md"))]
+    (mapcat (fn [s]
+              (concat [(str "  - " (yq (:name s)) ":")
+                       (str "      - " (yq (:name s)) ": " (yq (:page s)))]
+                      (for [c (:components s)]
+                        (str "      - " (yq (:name c)) ": " (yq (:page c))))))
+            sections)
+    (when (seq wiki-pages)
+      (concat [(str "  - " (yq "wiki") ":")]
+              (for [[title page] wiki-pages]
+                (str "      - " (yq title) ": " (yq page)))))
     [""])))
 
-(defn- counts-line [scenarios statuses]
-  (let [fr (frequencies (map #(or (status-of statuses %) "not derived") scenarios))]
-    (if (empty? scenarios)
-      "no scenario"
-      (str (count scenarios) " scenario" (when (not= 1 (count scenarios)) "s") ": "
-           (str/join ", " (for [k ["verified" "failed" "unverified" "planned" "not derived"] :when (fr k)]
-                            (str (fr k) " " k)))))))
+;; ---------------------------------------------------------------------------
+;; Reading the project
 
-(defn context-md
-  "A bounded context's page (or the kernel's)."
-  [{:keys [section by-page statuses notice]}]
-  (let [page (:page section)]
-    (str/join
-     "\n"
-     (concat
-      [(str "# " (escape (:name section))) "" (escape (:description section)) "" notice ""]
-      (when-let [img (view-image page (:view section))]
-        ["## Component view" "" img ""])
-      ["## Components" ""]
-      (for [c (:components section)]
-        (str "- [" (escape (:name c)) "](" (relative page (:page c)) "): " (escape (:description c))
-             " (" (counts-line (get by-page (:page c)) statuses) ")"))
-      [""]))))
+(defn- read-text [req rel]
+  (let [f (command/path req rel)]
+    (when (fs/regular-file? f) (slurp (str f)))))
 
-(defn- citation-link
-  "A citation as a link to its source at its pin, or nil when the source is
-  unknown or its repository is no URL."
-  [repos citation]
-  (when-let [[_ src path commit] (re-matches #"([A-Za-z0-9][\w.-]*):([^\s@`]+)@([0-9a-fA-F]{4,40})" citation)]
-    (when-let [repo (get repos src)]
-      (when (re-find #"^https?://" repo)
-        (str (-> repo (str/replace #"/+$" "") (str/replace #"\.git$" "")) "/blob/" commit "/" path)))))
+(defn- read-model [req]
+  (let [rel (command/config-value req :model)
+        text (or (read-text req rel) (command/cannot-run! (str "no model " rel ": the site follows the model")))
+        m (try (edn/read-string text)
+               (catch Exception e (command/cannot-run! (str "the model " rel " is not readable EDN: " (ex-message e)))))]
+    (when-not (map? m) (command/cannot-run! (str "the model " rel " is not a map")))
+    m))
 
-(def ^:private citation-src
-  "A citation inside prose: source:path@commit (a URL is none)."
-  "([A-Za-z0-9][\\w.-]*):(?!/)[^\\s`'\"@()\\[\\]<>]+@[0-9a-fA-F]{7,40}(?![\\w])")
+(defn- wiki-files
+  "The wiki's Markdown files, relative to the wiki directory: index first."
+  [req]
+  (when-let [w (get-in req [:config :wiki-dir])]
+    (let [d (command/path req w)]
+      (when (fs/directory? d)
+        (let [all (sort (map #(str/replace (str (fs/relativize d %)) "\\" "/")
+                             (filter fs/regular-file? (fs/glob d "**.md"))))]
+          (vec (concat (filter #{"index.md"} all) (remove #{"index.md"} all))))))))
 
-(def ^:private linkable-re
-  (re-pattern (str "\\[[^\\]\\n]*\\]\\([^)\\n]*\\)"           ; a link already: left alone
-                   "|`(" citation-src ")`"                         ; a citation in code
-                   "|(?<![\\w/.@`-])(" citation-src ")")))        ; a bare citation
+(defn- first-heading [text]
+  (some #(second (re-matches #"#\s+(.+?)\s*#*\s*" %)) (str/split-lines (str text))))
 
-(defn link-citations
-  "Wiki Markdown with every citation of a known source linked to the cited
-  file at its pin, in code or not. `repos` maps a source id to its repository."
-  [text repos]
-  (str/replace (or text "") linkable-re
-               (fn [[whole in-code _ bare]]
-                 (let [c (or in-code bare)
-                       u (when c (citation-link repos c))]
-                   (if u (str "[" whole "](" u ")") whole)))))
-
-(defn home-md
-  "The home page."
-  [{:keys [model sections spec statuses notice by-id wiki-pages repos]}]
-  (let [views (:views model)
-        of-level (fn [lvl] (filter #(= lvl (:level %)) views))
-        scenarios (:scenarios spec)
-        declared (let [n (:needs spec)] (if (map? n) n (into {} (map (juxt :id identity)) n)))
-        need-ids (sort (distinct (concat (keys declared) (mapcat :needs scenarios))))]
-    (str/join
-     "\n"
-     (concat
-      [(str "# " (escape (or (get-in model [:system :name]) "The spec")))
-       ""
-       (escape (get-in model [:system :description]))
-       ""
-       notice
-       ""]
-      (mapcat (fn [[title lvl]]
-                (when-let [vs (seq (of-level lvl))]
-                  (concat [(str "## " title) ""] (mapcat #(vector (view-image "index.md" %) "") vs))))
-              [["Context view" :context] ["Container view" :container] ["Dynamic views" :dynamic]])
-      ["## Bounded contexts" ""]
-      (for [s sections] (str "- [" (escape (:name s)) "](" (:page s) "): " (escape (:description s))))
-      ["" "## User needs" ""]
-      (mapcat (fn [n]
-                (let [d (get declared n)
-                      tracing (filter #(some #{n} (:needs %)) scenarios)]
-                  (concat
-                   [(str "### " n) ""
-                    (if d (escape (:text d)) "*Not declared in the needs file.*") ""]
-                   (when (seq (:sources d))
-                     [(link-citations (str "Sources: " (str/join ", " (map #(str "`" % "`") (:sources d)))) repos) ""])
-                   (if (seq tracing)
-                     (concat
-                      (for [sc tracing
-                            :let [page (by-id sc)]]
-                        (str "- " (if (and page (:id sc))
-                                    (str "[" (:id sc) "](" page "#" (:id sc) ")")
-                                    (or (:id sc) "(no id)"))
-                             ": " (escape (:name sc))
-                             " (" (or (status-of statuses sc) "not derived") ")"))
-                      [""])
-                     ["No scenario traces to this need." ""]))))
-              need-ids)
-      ["## Domain wiki" ""]
-      (if (seq wiki-pages)
-        (for [p wiki-pages] (str "- [" (escape (:title p)) "](wiki/" (:path p) ")"))
-        ["The wiki holds no page."])
-      [""]))))
+(defn site-pages
+  "Every file of the site: {rel-under-source text}. Pure but for `read-text`."
+  [{:keys [model sections scenarios needs site wiki read-text views-dir spec-dir source-rel site-rel]}]
+  (let [by-comp (group-by :component scenarios)
+        comp-view (into {} (for [v (:views model) :when (= :component (:level v))] [(:context v) v]))
+        wiki-pages (for [f wiki]
+                     [(if (= "index.md" f) "wiki" (or (first-heading (read-text (str (:wiki-dir site) "/" f))) f))
+                      (str "wiki/" f)])
+        docs (concat
+              [["index.md" (home-page model sections scenarios needs (assoc site :wiki (seq wiki)))]]
+              (for [s sections]
+                [(:page s) (context-page s (when-not (:kernel? s) (comp-view (:id s))) site)])
+              (for [s sections c (:components s)]
+                [(:page c) (component-page s c (get by-comp (:id c))
+                                           (when (:spec c) (read-text (str spec-dir "/" (:spec c) ".md")))
+                                           site)])
+              (for [f wiki
+                    :let [rel (str (:wiki-dir site) "/" f)]]
+                [(str "wiki/" f) (wiki-page (read-text rel) (get-in site [:citations rel]) site)]))]
+    (into (sorted-map)
+          (concat
+           (for [[rel text] docs] [(str "docs/" rel) text])
+           (for [v (:views model)]
+             [(str "docs/views/" (:key v) ".svg") (read-text (str views-dir "/" (:key v) ".svg"))])
+           [["mkdocs.yml" (builder-config (get-in model [:system :name] "Site")
+                                          (relative (str source-rel "/x") site-rel)
+                                          sections wiki-pages)]]))))
 
 ;; ---------------------------------------------------------------------------
-;; Reading
+;; The site builder
 
-(defn- read-edn [f]
-  (try (edn/read-string (slurp (str f))) (catch Exception _ nil)))
+(defn broken-link-findings
+  "The broken links the builder's output names, as findings on the pages
+  (`docs-rel` is the docs directory relative to the project)."
+  [output docs-rel]
+  (vec (distinct
+        (for [[_ page target] (re-seq #"Doc file '([^']+)' contains (?:a link|an unrecognized relative link) '([^']+)'" output)]
+          (command/finding (str docs-rel "/" page) nil "site-broken-link"
+                           (str "the page " page " links to " target ", which the site does not hold"))))))
 
-(defn- page-title [text fallback]
-  (or (second (re-find #"(?m)^# (.+)$" (or text ""))) fallback))
+(defn- installed? [exe]
+  (if (str/includes? exe "/")
+    (and (fs/regular-file? exe) (fs/executable? exe))
+    (some? (fs/which exe))))
 
-(defn- wiki-pages [root wiki-dir]
-  (let [d (command/path root wiki-dir)]
-    (if (fs/directory? d)
-      (vec (for [f (sort-by str (fs/glob d "**"))
-                 :when (fs/regular-file? f)
-                 :let [rel (str/replace (str (fs/relativize d f)) "\\" "/")]]
-             {:path rel :file f :md? (str/ends-with? rel ".md")}))
-      [])))
-
-;; ---------------------------------------------------------------------------
-;; Writing
-
-(defn- write-file! [root rel content]
-  (let [f (command/path root rel)]
-    (fs/create-dirs (fs/parent f))
-    (if (bytes? content)
-      (fs/write-bytes f content)
-      (spit f content))
-    rel))
-
-(defn- digest [root rel] (sha256-hex (fs/read-all-bytes (command/path root rel))))
-
-(def broken-link-re #"Doc file '([^']+)' contains a link '([^']+)'(?:, but the target(?: '[^']*')? is not found)?")
-
-(defn build-findings
-  "Findings from the site builder's output (its exit code and text), naming
-  the Markdown under `docs-rel`."
-  [exit output docs-rel]
-  (let [warnings (filter #(re-find #"^(WARNING|ERROR)\b" %) (str/split-lines (or output "")))
-        fs (vec (for [w warnings]
-                  (if-let [[_ page link] (re-find broken-link-re w)]
-                    (command/finding (str docs-rel "/" page) nil "site-broken-link"
-                                     (str "the page " page " links to " link ", which the site does not hold"))
-                    (command/finding "site-build" (str/trim (str/replace w #"^(WARNING|ERROR)\s*-\s*" ""))))))]
-    (cond
-      (zero? exit) fs
-      (seq fs) fs
-      :else [(command/finding "site-build"
-                              (str "the site builder exited " exit ": "
-                                   (str/join " | " (take-last 5 (remove str/blank? (str/split-lines (or output "")))))))])))
-
-(defn- run-builder! [root builder]
-  (let [exe (first builder)
-        found (when exe (fs/which exe))]
-    (when-not found
-      (command/cannot-run!
-       (str "the site builder " (or exe "(none configured)") " is not installed (configured as :site :builder in "
-            command/config-file "): no HTML was written; the Markdown and the builder's configuration were")))
-    (let [r (apply p/shell {:dir (str root) :out :string :err :string :continue true} (str found) (rest builder))]
-      {:exit (:exit r) :output (str (:out r) "\n" (:err r))})))
+(defn- build!
+  "Runs the configured site builder in the project root: {:findings [...]}."
+  [req builder source-rel site-rel]
+  (let [[exe & args] builder]
+    (when-not (and (string? exe) (installed? exe))
+      (command/cannot-run! (str "the site builder " exe " is not installed (not found on PATH): the Markdown was written to "
+                                source-rel ", but no HTML was written to " site-rel)))
+    (let [r (try (apply p/shell {:dir (str (:root req)) :out :string :err :string :continue true} exe args)
+                 (catch java.io.IOException e
+                   (command/cannot-run! (str "the site builder " exe " could not be run (" (ex-message e) "): no HTML was written"))))
+          output (str (:err r) "\n" (:out r))]
+      (if (zero? (:exit r))
+        {:findings []}
+        (let [links (broken-link-findings output (str source-rel "/docs"))
+              warnings (filter #(re-find #"^\s*(WARNING|ERROR)\b" %) (str/split-lines output))]
+          {:findings
+           (if (seq links)
+             links
+             [(command/finding "site-build"
+                               (str "the site builder " (str/join " " builder) " exited " (:exit r) ": "
+                                    (if (seq warnings)
+                                      (str/join "; " (map str/trim warnings))
+                                      (str/trim (str/join " " (take-last 5 (str/split-lines output)))))))])})))))
 
 ;; ---------------------------------------------------------------------------
 ;; The stage
 
+(defn- clear! [req source-rel]
+  (let [src (command/path req source-rel)]
+    (fs/delete-tree (fs/file src "docs"))
+    (fs/delete-if-exists (fs/file src "mkdocs.yml"))))
+
+(defn- write! [req source-rel files]
+  (doseq [[rel text] files
+          :let [f (command/path req (str source-rel "/" rel))]]
+    (fs/create-dirs (fs/parent f))
+    (spit (str f) text)))
+
 (defn publish
-  "The publish task's own stage: writes the site, then builds it."
+  "Publish's own stage: checks the views are fresh, writes the site and
+  builds it."
   [req]
-  (let [root (:root req)
-        site (command/config-value req :site)
-        source (or (:source site) (command/cannot-run! (str command/config-file " sets no :site :source")))
-        html-dir (or (:dir site) (command/cannot-run! (str command/config-file " sets no :site :dir")))
-        builder (:builder site)
-        model-rel (command/config-value req :model)
-        views-dir (command/config-value req :views-dir)
-        spec-dir (command/config-value req :spec-dir)
-        wiki-dir (get-in req [:config :wiki-dir])
-        model-file (command/path root model-rel)
-        _ (when-not (fs/regular-file? model-file)
-            (command/cannot-run! (str "the model " model-rel " does not exist")))
-        model (let [m (read-edn model-file)]
-                (if (map? m) m (command/cannot-run! (str "the model " model-rel " is not readable EDN"))))
-        hash (sha256-hex (fs/read-all-bytes model-file))
-        read-output (fn [rel] (let [f (command/path root rel)] (when (fs/regular-file? f) (slurp f))))
-        stale (view-findings model hash views-dir read-output)]
+  (let [config (:config req)
+        {source-rel :source site-rel :dir builder :builder :as site-cfg} (command/config-value req :site)
+        _ (when-not (and (string? source-rel) (string? site-rel) (sequential? builder) (seq builder))
+            (command/cannot-run! (str "the configuration's :site " (pr-str site-cfg)
+                                      " needs :source, :dir and :builder")))
+        m (read-model req)
+        h (model-hash m)
+        views-dir (str/replace (or (:views-dir config) "dhf/views") #"/+$" "")
+        stale (view-findings m h views-dir #(read-text req %))]
     (if (seq stale)
-      {:result {:site {:written? false :model-hash hash}} :findings stale}
-      (let [state @(:state req)
-            spec (or (::spec state)
-                     (command/cannot-run! "no SpecParsed was published in this run: the spec context is not built, so the site has no scenarios"))
-            derived (::statuses state)
-            statuses (:statuses derived)
-            notice (status-notice {:derived? (some? derived) :results (:results req)})
-            repos (into {} (for [s (:sources (::knowledge state))] [(str (:id s)) (:repository s)]))
-            secs (sections model)
-            all-comps (for [s secs c (:components s)] [s c])
-            page-of-spec (into {} (for [[_ c] all-comps :when (:spec c)] [(:spec c) (:page c)]))
-            by-page (group-by #(get page-of-spec (:spec-path %)) (:scenarios spec))
-            by-id (fn [sc] (get page-of-spec (:spec-path sc)))
-            docs (str source "/docs")
-            wiki (if wiki-dir (wiki-pages root wiki-dir) [])
-            wiki-md (vec (for [w wiki :when (:md? w)]
-                           (assoc w :title (page-title (slurp (str (:file w))) (:path w)))))
-            files (atom [])
-            emit! (fn [rel content] (swap! files conj (write-file! root rel content)))]
-        ;; a fresh source directory: the site is written whole every time
-        (fs/delete-tree (command/path root docs))
-        (emit! (str docs "/index.md")
-               (home-md {:model model :sections secs :spec spec :statuses statuses :notice notice
-                         :by-id by-id :wiki-pages wiki-md :repos repos}))
-        (doseq [s secs]
-          (emit! (str docs "/" (:page s)) (context-md {:section s :by-page by-page :statuses statuses :notice notice}))
-          (doseq [c (:components s)
-                  :let [prose-f (when (:spec c) (command/path root (str spec-dir "/" (:spec c) ".md")))]]
-            (emit! (str docs "/" (:page c))
-                   (component-md {:section s :comp c :statuses statuses :notice notice
-                                  :prose (when (and prose-f (fs/regular-file? prose-f)) (slurp prose-f))
-                                  :scenarios (get by-page (:page c))}))))
-        (doseq [{k :key} (:views model)]
-          (emit! (str docs "/views/" k ".svg") (fs/read-all-bytes (command/path root (str views-dir "/" k ".svg")))))
-        (doseq [w wiki]
-          (emit! (str docs "/wiki/" (:path w))
-                 (if (:md? w)
-                   (str (str/trimr (link-citations (slurp (str (:file w))) repos)) "\n\n" notice "\n")
-                   (fs/read-all-bytes (:file w)))))
-        (let [cfg-rel (str source "/mkdocs.yml")
-              site-dir (str/replace (str (fs/relativize (fs/absolutize (command/path root source))
-                                                        (fs/absolutize (command/path root html-dir))))
-                                    "\\" "/")]
-          (emit! cfg-rel (mkdocs-yml {:site-name (or (get-in model [:system :name]) "Spec")
-                                      :site-dir site-dir :sections secs}))
-          (let [written (into (sorted-map) (for [rel @files] [rel (digest root rel)]))
-                result {:site {:written? true :source source :config cfg-rel :dir html-dir
-                               :pages (count (filter #(str/ends-with? % ".md") @files))
-                               :status-derived? (some? derived)
-                               :model-hash hash
-                               :files written}}
-                {:keys [exit output]} (run-builder! root builder)
-                findings (build-findings exit output docs)]
-            {:result (assoc-in result [:site :built?] (and (zero? exit) (empty? findings)))
-             :findings findings}))))))
+      {:result {:site {:written false :model-sha256 h
+                       :refused (str "views older than the model; run rdm-spec views")}}
+       :findings stale}
+      (let [parsed (or (event req :SpecParsed)
+                       (command/cannot-run! "the spec was not read: no SpecParsed event reached the site"))
+            derived (event req :VerificationDerived)
+            statuses (when (and (:results req) derived) (:statuses derived))
+            counts (when statuses (frequencies (vals statuses)))
+            secs (sections m)
+            site {:statuses statuses
+                  :results (:results req)
+                  :counts counts
+                  :gated (event req :SpecGated)
+                  :citations (citations-by-file (event req :KnowledgeIndexed))
+                  :wiki-dir (str/replace (or (:wiki-dir config) "dhf/wiki") #"/+$" "")}
+            files (site-pages {:model m
+                               :sections secs
+                               :scenarios (:scenarios parsed)
+                               :needs (:needs parsed)
+                               :site site
+                               :wiki (wiki-files req)
+                               :read-text #(read-text req %)
+                               :views-dir views-dir
+                               :spec-dir (str/replace (or (:spec-dir config) "dhf/spec") #"/+$" "")
+                               :source-rel source-rel
+                               :site-rel site-rel})]
+        (clear! req source-rel)
+        (write! req source-rel files)
+        (let [{:keys [findings]} (build! req builder source-rel site-rel)]
+          {:result {:site {:written true
+                           :source source-rel
+                           :html site-rel
+                           :built (empty? findings)
+                           :builder (vec builder)
+                           :model-sha256 h
+                           :statuses-derived (boolean statuses)
+                           :pages (vec (for [k (keys files) :when (str/ends-with? k ".md")] (subs k 5)))
+                           :files (into (sorted-map)
+                                        (for [[k text] files]
+                                          [k (sha256 (.getBytes ^String text "UTF-8"))]))}}
+           :findings findings})))))
