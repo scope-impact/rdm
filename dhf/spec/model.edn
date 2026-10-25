@@ -110,7 +110,9 @@
       [{:id :regeneration/cut :name "Cut" :spec "regeneration/cut"
         :description "Tags HEAD spec-N when it is origin/HEAD, and pushes the tag"}
        {:id :regeneration/fence :name "Fence" :spec "regeneration/fence"
-        :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}]}
+        :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}
+       {:id :regeneration/scopes :name "Scopes" :spec "regeneration/scopes"
+        :description "Lists the scopes a spec change touched between two cuts"}]}
 
      {:id :ratification :name "ratification"
       :description "Ratifies a build against its cut: the builder's tests pass, write results and name every scenario"
@@ -171,6 +173,8 @@
   {:from :measurement/scorer :to :repository :description "Reads cycle.edn, the checklist and verdicts, writes score.edn to"}
   {:from :measurement/scoreboard :to :repository :description "Reads scores from"}
   {:from :measurement/oracle :to :repository :description "Reads fixtures and goldens from"}
+  {:from :regeneration/scopes :to :repository :description "Reads two cuts from"}
+  {:from :regeneration/fence :to :regeneration/cut :description "Resolves cuts with the git helpers of"}
   {:from :measurement/oracle :to :measurement/scoreboard :description "Runs and compares"}
   {:from :publishing/site :to :repository :description "Reads views from and writes the site to"}
 

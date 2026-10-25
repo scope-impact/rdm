@@ -28,6 +28,7 @@ Feature: Command
         | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the views' freshness, sources, wiki  |
         | views      | views                                                    | generate and render every view to dhf/views/                         |
         | cut        | cut                                                      | tag HEAD spec-N when it is origin/HEAD, and push the tag             |
+        | scopes     | scopes CUT CUT                                           | list the scopes a spec change touched between two cuts               |
         | fence      | fence ROOM CUT [--context C,...] [--component C/N,...]   | build a clean room from a cut                                        |
         | run        | run [--results DIR]                                      | run the scenarios against a project's step definitions               |
         | ratify     | ratify ROOM CYCLE                                        | run the builder's tests on the room's code in a checkout of the cut  |
@@ -91,7 +92,7 @@ Feature: Command
 
     @spec-0179 @contract
     Scenario: A task that cannot run exits 2 and says why
-      Given the configured results directory does not exist
+      Given a copy of rdm-spec's own project in which the configured results directory does not exist
       When "rdm-spec status" is run
       Then it exits 2 and names the missing directory
 

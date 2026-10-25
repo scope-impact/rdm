@@ -20,7 +20,7 @@ Feature: Site
     Scenario: A component page carries the component's prose and scenarios
       Given the component Lint with design prose beside its feature file and its scenarios
       When "rdm-spec publish" is run
-      Then Lint's page holds its description, its prose and every scenario with its id, level and steps
+      Then Lint's page holds its description from the model, its prose and every scenario with its id, level and steps
 
     @spec-0094 @e2e
     Scenario: Each bounded context gets an index page with its component view
@@ -49,12 +49,16 @@ Feature: Site
 
     @spec-0098 @e2e
     Scenario: Without results, the site says no status was derived
-      Given the configured results directory does not exist
+      Given a copy of rdm-spec's own project in which the configured results directory does not exist
       When "rdm-spec publish" is run with no --results
       Then every page, the wiki's included, says no status was derived because no results were given
 
   Rule: The site is a reading of the spec, never a copy that can drift
 
+    # One copy of the model hash: publish runs the views' freshness check as a
+    # gate before the site, so the site never computes the hash itself
+    # (loyly:harness/README.md@17d68d2, "The pieces, in pipeline order":
+    # "four copies drift into four instruments").
     @spec-0099 @e2e
     Scenario: Publishing refuses views older than the model
       Given a rendered view whose recorded hash differs from the model's

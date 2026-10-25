@@ -34,4 +34,15 @@
            "harness/config.sh" "harness/fence.sh" "harness/gen_checklist.clj"
            "harness/hjson.clj" "harness/modules.sh" "harness/oracle.sh"
            "harness/probe.sh" "harness/score.clj" "harness/scoreboard.clj"
-           "harness/stamp_item_ids.clj" "harness/verify.sh"]}}
+           "harness/stamp_item_ids.clj" "harness/verify.sh"]}
+
+ ;; RETIRED on the spec owner's decision (967c1de): it holds today's
+ ;; implementation of what rdm-spec regenerates, so citing it pointed a builder
+ ;; at the answer. A source is retired, never deleted: its pin stays, so the
+ ;; history of what was cited stays readable, and a citation against it fails.
+ :rdm
+ {:repository "https://github.com/scope-impact/rdm"
+  :record "rdm.md"
+  :pins ["3763e08"]
+  :retired "holds today's implementation of what rdm-spec regenerates"
+  :fenced ["."]}}

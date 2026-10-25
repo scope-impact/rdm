@@ -92,6 +92,10 @@ a container.
 **Model**: `dhf/spec/model.edn`, the one C4 source. Every view is generated
 from it.
 
+**Retired source**: a raw source kept in `dhf/raw/sources.edn` with its pins
+and `:retired` and the reason, because a pin is never dropped; nothing may
+cite it.
+
 **Model hash**: the SHA-256, as lowercase hex, of the model read as EDN and
 printed back with every map's entries and every set's elements sorted by the
 printed form of the key or element, each printed as EDN prints it with no
@@ -165,7 +169,8 @@ implementation its scope keeps.
 **Scope**: what a regeneration rebuilds: the whole project, one bounded context
 or one component, or a list of contexts and components. The kernel counts as
 a context named `kernel`. The rest of the implementation stays in the clean
-room as it was at the cut. A cycle's checklist holds the items of its scope,
+room as it was at the cut. A checklist names an item's context and component by
+the model's `:name`. A cycle's checklist holds the items of its scope,
 and nothing else: a scoped cycle is graded on its scope only.
 
 **Regeneration**: building the implementation again from a cut, inside the
@@ -185,7 +190,8 @@ _Avoid_: gate, on its own (say spec check or ratify).
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
 first), with `results/`, `build/` and `ratified.edn` (ratify), `checklist.json`
-and `score.edn` beside it.
+and `score.edn` beside it, and `test.log`, the test command's output
+(ratify). The checkout is an export of the cut: its files, and no history.
 
 **Oracle (instrument)**: `rdm-spec oracle`: the checklist, the scorer and the
 scoreboard run on recorded fixture cycles under `dhf/harness/oracle/` and
@@ -197,7 +203,10 @@ scenarios.
 
 **Gate**: a stage the task table runs first and that stops the task when it
 has findings; the stages after it never see it. Every other stage reports, so
-one run names every finding.
+one run names every finding. A gate whose code is not built refuses the task
+(exit 2), as Löyly's gate refuses an instrument nobody checked
+(loyly:harness/README.md@17d68d2, "What makes the checks run"). Publish runs
+the views' freshness check as a gate before the site.
 
 **Scoreboard**: the comparison of two cycles over the items both scored,
 counting what got better and what got worse, never a net.

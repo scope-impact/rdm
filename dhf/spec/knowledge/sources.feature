@@ -20,6 +20,15 @@ Feature: Sources
       When "rdm-spec check" is run
       Then the check fails and names the source, the dropped pin and the commit that dropped it
 
+    # A source removed on purpose once read as dropped pins (cycle 04).
+    @spec-0236 @e2e
+    Scenario: A source is retired, never deleted, and nothing may cite it
+      Given the sources index keeps rdm with its pins and :retired "holds today's implementation"
+      And a wiki page whose footnote cites "rdm:README.md@3763e08"
+      When "rdm-spec check" is run
+      Then the check reports no dropped pin for rdm
+      And it fails and names the citation and that its source is retired
+
   # Checkouts are machine-local, so they are never committed: they are given on
   # the command line, a directory holding one checkout per source, named by
   # the source's id.

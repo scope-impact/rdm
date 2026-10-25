@@ -49,7 +49,7 @@ Feature: Trace
 
     @spec-0108 @e2e
     Scenario: Without results, the trace says no status was derived
-      Given the configured results directory does not exist
+      Given a copy of rdm-spec's own project in which the configured results directory does not exist
       When "rdm-spec trace spec-0012" is run with no --results
       Then the trace lists the scenario's needs, component and level
       And it says no status was derived because no results were given

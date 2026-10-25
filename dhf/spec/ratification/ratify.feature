@@ -12,10 +12,10 @@ Feature: Ratify
   Rule: Ratify trusts only the cut
 
     @spec-0202 @e2e
-    Scenario: Ratify reads the cycle before it reads anything else
+    Scenario: Ratify reads the cycle before anything else it does
       Given dhf/cycles/03/cycle.edn names the cut spec-3
       When "rdm-spec ratify ROOM 03" is run
-      Then it ratifies against a fresh checkout of spec-3
+      Then it ratifies against a fresh export of spec-3: its files, and no history
 
     @spec-0203 @e2e
     Scenario: A cycle with no cycle.edn is refused
@@ -59,6 +59,7 @@ Feature: Ratify
       Given the declared test command exits 1
       When "rdm-spec ratify ROOM 03" is run
       Then it exits 1 and says the test command failed, with its exit status
+      And the test command's output is in dhf/cycles/03/test.log, which the refusal names
 
     @spec-0033 @e2e
     Scenario: Ratify requires results
@@ -88,15 +89,9 @@ Feature: Ratify
 
     @spec-0215 @contract
     Scenario: Ratify writes ratified.edn with the cut, the room's tree and the outcome
-      Given the room's implementation has the tree hash 4b825dc642cb6eb9a060e54bf8d69288fbee4904
+      Given a room whose implementation has a tree hash H
       When "rdm-spec ratify ROOM 03" is run and passes
-      Then dhf/cycles/03/ratified.edn holds:
-        """
-        {:cut "spec-3"
-         :room-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
-         :outcome :passed
-         :checkout "dhf/cycles/03/build"}
-        """
+      Then dhf/cycles/03/ratified.edn holds exactly :cut "spec-3", :room-tree H in full, :outcome :passed and :checkout "dhf/cycles/03/build"
       And dhf/cycles/03/build is the ratified checkout, which the grader grades
 
     @spec-0216 @contract
