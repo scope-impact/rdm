@@ -1,0 +1,17 @@
+;; Cycle 04: the spec change folding in cycle 03's findings and adding an
+;; oracle for the instrument, cut as spec-6 (tagged locally). Run by the
+;; installed rdm-spec (cycle 01's build): one room per scope, one builder each,
+;; merged, ratified, checklisted per scope, graded by graders who are no
+;; builder, each given a grading room holding only the build and the source
+;; checkouts it may read.
+{:cut "spec-6"
+ :scope [{:context :measurement}
+         {:context :publishing}
+         {:component :knowledge/sources}
+         {:context :regeneration}
+         {:context :ratification}
+         {:component :spec/check}
+         {:component :kernel/command}]
+ :builder {:name "builder subagents, one per scope" :actor :agent}
+ :grader {:name "grader subagents" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
