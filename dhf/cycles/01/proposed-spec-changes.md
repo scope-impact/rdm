@@ -87,3 +87,8 @@ None of this is in the spec yet.
   should run where nothing else is reachable.
 - **Two builders (fence, init) wrote code before step definitions,** so not
   test-first.
+- **spec-1 is a local-only cut.** The remote refused the tag push (HTTP 403),
+  and cut.feature says a cut pushes its tag. On the spec owner's decision,
+  spec-1 was tagged by hand on d89f6c3 in the working clone only, with
+  origin/HEAD set locally to the branch. Say whether a cut may stay local
+  when the remote refuses the tag.
