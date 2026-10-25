@@ -1,0 +1,14 @@
+{:cycle "01"
+ :cut "spec-1"
+ :scope :project
+ :room-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+ :builder {:name "builder-a", :actor :agent}
+ :grader {:name "grader-b", :actor :agent}
+ :spec-owner {:name "owner-c", :actor :human}
+ :items [{:id "spec-0001" :verdict :pass :evidence "added an apple; the cart held it"}
+         {:id "spec-0002" :verdict :fail :evidence "removed the apple; the cart still held it"}
+         {:id "spec-0003" :verdict :pass :evidence "added apple then pear; listed in that order"}
+         {:id "spec-0004" :verdict :pass :evidence "2 and 3 totalled 5"}
+         {:id "spec-0005" :verdict :fail :evidence "a discount of 5 on 5 gave 5, not 0"}]
+ :passed 3
+ :scored 5}

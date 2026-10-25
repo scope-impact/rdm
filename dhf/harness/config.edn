@@ -50,7 +50,12 @@
  ;; The clean room is an allow-list (dhf/spec/regeneration/fence.feature): these
  ;; paths, plus the implementation a scoped regeneration keeps, and nothing
  ;; else. Giving the builder no network is the builder's obligation.
- :clean-room {:allow ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/views"
+ ;; dhf/harness is allowed file by file: its oracle/ holds the instrument's
+ ;; goldens, the measurements a builder of the instrument must never see
+ ;; (loyly:harness/README.md@17d68d2, "The idea in five lines" 2; Löyly fences
+ ;; its own harness/oracle, dhf/raw/sources.edn).
+ :clean-room {:allow ["dhf/spec" "dhf/harness/config.edn" "dhf/harness/stack.md"
+                      "dhf/raw" "dhf/wiki" "dhf/views"
                       "dhf/decisions/adr-0002-spec-first-regeneration.md"]}
 
  ;; What ratify runs in a checkout of the cut holding the room's implementation

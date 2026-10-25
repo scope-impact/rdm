@@ -1,0 +1,4 @@
+;; The id ledger. The stamper ("rdm-spec stamp") hands out the next scenario
+;; id from here and records it, so an id is never issued twice, not even after
+;; its scenario is deleted. Never edit by hand.
+{:issued 6}

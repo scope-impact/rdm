@@ -1,0 +1,39 @@
+{
+  "cycle" : "01",
+  "cut" : "spec-1",
+  "items" : [ {
+    "id" : "spec-0001",
+    "title" : "An item added is in the cart",
+    "context" : "shop",
+    "component" : "Cart",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0002",
+    "title" : "An item removed is gone",
+    "context" : "shop",
+    "component" : "Cart",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0003",
+    "title" : "A cart lists its items in the order added",
+    "context" : "shop",
+    "component" : "Cart",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0004",
+    "title" : "The total is the sum of the prices",
+    "context" : "shop",
+    "component" : "Till",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0005",
+    "title" : "A discount is taken off the total",
+    "context" : "shop",
+    "component" : "Till",
+    "level" : "contract"
+  } ],
+  "planned" : [ {
+    "id" : "spec-0006",
+    "title" : "A refund returns the money"
+  } ]
+}

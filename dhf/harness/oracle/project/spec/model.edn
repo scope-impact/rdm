@@ -1,0 +1,15 @@
+;; The oracle's fixture project: a till and a cart, the smallest model the
+;; checklist, the scorer and the scoreboard have something to say about.
+{:system {:id :shop :name "shop" :description "Sells things"}
+ :people [{:id :clerk :name "Clerk" :actor #{:human} :description "Rings up sales"}]
+ :external []
+ :containers [{:id :shop-app :name "shop" :kind :runs :technology "a command"
+               :description "The shop"
+               :contexts [{:id :shop :name "shop" :description "Selling"
+                           :components [{:id :shop/cart :name "Cart" :spec "shop/cart"
+                                         :description "Holds what is bought"}
+                                        {:id :shop/till :name "Till" :spec "shop/till"
+                                         :description "Takes the money"}]}]}]
+ :relationships [{:from :clerk :to :shop-app :description "Sells with"}
+                 {:from :shop/till :to :shop/cart :description "Totals"}]
+ :views [{:key "context" :level :context :description "The shop and its clerk"}]}

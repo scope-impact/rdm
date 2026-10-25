@@ -1,0 +1,11 @@
+{:cycle "03"
+ :cut "spec-1"
+ :scope {:component :shop/till}
+ :room-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+ :builder {:name "builder-a", :actor :agent}
+ :grader {:name "grader-b", :actor :agent}
+ :spec-owner {:name "owner-c", :actor :human}
+ :items [{:id "spec-0004" :verdict :pass :evidence "2 and 3 totalled 5"}
+         {:id "spec-0005" :verdict :pass :evidence "both rows: 10 less 1 is 9, 5 less 5 is 0"}]
+ :passed 2
+ :scored 2}

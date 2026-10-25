@@ -1,0 +1,5 @@
+{:cut "spec-1"
+ :scope :project
+ :builder {:name "builder-a" :actor :agent}
+ :grader {:name "grader-b" :actor :agent}
+ :spec-owner {:name "owner-c" :actor :human}}

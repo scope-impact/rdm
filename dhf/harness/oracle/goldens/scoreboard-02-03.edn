@@ -1,0 +1,19 @@
+{:cycles ["02" "03"],
+ :target
+ {:scope {:component :shop/till},
+  :cycle "03",
+  :compared 2,
+  :better 1,
+  :worse 0,
+  :better-items ["spec-0005"],
+  :worse-items []},
+ :rest
+ {:compared 0,
+  :better 0,
+  :worse 0,
+  :better-items [],
+  :worse-items [],
+  :not-scored {"03" 3}},
+ :statements
+ ["cycle 03 is scoped to {:component :shop/till}: its scope is reported first"
+  "the rest was not scored in cycle 03: 3 items of cycle 02 outside the scope are not compared"]}

@@ -61,3 +61,11 @@ build), and the first whose builders had the Löyly page.
 - **The oracle still has no recorded goldens for rdm-spec itself.** The gate
   passes because there is nothing to judge. Recording them is the next step
   for the instrument.
+
+## Found while recording the oracle
+
+- **The skeleton allows all of `dhf/harness`,** so a project with an oracle
+  would carry its goldens into every clean room. rdm-spec's own config now
+  allows `dhf/harness/config.edn` and `dhf/harness/stack.md` only, as Löyly
+  fences its `harness/oracle`. `init` (spec-0086) and fence's fixture
+  (spec-0038) should say the same.

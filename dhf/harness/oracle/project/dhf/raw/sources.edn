@@ -1,0 +1,2 @@
+;; The oracle fixture's one raw source.
+{:counter {:repository "https://example.org/counter" :record "counter.md" :pins ["1234567"] :fenced []}}

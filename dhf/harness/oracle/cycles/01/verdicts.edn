@@ -1,0 +1,5 @@
+[{:id "spec-0001" :verdict :pass :evidence "added an apple; the cart held it"}
+ {:id "spec-0002" :verdict :fail :evidence "removed the apple; the cart still held it"}
+ {:id "spec-0003" :verdict :pass :evidence "added apple then pear; listed in that order"}
+ {:id "spec-0004" :verdict :pass :evidence "2 and 3 totalled 5"}
+ {:id "spec-0005" :verdict :fail :evidence "a discount of 5 on 5 gave 5, not 0"}]

@@ -1,0 +1,42 @@
+;; shop's harness configuration, written by rdm-spec init: everything the
+;; harness must not know by heart. Everything here is committed, so nothing
+;; machine-local belongs here: source checkouts, for one, are given on the
+;; command line (rdm-spec check --sources DIR).
+{;; Stamped scenario ids are @<id-prefix>-NNNN.
+ :id-prefix "spec"
+
+ ;; Where the spec, the id ledger and the C4 model live.
+ :spec-dir "dhf/spec"
+ :ledger "dhf/spec/ids.edn"
+ :model "dhf/spec/model.edn"
+ :events "dhf/spec/events.edn"
+ :needs "dhf/spec/needs.edn"
+ ;; Generated views ("rdm-spec views").
+ :views-dir "dhf/views"
+
+ ;; The raw sources every need cites, and the domain wiki.
+ :raw-dir "dhf/raw"
+ :wiki-dir "dhf/wiki"
+ ;; The words neither the spec nor the wiki may use: the stack. None yet.
+ :stack-words []
+
+ ;; Where the step definitions for "rdm-spec run" live.
+ :steps-dir "test/steps"
+
+ ;; The implementation: every path a regeneration rebuilds. None yet; add each
+ ;; path as the implementation is written, with :code-layout and the
+ ;; :test-command ratify runs.
+ :implementation []
+
+ ;; The clean room is an allow-list: these paths, plus the implementation a
+ ;; scoped regeneration keeps, and nothing else.
+ :clean-room {:allow ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"]}
+
+ ;; Test results, cycles and the site.
+ :results-dir "dhf/allure-results"
+ :cycles-dir "dhf/cycles"
+ :site {:dir "site" :source "site-src" :builder ["mkdocs" "build" "--strict" "-f" "site-src/mkdocs.yml"]}
+
+ ;; C4 lint.
+ :c4 {:view-element-limit 20
+      :description-max-chars 45}}
