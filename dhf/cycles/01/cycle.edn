@@ -20,4 +20,7 @@
  :bootstrap true
  :builder {:name "builder subagents, one per scope group" :actor :agent}
  :grader nil
- :spec-owner {:name "Sathish Narayanan" :actor :human}}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
+ ;; The person's review of the bootstrap build (ADR 0002), on 2026-10-25.
+ ;; The build at c5d45eb is accepted as the first release installed.
+ :reviewed {:by {:name "Sathish Narayanan" :actor :human} :build "c5d45eb" :outcome :accepted}}
