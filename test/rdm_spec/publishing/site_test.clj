@@ -1,94 +1,95 @@
 (ns rdm-spec.publishing.site-test
-  (:require [clojure.edn :as edn]
+  (:require [babashka.fs :as fs]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.publishing.site :as site]))
 
-(deftest the-model-hash-ignores-order-and-formatting
-  (let [a (edn/read-string "{:b 1 :a #{:x :y :z} :c [{:k 1 :j 2}]}")
-        b (edn/read-string "{:c [{:j 2\n :k 1}]\n :a #{:z :y :x}\n :b 1}")]
-    (is (= "{:a #{:x :y :z}, :b 1, :c [{:j 2, :k 1}]}" (site/printed a)))
-    (is (= (site/model-hash a) (site/model-hash b)))
-    (is (re-matches #"[0-9a-f]{64}" (site/model-hash a)))
-    (is (not= (site/model-hash a) (site/model-hash (assoc a :b 2))))))
+(def root
+  (-> (io/resource "rdm_spec/kernel/command.clj") io/file fs/absolutize
+      fs/parent fs/parent fs/parent fs/parent str))
 
-(deftest a-view-records-its-hash-on-its-first-line
-  (let [h (apply str (repeat 64 "a"))]
-    (is (= h (site/recorded-hash (str "%% model-sha256: " h "; generated\nC4Context"))))
-    (is (= h (site/recorded-hash (str "<!-- model-sha256: " h " -->\n<svg/>"))))
-    (is (nil? (site/recorded-hash (str "C4Context\n%% model-sha256: " h))))))
+(deftest model-hash-follows-the-glossary
+  (testing "reformatting and reordering a map's entries or a set's elements keeps the hash"
+    (is (= (site/model-hash {:b 1 :a #{:y :x} :c [{:k 1 :j 2}]})
+           (site/model-hash (edn/read-string "{:c [{:j 2 :k 1}] :a #{:x :y}\n :b 1}")))))
+  (testing "a vector's order is part of the model"
+    (is (not= (site/model-hash {:v [1 2]}) (site/model-hash {:v [2 1]}))))
+  (testing "the room's rendered views record the hash of the room's model"
+    (let [m (edn/read-string (slurp (str (fs/file root "dhf/spec/model.edn"))))
+          line (first (str/split-lines (slurp (str (fs/file root "dhf/views/context.mmd")))))]
+      (is (= (site/recorded-hash line) (site/model-hash m))))))
+
+(deftest recorded-hash-reads-the-first-line
+  (is (= (apply str (repeat 64 "a")) (site/recorded-hash (str "%% model-sha256: " (apply str (repeat 64 "a")) "; x"))))
+  (is (nil? (site/recorded-hash "<!-- no hash -->"))))
 
 (def model
-  {:system {:name "Demo"}
-   :containers [{:id :app :contexts [{:id :spec :name "spec" :description "S"
-                                      :components [{:id :spec/parser :name "Parser" :spec "spec/parser"}
-                                                   {:id :spec/check :name "Spec check" :spec "spec/check"}]}
-                                     {:id :architecture :name "architecture" :description "A"
-                                      :components [{:id :architecture/lint :name "Lint" :spec "architecture/lint"}]}]}]
-   :kernel [{:id :kernel/command :name "Command" :spec "kernel/command"}]
-   :views [{:key "context" :level :context}
-           {:key "spec-components" :level :component :context :spec}]})
+  {:system {:id :s :name "S" :description "d"}
+   :containers [{:id :app :kind :runs
+                 :contexts [{:id :b :name "b" :description "B" :components [{:id :b/z :name "Z" :spec "b/z"}
+                                                                            {:id :b/y :name "Y" :spec "b/y"}]}
+                            {:id :a :name "a" :description "A" :components [{:id :a/x :name "X" :spec "a/x"}]}]}]
+   :kernel [{:id :kernel/bus :name "Bus" :spec "kernel/bus"}]})
 
-(deftest sections-follow-the-model-then-the-kernel
-  (let [ss (site/sections model)]
-    (is (= ["spec" "architecture" "kernel"] (map :name ss)))
-    (is (= ["spec/parser.md" "spec/check.md"] (map :page (:components (first ss)))))
-    (is (= "spec-components" (:key (:view (first ss)))))
-    (is (nil? (:view (second ss))))
-    (is (= ["spec" "architecture"] (map :name (site/sections (dissoc model :kernel)))))))
+(deftest contexts-follow-the-model
+  (let [cs (site/contexts model)]
+    (is (= ["b" "a" "kernel"] (map :key cs)))
+    (is (= ["b/z.md" "b/y.md"] (map :page (:components (first cs)))))
+    (is (= "kernel/index.md" (:index (last cs))))))
 
-(deftest the-navigation-lists-home-then-each-section-in-order
-  (let [yml (site/mkdocs-yml {:model model :sections (site/sections model) :site-dir "../site"
-                              :wiki-pages [{:page "wiki/index.md" :title "Wiki"}]})
-        nav-lines (drop-while #(not= "nav:" %) (str/split-lines yml))]
-    (is (str/includes? yml "site_dir: \"../site\""))
-    (is (= ["  - \"Home\": index.md"
-            "  - \"spec\":"
-            "      - \"spec\": \"spec/index.md\""
-            "      - \"Parser\": \"spec/parser.md\""
-            "      - \"Spec check\": \"spec/check.md\""
-            "  - \"architecture\":"]
-           (take 6 (rest nav-lines))))
-    (is (< (str/index-of yml "\"kernel\":") (str/index-of yml "\"Wiki\":")))))
+(deftest navigation-lists-home-then-each-section
+  (let [yml (site/mkdocs-config {:site-name "S" :sections (site/contexts model) :wiki-pages ["wiki/index.md"]
+                                 :site-dir "../site"})
+        lines (str/split-lines yml)
+        nav (drop-while #(not= "nav:" %) lines)]
+    (is (= ["nav:"
+            "  - \"Home\": index.md"
+            "  - \"b\":"
+            "      - \"b\": \"b/index.md\""
+            "      - \"Z\": \"b/z.md\""
+            "      - \"Y\": \"b/y.md\""
+            "  - \"a\":"
+            "      - \"a\": \"a/index.md\""
+            "      - \"X\": \"a/x.md\""
+            "  - \"kernel\":"
+            "      - \"kernel\": \"kernel/index.md\""
+            "      - \"Bus\": \"kernel/bus.md\""
+            "  - \"wiki\":"
+            "      - \"wiki/index.md\""]
+           nav))
+    (is (some #{"site_dir: \"../site\""} lines))))
 
-(deftest relative-links-climb-to-the-docs-root
-  (is (= "views/x.svg" (site/relative "index.md" "views/x.svg")))
-  (is (= "../views/x.svg" (site/relative "spec/index.md" "views/x.svg")))
-  (is (= "../../a.md" (site/relative "wiki/pages/p.md" "a.md"))))
+(deftest status-follows-the-results
+  (is (= :planned (site/status-of {:id "spec-0001" :wip? true} nil)))
+  (is (= :planned (site/status-of {:id "spec-0001" :wip? true} {"spec-0001" :verified})))
+  (is (nil? (site/status-of {:id "spec-0001"} nil)))
+  (is (= :failed (site/status-of {:id "spec-0001"} {"spec-0001" :failed})))
+  (is (= :unverified (site/status-of {:id "spec-0002"} {"spec-0001" :failed}))))
 
-(deftest status-is-shown-never-decided
-  (let [derived {:derived? true :statuses {"spec-0001" :verified "spec-0002" :failed}}]
-    (is (= "verified" (site/status-of derived {:id "spec-0001"})))
-    (is (= "failed" (site/status-of derived {:id "spec-0002"})))
-    (is (= "unverified" (site/status-of derived {:id "spec-0003"})))
-    (is (= "planned" (site/status-of {:derived? false} {:id "spec-0004" :wip? true})))
-    (is (= "not derived" (site/status-of {:derived? false} {:id "spec-0001"})))
-    (is (re-find #"no status was derived because no results were given"
-                 (str/lower-case (site/status-note {:derived? false}))))))
-
-(deftest a-scenario-shows-its-id-level-status-and-steps
-  (let [md (site/scenario-md {:derived? true :statuses {"spec-0001" :verified}}
-                             {:id "spec-0001" :title "It works" :level :contract :needs ["UN-001"]
-                              :steps [{:keyword "Given" :text "a thing"} {:keyword "Then" :text "it works"}]})]
-    (is (str/starts-with? md "### spec-0001: It works"))
-    (is (str/includes? md "**Level:** contract"))
-    (is (str/includes? md "**Status:** verified"))
-    (is (str/includes? md "- **Given** a thing"))
-    (is (str/includes? md "- **Then** it works"))))
-
-(deftest broken-links-name-the-line-and-the-link
-  (let [present #{"index.md" "spec/parser.md" "views/context.svg" "wiki/index.md"}
-        text "# P\n\n[ok](parser.md) [up](../index.md#top)\n![v](../views/context.svg)\n[bad](nowhere.md)\n`[code](x.md)`\n[w](../wiki/)\n[ext](https://x.org/a.md)\n"]
-    (is (= [{:line 5 :link "nowhere.md"}] (site/broken-links "spec/parser.md" text present)))))
-
-(deftest footnote-citations-link-to-their-source-at-their-commit
-  (let [sources [{:id "loyly" :repository "https://github.com/skallinen/loyly"}
-                 {:id "short" :repository "owner/name"}]
-        text "A claim.[^1] Not linked: `loyly:README.md@17d68d2`.\n\n[^1]: `loyly:README.md@17d68d2`, \"What to steal\".\n"
-        out (site/link-citations text sources [{:citation "loyly:README.md@17d68d2"}])]
-    (is (= "https://github.com/owner/name/blob/abc1234/a/b.md"
-           (site/source-url sources {:source "short" :path "a/b.md" :commit "abc1234"})))
-    (is (nil? (site/source-url sources {:source "nobody" :path "a" :commit "abc1234"})))
+(deftest footnotes-link-their-sources
+  (let [text "Body cites loyly:README.md@17d68d2 inline.[^1]\n\n[^1]: `loyly:README.md@17d68d2`, \"What\" 1.\n  [^2]: `other:x.md@abcdef1`."
+        out (site/link-footnotes text {"loyly" "https://github.com/skallinen/loyly"})]
+    (is (str/includes? out "Body cites loyly:README.md@17d68d2 inline.[^1]") "the body is left alone")
     (is (str/includes? out "[^1]: [`loyly:README.md@17d68d2`](https://github.com/skallinen/loyly/blob/17d68d2/README.md)"))
-    (testing "only footnote definitions are linked"
-      (is (str/includes? out "Not linked: `loyly:README.md@17d68d2`.")))))
+    (is (str/includes? out "[^2]: `other:x.md@abcdef1`.") "an unknown source stays unlinked")))
+
+(deftest pages-carry-the-status-note
+  (let [sections (site/contexts model)
+        page (site/component-page {:section (first sections) :component (first (:components (first sections)))
+                                   :prose "Prose." :note site/no-status-note
+                                   :scenarios [{:id "spec-0001" :title "T" :level :e2e :wip? false
+                                                :steps [{:keyword "Given" :text "a | b"}]}]
+                                   :statuses nil})]
+    (is (str/includes? page site/no-status-note))
+    (is (str/includes? page "`spec-0001` · level: e2e · status: **no status derived**"))
+    (is (str/includes? page "- **Given** a \\| b"))
+    (is (str/includes? page "Prose."))
+    (is (str/includes? page "[b](index.md)") "the component links its context's page")))
+
+(deftest broken-links-are-read-from-the-builder
+  (is (= [{:page "architecture/lint.md" :link "gone.md"}]
+         (site/broken-link-findings
+          (str "INFO    -  Building\nWARNING -  Doc file 'architecture/lint.md' contains a link 'gone.md', "
+               "but the target 'architecture/gone.md' is not found among documentation files.\n")))))

@@ -1,31 +1,33 @@
 (ns rdm-spec.knowledge.sources
   "The Sources component of the knowledge context (dhf/spec/knowledge/
   sources.feature): reads the sources index (sources.edn in the configured
-  :raw-dir) and resolves every citation of the needs (the configured :needs)
-  and of the wiki's pages against it. It is the knowledge stage of
-  `rdm-spec check` and `rdm-spec publish`: it runs the Wiki component's check
-  too, and publishes KnowledgeIndexed.
+  :raw-dir), the needs' citations and, through the Wiki component, the wiki's,
+  and resolves every citation against the index's pins and fences and, when
+  `--sources DIR` is given, against the source's checkout, DIR/<source id>.
+  It is the first stage of `rdm-spec check` and `rdm-spec publish`, and
+  publishes KnowledgeIndexed.
 
   A citation is `<source>:<path>@<commit>`. It resolves when its source is
-  recorded, its commit is one of the source's pins, its path is not fenced,
-  and the path exists at that pin in the source's checkout. Checkouts are
-  machine-local: `--sources DIR` names a directory holding one git checkout
-  per source, named by the source's id. Without one, a citation's path is
-  :unchecked, reported as a warning, never passed.
+  recorded, its path is not fenced, its commit is one of the source's pins and
+  its path exists at that commit in the source's checkout. Without a checkout
+  its path cannot be checked: it is reported :unchecked, with the reason, as a
+  warning and never as a pass.
 
   The rules, each a stable name on the error stream:
-    sources-index            the sources index is not an EDN map of sources
-    source-no-repository     a source with no repository
-    source-no-record         a source whose provenance record is missing
-    source-no-pin            a source with no pin
-    source-pin-dropped       a pin the index at HEAD lists and the working tree does not
-    source-fence-unmatched   a fenced path that matches nothing at a pin of a given checkout
-    citation-malformed       a need's citation not written <source>:<path>@<commit>
-    citation-unknown-source  a citation naming no recorded source
-    citation-not-pinned      a citation at a commit that is not one of its source's pins
-    citation-fenced          a citation of a fenced path, or of a path inside a fenced directory
-    citation-missing-path    a path that does not exist at its pin in the checkout
-    citation-unchecked       (a warning) a citation whose path could not be checked, and why"
+    sources-unreadable      the sources index is not an EDN map of sources
+    source-no-repository    a source with no repository
+    source-no-pin           a source with no pin
+    source-no-record        a source whose provenance record is missing
+    source-pin-dropped      a pin a commit of the index's history (or the
+                            working tree) no longer lists
+    source-fence-unmatched  a fenced path that matches nothing at a pin
+    citation-malformed      a need's source that is not a citation
+    citation-unknown-source a citation of a source the index does not record
+    citation-fenced         a citation of a fenced path, or inside a fenced
+                            directory
+    citation-unpinned       a citation at a commit that is not a pin
+    citation-path-missing   a citation whose path does not exist at its pin
+    citation-unchecked      (warning) a citation whose path could not be checked"
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
@@ -35,335 +37,475 @@
 (def index-name "sources.edn")
 
 ;; ---------------------------------------------------------------------------
-;; Citations in text
+;; Citations
 
 (def citation-pattern
-  "A citation, <source>:<path>@<commit>, the commit 7 to 40 hex digits."
-  #"(?<![\w.:/@-])([A-Za-z0-9][\w.-]*):(?!/)([^\s@`\"'()\[\]<>:]+)@([0-9a-fA-F]{7,40})(?![0-9a-zA-Z])")
+  "A citation in running text: <source>:<path>@<commit>. Not inside a URL
+  (no // after the colon) and not glued to a longer word."
+  #"(?<![\w/.@:-])([A-Za-z0-9][\w.-]*):((?!/)[^\s@`\"'()\[\]<>]+)@([0-9a-fA-F]{4,40})(?![\w])")
 
 (defn parse-citation
-  "{:citation :source :path :commit} of the citation `s`, or nil when `s` is
-  not one."
+  "{:citation :source :path :commit} of the citation `s` (the whole string),
+  or nil when it is not one."
   [s]
-  (when-let [[c source path commit] (and (string? s) (re-matches citation-pattern (str/trim s)))]
-    {:citation c :source source :path path :commit commit}))
+  (when-let [[whole source path commit] (re-matches citation-pattern (str/trim (str s)))]
+    {:citation whole :source source :path path :commit commit}))
 
 (defn citations-in
   "Every citation in `text`: [{:citation :source :path :commit :line}], in
-  order."
+  the order written."
   [text]
   (vec (for [[i l] (map-indexed vector (str/split-lines (or text "")))
-             [c source path commit] (re-seq citation-pattern l)]
-         {:citation c :source source :path path :commit commit :line (inc i)})))
-
-;; ---------------------------------------------------------------------------
-;; Checkouts
-
-(defn- git
-  "Runs git in `dir`: {:exit :out}."
-  [dir & args]
-  (try
-    (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true
-                            :extra-env {"GIT_TERMINAL_PROMPT" "0"}}
-                   "git" args)]
-      {:exit (:exit r) :out (str/trim (:out r))})
-    (catch Exception e {:exit -1 :out "" :error (ex-message e)})))
-
-(def ^:private commit-of*
-  (memoize (fn [checkout pin]
-             (let [r (git checkout "rev-parse" "--verify" "--quiet" (str pin "^{commit}"))]
-               (when (zero? (:exit r)) (:out r))))))
-
-(defn commit-of
-  "The full commit `pin` names in the git checkout `checkout`, or nil."
-  [checkout pin]
-  (commit-of* (str checkout) (str pin)))
-
-(def ^:private exists-at*
-  (memoize (fn [checkout commit path]
-             (zero? (:exit (git checkout "cat-file" "-e" (str commit ":" path)))))))
-
-(defn exists-at?
-  "Whether `path` (a file or a directory) exists at `commit` in `checkout`."
-  [checkout commit path]
-  (exists-at* (str checkout) (str commit) (str/replace (str path) #"^\./|/+$" "")))
-
-(defn checkout-dir
-  "The checkout of the source `id` under `sources-dir`, or nil when there is
-  none."
-  [sources-dir id]
-  (when sources-dir
-    (let [d (fs/file sources-dir id)]
-      (when (fs/directory? d) (str d)))))
-
-;; ---------------------------------------------------------------------------
-;; Resolving
-
-(defn fence-of
-  "The fenced path of `fenced` that `path` is or lies inside, or nil."
-  [fenced path]
-  (let [clean #(str/replace (str %) #"^\./|/+$" "")
-        p (clean path)]
-    (some (fn [f] (let [f (clean f)]
-                    (when (and (seq f) (or (= p f) (str/starts-with? p (str f "/")))) f)))
-          fenced)))
-
-(defn resolve-citation
-  "Resolves the citation `citation` (a string) against `sources` (the index,
-  [{:id :repository :pins :fenced}]) and `sources-dir` (or nil):
-  {:citation :source :path :commit :status :reasons :rule}, :status
-  :resolved, :unresolved or :unchecked, :rule the first failing rule."
-  [sources sources-dir citation]
-  (if-let [{:keys [source path commit] :as c} (parse-citation citation)]
-    (let [src (first (filter #(= source (:id %)) sources))
-          pins (vec (:pins src))
-          unresolved (fn [rule & reasons] (assoc c :status :unresolved :rule rule :reasons (vec reasons)))]
-      (cond
-        (nil? src)
-        (unresolved "citation-unknown-source"
-                    (str "no source " source " is recorded in the sources index; the sources are "
-                         (if (seq sources) (str/join ", " (map :id sources)) "none")))
-
-        :else
-        (let [fence (fence-of (:fenced src) path)
-              pinned? (some #{commit} pins)
-              reasons (concat
-                       (when-not pinned?
-                         [["citation-not-pinned"
-                           (str "the commit " commit " is not a pin of " source "; its pins are "
-                                (if (seq pins) (str/join ", " pins) "none"))]])
-                       (when fence
-                         [["citation-fenced"
-                           (if (= fence (str/replace path #"/+$" ""))
-                             (str "the path " path " is fenced in " source
-                                  ": a source's implementation is never cited")
-                             (str "the path " path " lies in the fenced directory " fence " of " source
-                                  ": a source's implementation is never cited"))]]))]
-          (if (seq reasons)
-            (apply unresolved (ffirst reasons) (map second reasons))
-            (let [co (checkout-dir sources-dir source)
-                  full (when co (commit-of co commit))]
-              (cond
-                (nil? sources-dir)
-                (assoc c :status :unchecked :reasons
-                       [(str "no checkout of " source " was given with --sources, so the path " path
-                             " was not looked for at " commit)])
-                (nil? co)
-                (assoc c :status :unchecked :reasons
-                       [(str "no checkout of " source " in " sources-dir " (a directory " source
-                             "/ there), so the path " path " was not looked for at " commit)])
-                (nil? full)
-                (assoc c :status :unchecked :reasons
-                       [(str "the checkout " co " holds no commit " commit
-                             ", so the path " path " was not looked for at it")])
-                (exists-at? co full path)
-                (assoc c :status :resolved :reasons [])
-                :else
-                (unresolved "citation-missing-path"
-                            (str "the path " path " does not exist at the pin " commit
-                                 " in the checkout " co))))))))
-    {:citation citation :source nil :path nil :commit nil :status :unresolved
-     :rule "citation-malformed"
-     :reasons [(str "\"" citation "\" is not a citation; a citation is <source>:<path>@<commit>")]}))
-
-(defn citation-finding
-  "The finding for the resolved citation `c` (with :file and :line), cited by
-  `who` (\"the need UN-004\", \"the footnote [^1]\"): an error when it is
-  :unresolved, a warning when :unchecked, nil when :resolved."
-  [who c]
-  (case (:status c)
-    :unresolved (command/finding (:file c) (:line c) (or (:rule c) "citation-unresolved")
-                                 (str who " cites " (:citation c) ", which does not resolve: "
-                                      (str/join "; " (:reasons c))))
-    :unchecked (command/warning (:file c) (:line c) "citation-unchecked"
-                                (str who " cites " (:citation c) ", not checked: "
-                                     (str/join "; " (:reasons c))))
-    nil))
+             [whole source path commit] (re-seq citation-pattern l)]
+         {:citation whole :source source :path path :commit commit :line (inc i)})))
 
 ;; ---------------------------------------------------------------------------
 ;; The sources index
 
 (defn- line-of
-  "The 1-based line of `text` at or after `from` holding `needle`, or nil."
-  ([text needle] (line-of text needle 1))
-  ([text needle from]
-   (some (fn [[i l]] (when (and (>= (inc i) from) (str/includes? l needle)) (inc i)))
-         (map-indexed vector (str/split-lines (or text ""))))))
+  "The 1-based line of `lines` that first satisfies `pred` at or after
+  line `from` (1-based), else nil."
+  ([lines pred] (line-of lines pred 1))
+  ([lines pred from]
+   (some (fn [[i l]] (when (and (>= (inc i) from) (pred l)) (inc i)))
+         (map-indexed vector lines))))
 
-(defn- source-line [text id]
-  (or (some (fn [[i l]] (when (re-find (re-pattern (str "(?<![\\w-]):" (java.util.regex.Pattern/quote id) "(?![\\w.-])")) l)
-                          (inc i)))
-            (map-indexed vector (str/split-lines (or text ""))))
-      nil))
+(defn- key-line [lines k]
+  (let [re (re-pattern (str "(?:^|[\\s{,])" (java.util.regex.Pattern/quote (str k)) "(?=[\\s{,]|$)"))]
+    (line-of lines #(and (not (str/starts-with? (str/triml %) ";")) (re-find re %)))))
 
-(defn- strings [x] (if (sequential? x) (vec (filter string? x)) []))
-
-(defn index-sources
-  "The sources of the index `idx` (the EDN map): [{:id :repository :pins
-  :fenced :record}], sorted by id."
-  [idx]
-  (vec (sort-by :id
-                (for [[k v] idx :when (map? v)]
-                  {:id (if (keyword? k) (name k) (str k))
-                   :repository (:repository v)
-                   :record (:record v)
-                   :pins (strings (:pins v))
-                   :fenced (strings (:fenced v))}))))
+(defn- strings [x] (if (sequential? x) (vec (keep #(when (some? %) (str %)) x)) []))
 
 (defn read-index
-  "{:text :index :sources :findings} of the sources index file `f`, named
-  `rel` in findings. A missing index records no source."
-  [f rel]
-  (if-not (fs/regular-file? f)
-    {:text nil :sources [] :findings []}
-    (let [text (slurp (str f))
-          idx (try (edn/read-string text) (catch Exception e e))]
-      (cond
-        (instance? Exception idx)
-        {:text text :sources []
-         :findings [(command/finding rel nil "sources-index"
-                                     (str "the sources index is not readable EDN: " (ex-message idx)))]}
-        (not (or (nil? idx) (map? idx)))
-        {:text text :sources []
-         :findings [(command/finding rel nil "sources-index" "the sources index is not a map of sources")]}
-        :else
-        {:text text :index idx :sources (index-sources idx) :findings []}))))
+  "The sources index `text` read: {:sources [{:id :repository :record :pins
+  :fenced :line}] :error message-or-nil}; :id is the source's name, a string."
+  [text]
+  (let [v (try (edn/read-string text) (catch Exception e {::error (ex-message e)}))
+        lines (str/split-lines (or text ""))]
+    (cond
+      (::error v) {:sources [] :error (str "is not readable EDN: " (::error v))}
+      (nil? v) {:sources [] :error nil}
+      (not (map? v)) {:sources [] :error "is not a map of sources, {:source-id {:repository :record :pins :fenced}}"}
+      :else
+      {:sources (vec (for [[k s] v
+                           :let [s (if (map? s) s {})]]
+                       {:id (if (keyword? k) (name k) (str k))
+                        :repository (some-> (:repository s) str)
+                        :record (some-> (:record s) str)
+                        :pins (strings (:pins s))
+                        :fenced (strings (:fenced s))
+                        :line (key-line lines k)}))
+       :error nil})))
 
-(defn source-findings
-  "The index rules for each of `sources` (as index-sources returns them),
-  the index's text being `text`, its records in `raw-dir` (a File)."
-  [rel text raw-dir sources]
-  (vec (for [{:keys [id repository record pins]} sources
-             :let [line (source-line text id)]
-             f [(when (str/blank? (str repository))
-                  (command/finding rel line "source-no-repository"
-                                   (str "the source " id " names no repository")))
-                (when (or (str/blank? (str record)) (not (fs/regular-file? (fs/file raw-dir (str record)))))
-                  (command/finding rel line "source-no-record"
-                                   (str "the source " id " has no provenance record"
-                                        (when-not (str/blank? (str record)) (str ": there is no " record " beside the index")))))
-                (when (empty? pins)
-                  (command/finding rel line "source-no-pin"
-                                   (str "the source " id " has no pin; every source is pinned at the commits it is cited at")))]
-             :when f]
-         f)))
+(defn- pins-of
+  "{source-id #{pin}} of the index `text`, or nil when it is unreadable."
+  [text]
+  (let [{:keys [sources error]} (read-index text)]
+    (when-not error
+      (into {} (for [s sources] [(:id s) (set (:pins s))])))))
 
-(defn dropped-pin-findings
-  "A finding for each pin a source had in `before` (the index at HEAD, as
-  index-sources returns it) and no longer lists in `after`."
-  [rel text before after]
-  (let [now (into {} (map (juxt :id (comp set :pins))) after)]
-    (vec (for [{:keys [id pins]} before
-               pin pins
-               :when (not (contains? (get now id #{}) pin))]
-           (command/finding rel (or (source-line text id) nil) "source-pin-dropped"
-                            (str "the source " id " no longer lists the pin " pin
-                                 ", which the index at HEAD lists; a pin is never dropped, so citations made against it still resolve"))))))
+(defn- source-findings
+  "The rules every recorded source keeps."
+  [index-rel raw-dir-file sources]
+  (vec (mapcat (fn [{:keys [id repository record pins line]}]
+                 (concat
+                  (when (str/blank? repository)
+                    [(command/finding index-rel line "source-no-repository"
+                                      (str "the source " id " names no repository"))])
+                  (when (empty? pins)
+                    [(command/finding index-rel line "source-no-pin"
+                                      (str "the source " id " has no pin; a source is cited at a commit it is pinned to"))])
+                  (cond
+                    (str/blank? record)
+                    [(command/finding index-rel line "source-no-record"
+                                      (str "the source " id " names no provenance record"))]
+                    (not (fs/regular-file? (fs/file raw-dir-file record)))
+                    [(command/finding index-rel line "source-no-record"
+                                      (str "the source " id "'s provenance record " record " does not exist beside the index"))])))
+               sources)))
 
-(defn head-sources
-  "The sources of the index at HEAD in the git repository `root`, or nil when
-  there is no HEAD or the index is not there."
+;; ---------------------------------------------------------------------------
+;; Git
+
+(defn- git
+  "Runs git in `dir`: {:exit :out}, never throwing (exit -1 when git cannot
+  be run)."
+  [dir args & [in]]
+  (try
+    (let [r (apply p/shell (cond-> {:dir (str dir) :out :string :err :string :continue true}
+                             in (assoc :in in))
+                   "git" args)]
+      {:exit (:exit r) :out (:out r)})
+    (catch Exception _ {:exit -1 :out ""})))
+
+;; ---------------------------------------------------------------------------
+;; Pins dropped in the index's history
+
+(defn- index-history
+  "The commits touching the index `rel` in the repository at `root`, oldest
+  first: [{:commit :parents [..] :subject}]; [] when it is no repository."
   [root rel]
-  (let [r (git root "show" (str "HEAD:" rel))]
-    (when (zero? (:exit r))
-      (let [idx (try (edn/read-string (:out r)) (catch Exception _ nil))]
-        (when (map? idx) (index-sources idx))))))
+  (let [{:keys [exit out]} (git root ["log" "--topo-order" "--reverse" "--parents" "--format=%H %P%x09%s" "--" rel])]
+    (if (zero? exit)
+      (vec (for [l (str/split-lines out)
+                 :when (not (str/blank? l))
+                 :let [[shas subject] (str/split l #"\t" 2)
+                       [c & ps] (str/split (str/trim shas) #" ")]]
+             {:commit c :parents (vec ps) :subject (or subject "")}))
+      [])))
 
-(defn fence-findings
-  "A finding for each fenced path of a source with a checkout in
-  `sources-dir` that matches nothing at one of its pins."
-  [rel text sources-dir sources]
-  (vec (for [{:keys [id pins fenced]} sources
-             :let [co (checkout-dir sources-dir id)]
-             :when co
+(defn- index-at
+  "{source #{pin}} of the index `rel` at `commit`: {} when the commit does not
+  hold it, nil when it is unreadable there."
+  [root rel commit]
+  (let [{:keys [exit out]} (git root ["show" (str commit ":" rel)])]
+    (if (zero? exit) (pins-of out) {})))
+
+(defn dropped-pins
+  "Every pin some version of the index listed and the current one (`now`,
+  {source #{pin}}) does not: [{:source :pin :commit :subject}], :commit being
+  the last commit that dropped it (nil: the working tree, uncommitted)."
+  [root rel now]
+  (let [history (index-history root (str/replace rel "\\" "/"))
+        versions (atom {})
+        version (fn [c] (or (get @versions c)
+                            (let [v (or (index-at root rel c) {})] (swap! versions assoc c v) v)))
+        head (some-> (git root ["rev-parse" "HEAD"]) :out str/trim not-empty)
+        steps (concat
+               (for [{:keys [commit parents subject]} history
+                     parent parents]
+                 [parent commit subject])
+               (when (and head (seq history))
+                 [[head nil "the working tree"]]))
+        drops (reduce (fn [acc [parent child subject]]
+                        (let [before (version parent)
+                              after (if child (version child) now)]
+                          (into acc (for [[src pins] (sort-by key before)
+                                          pin (sort pins)
+                                          :when (not (contains? (get after src #{}) pin))]
+                                      [[src pin] {:source src :pin pin :commit child :subject subject}]))))
+                      {} steps)]
+    (vec (for [[[src pin] d] (sort-by key drops)
+               :when (not (contains? (get now src #{}) pin))]
+           d))))
+
+(defn- drop-findings [index-rel sources drops]
+  (let [line (into {} (map (juxt :id :line) sources))]
+    (vec (for [{:keys [source pin commit subject]} drops]
+           (command/finding index-rel (get line source) "source-pin-dropped"
+                            (str "the source " source " no longer lists the pin " pin ", dropped by "
+                                 (if commit
+                                   (str "the commit " (subs commit 0 (min 7 (count commit))) " (\"" subject "\")")
+                                   "the working tree, uncommitted")
+                                 "; a pin is never dropped: a citation made against it must still resolve"))))))
+
+;; ---------------------------------------------------------------------------
+;; Checkouts
+
+(defn- checkout-state
+  "What a source's checkout can answer: {:dir :reason}, :reason (why its
+  paths cannot be checked) nil when it is a git checkout."
+  [sources-dir sources-arg id]
+  (cond
+    (nil? sources-dir)
+    {:reason (str "no checkout of " id " was given with --sources")}
+
+    (not (fs/directory? (fs/file sources-dir id)))
+    {:reason (str "no checkout of " id " is in " sources-arg " (" sources-arg "/" id ")")}
+
+    :else
+    (let [dir (str (fs/file sources-dir id))
+          {:keys [exit]} (git dir ["rev-parse" "--git-dir"])]
+      (if (zero? exit)
+        {:dir dir}
+        {:reason (str sources-arg "/" id " is not a git checkout of " id)}))))
+
+(defn- object-types
+  "{expression type-or-nil} for each object expression (`rev:path`,
+  `rev^{commit}`) in the checkout `dir`, asked in one batch."
+  [dir exprs]
+  (let [exprs (vec (distinct exprs))]
+    (if (empty? exprs)
+      {}
+      (let [{:keys [exit out]} (git dir ["cat-file" "--batch-check"] (str (str/join "\n" exprs) "\n"))
+            lines (str/split-lines (or out ""))]
+        (if (and (zero? exit) (= (count lines) (count exprs)))
+          (into {} (map (fn [e l]
+                          [e (second (re-matches #"[0-9a-f]{7,64} (\w+) \d+" l))])
+                        exprs lines))
+          (into {} (for [e exprs]
+                     [e (let [r (git dir ["cat-file" "-t" e])]
+                          (when (zero? (:exit r)) (str/trim (:out r))))])))))))
+
+(defn make-resolver
+  "A context for resolving citations: the index's `sources` and the
+  directory of checkouts `sources-dir` (a file, or nil) given as
+  `sources-arg`. Answers about checkouts are asked once and kept."
+  [sources sources-dir sources-arg]
+  {:sources (into {} (map (juxt :id identity) sources))
+   :sources-dir sources-dir
+   :sources-arg (or sources-arg (some-> sources-dir str))
+   :checkouts (atom {})
+   :objects (atom {})})
+
+(defn- checkout [resolver id]
+  (or (get @(:checkouts resolver) id)
+      (let [st (checkout-state (:sources-dir resolver) (:sources-arg resolver) id)]
+        (swap! (:checkouts resolver) assoc id st)
+        st)))
+
+(defn- object-type
+  "The type of `expr` in the checkout of `id`, or nil when it has none."
+  [resolver id dir expr]
+  (let [k [id expr]]
+    (if (contains? @(:objects resolver) k)
+      (get @(:objects resolver) k)
+      (let [t (get (object-types dir [expr]) expr)]
+        (swap! (:objects resolver) assoc k t)
+        t))))
+
+(defn prefetch!
+  "Asks each checkout, in one batch, about every expression in `by-source`
+  ({id [expr]}), so resolving needs no further process."
+  [resolver by-source]
+  (doseq [[id exprs] by-source
+          :let [{:keys [dir]} (checkout resolver id)]
+          :when dir
+          :let [todo (remove #(contains? @(:objects resolver) [id %]) exprs)]
+          :when (seq todo)
+          [e t] (object-types dir todo)]
+    (swap! (:objects resolver) assoc [id e] t)))
+
+;; ---------------------------------------------------------------------------
+;; Resolving
+
+(defn- pin-match?
+  "True when the commit `c` is the pin `p`: equal, or one an abbreviation of
+  the other."
+  [c p]
+  (let [c (str/lower-case c) p (str/lower-case p)]
+    (or (= c p) (str/starts-with? c p) (str/starts-with? p c))))
+
+(defn fenced-by
+  "The fenced path of `fenced` that `path` is, or lies inside; else nil."
+  [fenced path]
+  (let [norm #(str/replace (str/replace (str %) #"^\./+" "") #"/+$" "")
+        path (norm path)]
+    (some (fn [f] (let [f (norm f)]
+                    (when (and (not (str/blank? f)) (or (= path f) (str/starts-with? path (str f "/")))) f)))
+          fenced)))
+
+(defn- outcome [status rule reason] {:status status :rule rule :reasons [reason]})
+
+(defn- resolve-with
+  [resolver {:keys [citation source path commit] :as parts}]
+  (let [src (get (:sources resolver) source)
+        result
+        (cond
+          (nil? src)
+          (outcome :unresolved "citation-unknown-source"
+                   (str "no source " source " is recorded in the sources index"))
+
+          (fenced-by (:fenced src) path)
+          (let [f (fenced-by (:fenced src) path)]
+            (outcome :unresolved "citation-fenced"
+                     (if (= f (str/replace path #"/+$" ""))
+                       (str "the path " path " is fenced in " source "; a source's implementation is not cited")
+                       (str "the path " path " is inside the fenced directory " f " of " source
+                            "; a source's implementation is not cited"))))
+
+          (not-any? #(pin-match? commit %) (:pins src))
+          (outcome :unresolved "citation-unpinned"
+                   (str "the commit " commit " is not a pin of " source ", whose pins are "
+                        (if (seq (:pins src)) (str/join ", " (:pins src)) "none")))
+
+          :else
+          (let [pin (or (first (filter #(= (str/lower-case commit) (str/lower-case %)) (:pins src)))
+                        (first (filter #(pin-match? commit %) (:pins src))))
+                {:keys [dir reason]} (checkout resolver source)]
+            (cond
+              reason
+              (outcome :unchecked "citation-unchecked" (str "not checked: " reason))
+
+              (not (object-type resolver source dir (str commit "^{commit}")))
+              (outcome :unchecked "citation-unchecked"
+                       (str "not checked: the checkout of " source " does not hold the commit " commit))
+
+              (not (object-type resolver source dir (str commit ":" path)))
+              (outcome :unresolved "citation-path-missing"
+                       (str "the path " path " does not exist at " commit
+                            (when (not= pin commit) (str " (the pin " pin ")"))
+                            " in the checkout of " source))
+
+              :else {:status :resolved :rule nil :reasons []})))]
+    (merge {:citation citation :source source :path path :commit commit} result)))
+
+(defn resolve-citation
+  "Resolves the citation `citation` (a string) against the recorded `sources`
+  ([{:id :pins :fenced ...}]) and the checkouts under `sources-dir` (or nil),
+  or against a resolver (make-resolver): {:citation :source :path :commit
+  :status :reasons :rule}, :status one of :resolved, :unresolved and
+  :unchecked, :rule the finding's rule (nil when resolved)."
+  ([resolver citation]
+   (if-let [parts (parse-citation citation)]
+     (resolve-with resolver parts)
+     {:citation (str citation) :source nil :path nil :commit nil :status :unresolved
+      :rule "citation-malformed"
+      :reasons [(str "\"" citation "\" is not a citation, <source>:<path>@<commit>")]}))
+  ([sources sources-dir citation]
+   (let [resolver (if (and (map? sources) (:checkouts sources))
+                    sources
+                    (make-resolver sources (some-> sources-dir fs/file) (some-> sources-dir str)))]
+     (resolve-citation resolver citation))))
+
+(defn citation-finding
+  "The finding for the resolved citation `c` (with :file and :line) made by
+  `who` (\"UN-004\", \"the footnote [^1]\"), or nil when it resolved; a
+  citation that could not be checked is a warning."
+  [who c]
+  (case (:status c)
+    :resolved nil
+    :unchecked (command/warning (:file c) (:line c) (or (:rule c) "citation-unchecked")
+                                (str who " cites " (:citation c) ", which was " (str/join "; " (:reasons c))))
+    (command/finding (:file c) (:line c) (or (:rule c) "citation-unresolved")
+                     (str who " cites " (:citation c) ", which does not resolve: " (str/join "; " (:reasons c))))))
+
+;; ---------------------------------------------------------------------------
+;; Fences at the pins
+
+(defn- fence-findings
+  "A fenced path that matches nothing at a pin, for every source whose
+  checkout holds that pin."
+  [resolver index-rel sources]
+  (vec (for [{:keys [id pins fenced line]} sources
+             :let [{:keys [dir]} (checkout resolver id)]
+             :when dir
              pin pins
-             :let [full (commit-of co pin)]
-             :when full
-             path fenced
-             :when (not (exists-at? co full path))]
-         (command/finding rel (or (line-of text (str "\"" path "\"")) (source-line text id)) "source-fence-unmatched"
-                          (str "the fenced path " path " of " id " matches nothing at the pin " pin
-                               " in the checkout " co)))))
+             :when (object-type resolver id dir (str pin "^{commit}"))
+             f fenced
+             :when (not (object-type resolver id dir (str pin ":" (str/replace f #"/+$" ""))))]
+         (command/finding index-rel line "source-fence-unmatched"
+                          (str "the source " id " fences " f ", which matches nothing at its pin " pin
+                               " in the checkout; a fence names a path that exists")))))
 
 ;; ---------------------------------------------------------------------------
 ;; The needs
 
-(defn need-citations
-  "Every citation of the needs file `f` (named `rel`), resolved:
-  [{:citation :source :path :commit :file :line :need :status :reasons :rule}].
-  An unreadable needs file has none (the spec check names it)."
-  [f rel sources sources-dir]
-  (when (fs/regular-file? f)
+(defn- read-needs
+  "The needs of the needs file `f` (relative `rel`): [{:id :sources :line}]
+  in the file's order, or [] when it is missing or unreadable (the spec check
+  reports that)."
+  [f]
+  (if-not (fs/regular-file? f)
+    []
     (let [text (slurp (str f))
-          needs (try (edn/read-string text) (catch Exception _ nil))]
-      (when (map? needs)
-        (vec (for [[id need] (sort-by (comp str key) needs)
-                   :when (map? need)
-                   :let [from (or (line-of text (pr-str (str id))) 1)]
-                   s (if (sequential? (:sources need)) (:sources need) [])
-                   :when (some? s)]
-               (merge (resolve-citation sources sources-dir (str s))
-                      {:citation (str s)
-                       :file rel
-                       :line (or (line-of text (pr-str (str s)) from) from)
-                       :need (str id)})))))))
+          v (try (edn/read-string text) (catch Exception _ nil))
+          lines (str/split-lines text)]
+      (if-not (map? v)
+        []
+        (->> (for [[k n] v
+                   :let [id (if (keyword? k) (name k) (str k))
+                         line (key-line lines (pr-str k))]]
+               {:id id :line line :sources (if (map? n) (:sources n) nil) :lines lines})
+             (sort-by (juxt #(or (:line %) Long/MAX_VALUE) :id))
+             vec)))))
+
+(defn need-citations
+  "Every citation of the needs, resolved: [{:citation :source :path :commit
+  :file :line :need :status :reasons :rule}]."
+  [resolver needs-rel needs]
+  (vec (for [{:keys [id line sources lines]} needs
+             :when (sequential? sources)
+             s sources
+             :let [s (str s)
+                   at (or (line-of lines #(str/includes? % (pr-str s)) (or line 1))
+                          (line-of lines #(str/includes? % (pr-str s)))
+                          line)]]
+         (merge (resolve-citation resolver s) {:file needs-rel :line at :need id}))))
 
 ;; ---------------------------------------------------------------------------
 ;; The stage
 
-(defn- event-finding [f] (select-keys f [:file :line :rule :message]))
+(defn- slash [s] (str/replace (str s) #"/+$" ""))
 
 (defn- sources-dir-of
-  "The --sources directory, absolute, or nil; cannot run when it is not a
+  "The --sources directory, or nil; cannot run when it is given and is not a
   directory."
   [req]
-  (when-let [d (get-in req [:opts :sources])]
+  (when-let [d (not-empty (str (or (get-in req [:opts :sources]) "")))]
     (let [f (command/path req d)]
       (when-not (fs/directory? f)
-        (command/cannot-run! (str "the sources directory " d " does not exist")))
-      (str (fs/normalize (fs/absolutize f))))))
+        (command/cannot-run! (str "the sources directory " d " given with --sources does not exist")))
+      f)))
 
-(defn- requiring-resolve-wiki []
-  (try (requiring-resolve 'rdm-spec.knowledge.wiki/check-wiki)
-       (catch Exception _ nil)))
+(defn- wiki-citations
+  "Every citation written in the wiki's Markdown files (for asking the
+  checkouts ahead; the Wiki component reads the wiki)."
+  [req]
+  (let [dir (command/path req (slash (or (get-in req [:config :wiki-dir]) "dhf/wiki")))]
+    (if (fs/directory? dir)
+      (vec (mapcat #(citations-in (slurp (str %))) (fs/glob dir "**.md")))
+      [])))
+
+(defn- event-citation [c]
+  (select-keys c [:citation :source :path :commit :file :line :need :status :reasons]))
 
 (defn index-knowledge
-  "Reads the sources and the wiki of the project the request names and
-  resolves every citation: the KnowledgeIndexed payload, its :findings
-  holding every finding and warning (with :severity)."
+  "Reads the sources, the needs and the wiki of the project of `req` and
+  resolves every citation: {:revision :sources :pages :citations :findings},
+  KnowledgeIndexed's payload."
   [req]
-  (let [{:keys [root config]} req
-        raw-dir (str/replace (or (:raw-dir config) "dhf/raw") #"/+$" "")
-        rel (str raw-dir "/" index-name)
-        sources-dir (sources-dir-of req)
-        {:keys [text sources] index-findings :findings} (read-index (command/path root rel) rel)
-        before (head-sources root rel)
-        needs-rel (or (:needs config) "dhf/spec/needs.edn")
-        need-cites (or (need-citations (command/path root needs-rel) needs-rel sources sources-dir) [])
-        wiki-check (requiring-resolve-wiki)
-        wiki (if wiki-check
-               (wiki-check root config {:sources sources :sources-dir sources-dir})
-               {:pages [] :citations [] :findings []})
-        findings (vec (concat index-findings
-                              (source-findings rel text (command/path root raw-dir) sources)
-                              (when before (dropped-pin-findings rel text before sources))
-                              (when sources-dir (fence-findings rel text sources-dir sources))
-                              (keep #(citation-finding (str "the need " (:need %)) %) need-cites)
-                              (:findings wiki)))]
+  (let [config (:config req)
+        raw-dir (slash (or (:raw-dir config) "dhf/raw"))
+        index-rel (str raw-dir "/" index-name)
+        index-file (command/path req index-rel)
+        index-text (when (fs/regular-file? index-file) (slurp (str index-file)))
+        {:keys [sources error]} (if index-text (read-index index-text) {:sources [] :error nil})
+        sources-arg (get-in req [:opts :sources])
+        sdir (sources-dir-of req)
+        resolver (make-resolver sources sdir sources-arg)
+        needs-rel (slash (or (:needs config) "dhf/spec/needs.edn"))
+        needs (read-needs (command/path req needs-rel))
+        ;; ask each checkout once, about everything
+        _ (when sdir
+            (prefetch! resolver
+                       (merge-with into
+                                   (into {} (for [s sources]
+                                              [(:id s) (vec (concat (for [p (:pins s)] (str p "^{commit}"))
+                                                                    (for [p (:pins s) f (:fenced s)]
+                                                                      (str p ":" (slash f)))))]))
+                                   (reduce (fn [m c] (update m (:source c) (fnil conj [])
+                                                             (str (:commit c) "^{commit}")
+                                                             (str (:commit c) ":" (:path c))))
+                                           {}
+                                           (concat
+                                            (keep parse-citation (mapcat #(when (sequential? (:sources %)) (:sources %)) needs))
+                                            (wiki-citations req))))))
+        need-cites (need-citations resolver needs-rel needs)
+        check-wiki (requiring-resolve 'rdm-spec.knowledge.wiki/check-wiki)
+        wiki (check-wiki (:root req) config {:sources resolver :sources-dir sdir})
+        drops (if (and index-text (nil? error))
+                (dropped-pins (:root req) index-rel (into {} (for [s sources] [(:id s) (set (:pins s))])))
+                [])
+        findings (vec (concat
+                       (when error [(command/finding index-rel nil "sources-unreadable" (str "the sources index " error))])
+                       (source-findings index-rel (command/path req raw-dir) sources)
+                       (drop-findings index-rel sources drops)
+                       (fence-findings resolver index-rel sources)
+                       (keep #(citation-finding (:need %) %) need-cites)
+                       (:findings wiki)))]
     {:revision :working-tree
      :sources (mapv #(select-keys % [:id :repository :pins :fenced]) sources)
      :pages (vec (:pages wiki))
-     :citations (vec (concat (map #(dissoc % :rule) need-cites) (:citations wiki)))
+     :citations (vec (concat (map event-citation need-cites) (map event-citation (:citations wiki))))
      :findings findings}))
 
 (defn check
-  "The knowledge stage of `rdm-spec check` (and of `rdm-spec publish`):
-  indexes the sources and the wiki, publishes KnowledgeIndexed and reports
-  every finding; a citation that could not be checked is a warning."
+  "The sources stage of `rdm-spec check` and `rdm-spec publish`: indexes the
+  knowledge, publishes KnowledgeIndexed and reports its findings."
   [req]
-  (let [k (index-knowledge req)
-        errors (remove command/warning? (:findings k))
-        payload (assoc k :findings (mapv event-finding errors))]
-    (command/publish! req :knowledge/sources :KnowledgeIndexed payload)
-    {:result {:knowledge (assoc payload :passed? (empty? errors))}
+  (let [k (index-knowledge req)]
+    (command/publish! req :knowledge/sources :KnowledgeIndexed
+                      (update k :findings (fn [fs*] (mapv #(select-keys % [:file :line :rule :message]) fs*))))
+    {:result {:knowledge (dissoc k :findings)}
      :findings (:findings k)}))

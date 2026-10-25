@@ -5,89 +5,98 @@
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.knowledge.sources :as sources]))
 
-(def idx [{:id "loyly" :repository "r" :pins ["17d68d2"] :fenced ["impl" "harness/fence.sh"]}])
-
 (defn- git! [dir & args]
   (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true
                           :extra-env {"GIT_CONFIG_NOSYSTEM" "1" "GIT_CONFIG_GLOBAL" "/dev/null"
                                       "GIT_AUTHOR_NAME" "t" "GIT_AUTHOR_EMAIL" "t@example.org"
                                       "GIT_COMMITTER_NAME" "t" "GIT_COMMITTER_EMAIL" "t@example.org"}}
-                 "git" "-c" "commit.gpgsign=false" "-c" "core.hooksPath=/dev/null" args)]
-    (is (zero? (:exit r)) (:err r))
+                 "git" "-c" "core.hooksPath=/dev/null" "-c" "commit.gpgsign=false" args)]
+    (when-not (zero? (:exit r)) (throw (ex-info (str "git failed: " (:err r)) {})))
     (str/trim (:out r))))
 
+(defn- write! [dir rel text]
+  (fs/create-dirs (fs/parent (fs/file dir rel)))
+  (spit (str (fs/file dir rel)) text))
+
 (defn- checkout!
-  "A sources directory holding a checkout of loyly with `files`, tagged 17d68d2."
-  [files]
+  "A sources directory holding a checkout of `id` with `files`, tagged `pin`."
+  [id pin files]
   (let [sdir (str (fs/create-temp-dir))
-        co (fs/file sdir "loyly")]
-    (doseq [f files]
-      (fs/create-dirs (fs/parent (fs/file co f)))
-      (spit (str (fs/file co f)) "x\n"))
+        co (fs/file sdir id)]
+    (doseq [f files] (write! co f "x\n"))
     (git! co "init" "-q")
     (git! co "add" "-A")
     (git! co "commit" "-q" "-m" "c")
-    (git! co "tag" "17d68d2")
+    (git! co "tag" pin)
     sdir))
 
-(deftest citations-in-text
+(def index [{:id "loyly" :repository "r" :pins ["17d68d2"] :fenced ["impl" "harness/fence.sh"]}])
+
+(deftest citations-are-read-from-text
   (is (= [{:citation "loyly:README.md@17d68d2" :source "loyly" :path "README.md" :commit "17d68d2" :line 2}]
-         (sources/citations-in "x\n[^1]: `loyly:README.md@17d68d2`, \"What to steal\".")))
-  (testing "a URL is not a citation, nor is a short hex"
-    (is (empty? (sources/citations-in "https://github.com/a/b@1234567 and loyly:a.md@12ab")))))
+         (sources/citations-in "See https://x.org/a@17d68d2.\n[^1]: `loyly:README.md@17d68d2`, \"S\".")))
+  (is (nil? (sources/parse-citation "loyly:README.md")))
+  (is (= "a/b.md" (:path (sources/parse-citation "src:a/b.md@abcd123")))))
 
-(deftest resolving-without-a-checkout
-  (testing "an unknown source"
-    (let [r (sources/resolve-citation idx nil "innolitix:README.md@f21b508")]
-      (is (= [:unresolved "citation-unknown-source"] ((juxt :status :rule) r)))
-      (is (str/includes? (first (:reasons r)) "innolitix"))))
-  (testing "a commit that is not a pin names the pins"
-    (let [r (sources/resolve-citation idx nil "loyly:README.md@0000000")]
-      (is (= "citation-not-pinned" (:rule r)))
-      (is (str/includes? (first (:reasons r)) "17d68d2"))))
-  (testing "a fenced path and a path inside a fenced directory"
-    (is (= "citation-fenced" (:rule (sources/resolve-citation idx nil "loyly:harness/fence.sh@17d68d2"))))
-    (is (str/includes? (first (:reasons (sources/resolve-citation idx nil "loyly:impl/a.clj@17d68d2")))
-                       "fenced directory impl"))
-    (is (nil? (sources/fence-of ["impl"] "implementation.md"))))
-  (testing "without a checkout, a path is unchecked, with the reason"
-    (let [r (sources/resolve-citation idx nil "loyly:README.md@17d68d2")]
-      (is (= :unchecked (:status r)))
-      (is (seq (:reasons r)))
-      (is (= :warning (:severity (sources/citation-finding "the need UN-1" (assoc r :file "f" :line 1))))))))
+(deftest the-index-is-read-with-lines
+  (let [{:keys [sources error]} (sources/read-index ";; :loyly in a comment\n{:loyly\n {:repository \"r\" :pins [\"17d68d2\"]}\n :demo {:repository \"d\"}}")]
+    (is (nil? error))
+    (is (= [["loyly" 2 ["17d68d2"]] ["demo" 4 []]] (map (juxt :id :line :pins) sources))))
+  (is (:error (sources/read-index "[1 2]")))
+  (is (:error (sources/read-index "{:a"))))
 
-(deftest resolving-against-a-checkout
-  (let [sdir (checkout! ["README.md" "impl/a.clj"])]
-    (is (= :resolved (:status (sources/resolve-citation idx sdir "loyly:README.md@17d68d2"))))
-    (let [r (sources/resolve-citation idx sdir "loyly:docs/plan.md@17d68d2")
-          f (sources/citation-finding "the need UN-1" (assoc r :file "dhf/spec/needs.edn" :line 3))]
-      (is (= "citation-missing-path" (:rule r)))
-      (is (= ["dhf/spec/needs.edn" 3 "citation-missing-path"] ((juxt :file :line :rule) f)))
-      (is (str/includes? (:message f) "docs/plan.md does not exist at the pin 17d68d2")))
-    (testing "a fenced path matching nothing at a pin"
-      (let [fs* (sources/fence-findings "dhf/raw/sources.edn" "{:loyly\n {:fenced [\"impl\" \"harness/fence.sh\"]}}"
-                                        sdir idx)]
-        (is (= [["source-fence-unmatched" 2]] (map (juxt :rule :line) fs*)))
-        (is (str/includes? (:message (first fs*)) "harness/fence.sh"))))))
+(deftest fences
+  (is (= "impl" (sources/fenced-by ["impl"] "impl/a.clj")))
+  (is (= "harness/fence.sh" (sources/fenced-by ["harness/fence.sh"] "harness/fence.sh")))
+  (is (nil? (sources/fenced-by ["impl"] "implementation.md"))))
 
-(deftest index-rules
-  (let [dir (fs/create-temp-dir)
-        text "{:a {:repository \"r\" :record \"a.md\" :pins []}\n :b {:record \"b.md\" :pins [\"1234567\"]}}"]
-    (spit (str (fs/file dir "a.md")) "a")
-    (is (= #{["source-no-pin" 1] ["source-no-repository" 2] ["source-no-record" 2]}
-           (set (map (juxt :rule :line)
-                     (sources/source-findings "s.edn" text dir (sources/index-sources (read-string text))))))))
-  (testing "a dropped pin"
-    (let [fs* (sources/dropped-pin-findings "s.edn" "{:loyly {:pins [\"aaaaaaa\"]}}"
-                                            [{:id "loyly" :pins ["17d68d2" "aaaaaaa"]}]
-                                            [{:id "loyly" :pins ["aaaaaaa"]}])]
-      (is (= ["source-pin-dropped"] (map :rule fs*)))
-      (is (str/includes? (:message (first fs*)) "17d68d2")))))
+(deftest resolving
+  (let [sdir (checkout! "loyly" "17d68d2" ["README.md" "impl/a.clj" "harness/fence.sh"])
+        r #(sources/resolve-citation index sdir %)]
+    (testing "statuses and rules"
+      (is (= [:resolved nil] ((juxt :status :rule) (r "loyly:README.md@17d68d2"))))
+      (is (= [:unresolved "citation-path-missing"] ((juxt :status :rule) (r "loyly:docs/plan.md@17d68d2"))))
+      (is (= [:unresolved "citation-unpinned"] ((juxt :status :rule) (r "loyly:README.md@0000000"))))
+      (is (= [:unresolved "citation-unknown-source"] ((juxt :status :rule) (r "innolitix:README.md@f21b508"))))
+      (is (= [:unresolved "citation-fenced"] ((juxt :status :rule) (r "loyly:impl/a.clj@17d68d2"))))
+      (is (= [:unresolved "citation-malformed"] ((juxt :status :rule) (r "loyly:README.md")))))
+    (testing "reasons name what is wrong"
+      (is (str/includes? (first (:reasons (r "loyly:README.md@0000000"))) "17d68d2"))
+      (is (str/includes? (first (:reasons (r "loyly:impl/a.clj@17d68d2"))) "fenced directory impl")))
+    (testing "without a checkout, a path is unchecked, never resolved"
+      (let [c (sources/resolve-citation index nil "loyly:README.md@17d68d2")]
+        (is (= :unchecked (:status c)))
+        (is (re-find #"no checkout of loyly" (first (:reasons c))))))
+    (testing "a checkout that does not hold the pin leaves it unchecked"
+      (let [other (checkout! "loyly" "1111111" ["README.md"])
+            idx [{:id "loyly" :pins ["17d68d2"] :fenced []}]]
+        (is (= :unchecked (:status (sources/resolve-citation idx other "loyly:README.md@17d68d2"))))))))
 
-(deftest need-citations-carry-their-need-and-line
-  (let [dir (fs/create-temp-dir)
-        f (fs/file dir "needs.edn")]
-    (spit (str f) "{\"UN-001\" {:text \"t\"\n           :sources [\"loyly:README.md@17d68d2\"\n  \"nonsense\"]}}\n")
-    (let [cs (sources/need-citations f "needs.edn" idx nil)]
-      (is (= [["UN-001" 2 :unchecked] ["UN-001" 3 :unresolved]] (map (juxt :need :line :status) cs)))
-      (is (= "citation-malformed" (:rule (second cs)))))))
+(deftest findings-of-citations
+  (let [c {:citation "x:a@1234567" :file "f" :line 3}]
+    (is (nil? (sources/citation-finding "UN-001" (assoc c :status :resolved))))
+    (is (= :warning (:severity (sources/citation-finding "UN-001" (assoc c :status :unchecked :reasons ["not checked: why"])))))
+    (let [f (sources/citation-finding "the footnote [^1]" (assoc c :status :unresolved :rule "citation-unpinned" :reasons ["r"]))]
+      (is (= ["f" 3 "citation-unpinned" :error] ((juxt :file :line :rule :severity) f)))
+      (is (str/starts-with? (:message f) "the footnote [^1] cites x:a@1234567")))))
+
+(deftest dropped-pins-across-history
+  (let [dir (str (fs/create-temp-dir))
+        rel "dhf/raw/sources.edn"]
+    (write! dir rel "{:loyly {:pins [\"17d68d2\"]}}")
+    (git! dir "init" "-q") (git! dir "add" "-A") (git! dir "commit" "-q" "-m" "first")
+    (write! dir rel "{:loyly {:pins [\"abcdef1\"]}}")
+    (git! dir "commit" "-q" "-am" "drop")
+    (let [dropper (git! dir "rev-parse" "HEAD")]
+      (write! dir rel "{:loyly {:pins [\"abcdef1\"]} :x {:pins []}}")
+      (git! dir "commit" "-q" "-am" "later")
+      (testing "a pin dropped by an earlier commit is found, with that commit"
+        (is (= [{:source "loyly" :pin "17d68d2" :commit dropper :subject "drop"}]
+               (sources/dropped-pins dir rel {"loyly" #{"abcdef1"} "x" #{}}))))
+      (testing "a pin listed again is no longer dropped"
+        (is (empty? (sources/dropped-pins dir rel {"loyly" #{"abcdef1" "17d68d2"} "x" #{}}))))
+      (testing "a pin dropped in the working tree is found, with no commit"
+        (is (= [{:source "loyly" :pin "abcdef1" :commit nil :subject "the working tree"}]
+               (filter #(= "abcdef1" (:pin %)) (sources/dropped-pins dir rel {"loyly" #{"17d68d2"} "x" #{}}))))))
+    (testing "no repository, no history"
+      (is (empty? (sources/dropped-pins (str (fs/create-temp-dir)) rel {}))))))

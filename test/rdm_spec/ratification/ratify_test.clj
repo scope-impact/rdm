@@ -1,78 +1,115 @@
 (ns rdm-spec.ratification.ratify-test
   (:require [babashka.fs :as fs]
-            [babashka.process :as p]
-            [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [rdm-spec.kernel.command :as command]
             [rdm-spec.ratification.ratify :as ratify]))
 
-(defn- rules [fs] (set (map :rule fs)))
+(defn- tmp [] (str (fs/create-temp-dir {:prefix "ratify-test-"})))
 
-(def scs
-  [{:ids ["spec-0012"] :wip? false :file "f.feature" :line 3}
-   {:ids ["spec-0014"] :wip? false :file "f.feature" :line 9}
-   {:ids ["spec-0013"] :wip? true :file "f.feature" :line 15}])
+(defn- write! [dir rel text]
+  (let [f (fs/file dir rel)]
+    (fs/create-dirs (fs/parent f))
+    (spit f text)))
 
-(deftest scenario-findings
-  (testing "every scenario not @wip named, every result passed"
-    (is (empty? (ratify/scenario-findings scs [{:spec ["spec-0012"] :status "passed"}
-                                               {:spec ["spec-0014"] :status "passed"}]))))
-  (testing "a scenario no result names"
-    (let [f (ratify/scenario-findings scs [{:spec ["spec-0014"] :status "passed"}])]
-      (is (= #{"scenario-not-run"} (rules f)))
-      (is (= [["f.feature" 3]] (map (juxt :file :line) f)))
-      (is (re-find #"spec-0012" (:message (first f))))))
-  (testing "one result of an outline did not pass"
-    (let [f (ratify/scenario-findings scs [{:spec ["spec-0012"] :status "passed"}
-                                           {:spec ["spec-0012"] :status "broken"}
-                                           {:spec ["spec-0014"] :status "passed"}])]
-      (is (= #{"scenario-not-passed"} (rules f)))
-      (is (re-find #"spec-0012.*broken" (:message (first f))))))
-  (testing "a planned scenario needs no result"
-    (is (empty? (ratify/scenario-findings [(nth scs 2)] [])))))
+(def scenarios
+  [{:id "spec-0012" :file "dhf/spec/a.feature" :line 7 :wip? false}
+   {:id "spec-0014" :file "dhf/spec/a.feature" :line 12 :wip? false}
+   {:id "spec-0013" :file "dhf/spec/a.feature" :line 17 :wip? true}])
 
-(deftest result-findings
-  (is (= #{"no-results"} (rules (ratify/result-findings {:results [] :unreadable []} identity))))
-  (is (= #{"unreadable-result"} (rules (ratify/result-findings {:results [{:spec []}] :unreadable [{:file "x" :why "bad"}]}
-                                                               identity))))
-  (is (empty? (ratify/result-findings {:results [{:spec ["spec-0012"]}] :unreadable []} identity))))
+(defn- result [id status] {:file (str "/r/" id "-" status "-result.json") :spec [id] :status status})
 
-(deftest read-results
-  (let [d (fs/create-temp-dir)]
-    (spit (str (fs/file d "a-result.json")) "{\"status\":\"passed\",\"labels\":[{\"name\":\"spec\",\"value\":\"spec-0012\"}]}")
-    (spit (str (fs/file d "b-result.json")) "not json")
-    (spit (str (fs/file d "c-container.json")) "{}")
+(defn- rules [findings] (mapv :rule findings))
+
+(deftest judge-passes-when-every-due-scenario-passed
+  (is (= [] (ratify/judge scenarios {:results [(result "spec-0012" "passed") (result "spec-0014" "passed")]
+                                     :unreadable []} "R"))))
+
+(deftest judge-refuses-a-green-exit-with-no-results
+  (let [fs* (ratify/judge scenarios {:results [] :unreadable []} "R")]
+    (is (= ["ratify-no-results"] (rules fs*)))
+    (is (str/includes? (:message (first fs*)) "not a run"))))
+
+(deftest judge-names-an-unnamed-scenario-where-it-is
+  (let [[f & more] (ratify/judge scenarios {:results [(result "spec-0014" "passed")] :unreadable []} "R")]
+    (is (empty? more))
+    (is (= ["dhf/spec/a.feature" 7 "ratify-scenario-not-named"] [(:file f) (:line f) (:rule f)]))
+    (is (str/includes? (:message f) "spec-0012"))))
+
+(deftest judge-ignores-a-planned-scenario
+  (testing "neither its absence nor a skipped result refuses"
+    (is (= [] (ratify/judge scenarios {:results [(result "spec-0012" "passed") (result "spec-0014" "passed")
+                                                 (result "spec-0013" "skipped")]
+                                       :unreadable []} "R")))))
+
+(deftest judge-names-every-result-that-did-not-pass
+  (let [fs* (ratify/judge scenarios {:results [(result "spec-0012" "passed") (result "spec-0012" "broken")
+                                               (result "spec-0014" "failed")]
+                                     :unreadable []} "R")]
+    (is (= ["ratify-result-not-passed" "ratify-result-not-passed"] (rules fs*)))
+    (is (re-find #"spec-0012.*broken" (:message (first fs*))))
+    (is (re-find #"spec-0014.*failed" (:message (second fs*))))))
+
+(deftest judge-refuses-an-unreadable-result
+  (is (= ["ratify-unreadable-result"]
+         (rules (ratify/judge scenarios {:results [(result "spec-0012" "passed") (result "spec-0014" "passed")]
+                                         :unreadable ["/r/x-result.json"]} "R")))))
+
+(deftest read-results-reads-labels-and-status
+  (let [d (tmp)]
+    (spit (str (fs/file d "a-result.json")) "{\"status\":\"passed\",\"labels\":[{\"name\":\"spec\",\"value\":\"spec-0012\"},{\"name\":\"suite\",\"value\":\"x\"}]}")
+    (spit (str (fs/file d "b-result.json")) "{\"labels\":[]}")
+    (spit (str (fs/file d "c-result.json")) "not json")
+    (spit (str (fs/file d "d-container.json")) "{}")
     (let [{:keys [results unreadable]} (ratify/read-results d)]
-      (is (= [{:spec ["spec-0012"] :status "passed"}] (map #(dissoc % :file) results)))
+      (is (= [["spec-0012"] []] (mapv :spec results)))
+      (is (= ["passed" "unknown"] (mapv :status results)))
       (is (= 1 (count unreadable))))))
 
-(deftest spec-findings
-  (let [f (ratify/spec-findings {:refusals [{:file "a.feature" :line 2 :rule "unknown-keyword" :message "no"}]
-                                 :scenarios [{:ids [] :file "b.feature" :line 7 :name "x"}
-                                             {:ids ["spec-0001"] :file "b.feature" :line 12 :name "y"}]})]
-    (is (= #{"spec-unknown-keyword" "unstamped-scenario"} (rules f)))
-    (is (= ["b.feature" 7] ((juxt :file :line) (first (filter #(= "unstamped-scenario" (:rule %)) f)))))))
+(deftest read-spec-finds-ids-planned-work-and-unstamped-scenarios
+  (let [d (tmp)]
+    (write! d "dhf/spec/x/a.feature"
+            (str "@UN-001\nFeature: A\n\n  @spec-0012 @e2e\n  Scenario: One\n    Given a\n\n"
+                 "  @e2e @wip @spec-0013\n  Scenario: Two\n    Given b\n\n"
+                 "  @e2e\n  Scenario: Three\n    Given c\n"))
+    (let [{:keys [scenarios findings]} (ratify/read-spec d "dhf/spec" "spec")]
+      (is (= [["spec-0012" false] ["spec-0013" true]] (mapv (juxt :id :wip?) scenarios)))
+      (is (= [["dhf/spec/x/a.feature" 13 "ratify-unstamped-scenario"]] (mapv (juxt :file :line :rule) findings))))))
 
-(deftest ratified-text
-  (let [m (ratify/ratified-map {:cut "spec-3" :room-tree ratify/empty-tree :outcome :passed
-                                :checkout "dhf/cycles/03/build"})
-        t (ratify/ratified-text m)]
-    (is (= [:cut :room-tree :outcome :checkout] (keys m)))
-    (is (= m (edn/read-string t)))
-    (is (re-find #"^\{:cut \"spec-3\"\n :room-tree" t)))
-  (is (= :reason (last (keys (ratify/ratified-map {:cut "c" :room-tree "t" :outcome :refused :checkout "b"
-                                                   :reason "why"}))))))
+(deftest tree-hash-is-the-git-tree-of-the-implementation-paths
+  (let [d (tmp)]
+    (is (= "4b825dc642cb6eb9a060e54bf8d69288fbee4904" (ratify/tree-hash d ["src" "test.clj"])))
+    (write! d "notes.txt" "outside every path")
+    (is (= "4b825dc642cb6eb9a060e54bf8d69288fbee4904" (ratify/tree-hash d ["src" "test.clj"])))
+    (write! d "src/a.clj" "(ns a)\n")
+    (let [h (ratify/tree-hash d ["src" "test.clj"])]
+      (is (re-matches #"[0-9a-f]{40}" h))
+      (is (not= "4b825dc642cb6eb9a060e54bf8d69288fbee4904" h))
+      (is (= h (ratify/tree-hash d ["src" "test.clj"])) "the same files hash the same"))))
 
-(deftest tree-hash
-  (let [d (str (fs/create-temp-dir))]
-    (p/shell {:dir d :out :string :err :string} "git" "init" "-q")
-    (testing "no implementation: the empty tree, in full"
-      (is (= "4b825dc642cb6eb9a060e54bf8d69288fbee4904" (ratify/tree-hash d ["src" "test.clj"]))))
-    (testing "only the implementation paths count, ignored files included"
-      (spit (str (fs/file d ".gitignore")) "test.clj\n")
-      (spit (str (fs/file d "test.clj")) "x\n")
-      (spit (str (fs/file d "README.md")) "not implementation\n")
-      (let [h (ratify/tree-hash d ["src" "test.clj"])]
-        (is (re-matches #"[0-9a-f]{40}" h))
-        (is (not= ratify/empty-tree h))
-        (spit (str (fs/file d "README.md")) "changed\n")
-        (is (= h (ratify/tree-hash d ["src" "test.clj"])))))))
+(deftest replace-implementation-never-merges
+  (let [build (tmp) room (tmp)]
+    (write! build "src/old.clj" "old")
+    (write! build "src/kept.clj" "build's")
+    (write! build "test.clj" "build's tests")
+    (write! build "dhf/spec/a.feature" "the cut's")
+    (write! room "src/kept.clj" "room's")
+    (write! room "dhf/spec/a.feature" "edited")
+    (ratify/replace-implementation! build room ["src" "test.clj"])
+    (is (not (fs/exists? (fs/file build "src/old.clj"))))
+    (is (= "room's" (slurp (str (fs/file build "src/kept.clj")))))
+    (is (not (fs/exists? (fs/file build "test.clj"))) "a path the room lacks is absent")
+    (is (= "the cut's" (slurp (str (fs/file build "dhf/spec/a.feature")))))))
+
+(deftest a-missing-cycle-cannot-run
+  (let [d (tmp)
+        e (try (ratify/read-cycle d "dhf/cycles/03/cycle.edn") nil
+               (catch clojure.lang.ExceptionInfo e e))]
+    (is (::command/cannot-run (ex-data e)))
+    (is (str/includes? (ex-message e) "dhf/cycles/03/cycle.edn"))))
+
+(deftest a-cycle-naming-no-cut-cannot-run
+  (let [d (tmp)]
+    (write! d "dhf/cycles/03/cycle.edn" "{:scope :project}")
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"names no :cut"
+                          (ratify/read-cycle d "dhf/cycles/03/cycle.edn")))))

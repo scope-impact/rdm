@@ -1,259 +1,278 @@
 (ns steps.measurement-scorer
   "Step definitions for dhf/spec/measurement/scorer.feature.
 
-  A scoring fixture is a project holding only the configuration and cycle 03:
-  its cycle.edn (steps.measurement-cycle's default, changed by :cycle-overrides),
-  its checklist.json (the items :items), its ratified.edn (:ratified, or none
-  when it is :none) and the verdicts file verdicts.edn (:verdicts, written as
-  EDN, or :verdicts-text as is). Each Given changes the context and rebuilds
-  the fixture (`fixture!`), so Givens compose. The scope scenarios cut a copy
-  of the room's allow-list holding one small feature file per component."
+  Declaring a cycle (its scope, the checklist and ratify on it) uses cycle
+  projects (steps.measurement-cycle). Scoring needs no repository: a scoring
+  fixture is a project holding the room's configuration and cycle 03, built
+  from ctx :scoring, which the Givens change before `scoring!` writes it:
+    :cycle     cycle.edn (steps.measurement-cycle/default-cycle)
+    :items     the checklist's item ids (spec-0012, spec-0014)
+    :ratified  ratified.edn, or nil for none (passed on the empty tree)
+    :verdicts  the verdicts file's text (each item passed)"
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.kernel-command :as kc]
+            [steps.measurement-checklist :as mcl]
             [steps.measurement-cycle :as mc]
             [steps.support :as s]))
 
 (defn- needs-scorer! [] (s/needs-built! 'rdm-spec.measurement.scorer))
 
-(def score-path (mc/cycle-path "03" "score.edn"))
+(defn- run [ctx] (or (:run ctx) (s/fail! "no command was run")))
+
+(def empty-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904")
 
 (def evidence
   {"spec-0012" "check exited 1 naming the view"
    "spec-0014" "no finding was printed"})
 
-(defn item-ids [n] (mapv #(format "spec-%04d" (+ 601 %)) (range n)))
+(defn verdicts-text [vs] (pr-str (vec vs)))
 
-(def defaults
-  {:items ["spec-0012" "spec-0014"]
-   :ratified {:cut "spec-3" :room-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904" :outcome :passed
-              :checkout "dhf/cycles/03/build"}
-   :verdicts [{:id "spec-0012" :verdict :pass :evidence (evidence "spec-0012")}
-              {:id "spec-0014" :verdict :fail :evidence (evidence "spec-0014")}]
-   :cycle-overrides {}})
+(defn- passing [ids]
+  (verdicts-text (for [id ids] {:id id :verdict :pass :evidence (get evidence id (str "the build did what " id " says"))})))
 
-(defn- fixture!
-  [ctx]
-  (needs-scorer!)
-  (let [ctx (merge defaults ctx)
-        dir (or (:dir ctx) (s/project!))]
-    (mc/write-cycle! dir "03" (:cycle-overrides ctx))
-    (s/write! dir (mc/cycle-path "03" "checklist.json")
-              (json/generate-string
-               (array-map "cycle" "03" "cut" "spec-3"
-                          "items" (vec (for [id (:items ctx)]
-                                         (array-map "id" id "title" (str "The scenario " id) "context" "architecture"
-                                                    "component" "Lint" "level" "e2e")))
-                          "planned" [])
-               {:pretty true}))
-    (let [rf (fs/file dir (mc/cycle-path "03" "ratified.edn"))]
-      (if (= :none (:ratified ctx))
-        (fs/delete-if-exists rf)
-        (s/write! dir (mc/cycle-path "03" "ratified.edn") (pr-str (:ratified ctx)))))
-    (s/write! dir "verdicts.edn" (or (:verdicts-text ctx) (pr-str (:verdicts ctx))))
-    (fs/delete-if-exists (fs/file dir score-path))
-    (assoc ctx :dir dir)))
+(def default-scoring
+  {:cycle mc/default-cycle
+   :items ["spec-0012" "spec-0014"]
+   :ratified {:cut "spec-3" :room-tree empty-tree :outcome :passed :checkout "dhf/cycles/03/build"}})
 
-(defn- score [ctx]
-  (mc/exits! ctx 0)
-  (mc/read-edn-file ctx score-path))
+(defn- scoring [ctx] (merge default-scoring {:verdicts (passing (:items (merge default-scoring (:scoring ctx))))}
+                            (:scoring ctx)))
 
-(defn- refused!
-  "The run exited `code`, wrote no score.edn and says `re`."
-  [ctx code re what]
-  (mc/exits! ctx code)
-  (mc/wrote-nothing! ctx score-path)
-  (mc/says! ctx re what))
+(defn scoring!
+  "ctx with its scoring fixture (re)written from :scoring changed by `f`."
+  ([ctx] (scoring! ctx identity))
+  ([ctx f]
+   (needs-scorer!)
+   (let [sc (f (scoring ctx))
+         dir (or (:dir ctx) (s/project!))
+         cdir (fs/file dir "dhf/cycles/03")]
+     (when (fs/exists? cdir) (fs/delete-tree cdir))
+     (s/write! dir (mc/cycle-path "03" "cycle.edn") (pr-str (:cycle sc)))
+     (s/write! dir (mc/cycle-path "03" "checklist.json")
+               (json/generate-string {:cycle "03" :cut (get-in sc [:cycle :cut]) :planned []
+                                      :items (for [id (:items sc)]
+                                               {:id id :title (str "The scenario " id) :context "architecture"
+                                                :component "Lint" :level "e2e"})}
+                                     {:pretty true}))
+     (when-let [r (:ratified sc)] (s/write! dir (mc/cycle-path "03" "ratified.edn") (pr-str r)))
+     (s/write! dir "verdicts.edn" (:verdicts sc))
+     (assoc ctx :dir dir :scoring sc :cycle "03"))))
+
+(defn- score-file [ctx] (fs/file (:dir ctx) (mc/cycle-path "03" "score.edn")))
+
+(defn read-score [ctx]
+  (let [f (score-file ctx)]
+    (s/check! (fs/exists? f) (str "no " (mc/cycle-path "03" "score.edn") "\n" (s/show (run ctx))))
+    (edn/read-string (slurp (str f)))))
+
+(defn- refused! [ctx code re what]
+  (let [r (run ctx)]
+    (s/check! (= code (:exit r)) (str "expected exit " code "\n" (s/show r)))
+    (s/check! (re-find re (:err r)) (str "the error stream does not say " what "\n" (s/show r)))
+    (s/check! (not (fs/exists? (score-file ctx))) "a score.edn was written")))
 
 ;; ---------------------------------------------------------------------------
 ;; A cycle is one directory, declared before it is ratified
 
-(def scope-files
-  "One small feature file per component, so each scope selects its own items."
-  {"dhf/spec/architecture/lint.feature" ["Lint" ["spec-0012"]]
-   "dhf/spec/verification/status.feature" ["Status" ["spec-0501" "spec-0502"]]
-   "dhf/spec/knowledge/wiki.feature" ["Wiki" ["spec-0511"]]
-   "dhf/spec/spec/parser.feature" ["Parser" ["spec-0521" "spec-0522"]]
-   "dhf/spec/spec/check.feature" ["Spec check" ["spec-0531"]]})
+(def scoped-files
+  "A spec over four contexts, for the scope scenarios."
+  {mc/lint-feature [{:id "spec-0301" :title "A lint scenario"}]
+   "dhf/spec/verification/status.feature" [{:id "spec-0302" :title "A status scenario"}
+                                           {:id "spec-0303" :title "A planned status scenario" :wip? true}]
+   "dhf/spec/verification/trace.feature" [{:id "spec-0304" :title "A trace scenario" :level "contract"}]
+   "dhf/spec/spec/parser.feature" [{:id "spec-0305" :title "A parser scenario"}]
+   "dhf/spec/knowledge/wiki.feature" [{:id "spec-0306" :title "A wiki scenario"}]})
 
-(defn- ids-of [& files] (vec (sort (mapcat #(second (scope-files %)) files))))
+(def owners
+  {"spec-0301" [:architecture :architecture/lint] "spec-0302" [:verification :verification/status]
+   "spec-0303" [:verification :verification/status] "spec-0304" [:verification :verification/trace]
+   "spec-0305" [:spec :spec/parser] "spec-0306" [:knowledge :knowledge/wiki]})
 
-(def scope-items
-  {:project (vec (sort (mapcat second (vals scope-files))))
-   {:context :verification} (ids-of "dhf/spec/verification/status.feature")
-   {:component :spec/parser} (ids-of "dhf/spec/spec/parser.feature")
-   [{:context :knowledge} {:component :spec/parser}] (ids-of "dhf/spec/knowledge/wiki.feature"
-                                                             "dhf/spec/spec/parser.feature")})
+(defn- in-scope [scope]
+  (let [parts (cond (= :project scope) nil (map? scope) [scope] :else scope)]
+    (sort (for [[id [c k]] owners
+                :when (or (= :project scope)
+                          (some #(or (= c (:context %)) (= k (:component %))) parts))]
+            id))))
 
-(defn- scope-project! [ctx]
-  (mc/cycle-project! ctx (into {} (for [[f [feature ids]] scope-files]
-                                    [f (mc/feature-text feature (for [id ids] {:id id :title (str "Scenario " id)}))]))))
-
-(defn- checklist-ids [ctx]
-  (let [f (fs/file (:dir ctx) (mc/cycle-path "03" "checklist.json"))]
-    (s/check! (fs/exists? f) (str "no checklist.json\n" (s/show (mc/the-run ctx))))
-    (mapv :id (:items (json/parse-string (slurp (str f)) true)))))
+(defn- scoped-project! [ctx cycle-text]
+  (s/needs-built! 'rdm-spec.measurement.checklist)
+  (let [dir (mc/project! scoped-files)
+        cycle (edn/read-string cycle-text)]
+    (mc/cut! dir (:cut cycle))
+    (s/write! dir (mc/cycle-path "03" "cycle.edn") cycle-text)
+    (assoc ctx :dir dir :room (mc/room!) :cycle "03" :declared cycle)))
 
 (defstep #"dhf/cycles/03/cycle\.edn holds:"
-  (fn [ctx doc]
-    (s/needs-built! 'rdm-spec.measurement.checklist 'rdm-spec.ratification.ratify)
-    (let [ctx (scope-project! ctx)]
-      (mc/write-cycle-text! (:dir ctx) "03" doc)
-      (assoc ctx :scope (:scope (edn/read-string doc))))))
+  (fn [ctx doc] (scoped-project! ctx doc)))
 
 (defstep #"\"rdm-spec checklist 03\" and \"rdm-spec ratify ROOM 03\" are run"
   (fn [ctx]
-    (let [c (kc/run-line ctx "checklist 03")
-          r (kc/run-line c "ratify ROOM 03")]
-      (assoc r :runs {:checklist (:run c) :ratify (:run r)}))))
+    (let [ctx (kc/run-line ctx "checklist 03")
+          checklist-run (:run ctx)
+          ctx (kc/run-line ctx "ratify ROOM 03")]
+      (assoc ctx :runs {:checklist checklist-run :ratify (:run ctx)}))))
 
 (defstep #"both work on the cut spec-3, and the checklist holds the items of that scope"
   (fn [ctx]
     (let [{:keys [checklist ratify]} (:runs ctx)
-          ratified (mc/read-edn-file ctx (mc/cycle-path "03" "ratified.edn"))
-          c (json/parse-string (slurp (str (fs/file (:dir ctx) (mc/cycle-path "03" "checklist.json")))) true)]
-      (s/check! (zero? (:exit checklist)) (str "checklist:\n" (s/show checklist)))
-      (s/check! (#{0 1} (:exit ratify)) (str "ratify did not run:\n" (s/show ratify)))
-      (s/check! (= "spec-3" (:cut c)) (str "the checklist's cut is " (:cut c)))
-      (s/check! (= "spec-3" (:cut ratified)) (str "ratified.edn's cut is " (:cut ratified)))
-      (s/check! (= (scope-items (:scope ctx)) (mapv :id (:items c)))
-                (str "the checklist holds " (pr-str (mapv :id (:items c))) ", the scope "
-                     (pr-str (scope-items (:scope ctx))))))))
+          _ (s/check! (zero? (:exit checklist)) (str "the checklist failed\n" (s/show checklist)))
+          {:keys [cut items planned]} (mcl/read-checklist (assoc ctx :run checklist))
+          rf (fs/file (:dir ctx) (mc/cycle-path "03" "ratified.edn"))]
+      (s/check! (= "spec-3" cut) (str "the checklist is of the cut " cut))
+      (s/check! (= (in-scope (:scope (:declared ctx))) (sort (map :id (concat items planned))))
+                (str "the checklist holds " (pr-str (map :id (concat items planned))) ", not the scope's"))
+      (s/check! (fs/exists? rf) (str "ratify wrote no ratified.edn\n" (s/show ratify)))
+      (s/check! (= "spec-3" (:cut (edn/read-string (slurp (str rf))))) "ratify did not work on spec-3"))))
 
 (defstep #"dhf/cycles/03/cycle\.edn holds the scope (.+)"
   (fn [ctx scope]
-    (s/needs-built! 'rdm-spec.measurement.checklist)
-    (let [scope (edn/read-string scope)
-          ctx (scope-project! ctx)]
-      (mc/write-cycle! (:dir ctx) "03" {:scope scope})
-      (assoc ctx :scope scope))))
+    (scoped-project! ctx (pr-str (assoc mc/default-cycle :scope (edn/read-string scope))))))
 
 (defstep #"it accepts the scope"
   (fn [ctx]
-    (mc/exits! ctx 0)
-    (s/check! (= (scope-items (:scope ctx)) (checklist-ids ctx))
-              (str "the checklist holds " (pr-str (checklist-ids ctx)) ", the scope " (pr-str (scope-items (:scope ctx)))))))
+    (let [r (run ctx)]
+      (s/check! (zero? (:exit r)) (str "expected exit 0\n" (s/show r)))
+      (let [{:keys [items planned]} (mcl/read-checklist ctx)]
+        (s/check! (= (in-scope (:scope (:declared ctx))) (sort (map :id (concat items planned))))
+                  (str "the checklist holds " (pr-str (map :id (concat items planned)))))))))
 
 (defstep #"cycle 03's checklist holds 2 items and its ratification passed on the room tree ([0-9a-f]{40})"
   (fn [ctx tree]
-    (fixture! (assoc ctx :items ["spec-0012" "spec-0014"]
-                     :ratified (assoc (:ratified defaults) :room-tree tree)))))
+    (scoring! ctx #(-> % (assoc :items ["spec-0012" "spec-0014"]) (assoc-in [:ratified :room-tree] tree)))))
 
 (defstep #"a verdicts file grading spec-0012 pass and spec-0014 fail"
-  (fn [ctx] (fixture! (assoc ctx :verdicts (:verdicts defaults)))))
+  (fn [ctx]
+    (scoring! ctx #(assoc % :verdicts (verdicts-text [{:id "spec-0012" :verdict :pass :evidence (evidence "spec-0012")}
+                                                      {:id "spec-0014" :verdict :fail :evidence (evidence "spec-0014")}])))))
 
 (defstep #"dhf/cycles/03/score\.edn holds:"
   (fn [ctx doc]
-    (let [got (score ctx)
-          want (edn/read-string doc)
-          text (slurp (str (fs/file (:dir ctx) score-path)))
-          order #(mapv second (re-seq #"(?m)(?:^\{|^ )(:[a-z-]+) " %))]
-      (s/check! (= want got) (str "score.edn holds\n" (pr-str got) "\nexpected\n" doc))
-      (s/check! (= (order doc) (order text)) (str "score.edn's keys are in the order " (pr-str (order text)))))))
+    (let [r (run ctx)]
+      (s/check! (zero? (:exit r)) (str "expected exit 0\n" (s/show r)))
+      (let [got (read-score ctx) want (edn/read-string doc)]
+        (s/check! (= want got) (str "score.edn holds\n" (pr-str got) "\nexpected\n" (pr-str want)))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Verdicts have one shape
 
 (defstep #"a verdicts file holding:"
-  (fn [ctx doc] (fixture! (assoc ctx :verdicts-text doc :verdicts (edn/read-string doc)))))
+  (fn [ctx doc] (scoring! ctx #(assoc % :verdicts doc))))
 
 (defstep #"both verdicts are filed"
   (fn [ctx]
-    (let [sc (score ctx)]
-      (s/check! (= (:verdicts ctx) (:items sc)) (str "score.edn's items: " (pr-str (:items sc)))))))
+    (let [r (run ctx)]
+      (s/check! (zero? (:exit r)) (str "expected exit 0\n" (s/show r)))
+      (let [vs (edn/read-string (get-in ctx [:scoring :verdicts]))
+            items (:items (read-score ctx))]
+        (s/check! (= vs (map #(select-keys % [:id :verdict :evidence]) items))
+                  (str "score.edn's items are " (pr-str items)))))))
 
 (def malformed
-  {"is a map, not a vector" [(pr-str {"spec-0012" :pass}) #"(?i)vector"]
-   "grades spec-0012 twice" [(pr-str [{:id "spec-0012" :verdict :pass :evidence "a"}
-                                      {:id "spec-0012" :verdict :fail :evidence "b"}])
-                             #"spec-0012.*(twice|2 times)"]
-   "gives spec-0012 the verdict :maybe" [(pr-str [{:id "spec-0012" :verdict :maybe :evidence "a"}]) #"spec-0012.*:maybe"]
-   "gives spec-0012 no evidence" [(pr-str [{:id "spec-0012" :verdict :pass}]) #"spec-0012.*evidence"]})
+  {"is a map, not a vector" [(pr-str {:id "spec-0012" :verdict :pass :evidence "it passed"}) #"not a map" "that it is a map"]
+   "grades spec-0012 twice" [(verdicts-text [{:id "spec-0012" :verdict :pass :evidence "it passed"}
+                                             {:id "spec-0012" :verdict :fail :evidence "it failed"}])
+                             #"spec-0012 is graded 2 times" "that spec-0012 is graded twice"]
+   "gives spec-0012 the verdict :maybe" [(verdicts-text [{:id "spec-0012" :verdict :maybe :evidence "unsure"}])
+                                         #"spec-0012 has the verdict :maybe" "the verdict :maybe"]
+   "gives spec-0012 no evidence" [(verdicts-text [{:id "spec-0012" :verdict :pass}])
+                                  #"spec-0012 gives no evidence" "that spec-0012 gives no evidence"]})
 
 (defstep #"a verdicts file that (.+)"
-  (fn [ctx what]
-    (let [[text re] (or (malformed what) (s/fail! (str "no such malformed verdicts file: " what)))]
-      (fixture! (assoc ctx :verdicts-text text :malformed re)))))
+  (fn [ctx how]
+    (let [[text re what] (or (get malformed how) (s/fail! (str "no fixture for a verdicts file that " how)))]
+      (assoc (scoring! ctx #(assoc % :verdicts text)) :says [re what]))))
 
 (defstep #"it exits 1, writes nothing, and says what is malformed"
-  (fn [ctx] (refused! ctx 1 (:malformed ctx) (str "what is malformed (" (:malformed ctx) ")"))))
+  (fn [ctx]
+    (let [[re what] (:says ctx)]
+      (refused! ctx 1 (re-pattern (str "(?m)^verdicts\\.edn:\\d+: verdicts-malformed: .*" re)) what))))
 
 ;; ---------------------------------------------------------------------------
 ;; The instrument refuses to record what it did not measure
 
 (defstep #"a verdicts file with no verdict in it"
-  (fn [ctx] (fixture! (assoc ctx :verdicts-text "[]\n"))))
+  (fn [ctx] (scoring! ctx #(assoc % :verdicts "[]"))))
 
 (defstep #"it exits 2, writes nothing, and says the grading did not happen"
-  (fn [ctx] (refused! ctx 2 #"grading did not happen" "that the grading did not happen")))
+  (fn [ctx]
+    (refused! ctx 2 #"cannot-run: .*the grading did not happen" "that the grading did not happen")
+    (s/check! (str/blank? (:out (run ctx))) "a refusal printed a result")))
 
 (defstep #"cycle 03's checklist holds (\d+) items"
-  (fn [ctx n] (fixture! (assoc ctx :items (item-ids (parse-long n))))))
+  (fn [ctx n]
+    (scoring! ctx #(assoc % :items (mapv :id (mcl/numbered 12 (parse-long n)))))))
 
 (defstep #"a verdicts file grading (\d+) of them, all passed"
   (fn [ctx n]
-    (let [graded (take (parse-long n) (:items ctx))]
-      (fixture! (assoc ctx :verdicts (vec (for [id graded] {:id id :verdict :pass :evidence (str id " passed")}))
-                       :ungraded (vec (drop (parse-long n) (:items ctx))))))))
+    (scoring! ctx #(assoc % :verdicts (passing (take (parse-long n) (:items %)))))))
 
 (defstep #"the score is (\d+) of (\d+), and the ungraded item is recorded as failed"
   (fn [ctx passed scored]
-    (let [sc (score ctx)]
-      (s/check! (= [(parse-long passed) (parse-long scored)] [(:passed sc) (:scored sc)])
-                (str "the score is " (:passed sc) " of " (:scored sc)))
-      (doseq [id (:ungraded ctx)]
-        (s/check! (some #(and (= id (:id %)) (= :fail (:verdict %))) (:items sc))
-                  (str "the ungraded " id " is not recorded as failed: " (pr-str (:items sc))))))))
+    (let [r (run ctx)]
+      (s/check! (zero? (:exit r)) (str "expected exit 0\n" (s/show r)))
+      (let [{:keys [items] :as sc} (read-score ctx)
+            graded (set (map :id (edn/read-string (get-in ctx [:scoring :verdicts]))))
+            ungraded (remove #(graded (:id %)) items)]
+        (s/check! (= [(parse-long passed) (parse-long scored)] [(:passed sc) (:scored sc)])
+                  (str "the score is " (:passed sc) " of " (:scored sc)))
+        (s/check! (and (= 1 (count ungraded)) (= :fail (:verdict (first ungraded))))
+                  (str "the ungraded items are recorded as " (pr-str ungraded)))))))
 
 (defstep #"a verdicts file grading spec-0999, which is not on cycle 03's checklist"
   (fn [ctx]
-    (fixture! (assoc ctx :verdicts (conj (:verdicts defaults) {:id "spec-0999" :verdict :pass :evidence "it passed"})))))
+    (scoring! ctx #(assoc % :verdicts (verdicts-text [{:id "spec-0012" :verdict :pass :evidence "it passed"}
+                                                      {:id "spec-0999" :verdict :pass :evidence "it passed"}])))))
 
 (defstep #"it exits 1, writes nothing, and names spec-0999"
-  (fn [ctx] (refused! ctx 1 #"spec-0999" "spec-0999")))
+  (fn [ctx] (refused! ctx 1 #"(?m)^verdicts\.edn:\d+: \S+: spec-0999 is not on the cycle's checklist" "spec-0999")))
 
 ;; ---------------------------------------------------------------------------
 ;; The builder neither grades nor reads its own score
 
 (defstep #"cycle 03 declares builder-a as an agent builder, grader-b as an agent grader and Sami as a human spec owner"
   (fn [ctx]
-    (fixture! (assoc ctx :cycle-overrides {:builder {:name "builder-a" :actor :agent}
-                                           :grader {:name "grader-b" :actor :agent}
-                                           :spec-owner {:name "Sami" :actor :human}}))))
+    (scoring! ctx #(assoc % :cycle (merge mc/default-cycle {:builder {:name "builder-a" :actor :agent}
+                                                            :grader {:name "grader-b" :actor :agent}
+                                                            :spec-owner {:name "Sami" :actor :human}})))))
 
 (defstep #"score\.edn names each of them with their role and whether human or agent"
   (fn [ctx]
-    (let [sc (score ctx)
-          want {:builder {:name "builder-a" :actor :agent}
-                :grader {:name "grader-b" :actor :agent}
-                :spec-owner {:name "Sami" :actor :human}}]
-      (s/check! (= want (select-keys sc (keys want))) (str "score.edn names " (pr-str (select-keys sc (keys want))))))))
+    (let [r (run ctx)]
+      (s/check! (zero? (:exit r)) (str "expected exit 0\n" (s/show r)))
+      (let [sc (read-score ctx)
+            want {:builder {:name "builder-a" :actor :agent}
+                  :grader {:name "grader-b" :actor :agent}
+                  :spec-owner {:name "Sami" :actor :human}}]
+        (s/check! (= want (select-keys sc (keys want))) (str "score.edn names " (pr-str (select-keys sc (keys want)))))))))
 
 (defstep #"cycle 03 declares builder-a as both its builder and its grader"
   (fn [ctx]
-    (fixture! (assoc ctx :cycle-overrides {:builder {:name "builder-a" :actor :agent}
-                                           :grader {:name "builder-a" :actor :agent}}))))
+    (scoring! ctx #(assoc-in % [:cycle :grader] {:name "builder-a" :actor :agent}))))
 
 (defstep #"it exits 1, writes nothing, and says the builder may not grade or read its own score"
-  (fn [ctx] (refused! ctx 1 #"builder may not grade or read its own score" "the builder may not grade its own score")))
+  (fn [ctx] (refused! ctx 1 #"the builder may not grade or read its own score" "that the builder may not grade")))
 
 (defstep #"cycle 03 declares a builder and a grader and no spec owner"
-  (fn [ctx] (fixture! (assoc ctx :cycle-overrides {:spec-owner nil}))))
+  (fn [ctx]
+    (scoring! ctx #(update % :cycle dissoc :spec-owner))))
 
 (defstep #"it exits 1, writes nothing, and names the missing role"
-  (fn [ctx] (refused! ctx 1 #"(?i)spec.owner" "the spec owner")))
+  (fn [ctx] (refused! ctx 1 #"names no spec owner \(:spec-owner\)" "the missing spec owner")))
 
 ;; ---------------------------------------------------------------------------
 ;; Only a ratified build is scored
 
-(defstep #"dhf/cycles/03/ratified\.edn (holds :outcome :refused|does not exist)"
-  (fn [ctx state]
-    (fixture! (assoc ctx :ratified (if (str/starts-with? state "holds")
-                                     (assoc (:ratified defaults) :outcome :refused :reason "the test command failed")
-                                     :none)))))
+(defstep #"dhf/cycles/03/ratified\.edn holds :outcome :refused"
+  (fn [ctx]
+    (scoring! ctx #(update % :ratified assoc :outcome :refused :reason "the test command failed"))))
+
+(defstep #"dhf/cycles/03/ratified\.edn does not exist"
+  (fn [ctx] (scoring! ctx #(assoc % :ratified nil))))
 
 (defstep #"it exits 1, writes nothing, and says the cycle has no passing ratification"
-  (fn [ctx] (refused! ctx 1 #"no passing ratification" "that the cycle has no passing ratification")))
+  (fn [ctx] (refused! ctx 1 #"the cycle has no passing ratification" "that the cycle has no passing ratification")))
