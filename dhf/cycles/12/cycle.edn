@@ -1,0 +1,18 @@
+;; Cycle 12: cycle 11's findings folded in, cut as spec-16 (tagged locally).
+;; Run by cycle 10's release (9a7a5ae); cycle 11's build is the cut's
+;; implementation. Its scopes are what `rdm-spec scopes spec-15 spec-16`
+;; listed, plus two the person judged the shared files reach: kernel/command
+;; (the README's rules on Givens and on Thens that nothing changed, both kept
+;; by its shared steps) and spec/parser (SpecParsed's keys in events.edn).
+;; Three builders in parallel.
+{:cut "spec-16"
+ :scope [{:component :compliance/audit}
+         {:component :kernel/command}
+         {:component :measurement/scoreboard}
+         {:component :measurement/scorer}
+         {:component :publishing/site}
+         {:component :spec/parser}
+         {:component :verification/status}]
+ :builder {:name "builder subagents, one per group of scopes" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
