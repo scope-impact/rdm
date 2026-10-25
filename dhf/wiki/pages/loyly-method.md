@@ -67,6 +67,11 @@ states it in its own readable record, never its tools, which are fenced.
   than a server.
 - **A cycle may regenerate one bounded context or one component,** not only the
   whole application.
+- **The oracle lives outside the repository,** one file in one artifact read
+  by its digest, where Löyly keeps `harness/oracle` in the repository and
+  fences it.[^fenced] No allow-list can leak goldens that are not in the
+  repository, and a digest names exactly one set of bytes, so a golden cannot
+  change unseen.
 
 Each departure is recorded in `dhf/decisions/adr-0002-spec-first-regeneration.md`.
 
@@ -79,4 +84,5 @@ Each departure is recorded in `dhf/decisions/adr-0002-spec-first-regeneration.md
 [^checklist]: `loyly:harness/spec.feature@17d68d2`, "The checklist is one item per stamped scenario, and the spec is its only author".
 [^stops]: `loyly:harness/spec.feature@17d68d2`, "An unstamped scenario stops the checklist rather than shrinking it".
 [^stderr]: `loyly:harness/spec.feature@17d68d2`, "The skip lines go to stderr, so stdout is the checklist alone".
+[^fenced]: `loyly:harness/README.md@17d68d2`, "The idea in five lines" 2.
 [^score]: `loyly:harness/spec.feature@17d68d2`, "Zero verdicts means the grading did not happen, not that everything failed".

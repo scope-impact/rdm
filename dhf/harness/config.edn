@@ -27,7 +27,7 @@
  ;; The words neither the wiki nor the spec may use: the stack, which lives in
  ;; dhf/harness/stack.md (dhf/spec/spec/check.feature).
  :stack-words ["Babashka" "Clojure" "Python" "Mermaid" "mmdr" "MkDocs" "GitHub Actions" "pytest"
-                "Pandoc" "Typst" "pdftotext"]
+                "Pandoc" "Typst" "pdftotext" "ORAS"]
 
  ;; Where a project's step definitions for "rdm-spec run" live
  ;; (dhf/spec/kernel/runner.feature). rdm-spec's own are the builder's, under
@@ -51,10 +51,18 @@
  ;; The clean room is an allow-list (dhf/spec/regeneration/fence.feature): these
  ;; paths, plus the implementation a scoped regeneration keeps, and nothing
  ;; else. Giving the builder no network is the builder's obligation.
- ;; dhf/harness is allowed file by file: its oracle/ holds the instrument's
- ;; goldens, the measurements a builder of the instrument must never see
- ;; (loyly:harness/README.md@17d68d2, "The idea in five lines" 2; Löyly fences
- ;; its own harness/oracle, dhf/raw/sources.edn).
+ ;; dhf/harness is allowed file by file. The instrument's goldens, the
+ ;; measurements a builder of the instrument must never see
+ ;; (loyly:harness/README.md@17d68d2, "The idea in five lines" 2), are not in
+ ;; the repository at all: see :oracle.
+ ;; The oracle (dhf/spec/measurement/oracle.feature): one oracle.edn in one
+ ;; artifact, read by its digest only. Locally, ORACLE_LAYOUT names an artifact
+ ;; layout holding it; otherwise it is pulled from the repository. A golden
+ ;; changes only by `rdm-spec oracle record --reason R`, which stores a new
+ ;; artifact and rewrites :digest here.
+ :oracle {:repository "ghcr.io/scope-impact/rdm-spec-oracle"
+          :digest "sha256:cf29099c1bd3fb0dd61b45af285fca7c4652000768fb7497942c5b373d1a4772"}
+
  :clean-room {:allow ["dhf/spec" "dhf/harness/config.edn" "dhf/harness/stack.md"
                       "dhf/raw" "dhf/wiki" "dhf/views"
                       "dhf/decisions/adr-0002-spec-first-regeneration.md"]}

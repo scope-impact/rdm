@@ -195,14 +195,22 @@ and `score.edn` beside it, and `test.log`, the test command's output
 (ratify). The checkout is an export of the cut: its files, and no history.
 
 **Oracle (instrument)**: `rdm-spec oracle`: the checklist, the scorer and the
-scoreboard run on recorded fixture cycles under `dhf/harness/oracle/` and
-compared with their recorded goldens. Its layout: `project/` (the one fixture
-project), `cycles/NN/` (`cycle.edn`, `ratified.edn`, `verdicts.edn`),
-`goldens/NN/` (`checklist.json`, `score.edn`), `goldens/scoreboard-NN-MM.edn`
-and `RECORDED.md`. No `dhf/harness/oracle/` at all is no oracle; one holding
-no fixture cycle is a finding, since it judged nothing. It is the gate before fence and ratify:
-the command runs it first and stops the task when it has findings.
-A golden is re-recorded only with a stated reason, kept in `RECORDED.md`. It
+scoreboard run on recorded fixture cycles and compared with their recorded
+goldens. The oracle is one file, `oracle.edn`, in one artifact kept outside
+the repository and named by the configuration's `:oracle {:repository R
+:digest D}`; it is read by its digest only, from the registry repository R, or
+from the local artifact layout the environment variable `ORACLE_LAYOUT` names
+when set. `oracle.edn` holds `:project` (the one fixture project, each file's
+path and text, committed in a scratch repository and tagged with every cut
+the cycles name), `:cycles` (`{"NN" {:cycle :ratified :verdicts}}`), one key
+per instrument component with its goldens (`:checklist {"NN" ...}`,
+`:scorer {"NN" ...}`, `:scoreboard {"NN-MM" ...}`, compared as data) and
+`:recorded`. No `:oracle` in the configuration is no oracle; one holding no
+fixture cycle is a finding, since it judged nothing; one that cannot be read
+cannot run (exit 2). It is the gate before fence and ratify: the command runs
+it first and stops the task when it has findings. A golden is re-recorded
+only with a stated reason: a new artifact, its entry in `:recorded`, and the
+configuration's new digest, committed. It
 judges the instrument; the Allure results remain the oracle of a project's
 scenarios.
 

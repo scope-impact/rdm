@@ -18,4 +18,5 @@ loyly:docs/wow/invariants.md@17d68d2, INV-2). Decided in
 | Diagram source and render | Mermaid C4 (`dhf/views/<key>.mmd`), rendered to SVG (`dhf/views/<key>.svg`) by `mmdr` (mermaid-rs-renderer) |
 | Site builder | MkDocs, `mkdocs build --strict -f site-src/mkdocs.yml`; publish writes the Markdown and `mkdocs.yml` under `site-src/`, HTML goes to `site/` |
 | Audit copy PDFs | Pandoc writes Typst (`pandoc -s -t typst`, with a main font given, `-V mainfont="DejaVu Sans"`, as Pandoc's own template names none; `#set document(date: none)` first, so the same input gives the same bytes) and `typst compile IN OUT` compiles it; the text of a PDF is read with `pdftotext` |
+| Oracle artifact | An OCI artifact holding `oracle.edn` (media type `application/edn`, artifact type `application/vnd.scope-impact.rdm-spec.oracle.v1`), stored and fetched by digest with ORAS: `oras pull REPOSITORY@DIGEST`, or `oras pull --oci-layout "$ORACLE_LAYOUT@DIGEST"` for a local OCI layout; `oras push` stores a new one |
 | Test results | Allure results (JSON), the `spec` label carrying the scenario id |

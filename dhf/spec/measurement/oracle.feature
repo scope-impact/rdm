@@ -13,41 +13,49 @@ Feature: Oracle
   # The layout was never written down, and the oracle never enters a clean
   # room, so cycle 08's builder invented one and its oracle refused this
   # repository's own goldens (dhf/cycles/08/proposed-spec-changes.md, 1).
-  Rule: The oracle's directory has one layout
+  # The goldens now live outside the repository altogether: one EDN file in
+  # one artifact, pinned by digest, so no allow-list can leak them and none
+  # can change unseen (dhf/wiki/pages/loyly-method.md, departures).
+  Rule: The oracle is one EDN file in one artifact, pinned by digest
 
     @spec-0276 @contract
-    Scenario: The oracle reads one fixture project, its cycles and their goldens
-      Given dhf/harness/oracle/ holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
+    Scenario: The oracle reads one oracle.edn, one key per instrument component
+      Given the configured oracle holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
       When "rdm-spec oracle" is run
-      Then it reads dhf/harness/oracle/ as:
-        | path                                  | holds                                                        |
-        | project/                              | the one fixture project, a git repository whose cuts the cycles name |
-        | cycles/NN/cycle.edn                   | the fixture cycle NN's record                                |
-        | cycles/NN/ratified.edn                | its ratification                                             |
-        | cycles/NN/verdicts.edn                | its verdicts                                                 |
-        | goldens/NN/checklist.json             | the checklist the instrument must derive for cycle NN        |
-        | goldens/NN/score.edn                  | the score it must file for cycle NN                          |
-        | goldens/scoreboard-NN-MM.edn          | the scoreboard it must give from cycle NN to cycle MM        |
-        | RECORDED.md                           | each recording, its date and its reason                      |
-      And it exits 0 and names each golden it compared
+      Then it reads the artifact the configuration's :oracle names by its digest, holding the one file oracle.edn:
+        """
+        {:project    {"dhf/spec/model.edn" "..." ...}
+         :cycles     {"01" {:cycle {...} :ratified {...} :verdicts [...]} ...}
+         :checklist  {"01" {:cycle "01" :cut "spec-1" :items [...] :planned [...]} ...}
+         :scorer     {"01" {...score.edn...} ...}
+         :scoreboard {"01-02" {...the :scoreboard...} ...}
+         :recorded   [{:date "2026-10-25" :reason "..." :changed [:scorer]} ...]}
+        """
+      And it exits 0 and names each golden it compared, as its component and key
 
     @spec-0277 @e2e
-    Scenario: An oracle directory that holds no fixture cycle fails
-      Given a project whose dhf/harness/oracle/ holds only RECORDED.md
+    Scenario: An oracle that holds no fixture cycle fails
+      Given the configured oracle's oracle.edn holds no fixture cycle
       When "rdm-spec oracle" is run
       Then it exits 1 and says the oracle holds no fixture cycle, so it judged nothing
+
+    @spec-0280 @e2e
+    Scenario: An oracle the store does not hold cannot run
+      Given the configuration's :oracle names a digest the store does not hold
+      When "rdm-spec oracle" is run
+      Then it exits 2 and names the repository and the digest
 
   Rule: The instrument is judged against recorded goldens
 
     @spec-0228 @e2e
     Scenario: The oracle passes when every output matches its golden
-      Given dhf/harness/oracle/ holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
+      Given the configured oracle holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
       When "rdm-spec oracle" is run
       Then it exits 0 and names each golden it compared
 
     @spec-0229 @e2e
     Scenario: An output that differs from its golden fails the oracle, naming the difference
-      Given dhf/harness/oracle/ holds a golden score whose second item says pass where the scorer files fail
+      Given the configured oracle holds a golden score whose second item says pass where the scorer files fail
       When "rdm-spec oracle" is run
       Then it exits 1 and names the golden, the item and both values
 
@@ -55,15 +63,16 @@ Feature: Oracle
     # moved (loyly:harness/README.md@17d68d2, "What makes the checks run").
     @spec-0230 @e2e
     Scenario: Recording goldens says which changed, and why
-      Given dhf/harness/oracle/ holds goldens, one of which the instrument no longer reproduces
+      Given the configured oracle holds goldens, one of which the instrument no longer reproduces
       When "rdm-spec oracle record --reason 'the scoreboard now says the denominator moved'" is run
-      Then it rewrites that golden, names it, and appends the reason with the date to dhf/harness/oracle/RECORDED.md
+      Then it stores a new artifact whose oracle.edn rewrites that golden and appends to :recorded the date, the reason and the component changed
+      And the configuration's :oracle names the new digest, and the old artifact is unchanged
 
     @spec-0231 @e2e
     Scenario: Recording without a reason is refused
-      Given dhf/harness/oracle/ holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
+      Given the configured oracle holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
       When "rdm-spec oracle record" is run
-      Then it exits 2, says a reason is required, and rewrites nothing
+      Then it exits 2, says a reason is required, stores nothing and leaves the configuration's :oracle unchanged
 
   # A room built, or a build ratified, by an instrument nobody checked hands
   # the next cycle a judge nobody checked (loyly:harness/README.md@17d68d2,
@@ -75,7 +84,7 @@ Feature: Oracle
 
     @spec-0232 @e2e
     Scenario Outline: Fence and ratify refuse while the oracle fails
-      Given a project whose dhf/harness/oracle/ holds a golden the instrument does not reproduce
+      Given a project whose configured oracle holds a golden the instrument does not reproduce
       When "rdm-spec <task>" is run
       Then it exits 1, prints the oracle's findings unchanged, and <does-nothing>
 
@@ -86,6 +95,6 @@ Feature: Oracle
 
     @spec-0233 @e2e
     Scenario: A project with no oracle is not refused
-      Given a project with no dhf/harness/oracle/
+      Given a project whose configuration names no :oracle
       When "rdm-spec oracle" is run
       Then it exits 0 and says there is no oracle to run
