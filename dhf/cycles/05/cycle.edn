@@ -1,0 +1,16 @@
+;; Cycle 05: the spec change folding in cycle 04's findings, cut as spec-8
+;; (tagged locally). The first cycle run by cycle 04's build as the installed
+;; release, and the first whose clean rooms hold the Löyly wiki page. Its
+;; scopes are the components whose feature files changed between spec-7 and
+;; spec-8 (git diff of the two cuts, as spec-0237 will make a task).
+{:cut "spec-8"
+ :scope [{:component :kernel/command}
+         {:component :knowledge/sources}
+         {:context :publishing}
+         {:context :ratification}
+         {:component :regeneration/scopes}
+         {:component :spec/check}
+         {:component :verification/trace}]
+ :builder {:name "builder subagents, one per scope" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
