@@ -1,261 +1,195 @@
 (ns steps.architecture-views
-  "Step definitions for dhf/spec/architecture/views.feature: a copy of the
-  room's spec whose model a step trims, `rdm-spec views` (the shared When) to
-  draw it, and each Then reading the outputs back from dhf/views/.
+  "Step definitions for dhf/spec/architecture/views.feature, and the step
+  `a rendered view whose recorded hash differs from the model's`, which
+  dhf/spec/publishing/site.feature shares (it sets :dir and :stale-view).
 
-  What is checked is computed here from the model and the glossary, never
-  asked of the implementation: the model hash is the SHA-256, as lowercase
-  hex, of the model read as EDN and printed back with every map's keys sorted;
-  the formats are the ones dhf/harness/stack.md names for dhf/views/<key>."
+  The views' scenarios run `rdm-spec views` on a small model of their own (a
+  shop: two people, a bank, an app of two bounded contexts, a database and
+  a kernel component), and read the diagram source back to see exactly
+  which elements and relationships each view holds."
   (:require [babashka.fs :as fs]
-            [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.walk :as walk]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.architecture-support :as a]
             [steps.support :as s]))
 
 ;; ---------------------------------------------------------------------------
-;; Helpers
+;; The fixture
 
-(defn- views-dir [] (:views-dir (s/room-config)))
+(def shop
+  {:system {:id :shop :name "Shop" :description "Sells things"}
+   :people [{:id :buyer :name "Buyer" :description "Buys things" :actor #{:human :agent}}
+            {:id :clerk :name "Clerk" :description "Keeps the books" :actor #{:human}}]
+   :external [{:id :bank :name "Bank" :description "Moves the money"}]
+   :containers [{:id :app :name "App" :kind :runs :technology "a program" :description "The shop's program"
+                 :contexts [{:id :orders :name "orders" :description "Takes orders"
+                             :components [{:id :orders/cart :name "Cart" :spec "orders/cart" :description "Holds the cart"}
+                                          {:id :orders/pay :name "Pay" :spec "orders/pay" :description "Takes payment"}]}
+                            {:id :stock :name "stock" :description "Counts the stock"
+                             :components [{:id :stock/count :name "Count" :spec "stock/count" :description "Counts items"}]}]}
+                {:id :db :name "Database" :kind :stores :technology "files" :description "Holds the counts"}]
+   :kernel [{:id :kernel/bus :name "Bus" :spec "kernel/bus" :description "Carries the events"}]
+   :relationships [{:from :buyer :to :app :description "Buys through"}
+                   {:from :clerk :to :bank :description "Reconciles with"}
+                   {:from :app :to :bank :description "Charges through"}
+                   {:from :orders/cart :to :orders/pay :description "Hands the cart to"}
+                   {:from :orders/pay :to :stock/count :description "Publishes" :event :Paid}
+                   {:from :stock/count :to :db :description "Writes counts to"}
+                   {:from :orders/pay :to :kernel/bus :description "Publishes on"}
+                   {:from :bank :to :db :description "Reports to"}]
+   :views [{:key "context" :level :context :description "The shop and who uses it"}
+           {:key "containers" :level :container :description "The program and its store"}
+           {:key "orders-components" :level :component :context :orders :description "Taking orders"}
+           {:key "stock-components" :level :component :context :stock :description "Counting stock"}
+           {:key "checkout" :level :dynamic :description "One checkout"
+            :steps [[:buyer :app "1. Opens a cart"]
+                    [:orders/cart :orders/pay "2. Pays"]
+                    [:orders/pay :stock/count "3. Counts down the stock"]]}]})
 
-(defn- sha256-hex [^String text]
-  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes text "UTF-8"))]
-    (apply str (map #(format "%02x" (bit-and % 0xff)) d))))
+(def shop-events {:Paid {:description "An order was paid" :published-by :orders/pay :carries []}})
 
-(defn model-hash
-  "The glossary's model hash of the model file in `dir`."
-  [dir]
-  (let [v (edn/read-string (slurp (str (fs/file dir a/model-rel))))]
-    (sha256-hex (binding [*print-namespace-maps* false]
-                  (pr-str (walk/postwalk #(if (map? %) (into (sorted-map) %) %) v))))))
+(def expected
+  "What each level's view of the shop holds: its elements (diagram id ->
+  how it is drawn, :in when inside the boundary) and its relationships."
+  {"context" {:key "context"
+              :elements {"shop" ["System" :out] "buyer" ["Person" :out] "clerk" ["Person" :out]
+                         "bank" ["System_Ext" :out]}
+              :rels #{["buyer" "shop"] ["clerk" "bank"] ["shop" "bank"] ["bank" "shop"]}}
+   "container" {:key "containers"
+                :elements {"app" ["Container" :in] "db" ["ContainerDb" :in] "buyer" ["Person" :out]
+                           "clerk" ["Person" :out] "bank" ["System_Ext" :out]}
+                :rels #{["buyer" "app"] ["clerk" "bank"] ["app" "bank"] ["app" "db"] ["bank" "db"]}}
+   "component" {:key "orders-components"
+                :elements {"orders__cart" ["Component" :in] "orders__pay" ["Component" :in]
+                           "stock__count" ["Component_Ext" :out] "kernel__bus" ["Component_Ext" :out]}
+                :rels #{["orders__cart" "orders__pay"] ["orders__pay" "stock__count"] ["orders__pay" "kernel__bus"]}}
+   "dynamic" {:key "checkout"
+              :elements {"buyer" ["Person" :out] "app" ["Container" :out] "orders__cart" ["Component" :out]
+                         "orders__pay" ["Component" :out] "stock__count" ["Component" :out]}
+              :rels [["buyer" "app" "1. Opens a cart"] ["orders__cart" "orders__pay" "2. Pays"]
+                     ["orders__pay" "stock__count" "3. Counts down the stock"]]}})
 
-(defn formats
-  "The extensions dhf/harness/stack.md names for a view's outputs."
+(defn- shop! []
+  (a/needs-architecture!)
+  (let [dir (s/project!)]
+    (a/write-model! dir shop)
+    (s/write! dir a/events-rel (pr-str shop-events))
+    dir))
+
+(defn- views-dir [dir] (fs/file dir (or (:views-dir (s/room-config)) "dhf/views")))
+
+(defn- formats
+  "The output formats dhf/harness/stack.md names for a view (dhf/views/<key>.EXT)."
   []
   (let [text (slurp (str (fs/file s/room-root "dhf/harness/stack.md")))
         exts (distinct (map second (re-seq #"dhf/views/<key>\.(\w+)" text)))]
-    (s/check! (seq exts) "dhf/harness/stack.md names no format for dhf/views/<key>")
+    (s/check! (seq exts) "dhf/harness/stack.md names no output format of a view")
     (vec exts)))
 
-(defn- output [dir k ext] (fs/file dir (views-dir) (str k "." ext)))
+;; --- reading a diagram source back -------------------------------------------
 
-(defn- run-views! [ctx]
-  (let [r (s/rdm-spec! (:dir ctx) "views")]
-    (s/check! (= 0 (:exit r)) (str "rdm-spec views failed\n" (s/show r)))
-    r))
+(def element-re
+  #"^(\s*)(Person|Person_Ext|System|System_Ext|Container|ContainerDb|Container_Ext|ContainerDb_Ext|Component|Component_Ext)\((\w+),.*")
 
-;; --- Parsing a diagram source -------------------------------------------------
-
-(defn- alias-of
-  "How a diagram source names an element's id."
-  [k]
-  (-> (if (namespace k) (str (namespace k) "__" (name k)) (name k))
-      (str/replace #"[^A-Za-z0-9_]" "_")))
-
-(defn parse-source
-  "A view's diagram source as {:elements {alias {:macro :inside?}} :rels
-  [[from to label]] :boundaries n}."
+(defn parse-diagram
+  "{:elements {id [macro :in|:out]} :rels [[from to label]]} of a diagram source."
   [text]
-  (loop [[l & more :as ls] (str/split-lines text) depth 0 acc {:elements {} :rels [] :boundaries 0}]
-    (if (empty? ls)
-      acc
-      (let [l (str/trim l)]
-        (cond
-          (re-find #"^\w*Boundary\(" l)
-          (recur more (inc depth) (update acc :boundaries inc))
-
-          (= "}" l) (recur more (dec depth) acc)
-
-          (re-find #"^Rel\w*\(" l)
-          (let [[_ from to label] (re-find #"^Rel\w*\(\s*(\w+)\s*,\s*(\w+)\s*,\s*\"([^\"]*)\"" l)]
-            (recur more depth (update acc :rels conj [from to label])))
-
-          (re-find #"^(Person|System|Container|Component)\w*\(" l)
-          (let [[_ macro alias] (re-find #"^(\w+)\(\s*(\w+)" l)]
-            (recur more depth (assoc-in acc [:elements alias] {:macro macro :inside? (pos? depth)})))
-
-          :else (recur more depth acc))))))
-
-;; --- What the model says a view holds ----------------------------------------
-
-(defn- elements-of
-  "{id {:type :container :context}} for every element of model `m`."
-  [m]
-  (merge
-   {(get-in m [:system :id]) {:type :system}}
-   (into {} (for [p (:people m)] [(:id p) {:type :person}]))
-   (into {} (for [e (:external m)] [(:id e) {:type :external}]))
-   (into {} (for [c (:containers m)] [(:id c) {:type :container}]))
-   (into {} (for [c (:containers m) x (:contexts c)] [(:id x) {:type :context :container (:id c)}]))
-   (into {} (for [c (:containers m) x (:contexts c) y (:components x)]
-              [(:id y) {:type :component :container (:id c) :context (:id x)}]))
-   (into {} (for [k (:kernel m)] [(:id k) {:type :kernel}]))))
-
-(defn- kernel-container
-  "The container the kernel is shared code of: the one that holds contexts."
-  [m]
-  (:id (or (first (filter :contexts (:containers m))) (first (filter #(= :runs (:kind %)) (:containers m))))))
-
-(defn- lift
-  "The element of the level `level` that `id` stands in or is."
-  [m els level id]
-  (let [{:keys [type container]} (get els id)]
-    (case level
-      :context (if (#{:person :external :system} type) id (get-in m [:system :id]))
-      :container (case type
-                   (:context :component) container
-                   :kernel (kernel-container m)
-                   id))))
-
-(defn- lifted-rels [m level]
-  (let [els (elements-of m)]
-    (set (for [r (:relationships m)
-               :let [f (lift m els level (:from r)) t (lift m els level (:to r))]
-               :when (not= f t)]
-           [(alias-of f) (alias-of t)]))))
-
-(defn- the-view [ctx]
-  (let [m (a/read-model (:dir ctx))
-        v (first (filter #(= (:view-key ctx) (:key %)) (:views m)))
-        src (output (:dir ctx) (:key v) "mmd")]
-    (s/check! (fs/exists? src) (str "no diagram source " src))
-    {:m m :v v :parsed (parse-source (slurp (str src)))}))
-
-(defn- same! [what want got]
-  (s/check! (= (set want) (set got))
-            (str what " differ: missing " (pr-str (sort (remove (set got) want)))
-                 ", extra " (pr-str (sort (remove (set want) got))))))
-
-(defn- holds-context [ctx]
-  (let [{:keys [m parsed]} (the-view ctx)
-        want (map alias-of (concat [(get-in m [:system :id])] (map :id (:people m)) (map :id (:external m))))]
-    (same! "the context view's elements" want (keys (:elements parsed)))
-    (same! "the context view's relationships" (lifted-rels m :context) (map (comp vec (partial take 2)) (:rels parsed)))))
-
-(defn- holds-container [ctx]
-  (let [{:keys [m parsed]} (the-view ctx)
-        containers (map (comp alias-of :id) (:containers m))
-        want (concat containers (map (comp alias-of :id) (:people m)) (map (comp alias-of :id) (:external m)))]
-    (same! "the container view's elements" want (keys (:elements parsed)))
-    (same! "the container view's elements inside the system" containers
-           (keep (fn [[k e]] (when (:inside? e) k)) (:elements parsed)))
-    (same! "the container view's relationships" (lifted-rels m :container)
-           (map (comp vec (partial take 2)) (:rels parsed)))))
-
-(defn- holds-component [ctx]
-  (let [{:keys [m v parsed]} (the-view ctx)
-        els (elements-of m)
-        inside (set (for [[id e] els :when (and (= :component (:type e)) (= (:context v) (:context e)))] id))
-        rels (filter #(or (inside (:from %)) (inside (:to %))) (:relationships m))
-        outside (set (remove inside (mapcat (juxt :from :to) rels)))
-        drawn (:elements parsed)]
-    (s/check! (= 1 (:boundaries parsed)) (str "the component view draws " (:boundaries parsed) " boundaries, not one"))
-    (same! "the components inside the boundary" (map alias-of inside)
-           (keep (fn [[k e]] (when (:inside? e) k)) drawn))
-    (same! "the elements outside the boundary" (map alias-of outside)
-           (keep (fn [[k e]] (when-not (:inside? e) k)) drawn))
-    (doseq [id outside :let [e (get drawn (alias-of id))]]
-      (s/check! (str/ends-with? (:macro e) "_Ext") (str id " is outside the context but drawn as " (:macro e))))
-    (same! "the component view's relationships" (set (map #(mapv alias-of [(:from %) (:to %)]) rels))
-           (map (comp vec (partial take 2)) (:rels parsed)))))
-
-(defn- holds-dynamic [ctx]
-  (let [{:keys [v parsed]} (the-view ctx)
-        steps (:steps v)]
-    (same! "the dynamic view's elements" (map alias-of (distinct (mapcat (partial take 2) steps)))
-           (keys (:elements parsed)))
-    (s/check! (= (mapv (fn [[f t label]] [(alias-of f) (alias-of t) label]) steps) (:rels parsed))
-              (str "the dynamic view's steps are not its relationships, in order: " (pr-str (:rels parsed))))))
-
-(def ^:private holds
-  {"the system, every person and every external system, and the relationships between them" holds-context
-   "every container, every person and every external system, and the relationships between them" holds-container
-   "one context's components inside its boundary, and the elements outside it they relate to, drawn as external"
-   holds-component
-   "the elements its steps name, and its steps in order" holds-dynamic})
+  (loop [[l & more] (str/split-lines text) depth 0 els {} rels []]
+    (if (nil? l)
+      {:elements els :rels rels}
+      (cond
+        (re-find #"Boundary\(.*\{\s*$" l) (recur more (inc depth) els rels)
+        (= "}" (str/trim l)) (recur more (dec depth) els rels)
+        :else
+        (if-let [[_ _ macro id] (re-matches element-re l)]
+          (recur more depth (assoc els id [macro (if (pos? depth) :in :out)]) rels)
+          (if-let [[_ from to label] (re-matches #"^\s*Rel\((\w+), (\w+), \"(.*)\"\)\s*$" l)]
+            (recur more depth els (conj rels [from to label]))
+            (recur more depth els rels)))))))
 
 ;; ---------------------------------------------------------------------------
 ;; The C4 model is one source and every view is generated from it
 
 (defstep #"a model with a context view, a container view and two component views"
   (fn [ctx]
-    (let [dir (a/dir-of ctx)
-          m (a/read-model dir)
-          pick (fn [level] (filter #(= level (:level %)) (:views m)))
-          views (vec (concat (take 1 (pick :context)) (take 1 (pick :container)) (take 2 (pick :component))))]
-      (s/check! (= 4 (count views)) "the room's model lacks a view of some level")
-      ;; no earlier output, so everything read back was written by this run
-      (fs/delete-tree (fs/file dir (views-dir)))
-      (a/write-model! dir (assoc m :views views))
-      (assoc ctx :dir dir :view-keys (mapv :key views)))))
+    (let [levels (frequencies (map :level (:views shop)))]
+      (s/check! (and (= 1 (levels :context)) (= 1 (levels :container)) (= 2 (levels :component)))
+                "the fixture holds other views")
+      (assoc ctx :dir (shop!)))))
 
 (defstep #"each view's diagram source is written to dhf/views/<key> and rendered beside it, in the formats dhf/harness/stack.md names"
   (fn [ctx]
-    (let [r (:run ctx)]
-      (s/check! (= 0 (:exit r)) (s/show r))
-      (doseq [k (:view-keys ctx) ext (formats) :let [f (output (:dir ctx) k ext)]]
-        (s/check! (fs/regular-file? f) (str "no " ext " output for the view " k "\n" (s/show r)))
+    (let [r (a/the-run ctx)
+          vd (views-dir (:dir ctx))
+          exts (formats)]
+      (s/check! (= 0 (:exit r)) (str "expected exit 0\n" (s/show r)))
+      (s/check! (some #{"svg"} exts) (str "no rendering among the formats " exts))
+      (doseq [{k :key} (:views shop) ext exts
+              :let [f (fs/file vd (str k "." ext))]]
+        (s/check! (fs/exists? f) (str "no " f "\n" (s/show r)))
         (when (= "svg" ext)
-          (s/check! (re-find #"<svg[\s>]" (slurp (str f))) (str f " is no SVG render")))
-        (when (= "mmd" ext)
-          (s/check! (re-find #"(?m)^C4\w+$" (slurp (str f))) (str f " is no C4 diagram source")))))))
+          (s/check! (str/includes? (slurp (str f)) "<svg") (str f " is not a rendered SVG")))))))
 
 (defstep #"each output's first line is a comment holding \"model-sha256: \" and the model's hash"
   (fn [ctx]
-    (let [h (model-hash (:dir ctx))]
-      (doseq [k (:view-keys ctx) ext (formats)
-              :let [f (output (:dir ctx) k ext)
+    (let [vd (views-dir (:dir ctx))
+          h (a/hash-of (a/read-model (:dir ctx)))]
+      (doseq [{k :key} (:views shop) ext (formats)
+              :let [f (fs/file vd (str k "." ext))
                     line (first (str/split-lines (slurp (str f))))]]
+        (s/check! (str/includes? line (str "model-sha256: " h)) (str f "'s first line does not record " h ": " line))
         (s/check! (case ext
                     "mmd" (str/starts-with? line "%%")
-                    "svg" (and (str/starts-with? line "<!--") (str/ends-with? line "-->"))
+                    "svg" (and (str/starts-with? line "<!--") (str/ends-with? (str/trim line) "-->"))
                     true)
-                  (str f "'s first line is no comment: " line))
-        (s/check! (str/includes? line (str "model-sha256: " h))
-                  (str f "'s first line does not hold the model hash " h ": " line))))))
+                  (str f "'s first line is not a comment: " line))))))
 
 (defstep #"a rendered view whose recorded hash differs from the model's"
   (fn [ctx]
-    (a/needs-check!)
-    (let [dir (a/dir-of ctx)
-          ctx (assoc ctx :dir dir)
-          _ (run-views! ctx)
+    (let [dir (or (:dir ctx) (s/copy-of-room!))
+          _ (when (s/built? 'rdm-spec.architecture.views) (a/views! dir))
           k "containers"
-          f (output dir k "svg")
-          text (slurp (str f))
-          h (model-hash dir)
-          other (apply str (repeat 64 "0"))]
-      (s/check! (str/includes? text h) (str f " does not record the model hash"))
-      (spit (str f) (str/replace-first text h other))
-      (assoc ctx :stale-view k))))
+          other (apply str (repeat 64 "0"))
+          vd (views-dir dir)]
+      (doseq [ext ["mmd" "svg"]
+              :let [f (str (fs/file vd (str k "." ext)))
+                    [first-line & more] (str/split-lines (slurp f))
+                    changed (str/replace first-line #"model-sha256: [0-9a-f]{64}" (str "model-sha256: " other))]]
+        (s/check! (not= first-line changed) (str f " records no model hash: " first-line))
+        (spit f (str (str/join "\n" (cons changed more)) "\n")))
+      (assoc ctx :dir dir :stale-view k))))
 
 (defstep #"it fails and names the stale view"
   (fn [ctx]
-    (let [r (:run ctx)
-          k (:stale-view ctx)
-          stale (a/rule-lines r "views-stale")]
-      (s/check! (= 1 (:exit r)) (s/show r))
-      (s/check! (some #(str/includes? % (str "view \"" k "\"")) stale)
-                (str "the view " k " is not named stale\n" (s/show r)))
-      (s/check! (every? #(str/includes? % (str "view \"" k "\"")) stale)
-                (str "a fresh view is named stale\n" (s/show r))))))
+    (let [r (a/the-run ctx)
+          k (:stale-view ctx)]
+      (s/check! (= 1 (:exit r)) (str "expected exit 1\n" (s/show r)))
+      (s/check! (a/line-with r (pr-str k) "stale") (str "no finding names the view " k " as stale\n" (s/show r)))
+      (s/check! (every? #(str/includes? % (pr-str k)) (filter #(str/includes? % "stale") (a/finding-lines r)))
+                (str "other views than " k " are named stale\n" (s/show r))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Each level of view holds what C4 says it holds
 
 (defstep #"a model with a view of level (\w+)"
   (fn [ctx level]
-    (let [dir (a/dir-of ctx)
-          v (first (filter #(= (keyword level) (:level %)) (:views (a/read-model dir))))]
-      (s/check! v (str "the room's model has no view of level " level))
-      (fs/delete-tree (fs/file dir (views-dir)))
-      (assoc ctx :dir dir :view-key (:key v)))))
+    (let [e (or (expected level) (s/fail! (str "no level " level)))]
+      (s/check! (some #(and (= (:key e) (:key %)) (= (keyword level) (:level %))) (:views shop))
+                (str "the fixture has no view of level " level))
+      (assoc ctx :dir (shop!) :level level))))
 
 (defstep #"the view holds (.+)"
-  (fn [ctx what]
-    (s/check! (= 0 (:exit (:run ctx))) (s/show (:run ctx)))
-    (let [f (or (get holds what) (s/fail! (str "no check for " (pr-str what))))]
-      (f ctx)
-      nil)))
+  (fn [ctx _what]
+    (let [r (a/the-run ctx)
+          e (expected (:level ctx))
+          f (fs/file (views-dir (:dir ctx)) (str (:key e) ".mmd"))
+          _ (s/check! (= 0 (:exit r)) (str "expected exit 0\n" (s/show r)))
+          d (parse-diagram (slurp (str f)))
+          rels (map (fn [[a b _]] [a b]) (:rels d))]
+      (s/check! (= (:elements e) (:elements d))
+                (str "the " (:level ctx) " view holds " (pr-str (:elements d)) ", not " (pr-str (:elements e))))
+      (if (= "dynamic" (:level ctx))
+        (s/check! (= (:rels e) (:rels d)) (str "the steps are " (pr-str (:rels d)) ", not " (pr-str (:rels e))))
+        (do (s/check! (= (count rels) (count (set rels))) (str "a relationship is drawn twice: " (pr-str rels)))
+            (s/check! (= (:rels e) (set rels))
+                      (str "the " (:level ctx) " view relates " (pr-str (set rels)) ", not " (pr-str (:rels e)))))))))

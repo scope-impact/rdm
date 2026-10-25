@@ -1,145 +1,191 @@
 (ns steps.verification-results
-  "Step definitions for dhf/spec/verification/results.feature: Allure result
-  files written by hand, as a test run in any stack would write them, read by
-  `rdm-spec status` in a small project."
+  "Step definitions for dhf/spec/verification/results.feature: `rdm-spec
+  status` in a small project with its own spec, reading Allure results written
+  by hand as a test run in any stack would write them."
   (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
             [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-command :as kc]
             [steps.support :as s]
             [steps.verification-fixtures :as fx]))
 
-(defn- known-project
-  "A project with two stamped scenarios, spec-0001 and spec-0002."
-  []
-  (fx/one-feature (str (fx/scenario-text {:id "spec-0001"}) "\n" (fx/scenario-text {:id "spec-0002"}))))
+(defn- project-with
+  "A project whose one feature holds the stamped scenarios `ids`."
+  [ids]
+  (fx/one-feature (str/join "\n" (map #(fx/scenario-text {:id %}) ids))))
 
-(defn- counted-toward-nothing!
-  "No scenario's status moved: spec-0001 passed and stays verified, spec-0002
-  had no result and stays unverified, whatever else the directory holds."
+(defn- ensure-project
+  "The context with a project (:dir) holding spec-0001 and spec-0002, unless
+  it has one."
   [ctx]
-  (let [rep (fx/report ctx)]
-    (s/check! (= :verified (fx/status-of rep "spec-0001")) (s/show (:run ctx)))
-    (s/check! (= :unverified (fx/status-of rep "spec-0002")) (s/show (:run ctx)))
-    (s/check! (= 2 (count (:scenarios rep))) (str "the report lists other scenarios\n" (s/show (:run ctx))))
-    rep))
+  (if (:dir ctx) ctx (assoc ctx :dir (project-with ["spec-0001" "spec-0002"]))))
 
-;; --- Allure results are the oracle, whoever wrote them --------------------
+(defn- err-lines-naming [ctx needle]
+  (filterv #(str/includes? % needle) (s/err-lines (:run ctx))))
+
+;; --- Allure results are the oracle, whoever wrote them ------------------------
 
 (defstep #"an Allure result labelled spec=(\S+)"
   (fn [ctx id]
-    (-> (assoc ctx :dir (known-project) :unknown id)
-        (fx/add-result! "spec-0001" "passed")
-        (fx/add-result! id "passed"))))
+    (fx/add-result! (ensure-project ctx) id "passed")))
 
 (defstep #"no scenario in the spec is tagged @(\S+)"
   (fn [ctx id]
-    (let [spec (str/join "\n" (vals (fx/spec-snapshot (:dir ctx))))]
-      (s/check! (not (str/includes? spec (str "@" id))) (str "the spec tags a scenario @" id)))))
+    (let [ctx (ensure-project ctx)
+          ids (fx/scenario-ids (:dir ctx) (constantly true))]
+      (s/check! (seq ids) "the project holds no stamped scenario")
+      (s/check! (not (some #{id} ids)) (str "a scenario is tagged @" id))
+      ctx)))
 
 (defstep #"the report lists (\S+) as an unknown result"
   (fn [ctx id]
     (let [rep (fx/report ctx)
-          unknown (:unknown-results rep)]
-      (s/check! (some #(= id (:id %)) unknown) (str id " is not listed as unknown\n" (s/show (:run ctx))))
-      (s/check! (str/includes? (:err (:run ctx)) id) (str "the error stream does not name " id "\n" (s/show (:run ctx)))))))
+          files (set (map #(str (fs/file-name %)) (:result-files ctx)))
+          unknown (filter #(= id (:id %)) (:unknown-results rep))]
+      (s/check! (seq unknown) (str id " is not listed as an unknown result\n" (s/show (:run ctx))))
+      (s/check! (every? #(contains? files (str (fs/file-name (:file %)))) unknown)
+                (str "the unknown result names no file the scenario wrote: " (pr-str unknown)))
+      (s/check! (seq (filter #(str/includes? % id) (err-lines-naming ctx "unknown-result")))
+                (str "the error stream does not warn of " id "\n" (s/show (:run ctx))))
+      nil)))
 
 (defstep #"it counts toward no scenario"
   (fn [ctx]
-    (let [rep (counted-toward-nothing! ctx)]
-      (when-let [id (:unknown ctx)]
-        (s/check! (nil? (fx/status-of rep id)) (str id " is listed as a scenario"))))))
+    (let [rep (fx/report ctx)
+          written (set (map #(str (fs/file-name %)) (:result-files ctx)))]
+      (s/check! (seq (:scenarios rep)) (str "the report lists no scenario\n" (s/show (:run ctx))))
+      (doseq [sc (:scenarios rep)]
+        (s/check! (not-any? #(written (str (fs/file-name (:file %)))) (:results sc))
+                  (str (:id sc) " counts the result\n" (s/show (:run ctx))))
+        ;; The only results in the directory are the ones this scenario wrote.
+        (s/check! (= :unverified (keyword (name (:status sc))))
+                  (str (:id sc) " is " (:status sc) ", not unverified\n" (s/show (:run ctx)))))
+      nil)))
 
 (defstep #"the results directory exists and holds no Allure result"
   (fn [ctx]
-    (let [dir (known-project)]
-      (fs/create-dirs (fx/results-of dir))
-      (assoc ctx :dir dir))))
+    (let [dir (project-with ["spec-0001"])
+          results (fx/results-of dir)]
+      (fs/create-dirs results)
+      ;; What a run leaves beside its results is not a result.
+      (spit (str (fs/file results "c0ffee-container.json")) "{\"children\":[]}")
+      (spit (str (fs/file results "environment.properties")) "os=any\n")
+      (assoc ctx :dir dir :results-path results))))
 
 (defstep #"it exits 2 and says no test run wrote results there"
   (fn [ctx]
-    (let [r (:run ctx)]
-      (s/check! (= 2 (:exit r)) (s/show r))
-      (s/check! (str/includes? (:err r) "no test run wrote results") (s/show r))
-      (s/check! (str/includes? (:err r) fx/results-dir) (str "the directory is not named\n" (s/show r))))))
+    (let [r (:run ctx)
+          lines (s/err-lines r)]
+      (s/check! (= 2 (:exit r)) (str "expected exit 2\n" (s/show r)))
+      (s/check! (str/blank? (:out r)) (str "it printed a result\n" (s/show r)))
+      (s/check! (some #(and (str/starts-with? % "cannot-run:")
+                            (str/includes? % "no test run wrote results")
+                            (str/includes? % (str (fs/file-name (:results-path ctx)))))
+                      lines)
+                (str "it does not say no test run wrote results there\n" (s/show r))))))
 
 (defstep #"a results directory holding one result file that is not valid JSON"
   (fn [ctx]
-    (let [dir (known-project)
-          name "0b6c3d1e-bad-result.json"]
-      (s/write! (fx/results-of dir) name "{\"uuid\": \"0b6c3d1e\", \"status\": \"passed\", ")
-      (assoc ctx :dir dir :bad-file name))))
+    (let [dir (project-with ["spec-0001"])
+          f (s/write! (fx/results-of dir) "0badf00d-result.json" "{\"status\": \"failed\", \"labels\": [")]
+      (assoc ctx :dir dir :bad-file f))))
 
-(defstep #"the report names that file as unreadable"
+(defstep #"the report names that file as unreadable, in one line on the error stream"
   (fn [ctx]
     (let [r (:run ctx)
-          rep (fx/report ctx)]
-      (s/check! (some #(str/includes? (str (:file %)) (:bad-file ctx)) (:unreadable-files rep))
-                (str "the report does not name " (:bad-file ctx) " as unreadable\n" (s/show r)))
-      (s/check! (some #(and (str/includes? % (:bad-file ctx)) (str/includes? % "unreadable")) (s/err-lines r))
-                (str "no finding names " (:bad-file ctx) "\n" (s/show r))))))
+          base (str (fs/file-name (:bad-file ctx)))
+          rep (fx/report ctx)
+          lines (err-lines-naming ctx base)]
+      (s/check! (not= 0 (:exit r)) (str "an unreadable result passed\n" (s/show r)))
+      (s/check! (some #(str/includes? (str (:file %)) base) (:unreadable-files rep))
+                (str "the report does not name " base " as unreadable\n" (s/show r)))
+      (s/check! (= 1 (count lines)) (str (count lines) " lines name " base ", not one\n" (s/show r)))
+      (s/check! (str/includes? (first lines) "unreadable") (str "the line does not say unreadable: " (first lines)))
+      (s/check! (= :unverified (fx/status-of rep "spec-0001"))
+                "the unreadable result counted toward a scenario"))))
+
+;; --- The stack that wrote the results does not matter -------------------------
+
+(def ^:private stack-ids ["spec-0001" "spec-0002" "spec-0003"])
+(def ^:private stack-outcomes {"spec-0001" "passed" "spec-0002" "failed"})
 
 (defn- js-result
-  "A result as allure-js-commons writes it (its fields and labels), for a
-  scenario id."
-  [id status]
+  "A result as allure-js-commons writes it: its own label set, nested steps,
+  parameters, attachments, a testCaseId, compact JSON."
+  [spec status]
   (let [uuid (str (java.util.UUID/randomUUID))]
     {:uuid uuid
-     :historyId (str "a1b2c3" (hash id))
-     :testCaseId (str "d4e5f6" (hash id))
-     :name (str "scenario " id)
-     :fullName (str "features/demo.feature#" id)
+     :historyId (str (hash [spec "js"]))
+     :testCaseId (str (hash spec))
+     :name (str "verifies " spec)
+     :fullName (str "test/spec.test.js#verifies " spec)
      :status status
-     :statusDetails {:known false :muted false :flaky false}
+     :statusDetails (if (= "passed" status) {} {:message "expected true to be false" :trace "AssertionError\n    at Context.<anonymous>"})
      :stage "finished"
      :start 1700000000000
-     :stop 1700000000250
-     :steps [{:name "Given a step" :status status :stage "finished" :steps [] :attachments [] :parameters []
-              :statusDetails {} :start 1700000000000 :stop 1700000000200}]
-     :attachments []
+     :stop 1700000000042
+     :description ""
      :parameters []
+     :attachments [{:name "log" :source (str uuid "-attachment.txt") :type "text/plain"}]
      :links []
      :labels [{:name "language" :value "javascript"}
-              {:name "framework" :value "cucumberjs"}
+              {:name "framework" :value "mocha"}
               {:name "host" :value "ci-runner"}
-              {:name "thread" :value "pid-4242"}
-              {:name "tag" :value (str "@" id)}
-              {:name "spec" :value id}]}))
+              {:name "thread" :value "1"}
+              {:name "suite" :value "spec.test.js"}
+              {:name "spec" :value spec}]
+     :steps [{:name "Given a step" :status status :stage "finished" :start 1700000000001 :stop 1700000000040
+              :parameters [] :attachments []
+              :steps [{:name "an inner step" :status status :stage "finished" :steps [] :parameters [] :attachments []}]}]}))
 
 (defstep #"Allure results labelled with spec ids written by a JavaScript test run"
   (fn [ctx]
-    (let [dir (known-project)]
-      (fx/write-result! (fx/results-of dir) (js-result "spec-0001" "passed"))
-      (fx/write-result! (fx/results-of dir) (js-result "spec-0002" "failed"))
-      (fx/write-result! (fx/results-of dir) (js-result "spec-0002" "passed"))
+    (let [dir (project-with stack-ids)
+          results (fx/results-of dir)]
+      (fs/create-dirs results)
+      (doseq [[spec status] stack-outcomes
+              :let [r (js-result spec status)]]
+        (spit (str (fs/file results (str (:uuid r) "-result.json"))) (json/generate-string r))
+        (spit (str (fs/file results (str (:uuid r) "-attachment.txt"))) "log line\n"))
+      (spit (str (fs/file results (str (java.util.UUID/randomUUID) "-container.json")))
+            (json/generate-string {:uuid "c" :name "spec.test.js" :children [] :befores [] :afters []}))
       (assoc ctx :dir dir))))
+
+(defn- statuses [rep]
+  (into {} (map (juxt :id #(keyword (name (:status %)))) (:scenarios rep))))
 
 (defstep #"the scenarios they name are verified exactly as if any other stack had written them"
   (fn [ctx]
-    ;; The same outcomes, written as the fixtures write any other run's results,
-    ;; give the same report.
-    (let [js (fx/report ctx)
-          other-dir (known-project)
-          _ (fx/write-result! (fx/results-of other-dir) (fx/allure-result "spec-0001" "passed"))
-          _ (fx/write-result! (fx/results-of other-dir) (fx/allure-result "spec-0002" "failed"))
-          _ (fx/write-result! (fx/results-of other-dir) (fx/allure-result "spec-0002" "passed"))
-          other (fx/report {:run (s/rdm-spec! other-dir "status")})
-          view (fn [rep] (into {} (map (juxt :id :status) (:scenarios rep))))]
-      (s/check! (= :verified (fx/status-of js "spec-0001")) (s/show (:run ctx)))
-      (s/check! (= :failed (fx/status-of js "spec-0002")) (s/show (:run ctx)))
-      (s/check! (= (view js) (view other)) (str "the reports differ: " (view js) " vs " (view other))))))
+    (let [r (:run ctx)
+          rep (fx/report ctx)
+          ;; The same spec and outcomes, written by the fixtures' own runner.
+          other (reduce (fn [c [spec status]] (fx/add-result! c spec status))
+                        {:dir (project-with stack-ids)}
+                        stack-outcomes)
+          other (kc/run-line other "status")
+          other-rep (fx/report other)]
+      (s/check! (= (:exit (:run other)) (:exit r))
+                (str "it exits " (:exit r) ", another stack's results " (:exit (:run other)) "\n" (s/show r)))
+      (s/check! (= {"spec-0001" :verified "spec-0002" :failed "spec-0003" :unverified} (statuses rep))
+                (str "the statuses are " (pr-str (statuses rep)) "\n" (s/show r)))
+      (s/check! (= (statuses other-rep) (statuses rep))
+                (str "another stack's results give " (pr-str (statuses other-rep))))
+      (s/check! (= (:counts other-rep) (:counts rep)) (str "the counts differ: " (pr-str (:counts rep))))
+      (s/check! (empty? (:unreadable-files rep)) (str "files were unreadable: " (pr-str (:unreadable-files rep))))
+      (s/check! (empty? (:unknown-results rep)) (str "results were unknown: " (pr-str (:unknown-results rep))))
+      nil)))
 
-;; --- A result with no spec label verifies nothing --------------------------
+;; --- A result with no spec label verifies nothing ----------------------------
 
 (defstep #"an Allure result from a unit test, with no spec label"
   (fn [ctx]
-    (-> (assoc ctx :dir (known-project))
-        (fx/add-result! "spec-0001" "passed")
-        (fx/add-result! nil "failed" {:name "a unit test" :fullName "my.ns-test/a-unit-test"
-                                       :labels [{:name "suite" :value "unit"}
-                                                {:name "package" :value "my.ns-test"}]}))))
+    (fx/add-result! (ensure-project ctx) nil "passed"
+                    {:name "a unit test" :fullName "rdm-spec.demo-test/a-unit-test"})))
 
 (defstep #"it is not listed as an unknown result"
   (fn [ctx]
     (let [rep (fx/report ctx)]
-      (s/check! (empty? (:unknown-results rep)) (str "unknown results are listed\n" (s/show (:run ctx))))
-      (s/check! (empty? (:unreadable-files rep)) (str "unreadable files are listed\n" (s/show (:run ctx)))))))
+      (s/check! (empty? (:unknown-results rep)) (str "unknown results: " (pr-str (:unknown-results rep))))
+      (s/check! (empty? (err-lines-naming ctx "unknown-result")) (str "it is warned of\n" (s/show (:run ctx))))
+      nil)))

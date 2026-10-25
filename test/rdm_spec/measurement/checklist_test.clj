@@ -1,58 +1,49 @@
 (ns rdm-spec.measurement.checklist-test
-  (:require [cheshire.core :as json]
-            [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing]]
             [rdm-spec.measurement.checklist :as checklist]))
 
-(def model
-  {:containers [{:id :c :contexts [{:id :verification :name "verification"
-                                    :components [{:id :verification/status :name "Status"}]}
-                                   {:id :spec :name "spec"
-                                    :components [{:id :spec/parser :name "Parser"}]}]}]
-   :kernel [{:id :kernel/bus :name "Event bus"}]})
-
-(deftest scopes-have-four-shapes
-  (is (= [] (checklist/scope-units :project)))
-  (is (= [[:context :verification]] (checklist/scope-units {:context :verification})))
-  (is (= [[:component :spec/parser]] (checklist/scope-units {:component :spec/parser})))
-  (is (= [[:context :knowledge] [:component :spec/parser]]
-         (checklist/scope-units [{:context :knowledge} {:component :spec/parser}])))
-  (testing "anything else is malformed"
-    (doseq [s [nil :all {} [] {:context :a :component :b/c} {:component :parser} [{:context :a} :b] "project"]]
-      (is (nil? (checklist/scope-units s)) (pr-str s)))))
-
-(deftest a-scope-must-be-named-by-the-model
-  (is (nil? (checklist/scope-refusal model :project)))
-  (is (nil? (checklist/scope-refusal model {:context :kernel})))
-  (is (nil? (checklist/scope-refusal model [{:context :verification} {:component :kernel/bus}])))
-  (is (re-find #"no context archive" (checklist/scope-refusal model {:context :archive})))
-  (is (re-find #"not a scope" (checklist/scope-refusal model {:thing 1}))))
-
-(deftest a-scope-targets-its-items
-  (let [t (checklist/target? model [{:context :verification} {:component :spec/parser}])]
-    (is (t {:context "verification" :component "Status"}))
-    (is (t {:context "spec" :component "Parser"}))
-    (is (not (t {:context "spec" :component "Stamper"}))))
-  (is ((checklist/target? model :project) {:context "x" :component "y"})))
-
 (def scs
-  [{:id "spec-0014" :title "B" :context :architecture :context-name "architecture" :component-name "Lint" :level :e2e}
-   {:id "spec-0013" :title "W" :wip? true}
-   {:id "spec-0012" :title "A" :context :architecture :context-name "architecture" :component-name "Lint" :level :contract}
-   {:id nil :ids [] :title "Unstamped" :file "f.feature" :line 9}])
+  [{:id "spec-0014" :title "B" :level :contract :context :architecture :component :architecture/lint
+    :context-name "architecture" :component-name "Lint"}
+   {:id "spec-0012" :title "A" :level :e2e :context :architecture :component :architecture/lint
+    :context-name "architecture" :component-name "Lint"}
+   {:id "spec-0013" :title "C" :wip? true :level :e2e :context :architecture :component :architecture/lint}
+   {:id "spec-0020" :title "D" :level :e2e :context :spec :component :spec/parser
+    :context-name "spec" :component-name "Parser"}])
 
-(deftest one-item-per-stamped-scenario
-  (let [{:keys [items planned]} (checklist/derive-checklist scs)]
-    (is (= ["spec-0012" "spec-0014"] (map :id items)))
-    (is (= {:id "spec-0012" :title "A" :context "architecture" :component "Lint" :level "contract"} (first items)))
-    (is (= [{:id "spec-0013" :title "W"}] planned))
-    (is (= [:id :title :context :component :level] (keys (first items))))))
+(deftest scope-problem
+  (testing "valid scopes"
+    (doseq [s [:project {:context :verification} {:component :spec/parser}
+               [{:context :knowledge} {:component :spec/parser}] {:context :kernel}]]
+      (is (nil? (checklist/scope-problem s)) (pr-str s))))
+  (testing "invalid scopes"
+    (doseq [s [:everything {} [] {:context :a/b} {:component :parser} {:context :a :component :a/b}
+               [{:context :a} :b] "spec"]]
+      (is (string? (checklist/scope-problem s)) (pr-str s)))))
 
-(deftest an-unstamped-scenario-stops-the-checklist
-  (let [fs (checklist/spec-findings {:scenarios (map #(assoc % :ids (if (:id %) [(:id %)] [])) scs)})]
-    (is (= [["f.feature" 9 "unstamped-scenario"]] (map (juxt :file :line :rule) fs)))))
+(deftest in-scope
+  (is (checklist/in-scope? :project (first scs)))
+  (is (checklist/in-scope? {:context :architecture} (first scs)))
+  (is (not (checklist/in-scope? {:context :spec} (first scs))))
+  (is (checklist/in-scope? {:component :spec/parser} (last scs)))
+  (is (checklist/in-scope? [{:context :knowledge} {:component :spec/parser}] (last scs)))
+  (is (not (checklist/in-scope? [{:context :knowledge} {:component :spec/parser}] (first scs)))))
 
-(deftest the-json-keeps-its-key-order
-  (let [text (checklist/checklist-json "03" "spec-3" (checklist/derive-checklist scs))]
-    (is (= ["cycle" "cut" "items" "id" "title" "context" "component" "level"]
-           (take 8 (map second (re-seq #"\"(\w+)\"\s*:" text)))))
-    (is (= "spec-3" (:cut (json/parse-string text true))))))
+(deftest derive-checklist
+  (testing "items to grade sorted by id, planned apart, keys in order"
+    (let [{:keys [checklist findings]} (checklist/derive-checklist "03" "spec-3" :project scs)]
+      (is (empty? findings))
+      (is (= ["cycle" "cut" "items" "planned"] (keys checklist)))
+      (is (= ["spec-0012" "spec-0014" "spec-0020"] (map #(get % "id") (get checklist "items"))))
+      (is (= ["id" "title" "context" "component" "level"] (keys (first (get checklist "items")))))
+      (is (= {"id" "spec-0012" "title" "A" "context" "architecture" "component" "Lint" "level" "e2e"}
+             (first (get checklist "items"))))
+      (is (= [{"id" "spec-0013" "title" "C"}] (get checklist "planned")))))
+  (testing "a scope keeps its items only"
+    (let [{:keys [checklist]} (checklist/derive-checklist "03" "spec-3" {:component :spec/parser} scs)]
+      (is (= ["spec-0020"] (map #(get % "id") (get checklist "items"))))
+      (is (empty? (get checklist "planned")))))
+  (testing "an unstamped scenario is a finding with its file and line"
+    (let [{:keys [findings]} (checklist/derive-checklist "03" "spec-3" :project
+                                                         (conj scs {:id nil :title "X" :file "f.feature" :line 9}))]
+      (is (= [["f.feature" 9 "unstamped-scenario"]] (map (juxt :file :line :rule) findings))))))

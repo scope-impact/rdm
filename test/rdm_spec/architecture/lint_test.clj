@@ -1,55 +1,106 @@
 (ns rdm-spec.architecture.lint-test
   (:require [babashka.fs :as fs]
-            [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is]]
             [rdm-spec.architecture.lint :as lint]
-            [rdm-spec.architecture.model :as model]))
+            [rdm-spec.architecture.model-test :refer [small]]
+            [rdm-spec.kernel.bus :as bus]))
 
-(def room
-  (-> (io/resource "rdm_spec/kernel/command.clj") io/file fs/absolutize
-      fs/parent fs/parent fs/parent fs/parent str))
+(def catalogue {:E {:published-by :one/b :carries []}})
 
-(def config (edn/read-string (slurp (str (fs/file room "dhf/harness/config.edn")))))
+(def files ["dhf/spec/one/a.feature" "dhf/spec/one/b.feature" "dhf/spec/two/c.feature" "dhf/spec/kernel/k.feature"])
 
-(defn- req [] {:root room :config config :state (atom {})})
+(defn- run
+  ([m] (run m {}))
+  ([m opts]
+   (lint/lint-model "m.edn" m (merge {:catalogue catalogue :view-limit 20 :description-max 45 :spec-dir "dhf/spec"
+                                      :feature-files files :exists? (set files)}
+                                     opts))))
 
-(defn- rules [findings] (set (map :rule findings)))
+(defn- the [rule fs] (filter #(= rule (:rule %)) fs))
 
-(defn- lint-of [m]
-  (let [r (req)]
-    (lint/lint r {:model m :catalogue (edn/read-string (slurp (str (fs/file room "dhf/spec/events.edn"))))
-                  :file "dhf/spec/model.edn" :events-file "dhf/spec/events.edn"})))
+(def with-two-view (update small :views conj {:key "two" :level :component :context :two :description "Two"}))
 
-(def room-model (:model (model/read-model-file (fs/file room "dhf/spec/model.edn") "dhf/spec/model.edn")))
+(deftest a-sound-model-passes
+  (is (= [] (run with-two-view))))
 
-(deftest the-room-model-passes-the-lint
-  (let [fs* (lint-of room-model)]
-    (is (empty? fs*) (pr-str fs*))))
+(deftest a-context-with-components-needs-a-component-view
+  (let [[f :as fs] (run small)]
+    (is (= 1 (count fs)))
+    (is (= "a-component-view" (:rule f)))
+    (is (str/includes? (:message f) ":two"))))
 
-(deftest the-check-stage-lists-what-a-person-judges
-  (let [{:keys [result findings]} (lint/check (req))]
-    (is (empty? findings))
-    (is (= 3 (count (get-in result [:c4-for-a-person :questions]))))))
+(deftest every-view-and-element-is-described
+  (is (str/includes? (:message (first (the "c4-scope" (run (update-in with-two-view [:views 0] dissoc :description))))) "\"ctx\""))
+  (is (str/includes? (:message (first (the "c4-element-described" (run (update-in with-two-view [:containers 1] assoc :description " ")))))
+                     ":db"))
+  (let [[f] (the "c4-arrow-labelled" (run (update-in with-two-view [:relationships 1] dissoc :description)))]
+    (is (str/includes? (:message f) ":app"))
+    (is (str/includes? (:message f) ":x"))))
 
-(deftest each-rule-fires
-  (testing "c4-scope"
-    (is ((rules (lint-of (update room-model :views #(assoc-in % [0 :description] nil)))) "c4-scope")))
-  (testing "c4-container-runs"
-    (is ((rules (lint-of (assoc-in room-model [:containers 1 :kind] :library))) "c4-container-runs")))
-  (testing "c4-events-named: an event from the wrong publisher"
-    (is ((rules (lint-of (update room-model :relationships conj
-                                 {:from :spec/check :to :publishing/site :description "Publishes" :event :SpecParsed})))
-         "c4-events-named")))
-  (testing "a-contract-only, never for a kernel element"
-    (is ((rules (lint-of (update room-model :relationships conj
-                                 {:from :spec/check :to :publishing/site :description "Feeds"})))
-         "a-contract-only"))
-    (is (not ((rules (lint-of (update room-model :relationships conj
-                                      {:from :spec/check :to :kernel/bus :description "Publishes on"})))
-              "a-contract-only"))))
-  (testing "c4-view-size is a warning"
-    (let [m (update room-model :external into (for [i (range 20)] {:id (keyword (str "x" i)) :name "X" :description "x"}))
-          size (filter #(= "c4-view-size" (:rule %)) (lint-of m))]
-      (is (seq size))
-      (is (every? #(= :warning (:severity %)) size)))))
+(deftest a-context-view-needs-a-person
+  (let [m (-> with-two-view (assoc :people []) (update :relationships #(vec (rest %)))
+              (update :views #(vec (butlast (remove (fn [v] (= :dynamic (:level v))) %)))))
+        m (update m :views conj {:key "two" :level :component :context :two :description "Two"})]
+    (is (= ["c4-context-actors"] (map :rule (run m))))))
+
+(deftest a-container-runs-or-stores
+  (let [[f] (run (assoc-in with-two-view [:containers 1 :kind] :library))]
+    (is (= "c4-container-runs" (:rule f)))
+    (is (str/includes? (:message f) ":db"))
+    (is (str/includes? (:message f) ":library"))))
+
+(deftest an-event-is-catalogued-and-published-by-its-publisher
+  (let [[f] (run with-two-view {:catalogue {}})]
+    (is (= "c4-events-named" (:rule f)))
+    (is (str/includes? (:message f) ":one/b -> :two/c"))
+    (is (str/includes? (:message f) ":E")))
+  (is (= ["c4-events-named"] (map :rule (run with-two-view {:catalogue {:E {:published-by :one/a}}})))))
+
+(deftest a-big-view-warns-with-both-counts
+  (let [[f :as fs] (run with-two-view {:view-limit 3})]
+    (is (every? #(= :warning (:severity %)) fs))
+    (is (= #{"c4-view-size"} (set (map :rule fs))))
+    (is (some #(and (str/includes? (:message %) "\"cont\"") (str/includes? (:message %) " 4 ")
+                    (str/includes? (:message %) " 3")) fs))))
+
+(deftest a-long-person-or-system-description-fails
+  (let [d (apply str (repeat 60 "x"))
+        [f] (run (assoc-in with-two-view [:people 0 :description] d))]
+    (is (= "c4-description-length" (:rule f)))
+    (is (str/includes? (:message f) ":p"))
+    (is (str/includes? (:message f) "60"))
+    (is (str/includes? (:message f) "45")))
+  (is (= [] (run (assoc-in with-two-view [:containers 1 :description] (apply str (repeat 60 "x")))))
+      "only people and systems"))
+
+(deftest components-own-feature-files-and-feature-files-have-owners
+  (let [fs (run with-two-view {:feature-files (conj files "dhf/spec/one/z.feature") :exists? (set (rest files))})]
+    (is (= #{"a-scenario-owner"} (set (map :rule fs))))
+    (is (some #(and (str/includes? (:message %) ":one/a") (str/includes? (:message %) "dhf/spec/one/a.feature")) fs))
+    (is (some #(= "dhf/spec/one/z.feature" (:file %)) fs))))
+
+(deftest contexts-relate-only-through-events
+  (let [[f] (run (update with-two-view :relationships conj {:from :two/c :to :one/a :description "Calls"}))]
+    (is (= "a-contract-only" (:rule f)))
+    (is (str/includes? (:message f) ":two/c -> :one/a")))
+  (is (= [] (run (update with-two-view :relationships conj {:from :one/a :to :kernel/k :description "Uses"})))
+      "the kernel is in no context"))
+
+(deftest the-check-stage-reads-the-model-and-lists-what-a-person-judges
+  (let [dir (str (fs/create-temp-dir))
+        req {:root dir :config {:model "dhf/spec/model.edn" :spec-dir "dhf/spec" :c4 {:view-element-limit 20}}
+             :state (atom {}) :bus (bus/make-bus)}]
+    (fs/create-dirs (fs/file dir "dhf/spec/one"))
+    (fs/create-dirs (fs/file dir "dhf/spec/two"))
+    (fs/create-dirs (fs/file dir "dhf/spec/kernel"))
+    (spit (str (fs/file dir "dhf/spec/model.edn")) (pr-str with-two-view))
+    (doseq [f files] (spit (str (fs/file dir f)) "Feature: x\n"))
+    (doseq [[e h] (lint/subscriptions req)] (bus/subscribe! (:bus req) e :architecture/lint h))
+    (bus/publish! (:bus req) :spec/parser :SpecParsed {:scenarios [{:file "dhf/spec/z.feature"}]})
+    (let [{:keys [result findings]} (lint/check req)]
+      (is (= ["c4-events-named" "a-scenario-owner"] (map :rule findings))
+          "no catalogue declares the event, and SpecParsed names a feature file no component owns")
+      (is (= "dhf/spec/z.feature" (:file (second findings))))
+      (is (= 3 (count (get-in result [:lint :for-a-person]))))
+      (is (false? (get-in result [:lint :passed?]))))))

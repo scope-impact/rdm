@@ -1,84 +1,93 @@
 (ns steps.measurement-checklist
-  "Step definitions for dhf/spec/measurement/checklist.feature. The project
-  and cycle fixtures are steps.measurement-cycle's; the command is run by
-  steps.kernel-command."
+  "Step definitions for dhf/spec/measurement/checklist.feature. Each project
+  is a cut copy of the room's allow-list (steps.measurement-cycle) whose spec
+  is one small feature file; the working tree may differ from the cut."
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.measurement-cycle :as mc]
             [steps.support :as s]))
 
-(defn- scenarios-of
-  "`n` stamped scenarios from spec-0301, the last tagged @wip; those from the
-  third on in the context verification (component Status), the others in
-  architecture (component Lint)."
-  [n]
-  (vec (for [i (range n)]
-         {:id (format "spec-%04d" (+ 301 i))
-          :title (str "Scenario number " (inc i))
-          :wip? (= i (dec n))
-          :owner (if (< i 2) ["architecture" "Lint"] ["verification" "Status"])})))
+(defn- needs-checklist! [] (s/needs-built! 'rdm-spec.measurement.checklist 'rdm-spec.spec.parser))
 
-(defstep #"the spec at cut spec-3 has (\d+) stamped scenarios, one of them tagged @wip"
-  (fn [ctx n]
-    (let [scs (scenarios-of (parse-long n))
-          lint (filter #(= "Lint" (second (:owner %))) scs)
-          status (remove #(= "Lint" (second (:owner %))) scs)
-          dir (mc/spec-project! {mc/lint-feature (mc/feature-text lint)
-                                 mc/status-feature (mc/feature-text "Status" "UN-003" status)})]
-      (assoc ctx :dir (str dir) :scenarios scs))))
+(def checklist-path (mc/cycle-path "03" "checklist.json"))
 
-(defstep #"dhf/cycles/03/checklist.json holds (\d+) items to grade, each with the scenario's id, title, context, component and level"
-  (fn [ctx n]
-    (let [r (:run ctx)
-          _ (s/check! (zero? (:exit r)) (str "expected exit 0\n" (s/show r)))
-          {:keys [cycle cut items]} (mc/read-checklist ctx "03")
-          want (remove :wip? (:scenarios ctx))]
-      (s/check! (= "03" cycle) (str "the checklist names the cycle " (pr-str cycle)))
-      (s/check! (= "spec-3" cut) (str "the checklist names the cut " (pr-str cut)))
-      (s/check! (= (parse-long n) (count items)) (str (count items) " items: " (pr-str (map :id items))))
-      (doseq [{:keys [id title owner]} want
-              :let [item (first (filter #(= id (:id %)) items))]]
-        (s/check! item (str "no item for " id))
-        (s/check! (= {:id id :title title :context (first owner) :component (second owner) :level "e2e"} item)
-                  (str "the item of " id " is " (pr-str item)))))))
+(defn- checklist-text [ctx]
+  (mc/exits! ctx 0)
+  (let [f (fs/file (:dir ctx) checklist-path)]
+    (s/check! (fs/exists? f) (str "no " checklist-path "\n" (s/show (mc/the-run ctx))))
+    (slurp (str f))))
 
-(defstep #"it lists the @wip scenario separately, as planned"
-  (fn [ctx]
-    (let [{:keys [items planned]} (mc/read-checklist ctx "03")
-          wip (first (filter :wip? (:scenarios ctx)))]
-      (s/check! (= [{:id (:id wip) :title (:title wip)}] planned) (str "planned is " (pr-str planned)))
-      (s/check! (not-any? #(= (:id wip) (:id %)) items) (str (:id wip) " is an item to grade")))))
+(defn- checklist [ctx] (json/parse-string (checklist-text ctx) true))
 
-(defstep #"cycle 03 of cut spec-3, with one item to grade and one planned scenario"
-  (fn [ctx]
-    (mc/cycle-project! ctx {mc/lint-feature (mc/feature-text (take 2 mc/default-scenarios))})))
-
-(defn- keys-in-order
-  "The keys of every JSON object in `text`, in the order they are written."
+(defn- json-keys
+  "Every key of a JSON text, in the order it is written."
   [text]
   (mapv second (re-seq #"\"([A-Za-z_-]+)\"\s*:" text)))
 
-(defstep #"dhf/cycles/03/checklist.json holds:"
+;; ---------------------------------------------------------------------------
+
+(defstep #"the spec at cut spec-3 has (\d+) stamped scenarios, one of them tagged @wip"
+  (fn [ctx n]
+    (needs-checklist!)
+    (let [n (parse-long n)
+          scs (vec (for [i (range n)]
+                     (cond-> {:id (format "spec-%04d" (+ 301 i)) :title (str "Scenario number " (inc i))
+                              :level (if (even? i) "e2e" "contract")}
+                       (= i (dec n)) (assoc :wip? true))))
+          ctx (mc/cycle-project! ctx {mc/lint-feature (mc/feature-text scs)})]
+      ;; after the cut, the working tree gains a scenario the cut never held
+      (s/write! (:dir ctx) mc/lint-feature
+                (mc/feature-text (conj scs {:id "spec-0399" :title "Added after the cut"})))
+      (assoc ctx :scenarios scs))))
+
+(defstep #"dhf/cycles/03/checklist\.json holds (\d+) items to grade, each with the scenario's id, title, context, component and level"
+  (fn [ctx n]
+    (let [c (checklist ctx)
+          want (vec (for [sc (:scenarios ctx) :when (not (:wip? sc))]
+                      {:id (:id sc) :title (:title sc) :context "architecture" :component "Lint"
+                       :level (:level sc)}))]
+      (s/check! (= (parse-long n) (count (:items c))) (str (count (:items c)) " items: " (pr-str (map :id (:items c)))))
+      (s/check! (= want (:items c)) (str "items:\n" (pr-str (:items c)) "\nexpected\n" (pr-str want)))
+      (s/check! (= {:cycle "03" :cut "spec-3"} (select-keys c [:cycle :cut])) (pr-str (select-keys c [:cycle :cut]))))))
+
+(defstep #"it lists the @wip scenario separately, as planned"
+  (fn [ctx]
+    (let [c (checklist ctx)
+          wip (first (filter :wip? (:scenarios ctx)))]
+      (s/check! (= [{:id (:id wip) :title (:title wip)}] (:planned c)) (str "planned: " (pr-str (:planned c))))
+      (s/check! (not-any? #(= (:id wip) (:id %)) (:items c)) "the planned scenario is an item to grade"))))
+
+(defstep #"cycle 03 of cut spec-3, with one item to grade and one planned scenario"
+  (fn [ctx]
+    (needs-checklist!)
+    (let [scs [{:id "spec-0013" :title "A component that owns no feature file fails the lint" :wip? true}
+               {:id "spec-0012" :title "A view with no description fails the lint"}]
+          ctx (mc/cycle-project! ctx {mc/lint-feature (mc/feature-text scs)})]
+      (mc/write-cycle! (:dir ctx) "03" {})
+      ctx)))
+
+(defstep #"dhf/cycles/03/checklist\.json holds:"
   (fn [ctx doc]
-    (let [r (:run ctx)
-          _ (s/check! (zero? (:exit r)) (str "expected exit 0\n" (s/show r)))
-          got (mc/read-checklist ctx "03")
+    (let [got (checklist ctx)
           want (json/parse-string doc true)]
-      (s/check! (= want got) (str "checklist.json holds " (pr-str got) "\nexpected " (pr-str want)))
+      (s/check! (= want got) (str "checklist.json holds\n" (pr-str got) "\nexpected\n" (pr-str want)))
       (assoc ctx :expected-doc doc))))
 
 (defstep #"its keys appear in that order, items and planned sorted by id"
   (fn [ctx]
-    (let [text (slurp (str (fs/file (:dir ctx) (mc/cycle-path "03" "checklist.json"))))
-          {:keys [items planned]} (json/parse-string text true)]
-      (s/check! (= (keys-in-order (:expected-doc ctx)) (keys-in-order text))
-                (str "the keys are written in the order " (keys-in-order text)))
-      (doseq [xs [items planned]]
-        (s/check! (= (map :id xs) (sort (map :id xs))) (str "not sorted by id: " (pr-str (map :id xs))))))))
+    (let [text (checklist-text ctx)
+          c (json/parse-string text true)]
+      (s/check! (= (json-keys (:expected-doc ctx)) (json-keys text))
+                (str "keys in the order " (pr-str (json-keys text)) ", expected " (pr-str (json-keys (:expected-doc ctx)))))
+      (doseq [k [:items :planned]]
+        (s/check! (= (sort (map :id (k c))) (map :id (k c))) (str (name k) " are not sorted by id"))))))
 
 (defstep #"it exits 1, writes nothing, and names the file and line of the unstamped scenario"
   (fn [ctx]
+    (needs-checklist!)
+    (mc/exits! ctx 1)
+    (mc/wrote-nothing! ctx checklist-path)
     (let [{:keys [file line]} (:unstamped ctx)]
-      (mc/refused! ctx 1 "checklist.json"
-                   (re-pattern (str "(^|\\s)" (java.util.regex.Pattern/quote (str file ":" line ":"))))))))
+      (mc/says! ctx (re-pattern (str "(?m)^" (java.util.regex.Pattern/quote (str file ":" line ":")) " "))
+                (str file ":" line)))))
