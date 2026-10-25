@@ -19,7 +19,7 @@
          {:component :kernel/command}]
  :builder {:name "builder subagents, one per scope" :actor :agent}
  :grader {:name "grader subagents" :actor :agent}
- :spec-owner {:name "Sathish Narayanan" :actor :human
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
  ;; The spec owner's review of the build, 2026-10-25: accepted, and installed
  ;; as the release that runs the next cycles (replacing cycle 01's c5d45eb).
  :reviewed {:by {:name "Sathish Narayanan" :actor :human} :build "b5373e3" :outcome :accepted}}

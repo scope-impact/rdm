@@ -98,3 +98,16 @@ had the wiki page. These are the open choices it settles:
 - **Builders still write `dhf/allure-results/`** when run without
   RESULTS_DIR (two this cycle, removed). The test command could refuse to run
   without it.
+
+## Found by the installed cycle 04 release
+
+- **A deliberately removed source reads as dropped pins.** The release's
+  sources check (spec-0121, across the index's history) reports
+  `source-pin-dropped` for scope-impact/rdm, removed on the spec owner's
+  decision in 967c1de because it holds today's implementation. The spec has
+  no way to remove a source on purpose, and Löyly's record is silent, so the
+  builder's reading stands. Proposal: a source is retired, never deleted. Its
+  entry keeps its pins and gains `:retired "<reason>"`; a citation against a
+  retired source fails, and the check accepts the retirement. Until then
+  `rdm-spec check` exits 1 on this repository, and no cut can be taken
+  (spec-0224).
