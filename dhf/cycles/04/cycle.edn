@@ -13,7 +13,7 @@
  :scope [{:context :measurement}
          {:context :publishing}
          {:component :knowledge/sources}
-         {:component :regeneration/fence}
+         {:context :regeneration}
          {:context :ratification}
          {:component :spec/check}
          {:component :kernel/command}]
