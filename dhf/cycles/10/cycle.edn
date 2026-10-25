@@ -1,0 +1,14 @@
+;; Cycle 10: cycle 09's findings folded in, cut as spec-14 (tagged locally).
+;; The first cycle run by cycle 09's release (0df7db9), whose oracle gate reads
+;; the artifact by digest. Its scopes are what `rdm-spec scopes spec-13
+;; spec-14` listed, plus kernel/command, which the README's two new rules
+;; reach: it names the context keys of the shared steps, and its fixtures
+;; never carry the room's oracle. Two builders in parallel.
+{:cut "spec-14"
+ :scope [{:context :compliance}
+         {:component :kernel/command}
+         {:component :measurement/oracle}
+         {:component :publishing/site}]
+ :builder {:name "builder subagents, one per group of scopes" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
