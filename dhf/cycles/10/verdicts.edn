@@ -1,0 +1,248 @@
+[{:id "spec-0092",
+  :verdict :pass,
+  :evidence
+  "Fixture from init with a model of two contexts (spec: Parser, Stamper; architecture: Lint, Model, Views), no kernel; publish exited 0 and wrote exactly five component pages, spec/parser.md ... architecture/views.md, titled e.g. '# Lint (architecture)', each built to HTML."}
+ {:id "spec-0093",
+  :verdict :pass,
+  :evidence
+  "Copy of rdm-spec's dhf with prose added at dhf/spec/architecture/lint.md; publish exit 0; architecture/lint.md holds the model description, a Design section with the prose, and all 13 scenarios of lint.feature each with id, title, level tag and every step (checked by script)."}
+ {:id "spec-0094",
+  :verdict :pass,
+  :evidence
+  "Publish on the copy of rdm-spec's dhf: architecture/index.md embeds ../views/architecture-components.svg (copied into the site) and links model.md, lint.md and views.md."}
+ {:id "spec-0095",
+  :verdict :pass,
+  :evidence
+  "Publish on the copy of rdm-spec's dhf: index.md embeds views/context.svg and views/containers.svg and lists all 13 user needs, each with exactly the scenarios whose feature, rule or scenario need tags trace to it (237 scenarios, compared by an independent script)."}
+ {:id "spec-0096",
+  :verdict :pass,
+  :evidence
+  "Fixture results dir (outside the project) with spec-0012 passed and spec-0013 failed; publish --results DIR exit 0; Lint's page and the home page show spec-0012 verified and spec-0013 failed."}
+ {:id "spec-0097",
+  :verdict :pass,
+  :evidence
+  "Fixture with @spec-0014 tagged @wip; publish with no results and again with a result marking spec-0014 passed: both times its page and the home page show it planned."}
+ {:id "spec-0098",
+  :verdict :pass,
+  :evidence
+  "Copy of rdm-spec's dhf with no dhf/allure-results; publish with no --results exit 0; every one of the 44 Markdown pages, wiki index and both wiki pages included, says 'no status was derived because no results were given'."}
+ {:id "spec-0099",
+  :verdict :pass,
+  :evidence
+  "In a valid fixture, changed the model-sha256 on line 1 of spec-components.mmd, and separately of the rendered spec-components.svg; publish exited 1 each time naming that view file with view-stale, and wrote no site."}
+ {:id "spec-0100",
+  :verdict :pass,
+  :evidence
+  "Init-made fixture; copied dhf aside, ran publish (exit 0), diff -r of dhf against the copy is empty and git status shows only ignored site/ and site-src/."}
+ {:id "spec-0101",
+  :verdict :pass,
+  :evidence
+  "Published twice with the same results dir, keeping the first site-src aside: diff -r of the Markdown and mkdocs.yml is empty, and no page under site-src or site names /tmp, /home or /root (the results dir was an absolute /tmp path)."}
+ {:id "spec-0133",
+  :verdict :pass,
+  :evidence
+  "Fixture wiki page pages/alpha.md with footnote citing `loyly:README.md@17d68d2`; publish exit 0; the page is published and the footnote links https://github.com/skallinen/loyly/blob/17d68d2/README.md in both Markdown and HTML."}
+ {:id "spec-0146",
+  :verdict :pass,
+  :evidence
+  "Fixture model with contexts spec then architecture and one kernel component; publish wrote mkdocs.yml nav: Home, spec (spec/index.md, Parser, Stamper), architecture (index, Lint, Model, Views), kernel (index, Command), then wiki; model order kept."}
+ {:id "spec-0147",
+  :verdict :pass,
+  :evidence
+  "Valid fixture, mkdocs wrapped by a logging shim: publish exit 0, the shim logged 'build --strict -f site-src/mkdocs.yml', and site/index.html and the page HTML were written."}
+ {:id "spec-0148",
+  :verdict :pass,
+  :evidence
+  "After a good publish, added prose to Lint linking nowhere-at-all.md; publish exit 1, stderr 'site-src/docs/architecture/lint.md: site-link-broken: the page links to nowhere-at-all.md ...'; the site directory was removed, no HTML left."}
+ {:id "spec-0149",
+  :verdict :pass,
+  :evidence
+  "With a site/ left by an earlier publish, ran publish with a PATH lacking mkdocs: exit 2, stderr 'cannot-run: the site builder mkdocs is not installed (not on PATH), so no HTML was written; site holds none', stdout empty, site/ gone."}
+ {:id "spec-0176",
+  :verdict :pass,
+  :evidence
+  "rdm-spec help in an init-made project exit 0; all 20 rows' task, usage and description match the outline's Examples exactly (script compare of the EDN result)."}
+ {:id "spec-0177",
+  :verdict :pass,
+  :evidence
+  "rdm-spec check on the copy of rdm-spec's own dhf (no :oracle) exits 0, with only citation-unchecked warnings."}
+ {:id "spec-0178",
+  :verdict :pass,
+  :evidence
+  "Removed @e2e from spec-0012 in lint.feature; check exit 1, stderr 'dhf/spec/architecture/lint.feature:76: scenario-no-level: spec-0012 carries no level...', stdout is exactly one EDN form."}
+ {:id "spec-0179",
+  :verdict :pass,
+  :evidence
+  "Copy of rdm-spec's dhf with no dhf/allure-results; status exit 2, stderr 'cannot-run: the results directory dhf/allure-results does not exist', stdout empty."}
+ {:id "spec-0180",
+  :verdict :pass,
+  :evidence
+  "rdm-spec frobnicate: exit 2, stdout empty, stderr 'cannot-run: unknown task frobnicate; the tasks are help, init, ... audit' listing all 20."}
+ {:id "spec-0193",
+  :verdict :pass,
+  :evidence
+  "Put a result for spec-0012 (passed) only in dhf/allure-results; status with no --results and no RESULTS_DIR reported that file from dhf/allure-results."}
+ {:id "spec-0219",
+  :verdict :pass,
+  :evidence
+  "Distinct results in dhf/allure-results (passed), R1 (failed) and other (broken): unset env read dhf/allure-results; RESULTS_DIR=R1 read R1; RESULTS_DIR=R1 with --results other read other. All rows hold."}
+ {:id "spec-0228",
+  :verdict :pass,
+  :evidence
+  "Own oracle.edn (init-based fixture project, cycles 01/02 at spec-1/spec-2, goldens hand-checked: 4 items + 1 planned, scores 2/4 and 3/4, scoreboard 2 better 1 worse) pushed to an OCI layout; oracle with ORACLE_LAYOUT exit 0 naming checklist 01/02, scorer 01/02, scoreboard 01-02."}
+ {:id "spec-0229",
+  :verdict :pass,
+  :evidence
+  "Same oracle with golden :scorer \"01\" item 2 set to :pass; oracle exit 1, stderr 'golden-differs: the golden :scorer \"01\" differs at :items 1 (spec-0002) :verdict: the golden holds :pass, the scorer gives :fail'."}
+ {:id "spec-0230",
+  :verdict :pass,
+  :evidence
+  "Oracle with that unreproduced scorer golden; record --reason '...' exit 0: new artifact pulled shows the item rewritten to :fail, :recorded appended {date 2026-10-25, the reason, :changed [:scorer]}, rest equal; config.edn digest rewritten uncommitted; old artifact still pulls with the same bytes."}
+ {:id "spec-0231",
+  :verdict :pass,
+  :evidence
+  "oracle record with no reason: exit 2, 'cannot-run: a reason is required ...; nothing was stored'; layout blobs and index.json unchanged, config.edn unchanged (git status clean)."}
+ {:id "spec-0232",
+  :verdict :pass,
+  :evidence
+  "Fixture with a red oracle, tag spec-3 and cycle 03 without ratified.edn: fence ROOM spec-3 and ratify ROOM 03 each exit 1, stdout {}, stderr identical to the oracle's own findings; no room created, no ratified.edn written. Control: green oracle lets fence build the room."}
+ {:id "spec-0233",
+  :verdict :pass,
+  :evidence
+  "Copy of rdm-spec's dhf with :oracle removed (and an init-made project): oracle exit 0, '{:oracle {:ran? false, :note \"the configuration names no :oracle: there is no oracle to run\"}}'."}
+ {:id "spec-0235",
+  :verdict :pass,
+  :evidence
+  "Removed a level tag and changed a model description so views are stale; check exit 1 naming both scenario-no-level for spec-0012 and view-stale for every view."}
+ {:id "spec-0239",
+  :verdict :pass,
+  :evidence
+  "Fixture wiki whose index lists alpha and beta pages; publish: home page links wiki/index.md, the index links pages/alpha.md and pages/beta.md, and the nav holds a wiki section right after the kernel section."}
+ {:id "spec-0242",
+  :verdict :pass,
+  :evidence
+  "Regulated fixture, every clause named, spec-0002's Allure result set to failed; `rdm-spec audit OUT` exited 1, printed {} and the same scenario-failed line `rdm-spec release` prints, and OUT was not created."}
+ {:id "spec-0243",
+  :verdict :pass,
+  :evidence
+  "Verified fixture with std.txt holding STD:5.1 (tagged) and STD:5.2 (untagged), committed; audit exited 1 with `dhf/clauses/std.txt:2: clause-unreferenced: STD:5.2 ...` and created no OUT."}
+ {:id "spec-0244",
+  :verdict :pass,
+  :evidence
+  "Fixture from init with no :regulated (documents absent); audit exited 2 with `cannot-run: the configuration dhf/harness/config.edn holds no :regulated ...`."}
+ {:id "spec-0245",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated fixture, OUT pre-made holding note.txt; audit exited 2 naming OUT ('exists: ... only into a directory that does not exist'); note.txt sha256 unchanged and nothing else written."}
+ {:id "spec-0246",
+  :verdict :pass,
+  :evidence
+  "plan.md line 'We plan the work [[STD:5.1]].'; audit exit 0, auditor copy keeps the line, engineer copy has 'We plan the work.', and `diff` of the two shows only that line differing."}
+ {:id "spec-0247",
+  :verdict :pass,
+  :evidence
+  "One committed releasable fixture per row (a second document kept every clause named). All 8 rows held: 'We plan.', 'We plan and test.', a two-line tag gave 'We plan the work' / ' and test it.' (line kept), code span, unclosed [[, fenced and indented code unchanged, frontmatter title became 'Development plan'."}
+ {:id "spec-0248",
+  :verdict :pass,
+  :evidence
+  "Fixture with dhf/documents/plan.md and dhf/documents/risk/register.md; audit wrote auditor/ and engineer/ each holding plan.md and risk/register.md (plus their PDFs)."}
+ {:id "spec-0249",
+  :verdict :pass,
+  :evidence
+  "plan.md id PLAN-001, revision 3, title 'Development plan'; both OUT/auditor/plan.pdf and OUT/engineer/plan.pdf exist, pdftotext of page 1 shows 'Development plan' and 'Document PLAN-001, revision 3', and the engineer PDF text holds no '[['."}
+ {:id "spec-0250",
+  :verdict :pass,
+  :evidence
+  "std.txt 'include base.txt' then 'STD:5.1 Development plan', base.txt 'STD:4.1 Quality system', STD:5.1 tagged at plan.md:8 and risk/register.md:9; clauses.md has one section, dhf/clauses/std.txt, none for base.txt, STD:4.1 row first, then STD:5.1 with 'Development plan', dhf/documents/plan.md:8 and dhf/documents/risk/register.md:9."}
+ {:id "spec-0251",
+  :verdict :pass,
+  :evidence
+  "Need UN-001 traced (feature tag) by @spec-0001 and @spec-0002, both passed; traceability.md has '## UN-001', its text, and rows for @spec-0001/@spec-0002 with title, component Thing and status verified."}
+ {:id "spec-0252",
+  :verdict :pass,
+  :evidence
+  "Results directory dhf/allure-results with two result files; OUT/results holds both, `cmp` byte-identical to the originals."}
+ {:id "spec-0253",
+  :verdict :pass,
+  :evidence
+  "In 4 fixtures manifest.edn read as EDN has exactly keys :commit :files; :commit equals `git rev-parse HEAD`; :files lists every other file of OUT with paths relative to OUT, sorted, and every :sha256 matches sha256sum."}
+ {:id "spec-0254",
+  :verdict :pass,
+  :evidence
+  "Ran audit OUT then OUT2 at the same commit and results: `diff -r` found no difference (PDFs, manifest included); a clone at another path with another TZ also gave identical bytes."}
+ {:id "spec-0255",
+  :verdict :pass,
+  :evidence
+  "Fixture with no :regulated and dhf/documents/plan.md naming no clause (no frontmatter, holding TODO); check exited 0, its only warning is a citation-unchecked one about needs.edn, with nothing about clauses, clause lists or documents."}
+ {:id "spec-0256",
+  :verdict :pass,
+  :evidence
+  "std.txt exactly as given, base.txt 'STD:4.1 Quality system', no tags; check exited 1 with exactly three clause-unreferenced findings, for STD:4.1 (base.txt:1), STD:5.1 (std.txt:4) and STD:5.2 (std.txt:5), and no others."}
+ {:id "spec-0257",
+  :verdict :pass,
+  :evidence
+  "std.txt holding only comment lines; check exited 2 with 'cannot-run: the clause list dhf/clauses/std.txt holds no clause'."}
+ {:id "spec-0258",
+  :verdict :pass,
+  :evidence
+  "std.txt 'include missing.txt'; check exited 2 with a message naming dhf/clauses/missing.txt as no readable file."}
+ {:id "spec-0259",
+  :verdict :pass,
+  :evidence
+  "STD:5.1 tagged in plan.md, STD:5.2 not; check exited 1 with 'dhf/clauses/std.txt:2: clause-unreferenced: STD:5.2 Requirements analysis: ...' (file, line, key and description)."}
+ {:id "spec-0260",
+  :verdict :pass,
+  :evidence
+  "8 fixtures, one per row, with the row as a body line of plan.md; rows 1-4 gave exit 0 and 0 gaps (named), rows 5-8 gave exit 1 with a clause-unreferenced finding for STD:5.1 (not named). Every row held."}
+ {:id "spec-0261",
+  :verdict :pass,
+  :evidence
+  "Body 'An open [[ tag', blank line, 'STD:5.1 ]]'; check exited 1 with a clause-unreferenced finding for STD:5.1 (not named)."}
+ {:id "spec-0262",
+  :verdict :pass,
+  :evidence
+  "plan.md tags STD:5.1 and, on line 8, STD:9.9; check exited 0 with 'dhf/documents/plan.md:8: warning: clause-unknown: STD:9.9: ...'."}
+ {:id "spec-0263",
+  :verdict :pass,
+  :evidence
+  "plan.md tags STD:5.1 and has 'TODO: write the plan' on line 9; check exited 0 with 'dhf/documents/plan.md:9: warning: document-placeholder: ...'."}
+ {:id "spec-0264",
+  :verdict :pass,
+  :evidence
+  "plan.md frontmatter with id and title, no revision; check exited 1 with 'dhf/documents/plan.md: document-unidentified: the controlled document has no revision in its frontmatter'."}
+ {:id "spec-0265",
+  :verdict :pass,
+  :evidence
+  "plan.md and old-plan.md both id PLAN-001; check exited 1 with a document-id-duplicate finding naming PLAN-001, dhf/documents/plan.md and dhf/documents/old-plan.md."}
+ {:id "spec-0268",
+  :verdict :pass,
+  :evidence
+  "title 'Development plan [[STD:5.1]]' in frontmatter, body naming nothing; check exited 1 with a clause-unreferenced finding for STD:5.1 (not named)."}
+ {:id "spec-0273",
+  :verdict :pass,
+  :evidence
+  "Copy of rdm-spec's dhf, whose wiki index holds a [^ex] footnote citing `loyly:README.md@17d68d2`; publish: the published index's footnote links https://github.com/skallinen/loyly/blob/17d68d2/README.md (Markdown and HTML)."}
+ {:id "spec-0274",
+  :verdict :pass,
+  :evidence
+  "Each row on a committed releasable fixture (untracked draft.md, changed plan.md, changed scenario title in thing.feature, changed std.txt): audit exited 1 with a not-committed finding naming that file, and no OUT. Staged-only, ignored-untracked and included-list changes were refused too. An uncommitted change to dhf/harness/config.edn is not refused (see the report); this outline's rows do not cover it."}
+ {:id "spec-0275",
+  :verdict :pass,
+  :evidence
+  "Body: text, blank line, then '    [[STD:5.1]]'; check exited 1 with a clause-unreferenced finding for STD:5.1 (not named)."}
+ {:id "spec-0276",
+  :verdict :pass,
+  :evidence
+  "Pushed own oracle.edn (keys :project :cycles :checklist :scorer :scoreboard :recorded) to an OCI layout with the stack's media and artifact types; config :oracle names a dummy repository and its digest; oracle read it by digest from ORACLE_LAYOUT, exit 0, result :compared lists each golden as {:component :key}."}
+ {:id "spec-0277",
+  :verdict :pass,
+  :evidence
+  "Oracle.edn with :cycles {} and empty goldens; oracle exit 1, 'oracle-empty: the oracle registry.invalid/grader/fx-oracle@sha256:5924... holds no fixture cycle, so it judged nothing'."}
+ {:id "spec-0280",
+  :verdict :pass,
+  :evidence
+  ":oracle digest sha256:000...0 absent from the layout; oracle exit 2, 'cannot-run: the oracle registry.invalid/grader/fx-oracle@sha256:000... (read from the layout ...) cannot be read: the store does not hold it', naming repository and digest."}
+ {:id "spec-0281",
+  :verdict :pass,
+  :evidence
+  "Body '- A list item.', blank line, '    The continuation [[STD:5.1]] here.'; check exited 0, 0 gaps (named); the audit's clauses page cites plan.md:11 and the engineer copy drops the tag."}]
