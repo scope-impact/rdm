@@ -1,8 +1,8 @@
-;; Cycle 03: the spec change folding in cycle 02's findings, cut as spec-4
+;; Cycle 03: the spec change folding in cycle 02's findings, cut as spec-4, then as spec-5 once its views were redrawn
 ;; (tagged locally). Run by the installed rdm-spec (cycle 01's build): one
 ;; clean room per scope, fenced by rdm-spec fence, one builder each, merged,
 ;; ratified, checklisted per scope and graded by graders who are no builder.
-{:cut "spec-4"
+{:cut "spec-5"
  :scope [{:context :measurement}
          {:context :regeneration}
          {:context :architecture}
