@@ -1,0 +1,16 @@
+;; Cycle 11: cycle 10's findings folded in, cut as spec-15 (tagged locally),
+;; and the whole project regenerated, so every implementation file is rebuilt
+;; from the spec: the shared step texts and run-time registrations left in
+;; components no scoped cycle had reached, and the kernel's stopgap over
+;; support.clj, go with it. Run by cycle 10's release (9a7a5ae).
+;; Built in partitions. Phase 1: the kernel (command, bus, runner) with the
+;; test scaffolding no context owns (test.clj, bb.edn, test/steps/support.clj),
+;; in a room fenced for the context kernel with those three files removed by
+;; the integrator. Phase 2: five builders in parallel, each in a room fenced
+;; for its group of contexts, phase 1's files copied in. Every file of the
+;; merged build is a rebuilt one.
+{:cut "spec-15"
+ :scope :project
+ :builder {:name "builder subagents: the kernel first, then one per group of contexts" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
