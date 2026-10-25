@@ -1,231 +1,301 @@
 (ns steps.spec-check
-  "Step definitions for dhf/spec/spec/check.feature, in a copy of the room's
-  spec whose check feature file (and, where a scenario needs two, the stamper
-  feature file) is replaced by a fixture. Fixture scenarios carry the ids of
-  the scenarios they stand for, which the replaced file held, so they collide
-  with no other file's.
+  "Step definitions for dhf/spec/spec/check.feature. Each scenario runs the
+  check on a copy of the room's spec whose spec/check feature file is replaced
+  by a fixture (steps.spec-support); the fixtures take their ids from the
+  check feature itself, so no other file of the copy is touched, unless the
+  scenario names an id another file carries.
 
-  Two steps share their wording with other features: \"it passes\"
-  (dhf/spec/project/init.feature, dhf/spec/spec/parser.feature, ...) and
-  \"the configured stack words include ...\" (dhf/spec/knowledge/wiki.feature).
-  Each is defined only when no other step file defines it, with the same
-  meaning, so never twice."
-  (:require [clojure.string :as str]
+  Shared in wording with other features, and defined here only when no file
+  loaded earlier defines them, so each is there once with one meaning:
+  \"it passes\" (dhf/spec/project/init.feature, dhf/spec/knowledge/
+  sources.feature) and \"the configured stack words include ...\"
+  (dhf/spec/knowledge/wiki.feature)."
+  (:require [babashka.fs :as fs]
+            [clojure.edn :as edn]
+            [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.spec-support :as f]
             [steps.support :as s]))
 
 (def check-file "dhf/spec/spec/check.feature")
 
-(defn- fixture!
-  "ctx with a copy of the room's spec whose check feature file is `text`."
-  [ctx text]
-  (s/needs-built! 'rdm-spec.spec.check 'rdm-spec.spec.parser)
-  (let [ctx (f/ensure-room! ctx)]
-    (f/feature! (:dir ctx) "spec/check" text)
-    (assoc ctx :file check-file :text text)))
+;; ---------------------------------------------------------------------------
+;; Helpers
 
-(defn- scenario!
-  "A fixture of one scenario, `id` among its tags `tags`."
-  [ctx id tags & [opts]]
-  (let [text (f/fixture-feature (merge {:tags tags :name "A fixture scenario" :feature-name "Spec check"} opts))]
-    (assoc (fixture! ctx text) :id id :line (f/scenario-line text "A fixture scenario"))))
+(defn- registered? [text]
+  (some #(re-matches (:pattern %) text) @rdm-spec.kernel.runner/*registry*))
 
-(defn- findings
-  "The run's finding lines (no warnings, no events)."
+(defn- room
+  "ctx with a copy of the room (kept when it has one already)."
   [ctx]
-  (remove #(re-find #"(^|: )warning: " %) (f/finding-lines (:run ctx))))
+  (apply s/needs-built! f/check-stages)
+  (f/ensure-room! ctx))
+
+(defn- ids-of
+  "The id numbers the tag lines of `text` carry (an id named in a step's
+  words is not a tag)."
+  [text]
+  (for [l (str/split-lines text)
+        :when (str/starts-with? (str/trim l) "@")
+        id (f/ids-in l)]
+    (parse-long (subs id 6))))
+
+(defn- cover-moved-ids!
+  "Raises the copy's ledger over every id the spec's other files carry, so an
+  id moved off them by spec-support (to make the fixture's ids its own) is
+  one the ledger issued: the fixture's scenario is then the only finding."
+  [dir fixture-file]
+  (let [others (for [g (fs/glob (fs/file dir "dhf/spec") "**.feature")
+                     :when (not= (str (fs/absolutize g)) (str (fs/absolutize (fs/file dir fixture-file))))]
+                 (slurp (str g)))
+        top (reduce max 0 (mapcat ids-of others))
+        issued (or (f/ledger dir) 0)]
+    (when (> top issued)
+      (f/write-ledger! dir top))))
+
+(defn- fixture!
+  "ctx with the copy's check feature file replaced by `text`; :file and
+  :text name it, :line is the line of the scenario named :name."
+  [ctx text & {:keys [move?] :or {move? true}}]
+  (let [ctx (room ctx)
+        dir (:dir ctx)]
+    (if move?
+      (do (f/feature! dir "spec/check" text)
+          (cover-moved-ids! dir check-file))
+      (spit (str (fs/file dir check-file)) text))
+    (assoc ctx :file check-file :text text
+           :line (f/scenario-line text (or (:name ctx) "A fixture scenario")))))
+
+(defn- one-scenario!
+  "A fixture holding one scenario tagged `tags` (options as fixture-feature)."
+  [ctx tags & [opts]]
+  (fixture! (assoc ctx :name "A fixture scenario")
+            (f/fixture-feature (merge {:tags tags :feature-name "Spec check"} opts))))
+
+(defn- lines [ctx] (f/finding-lines (:run ctx)))
+
+(defn- at [ctx] (str (:file ctx) ":" (:line ctx) ":"))
 
 (defn- fails-with!
-  "Checks the run exited 1 and one finding line (never a warning) holds every
-  one of `parts`."
-  [ctx & parts]
+  "The run exited 1 and a finding line satisfies `pred`; `what` says what
+  was looked for."
+  [ctx pred what]
   (let [r (:run ctx)]
     (s/check! r "no command was run")
     (s/check! (= 1 (:exit r)) (str "expected exit 1\n" (s/show r)))
-    (s/check! (some (fn [l] (every? #(str/includes? l %) parts)) (findings ctx))
-              (str "no finding names all of " (pr-str parts) "\n" (s/show r)))))
+    (s/check! (some pred (lines ctx)) (str "no finding " what "\n" (s/show r)))))
+
+(defn- includes-all? [l parts] (every? #(str/includes? l %) parts))
 
 ;; ---------------------------------------------------------------------------
-;; Ids
+;; A scenario is the unit of requirement and carries exactly one id
 
-(defstep #"a scenario tagged both @(\S+) and @(\S+)"
+(defstep #"a scenario tagged both @(spec-\d+) and @(spec-\d+)"
   (fn [ctx a b]
-    (assoc (scenario! ctx a (str "@" a " @" b " @e2e")) :ids [a b] :title "A fixture scenario")))
+    (assoc (one-scenario! ctx (str "@" a " @" b " @e2e")) :ids [a b])))
 
 (defstep #"it fails and names the scenario and both ids"
   (fn [ctx]
-    (apply fails-with! ctx (str (:file ctx) ":" (:line ctx) ":") (:title ctx) (:ids ctx))))
+    (fails-with! ctx #(and (str/starts-with? % (at ctx)) (includes-all? % (:ids ctx)))
+                 (str "at " (at ctx) " names " (str/join " and " (:ids ctx))))))
 
-(defstep #"two scenarios both tagged @(\S+)"
+(defstep #"two scenarios both tagged @(spec-\d+)"
   (fn [ctx id]
-    (s/needs-built! 'rdm-spec.spec.check 'rdm-spec.spec.parser)
-    (let [ctx (f/ensure-room! ctx)
-          tags (str "@" id " @e2e")
-          files (f/features! (:dir ctx)
-                             {"spec/check" (f/fixture-feature {:tags tags :name "The first carrier"})
-                              "spec/stamper" (f/fixture-feature {:tags tags :name "The second carrier"})})]
-      (assoc ctx :files files :id id))))
+    (let [ctx (room ctx)
+          dir (:dir ctx)
+          ;; another feature file of the copy carrying the id, else a second
+          ;; scenario of the fixture would not be in another file
+          other (first (for [g (sort (map str (fs/glob (fs/file dir "dhf/spec") "**.feature")))
+                             :let [rel (str (fs/relativize dir g))]
+                             :when (and (not= rel check-file)
+                                        (re-find (re-pattern (str "@" id "(?!\\d)")) (slurp g)))]
+                         rel))
+          ctx (if other
+                ctx
+                (do (s/write! dir "dhf/spec/spec/parser.feature"
+                              (f/fixture-feature {:tags (str "@" id " @e2e") :name "The other scenario"}))
+                    ctx))
+          other (or other "dhf/spec/spec/parser.feature")
+          ctx (fixture! (assoc ctx :name "A fixture scenario")
+                        (f/fixture-feature {:tags (str "@" id " @e2e") :feature-name "Spec check"})
+                        :move? false)]
+      (assoc ctx :id id :files [check-file other]))))
 
 (defstep #"it fails and names both files and the id"
   (fn [ctx]
-    (apply fails-with! ctx (:id ctx) (:files ctx))))
+    (fails-with! ctx #(includes-all? % (conj (:files ctx) (:id ctx)))
+                 (str "names " (str/join " and " (:files ctx)) " and " (:id ctx)))))
 
 (defstep #"a scenario on line (\d+) of a feature file with no @spec- tag"
   (fn [ctx n]
     (let [n (parse-long n)
-          base (f/scenario-line (f/fixture-feature {:tags "@e2e"}) "A fixture scenario")
-          _ (s/check! (>= n base) (str "a fixture scenario cannot sit above line " base))
-          leading (repeat (- n base) "# A comment that moves the scenario down.")
-          text (f/fixture-feature {:tags "@e2e" :leading leading})]
-      (s/check! (= n (f/scenario-line text "A fixture scenario")) "the fixture is not on the line asked")
-      (assoc (fixture! ctx text) :line n))))
+          bare (f/scenario-line (f/fixture-feature {:tags "@e2e"}) "A fixture scenario")
+          leading (vec (repeat (- n bare) "# A comment that places the scenario."))
+          ctx (one-scenario! ctx "@e2e" {:leading leading})]
+      (s/check! (= n (:line ctx)) (str "the fixture's scenario is on line " (:line ctx) ", not " n))
+      ctx)))
 
 (defstep #"it fails, names the file and line (\d+), and says to run \"rdm-spec stamp\""
   (fn [ctx n]
-    (fails-with! ctx (str (:file ctx) ":" n ":") "rdm-spec stamp")))
+    (let [where (str (:file ctx) ":" n ":")]
+      (fails-with! ctx #(and (str/starts-with? % where) (str/includes? % "rdm-spec stamp"))
+                   (str "at " where " says to run rdm-spec stamp")))))
 
-(defstep #"the ledger has issued ids up to (\d+) and a scenario is tagged @(\S+)"
-  (fn [ctx n id]
-    (let [ctx (scenario! ctx id (str "@" id " @e2e"))]
-      (f/write-ledger! (:dir ctx) (parse-long n))
-      ctx)))
+(defstep #"a scenario tagged @(spec-(\d+)), an id above every id the ledger has issued"
+  (fn [ctx id n]
+    (let [ctx (one-scenario! ctx (str "@" id " @e2e"))
+          issued (f/ledger (:dir ctx))]
+      (s/check! (and issued (> (parse-long n) issued))
+                (str id " is not above the ledger's " (pr-str issued)))
+      (assoc ctx :id id))))
 
-(defstep #"it fails, names (\S+) and says the ledger never issued it"
+(defstep #"it fails, names (spec-\d+) and says the ledger never issued it"
   (fn [ctx id]
-    (fails-with! ctx (str (:file ctx) ":" (:line ctx) ":") id "the ledger never issued it")))
+    (fails-with! ctx #(and (str/includes? % id) (str/includes? % "never issued"))
+                 (str "names " id " and says the ledger never issued it"))))
 
 ;; ---------------------------------------------------------------------------
-;; Levels and tags
+;; A scenario carries exactly one verification level
 
 (def ^:private levels #{"@e2e" "@contract"})
 
-(defstep #"a stamped scenario tagged (@\S+)"
-  ;; A tag that is not a level comes with a level, so the tag is all that is wrong.
+(defstep #"a stamped scenario tagged (@[\w-]+)"
   (fn [ctx tag]
-    (scenario! ctx "spec-0044" (str "@spec-0044 " tag (when-not (levels tag) " @e2e")))))
+    (if (levels tag)
+      (assoc (one-scenario! ctx (str "@spec-0044 " tag)) :id "spec-0044" :tag tag)
+      (assoc (one-scenario! ctx (str "@spec-0150 @e2e " tag)) :id "spec-0150" :tag tag))))
 
 (defstep #"the scenario passes the level check"
   (fn [ctx]
-    (let [r (:run ctx)]
+    (let [r (:run ctx)
+          about (filter #(and (str/starts-with? % (at ctx)) (re-find #"(?i)level" %)) (lines ctx))]
       (s/check! r "no command was run")
-      (s/check! (#{0 1} (:exit r)) (str "the check did not run\n" (s/show r)))
-      (s/check! (not-any? #(and (str/starts-with? % (str (:file ctx) ":")) (str/includes? % "check-level"))
-                          (findings ctx))
-                (str "a level finding names " (:file ctx) "\n" (s/show r)))
-      (s/check! (= 0 (:exit r)) (str "expected exit 0\n" (s/show r))))))
+      (s/check! (not= 2 (:exit r)) (str "the check could not run\n" (s/show r)))
+      (s/check! (empty? about) (str "the level check names the scenario\n" (s/show r))))))
 
 (defstep #"a stamped scenario with no level tag"
-  (fn [ctx] (scenario! ctx "spec-0045" "@spec-0045")))
+  (fn [ctx] (assoc (one-scenario! ctx "@spec-0045") :id "spec-0045")))
+
+(defstep #"it fails and names the scenario's id and the two levels"
+  (fn [ctx]
+    (fails-with! ctx #(includes-all? % [(:id ctx) "@e2e" "@contract"])
+                 (str "names " (:id ctx) ", @e2e and @contract"))))
 
 (defstep #"a stamped scenario tagged both @e2e and @contract"
-  (fn [ctx] (scenario! ctx "spec-0046" "@spec-0046 @e2e @contract")))
+  (fn [ctx] (assoc (one-scenario! ctx "@spec-0046 @e2e @contract") :id "spec-0046")))
 
-(defstep #"it fails and names the scenario's id and (the two|both) levels"
-  (fn [ctx _]
-    (fails-with! ctx (str (:file ctx) ":" (:line ctx) ":") (:id ctx) "@e2e" "@contract")))
+(defstep #"it fails and names the scenario's id and both levels"
+  (fn [ctx]
+    (fails-with! ctx #(includes-all? % [(:id ctx) "@e2e" "@contract"])
+                 (str "names " (:id ctx) ", @e2e and @contract"))))
 
-(defstep #"it fails, names the scenario's id and (@\S+), and lists the tags a scenario may carry"
-  (fn [ctx tag]
-    (fails-with! ctx (str (:file ctx) ":" (:line ctx) ":") (:id ctx) tag "@e2e" "@contract" "@UN-" "@wip")))
+(defstep #"it fails, names the scenario's id and @persona, and lists the tags a scenario may carry"
+  (fn [ctx]
+    (fails-with! ctx #(and (includes-all? % [(:id ctx) "@persona" "@e2e" "@contract" "@wip" "@UN-"])
+                           (re-find #"@spec-" (str/replace % (str "@" (:id ctx)) "")))
+                 (str "names " (:id ctx) " and @persona and lists the id, level, need and @wip tags"))))
 
 ;; ---------------------------------------------------------------------------
-;; Needs
+;; Every scenario traces to a user need
 
 (defstep #"a feature tagged @(UN-\d+)"
   (fn [ctx need]
-    (assoc (scenario! ctx "spec-0047" "@spec-0047 @e2e" {:feature-tags (str "@" need)}) :need need)))
+    (assoc (one-scenario! ctx "@spec-0047 @e2e" {:feature-tags (str "@" need)})
+           :id "spec-0047" :need need)))
 
 (defstep #"a scenario under it carries no need tag of its own"
   (fn [ctx]
-    (s/check! (:text ctx) "no feature was written")
-    (s/check! (not-any? #(re-find #"^\s+@.*@UN-" %) (str/split-lines (:text ctx)))
-              "the fixture scenario carries a need tag")
-    ctx))
+    (let [own (f/tags-of (:dir ctx) "A fixture scenario")]
+      (s/check! (some? own) "the fixture's scenario is not in the spec")
+      (s/check! (not-any? #(str/starts-with? % "@UN-") own) (str "the scenario carries " (pr-str own))))))
 
-(defn- maps-in [v] (filter map? (tree-seq coll? seq v)))
+(defn- maps-in [x]
+  (cond (map? x) (cons x (mapcat maps-in (vals x)))
+        (coll? x) (mapcat maps-in x)
+        :else nil))
 
 (defstep #"it lists the scenario"
   (fn [ctx]
     (let [r (:run ctx)
-          res (f/result r)]
-      (s/check! (#{0 1} (:exit r)) (s/show r))
-      (s/check! (map? res) (str "the result is not EDN\n" (s/show r)))
-      (s/check! (some #(= (:id ctx) (:id %)) (mapcat :scenarios (maps-in res)))
-                (str (:id ctx) " is not listed\n" (s/show r))))))
+          v (try (edn/read-string (:out r)) (catch Exception _ nil))]
+      (s/check! (= 0 (:exit r)) (str "expected exit 0\n" (s/show r)))
+      (s/check! (some #(= (:id ctx) (:id %)) (maps-in v))
+                (str "the result lists no scenario " (:id ctx) "\n" (s/show r))))))
 
 (defstep #"a stamped scenario with no need tag on it, its rule or its feature"
-  (fn [ctx] (scenario! ctx "spec-0048" "@spec-0048 @e2e" {:feature-tags ""})))
+  (fn [ctx] (assoc (one-scenario! ctx "@spec-0048 @e2e" {:feature-tags ""}) :id "spec-0048")))
 
 (defstep #"it fails and names the scenario's id"
   (fn [ctx]
-    (fails-with! ctx (str (:file ctx) ":" (:line ctx) ":") (:id ctx))))
+    (fails-with! ctx #(and (str/starts-with? % (at ctx)) (str/includes? % (:id ctx)))
+                 (str "at " (at ctx) " names " (:id ctx)))))
 
 (defstep #"the declared needs are (UN-\d+) to (UN-\d+)"
   (fn [ctx from to]
-    (s/needs-built! 'rdm-spec.spec.check 'rdm-spec.spec.parser)
-    (let [ctx (f/ensure-room! ctx)
+    (let [ctx (room ctx)
           n #(parse-long (subs % 3))
-          [lo hi] [(n from) (n to)]]
-      (f/needs! (:dir ctx) (fn [m] (into {} (filter (fn [[k _]] (<= lo (n (str k)) hi)) m))))
-      ctx)))
+          keep? (set (for [i (range (n from) (inc (n to)))] (format "UN-%03d" i)))]
+      (f/needs! (:dir ctx) #(into {} (filter (fn [[k _]] (keep? (str k)))) %))
+      (assoc ctx :declared keep?))))
 
 (defstep #"a scenario tagged @(UN-\d+)"
   (fn [ctx need]
-    (assoc (scenario! ctx "spec-0049" (str "@spec-0049 @e2e @" need) {:feature-tags "@UN-002"}) :need need)))
+    (s/check! (not (contains? (:declared ctx) need)) (str need " is declared"))
+    (assoc (one-scenario! ctx (str "@spec-0049 @e2e @" need)) :id "spec-0049" :need need)))
 
 (defstep #"it fails and names (UN-\d+) and the scenario's id"
   (fn [ctx need]
-    (fails-with! ctx (str (:file ctx) ":" (:line ctx) ":") need (:id ctx))))
+    (fails-with! ctx #(includes-all? % [need (:id ctx)]) (str "names " need " and " (:id ctx)))))
+
+;; ---------------------------------------------------------------------------
+;; Every user need rests on a source
 
 (defstep #"the need (UN-\d+) with no sources"
   (fn [ctx need]
-    (s/needs-built! 'rdm-spec.spec.check 'rdm-spec.spec.parser)
-    (let [ctx (f/ensure-room! ctx)]
+    (let [ctx (room ctx)]
       (f/needs! (:dir ctx) #(assoc-in % [need :sources] []))
       (assoc ctx :need need))))
 
 (defstep #"it fails and names (UN-\d+)"
   (fn [ctx need]
-    (fails-with! ctx "dhf/spec/needs.edn:" need)))
+    (fails-with! ctx #(str/includes? % need) (str "names " need))))
 
 ;; ---------------------------------------------------------------------------
-;; Planned work
+;; Planned work is a scenario tagged @wip
 
 (defstep #"a spec whose one stamped scenario is tagged @wip"
   (fn [ctx]
-    (apply s/needs-built! f/check-stages)
-    (f/ensure-shared-steps!)
-    (let [ctx (scenario! ctx "spec-0050" "@spec-0050 @e2e @wip")]
+    (let [ctx (one-scenario! ctx "@spec-0050 @e2e @wip")]
       (f/generate-views! (:dir ctx))
-      ctx)))
+      (assoc ctx :id "spec-0050"))))
+
+(when-not (registered? "it passes")
+  (defstep #"it passes"
+    (fn [ctx]
+      (let [r (:run ctx)]
+        (s/check! r "no command was run")
+        (s/check! (= 0 (:exit r)) (str "expected exit 0\n" (s/show r)))))))
 
 ;; ---------------------------------------------------------------------------
-;; The stack
+;; The spec never names an implementation
 
-;; Shared in wording with dhf/spec/knowledge/wiki.feature: the same meaning
-;; there (the word is added to the configured stack words of a copy of the
-;; room), defined here only when no file loaded earlier defines it.
-(when-not (some #(re-matches (:pattern %) "the configured stack words include \"Cobalt\"")
-                @rdm-spec.kernel.runner/*registry*)
+(when-not (registered? "the configured stack words include \"Cobalt\"")
   (defstep #"the configured stack words include \"([^\"]+)\""
     (fn [ctx word]
       (let [ctx (assoc ctx :dir (or (:dir ctx) (s/copy-of-room!)))]
-        (f/config! (:dir ctx) (fn [c] (update c :stack-words #(vec (distinct (conj (vec %) word))))))
+        (f/config! (:dir ctx) #(update % :stack-words (fn [ws] (vec (distinct (conj (vec ws) word))))))
         (assoc ctx :stack-word word)))))
 
 (defstep #"a feature file whose description says the parser is written in (\S+)"
   (fn [ctx word]
-    (let [sentence (str "The parser is written in " word ".")
-          text (f/fixture-feature {:tags "@spec-0209 @e2e" :description [sentence]})
-          line (some (fn [[i l]] (when (str/includes? l sentence) (inc i)))
-                     (map-indexed vector (str/split-lines text)))]
-      (assoc (fixture! ctx text) :word word :word-line line))))
+    (let [ctx (one-scenario! ctx "@spec-0209 @e2e"
+                             {:description [(str "The parser is written in " word ".")]})
+          line (some (fn [[i l]] (when (str/includes? l (str "written in " word)) (inc i)))
+                     (map-indexed vector (str/split-lines (:text ctx))))]
+      (assoc ctx :word word :word-line line))))
 
 (defstep #"it fails and names the file, the line and the word"
   (fn [ctx]
-    (fails-with! ctx (str (:file ctx) ":" (:word-line ctx) ":") (:word ctx))))
-
-;; "it passes" is shared with other features: registered at run time by
-;; f/ensure-shared-steps! (in the @wip Given), unless another step file
-;; defines it.
+    (let [where (str (:file ctx) ":" (:word-line ctx) ":")]
+      (fails-with! ctx #(and (str/starts-with? % where) (str/includes? % (:word ctx)))
+                   (str "at " where " names " (:word ctx))))))

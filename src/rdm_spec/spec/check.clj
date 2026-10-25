@@ -1,245 +1,269 @@
 (ns rdm-spec.spec.check
   "The Spec check component of the spec context (dhf/spec/spec/check.feature):
-  the rules a spec must keep. The spec is read by the Parser component; this
-  component holds what it read to the rules and publishes SpecGated.
+  the rules a spec must keep. It reads the spec with the Parser, publishes
+  SpecParsed (for the stages after it) and SpecGated, and reports every
+  finding; the model lint, the views and the knowledge are other stages of
+  `rdm-spec check`.
 
-  The rules, each a stable finding name:
+  The rules, each a stable name on the error stream:
+    (the parser's)        a construct outside the Gherkin subset, relayed
+                          with its file, line and rule unchanged
+    scenario-no-id        a scenario with no id: run rdm-spec stamp
+    scenario-many-ids     a scenario with more than one id
+    id-duplicate          an id carried by more than one scenario
+    id-unissued           an id above the highest the ledger has issued
+    ledger-unreadable     a ledger that is not EDN with an :issued number
+    scenario-no-level     a scenario with no level (@e2e or @contract)
+    scenario-many-levels  a scenario with both levels
+    tag-unknown           a tag that is not an id, a level, a need or @wip
+    tag-misplaced         an id, a level or @wip on a feature, a rule or
+                          examples; an id, a level and @wip go on a scenario
+    scenario-no-need      a scenario tracing to no need, by a tag on it, its
+                          rule or its feature
+    need-undeclared       a need tag naming no need the needs file declares
+    needs-unreadable      a needs file that is missing or not a map of needs
+    need-no-source        a declared need citing no source
+    need-unresolved       a need every citation of which failed to resolve
+                          (from KnowledgeIndexed; the Sources component names
+                          each citation and why)
+    stack-word            a spec file naming a configured stack word
 
-    check-id-count       a scenario carrying more than one id
-    check-id-missing     a scenario carrying no id (run `rdm-spec stamp`)
-    check-id-duplicate   an id carried by two scenarios
-    check-id-unissued    an id above the ledger's highest issued id
-    check-level          a scenario carrying no level, or both
-    check-tag            a scenario tag that is not an id, a level, a need or @wip
-    check-tag-placement  a feature, rule or examples tag that is not a need tag
-    check-need-missing   a scenario tracing to no need (on it, its rule or its feature)
-    check-need-unknown   a need tag naming no declared need
-    check-need-source    a declared need citing no source
-    check-needs-file     a needs file that cannot be read
-    check-stack-word     a spec file naming a configured stack word
-
-  plus the parser's refusals, relayed with their own rules and lines. Whether
-  a cited source resolves is the knowledge context's to say.
-
-  The stage `check` (of `rdm-spec check` and `rdm-spec publish`) reads the
-  spec in the working tree, publishes SpecParsed (as the parser) so the
-  stages after it read the same spec, then SpecGated with every finding."
+  Every rule but the parser's is pure (`findings`), over the parsed spec."
   (:require [babashka.fs :as fs]
+            [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]
-            [rdm-spec.spec.parser :as parser]
-            [rdm-spec.spec.stamper :as stamper]))
+            [rdm-spec.spec.parser :as parser]))
 
 ;; ---------------------------------------------------------------------------
-;; Helpers
-
-(defn- named
-  "How a finding names a scenario: its id, else its title."
-  [sc]
-  (if (:id sc)
-    (str (:id sc) " (\"" (:title sc) "\")")
-    (str "the scenario \"" (:title sc) "\"")))
-
-(defn- at [sc rule message]
-  (command/finding (:file sc) (:line sc) rule message))
-
-(defn- id-number
-  "The number of the id `id` (\"spec-0042\" -> 42)."
-  [id]
-  (some-> (re-find #"-(\d+)$" (str id)) second parse-long))
+;; Tags
 
 (defn allowed-tags
-  "The tags a scenario may carry, said in words."
+  "The tags a scenario may carry, as a reader is told them."
   [prefix]
-  (str "one id (@" prefix "-NNNN), one level (@e2e or @contract), need tags (@UN-nnn) and @wip"))
+  (str "an id (@" prefix "-NNNN), a level (@e2e or @contract), a need (@UN-nnn) and @wip"))
+
+(defn tag-kind
+  "What the tag `t` is: :id, :level, :need, :wip or :unknown."
+  [prefix t]
+  (cond (re-matches (parser/id-pattern prefix) t) :id
+        (parser/level-tags t) :level
+        (re-matches parser/need-pattern t) :need
+        (= parser/wip-tag t) :wip
+        :else :unknown))
+
+(defn- id-number [prefix id]
+  (some-> (re-matches (re-pattern (str (java.util.regex.Pattern/quote prefix) "-(\\d+)")) id) second parse-long))
+
+(defn- label
+  "How a finding names the scenario: its id when it has exactly one, else
+  its title."
+  [sc]
+  (or (:id sc) (str "the scenario \"" (:title sc) "\"")))
+
+(defn- at [file line rule message] (command/finding file line rule message))
 
 ;; ---------------------------------------------------------------------------
-;; Ids
+;; The rules
 
-(defn id-findings
-  "One id per scenario, each id carried once, and every id issued by the
-  ledger (`issued`: the highest id it records; nil when not checked)."
-  [prefix ledger-rel issued scenarios]
-  (concat
-   (for [sc scenarios
-         :let [ids (:ids sc)]
-         :when (> (count ids) 1)]
-     (at sc "check-id-count"
-         (str "the scenario \"" (:title sc) "\" carries " (count ids) " ids, "
-              (str/join " and " (map #(str "@" %) ids)) "; a scenario carries exactly one")))
-   (for [sc scenarios
-         :when (empty? (:ids sc))]
-     (at sc "check-id-missing"
-         (str "the scenario \"" (:title sc) "\" carries no @" prefix "- id; run \"rdm-spec stamp\" to give it one")))
-   (let [carriers (reduce (fn [m sc] (reduce #(update %1 %2 (fnil conj []) sc) m (:ids sc)))
-                          (sorted-map) scenarios)]
-     (for [[id scs] carriers
-           :when (> (count scs) 1)
-           :let [first-sc (first scs)]
-           sc (rest scs)]
-       (at sc "check-id-duplicate"
-           (str "@" id " is carried by two scenarios: \"" (:title sc) "\" here and \"" (:title first-sc)
-                "\" at " (:file first-sc) ":" (:line first-sc) "; an id names one scenario"))))
-   (when issued
-     (for [sc scenarios
-           id (:ids sc)
-           :let [n (id-number id)]
-           :when (and n (> n issued))]
-       (at sc "check-id-unissued"
-           (str id " is above the highest id the ledger " ledger-rel " records as issued, "
-                (stamper/format-id prefix issued) ": the ledger never issued it; ids are handed out by"
-                " \"rdm-spec stamp\", never by hand"))))))
+(defn- id-findings [prefix sc]
+  (let [{:keys [ids file line title]} sc]
+    (case (count ids)
+      0 [(at file line "scenario-no-id"
+             (str "the scenario \"" title "\" carries no @" prefix "- id; run \"rdm-spec stamp\" to give it one"))]
+      1 []
+      [(at file line "scenario-many-ids"
+           (str "the scenario \"" title "\" carries " (count ids) " ids, "
+                (str/join " and " (map #(str "@" %) ids)) "; a scenario carries exactly one"))])))
 
-;; ---------------------------------------------------------------------------
-;; Levels and tags
+(defn- level-findings [sc]
+  (let [{:keys [levels file line]} sc]
+    (case (count levels)
+      0 [(at file line "scenario-no-level"
+             (str (label sc) " carries no level; a scenario carries exactly one of @e2e and @contract"))]
+      1 []
+      [(at file line "scenario-many-levels"
+           (str (label sc) " carries both " (str/join " and " levels)
+                "; a scenario carries exactly one of @e2e and @contract"))])))
 
-(defn level-findings
-  "Exactly one level per scenario."
+(defn- tag-findings [prefix sc]
+  (let [{:keys [tags file line examples]} sc]
+    (concat
+     (for [t (distinct tags) :when (= :unknown (tag-kind prefix t))]
+       (at file line "tag-unknown"
+           (str (label sc) " carries " t ", which no scenario may carry; a scenario may carry "
+                (allowed-tags prefix))))
+     (for [ex examples t (distinct (:tags ex))]
+       (at file (:line ex) "tag-misplaced"
+           (str "the examples of " (label sc) " carry " t "; examples carry no tag, "
+                (allowed-tags prefix) " go on the scenario"))))))
+
+(defn- heading-tag-findings
+  "The tags of a feature or a rule (`what` names it): only needs belong there."
+  [prefix file line what tags]
+  (for [t (distinct tags)
+        :let [k (tag-kind prefix t)]
+        :when (not= :need k)]
+    (if (= :unknown k)
+      (at file line "tag-unknown"
+          (str what " carries " t ", which is not a tag of the spec; a feature or a rule carries needs (@UN-nnn)"
+               " and a scenario may carry " (allowed-tags prefix)))
+      (at file line "tag-misplaced"
+          (str what " carries " t "; an id, a level and @wip go on a scenario only, a feature or a rule"
+               " carries needs (@UN-nnn)")))))
+
+(defn- need-findings [declared sc]
+  (let [{:keys [needs file line]} sc]
+    (if (empty? needs)
+      [(at file line "scenario-no-need"
+           (str (label sc) " traces to no user need: tag it, its rule or its feature with a declared @UN-nnn"))]
+      (for [n needs :when (and declared (not (contains? declared n)))]
+        (at file line "need-undeclared"
+            (str (label sc) " traces to @" n ", which the needs file does not declare"))))))
+
+(defn- unissued-findings [prefix issued ledger-rel sc]
+  (when issued
+    (for [id (:ids sc)
+          :let [n (id-number prefix id)]
+          :when (and n (> n issued))]
+      (at (:file sc) (:line sc) "id-unissued"
+          (str id " is above " (if (pos? issued) (str "the highest id the ledger " ledger-rel " has issued, "
+                                                      (format "%s-%04d" prefix issued))
+                                   (str "every id: the ledger " ledger-rel " has issued none"))
+               "; the ledger never issued it. Ids are handed out by \"rdm-spec stamp\", never by hand")))))
+
+(defn- duplicate-findings [scenarios]
+  (let [carried (for [sc scenarios id (:ids sc)] {:id id :file (:file sc) :line (:line sc)})]
+    (for [[id places] (group-by :id carried)
+          :when (> (count places) 1)
+          :let [[_ second-place] places]]
+      (at (:file second-place) (:line second-place) "id-duplicate"
+          (str id " is carried by " (count places) " scenarios, "
+               (str/join ", " (map #(str (:file %) ":" (:line %)) places))
+               "; an id is carried by one scenario")))))
+
+(defn- rules-of
+  "Every distinct rule heading of the scenarios: [{:file :line :name :tags}]."
   [scenarios]
-  (for [sc scenarios
-        :let [levels (:levels sc)]
-        :when (not= 1 (count levels))]
-    (at sc "check-level"
-        (if (empty? levels)
-          (str (named sc) " carries no level; a scenario carries exactly one: @e2e or @contract")
-          (str (named sc) " carries " (count levels) " levels, " (str/join " and " levels)
-               "; a scenario carries exactly one: @e2e or @contract")))))
+  (distinct (for [sc scenarios :when (:rule-line sc)]
+              {:file (:file sc) :line (:rule-line sc) :name (:rule sc) :tags (:rule-tags sc)})))
 
-(defn- tag-kind [id-re tag]
-  (cond (re-matches id-re tag) :id
-        (parser/level-tags tag) :level
-        (re-matches parser/need-pattern tag) :need
-        (= parser/wip-tag tag) :wip
-        :else nil))
-
-(defn tag-findings
-  "Only known tags on a scenario."
-  [prefix scenarios]
-  (let [id-re (parser/id-pattern prefix)]
-    (for [sc scenarios
-          tag (distinct (:tags sc))
-          :when (nil? (tag-kind id-re tag))]
-      (at sc "check-tag"
-          (str (named sc) " carries the tag " tag ", which is not an id, a level, a need or @wip;"
-               " a scenario may carry " (allowed-tags prefix))))))
-
-(defn placement-findings
-  "Only need tags on a feature, a rule or examples."
-  [prefix features scenarios]
-  (let [id-re (parser/id-pattern prefix)
-        bad (fn [tag] (not= :need (tag-kind id-re tag)))
-        say (fn [where tag]
-              (str "the tag " tag " is on " where "; a feature or a rule carries only need tags (@UN-nnn),"
-                   " and an id, a level or @wip goes on a scenario"))]
+(defn- source-findings [needs-file needs knowledge]
+  (let [by-need (group-by :need (filter :need (:citations knowledge)))]
     (concat
-     (for [f features
-           tag (distinct (:tags f))
-           :when (bad tag)]
-       (command/finding (:file f) (:line f) "check-tag-placement" (say (str "the feature \"" (:name f) "\"") tag)))
-     (distinct
-      (for [sc scenarios
-            :when (:rule sc)
-            tag (distinct (:rule-tags sc))
-            :when (bad tag)]
-        (command/finding (:file sc) (:rule-line sc) "check-tag-placement" (say (str "the rule \"" (:rule sc) "\"") tag))))
-     (distinct
-      (for [sc scenarios
-            ex (:examples sc)
-            tag (distinct (:tags ex))]
-        (command/finding (:file sc) (:line ex) "check-tag-placement"
-                         (str "the tag " tag " is on the examples of " (named sc)
-                              "; examples carry no tags")))))))
+     (for [{:keys [id sources line]} needs :when (empty? sources)]
+       (at needs-file line "need-no-source"
+           (str id " cites no source; every user need rests on a raw source, cited as <source>:<path>@<commit>")))
+     (for [{:keys [id sources line]} needs
+           :let [cs (get by-need id)]
+           :when (and (seq sources) (seq cs) (every? #(= :unresolved (:status %)) cs))]
+       (at needs-file line "need-unresolved"
+           (str id " rests on no source that resolves: every citation it makes fails to resolve"))))))
 
-;; ---------------------------------------------------------------------------
-;; Needs
-
-(defn need-findings
-  "Every scenario traces to a declared need."
-  [scenarios needs]
-  (let [declared (set (map :id needs))]
-    (concat
-     (for [sc scenarios
-           :when (empty? (:needs sc))]
-       (at sc "check-need-missing"
-           (str (named sc) " traces to no user need: tag it, its rule or its feature with one (@UN-nnn)")))
-     (for [sc scenarios
-           n (:needs sc)
-           :when (not (contains? declared n))]
-       (at sc "check-need-unknown"
-           (str (named sc) " traces to " n ", which no user need declares"))))))
-
-(defn source-findings
-  "Every declared need cites a source."
-  [needs-rel needs]
-  (for [n needs
-        :when (empty? (remove #(str/blank? (str %)) (:sources n)))]
-    (command/finding needs-rel (:line n) "check-need-source"
-                     (str "the user need " (:id n) " cites no source; every need rests on a raw source,"
-                          " cited as <source>:<path>@<commit>"))))
-
-;; ---------------------------------------------------------------------------
-;; The stack
-
-(defn- word-pattern [w]
+(defn word-pattern
+  "Matches the stack word `w` as a whole word, whatever its case."
+  [w]
   (re-pattern (str "(?i)(?<![\\p{L}\\p{N}_])" (java.util.regex.Pattern/quote w) "(?![\\p{L}\\p{N}_])")))
 
 (defn stack-word-findings
-  "A finding for each line of each file naming a configured stack word,
-  matched as a whole word, whatever its case. `files`: [{:file :text}]."
-  [files words]
+  "A finding for each line of the file `file` holding `text` that names one
+  of `words`."
+  [file text words]
   (let [res (for [w words :when (and (string? w) (not (str/blank? w)))] [w (word-pattern w)])]
-    (for [{:keys [file text]} files
-          [i l] (map-indexed vector (str/split-lines (or text "")))
+    (for [[i l] (map-indexed vector (str/split-lines (or text "")))
           [w re] res
           :when (re-find re l)]
-      (command/finding file (inc i) "check-stack-word"
-                       (str "names the stack word \"" w "\"; the spec never names its stack,"
-                            " which lives in dhf/harness/stack.md")))))
+      (at file (inc i) "stack-word"
+          (str "names the stack word \"" w "\"; the spec never names an implementation"
+               " (the stack is recorded in dhf/harness/stack.md)")))))
+
+(defn findings
+  "Pure: every finding of the spec check on the parsed `spec`
+  (parser/read-spec). `opts`: :id-prefix, :issued (the ledger's highest id,
+  nil when not known), :ledger (its path), :stack-words, :knowledge
+  (KnowledgeIndexed's payload, or nil)."
+  [spec {:keys [id-prefix issued ledger stack-words knowledge]}]
+  (let [prefix (or id-prefix "spec")
+        scenarios (:scenarios spec)
+        declared (when-not (:needs-error spec) (set (map :id (:needs spec))))]
+    (vec (concat
+          (parser/refusal-findings spec)
+          (when-let [e (:needs-error spec)]
+            [(at (:needs-file spec) nil "needs-unreadable" e)])
+          (for [ft (:features spec)
+                f (heading-tag-findings prefix (:file ft) (:line ft) (str "the feature \"" (:name ft) "\"") (:tags ft))]
+            f)
+          (for [r (rules-of scenarios)
+                f (heading-tag-findings prefix (:file r) (:line r) (str "the rule \"" (:name r) "\"") (:tags r))]
+            f)
+          (mapcat #(id-findings prefix %) scenarios)
+          (duplicate-findings scenarios)
+          (mapcat #(unissued-findings prefix issued ledger %) scenarios)
+          (mapcat level-findings scenarios)
+          (mapcat #(tag-findings prefix %) scenarios)
+          (mapcat #(need-findings declared %) scenarios)
+          (source-findings (:needs-file spec) (:needs spec) knowledge)
+          (for [[file text] (:texts spec)
+                f (stack-word-findings file text stack-words)]
+            f)))))
 
 ;; ---------------------------------------------------------------------------
-;; The whole check
+;; The ledger
 
-(defn check-spec
-  "Every finding of the spec check on the spec `spec` (parser/read-spec).
-  `opts`: :id-prefix, :ledger (its path relative to the root), :issued (the
-  ledger's highest issued id, nil to skip that rule), :stack-words."
-  [spec {:keys [id-prefix ledger issued stack-words]}]
-  (let [prefix (or id-prefix "spec")
-        scs (:scenarios spec)]
-    (vec (concat (parser/refusal-findings spec)
-                 (id-findings prefix ledger issued scs)
-                 (level-findings scs)
-                 (tag-findings prefix scs)
-                 (placement-findings prefix (:features spec) scs)
-                 (need-findings scs (:needs spec))
-                 (when-let [e (:needs-error spec)]
-                   [(command/finding (:needs-file spec) nil "check-needs-file" e)])
-                 (source-findings (:needs-file spec) (:needs spec))
-                 (stack-word-findings (parser/text-files nil spec) stack-words)))))
+(defn read-ledger
+  "{:issued n} from the ledger `rel` under `root` (0 when there is none,
+  as the stamper reads it), or {:finding f} when it cannot be read."
+  [root rel]
+  (let [f (command/path root rel)]
+    (if-not (fs/regular-file? f)
+      {:issued 0}
+      (let [v (try (edn/read-string (slurp (str f))) (catch Exception e {::error (ex-message e)}))]
+        (cond
+          (and (map? v) (::error v))
+          {:finding (at rel nil "ledger-unreadable" (str "the ledger " rel " is not EDN: " (::error v)))}
 
-(defn- event-finding [f] (select-keys f [:file :line :rule :message]))
+          (and (map? v) (integer? (:issued v)) (not (neg? (:issued v))))
+          {:issued (:issued v)}
+
+          :else
+          {:finding (at rel nil "ledger-unreadable" (str "the ledger " rel " records no :issued number"))})))))
+
+;; ---------------------------------------------------------------------------
+;; The stage
+
+(defn subscriptions
+  "Keeps KnowledgeIndexed's payload: which of the needs' citations resolve."
+  [req]
+  [[:KnowledgeIndexed (fn [payload] (swap! (:state req) assoc ::knowledge payload) nil)]])
 
 (defn check
-  "The spec check's stage: reads the spec in the working tree, publishes
-  SpecParsed and then SpecGated, and reports every finding."
+  "The spec check, a stage of `rdm-spec check` and `rdm-spec publish`: reads
+  the spec in the working tree, publishes SpecParsed, checks it and
+  publishes SpecGated."
   [req]
   (let [config (:config req)
         spec-dir (command/config-value req :spec-dir)
-        prefix (or (:id-prefix config) "spec")
-        ledger-rel (or (:ledger config) (str (str/replace spec-dir #"/+$" "") "/ids.edn"))
         _ (when-not (fs/directory? (command/path req spec-dir))
             (command/cannot-run! (str "no spec directory " spec-dir)))
-        issued (stamper/read-ledger (command/path req ledger-rel) ledger-rel)
-        spec (parser/read-spec (:root req) {:spec-dir spec-dir :id-prefix prefix
+        spec (parser/read-spec (:root req) {:spec-dir spec-dir :id-prefix (:id-prefix config)
                                             :model (:model config) :needs (:needs config)})
+        _ (some-> (:state req) (swap! assoc :rdm-spec.spec.parser/spec spec))
         _ (parser/publish! req spec)
-        findings (check-spec spec {:id-prefix prefix :ledger ledger-rel :issued issued
-                                   :stack-words (:stack-words config)})
-        passed? (empty? findings)]
+        ledger (:ledger config)
+        {:keys [issued finding]} (when ledger (read-ledger (:root req) ledger))
+        found (vec (concat (when finding [finding])
+                           (findings spec {:id-prefix (:id-prefix config)
+                                           :issued issued
+                                           :ledger ledger
+                                           :stack-words (:stack-words config)
+                                           :knowledge (some-> (:state req) deref ::knowledge)})))
+        passed? (empty? found)]
     (command/publish! req :spec/check :SpecGated
-                      {:revision (:revision spec) :passed? passed? :findings (mapv event-finding findings)})
-    {:result {:spec {:passed? passed?
+                      {:revision (:revision spec)
+                       :passed? passed?
+                       :findings (mapv #(select-keys % [:file :line :rule :message]) found)})
+    {:result {:spec {:revision (:revision spec)
                      :scenarios (count (:scenarios spec))
                      :needs (count (:needs spec))
-                     :issued issued}}
-     :findings findings}))
+                     :passed? passed?}}
+     :findings found}))

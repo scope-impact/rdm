@@ -6,106 +6,122 @@
             [rdm-spec.spec.check :as check]
             [rdm-spec.spec.parser :as parser]))
 
-(defn- tmp [] (str (fs/create-temp-dir {:prefix "check-test-"})))
-
-(defn- write! [dir rel text]
-  (let [f (fs/file dir rel)]
-    (fs/create-dirs (fs/parent f))
-    (spit (str f) text)))
+(def model
+  (pr-str {:containers [{:id :c :contexts [{:id :alpha :name "alpha"
+                                             :components [{:id :alpha/one :name "One" :spec "alpha/one"}]}]}]}))
 
 (def needs-text
-  "{\"UN-001\" {:text \"One\" :sources [\"loyly:README.md@17d68d2\"]}\n \"UN-002\" {:text \"Two\" :sources []}}\n")
+  (str ";; needs\n"
+       "{\"UN-001\" {:text \"one\" :sources [\"a:b@1234567\"]}\n"
+       " \"UN-002\" {:text \"two\" :sources []}}\n"))
 
 (defn- feature [& scenarios]
-  (str "@UN-001\nFeature: Demo\n  A demo.\n\n"
-       (str/join "\n" (for [[name tags] scenarios]
-                        (str "  " tags "\n  Scenario: " name "\n    Given a step\n")))))
+  (str "@UN-001\nFeature: One\n  Prose.\n\n  Rule: R\n\n"
+       (str/join "\n" (for [[tags title] scenarios]
+                        (str (when tags (str "    " tags "\n")) "    Scenario: " title "\n      Given a\n")))))
 
-(defn- spec-of
-  "The spec read from a project holding `files` {rel text}."
-  [files]
-  (let [dir (tmp)]
-    (write! dir "dhf/spec/needs.edn" needs-text)
-    (doseq [[rel text] files] (write! dir rel text))
-    (parser/read-spec dir {})))
+(defn- project [files]
+  (let [dir (str (fs/create-temp-dir {:prefix "check-test-"}))]
+    (doseq [[rel text] files]
+      (let [f (fs/file dir rel)]
+        (fs/create-dirs (fs/parent f))
+        (spit (str f) text)))
+    dir))
 
-(defn- rules [findings] (frequencies (map :rule findings)))
+(def config {:spec-dir "dhf/spec" :id-prefix "spec" :model "dhf/spec/model.edn" :needs "dhf/spec/needs.edn"
+             :ledger "dhf/spec/ids.edn"})
 
-(defn- run [files & [opts]]
-  (check/check-spec (spec-of files) (merge {:id-prefix "spec" :ledger "dhf/spec/ids.edn" :issued 10} opts)))
+(defn- findings-of
+  ([feature-text] (findings-of feature-text {}))
+  ([feature-text opts]
+   (let [dir (project {"dhf/spec/model.edn" model
+                       "dhf/spec/needs.edn" needs-text
+                       "dhf/spec/alpha/one.feature" feature-text})
+         spec (parser/read-spec dir config)]
+     (check/findings spec (merge {:id-prefix "spec" :issued 100 :ledger "dhf/spec/ids.edn"} opts)))))
 
-(deftest a-clean-spec-has-only-the-unsourced-need
-  (is (= {"check-need-source" 1}
-         (rules (run {"dhf/spec/demo/a.feature" (feature ["One" "@spec-0001 @e2e"] ["Two" "@spec-0002 @contract @wip"])})))))
+(defn- rules [fs*] (set (map :rule fs*)))
+
+(defn- of-rule [fs* rule] (filter #(= rule (:rule %)) fs*))
+
+(deftest a-scenario-keeping-every-rule-has-no-finding-but-the-needs
+  (is (= #{"need-no-source"} (rules (findings-of (feature ["@spec-0001 @e2e" "Fine"]))))))
 
 (deftest ids
-  (testing "two ids, no id, a duplicate and an unissued id"
-    (let [fs (run {"dhf/spec/demo/a.feature" (feature ["Both" "@spec-0001 @spec-0002 @e2e"]
-                                                      ["None" "@e2e"]
-                                                      ["Again" "@spec-0003 @e2e"])
-                   "dhf/spec/demo/b.feature" (feature ["Copy" "@spec-0003 @e2e"]
-                                                      ["Far" "@spec-0901 @e2e"])})
-          by (group-by :rule fs)]
-      (is (= 1 (count (by "check-id-count"))))
-      (is (str/includes? (:message (first (by "check-id-count"))) "@spec-0001 and @spec-0002"))
-      (is (= 1 (count (by "check-id-missing"))))
-      (is (str/includes? (:message (first (by "check-id-missing"))) "rdm-spec stamp"))
-      (let [[d] (by "check-id-duplicate")]
-        (is (= "dhf/spec/demo/b.feature" (:file d)))
-        (is (str/includes? (:message d) "dhf/spec/demo/a.feature")))
-      (let [[u] (by "check-id-unissued")]
-        (is (str/includes? (:message u) "spec-0901"))
-        (is (str/includes? (:message u) "never issued")))))
-  (testing "no ledger check when issued is nil"
-    (is (empty? (filter #(= "check-id-unissued" (:rule %))
-                        (run {"dhf/spec/demo/a.feature" (feature ["Far" "@spec-0901 @e2e"])} {:issued nil}))))))
+  (testing "none: names the line and says to stamp"
+    (let [[f] (of-rule (findings-of (feature ["@e2e" "Unstamped"])) "scenario-no-id")]
+      (is (= ["dhf/spec/alpha/one.feature" 8] [(:file f) (:line f)]))
+      (is (str/includes? (:message f) "rdm-spec stamp"))))
+  (testing "two"
+    (let [[f] (of-rule (findings-of (feature ["@spec-0007 @spec-0008 @e2e" "Two"])) "scenario-many-ids")]
+      (is (every? #(str/includes? (:message f) %) ["spec-0007" "spec-0008"]))))
+  (testing "carried twice: both places named"
+    (let [[f :as fs*] (of-rule (findings-of (feature ["@spec-0007 @e2e" "A"] ["@spec-0007 @e2e" "B"])) "id-duplicate")]
+      (is (= 1 (count fs*)))
+      (is (str/includes? (:message f) "one.feature:8"))
+      (is (str/includes? (:message f) "one.feature:12"))))
+  (testing "above the ledger"
+    (let [[f] (of-rule (findings-of (feature ["@spec-0901 @e2e" "High"]) {:issued 238}) "id-unissued")]
+      (is (str/includes? (:message f) "spec-0901"))
+      (is (str/includes? (:message f) "never issued"))
+      (is (str/includes? (:message f) "spec-0238"))))
+  (testing "at the ledger: issued"
+    (is (empty? (of-rule (findings-of (feature ["@spec-0100 @e2e" "Top"])) "id-unissued"))))
+  (testing "no ledger known: not checked"
+    (is (empty? (of-rule (findings-of (feature ["@spec-0901 @e2e" "High"]) {:issued nil}) "id-unissued")))))
 
 (deftest levels-and-tags
-  (let [fs (run {"dhf/spec/demo/a.feature" (feature ["No level" "@spec-0001"]
-                                                    ["Two levels" "@spec-0002 @e2e @contract"]
-                                                    ["Persona" "@spec-0003 @e2e @persona"])})
-        by (group-by :rule fs)]
-    (is (= 2 (count (by "check-level"))))
-    (is (every? #(and (str/includes? (:message %) "@e2e") (str/includes? (:message %) "@contract")) (by "check-level")))
-    (let [[t] (by "check-tag")]
-      (is (str/includes? (:message t) "spec-0003"))
-      (is (str/includes? (:message t) "@persona"))
-      (is (str/includes? (:message t) "@wip"))))
-  (testing "only need tags on a feature or a rule"
-    (let [fs (run {"dhf/spec/demo/a.feature"
-                   "@UN-001 @wip\nFeature: Demo\n\n  @e2e\n  Rule: R\n\n    @spec-0001 @e2e\n    Scenario: S\n      Given a step\n"})]
-      (is (= 2 (get (rules fs) "check-tag-placement"))))))
+  (is (seq (of-rule (findings-of (feature ["@spec-0001" "None"])) "scenario-no-level")))
+  (let [[f] (of-rule (findings-of (feature ["@spec-0001 @e2e @contract" "Both"])) "scenario-many-levels")]
+    (is (every? #(str/includes? (:message f) %) ["spec-0001" "@e2e" "@contract"])))
+  (let [[f] (of-rule (findings-of (feature ["@spec-0001 @e2e @persona" "Persona"])) "tag-unknown")]
+    (is (every? #(str/includes? (:message f) %) ["spec-0001" "@persona" "@spec-NNNN" "@e2e" "@contract" "@UN-nnn" "@wip"])))
+  (testing "@wip is accepted on a scenario, refused on a feature"
+    (is (empty? (remove #(= "need-no-source" (:rule %))
+                        (findings-of (feature ["@spec-0001 @e2e @wip" "Planned"])))))
+    (is (seq (of-rule (findings-of (str "@wip " (feature ["@spec-0001 @e2e" "X"]))) "tag-misplaced")))))
 
 (deftest needs
-  (let [fs (run {"dhf/spec/demo/a.feature"
-                 (str "Feature: Demo\n\n  @spec-0001 @e2e\n  Scenario: Untraced\n    Given a step\n\n"
-                      "  @spec-0002 @e2e @UN-009\n  Scenario: Unknown need\n    Given a step\n")})
-        by (group-by :rule fs)]
-    (is (= ["check-need-missing"] (map :rule (filter #(str/includes? (:message %) "spec-0001") fs))))
-    (is (str/includes? (:message (first (by "check-need-unknown"))) "UN-009"))
-    (let [[s] (by "check-need-source")]
-      (is (= "dhf/spec/needs.edn" (:file s)))
-      (is (= 2 (:line s)))
-      (is (str/includes? (:message s) "UN-002")))))
+  (testing "a feature's need covers its scenarios"
+    (is (empty? (of-rule (findings-of (feature ["@spec-0001 @e2e" "X"])) "scenario-no-need"))))
+  (testing "no need anywhere"
+    (is (seq (of-rule (findings-of (str/replace (feature ["@spec-0001 @e2e" "X"]) "@UN-001\n" ""))
+                      "scenario-no-need"))))
+  (testing "an undeclared need"
+    (let [[f] (of-rule (findings-of (feature ["@spec-0001 @e2e @UN-009" "X"])) "need-undeclared")]
+      (is (every? #(str/includes? (:message f) %) ["UN-009" "spec-0001"]))))
+  (testing "a need citing no source, at its line"
+    (let [[f] (of-rule (findings-of (feature ["@spec-0001 @e2e" "X"])) "need-no-source")]
+      (is (= ["dhf/spec/needs.edn" 3] [(:file f) (:line f)]))
+      (is (str/includes? (:message f) "UN-002"))))
+  (testing "a need whose every citation failed to resolve"
+    (let [k {:citations [{:need "UN-001" :status :unresolved}]}]
+      (is (seq (of-rule (findings-of (feature ["@spec-0001 @e2e" "X"]) {:knowledge k}) "need-unresolved"))))
+    (let [k {:citations [{:need "UN-001" :status :unchecked}]}]
+      (is (empty? (of-rule (findings-of (feature ["@spec-0001 @e2e" "X"]) {:knowledge k}) "need-unresolved"))))))
 
 (deftest stack-words
-  (is (= [["dhf/spec/x.md" 2]]
-         (map (juxt :file :line)
-              (check/stack-word-findings [{:file "dhf/spec/x.md" :text "fine\nwritten in cobalt.\ncobaltic is not it\n"}]
-                                         ["Cobalt"])))))
+  (let [fs* (check/stack-word-findings "f.feature" "one\nwritten in Cobalt.\ncobaltic\nCOBALT" ["Cobalt"])]
+    (is (= [2 4] (map :line fs*)))
+    (is (every? #(str/includes? (:message %) "Cobalt") fs*)))
+  (is (= [] (vec (check/stack-word-findings "f" "anything" [])))))
 
-(deftest the-stage
-  (let [dir (tmp)]
-    (write! dir "dhf/spec/needs.edn" "{\"UN-001\" {:text \"One\" :sources [\"loyly:README.md@17d68d2\"]}}")
-    (write! dir "dhf/spec/ids.edn" "{:issued 1}")
-    (write! dir "dhf/spec/demo/a.feature" (feature ["One" "@spec-0001 @e2e"]))
-    (let [b (bus/make-bus {})
-          req {:root dir :config {:spec-dir "dhf/spec" :ledger "dhf/spec/ids.edn" :stack-words ["Cobalt"]}
-               :bus b :state (atom {})}
-          seen (atom [])]
-      (bus/subscribe! b :SpecParsed :test (fn [_] (swap! seen conj :SpecParsed) nil))
-      (bus/subscribe! b :SpecGated :test (fn [p] (swap! seen conj [:SpecGated (:passed? p)]) nil))
-      (let [{:keys [result findings]} (check/check req)]
-        (is (empty? findings))
-        (is (true? (get-in result [:spec :passed?])))
-        (is (= [:SpecParsed [:SpecGated true]] @seen))))))
+(deftest the-ledger
+  (let [dir (project {"ids.edn" ";; c\n{:issued 7}\n" "bad.edn" "{:issued" "none.edn" "{}"})]
+    (is (= {:issued 7} (check/read-ledger dir "ids.edn")))
+    (is (= {:issued 0} (check/read-ledger dir "missing.edn")))
+    (is (= "ledger-unreadable" (:rule (:finding (check/read-ledger dir "bad.edn")))))
+    (is (= "ledger-unreadable" (:rule (:finding (check/read-ledger dir "none.edn")))))))
+
+(deftest the-stage-publishes-spec-parsed-then-spec-gated
+  (let [dir (project {"dhf/spec/model.edn" model
+                      "dhf/spec/needs.edn" needs-text
+                      "dhf/spec/ids.edn" "{:issued 1}"
+                      "dhf/spec/alpha/one.feature" (feature ["@spec-0001 @e2e" "X"])})
+        b (bus/make-bus)
+        req {:root dir :config config :state (atom {}) :bus b}
+        out (check/check req)]
+    (is (= [:SpecParsed :SpecGated] (map :event (bus/events b))))
+    (is (= #{"need-no-source"} (rules (:findings out))))
+    (is (false? (get-in out [:result :spec :passed?])))
+    (is (= 1 (get-in out [:result :spec :scenarios])))))

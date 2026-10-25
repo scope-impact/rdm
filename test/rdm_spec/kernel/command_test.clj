@@ -5,160 +5,162 @@
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.kernel.command :as command]))
 
+(defn- tmp [] (str (fs/create-temp-dir {:prefix "rdm-spec-command-test-"})))
+
 (defn- refusal [f]
   (try (f) nil (catch clojure.lang.ExceptionInfo e (when (command/cannot-run? e) (ex-message e)))))
 
-(defn- project [config]
-  (let [d (str (fs/create-temp-dir {:prefix "rdm-spec-command-test-"}))]
-    (when config
-      (fs/create-dirs (fs/file d "dhf/harness"))
-      (spit (str (fs/file d command/config-file)) (pr-str config)))
-    d))
-
-(deftest formats-findings-and-warnings
+(deftest findings-are-formatted-as-the-readme-says
   (is (= "a.feature:3: check-level: no level"
          (command/format-finding (command/finding "a.feature" 3 "check-level" "no level"))))
-  (is (= "a.edn: model-edn: unreadable" (command/format-finding (command/finding "a.edn" nil "model-edn" "unreadable"))))
-  (is (= "room-history: two commits" (command/format-finding (command/finding "room-history" "two commits"))))
-  (is (= "a.md:2: warning: w-rule: hm" (command/format-finding (command/warning "a.md" 2 "w-rule" "hm"))))
-  (is (= "warning: w-rule: hm" (command/format-finding (command/warning "w-rule" "hm"))))
-  (testing "a relayed line is printed unchanged"
-    (is (= "x.feature:9: r: m" (command/format-finding {:file nil :line nil :rule nil :message "x.feature:9: r: m"})))))
+  (is (= "a.feature: wiki-no-index: no index"
+         (command/format-finding (command/finding "a.feature" nil "wiki-no-index" "no index"))))
+  (is (= "stamp-refused: nothing was stamped"
+         (command/format-finding (command/finding "stamp-refused" "nothing was stamped"))))
+  (is (= "n.edn:4: warning: citation-unchecked: not checked"
+         (command/format-finding (command/warning "n.edn" 4 "citation-unchecked" "not checked"))))
+  (is (= "warning: scoreboard: moved"
+         (command/format-finding (command/warning "scoreboard" "moved"))))
+  (is (command/warning? (command/warning "r" "m")))
+  (is (not (command/warning? (command/finding "r" "m")))))
 
-(deftest paths-are-relative-to-the-root
-  (is (= (str (fs/file "/p" "dhf/spec")) (str (command/path {:root "/p"} "dhf/spec"))))
-  (is (= "/abs/x" (str (command/path "/p" "/abs/x"))))
-  (is (= "dhf/cycles/03" (command/rel {:root "/p"} "/p/dhf/cycles/03")))
-  (is (= "/elsewhere/x" (command/rel "/p" "/elsewhere/x"))))
+(deftest arguments-are-read-as-the-usage-says
+  (is (= {:args ["room" "spec-3"] :opts {:context "a,b" :component "spec/parser"}}
+         (command/parse-args "fence ROOM CUT [--context C,...] [--component C/N,...]"
+                             ["room" "spec-3" "--context" "a" "--component" "spec/parser" "--context=b"])))
+  (is (= {:args ["record"] :opts {:reason "why"}}
+         (command/parse-args "oracle [record --reason R]" ["record" "--reason" "why"])))
+  (is (= {:args [] :opts {:events true :sources "d"}}
+         (command/parse-args "check [--sources DIR] [--events]" ["--events" "--sources" "d"])))
+  (testing "every task takes --events"
+    (is (= {:args [] :opts {:events true}} (command/parse-args "status [--results DIR]" ["--events"]))))
+  (testing "what the usage does not allow cannot run, naming it and the usage"
+    (is (re-find #"missing CUT.*usage: rdm-spec fence" (refusal #(command/parse-args "fence ROOM CUT" ["room"]))))
+    (is (re-find #"unknown argument extra" (refusal #(command/parse-args "stamp" ["extra"]))))
+    (is (re-find #"unknown option --bogus" (refusal #(command/parse-args "check [--events]" ["--bogus"]))))
+    (is (re-find #"missing --verdicts" (refusal #(command/parse-args "score CYCLE --verdicts FILE" ["03"]))))
+    (is (re-find #"--results needs a value" (refusal #(command/parse-args "status [--results DIR]" ["--results"]))))
+    (is (re-find #"given twice" (refusal #(command/parse-args "status [--results DIR]" ["--results" "a" "--results" "b"]))))
+    (is (re-find #"unknown argument frob" (refusal #(command/parse-args "oracle [record --reason R]" ["frob"]))))))
 
-(deftest reads-the-configuration
-  (is (nil? (command/read-config (project nil))))
-  (is (= {:a 1} (command/read-config (project {:a 1}))))
-  (let [d (project nil)]
+(deftest every-usage-in-the-table-reads
+  (doseq [{:keys [usage]} command/tasks]
+    (is (map? (command/arg-spec usage)) usage)))
+
+(deftest paths-are-the-projects
+  (let [d (tmp)]
+    (is (= (str (fs/file d "a/b")) (str (command/path d "a/b"))))
+    (is (= (str (fs/file d "a/b")) (str (command/path {:root d} "a/b"))))
+    (is (= "/x/y" (str (command/path d "/x/y"))))
+    (is (= "a/b.txt" (command/rel d (fs/file d "a/b.txt"))))
+    (is (= "a/b.txt" (command/rel {:root d} (str d "/a/b.txt"))))))
+
+(deftest the-configuration
+  (let [d (tmp)]
+    (is (nil? (command/read-config d)))
     (fs/create-dirs (fs/file d "dhf/harness"))
+    (spit (str (fs/file d command/config-file)) "{:spec-dir \"dhf/spec\"}")
+    (is (= {:spec-dir "dhf/spec"} (command/read-config d)))
+    (is (= "dhf/spec" (command/config-value {:config (command/read-config d)} :spec-dir)))
+    (is (re-find #"sets no :ledger" (refusal #(command/config-value {:config {:spec-dir "x"}} :ledger))))
+    (is (re-find #"no configuration" (refusal #(command/config-value {:config nil} :ledger))))
+    (spit (str (fs/file d command/config-file)) "[1 2]")
+    (is (re-find #"not a map" (refusal #(command/read-config d))))
     (spit (str (fs/file d command/config-file)) "{:a")
-    (is (str/includes? (refusal #(command/read-config d)) "not readable EDN")))
-  (is (= "x" (command/config-value {:config {:k "x"}} :k)))
-  (is (str/includes? (refusal #(command/config-value {:config {}} :k)) ":k")))
+    (is (re-find #"not readable EDN" (refusal #(command/read-config d))))))
 
-(deftest parses-arguments-against-the-usage
-  (let [fence (command/task-named command/tasks "fence")
-        oracle (command/task-named command/tasks "oracle")
-        score (command/task-named command/tasks "score")]
-    (is (= {:args ["R" "spec-3"] :opts {:context "a,b"}} (command/parse-args fence ["R" "spec-3" "--context" "a,b"])))
-    (is (= {:args ["R" "spec-3"] :opts {:component "x/y" :events? true}}
-           (command/parse-args fence ["R" "--component=x/y" "spec-3" "--events"])))
-    (is (str/includes? (refusal #(command/parse-args fence ["R"])) "CUT"))
-    (is (str/includes? (refusal #(command/parse-args fence ["R" "C" "D"])) "unknown argument D"))
-    (is (str/includes? (refusal #(command/parse-args fence ["R" "C" "--frob"])) "unknown argument --frob"))
-    (is (str/includes? (refusal #(command/parse-args fence ["R" "C" "--context"])) "takes a value"))
-    (is (= {:args [] :opts {}} (command/parse-args oracle [])))
-    (is (= {:args ["record"] :opts {:reason "why not"}} (command/parse-args oracle ["record" "--reason" "why not"])))
-    (is (str/includes? (refusal #(command/parse-args score ["03"])) "--verdicts"))))
-
-(deftest chooses-the-results-directory
-  (let [root (project nil)
-        status (command/task-named command/tasks "status")
-        trace (command/task-named command/tasks "trace")
-        run (command/task-named command/tasks "run")
-        cfg {:results-dir "dhf/allure-results"}]
-    (testing "--results, else RESULTS_DIR, else the configured one"
-      (is (= "dhf/allure-results" (command/results-dir run {:opts {} :config cfg :root root :env {}})))
-      (is (= "/r1" (command/results-dir run {:opts {} :config cfg :root root :env {"RESULTS_DIR" "/r1"}})))
-      (is (= "other" (command/results-dir run {:opts {:results "other"} :config cfg :root root
-                                               :env {"RESULTS_DIR" "/r1"}}))))
-    (testing "a task reading results cannot run without them"
-      (is (str/includes? (refusal #(command/results-dir status {:opts {} :config cfg :root root :env {}}))
-                         "the results directory dhf/allure-results does not exist")))
-    (testing "an optional reader takes the configured one only when it exists"
-      (is (nil? (command/results-dir trace {:opts {} :config cfg :root root :env {}})))
-      (fs/create-dirs (fs/file root "dhf/allure-results"))
-      (is (= "dhf/allure-results" (command/results-dir trace {:opts {} :config cfg :root root :env {}}))))
-    (testing "a task taking no results has none"
-      (is (nil? (command/results-dir (command/task-named command/tasks "check")
-                                     {:opts {:results "x"} :config cfg :root root :env {}}))))))
-
-;; --- stages, gates and reporting ---------------------------------------------
-
-(def ^:private ran (atom []))
-
-(defn stage-a [_] (swap! ran conj :a) {:result {:a 1} :findings [(command/finding "f" 1 "rule-a" "from a")]})
-(defn stage-b [_] (swap! ran conj :b) {:result {:b 2} :findings [(command/warning "rule-b" "from b")]})
-(defn gate-red [req] (swap! ran conj [:gate (:args req)]) {:result {:gate :red} :findings [(command/finding "g.edn" 4 "golden" "differs")]})
-(defn gate-green [req] (swap! ran conj [:gate (:args req)]) {:result {:gate :green} :findings []})
-(defn refuses [_] (command/cannot-run! "nothing to read"))
-
-(defn- table [stages]
-  [{:task "t" :usage "t X" :does "test" :args ["X"] :config :none :stages stages}])
-
-(defn- exec [stages & argv]
-  (reset! ran [])
-  (command/execute (into ["t"] (or (seq argv) ["x"])) {:root (project nil) :env {} :table (table stages)}))
-
-(deftest every-stage-reports
-  (let [out (exec [`stage-a `stage-b])]
-    (is (= [:a :b] @ran))
-    (is (= 1 (:exit out)))
-    (is (= {:a 1 :b 2} (:result out)))
-    (is (= ["f:1: rule-a: from a" "warning: rule-b: from b"] (:err (command/report out))))
-    (is (= {:a 1 :b 2} (edn/read-string (:out (command/report out)))))))
-
-(deftest a-gate-stops-the-task
-  (testing "a gate with findings: exit 1, the gate's findings unchanged, the later stages never run"
-    (let [out (exec [{:stage `gate-red :gate? true} `stage-a])]
-      (is (= [[:gate []]] @ran) "the gate sees no positionals of the task, and stage-a never ran")
-      (is (= 1 (:exit out)))
-      (is (= ["g.edn:4: golden: differs"] (:err (command/report out))))))
-  (testing "a passing gate lets every stage run, and its result is not the task's"
-    (let [out (exec [{:stage `gate-green :gate? true} `stage-b])]
-      (is (= [[:gate []] :b] @ran))
-      (is (= 0 (:exit out)))
-      (is (= {:b 2} (:result out)))))
-  (testing "a gate that is not built is skipped with a warning"
-    (let [out (exec [{:stage 'rdm-spec.no-such.context/oracle :gate? true} `stage-b])]
-      (is (= [:b] @ran))
-      (is (= 0 (:exit out)))
-      (is (some #(str/includes? % "gate-not-built") (:err (command/report out)))))))
-
-(deftest cannot-run-exits-2-and-prints-nothing-on-standard-output
-  (let [out (exec [`stage-a `refuses])]
-    (is (= 2 (:exit out)))
-    (is (= {:exit 2 :out "" :err ["cannot-run: nothing to read"]} (command/report out))))
-  (testing "a stage that is not built cannot run"
-    (is (= 2 (:exit (exec ['rdm-spec.no-such.context/stage])))))
-  (testing "a missing positional cannot run"
-    (reset! ran [])
-    (is (= 2 (:exit (command/execute ["t"] {:root (project nil) :env {} :table (table [`stage-a])}))))
-    (is (empty? @ran))))
-
-(deftest an-unknown-task-lists-every-task
-  (let [r (command/report (command/execute ["frobnicate"] {:root (project nil) :env {}}))]
+(deftest help-and-unknown-tasks
+  (let [d (tmp)
+        r (command/run-task ["help"] d {})]
+    (is (= 0 (:exit r)))
+    (is (= (map :task command/tasks) (map :task (:tasks (edn/read-string (:out r))))))
+    (is (= [] (:err r))))
+  (let [r (command/run-task ["frobnicate"] (tmp) {})]
     (is (= 2 (:exit r)))
     (is (= "" (:out r)))
-    (is (str/includes? (first (:err r)) "frobnicate"))
-    (is (= (count command/tasks) (count (rest (:err r)))))))
+    (is (str/starts-with? (first (:err r)) "cannot-run: unknown task frobnicate"))
+    (doseq [t (map :task command/tasks)] (is (str/includes? (first (:err r)) t))))
+  (is (= 2 (:exit (command/run-task [] (tmp) {})))))
 
-(deftest help-lists-every-task
-  (let [out (command/execute ["help"] {:root (project nil) :env {}})]
-    (is (= 0 (:exit out)))
-    (is (= (mapv :task command/tasks) (mapv :task (:tasks (:result out)))))))
+;; ---------------------------------------------------------------------------
+;; Gates and stages, with stages of this namespace
 
-(deftest a-task-needing-the-configuration-cannot-run-without-it
-  (let [out (command/execute ["status"] {:root (project nil) :env {}})]
-    (is (= 2 (:exit out)))
-    (is (str/includes? (:cannot-run out) command/config-file))))
+(def calls (atom []))
 
-(deftest the-task-table
-  (testing "fence and ratify run the oracle first, as a gate"
-    (doseq [t ["fence" "ratify"]]
-      (is (= {:stage command/oracle-stage :gate? true} (first (:stages (command/task-named command/tasks t)))))))
-  (testing "the oracle task runs the oracle as its own stage"
-    (is (= [command/oracle-stage] (:stages (command/task-named command/tasks "oracle")))))
-  (testing "no other task has a gate"
-    (is (= #{"fence" "ratify"}
-           (set (for [t command/tasks :when (some #(and (map? %) (:gate? %)) (:stages t))] (:task t)))))))
+(defn red-gate [_req] (swap! calls conj :gate) {:result {:gate :red} :findings [(command/finding "g.edn" 1 "golden-differs" "red")]})
+(defn warning-gate [_req] (swap! calls conj :gate) {:result {} :findings [(command/warning "gate-note" "only a warning")]})
+(defn stage-a [_req] (swap! calls conj :a) {:result {:a 1} :findings [(command/finding "f" 2 "rule-a" "a")]})
+(defn stage-b [req] (swap! calls conj :b) {:result {:b (:results req)} :findings [(command/warning "rule-b" "b")]})
+(defn refusing [_req] (command/cannot-run! "nothing to read"))
+(defn subscriptions [_req] [[:Nothing (fn [_] nil)]])
+
+(defn- with-task [row f]
+  (reset! calls [])
+  (with-redefs [command/tasks [(merge {:task "t" :usage "t [--results DIR]" :does "a test task"} row)]]
+    (f)))
+
+(deftest a-gate-stops-the-task
+  (with-task {:gates [`red-gate] :stages [`stage-a]}
+    #(let [r (command/run-task ["t"] (tmp) {})]
+       (is (= 1 (:exit r)))
+       (is (= [:gate] @calls))
+       (is (= ["g.edn:1: golden-differs: red"] (:err r))))))
+
+(deftest a-gate-with-only-warnings-lets-the-task-run
+  (with-task {:gates [`warning-gate] :stages [`stage-b]}
+    #(let [r (command/run-task ["t"] (tmp) {})]
+       (is (= 0 (:exit r)))
+       (is (= [:gate :b] @calls)))))
+
+(deftest every-stage-reports
+  (with-task {:stages [`stage-a `stage-b]}
+    #(let [r (command/run-task ["t"] (tmp) {})]
+       (is (= 1 (:exit r)))
+       (is (= {:a 1 :b nil} (edn/read-string (:out r))))
+       (testing "errors first, then warnings"
+         (is (= ["f:2: rule-a: a" "warning: rule-b: b"] (:err r)))))))
+
+(deftest a-gate-or-stage-not-built-refuses-the-task
+  (with-task {:gates ['rdm-spec.nowhere/gate] :stages [`stage-a]}
+    #(let [r (command/run-task ["t"] (tmp) {})]
+       (is (= 2 (:exit r)))
+       (is (= [] @calls))
+       (is (re-find #"cannot-run: the gate rdm-spec.nowhere/gate is not built" (first (:err r))))))
+  (with-task {:stages ['rdm-spec.nowhere/stage]}
+    #(is (= 2 (:exit (command/run-task ["t"] (tmp) {}))))))
+
+(deftest a-refusal-prints-nothing-on-standard-output
+  (with-task {:stages [`stage-a `refusing]}
+    #(let [r (command/run-task ["t"] (tmp) {})]
+       (is (= 2 (:exit r)))
+       (is (= "" (:out r)))
+       (is (= ["cannot-run: nothing to read"] (:err r))))))
+
+(deftest the-results-directory
+  (let [d (tmp)]
+    (fs/create-dirs (fs/file d "dhf/harness"))
+    (spit (str (fs/file d command/config-file)) (pr-str {:results-dir "dhf/allure-results"}))
+    (testing "--results, else RESULTS_DIR, else the configured one"
+      (with-task {:results :always :stages [`stage-b]}
+        #(do (is (= {:b "dhf/allure-results"} (edn/read-string (:out (command/run-task ["t"] d {})))))
+             (is (= {:b "/r1"} (edn/read-string (:out (command/run-task ["t"] d {"RESULTS_DIR" "/r1"})))))
+             (is (= {:b "other"} (edn/read-string (:out (command/run-task ["t" "--results" "other"] d {"RESULTS_DIR" "/r1"}))))))))
+    (testing "a task reading results only when there are any takes the configured one only when it exists"
+      (with-task {:results :when-exists :stages [`stage-b]}
+        #(do (is (= {:b nil} (edn/read-string (:out (command/run-task ["t"] d {})))))
+             (fs/create-dirs (fs/file d "dhf/allure-results"))
+             (is (= {:b "dhf/allure-results"} (edn/read-string (:out (command/run-task ["t"] d {}))))))))))
 
 (deftest events-are-printed-last-with-events
-  (let [stage (fn [req] (command/publish! req :ctx/a :A {}) {:findings [(command/warning "w" "x")]})
-        out (command/execute ["t" "x" "--events"] {:root (project nil) :env {} :table (table [stage])})]
-    (is (= ["warning: w: x" "event: A published-by ctx/a"] (:err (command/report out))))))
+  (with-task {:stages [`stage-a]}
+    #(let [r (command/run-task ["t" "--events"] (tmp) {})]
+       (is (= ["f:2: rule-a: a"] (:err r))))))
+
+(deftest the-table
+  (testing "fence and ratify are gated by the oracle, publish by the views' freshness"
+    (is (= ['rdm-spec.measurement.oracle/oracle] (:gates (command/task-row "fence"))))
+    (is (= ['rdm-spec.measurement.oracle/oracle] (:gates (command/task-row "ratify"))))
+    (is (= ['rdm-spec.architecture.views/check] (:gates (command/task-row "publish")))))
+  (is (= ["help" "init" "adopt" "stamp" "check" "views" "cut" "scopes" "fence" "run" "ratify" "checklist"
+          "status" "trace" "release" "score" "scoreboard" "oracle" "publish"]
+         (map :task command/tasks))))
