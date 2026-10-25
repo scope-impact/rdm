@@ -24,5 +24,5 @@ spec should rest on nothing.
 
 ## Pages
 
-None yet. The first pages are distilled from the evidence tables in
-`dhf/raw/`.
+- [The Löyly method, where the spec is silent](pages/loyly-method.md): the
+  rules rdm-spec follows wherever its own spec leaves a choice open.

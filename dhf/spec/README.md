@@ -33,6 +33,10 @@ The spec of rdm-spec, the source of truth for what it does
   `dhf/harness/stack.md`; the spec check refuses the configured stack words.
 - **Every When runs the command** (`rdm-spec <task>`) unless the step edits a
   file or makes a commit; every refusal says its exit code.
+- **Where the spec is silent, follow Löyly.** A builder who meets an
+  ambiguity follows the rule in `dhf/wiki/pages/loyly-method.md` and says so
+  in the report; the next spec change writes the rule into the spec, citing
+  it. Where Löyly is silent too, the builder decides and reports it.
 - **"A project" means any repository set up this way,** rdm-spec itself included.
 - **Where tags go.** An id (`@spec-` and four or more digits) and a level go
   on a scenario or scenario outline only. A need tag goes on a feature, a rule

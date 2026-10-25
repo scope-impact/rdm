@@ -238,6 +238,17 @@ removed.
 - The graph and its MCP server either stay on a frozen Python release after
   cutover or are switched off until rebuilt. That is decided before cutover.
 
+## Ambiguity follows Löyly
+
+Decided by the spec owner, 2026-10-25. Where the spec leaves a choice open,
+the choice follows Löyly, rdm-spec's raw source for the method. The rules are
+distilled, with citations, in `dhf/wiki/pages/loyly-method.md`; the wiki is
+on the clean room's allow-list, so every builder can read them, while Löyly's
+own tools stay fenced. A builder reports each rule it followed; the next spec
+change writes it into the spec. Where Löyly is silent too, the builder decides
+and reports it, and the spec owner settles it. Where rdm-spec departs from
+Löyly on purpose, the page and this record say so.
+
 ## Decided by the agent, on delegation
 
 The remaining hotspots were handed to the agent to decide (2026-10-24). Each
