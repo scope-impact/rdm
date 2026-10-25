@@ -1,72 +1,73 @@
 (ns rdm-spec.verification.release
-  "Release check (dhf/spec/verification/release.feature): refuses a release
-  while any stamped scenario is not verified (planned, failed or unverified),
-  and, under the regulated profile, while gap analysis has any finding that
-  is not a warning (a gap, a document with no id, a duplicate id), relayed
-  unchanged from ClausesIndexed.
+  "The Release check of the verification context
+  (dhf/spec/verification/release.feature): refuses a release while any
+  scenario is not verified, and, under the regulated profile, while any
+  clause is not named or any controlled document is not identified.
 
-  Statuses come from Status (derive!, within this context); the clauses from
-  the ClausesIndexed event the gap stage publishes before it. The audit copy
-  runs it as its gate.
+  The stage `release` (task release, and the gate before the audit copy)
+  derives every stamped scenario's status from the results (the Status
+  component, which publishes VerificationDerived) and finds, at the
+  scenario's file and line:
+    release-planned     a scenario tagged @wip (planned work is not released)
+    release-failed      a scenario a result did not pass
+    release-unverified  a scenario with no result
+    release-unstamped   a scenario with no single id: nothing can verify it
+  the parser's refusals (relayed: a spec the parser refuses is not
+  releasable), every unreadable result file (result-unreadable), and under
+  :regulated every finding of the gap stage, relayed from ClausesIndexed
+  unchanged, its warnings as warnings. A result naming no stamped scenario
+  is a warning (result-unknown).
 
-  Findings: scenario-planned, scenario-failed, scenario-unverified (at the
-  scenario's file and line, naming its id and status), scenario-unstamped,
-  the status report's own (an unreadable result), and gap analysis's.
-  The result: {:release {:releasable? :results :scenarios :blocking
-  :clauses :gaps}}."
+  Its result: {:release {:results DIR :releasable? bool :counts {..}}}."
   (:require [rdm-spec.kernel.command :as command]
+            [rdm-spec.verification.results :as results]
             [rdm-spec.verification.status :as status]))
 
 (defn subscriptions
-  "Status's SpecParsed, and ClausesIndexed kept in the run's state."
+  "Keeps SpecParsed (as the Status component reads it) and ClausesIndexed."
   [req]
   (conj (vec (status/subscriptions req))
         [:ClausesIndexed (fn [payload] (swap! (:state req) assoc ::clauses payload) nil)]))
 
-(defn scenario-findings
-  "Pure: a finding for each scenario of the status report that is not
-  verified, and each scenario with no single id."
-  [report]
-  (vec (concat
-        (for [{:keys [id file line status name]} (:scenarios report)
-              :when (not= :verified status)]
-          (command/finding file line (str "scenario-" (clojure.core/name status))
-                           (str id " is " (clojure.core/name status)
-                                (case status
-                                  :planned " (tagged @wip): planned work is not releasable"
-                                  :failed ": a result labelled with its id did not pass"
-                                  :unverified ": no result is labelled with its id"
-                                  "")
-                                (when name (str " (" name ")")))))
-        (for [{:keys [file line name]} (:unstamped report)]
-          (command/finding file line "scenario-unstamped"
-                           (str "the scenario " (pr-str name) " carries no single id, so it has no status"))))))
+(defn- relay [{:keys [file line rule message severity]}]
+  (if (= :warning severity)
+    (command/warning file line rule message)
+    (command/finding file line rule message)))
 
-(defn clause-findings
-  "Pure: gap analysis's findings, as ClausesIndexed carries them, relayed
-  unchanged (warnings stay warnings)."
-  [clauses-indexed]
-  (vec (for [f (:findings clauses-indexed)]
-         (if (= :warning (:severity f))
-           (command/warning (:file f) (:line f) (:rule f) (:message f))
-           (command/finding (:file f) (:line f) (:rule f) (:message f))))))
+(defn scenario-findings
+  "A finding per scenario of `scenarios` that is not verified, by `statuses`."
+  [scenarios statuses]
+  (vec
+   (concat
+    (for [sc scenarios :when (nil? (:id sc))]
+      (command/finding (:file sc) (:line sc) "release-unstamped"
+                       (str "the scenario \"" (:title sc) "\" carries no single id, so nothing can verify it")))
+    (for [sc (status/stamped scenarios)
+          :let [st (get statuses (:id sc))]
+          :when (not= :verified st)]
+      (command/finding (:file sc) (:line sc) (str "release-" (name st))
+                       (str (:id sc) " \"" (:title sc) "\" is " (name st)
+                            (case st
+                              :planned " (tagged @wip): planned work is not released"
+                              :failed ": a result labelled with its id did not pass"
+                              :unverified ": no result is labelled with its id")))))))
 
 (defn release
-  "The release check."
+  "The release check stage."
   [req]
-  (let [{:keys [report findings]} (status/derive! req)
-        _ (when-not (:derived? report)
-            (command/cannot-run! "the release check reads results, and none were given"))
+  (let [spec (status/spec-of req)
+        {:keys [read derived]} (status/derive-from! req (:results req))
+        clauses (some-> (:state req) deref ::clauses)
         regulated? (contains? (:config req) :regulated)
-        clauses (when regulated?
-                  (or (some-> (:state req) deref ::clauses)
-                      (command/cannot-run! "under the regulated profile the clauses were not read: no ClausesIndexed event reached the release check")))
-        all (vec (concat (scenario-findings report) findings (clause-findings clauses)))
-        blocking (remove command/warning? all)]
-    {:result {:release (cond-> {:releasable? (empty? blocking)
-                                :results (:results report)
-                                :scenarios (:counts report)
-                                :blocking (count blocking)}
-                         regulated? (assoc :clauses (count (:clauses clauses))
-                                           :gaps (count (filter #(empty? (:named-at %)) (:clauses clauses)))))}
-     :findings all}))
+        _ (when (and regulated? (nil? clauses))
+            (command/cannot-run! "the configuration holds :regulated, but the clauses were not read: no ClausesIndexed event reached the release check"))
+        refusals (for [{:keys [file line rule message]} (:refusals spec)] (command/finding file line rule message))
+        findings (vec (concat (scenario-findings (:scenarios spec) (:statuses derived))
+                              refusals
+                              (results/unreadable-findings read)
+                              (when regulated? (map relay (:findings clauses)))
+                              (status/unknown-warnings (:unknown-results derived))))]
+    {:result {:release {:results (:dir read)
+                        :releasable? (not-any? (complement command/warning?) findings)
+                        :counts (status/counts (:statuses derived))}}
+     :findings findings}))

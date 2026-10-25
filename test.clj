@@ -1,110 +1,178 @@
-;; The builder's tests (dhf/harness/config.edn :test-command, `bb test.clj`).
+;; rdm-spec's builder's tests (dhf/harness/stack.md; the configuration's
+;; :test-command): every unit test under test/ and every scenario of the spec,
+;; each writing an Allure result into $RESULTS_DIR (else the configured
+;; :results-dir). Exits 0 only when every unit test passed and every scenario
+;; not tagged @wip passed.
 ;;
-;; Runs (a) every unit test namespace under test/ (files *_test.clj, found by
-;; looking, never listed; test/steps excluded) and (b) every scenario of the
-;; spec with the Gherkin runner against the step definitions under the
-;; configured :steps-dir. Writes Allure results into $RESULTS_DIR, else the
-;; configured :results-dir, after clearing earlier results there. Unit test
-;; results carry no spec label, so they verify no scenario. Exits 0 only when
-;; every unit test passed and no scenario failed or is broken (a planned,
-;; @wip scenario is skipped and fails nothing); a scenario whose steps have no
-;; definition yet is broken.
-(require '[babashka.classpath :as cp]
-         '[babashka.fs :as fs])
+;;   bb test.clj                     everything
+;;   bb test.clj [--no-unit] [--no-scenarios] [PATH ...]
+;;                                   a part, while building: PATH limits the
+;;                                   scenarios to feature files under it
+;;
+;; Every fixture of a run (the step definitions', the unit tests', and the
+;; temporary files of the commands they run) lies under one directory, made
+;; here and removed when the run ends: the tests run in a child process whose
+;; temporary directory it is (bb ignores JAVA_TOOL_OPTIONS, so it is given as
+;; -Djava.io.tmpdir) and which steps.support names (RDM_SPEC_FIXTURES).
+
+(require '[babashka.fs :as fs]
+         '[babashka.process :as p]
+         '[cheshire.core :as json]
+         '[clojure.edn :as edn]
+         '[clojure.string :as str]
+         '[clojure.test :as t])
 
 (def root (str (fs/parent (fs/absolutize *file*))))
-(cp/add-classpath (str (fs/file root "src") java.io.File/pathSeparator (fs/file root "test")))
 
-(require '[cheshire.core :as json]
-         '[clojure.string :as str]
-         '[clojure.test :as t]
-         '[rdm-spec.kernel.command :as command]
-         '[rdm-spec.kernel.runner :as runner])
+(def fixtures-var "RDM_SPEC_FIXTURES")
 
-(def config (command/read-config root))
-(def results-dir
-  (str (command/path root (or (not-empty (System/getenv "RESULTS_DIR")) (:results-dir config)))))
-(fs/create-dirs results-dir)
-(runner/clean-results! results-dir)
+(defn- bb-exe []
+  (or (try (let [exe (str (fs/read-link "/proc/self/exe"))] (when (re-find #"(^|/)bb$" exe) exe))
+           (catch Exception _ nil))
+      (some-> (fs/which "bb") str)
+      "bb"))
 
-;; --- (a) unit tests -------------------------------------------------------
+;; ---------------------------------------------------------------------------
+;; The parent: one fixture directory per run, removed when the run ends
 
-(defn unit-test-namespaces []
-  (let [test-dir (fs/file root "test")
-        steps (str (fs/absolutize (command/path root (:steps-dir config))))]
-    (->> (fs/glob test-dir "**_test.clj")
-         (map fs/absolutize)
-         (remove #(str/starts-with? (str %) steps))
-         (map #(-> (str (fs/relativize test-dir %))
-                   (str/replace #"\.clj$" "")
-                   (str/replace "/" ".")
-                   (str/replace "_" "-")
-                   symbol))
-         sort)))
+(defn- parent! []
+  (let [run-dir (str (fs/create-temp-dir {:prefix "rdm-spec-test-run-"}))
+        code (try
+               (-> (p/process (concat [(bb-exe) (str "-Djava.io.tmpdir=" run-dir)
+                                       "-cp" (str root "/src" java.io.File/pathSeparator root "/test")
+                                       (str root "/test.clj")]
+                                      *command-line-args*)
+                              {:inherit true :dir root
+                               :extra-env {fixtures-var run-dir "TMPDIR" run-dir}})
+                   deref
+                   :exit)
+               (finally
+                 (fs/delete-tree run-dir)))]
+    (System/exit code)))
 
-(defn run-unit-tests []
-  (let [outcomes (atom [])
-        current (atom nil)]
-    (doseq [n (unit-test-namespaces)]
-      (require n)
-      (binding [t/report (fn [m]
-                           (case (:type m)
-                             :begin-test-var (reset! current {:var (:var m) :start (System/currentTimeMillis)
-                                                              :fails []})
-                             :end-test-var (swap! outcomes conj (assoc @current :stop (System/currentTimeMillis)))
-                             (:fail :error) (do (swap! current update :fails conj m)
-                                                (binding [*out* *err*] (t/with-test-out (println "FAIL" (:var @current)))
-                                                  (println (pr-str (dissoc m :actual)) " actual:" (pr-str (:actual m)))))
-                             nil))]
-        (t/test-ns n)))
-    (doseq [{:keys [var start stop fails]} @outcomes]
-      (let [m (meta var)
-            status (cond (some #(= :error (:type %)) fails) "broken"
-                         (seq fails) "failed"
-                         :else "passed")]
-        (runner/write-result!
-         results-dir
-         {:uuid (str (java.util.UUID/randomUUID))
-          :historyId (str (:ns m) "/" (:name m))
-          :name (str (:name m))
-          :fullName (str (:ns m) "/" (:name m))
-          :status status
-          :statusDetails (if (seq fails)
-                           {:message (str/join "\n" (map #(str (or (:message %) "") " expected: " (pr-str (:expected %))
-                                                               " actual: " (pr-str (:actual %))) fails))}
-                           {})
-          :stage "finished" :start start :stop stop
-          :labels [{:name "suite" :value "unit"} {:name "package" :value (str (:ns m))}
-                   {:name "framework" :value "clojure.test"}]
-          :steps []})))
-    @outcomes))
+;; ---------------------------------------------------------------------------
+;; The child: the tests
 
-;; --- (b) scenarios --------------------------------------------------------
+(defn- config []
+  (let [f (fs/file root "dhf/harness/config.edn")]
+    (if (fs/exists? f) (edn/read-string (slurp (str f))) {})))
 
-(defn run-scenarios []
-  (runner/run-features {:root root
-                        :spec-dir (:spec-dir config)
-                        :steps-dir (:steps-dir config)
-                        :results-dir results-dir
-                        :id-prefix (:id-prefix config)
-                        :model (:model config)
-                        :clean? false}))
+(defn- results-dir [cfg]
+  (let [d (or (not-empty (System/getenv "RESULTS_DIR")) (:results-dir cfg) "dhf/allure-results")]
+    (str (if (fs/absolute? d) d (fs/file root d)))))
 
-(let [units (run-unit-tests)
-      unit-failed (filter #(seq (:fails %)) units)
-      sc (run-scenarios)
-      results (:results sc)
-      summary (runner/summarize results)]
-  (println)
-  (println "Unit tests:" (count units) "run," (count unit-failed) "failed")
-  (doseq [u unit-failed] (println "  FAILED" (:var u)))
-  (when (:refused sc) (println "Scenarios refused:" (:refused sc)))
-  (doseq [r (:refusals sc)] (println "  REFUSED" (str (:file r) ":" (:line r) ": " (:rule r) ": " (:message r))))
-  (println "Scenarios:" summary)
-  (doseq [r results :when (#{"failed" "broken"} (:status r))]
-    (println (str "  " (str/upper-case (:status r)) " " (str/join "," (:ids r)) " " (:file r) ":" (:line r) " " (:name r))
-             (str "\n      " (:message r))))
-  (println "Results written to" results-dir)
-  (System/exit (if (or (seq unit-failed) (:refused sc) (seq (:refusals sc))
-                       (pos? (:failed summary 0)) (pos? (:broken summary 0)))
-                 1 0)))
+(defn- write-result! [dir r]
+  (fs/create-dirs dir)
+  (spit (str (fs/file dir (str (:uuid r) "-result.json"))) (json/generate-string r {:pretty true})))
+
+(defn- say [& xs] (println (str/join " " xs)) (flush))
+
+;; --- unit tests ------------------------------------------------------------------
+
+(defn- unit-test-files [cfg]
+  (let [steps (str (fs/file root (or (:steps-dir cfg) "test/steps")))]
+    (vec (sort (for [f (map str (fs/glob (fs/file root "test") "**_test.clj"))
+                     :when (not (str/starts-with? f (str steps "/")))]
+                 f)))))
+
+(defn- ns-of [f]
+  (-> (str (fs/relativize (fs/file root "test") f))
+      (str/replace #"\.clj$" "")
+      (str/replace "/" ".")
+      (str/replace "_" "-")
+      symbol))
+
+(defn- run-unit-tests!
+  "Runs every unit test, writing a result for each: [{:name :status}]."
+  [cfg out]
+  (vec
+   (for [f (unit-test-files cfg)
+         :let [ns-sym (ns-of f)
+               loaded (try (require ns-sym) nil (catch Throwable e e))]
+         v (if loaded
+             [::load-error]
+             (sort-by (comp str symbol) (filter (comp :test meta) (vals (ns-interns ns-sym)))))]
+     (let [start (System/currentTimeMillis)
+           events (atom [])
+           nm (if (= ::load-error v) (str ns-sym " (loading)") (str (symbol v)))
+           _ (when-not (= ::load-error v)
+               (binding [t/report (fn [m]
+                                    (when (#{:fail :error} (:type m))
+                                      (swap! events conj m)
+                                      (binding [t/*test-out* *out*] (t/with-test-out ((get-method t/report (:type m)) m)))))]
+                 (try (t/test-vars [v])
+                      (catch Throwable e (swap! events conj {:type :error :actual e})))))
+           evs (if loaded [{:type :error :actual loaded}] @events)
+           status (cond (some #(= :error (:type %)) evs) "broken"
+                        (seq evs) "failed"
+                        :else "passed")
+           msg (when-let [e (first evs)]
+                 (str (or (:message e) "")
+                      (when (contains? e :expected) (str " expected: " (pr-str (:expected e))))
+                      " actual: " (let [a (:actual e)] (if (instance? Throwable a) (str (class a) ": " (ex-message a)) (pr-str a)))))]
+       (write-result! out {:uuid (str (random-uuid)) :name nm :fullName (str f)
+                           :status status :statusDetails (if msg {:message msg} {}) :stage "finished"
+                           :start start :stop (System/currentTimeMillis)
+                           :labels [{:name "framework" :value "clojure.test"} {:name "suite" :value (str ns-sym)}]
+                           :steps []})
+       (when-not (= "passed" status) (say status "unit" nm))
+       {:name nm :status status}))))
+
+;; --- scenarios -------------------------------------------------------------------
+
+(defn- run-scenarios!
+  "Runs the scenarios (limited to `only` when given): {:runs :refusals :shadowed}."
+  [cfg out only]
+  (let [runner-ns 'rdm-spec.kernel.runner
+        _ (require runner-ns)
+        plan (resolve (symbol (str runner-ns) "plan"))
+        load! (resolve (symbol (str runner-ns) "load-step-files!"))
+        step-files (resolve (symbol (str runner-ns) "step-files"))
+        run! (resolve (symbol (str runner-ns) "run-pickles!"))
+        shadow-warnings (resolve (symbol (str runner-ns) "shadow-warnings"))
+        format-finding (requiring-resolve 'rdm-spec.kernel.command/format-finding)
+        steps-dir (str (fs/file root (or (:steps-dir cfg) "test/steps")))
+        kernel-first (for [n ["support" "kernel_command" "kernel_bus" "kernel_runner"]
+                           :let [f (str (fs/file steps-dir (str n ".clj")))]
+                           :when (fs/exists? f)]
+                       f)
+        files (distinct (concat kernel-first (step-files steps-dir)))
+        {:keys [pickles refusals features]} (plan root {:spec-dir (:spec-dir cfg) :id-prefix (:id-prefix cfg)
+                                                        :model (:model cfg) :only only})]
+    (load! files)
+    (doseq [f refusals] (say "refused" (format-finding (assoc f :severity :error))))
+    (doseq [w (shadow-warnings)] (say (format-finding w)))
+    (say "scenarios:" (count pickles) "in" features "feature files")
+    {:refusals refusals
+     :features features
+     :runs (run! pickles out
+                 (fn [pk r]
+                   (say (format "%-7s %-10s %s:%s  %s" (:status r) (or (:id pk) "-") (:file pk)
+                                (or (get-in pk [:row :line]) (:line pk)) (:display-name pk)))
+                   (when (#{"failed" "broken"} (:status r))
+                     (say "        " (get-in r [:statusDetails :message])))))}))
+
+(defn- child! []
+  (let [args *command-line-args*
+        unit? (not (some #{"--no-unit"} args))
+        scenarios? (not (some #{"--no-scenarios"} args))
+        only (vec (remove #(str/starts-with? % "--") args))
+        cfg (config)
+        out (results-dir cfg)
+        _ (fs/create-dirs out)
+        units (when unit? (run-unit-tests! cfg out))
+        {:keys [runs refusals features]} (when scenarios? (run-scenarios! cfg out only))
+        bad-units (remove #(= "passed" (:status %)) units)
+        statuses (frequencies (map (comp :status second) runs))
+        bad-runs (filter #(#{"failed" "broken"} (:status (second %))) runs)]
+    (say)
+    (when unit? (say "unit tests:" (count units) "run," (count bad-units) "not passed"))
+    (when scenarios? (say "scenarios:" (count runs) "run," (pr-str statuses)))
+    (say "results:" out)
+    (System/exit (if (and (empty? bad-units) (empty? bad-runs) (empty? refusals)
+                          (or (not scenarios?) (seq only) (pos? (or features 0))))
+                   0 1))))
+
+(if (System/getenv fixtures-var)
+  (child!)
+  (parent!))

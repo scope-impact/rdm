@@ -1,0 +1,20 @@
+;; The C4 model: the one source every architecture view is generated from
+;; (rdm-spec views). It holds the system and nothing else yet: add the
+;; people, the containers, their bounded contexts and components, the
+;; relationships and the views as the design is written.
+;;
+;; Shape; ids are keywords, unique across the model:
+;;
+;;   :system         {:id :name :description}
+;;   :people         [{:id :name :description :actor #{:human :agent}}]
+;;   :external       [{:id :name :description}]
+;;   :containers     [{:id :name :description :technology :kind :runs | :stores
+;;                     :contexts [{:id :name :description
+;;                                 :components [{:id :name :description
+;;                                               :spec "<context>/<component>"}]}]}]
+;;   :kernel         [{:id :name :description :spec "kernel/<component>"}]
+;;   :relationships  [{:from :to :description [:event]}]
+;;   :views          [{:key :level :description [:context] [:steps]}]
+{:system {:id {{system-id}}
+          :name {{system-name}}
+          :description "What the system does, in a few words"}}

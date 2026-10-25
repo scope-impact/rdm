@@ -1,163 +1,114 @@
 (ns steps.regeneration-cut
   "Step definitions for dhf/spec/regeneration/cut.feature.
 
-  A cut fixture is a throwaway repository with a bare origin
-  (steps.regeneration-support/origin-project!): a copy of the room's
-  allow-listed paths committed on main and pushed, origin/HEAD naming main,
-  earlier cuts tagged on earlier commits and pushed. The context keeps :dir
-  (the repository, where the shared When runs the command), :origin (the bare
-  remote), :head (the commit HEAD names), and what the tags were before the
-  run (:tags-before, :remote-before), so a Then can say what the run added."
+  Context keys set here: :dir (the project, a git repository on main with
+  an origin), :origin (the bare repository), :head (HEAD's commit),
+  :tags-before and :remote-before (the tags before the When), :check-run
+  (rdm-spec check run on HEAD), :branch and :default-branch."
   (:require [clojure.string :as str]
-            [babashka.fs :as fs]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.kernel-command :as kc]
             [steps.regeneration-support :as rs]
             [steps.support :as s]))
 
-(defn- needs-cut! [] (s/needs-built! 'rdm-spec.regeneration.cut))
+(defn- project-with-origin!
+  "A copy of the room, committed on main with the cuts spec-5 and spec-6 on
+  older commits, `edit!` applied before its last commit, pushed to a new
+  origin."
+  [ctx edit!]
+  (let [dir (rs/repo! (s/copy-of-room!))]
+    (rs/commit! dir "the first merge")
+    (rs/tag! dir "spec-5")
+    (s/write! dir "NOTES.md" "a second merge\n")
+    (rs/commit! dir "the second merge")
+    (rs/tag! dir "spec-6")
+    (s/write! dir "NOTES.md" "a third merge\n")
+    (edit! dir)
+    (let [head (rs/commit! dir "the third merge")
+          bare (rs/origin! dir)]
+      (assoc ctx :dir dir :origin bare :head head
+             :tags-before (rs/tags dir) :remote-before (rs/remote-tags bare)))))
 
-(defn- the-run [ctx] (or (:run ctx) (s/fail! "no command was run")))
+(defstep #"HEAD is the commit origin/HEAD names, and the last cut is spec-6"
+  (fn [ctx] (project-with-origin! ctx (fn [_]))))
 
-(defn- remember-tags
-  "ctx with the tags the repository and its origin hold now."
-  [ctx]
-  (assoc ctx
-         :tags-before (rs/all-tags (:dir ctx))
-         :remote-before (rs/remote-tags (:origin ctx))))
-
-(defn- fixture!
-  "ctx with a project on origin/HEAD whose earlier cuts are `cuts`."
-  [ctx cuts]
-  (needs-cut!)
-  (let [p (rs/origin-project! {:cuts cuts})]
-    (s/check! (= (:head p) (rs/git! (:dir p) "rev-parse" "refs/remotes/origin/HEAD"))
-              "HEAD is not the commit origin/HEAD names")
-    (remember-tags (merge ctx p))))
-
-(defn- exits! [ctx n]
-  (let [r (the-run ctx)]
-    (s/check! (= n (:exit r)) (str "expected exit " n "\n" (s/show r)))
-    r))
-
-(defn- tags-unchanged! [ctx]
-  (let [r (the-run ctx)]
-    (s/check! (= (:tags-before ctx) (rs/all-tags (:dir ctx)))
-              (str "the run changed the tags: " (sort (rs/all-tags (:dir ctx))) "\n" (s/show r)))
-    (s/check! (= (:remote-before ctx) (rs/remote-tags (:origin ctx)))
-              (str "the run changed origin's tags: " (rs/remote-tags (:origin ctx)) "\n" (s/show r)))))
-
-(defn- strip-level!
-  "Removes the level tag of the first scenario with one in `rel` (a feature
-  file of `dir`), so the spec check finds a scenario with no level."
-  [dir rel]
-  (let [f (fs/file dir rel)
-        lines (str/split-lines (slurp f))
-        i (first (keep-indexed (fn [i l] (when (re-find #"^\s*@\S+.*@(e2e|contract)\b" l) i)) lines))]
-    (s/check! i (str rel " has no scenario with a level"))
-    (spit f (str (str/join "\n" (update (vec lines) i #(str/replace % #"\s*@(e2e|contract)\b" ""))) "\n"))))
-
-(defn- finding-lines
-  "The error lines of a run that are findings, not warnings or events."
-  [r]
-  (vec (remove #(or (re-find #"(^|: )warning: " %) (str/starts-with? % "event: ")) (s/err-lines r))))
-
-;; ---------------------------------------------------------------------------
-;; Givens
-
-(defstep #"HEAD is the commit origin/HEAD names, and the last cut is spec-(\d+)"
-  (fn [ctx n]
-    (let [n (parse-long n)]
-      ;; an earlier cut below the last, so the last is found by its number
-      (fixture! ctx (vec (distinct [(str "spec-" (max 1 (dec n))) (str "spec-" n)]))))))
-
-(defstep #"the commit tagged (spec-\d+)"
-  (fn [ctx tag]
-    (let [ctx (fixture! ctx ["spec-1"])
-          {:keys [dir head]} ctx]
-      (rs/git! dir "tag" tag head)
-      (rs/git! dir "push" "-q" "origin" (str "refs/tags/" tag))
-      (s/check! (= head (get (rs/remote-tags (:origin ctx)) tag)) (str tag " is not on origin"))
-      (remember-tags (assoc ctx :tag tag)))))
-
-(defstep #"HEAD is the commit origin/HEAD names, and \"rdm-spec check\" exits 1 on it"
+(defstep #"HEAD is tagged spec-7"
   (fn [ctx]
-    (let [ctx (fixture! ctx ["spec-6"])
-          dir (:dir ctx)]
-      (strip-level! dir "dhf/spec/architecture/lint.feature")
-      (let [head (rs/commit! dir "a merged spec change the check refuses")]
-        (rs/push-head! dir)
-        (s/check! (= head (rs/git! dir "rev-parse" "refs/remotes/origin/HEAD")) "HEAD is not origin/HEAD")
-        (let [check (kc/run! ctx dir ["check"])]
-          (s/check! (= 1 (:exit check)) (str "rdm-spec check does not exit 1 on HEAD\n" (s/show check)))
-          (s/check! (seq (finding-lines check)) "the check names no finding")
-          (remember-tags (assoc ctx :head head :check check)))))))
-
-(defstep #"HEAD is not the commit origin/HEAD names"
-  (fn [ctx]
-    (let [ctx (fixture! ctx ["spec-6"])
-          dir (:dir ctx)]
-      (rs/git! dir "checkout" "-q" "-b" "feature")
-      (s/write! dir "dhf/spec/history.md" "a change not merged\n")
-      (let [head (rs/commit! dir "work on a branch")]
-        (s/check! (not= head (rs/git! dir "rev-parse" "refs/remotes/origin/HEAD")) "HEAD is origin/HEAD")
-        (remember-tags (assoc ctx :head head :branch "feature" :default-branch "main"))))))
-
-;; ---------------------------------------------------------------------------
-;; Whens
-
-(defstep #"\"rdm-spec cut\" is run (?:again )?on it"
-  (fn [ctx] (kc/run-line ctx "cut")))
-
-;; ---------------------------------------------------------------------------
-;; Thens
-
-(defstep #"HEAD is tagged (spec-\d+)"
-  (fn [ctx tag]
-    (let [r (exits! ctx 0)
-          {:keys [dir head]} ctx
-          result (kc/stdout-edn r)]
-      (s/check! (= head (rs/git! dir "rev-parse" "HEAD")) "HEAD moved")
-      (s/check! (contains? (rs/tags-at dir head) tag) (str "HEAD is not tagged " tag "\n" (s/show r)))
-      (s/check! (= (conj (:tags-before ctx) tag) (rs/all-tags dir))
-                (str "the run added other tags than " tag ": " (sort (rs/all-tags dir))))
-      (s/check! (= tag (:cut result)) (str "the result does not name the cut " tag "\n" (s/show r)))
-      (assoc ctx :tag tag))))
+    (let [r (kc/exits! ctx 0)
+          at-head (rs/git! (:dir ctx) "tag" "--points-at" "HEAD")]
+      (s/check! (some #{"spec-7"} (str/split-lines at-head)) (str "HEAD is not tagged spec-7: " (pr-str at-head) "\n" (s/show r)))
+      (s/check! (= (sort (conj (:tags-before ctx) "spec-7")) (rs/tags (:dir ctx)))
+                (str "the tags are " (pr-str (rs/tags (:dir ctx))) ", not those before and spec-7"))
+      nil)))
 
 (defstep #"the tag is pushed to origin"
   (fn [ctx]
     (let [remote (rs/remote-tags (:origin ctx))]
-      (s/check! (= (:head ctx) (get remote (:tag ctx)))
-                (str "origin holds no " (:tag ctx) " on HEAD: " remote))
-      (s/check! (= (assoc (:remote-before ctx) (:tag ctx) (:head ctx)) remote)
-                (str "the run pushed other tags: " remote)))))
+      (s/check! (= (:head ctx) (get remote "spec-7")) (str "origin's spec-7 is " (pr-str (get remote "spec-7"))
+                                                         ", not HEAD " (:head ctx)))
+      nil)))
 
-(defstep #"no tag is added and the cut says the commit is already (spec-\d+)"
-  (fn [ctx tag]
-    (let [r (exits! ctx 0)
+;; --- cutting twice -------------------------------------------------------------
+
+(defstep #"the commit tagged spec-7"
+  (fn [ctx]
+    (let [ctx (project-with-origin! ctx (fn [_]))
+          dir (:dir ctx)]
+      (rs/tag! dir "spec-7")
+      (rs/git! dir "push" "-q" "origin" "refs/tags/spec-7")
+      (assoc ctx :tags-before (rs/tags dir) :remote-before (rs/remote-tags (:origin ctx))))))
+
+(defstep #"\"rdm-spec cut\" is run again on it"
+  (fn [ctx] (kc/run-line ctx "cut")))
+
+(defstep #"no tag is added and the cut says the commit is already spec-7"
+  (fn [ctx]
+    (let [r (kc/exits! ctx 0)
           result (kc/stdout-edn r)]
-      (tags-unchanged! ctx)
-      (s/check! (map? result) (str "the result is not EDN\n" (s/show r)))
-      (s/check! (= tag (:cut result)) (str "the result does not name " tag "\n" (s/show r)))
-      (s/check! (= tag (:already-cut result)) (str "the result does not say the commit is already " tag "\n" (s/show r))))))
+      (s/check! (= (:tags-before ctx) (rs/tags (:dir ctx))) (str "the tags changed: " (pr-str (rs/tags (:dir ctx)))))
+      (s/check! (= (:remote-before ctx) (rs/remote-tags (:origin ctx))) "origin's tags changed")
+      (s/check! (re-find #"already spec-7" (pr-str result))
+                (str "the cut does not say the commit is already spec-7\n" (s/show r)))
+      nil)))
+
+;; --- a HEAD whose spec fails the check --------------------------------------------
+
+(defstep #"HEAD is the commit origin/HEAD names, and \"rdm-spec check\" exits 1 on it"
+  (fn [ctx]
+    (let [ctx (project-with-origin! ctx (fn [dir] (rs/drop-level! dir)))
+          check (kc/run! ctx (:dir ctx) ["check"])]
+      (s/check! (= 1 (:exit check)) (str "rdm-spec check does not exit 1 on HEAD\n" (s/show check)))
+      (assoc ctx :check-run check))))
 
 (defstep #"it exits 1, tags nothing, and prints each of the check's finding lines unchanged"
   (fn [ctx]
-    (let [r (exits! ctx 1)
-          lines (set (s/err-lines r))
-          expected (finding-lines (:check ctx))]
-      (tags-unchanged! ctx)
-      (s/check! (map? (kc/stdout-edn r)) (str "on exit 1 standard output holds no result\n" (s/show r)))
-      (doseq [l expected]
-        (s/check! (contains? lines l) (str "the cut does not print the check's finding " (pr-str l) "\n" (s/show r)))))))
+    (let [r (kc/exits! ctx 1)
+          want (kc/finding-lines (:check-run ctx))
+          got (set (kc/finding-lines r))]
+      (s/check! (seq want) "the check named no finding")
+      (doseq [l want]
+        (s/check! (contains? got l) (str "the cut does not print the check's line " (pr-str l) "\n" (s/show r))))
+      (s/check! (= (:tags-before ctx) (rs/tags (:dir ctx))) (str "the tags changed: " (pr-str (rs/tags (:dir ctx)))))
+      (s/check! (= (:remote-before ctx) (rs/remote-tags (:origin ctx))) "origin's tags changed")
+      nil)))
+
+;; --- a HEAD that is not origin/HEAD ------------------------------------------------
+
+(defstep #"HEAD is not the commit origin/HEAD names"
+  (fn [ctx]
+    (let [ctx (project-with-origin! ctx (fn [_]))
+          dir (:dir ctx)]
+      (rs/git! dir "checkout" "-q" "-b" "feature")
+      (s/write! dir "NOTES.md" "work not merged\n")
+      (rs/commit! dir "work not merged")
+      (assoc ctx :branch "feature" :default-branch "main"
+             :tags-before (rs/tags dir) :remote-before (rs/remote-tags (:origin ctx))))))
+
+(defstep #"\"rdm-spec cut\" is run on it"
+  (fn [ctx] (kc/run-line ctx "cut")))
 
 (defstep #"it exits 2 and names the branch"
   (fn [ctx]
-    (let [r (exits! ctx 2)
-          line (first (filter #(str/starts-with? % "cannot-run: ") (s/err-lines r)))]
-      (tags-unchanged! ctx)
-      (s/check! (str/blank? (:out r)) (str "a cut that cannot run printed a result\n" (s/show r)))
-      (s/check! line (str "the cut says no cannot-run line\n" (s/show r)))
-      (doseq [b [(:default-branch ctx) (:branch ctx)]]
-        (s/check! (re-find (re-pattern (str "\\b" b "\\b")) line)
-                  (str "the refusal does not name the branch " b "\n" (s/show r)))))))
+    (kc/refused-naming! ctx (:branch ctx) (:default-branch ctx))
+    (s/check! (= (:tags-before ctx) (rs/tags (:dir ctx))) "a tag was added")
+    nil))

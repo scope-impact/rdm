@@ -1,48 +1,38 @@
 (ns rdm-spec.spec.parser
-  "The Parser component of the spec context (dhf/spec/spec/parser.feature):
-  reads the spec, in the working tree or as it was at a revision, into data,
-  and refuses every construct outside the declared Gherkin subset. Gherkin is
-  read by the kernel's reader (rdm-spec.kernel.gherkin), so the runner and the
-  spec context never read it two ways; this component adds what the spec
-  context knows: ids, levels, needs, planned work and each scenario's owner in
-  the C4 model. It publishes SpecParsed.
+  "Parser (dhf/spec/spec/parser.feature): reads the spec, at a revision,
+  through the kernel's Gherkin reader (rdm-spec.kernel.gherkin), which reads
+  the declared subset and refuses anything outside it, never skipping it.
 
-  `read-spec` returns
+  The spec is read from the working tree, or from a commit: a task that names
+  a cut reads the spec as it was at that cut (`rdm-spec checklist CYCLE`, the
+  cut its cycle.edn names), its model and needs included.
 
-    {:revision   \"<commit>\" | :working-tree
-     :spec-dir   \"dhf/spec\"
-     :files      [path]                  ; every file of the spec, sorted
-     :texts      {path text}             ; their texts (text-files reads them)
-     :features   [{:file :line :name :tags :description}]
-     :scenarios  [scenario]              ; path order, then file order
-     :needs      [{:id :text :sources :line}]   ; in the needs file's order
-     :needs-file path  :needs-error message-or-nil
-     :refusals   [{:file :line :rule :message}]}
+  `read-spec` returns SpecParsed's payload (dhf/spec/events.edn) with more
+  than the event carries, for the Spec check:
 
-  where a scenario is
+    {:revision  \"<commit>\" | :working-tree
+     :scenarios [{:id :ids :title :name :keyword :file :line :level :levels
+                  :needs :wip? :outline? :rows :steps :background :examples
+                  :rule :rule-line :tags :all-tags :feature-tags :rule-tags
+                  :feature-line :context :component :context-name
+                  :component-name}]
+     :needs     [{:id :text :sources}]
+     :refusals  [{:file :line :rule :message}]
+     :files     [{:file :text}]          ; every file under the spec directory
+     :features  [{:file :feature :examples-tags [{:line :tags}]}]
+     :needs-findings [finding]           ; the needs file missing or unreadable
+     :needs-lines {\"UN-001\" line}}
 
-    {:id \"spec-0007\" or nil (nil unless it carries exactly one id)
-     :ids [\"spec-0007\"] :title :name :file :line
-     :keyword \"Scenario\" | \"Scenario Outline\" :outline? bool
-     :tags [own tags] :all-tags [feature, rule, own]
-     :levels [\"@e2e\"] :level :e2e | :contract | nil (nil unless exactly one)
-     :needs [\"UN-001\"]                    ; from it, its rule and its feature
-     :wip? bool                            ; @wip on it, its rule or its feature
-     :steps [{:keyword :text :line [:doc-string] [:data-table]}] :background [step]
-     :examples [{:line :tags :header :rows [{:line :cells}]}] or nil
-     :rows [{:line :values {header value}}] or nil   ; an outline's example rows
-     :feature name :rule name-or-nil :rule-line :rule-tags
-     :context :spec :component :spec/parser      ; the model's ids, or nil
-     :context-name \"spec\" :component-name \"Parser\"}
+  :id is the scenario's one id tag (@<prefix>-NNNN, four digits or more),
+  nil when it carries none or several (:ids holds them all); :level is :e2e
+  or :contract when it carries exactly one; :needs the need tags (@UN-nnn) of
+  the scenario, its rule and its feature; :wip? whether @wip is on it.
+  :context and :component are the model's ids of the component owning the
+  file (kernel components: context :kernel), the -name keys its :name; a file
+  no component owns is named by its path, <context>/<component>.feature.
 
-  Tags keep their @; ids and needs do not. The context of a kernel component
-  is :kernel, named \"kernel\".
-
-  The stage `parse` (first stage of checklist, status, trace and release)
-  reads the spec at the cut the task names (checklist: the cycle's cut, from
-  its cycle.edn) or else in the working tree, leaves it in the run's state
-  under ::spec and publishes SpecParsed. It reports no finding itself: what a
-  refusal means is the reading task's to say."
+  The parse stage publishes SpecParsed and reports nothing itself: what reads
+  the spec relays what stops it."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
@@ -53,303 +43,246 @@
 ;; ---------------------------------------------------------------------------
 ;; Tags
 
-(defn id-pattern
-  "Matches a whole id tag, @<prefix>-NNNN (four digits or more)."
+(defn id-re
+  "The pattern of an id tag with `prefix`: @<prefix>-NNNN, four digits or more."
   [prefix]
-  (re-pattern (str "@" (java.util.regex.Pattern/quote (or prefix "spec")) "-\\d{4,}")))
+  (re-pattern (str "@" (java.util.regex.Pattern/quote (str prefix)) "-\\d{4,}")))
 
-(def need-pattern
-  "Matches a whole need tag, @UN-nnn."
-  #"@UN-\d+")
+(def any-id-re
+  "An id tag of any prefix."
+  #"@[A-Za-z](?:[A-Za-z0-9]|-(?=[A-Za-z0-9]))*-\d{4,}")
 
-(def level-tags #{"@e2e" "@contract"})
+(def need-re #"@UN-\d+")
 
-(def wip-tag "@wip")
+(def levels ["@e2e" "@contract"])
 
-(defn- level-of [tag] (keyword (subs tag 1)))
+(defn id-tags [prefix tags] (vec (distinct (filter #(re-matches (id-re prefix) %) tags))))
+
+(defn need-tags [tags] (vec (distinct (filter #(re-matches need-re %) tags))))
+
+(defn level-tags [tags] (vec (distinct (filter (set levels) tags))))
 
 ;; ---------------------------------------------------------------------------
-;; Reading files: the working tree or a revision
+;; Reading files at a revision
 
 (defn- git [root & args]
-  (let [r (apply p/shell {:dir (str root) :out :string :err :string :continue true :in ""} "git" args)]
-    {:exit (:exit r) :out (:out r) :err (:err r)}))
+  (apply p/shell {:dir (str root) :out :string :err :string :continue true :in ""} "git" args))
 
 (defn commit-of
   "The commit `rev` names in the repository at `root`, or nil."
   [root rev]
-  (when (and rev (not (str/blank? (str rev))))
-    (let [r (git root "rev-parse" "--verify" "--quiet" (str rev "^{commit}"))]
-      (when (zero? (:exit r)) (not-empty (str/trim (:out r)))))))
+  (let [r (git root "rev-parse" "--verify" "--quiet" (str rev "^{commit}"))]
+    (when (zero? (:exit r)) (not-empty (str/trim (:out r))))))
 
-(defn- strip-slash [s] (str/replace (str s) #"/+$" ""))
-
-(defn- reader
-  "{:list (fn [dir] [rel path]) :read (fn [rel] text-or-nil)}: the working
-  tree under `root`, or the commit `commit` of its repository."
+(defn reader
+  "{:revision :read (rel -> text or nil) :list (dir -> [rel], every file
+  under it)}: the working tree of `root`, or the commit `commit`."
   [root commit]
   (if commit
-    {:list (fn [dir]
-             (let [r (git root "ls-tree" "-r" "--name-only" "-z" commit "--" (str (strip-slash dir) "/"))]
-               (if (zero? (:exit r))
-                 (vec (sort (remove str/blank? (str/split (:out r) #"\u0000"))))
-                 [])))
+    {:revision commit
      :read (fn [rel]
-             (let [r (git root "show" (str commit ":./" rel))]
-               (when (zero? (:exit r)) (:out r))))}
-    {:list (fn [dir]
-             (let [d (command/path root dir)]
-               (if (fs/directory? d)
-                 (vec (sort (for [f (fs/glob d "**") :when (fs/regular-file? f)]
-                              (command/rel root f))))
-                 [])))
+             (let [r (git root "show" (str commit ":" rel))]
+               (when (zero? (:exit r)) (:out r))))
+     :list (fn [dir]
+             (let [r (git root "ls-tree" "-r" "--name-only" commit "--" (str dir "/"))]
+               (if (zero? (:exit r)) (vec (sort (remove str/blank? (str/split-lines (:out r))))) [])))}
+    {:revision :working-tree
      :read (fn [rel]
              (let [f (command/path root rel)]
-               (when (fs/regular-file? f) (slurp (str f)))))}))
+               (when (fs/regular-file? f) (slurp (str f)))))
+     :list (fn [dir]
+             (let [d (command/path root dir)]
+               (if (fs/directory? d)
+                 (vec (sort (for [f (fs/glob d "**" {:hidden true}) :when (fs/regular-file? f)]
+                              (command/rel root f))))
+                 [])))}))
 
 ;; ---------------------------------------------------------------------------
-;; The model: who owns a feature file
+;; The model's owners
 
-(defn- read-edn-map [text]
-  (when text
-    (try (let [v (edn/read-string text)] (when (map? v) v))
-         (catch Exception _ nil))))
+(defn- read-edn [text]
+  (when text (try (edn/read-string text) (catch Exception _ nil))))
 
 (defn owners
-  "{spec-path {:context :component :context-name :component-name}} of every
-  component the model `model` names (spec-path as in :spec, e.g.
-  \"spec/parser\"); the kernel's components have the context :kernel."
-  [model]
-  (into {}
-        (concat
-         (for [c (:containers model) ctx (:contexts c) comp (:components ctx)
-               :when (string? (:spec comp))]
-           [(:spec comp) {:context (:id ctx)
-                          :component (:id comp)
-                          :context-name (or (:name ctx) (some-> (:id ctx) name))
-                          :component-name (or (:name comp) (some-> (:id comp) name))}])
-         (for [comp (:kernel model) :when (string? (:spec comp))]
-           [(:spec comp) {:context :kernel
-                          :component (:id comp)
-                          :context-name "kernel"
-                          :component-name (or (:name comp) (some-> (:id comp) name))}]))))
-
-(defn spec-path
-  "The feature file `file` as the model names it: relative to `spec-dir`,
-  without .feature (\"spec/parser\"); nil when it lies outside."
-  [spec-dir file]
-  (let [prefix (str (strip-slash spec-dir) "/")]
-    (when (str/starts-with? file prefix)
-      (str/replace (subs file (count prefix)) #"\.feature$" ""))))
+  "{spec-path {:context :component :context-name :component-name}} of the
+  model `m` (kernel components: context :kernel)."
+  [m]
+  (let [m (if (map? m) m {})
+        maps (fn [xs] (if (sequential? xs) (filter map? xs) []))]
+    (into {}
+          (concat
+           (for [c (maps (:containers m)) x (maps (:contexts c)) comp (maps (:components x))
+                 :when (string? (:spec comp))]
+             [(:spec comp) {:context (:id x) :component (:id comp)
+                            :context-name (or (:name x) (some-> (:id x) name))
+                            :component-name (or (:name comp) (some-> (:id comp) name))}])
+           (for [comp (maps (:kernel m)) :when (string? (:spec comp))]
+             [(:spec comp) {:context :kernel :component (:id comp)
+                            :context-name "kernel"
+                            :component-name (or (:name comp) (some-> (:id comp) name))}])))))
 
 (defn owner-of
-  "The owner of `file`: from the model, or, with no model, from the path
-  (dhf/spec/<context>/<component>.feature). Nil keys when no one owns it."
-  [model spec-dir file]
-  (let [sp (spec-path spec-dir file)
-        none {:context nil :component nil :context-name nil :component-name nil}]
-    (cond
-      (nil? sp) none
-      model (get (owners model) sp none)
-      :else (let [parts (str/split sp #"/")]
-              (if (= 2 (count parts))
-                (let [[c n] parts]
-                  {:context (keyword c) :component (keyword c n) :context-name c :component-name n})
-                none)))))
-
-;; ---------------------------------------------------------------------------
-;; Needs
-
-(defn- need-line [text id]
-  (let [q (java.util.regex.Pattern/quote (pr-str id))
-        lines (map-indexed vector (str/split-lines text))]
-    (or (some (fn [[i l]] (when (re-find (re-pattern (str "^[\\s{]*" q "(\\s|$)")) l) (inc i))) lines)
-        (some (fn [[i l]] (when (and (str/includes? l (pr-str id))
-                                     (not (str/starts-with? (str/triml l) ";")))
-                            (inc i)))
-              lines))))
-
-(defn read-needs
-  "{:needs [{:id :text :sources :line}] :needs-error message-or-nil} from the
-  needs file's text (nil: the file `rel` does not exist)."
-  [rel text]
-  (if (nil? text)
-    {:needs [] :needs-error (str "the needs file " rel " does not exist")}
-    (let [v (try (edn/read-string text)
-                 (catch Exception e {::error (str "the needs file " rel " is not readable EDN: " (ex-message e))}))]
-      (cond
-        (and (map? v) (::error v)) {:needs [] :needs-error (::error v)}
-        (not (map? v)) {:needs [] :needs-error (str "the needs file " rel " is not a map of needs, {\"UN-001\" {:text :sources}}")}
-        :else
-        {:needs (->> (for [[k n] v
-                           :let [id (if (keyword? k) (name k) (str k))
-                                 n (if (map? n) n {})
-                                 sources (:sources n)]]
-                       {:id id
-                        :text (:text n)
-                        :sources (if (sequential? sources) (vec sources) [])
-                        :line (need-line text id)})
-                     (sort-by (juxt #(or (:line %) Integer/MAX_VALUE) :id))
-                     vec)
-         :needs-error nil}))))
+  "The owner of the feature file `rel` under `spec-dir`."
+  [owner-map spec-dir rel]
+  (let [prefix (str spec-dir "/")
+        sp (when (str/starts-with? rel prefix) (str/replace (subs rel (count prefix)) #"\.feature$" ""))]
+    (or (get owner-map sp)
+        (let [parts (when sp (str/split sp #"/"))]
+          (if (= 2 (count parts))
+            {:context (keyword (first parts)) :component (keyword (first parts) (second parts))
+             :context-name (first parts) :component-name (second parts)}
+            {:context nil :component nil :context-name nil :component-name nil})))))
 
 ;; ---------------------------------------------------------------------------
 ;; Scenarios
 
-(defn- strip-at [t] (subs t 1))
-
-(defn scenario
-  "The scenario of a kernel-parsed scenario `sc` of the feature `feature`,
-  in `file`, owned by `owner`."
-  [prefix file feature owner sc]
-  (let [own (vec (:tags sc))
-        all (vec (:all-tags sc))
-        id-re (id-pattern prefix)
-        ids (vec (distinct (map strip-at (filter #(re-matches id-re %) own))))
-        levels (vec (distinct (filter level-tags own)))
+(defn scenario-entry
+  "Pure: one scenario of the feature file `rel`, as SpecParsed carries it."
+  [rel parsed sc prefix owner]
+  (let [ids (mapv #(subs % 1) (id-tags prefix (:tags sc)))
+        lvls (level-tags (:tags sc))
         outline? (= "Scenario Outline" (:keyword sc))]
     (merge
      {:id (when (= 1 (count ids)) (first ids))
       :ids ids
       :title (:name sc)
       :name (:name sc)
-      :file file
-      :line (:line sc)
       :keyword (:keyword sc)
+      :file rel
+      :line (:line sc)
+      :level (when (= 1 (count lvls)) (keyword (subs (first lvls) 1)))
+      :levels (mapv #(keyword (subs % 1)) lvls)
+      :needs (mapv #(subs % 1) (need-tags (:all-tags sc)))
+      :wip? (boolean (some #{"@wip"} (:tags sc)))
       :outline? outline?
-      :tags own
-      :all-tags all
-      :levels levels
-      :level (when (= 1 (count levels)) (level-of (first levels)))
-      :needs (vec (distinct (map strip-at (filter #(re-matches need-pattern %) all))))
-      :wip? (boolean (some #{wip-tag} all))
-      :steps (vec (:steps sc))
-      :background (vec (:background sc))
-      :examples (:examples sc)
-      :rows (when outline?
-              (vec (for [ex (:examples sc) row (:rows ex)]
-                     {:line (:line row) :values (zipmap (:header ex) (:cells row))})))
-      :feature (:name feature)
+      :rows (if outline? (gherkin/outline-rows sc) [])
+      :steps (mapv #(select-keys % [:keyword :text :line :doc-string :data-table]) (:steps sc))
+      :background (mapv #(select-keys % [:keyword :text :line :doc-string :data-table]) (:background sc))
+      :examples (vec (for [ex (:examples sc)] (select-keys ex [:line :tags :header :rows])))
       :rule (get-in sc [:rule :name])
       :rule-line (get-in sc [:rule :line])
-      :rule-tags (vec (get-in sc [:rule :tags]))}
+      :tags (vec (:tags sc))
+      :all-tags (vec (:all-tags sc))
+      :feature-tags (vec (get-in parsed [:feature :tags]))
+      :rule-tags (vec (get-in sc [:rule :tags]))
+      :feature-line (get-in parsed [:feature :line])}
      owner)))
 
-(defn parse-file
-  "{:feature :scenarios :refusals} of the feature file `file` (a path
-  relative to the project root) holding `text`."
-  [{:keys [id-prefix spec-dir model]} file text]
-  (let [parsed (gherkin/parse-feature file text)
-        feature (:feature parsed)
-        owner (owner-of model spec-dir file)]
-    {:feature (when feature
-                {:file file :line (:line feature) :name (:name feature)
-                 :tags (vec (:tags feature)) :description (:description feature)})
-     :scenarios (mapv #(scenario id-prefix file feature owner %) (:scenarios parsed))
-     :refusals (vec (:refusals parsed))}))
+(defn parse-text
+  "Pure: the feature file `rel` holding `text`: {:scenarios :refusals :feature}."
+  [rel text {:keys [prefix owner]}]
+  (let [parsed (gherkin/parse-feature rel text)]
+    {:feature (:feature parsed)
+     :examples-tags (vec (for [sc (:scenarios parsed) ex (:examples sc) :when (seq (:tags ex))]
+                           {:line (:line ex) :tags (:tags ex)}))
+     :scenarios (mapv #(scenario-entry rel parsed % prefix owner) (:scenarios parsed))
+     :refusals (mapv #(select-keys % [:file :line :rule :message]) (:refusals parsed))}))
+
+;; ---------------------------------------------------------------------------
+;; Needs
+
+(defn- key-lines
+  "{\"UN-001\" line} of every need key written in `text`."
+  [text]
+  (into {}
+        (for [[i l] (map-indexed vector (str/split-lines (or text "")))
+              [_ k] (re-seq #"\"(UN-\d+)\"" l)]
+          [k (inc i)])))
+
+(defn read-needs
+  "The needs file `rel` holding `text` (nil: missing): {:needs [{:id :text
+  :sources}] :findings [..] :lines {id line}}. A missing or unreadable needs
+  file is a finding: it is part of the spec."
+  [rel text]
+  (let [v (when text (try {:ok (edn/read-string text)} (catch Exception e {:error (ex-message e)})))
+        lines (key-lines text)]
+    (cond
+      (nil? text)
+      {:needs [] :lines {} :findings [(command/finding rel "needs-unreadable" (str "there is no needs file " rel))]}
+
+      (:error v)
+      {:needs [] :lines {} :findings [(command/finding rel "needs-unreadable"
+                                                       (str "the needs file is not readable EDN: " (:error v)))]}
+
+      (not (map? (:ok v)))
+      {:needs [] :lines {} :findings [(command/finding rel "needs-unreadable"
+                                                       "the needs file is not an EDN map of need id to {:text :sources}")]}
+
+      :else
+      {:needs (vec (for [[k n] (sort-by (comp str key) (:ok v))]
+                     {:id (str k)
+                      :text (when (map? n) (:text n))
+                      :sources (if (and (map? n) (sequential? (:sources n))) (vec (:sources n)) [])}))
+       :lines lines
+       :findings []})))
 
 ;; ---------------------------------------------------------------------------
 ;; The spec
 
 (defn read-spec
-  "The spec under `root` (see the namespace doc). `opts`: :spec-dir (default
-  dhf/spec), :id-prefix (default spec), :model and :needs (the files, by
-  default model.edn and needs.edn of the spec directory) and :revision (a
-  commit, tag or branch to read the spec at; nil for the working tree)."
-  [root {:keys [spec-dir id-prefix model needs revision]}]
-  (let [spec-dir (strip-slash (or spec-dir "dhf/spec"))
-        commit (when revision
-                 (or (commit-of root revision)
-                     (command/cannot-run! (str "the revision " revision " is not a commit of this repository"))))
-        {list-files :list read-text :read} (reader root commit)
-        files (list-files spec-dir)
-        texts (into (sorted-map) (keep (fn [f] (when-let [t (read-text f)] [f t]))) files)
-        model-rel (or model (str spec-dir "/model.edn"))
-        m (read-edn-map (read-text model-rel))
-        needs-rel (or needs (str spec-dir "/needs.edn"))
-        {:keys [needs needs-error]} (read-needs needs-rel (read-text needs-rel))
-        ctx {:id-prefix (or id-prefix "spec") :spec-dir spec-dir :model m}
-        parsed (for [[f t] texts :when (str/ends-with? f ".feature")] (parse-file ctx f t))]
-    {:revision (or commit :working-tree)
-     :spec-dir spec-dir
-     :files (vec (keys texts))
-     :texts texts
-     :features (vec (keep :feature parsed))
-     :scenarios (vec (mapcat :scenarios parsed))
-     :needs needs
-     :needs-file needs-rel
-     :needs-error needs-error
-     :refusals (vec (mapcat :refusals parsed))}))
+  "The spec of the project at `root` with configuration `config`, read from
+  the working tree or, with `commit`, at that commit; see the namespace doc."
+  ([root config] (read-spec root config nil))
+  ([root config commit]
+   (let [req {:root root :config config}
+         spec-dir (str/replace (command/config-value req :spec-dir) #"/+$" "")
+         prefix (command/config-value req :id-prefix)
+         {:keys [revision read list]} (reader root commit)
+         files (list spec-dir)
+         owner-map (owners (read-edn (read (command/config-value req :model))))
+         features (vec (for [rel files :when (str/ends-with? rel ".feature")]
+                         (assoc (parse-text rel (or (read rel) "") {:prefix prefix
+                                                                    :owner (owner-of owner-map spec-dir rel)})
+                                :file rel)))
+         needs-rel (command/config-value req :needs)
+         needs (read-needs needs-rel (read needs-rel))]
+     {:revision revision
+      :scenarios (vec (mapcat :scenarios features))
+      :needs (:needs needs)
+      :refusals (vec (mapcat :refusals features))
+      :files (vec (for [rel files] {:file rel :text (read rel)}))
+      :features (mapv #(select-keys % [:file :feature :examples-tags]) features)
+      :needs-findings (:findings needs)
+      :needs-lines (:lines needs)})))
 
-(defn text-files
-  "Every file of the spec as read: [{:file :text}], sorted by path."
-  [_root spec]
-  (vec (for [[f t] (:texts spec)] {:file f :text t})))
-
-(defn refusal-findings
-  "The parser's refusals as findings, each named by file, line and rule."
-  [spec]
-  (vec (for [{:keys [file line rule message]} (:refusals spec)]
-         (command/finding file line rule message))))
-
-(defn payload
-  "SpecParsed's payload: what events.edn says it carries."
-  [spec]
-  {:revision (:revision spec)
-   :scenarios (:scenarios spec)
-   :needs (mapv #(select-keys % [:id :text :sources]) (:needs spec))
-   :refusals (:refusals spec)})
+(def carried
+  "What SpecParsed carries of a read spec."
+  [:revision :scenarios :needs :refusals])
 
 (defn publish!
-  "Publishes SpecParsed for `spec` on the run's bus."
+  "Publishes the read spec as SpecParsed, from the Parser."
   [req spec]
-  (command/publish! req :spec/parser :SpecParsed (payload spec)))
+  (command/publish! req :spec/parser :SpecParsed (select-keys spec carried)))
 
 ;; ---------------------------------------------------------------------------
 ;; The stage
 
 (defn- cycle-cut
-  "The cut a cycle's cycle.edn names, or nil when it names none readable."
-  [req cycle]
-  (when-let [cycles (get-in req [:config :cycles-dir])]
-    (when (and (string? cycle) (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]*" cycle))
-      (let [f (command/path req (str (strip-slash cycles) "/" cycle "/cycle.edn"))]
-        (when (fs/regular-file? f)
-          (let [c (read-edn-map (slurp (str f)))]
-            (when (and (string? (:cut c)) (not (str/blank? (:cut c))))
-              (:cut c))))))))
-
-(defn cut-of
-  "The cut the task reading the spec names: --cut, else for a task over a
-  cycle (checklist) the cycle's cut. Nil: the working tree."
+  "The commit of the cut the cycle named by the task's argument declares, or
+  nil when there is none to read (the task's own stage says why)."
   [req]
-  (or (get-in req [:opts :cut])
-      (when (= "checklist" (:task req)) (cycle-cut req (first (:args req))))))
+  (let [cycle (first (:args req))
+        cycles (str/replace (command/config-value req :cycles-dir) #"/+$" "")]
+    (when (and (string? cycle) (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]*" cycle))
+      (let [f (command/path req (str cycles "/" cycle "/cycle.edn"))
+            c (when (fs/regular-file? f) (read-edn (slurp (str f))))
+            cut (when (map? c) (:cut c))]
+        (when (and (string? cut) (not (str/blank? cut)))
+          (commit-of (:root req) cut))))))
+
+(defn revision-of
+  "The commit a task reads the spec at, or nil for the working tree: the
+  checklist reads its cycle's cut."
+  [req]
+  (when (= "checklist" (:task req))
+    (cycle-cut req)))
 
 (defn parse
-  "The parser's stage: reads the spec (at the cut the task names, else in the
-  working tree), leaves it in the run's state as ::spec, publishes
-  SpecParsed. A cut the repository does not hold is left to the task to
-  refuse: nothing is read or published then."
+  "The parse stage: reads the spec at the task's revision and publishes
+  SpecParsed. A checklist whose cut cannot be read publishes nothing; the
+  checklist says why."
   [req]
-  (let [config (:config req)
-        spec-dir (command/config-value req :spec-dir)
-        cut (cut-of req)
-        opts {:spec-dir spec-dir :id-prefix (:id-prefix config) :model (:model config) :needs (:needs config)}]
-    (cond
-      (and cut (nil? (commit-of (:root req) cut)))
-      {:findings []}
-
-      cut
-      (let [spec (read-spec (:root req) (assoc opts :revision cut))]
-        (swap! (:state req) assoc ::spec spec)
-        (publish! req spec)
-        {:findings []})
-
-      :else
-      (do (when-not (fs/directory? (command/path req spec-dir))
-            (command/cannot-run! (str "no spec directory " spec-dir)))
-          (let [spec (read-spec (:root req) opts)]
-            (swap! (:state req) assoc ::spec spec)
-            (publish! req spec)
-            {:findings []})))))
+  (let [commit (revision-of req)]
+    (when (or commit (not= "checklist" (:task req)))
+      (publish! req (read-spec (:root req) (:config req) commit)))
+    {:result {} :findings []}))

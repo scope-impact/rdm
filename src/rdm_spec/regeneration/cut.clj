@@ -1,231 +1,192 @@
 (ns rdm-spec.regeneration.cut
-  "Cut (dhf/spec/regeneration/cut.feature): `rdm-spec cut` tags HEAD spec-N
-  when it is the commit origin/HEAD names, and pushes the tag to origin. A
-  regeneration reads a cut and nothing else (the fence, beside this, builds
-  clean rooms only from cuts, through the git helpers here).
+  "Component Cut of the regeneration context (dhf/spec/regeneration/cut.feature):
+  `rdm-spec cut` tags HEAD spec-N when it is the commit origin/HEAD names
+  and its spec passes the check, and pushes the tag. A commit already cut
+  is not cut again.
 
-  In order:
-    1. the project must be a git repository with a HEAD commit (else exit 2).
-    2. a HEAD that already carries a spec-N tag is already cut: nothing is
-       tagged or pushed, the result says which cut it is (exit 0). Cutting
-       twice changes nothing, so CI may re-run a cut harmlessly.
-    3. origin/HEAD must name a commit (else exit 2), and HEAD must be that
-       commit; any other HEAD is refused (exit 2), naming the default branch
-       origin/HEAD names and HEAD's own branch.
-    4. a HEAD that origin already holds a spec-N tag for is already cut, as in 2.
-    5. `rdm-spec check` runs on HEAD, in a temporary worktree of the same
-       repository (so the check sees the commit and its history, never an
-       uncommitted change); when it has findings the cut exits 1, tags
-       nothing and relays each finding line unchanged. A check that cannot
-       run stops the cut (exit 2).
-    6. HEAD is tagged spec-N, N one more than the highest cut number among
-       the local tags and origin's (spec-1 when there is none), as a
-       lightweight tag (it needs no identity, which CI often lacks), and the
-       tag is pushed to origin. A push that fails removes the local tag again,
-       so a re-run cuts the commit rather than calling it already cut.
-
-  Cut tags are always spec-N: the tag names a cut, not a scenario id, so the
-  configured :id-prefix does not apply."
+  Also the context's git helpers, which Fence resolves cuts with (the
+  model: Fence -> Cut, \"Resolves cuts with the git helpers of\")."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
+            [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]))
 
 ;; ---------------------------------------------------------------------------
-;; Names
-
-(defn lines
-  "The non-blank lines of `s`, trimmed."
-  [s]
-  (vec (remove str/blank? (map str/trim (str/split-lines (or s ""))))))
-
-(defn cut-number
-  "N when `s` is a cut's tag name, spec-N; else nil."
-  [s]
-  (when-let [[_ n] (and (string? s) (re-matches #"spec-(\d+)" s))]
-    (parse-long n)))
-
-(defn sort-cuts
-  "The cut tags among `names`, by their number."
-  [names]
-  (vec (sort-by cut-number (distinct (filter cut-number names)))))
-
-(defn next-cut
-  "The tag of the cut after every cut among `names`: spec-1 when there is none."
-  [names]
-  (str "spec-" (inc (reduce max 0 (keep cut-number names)))))
-
-(defn short-hash
-  "The commit hash `c` abbreviated to seven characters."
-  [c]
-  (let [c (str c)] (subs c 0 (min 7 (count c)))))
-
-;; ---------------------------------------------------------------------------
 ;; git
 
+(def cut-re
+  "A cut's tag: spec-N."
+  #"spec-(\d+)")
+
+(defn cut-tag?
+  "Whether `s` is a cut's tag."
+  [s]
+  (boolean (re-matches cut-re (str s))))
+
+(defn cut-number
+  "N of the cut tag spec-N."
+  [tag]
+  (parse-long (second (re-matches cut-re (str tag)))))
+
+(defn next-cut
+  "The tag of the next cut after the cut tags `tags` (other tags ignored)."
+  [tags]
+  (str "spec-" (inc (reduce max 0 (keep #(when (cut-tag? %) (cut-number %)) tags)))))
+
+(defn latest-cut
+  "The highest cut tag of `tags`, or nil."
+  [tags]
+  (last (sort-by cut-number (filter cut-tag? tags))))
+
+(defn- env-of [req extra]
+  (merge (or (:env req) (into {} (System/getenv))) extra))
+
 (defn git
-  "Runs git in `dir`: {:exit :out :err}, whatever its exit. An options map
-  may come first among `args`: :extra-env (variables added to the
-  environment) and :in (standard input, default none). Cannot run when git
-  itself cannot be run."
-  [dir & args]
-  (let [[opts args] (if (map? (first args)) [(first args) (rest args)] [{} args])]
-    (try
-      (let [r (apply p/shell (cond-> {:dir (str dir) :out :string :err :string :continue true
-                                      :in (or (:in opts) "")}
-                               (:extra-env opts) (assoc :extra-env (:extra-env opts)))
-                     "git" (map str args))]
-        {:exit (:exit r) :out (str (:out r)) :err (str (:err r))})
-      (catch java.io.IOException e
-        (command/cannot-run! (str "git cannot be run: " (ex-message e)))))))
+  "Runs git `args` in the project of `req`: {:exit :out :err}. `opts` may
+  give :dir, :in and :env (extra variables)."
+  [req opts & args]
+  (let [r (try (apply p/shell {:dir (str (or (:dir opts) (:root req))) :out :string :err :string
+                               :continue true :in (or (:in opts) "")
+                               :env (env-of req (:env opts))}
+                      "git" args)
+               (catch java.io.IOException e
+                 (command/cannot-run! (str "git cannot be run (" (ex-message e) "): rdm-spec "
+                                           (:task req) " needs git on PATH"))))]
+    {:exit (:exit r) :out (:out r) :err (str/trim (str (:err r)))}))
 
 (defn git!
-  "Runs git as `git` does and returns its trimmed standard output; cannot run
-  when git fails."
-  [dir & args]
-  (let [r (apply git dir args)]
+  "Runs git `args` (see git); the trimmed output, or the task cannot run,
+  saying `why` and git's own message."
+  [req opts why & args]
+  (let [r (apply git req opts args)]
     (when-not (zero? (:exit r))
-      (command/cannot-run! (str "git " (str/join " " (remove map? args)) " failed in " dir ": "
-                                (str/trim (str (:err r) (:out r))))))
+      (command/cannot-run! (str why (when-not (str/blank? (:err r)) (str ": " (:err r))))))
     (str/trim (:out r))))
 
 (defn repository!
-  "Cannot run unless `dir` lies in a git repository's working tree."
-  [dir]
-  (let [r (git dir "rev-parse" "--is-inside-work-tree")]
-    (when-not (and (zero? (:exit r)) (= "true" (str/trim (:out r))))
-      (command/cannot-run! (str dir " is not a git repository: a cut is a tag in one"))))
-  nil)
-
-(defn rev
-  "The full hash of the commit `name` names in `dir`, nil when it names none."
-  [dir name]
-  (when-not (str/blank? (str name))
-    (let [r (git dir "rev-parse" "--verify" "--quiet" "--end-of-options" (str name "^{commit}"))]
-      (when (zero? (:exit r)) (not-empty (str/trim (:out r)))))))
-
-(defn cuts-at
-  "The spec-N tags pointing at `commit` in `dir`, by their number."
-  [dir commit]
-  (sort-cuts (lines (git! dir "tag" "--points-at" commit "--list" "spec-*"))))
-
-(defn local-cuts
-  "Every spec-N tag of `dir`, by number."
-  [dir]
-  (sort-cuts (lines (git! dir "tag" "--list" "spec-*"))))
-
-(defn remote-cut-commits
-  "{tag commit} of origin's spec-N tags (each tag peeled to its commit)."
-  [dir]
-  (let [r (git dir "ls-remote" "--tags" "origin" "refs/tags/spec-*")]
+  "Nothing when the project of `req` is a git repository; otherwise the
+  task cannot run."
+  [req]
+  (let [r (git req {} "rev-parse" "--git-dir")]
     (when-not (zero? (:exit r))
-      (command/cannot-run! (str "origin's tags cannot be read: " (str/trim (:err r)))))
-    (reduce (fn [m l]
-              (let [[oid ref] (str/split l #"\s+")
-                    peeled? (str/ends-with? (str ref) "^{}")
-                    tag (-> (str ref) (str/replace #"^refs/tags/" "") (str/replace #"\^\{\}$" ""))]
-                (cond (not (cut-number tag)) m
-                      peeled? (assoc m tag oid)
-                      (contains? m tag) m
-                      :else (assoc m tag oid))))
-            {} (lines (:out r)))))
+      (command/cannot-run! (str (:root req) " is not a git repository: rdm-spec " (:task req)
+                                " reads cuts, which are git tags")))))
 
-(defn remote-cuts
-  "origin's spec-N tags, by number."
-  [dir]
-  (sort-cuts (keys (remote-cut-commits dir))))
+(defn commit-of
+  "The commit `rev` names in the project of `req`, or nil."
+  [req rev]
+  (let [r (git req {} "rev-parse" "--verify" "-q" (str rev "^{commit}"))]
+    (when (zero? (:exit r)) (str/trim (:out r)))))
 
-(defn default-branch
-  "{:branch :commit} of what origin/HEAD names, nil when it names no commit."
-  [dir]
-  (when-let [c (rev dir "refs/remotes/origin/HEAD")]
-    (let [r (git dir "symbolic-ref" "--quiet" "refs/remotes/origin/HEAD")]
-      {:branch (when (zero? (:exit r))
-                 (str/replace (str/trim (:out r)) #"^refs/remotes/origin/" ""))
-       :commit c})))
+(defn cut-tags-at
+  "The cut tags naming the commit `commit`, sorted by N."
+  [req commit]
+  (let [r (git req {} "tag" "--points-at" commit)]
+    (vec (sort-by cut-number (filter cut-tag? (map str/trim (str/split-lines (:out r))))))))
 
-(defn current-branch
-  "The branch HEAD is on, nil when HEAD is detached."
-  [dir]
-  (let [r (git dir "symbolic-ref" "--quiet" "--short" "HEAD")]
-    (when (zero? (:exit r)) (not-empty (str/trim (:out r))))))
+(defn show
+  "The text of `path` at the commit `rev`, or nil when it holds none."
+  [req rev path]
+  (let [r (git req {} "show" (str rev ":" path))]
+    (when (zero? (:exit r)) (:out r))))
 
-(defn checkout!
-  "Writes the files `paths` as the commit `commit` of the repository `dir`
-  holds them into the directory `out` (made when missing): straight from the
-  commit's tree through a temporary index, so neither the repository's index
-  nor its working tree is read or changed, and no .git is written."
-  [dir commit out paths]
-  (let [tmp (fs/create-temp-dir {:prefix "rdm-spec-index-"})
-        index (str (fs/file tmp "index"))
-        env {:extra-env {"GIT_INDEX_FILE" index}}
-        out (fs/absolutize out)]
+(defn edn-at
+  "The EDN value of `path` at `rev`, or nil when there is none; the task
+  cannot run when it is not readable EDN."
+  [req rev path]
+  (when-let [text (show req rev path)]
+    (try (edn/read-string text)
+         (catch Exception e
+           (command/cannot-run! (str path " at " rev " is not readable EDN: " (ex-message e)))))))
+
+(defn config-at
+  "The configuration of the commit `rev`, or nil when it holds none."
+  [req rev]
+  (let [c (edn-at req rev command/config-file)]
+    (when (and (some? c) (not (map? c)))
+      (command/cannot-run! (str command/config-file " at " rev " is not an EDN map")))
+    c))
+
+(defn export!
+  "Writes the files of the commit `rev` into the directory `dir` (made
+  when missing): its files and no history."
+  [req rev dir]
+  (let [idx (str (fs/create-temp-file {:prefix "rdm-spec-index-"}))]
     (try
-      (fs/create-dirs out)
-      (git! dir env "read-tree" commit)
-      (when (seq paths)
-        (git! dir (assoc env :in (str (str/join "\u0000" paths) "\u0000"))
-              "checkout-index" "-f" "-z" "--stdin" (str "--prefix=" out "/")))
-      nil
-      (finally (fs/delete-tree tmp)))))
+      (fs/delete-if-exists idx)
+      (fs/create-dirs dir)
+      (git! req {:env {"GIT_INDEX_FILE" idx}} (str "the commit " rev " cannot be read") "read-tree" rev)
+      (git! req {:env {"GIT_INDEX_FILE" idx}} (str "the commit " rev " cannot be written to " dir)
+            (str "--work-tree=" (fs/absolutize dir)) "checkout-index" "-a" "-f")
+      (finally (fs/delete-if-exists idx)))
+    dir))
 
 ;; ---------------------------------------------------------------------------
-;; The check, on HEAD
+;; The cut
 
-(defn- check-at
-  "Runs the check on `commit` in a temporary worktree of `dir`: the check's
-  {:exit :findings :cannot-run}."
-  [dir commit env]
-  (let [tmp (fs/create-temp-dir {:prefix "rdm-spec-cut-"})
-        wt (str (fs/file tmp "head"))]
+(defn- origin-head
+  "{:name :commit :branch} of what origin/HEAD names, or the task cannot run."
+  [req]
+  (if-let [c (commit-of req "refs/remotes/origin/HEAD")]
+    (let [nm (str/trim (:out (git req {} "symbolic-ref" "-q" "--short" "refs/remotes/origin/HEAD")))
+          nm (if (str/blank? nm) "origin/HEAD" nm)]
+      {:name nm :commit c :branch (str/replace nm #"^origin/" "")})
+    (let [r (git req {} "ls-remote" "--symref" "origin" "HEAD")
+          ls (str/split-lines (:out r))
+          branch (some #(second (re-find #"^ref: refs/heads/(\S+)\s+HEAD" %)) ls)
+          c (some #(second (re-find #"^([0-9a-f]{40,})\s+HEAD$" %)) ls)]
+      (when-not (and (zero? (:exit r)) c)
+        (command/cannot-run! (str "origin/HEAD names no commit (no remote origin, or its HEAD is unknown)"
+                                  (when-not (str/blank? (:err r)) (str ": " (:err r)))
+                                  ": rdm-spec cut tags only the commit the default branch names")))
+      {:name (str "origin/" (or branch "HEAD")) :commit c :branch (or branch "HEAD")})))
+
+(defn- check-head!
+  "The findings of `rdm-spec check` on an export of HEAD; the task cannot
+  run when the check cannot."
+  [req head]
+  (let [dir (str (fs/create-temp-dir {:prefix "rdm-spec-cut-"}))]
     (try
-      (git! dir "-c" "core.hooksPath=/dev/null" "worktree" "add" "--quiet" "--detach" wt commit)
-      (command/execute ["check"] {:root wt :env env})
-      (finally
-        (git dir "worktree" "remove" "--force" wt)
-        (git dir "worktree" "prune")
-        (fs/delete-tree tmp)))))
-
-;; ---------------------------------------------------------------------------
-;; The task
-
-(defn- already [head tag]
-  {:result (array-map :cut tag :commit head :already-cut tag) :findings []})
+      (export! req head dir)
+      (let [{:keys [cannot-run findings]} (command/execute ["check"] {:root dir :env (:env req)})]
+        (when cannot-run
+          (command/cannot-run! (str "the check cannot run on HEAD " (subs head 0 (min 12 (count head))) ": " cannot-run)))
+        (vec findings))
+      (finally (fs/delete-tree dir)))))
 
 (defn cut
-  "The cut task: `rdm-spec cut`."
+  "The cut stage: `rdm-spec cut`."
   [req]
-  (let [dir (:root req)
-        _ (repository! dir)
-        head (or (rev dir "HEAD") (command/cannot-run! "HEAD names no commit: there is nothing to cut"))]
-    (if-let [tag (last (cuts-at dir head))]
-      (already head tag)
-      (let [{:keys [branch commit]} (or (default-branch dir)
-                                        (command/cannot-run!
-                                         (str "origin/HEAD names no commit: the default branch is unknown"
-                                              " (git remote set-head origin --auto)")))
-            on (current-branch dir)]
-        (when-not (= head commit)
-          (command/cannot-run!
-           (str "HEAD (" (if on (str "the branch " on) "a detached HEAD") ", " (short-hash head)
-                ") is not the commit origin/HEAD names (the branch " (or branch "origin/HEAD") ", "
-                (short-hash commit) "): only the default branch is cut")))
-        (let [remote (remote-cut-commits dir)]
-          (if-let [tag (last (sort-cuts (for [[t c] remote :when (= c head)] t)))]
-            (already head tag)
-            (let [check (check-at dir head (:env req))]
-              (when (:cannot-run check)
-                (command/cannot-run! (str "rdm-spec check cannot run on HEAD: " (:cannot-run check))))
-              (if (= 1 (:exit check))
-                {:result (array-map :cut nil :commit head :branch branch)
-                 :findings (vec (remove command/warning? (:findings check)))}
-                (let [previous (last (sort-cuts (concat (local-cuts dir) (keys remote))))
-                      tag (next-cut (concat (local-cuts dir) (keys remote)))]
-                  (git! dir "tag" tag head)
-                  (let [push (git dir "push" "--quiet" "origin" (str "refs/tags/" tag))]
-                    (when-not (zero? (:exit push))
-                      (git dir "tag" "-d" tag)
-                      (command/cannot-run! (str "the tag " tag " could not be pushed to origin, so nothing is cut: "
-                                                (str/trim (:err push))))))
-                  {:result (array-map :cut tag :commit head :branch branch :previous previous :pushed-to "origin")
-                   :findings []})))))))))
+  (repository! req)
+  (let [head (or (commit-of req "HEAD") (command/cannot-run! "HEAD names no commit: there is nothing to cut"))
+        origin (origin-head req)
+        branch (let [b (str/trim (:out (git req {} "symbolic-ref" "-q" "--short" "HEAD")))]
+                 (if (str/blank? b) "a detached HEAD" (str "the branch " b)))
+        short #(subs % 0 (min 12 (count %)))]
+    (when-not (= head (:commit origin))
+      (command/cannot-run! (str "HEAD (" branch ", " (short head) ") is not the commit " (:name origin)
+                                " names (" (short (:commit origin)) "): only the default branch "
+                                (:branch origin) " is cut")))
+    (git! req {} "the cut tags cannot be fetched from origin" "fetch" "-q" "--tags" "origin")
+    (if-let [tag (last (cut-tags-at req head))]
+      (do (git! req {} (str "the tag " tag " cannot be pushed to origin") "push" "-q" "origin" (str "refs/tags/" tag))
+          {:result {:cut {:tag tag :commit head :tagged? false
+                          :note (str "the commit is already " tag ": no tag was added")}}
+           :findings []})
+      (let [findings (check-head! req head)
+            errors (vec (remove command/warning? findings))]
+        (if (seq errors)
+          {:result {:cut {:commit head :tagged? false
+                          :note "the spec at HEAD fails the check: nothing was tagged"}}
+           :findings errors}
+          (let [tags (str/split-lines (:out (git req {} "tag" "--list" "spec-*")))
+                tag (next-cut (map str/trim tags))]
+            (git! req {} (str "HEAD cannot be tagged " tag) "tag" tag head)
+            (let [r (git req {} "push" "-q" "origin" (str "refs/tags/" tag))]
+              (when-not (zero? (:exit r))
+                (git req {} "tag" "-d" tag)
+                (command/cannot-run! (str "the tag " tag " cannot be pushed to origin, so it was removed again"
+                                          (when-not (str/blank? (:err r)) (str ": " (:err r)))))))
+            {:result {:cut {:tag tag :commit head :tagged? true :pushed-to "origin"}}
+             :findings []}))))))

@@ -1,45 +1,38 @@
 (ns rdm-spec.project.init-test
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
-            [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [rdm-spec.kernel.command :as command]
             [rdm-spec.project.init :as init]))
 
-(defn- with-tmp [f]
-  (let [d (str (fs/create-temp-dir {:prefix "init-test-"}))]
-    (try (f d) (finally (fs/delete-tree d)))))
-
-(deftest the-id-prefix
+(deftest a-prefix-starts-a-tag
   (is (nil? (init/prefix-problem "spec")))
-  (is (nil? (init/prefix-problem "a-b2-c")))
-  (is (str/includes? (init/prefix-problem "9lives") "starts with a letter"))
-  (is (some? (init/prefix-problem "a--b")))
-  (is (some? (init/prefix-problem "a-")))
-  (is (str/includes? (init/prefix-problem "UN") "the prefix UN is taken by need tags")))
+  (is (nil? (init/prefix-problem "my-proj2")))
+  (doseq [p ["9lives" "a--b" "a-" "-a" "a_b" ""]]
+    (is (re-find #"starts with a letter" (init/prefix-problem p)) p))
+  (is (re-find #"taken by need tags" (init/prefix-problem "UN"))))
 
-(deftest every-template-renders
-  (let [vs (init/vars "Sauna 2" "sauna")]
-    (is (= ":sauna-2" (get vs "system-id")))
-    (doseq [e init/skeleton]
-      (is (not (str/includes? (init/content e vs) "{{")) (:path e)))
-    (let [cfg (edn/read-string (init/content {:template "config.edn.tmpl"} vs))]
-      (is (= "sauna" (:id-prefix cfg)))
-      (is (some #{"dhf/harness/stack.md"} (get-in cfg [:clean-room :allow]))))))
+(deftest every-skeleton-file-is-there-and-filled
+  (doseq [[_ resource] init/skeleton]
+    (is (string? (init/skeleton-text resource {:name "sauna" :id-prefix "x"})) resource))
+  (let [m (edn/read-string (init/skeleton-text "spec/model.edn" {:name "My Sauna" :id-prefix "x"}))]
+    (is (= {:id :my-sauna :name "My Sauna"} (select-keys (:system m) [:id :name]))))
+  (is (= "x" (:id-prefix (edn/read-string (init/skeleton-text "harness/config.edn" {:name "s" :id-prefix "x"}))))))
 
-(deftest init-writes-the-skeleton-and-refuses-an-existing-path
-  (with-tmp
-    (fn [dir]
-      (let [out (command/execute ["init" "sauna"] {:root dir})]
-        (is (= 0 (:exit out)))
-        (is (= (map :path init/skeleton) (get-in out [:result :init :wrote])))
-        (is (fs/executable? (fs/file dir "sauna/.githooks/pre-commit"))))
-      (let [out (command/execute ["init" "sauna"] {:root dir})]
-        (is (= 2 (:exit out)))
-        (is (str/includes? (:cannot-run out) "sauna")))
-      (let [abs (str (fs/file dir "abs" "x"))
-            out (command/execute ["init" abs "--id-prefix" "x"] {:root dir})]
-        (is (= 0 (:exit out)))
-        (is (fs/regular-file? (fs/file abs "dhf/harness/stack.md"))))
-      (is (= 2 (:exit (command/execute ["init" "un" "--id-prefix" "UN"] {:root dir}))))
-      (is (not (fs/exists? (fs/file dir "un")))))))
+(deftest init-writes-the-skeleton-into-a-new-path
+  (let [parent (str (fs/create-temp-dir {:prefix "init-test-"}))]
+    (try
+      (let [out (init/init {:root parent :args ["sauna"] :opts {}})
+            dir (fs/file parent "sauna")]
+        (is (= init/destinations (get-in out [:result :init :wrote])))
+        (doseq [d init/destinations] (is (fs/regular-file? (fs/file dir d)) d))
+        (is (fs/directory? (fs/file dir ".git")))
+        (is (fs/executable? (fs/file dir ".githooks/pre-commit"))))
+      (testing "a path that exists cannot be initialised"
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"already exists"
+                              (init/init {:root parent :args ["sauna"] :opts {}}))))
+      (testing "a bad prefix writes nothing"
+        (let [e (try (init/init {:root parent :args ["other"] :opts {:id-prefix "UN"}}) nil (catch Exception e e))]
+          (is (command/cannot-run? e))
+          (is (not (fs/exists? (fs/file parent "other"))))))
+      (finally (fs/delete-tree parent)))))

@@ -1,9 +1,3 @@
-;; The rdm-spec command from this repository: `bb rdm-spec <task> ...`
-;; (or `bb -m rdm-spec.kernel.command <task> ...`). `bb test` runs every test
-;; (the same as `bb test.clj`).
-{:paths ["src" "test"]
- :tasks {rdm-spec {:doc "Run an rdm-spec task: bb rdm-spec help"
-                   :requires ([rdm-spec.kernel.command :as command])
-                   :task (apply command/-main *command-line-args*)}
-         test {:doc "Run the unit tests and the scenarios: bb test.clj"
-               :task (shell "bb test.clj")}}}
+;; rdm-spec, run by Babashka (dhf/harness/stack.md). The command is
+;; rdm-spec.kernel.command; test.clj runs the builder's tests.
+{:paths ["src" "test"]}

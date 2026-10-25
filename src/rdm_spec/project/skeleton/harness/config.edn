@@ -1,0 +1,40 @@
+;; The harness configuration: everything the harness must not know by heart.
+;; Everything here is committed, so nothing machine-local belongs here.
+{;; Stamped scenario ids are @<id-prefix>-NNNN.
+ :id-prefix {{id-prefix}}
+
+ ;; Where the spec, the id ledger, the C4 model, the event catalogue and the
+ ;; user needs live.
+ :spec-dir "dhf/spec"
+ :ledger "dhf/spec/ids.edn"
+ :model "dhf/spec/model.edn"
+ :events "dhf/spec/events.edn"
+ :needs "dhf/spec/needs.edn"
+ ;; Generated views.
+ :views-dir "dhf/views"
+
+ ;; The raw sources every need cites, and the domain wiki.
+ :raw-dir "dhf/raw"
+ :wiki-dir "dhf/wiki"
+ ;; The words neither the wiki nor the spec may use: the stack, which lives in
+ ;; dhf/harness/stack.md.
+ :stack-words []
+
+ ;; Where the step definitions for "rdm-spec run" live, and where test
+ ;; results are written and read.
+ :steps-dir "test/steps"
+ :results-dir "dhf/allure-results"
+
+ ;; Cycles: dhf/cycles/NN/cycle.edn, written by hand, and what the cycle's
+ ;; tasks write beside it.
+ :cycles-dir "dhf/cycles"
+
+ ;; The site: written under :source, built into :dir.
+ :site {:dir "site" :source "site-src" :builder ["mkdocs" "build" "--strict" "-f" "site-src/mkdocs.yml"]}
+
+ ;; The clean room is an allow-list: these paths, plus the implementation a
+ ;; scoped regeneration keeps, and nothing else. The implementation's paths
+ ;; (:implementation, :code-layout) and the builder's :test-command are added
+ ;; when there is an implementation.
+ :clean-room {:allow ["dhf/spec" "dhf/harness/config.edn" "dhf/harness/stack.md"
+                      "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"]}}

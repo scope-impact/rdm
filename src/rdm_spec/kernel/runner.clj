@@ -1,346 +1,386 @@
 (ns rdm-spec.kernel.runner
-  "Gherkin runner (dhf/spec/kernel/runner.feature): runs every scenario of a
-  spec against the project's step definitions and writes one Allure result per
-  scenario (one per example row of an outline), labelled with the scenario's
-  id, component and context.
+  "The Gherkin runner (dhf/spec/kernel/runner.feature): runs the scenarios of
+  a spec against their step definitions and writes one Allure result per
+  scenario (one per example row of an outline), labelled with what it
+  verifies.
 
-  The step API, a public contract (dhf/harness/stack.md):
+  The step API, a public contract for any project run with `rdm-spec run`:
 
-    (require '[rdm-spec.kernel.runner :refer [defstep]])
-    (defstep #\"the spec holds (\\d+) features\" (fn [ctx n] ctx'))
+    (defstep #\"pattern\" (fn [ctx & captured] ctx'))
 
-  A step's function receives the scenario's context and the pattern's
-  captured groups, then the step's data table (a vector of rows, header
-  first) or doc string when it has one. Its return is the next step's context;
-  nil (or anything not a map) leaves the context as it was. Each scenario
-  starts with an empty context.
+  A step's text (without its keyword) must match exactly one pattern, as a
+  whole. The function gets the scenario's context and the pattern's groups
+  (nil for a group that took no part), then the step's doc string or data
+  table when it has one. What it returns is the next step's context; a step
+  that returns something other than a map (a check that returns nil, say)
+  leaves the context as it was. Every scenario starts from {}.
 
-  A scenario's result is:
-    passed   every step passed
-    failed   a step threw; the result names the step and the error, and the
-             steps after it are reported as not run (skipped)
-    broken   a step no definition matches, a step two or more definitions
-             match (naming each), or a step that threw an ex-info whose data
-             holds ::broken (it cannot be verified yet)
-    skipped  a planned scenario (@wip): none of its steps is run, and its
-             result is labelled planned=true
+  Results: passed; failed when a step throws (naming the step and the error;
+  the steps after it are reported skipped, as not run); broken when a step
+  matches no definition, or more than one (naming them); skipped and
+  labelled planned=true for a scenario tagged @wip, whose steps never run.
 
-  Feature files are discovered under the spec directory, never listed; a run
-  that finds none is refused and writes nothing.
+  Registering a pattern whose source is already registered by another file
+  keeps the first definition and records the later one as shadowed, so one
+  step text keeps one meaning; the run names each shadowed definition as a
+  warning. A file registering its own pattern again (a reload) replaces it.
 
-  While a scenario runs, processes it starts through babashka.process do not
-  inherit RESULTS_DIR: the run's results directory is the runner's, and a
-  scenario that needs the variable sets it itself."
+  Discovery: every *.feature under the configured :spec-dir and every *.clj
+  under the configured :steps-dir, found by looking, never listed. A run that
+  finds no feature file is refused.
+
+  The task `rdm-spec run [--results DIR]` writes into the results directory
+  (--results, else RESULTS_DIR, else the configured :results-dir). Its
+  result: {:run {:results DIR :scenarios n :passed n :failed n :broken n
+  :planned n}}; each failed or broken scenario is a finding (scenario-failed,
+  scenario-broken) at its file and line."
   (:require [babashka.classpath :as cp]
+            [clojure.java.io :as io]
             [babashka.fs :as fs]
-            [babashka.process :as process]
             [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.string :as str]
+            [rdm-spec.kernel.command :as command]
             [rdm-spec.kernel.gherkin :as gherkin]))
 
 ;; ---------------------------------------------------------------------------
-;; The step API
+;; The step registry
 
 (def ^:dynamic *registry*
-  "Every step definition loaded: an atom of [{:pattern :fn :file :line}], in
-  the order defined. Definitions are told apart by file and line: defining
-  again at the same place replaces the earlier one."
+  "An atom holding every step definition: [{:pattern :fn :file :line}]."
   (atom []))
 
-(defn- canonical-file [file]
-  (let [s (str file)]
-    (try (if (and (not (str/blank? s)) (fs/exists? s)) (str (fs/canonicalize s)) s)
-         (catch Exception _ s))))
+(def ^:dynamic *shadowed*
+  "An atom holding the definitions a registration did not keep, each with
+  :kept, the definition it shadows."
+  (atom []))
+
+(defn- display-file [file]
+  (let [f (str file)]
+    (if (and (fs/absolute? f) (fs/starts-with? f (fs/cwd)))
+      (str (fs/relativize (fs/cwd) f))
+      f)))
 
 (defn register!
-  "Registers the step definition `pattern` -> `f`, defined at `file`:`line`."
+  "Registers the step definition `pattern` -> `f`, defined at `file` and
+  `line`. Returns the definition kept for the pattern."
   [pattern f file line]
-  (let [file (canonical-file file)
-        d {:pattern pattern :fn f :file file :line line}]
-    (swap! *registry*
-           (fn [defs]
-             (let [i (first (keep-indexed (fn [i x] (when (and (= file (:file x)) (= line (:line x))) i)) defs))]
-               (if i (assoc (vec defs) i d) (conj (vec defs) d)))))
-    nil))
+  (let [entry {:pattern pattern :fn f :file (display-file file) :line line}
+        src (str pattern)
+        reg @*registry*
+        i (first (keep-indexed (fn [i e] (when (= src (str (:pattern e))) i)) reg))]
+    (cond
+      (nil? i) (do (swap! *registry* (fn [r] (conj (vec r) entry))) entry)
+      (= (:file (nth reg i)) (:file entry)) (do (swap! *registry* assoc i entry) entry)
+      :else (let [kept (nth reg i)]
+              (when-not (some #(and (= (:file %) (:file entry)) (= (:line %) (:line entry))) @*shadowed*)
+                (swap! *shadowed* conj (assoc entry :kept (dissoc kept :fn))))
+              kept))))
 
 (defmacro defstep
-  "Defines a step: `pattern` (a regular expression the whole step text must
-  match) and `f`, a function of the context and the captured groups."
+  "Defines a step: `pattern` (a regex matched against the whole step text,
+  without its keyword) and `f`, (fn [ctx & captured] ctx')."
   [pattern f]
   `(register! ~pattern ~f ~(str *file*) ~(:line (meta &form))))
 
 (defn matching
-  "The definitions whose pattern matches the whole of `text`."
+  "Every definition whose pattern matches the step text `text`."
   [text]
-  (filterv #(re-matches (:pattern %) text) @*registry*))
+  (filterv #(re-matches (:pattern %) (str text)) @*registry*))
+
+(defn- where [d] (str (:file d) ":" (:line d)))
+
+(defn shadow-warnings
+  "A warning for every shadowed definition."
+  []
+  (vec (for [d @*shadowed*]
+         (command/warning (:file d) (:line d) "step-shadowed"
+                          (str "the step pattern " (pr-str (str (:pattern d))) " is already defined at "
+                               (where (:kept d)) ", which is the one used; this definition is not")))))
 
 ;; ---------------------------------------------------------------------------
-;; The project: feature files, the model, step files
+;; Loading step definition files
+
+(defn- ns-of-file
+  "The namespace symbol a Clojure file declares, or nil."
+  [f]
+  (try
+    (let [form (with-open [r (java.io.PushbackReader. (io/reader (str f)))]
+                 (loop []
+                   (let [x (read {:eof ::eof :read-cond :allow} r)]
+                     (cond (= ::eof x) nil
+                           (and (seq? x) (= 'ns (first x))) x
+                           :else (recur)))))]
+      (when form (second form)))
+    (catch Exception _ nil)))
+
+(defn- classpath-root
+  "The directory `f` lies under as the namespace `ns-sym`, or nil."
+  [f ns-sym]
+  (let [rel (str (-> (str ns-sym) (str/replace "-" "_") (str/replace "." "/")) ".clj")
+        abs (str (fs/absolutize f))]
+    (when (str/ends-with? abs (str "/" rel))
+      (subs abs 0 (- (count abs) (count rel) 1)))))
+
+(defn load-step-files!
+  "Loads the step definition files `files`, in order: each by its namespace
+  when it declares one (its directory put on the classpath, so step files
+  can require one another), else by its path."
+  [files]
+  (let [loaded (atom #{})]
+    (doseq [f files
+            :let [ns-sym (ns-of-file f)
+                  root (when ns-sym (classpath-root f ns-sym))]]
+      (when (and root (not (@loaded root)))
+        (cp/add-classpath root)
+        (swap! loaded conj root))
+      (if (and ns-sym root)
+        (require ns-sym)
+        (load-file (str f))))))
+
+(defn step-files
+  "Every *.clj under `dir`, sorted by path."
+  [dir]
+  (if (fs/directory? dir)
+    (vec (sort (map str (fs/glob dir "**.clj"))))
+    []))
 
 (defn feature-files
-  "Every .feature file under `dir`, sorted by path; [] when there is none."
+  "Every *.feature under `dir`, sorted by path."
   [dir]
-  (if (and dir (fs/directory? dir))
+  (if (fs/directory? dir)
     (vec (sort (map str (fs/glob dir "**.feature"))))
     []))
 
-(defn read-model
-  "The C4 model in the file `f`, or nil when absent or unreadable."
-  [f]
-  (when (and f (fs/exists? f))
-    (try (let [m (edn/read-string (slurp (str f)))] (when (map? m) m))
-         (catch Exception _ nil))))
+;; ---------------------------------------------------------------------------
+;; Who owns a feature file
+
+(defn owners
+  "{spec-path {:context :component}} by the model `m`'s names; the
+  kernel's components belong to the context kernel."
+  [m]
+  (into {}
+        (concat
+         (for [c (:containers m) x (:contexts c) comp (:components x) :when (string? (:spec comp))]
+           [(:spec comp) {:context (or (:name x) (some-> (:id x) name))
+                          :component (or (:name comp) (some-> (:id comp) name))}])
+         (for [comp (:kernel m) :when (string? (:spec comp))]
+           [(:spec comp) {:context "kernel" :component (or (:name comp) (some-> (:id comp) name))}]))))
 
 (defn owner-of
-  "The component owning the feature file at `spec-path` (\"architecture/lint\")
-  in the model: {:component \"Lint\" :context \"architecture\"}; a kernel
-  component's context is \"kernel\". nil when the model names no owner; with
-  no model at all, read from the path: {:component \"lint\" :context
-  \"architecture\"}."
-  [model spec-path]
-  (if (nil? model)
-    (let [parts (str/split (str spec-path) #"/")]
-      (when (>= (count parts) 2)
-        {:component (last parts) :context (first parts)}))
-   (first
-   (concat
-    (for [c (:containers model) ctx (:contexts c) comp (:components ctx)
-          :when (= spec-path (:spec comp))]
-      {:component (:name comp) :context (or (:name ctx) (some-> (:id ctx) name))})
-    (for [comp (:kernel model) :when (= spec-path (:spec comp))]
-      {:component (:name comp) :context "kernel"})))))
-
-(defn- spec-path [spec-root file]
-  (-> (str (fs/relativize (fs/absolutize spec-root) (fs/absolutize file)))
-      (str/replace "\\" "/")
-      (str/replace #"\.feature$" "")))
-
-(defn load-step-files!
-  "Loads every .clj file under `steps-dir`, in path order, after emptying the
-  registry. Returns [{:file :message}] for the files that could not be loaded."
-  [steps-dir]
-  (reset! *registry* [])
-  (when (and steps-dir (fs/directory? steps-dir))
-    (let [parent (fs/parent (fs/absolutize steps-dir))]
-      (when parent (cp/add-classpath (str parent)))))
-  (vec
-   (for [f (if (and steps-dir (fs/directory? steps-dir))
-             (sort (map str (fs/glob steps-dir "**.clj")))
-             [])
-         :let [err (try (binding [*ns* (create-ns 'rdm-spec.kernel.runner.steps)]
-                          (eval '(clojure.core/refer-clojure))
-                          (load-file f))
-                        nil
-                        (catch Throwable e e))]
-         :when err]
-     {:file f :message (str (.getName (class err)) ": " (ex-message err))})))
+  "The owner of the feature file `rel` (relative to the root) under
+  `spec-dir`: from `owner-map`, else from its path."
+  [owner-map spec-dir rel]
+  (let [prefix (str (str/replace (str spec-dir) #"/+$" "") "/")
+        sp (when (str/starts-with? rel prefix) (str/replace (subs rel (count prefix)) #"\.feature$" ""))]
+    (or (get owner-map sp)
+        (when sp
+          (let [parts (str/split sp #"/")]
+            (when (= 2 (count parts))
+              {:context (first parts) :component (second parts)}))))))
 
 ;; ---------------------------------------------------------------------------
-;; Allure results
+;; Scenarios to run
 
-(defn clean-results!
-  "Removes earlier Allure files (results, containers, attachments) from `dir`."
-  [dir]
-  (when (fs/directory? dir)
-    (doseq [f (fs/list-dir dir)
-            :when (and (fs/regular-file? f)
-                       (re-find #"-(result|container|attachment)(\.[A-Za-z0-9]+)?$|-result\.json$|-container\.json$"
-                                (str (fs/file-name f))))]
-      (fs/delete f))))
+(defn- id-re [prefix] (re-pattern (str "@" (java.util.regex.Pattern/quote (or prefix "spec")) "-\\d{4,}")))
 
-(defn write-result!
-  "Writes one Allure result (a map, :uuid included) as <uuid>-result.json."
-  [dir result]
-  (fs/create-dirs dir)
-  (let [uuid (or (:uuid result) (str (java.util.UUID/randomUUID)))
-        f (fs/file dir (str uuid "-result.json"))]
-    (spit f (json/generate-string (assoc result :uuid uuid) {:pretty true}))
-    (str f)))
+(defn- substituted-step [step values]
+  (cond-> (update step :text gherkin/substitute values)
+    (:doc-string step) (update :doc-string gherkin/substitute values)
+    (:data-table step) (update :data-table (fn [t] (mapv (fn [row] (mapv #(gherkin/substitute % values) row)) t)))))
 
-(defn summarize
-  "{:scenarios n :passed n :failed n :broken n :skipped n} over run results."
-  [results]
-  (merge {:scenarios (count results) :passed 0 :failed 0 :broken 0 :skipped 0}
-         (frequencies (map (comp keyword :status) results))))
+(defn pickles
+  "The runnable units of a parsed feature file: one per scenario, one per
+  example row of an outline. `rel` names the file."
+  [rel parsed {:keys [prefix owner]}]
+  (vec
+   (for [sc (:scenarios parsed)
+         :let [ids (vec (distinct (map #(subs % 1) (filter #(re-matches (id-re prefix) %) (:tags sc)))))
+               base {:file rel :line (:line sc) :name (:name sc) :ids ids
+                     :id (when (= 1 (count ids)) (first ids))
+                     :wip? (boolean (some #{"@wip"} (:all-tags sc)))
+                     :feature (get-in parsed [:feature :name])
+                     :owner owner}
+               rows (if (= "Scenario Outline" (:keyword sc))
+                      (for [ex (:examples sc) row (:rows ex)]
+                        {:line (:line row) :pairs (mapv vector (:header ex) (:cells row))})
+                      [nil])]
+         row rows
+         :let [values (into {} (:pairs row))]]
+     (assoc base
+            :row row
+            :display-name (if row
+                            (str (:name sc) " [" (str/join ", " (map (fn [[k v]] (str k "=" v)) (:pairs row))) "]")
+                            (:name sc))
+            :steps (mapv #(substituted-step % values) (concat (:background sc) (:steps sc)))))))
 
 ;; ---------------------------------------------------------------------------
 ;; Running one scenario
 
 (defn- step-name [st] (str (:keyword st) " " (:text st)))
 
-(defn- where [d] (str (:file d) ":" (:line d)))
+(defn- error-text [^Throwable e]
+  (let [m (ex-message e)]
+    (if (and m (instance? clojure.lang.ExceptionInfo e))
+      m
+      (str (.getName (class e)) (when m (str ": " m))))))
 
-(defn- no-results-dir-env []
-  (into {} (remove (fn [[k _]] (= "RESULTS_DIR" k)) (System/getenv))))
+(defn- now [] (System/currentTimeMillis))
 
-(defn- run-step
-  "Runs one step: {:status :ctx :message}."
-  [ctx st]
-  (let [text (:text st)
-        defs (matching text)]
-    (cond
-      (empty? defs)
-      {:status "broken" :ctx ctx
-       :message (str "no step definition matches the step \"" (step-name st) "\" (line " (:line st) ")")}
-
-      (> (count defs) 1)
-      {:status "broken" :ctx ctx
-       :message (str "the step \"" (step-name st) "\" is matched by " (count defs) " step definitions: "
-                     (str/join ", " (map #(str (where %) " " (pr-str (str (:pattern %)))) defs)))}
-
-      :else
-      (let [d (first defs)
-            m (re-matches (:pattern d) text)
-            captured (if (string? m) [] (vec (rest m)))
-            extra (cond (:data-table st) [(:data-table st)]
-                        (:doc-string st) [(:doc-string st)]
-                        :else [])]
-        (try
-          (let [out (binding [process/*defaults* (assoc process/*defaults* :env (no-results-dir-env))]
-                      (apply (:fn d) ctx (concat captured extra)))]
-            {:status "passed" :ctx (if (map? out) out ctx)})
-          (catch Throwable e
-            (let [broken? (::broken (ex-data e))]
-              {:status (if broken? "broken" "failed") :ctx ctx
-               :message (str "the step \"" (step-name st) "\" (line " (:line st) ") "
-                             (if broken? "is broken" "failed") ": "
-                             (or (ex-message e) (.getName (class e))))})))))))
-
-(defn- run-steps
-  "Runs `steps` in order from an empty context: {:status :message :steps}."
+(defn run-steps
+  "Runs `steps` from the context {}: {:status :message :steps [{:name :status
+  :message :start :stop}]}."
   [steps]
-  (loop [sts steps ctx {} out [] status "passed" message nil]
-    (if-let [[st & more] (seq sts)]
-      (if (not= "passed" status)
-        (recur more ctx (conj out {:name (step-name st) :status "skipped" :start 0 :stop 0
-                                   :statusDetails {:message "not run: an earlier step did not pass"}})
-               status message)
-        (let [start (System/currentTimeMillis)
-              {s :status c :ctx msg :message} (run-step ctx st)
-              stop (System/currentTimeMillis)]
-          (recur more c (conj out (cond-> {:name (step-name st) :status s :start start :stop stop}
-                                    msg (assoc :statusDetails {:message msg})))
-                 s msg)))
-      {:status status :message message :steps out})))
+  (loop [ctx {} [st & more] steps done [] outcome nil]
+    (if (nil? st)
+      {:status (or (:status outcome) "passed") :message (:message outcome) :steps done}
+      (let [nm (step-name st)
+            start (now)]
+        (if outcome
+          (recur ctx more (conj done {:name nm :status "skipped" :start start :stop start
+                                      :message "not run: an earlier step did not pass"})
+                 outcome)
+          (let [ms (matching (:text st))]
+            (case (count ms)
+              0 (let [msg (str "no step definition matches the step \"" nm "\" (line " (:line st) ")")]
+                  (recur ctx more (conj done {:name nm :status "broken" :start start :stop (now) :message msg})
+                         {:status "broken" :message msg}))
+              1 (let [d (first ms)
+                      m (re-matches (:pattern d) (:text st))
+                      args (concat (if (string? m) [] (rest m))
+                                   (cond (contains? st :doc-string) [(:doc-string st)]
+                                         (contains? st :data-table) [(:data-table st)]))
+                      r (try {:ok (apply (:fn d) ctx args)}
+                             (catch Throwable e {:error e}))]
+                  (if-let [e (:error r)]
+                    (let [msg (str "the step \"" nm "\" (line " (:line st) ") failed: " (error-text e))]
+                      (recur ctx more (conj done {:name nm :status "failed" :start start :stop (now) :message msg})
+                             {:status "failed" :message msg}))
+                    (recur (if (map? (:ok r)) (:ok r) ctx) more
+                           (conj done {:name nm :status "passed" :start start :stop (now)})
+                           nil)))
+              (let [msg (str "the step \"" nm "\" (line " (:line st) ") is matched by " (count ms) " step definitions: "
+                             (str/join " and " (map #(str (where %) " " (pr-str (str (:pattern %)))) ms)))]
+                (recur ctx more (conj done {:name nm :status "broken" :start start :stop (now) :message msg})
+                       {:status "broken" :message msg})))))))))
 
-(defn- labels [{:keys [id owner feature planned? sp]}]
-  (let [[ctx-name comp-name] (if owner
-                               [(:context owner) (:component owner)]
-                               (let [parts (str/split sp #"/")]
-                                 [(first parts) (last parts)]))]
-    (cond-> []
-      id (conj {:name "spec" :value id})
-      comp-name (conj {:name "component" :value comp-name})
-      ctx-name (conj {:name "context" :value ctx-name})
-      feature (conj {:name "feature" :value feature})
-      true (conj {:name "suite" :value "scenarios"} {:name "framework" :value "rdm-spec"})
-      planned? (conj {:name "planned" :value "true"}))))
+(defn allure-result
+  "The Allure result of a pickle and its outcome."
+  [p {:keys [status message steps start stop]}]
+  (let [labels (cond-> []
+                 (:id p) (conj {:name "spec" :value (:id p)})
+                 (get-in p [:owner :component]) (conj {:name "component" :value (get-in p [:owner :component])})
+                 (get-in p [:owner :context]) (conj {:name "context" :value (get-in p [:owner :context])})
+                 (:wip? p) (conj {:name "planned" :value "true"})
+                 (:feature p) (conj {:name "feature" :value (:feature p)})
+                 true (conj {:name "framework" :value "rdm-spec run"}))]
+    (cond-> {:uuid (str (random-uuid))
+             :historyId (str (:file p) ":" (or (get-in p [:row :line]) (:line p)))
+             :name (:display-name p)
+             :fullName (str (:file p) ":" (or (get-in p [:row :line]) (:line p)))
+             :status status
+             :statusDetails (if message {:message message} {})
+             :stage "finished"
+             :start start
+             :stop stop
+             :labels labels
+             :steps (vec (for [s steps]
+                           (cond-> {:name (:name s) :status (:status s) :stage "finished"
+                                    :start (:start s) :stop (:stop s)}
+                             (:message s) (assoc :statusDetails {:message (:message s)}))))}
+      (:row p) (assoc :parameters (vec (for [[k v] (get-in p [:row :pairs])] {:name k :value v}))))))
 
-(defn run-scenario
-  "Runs one concrete scenario (an outline's row, or a scenario), writes its
-  result into `results-dir` and returns the run's view of it."
-  [{:keys [results-dir id-prefix]} {:keys [file feature owner sp]} sc]
-  (let [id-re (re-pattern (str "@" (java.util.regex.Pattern/quote (or id-prefix "spec")) "-\\d+"))
-        ids (vec (distinct (map #(subs % 1) (filter #(re-matches id-re %) (:tags sc)))))
-        id (when (= 1 (count ids)) (first ids))
-        planned? (boolean (some #{"@wip"} (:all-tags sc)))
-        values (get-in sc [:example :values])
-        header (get-in sc [:example :header])
-        row-text (when values (str/join ", " (map #(str % "=" (get values %)) header)))
-        name (str (:name sc) (when row-text (str " [" row-text "]")))
-        steps (vec (concat (:background sc) (:steps sc)))
-        start (System/currentTimeMillis)
-        {:keys [status message] step-results :steps}
-        (if planned?
-          {:status "skipped" :message "planned (@wip): not run"
-           :steps (mapv #(hash-map :name (step-name %) :status "skipped" :start 0 :stop 0) steps)}
-          (run-steps steps))
-        stop (System/currentTimeMillis)
-        uuid (str (java.util.UUID/randomUUID))
-        result (cond-> {:uuid uuid
-                        :historyId (str file ":" (:line sc) (when row-text (str "[" row-text "]")))
-                        :name name
-                        :fullName (str file ":" (:line sc) " " name)
-                        :status status
-                        :statusDetails (if message {:message message} {})
-                        :stage "finished" :start start :stop stop
-                        :labels (labels {:id id :owner owner :feature feature :planned? planned? :sp sp})
-                        :steps step-results}
-                 values (assoc :parameters (mapv #(hash-map :name % :value (get values %)) header)))]
-    (write-result! results-dir result)
-    {:status status :ids ids :id id :file file :line (or (get-in sc [:example :line]) (:line sc))
-     :name name :message message :planned? planned?}))
+(defn run-pickle
+  "Runs one pickle (a planned one is not run): its Allure result."
+  [p]
+  (let [start (now)]
+    (if (:wip? p)
+      (allure-result p {:status "skipped" :message "planned (@wip): not run"
+                        :steps (for [st (:steps p)] {:name (step-name st) :status "skipped" :start start :stop start})
+                        :start start :stop start})
+      (let [out (run-steps (:steps p))]
+        (allure-result p (assoc out :start start :stop (now)))))))
+
+(defn write-result!
+  "Writes the Allure result `r` into `dir` as <uuid>-result.json."
+  [dir r]
+  (fs/create-dirs dir)
+  (spit (str (fs/file dir (str (:uuid r) "-result.json"))) (json/generate-string r {:pretty true})))
+
+(defn- read-model [f]
+  (try (let [m (edn/read-string (slurp (str f)))] (when (map? m) m))
+       (catch Exception _ nil)))
+
+(defn plan
+  "What a run of the spec under `root` would run: {:pickles [..] :refusals
+  [..] :features n}. `opts`: :spec-dir :id-prefix :model (paths relative
+  to `root`), :only (path prefixes, relative to `root`, a run is limited to)."
+  [root {:keys [spec-dir id-prefix model only]}]
+  (let [spec-dir (str/replace (or spec-dir "dhf/spec") #"/+$" "")
+        files (feature-files (fs/file root spec-dir))
+        rel #(str/replace (str (fs/relativize (fs/absolutize root) (fs/absolutize %))) "\\" "/")
+        files (if (seq only) (filter (fn [f] (some #(str/starts-with? (rel f) %) only)) files) files)
+        owner-map (owners (read-model (fs/file root (or model (str spec-dir "/model.edn")))))
+        parsed (for [f files :let [r (rel f)]]
+                 [r (gherkin/parse-feature r (slurp f))])]
+    {:features (count files)
+     :refusals (vec (mapcat (comp :refusals second) parsed))
+     :pickles (vec (mapcat (fn [[r p]] (pickles r p {:prefix id-prefix :owner (owner-of owner-map spec-dir r)}))
+                           parsed))}))
+
+(defn summarize
+  "Counts of the results `rs`."
+  [rs]
+  (let [planned? (fn [r] (some #(= {:name "planned" :value "true"} %) (:labels r)))]
+    {:scenarios (count rs)
+     :passed (count (filter #(= "passed" (:status %)) rs))
+     :failed (count (filter #(= "failed" (:status %)) rs))
+     :broken (count (filter #(= "broken" (:status %)) rs))
+     :planned (count (filter planned? rs))}))
+
+(defn run-pickles!
+  "Runs every pickle, writing each result into `results-dir`, and calls
+  `on-result` with each pickle and its result. Returns [[pickle result]]."
+  [pickles results-dir on-result]
+  (vec (for [p pickles]
+         (let [r (run-pickle p)]
+           (write-result! results-dir r)
+           (when on-result (on-result p r))
+           [p r]))))
+
+(defn outcome-findings
+  "A finding for every scenario run that failed or broke."
+  [runs]
+  (vec (for [[p r] runs
+             :when (#{"failed" "broken"} (:status r))]
+         (command/finding (:file p) (or (get-in p [:row :line]) (:line p)) (str "scenario-" (:status r))
+                          (str (or (:id p) "a scenario with no single id") " (" (:display-name p) ") is "
+                               (:status r) ": " (get-in r [:statusDetails :message]))))))
 
 ;; ---------------------------------------------------------------------------
-;; Running a spec
-
-(defn run-features
-  "Runs every scenario of the spec. `opts`:
-    :root         the project root
-    :spec-dir     the spec directory (relative to :root)
-    :steps-dir    the step definitions' directory (relative to :root)
-    :results-dir  where results go (relative to :root, or absolute)
-    :id-prefix    the scenario id prefix
-    :model        the C4 model file (relative to :root), for the labels
-    :clean?       remove earlier results first
-  Returns {:results [{:status :ids :file :line :name :message}]
-           :refused nil-or-why :refusals [{:file :line :rule :message}]}.
-  Refused (nothing written) when no feature file is found."
-  [{:keys [root spec-dir steps-dir results-dir id-prefix model clean?]}]
-  (let [at #(when % (let [s (str %)] (if (fs/absolute? s) s (str (fs/file root s)))))
-        spec-abs (at spec-dir)
-        files (feature-files spec-abs)]
-    (if (empty? files)
-      {:results [] :refusals []
-       :refused (str "no scenario was found: the spec directory " spec-dir " holds no feature file")}
-      (let [results-abs (at results-dir)
-            _ (fs/create-dirs results-abs)
-            _ (when clean? (clean-results! results-abs))
-            load-errors (load-step-files! (at steps-dir))
-            mdl (read-model (at model))
-            opts {:results-dir results-abs :id-prefix id-prefix}
-            parsed (for [f files]
-                     (let [rel (str/replace (str (fs/relativize (fs/absolutize root) (fs/absolutize f))) "\\" "/")]
-                       (assoc (gherkin/parse-feature rel (slurp f)) :sp (spec-path spec-abs f))))
-            out (vec (for [{:keys [file feature scenarios sp]} parsed
-                           sc scenarios
-                           concrete (gherkin/expand sc)]
-                       (run-scenario opts {:file file :feature (:name feature) :sp sp :owner (owner-of mdl sp)}
-                                     concrete)))]
-        {:results out
-         :refused nil
-         :refusals (vec (concat
-                         (for [{:keys [file message]} load-errors]
-                           {:file file :line nil :rule "step-file" :message (str "the step file could not be loaded: " message)})
-                         (mapcat :refusals parsed)))}))))
+;; The task
 
 (defn run
-  "The run task: `rdm-spec run [--results DIR]`. Runs every scenario of the
-  project's spec against its step definitions (the configured :steps-dir),
-  writing results into the results directory after clearing earlier ones."
+  "The run task's stage: `rdm-spec run [--results DIR]`."
   [req]
-  (let [config (:config req)
-        cfg (fn [k] (or (get config k)
-                        (throw (ex-info (str "the configuration sets no " k)
-                                        {:rdm-spec.kernel.command/cannot-run true}))))
-        results (or (:results req) (cfg :results-dir))
-        out (run-features {:root (:root req) :spec-dir (cfg :spec-dir) :steps-dir (cfg :steps-dir)
-                           :results-dir results :id-prefix (or (:id-prefix config) "spec")
-                           :model (:model config) :clean? true})]
-    (when (:refused out)
-      (throw (ex-info (:refused out) {:rdm-spec.kernel.command/cannot-run true})))
-    (let [rs (:results out)
-          rel-file (fn [f] f)]
-      {:result {:results results
-                :summary (summarize rs)
-                :scenarios (mapv #(-> (select-keys % [:id :name :file :line :status])
-                                      (update :file rel-file))
-                                 rs)}
-       :findings (vec (concat
-                       (for [r (:refusals out)]
-                         {:file (:file r) :line (:line r) :rule (:rule r) :message (:message r) :severity :error})
-                       (for [r rs :when (#{"failed" "broken"} (:status r))]
-                         {:file (:file r) :line (:line r) :rule (str "scenario-" (:status r))
-                          :message (str (or (:id r) "an unstamped scenario") " \"" (:name r) "\": " (:message r))
-                          :severity :error})))})))
+  (let [root (:root req)
+        spec-dir (command/config-value req :spec-dir)
+        steps-dir (command/config-value req :steps-dir)
+        {:keys [pickles refusals features]} (plan root {:spec-dir spec-dir
+                                                        :id-prefix (command/config-value req :id-prefix)
+                                                        :model (command/config-value req :model)})
+        _ (when (zero? features)
+            (command/cannot-run! (str "no scenario was found: the spec directory " spec-dir
+                                      " holds no feature file, so nothing was run and no result was written")))
+        results (:results req)
+        results-dir (command/path req results)]
+    (binding [*registry* (atom [])
+              *shadowed* (atom [])]
+      (load-step-files! (step-files (command/path req steps-dir)))
+      (let [runs (run-pickles! pickles results-dir nil)
+            rs (map second runs)]
+        {:result {:run (assoc (summarize rs) :results results)}
+         :findings (vec (concat (for [{:keys [file line rule message]} refusals]
+                                  (command/finding file line rule message))
+                                (outcome-findings runs)
+                                (shadow-warnings)))}))))

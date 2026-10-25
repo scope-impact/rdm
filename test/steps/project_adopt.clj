@@ -1,191 +1,184 @@
 (ns steps.project-adopt
-  "Step definitions for dhf/spec/project/adopt.feature. Every scenario makes
-  its own git repository (a fixture) and runs `rdm-spec adopt` in it as its
-  own process. \"it exits N\" is the kernel's (steps.kernel-command).
-
-  What \"the skeleton, as rdm-spec init writes it\" is, is read from init
-  itself: init is run into a directory of the same name elsewhere, and every
-  skeleton file must be byte for byte the same.
-
-  Context keys: :dir the repository, :run the last run, :before a snapshot
-  of the repository (.git included) before adopt, :kept-path the path a
-  Given placed, :link-target the target of a symbolic link."
+  "Step definitions for dhf/spec/project/adopt.feature: `rdm-spec adopt` in
+  a git repository of the scenario's own. Context keys: see
+  steps.project-support."
   (:require [babashka.fs :as fs]
-            [clojure.edn]
+            [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.kernel-command :as kc]
             [steps.project-support :as ps]
             [steps.support :as s]))
 
-(def ^:private source-files
-  {"src/app.c" "int main(void) { return 0; }\n"
-   "README.md" "# An app\n\nIt was here first.\n"})
+(def ^:private source-and-readme
+  {"README.md" "# Sauna booking\n\nBooks sauna turns.\n"
+   "src/booking.c" "int main(void) { return 0; }\n"})
 
-(def ^:private test-files
-  {"tests/app_test.c" "int test(void) { return 0; }\n"})
+(def ^:private source-and-tests
+  (merge source-and-readme
+         {"tests/booking_test.c" "int test_booking(void) { return 0; }\n"
+          "tests/features/booking.feature" "Feature: Booking\n  Scenario: A turn is booked\n    Given a free turn\n"}))
 
-(defn- repo! [ctx files]
-  (let [dir (ps/git-repo! files)]
-    (assoc ctx :dir dir :before (ps/snapshot dir))))
+(defn- repo-ctx [ctx files]
+  (ps/needs-project!)
+  (let [dir (ps/repository! files)]
+    (-> ctx
+        (assoc :dir dir :repo-files (ps/files-of dir))
+        ;; never look above the fixture for a repository
+        (assoc-in [:env "GIT_CEILING_DIRECTORIES"] (str (fs/parent dir))))))
 
-(defn- adopt-result [ctx]
-  (let [r (kc/the-run ctx)]
-    (or (:adopt (kc/stdout-edn r)) (s/fail! (str "adopt printed no :adopt result\n" (s/show r))))))
-
-(defn- unchanged! [ctx paths]
-  (let [now (ps/snapshot (:dir ctx))
-        changed (filter #(not= (get (:before ctx) %) (get now %)) paths)]
-    (s/check! (empty? changed) (str "changed: " (pr-str changed)))
-    nil))
-
-(defn- init-reference
-  "The skeleton init writes for a project named like `dir`: {rel content}."
-  [ctx dir]
-  (let [parent (s/tmp-dir)
-        name (str (fs/file-name dir))
-        r (kc/run! ctx parent ["init" name])]
-    (s/check! (zero? (:exit r)) (str "rdm-spec init failed\n" (s/show r)))
-    (into {} (for [rel (ps/skeleton-paths)]
-               [rel (slurp (str (fs/file parent name rel)))]))))
-
-;; ---------------------------------------------------------------------------
-;; Adopt adds and never overwrites
+(defn- adopted [ctx] (ps/result-of (kc/exits! ctx 0) :adopt))
 
 (defstep #"a git repository holding source code and a README"
-  (fn [ctx] (repo! ctx source-files)))
+  (fn [ctx] (repo-ctx ctx source-and-readme)))
 
 (defstep #"a git repository holding source code and tests"
-  (fn [ctx] (repo! ctx (merge source-files test-files))))
-
-(defstep #"\"rdm-spec ([^\"]*)\" is run in it(?: again)?"
-  (fn [ctx line] (kc/run-line ctx line)))
+  (fn [ctx] (repo-ctx ctx source-and-tests)))
 
 (defstep #"it holds the skeleton, as \"rdm-spec init\" writes it"
   (fn [ctx]
     (kc/exits! ctx 0)
-    (let [want (init-reference ctx (:dir ctx))]
-      (doseq [[rel content] want
-              :let [f (fs/file (:dir ctx) rel)]]
-        (s/check! (fs/regular-file? f) (str rel " was not written"))
-        (s/check! (= content (slurp (str f))) (str rel " differs from what init writes")))
-      (s/check! (fs/executable? (fs/file (:dir ctx) ".githooks/pre-commit")) "the hook is not executable")
-      (s/check! (= ".githooks" (:out (ps/git (:dir ctx) "config" "--local" "--get" "core.hooksPath")))
-                "core.hooksPath is not .githooks")
+    (let [dir (:dir ctx)
+          ;; init, into a path of the same name, writes the same skeleton
+          parent (s/tmp-dir)
+          nm (str (fs/file-name dir))
+          r (kc/run! ctx parent ["init" nm])
+          _ (s/check! (zero? (:exit r)) (str "rdm-spec init failed\n" (s/show r)))
+          inited (ps/files-of (fs/file parent nm))
+          have (ps/files-of dir)]
+      (doseq [rel (sort (ps/skeleton-paths))]
+        (s/check! (= (get inited rel) (get have rel)) (str rel " is not as init writes it")))
+      (s/check! (= ".githooks" (ps/git! dir "config" "--get" "core.hooksPath")) "core.hooksPath is not .githooks")
       nil)))
 
 (defstep #"its source code and README are unchanged"
-  (fn [ctx] (unchanged! ctx (keys source-files))))
+  (fn [ctx]
+    (let [now (ps/files-of (:dir ctx))]
+      (doseq [[rel text] (:repo-files ctx)]
+        (s/check! (= text (get now rel)) (str rel " changed")))
+      nil)))
 
 (defstep #"adopt lists every file it wrote"
   (fn [ctx]
-    (let [res (adopt-result ctx)]
-      (s/check! (= (set (ps/skeleton-paths)) (set (:wrote res))) (str "adopt lists " (pr-str (:wrote res))))
+    (let [res (adopted ctx)]
+      (s/check! (= (ps/skeleton-paths) (set (:wrote res))) (str "adopt lists " (sort (:wrote res))))
       nil)))
 
 (defstep #"a git repository that already holds (\S+)"
   (fn [ctx rel]
-    (assoc (repo! ctx (assoc source-files rel "# Our own glossary\n")) :kept-path rel)))
+    (assoc (repo-ctx ctx (assoc source-and-readme rel "# Our own glossary\n\n**Turn**: an hour in the sauna.\n"))
+           :kept rel)))
 
 (defstep #"(dhf/\S+) is unchanged"
-  (fn [ctx rel] (unchanged! ctx [rel])))
+  (fn [ctx rel]
+    (s/check! (= (get (:repo-files ctx) rel) (get (ps/files-of (:dir ctx)) rel)) (str rel " changed"))
+    nil))
 
 (defstep #"adopt names it as kept"
   (fn [ctx]
-    (let [res (adopt-result ctx)]
-      (s/check! (some #{(:kept-path ctx)} (:kept res)) (str "adopt keeps " (pr-str (:kept res))))
-      (s/check! (not (some #{(:kept-path ctx)} (:wrote res))) "adopt lists it as written")
-      nil)))
+    (let [res (adopted ctx)]
+      (s/check! (some #{(:kept ctx)} (:kept res)) (str "adopt does not name " (:kept ctx) " as kept: " (pr-str res)))
+      (s/check! (not-any? #{(:kept ctx)} (:wrote res)) (str "adopt says it wrote " (:kept ctx))))
+    nil))
 
 (defstep #"a git repository where (\S+) is a symbolic link"
   (fn [ctx rel]
-    (let [ctx (repo! ctx (assoc source-files "config/ours.edn" "{:ours true}\n"))
+    (let [ctx (repo-ctx ctx (assoc source-and-readme "our-config.edn" "{:id-prefix \"spec\"}\n"))
           link (fs/file (:dir ctx) rel)]
       (fs/create-dirs (fs/parent link))
-      (fs/create-sym-link link (fs/relativize (fs/parent link) (fs/file (:dir ctx) "config/ours.edn")))
-      (assoc ctx :kept-path rel :link-target "config/ours.edn" :before (ps/snapshot (:dir ctx))))))
+      (fs/create-sym-link link (fs/relativize (fs/parent link) (fs/file (:dir ctx) "our-config.edn")))
+      (assoc ctx :kept rel :repo-files (ps/files-of (:dir ctx))))))
 
 (defstep #"the link and its target are unchanged"
   (fn [ctx]
-    (s/check! (fs/sym-link? (fs/file (:dir ctx) (:kept-path ctx))) "the link is gone")
-    (unchanged! ctx [(:kept-path ctx) (:link-target ctx)])))
+    (let [link (fs/file (:dir ctx) (:kept ctx))
+          now (ps/files-of (:dir ctx))]
+      (s/check! (fs/sym-link? link) "the link is no longer a symbolic link")
+      (s/check! (= (get (:repo-files ctx) (:kept ctx)) (get now (:kept ctx))) "the link changed")
+      (s/check! (= (get (:repo-files ctx) "our-config.edn") (get now "our-config.edn")) "the link's target changed")
+      nil)))
 
 (defstep #"adopt names the link as kept"
   (fn [ctx]
-    (let [res (adopt-result ctx)]
-      (s/check! (some #{(:kept-path ctx)} (:kept res)) (str "adopt keeps " (pr-str (:kept res))))
-      nil)))
+    (let [res (adopted ctx)]
+      (s/check! (some #{(:kept ctx)} (:kept res)) (str "adopt does not name " (:kept ctx) " as kept: " (pr-str res))))
+    nil))
 
 (defstep #"a git repository with its own \.gitignore"
-  (fn [ctx] (repo! ctx (assoc source-files ".gitignore" "build/\n*.o\n"))))
+  (fn [ctx] (repo-ctx ctx (assoc source-and-readme ".gitignore" "build/\n*.o\n"))))
 
 (defstep #"the \.gitignore is unchanged"
-  (fn [ctx] (unchanged! ctx [".gitignore"])))
+  (fn [ctx]
+    (s/check! (= (get (:repo-files ctx) ".gitignore") (get (ps/files-of (:dir ctx)) ".gitignore")) ".gitignore changed")
+    nil))
 
 (defstep #"adopt names the lines it would have added, those init writes to \.gitignore"
   (fn [ctx]
-    (let [res (adopt-result ctx)
-          init-lines (-> (init-reference ctx (:dir ctx)) (get ".gitignore") str/split-lines)
-          init-lines (vec (remove str/blank? init-lines))]
-      (s/check! (= init-lines (vec (:gitignore-lines res)))
-                (str "adopt names " (pr-str (:gitignore-lines res)) ", init writes " (pr-str init-lines)))
-      (s/check! (some #{".gitignore"} (:kept res)) "adopt does not name .gitignore as kept")
+    (let [res (adopted ctx)
+          parent (s/tmp-dir)
+          _ (kc/run! ctx parent ["init" "x"])
+          init-lines (->> (str/split-lines (slurp (str (fs/file parent "x" ".gitignore"))))
+                          (map str/trim) (remove #(or (str/blank? %) (str/starts-with? % "#"))) vec)]
+      (s/check! (= ps/gitignore-lines init-lines) (str "init writes " init-lines))
+      (s/check! (some #{".gitignore"} (:kept res)) (str "adopt does not name .gitignore as kept: " (pr-str res)))
+      (s/check! (= init-lines (get-in res [:gitignore :lines-to-add]))
+                (str "adopt names " (pr-str (:gitignore res)) ", not " init-lines))
       nil)))
 
 (defstep #"a repository that has been adopted"
   (fn [ctx]
-    (let [dir (ps/git-repo! source-files)
-          r (kc/run! ctx dir ["adopt"])]
+    (let [ctx (repo-ctx ctx source-and-readme)
+          r (kc/run! ctx (:dir ctx) ["adopt"])]
       (s/check! (zero? (:exit r)) (str "the first adopt failed\n" (s/show r)))
-      (assoc ctx :dir dir :before (ps/snapshot dir)))))
+      (assoc ctx :repo-files (ps/files-of (:dir ctx))
+             :git-config (slurp (str (fs/file (:dir ctx) ".git/config")))))))
 
 (defstep #"no file changes"
   (fn [ctx]
     (kc/exits! ctx 0)
-    (let [d (ps/diff (:before ctx) (ps/snapshot (:dir ctx)))]
-      (s/check! (empty? d) (str "changed: " (pr-str d)))
+    (let [now (ps/files-of (:dir ctx))
+          changed (sort (filter #(not= (get (:repo-files ctx) %) (get now %))
+                                (distinct (concat (keys (:repo-files ctx)) (keys now)))))]
+      (s/check! (empty? changed) (str "files changed: " (str/join ", " changed)))
+      (s/check! (= (:git-config ctx) (slurp (str (fs/file (:dir ctx) ".git/config")))) ".git/config changed")
       nil)))
 
 (defstep #"adopt names every destination as kept"
   (fn [ctx]
-    (let [res (adopt-result ctx)]
-      (s/check! (= (set (ps/skeleton-paths)) (set (:kept res))) (str "adopt keeps " (pr-str (:kept res))))
-      (s/check! (empty? (:wrote res)) (str "adopt wrote " (pr-str (:wrote res))))
+    (let [res (adopted ctx)]
+      (s/check! (= (ps/skeleton-paths) (set (:kept res))) (str "adopt names as kept " (sort (:kept res))))
+      (s/check! (empty? (:wrote res)) (str "adopt wrote " (:wrote res)))
       nil)))
 
 (defstep #"a directory that is not a git repository"
   (fn [ctx]
+    (ps/needs-project!)
     (let [dir (s/tmp-dir)]
       (s/write! dir "notes.txt" "Not a repository.\n")
-      (s/check! (nil? (ps/repo-root dir)) (str dir " is in a git repository"))
-      (assoc ctx :dir dir :before (ps/snapshot dir)))))
+      (-> ctx
+          (assoc :dir dir :repo-files (ps/files-of dir))
+          (assoc-in [:env "GIT_CEILING_DIRECTORIES"] (str (fs/parent dir)))))))
 
 (defstep #"it exits 2, says the hook needs a git repository, and writes nothing"
   (fn [ctx]
-    (let [r (kc/exits! ctx 2)]
-      (s/check! (str/blank? (:out r)) (str "a refusal printed a result\n" (s/show r)))
-      (s/check! (some #(and (str/starts-with? % "cannot-run: ") (str/includes? % "hook needs a git repository"))
-                      (s/err-lines r))
-                (str "it does not say the hook needs a git repository\n" (s/show r)))
-      (let [d (ps/diff (:before ctx) (ps/snapshot (:dir ctx)))]
-        (s/check! (empty? d) (str "written: " (pr-str d))))
-      nil)))
-
-;; ---------------------------------------------------------------------------
-;; Adopt never reads the existing code into the spec
+    (kc/refused-naming! ctx "the hook needs a git repository")
+    (s/check! (= (:repo-files ctx) (ps/files-of (:dir ctx))) "adopt wrote something")
+    (s/check! (not (fs/exists? (fs/file (:dir ctx) ".git"))) "adopt made a repository")
+    nil))
 
 (defstep #"the model, the needs and the ledger are empty"
   (fn [ctx]
     (kc/exits! ctx 0)
-    (let [read #(clojure.edn/read-string (slurp (str (fs/file (:dir ctx) %))))
-          m (read "dhf/spec/model.edn")]
-      (s/check! (every? empty? (vals (dissoc m :system))) (str "the model holds more than the system: " (pr-str m)))
-      (s/check! (= {} (read "dhf/spec/needs.edn")) "the needs are not empty")
-      (s/check! (= {:issued 0} (read "dhf/spec/ids.edn")) "the ledger is not at 0")
-      nil)))
+    (let [rd #(edn/read-string (slurp (str (fs/file (:dir ctx) %))))]
+      (s/check! (= #{:system} (set (keys (rd "dhf/spec/model.edn")))) "the model holds more than the system")
+      (s/check! (= {} (rd "dhf/spec/needs.edn")) "the needs are not empty")
+      (s/check! (= {:issued 0} (rd "dhf/spec/ids.edn")) "the ledger is not at 0"))
+    nil))
 
 (defstep #"no feature file is written"
   (fn [ctx]
-    (let [fs* (map str (fs/glob (:dir ctx) "**.feature" {:hidden true}))]
-      (s/check! (empty? fs*) (str "feature files written: " (pr-str fs*)))
+    (let [res (adopted ctx)
+          new (remove (set (keys (:repo-files ctx))) (keys (ps/files-of (:dir ctx))))]
+      (s/check! (not-any? #(str/ends-with? % ".feature") new) (str "adopt wrote a feature file: " (vec new)))
+      (s/check! (not-any? #(str/ends-with? % ".feature") (:wrote res)) "adopt lists a feature file")
       nil)))

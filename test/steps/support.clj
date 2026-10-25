@@ -1,123 +1,200 @@
 (ns steps.support
-  "Helpers the step definitions share: temporary projects, driving the
-  rdm-spec command as a separate process, reading Allure results, and marking
-  a scenario broken while a context it needs is not built yet."
+  "The helpers every step file uses. No step is defined here.
+
+  Fixtures: every directory a step makes (tmp-dir, copy-of-room!, project!)
+  lies under one directory per run, the fixture root, removed when the run
+  ends. test.clj names it (RDM_SPEC_FIXTURES) and removes it; a run without
+  test.clj makes its own and removes it when the process exits.
+
+  Commands: rdm-spec is run by path (bb -cp <room>/src), never one on PATH,
+  in the directory the scenario names. A scenario's commands inherit the
+  tests' environment, except RESULTS_DIR, plus what its steps set (a nil
+  value unsets a variable).
+
+  API: room-root, bb, fixture-root, tmp-dir, check!, fail!, write!,
+  room-config, built?, needs-built!, copy-of-room!, project!, env-for,
+  command, rdm-spec!, err-lines, show, split-args."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
-            [cheshire.core :as json]
             [clojure.edn :as edn]
-            [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(def room-root
-  "The repository root: four levels above src/rdm_spec/kernel/command.clj."
-  (-> (io/resource "rdm_spec/kernel/command.clj") io/file fs/absolutize
-      fs/parent fs/parent fs/parent fs/parent str))
+;; ---------------------------------------------------------------------------
+;; Where things are
 
-(def bb (or (some-> (fs/which "bb") str) "bb"))
+(def room-root
+  "The repository the tests run in (the room, or ratify's checkout): the
+  directory holding test/steps/support.clj."
+  (let [f (some-> *file* str not-empty fs/absolutize)]
+    (str (if (and f (str/ends-with? (str f) "test/steps/support.clj"))
+           (-> f fs/parent fs/parent fs/parent)
+           (fs/absolutize ".")))))
+
+(def bb
+  "The bb executable these tests run under."
+  (or (try (let [exe (str (fs/read-link "/proc/self/exe"))]
+             (when (re-find #"(^|/)bb$" exe) exe))
+           (catch Exception _ nil))
+      (some-> (fs/which "bb") str)
+      "bb"))
+
+;; ---------------------------------------------------------------------------
+;; Failing a step
 
 (defn fail!
-  "Fails the step with `message`."
-  [message & [data]]
-  (throw (ex-info message (or data {}))))
+  "Fails the step, saying why."
+  [msg]
+  (throw (ex-info (str msg) {::failed true})))
 
 (defn check!
-  "Fails the step with `message` unless `ok`. Returns nil, so a step ending\n  with it passes its context on unchanged."
-  [ok message & [data]]
-  (when-not ok (fail! message data))
-  nil)
+  "Fails the step with `msg` unless `ok`; returns `ok`."
+  [ok msg]
+  (when-not ok (fail! msg))
+  ok)
 
-(defn built?
-  "True when the namespace `ns-sym` exists in the implementation."
-  [ns-sym]
-  (some? (io/resource (str (-> (str ns-sym) (str/replace "-" "_") (str/replace "." "/")) ".clj"))))
+;; ---------------------------------------------------------------------------
+;; Fixtures, all under one directory per run
 
-(defn needs-built!
-  "Marks the scenario broken (not failed) while any of the namespaces is not
-  built: its steps cannot be verified yet."
-  [& ns-syms]
-  (let [missing (remove built? ns-syms)]
-    (when (seq missing)
-      (throw (ex-info (str "cannot be verified yet: " (str/join ", " missing) " is not built")
-                      {:rdm-spec.kernel.runner/broken true})))))
+(defonce ^:private own-root (atom nil))
 
-(defn tmp-dir []
-  (str (fs/create-temp-dir {:prefix "rdm-spec-test-"})))
+(defn fixture-root
+  "The directory every fixture of this run lies under."
+  []
+  (or (not-empty (System/getenv "RDM_SPEC_FIXTURES"))
+      @own-root
+      (locking own-root
+        (or @own-root
+            (let [d (str (fs/create-temp-dir {:prefix "rdm-spec-fixtures-"}))]
+              (.addShutdownHook (Runtime/getRuntime)
+                                (Thread. ^Runnable (fn [] (try (fs/delete-tree d) (catch Exception _ nil)))))
+              (reset! own-root d))))))
+
+(defn tmp-dir
+  "A new empty directory under the fixture root."
+  []
+  (let [root (fixture-root)]
+    (fs/create-dirs root)
+    (str (fs/create-temp-dir {:dir root :prefix "fx-"}))))
 
 (defn write!
-  "Writes `content` to `rel` under `dir`, creating directories."
-  [dir rel content]
+  "Writes `text` to `rel` under `dir`, making its parents; returns the file."
+  [dir rel text]
   (let [f (fs/file dir rel)]
     (fs/create-dirs (fs/parent f))
-    (spit f content)
+    (spit (str f) (str text))
     (str f)))
 
-(defn room-config []
+;; ---------------------------------------------------------------------------
+;; The room
+
+(defn room-config
+  "The room's dhf/harness/config.edn, read."
+  []
   (edn/read-string (slurp (str (fs/file room-root "dhf/harness/config.edn")))))
 
+(defn- ns-file [sym]
+  (fs/file room-root "src" (str (-> (str sym) (str/replace "-" "_") (str/replace "." "/")) ".clj")))
+
+(defn built?
+  "Whether the namespace `sym` is built: its file is in the room's src/."
+  [sym]
+  (fs/regular-file? (ns-file sym)))
+
+(defn needs-built!
+  "Fails the step unless every namespace of `syms` is built."
+  [& syms]
+  (let [missing (remove built? syms)]
+    (check! (empty? missing) (str "not built: " (str/join ", " missing))))
+  nil)
+
+(defn- write-config! [dir c]
+  (write! dir "dhf/harness/config.edn" (str (pr-str c) "\n")))
+
+(defn copy-of-room!
+  "A new directory holding a copy of the room's allow-listed paths (its
+  :clean-room :allow), its configuration without :oracle: a fixture never
+  carries the room's oracle unless its scenario sets one."
+  []
+  (let [dir (tmp-dir)
+        cfg (room-config)]
+    (doseq [a (get-in cfg [:clean-room :allow])
+            :let [src (fs/file room-root a)
+                  dst (fs/file dir a)]
+            :when (fs/exists? src)]
+      (if (fs/directory? src)
+        (fs/copy-tree src dst {:replace-existing true})
+        (do (fs/create-dirs (fs/parent dst))
+            (fs/copy src dst {:replace-existing true}))))
+    (write-config! dir (dissoc cfg :oracle))
+    dir))
+
 (defn project!
-  "A temporary project holding only dhf/harness/config.edn: the room's
-  configuration merged with `overrides`."
+  "A new directory holding only the room's configuration, without :oracle,
+  merged with `overrides`."
   ([] (project! {}))
   ([overrides]
    (let [dir (tmp-dir)]
-     (write! dir "dhf/harness/config.edn" (pr-str (merge (room-config) overrides)))
+     (write-config! dir (merge (dissoc (room-config) :oracle) overrides))
      dir)))
 
-(defn copy-of-room!
-  "A temporary project holding a copy of the room's allow-listed paths (the
-  spec, the harness configuration, the raw sources, the wiki, the ADR)."
-  []
-  (let [dir (tmp-dir)]
-    (doseq [a (get-in (room-config) [:clean-room :allow])
-            :let [src (fs/file room-root a)]
-            :when (fs/exists? src)]
-      (if (fs/directory? src)
-        (fs/copy-tree src (fs/file dir a))
-        (do (fs/create-dirs (fs/parent (fs/file dir a)))
-            (fs/copy src (fs/file dir a)))))
-    ;; a fixture is a project the scenario makes: it never carries the
-    ;; room's own oracle, which only a scenario about the oracle sets
-    (let [cfg (fs/file dir "dhf/harness/config.edn")]
-      (when (fs/exists? cfg)
-        (spit (str cfg) (str/replace (slurp (str cfg)) #"(?m)^ *:oracle \{[^}]*\}\n" ""))))
-    dir))
+;; ---------------------------------------------------------------------------
+;; Running rdm-spec
+
+(defn env-for
+  "The environment of a scenario's command: the tests' own without
+  RESULTS_DIR, with `extra` ({name value}, a nil value unsetting it)."
+  [extra]
+  (reduce-kv (fn [m k v] (if (nil? v) (dissoc m k) (assoc m (str k) (str v))))
+             (dissoc (into {} (System/getenv)) "RESULTS_DIR")
+             (or extra {})))
+
+(defn command
+  "Runs rdm-spec `args` in `dir` with the environment (env-for `extra-env`):
+  {:dir :args :exit :out :err}."
+  [dir args extra-env]
+  (let [args (mapv str args)
+        cmd (concat [bb (str "-Djava.io.tmpdir=" (fixture-root)) "-cp" (str (fs/file room-root "src"))
+                     "-m" "rdm-spec.kernel.command"]
+                    args)
+        r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
+                          :env (env-for extra-env)}
+                 cmd)]
+    {:dir (str dir) :args args :exit (:exit r) :out (:out r) :err (:err r)}))
 
 (defn rdm-spec!
-  "Runs `rdm-spec args...` as its own process in `dir`, the implementation
-  under test on its classpath. Returns {:exit :out :err}."
+  "Runs `rdm-spec args...` in `dir`: {:dir :args :exit :out :err}."
   [dir & args]
-  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true}
-                 bb "-cp" (str (fs/file room-root "src")) "-m" "rdm-spec.kernel.command" args)]
-    {:exit (:exit r) :out (:out r) :err (:err r) :args (vec args)}))
+  (command dir args nil))
 
-(defn split-args [s] (vec (remove str/blank? (str/split s #"\s+"))))
+(defn err-lines
+  "The lines of a run's error stream."
+  [run]
+  (vec (remove str/blank? (str/split-lines (str (:err run))))))
 
-(defn err-lines [{:keys [err]}] (vec (remove str/blank? (str/split-lines (or err "")))))
+(defn show
+  "A run, as a failure message shows it."
+  [run]
+  (if (map? run)
+    (str "$ rdm-spec " (str/join " " (:args run)) "   (in " (:dir run) ")\n"
+         "exit " (:exit run) "\n"
+         "--- standard output\n" (:out run)
+         (when-not (str/ends-with? (str (:out run)) "\n") "\n")
+         "--- error stream\n" (:err run))
+    (pr-str run)))
 
-(defn read-results
-  "Every Allure result in `dir`, keywordized, in no particular order."
-  [dir]
-  (if (fs/directory? dir)
-    (vec (for [f (fs/glob dir "*-result.json")]
-           (json/parse-string (slurp (str f)) true)))
-    []))
-
-(defn label [result k]
-  (some #(when (= k (:name %)) (:value %)) (:labels result)))
-
-(defn labels [result k]
-  (vec (keep #(when (= k (:name %)) (:value %)) (:labels result))))
-
-(defn feature
-  "The text of a feature file holding `body` under a feature tagged @UN-001."
-  [body]
-  (str "@UN-001\nFeature: Demo\n  A feature for the runner's tests.\n\n" body "\n"))
-
-(defn step-file
-  "A step definition file requiring the runner's step API, then `body`."
-  [body]
-  (str "(require '[rdm-spec.kernel.runner :refer [defstep]])\n\n" body "\n"))
-
-(defn show [r]
-  (str "exit " (:exit r) "\nstdout:\n" (:out r) "\nstderr:\n" (:err r)))
+(defn split-args
+  "The words of a command line, as a shell splits them: single or double
+  quotes keep a word's spaces."
+  [line]
+  (let [s (str line) n (count s)]
+    (loop [i 0 cur nil quote-ch nil out []]
+      (if (>= i n)
+        (cond-> out cur (conj cur))
+        (let [c (.charAt s i)]
+          (cond
+            quote-ch (if (= c quote-ch)
+                       (recur (inc i) (or cur "") nil out)
+                       (recur (inc i) (str cur c) quote-ch out))
+            (#{\' \"} c) (recur (inc i) (or cur "") c out)
+            (Character/isWhitespace c) (recur (inc i) nil nil (cond-> out cur (conj cur)))
+            :else (recur (inc i) (str cur c) nil out)))))))

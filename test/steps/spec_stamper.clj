@@ -1,118 +1,127 @@
 (ns steps.spec-stamper
-  "Step definitions for dhf/spec/spec/stamper.feature, in minimal projects:
-  the room's configuration, a spec of demo feature files and a ledger."
+  "Step definitions for dhf/spec/spec/stamper.feature: `rdm-spec stamp` in a
+  spec project (steps.spec-support). Context keys: see steps.spec-support."
   (:require [babashka.fs :as fs]
             [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.spec-support :as f]
+            [steps.kernel-command :as kc]
+            [steps.spec-support :as sp]
             [steps.support :as s]))
 
-(defn- project [ctx]
-  (s/needs-built! 'rdm-spec.spec.stamper)
-  (if (:dir ctx) ctx (assoc ctx :dir (f/project!))))
+(def ^:private stamped {:tags ["@spec-0001" "@e2e"] :title "A stamped scenario"})
 
-(defn- add-feature!
-  "Writes a demo feature file at dhf/spec/<rel> holding scenarios [[name tags]]."
-  [ctx rel scs]
-  (s/write! (:dir ctx) (str "dhf/spec/" rel) (f/scenarios-feature scs))
-  ctx)
+(defn- project-with-ledger [n]
+  (sp/spec-project! {:features {"desk" (sp/feature-text "Desk" [stamped])} :ledger n}))
 
-;; Given (before the command ran) it writes the ledger; Then it checks it.
+(defn- add-scenario!
+  "Appends the scenario `sc` to the desk feature of the project `dir`."
+  [dir sc]
+  (let [f (fs/file dir (sp/feature-rel "desk"))]
+    (spit (str f) (str (slurp (str f)) "\n" (sp/scenario-text sc)))))
+
+(defn- ids-of [sc prefix]
+  (filterv #(re-matches (re-pattern (str "@" prefix "-\\d{4,}")) %) (:tags sc)))
+
+(defn- tagged! [ctx title id]
+  (let [sc (sp/scenario-titled! (:dir ctx) title)
+        ids (ids-of sc "[A-Za-z][A-Za-z0-9-]*?")]
+    (s/check! (= [(str "@" id)] ids) (str "the scenario " (pr-str title) " is tagged " ids ", not @" id
+                                          "\n" (s/show (:run ctx))))
+    nil))
+
+;; Given: the ledger is set; Then (after a run): the ledger is checked.
 (defstep #"the ledger records (\d+) as the highest id issued"
   (fn [ctx n]
     (let [n (parse-long n)]
       (if (:run ctx)
-        (s/check! (= n (f/ledger (:dir ctx)))
-                  (str "the ledger records " (f/ledger (:dir ctx)) "\n" (s/show (:run ctx))))
-        (let [ctx (project ctx)]
-          (f/write-ledger! (:dir ctx) n)
-          (assoc ctx :ledger n))))))
+        (do (kc/exits! ctx 0)
+            (s/check! (= n (sp/ledger-of (:dir ctx))) (str "the ledger records " (sp/ledger-of (:dir ctx)) ", not " n))
+            nil)
+        (if (:dir ctx)
+          (do (sp/write-ledger! (:dir ctx) n) nil)
+          (assoc ctx :dir (project-with-ledger n)))))))
 
 (defstep #"a scenario in the spec carries no id tag"
   (fn [ctx]
-    (let [ctx (project ctx)]
-      (add-feature! ctx "demo/unstamped.feature"
-                    [["An already stamped scenario" (format "@%s-0001 @e2e" (get-in ctx [:prefix] "spec"))]
-                     ["The unstamped scenario" "@e2e"]])
-      (assoc ctx :name "The unstamped scenario"))))
+    (let [title "An unstamped scenario"]
+      (add-scenario! (:dir ctx) {:tags ["@e2e"] :title title})
+      (assoc ctx :title title))))
 
-(defstep #"the scenario is tagged @(\S+)"
-  (fn [ctx id]
-    (let [r (:run ctx)
-          tags (f/tags-of (:dir ctx) (:name ctx))]
-      (s/check! (= 0 (:exit r)) (s/show r))
-      (s/check! (some #{(str "@" id)} tags) (str "the scenario carries " (pr-str tags) "\n" (s/show r))))))
+(defstep #"the scenario is tagged @(spec-\d+)"
+  (fn [ctx id] (kc/exits! ctx 0) (tagged! ctx (:title ctx) id)))
 
 (defstep #"every scenario in the spec carries an id"
   (fn [ctx]
-    (let [ctx (project ctx)]
-      (f/write-ledger! (:dir ctx) 3)
-      (add-feature! ctx "demo/a.feature" [["First" "@spec-0001 @e2e"] ["Second" "@spec-0002 @contract"]])
-      (add-feature! ctx "demo/b.feature" [["Third" "@e2e @spec-0003"]])
-      (f/ensure-shared-steps!)
-      (assoc ctx :spec-before (f/spec-snapshot (:dir ctx)) :ledger-text (slurp (f/ledger-file (:dir ctx)))))))
-
-;; "no file in the spec changes" is shared with
-;; dhf/spec/verification/status.feature: registered at run time by
-;; f/ensure-shared-steps! (comparing :spec-before), unless another step file
-;; defines it.
+    (let [dir (sp/spec-project! {:features {"desk" (sp/feature-text "Desk" [stamped {:tags ["@spec-0002" "@e2e" "@UN-002"] :title "Another"}])
+                                            "door" (sp/feature-text "Door" [{:tags ["@spec-0003" "@contract"] :title "At the door"}])}})]
+      (s/check! (every? #(seq (ids-of % "spec")) (sp/scenarios-of dir)) "a fixture scenario carries no id")
+      (assoc ctx :dir dir :ledger-before (slurp (str (fs/file dir "dhf/spec/ids.edn")))))))
 
 (defstep #"the ledger does not change"
   (fn [ctx]
-    (s/check! (= 0 (:exit (:run ctx))) (s/show (:run ctx)))
-    (s/check! (= (:ledger-text ctx) (slurp (f/ledger-file (:dir ctx)))) "the ledger changed")))
+    (kc/exits! ctx 0)
+    (s/check! (= (:ledger-before ctx) (slurp (str (fs/file (:dir ctx) "dhf/spec/ids.edn")))) "the ledger changed")
+    nil))
 
-(defstep #"the scenario tagged @spec-0042 has been deleted"
-  (fn [ctx]
-    (let [ctx (project ctx)]
-      (add-feature! ctx "demo/a.feature" [["A remaining scenario" "@spec-0041 @e2e"]])
-      (s/check! (not (some #(str/includes? (slurp (str %)) "@spec-0042")
-                           (fs/glob (fs/file (:dir ctx) "dhf/spec") "**.feature")))
-                "@spec-0042 is still in the spec")
-      ctx)))
+(defstep #"the scenario tagged @(spec-\d+) has been deleted"
+  (fn [ctx id]
+    (let [dir (:dir ctx)
+          title "A scenario deleted since"]
+      (add-scenario! dir {:tags [(str "@" id) "@e2e"] :title title})
+      (let [f (fs/file dir (sp/feature-rel "desk"))
+            text (slurp (str f))
+            i (str/index-of text (str "  @" id))]
+        (spit (str f) (subs text 0 i))
+        (s/check! (not (str/includes? (slurp (str f)) id)) (str id " is still in the spec"))
+        nil))))
 
 (defstep #"a new scenario carries no id tag"
   (fn [ctx]
-    (add-feature! ctx "demo/b.feature" [["The new scenario" "@e2e"]])
-    (assoc ctx :name "The new scenario")))
+    (let [title "A new scenario"]
+      (add-scenario! (:dir ctx) {:tags ["@e2e"] :title title})
+      (assoc ctx :title title))))
 
-(defstep #"the new scenario is tagged @(\S+)"
+(defstep #"the new scenario is tagged @(spec-\d+)"
+  (fn [ctx id] (kc/exits! ctx 0) (tagged! ctx (:title ctx) id)))
+
+(defstep #"a scenario tagged @(spec-\d+) in one component's feature file"
   (fn [ctx id]
-    (let [r (:run ctx)
-          tags (f/tags-of (:dir ctx) (:name ctx))]
-      (s/check! (= 0 (:exit r)) (s/show r))
-      (s/check! (some #{(str "@" id)} tags) (str "the new scenario carries " (pr-str tags) "\n" (s/show r))))))
-
-(defstep #"a scenario tagged @spec-0007 in one component's feature file"
-  (fn [ctx]
-    (let [ctx (project ctx)]
-      (f/write-ledger! (:dir ctx) 7)
-      (add-feature! ctx "one/first.feature" [["The original title" "@spec-0007 @e2e"]]))))
+    (let [dir (sp/spec-project! {:features {"desk" (sp/feature-text "Desk" [stamped {:tags [(str "@" id) "@e2e"] :title "Moved later"}])
+                                            "door" (sp/feature-text "Door" [{:tags ["@spec-0003" "@e2e"] :title "At the door"}])}})]
+      (assoc ctx :dir dir :id id))))
 
 (defstep #"its title is reworded and it is moved to another component's feature file"
   (fn [ctx]
-    (let [dir (:dir ctx)]
-      (add-feature! ctx "one/first.feature" [["A scenario that stays" "@spec-0006 @e2e"]])
-      (add-feature! ctx "two/second.feature" [["The reworded title" "@spec-0007 @e2e"]])
-      (assoc ctx :name "The reworded title" :dir dir))))
+    (let [dir (:dir ctx)
+          desk (fs/file dir (sp/feature-rel "desk"))
+          door (fs/file dir (sp/feature-rel "door"))
+          text (slurp (str desk))
+          i (str/index-of text (str "  @" (:id ctx)))
+          title "Reworded, and at the door now"]
+      (spit (str desk) (subs text 0 i))
+      (spit (str door) (str (slurp (str door)) "\n" (sp/scenario-text {:tags [(str "@" (:id ctx)) "@e2e"] :title title})))
+      (assoc ctx :title title))))
 
-(defstep #"it is still tagged @(\S+)"
+(defstep #"it is still tagged @(spec-\d+)"
   (fn [ctx id]
-    (let [r (:run ctx)
-          tags (f/tags-of (:dir ctx) (:name ctx))]
-      (s/check! (= 0 (:exit r)) (s/show r))
-      (s/check! (= [(str "@" id)] (filter #(re-matches #"@spec-\d+" %) tags))
-                (str "the scenario carries " (pr-str tags))))))
+    (kc/exits! ctx 0)
+    (tagged! ctx (:title ctx) id)
+    (let [sc (sp/scenario-titled! (:dir ctx) (:title ctx))]
+      (s/check! (= (sp/feature-rel "door") (:file sc)) "the scenario is no longer in the door's feature file"))
+    nil))
 
 (defstep #"the project's configuration sets the id prefix to \"([^\"]+)\""
   (fn [ctx prefix]
-    (s/needs-built! 'rdm-spec.spec.stamper)
-    (assoc ctx :dir (f/project! {:id-prefix prefix}) :prefix prefix)))
+    (let [dir (sp/spec-project! {:features {"desk" (sp/feature-text "Desk" [{:tags [(str "@" prefix "-0001") "@e2e"]
+                                                                             :title "A stamped scenario"}])}
+                                 :overrides {:id-prefix prefix}})]
+      (assoc ctx :dir dir :prefix prefix))))
 
-(defstep #"the scenario is tagged with an id starting (@\S+-)"
+(defstep #"the scenario is tagged with an id starting @([A-Za-z][A-Za-z0-9-]*-)"
   (fn [ctx start]
-    (let [r (:run ctx)
-          tags (f/tags-of (:dir ctx) (:name ctx))]
-      (s/check! (= 0 (:exit r)) (s/show r))
-      (s/check! (some #(re-matches (re-pattern (str (java.util.regex.Pattern/quote start) "\\d{4,}")) %) tags)
-                (str "the scenario carries " (pr-str tags))))))
+    (kc/exits! ctx 0)
+    (let [sc (sp/scenario-titled! (:dir ctx) (:title ctx))
+          ids (filterv #(re-matches #"@[A-Za-z][A-Za-z0-9-]*-\d{4,}" %) (:tags sc))]
+      (s/check! (and (= 1 (count ids)) (str/starts-with? (first ids) (str "@" start)))
+                (str "the scenario is tagged " (:tags sc) "\n" (s/show (:run ctx))))
+      nil)))

@@ -1,329 +1,245 @@
 (ns rdm-spec.ratification.ratify
-  "Ratify (dhf/spec/ratification/ratify.feature): `rdm-spec ratify ROOM
-  CYCLE` ratifies the room's implementation by a check the builder does not
-  control. It gates; it never scores.
+  "Component Ratify of the ratification context
+  (dhf/spec/ratification/ratify.feature): `rdm-spec ratify ROOM CYCLE`.
 
-  In order:
-    1. dhf/cycles/CYCLE/cycle.edn is read before anything else; missing, not
-       an EDN map, or naming no :cut, the task cannot run (exit 2), naming
-       the file. The project must be a git repository holding the cut as a
-       tag, and ROOM must be a directory (else exit 2).
-    2. The checkout, dhf/cycles/CYCLE/build, is made afresh as an export of
-       the cut: its files, written from the cut's tree through a throwaway
-       index, and no history (no .git).
-    3. Every path the cut's configuration lists as :implementation is
-       deleted from the checkout and the room's copied in its place, so the
-       spec and the configuration are always the cut's: nothing the builder
-       edited outside the implementation is used.
-    4. The cut's spec is read (the cut's :spec-dir and :id-prefix): a
-       scenario with no id (or a feature the Gherkin reader refuses) refuses
-       ratification without running anything, naming file and line as the
-       cut names them; it stops ratification rather than shrinking it.
-    5. The results directory dhf/cycles/CYCLE/results is emptied, and the
-       cut's :test-command runs in the checkout with the caller's environment
-       and RESULTS_DIR set to that directory's absolute path. Its standard
-       output and error stream both go to dhf/cycles/CYCLE/test.log.
-    6. It passes only when the command exits 0, at least one Allure result
-       (*-result.json) was written, and every stamped scenario not tagged
-       @wip is named (label spec) by at least one result, every one of which
-       passed. Each failure is a finding (exit 1).
-    7. dhf/cycles/CYCLE/ratified.edn records the outcome: on a pass exactly
-       {:cut :room-tree :outcome :passed :checkout}; on a refusal
-       {:cut :room-tree :outcome :refused :reason :checkout}. :room-tree is the
-       full git tree hash of the room's implementation paths, every file
-       under them as it is on disk (ignore rules do not apply).
-
-  Ratify knows nothing of the oracle: the command runs it as a gate before."
+  Trusts only the cut: reads the cycle's cycle.edn first, exports its cut
+  (files, no history) to dhf/cycles/CYCLE/build, replaces every configured
+  implementation path there with the room's (never merged), and runs the
+  cut's declared test command in it with RESULTS_DIR set to the cycle's
+  results directory, its output in the cycle's test.log. Passes only when
+  the cut's spec is stamped, the command exits 0, it wrote Allure results,
+  every stamped scenario not tagged @wip is named by a result, and no
+  result naming one, or naming nothing, failed. Records what it ratified in
+  ratified.edn. It gates; it never scores."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [cheshire.core :as json]
             [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]
-            [rdm-spec.kernel.gherkin :as gherkin]))
-
-;; ---------------------------------------------------------------------------
-;; Paths of a cycle
-
-(defn cycle-file
-  "\"dhf/cycles/<cycle>/<f>\", under the configured :cycles-dir."
-  [cycles-dir cycle f]
-  (str (or cycles-dir "dhf/cycles") "/" cycle "/" f))
+            [rdm-spec.kernel.runner :as runner]))
 
 ;; ---------------------------------------------------------------------------
 ;; git
 
-(defn- clean-env
-  "`env` without git's repository-locating variables, plus `extra`."
-  [env extra]
-  (merge (into {} (remove (fn [[k _]] (#{"GIT_DIR" "GIT_WORK_TREE" "GIT_INDEX_FILE" "GIT_OBJECT_DIRECTORY"
-                                         "GIT_ALTERNATE_OBJECT_DIRECTORIES" "GIT_COMMON_DIR" "GIT_NAMESPACE"
-                                         "GIT_CEILING_DIRECTORIES"} k))
-                          env))
-         extra))
+(defn- git
+  [req opts & args]
+  (let [r (try (apply p/shell {:dir (str (or (:dir opts) (:root req))) :out :string :err :string :continue true
+                               :in "" :env (merge (or (:env req) (into {} (System/getenv))) (:env opts))}
+                      "git" args)
+               (catch java.io.IOException e
+                 (command/cannot-run! (str "git cannot be run (" (ex-message e) "): rdm-spec ratify needs git on PATH"))))]
+    {:exit (:exit r) :out (:out r) :err (str/trim (str (:err r)))}))
 
-(defn git
-  "Runs git in `dir`: {:exit :out :err}. `extra` adds environment variables."
-  [dir extra & args]
-  (let [r (try (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
-                               :env (clean-env (into {} (System/getenv)) extra)}
-                      "git" (map str args))
-               (catch Exception e
-                 (command/cannot-run! (str "git cannot be run: " (ex-message e)))))]
-    {:exit (:exit r) :out (:out r) :err (:err r)}))
-
-(defn git!
-  "git's trimmed standard output; cannot run when it fails."
-  [dir extra & args]
-  (let [r (apply git dir extra args)]
+(defn- git! [req opts why & args]
+  (let [r (apply git req opts args)]
     (when-not (zero? (:exit r))
-      (command/cannot-run! (str "git " (str/join " " args) " failed in " dir ": " (str/trim (:err r)))))
+      (command/cannot-run! (str why (when-not (str/blank? (:err r)) (str ": " (:err r))))))
     (str/trim (:out r))))
 
-(defn resolve-cut
-  "The commit the tag `cut` names in the repository at `root`; cannot run
-  when the project is no repository or the tag is not there."
-  [root cut cycle-rel]
-  (let [r (git root {} "rev-parse" "--is-inside-work-tree")]
-    (when-not (and (zero? (:exit r)) (= "true" (str/trim (:out r))))
-      (command/cannot-run! (str root " is not a git repository: the cut " cut " is a tag in one"))))
-  (let [r (git root {} "rev-parse" "--verify" "--quiet" "--end-of-options" (str "refs/tags/" cut "^{commit}"))]
-    (if (zero? (:exit r))
-      (str/trim (:out r))
-      (command/cannot-run! (str cycle-rel " names the cut " cut ", which is no tag in this repository")))))
-
-(defn- with-temp-index
-  "Calls (f env) with GIT_INDEX_FILE set to a throwaway index."
-  [f]
-  (let [d (fs/create-temp-dir {:prefix "rdm-spec-ratify-"})]
-    (try (f {"GIT_INDEX_FILE" (str (fs/file d "index"))})
-         (finally (fs/delete-tree d)))))
-
-(defn export!
-  "Writes the files of `commit` (in the repository at `root`) into `dest`,
-  which must not exist: an export, with no history."
-  [root commit dest]
-  (fs/create-dirs dest)
-  (with-temp-index
-    (fn [env]
-      (git! root env "read-tree" (str commit "^{tree}"))
-      (git! root env "checkout-index" "-a" "-f" (str "--prefix=" (fs/absolutize dest) "/")))))
+(defn- export!
+  "Writes the files of `commit` into `dir`: its files, and no history."
+  [req commit dir]
+  (let [idx (str (fs/create-temp-file {:prefix "rdm-spec-index-"}))]
+    (try
+      (fs/delete-if-exists idx)
+      (fs/create-dirs dir)
+      (git! req {:env {"GIT_INDEX_FILE" idx}} (str "the cut " commit " cannot be read") "read-tree" commit)
+      (git! req {:env {"GIT_INDEX_FILE" idx}} "the cut cannot be exported"
+            (str "--work-tree=" (fs/absolutize dir)) "checkout-index" "-a" "-f")
+      (finally (fs/delete-if-exists idx)))))
 
 (defn tree-hash
-  "The full git tree hash of the files under `paths` of `dir`, as they are on
-  disk, every one of them (ignore rules do not apply). The empty tree when
-  none exists."
-  [dir paths]
-  (let [gd (fs/create-temp-dir {:prefix "rdm-spec-tree-"})]
+  "The git tree hash of the implementation paths `impl` of `room`: the tree
+  holding exactly the room's files under them."
+  [req room impl]
+  (let [gd (str (fs/create-temp-dir {:prefix "rdm-spec-tree-"}))
+        o {:dir room :env {"GIT_DIR" (str (fs/file gd ".git")) "GIT_WORK_TREE" (str (fs/absolutize room))
+                           "GIT_INDEX_FILE" (str (fs/file gd "index"))}}
+        present (filter #(fs/exists? (fs/file room %)) impl)]
     (try
-      (let [env {"GIT_DIR" (str gd) "GIT_WORK_TREE" (str (fs/absolutize dir))}
-            run! (fn [& args]
-                   (let [r (try (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
-                                                :env (merge (clean-env (into {} (System/getenv)) {}) env)}
-                                       "git" args)
-                                (catch Exception e (command/cannot-run! (str "git cannot be run: " (ex-message e)))))]
-                     (when-not (zero? (:exit r))
-                       (command/cannot-run! (str "git " (str/join " " args) " failed in " dir ": " (str/trim (:err r)))))
-                     (str/trim (:out r))))
-            present (filter #(fs/exists? (fs/file dir %)) paths)]
-        (run! "init" "-q")
-        (when (seq present)
-          (apply run! "add" "-A" "-f" "--" present))
-        (run! "write-tree"))
+      (git! req {:dir gd} "a scratch repository cannot be made" "init" "-q")
+      (when (seq present)
+        (apply git! req o "the room's implementation cannot be read" "add" "-A" "-f" "--" present))
+      (git! req o "the room's tree cannot be written" "write-tree")
       (finally (fs/delete-tree gd)))))
 
 ;; ---------------------------------------------------------------------------
-;; The checkout
+;; The checks
 
-(defn- copy-path! [from to]
-  (cond
-    (fs/directory? from) (fs/copy-tree from to {:copy-attributes true})
-    (fs/exists? from) (do (fs/create-dirs (fs/parent to))
-                          (fs/copy from to {:copy-attributes true}))))
-
-(defn replace-implementation!
-  "Deletes every `paths` entry of the checkout `build` and copies the room's
-  in its place."
-  [build room paths]
-  (doseq [rel paths
-          :let [target (fs/file build rel)]]
-    (when (or (fs/exists? target) (fs/sym-link? target))
-      (if (and (fs/directory? target) (not (fs/sym-link? target)))
-        (fs/delete-tree target)
-        (fs/delete target)))
-    (copy-path! (fs/file room rel) target)))
-
-;; ---------------------------------------------------------------------------
-;; The cut's spec
-
-(defn id-pattern [prefix]
-  (re-pattern (str "@" (java.util.regex.Pattern/quote (str prefix)) "-\\d{4,}")))
-
-(defn read-spec
-  "The scenarios of the feature files under `spec-dir` of `build`, named as
-  the cut names them: {:scenarios [{:id :wip? :file :line}] :findings []}.
-  A scenario with no id, and a construct the Gherkin reader refuses, is a
-  finding."
-  [build spec-dir prefix]
-  (let [dir (fs/file build spec-dir)
-        files (if (fs/directory? dir) (sort (map str (fs/glob dir "**.feature"))) [])
-        id-re (id-pattern prefix)]
-    (reduce
-     (fn [acc f]
-       (let [rel (str/replace (str (fs/relativize (fs/absolutize build) (fs/absolutize f))) "\\" "/")
-             parsed (gherkin/parse-feature rel (slurp f))]
-         (-> acc
-             (update :findings into (for [r (:refusals parsed)]
-                                      (command/finding (:file r) (:line r) (:rule r) (:message r))))
-             (update :scenarios into
-                     (for [sc (:scenarios parsed)
-                           :let [ids (filter #(re-matches id-re %) (:tags sc))]]
-                       {:id (some-> (first ids) (subs 1))
-                        :name (:name sc)
-                        :wip? (boolean (some #{"@wip"} (:all-tags sc)))
-                        :file rel :line (:line sc)})))))
-     {:scenarios [] :findings []}
-     files)))
-
-(defn unstamped-findings [scenarios]
-  (for [sc scenarios :when (nil? (:id sc))]
-    (command/finding (:file sc) (:line sc) "unstamped-scenario"
-                     (str "the scenario \"" (:name sc) "\" has no id: a cut holding an unstamped scenario is not ratified"))))
-
-;; ---------------------------------------------------------------------------
-;; Results
+(defn- labels [r]
+  (into {} (for [l (:labels r) :when (map? l)] [(str (:name l)) (str (:value l))])))
 
 (defn read-results
-  "The Allure results in `dir`: {:results [{:file :status :specs}] :findings}.
-  A result file that is not a JSON object is a finding."
-  [dir results-rel]
-  (let [files (if (fs/directory? dir) (sort (map str (fs/glob dir "*-result.json"))) [])]
-    (reduce
-     (fn [acc f]
-       (let [rel (str results-rel "/" (fs/file-name f))
-             m (try (json/parse-string (slurp f) true) (catch Exception _ ::unreadable))]
-         (if (map? m)
-           (update acc :results conj {:file rel :status (some-> (:status m) str)
-                                      :specs (vec (keep #(when (= "spec" (:name %)) (some-> (:value %) str))
-                                                        (when (sequential? (:labels m)) (:labels m))))})
-           (update acc :findings conj (command/finding rel nil "unreadable-result"
-                                                       "an Allure result that is no JSON object: it could hide a failure")))))
-     {:results [] :findings []}
-     files)))
+  "[{:file :status :spec :name}] of every *-result.json under `dir`, and
+  findings for those that cannot be read; files named relative to the
+  project of `req`."
+  [req dir]
+  (let [files (sort (map str (fs/glob dir "**-result.json")))]
+    (reduce (fn [acc f]
+              (let [rel (command/rel req f)
+                    r (try (json/parse-string (slurp f) true) (catch Exception _ ::unreadable))]
+                (if (map? r)
+                  (update acc :results conj {:file rel :status (str (:status r)) :name (:name r)
+                                             :spec (get (labels r) "spec")})
+                  (update acc :findings conj
+                          (command/finding rel "result-unreadable" "the file is not an Allure result: not a JSON object")))))
+            {:results [] :findings []}
+            files)))
 
-(defn judge
-  "Findings over the run: the test command's `exit`, its `results` and the
-  cut's stamped `scenarios`; `command` and `log` name the test command and
-  the file holding its output."
-  [{:keys [exit results scenarios command log]}]
-  (let [statuses (reduce (fn [m r] (reduce #(update %1 %2 (fnil conj []) r) m (:specs r))) {} results)]
-    (concat
-     (when-not (zero? exit)
-       [(command/finding log nil "test-command-failed"
-                         (str "the test command " command " failed with exit status " exit
-                              "; its output is in " log))])
-     (when (and (zero? exit) (empty? results))
-       [(command/finding nil nil "no-results"
-                         (str "the test command " command " exited 0 but wrote no Allure result:"
-                              " a green exit with no results is not a run"))])
-     (when (seq results)
-       (for [sc (sort-by :id scenarios)
-             :when (and (:id sc) (not (:wip? sc)))
-             :let [rs (get statuses (:id sc))
-                   bad (remove #(= "passed" (:status %)) rs)]
-             f (cond
-                 (and (empty? rs) (zero? exit))
-                 [(command/finding (:file sc) (:line sc) "scenario-not-run"
-                                   (str (:id sc) " is named by no result: every scenario not tagged @wip must be run"))]
-                 (seq bad)
-                 (for [r bad]
-                   (command/finding (:file r) nil "scenario-not-passed"
-                                    (str (:id sc) " has a result whose status is " (or (:status r) "missing")
-                                         ", not passed")))
-                 :else [])]
-         f)))))
+(defn result-findings
+  "The findings of the results `results` against the scenarios `scenarios`
+  ([{:id :file :line :wip?}]): every stamped scenario not tagged @wip is
+  named by a result, and none that did not pass names one; a result naming
+  no scenario that failed or broke is a finding too; one naming an id the
+  spec does not hold is a warning."
+  [results scenarios results-rel]
+  (let [by-id (group-by :spec results)
+        ids (set (map :id scenarios))
+        required (remove :wip? scenarios)]
+    (vec (concat
+          (for [{:keys [id file line]} required
+                :when (empty? (get by-id id))]
+            (command/finding file line "scenario-unnamed"
+                             (str id " is named by no result in " results-rel
+                                  ": every scenario not tagged @wip must be tested")))
+          (for [{:keys [id]} required
+                r (get by-id id)
+                :when (not= "passed" (:status r))]
+            (command/finding (:file r) "result-not-passed"
+                             (str id " has a result whose status is " (if (str/blank? (:status r)) "unknown" (:status r))
+                                  (when (:name r) (str " (" (:name r) ")")))))
+          (for [r (get by-id nil)
+                :when (#{"failed" "broken"} (:status r))]
+            (command/finding (:file r) "result-not-passed"
+                             (str "the result " (pr-str (:name r)) " names no scenario and its status is " (:status r))))
+          (for [[id rs] by-id
+                :when (and id (not (contains? ids id)))]
+            (command/warning (:file (first rs)) "result-unknown"
+                             (str "the result names " id ", which no scenario of the cut carries")))))))
+
+(defn spec-scenarios
+  "{:scenarios [{:id :file :line :wip?}] :findings} of the spec in the
+  checkout `dir`, by the configuration `cfg`: an unstamped scenario, or one
+  the reader refuses, is a finding."
+  [dir cfg]
+  (let [{:keys [pickles refusals]} (runner/plan dir {:spec-dir (:spec-dir cfg) :id-prefix (:id-prefix cfg)
+                                                     :model (:model cfg)})]
+    {:scenarios (vec (vals (into (sorted-map)
+                                 (for [pk pickles :when (:id pk)]
+                                   [(:id pk) {:id (:id pk) :file (:file pk) :line (:line pk) :wip? (:wip? pk)}]))))
+     :findings (vec (concat
+                     (map #(assoc % :severity :error) refusals)
+                     (distinct
+                      (for [pk pickles :when (empty? (:ids pk))]
+                        (command/finding (:file pk) (:line pk) "scenario-unstamped"
+                                         (str "the scenario \"" (:name pk) "\" carries no id: a cut holding an unstamped"
+                                              " scenario is not ratified (rdm-spec stamp gives it one)"))))))}))
 
 ;; ---------------------------------------------------------------------------
-;; The stage
+;; Ratify
 
-(defn- read-cycle [root cycle-rel]
-  (let [f (command/path root cycle-rel)]
-    (when-not (fs/regular-file? f)
-      (command/cannot-run! (str "no " cycle-rel ": a cycle is declared there, by hand, before it is ratified")))
-    (let [c (try (edn/read-string (slurp f))
-                 (catch Exception e (command/cannot-run! (str cycle-rel " is not readable EDN: " (ex-message e)))))]
-      (when-not (map? c) (command/cannot-run! (str cycle-rel " is not an EDN map")))
-      (when-not (and (string? (:cut c)) (not (str/blank? (:cut c))))
-        (command/cannot-run! (str cycle-rel " names no :cut")))
-      c)))
+(defn- record!
+  "Writes ratified.edn and returns the stage's output."
+  [req rel-of base findings result]
+  (let [errors (remove command/warning? findings)
+        r (if (seq errors)
+            (assoc base :outcome :refused :reason (str/join "; " (map :message errors)))
+            (assoc base :outcome :passed))
+        m (reduce (fn [m k] (if (contains? r k) (assoc m k (get r k)) m))
+                  (array-map) [:cut :room-tree :outcome :checkout :reason])]
+    (spit (str (command/path req (rel-of "ratified.edn"))) (str (pr-str m) "\n"))
+    {:result {:ratify (merge result (dissoc m :reason) {:ratified (rel-of "ratified.edn")})}
+     :findings (vec findings)}))
+
+(defn- copy-implementation!
+  "Replaces every implementation path of `build` with the room's."
+  [room build impl]
+  (doseq [p impl
+          :let [dst (fs/file build p) src (fs/file room p)]]
+    (fs/delete-tree dst)
+    (when (fs/exists? src)
+      (if (fs/directory? src)
+        (fs/copy-tree src dst {:replace-existing true})
+        (do (fs/create-dirs (fs/parent dst))
+            (fs/copy src dst {:replace-existing true}))))))
 
 (defn- run-tests!
-  "Runs `cmd` in `dir` with `env`, both output streams into `log`: its exit."
-  [cmd dir env log]
-  (fs/create-dirs (fs/parent log))
-  (let [pb (doto (ProcessBuilder. ^java.util.List (mapv str cmd))
-             (.directory (fs/file dir))
-             (.redirectErrorStream true)
-             (.redirectOutput (fs/file log)))
-        penv (.environment pb)]
-    (.clear penv)
-    (doseq [[k v] env] (.put penv (str k) (str v)))
-    (let [proc (try (.start pb)
-                    (catch Exception e
-                      (command/cannot-run! (str "the test command " (str/join " " cmd) " cannot be run: "
-                                                (ex-message e)))))]
-      (.close (.getOutputStream proc))
-      (.waitFor proc))))
+  "Runs `cmd` in `build` with RESULTS_DIR set, its output into `log`: the
+  exit status."
+  [req cmd build results log]
+  (try
+    (:exit @(p/process (vec cmd) {:dir (str build) :in ""
+                                  :env (assoc (or (:env req) (into {} (System/getenv))) "RESULTS_DIR" (str results))
+                                  :out (io/file (str log)) :err :out}))
+    (catch java.io.IOException e
+      (command/cannot-run! (str "the test command " (str/join " " cmd) " cannot be run: " (ex-message e))))))
 
 (defn ratify
-  "The ratify stage: {:result {...} :findings [...]}."
+  "The ratify stage: `rdm-spec ratify ROOM CYCLE`."
   [req]
-  (let [[room cycle] (:args req)
-        root (:root req)
-        cycles-dir (or (get-in req [:config :cycles-dir]) "dhf/cycles")
-        cycle-rel (cycle-file cycles-dir cycle "cycle.edn")
-        {:keys [cut]} (read-cycle root cycle-rel)
-        commit (resolve-cut root cut cycle-rel)
-        room-dir (command/path root room)
-        _ (when-not (fs/directory? room-dir)
-            (command/cannot-run! (str "the room " room " is not a directory")))
-        build-rel (cycle-file cycles-dir cycle "build")
-        results-rel (cycle-file cycles-dir cycle "results")
-        log-rel (cycle-file cycles-dir cycle "test.log")
-        ratified-rel (cycle-file cycles-dir cycle "ratified.edn")
-        build (command/path root build-rel)
-        results (fs/absolutize (command/path root results-rel))
-        _ (when (fs/exists? build) (fs/delete-tree build))
-        _ (export! root commit build)
-        config (command/read-config build)
-        _ (when-not config
-            (command/cannot-run! (str "the cut " cut " holds no " command/config-file)))
-        impl (or (:implementation config)
-                 (command/cannot-run! (str "the cut's " command/config-file " sets no :implementation")))
-        test-cmd (:test-command config)
-        _ (when-not (and (sequential? test-cmd) (seq test-cmd))
-            (command/cannot-run! (str "the cut's " command/config-file " sets no :test-command")))
-        room-tree (tree-hash room-dir impl)
-        _ (replace-implementation! build room-dir impl)
-        spec (read-spec build (or (:spec-dir config) "dhf/spec") (or (:id-prefix config) "spec"))
-        stopped (concat (:findings spec) (unstamped-findings (:scenarios spec)))
-        findings (if (seq stopped)
-                   (vec stopped)
-                   (do
-                     (when (fs/exists? results) (fs/delete-tree results))
-                     (fs/create-dirs results)
-                     (let [exit (run-tests! test-cmd build
-                                            (assoc (:env req) "RESULTS_DIR" (str results))
-                                            (command/path root log-rel))
-                           rs (read-results results results-rel)]
-                       (vec (concat (:findings rs)
-                                    (judge {:exit exit :results (:results rs) :scenarios (:scenarios spec)
-                                            :command (str/join " " test-cmd) :log log-rel}))))))
-        record (if (seq findings)
-                 {:cut cut :room-tree room-tree :outcome :refused
-                  :reason (str/join "; " (map command/format-finding findings))
-                  :checkout build-rel}
-                 {:cut cut :room-tree room-tree :outcome :passed :checkout build-rel})]
-    (spit (command/path root ratified-rel) (str (pr-str record) "\n"))
-    {:result {:ratified (assoc record :cycle cycle)}
-     :findings findings}))
+  (let [[room-arg cycle] (:args req)
+        cycles-dir (str/replace (str (command/config-value req :cycles-dir)) #"/+$" "")
+        rel-of (fn [f] (str cycles-dir "/" cycle "/" f))
+        cycle-rel (rel-of "cycle.edn")
+        cycle-file (command/path req cycle-rel)
+        _ (when-not (fs/regular-file? cycle-file)
+            (command/cannot-run! (str "no " cycle-rel ": ratify reads the cycle's cut from it before anything else")))
+        cyc (try (edn/read-string (slurp (str cycle-file)))
+                 (catch Exception e (command/cannot-run! (str cycle-rel " is not readable EDN: " (ex-message e)))))
+        cut (when (map? cyc) (:cut cyc))
+        _ (when-not (and (string? cut) (not (str/blank? cut)))
+            (command/cannot-run! (str cycle-rel " names no :cut: ratify ratifies against a cut")))
+        _ (when-not (zero? (:exit (git req {} "rev-parse" "--git-dir")))
+            (command/cannot-run! (str (:root req) " is not a git repository: ratify reads the cut " cut " from it")))
+        commit (let [r (git req {} "rev-parse" "--verify" "-q" (str cut "^{commit}"))]
+                 (if (zero? (:exit r))
+                   (str/trim (:out r))
+                   (command/cannot-run! (str "the cut " cut " that " cycle-rel " names is not in " (:root req)))))
+        room (command/path req room-arg)
+        _ (when-not (fs/directory? room)
+            (command/cannot-run! (str "ROOM " room-arg " is not a directory: ratify takes the room's implementation from it")))
+        build-rel (rel-of "build")
+        build (command/path req build-rel)
+        _ (fs/delete-tree build)
+        _ (export! req commit build)
+        cfg (let [f (fs/file build command/config-file)]
+              (when (fs/regular-file? f)
+                (try (edn/read-string (slurp (str f))) (catch Exception _ nil))))
+        _ (when-not (map? cfg)
+            (command/cannot-run! (str "the cut " cut " holds no readable " command/config-file)))
+        impl (vec (:implementation cfg))
+        cmd (:test-command cfg)
+        _ (when (empty? impl)
+            (command/cannot-run! (str "the configuration at " cut " names no :implementation: nothing to take from the room")))
+        _ (when-not (and (sequential? cmd) (seq cmd) (every? string? cmd))
+            (command/cannot-run! (str "the configuration at " cut " declares no :test-command")))
+        room-tree (tree-hash req room impl)
+        base {:cut cut :room-tree room-tree :checkout build-rel}
+        result {:cycle cycle :commit commit}
+        _ (copy-implementation! room build impl)
+        {:keys [scenarios findings]} (spec-scenarios (str build) cfg)]
+    (if (seq findings)
+      (record! req rel-of base findings result)
+      (let [results-rel (rel-of "results")
+            results (fs/absolutize (command/path req results-rel))
+            log-rel (rel-of "test.log")
+            _ (fs/delete-tree results)
+            _ (fs/create-dirs results)
+            exit (run-tests! req cmd build results (command/path req log-rel))
+            result (assoc result :results results-rel :log log-rel :exit exit)]
+        (if-not (zero? exit)
+          (record! req rel-of base
+                   [(command/finding log-rel "test-command-failed"
+                                     (str "the test command " (str/join " " cmd) " failed with exit status " exit
+                                          "; its output is in " log-rel))]
+                   result)
+          (let [{rs :results unreadable :findings} (read-results req results)]
+            (record! req rel-of base
+                     (if (and (empty? rs) (empty? unreadable))
+                       [(command/finding results-rel "no-results"
+                                         (str "the test command exited 0 and wrote no Allure result into " results-rel
+                                              ": a green exit with no results is not a run"))]
+                       (concat unreadable (result-findings rs scenarios results-rel)))
+                     (assoc result :scenarios (count scenarios)))))))))

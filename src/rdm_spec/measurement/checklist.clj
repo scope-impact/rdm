@@ -1,236 +1,190 @@
 (ns rdm-spec.measurement.checklist
-  "Checklist (dhf/spec/measurement/checklist.feature): `rdm-spec checklist
-  CYCLE` derives the cycle's checklist from the spec at the cycle's cut into
-  dhf/cycles/CYCLE/checklist.json, for a grader to grade. Never written by
-  hand: the spec is its only author.
+  "The Checklist component (dhf/spec/measurement/checklist.feature): `rdm-spec
+  checklist CYCLE` derives dhf/cycles/CYCLE/checklist.json from the spec at
+  the cycle's cut, never by hand: one item per stamped scenario of the
+  cycle's scope not tagged @wip, the @wip ones listed apart as planned, and,
+  under the regulated profile, one item per clause after them.
 
-  It reads the spec through the SpecParsed event (the parser, run first,
-  reads it at the cut cycle.edn names) and, under the regulated profile, the
-  clauses through ClausesIndexed (the gap stage, run before it).
+  The spec arrives as SpecParsed and the clauses as ClausesIndexed (the
+  parser and the gap analysis run as earlier stages of the task, at the
+  cut; this namespace's `subscriptions` keep their payloads).
 
-  In order:
-    cannot run (exit 2): a cycle name that is no directory name, no
-      cycle.edn or one that is not an EDN map, no :cut in it, a cut the
-      repository does not hold, a :scope of another shape than :project,
-      {:context :c}, {:component :c/n} or a vector of those.
-    findings (exit 1), writing nothing: a scenario carrying no single id
-      (scenario-unstamped, at its file and line), a stamped scenario with no
-      single level (scenario-no-level), the parser's refusals (relayed), and
-      a checklist with nothing in it (checklist-empty): an unstamped scenario
-      or an empty spec stops the checklist rather than shrinking it.
+  checklist.json, its keys in this order (spec-0210):
 
-  checklist.json, keys in this order:
-    {\"cycle\" \"03\" \"cut\" \"spec-3\"
-     \"items\"   [{\"id\" \"title\" \"context\" \"component\" \"level\"}]  ; by id
-     \"planned\" [{\"id\" \"title\"}]}                                  ; @wip, by id
-  Only the scenarios of the cycle's scope are listed. Under the regulated
-  profile, when the scope is the whole project or names the context
-  compliance, every clause follows the scenario items, in the clause lists'
-  order with includes in place, each key once:
-    {\"id\" key \"title\" description \"context\" \"compliance\"
-     \"component\" clause-list-file \"level\" \"clause\"}
+    {\"cycle\" \"03\", \"cut\" \"spec-3\",
+     \"items\":   [{\"id\" \"title\" \"context\" \"component\" \"level\"}]  ; by id, clauses after
+     \"planned\": [{\"id\" \"title\"}]}                                  ; by id
 
-  Cycle helpers the scorer and the scoreboard share: `cycle-file`,
-  `read-cycle` (the map carries ::file), `read-edn-file`, `id-order`."
+  context and component are the model's :name; a clause item's context is
+  \"compliance\", its component the clause list it is written in, its level
+  \"clause\".
+
+  A cycle's scope (cycle.edn :scope, :project when absent): :project,
+  {:context :c}, {:component :c/n}, or a vector of contexts and components.
+  Clause items belong to a cycle scoped to the project or naming the context
+  compliance.
+
+  Refusals, writing nothing: no cycle.edn, one that is not a map naming a
+  :cut, a scope of another shape, or a cut the repository does not hold
+  cannot run (exit 2). A scenario the cut holds with no id stops the
+  checklist rather than shrinking it (checklist-unstamped, at its file and
+  line), as does any other refusal of the parser (relayed unchanged), and a
+  cut or scope with nothing to grade (checklist-empty): exit 1.
+
+  Result: {:checklist {:cycle :cut :file :items n :planned n}}."
   (:require [babashka.fs :as fs]
-            [babashka.process :as p]
             [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]))
 
 ;; ---------------------------------------------------------------------------
-;; Cycles
+;; Events
 
-(defn cycles-dir
-  "The configured cycles directory, without a trailing /."
+(defn subscriptions
+  "Keeps SpecParsed's and ClausesIndexed's payloads in the run's state."
   [req]
-  (str/replace (str (or (get-in req [:config :cycles-dir]) "dhf/cycles")) #"/+$" ""))
+  [[:SpecParsed (fn [payload] (swap! (:state req) assoc ::spec payload) nil)]
+   [:ClausesIndexed (fn [payload] (swap! (:state req) assoc ::clauses payload) nil)]])
 
-(defn- cycle-name! [cycle]
-  (when-not (and (string? cycle) (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]*" cycle))
-    (command/cannot-run! (str "the cycle " (pr-str cycle) " is no cycle name: a cycle is a directory name such as 03")))
-  cycle)
+;; ---------------------------------------------------------------------------
+;; The cycle
 
-(defn cycle-file
-  "The project path of the file `f` of cycle `cycle`: dhf/cycles/CYCLE/f."
-  [req cycle f]
-  (str (cycles-dir req) "/" (cycle-name! cycle) "/" f))
+(defn cycle-rel
+  "dhf/cycles/<cycle>/<file>, under the configured cycles directory."
+  [req cycle file]
+  (str (str/replace (str (command/config-value req :cycles-dir)) #"/+$" "") "/" cycle "/" file))
 
-(defn read-edn-file
-  "The EDN value of the project file `rel`. When it does not exist: `default`
-  (3 arguments), else cannot run. One that is not readable EDN cannot run."
-  ([req rel]
-   (let [v (read-edn-file req rel ::missing)]
-     (when (= ::missing v) (command/cannot-run! (str "no " rel)))
-     v))
-  ([req rel default]
-   (let [f (command/path req rel)]
-     (if-not (fs/regular-file? f)
-       default
-       (try (edn/read-string (slurp (str f)))
-            (catch Exception e
-              (command/cannot-run! (str rel " is not readable EDN: " (ex-message e)))))))))
+(defn valid-cycle-name? [cycle]
+  (boolean (and (string? cycle) (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]*" cycle))))
 
-(defn read-cycle
-  "The cycle's cycle.edn as a map, carrying ::file (its path), or cannot run."
+(defn- read-cycle
+  "The cycle's cycle.edn, read; cannot run when it is missing or unreadable."
   [req cycle]
-  (let [rel (cycle-file req cycle "cycle.edn")
-        c (read-edn-file req rel nil)]
-    (cond
-      (nil? c) (command/cannot-run! (str "no " rel ": a cycle is declared by hand in its cycle.edn before it is measured"))
-      (not (map? c)) (command/cannot-run! (str rel " is not an EDN map"))
-      :else (assoc c ::file rel))))
+  (when-not (valid-cycle-name? cycle)
+    (command/cannot-run! (str "the cycle " (pr-str cycle) " is not a cycle's name, such as 03")))
+  (let [rel (cycle-rel req cycle "cycle.edn")
+        f (command/path req rel)]
+    (when-not (fs/regular-file? f)
+      (command/cannot-run! (str "no " rel ": a cycle is declared by hand in its cycle.edn before its checklist")))
+    (let [c (try (edn/read-string (slurp (str f)))
+                 (catch Exception e (command/cannot-run! (str rel " is not readable EDN: " (ex-message e)))))]
+      (when-not (map? c) (command/cannot-run! (str rel " is not an EDN map")))
+      (when-not (and (string? (:cut c)) (not (str/blank? (:cut c))))
+        (command/cannot-run! (str rel " names no :cut")))
+      c)))
 
 ;; ---------------------------------------------------------------------------
-;; Ids
+;; Scopes
 
-(defn- id-key [id]
-  (let [s (str id)
-        [_ n] (re-matches #"[A-Za-z][A-Za-z0-9_]*-(\d+)" s)]
-    (if n
-      [0 (str/replace s #"-\d+$" "") (parse-long n) s]
-      [1 s 0 s])))
-
-(defn id-order
-  "Pure: the ids sorted: scenario ids (prefix-NNNN) by prefix and number,
-  then any other (a clause key) by its text."
-  [ids]
-  (vec (sort-by id-key (distinct (seq ids)))))
-
-;; ---------------------------------------------------------------------------
-;; Scope
+(defn- scope-part? [x]
+  (and (map? x) (= 1 (count x))
+       (or (and (contains? x :context) (keyword? (:context x)) (nil? (namespace (:context x))))
+           (and (contains? x :component) (keyword? (:component x)) (some? (namespace (:component x)))))))
 
 (defn scope-parts
-  "Pure: the scope as [{:context kw} | {:component kw}], nil for the whole
-  project, or ::malformed."
+  "Pure: the parts of a scope, [{:context k} | {:component k}], or nil for
+  the whole project; :invalid when it has another shape."
   [scope]
-  (let [part? (fn [p] (and (map? p) (= 1 (count p))
-                           (or (keyword? (:context p)) (qualified-keyword? (:component p)))))]
-    (cond
-      (or (nil? scope) (= :project scope)) nil
-      (part? scope) [scope]
-      (and (vector? scope) (seq scope) (every? part? scope)) scope
-      :else ::malformed)))
+  (cond
+    (or (nil? scope) (= :project scope)) nil
+    (scope-part? scope) [scope]
+    (and (vector? scope) (seq scope) (every? scope-part? scope)) scope
+    :else :invalid))
 
 (defn in-scope?
-  "Pure: whether the scenario (its :context and :component, the model's ids)
-  lies in the scope parts (nil: the whole project)."
+  "Pure: whether the scenario (:context and :component, the model's ids)
+  belongs to the scope's parts (nil: the project)."
   [parts {:keys [context component]}]
   (or (nil? parts)
-      (boolean (some #(or (and (:context %) (= (:context %) context))
-                          (and (:component %) (= (:component %) component)))
-                     parts))))
+      (boolean (some (fn [p] (if (:context p) (= (:context p) context) (= (:component p) component))) parts))))
 
 (defn clauses-in-scope?
-  "Pure: clause items belong to a cycle scoped to the whole project or naming
-  the context compliance."
+  "Pure: whether a cycle with these scope parts carries clause items."
   [parts]
   (or (nil? parts) (boolean (some #(= :compliance (:context %)) parts))))
 
 ;; ---------------------------------------------------------------------------
-;; Items
+;; The checklist, as data
 
-(defn- level-name [l] (if (keyword? l) (name l) (str l)))
+(defn- nm [x] (cond (nil? x) nil (keyword? x) (name x) :else (str x)))
 
-(defn scenario-findings
-  "Pure: what stops the checklist in the scenarios: one without a single id,
-  one stamped with no single level."
+(defn scenario-item
+  "Pure: a parsed scenario as an item to grade."
+  [{:keys [id title context-name component-name level]}]
+  (array-map "id" id "title" title "context" (nm context-name) "component" (nm component-name) "level" (nm level)))
+
+(defn clause-item
+  "Pure: a clause (ClausesIndexed) as an item to grade."
+  [{:keys [key description clause-list]}]
+  (array-map "id" key "title" description "context" "compliance" "component" clause-list "level" "clause"))
+
+(defn derive-checklist
+  "Pure: the checklist of `cycle` at `cut` from the scenarios (SpecParsed's)
+  and the clauses (ClausesIndexed's, or nil), for the scope's parts."
+  [cycle cut scenarios clauses parts]
+  (let [stamped (filter #(and (:id %) (in-scope? parts %)) scenarios)
+        by-id #(sort-by (fn [x] (get x "id")) %)
+        items (by-id (map scenario-item (remove :wip? stamped)))
+        planned (by-id (map #(array-map "id" (:id %) "title" (:title %)) (filter :wip? stamped)))
+        clause-items (when (and clauses (clauses-in-scope? parts))
+                       (->> clauses
+                            (reduce (fn [[seen acc] c]
+                                      (if (seen (:key c)) [seen acc] [(conj seen (:key c)) (conj acc (clause-item c))]))
+                                    [#{} []])
+                            second))]
+    (array-map "cycle" cycle "cut" cut "items" (vec (concat items clause-items)) "planned" (vec planned))))
+
+(defn unstamped-findings
+  "Pure: a finding for each scenario with no id (stamped scenarios only are
+  items), at its file and line."
   [scenarios]
-  (vec (concat
-        (for [sc scenarios :when (nil? (:id sc))]
-          (command/finding (:file sc) (:line sc) "scenario-unstamped"
-                           (str "the scenario " (pr-str (:title sc))
-                                " carries no single id: an unstamped scenario stops the checklist rather than shrinking it;"
-                                " stamp it first")))
-        (for [sc scenarios :when (and (:id sc) (nil? (:level sc)))]
-          (command/finding (:file sc) (:line sc) "scenario-no-level"
-                           (str (:id sc) " carries no single level, so it cannot be an item to grade"))))))
-
-(defn items
-  "Pure: {:items [..] :planned [..]} of the stamped scenarios in scope,
-  each sorted by id, keys in the published order."
-  [scenarios parts]
-  (let [scs (filter #(and (:id %) (in-scope? parts %)) scenarios)
-        by-id (fn [xs] (sort-by #(id-key (get % "id")) xs))]
-    {:items (vec (by-id (for [sc scs :when (not (:wip? sc))]
-                          (array-map "id" (:id sc)
-                                     "title" (:title sc)
-                                     "context" (or (:context-name sc) (some-> (:context sc) name))
-                                     "component" (or (:component-name sc) (some-> (:component sc) name))
-                                     "level" (level-name (:level sc))))))
-     :planned (vec (by-id (for [sc scs :when (:wip? sc)]
-                            (array-map "id" (:id sc) "title" (:title sc)))))}))
-
-(defn clause-items
-  "Pure: a checklist item per clause, in the order given."
-  [clauses]
-  (vec (for [c clauses]
-         (array-map "id" (:key c)
-                    "title" (:description c)
-                    "context" "compliance"
-                    "component" (:clause-list c)
-                    "level" "clause"))))
-
-(defn checklist-text
-  "Pure: checklist.json's text, keys in the published order."
-  [cycle cut items planned]
-  (str (json/generate-string (array-map "cycle" cycle "cut" cut "items" items "planned" planned)
-                             {:pretty true})
-       "\n"))
+  (vec (for [{:keys [id file line title ids]} scenarios
+             :when (nil? id)]
+         (if (empty? ids)
+           (command/finding file line "checklist-unstamped"
+                            (str "the scenario \"" title "\" carries no id: an unstamped scenario stops the checklist"
+                                 " rather than shrinking it (rdm-spec stamp)"))
+           (command/finding file line "checklist-ids"
+                            (str "the scenario \"" title "\" carries " (count ids) " ids, not one: the checklist"
+                                 " cannot name it as one item"))))))
 
 ;; ---------------------------------------------------------------------------
 ;; The stage
 
-(defn subscriptions
-  "Keeps SpecParsed and ClausesIndexed in the run's state."
-  [req]
-  (for [e [:SpecParsed :ClausesIndexed]]
-    [e (fn [payload] (swap! (:state req) assoc-in [::events e] payload) nil)]))
-
-(defn- event [req e] (some-> (:state req) deref (get-in [::events e])))
-
-(defn- commit-of [root rev]
-  (let [r (p/shell {:dir (str root) :out :string :err :string :continue true :in ""}
-                   "git" "rev-parse" "--verify" "--quiet" (str rev "^{commit}"))]
-    (when (zero? (:exit r)) (not-empty (str/trim (:out r))))))
-
 (defn checklist
-  "The checklist stage."
+  "The checklist stage: derives and writes dhf/cycles/CYCLE/checklist.json."
   [req]
-  (let [cycle-name (first (:args req))
-        cycle (read-cycle req cycle-name)
-        cut (:cut cycle)
-        _ (when-not (and (string? cut) (not (str/blank? cut)))
-            (command/cannot-run! (str (::file cycle) " names no :cut: a cycle reads one cut")))
-        _ (when-not (commit-of (:root req) cut)
-            (command/cannot-run! (str "the cut " cut " that " (::file cycle) " names is no commit of this repository")))
-        parts (scope-parts (:scope cycle))
-        _ (when (= ::malformed parts)
-            (command/cannot-run! (str (::file cycle) " has the scope " (pr-str (:scope cycle))
-                                      ": a scope is :project, {:context :c}, {:component :c/n} or a vector of those")))
-        parsed (or (event req :SpecParsed)
-                   (command/cannot-run! (str "the spec at the cut " cut " could not be read")))
-        scenarios (:scenarios parsed)
-        refusals (for [{:keys [file line rule message]} (:refusals parsed)]
-                   (command/finding file line rule message))
-        stops (vec (concat refusals (scenario-findings scenarios)))
-        rel (cycle-file req cycle-name "checklist.json")]
-    (if (seq stops)
-      {:result {} :findings stops}
-      (let [{:keys [items planned]} (items scenarios parts)
-            clauses (when (and (contains? (:config req) :regulated) (clauses-in-scope? parts))
-                      (clause-items (:clauses (event req :ClausesIndexed))))
-            all (into items clauses)]
-        (if (and (empty? all) (empty? planned))
-          {:result {}
-           :findings [(command/finding (::file cycle) nil "checklist-empty"
-                                       (str "the spec at the cut " cut " holds no stamped scenario in the scope "
-                                            (pr-str (or (:scope cycle) :project))
-                                            ": an empty spec stops the checklist rather than producing an empty one"))]}
-          (let [f (command/path req rel)]
-            (fs/create-dirs (fs/parent f))
-            (spit (str f) (checklist-text cycle-name cut all planned))
-            {:result {:checklist {:cycle cycle-name :cut cut :file rel
-                                  :items (count all) :clauses (count clauses) :planned (count planned)}}
-             :findings []}))))))
+  (let [cycle (first (:args req))
+        c (read-cycle req cycle)
+        parts (scope-parts (:scope c))
+        _ (when (= :invalid parts)
+            (command/cannot-run! (str (cycle-rel req cycle "cycle.edn") " holds the scope " (pr-str (:scope c))
+                                      ", not :project, {:context C}, {:component C/N} or a vector of them")))
+        st (some-> (:state req) deref)
+        spec (or (::spec st)
+                 (command/cannot-run! (str "the cut " (:cut c) " that " (cycle-rel req cycle "cycle.edn")
+                                           " names is not a commit of this repository, so its spec cannot be read")))
+        scenarios (:scenarios spec)
+        refusals (vec (concat (for [{:keys [file line rule message]} (:refusals spec)]
+                                (command/finding file line rule message))
+                              (unstamped-findings scenarios)))
+        cl (derive-checklist cycle (:cut c) scenarios (:clauses (::clauses st)) parts)
+        rel (cycle-rel req cycle "checklist.json")]
+    (cond
+      (seq refusals)
+      {:result {} :findings (vec (distinct refusals))}
+
+      (empty? (get cl "items"))
+      {:result {}
+       :findings [(command/finding (cycle-rel req cycle "cycle.edn") "checklist-empty"
+                                   (str "the cut " (:cut c) (when parts (str " within the scope " (pr-str (:scope c))))
+                                        " holds no stamped scenario to grade: an empty checklist would judge nothing"))]}
+
+      :else
+      (let [f (command/path req rel)]
+        (fs/create-dirs (fs/parent f))
+        (spit (str f) (str (json/generate-string cl {:pretty true}) "\n"))
+        {:result {:checklist {:cycle cycle :cut (:cut c) :file rel
+                              :items (count (get cl "items")) :planned (count (get cl "planned"))}}
+         :findings []}))))

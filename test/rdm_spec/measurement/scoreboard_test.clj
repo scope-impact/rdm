@@ -1,52 +1,39 @@
 (ns rdm-spec.measurement.scoreboard-test
-  (:require [babashka.fs :as fs]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.measurement.scoreboard :as sb]))
 
-(defn- score [scope vs] {:scope scope :items (for [[id v] vs] {:id id :verdict v})})
+(defn- cyc [nn scope verdicts]
+  {:cycle nn :scope scope :bootstrap? false
+   :score {:items (vec (for [[id v] verdicts] {:id id :verdict v}))}})
 
-(deftest both-directions-never-a-net
-  (let [b (sb/compare-scores "01" (score :project {"a" :fail "b" :pass "c" :fail})
-                             "02" (score :project {"a" :pass "b" :fail "c" :fail}))]
-    (is (= [3 1 1 ["a"] ["b"]] ((juxt :compared :better :worse :better-items :worse-items) b)))
-    (is (empty? (:statements b)))
-    (is (not-any? #(re-find #"net" (name %)) (keys b)))))
+(deftest both-directions-never-the-net
+  (let [r (sb/compare-cycles (cyc "01" :project [["a" :fail] ["b" :pass] ["c" :pass]])
+                             (cyc "02" :project [["a" :pass] ["b" :fail] ["c" :pass]]))]
+    (is (= {:count 1 :items ["a"]} (:better r)))
+    (is (= {:count 1 :items ["b"]} (:worse r)))
+    (is (= 3 (:compared r)))
+    (is (not (:moved (:denominator r))))
+    (is (not-any? #(str/includes? (name %) "net") (keys r)))))
 
-(deftest a-moved-denominator-is-said
-  (let [b (sb/compare-scores "01" (score :project {"a" :fail "b" :pass})
-                             "02" (score :project {"a" :pass "b" :pass "c" :fail "d" :pass}))]
-    (is (= 2 (:compared b)))
-    (is (= ["c" "d"] (get-in b [:only-in "02"])))
-    (is (some #(str/includes? % "the denominator moved from 2 to 4") (:statements b)))))
+(deftest a-moved-denominator-and-new-items
+  (let [r (sb/compare-cycles (cyc "01" :project [["a" :pass]])
+                             (cyc "02" :project [["a" :pass] ["b" :pass]]))]
+    (is (= {:from 1 :to 2 :moved true} (:denominator r)))
+    (is (= {:cycle "02" :count 1 :items ["b"]} (:new r)))
+    (is (some #(str/includes? % "denominator moved from 1 to 2") (:says r)))))
 
-(deftest a-scoped-cycle-is-reported-target-first
-  (let [b (sb/compare-scores "01" (score :project {"v1" :fail "v2" :pass "r1" :pass})
-                             "02" (score {:context :verification} {"v1" :pass "v2" :pass}))]
-    (is (= [:cycles :target :rest :statements] (keys b)))
-    (is (= [2 1 0] ((juxt :compared :better :worse) (:target b))))
-    (is (= {"02" 1} (get-in b [:rest :not-scored])))
-    (is (some #(str/includes? % "the rest was not scored in cycle 02") (:statements b))))
-  (testing "the earlier cycle scoped"
-    (let [b (sb/compare-scores "01" (score {:context :verification} {"v1" :fail})
-                               "02" (score :project {"v1" :pass "r1" :pass}))]
-      (is (= "01" (get-in b [:target :cycle])))
-      (is (= 1 (get-in b [:target :better]))))))
+(deftest a-scoped-cycle-target-first
+  (let [r (sb/compare-cycles (cyc "01" :project [["a" :pass] ["v" :fail]])
+                             (cyc "02" {:context :verification} [["v" :pass]]))]
+    (is (= {:count 1 :items ["v"]} (:better r)))
+    (is (= {:cycle "02" :count 1 :items ["a"]} (:not-scored r)))
+    (is (str/includes? (first (:says r)) "{:context :verification}"))
+    (is (some #(str/includes? % "not scored in cycle 02") (:says r)))))
 
-(deftest the-stage
-  (let [root (str (fs/create-temp-dir))
-        w (fn [c f v] (spit (str (doto (fs/file root "dhf/cycles" c) fs/create-dirs) "/" f) (pr-str v)))
-        req {:root root :task "scoreboard" :args ["00" "01"] :config {:cycles-dir "dhf/cycles"}}]
-    (try
-      (w "00" "cycle.edn" {:cut "spec-1" :bootstrap true})
-      (w "01" "cycle.edn" {:cut "spec-2"})
-      (testing "a cycle that was not scored cannot be compared"
-        (w "02" "cycle.edn" {:cut "spec-3"})
-        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"has not been scored"
-                              (sb/scoreboard (assoc req :args ["01" "02"])))))
-      (testing "a bootstrap is marked and nothing is compared"
-        (let [{:keys [result findings]} (sb/scoreboard req)]
-          (is (= ["00"] (get-in result [:scoreboard :bootstrap])))
-          (is (not (contains? (:scoreboard result) :better)))
-          (is (every? #(= :warning (:severity %)) findings))))
-      (finally (fs/delete-tree root)))))
+(deftest a-bootstrap-is-never-a-baseline
+  (let [r (sb/compare-cycles {:cycle "00" :bootstrap? true :scope :project}
+                             (cyc "01" :project [["a" :pass]]))]
+    (is (= ["00"] (:bootstrap r)))
+    (testing "nothing is counted"
+      (is (not-any? #(contains? r %) [:better :worse :compared])))))

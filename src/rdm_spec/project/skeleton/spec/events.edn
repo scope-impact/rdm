@@ -1,0 +1,10 @@
+;; The event catalogue: the domain events that pass between bounded contexts
+;; within one run, which are the contracts between them. Each is declared as
+;;
+;;   :EventName {:description "what happened"
+;;               :published-by :context/component
+;;               :carries [:key ...]
+;;               :shape {:key "what it holds"}}
+;;
+;; An empty catalogue declares nothing, and so checks nothing.
+{}

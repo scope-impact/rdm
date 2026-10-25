@@ -1,205 +1,129 @@
 (ns steps.spec-support
-  "Fixtures for the spec context's step definitions (spec_check, spec_parser,
-  spec_stamper): a copy of the room's spec with one component's feature file
-  replaced by a fixture, and minimal projects for the stamper."
+  "Fixtures for the spec context's step definitions (spec_parser, spec_stamper,
+  spec_check): small projects the scenario makes, never the room.
+
+  A spec project is a directory holding the room's configuration (without
+  :oracle and :regulated), a model whose kernel components own the fixture's
+  feature files (dhf/spec/kernel/<name>.feature: no bounded context, so no
+  view is needed for the whole check to pass), five declared needs citing a
+  recorded source, a ledger, and the feature files the scenario writes.
+
+  Context keys set by this context's steps:
+    :dir        the project
+    :file       the feature file a step wrote or changed (relative to :dir)
+    :line       the line a step is about
+    :scenario   {:id :title :file :line} of the scenario a step is about
+    :ledger-before  the ledger's text before the run
+    :title      the title of the scenario a later step looks for"
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.gherkin :as gherkin]
             [steps.support :as s]))
 
-(def check-stages
-  "Every namespace `rdm-spec check` runs: a scenario that expects the whole
-  check to pass cannot be verified while one is not built."
-  ['rdm-spec.knowledge.sources 'rdm-spec.spec.check 'rdm-spec.spec.parser
-   'rdm-spec.architecture.lint 'rdm-spec.architecture.views])
+(def spec-ns ['rdm-spec.spec.parser 'rdm-spec.spec.stamper 'rdm-spec.spec.check])
 
-(defn spec-file [dir spec-path] (str (fs/file dir "dhf/spec" (str spec-path ".feature"))))
+(defn needs-spec! [] (apply s/needs-built! spec-ns))
 
-(defn- spec-files [dir]
-  (sort (map str (fs/glob (fs/file dir "dhf/spec") "**.feature"))))
+(def default-needs
+  (into (sorted-map)
+        (for [i (range 1 6)]
+          [(format "UN-%03d" i) {:text (str "A fixture need, number " i ".")
+                                 :sources ["demo:README.md@abc1234"]}])))
 
-(defn ids-in [text] (set (re-seq #"@spec-\d+" text)))
+(defn- model-text [components]
+  (pr-str {:system {:id :sauna :name "Sauna" :description "Books sauna turns"}
+           :containers [{:id :app :name "App" :kind :runs :technology "A program"
+                         :description "Takes the bookings"}]
+           :kernel (vec (for [c components]
+                          {:id (keyword c) :name (str/capitalize c) :description (str "The " c " of the fixture")
+                           :spec (str "kernel/" c)}))}))
 
-(defn features!
-  "Replaces the feature files of the spec paths (e.g. \"spec/parser\") in
-  the project `dir` with the texts of `fixtures`, {spec-path text}. Any id the
-  fixtures use that another feature file of the spec also carries is moved
-  off that file, to an id far above the ledger, so the fixtures' ids are the
-  only ones of their kind. Returns the files' paths relative to `dir`."
-  [dir fixtures]
-  (let [fs* (set (for [[sp text] fixtures]
-                   (let [f (spec-file dir sp)] (spit f text) (str (fs/absolutize f)))))
-        used (set (mapcat ids-in (vals fixtures)))
-        counter (atom 9000)]
-    (doseq [g (spec-files dir)
-            :when (not (contains? fs* (str (fs/absolutize g))))
-            :let [t (slurp g)
-                  hit (filter #(str/includes? t %) used)]
-            :when (seq hit)]
-      (spit g (reduce (fn [t id] (str/replace t (re-pattern (str id "(?!\\d)"))
-                                              (str "@spec-" (swap! counter inc))))
-                      t hit)))
-    (mapv #(str "dhf/spec/" % ".feature") (keys fixtures))))
+(defn feature-rel [component] (str "dhf/spec/kernel/" component ".feature"))
 
-(defn feature!
-  "features! for one fixture; returns its file's path relative to `dir`."
-  [dir spec-path text]
-  (first (features! dir {spec-path text})))
+(defn scenario-text
+  "A scenario: {:tags [\"@spec-0001\" \"@e2e\"] :title} as feature text, two
+  spaces in."
+  [{:keys [tags title]}]
+  (str (when (seq tags) (str "  " (str/join " " tags) "\n"))
+       "  Scenario: " title "\n"
+       "    Given a fixture\n"
+       "    When \"rdm-spec check\" is run\n"
+       "    Then it passes\n"))
 
-(defn fixture-feature
-  "A feature file holding one scenario under a rule. Options:
-  :feature-tags :name :tags :description (extra description lines),
-  :leading (comment lines before the feature, to place the scenario)."
-  [{:keys [feature-tags name tags description leading feature-name]
-    :or {feature-tags "@UN-002" name "A fixture scenario" feature-name "Parser"}}]
-  (str (str/join (map #(str % "\n") leading))
-       (when (seq feature-tags) (str feature-tags "\n"))
-       "Feature: " feature-name "\n"
-       "  A fixture of the spec context's tests.\n"
-       (str/join (map #(str "  " % "\n") description))
-       "\n"
-       "  Rule: The fixture's rule\n\n"
-       (when (seq tags) (str "    " tags "\n"))
-       "    Scenario: " name "\n"
-       "      Given a fixture\n"
-       "      When the fixture runs\n"
-       "      Then the fixture holds\n"))
+(defn feature-text
+  "A feature file: its tags (default @UN-001), name and scenarios."
+  ([nm scenarios] (feature-text nm ["@UN-001"] scenarios))
+  ([nm tags scenarios]
+   (str "# A fixture feature file.\n\n"
+        (when (seq tags) (str (str/join " " tags) "\n"))
+        "Feature: " nm "\n  A fixture.\n\n"
+        (str/join "\n" (map scenario-text scenarios)))))
 
-(defn scenario-line
-  "The line of the Scenario named `name` in `text`."
-  [text name]
-  (some (fn [[i l]] (when (= (str/trim l) (str "Scenario: " name)) (inc i)))
+(defn write-feature!
+  "Writes the feature file of `component` in the project `dir`."
+  [dir component text]
+  (s/write! dir (feature-rel component) text))
+
+(defn write-model!
+  "The project's model, its kernel components owning `components`' feature files."
+  [dir components]
+  (s/write! dir "dhf/spec/model.edn" (str (model-text components) "\n")))
+
+(defn write-needs! [dir needs] (s/write! dir "dhf/spec/needs.edn" (str (pr-str needs) "\n")))
+
+(defn write-ledger! [dir n] (s/write! dir "dhf/spec/ids.edn" (str ";; The id ledger.\n{:issued " n "}\n")))
+
+(defn ledger-of [dir] (:issued (edn/read-string (slurp (str (fs/file dir "dhf/spec/ids.edn"))))))
+
+(defn spec-project!
+  "A new spec project: `features` {component text}, the ledger at `ledger`,
+  the declared `needs` and configuration `overrides`."
+  [{:keys [features ledger needs overrides] :or {ledger 10 needs default-needs}}]
+  (needs-spec!)
+  (let [dir (s/project! (merge {:stack-words (:stack-words (s/room-config))} overrides))
+        cfg (edn/read-string (slurp (str (fs/file dir "dhf/harness/config.edn"))))]
+    (s/write! dir "dhf/harness/config.edn" (pr-str (dissoc cfg :regulated)))
+    (write-model! dir (sort (keys features)))
+    (s/write! dir "dhf/spec/events.edn" "{}\n")
+    (write-needs! dir needs)
+    (write-ledger! dir ledger)
+    (s/write! dir "dhf/raw/sources.edn"
+              (pr-str {:demo {:repository "https://example.invalid/demo.git" :record "demo.md"
+                              :pins ["abc1234"] :fenced []}}))
+    (s/write! dir "dhf/raw/demo.md" "# demo\n\nA fixture source.\n")
+    (doseq [[c text] features] (write-feature! dir c text))
+    dir))
+
+(defn parse
+  "The feature file `rel` of the project `dir`, read by the kernel's reader."
+  [dir rel]
+  (gherkin/parse-feature rel (slurp (str (fs/file dir rel)))))
+
+(defn scenarios-of
+  "Every scenario of every feature file under the project's dhf/spec:
+  [{:file :line :title :tags}]."
+  [dir]
+  (vec (for [f (sort (map str (fs/glob (fs/file dir "dhf/spec") "**.feature")))
+             :let [rel (str (fs/relativize dir f))]
+             sc (:scenarios (parse dir rel))]
+         {:file rel :line (:line sc) :title (:name sc) :tags (:tags sc)})))
+
+(defn scenario-titled!
+  "The scenario titled `title` in the project `dir`; the step fails when
+  there is not exactly one."
+  [dir title]
+  (let [scs (filter #(= title (:title %)) (scenarios-of dir))]
+    (s/check! (= 1 (count scs)) (str (count scs) " scenarios are titled " (pr-str title)))
+    (first scs)))
+
+(defn line-of
+  "The line number of the first line of `text` that, trimmed, starts with `start`."
+  [text start]
+  (some (fn [[i l]] (when (str/starts-with? (str/trim l) start) (inc i)))
         (map-indexed vector (str/split-lines text))))
 
-(defn room!
-  "A copy of the room's spec, with every view generated when the views are
-  built (so a check of the copy can pass)."
-  []
-  (s/copy-of-room!))
-
-(defn generate-views!
-  "Generates the views in `dir`, when the views are built, so the views'
-  freshness check can pass."
-  [dir]
-  (when (s/built? 'rdm-spec.architecture.views)
-    (s/rdm-spec! dir "views"))
-  dir)
-
-(defn ensure-room!
-  "`ctx`'s project, a copy of the room's spec when it has none yet (or when
-  the one it has holds no spec: the allow-listed paths are copied in, its
-  configuration kept)."
-  [ctx]
-  (let [dir (or (:dir ctx) (room!))]
-    (when-not (fs/exists? (fs/file dir "dhf/spec/model.edn"))
-      (let [cfg (when (fs/exists? (fs/file dir "dhf/harness/config.edn"))
-                  (slurp (str (fs/file dir "dhf/harness/config.edn"))))
-            room (room!)]
-        (doseq [a (get-in (s/room-config) [:clean-room :allow])
-                :let [src (fs/file room a)]
-                :when (fs/exists? src)]
-          (if (fs/directory? src)
-            (fs/copy-tree src (fs/file dir a) {:replace-existing true})
-            (do (fs/create-dirs (fs/parent (fs/file dir a)))
-                (fs/copy src (fs/file dir a) {:replace-existing true}))))
-        (when cfg (spit (str (fs/file dir "dhf/harness/config.edn")) cfg))))
-    (assoc ctx :dir dir)))
-
-(defn update-edn!
-  "Rewrites the EDN file `rel` under `dir` as (f value)."
-  [dir rel f]
-  (let [file (fs/file dir rel)
-        v (edn/read-string (slurp (str file)))]
-    (spit (str file) (pr-str (f v)))))
-
-(defn config! [dir f] (update-edn! dir "dhf/harness/config.edn" f))
-
-(defn needs! [dir f] (update-edn! dir "dhf/spec/needs.edn" f))
-
-(defn finding-lines
-  "The lines of the run's error stream that are findings (no event lines)."
-  [run]
-  (vec (remove #(str/starts-with? % "event: ") (s/err-lines run))))
-
-(defn line-with
-  "The first error line containing every one of `parts`, or nil."
-  [run & parts]
-  (first (filter (fn [l] (every? #(str/includes? l %) parts)) (finding-lines run))))
-
-(defn fails-naming!
-  "Checks the run exited 1 and one finding line names every one of `parts`."
-  [ctx & parts]
-  (let [r (:run ctx)]
-    (s/check! (= 1 (:exit r)) (str "expected exit 1\n" (s/show r)))
-    (s/check! (apply line-with r parts)
-              (str "no finding names all of " (pr-str parts) "\n" (s/show r)))))
-
-(defn result
-  "The run's standard output read as EDN, or nil."
-  [run]
-  (try (edn/read-string (:out run)) (catch Exception _ nil)))
-
-;; --- minimal projects, for the stamper ---------------------------------------
-
-(defn project!
-  "A temporary project holding only the room's configuration (merged with
-  `overrides`) and an empty spec directory."
-  ([] (project! {}))
-  ([overrides]
-   (let [dir (s/project! overrides)]
-     (fs/create-dirs (fs/file dir "dhf/spec"))
-     dir)))
-
-(defn ledger-file [dir] (str (fs/file dir "dhf/spec/ids.edn")))
-
-(defn write-ledger! [dir n]
-  (spit (ledger-file dir) (str ";; The id ledger.\n{:issued " n "}\n")))
-
-(defn ledger [dir]
-  (when (fs/exists? (ledger-file dir))
-    (:issued (edn/read-string (slurp (ledger-file dir))))))
-
-(defn scenarios-feature
-  "A feature file holding scenarios [[name tags] ...]."
-  [scs]
-  (str "@UN-001\nFeature: Demo\n  A feature for the stamper's tests.\n\n"
-       (str/join "\n"
-                 (for [[name tags] scs]
-                   (str (when (seq tags) (str "  " tags "\n"))
-                        "  Scenario: " name "\n"
-                        "    Given a step\n"
-                        "    Then another\n")))))
-
-(defn tags-of
-  "The own tags of the scenario named `name` in any feature file under dir's
-  spec, or nil when there is none."
-  [dir name]
-  (first (for [f (spec-files dir)
-               sc (:scenarios (gherkin/parse-feature f (slurp f)))
-               :when (= name (:name sc))]
-           (:tags sc))))
-
-(defn spec-snapshot
-  "{relative path content} of every file under dhf/spec of `dir` (the shape
-  the status steps snapshot in, :spec-before)."
-  [dir]
-  (into (sorted-map)
-        (for [f (fs/glob (fs/file dir "dhf/spec") "**") :when (fs/regular-file? f)]
-          [(str (fs/relativize dir f)) (slurp (str f))])))
-
-(defn mtimes
-  "{path mtime} of every file under the spec directory."
-  [dir]
-  (into {} (for [f (fs/glob (fs/file dir "dhf/spec") "**") :when (fs/regular-file? f)]
-             [(str f) (str (fs/last-modified-time f))])))
-
-;; --- steps the spec shares with other contexts' features -----------------------
-
-(defn ensure-shared-steps!
-  "Defines nothing: \"it passes\" and \"no file in the spec changes\", which
-  the spec context's features share with other contexts', are the kernel's
-  (steps.kernel-command), defined once when its step file loads. Kept so the
-  step files that still call it load."
-  []
-  nil)
+(defn finding-naming
+  "The first finding line of the run naming every one of `parts`, or nil."
+  [lines parts]
+  (first (filter (fn [l] (every? #(str/includes? l (str %)) parts)) lines)))

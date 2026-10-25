@@ -1,0 +1,5 @@
+#!/bin/sh
+# The pre-commit hook (rdm-spec init and adopt): every commit is checked.
+# The commit is refused when the check exits other than 0; its findings are
+# on the error stream.
+exec rdm-spec check

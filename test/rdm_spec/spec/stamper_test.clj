@@ -1,50 +1,37 @@
 (ns rdm-spec.spec.stamper-test
   (:require [babashka.fs :as fs]
-            [clojure.edn :as edn]
             [clojure.test :refer [deftest is]]
             [rdm-spec.spec.stamper :as stamper]))
 
-(deftest stamp-lines-puts-the-id-first-on-the-tag-line-or-above
-  (is (= ["  @spec-0005 @e2e" "  Scenario: A" "" "  @spec-0006" "  Scenario: B"]
-         (stamper/stamp-lines ["  @e2e" "  Scenario: A" "" "  Scenario: B"]
-                              {2 "@spec-0005" 4 "@spec-0006"}))))
-
-(deftest ids-are-four-digits-at-least
+(deftest ids-are-the-next-ones-never-one-taken
+  (is (= [42 43] (stamper/next-ids 41 [] 2)))
+  (is (= [42 44] (stamper/next-ids 41 [43] 2)))
   (is (= "spec-0042" (stamper/format-id "spec" 42)))
-  (is (= "loyly-12345" (stamper/format-id "loyly" 12345))))
+  (is (= "spec-12345" (stamper/format-id "spec" 12345))))
 
-(defn- req [dir]
-  {:root dir :config {:spec-dir "dhf/spec" :id-prefix "spec" :ledger "dhf/spec/ids.edn"} :state (atom {})})
+(deftest the-id-goes-first-on-the-tag-line-or-on-a-new-one
+  (is (= "Feature: F\n  @spec-0001 @e2e\n  Scenario: S\n"
+         (stamper/stamp-text "Feature: F\n  @e2e\n  Scenario: S\n" {3 "spec-0001"})))
+  (is (= "Feature: F\n  # c\n  @spec-0001 @e2e\n  # d\n  Scenario: S\n"
+         (stamper/stamp-text "Feature: F\n  # c\n  @e2e\n  # d\n  Scenario: S\n" {5 "spec-0001"})))
+  (is (= "Feature: F\n\n  @spec-0001\n  Scenario: A\n\n  @spec-0002\n  Scenario: B\n"
+         (stamper/stamp-text "Feature: F\n\n  Scenario: A\n\n  Scenario: B\n" {3 "spec-0001" 5 "spec-0002"}))))
 
-(deftest stamps-from-the-ledger-and-records-it
-  (let [dir (str (fs/create-temp-dir))]
-    (fs/create-dirs (fs/file dir "dhf/spec/a"))
-    (spit (str (fs/file dir "dhf/spec/ids.edn")) ";; c\n{:issued 41}\n")
-    (spit (str (fs/file dir "dhf/spec/a/b.feature"))
-          "@UN-001\nFeature: B\n\n  @e2e\n  Scenario: X\n    Given a\n\n  Scenario: Y\n    Given b\n")
-    (let [r (stamper/stamp (req dir))]
-      (is (= ["spec-0042" "spec-0043"] (map :id (:stamped (:result r)))))
-      (is (= 43 (:issued (edn/read-string (slurp (str (fs/file dir "dhf/spec/ids.edn")))))))
-      (is (= ";; c\n{:issued 43}\n" (slurp (str (fs/file dir "dhf/spec/ids.edn")))))
-      (is (= "@UN-001\nFeature: B\n\n  @spec-0042 @e2e\n  Scenario: X\n    Given a\n\n  @spec-0043\n  Scenario: Y\n    Given b\n"
-             (slurp (str (fs/file dir "dhf/spec/a/b.feature"))))))
-    (let [r (stamper/stamp (req dir))]
-      (is (= [] (:stamped (:result r)))))))
-
-(deftest a-higher-id-in-the-spec-is-never-issued-again
-  (let [dir (str (fs/create-temp-dir))]
-    (fs/create-dirs (fs/file dir "dhf/spec/a"))
-    (spit (str (fs/file dir "dhf/spec/ids.edn")) "{:issued 3}")
-    (spit (str (fs/file dir "dhf/spec/a/b.feature"))
-          "@UN-001\nFeature: B\n\n  @spec-0009 @e2e\n  Scenario: X\n    Given a\n\n  Scenario: Y\n    Given b\n")
-    (is (= ["spec-0010"] (map :id (:stamped (:result (stamper/stamp (req dir)))))))))
-
-(deftest a-refused-spec-is-not-stamped
-  (let [dir (str (fs/create-temp-dir))
-        text "@UN-001\nFeature: B\n\n  Scenario Template: X\n    Given a\n\n  Scenario: Y\n    Given b\n"]
-    (fs/create-dirs (fs/file dir "dhf/spec/a"))
-    (spit (str (fs/file dir "dhf/spec/a/b.feature")) text)
-    (let [r (stamper/stamp (req dir))]
-      (is (seq (:findings r)))
-      (is (= text (slurp (str (fs/file dir "dhf/spec/a/b.feature")))))
-      (is (not (fs/exists? (fs/file dir "dhf/spec/ids.edn")))))))
+(deftest stamping-a-project
+  (let [dir (str (fs/create-temp-dir {:prefix "stamper-test-"}))
+        f (fs/file dir "dhf/spec/a/b.feature")
+        ledger (fs/file dir "dhf/spec/ids.edn")]
+    (try
+      (fs/create-dirs (fs/parent f))
+      (spit (str f) "@UN-001\nFeature: B\n\n  @spec-0001 @e2e\n  Scenario: A\n    Given x\n\n  @e2e\n  Scenario: C\n    Given y\n")
+      (spit (str ledger) ";; the ledger\n{:issued 5}\n")
+      (let [out (stamper/stamp {:root dir :config {}})]
+        (is (= [{:id "spec-0006" :file "dhf/spec/a/b.feature" :line 9 :title "C"}] (get-in out [:result :stamp :stamped])))
+        (is (= ";; the ledger\n{:issued 6}\n" (slurp (str ledger))))
+        (is (re-find #"@spec-0006 @e2e\n  Scenario: C" (slurp (str f)))))
+      (let [before (slurp (str f))
+            out (stamper/stamp {:root dir :config {}})]
+        (is (empty? (get-in out [:result :stamp :stamped])))
+        (is (= before (slurp (str f))))
+        (is (= ";; the ledger\n{:issued 6}\n" (slurp (str ledger)))))
+      (finally (fs/delete-tree dir)))))

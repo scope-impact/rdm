@@ -3,38 +3,41 @@
             [rdm-spec.regeneration.fence :as fence]))
 
 (def model
-  {:containers [{:contexts [{:id :spec :components [{:id :spec/parser :spec "spec/parser"}
-                                                     {:id :spec/check-x :spec "spec/check-x"}]}
-                            {:id :knowledge :components [{:id :knowledge/wiki :spec "knowledge/wiki"}]}]}]
-   :kernel [{:id :kernel/bus :spec "kernel/bus"}]})
+  {:containers [{:id :c :contexts [{:id :spec :components [{:id :spec/parser} {:id :spec/check}]}
+                                   {:id :verification :components [{:id :verification/status}]}]}]
+   :kernel [{:id :kernel/bus}]})
 
 (def layout
   {:context ["src/rdm_spec/{context}/" "test/rdm_spec/{context}/" "test/steps/{context}_"]
    :component ["src/rdm_spec/{context}/{component}.clj" "test/rdm_spec/{context}/{component}_test.clj"
                "test/steps/{context}_{component}.clj"]})
 
-(deftest scopes
-  (let [known (fence/model-scopes model)]
-    (is (= #{"spec" "knowledge" "kernel"} (set (:contexts known))))
-    (is (= [{:context "knowledge"} {:context "spec" :component "parser"} {:context "kernel" :component "bus"}]
-           (fence/resolve-scopes known ["knowledge"] ["spec/parser" "kernel/bus"])))
-    (is (= {:unknown ["archive" "spec/nothing"]} (fence/resolve-scopes known ["archive"] ["spec/nothing"])))))
+(deftest scopes-are-the-models
+  (is (= :project (fence/scope-of model {})))
+  (is (= [{:context :verification} {:context :kernel} {:component :spec/parser} {:component :kernel/bus}]
+         (fence/scope-of model {:context "verification,kernel" :component "spec/parser,kernel/bus"})))
+  (testing "an unknown scope cannot run, naming the contexts and kernel"
+    (let [e (try (fence/scope-of model {:context "archive"}) nil (catch Exception e e))]
+      (is (re-find #"archive" (ex-message e)))
+      (is (re-find #"spec, verification, and kernel" (ex-message e))))
+    (is (thrown? Exception (fence/scope-of model {:component "spec/nothing"})))))
 
-(deftest what-a-room-keeps
-  (let [files ["src/rdm_spec/spec/parser.clj" "src/rdm_spec/spec/check_x.clj" "src/rdm_spec/knowledge/wiki.clj"
-               "test/steps/knowledge_wiki.clj" "test/steps/spec_parser.clj" "test.clj"]]
-    (testing "the whole project keeps nothing"
-      (is (empty? (fence/kept-implementation files [] []))))
-    (testing "a component's - is written _"
-      (is (= ["src/rdm_spec/spec/check_x.clj" "test/rdm_spec/spec/check_x_test.clj" "test/steps/spec_check_x.clj"]
-             (fence/removed-prefixes layout [{:context "spec" :component "check-x"}]))))
-    (testing "a context and a component"
-      (let [scopes [{:context "knowledge"} {:context "spec" :component "parser"}]]
-        (is (= ["src/rdm_spec/spec/check_x.clj" "test.clj"]
-               (fence/kept-implementation files scopes (fence/removed-prefixes layout scopes))))))))
+(deftest a-scope-removes-its-layout
+  (is (= ["src/rdm_spec/verification/" "test/rdm_spec/verification/" "test/steps/verification_"]
+         (fence/removed-prefixes layout [{:context :verification}])))
+  (is (= ["src/rdm_spec/spec/parser.clj" "test/rdm_spec/spec/parser_test.clj" "test/steps/spec_parser.clj"]
+         (fence/removed-prefixes layout [{:component :spec/parser}]))))
 
-(deftest options
-  (is (= ["knowledge" "publishing"] (fence/split-list "knowledge, publishing,")))
-  (is (= [] (fence/split-list nil)))
-  (is (fence/under? "dhf/wiki/a.md" "dhf/wiki/"))
-  (is (not (fence/under? "dhf/wikis" "dhf/wiki"))))
+(deftest what-a-clean-room-keeps
+  (let [rules {:allow ["dhf/spec" "dhf/harness/config.edn"] :implementation ["src" "test" "test.clj"]}
+        scoped (assoc rules :scope [{:context :verification}]
+                      :prefixes (fence/removed-prefixes layout [{:context :verification}]))]
+    (is (fence/kept? (assoc rules :scope :project) "dhf/spec/a.feature"))
+    (is (not (fence/kept? (assoc rules :scope :project) "dhf/spec-other/a")))
+    (is (not (fence/kept? (assoc rules :scope :project) "src/rdm_spec/spec/parser.clj")))
+    (is (not (fence/kept? (assoc rules :scope :project) "dhf/harness/oracle/x")))
+    (is (fence/kept? scoped "src/rdm_spec/spec/parser.clj"))
+    (is (fence/kept? scoped "test.clj"))
+    (is (not (fence/kept? scoped "src/rdm_spec/verification/status.clj")))
+    (is (not (fence/kept? scoped "test/steps/verification_status.clj")))
+    (is (not (fence/kept? scoped "README.md")))))

@@ -1,74 +1,62 @@
-;; Step definitions for dhf/spec/project/hooks.feature. The hook is installed
-;; by "rdm-spec init"; commits are made with git, with a stand-in rdm-spec first
-;; on PATH that records how it was called and exits as the scenario says, so
-;; the hook is verified whatever the real check finds.
 (ns steps.project-hooks
+  "Step definitions for dhf/spec/project/hooks.feature: the pre-commit hook
+  init installs, run by a real commit. The hook runs rdm-spec from PATH, so
+  the scenario puts first on PATH an rdm-spec that logs its arguments and
+  runs the room's code by path (steps.project-support/shim!). Context keys:
+  see steps.project-support; :commits, the commits made, {:exit :err}."
   (:require [babashka.fs :as fs]
-            [babashka.process :as p]
             [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-command :as kc]
             [steps.project-support :as ps]
             [steps.support :as s]))
 
-(defn- stand-in!
-  "A directory holding an executable rdm-spec that appends its arguments to
-  `log` and exits with the code written in `code-file`."
-  [log code-file]
-  (let [bin (s/tmp-dir)
-        f (fs/file bin "rdm-spec")]
-    (spit f (str "#!/usr/bin/env bb\n"
-                 "(spit " (pr-str (str log)) " (str (clojure.string/join \" \" *command-line-args*) \"\\n\") :append true)\n"
-                 "(System/exit (parse-long (clojure.string/trim (slurp " (pr-str (str code-file)) "))))\n"))
-    (fs/set-posix-file-permissions f "rwxr-xr-x")
-    bin))
+(defstep #"the pre-commit hook is installed"
+  (fn [ctx]
+    (ps/needs-project!)
+    (let [parent (s/tmp-dir)
+          log (str (fs/file (s/tmp-dir) "rdm-spec.log"))
+          r (kc/run! ctx parent ["init" "sauna"])
+          dir (str (fs/file parent "sauna"))]
+      (s/check! (zero? (:exit r)) (str "rdm-spec init failed\n" (s/show r)))
+      (s/check! (= ".githooks" (ps/git! dir "config" "--get" "core.hooksPath")) "core.hooksPath is not .githooks")
+      (assoc ctx :dir dir :hook-log log
+             :env {"PATH" (str (ps/shim! log) java.io.File/pathSeparator (System/getenv "PATH"))
+                   "GIT_CEILING_DIRECTORIES" parent}))))
 
 (defn- commit!
-  "Stages everything and commits in `repo`, the stand-in rdm-spec exiting
-  `code`. Returns git's {:exit :out :err}."
-  [{:keys [repo bin code-file]} code message]
-  (spit (str code-file) (str code))
-  (s/write! repo "notes.md" (str message "\n"))
-  (let [path (str/join java.io.File/pathSeparator
-                       (concat [bin (str (fs/parent s/bb))] [(System/getenv "PATH")]))
-        sh (fn [& args]
-             (apply p/shell {:dir repo :out :string :err :string :continue true
-                             :extra-env {"PATH" path}}
-                    "git" "-c" "user.name=Builder" "-c" "user.email=builder@example.org" args))]
-    (sh "add" "-A")
-    (let [r (sh "commit" "-m" message)]
-      {:exit (:exit r) :out (:out r) :err (:err r)})))
+  "Makes a commit of everything in the project, the hook running: {:exit :err :head-before :head-after}."
+  [ctx msg]
+  (let [dir (:dir ctx)
+        head #(str/trim (:out (ps/git dir (:env ctx) "rev-parse" "--verify" "--quiet" "HEAD")))
+        before (head)
+        _ (ps/git! dir "add" "-A")
+        r (ps/git dir (:env ctx) "commit" "-q" "-m" msg)]
+    {:exit (:exit r) :err (:err r) :head-before before :head-after (head)}))
 
-(defn- head [repo] (:out (ps/git repo "rev-parse" "--verify" "-q" "HEAD")))
-
-(defn- calls [log] (if (fs/exists? log) (vec (str/split-lines (slurp (str log)))) []))
-
-(defstep #"the pre-commit hook is installed"
-  (fn [_]
-    (let [dir (s/tmp-dir)
-          r (s/rdm-spec! dir "init" "project")
-          repo (str (fs/file dir "project"))
-          log (str (fs/file dir "calls.log"))
-          code-file (str (fs/file dir "exit-code"))]
-      (s/check! (= 0 (:exit r)) (s/show r))
-      {:repo repo :log log :code-file code-file :bin (str (stand-in! log code-file))})))
+(defn- log-lines [ctx]
+  (let [f (fs/file (:hook-log ctx))]
+    (if (fs/exists? f) (vec (remove str/blank? (str/split-lines (slurp (str f))))) [])))
 
 (defstep #"a commit is made"
   (fn [ctx]
-    (assoc ctx :commit (commit! ctx 0 "first commit"))))
+    (assoc ctx :commits [(commit! ctx "The skeleton")])))
 
-(defstep #"the hook runs \"rdm-spec check\""
-  (fn [ctx]
-    (let [c (:commit ctx)]
-      (s/check! (= 0 (:exit c)) (str "the commit failed: " (pr-str c)))
-      (s/check! (= ["check"] (calls (:log ctx))) (str "rdm-spec was called with " (pr-str (calls (:log ctx)))))
-      (s/check! (head (:repo ctx)) "no commit was made"))))
+(defstep #"the hook runs \"rdm-spec ([^\"]+)\""
+  (fn [ctx line]
+    (let [c (last (:commits ctx))]
+      (s/check! (= [line] (log-lines ctx)) (str "the hook ran rdm-spec with " (log-lines ctx) ", not " line))
+      (s/check! (zero? (:exit c)) (str "the commit of a skeleton that passes the check was refused: " (:err c)))
+      (s/check! (not= (:head-before c) (:head-after c)) "no commit was made")
+      nil)))
 
 (defstep #"the commit is refused when the check exits other than 0"
   (fn [ctx]
-    (doseq [code [1 2]]
-      (let [before (head (:repo ctx))
-            n (count (calls (:log ctx)))
-            c (commit! ctx code (str "a commit the check refuses with " code))]
-        (s/check! (not= 0 (:exit c)) (str "the commit was made although the check exited " code))
-        (s/check! (= before (head (:repo ctx))) "HEAD moved")
-        (s/check! (= (inc n) (count (calls (:log ctx)))) "the check was not run")))))
+    ;; a needs file that is not EDN is a finding: the check exits 1
+    (s/write! (:dir ctx) "dhf/spec/needs.edn" "{\"UN-001\" \n")
+    (let [c (commit! ctx "A broken spec")]
+      (s/check! (= 2 (count (log-lines ctx))) (str "the hook did not run the check again: " (log-lines ctx)))
+      (s/check! (not (zero? (:exit c))) "the commit was made")
+      (s/check! (= (:head-before c) (:head-after c)) "HEAD moved")
+      (s/check! (str/includes? (:err c) "needs") (str "the refusal does not say why: " (:err c)))
+      nil)))
