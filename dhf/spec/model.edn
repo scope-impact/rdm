@@ -28,7 +28,7 @@
 ;;   :relationships  [{:from :to :description [:event]}]
 ;;                   ; :event names one in events.edn; events travel only within one run
 ;;   :views          [{:key :level :description [:context] [:steps]}]
-{:system {:id :rdm-spec
+{:system {:id :rdm-spec-system
           :name "rdm-spec"
           :description "Regenerates a build from its spec, scores it"}
 

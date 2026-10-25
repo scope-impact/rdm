@@ -12,7 +12,7 @@ Feature: Fence
     @spec-0037 @e2e
     Scenario: A commit that is not a cut is refused
       Given the commit 1a2b3c4 carries no spec-N tag
-      When "rdm-spec fence /tmp/room 1a2b3c4" is run
+      When "rdm-spec fence ROOM 1a2b3c4" is run
       Then it exits 2 and says regeneration reads only a cut
 
   # Incident: a weaker fence probe once passed while the previous implementation
@@ -22,16 +22,16 @@ Feature: Fence
 
     @spec-0038 @e2e
     Scenario: The clean room holds only the allowed paths, as one root commit
-      Given the configuration allows dhf/spec, dhf/harness, dhf/raw, dhf/wiki and dhf/decisions/adr-0002-spec-first-regeneration.md
-      When "rdm-spec fence /tmp/room spec-3" is run
-      Then /tmp/room is a repository with a single root commit
+      Given the configuration allows dhf/spec, dhf/harness, dhf/raw, dhf/wiki, dhf/views and dhf/decisions/adr-0002-spec-first-regeneration.md
+      When "rdm-spec fence ROOM spec-3" is run
+      Then ROOM is a repository with a single root commit
       And its working tree holds the allowed paths, unchanged, and no other file
       And no object reachable in it belongs to any other path
 
     @spec-0040 @e2e
     Scenario: An allowed path missing at the cut is refused
       Given the configuration allows dhf/wiki and the cut holds no dhf/wiki
-      When "rdm-spec fence /tmp/room spec-3" is run
+      When "rdm-spec fence ROOM spec-3" is run
       Then it exits 2 and names dhf/wiki
 
   # The configuration's :code-layout places each component's code and unit
@@ -42,24 +42,24 @@ Feature: Fence
 
     @spec-0182 @e2e
     Scenario: The project scope keeps no implementation
-      When "rdm-spec fence /tmp/room spec-3" is run
-      Then /tmp/room holds none of the configured implementation paths
+      When "rdm-spec fence ROOM spec-3" is run
+      Then ROOM holds none of the configured implementation paths
 
     @spec-0183 @e2e
     Scenario: A context scope removes that context's code and keeps the rest
       Given the code layout places context code at src/rdm_spec/<context>/ and its unit tests at test/rdm_spec/<context>/
-      When "rdm-spec fence /tmp/room spec-3 --context verification" is run
-      Then /tmp/room holds no file under src/rdm_spec/verification/ or test/rdm_spec/verification/
+      When "rdm-spec fence ROOM spec-3 --context verification" is run
+      Then ROOM holds no file under src/rdm_spec/verification/ or test/rdm_spec/verification/
       And it holds every other implementation file at the cut, unchanged
 
     @spec-0184 @e2e
     Scenario: A component scope removes that component's code and keeps the rest
       Given the code layout places component code at src/rdm_spec/<context>/<component>.clj and its unit tests at test/rdm_spec/<context>/<component>_test.clj
-      When "rdm-spec fence /tmp/room spec-3 --component spec/parser" is run
-      Then /tmp/room holds neither src/rdm_spec/spec/parser.clj nor test/rdm_spec/spec/parser_test.clj
+      When "rdm-spec fence ROOM spec-3 --component spec/parser" is run
+      Then ROOM holds neither src/rdm_spec/spec/parser.clj nor test/rdm_spec/spec/parser_test.clj
       And it holds every other implementation file at the cut, unchanged
 
     @spec-0185 @e2e
     Scenario: A scope the model does not name is refused
-      When "rdm-spec fence /tmp/room spec-3 --context archive" is run
+      When "rdm-spec fence ROOM spec-3 --context archive" is run
       Then it exits 2 and names archive and the model's bounded contexts

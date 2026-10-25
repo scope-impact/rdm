@@ -18,7 +18,7 @@ Feature: Site
 
     @spec-0093 @e2e
     Scenario: A component page carries the component's prose and scenarios
-      Given the component Lint with design prose beside its feature file and fifteen scenarios
+      Given the component Lint with design prose beside its feature file and its scenarios
       When "rdm-spec publish" is run
       Then Lint's page holds its description, its prose and every scenario with its id, level and steps
 

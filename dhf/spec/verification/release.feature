@@ -8,7 +8,7 @@ Feature: Release check
 
     @spec-0059 @e2e
     Scenario: The release check refuses while any scenario is tagged @wip
-      Given a stamped scenario tagged @wip
+      Given a stamped scenario tagged @wip, and a passing result for every other stamped scenario
       When "rdm-spec release" is run
       Then it exits 1 and names the scenario's id
 

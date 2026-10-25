@@ -64,7 +64,7 @@ Feature: Gherkin runner
 
     @spec-0154 @e2e
     Scenario: A planned scenario is not run, and its result says it is planned
-      Given a stamped scenario tagged @wip
+      Given a stamped scenario tagged @wip, with step definitions for its steps
       When "rdm-spec run" is run
       Then the scenario's steps are not run
       And its result is skipped and labelled planned

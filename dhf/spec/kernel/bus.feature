@@ -21,3 +21,13 @@ Feature: Event bus
       Given a spec and its sources unchanged between two runs
       When "rdm-spec check --events" is run twice
       Then both runs list the same events in the same order
+
+  # One catalogue: the project's, so the bus and the lint can never disagree
+  # (cycle 00, dhf/cycles/00/proposed-spec-changes.md, A5).
+  Rule: The bus carries only the events the project's catalogue declares
+
+    @spec-0221 @e2e
+    Scenario: Publishing an event the catalogue does not declare is refused
+      Given the configured event catalogue does not declare SpecParsed
+      When "rdm-spec check" is run
+      Then it exits 2 and names SpecParsed and the configured catalogue

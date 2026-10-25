@@ -38,15 +38,19 @@
  ;; component can be rebuilt while the rest stands
  ;; (dhf/spec/regeneration/fence.feature). test.clj runs the tests.
  :implementation ["src" "test" "test.clj" "bb.edn"]
- ;; {component} is written with - as _, as Clojure file names are.
- :code-layout {:context ["src/rdm_spec/{context}/" "test/rdm_spec/{context}/"]
+ ;; {component} is written with - as _, as Clojure file names are. Each entry
+ ;; is a path prefix: a scope removes every implementation file starting with
+ ;; one of its entries, the step definitions included.
+ :code-layout {:context ["src/rdm_spec/{context}/" "test/rdm_spec/{context}/"
+                         "test/steps/{context}_"]
                :component ["src/rdm_spec/{context}/{component}.clj"
-                           "test/rdm_spec/{context}/{component}_test.clj"]}
+                           "test/rdm_spec/{context}/{component}_test.clj"
+                           "test/steps/{context}_{component}.clj"]}
 
  ;; The clean room is an allow-list (dhf/spec/regeneration/fence.feature): these
  ;; paths, plus the implementation a scoped regeneration keeps, and nothing
  ;; else. Giving the builder no network is the builder's obligation.
- :clean-room {:allow ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki"
+ :clean-room {:allow ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/views"
                       "dhf/decisions/adr-0002-spec-first-regeneration.md"]}
 
  ;; What ratify runs in a checkout of the cut holding the room's implementation

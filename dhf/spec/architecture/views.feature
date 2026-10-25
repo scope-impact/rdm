@@ -11,7 +11,7 @@ Feature: Views
       Given a model with a context view, a container view and two component views
       When "rdm-spec views" is run
       Then each view's diagram source is written to dhf/views/<key> and rendered beside it, in the formats dhf/harness/stack.md names
-      And each output carries the hash of the model it came from
+      And each output records the SHA-256 of model.edn's bytes, as lowercase hex, on its first line
 
     @spec-0018 @e2e
     Scenario: A view older than the model fails the check

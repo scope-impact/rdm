@@ -34,3 +34,18 @@ The spec of rdm-spec, the source of truth for what it does
 - **Every When runs the command** (`rdm-spec <task>`) unless the step edits a
   file or makes a commit; every refusal says its exit code.
 - **"A project" means any repository set up this way,** rdm-spec itself included.
+- **Where tags go.** An id (`@spec-` and four or more digits) and a level go
+  on a scenario or scenario outline only. A need tag goes on a feature, a rule
+  or a scenario. `@wip` goes on a scenario only.
+- **ROOM in a step is a new directory the scenario makes for itself,** never a
+  fixed path, so runs never share one.
+- **One step text, one meaning.** A Given worded the same in two feature files
+  sets up the same thing in both.
+- **How every task reports.** Standard output holds only the task's result, as
+  EDN. The error stream holds one line per finding, `FILE:LINE: RULE: what is
+  wrong`, then one line per warning, `warning: what`. A RULE is a stable
+  kebab-case name the owning component chooses, unless a scenario names it.
+  Exit 0 is a pass; 1 a finding in what the task checked (the spec, the
+  model, the sources, the results, a build); 2 a task that cannot run as
+  asked: an unknown task, argument or id, a missing file, directory or tool,
+  an unreadable configuration, a state that forbids it.

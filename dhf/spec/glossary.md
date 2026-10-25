@@ -126,6 +126,15 @@ builder's tests: implementation, rebuilt with the code, never scored.
 labelled with its id passed, and no result labelled with its id did not pass
 (failed, broken, skipped or unknown).
 
+**Allure result**: one `<uuid>-result.json` file in a results directory: a
+JSON object with `name`, `status` (`passed`, `failed`, `broken` or `skipped`),
+`steps` (each with `name` and `status`), `statusDetails.message` when it did
+not pass, and `labels`: `spec` (the scenario id, exactly one), `component`,
+`context` (`kernel` for kernel scenarios), and `planned` = `true` for a
+scenario tagged `@wip`. A row of an outline is one result, its `name` ending
+with the row as `key=value` pairs and its `parameters` holding them. A
+result with no `spec` label verifies nothing.
+
 **Grader**: the role that grades each checklist item against a ratified build,
 however they grade. A human or an agent, never the builder of what is graded.
 

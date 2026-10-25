@@ -21,7 +21,7 @@ Feature: Scorer
          :grader {:name "grader-b" :actor :agent}
          :spec-owner {:name "Sami" :actor :human}}
         """
-      When "rdm-spec checklist 03" and "rdm-spec ratify /tmp/room 03" are run
+      When "rdm-spec checklist 03" and "rdm-spec ratify ROOM 03" are run
       Then both work on the cut spec-3, for that scope
 
     @spec-0200 @contract

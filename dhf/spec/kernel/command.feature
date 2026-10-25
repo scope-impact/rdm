@@ -45,6 +45,19 @@ Feature: Command
       When "rdm-spec status" is run with no --results
       Then it reads dhf/allure-results
 
+    @spec-0219 @contract
+    Scenario Outline: A task's results directory is --results, else RESULTS_DIR, else the configured one
+      Given the configured results directory is dhf/allure-results
+      And the environment variable RESULTS_DIR is <env>
+      When "rdm-spec status <flag>" is run
+      Then it reads <dir>
+
+      Examples:
+        | env     | flag            | dir              |
+        | unset   |                 | dhf/allure-results |
+        | /tmp/r1 |                 | /tmp/r1          |
+        | /tmp/r1 | --results other | other            |
+
   Rule: Every task reports the same way
 
     @spec-0177 @contract
@@ -55,7 +68,7 @@ Feature: Command
 
     @spec-0178 @contract
     Scenario: A task that finds a problem exits 1 and names it on the error stream
-      Given a scenario with no level tag on line 12 of dhf/spec/spec/check.feature
+      Given a feature file in which one scenario carries no level tag
       When "rdm-spec check" is run
       Then it exits 1
       And the error stream holds one line per finding: "FILE:LINE: RULE: what is wrong", FILE and LINE left out where none applies

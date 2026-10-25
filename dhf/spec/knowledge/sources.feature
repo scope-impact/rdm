@@ -28,7 +28,7 @@ Feature: Sources
     @spec-0171 @contract
     Scenario: Source checkouts are given as one directory, one checkout per source
       Given a directory holding loyly/ and innolitics-rdm/, checkouts of those sources
-      When "rdm-spec check --sources" is run with that directory
+      When "rdm-spec check --sources DIR" is run with that directory as DIR
       Then citations of loyly and innolitics-rdm are checked against those checkouts
 
     @spec-0122 @e2e

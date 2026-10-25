@@ -8,13 +8,13 @@ Feature: Status
 
     @spec-0064 @e2e
     Scenario: The status report lists a scenario tagged @wip as planned
-      Given a stamped scenario tagged @wip with no passing result
+      Given a stamped scenario tagged @wip, with no result
       When "rdm-spec status" is run
       Then it lists the scenario as planned
 
     @spec-0191 @e2e
     Scenario: A scenario tagged @wip is planned whatever its results say
-      Given a stamped scenario tagged @wip
+      Given a stamped scenario tagged @wip, with results
       And an Allure result for it with status skipped, and another with status passed
       When "rdm-spec status" is run
       Then it lists the scenario as planned, not as verified, failed or unverified

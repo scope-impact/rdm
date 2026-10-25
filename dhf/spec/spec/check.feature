@@ -64,8 +64,8 @@ Feature: Spec check
     Scenario: A need tag on the feature is inherited by every scenario under it
       Given a feature tagged @UN-003
       And a scenario under it carries no need tag of its own
-      When "rdm-spec check" is run
-      Then the scenario traces to UN-003
+      When "rdm-spec trace UN-003" is run
+      Then it lists the scenario
 
     @spec-0048 @e2e
     Scenario: A scenario that traces to no need fails the spec check
@@ -90,8 +90,9 @@ Feature: Spec check
 
     @spec-0135 @e2e
     Scenario: A user need citing a source that does not resolve fails the spec check
-      Given the need UN-004 citing "innolitics-rdm:docs/nothing.md@f21b508", which the sources report as not resolving
-      When "rdm-spec check" is run
+      Given the recorded source demo, pinned at the commit of a checkout given with --sources
+      And the need UN-004 citing "demo:docs/nothing.md" at that pin, a path the checkout does not hold
+      When "rdm-spec check --sources DIR" is run
       Then it fails and names UN-004, the citation and why it did not resolve
 
     @spec-0187 @e2e
@@ -106,7 +107,7 @@ Feature: Spec check
 
     @spec-0050 @e2e
     Scenario: The spec check accepts a scenario tagged @wip
-      Given a stamped scenario tagged @wip with no passing result
+      Given a spec whose one stamped scenario is tagged @wip
       When "rdm-spec check" is run
       Then it passes
 
