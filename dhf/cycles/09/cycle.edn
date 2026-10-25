@@ -1,4 +1,11 @@
-;; Cycle 09: cycle 08's findings folded in, cut as spec-12 (tagged locally).
+;; Cycle 09: cycle 08's findings folded in, cut as spec-12, then spec-13 when
+;; the spec owner moved the oracle into one oracle.edn in one artifact pinned
+;; by digest mid-cycle (tagged locally). The oracle group's builder was
+;; stopped and its room fenced again from spec-13; the compliance and site
+;; groups' rooms, fenced from spec-12, are kept: spec-12..spec-13 touches only
+;; the oracle's feature, the glossary's oracle entry, the configuration, the
+;; stack and the wiki, none of which their scopes read. The merge is based on
+;; the spec-13 room.
 ;; Run by cycle 05's release; cycle 08's build is the cut's implementation.
 ;; Its scopes are what `rdm-spec scopes spec-11 spec-12` listed, plus two the
 ;; person judged the changed README reaches: kernel/command (the environment a
@@ -6,7 +13,7 @@
 ;; now a contract). The leftover run-time step registrations in components
 ;; outside these scopes wait for their next rebuild. Three builders in
 ;; parallel; the kernel's interface does not change.
-{:cut "spec-12"
+{:cut "spec-13"
  :scope [{:context :compliance}
          {:component :kernel/command}
          {:component :knowledge/sources}
