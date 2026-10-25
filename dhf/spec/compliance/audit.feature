@@ -116,17 +116,26 @@ Feature: Audit copy
     Scenario: The manifest pins every file of the audit copy
       Given a releasable regulated project
       When "rdm-spec audit OUT" is run
-      Then OUT/manifest.edn holds exactly {:commit :clean :files}: the commit HEAD resolves to, :clean true when no file under the clause lists' and documents' directories differs from it, untracked files included, and every other file of OUT as {:path :sha256}, its path relative to OUT, sorted by path
+      Then OUT/manifest.edn holds exactly {:commit :files}: the commit HEAD resolves to, and every other file of OUT as {:path :sha256}, its path relative to OUT, sorted by path
 
-    # An untracked document closed a gap and entered the audit copy while the
-    # manifest said :clean true at a commit that did not hold it (cycle 08,
-    # grading).
+    # An untracked document closed a gap while the manifest said :clean true
+    # at a commit that did not hold it (cycle 08, grading); then an uncommitted
+    # scenario title reached the traceability page, and the release check and
+    # the audit read two revisions and disagreed (cycle 09, grading). An audit
+    # copy is of one commit or of nothing.
     @spec-0274 @e2e
-    Scenario: The audit copy is made from what is committed at HEAD
-      Given a releasable regulated project whose every clause is named in committed documents
-      And an untracked document dhf/documents/draft.md
+    Scenario Outline: The audit copy is refused while what it is made from is not committed
+      Given a releasable regulated project, all committed
+      And <change>
       When "rdm-spec audit OUT" is run
-      Then OUT holds no copy of draft.md, and OUT/manifest.edn says :clean false
+      Then it exits 1, names <file> as not committed, and creates no OUT
+
+      Examples:
+        | change                                                   | file                       |
+        | an untracked document dhf/documents/draft.md             | dhf/documents/draft.md     |
+        | an uncommitted change to a document                      | that document              |
+        | an uncommitted change to a scenario's title              | that feature file          |
+        | an uncommitted change to the clause list                 | dhf/clauses/std.txt        |
 
     @spec-0254 @e2e
     Scenario: Same commit, same results, same audit copy

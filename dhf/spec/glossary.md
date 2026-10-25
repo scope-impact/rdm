@@ -210,7 +210,8 @@ fixture cycle is a finding, since it judged nothing; one that cannot be read
 cannot run (exit 2). It is the gate before fence and ratify: the command runs
 it first and stops the task when it has findings. A golden is re-recorded
 only with a stated reason: a new artifact, its entry in `:recorded`, and the
-configuration's new digest, committed. It
+configuration's new digest, written by `record` and committed by a person,
+reviewed like any spec change. It
 judges the instrument; the Allure results remain the oracle of a project's
 scenarios.
 
@@ -241,7 +242,8 @@ standard (dhf/wiki/pages/regulated-profile.md).
 
 **Clause list**: a standard reduced to its clauses, one file of lines: `KEY
 description`, `include FILE` (relative to the including file), a comment
-starting `#`, or blank. A key is one run of letters, digits and `. _ : -`.
+starting `#`, or blank. Any other line is a finding, and so is an include
+that leads back to a list already being read. A key is one run of letters, digits and `. _ : -`.
 The non-functional spec: what scenarios cannot run. Not the cycle's
 checklist, which only grades.
 
@@ -250,7 +252,8 @@ clause, never a substitute for reading the standard. A key listed twice, in
 one list or through includes, is one clause.
 
 **Audit tag**: `[[ ... ]]` in a controlled document, outside code (a fenced
-block, an indented block of four spaces or a tab, or an inline code span),
+block, an indented block of four spaces or a tab that is not a list item's
+continuation, or an inline code span),
 never running past a blank line. It names a clause when its text holds the key, or
 a dotted descendant of it (`STD:5.1.a` names `STD:5.1`), bounded by
 characters that are not key characters, a `: note` after the key allowed. A
@@ -265,10 +268,12 @@ check`, and every finding of it (a gap, a document with no id or a duplicate
 id; warnings aside) blocks the release check, exit 1.
 
 **Audit copy**: what `rdm-spec audit OUT` writes, only for a record the
-release check passes, from the clause lists and documents as committed at
-HEAD (an uncommitted document is not in it): the auditor's copy (`OUT/auditor/`, every audit tag
+release check passes and only of one commit: while any file it is made from
+(the spec, the clause lists, the documents) differs from HEAD, untracked
+included, it refuses (exit 1, naming each). It writes the auditor's copy (`OUT/auditor/`, every audit tag
 kept) and the engineer's copy (`OUT/engineer/`, every audit tag removed with
-the space before it, in the frontmatter too) of every controlled document, each also as a PDF; the
+the space before it, in the frontmatter too, its line breaks kept so each
+line keeps its number) of every controlled document, each also as a PDF; the
 clauses page (`OUT/clauses.md`, one section per declared clause list, included clauses in
 place); the traceability page
 (`OUT/traceability.md`); the results (`OUT/results/`); and `OUT/manifest.edn`,

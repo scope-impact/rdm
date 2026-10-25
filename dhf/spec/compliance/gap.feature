@@ -90,6 +90,16 @@ Feature: Gap analysis
         | We plan [[STD:5]].                          | not named |
         | `[[STD:5.1]]`                               | not named |
 
+    # A list item's continuation paragraph was read as code (cycle 09,
+    # grading): in Markdown it is the item's text.
+    @spec-0281 @e2e
+    Scenario: An audit tag in a list item's continuation paragraph names its clause
+      Given a regulated project
+      And dhf/clauses/std.txt holds the one clause STD:5.1
+      And dhf/documents/plan.md holds a list item, a blank line, and the item's continuation paragraph, indented four spaces, holding "[[STD:5.1]]"
+      When "rdm-spec check" is run
+      Then the clause STD:5.1 is named
+
     # A tag inside an indented code block named a clause (cycle 08, grading).
     @spec-0275 @e2e
     Scenario: An audit tag in an indented code block names nothing

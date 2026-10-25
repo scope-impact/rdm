@@ -66,7 +66,7 @@ Feature: Oracle
       Given the configured oracle holds goldens, one of which the instrument no longer reproduces
       When "rdm-spec oracle record --reason 'the scoreboard now says the denominator moved'" is run
       Then it stores a new artifact whose oracle.edn rewrites that golden and appends to :recorded the date, the reason and the component changed
-      And the configuration's :oracle names the new digest, and the old artifact is unchanged
+      And the configuration's :oracle names the new digest, left for a person to commit, and the old artifact is unchanged
 
     @spec-0231 @e2e
     Scenario: Recording without a reason is refused
