@@ -4,7 +4,8 @@
 ;; listed, plus two the person judged the changed README reaches: a step text
 ;; used by more than one context is now the kernel's, so kernel/command takes
 ;; them over, and verification/trace gives up its own "results directory as
-;; DIR". Built in two phases: kernel/command first, then four builders in
+;; DIR". project/adopt joined after phase 1: it lays down init's skeleton,
+;; which now holds dhf/harness/stack.md. Built in two phases: kernel/command first, then four builders in
 ;; parallel on top of it.
 {:cut "spec-11"
  :scope [{:context :compliance}
@@ -12,6 +13,7 @@
          {:component :knowledge/sources}
          {:component :measurement/checklist}
          {:component :measurement/oracle}
+         {:component :project/adopt}
          {:component :project/init}
          {:component :publishing/site}
          {:component :regeneration/fence}
