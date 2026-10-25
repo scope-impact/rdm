@@ -1,0 +1,14 @@
+# Decisions
+
+How {{name}} records its decisions: one file per decision, as an
+architecture decision record.
+
+- **One decision per file**, `adr-NNNN-short-title.md`, numbered in the order
+  decisions are proposed, never renumbered.
+- **Each record says** its status (Proposed, Accepted, Superseded by another
+  record), the context that forced the decision, the decision itself, and its
+  consequences.
+- **A decision is changed by a new record** that supersedes the old one; the
+  old record stays, marked as superseded.
+- **A decision reaches the spec as a spec change**: the record says why, the
+  spec says what.

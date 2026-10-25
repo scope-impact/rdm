@@ -1,0 +1,9 @@
+;; The rdm-spec command from this repository: `bb rdm-spec <task> ...`
+;; (or `bb -m rdm-spec.kernel.command <task> ...`). `bb test` runs every test
+;; (the same as `bb test.clj`).
+{:paths ["src" "test"]
+ :tasks {rdm-spec {:doc "Run an rdm-spec task: bb rdm-spec help"
+                   :requires ([rdm-spec.kernel.command :as command])
+                   :task (apply command/-main *command-line-args*)}
+         test {:doc "Run the unit tests and the scenarios: bb test.clj"
+               :task (shell "bb test.clj")}}}

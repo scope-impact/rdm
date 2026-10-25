@@ -1,0 +1,28 @@
+# Raw sources
+
+What {{name}}'s spec is distilled from. Every user need cites at least one
+source here (`dhf/spec/needs.edn`, `:sources`), so a rule that rests on nothing
+is visible as one.
+
+Each source is indexed for machines in `sources.edn` (its repository, every
+pin ever cited, and its fenced paths), and has a **provenance record** here, a
+`.md` file: the repository, the commit it is pinned to, and what it is evidence
+for. The sources themselves are not copied in: a citation names
+`<source>:<path>@<commit>`, and anyone can read the cited file at that commit.
+
+## Rules
+
+- **Never edited.** A record changes only to add a newer pin, and the old pin
+  stays listed: a citation made against it must still resolve.
+- **Cited, never paraphrased into authority.** A need or a scenario may restate
+  what a source says; where they disagree, the source wins and the spec is the
+  bug.
+- **A source's implementation is fenced.** Code that implements what this
+  project regenerates is listed under `:fenced` in `sources.edn` and never
+  cited, and no source checkout reaches a clean room.
+- **Where sources conflict, say so** in the need or the decision that follows
+  one, and say which one is followed and why.
+
+## The sources
+
+None yet.

@@ -1,0 +1,31 @@
+# Cuts every push to the default branch: "rdm-spec cut" tags the commit spec-N
+# and pushes the tag. Written by rdm-spec init. Cutting a commit twice changes
+# nothing, so a re-run is harmless.
+name: cut
+
+"on":
+  push:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cut
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Point origin/HEAD at the default branch
+        run: git remote set-head origin --auto
+      - name: rdm-spec is installed
+        # rdm-spec is installed once on the runner; install it in a step before
+        # this one.
+        run: command -v rdm-spec
+      - name: Cut
+        run: rdm-spec cut
