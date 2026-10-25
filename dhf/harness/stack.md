@@ -17,4 +17,5 @@ loyly:docs/wow/invariants.md@17d68d2, INV-2). Decided in
 | CI workflow | GitHub Actions, `.github/workflows/cut.yml` |
 | Diagram source and render | Mermaid C4 (`dhf/views/<key>.mmd`), rendered to SVG (`dhf/views/<key>.svg`) by `mmdr` (mermaid-rs-renderer) |
 | Site builder | MkDocs, `mkdocs build --strict -f site-src/mkdocs.yml`; publish writes the Markdown and `mkdocs.yml` under `site-src/`, HTML goes to `site/` |
+| Audit copy PDFs | Pandoc writes Typst (`pandoc -s -t typst`, with a main font given, `-V mainfont="DejaVu Sans"`, as Pandoc's own template names none) and `typst compile IN OUT` compiles it; the text of a PDF is read with `pdftotext` |
 | Test results | Allure results (JSON), the `spec` label carrying the scenario id |

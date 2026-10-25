@@ -26,7 +26,8 @@
  :wiki-dir "dhf/wiki"
  ;; The words neither the wiki nor the spec may use: the stack, which lives in
  ;; dhf/harness/stack.md (dhf/spec/spec/check.feature).
- :stack-words ["Babashka" "Clojure" "Python" "Mermaid" "mmdr" "MkDocs" "GitHub Actions" "pytest"]
+ :stack-words ["Babashka" "Clojure" "Python" "Mermaid" "mmdr" "MkDocs" "GitHub Actions" "pytest"
+                "Pandoc" "Typst" "pdftotext"]
 
  ;; Where a project's step definitions for "rdm-spec run" live
  ;; (dhf/spec/kernel/runner.feature). rdm-spec's own are the builder's, under

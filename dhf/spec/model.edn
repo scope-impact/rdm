@@ -136,7 +136,14 @@
       :description "Publishes the spec, its views and its status as one site"
       :components
       [{:id :publishing/site :name "Site" :spec "publishing/site"
-        :description "One page per component and context, and the site builder's configuration"}]}]}
+        :description "One page per component and context, and the site builder's configuration"}]}
+     {:id :compliance :name "compliance"
+      :description "The regulated profile: clause lists, controlled documents and the audit copy"
+      :components
+      [{:id :compliance/gap :name "Gap analysis" :spec "compliance/gap"
+        :description "Every declared clause named by an audit tag in a controlled document"}
+       {:id :compliance/audit :name "Audit copy" :spec "compliance/audit"
+        :description "The auditor's and engineer's copies, with their evidence"}]}]}
 
   {:id :repository :name "Repository" :kind :stores :technology "git"
    :description "The spec, the model, the ledger, cuts, cycles and results"}]
@@ -177,6 +184,8 @@
   {:from :regeneration/fence :to :regeneration/cut :description "Resolves cuts with the git helpers of"}
   {:from :measurement/oracle :to :measurement/scoreboard :description "Runs and compares"}
   {:from :publishing/site :to :repository :description "Reads views from and writes the site to"}
+  {:from :compliance/gap :to :repository :description "Reads clause lists and documents from"}
+  {:from :compliance/audit :to :repository :description "Reads documents and results from"}
 
   ;; events between contexts, within one run: the contracts
   {:from :knowledge/sources :to :spec/check :description "Publishes" :event :KnowledgeIndexed}
@@ -187,6 +196,10 @@
   {:from :spec/parser :to :publishing/site :description "Publishes" :event :SpecParsed}
   {:from :spec/check :to :publishing/site :description "Publishes" :event :SpecGated}
   {:from :verification/status :to :publishing/site :description "Publishes" :event :VerificationDerived}
+  {:from :spec/parser :to :compliance/audit :description "Publishes" :event :SpecParsed}
+  {:from :verification/status :to :compliance/audit :description "Publishes" :event :VerificationDerived}
+  {:from :compliance/gap :to :verification/release :description "Publishes" :event :ClausesIndexed}
+  {:from :compliance/gap :to :measurement/checklist :description "Publishes" :event :ClausesIndexed}
 
   ;; within contexts
   {:from :project/adopt :to :project/hooks :description "Installs hooks with"}
@@ -202,7 +215,8 @@
   {:from :verification/release :to :verification/status :description "Refuses on"}
   {:from :regeneration/fence :to :regeneration/cut :description "Builds clean rooms only from"}
   {:from :measurement/scorer :to :measurement/checklist :description "Scores"}
-  {:from :measurement/scoreboard :to :measurement/scorer :description "Compares the filed scores of"}]
+  {:from :measurement/scoreboard :to :measurement/scorer :description "Compares the filed scores of"}
+  {:from :compliance/audit :to :compliance/gap :description "Lists where each clause is met with"}]
 
  :views
  [{:key "context" :level :context
@@ -227,6 +241,8 @@
    :description "The checklist, the score and the scoreboard"}
   {:key "publishing-components" :level :component :context :publishing
    :description "The published site"}
+  {:key "compliance-components" :level :component :context :compliance
+   :description "Clauses, documents and the audit copy"}
   {:key "regeneration-cycle" :level :dynamic
    :description "One cycle, from a merged spec change to a score the spec owner reads"
    :steps [[:regeneration/cut :repository "1. Tags the merge spec-N"]

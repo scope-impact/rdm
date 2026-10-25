@@ -34,7 +34,8 @@ and is not itself a requirement.
 
 **Level**: how a scenario is verified, exactly one per scenario: `@e2e`
 (through the command) or `@contract` (a file format or an interface others
-build on). There are no others.
+build on). There are no others; a checklist item that is a clause, not a
+scenario, has the level `clause` (Clause item).
 
 **User need**: what a user requires, independent of any solution. Declared
 in `dhf/spec/needs.edn`; every scenario traces to at least one.
@@ -216,3 +217,46 @@ definitions and writes Allure results labelled with each scenario's id.
 
 **Cutover**: the moment the regenerated core, passing the whole spec
 at a cut, takes over this repository from the current record.
+
+## The regulated profile
+
+**Regulated profile**: what a project gets by declaring `:regulated` in its
+configuration, `{:clause-lists ["dhf/clauses/std.txt" ...] :documents
+"dhf/documents"}`: the clause lists it is held to and where its controlled
+documents live. Without `:regulated` nothing of the profile runs. rdm-spec
+ships no clause list and no document: the project brings both, for whatever
+standard (dhf/wiki/pages/regulated-profile.md).
+
+**Clause list**: a standard reduced to its clauses, one file of lines: `KEY
+description`, `include FILE` (relative to the including file), a comment
+starting `#`, or blank. A key is one run of letters, digits and `. _ : -`.
+The non-functional spec: what scenarios cannot run. Not the cycle's
+checklist, which only grades.
+
+**Clause**: one key of a clause list with its description, a mnemonic for the
+clause, never a substitute for reading the standard. A key listed twice, in
+one list or through includes, is one clause.
+
+**Audit tag**: `[[ ... ]]` in a controlled document, outside code, never
+running past a blank line. It names a clause when its text holds the key, or
+a dotted descendant of it (`STD:5.1.a` names `STD:5.1`), bounded by
+characters that are not key characters, a `: note` after the key allowed. A
+key outside an audit tag names nothing.
+
+**Controlled document**: a Markdown file under the documents directory with
+frontmatter `id`, `revision` and `title`. Its id is unique among them.
+
+**Gap**: a clause no audit tag names. Gap analysis is a stage of `rdm-spec
+check`, and a gap blocks the release check.
+
+**Audit copy**: what `rdm-spec audit OUT` writes, only for a record the
+release check passes: the auditor's copy (`OUT/auditor/`, every audit tag
+kept) and the engineer's copy (`OUT/engineer/`, every audit tag removed with
+the space before it) of every controlled document, each also as a PDF; the
+clauses page (`OUT/clauses.md`); the traceability page
+(`OUT/traceability.md`); the results (`OUT/results/`); and `OUT/manifest.edn`,
+every other file with its SHA-256.
+
+**Clause item**: a clause as an item of the cycle's checklist, at the level
+`clause`. Its grader reads the sections whose audit tags name it and passes it
+only if they meet the clause. Named is not met.

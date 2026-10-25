@@ -41,3 +41,20 @@ Feature: Checklist
       Given the spec at cut spec-3 holds a scenario with no id
       When "rdm-spec checklist 03" is run
       Then it exits 1, writes nothing, and names the file and line of the unstamped scenario
+
+  # A clause named is not a clause met (dhf/wiki/pages/regulated-profile.md,
+  # "Referenced is not met"). A grader judges it as a scenario is judged, and
+  # an ungraded clause is a fail like any ungraded item.
+  @UN-013
+  Rule: Under the regulated profile, every clause is an item to grade
+
+    @spec-0266 @contract
+    Scenario: Each clause of the cut's clause lists is an item after the scenarios
+      Given cycle 03 of cut spec-3 in a regulated project whose clause list dhf/clauses/std.txt at the cut holds "STD:5.1 Development plan"
+      When "rdm-spec checklist 03" is run
+      Then the items of dhf/cycles/03/checklist.json end with:
+        """
+        {"id": "STD:5.1", "title": "Development plan",
+         "context": "compliance", "component": "dhf/clauses/std.txt", "level": "clause"}
+        """
+      And the clause items come after every scenario item, in the clause lists' order with includes in place, each key once

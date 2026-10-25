@@ -29,3 +29,14 @@ Feature: Release check
       Given every stamped scenario has a passing result and none is tagged @wip
       When "rdm-spec release" is run
       Then it exits 0
+
+  # A clause no document names is unverified the way a scenario with no result
+  # is (dhf/spec/compliance/gap.feature).
+  @UN-013
+  Rule: Under the regulated profile, a release needs every clause named
+
+    @spec-0267 @e2e
+    Scenario: The release check refuses a clause no audit tag names
+      Given a regulated project whose every stamped scenario has a passing result, and a clause no audit tag names
+      When "rdm-spec release" is run
+      Then it exits 1 and names the clause and its clause list

@@ -26,3 +26,5 @@ spec should rest on nothing.
 
 - [The Löyly method, where the spec is silent](pages/loyly-method.md): the
   rules rdm-spec follows wherever its own spec leaves a choice open.
+- [The regulated profile](pages/regulated-profile.md): clause lists, audit
+  tags, the auditor's copy, and why a referenced clause is still graded.

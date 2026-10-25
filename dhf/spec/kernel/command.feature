@@ -25,7 +25,7 @@ Feature: Command
         | init       | init PATH [--id-prefix P]                                | write the skeleton into a path that does not exist                   |
         | adopt      | adopt                                                    | add the skeleton to the current repository, overwriting nothing      |
         | stamp      | stamp                                                    | give every unstamped scenario its id                                 |
-        | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the views' freshness, sources, wiki  |
+        | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the views' freshness, sources, wiki, clauses |
         | views      | views                                                    | generate and render every view to dhf/views/                         |
         | cut        | cut                                                      | tag HEAD spec-N when it is origin/HEAD, and push the tag             |
         | scopes     | scopes CUT CUT                                           | list the scopes a spec change touched between two cuts               |
@@ -40,6 +40,7 @@ Feature: Command
         | scoreboard | scoreboard CYCLE CYCLE                                   | compare two cycles                                                   |
         | oracle     | oracle [record --reason R]                               | judge the instrument against its recorded goldens                    |
         | publish    | publish [--results DIR]                                  | write the site and build it                                          |
+        | audit      | audit OUT [--results DIR]                                | write the auditor's and the engineer's copy, with their evidence, to OUT |
 
     @spec-0193 @contract
     Scenario: A task's results directory defaults to the configured one
