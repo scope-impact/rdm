@@ -1,0 +1,16 @@
+;; Cycle 06: the spec change folding in cycle 05's findings, cut as spec-9
+;; (tagged locally). Run by cycle 05's release. Its scopes are what
+;; `rdm-spec scopes spec-8 spec-9` listed, plus spec/check, which the person
+;; judged the changed README reaches (a missing spec file is a finding); the
+;; other shared files it named are read by scopes already listed.
+{:cut "spec-9"
+ :scope [{:component :kernel/command}
+         {:component :knowledge/sources}
+         {:component :project/init}
+         {:component :publishing/site}
+         {:component :regeneration/fence}
+         {:component :regeneration/scopes}
+         {:component :spec/check}]
+ :builder {:name "builder subagents, one per scope" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
