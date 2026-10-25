@@ -1,9 +1,9 @@
-;; Cycle 02: the spec change folding in cycle 01's findings, cut as spec-2
+;; Cycle 02: the spec change folding in cycle 01's findings, cut as spec-2, then as spec-3 once its views were redrawn
 ;; (tagged locally: the remote refuses tag pushes). The first cycle run by
 ;; the installed rdm-spec (cycle 01's accepted build): each scope fenced into
 ;; its own clean room by rdm-spec fence, rebuilt by its own builder, merged,
 ;; then ratified, checklisted and graded.
-{:cut "spec-2"
+{:cut "spec-3"
  :scope [{:component :kernel/bus}
          {:component :architecture/views}
          {:context :publishing}
