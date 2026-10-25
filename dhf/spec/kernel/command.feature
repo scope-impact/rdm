@@ -37,6 +37,7 @@ Feature: Command
         | release    | release [--results DIR]                                  | the release check                                                    |
         | score      | score CYCLE --verdicts FILE                              | file a grader's verdicts on a ratified cycle into its score.edn      |
         | scoreboard | scoreboard CYCLE CYCLE                                   | compare two cycles                                                   |
+        | oracle     | oracle [record --reason R]                               | judge the instrument against its recorded goldens                    |
         | publish    | publish [--results DIR]                                  | write the site and build it                                          |
 
     @spec-0193 @contract

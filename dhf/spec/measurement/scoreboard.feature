@@ -28,14 +28,8 @@ Feature: Scoreboard
   # project cycle does (cycle 02, dhf/cycles/02/proposed-spec-changes.md, A1).
   Rule: A scoped cycle is reported target first
 
-    @spec-0172 @e2e
-    Scenario: The target's scenarios are reported apart from the rest
-      Given cycle 02 regenerated the bounded context verification and cycle 01 is its baseline
-      And both cycles scored every scenario
-      When "rdm-spec scoreboard 01 02" is run
-      Then it reports better and worse for verification's scenarios first
-      And then, separately, better and worse for every other scenario both scored
-
+    # spec-0172 (a scoped cycle that scored every scenario) is retired: under
+    # the scope rule no such cycle can exist (cycle 03, A1).
     @spec-0225 @e2e
     Scenario: A scoped cycle is compared over its scope only
       Given cycle 01 scored every scenario and cycle 02 scored only the bounded context verification's

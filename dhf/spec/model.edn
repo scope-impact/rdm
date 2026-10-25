@@ -126,7 +126,9 @@
        {:id :measurement/scorer :name "Scorer" :spec "measurement/scorer"
         :description "Files a grader's verdicts, and nothing when nothing was graded"}
        {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
-        :description "Better and worse over shared items, a moved denominator said aloud"}]}
+        :description "Better and worse over shared items, a moved denominator said aloud"}
+       {:id :measurement/oracle :name "Oracle" :spec "measurement/oracle"
+        :description "Judges the instrument against recorded goldens"}]}
 
      {:id :publishing :name "publishing"
       :description "Publishes the spec, its views and its status as one site"
@@ -168,9 +170,13 @@
   {:from :measurement/checklist :to :repository :description "Writes checklist.json to"}
   {:from :measurement/scorer :to :repository :description "Reads cycle.edn, the checklist and verdicts, writes score.edn to"}
   {:from :measurement/scoreboard :to :repository :description "Reads scores from"}
+  {:from :measurement/oracle :to :repository :description "Reads fixtures and goldens from"}
+  {:from :measurement/oracle :to :measurement/scoreboard :description "Runs and compares"}
   {:from :publishing/site :to :repository :description "Reads views from and writes the site to"}
 
   ;; events between contexts, within one run: the contracts
+  {:from :measurement/oracle :to :regeneration/fence :description "Publishes" :event :InstrumentJudged}
+  {:from :measurement/oracle :to :ratification/ratify :description "Publishes" :event :InstrumentJudged}
   {:from :knowledge/sources :to :spec/check :description "Publishes" :event :KnowledgeIndexed}
   {:from :knowledge/sources :to :publishing/site :description "Publishes" :event :KnowledgeIndexed}
   {:from :spec/parser :to :architecture/lint :description "Publishes" :event :SpecParsed}

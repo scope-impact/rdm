@@ -1,0 +1,62 @@
+# Component Oracle, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
+#
+# rdm-spec regenerates its own instrument every cycle, so the instrument needs
+# a judge of its own: recorded fixture cycles and the outputs the instrument
+# must give on them (cycle 03, dhf/cycles/03/proposed-spec-changes.md, C12;
+# loyly:harness/README.md@17d68d2, "The pieces, in pipeline order").
+
+@UN-008
+Feature: Oracle
+  Runs the checklist, the scorer and the scoreboard on recorded fixture cycles
+  and compares what they produce with recorded goldens.
+
+  Rule: The instrument is judged against recorded goldens
+
+    @spec-0228 @e2e
+    Scenario: The oracle passes when every output matches its golden
+      Given dhf/harness/oracle/ holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
+      When "rdm-spec oracle" is run
+      Then it exits 0 and names each golden it compared
+
+    @spec-0229 @e2e
+    Scenario: An output that differs from its golden fails the oracle, naming the difference
+      Given dhf/harness/oracle/ holds a golden score whose second item says pass where the scorer files fail
+      When "rdm-spec oracle" is run
+      Then it exits 1 and names the golden, the item and both values
+
+    # Re-recording to get a green destroys the only evidence that anything
+    # moved (loyly:harness/README.md@17d68d2, "What makes the checks run").
+    @spec-0230 @e2e
+    Scenario: Recording goldens says which changed, and why
+      Given dhf/harness/oracle/ holds goldens, one of which the instrument no longer reproduces
+      When "rdm-spec oracle record --reason 'the scoreboard now says the denominator moved'" is run
+      Then it rewrites that golden, names it, and appends the reason with the date to dhf/harness/oracle/RECORDED.md
+
+    @spec-0231 @e2e
+    Scenario: Recording without a reason is refused
+      When "rdm-spec oracle record" is run
+      Then it exits 2, says a reason is required, and rewrites nothing
+
+  # A room built, or a build ratified, by an instrument nobody checked hands
+  # the next cycle a judge nobody checked (loyly:harness/README.md@17d68d2,
+  # "What makes the checks run").
+  Rule: Nothing is fenced or ratified while the oracle is red
+  # Fence and ratify run the oracle first, in the same run, and act only on
+  # its InstrumentJudged (dhf/spec/events.edn).
+
+    @spec-0232 @e2e
+    Scenario Outline: Fence and ratify refuse while the oracle fails
+      Given a project whose dhf/harness/oracle/ holds a golden the instrument does not reproduce
+      When "rdm-spec <task>" is run
+      Then it exits 1, names the oracle's finding, and <does-nothing>
+
+      Examples:
+        | task                  | does-nothing                       |
+        | fence ROOM spec-3     | builds no room                     |
+        | ratify ROOM 03        | writes no ratified.edn             |
+
+    @spec-0233 @e2e
+    Scenario: A project with no oracle is not refused
+      Given a project with no dhf/harness/oracle/
+      When "rdm-spec oracle" is run
+      Then it exits 0 and says there is no oracle to run

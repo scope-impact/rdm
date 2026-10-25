@@ -93,8 +93,11 @@ a container.
 from it.
 
 **Model hash**: the SHA-256, as lowercase hex, of the model read as EDN and
-printed back with every map's keys and every set's elements sorted by their
-printed form, so reformatting the file keeps it.
+printed back with every map's entries and every set's elements sorted by the
+printed form of the key or element, each printed as EDN prints it with no
+namespace map syntax, so reformatting the file keeps it. A spec change that
+changes this definition is cut twice: before, and after a build that
+implements it has redrawn the views.
 A view records it on its first line, in a comment of the view's format:
 `model-sha256: <hex>`. A view is fresh when it records the current one.
 
@@ -183,6 +186,13 @@ _Avoid_: gate, on its own (say spec check or ratify).
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
 first), with `results/`, `build/` and `ratified.edn` (ratify), `checklist.json`
 and `score.edn` beside it.
+
+**Oracle (instrument)**: `rdm-spec oracle`: the checklist, the scorer and the
+scoreboard run on recorded fixture cycles under `dhf/harness/oracle/` and
+compared with their recorded goldens. Fence and ratify refuse while it is red.
+A golden is re-recorded only with a stated reason, kept in `RECORDED.md`. It
+judges the instrument; the Allure results remain the oracle of a project's
+scenarios.
 
 **Scoreboard**: the comparison of two cycles over the items both scored,
 counting what got better and what got worse, never a net.

@@ -16,9 +16,9 @@ Feature: Sources
 
     @spec-0121 @e2e
     Scenario: A source that drops a pin it had fails the check
-      Given the sources index at HEAD pins loyly at 17d68d2
-      When the index is changed so that 17d68d2 is no longer listed, and "rdm-spec check" is run
-      Then the check fails and names the source and the dropped pin
+      Given a commit of the sources index pins loyly at 17d68d2, and a later commit no longer lists it
+      When "rdm-spec check" is run
+      Then the check fails and names the source, the dropped pin and the commit that dropped it
 
   # Checkouts are machine-local, so they are never committed: they are given on
   # the command line, a directory holding one checkout per source, named by

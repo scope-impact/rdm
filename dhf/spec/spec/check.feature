@@ -25,6 +25,12 @@ Feature: Spec check
       When "rdm-spec check" is run
       Then it fails, names the file and line 30, and says to run "rdm-spec stamp"
 
+    @spec-0234 @e2e
+    Scenario: An id the ledger never issued fails the spec check
+      Given the ledger has issued ids up to 0227 and a scenario is tagged @spec-0901
+      When "rdm-spec check" is run
+      Then it fails, names spec-0901 and says the ledger never issued it
+
   Rule: A scenario carries exactly one verification level
 
     @spec-0044 @e2e

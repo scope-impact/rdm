@@ -33,7 +33,7 @@ Feature: Cut
     Scenario: A HEAD whose spec fails the check is not cut
       Given HEAD is the commit origin/HEAD names, and "rdm-spec check" exits 1 on it
       When "rdm-spec cut" is run
-      Then it exits 1, tags nothing, and names the check's findings
+      Then it exits 1, tags nothing, and prints each of the check's finding lines unchanged
 
     @spec-0163 @e2e
     Scenario: A HEAD that is not origin/HEAD is refused

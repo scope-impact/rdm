@@ -51,7 +51,7 @@ Feature: Site
     Scenario: Without results, the site says no status was derived
       Given the configured results directory does not exist
       When "rdm-spec publish" is run with no --results
-      Then every page says no status was derived because no results were given
+      Then every page, the wiki's included, says no status was derived because no results were given
 
   Rule: The site is a reading of the spec, never a copy that can drift
 
@@ -84,7 +84,7 @@ Feature: Site
 
     @spec-0146 @e2e
     Scenario: The site's navigation follows the model
-      Given a model with the bounded contexts spec and architecture, in that order, each with its components
+      Given a model with the bounded contexts spec and architecture, in that order, each with its components, and one kernel component
       When "rdm-spec publish" is run
       Then the site builder's configuration is written with the home page first, then a section for spec and one for architecture, then one for the kernel
       And each section lists its context's page and then its components' pages, in the model's order
@@ -100,6 +100,7 @@ Feature: Site
       Given a component page that links to a page the site does not hold
       When "rdm-spec publish" is run
       Then it exits 1 and names the page and the link
+      And no HTML is left in the site directory
 
     # Incident: a gate once reported success because a missing tool turned its
     # command into a no-op that exited 0 (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").

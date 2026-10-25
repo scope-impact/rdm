@@ -41,13 +41,19 @@ The spec of rdm-spec, the source of truth for what it does
   fixed path, so runs never share one.
 - **A scenario's commands see only the environment its steps set,** never
   the one the tests themselves run in (RESULTS_DIR included).
+- **Step definitions are the scope's own.** A step file uses only the
+  kernel's shared steps and its own context's step files; a helper it needs
+  from elsewhere is copied in. Each shared step text is defined once, by the
+  kernel or by the context that owns it (cycle 03: four integration fixes).
 - **One step text, one meaning.** A Given worded the same in two feature files
   sets up the same thing in both.
 - **How every task reports.** Standard output holds only the task's result, as
   EDN. The error stream holds one line per finding, `FILE:LINE: RULE: what is
   wrong`, then one line per warning, `warning: what`. A RULE is a stable
   kebab-case name the owning component chooses, unless a scenario names it.
-  A warning line is `FILE:LINE: warning: RULE: what`; a task that cannot
+  A finding about a file with no line says `FILE: RULE: what`; a relayed
+  finding keeps its line unchanged; on exit 1 standard output still holds the
+  result, `{}` when there is none. A warning line is `FILE:LINE: warning: RULE: what`; a task that cannot
   run says `cannot-run: why` and prints nothing on standard output; with
   `--events`, each event is a line `event: NAME published-by PUBLISHER`, after
   the findings and warnings. Exit 0 is a pass; 1 a finding in what the task checked (the spec, the
