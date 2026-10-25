@@ -3,86 +3,102 @@
             [babashka.process :as p]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [rdm-spec.kernel.bus :as bus]
             [rdm-spec.knowledge.sources :as sources]))
 
-(defn- with-tmp
-  "Calls (f dir) with a new temporary directory, removed afterwards."
-  [f]
+(def recorded
+  [{:id "loyly" :repository "https://example.org/loyly" :pins ["17d68d2"] :fenced ["impl" "harness/fence.sh"]}
+   {:id "old" :repository "https://example.org/old" :pins ["3763e08"] :fenced ["."] :retired "holds an implementation"}])
+
+(defn- with-tmp [f]
   (let [d (str (fs/create-temp-dir {:prefix "sources-test-"}))]
     (try (f d) (finally (fs/delete-tree d)))))
 
 (defn- git! [dir & args]
   (apply p/shell {:dir dir :out :string :err :string
-                  :extra-env {"GIT_AUTHOR_NAME" "t" "GIT_AUTHOR_EMAIL" "t@example.org"
-                              "GIT_COMMITTER_NAME" "t" "GIT_COMMITTER_EMAIL" "t@example.org"
-                              "GIT_CONFIG_GLOBAL" "/dev/null"}}
-         "git" "-c" "commit.gpgsign=false" args))
+                  :extra-env {"GIT_AUTHOR_NAME" "t" "GIT_AUTHOR_EMAIL" "t@t.invalid"
+                              "GIT_COMMITTER_NAME" "t" "GIT_COMMITTER_EMAIL" "t@t.invalid"}}
+         "git" "-c" "core.hooksPath=/dev/null" "-c" "commit.gpgsign=false" args))
 
-(def index
-  [{:id "loyly" :repository "r" :pins ["17d68d2"] :fenced ["impl" "harness/fence.sh"]}
-   {:id "rdm" :repository "r" :pins ["3763e08"] :fenced ["."] :retired "holds an implementation"}])
-
-(defn- status [c & [dir]] ((juxt :status :rule) (sources/resolve-citation index dir c)))
+(defn- write! [dir rel text]
+  (fs/create-dirs (fs/parent (fs/file dir rel)))
+  (spit (str (fs/file dir rel)) text))
 
 (deftest citations-are-read-from-text
   (is (= [{:citation "loyly:README.md@17d68d2" :source "loyly" :path "README.md" :commit "17d68d2" :line 2}]
-         (sources/citations-in "No citation: https://example.org/a@abcdef.\n[^1]: `loyly:README.md@17d68d2`, \"S\".")))
-  (is (nil? (sources/parse-citation "the loyly README")))
-  (is (= "docs/a.md" (:path (sources/parse-citation " loyly:docs/a.md@17d68d2 ")))))
+         (sources/citations-in "A claim.\n[^1]: `loyly:README.md@17d68d2`, \"What to steal\".\n")))
+  (is (empty? (sources/citations-in "the loyly README, and an address me@example.org")))
+  (is (= {:source "a-b" :path "docs/x.md" :commit "abc1234"} (sources/parse-citation "a-b:docs/x.md@abc1234")))
+  (is (nil? (sources/parse-citation "the loyly README"))))
 
-(deftest a-citation-resolves-or-says-why-not
-  (is (= [:unresolved "citation-malformed"] (status "the loyly README")))
-  (is (= [:unresolved "citation-unknown-source"] (status "innolitix:README.md@f21b508")))
-  (is (= [:unresolved "citation-retired"] (status "rdm:README.md@3763e08")))
-  (is (= [:unresolved "citation-unpinned"] (status "loyly:README.md@0000000")))
-  (is (= [:unresolved "citation-fenced"] (status "loyly:harness/fence.sh@17d68d2")))
-  (is (= [:unresolved "citation-fenced"] (status "loyly:impl/a/b.clj@17d68d2")))
-  (is (= [:unchecked nil] (status "loyly:implementation.md@17d68d2")))
-  (testing "the reasons name what is wrong"
-    (is (str/includes? (first (:reasons (sources/resolve-citation index nil "loyly:README.md@0000000"))) "17d68d2"))
-    (is (str/includes? (first (:reasons (sources/resolve-citation index nil "loyly:impl/x.clj@17d68d2"))) "impl"))))
+(deftest a-citation-resolves-in-order
+  (let [rule (fn [c] (:rule (sources/resolve-citation recorded nil c)))]
+    (is (= "citation-malformed" (rule "the loyly README")))
+    (is (= "citation-unknown-source" (rule "innolitix:README.md@f21b508")))
+    (is (= "citation-retired" (rule "old:README.md@3763e08")))
+    (is (= "citation-fenced" (rule "loyly:harness/fence.sh@17d68d2")))
+    (is (= "citation-fenced" (rule "loyly:impl/booking.clj@17d68d2")))
+    (is (nil? (rule "loyly:implementation.md@17d68d2")))
+    (is (= "citation-unpinned" (rule "loyly:README.md@0000000")))
+    (is (= :unchecked (:status (sources/resolve-citation recorded nil "loyly:README.md@17d68d2"))))
+    (is (= :unchecked (:status (sources/resolve-citation recorded nil "loyly:README.md@17d68d2abcdef"))))))
 
-(deftest a-checkout-decides-whether-the-path-exists
+(deftest a-checkout-resolves-the-path-at-its-pin
   (with-tmp
     (fn [dir]
       (let [co (str (fs/file dir "loyly"))]
-        (fs/create-dirs (fs/file co "docs"))
-        (spit (str (fs/file co "README.md")) "read me\n")
+        (write! co "README.md" "x\n")
         (git! co "init" "-q")
         (git! co "add" "-A")
         (git! co "commit" "-q" "-m" "one")
         (git! co "tag" "17d68d2")
-        (is (= [:resolved nil] (status "loyly:README.md@17d68d2" dir)))
-        (is (= [:unresolved "citation-path-missing"] (status "loyly:docs/plan.md@17d68d2" dir)))
+        (is (= :resolved (:status (sources/resolve-citation recorded dir "loyly:README.md@17d68d2"))))
+        (let [r (sources/resolve-citation recorded dir "loyly:docs/plan.md@17d68d2")]
+          (is (= ["citation-path-missing" :unresolved] [(:rule r) (:status r)]))
+          (is (str/includes? (first (:reasons r)) "docs/plan.md")))
         (is (= :unchecked (:status (sources/resolve-citation
-                                    [{:id "demo" :repository "r" :pins ["abcd123"] :fenced []}] dir
-                                    "demo:README.md@abcd123"))))
-        (testing "a fenced path that matches nothing at a pin"
-          (is (= ["fenced-path-missing"]
-                 (map :rule (sources/fenced-findings "dhf/raw/sources.edn"
-                                                     [{:id "loyly" :pins ["17d68d2"] :fenced ["README.md" "gone.sh"]}]
-                                                     dir)))))))))
+                                    (conj recorded {:id "other" :repository "r" :pins ["abc1234"] :fenced []})
+                                    dir "other:README.md@abc1234"))))))))
 
-(deftest a-finding-names-who-cites
-  (let [c (assoc (sources/resolve-citation index nil "loyly:impl/a.clj@17d68d2") :file "f.md" :line 3)
-        u (assoc (sources/resolve-citation index nil "loyly:README.md@17d68d2") :file "f.md" :line 4)]
-    (is (str/includes? (:message (sources/citation-finding "the need UN-004" c)) "the need UN-004 cites loyly:impl/a.clj@17d68d2"))
-    (is (= :warning (:severity (sources/citation-finding "x" u))))
-    (is (nil? (sources/citation-finding "x" {:status :resolved})))))
+(deftest a-citation-finding-names-where-it-is-cited
+  (is (nil? (sources/citation-finding "the page" {:status :resolved})))
+  (let [w (sources/citation-finding "the need UN-004" {:status :unchecked :citation "c:a@1234567" :reasons ["why"]
+                                                      :file "n.edn" :line 3})]
+    (is (= :warning (:severity w)))
+    (is (= "the need UN-004 cites c:a@1234567, which was not checked: why" (:message w))))
+  (is (= "citation-fenced" (:rule (sources/citation-finding "x" {:status :unresolved :rule "citation-fenced"
+                                                                 :citation "c" :reasons ["r"]})))))
 
-(deftest the-index-is-read-and-held-to-its-rules
-  (let [{:keys [sources error]} (sources/read-index "{:a {:repository \"r\" :record \"a.md\" :pins [\"abc1\"]}\n :b {:pins []}}")]
-    (is (nil? error))
-    (is (= [1 2] (map :line sources)))
-    (is (= #{"source-no-repository" "source-no-pin" "source-no-record"}
-           (set (map :rule (sources/index-findings "i.edn" "dhf/raw" sources #(= "a.md" %))))))
-    (is (= ["source-no-record"]
-           (map :rule (sources/index-findings "i.edn" "dhf/raw" (take 1 sources) (constantly false))))))
-  (is (some? (:error (sources/read-index "[1 2]")))))
+(deftest a-dropped-pin-is-named-with-what-dropped-it
+  (is (= [{:id "loyly" :pin "17d68d2" :by {:index {:loyly {:pins ["abcdef1"]}} :name "B"} :deleted? false}]
+         (sources/dropped-pins [{:index {:loyly {:pins ["17d68d2"]}} :name "A"}
+                                {:index {:loyly {:pins ["abcdef1"]}} :name "B"}
+                                {:index {:loyly {:pins ["abcdef1"]}} :name "C"}])))
+  (testing "a retired source keeps its pins: nothing is dropped"
+    (is (empty? (sources/dropped-pins [{:index {:rdm {:pins ["1234567"]}}}
+                                       {:index {:rdm {:pins ["1234567"] :retired "why"}}}]))))
+  (testing "a pin dropped and given back is not dropped"
+    (is (empty? (sources/dropped-pins [{:index {:a {:pins ["1234567"]}}} {:index {:a {:pins []}}}
+                                       {:index {:a {:pins ["1234567"]}}}])))))
 
-(deftest a-dropped-pin-is-found-with-the-commit-that-dropped-it
-  (let [v1 {:commit "c1" :sources [{:id "loyly" :pins ["17d68d2"]} {:id "rdm" :pins ["3763e08"]}]}
-        v2 {:commit "c2" :sources [{:id "rdm" :pins ["3763e08"]}]}]
-    (is (= [{:source "loyly" :pin "17d68d2" :commit "c2"}] (sources/dropped-pins [v1 v2] (:sources v2))))
-    (is (= [{:source "loyly" :pin "17d68d2" :commit nil}] (sources/dropped-pins [v1] (:sources v2))))
-    (is (empty? (sources/dropped-pins [v1 v2] (:sources v1))))))
+(deftest the-stage-publishes-knowledge-indexed
+  (with-tmp
+    (fn [dir]
+      (write! dir "dhf/raw/sources.edn" (pr-str {:loyly {:repository "r" :record "loyly.md" :pins ["17d68d2"] :fenced []}
+                                                 :bare {:record "nowhere.md"}}))
+      (write! dir "dhf/raw/loyly.md" "# loyly\n")
+      (write! dir "dhf/spec/needs.edn" "{\"UN-001\" {:text \"t\" :sources [\"loyly:README.md@17d68d2\" \"a book\"]}}\n")
+      (write! dir "dhf/wiki/index.md" "# Wiki\n\n- [A](pages/a.md)\n")
+      (write! dir "dhf/wiki/pages/a.md" "# A\n\nA claim.[^1]\n\n[^1]: `loyly:README.md@17d68d2`.\n")
+      (let [b (bus/make-bus)
+            seen (atom nil)
+            _ (bus/subscribe! b :KnowledgeIndexed :publishing/site #(reset! seen %))
+            out (sources/check {:root dir :config {:raw-dir "dhf/raw" :needs "dhf/spec/needs.edn" :wiki-dir "dhf/wiki"}
+                                :opts {} :bus b :state (atom {})})
+            rules (set (map :rule (remove #(= :warning (:severity %)) (:findings out))))]
+        (is (= #{"source-no-repository" "source-no-pin" "source-no-record" "citation-malformed"} rules))
+        (is (= ["dhf/wiki/pages/a.md"] (get-in out [:result :knowledge :pages])))
+        (is (= #{:revision :sources :pages :citations :findings} (set (keys @seen))))
+        (is (= [["UN-001" :unchecked] ["UN-001" :unresolved] [nil :unchecked]]
+               (map (juxt :need :status) (:citations @seen))))
+        (is (every? #(= "dhf/spec/needs.edn" (:file %)) (filter :need (:citations @seen))))))))

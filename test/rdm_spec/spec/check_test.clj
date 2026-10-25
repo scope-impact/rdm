@@ -1,47 +1,70 @@
 (ns rdm-spec.spec.check-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [rdm-spec.spec.check :as check]))
+            [rdm-spec.spec.check :as check]
+            [rdm-spec.spec.parser :as parser]))
 
-(defn- sc [m]
-  (merge {:file "dhf/spec/a/b.feature" :line 5 :title "A scenario" :ids ["spec-0001"] :id "spec-0001"
-          :tags ["@spec-0001" "@e2e"] :levels ["@e2e"] :needs ["UN-001"]}
-         m))
+(defn- spec-of
+  "The spec the parser reads from feature texts {file text}, with `needs`."
+  [files needs]
+  (let [parsed (for [[f t] files] (parser/parse-file {:id-prefix "spec" :spec-dir "dhf/spec"} f t))]
+    {:revision :working-tree
+     :texts (into (sorted-map) files)
+     :features (vec (keep :feature parsed))
+     :scenarios (vec (mapcat :scenarios parsed))
+     :needs needs :needs-file "dhf/spec/needs.edn" :needs-error nil
+     :refusals (vec (mapcat :refusals parsed))}))
 
-(defn- rules [fs*] (mapv :rule fs*))
+(def need [{:id "UN-001" :text "A need." :sources ["demo:README.md@abc1234"] :line 1}])
 
-(deftest one-id-per-scenario
-  (is (= ["scenario-no-id"] (rules (check/id-findings "spec" [(sc {:ids [] :id nil})] 10))))
-  (is (str/includes? (:message (first (check/id-findings "spec" [(sc {:ids [] :id nil})] 10))) "rdm-spec stamp"))
-  (is (= ["scenario-two-ids"] (rules (check/id-findings "spec" [(sc {:ids ["spec-0007" "spec-0008"] :id nil})] 10))))
-  (let [fs* (check/id-findings "spec" [(sc {}) (sc {:file "dhf/spec/c/d.feature"})] 10)]
-    (is (= ["id-duplicate"] (rules fs*)))
-    (is (every? #(str/includes? (:message (first fs*)) %) ["dhf/spec/a/b.feature" "dhf/spec/c/d.feature" "spec-0001"])))
-  (is (= ["id-not-issued"] (rules (check/id-findings "spec" [(sc {:ids ["spec-0901"]})] 273))))
-  (is (empty? (check/id-findings "spec" [(sc {})] nil))))
+(defn- feature [& scenario-tags]
+  (str "@UN-001\nFeature: Demo\n  A demo.\n\n  Rule: The rule\n"
+       (str/join (map-indexed (fn [i tags] (str "\n    " tags "\n    Scenario: S" i "\n      Given a step\n"))
+                              scenario-tags))))
 
-(deftest one-level-per-scenario
-  (is (empty? (check/level-findings [(sc {})])))
-  (is (= ["scenario-no-level"] (rules (check/level-findings [(sc {:levels []})]))))
-  (is (= ["scenario-two-levels"] (rules (check/level-findings [(sc {:levels ["@e2e" "@contract"]})])))))
+(defn- rules [spec & {:as opts}]
+  (set (map :rule (check/check-spec spec (merge {:prefix "spec" :ledger {:issued 100} :ledger-file "ids.edn"} opts)))))
 
-(deftest only-known-tags-where-they-go
-  (let [[f] (check/tag-findings "spec" [] [(sc {:tags ["@spec-0001" "@e2e" "@persona"]})])]
-    (is (= "tag-unknown" (:rule f)))
-    (is (every? #(str/includes? (:message f) %) ["spec-0001" "@persona" "@e2e" "@contract" "@UN-" "@wip"])))
-  (is (= ["tag-misplaced"] (rules (check/tag-findings "spec" [{:file "f" :line 1 :name "F" :tags ["@UN-1" "@wip"]}] []))))
-  (is (empty? (check/tag-findings "spec" [{:file "f" :line 1 :name "F" :tags ["@UN-1"]}]
-                                  [(sc {:tags ["@spec-0001" "@contract" "@wip" "@UN-002"]})]))))
+(deftest a-clean-spec-has-no-finding
+  (is (empty? (rules (spec-of {"dhf/spec/demo/a.feature" (feature "@spec-0001 @e2e" "@spec-0002 @contract @wip")} need)))))
+
+(deftest ids
+  (is (contains? (rules (spec-of {"a.feature" (feature "@e2e")} need)) "scenario-no-id"))
+  (is (contains? (rules (spec-of {"a.feature" (feature "@spec-0001 @spec-0002 @e2e")} need)) "scenario-ids"))
+  (is (contains? (rules (spec-of {"a.feature" (feature "@spec-0001 @e2e") "b.feature" (feature "@spec-0001 @e2e")} need))
+                 "id-duplicate"))
+  (is (contains? (rules (spec-of {"a.feature" (feature "@spec-0101 @e2e")} need)) "id-not-issued"))
+  (testing "an unreadable ledger is a finding, and no id is held to it"
+    (let [rs (rules (spec-of {"a.feature" (feature "@spec-0101 @e2e")} need) :ledger {:error "gone"})]
+      (is (contains? rs "ledger-unreadable"))
+      (is (not (contains? rs "id-not-issued"))))))
+
+(deftest a-duplicate-names-every-file
+  (let [fs* (check/id-findings "spec" (:scenarios (spec-of {"a.feature" (feature "@spec-0001 @e2e")
+                                                            "b.feature" (feature "@spec-0001 @e2e")} need)) 100)]
+    (is (= 2 (count fs*)))
+    (is (every? #(and (str/includes? (:message %) "a.feature") (str/includes? (:message %) "b.feature")) fs*))))
+
+(deftest levels-and-tags
+  (is (contains? (rules (spec-of {"a.feature" (feature "@spec-0001")} need)) "scenario-no-level"))
+  (is (contains? (rules (spec-of {"a.feature" (feature "@spec-0001 @e2e @contract")} need)) "scenario-levels"))
+  (is (contains? (rules (spec-of {"a.feature" (feature "@spec-0001 @e2e @persona")} need)) "tag-unknown"))
+  (is (contains? (rules (spec-of {"a.feature" (str "@spec-0009 " (feature "@spec-0001 @e2e"))} need)) "tag-misplaced")))
 
 (deftest needs
-  (let [needs [{:id "UN-001" :sources ["a:b@abcd"] :line 2} {:id "UN-004" :sources [] :line 3}]]
-    (is (= ["need-no-source"] (rules (check/need-findings [(sc {})] needs "n.edn" nil))))
-    (is (= #{"scenario-no-need" "need-undeclared" "need-no-source"}
-           (set (rules (check/need-findings [(sc {:needs []}) (sc {:needs ["UN-009"]})] needs "n.edn" nil)))))
-    (is (= ["needs-unreadable"] (rules (check/need-findings [] [] "n.edn" "missing"))))))
+  (is (contains? (rules (spec-of {"a.feature" (str/replace (feature "@spec-0001 @e2e") "@UN-001\n" "")} need))
+                 "scenario-no-need"))
+  (is (contains? (rules (spec-of {"a.feature" (feature "@spec-0001 @e2e @UN-009")} need)) "need-undeclared"))
+  (is (contains? (rules (spec-of {"a.feature" (feature "@spec-0001 @e2e")} [(assoc (first need) :sources [])]))
+                 "need-no-source")))
 
-(deftest stack-words
-  (let [fs* (check/stack-word-findings [{:file "f.feature" :text "Feature: F\n  Written in cobalt.\n  Cobaltic.\n"}]
-                                       ["Cobalt" ""])]
-    (is (= [["f.feature" 2 "spec-stack-word"]] (map (juxt :file :line :rule) fs*)))
+(deftest stack-words-are-whole-words
+  (let [fs* (check/stack-word-findings [{:file "a.feature" :text "one\nwritten in Cobalt.\nCobalty"}] ["Cobalt"])]
+    (is (= [["a.feature" 2]] (map (juxt :file :line) fs*)))
     (is (str/includes? (:message (first fs*)) "Cobalt"))))
+
+(deftest the-ledger
+  (is (= {:issued 3} (check/read-ledger "ids.edn" "{:issued 3}")))
+  (is (:error (check/read-ledger "ids.edn" nil)))
+  (is (:error (check/read-ledger "ids.edn" "{:issued")))
+  (is (:error (check/read-ledger "ids.edn" "[1]"))))

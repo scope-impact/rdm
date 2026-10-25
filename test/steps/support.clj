@@ -76,6 +76,11 @@
         (fs/copy-tree src (fs/file dir a))
         (do (fs/create-dirs (fs/parent (fs/file dir a)))
             (fs/copy src (fs/file dir a)))))
+    ;; a fixture is a project the scenario makes: it never carries the
+    ;; room's own oracle, which only a scenario about the oracle sets
+    (let [cfg (fs/file dir "dhf/harness/config.edn")]
+      (when (fs/exists? cfg)
+        (spit (str cfg) (str/replace (slurp (str cfg)) #"(?m)^ *:oracle \{[^}]*\}\n" ""))))
     dir))
 
 (defn rdm-spec!

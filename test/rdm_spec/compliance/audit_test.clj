@@ -1,51 +1,47 @@
 (ns rdm-spec.compliance.audit-test
-  (:require [babashka.fs :as fs]
-            [babashka.process :as p]
+  "Unit tests of the Audit copy's pure parts. They make no fixture on disk."
+  (:require [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [rdm-spec.compliance.audit :as audit]))
 
-(deftest the-clauses-page
-  (let [page (audit/clauses-page ["dhf/clauses/std.txt"]
-                                 [{:key "STD:4.1" :description "Quality system" :declared "dhf/clauses/std.txt"
-                                   :named-at [{:file "dhf/documents/q.md" :line 7}]}
-                                  {:key "STD:5.1" :description "Plan | scope" :declared "dhf/clauses/std.txt"
-                                   :named-at [{:file "dhf/documents/plan.md" :line 8}
-                                              {:file "dhf/documents/risk/register.md" :line 9}]}])
-        lines (str/split-lines page)]
-    (is (= ["## dhf/clauses/std.txt"] (filter #(str/starts-with? % "## ") lines)))
-    (is (some #{"| STD:4.1 | Quality system | dhf/documents/q.md:7 |"} lines))
-    (is (some #{"| STD:5.1 | Plan \\| scope | dhf/documents/plan.md:8, dhf/documents/risk/register.md:9 |"} lines))
-    (is (< (.indexOf page "STD:4.1") (.indexOf page "STD:5.1")))))
+(deftest the-engineers-copy
+  (testing "a tag goes with the white space before it"
+    (is (= "We plan." (audit/engineer-copy "We plan [[STD:5.1]].")))
+    (is (= "We plan and test." (audit/engineer-copy "We plan [[A:1]] and test [[A:2]]."))))
+  (testing "a tag over two lines leaves both lines"
+    (is (= "We plan\n every week." (audit/engineer-copy "We plan [[A:1\nmore]] every week."))))
+  (testing "code and unclosed tags are kept"
+    (doseq [t ["We plan `[[A:1]]`." "We [[A:1 and\n\nthen ]]." "```\n[[A:1]]\n```" "\n    [[A:1]]\n"]]
+      (is (= t (audit/engineer-copy t)))))
+  (testing "the frontmatter loses its tags too"
+    (is (= "---\ntitle: Plan\n---\n\nBody.\n"
+           (audit/engineer-copy "---\ntitle: Plan [[A:1]]\n---\n\nBody [[A:1]].\n")))))
 
-(deftest the-traceability-page
-  (let [spec {:needs [{:id "UN-001" :text "A first need."}]
-              :scenarios [{:id "spec-0002" :title "Second" :needs ["UN-001"] :component :demo/alpha :component-name "Alpha"}
-                          {:id "spec-0001" :title "First" :needs ["UN-001"] :component :demo/alpha :component-name "Alpha"}
-                          {:id nil :title "Unstamped" :needs ["UN-001"]}]}
-        page (audit/traceability-page spec {"spec-0001" :verified "spec-0002" :failed})]
-    (is (str/includes? page "## UN-001\n\nA first need."))
-    (is (str/includes? page "| @spec-0001 | First | Alpha (demo/alpha) | verified |\n| @spec-0002 | Second | Alpha (demo/alpha) | failed |"))
-    (is (not (str/includes? page "Unstamped")))))
+(deftest pages
+  (testing "one section per declared list, included clauses in place"
+    (let [page (audit/clauses-page "abc" ["s.txt"]
+                                   [{:key "A:4" :description "Q" :clause-list "b.txt" :line 1 :declared "s.txt"
+                                     :named-at [{:file "d/q.md" :line 3}]}
+                                    {:key "A:5" :description "P" :clause-list "s.txt" :line 2 :declared "s.txt"
+                                     :named-at [{:file "d/p.md" :line 8} {:file "d/r.md" :line 9}]}])]
+      (is (= ["## s.txt"] (filter #(str/starts-with? % "## ") (str/split-lines page))))
+      (is (str/includes? page "| A:5 | P | s.txt:2 | d/p.md:8, d/r.md:9 |"))))
+  (testing "each need with its scenarios and their status"
+    (let [page (audit/traceability-page [{:id "UN-001" :text "A need."}]
+                                        [{:id "spec-0001" :title "T" :component-name "Alpha" :needs ["UN-001"]}]
+                                        {"spec-0001" :verified})]
+      (is (str/includes? page "## UN-001\n\nA need."))
+      (is (str/includes? page "| @spec-0001 | T | Alpha | verified |")))))
 
-(deftest the-manifest-and-a-clean-record
-  (let [d (str (fs/create-temp-dir {:prefix "rdm-spec-audit-test-"}))]
-    (try
-      (spit (str (fs/file d "b.txt")) "b")
-      (fs/create-dirs (fs/file d "a"))
-      (spit (str (fs/file d "a" "z.txt")) "z")
-      (spit (str (fs/file d "manifest.edn")) "old")
-      (let [m (audit/manifest "abc" true d)]
-        (is (= [:commit :clean :files] (keys m)))
-        (is (= ["a/z.txt" "b.txt"] (map :path (:files m))))
-        (is (= "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d" (:sha256 (second (:files m))))))
-      (let [git (fn [& args] (apply p/shell {:dir d :out :string :err :string} "git" args))
-            req {:root d :env (into {} (System/getenv))}]
-        (git "init" "-q")
-        (git "add" "b.txt")
-        (git "-c" "user.name=t" "-c" "user.email=t@rdm-spec.invalid" "commit" "-q" "-m" "x")
-        (is (audit/head-commit req))
-        (is (true? (audit/clean? req)) "untracked files never count")
-        (spit (str (fs/file d "b.txt")) "changed")
-        (is (false? (audit/clean? req))))
-      (finally (fs/delete-tree d)))))
+(deftest the-manifest
+  (let [m (audit/manifest-text "abc" true [["a.md" "11"] ["b.md" "22"]])]
+    (is (str/starts-with? m "{:commit \"abc\", :clean true, :files [{:path \"a.md\", :sha256 \"11\"}"))
+    (is (= {:commit "abc" :clean true :files [{:path "a.md" :sha256 "11"} {:path "b.md" :sha256 "22"}]}
+           (edn/read-string m)))))
+
+(deftest pdf-input
+  (let [{:keys [title markdown]} (audit/pdf-input "---\nid: P-1\nrevision: 3\ntitle: Plan\n---\n\nBody.\n")]
+    (is (= "Plan" title))
+    (is (str/starts-with? markdown "**P-1**, revision 3"))
+    (is (not (str/includes? markdown "title:")))))

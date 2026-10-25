@@ -1,87 +1,74 @@
 (ns rdm-spec.compliance.gap-test
+  "Unit tests of Gap analysis's pure parts. They make no fixture on disk."
   (:require [clojure.test :refer [deftest is testing]]
             [rdm-spec.compliance.gap :as gap]
             [rdm-spec.kernel.command :as command]))
 
-(defn- mem-reader
-  "A reader over the map {path text}: no file is made."
-  [files]
-  {:read (fn [f] (get files f))
-   :list (fn [dir] (vec (sort (filter #(.startsWith ^String % (str dir "/")) (keys files)))))
-   :dir? (constantly true)})
-
-(defn- refusal [f]
-  (try (f) nil (catch Exception e (when (command/cannot-run? e) (ex-message e)))))
-
 (deftest clause-list-lines
-  (is (= [{:line 2 :include "dhf/clauses/base.txt"}
-          {:line 4 :clause {:key "STD:5.1" :description "Development plan"}}
-          {:line 5 :malformed "not/a key"}]
-         (gap/parse-clause-list "dhf/clauses/std.txt"
-                                "# comment\ninclude base.txt\n\nSTD:5.1 Development plan\nnot/a key\n"))))
+  (is (= {:clause "STD:5.1" :description "Development plan"} (gap/parse-line "STD:5.1 Development plan")))
+  (is (= {:include "base.txt"} (gap/parse-line "include base.txt")))
+  (is (:comment (gap/parse-line "  # a comment")))
+  (is (:blank (gap/parse-line "   ")))
+  (is (:malformed (gap/parse-line "STD/5 nope"))))
 
-(deftest clauses-in-order-includes-in-place-each-key-once
-  (let [rd (mem-reader {"dhf/clauses/std.txt" "include base.txt\nSTD:5.1 Plan\nSTD:4.1 Again\n"
-                        "dhf/clauses/base.txt" "STD:4.1 Quality system\n"})
-        {:keys [clauses]} (gap/read-clauses rd ["dhf/clauses/std.txt"])]
-    (is (= ["STD:4.1" "STD:5.1"] (map :key clauses)))
-    (is (= {:key "STD:4.1" :description "Quality system" :clause-list "dhf/clauses/base.txt" :line 1
-            :declared "dhf/clauses/std.txt"}
-           (first clauses)))))
+(deftest reading-clause-lists
+  (let [files {"dhf/clauses/std.txt" "# c\ninclude base.txt\nSTD:4.1 Again\nSTD:5.1 Plan\n"
+               "dhf/clauses/base.txt" "STD:4.1 Quality\n"}
+        {:keys [clauses findings]} (gap/read-clauses files ["dhf/clauses/std.txt"])]
+    (testing "includes in place, each key once, where first reached"
+      (is (= [["STD:4.1" "dhf/clauses/base.txt" 1] ["STD:5.1" "dhf/clauses/std.txt" 4]]
+             (map (juxt :key :clause-list :line) clauses)))
+      (is (every? #(= "dhf/clauses/std.txt" (:declared %)) clauses))
+      (is (empty? findings))))
+  (testing "a list that reaches no clause cannot run"
+    (is (thrown-with-msg? Exception #"holds no clause" (gap/read-clauses {"a.txt" "# only\n"} ["a.txt"]))))
+  (testing "an unreadable include cannot run, naming the file"
+    (let [e (try (gap/read-clauses {"d/a.txt" "include missing.txt\n"} ["d/a.txt"]) nil (catch Exception e e))]
+      (is (command/cannot-run? e))
+      (is (re-find #"d/missing\.txt" (ex-message e))))))
 
-(deftest clause-list-refusals
-  (is (re-find #"dhf/clauses/missing\.txt"
-               (refusal #(gap/read-clauses (mem-reader {"dhf/clauses/std.txt" "include missing.txt\n"})
-                                           ["dhf/clauses/std.txt"]))))
-  (is (re-find #"dhf/clauses/std\.txt holds no clause"
-               (refusal #(gap/read-clauses (mem-reader {"dhf/clauses/std.txt" "# only\n"})
-                                           ["dhf/clauses/std.txt"]))))
-  (testing "an include cycle is read once"
-    (is (= ["A:1"] (map :key (:clauses (gap/read-clauses (mem-reader {"a.txt" "include a.txt\nA:1 a\n"}) ["a.txt"])))))))
+(deftest naming-clauses
+  (is (gap/names? "STD:5.1" "STD:5.1"))
+  (is (gap/names? "STD:5.1.a" "STD:5.1"))
+  (is (not (gap/names? "STD:5.12" "STD:5.1")))
+  (is (not (gap/names? "STD:5" "STD:5.1")))
+  (is (= ["STD:5.1" "the" "plan"] (gap/tag-words "STD:5.1: the plan")))
+  (is (= "STD:9.9" (gap/single-key " STD:9.9 ")))
+  (is (= "STD:9.9" (gap/single-key "STD:9.9: a note")))
+  (is (nil? (gap/single-key "This section meets STD:5.1"))))
 
-(deftest what-names-a-clause
-  (doseq [[text named?] [["STD:5.1" true] ["This section meets STD:5.1" true]
-                         ["STD:5.1: the plan is this document" true] ["STD:5.1.a" true]
-                         ["STD:5.12" false] ["STD:5" false] ["XSTD:5.1" false]]]
-    (is (= named? (gap/names? text "STD:5.1")) text)))
+(deftest audit-tags-in-a-body
+  (testing "outside code, never past a blank line, across one line break"
+    (is (= [{:line 1 :inner "A"} {:line 9 :inner "B\nC"}]
+           (gap/body-tags ["x [[A]] `[[no]]`" "" "    [[indented]]" "" "```" "[[fenced]]" "```" "open [[ x"
+                           "[[B" "C]] y"]))))
+  (testing "an indented line inside a paragraph is not code"
+    (is (= ["A"] (map :inner (gap/body-tags ["text" "    [[A]]"])))))
+  (testing "a tab indents a block too"
+    (is (empty? (gap/body-tags ["" "\t[[A]]"])))))
 
-(deftest audit-tags-skip-frontmatter-code-and-blank-lines
-  (let [text (str "---\ntitle: T [[STD:1]]\n---\n\n"
-                  "We plan [[STD:5.1]].\n"
-                  "Code `[[STD:5.2]]` here.\n\n"
-                  "```\n[[STD:5.3]]\n```\n\n"
-                  "Open [[ tag\n\nSTD:5.4 ]]\n\n"
-                  "Over [[STD:5.5\nlines]] ok.\n")
-        tags (gap/audit-tags text)]
-    (is (= ["STD:5.1" "STD:5.5\nlines"] (map :text tags)))
-    (is (= [5 16] (map :line tags)))))
+(deftest documents
+  (let [d (gap/read-document "dhf/documents/p.md"
+                             "---\nid: P-1\nrevision: 2\ntitle: \"Plan [[X:1]]\"\n---\n\nWe plan [[X:1]].\nTODO later\n")]
+    (is (= ["P-1" "2" "Plan [[X:1]]"] ((juxt :id :revision :title) d)))
+    (testing "frontmatter names nothing; lines count from the file's start"
+      (is (= [{:line 7 :inner "X:1"}] (:tags d))))
+    (is (= [8] (:todos d)))))
 
-(deftest stripping-tags
-  (is (= "We plan and test." (gap/strip-tags "We plan [[STD:5.1]] and test [[STD:5.2]].")))
-  (is (= "We plan `[[STD:5.1]]`." (gap/strip-tags "We plan `[[STD:5.1]]`.")))
-  (is (= "We plan the work\nand keep it." (gap/strip-tags "We plan the work [[STD:5.1\nthe plan]] and keep it.")))
-  (is (= "---\ntitle: T [[X]]\n---\nBody." (gap/strip-tags "---\ntitle: T [[X]]\n---\nBody [[X]]."))))
-
-(deftest frontmatter-and-identity
-  (let [text "---\nid: PLAN-001\nrevision: 3\ntitle: Plan\n---\n\nBody\n"
-        {:keys [frontmatter body-line]} (gap/split-frontmatter text)]
-    (is (= 6 body-line))
-    (is (= {:id "PLAN-001" :revision "3" :title "Plan"} (gap/identity-of frontmatter))))
-  (is (:error (gap/identity-of nil))))
-
-(deftest the-analysis
-  (let [clauses [{:key "STD:5.1" :description "Plan" :clause-list "std.txt" :line 1}
-                 {:key "STD:5.2" :description "Req" :clause-list "std.txt" :line 2}]
-        doc (fn [id body] (str "---\nid: " id "\nrevision: 1\ntitle: T\n---\n\n" body "\n"))
-        {:keys [findings] :as out}
-        (gap/analyse clauses [{:file "a.md" :text (doc "A" "We plan [[STD:5.1]] [[STD:9.9]].\nTODO: more")}
-                              {:file "b.md" :text (doc "A" "Nothing.")}
-                              {:file "c.md" :text "No frontmatter."}])
+(deftest analysis
+  (let [clauses [{:key "X:1" :description "One" :clause-list "c.txt" :line 1 :declared "c.txt"}
+                 {:key "X:2" :description "Two" :clause-list "c.txt" :line 2 :declared "c.txt"}]
+        docs [{:file "a.md" :id "A" :revision "1" :title "A" :tags [{:line 3 :inner "X:1"} {:line 4 :inner "Y:9"}] :todos []}
+              {:file "b.md" :id "A" :revision nil :title "B" :tags [] :todos [5]}]
+        {:keys [clauses findings]} (gap/analyse clauses docs)
         by-rule (group-by :rule findings)]
-    (is (= [{:file "a.md" :line 7}] (:named-at (first (:clauses out)))))
-    (is (= [["std.txt" 2]] (map (juxt :file :line) (by-rule "clause-unreferenced"))))
-    (is (= #{"a.md" "b.md"} (set (map :file (by-rule "document-duplicate-id")))))
-    (is (= ["c.md"] (map :file (by-rule "document-unidentified"))))
-    (is (= [["a.md" 7]] (map (juxt :file :line) (by-rule "clause-unknown"))))
-    (is (= [["a.md" 8]] (map (juxt :file :line) (by-rule "document-placeholder"))))
-    (is (every? command/warning? (concat (by-rule "clause-unknown") (by-rule "document-placeholder"))))))
+    (is (= [[{:file "a.md" :line 3}] []] (map :named-at clauses)))
+    (is (= [["c.txt" 2]] (map (juxt :file :line) (get by-rule "clause-unreferenced"))))
+    (is (re-find #"revision" (:message (first (get by-rule "document-unidentified")))))
+    (is (= 2 (count (get by-rule "document-id-duplicate"))))
+    (is (= [["a.md" 4]] (map (juxt :file :line) (get by-rule "clause-unknown"))))
+    (is (every? command/warning? (concat (get by-rule "clause-unknown") (get by-rule "document-placeholder"))))))
+
+(deftest paths
+  (is (= "dhf/clauses/base.txt" (gap/resolve-include "dhf/clauses/std.txt" "base.txt")))
+  (is (= "dhf/other/x.txt" (gap/resolve-include "dhf/clauses/std.txt" "../other/x.txt"))))

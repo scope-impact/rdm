@@ -1,172 +1,174 @@
 (ns steps.compliance-gap
-  "Step definitions for dhf/spec/compliance/gap.feature: `rdm-spec check` in
-  a regulated project set up by rdm-spec (steps.compliance-support). The
-  When, `it exits N` and `it exits 2 and names X` are the kernel's."
+  "Step definitions for dhf/spec/compliance/gap.feature: gap analysis as a
+  stage of `rdm-spec check`, in a regulated project (steps.compliance-support)."
   (:require [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.compliance-support :as cs]
             [steps.kernel-command :as kc]
             [steps.support :as s]))
 
-(defn- dir [ctx] (or (:dir ctx) (s/fail! "no project was made")))
+(defn- unreferenced-lines
+  "The run's clause-unreferenced finding lines."
+  [r]
+  (filter #(str/includes? % "clause-unreferenced") (s/err-lines r)))
 
-(defn- plan! [ctx text]
-  (s/write! (dir ctx) "dhf/documents/plan.md" text)
-  ctx)
+(defn- names-key? [line k]
+  (boolean (re-find (re-pattern (str "(?<![A-Za-z0-9._:-])" (java.util.regex.Pattern/quote k)
+                                     "(?![A-Za-z0-9_:-]|\\.[A-Za-z0-9])"))
+                    line)))
 
-(defn- finding-lines
-  "The error lines of the last run under `rule`."
-  [ctx rule]
-  (filter #(str/includes? % (str ": " rule ": ")) (s/err-lines (kc/the-run ctx))))
+;; --- Without :regulated, nothing of the profile runs ---------------------------
 
-(defn- gaps
-  "The keys the last check reported as gaps: its clause-unreferenced findings."
-  [ctx]
-  (vec (keep #(second (re-find #"clause-unreferenced: (\S+)" %)) (finding-lines ctx "clause-unreferenced"))))
-
-;; ---------------------------------------------------------------------------
-;; Without :regulated
+(defstep #"a project set up by rdm-spec whose configuration holds no :regulated"
+  (fn [ctx]
+    (let [ctx (cs/initialised! ctx)]
+      (cs/config! (:dir ctx) #(dissoc % :regulated))
+      ctx)))
 
 (defstep #"a file dhf/documents/plan\.md that names no clause"
-  (fn [ctx] (plan! ctx (cs/document {} "We plan the work."))))
+  (fn [ctx]
+    (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "" "We meet STD:5.1 here, and [[STD:5.1]] is only text."))))
 
 (defstep #"it exits 0 and no finding or warning names a clause, a clause list or a document"
   (fn [ctx]
     (let [r (kc/exits! ctx 0)]
-      (s/check! (not-any? #(re-find #"(?i)clause|dhf/documents|dhf/clauses|document" %) (s/err-lines r))
-                (str "a line names the profile\n" (s/show r))))))
+      (doseq [l (s/err-lines r)]
+        (s/check! (not (re-find #"clause|dhf/documents|dhf/clauses|document-" l))
+                  (str "a line names the profile: " l "\n" (s/show r))))
+      nil)))
 
-;; ---------------------------------------------------------------------------
-;; Clause lists
+;; --- A clause list is read as clause lines, comments and includes ------------
 
 (defstep #"a regulated project"
   (fn [ctx] (cs/regulated! ctx)))
 
-(defstep #"(dhf/clauses/\S+) holds:"
-  (fn [ctx file doc]
-    (s/write! (dir ctx) file (str doc "\n"))
-    ctx))
+(defstep #"dhf/clauses/std\.txt holds:"
+  (fn [ctx text] (cs/write! ctx cs/std (str text "\n"))))
 
 (defstep #"(dhf/clauses/\S+) holds \"([^\"]*)\""
-  (fn [ctx file line]
-    (s/write! (dir ctx) file (str line "\n"))
-    ctx))
+  (fn [ctx rel line] (cs/write! ctx rel (str line "\n"))))
 
 (defstep #"no document names any clause"
-  (fn [ctx] (plan! ctx (cs/document {} "We plan the work."))))
+  (fn [ctx] (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "" "This plan names nothing yet."))))
 
-(defstep #"it exits 1 with one clause-unreferenced finding for each of (\S+), (\S+) and (\S+), and none for any other key"
-  (fn [ctx & ks]
+(defstep #"it exits 1 with one clause-unreferenced finding for each of STD:4\.1, STD:5\.1 and STD:5\.2, and none for any other key"
+  (fn [ctx]
     (let [r (kc/exits! ctx 1)
-          got (gaps ctx)]
-      (s/check! (= (sort ks) (sort got))
-                (str "clause-unreferenced findings for " (pr-str got) "\n" (s/show r))))))
+          ls (unreferenced-lines r)]
+      (doseq [k ["STD:4.1" "STD:5.1" "STD:5.2"]]
+        (s/check! (= 1 (count (filter #(names-key? % k) ls)))
+                  (str "not exactly one clause-unreferenced finding names " k "\n" (s/show r))))
+      (s/check! (= 3 (count ls)) (str "expected three clause-unreferenced findings\n" (s/show r)))
+      (s/check! (some #(and (names-key? % "STD:4.1") (str/includes? % "dhf/clauses/base.txt:1:")) ls)
+                (str "STD:4.1 is not named where base.txt holds it\n" (s/show r)))
+      nil)))
 
 (defstep #"dhf/clauses/std\.txt holds only comments"
+  (fn [ctx] (cs/write! ctx cs/std "# The standard\n# Nothing listed yet\n")))
+
+(defstep #"it exits 2 and says the clause list dhf/clauses/std\.txt holds no clause"
   (fn [ctx]
-    (s/write! (dir ctx) "dhf/clauses/std.txt" "# The standard's clauses\n# none yet\n")
-    ctx))
+    (let [r (kc/refused-naming! ctx "dhf/clauses/std.txt")]
+      (s/check! (str/includes? (:err r) "no clause") (str "it does not say the list holds no clause\n" (s/show r)))
+      nil)))
 
-(defstep #"it exits 2 and says the clause list (\S+) holds no clause"
-  (fn [ctx file] (kc/refused-naming! ctx file "holds no clause") nil))
+;; --- A clause is met only by an audit tag naming it ---------------------------
 
-;; ---------------------------------------------------------------------------
-;; What names a clause
+(defstep #"dhf/clauses/std\.txt holds the clauses STD:5\.1 and STD:5\.2"
+  (fn [ctx]
+    (-> (cs/write! ctx cs/std "# The standard\nSTD:5.1 Development plan\nSTD:5.2 Requirements analysis\n")
+        (assoc :clause-line 3))))
 
-(defstep #"dhf/clauses/std\.txt holds the clauses (\S+) and (\S+)"
-  (fn [ctx a b]
-    (s/write! (dir ctx) "dhf/clauses/std.txt" (str a " Development plan\n" b " Requirements analysis\n"))
-    (assoc ctx :clause-lines {a 1 b 2} :descriptions {a "Development plan" b "Requirements analysis"})))
+(defstep #"dhf/documents/plan\.md names STD:5\.1 in an audit tag and nothing else"
+  (fn [ctx] (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "" "We plan the work [[STD:5.1]]."))))
 
-(defstep #"dhf/documents/plan\.md names (\S+) in an audit tag and nothing else"
-  (fn [ctx k] (plan! ctx (cs/document {} (str "We plan the work [[" k "]].")))))
+(defstep #"it prints a clause-unreferenced finding naming dhf/clauses/std\.txt, the line of STD:5\.2, the key and its description"
+  (fn [ctx]
+    (let [r (kc/the-run ctx)
+          l (cs/err-line! r (str "dhf/clauses/std.txt:" (:clause-line ctx) ": clause-unreferenced: ")
+                          "STD:5.2" "Requirements analysis")]
+      (s/check! (= 1 (count (unreferenced-lines r))) (str "STD:5.1 is reported too: " l))
+      nil)))
 
-(defstep #"it prints a clause-unreferenced finding naming (\S+), the line of (\S+), the key and its description"
-  (fn [ctx file k]
-    (let [line (get-in ctx [:clause-lines k])
-          d (get-in ctx [:descriptions k])
-          r (kc/the-run ctx)]
-      (s/check! (some #(and (str/starts-with? % (str file ":" line ": clause-unreferenced: "))
-                            (str/includes? % k) (str/includes? % d))
-                      (s/err-lines r))
-                (str "no clause-unreferenced finding at " file ":" line " naming " k " and " d "\n" (s/show r))))))
-
-(defstep #"dhf/clauses/std\.txt holds the one clause (\S+)"
-  (fn [ctx k]
-    (s/write! (dir ctx) "dhf/clauses/std.txt" (str k " Development plan\n"))
-    ctx))
+(defstep #"dhf/clauses/std\.txt holds the one clause STD:5\.1"
+  (fn [ctx] (cs/write! ctx cs/std "STD:5.1 Development plan\n")))
 
 (defstep #"dhf/documents/plan\.md holds the line (.+)"
-  (fn [ctx line] (plan! ctx (cs/document {} line))))
+  (fn [ctx line] (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "" line))))
 
-(defstep #"the clause (\S+) is (named|not named)"
-  (fn [ctx k named]
-    (let [r (kc/the-run ctx)
-          gap? (some #{k} (gaps ctx))
-          result-gaps (get-in (kc/stdout-edn r) [:gap :gaps])]
-      (s/check! (not= 2 (:exit r)) (str "the check could not run\n" (s/show r)))
-      (if (= "named" named)
-        (s/check! (and (not gap?) (= 0 (:exit r)) (not (some #{k} result-gaps)))
-                  (str k " is not named\n" (s/show r)))
-        (s/check! (and gap? (= 1 (:exit r)) (some #{k} result-gaps))
-                  (str k " is named\n" (s/show r)))))))
+(defstep #"the clause (\S+) is named"
+  (fn [ctx k]
+    (let [r (kc/exits! ctx 0)]
+      (s/check! (not-any? #(names-key? % k) (unreferenced-lines r))
+                (str k " is reported unreferenced\n" (s/show r)))
+      nil)))
+
+(defstep #"the clause (\S+) is not named"
+  (fn [ctx k]
+    (let [r (kc/exits! ctx 1)]
+      (s/check! (some #(names-key? % k) (unreferenced-lines r))
+                (str "no clause-unreferenced finding names " k "\n" (s/show r)))
+      nil)))
+
+(defstep #"dhf/documents/plan\.md holds, after a blank line, a line of four spaces then \"\[\[STD:5\.1\]\]\""
+  (fn [ctx] (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "" "An example:" "" "    [[STD:5.1]]"))))
 
 (defstep #"dhf/documents/plan\.md holds \"An open \[\[ tag\", a blank line, and \"STD:5\.1 \]\]\""
-  (fn [ctx] (plan! ctx (cs/document {} "An open [[ tag\n\nSTD:5.1 ]]"))))
+  (fn [ctx] (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "" "An open [[ tag" "" "STD:5.1 ]]"))))
 
-(defstep #"dhf/documents/plan\.md names (\S+) and (\S+) in audit tags"
-  (fn [ctx a b]
-    ;; frontmatter is lines 1-5, a blank line 6: the tags stand on lines 7 and 9
-    (plan! (assoc ctx :tag-lines {a 7 b 9})
-           (cs/document {} (str "We plan the work [[" a "]].\n\nWe also meet [[" b "]].")))))
+(defstep #"dhf/documents/plan\.md names STD:5\.1 and STD:9\.9 in audit tags"
+  (fn [ctx]
+    (-> (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "" "We plan the work [[STD:5.1]]." "" "We also do [[STD:9.9]]."))
+        (assoc :tag-line (+ cs/plan-body-start 4)))))
 
-(defstep #"it prints a clause-unknown warning naming (\S+), the line of the tag and (\S+)"
-  (fn [ctx file k]
-    (let [line (get-in ctx [:tag-lines k])
-          r (kc/the-run ctx)]
-      (s/check! (some #(and (str/starts-with? % (str file ":" line ": warning: clause-unknown: "))
-                            (str/includes? % k))
-                      (s/err-lines r))
-                (str "no clause-unknown warning at " file ":" line " naming " k "\n" (s/show r))))))
+(defstep #"it prints a clause-unknown warning naming dhf/documents/plan\.md, the line of the tag and STD:9\.9"
+  (fn [ctx]
+    (cs/err-line! (kc/the-run ctx) (str "dhf/documents/plan.md:" (:tag-line ctx) ": warning: clause-unknown: ")
+                  "STD:9.9")
+    nil))
 
-;; ---------------------------------------------------------------------------
-;; Frontmatter, placeholders, identity
+;; --- Frontmatter names no clause -----------------------------------------------
 
-(defstep #"dhf/documents/plan\.md has the title \"([^\"]*)\" and a body that names no clause"
-  (fn [ctx title] (plan! ctx (cs/document {:title title} "We plan the work."))))
+(defstep #"dhf/documents/plan\.md has the title \"Development plan \[\[STD:5\.1\]\]\" and a body that names no clause"
+  (fn [ctx]
+    (cs/write! ctx cs/plan (cs/document [["id" "PLAN-001"] ["revision" "1"] ["title" "Development plan [[STD:5.1]]"]]
+                                        "# Plan\n\nThis plan names nothing.\n"))))
 
-(defstep #"dhf/documents/plan\.md names (\S+) in an audit tag and holds a line \"([^\"]*)\""
-  (fn [ctx k line]
-    ;; the tag on line 7, the placeholder on line 9
-    (plan! (assoc ctx :todo-line 9)
-           (cs/document {} (str "We plan the work [[" k "]].\n\n" line)))))
+;; --- A placeholder is a warning ------------------------------------------------
 
-(defstep #"it prints a document-placeholder warning naming (\S+) and the line holding TODO"
-  (fn [ctx file]
-    (let [r (kc/the-run ctx)]
-      (s/check! (some #(str/starts-with? % (str file ":" (:todo-line ctx) ": warning: document-placeholder: "))
-                      (s/err-lines r))
-                (str "no document-placeholder warning at " file ":" (:todo-line ctx) "\n" (s/show r))))))
+(defstep #"dhf/documents/plan\.md names STD:5\.1 in an audit tag and holds a line \"TODO: write the plan\""
+  (fn [ctx]
+    (-> (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "" "We plan the work [[STD:5.1]]." "" "TODO: write the plan"))
+        (assoc :todo-line (+ cs/plan-body-start 4)))))
+
+(defstep #"it prints a document-placeholder warning naming dhf/documents/plan\.md and the line holding TODO"
+  (fn [ctx]
+    (cs/err-line! (kc/the-run ctx) (str "dhf/documents/plan.md:" (:todo-line ctx) ": warning: document-placeholder: "))
+    nil))
+
+;; --- A controlled document carries its identity -------------------------------
 
 (defstep #"dhf/documents/plan\.md has frontmatter with an id and a title but no revision"
-  (fn [ctx] (plan! ctx (cs/document {:revision nil} "We plan the work [[STD:5.1]]."))))
+  (fn [ctx]
+    (cs/write! ctx cs/plan (cs/document [["id" "PLAN-001"] ["title" "Development plan"]]
+                                        "# Plan\n\nWe plan the work [[STD:5.1]].\n"))))
 
-(defstep #"it prints a document-unidentified finding naming (\S+) and the missing revision"
-  (fn [ctx file]
-    (let [r (kc/the-run ctx)]
-      (s/check! (some #(and (str/starts-with? % (str file ": document-unidentified: "))
-                            (str/includes? % "revision"))
-                      (s/err-lines r))
-                (str "no document-unidentified finding for " file " naming the revision\n" (s/show r))))))
+(defstep #"it prints a document-unidentified finding naming dhf/documents/plan\.md and the missing revision"
+  (fn [ctx]
+    (let [l (cs/err-line! (kc/the-run ctx) "dhf/documents/plan.md" "document-unidentified" "revision")]
+      (s/check! (not (re-find #"\bid\b|title" (str/replace l #"^.*document-unidentified: " "")))
+                (str "it names more than the revision as missing: " l))
+      nil)))
 
-(defstep #"dhf/documents/plan\.md and dhf/documents/old-plan\.md both have the id (\S+)"
-  (fn [ctx id]
-    (s/write! (dir ctx) "dhf/documents/old-plan.md" (cs/document {:id id :title "Old plan"} "An older plan."))
-    (plan! ctx (cs/document {:id id} "We plan the work [[STD:5.1]]."))))
+(defstep #"dhf/documents/plan\.md and dhf/documents/old-plan\.md both have the id PLAN-001"
+  (fn [ctx]
+    (-> ctx
+        (cs/write! cs/plan (cs/plan-doc "# Plan" "" "We plan the work [[STD:5.1]]."))
+        (cs/write! "dhf/documents/old-plan.md"
+                   (cs/document [["id" "PLAN-001"] ["revision" "4"] ["title" "Old plan"]] "The old plan.\n")))))
 
-(defstep #"it exits 1 and names the id (\S+) and both files"
-  (fn [ctx id]
+(defstep #"it exits 1 and names the id PLAN-001 and both files"
+  (fn [ctx]
     (let [r (kc/exits! ctx 1)]
-      (s/check! (some #(every? (fn [w] (str/includes? % w)) [id "dhf/documents/plan.md" "dhf/documents/old-plan.md"])
-                      (s/err-lines r))
-                (str "no line names " id " and both files\n" (s/show r))))))
+      (cs/err-line! r "PLAN-001" "dhf/documents/plan.md" "dhf/documents/old-plan.md")
+      nil)))

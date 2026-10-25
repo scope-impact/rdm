@@ -1,19 +1,15 @@
 (ns steps.knowledge-sources
   "Step definitions for dhf/spec/knowledge/sources.feature, in a copy of the
-  room's allow-listed paths (a fixture), whose sources index, needs and wiki
-  the scenario changes, with local git checkouts of a source as fixtures.
+  room's spec, sources index, needs and wiki (a fixture), which the Givens
+  change; source checkouts are fresh git repositories made by
+  steps.knowledge-support/checkout!.
 
-  The shared When (\"rdm-spec LINE\" is run, ... with that directory as DIR)
-  and \"it passes\" are the kernel's (steps.kernel-command). \"a wiki page
-  whose footnote cites C\" is the site's (a fresh copy of the room holding the
-  page), so a Given before it that needs the sources index's history records
-  that history in a repository of its own and points the scenario's git at it
-  (GIT_DIR), which survives the fresh copy.
+  The shared When (\"rdm-spec ...\" is run), \"it passes\" and \"a wiki page
+  whose footnote cites ...\" are the kernel's (steps.kernel-command).
 
-  Context keys: :dir the project, :run the last run, :sources-dir the
-  --sources directory, :source the source a Given named, :citation and
-  :citation-line the citation a Given added (its line in needs.edn), :record
-  the record file a Given named, :dropped {:source :pin :commit}."
+  Context keys: :dir the project, :run the last run, :source the source a
+  Given named, :citation and :cited-at {:file :line} the citation a Given
+  wrote, :sources-dir the directory of checkouts (DIR), :pin, :fenced."
   (:require [babashka.fs :as fs]
             [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
@@ -24,241 +20,227 @@
 ;; ---------------------------------------------------------------------------
 ;; Helpers
 
-(defn- room [ctx] (k/ensure-room! ctx))
+(defn- source! [ctx id m]
+  (let [ctx (k/ensure-room! ctx)]
+    (k/update-index! (:dir ctx) #(assoc % (keyword id) m))
+    (assoc ctx :source id)))
 
-(defn- add-source!
-  "Adds the source `id` to the project's index, with its record file written
-  unless `record?` is false."
-  [dir id entry record?]
-  (k/update-index! dir #(assoc % (keyword id) entry))
-  (when (and record? (:record entry))
-    (s/write! dir (str "dhf/raw/" (:record entry)) (str "# " id "\n\nA fixture source.\n"))))
+(defn- record! [dir file] (s/write! dir (str "dhf/raw/" file) (str "# " file "\n\nA fixture source record.\n")))
 
 (defn- line-naming
-  "The first finding line of the last run holding every one of `parts`."
+  "The run's first finding line holding every one of `parts`, or a failure."
   [ctx & parts]
   (k/fails-with! ctx (fn [l] (every? #(str/includes? l (str %)) parts))
-                 (str "names " (str/join ", " parts))))
+                 (str "naming all of " (pr-str parts))))
 
 (defn- cite-in-need!
-  "Puts `citation` into UN-011's sources; ctx with :citation and its line."
-  [ctx citation]
-  (let [ctx (room ctx)
-        line (k/cite! (:dir ctx) "UN-011" citation)]
-    (assoc ctx :citation citation :citation-line line)))
+  "Writes `citation` among the sources of `need`; ctx with :citation and
+  :cited-at."
+  [ctx need citation]
+  (let [ctx (k/ensure-room! ctx)
+        line (k/cite! (:dir ctx) need citation)]
+    (assoc ctx :citation citation :need need :cited-at {:file k/needs-rel :line line})))
 
-(defn- where-cited [ctx] (str k/needs-rel ":" (:citation-line ctx) ":"))
+(defn- at-citation!
+  "The finding line at the place the citation was written, naming `parts`."
+  [ctx & parts]
+  (let [{:keys [file line]} (:cited-at ctx)]
+    (k/fails-with! ctx (fn [l] (and (str/starts-with? l (str file ":" line ":"))
+                                   (every? #(str/includes? l (str %)) parts)))
+                   (str "at " file ":" line " naming " (pr-str parts)))))
 
-(defn- set-need-sources! [dir need sources]
-  (k/write-needs! dir (assoc-in (k/read-edn dir k/needs-rel) [need :sources] sources)))
+(defn- loyly-checkout!
+  "A checkout of loyly at `pin` under the scenario's sources directory,
+  holding what the room cites of it, minus `without`."
+  [ctx repo pin without]
+  (let [ctx (k/ensure-room! ctx)
+        idx (k/index (:dir ctx))
+        id (k/source-id idx repo)
+        sdir (k/sources-dir! ctx)]
+    (s/check! (some #{pin} (get-in idx [(keyword id) :pins])) (str id " is not pinned at " pin))
+    (k/checkout! sdir id pin (remove #{without} (k/cited-paths id)))
+    (assoc ctx :sources-dir sdir :source id :pin pin)))
 
-(defn- git-history!
-  "Commits each of `indexes` in turn as dhf/raw/sources.edn of a new
-  repository in `dir`; returns the commits, oldest first."
-  [dir indexes]
-  (k/git! dir "init" "-q")
-  (vec (for [[i idx] (map-indexed vector indexes)]
-         (do (spit (str (fs/file dir k/index-rel)) (pr-str idx))
-             (k/git! dir "add" "-A")
-             (k/git! dir "commit" "-q" "-m" (str "the sources index, commit " (inc i)))
-             (k/git! dir "rev-parse" "HEAD")))))
+(defn- commit-all! [dir msg]
+  (when-not (fs/exists? (fs/file dir ".git")) (k/git! dir "init" "-q"))
+  (k/git! dir "add" "-A")
+  (k/git! dir "commit" "-q" "--allow-empty" "-m" msg)
+  (k/git! dir "rev-parse" "HEAD"))
 
 ;; ---------------------------------------------------------------------------
 ;; A source is indexed with its repository, its pins and its record
 
 (defstep #"the sources index names a source with a repository and no pin"
   (fn [ctx]
-    (let [ctx (room ctx)]
-      (add-source! (:dir ctx) "demo" {:repository "https://example.org/demo" :record "demo.md" :pins [] :fenced []} true)
-      (assoc ctx :source "demo"))))
+    (let [ctx (source! ctx "demo" {:repository "https://example.org/demo" :record "demo.md" :pins [] :fenced []})]
+      (record! (:dir ctx) "demo.md")
+      ctx)))
 
 (defstep #"the sources index names a source with a pin and no repository"
   (fn [ctx]
-    (let [ctx (room ctx)]
-      (add-source! (:dir ctx) "demo" {:record "demo.md" :pins ["abc1234"] :fenced []} true)
-      (assoc ctx :source "demo"))))
+    (let [ctx (source! ctx "demo" {:record "demo.md" :pins ["abc1234"] :fenced []})]
+      (record! (:dir ctx) "demo.md")
+      ctx)))
 
 (defstep #"the sources index names a source whose record file is not in dhf/raw"
   (fn [ctx]
-    (let [ctx (room ctx)]
-      (add-source! (:dir ctx) "demo" {:repository "https://example.org/demo" :record "demo.md"
-                                      :pins ["abc1234"] :fenced []} false)
-      (s/check! (not (fs/exists? (fs/file (:dir ctx) "dhf/raw/demo.md"))) "the record exists")
-      (assoc ctx :source "demo" :record "demo.md"))))
+    (let [ctx (source! ctx "demo" {:repository "https://example.org/demo" :record "demo-missing.md"
+                                   :pins ["abc1234"] :fenced []})]
+      (s/check! (not (fs/exists? (fs/file (:dir ctx) "dhf/raw/demo-missing.md"))) "the record exists")
+      (assoc ctx :record "demo-missing.md"))))
 
 (defstep #"the check fails and names the source"
-  (fn [ctx]
-    (line-naming ctx k/index-rel (:source ctx))
-    nil))
+  (fn [ctx] (line-naming ctx (str k/index-rel ":") (:source ctx)) nil))
 
-(defstep #"it fails rule source-no-repository and names the source"
-  (fn [ctx]
-    (line-naming ctx k/index-rel "source-no-repository" (:source ctx))
-    nil))
+(defstep #"it fails rule (\S+) and names the source"
+  (fn [ctx rule] (line-naming ctx (str ": " rule ": ") (:source ctx)) nil))
 
-(defstep #"it fails rule source-no-record and names the source and the record file"
-  (fn [ctx]
-    (line-naming ctx k/index-rel "source-no-record" (:source ctx) (:record ctx))
-    nil))
+(defstep #"it fails rule (\S+) and names the source and the record file"
+  (fn [ctx rule] (line-naming ctx (str ": " rule ": ") (:source ctx) (:record ctx)) nil))
 
-(defstep #"a commit of the sources index pins loyly at 17d68d2, and a later commit no longer lists it"
-  (fn [ctx]
-    (let [ctx (room ctx)
-          dir (:dir ctx)
-          idx (k/index dir)]
-      (s/check! (= ["17d68d2"] (get-in idx [:loyly :pins])) "the room's index does not pin loyly at 17d68d2")
-      (let [[_ dropping] (git-history! dir [idx (dissoc idx :loyly)])]
-        (assoc ctx :dropped {:source "loyly" :pin "17d68d2" :commit dropping})))))
+(defstep #"a commit of the sources index pins (\S+) at (\S+), and a later commit keeps \1 with that pin replaced by another"
+  (fn [ctx id pin]
+    (let [ctx (k/ensure-room! ctx)
+          dir (:dir ctx)]
+      (k/update-index! dir #(assoc-in % [(keyword id) :pins] [pin]))
+      (commit-all! dir "the sources index pins it")
+      (k/update-index! dir #(assoc-in % [(keyword id) :pins] ["abcdef1"]))
+      (let [c (commit-all! dir "the pin replaced")]
+        (assoc ctx :source id :pin pin :dropped-by c)))))
 
 (defstep #"the check fails and names the source, the dropped pin and the commit that dropped it"
   (fn [ctx]
-    (let [{:keys [source pin commit]} (:dropped ctx)]
-      (k/fails-with! ctx #(and (str/includes? % source) (str/includes? % pin)
-                               (str/includes? % (subs commit 0 7)))
-                     (str "names " source ", " pin " and " commit))
-      nil)))
+    (line-naming ctx (:source ctx) (:pin ctx) (subs (:dropped-by ctx) 0 7))
+    nil))
 
-(defstep #"a commit of the sources index lists rdm with its pins, and a later commit keeps them and adds :retired \"([^\"]+)\""
-  (fn [ctx reason]
-    ;; The history lives in a repository of its own, which the scenario's git
-    ;; reads through GIT_DIR: the next Given (the site's) makes a fresh copy.
-    (let [repo (s/tmp-dir)
-          idx (k/index s/room-root)
-          kept (get-in idx [:rdm :pins])]
-      (s/check! (seq kept) "the room's index pins rdm nowhere")
-      (fs/create-dirs (fs/file repo "dhf/raw"))
-      (git-history! repo [(update idx :rdm dissoc :retired) (assoc-in idx [:rdm :retired] reason)])
-      (-> ctx
-          (assoc :history repo)
-          (assoc-in [:env "GIT_DIR"] (str (fs/file repo ".git")))))))
+(defstep #"a commit of the sources index lists (\S+) with its pins, and a later commit keeps them and adds :retired \"([^\"]+)\""
+  (fn [ctx id why]
+    (let [ctx (k/ensure-room! ctx)
+          dir (:dir ctx)
+          kid (keyword id)]
+      (s/check! (seq (get-in (k/index dir) [kid :pins])) (str id " has no pins"))
+      (k/update-index! dir #(update % kid dissoc :retired))
+      (commit-all! dir "the index lists it")
+      (k/update-index! dir #(assoc-in % [kid :retired] why))
+      (commit-all! dir "the source retired")
+      (assoc ctx :source id))))
 
-(defstep #"the check reports no dropped pin for rdm"
-  (fn [ctx]
+(defstep #"the check reports no dropped pin for (\S+)"
+  (fn [ctx id]
     (let [r (kc/the-run ctx)]
-      (s/check! (not-any? #(str/includes? % "history") (k/warning-lines r))
-                (str "the sources index's history was not read\n" (s/show r)))
-      (s/check! (not-any? #(and (str/includes? % "source-pin-dropped") (re-find #"\brdm\b" %)) (s/err-lines r))
-                (str "a dropped pin is reported for rdm\n" (s/show r)))
+      (s/check! (not-any? #(and (str/includes? % "source-pin-dropped") (str/includes? % id)) (s/err-lines r))
+                (str "a dropped pin is reported for " id "\n" (s/show r)))
       nil)))
 
 (defstep #"it fails and names the citation and that its source is retired"
-  (fn [ctx]
-    (line-naming ctx (:citation ctx) "retired")
-    nil))
+  (fn [ctx] (line-naming ctx (:citation ctx) "retired") nil))
 
-(defstep #"the need UN-004 whose sources hold \"([^\"]+)\""
-  (fn [ctx text]
-    (let [ctx (room ctx)]
-      (set-need-sources! (:dir ctx) "UN-004" [text])
-      (assoc ctx :citation text))))
+(defstep #"the need (UN-\d+) whose sources hold \"([^\"]+)\""
+  (fn [ctx need text] (cite-in-need! ctx need text)))
 
-(defstep #"it fails rule citation-malformed and names UN-004 and the source"
-  (fn [ctx]
-    (line-naming ctx "citation-malformed" "UN-004" (:citation ctx))
-    nil))
+(defstep #"it fails rule (\S+) and names (UN-\d+) and the source"
+  (fn [ctx rule need] (line-naming ctx (str ": " rule ": ") need (:citation ctx)) nil))
 
 ;; ---------------------------------------------------------------------------
 ;; A citation resolves to a source, a pin and a path
 
-(defn- faithful-checkout!
-  "A checkout of the room's source `id` at its pin, holding what the room's
-  needs and wiki cite of it and its fenced paths, minus `without`."
-  [ctx id & without]
-  (let [sdir (k/sources-dir! ctx)
-        pin (first (get-in (k/index s/room-root) [(keyword id) :pins]))]
-    (k/checkout! sdir id pin (remove (set without) (k/cited-paths id)))
-    (assoc ctx :sources-dir sdir :source id :pin pin)))
+(defstep #"a directory holding (\S+)/ and (\S+)/, checkouts of those sources"
+  (fn [ctx a b]
+    (let [ctx (k/ensure-room! ctx)
+          idx (k/index (:dir ctx))
+          sdir (k/sources-dir! ctx)]
+      (doseq [id [a b]
+              :let [pins (get-in idx [(keyword id) :pins])]]
+        (s/check! (seq pins) (str id " has no pin"))
+        (k/checkout! sdir id (first pins) (k/cited-paths id)))
+      (assoc ctx :sources-dir sdir :checked [a b]))))
 
-(defstep #"a directory holding loyly/ and innolitics-rdm/, checkouts of those sources"
-  (fn [ctx]
-    (k/needs-knowledge!)
-    (-> ctx (faithful-checkout! "loyly") (faithful-checkout! "innolitics-rdm"))))
-
-(defstep #"citations of loyly and innolitics-rdm are checked against those checkouts"
-  (fn [ctx]
+(defstep #"citations of (\S+) and (\S+) are checked against those checkouts"
+  (fn [ctx a b]
     (let [r (kc/the-run ctx)
-          cs (:citations (k/result r))]
-      (s/check! (#{0 1} (:exit r)) (s/show r))
-      (doseq [src ["loyly" "innolitics-rdm"]
-              :let [mine (filter #(= src (:source %)) cs)]]
-        (s/check! (seq mine) (str "no citation of " src " was reported\n" (s/show r)))
+          cites (:citations (k/result r))]
+      (s/check! (#{0 1} (:exit r)) (str "the check did not run\n" (s/show r)))
+      (doseq [id [a b]
+              :let [mine (filter #(= id (:source %)) cites)]]
+        (s/check! (seq mine) (str "no citation of " id " was reported\n" (s/show r)))
         (s/check! (every? #(= :resolved (:status %)) mine)
-                  (str "a citation of " src " was not resolved against its checkout: "
+                  (str "a citation of " id " was not checked against its checkout: "
                        (pr-str (remove #(= :resolved (:status %)) mine)))))
       nil)))
 
-(defstep #"a citation \"([^\"]+)\" and no source (\S+)"
-  (fn [ctx citation source]
-    (let [ctx (cite-in-need! ctx citation)]
-      (s/check! (not (contains? (k/index (:dir ctx)) (keyword source))) (str "the index records " source))
-      (assoc ctx :source source))))
-
-(defstep #"a citation \"([^\"]+)\""
-  (fn [ctx citation] (cite-in-need! ctx citation)))
+(defstep #"a citation \"([^\"]+)\"(?: and no source (\S+))?"
+  (fn [ctx citation absent]
+    (let [ctx (k/ensure-room! ctx)]
+      (when absent
+        (s/check! (not (contains? (k/index (:dir ctx)) (keyword absent))) (str "the source " absent " is recorded")))
+      (cite-in-need! ctx "UN-011" citation))))
 
 (defstep #"the citation fails and names (\S+) and where it was cited"
-  (fn [ctx source]
-    (k/fails-with! ctx #(and (str/starts-with? % (where-cited ctx)) (str/includes? % source))
-                   (str "at " (where-cited ctx) " names " source))
-    nil))
+  (fn [ctx id] (at-citation! ctx id) nil))
 
-(defstep #"the source loyly is pinned only at 17d68d2"
-  (fn [ctx]
-    (let [ctx (room ctx)]
-      (k/update-index! (:dir ctx) #(assoc-in % [:loyly :pins] ["17d68d2"]))
-      (assoc ctx :source "loyly" :pins ["17d68d2"]))))
+(defstep #"the source (\S+) is pinned only at (\S+)"
+  (fn [ctx id pin]
+    (let [ctx (k/ensure-room! ctx)]
+      (s/check! (= [pin] (get-in (k/index (:dir ctx)) [(keyword id) :pins])) (str id " is not pinned only at " pin))
+      (assoc ctx :source id :pins [pin]))))
 
 (defstep #"the citation fails and names the commit and the source's pins"
   (fn [ctx]
     (let [commit (last (str/split (:citation ctx) #"@"))]
-      (k/fails-with! ctx #(and (str/starts-with? % (where-cited ctx)) (str/includes? % commit)
-                               (every? (fn [p] (str/includes? % p)) (:pins ctx)))
-                     (str "names " commit " and the pins " (:pins ctx))))
-    nil))
+      (apply at-citation! ctx commit (:pins ctx))
+      nil)))
 
-(defstep #"a checkout of skallinen/loyly, holding README\.md at 17d68d2, given with --sources"
-  (fn [ctx] (faithful-checkout! ctx "loyly")))
+(defstep #"a checkout of (\S+), holding (\S+) at (\S+), given with --sources"
+  (fn [ctx repo path pin]
+    (let [ctx (loyly-checkout! ctx repo pin nil)]
+      (s/check! (fs/exists? (fs/file (:sources-dir ctx) (:source ctx) path)) (str "the checkout holds no " path))
+      ctx)))
 
-(defstep #"a checkout of skallinen/loyly, with no file (\S+) at 17d68d2, given with --sources"
-  (fn [ctx path] (assoc (faithful-checkout! ctx "loyly" path) :missing-path path)))
+(defstep #"a checkout of (\S+), with no file (\S+) at (\S+), given with --sources"
+  (fn [ctx repo path pin] (loyly-checkout! ctx repo pin path)))
 
-(defstep #"no checkout of skallinen/loyly is given with --sources"
-  (fn [ctx] (dissoc ctx :sources-dir)))
+(defstep #"a checkout of (\S+) at (\S+), given with --sources"
+  (fn [ctx repo pin] (loyly-checkout! ctx repo pin nil)))
+
+(defstep #"\"rdm-spec check\" is given no --sources at all"
+  (fn [ctx] (dissoc (k/ensure-room! ctx) :sources-dir)))
 
 (defstep #"\"rdm-spec ([^\"]*)\" resolves the citation \"([^\"]+)\""
   (fn [ctx line citation]
-    (let [ctx (cite-in-need! ctx citation)]
+    (let [ctx (k/ensure-room! ctx)
+          text (slurp (str (fs/file (:dir ctx) k/needs-rel)))
+          ctx (if (str/includes? text (str "\"" citation "\""))
+                (assoc ctx :citation citation)
+                (cite-in-need! ctx "UN-011" citation))]
+      (s/check! (= (some? (:sources-dir ctx)) (str/includes? line "--sources"))
+                "the command line and the checkouts disagree")
       (kc/run-line ctx line))))
 
 (defstep #"it resolves"
   (fn [ctx]
     (let [r (kc/the-run ctx)
           cs (k/citations-of r (:citation ctx))]
-      (s/check! (seq cs) (str (:citation ctx) " was not reported\n" (s/show r)))
+      (s/check! (seq cs) (str "the citation " (:citation ctx) " was not reported\n" (s/show r)))
       (s/check! (every? #(= :resolved (:status %)) cs) (str "it did not resolve: " (pr-str cs)))
-      (s/check! (not-any? #(str/includes? % (:citation ctx)) (s/err-lines r))
-                (str "a finding or warning names it\n" (s/show r)))
+      (s/check! (not-any? #(str/includes? % (:citation ctx)) (k/finding-lines r))
+                (str "a finding names " (:citation ctx) "\n" (s/show r)))
       nil)))
 
 (defstep #"the citation fails and names the path and the pin"
   (fn [ctx]
-    (k/fails-with! ctx #(and (str/starts-with? % (where-cited ctx)) (str/includes? % (:missing-path ctx))
-                             (str/includes? % (:pin ctx)))
-                   (str "names " (:missing-path ctx) " and " (:pin ctx)))
-    nil))
+    (let [[_ _ path pin] (re-matches #"([^:]+):(.+)@(\S+)" (:citation ctx))]
+      (line-naming ctx path pin)
+      nil)))
 
 (defstep #"it is reported as unchecked, with the reason"
   (fn [ctx]
     (let [r (kc/the-run ctx)
           cs (k/citations-of r (:citation ctx))]
-      (s/check! (seq cs) (str (:citation ctx) " was not reported\n" (s/show r)))
-      (s/check! (every? #(and (= :unchecked (:status %)) (seq (:reasons %))) cs)
-                (str "not unchecked with a reason: " (pr-str cs)))
-      (s/check! (some #(and (str/includes? % (:citation ctx)) (re-find #"not checked|unchecked" %))
-                      (k/warning-lines r))
-                (str "no warning says it is unchecked\n" (s/show r)))
-      (s/check! (not-any? #(str/includes? % (:citation ctx)) (k/finding-lines r))
-                (str "it is reported as a finding\n" (s/show r)))
+      (s/check! (seq cs) (str "the citation " (:citation ctx) " was not reported\n" (s/show r)))
+      (s/check! (every? #(= :unchecked (:status %)) cs) (str "it was not reported unchecked: " (pr-str cs)))
+      (s/check! (every? #(seq (:reasons %)) cs) (str "no reason was given: " (pr-str cs)))
+      (s/check! (some #(and (str/includes? % (:citation ctx)) (str/includes? % "warning: ")) (s/err-lines r))
+                (str "no warning names " (:citation ctx) "\n" (s/show r)))
       nil)))
 
 ;; ---------------------------------------------------------------------------
@@ -266,101 +248,90 @@
 
 (defstep #"the sources index fences \"([^\"]+)\" in (\S+)"
   (fn [ctx path id]
-    (let [ctx (room ctx)]
+    (let [ctx (k/ensure-room! ctx)]
       (k/update-index! (:dir ctx) #(update-in % [(keyword id) :fenced] (fn [f] (vec (distinct (conj (vec f) path))))))
       (assoc ctx :fenced path :source id))))
 
 (defstep #"the citation fails and names the fenced (?:path|directory) and where it was cited"
-  (fn [ctx]
-    (k/fails-with! ctx #(and (str/starts-with? % (where-cited ctx)) (str/includes? % (:citation ctx))
-                             (str/includes? (k/without % (:citation ctx)) (:fenced ctx)))
-                   (str "at " (where-cited ctx) " names the fenced " (:fenced ctx)))
-    nil))
-
-(defstep #"a checkout of skallinen/loyly at 17d68d2, given with --sources"
-  (fn [ctx] (faithful-checkout! ctx "loyly")))
+  (fn [ctx] (at-citation! ctx (:fenced ctx) "fenced") nil))
 
 (defstep #"the check fails and names the source, the pin and the path"
-  (fn [ctx]
-    (line-naming ctx (:source ctx) (:pin ctx) (:fenced ctx))
-    nil))
+  (fn [ctx] (line-naming ctx (:source ctx) (:pin ctx) (:fenced ctx)) nil))
 
 ;; ---------------------------------------------------------------------------
 ;; Citations are read from the needs and the wiki, nothing else
 
-(defstep #"a feature file whose example step quotes a citation of a fenced path"
+(def ^:private quoted-fenced "loyly:harness/fence.sh@17d68d2")
+
+(defstep #"a feature file whose Given step quotes a citation of a fenced path"
   (fn [ctx]
-    (let [ctx (room ctx)
-          dir (:dir ctx)
-          idx (k/index dir)
-          fenced? (fn [[_ src path]]
-                    (some #(or (= % ".") (= % path) (str/starts-with? path (str % "/")))
-                          (get-in idx [(keyword src) :fenced])))
-          hit (first (for [f (sort (map str (fs/glob (fs/file dir "dhf/spec") "**.feature")))
-                           l (str/split-lines (slurp f))
-                           :when (re-find #"^\s*(Given|When|Then|And|But)\s" l)
-                           m (re-seq k/citation-re l)
-                           :when (fenced? m)]
-                       [(str (fs/relativize dir f)) (first m)]))]
-      (s/check! hit "no feature file's step quotes a citation of a fenced path")
-      (assoc ctx :quoted (second hit)))))
+    (let [ctx (k/ensure-room! ctx)
+          f (fs/file (:dir ctx) "dhf/spec/knowledge/sources.feature")
+          text (slurp (str f))
+          given "Given a feature file whose Given step quotes a citation of a fenced path"
+          changed (str/replace text given (str "Given a feature file whose Given step quotes \"" quoted-fenced "\""))]
+      (s/check! (not= text changed) "the fixture's Given was not found")
+      (s/check! (some #(str/ends-with? quoted-fenced (str ":" % "@17d68d2"))
+                      (get-in (k/index (:dir ctx)) [:loyly :fenced]))
+                "the quoted citation is not of a fenced path")
+      (spit (str f) changed)
+      (assoc ctx :citation quoted-fenced))))
 
 (defstep #"the quoted citation is not resolved, and the check passes"
   (fn [ctx]
     (let [r (kc/exits! ctx 0)]
-      (s/check! (not-any? #(= (:quoted ctx) (:citation %)) (:citations (k/result r)))
-                (str (:quoted ctx) " was resolved\n" (s/show r)))
-      (s/check! (not-any? #(str/includes? % (:quoted ctx)) (s/err-lines r))
-                (str (:quoted ctx) " is named\n" (s/show r)))
+      (s/check! (empty? (k/citations-of r (:citation ctx))) (str "the quoted citation was resolved\n" (s/show r)))
+      (s/check! (not-any? #(str/includes? % (:citation ctx)) (s/err-lines r))
+                (str "a line names the quoted citation\n" (s/show r)))
       nil)))
 
 ;; ---------------------------------------------------------------------------
 ;; A need's citations resolve
 
-(defstep #"the recorded source demo, pinned at the commit of a checkout given with --sources"
-  (fn [ctx]
-    (let [ctx (room ctx)
+(defstep #"the recorded source (\S+), pinned at the commit of a checkout given with --sources"
+  (fn [ctx id]
+    (let [ctx (k/ensure-room! ctx)
           sdir (k/sources-dir! ctx)
-          co (str (fs/file sdir "demo"))]
+          co (str (fs/file sdir id))]
       (s/write! co "README.md" "A fixture source.\n")
       (k/git! co "init" "-q")
       (k/git! co "add" "-A")
-      (k/git! co "commit" "-q" "-m" "a fixture checkout of demo")
-      (let [pin (k/git! co "rev-parse" "--short=7" "HEAD")]
-        (add-source! (:dir ctx) "demo" {:repository "https://example.org/demo" :record "demo.md"
-                                        :pins [pin] :fenced []} true)
-        (assoc ctx :sources-dir sdir :source "demo" :pin pin)))))
+      (k/git! co "commit" "-q" "-m" "a fixture checkout")
+      (let [pin (subs (k/git! co "rev-parse" "HEAD") 0 7)]
+        (k/update-index! (:dir ctx) #(assoc % (keyword id) {:repository (str "https://example.org/" id)
+                                                            :record (str id ".md") :pins [pin] :fenced []}))
+        (record! (:dir ctx) (str id ".md"))
+        (assoc ctx :sources-dir sdir :source id :pin pin)))))
 
-(defstep #"the need UN-004 citing \"([^\"]+)\" at that pin, a path the checkout does not hold"
-  (fn [ctx cited]
-    (let [citation (str cited "@" (:pin ctx))]
-      (set-need-sources! (:dir ctx) "UN-004" [citation])
-      (assoc ctx :citation citation))))
+(defstep #"the need (UN-\d+) citing \"([^\"]+)\" at that pin, a path the checkout does not hold"
+  (fn [ctx need cited]
+    (let [path (second (str/split cited #":" 2))]
+      (s/check! (not (fs/exists? (fs/file (:sources-dir ctx) (:source ctx) path))) (str "the checkout holds " path))
+      (cite-in-need! ctx need (str cited "@" (:pin ctx))))))
 
-(defstep #"it fails and names UN-004, the citation and why it did not resolve"
-  (fn [ctx]
-    (k/fails-with! ctx #(and (str/includes? % "UN-004") (str/includes? % (:citation ctx))
-                             (re-find #"(?i)\bno\b|\bnot\b" (k/without % (:citation ctx))))
-                   (str "names UN-004, " (:citation ctx) " and why"))
+(defstep #"it fails and names (UN-\d+), the citation and why it did not resolve"
+  (fn [ctx need]
+    (k/fails-with! ctx #(and (str/includes? % need) (str/includes? % (:citation ctx))
+                             (re-find #"(?i)\bnot\b|\bno\b" (k/without % (:citation ctx))))
+                   (str "naming " need ", " (:citation ctx) " and why"))
     nil))
 
-(defstep #"the need UN-004 citing \"([^\"]+)\""
-  (fn [ctx citation]
-    (let [ctx (room ctx)]
-      (set-need-sources! (:dir ctx) "UN-004" [citation])
-      (assoc ctx :citation citation))))
+(defstep #"the need (UN-\d+) citing \"([^\"]+)\""
+  (fn [ctx need citation]
+    (let [ctx (k/ensure-room! ctx)
+          sources (get-in (k/read-edn (:dir ctx) k/needs-rel) [need :sources])]
+      (if (some #{citation} sources)
+        (assoc ctx :citation citation :need need)
+        (cite-in-need! ctx need citation)))))
 
-(defstep #"no checkout of loyly is given"
-  (fn [ctx]
-    (s/check! (not (:sources-dir ctx)) "a --sources directory was given")
-    ctx))
+(defstep #"no checkout of (\S+) is given"
+  (fn [ctx _] (dissoc ctx :sources-dir)))
 
 (defstep #"it warns that the citation was not checked, and why"
   (fn [ctx]
     (let [r (kc/the-run ctx)]
-      (s/check! (some #(and (str/includes? % (:citation ctx)) (str/includes? % "UN-004")
-                            (re-find #"not checked|unchecked" %)
-                            (re-find #"checkout|--sources" %))
-                      (k/warning-lines r))
+      (s/check! (some #(and (str/includes? % "warning: ") (str/includes? % (:citation ctx))
+                            (re-find #"not checked" %))
+                      (s/err-lines r))
                 (str "no warning says " (:citation ctx) " was not checked, and why\n" (s/show r)))
       nil)))

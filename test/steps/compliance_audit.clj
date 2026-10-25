@@ -1,8 +1,7 @@
 (ns steps.compliance-audit
   "Step definitions for dhf/spec/compliance/audit.feature: `rdm-spec audit
-  OUT` in a releasable regulated project (steps.compliance-support). The
-  When \"rdm-spec audit OUT\" is run, `it exits N` and the placeholders OUT
-  and OUT2 are the kernel's."
+  OUT` in a releasable regulated project (steps.compliance-support). OUT and
+  OUT2 are new paths in directories the run removes."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
@@ -12,279 +11,339 @@
             [steps.kernel-command :as kc]
             [steps.support :as s]))
 
-(defn- dir [ctx] (or (:dir ctx) (s/fail! "no project was made")))
-
-(defn- no-out! [ctx]
-  (let [out (cs/out-dir ctx "OUT")]
-    (s/check! (not (fs/exists? out)) (str out " was created"))))
+(defn- sha256 [f]
+  (let [md (java.security.MessageDigest/getInstance "SHA-256")]
+    (apply str (map #(format "%02x" %) (.digest md (fs/read-all-bytes f))))))
 
 (defn- files-under
-  "{relative path bytes-as-vector} of every file under `d`."
-  [d]
-  (into (sorted-map)
-        (for [f (fs/glob d "**") :when (fs/regular-file? f)]
-          [(str (fs/relativize d f)) (vec (fs/read-all-bytes f))])))
+  "Every regular file under `dir`, as paths relative to it, sorted."
+  [dir]
+  (vec (sort (for [f (fs/glob dir "**") :when (fs/regular-file? f)]
+               (str/replace (str (fs/relativize dir f)) "\\" "/")))))
 
-(defn- pdf-text [f & [first-page?]]
-  (s/check! (fs/regular-file? f) (str "no file " f))
-  (let [r (apply p/shell {:out :string :err :string :continue true :in ""}
-                 (concat ["pdftotext"] (when first-page? ["-f" "1" "-l" "1"]) [(str f) "-"]))]
-    (s/check! (zero? (:exit r)) (str "pdftotext failed on " f ": " (:err r)))
-    (:out r)))
+(defn- exits-0! [ctx] (kc/exits! ctx 0))
 
-;; ---------------------------------------------------------------------------
-;; Only a releasable record has an audit copy
+(defn- no-out! [ctx r]
+  (let [out (get-in ctx [:placeholders "OUT"])]
+    (s/check! out "no OUT was given")
+    (s/check! (not (fs/exists? out)) (str "OUT was created: " out "\n" (s/show r)))))
+
+;; --- Only a releasable record has an audit copy -------------------------------
 
 (defstep #"a regulated project whose every clause is named, and a stamped scenario whose result failed"
-  (fn [ctx] (cs/releasable! ctx {"spec-0001" "failed" "spec-0002" "passed"})))
+  (fn [ctx]
+    (assoc (cs/releasable! ctx {"spec-0002" "failed"}) :failed "spec-0002")))
 
 (defstep #"it exits 1, prints the release check's findings unchanged, and creates no OUT"
   (fn [ctx]
     (let [r (kc/exits! ctx 1)
-          release (kc/run! ctx (dir ctx) ["release"])
-          want (remove #(str/starts-with? % "event: ") (s/err-lines release))]
-      (s/check! (= 1 (:exit release)) (str "the release check passed\n" (s/show release)))
-      (s/check! (seq want) "the release check printed no finding")
-      (s/check! (every? (set (s/err-lines r)) want)
-                (str "the audit copy did not print the release check's findings unchanged\nrelease:\n"
-                     (s/show release) "\naudit:\n" (s/show r)))
-      (no-out! ctx))))
+          release (kc/run! ctx (:dir ctx) ["release"])]
+      (s/check! (= 1 (:exit release)) (str "the release check passes\n" (s/show release)))
+      (s/check! (= (s/err-lines release) (s/err-lines r))
+                (str "the audit's findings are not the release check's\nrelease:\n" (s/show release)
+                     "\naudit:\n" (s/show r)))
+      (cs/err-line! r (:failed ctx))
+      (no-out! ctx r)
+      nil)))
 
 (defstep #"a regulated project whose every scenario is verified, and a clause no audit tag names"
   (fn [ctx]
-    (let [ctx (cs/releasable! ctx)]
-      (s/write! (dir ctx) "dhf/clauses/std.txt" "STD:5.1 Development plan\nSTD:5.2 Requirements analysis\n")
-      (cs/commit! (assoc ctx :clause "STD:5.2")))))
+    (let [ctx (-> (cs/regulated! ctx) cs/with-spec!)]
+      (cs/write! ctx cs/std "STD:5.1 Development plan\nSTD:5.2 Requirements analysis\n")
+      (doseq [id ["spec-0001" "spec-0002"]] (cs/result! ctx id "passed"))
+      (assoc (cs/commit! ctx) :clause "STD:5.2"))))
 
 (defstep #"it exits 1, names the clause, and creates no OUT"
   (fn [ctx]
     (let [r (kc/exits! ctx 1)]
-      (s/check! (some #(str/includes? % (:clause ctx)) (s/err-lines r))
-                (str "no line names " (:clause ctx) "\n" (s/show r)))
-      (no-out! ctx))))
+      (cs/err-line! r (:clause ctx) "clause-unreferenced")
+      (no-out! ctx r)
+      nil)))
 
 (defstep #"it exits 2 and says the configuration holds no :regulated"
-  (fn [ctx] (kc/refused-naming! ctx "configuration" "no :regulated") nil))
+  (fn [ctx]
+    (kc/refused-naming! ctx ":regulated")
+    nil))
 
 (defstep #"a releasable regulated project and an existing directory OUT holding one file"
   (fn [ctx]
     (let [ctx (cs/releasable! ctx)
-          out (str (fs/file (kc/tmp-dir) "out"))]
-      (s/write! out "kept.txt" "an auditor's earlier copy\n")
-      (assoc-in ctx [:placeholders "OUT"] out))))
+          out (str (fs/file (kc/tmp-dir) "out"))
+          f (s/write! out "kept.txt" "kept\n")]
+      (-> ctx
+          (assoc-in [:placeholders "OUT"] out)
+          (assoc :kept f)))))
 
 (defstep #"it exits 2, names OUT, and the file in it is unchanged"
   (fn [ctx]
-    (let [out (cs/out-dir ctx "OUT")]
+    (let [out (get-in ctx [:placeholders "OUT"])]
       (kc/refused-naming! ctx out)
-      (s/check! (= {"kept.txt" (vec (.getBytes "an auditor's earlier copy\n" "UTF-8"))} (files-under out))
-                (str "the directory " out " changed: " (keys (files-under out)))))))
+      (s/check! (= ["kept.txt"] (files-under out)) (str "OUT was written into: " (files-under out)))
+      (s/check! (= "kept\n" (slurp (:kept ctx))) "the file in OUT changed")
+      nil)))
 
-;; ---------------------------------------------------------------------------
-;; Two copies of every document
+;; --- Every document has an auditor's copy and an engineer's copy -------------
 
-(def ^:private split-tag ["We plan the work [[STD:5.1" "the plan]] and keep it."])
-(def ^:private open-paragraph "An open [[ tag\nthat never closes.")
-(def ^:private code-block "```\n[[STD:5.1]]\n```")
+(def ^:private support-doc
+  "A second document naming STD:5.1, so the record stays releasable whatever
+  plan.md holds."
+  ["dhf/documents/sop.md"
+   (cs/document [["id" "SOP-001"] ["revision" "1"] ["title" "Procedure"]] "We follow the plan [[STD:5.1]].\n")])
 
-(defn- written
-  "{:body text :line the one line} of what the Given wrote into plan.md."
-  [what]
-  (if-let [[_ line] (re-matches #"the line \"(.*)\"" what)]
-    {:body line :line line}
-    (case what
-      "a tag that opens on one line and closes on the next" {:body (str/join "\n" split-tag)}
-      "a \"[[\" with no \"]]\" before the paragraph's blank line" {:body (str open-paragraph "\n\nThe next paragraph.")}
-      "a fenced code block holding [[STD:5.1]]" {:body code-block}
-      (s/fail! (str "no fixture for " (pr-str what))))))
+(defn- releasable-with-plan!
+  "A releasable regulated project whose plan.md is `text`."
+  [ctx text]
+  (let [ctx (cs/releasable! ctx)]
+    (apply cs/write! ctx support-doc)
+    (cs/write! ctx cs/plan text)
+    (cs/commit! ctx)))
 
-(defstep #"a releasable regulated project whose dhf/documents/plan\.md holds (.+)"
+(def ^:private written
+  "What plan.md holds, by the outline's words: [body lines, or a whole
+  document under :doc] and what the engineer's copy keeps."
+  {"a tag that opens on one line and closes on the next"
+   {:lines ["We plan the work [[STD:5.1" "and more]] every week."]
+    :kept ["We plan the work" " every week."]}
+   "a \"[[\" with no \"]]\" before the paragraph's blank line"
+   {:lines ["We plan [[STD:5.1 and" "never close it." "" "Next paragraph ]]."]
+    :kept ["We plan [[STD:5.1 and" "never close it." "" "Next paragraph ]]."]}
+   "a fenced code block holding [[STD:5.1]]"
+   {:lines ["```" "We plan [[STD:5.1]]." "```"] :kept ["```" "We plan [[STD:5.1]]." "```"]}
+   "an indented code block holding [[STD:5.1]]"
+   {:lines ["    We plan [[STD:5.1]]." "    And more."] :kept ["    We plan [[STD:5.1]]." "    And more."]}
+   "the title \"Development plan [[STD:5.1]]\" in its frontmatter"
+   {:doc (cs/document [["id" "PLAN-001"] ["revision" "1"] ["title" "Development plan [[STD:5.1]]"]]
+                      "# Plan\n\nWe plan the work.\n")}})
+
+(defstep #"a releasable regulated project whose dhf/documents/plan\.md holds the line \"(.*)\""
+  (fn [ctx line]
+    (-> (releasable-with-plan! ctx (cs/plan-doc "# Plan" "" "Before." "" line "" "After."))
+        (assoc :line-written line))))
+
+(defstep #"a releasable regulated project whose dhf/documents/plan\.md holds (?!the line \")(.+)"
   (fn [ctx what]
-    (let [ctx (cs/releasable! ctx)
-          w (written what)]
-      (s/write! (dir ctx) "dhf/documents/plan.md" (cs/document {} (:body w)))
-      (cs/commit! (assoc ctx :written w)))))
+    (let [w (get written what)]
+      (s/check! w (str "no fixture for: " what))
+      (-> (releasable-with-plan! ctx (or (:doc w) (apply cs/plan-doc "# Plan" "" (concat (:lines w) ["" "After."]))))
+          (assoc :written w)))))
 
-(defn- holds-lines? [lines want]
-  (let [n (count want)]
-    (some #(= want (subvec lines % (+ % n))) (range 0 (inc (- (count lines) n))))))
-
-(defstep #"OUT/(auditor|engineer)/plan\.md holds (.+)"
-  (fn [ctx side kept]
-    (kc/exits! ctx 0)
-    (let [lines (cs/lines-of (cs/out-file ctx (str "OUT/" side "/plan.md")))
-          want (if-let [[_ line] (re-matches #"the line \"(.*)\"" kept)]
-                 [line]
-                 (case kept
-                   "both lines without the tag" ["We plan the work" "and keep it."]
-                   "that line unchanged" [(get-in ctx [:written :line])]
-                   "the paragraph unchanged" (str/split-lines open-paragraph)
-                   "the code block unchanged" (str/split-lines code-block)
-                   (s/fail! (str "no expectation for " (pr-str kept)))))]
-      (s/check! (holds-lines? (vec lines) want)
-                (str side "/plan.md does not hold " (pr-str want) ":\n" (str/join "\n" lines))))))
+(defstep #"(OUT\d*/\S+) holds the line \"(.*)\""
+  (fn [ctx rel line]
+    (let [f (cs/out-file ctx rel)]
+      (s/check! (fs/regular-file? f) (str rel " does not exist\n" (s/show (kc/the-run ctx))))
+      (s/check! (some #{line} (cs/lines-of f)) (str rel " holds no line " (pr-str line) ":\n" (slurp (str f))))
+      nil)))
 
 (defstep #"apart from that line the two copies are identical"
   (fn [ctx]
-    (let [a (vec (cs/lines-of (cs/out-file ctx "OUT/auditor/plan.md")))
-          e (vec (cs/lines-of (cs/out-file ctx "OUT/engineer/plan.md")))
-          i (.indexOf a (get-in ctx [:written :line]))]
-      (s/check! (= (count a) (count e)) "the two copies have different numbers of lines")
-      (s/check! (= [i] (vec (keep-indexed (fn [j [x y]] (when (not= x y) j)) (map vector a e))))
-                (str "the copies differ elsewhere:\n" (str/join "\n" a) "\n---\n" (str/join "\n" e))))))
+    (let [a (cs/lines-of (cs/out-file ctx "OUT/auditor/plan.md"))
+          e (cs/lines-of (cs/out-file ctx "OUT/engineer/plan.md"))]
+      (s/check! (= (count a) (count e)) "the two copies differ in their number of lines")
+      (let [diff (keep-indexed (fn [i [x y]] (when (not= x y) i)) (map vector a e))]
+        (s/check! (= [(:line-written ctx)] (map #(get a %) diff))
+                  (str "the copies differ on other lines: " (pr-str (map #(get e %) diff)))))
+      nil)))
+
+(defn- engineer-body
+  "The engineer's copy of plan.md and the auditor's, as lines."
+  [ctx]
+  (kc/exits! ctx 0)
+  [(cs/lines-of (cs/out-file ctx "OUT/engineer/plan.md"))
+   (cs/lines-of (cs/out-file ctx "OUT/auditor/plan.md"))])
+
+(defn- holds-run! [lines want]
+  (s/check! (some #(= want %) (partition (count want) 1 lines))
+            (str "the engineer's copy does not hold " (pr-str want) ":\n" (str/join "\n" lines))))
+
+(defstep #"OUT/engineer/plan\.md holds both lines without the tag"
+  (fn [ctx]
+    (let [[e _] (engineer-body ctx)]
+      (holds-run! e (get-in ctx [:written :kept]))
+      (s/check! (not-any? #(str/includes? % "[[") e) "a tag is left") nil)))
+
+(defstep #"OUT/engineer/plan\.md holds (?:that line|the paragraph|the code block) unchanged"
+  (fn [ctx]
+    (let [[e a] (engineer-body ctx)]
+      (holds-run! e (or (get-in ctx [:written :kept]) [(:line-written ctx)]))
+      (s/check! (= a e) "the engineer's copy differs from the auditor's") nil)))
+
+(defstep #"OUT/engineer/plan\.md holds the title \"([^\"]*)\""
+  (fn [ctx title]
+    (let [[e a] (engineer-body ctx)]
+      (s/check! (some #{(str "title: " title)} e) (str "no title " title ":\n" (str/join "\n" e)))
+      (s/check! (some #(str/includes? % "[[STD:5.1]]") a) "the auditor's copy lost its title's tag") nil)))
 
 (defstep #"a releasable regulated project with dhf/documents/plan\.md and dhf/documents/risk/register\.md"
   (fn [ctx]
     (let [ctx (cs/releasable! ctx)]
-      (s/write! (dir ctx) "dhf/documents/risk/register.md"
-                (cs/document {:id "RISK-001" :title "Risk register"} "Every risk is evaluated [[STD:5.1]]."))
+      (cs/write! ctx "dhf/documents/risk/register.md"
+                 (cs/document [["id" "RISK-001"] ["revision" "2"] ["title" "Risk register"]] "No risk yet.\n"))
       (cs/commit! ctx))))
 
 (defstep #"OUT/auditor and OUT/engineer each hold plan\.md and risk/register\.md"
   (fn [ctx]
-    (kc/exits! ctx 0)
-    (doseq [side ["auditor" "engineer"] f ["plan.md" "risk/register.md"]]
-      (s/check! (fs/regular-file? (cs/out-file ctx (str "OUT/" side "/" f))) (str "no OUT/" side "/" f)))))
+    (exits-0! ctx)
+    (doseq [copy ["auditor" "engineer"] f ["plan.md" "risk/register.md"]]
+      (s/check! (fs/regular-file? (cs/out-file ctx (str "OUT/" copy "/" f))) (str "OUT/" copy "/" f " does not exist")))
+    nil))
 
-(defstep #"a releasable regulated project whose dhf/documents/plan\.md has the id (\S+), the revision (\S+) and the title \"([^\"]*)\""
-  (fn [ctx id revision title]
-    (let [ctx (cs/releasable! ctx)]
-      (s/write! (dir ctx) "dhf/documents/plan.md"
-                (cs/document {:id id :revision revision :title title} "We plan the work [[STD:5.1]]."))
-      (cs/commit! (assoc ctx :identity [id (str "revision " revision) title])))))
+(defstep #"a releasable regulated project whose dhf/documents/plan\.md has the id PLAN-001, the revision 3 and the title \"Development plan\""
+  (fn [ctx]
+    (releasable-with-plan! ctx (cs/document [["id" "PLAN-001"] ["revision" "3"] ["title" "Development plan"]]
+                                            "# Plan\n\nWe plan the work [[STD:5.1]].\n"))))
 
 (defstep #"OUT/auditor/plan\.pdf and OUT/engineer/plan\.pdf exist"
   (fn [ctx]
-    (kc/exits! ctx 0)
+    (exits-0! ctx)
     (doseq [f ["OUT/auditor/plan.pdf" "OUT/engineer/plan.pdf"]]
-      (s/check! (fs/regular-file? (cs/out-file ctx f)) (str "no " f)))))
+      (let [file (cs/out-file ctx f)]
+        (s/check! (fs/regular-file? file) (str f " does not exist"))
+        (s/check! (str/starts-with? (slurp (str file)) "%PDF") (str f " is not a PDF"))))
+    nil))
 
-(defstep #"the text of each one's first page holds (\S+), the revision (\S+) and \"([^\"]*)\""
-  (fn [ctx id revision title]
+(defn- pdf-text [f & pages]
+  (let [r (apply p/shell {:out :string :err :string :continue true :in ""}
+                 "pdftotext" (concat pages ["-layout" (str f) "-"]))]
+    (s/check! (zero? (:exit r)) (str "pdftotext failed on " f ": " (:err r)))
+    (:out r)))
+
+(defstep #"the text of each one's first page holds PLAN-001, the revision 3 and \"Development plan\""
+  (fn [ctx]
     (doseq [f ["OUT/auditor/plan.pdf" "OUT/engineer/plan.pdf"]
-            :let [t (str/replace (pdf-text (cs/out-file ctx f) true) #"\s+" " ")]
-            w [id (str "revision " revision) title]]
-      (s/check! (str/includes? t w) (str "the first page of " f " does not hold " w ":\n" t)))))
+            :let [t (pdf-text (cs/out-file ctx f) "-f" "1" "-l" "1")]]
+      (s/check! (str/includes? t "PLAN-001") (str f "'s first page names no PLAN-001:\n" t))
+      (s/check! (re-find #"(?i)revision\W*3\b" t) (str f "'s first page names no revision 3:\n" t))
+      (s/check! (str/includes? t "Development plan") (str f "'s first page has no title:\n" t)))
+    nil))
 
-(defstep #"no text of (OUT/\S+) holds \"([^\"]*)\""
-  (fn [ctx f w]
-    (let [t (pdf-text (cs/out-file ctx f))]
-      (s/check! (not (str/includes? t w)) (str f " holds " w ":\n" t)))))
+(defstep #"no text of OUT/engineer/plan\.pdf holds \"\[\[\""
+  (fn [ctx]
+    (let [t (pdf-text (cs/out-file ctx "OUT/engineer/plan.pdf"))]
+      (s/check! (not (str/includes? t "[[")) (str "the engineer's PDF holds [[:\n" t))
+      (s/check! (str/includes? (pdf-text (cs/out-file ctx "OUT/auditor/plan.pdf")) "[[STD:5.1]]")
+                "the auditor's PDF lost its tag")
+      nil)))
 
-;; ---------------------------------------------------------------------------
-;; The evidence
+;; --- The audit copy carries the evidence it rests on --------------------------
 
-(defstep #"a releasable regulated project whose dhf/clauses/std\.txt holds \"([^\"]*)\" then \"([^\"]*)\", and whose dhf/clauses/base\.txt holds \"([^\"]*)\""
-  (fn [ctx a b c]
-    (let [ctx (cs/releasable! ctx)]
-      (s/write! (dir ctx) "dhf/clauses/std.txt" (str a "\n" b "\n"))
-      (s/write! (dir ctx) "dhf/clauses/base.txt" (str c "\n"))
-      ;; the included clause is met elsewhere, so the record stays releasable
-      (s/write! (dir ctx) "dhf/documents/quality.md"
-                (cs/document {:id "QUAL-001" :title "Quality manual"}
-                             (str "This manual meets [[" (first (str/split c #"\s+")) "]].")))
-      (cs/commit! ctx))))
-
-(defn- tagged-at
-  "A document whose line `n` names `k` in an audit tag (frontmatter lines
-  1-5, a blank line 6)."
-  [ident k n]
-  (s/check! (> n 6) "a tag cannot stand in the frontmatter")
-  (cs/document ident (str/join "\n" (concat (repeat (- n 7) "Filler.") [(str "This meets [[" k "]].")]))))
-
-(defstep #"(\S+) is named on line (\d+) of (\S+) and line (\d+) of (\S+)"
-  (fn [ctx k n1 f1 n2 f2]
-    (s/write! (dir ctx) f1 (tagged-at {:id "PLAN-001"} k (parse-long n1)))
-    (s/write! (dir ctx) f2 (tagged-at {:id "RISK-001" :title "Risk register"} k (parse-long n2)))
-    (cs/commit! ctx)))
-
-(defn- sections
-  "[[heading [line ..]] ..] of a Markdown page's level-2 sections."
-  [lines]
-  (reduce (fn [out l]
-            (if-let [[_ h] (re-matches #"## (.*)" l)]
-              (conj out [h []])
-              (if (seq out) (update-in out [(dec (count out)) 1] conj l) out)))
-          [] lines))
-
-(defstep #"OUT/clauses\.md has one section per declared clause list, (\S+), and no section for (\S+)"
-  (fn [ctx declared included]
-    (kc/exits! ctx 0)
-    (let [hs (map first (sections (cs/lines-of (cs/out-file ctx "OUT/clauses.md"))))]
-      (s/check! (= [declared] (vec hs)) (str "the sections are " (pr-str hs)))
-      (s/check! (not-any? #(str/includes? % included) hs) (str "a section names " included)))))
-
-(defstep #"under it (\S+) comes first, where its include stands, then a row for (\S+) with \"([^\"]*)\", (\S+) and (\S+)"
-  (fn [ctx first-key k description at1 at2]
-    (let [[[_ body]] (sections (cs/lines-of (cs/out-file ctx "OUT/clauses.md")))
-          rows (filter #(str/starts-with? % "|") body)
-          keys* (keep #(second (re-find #"^\|\s*([^|\s]+)\s*\|" %)) rows)
-          clause-keys (remove #{"Clause" "---"} keys*)
-          row (first (filter #(re-find (re-pattern (str "^\\|\\s*" (java.util.regex.Pattern/quote k) "\\s*\\|")) %) rows))]
-      (s/check! (= [first-key k] (vec clause-keys)) (str "the clauses come as " (pr-str clause-keys)))
-      (s/check! (and row (every? #(str/includes? row %) [description at1 at2]))
-                (str "the row of " k " is " (pr-str row))))))
-
-(defstep #"a releasable regulated project whose need (\S+) is traced to by @(\S+) and @(\S+)"
-  (fn [ctx need a b]
-    (s/check! (= ["UN-001" "spec-0001" "spec-0002"] [need a b]) "the fixture traces UN-001 to spec-0001 and spec-0002")
-    (assoc (cs/releasable! ctx) :need need :traced [a b])))
-
-(defstep #"OUT/traceability\.md has, under (\S+) and its text, @(\S+) and @(\S+), each with its title, component and status verified"
-  (fn [ctx need a b]
-    (kc/exits! ctx 0)
-    (let [secs (into {} (sections (cs/lines-of (cs/out-file ctx "OUT/traceability.md"))))
-          body (get secs need)
-          text (get-in cs/demo-needs [need :text])]
-      (s/check! body (str "no section for " need ": " (pr-str (keys secs))))
-      (s/check! (some #(str/includes? % text) body) (str "the section does not hold the need's text " text))
-      (doseq [id [a b]
-              :let [row (first (filter #(str/includes? % (str "@" id " ")) body))]]
-        (s/check! (and row (every? #(str/includes? row %) [(get cs/scenario-titles id) "Alpha" "verified"]))
-                  (str "the row of @" id " is " (pr-str row)))))))
-
-(defstep #"a releasable regulated project and its results directory"
+(defstep #"a releasable regulated project whose dhf/clauses/std\.txt holds \"include base\.txt\" then \"STD:5\.1 Development plan\", and whose dhf/clauses/base\.txt holds \"STD:4\.1 Quality system\""
   (fn [ctx]
     (let [ctx (cs/releasable! ctx)]
-      (s/write! (dir ctx) (str cs/results-dir "/environment.properties") "os=fixture\n")
+      (cs/write! ctx cs/std "include base.txt\nSTD:5.1 Development plan\n")
+      (cs/write! ctx "dhf/clauses/base.txt" "STD:4.1 Quality system\n")
+      (cs/write! ctx "dhf/documents/quality.md"
+                 (cs/document [["id" "QMS-001"] ["revision" "1"] ["title" "Quality"]] "Our system [[STD:4.1]].\n"))
       (cs/commit! ctx))))
+
+(defstep #"STD:5\.1 is named on line 8 of dhf/documents/plan\.md and line 9 of dhf/documents/risk/register\.md"
+  (fn [ctx]
+    ;; plan-doc's body starts on line 7.
+    (cs/write! ctx cs/plan (cs/plan-doc "# Plan" "We plan the work [[STD:5.1]]."))
+    (cs/write! ctx "dhf/documents/risk/register.md"
+               (cs/document [["id" "RISK-001"] ["revision" "2"] ["title" "Risk register"]]
+                            "# Register\n\nRisks are planned [[STD:5.1]].\n"))
+    (cs/commit! ctx)))
+
+(defn- clauses-md [ctx]
+  (exits-0! ctx)
+  (let [f (cs/out-file ctx "OUT/clauses.md")]
+    (s/check! (fs/regular-file? f) "OUT/clauses.md does not exist")
+    (cs/lines-of f)))
+
+(defstep #"OUT/clauses\.md has one section per declared clause list, dhf/clauses/std\.txt, and no section for dhf/clauses/base\.txt"
+  (fn [ctx]
+    (let [ls (clauses-md ctx)
+          sections (filter #(re-find #"^#{2,}\s" %) ls)]
+      (s/check! (= 1 (count sections)) (str "sections: " (pr-str sections)))
+      (s/check! (str/includes? (first sections) "dhf/clauses/std.txt") (str "sections: " (pr-str sections)))
+      nil)))
+
+(defstep #"under it STD:4\.1 comes first, where its include stands, then a row for STD:5\.1 with \"Development plan\", dhf/documents/plan\.md:8 and dhf/documents/risk/register\.md:9"
+  (fn [ctx]
+    (let [rows (filter #(re-find #"\|\s*STD:" %) (clauses-md ctx))]
+      (s/check! (= 2 (count rows)) (str "rows: " (pr-str rows)))
+      (s/check! (str/includes? (first rows) "STD:4.1") (str "the first row is not STD:4.1: " (first rows)))
+      (doseq [w ["STD:5.1" "Development plan" "dhf/documents/plan.md:8" "dhf/documents/risk/register.md:9"]]
+        (s/check! (str/includes? (second rows) w) (str "the STD:5.1 row lacks " w ": " (second rows))))
+      nil)))
+
+(defstep #"a releasable regulated project whose need UN-001 is traced to by @spec-0001 and @spec-0002"
+  (fn [ctx] (cs/releasable! ctx)))
+
+(defstep #"OUT/traceability\.md has, under UN-001 and its text, @spec-0001 and @spec-0002, each with its title, component and status verified"
+  (fn [ctx]
+    (exits-0! ctx)
+    (let [text (slurp (str (cs/out-file ctx "OUT/traceability.md")))
+          ls (str/split-lines text)
+          need-at (first (keep-indexed (fn [i l] (when (and (re-find #"^#+\s" l) (str/includes? l "UN-001")) i)) ls))]
+      (s/check! need-at (str "no heading names UN-001:\n" text))
+      (s/check! (str/includes? text cs/need-text) (str "the need's text is missing:\n" text))
+      (doseq [[id title] cs/scenario-titles
+              :let [row (some #(when (str/includes? % (str "@" id)) %) (drop need-at ls))]]
+        (s/check! row (str "no row for @" id " under UN-001:\n" text))
+        (doseq [w [title "Alpha" "verified"]]
+          (s/check! (str/includes? row w) (str "the row for @" id " lacks " w ": " row))))
+      nil)))
+
+(defstep #"a releasable regulated project and its results directory"
+  (fn [ctx] (cs/releasable! ctx)))
 
 (defstep #"OUT/results holds a copy of every file of the results directory"
   (fn [ctx]
-    (kc/exits! ctx 0)
-    (let [want (files-under (fs/file (dir ctx) cs/results-dir))
-          got (files-under (cs/out-file ctx "OUT/results"))]
+    (exits-0! ctx)
+    (let [src (fs/file (:dir ctx) cs/results-rel)
+          dst (cs/out-file ctx "OUT/results")
+          want (files-under src)]
       (s/check! (seq want) "the results directory is empty")
-      (s/check! (= want got) (str "OUT/results holds " (pr-str (keys got)) ", the results " (pr-str (keys want)))))))
+      (s/check! (= want (files-under dst)) (str "OUT/results holds " (files-under dst) ", not " want))
+      (doseq [f want]
+        (s/check! (= (sha256 (fs/file src f)) (sha256 (fs/file dst f))) (str f " differs")))
+      nil)))
 
 (defstep #"a releasable regulated project"
   (fn [ctx] (cs/releasable! ctx)))
 
-(defn- sha256 [f]
-  (let [md (java.security.MessageDigest/getInstance "SHA-256")]
-    (apply str (map #(format "%02x" (bit-and % 0xff)) (.digest md (fs/read-all-bytes f))))))
+(defn- manifest [ctx]
+  (let [f (cs/out-file ctx "OUT/manifest.edn")]
+    (s/check! (fs/regular-file? f) "OUT/manifest.edn does not exist")
+    (edn/read-string (slurp (str f)))))
 
-(defn- sha256-of [out path] (sha256 (fs/file out path)))
-
-(defstep #"OUT/manifest\.edn holds exactly \{:commit :clean :files\}: the commit HEAD resolves to, :clean true when no tracked file differs from it \(untracked files never count\), and every other file of OUT as \{:path :sha256\}, its path relative to OUT, sorted by path"
+(defstep #"OUT/manifest\.edn holds exactly \{:commit :clean :files\}: the commit HEAD resolves to, :clean true when no file under the clause lists' and documents' directories differs from it, untracked files included, and every other file of OUT as \{:path :sha256\}, its path relative to OUT, sorted by path"
   (fn [ctx]
-    (kc/exits! ctx 0)
-    (let [out (cs/out-dir ctx "OUT")
-          m (edn/read-string (slurp (str (fs/file out "manifest.edn"))))
-          head (str/trim (cs/git! (dir ctx) "rev-parse" "HEAD"))
-          files (sort (for [f (fs/glob out "**") :when (fs/regular-file? f)
-                            :let [rel (str (fs/relativize out f))]
-                            :when (not= "manifest.edn" rel)]
-                        rel))]
-      (s/check! (fs/exists? (fs/file (dir ctx) "untracked.txt")) "the fixture lost its untracked file")
-      (s/check! (= #{:commit :clean :files} (set (keys m))) (str "the manifest's keys are " (pr-str (keys m))))
-      (s/check! (= head (:commit m)) (str "the commit is " (:commit m) ", HEAD " head))
-      (s/check! (true? (:clean m)) "the manifest says the record is not clean")
-      (s/check! (= (vec files) (mapv :path (:files m))) (str "the manifest lists " (pr-str (map :path (:files m)))))
-      (doseq [{:keys [path sha256] :as e} (:files m)]
-        (s/check! (= #{:path :sha256} (set (keys e))) (str "an entry holds " (pr-str (keys e))))
-        (s/check! (= sha256 (sha256-of out path)) (str "the hash of " path " is wrong"))))))
+    (exits-0! ctx)
+    (let [m (manifest ctx)
+          out (cs/out-file ctx "OUT")
+          want (vec (for [f (files-under out) :when (not= "manifest.edn" f)]
+                      {:path f :sha256 (sha256 (fs/file out f))}))]
+      (s/check! (= #{:commit :clean :files} (set (keys m))) (str "the manifest's keys: " (keys m)))
+      (s/check! (= (cs/git! (:dir ctx) "rev-parse" "HEAD") (:commit m)) (str "the commit: " (:commit m)))
+      (s/check! (true? (:clean m)) "a committed record is not :clean")
+      (s/check! (= want (:files m)) (str "the files: " (pr-str (:files m)) "\nnot " (pr-str want)))
+      ;; Dirty: a changed document under the documents directory.
+      (cs/write! ctx cs/plan (str (slurp (str (fs/file (:dir ctx) cs/plan))) "\nA change.\n"))
+      (let [out2 (str (fs/file (kc/tmp-dir) "out"))
+            r (kc/run! ctx (:dir ctx) ["audit" out2])]
+        (s/check! (zero? (:exit r)) (s/show r))
+        (s/check! (false? (:clean (edn/read-string (slurp (str (fs/file out2 "manifest.edn"))))))
+                  "a changed document leaves the manifest :clean"))
+      nil)))
 
+(defstep #"a releasable regulated project whose every clause is named in committed documents"
+  (fn [ctx] (cs/releasable! ctx)))
+
+(defstep #"an untracked document dhf/documents/draft\.md"
+  (fn [ctx]
+    (cs/write! ctx "dhf/documents/draft.md"
+               (cs/document [["id" "DRAFT-001"] ["revision" "1"] ["title" "Draft"]] "A draft [[STD:5.1]].\n"))))
+
+(defstep #"OUT holds no copy of draft\.md, and OUT/manifest\.edn says :clean false"
+  (fn [ctx]
+    (exits-0! ctx)
+    (let [fs* (files-under (cs/out-file ctx "OUT"))]
+      (s/check! (not-any? #(str/includes? % "draft") fs*) (str "OUT holds a draft: " fs*))
+      (s/check! (some #{"auditor/plan.md"} fs*) (str "OUT holds no plan.md: " fs*))
+      (s/check! (false? (:clean (manifest ctx))) "the manifest says :clean true")
+      nil)))
 
 (defstep #"\"rdm-spec ([^\"]*)\" is run, then \"rdm-spec ([^\"]*)\""
   (fn [ctx a b]
@@ -295,12 +354,12 @@
 
 (defstep #"every file, the PDFs and the manifest included, is byte for byte the same in OUT and OUT2"
   (fn [ctx]
-    (doseq [r (:runs ctx)]
-      (s/check! (zero? (:exit r)) (str "a run did not pass\n" (s/show r))))
-    (let [a (files-under (cs/out-dir ctx "OUT"))
-          b (files-under (cs/out-dir ctx "OUT2"))]
-      (s/check! (some #(str/ends-with? % ".pdf") (keys a)) "OUT holds no PDF")
-      (s/check! (contains? a "manifest.edn") "OUT holds no manifest")
-      (s/check! (= (keys a) (keys b)) (str "the files differ: " (pr-str (keys a)) " " (pr-str (keys b))))
-      (doseq [k (keys a)]
-        (s/check! (= (get a k) (get b k)) (str k " differs between OUT and OUT2"))))))
+    (doseq [r (:runs ctx)] (s/check! (zero? (:exit r)) (s/show r)))
+    (let [a (cs/out-file ctx "OUT") b (cs/out-file ctx "OUT2")
+          fa (files-under a)]
+      (s/check! (some #(str/ends-with? % ".pdf") fa) "OUT holds no PDF")
+      (s/check! (some #{"manifest.edn"} fa) "OUT holds no manifest")
+      (s/check! (= fa (files-under b)) "OUT and OUT2 hold other files")
+      (doseq [f fa]
+        (s/check! (= (sha256 (fs/file a f)) (sha256 (fs/file b f))) (str f " differs between OUT and OUT2")))
+      nil)))

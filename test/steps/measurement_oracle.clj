@@ -1,17 +1,28 @@
 (ns steps.measurement-oracle
   "Step definitions for dhf/spec/measurement/oracle.feature.
 
-  An oracle fixture (`oracle!`) is dhf/harness/oracle/ in a project the
-  scenario makes: two fixture cycles, 01 and 02, each a small project at the
-  cut spec-3 (the room's configuration, model, needs and events, and one
-  feature file of three scenarios, one planned), its cycle.edn, its verdicts
-  and its goldens. The checklist and score goldens are written here by hand
-  from what the spec says they hold; each scoreboard golden is what
-  `rdm-spec scoreboard` gives on the hand-written scores (the cycle before
-  it, the first's being the last), so no golden is recorded by the oracle
-  under test."
+  An oracle fixture is an oracle.edn written here, by hand, pushed with
+  `oras push --oci-layout` into a local artifact layout in a new temporary
+  directory (never a registry), and a project whose configuration's :oracle
+  names it by its digest, under a repository no registry answers for. The
+  scenario's commands get ORACLE_LAYOUT, naming that layout, through the
+  context's :env, as a step sets an environment variable for its commands
+  (steps.kernel-command).
+
+  The fixture's instrument inputs: a three-scenario spec (one component,
+  demo/Alpha; spec-0003 planned) cut as spec-1 and spec-2, cycle 01 grading
+  spec-0002 fail and cycle 02 grading both items pass. Its goldens are what
+  the spec says the checklist, the scorer and the scoreboard give on it.
+
+  The shared When, \"it exits N\" and the cycle project's helpers are the
+  kernel's (steps.kernel-command) and the measurement context's
+  (steps.measurement-cycle).
+
+  Context keys: :dir the project, :run the last run, :env, :layout,
+  :oracle (the oracle.edn data pushed), :oracle-text, :digest,
+  :repository, :broken-golden."
   (:require [babashka.fs :as fs]
-            [cheshire.core :as json]
+            [babashka.process :as p]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep]]
@@ -19,200 +30,302 @@
             [steps.measurement-cycle :as mc]
             [steps.support :as s]))
 
-(defn- needs-oracle! []
-  (s/needs-built! 'rdm-spec.measurement.oracle 'rdm-spec.measurement.checklist
-                  'rdm-spec.measurement.scorer 'rdm-spec.measurement.scoreboard))
+(def artifact-type "application/vnd.scope-impact.rdm-spec.oracle.v1")
 
-(def oracle-dir "dhf/harness/oracle")
+(def repository
+  "A repository no registry answers for: the fixture's artifact is only ever
+  read from its layout."
+  "registry.invalid/rdm-spec-oracle")
 
-(def empty-tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904")
+(defn needs-oracle! [] (s/needs-built! 'rdm-spec.measurement.oracle))
 
-(def verdicts
-  {"01" [{:id "spec-0012" :verdict :pass :evidence "check exited 1 naming the view"}
-         {:id "spec-0014" :verdict :fail :evidence "no finding was printed"}]
-   "02" [{:id "spec-0012" :verdict :pass :evidence "check exited 1 naming the view"}
-         {:id "spec-0014" :verdict :pass :evidence "the view over the limit was named"}]})
+;; ---------------------------------------------------------------------------
+;; The fixture project inside oracle.edn
 
-(defn- checklist-golden [cycle]
-  (json/generate-string
-   (array-map "cycle" cycle "cut" "spec-3"
-              "items" [(array-map "id" "spec-0012" "title" "A view with no description fails the lint"
-                                  "context" "architecture" "component" "Lint" "level" "e2e")
-                       (array-map "id" "spec-0014" "title" "A view over the limit fails the lint"
-                                  "context" "architecture" "component" "Lint" "level" "contract")]
-              "planned" [(array-map "id" "spec-0013" "title" "A component that owns no feature file fails the lint")])
-   {:pretty true}))
+(def ^:private model
+  (str "{:system {:id :demo-system :name \"Demo\" :description \"A fixture system\"}\n"
+       " :people [{:id :user :name \"User\" :actor #{:human} :description \"Uses the fixture\"}]\n"
+       " :external []\n"
+       " :containers\n"
+       " [{:id :app :name \"app\" :kind :runs :technology \"A fixture\" :description \"The fixture's one container\"\n"
+       "   :contexts\n"
+       "   [{:id :demo :name \"demo\" :description \"The fixture's one bounded context\"\n"
+       "     :components\n"
+       "     [{:id :demo/alpha :name \"Alpha\" :spec \"demo/alpha\" :description \"The fixture component\"}]}]}]\n"
+       " :relationships [{:from :user :to :app :description \"Uses\"}]\n"
+       " :views [{:key \"demo-components\" :level :component :context :demo\n"
+       "          :description \"The fixture's components\"}]}\n"))
 
-(defn- score-golden [cycle]
-  (let [items (get verdicts cycle)]
-    {:cycle cycle :cut "spec-3" :scope :project :room-tree empty-tree
-     :builder (:builder mc/default-cycle) :grader (:grader mc/default-cycle) :spec-owner (:spec-owner mc/default-cycle)
-     :items items
-     :passed (count (filter #(= :pass (:verdict %)) items))
-     :scored (count items)}))
+(def ^:private feature
+  (str "@UN-001\nFeature: Alpha\n  The oracle's fixture component.\n\n"
+       "  Rule: The fixture's rule\n\n"
+       "    @spec-0001 @e2e\n    Scenario: First\n      Given a fixture\n      Then it holds\n\n"
+       "    @spec-0002 @contract\n    Scenario: Second\n      Given a fixture\n      Then it holds\n\n"
+       "    @spec-0003 @e2e @wip\n    Scenario: Third\n      Given a fixture\n      Then it holds\n"))
 
-(defn- fixture-project!
-  "The fixture project's files at the cut, under `dir`."
-  [dir]
-  (doseq [rel ["dhf/harness/config.edn" "dhf/spec/model.edn" "dhf/spec/needs.edn" "dhf/spec/events.edn"]
-          :let [src (fs/file s/room-root rel)]
-          :when (fs/exists? src)]
-    (s/write! dir rel (slurp (str src))))
-  (s/write! dir mc/lint-feature (mc/feature-text mc/default-scenarios)))
+(def project-files
+  {"dhf/harness/config.edn" (pr-str {:id-prefix "spec" :spec-dir "dhf/spec" :ledger "dhf/spec/ids.edn"
+                                     :model "dhf/spec/model.edn" :events "dhf/spec/events.edn"
+                                     :needs "dhf/spec/needs.edn" :cycles-dir "dhf/cycles"})
+   "dhf/spec/model.edn" model
+   "dhf/spec/events.edn" "{}\n"
+   "dhf/spec/needs.edn" "{\"UN-001\" {:text \"A fixture need.\" :sources [\"demo:README.md@abc1234\"]}}\n"
+   "dhf/spec/ids.edn" "{:issued 3}\n"
+   "dhf/spec/demo/alpha.feature" feature})
 
-(defn- scoreboard-goldens
-  "{cycle text}: `rdm-spec scoreboard PREV CYCLE` on the hand-written scores."
-  [ctx]
-  (let [dir (s/project!)]
-    (doseq [c ["01" "02"]]
-      (s/write! dir (mc/cycle-path c "cycle.edn") (pr-str mc/default-cycle))
-      (s/write! dir (mc/cycle-path c "score.edn") (pr-str (score-golden c))))
-    (into {} (for [[prev c] [["02" "01"] ["01" "02"]]]
-               (let [r (kc/run! ctx dir ["scoreboard" prev c])]
-                 (s/check! (zero? (:exit r)) (str "rdm-spec scoreboard failed on the fixture's scores\n" (s/show r)))
-                 [c (pr-str (:scoreboard (kc/stdout-edn r)))])))))
+(def ^:private roles
+  {:builder {:name "builder-a" :actor :agent}
+   :grader {:name "grader-b" :actor :agent}
+   :spec-owner {:name "Sami" :actor :human}})
 
-(defn oracle!
-  "Writes the oracle fixture into `dir`'s dhf/harness/oracle/."
-  [ctx dir]
-  (let [boards (scoreboard-goldens ctx)]
-    (doseq [c ["01" "02"]
-            :let [base (str oracle-dir "/" c "/")]]
-      (fixture-project! (fs/file dir base "project"))
-      (s/write! dir (str base "cycle.edn") (pr-str mc/default-cycle))
-      (s/write! dir (str base "verdicts.edn") (pr-str (get verdicts c)))
-      (s/write! dir (str base "checklist.json") (checklist-golden c))
-      (s/write! dir (str base "score.edn") (pr-str (score-golden c)))
-      (s/write! dir (str base "scoreboard.edn") (get boards c)))
-    dir))
+(def ^:private tree "4b825dc642cb6eb9a060e54bf8d69288fbee4904")
 
-(def corrupted "dhf/harness/oracle/01/score.edn")
+(defn- fixture-cycle [n cut verdicts]
+  {:cycle (merge {:cut cut :scope :project} roles)
+   :ratified {:cut cut :room-tree tree :outcome :passed :checkout (str "dhf/cycles/" n "/build")}
+   :verdicts (vec (for [[id v] verdicts] {:id id :verdict v :evidence (str "graded " (name v))}))})
 
-(defn- corrupt!
-  "Makes cycle 01's score golden say pass for its second item, which the
-  scorer files as a fail."
-  [dir]
-  (let [g (score-golden "01")]
-    (s/write! dir corrupted (pr-str (-> g (assoc-in [:items 1 :verdict] :pass) (assoc :passed 2))))))
+(defn- golden-checklist [n cut]
+  {:cycle n :cut cut
+   :items [{:id "spec-0001" :title "First" :context "demo" :component "Alpha" :level "e2e"}
+           {:id "spec-0002" :title "Second" :context "demo" :component "Alpha" :level "contract"}]
+   :planned [{:id "spec-0003" :title "Third"}]})
 
-(defn- snapshot [dir]
-  (into (sorted-map)
-        (for [f (fs/glob (fs/file dir oracle-dir) "**") :when (fs/regular-file? f)]
-          [(str (fs/relativize dir f)) (slurp (str f))])))
+(defn- golden-score [n cut verdicts]
+  (let [items (vec (for [[id v] verdicts] {:id id :verdict v :evidence (str "graded " (name v))}))]
+    (merge {:cycle n :cut cut :scope :project :room-tree tree}
+           roles
+           {:items items
+            :passed (count (filter #(= :pass (:verdict %)) items))
+            :scored (count items)})))
+
+(def ^:private verdicts-01 [["spec-0001" :pass] ["spec-0002" :fail]])
+(def ^:private verdicts-02 [["spec-0001" :pass] ["spec-0002" :pass]])
+
+(def good-scoreboard
+  {:cycles ["01" "02"] :compared 2 :better 1 :worse 0 :better-items ["spec-0002"] :worse-items []
+   :scored {"01" 2 "02" 2} :only-in {"01" [] "02" []} :statements []})
+
+(def good-oracle
+  "Two fixture cycles, their verdicts, and the goldens the spec gives."
+  {:project project-files
+   :cycles {"01" (fixture-cycle "01" "spec-1" verdicts-01)
+            "02" (fixture-cycle "02" "spec-2" verdicts-02)}
+   :checklist {"01" (golden-checklist "01" "spec-1") "02" (golden-checklist "02" "spec-2")}
+   :scorer {"01" (golden-score "01" "spec-1" verdicts-01) "02" (golden-score "02" "spec-2" verdicts-02)}
+   :scoreboard {"01-02" good-scoreboard}
+   :recorded [{:date "2026-10-25" :reason "the first goldens, written from the spec" :changed [:checklist :scorer :scoreboard]}]})
+
+(def stale-scoreboard
+  "A scoreboard golden the instrument does not reproduce: it misses what got better."
+  (assoc good-scoreboard :better 0 :better-items []))
+
+;; ---------------------------------------------------------------------------
+;; Layouts
+
+(defn oracle-text [m] (binding [*print-namespace-maps* false] (str (pr-str m) "\n")))
+
+(defn- oras [dir & args]
+  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""} "oras" args)]
+    (s/check! (zero? (:exit r)) (str "oras " (str/join " " args) " failed: " (:err r) (:out r)))
+    (str (:out r))))
+
+(defn push!
+  "Pushes `text` as oracle.edn into the layout `layout`: its digest."
+  [layout text]
+  (let [src (s/tmp-dir)]
+    (spit (str (fs/file src "oracle.edn")) text)
+    (let [out (oras src "push" "--oci-layout" (str layout) "--artifact-type" artifact-type "oracle.edn:application/edn")
+          digest (second (re-find #"Digest: (sha256:[0-9a-f]{64})" out))]
+      (fs/delete-tree src)
+      (s/check! digest (str "oras printed no digest: " out))
+      digest)))
+
+(defn pull
+  "The text of oracle.edn in the artifact `digest` of the layout, or nil."
+  [layout digest]
+  (let [out (s/tmp-dir)
+        r (p/shell {:out :string :err :string :continue true :in ""}
+                   "oras" "pull" "--oci-layout" (str layout "@" digest) "-o" (str out))
+        f (fs/file out "oracle.edn")
+        text (when (and (zero? (:exit r)) (fs/exists? f)) (slurp (str f)))
+        files (when (fs/exists? out) (vec (map #(str (fs/file-name %)) (fs/list-dir out))))]
+    (fs/delete-tree out)
+    (when text {:text text :files files})))
+
+(defn manifests [layout]
+  (count (re-seq #"\"digest\"" (slurp (str (fs/file layout "index.json"))))))
+
+(defn- config-of [dir] (edn/read-string (slurp (str (fs/file dir "dhf/harness/config.edn")))))
+
+(defn- set-oracle! [dir oracle]
+  (let [c (config-of dir)]
+    (spit (str (fs/file dir "dhf/harness/config.edn"))
+          (pr-str (if oracle (assoc c :oracle oracle) (dissoc c :oracle))))))
+
+(defn with-oracle
+  "ctx whose project (a new one when it has none) configures the oracle
+  `m`, pushed into a new layout that ORACLE_LAYOUT names; `digest` (when
+  given) replaces the pushed one in the configuration."
+  ([ctx m] (with-oracle ctx m nil))
+  ([ctx m digest]
+   (needs-oracle!)
+   (let [dir (or (:dir ctx) (s/project! {}))
+         layout (str (fs/file (s/tmp-dir) "layout"))
+         text (oracle-text m)
+         pushed (push! layout text)
+         d (or digest pushed)]
+     (set-oracle! dir {:repository repository :digest d})
+     (-> ctx
+         (assoc :dir dir :layout layout :oracle m :oracle-text text :digest d :pushed pushed :repository repository)
+         (assoc-in [:env "ORACLE_LAYOUT"] layout)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Givens
 
-(defstep #"dhf/harness/oracle/ holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each"
-  (fn [ctx]
-    (needs-oracle!)
-    (let [dir (oracle! ctx (s/project!))]
-      (assoc ctx :dir dir :before (snapshot dir)))))
+(defstep #"the configured oracle holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each"
+  (fn [ctx] (with-oracle ctx good-oracle)))
 
-(defstep #"dhf/harness/oracle/ holds a golden score whose second item says pass where the scorer files fail"
-  (fn [ctx]
-    (needs-oracle!)
-    (let [dir (oracle! ctx (s/project!))]
-      (corrupt! dir)
-      (assoc ctx :dir dir :before (snapshot dir)))))
+(defstep #"the configured oracle's oracle\.edn holds no fixture cycle"
+  (fn [ctx] (with-oracle ctx (assoc good-oracle :cycles {} :checklist {} :scorer {} :scoreboard {}))))
 
-(defstep #"dhf/harness/oracle/ holds goldens, one of which the instrument no longer reproduces"
-  (fn [ctx]
-    (needs-oracle!)
-    (let [dir (oracle! ctx (s/project!))]
-      (corrupt! dir)
-      (assoc ctx :dir dir :before (snapshot dir)))))
+(defstep #"the configuration's :oracle names a digest the store does not hold"
+  (fn [ctx] (with-oracle ctx good-oracle (str "sha256:" (apply str (repeat 64 "0"))))))
 
-(defstep #"a project whose dhf/harness/oracle/ holds a golden the instrument does not reproduce"
+(defstep #"the configured oracle holds a golden score whose second item says pass where the scorer files fail"
+  (fn [ctx]
+    (let [m (assoc-in good-oracle [:scorer "01" :items 1 :verdict] :pass)]
+      (s/check! (= :fail (get-in good-oracle [:scorer "01" :items 1 :verdict])) "the scorer files pass")
+      (assoc (with-oracle ctx m) :broken-golden {:component "scorer" :key "01" :item "spec-0002"}))))
+
+(defstep #"the configured oracle holds goldens, one of which the instrument no longer reproduces"
+  (fn [ctx]
+    (assoc (with-oracle ctx (assoc-in good-oracle [:scoreboard "01-02"] stale-scoreboard))
+           :broken-golden {:component :scoreboard :key "01-02"})))
+
+(defstep #"a project whose configured oracle holds a golden the instrument does not reproduce"
   (fn [ctx]
     (needs-oracle!)
-    (let [dir (mc/project! {mc/lint-feature mc/default-scenarios})]
-      (oracle! ctx dir)
-      (corrupt! dir)
+    (let [dir (mc/project! {mc/lint-feature mc/default-scenarios})
+          room (s/tmp-dir)
+          ctx (with-oracle (assoc ctx :dir dir) (assoc-in good-oracle [:scoreboard "01-02"] stale-scoreboard))]
       (mc/cut! dir "spec-3")
       (mc/write-cycle! dir "03" {})
-      (assoc ctx :dir dir :cycle "03"))))
+      (assoc ctx :room room :cycle "03"))))
 
-(defstep #"a project with no dhf/harness/oracle/"
+(defstep #"a project whose configuration names no :oracle"
   (fn [ctx]
-    (s/needs-built! 'rdm-spec.measurement.oracle)
-    (assoc ctx :dir (s/project!))))
+    (needs-oracle!)
+    (let [dir (s/project! {})]
+      (set-oracle! dir nil)
+      (assoc ctx :dir dir))))
 
 ;; ---------------------------------------------------------------------------
 ;; Thens
 
-(def ^:private all-goldens
-  (vec (for [c ["01" "02"] g ["checklist.json" "score.edn" "scoreboard.edn"]] (str oracle-dir "/" c "/" g))))
+(defn- result [ctx] (:oracle (kc/stdout-edn (kc/the-run ctx))))
 
-(defstep #"it exits 0 and names each golden it compared"
-  (fn [ctx]
+(defn- all-goldens [m]
+  (set (for [k [:checklist :scorer :scoreboard] g (keys (get m k))] [k g])))
+
+(defn- compared! [ctx]
+  (let [r (kc/exits! ctx 0)
+        got (:compared (result ctx))]
+    (s/check! (sequential? got) (str "the result names no :compared goldens\n" (s/show r)))
+    (s/check! (= (all-goldens (:oracle ctx)) (set got))
+              (str "it compared " (pr-str got) ", not every golden " (pr-str (sort (all-goldens (:oracle ctx))))))
+    nil))
+
+(defstep #"it reads the artifact the configuration's :oracle names by its digest, holding the one file oracle\.edn:"
+  (fn [ctx doc]
     (let [r (kc/exits! ctx 0)
-          compared (get-in (kc/stdout-edn r) [:oracle :compared])]
-      (s/check! (= (sort all-goldens) (sort compared))
-                (str "it names " (pr-str compared) " as compared, expected " (pr-str all-goldens) "\n" (s/show r)))
+          res (result ctx)
+          pulled (pull (:layout ctx) (:digest ctx))
+          shape-keys (set (map keyword (map second (re-seq #"(?m)^[{\s]*:([a-z-]+)\s" doc))))]
+      (s/check! (= (:digest ctx) (:digest res)) (str "it read " (pr-str (:digest res)) ", not " (:digest ctx) "\n" (s/show r)))
+      (s/check! (= (:repository ctx) (:repository res)) (str "it names the repository " (pr-str (:repository res))))
+      (s/check! (= ["oracle.edn"] (:files pulled)) (str "the artifact holds " (pr-str (:files pulled))))
+      (s/check! (= #{:project :cycles :checklist :scorer :scoreboard :recorded} shape-keys)
+                (str "the spec's shape names " (pr-str shape-keys)))
+      (s/check! (= shape-keys (set (keys (edn/read-string (:text pulled))))) "oracle.edn is not of the spec's shape")
       nil)))
+
+(defstep #"it exits 0 and names each golden it compared(?:, as its component and key)?"
+  (fn [ctx] (compared! ctx)))
+
+(defstep #"it exits 1 and says the oracle holds no fixture cycle, so it judged nothing"
+  (fn [ctx]
+    (let [r (kc/exits! ctx 1)]
+      (s/check! (some #(and (str/includes? % "holds no fixture cycle") (str/includes? % "judged nothing")) (s/err-lines r))
+                (str "no line says the oracle holds no fixture cycle, so it judged nothing\n" (s/show r)))
+      nil)))
+
+(defstep #"it exits 2 and names the repository and the digest"
+  (fn [ctx]
+    (kc/refused-naming! ctx (:repository ctx) (:digest ctx))
+    nil))
 
 (defstep #"it exits 1 and names the golden, the item and both values"
   (fn [ctx]
     (let [r (kc/exits! ctx 1)
-          hits (filter #(and (str/starts-with? % (str corrupted ":"))
-                             (str/includes? % "spec-0014")
-                             (str/includes? % ":pass") (str/includes? % ":fail"))
-                       (s/err-lines r))]
-      (s/check! (seq hits) (str "no finding names " corrupted ", spec-0014, :pass and :fail\n" (s/show r)))
+          {:keys [component key item]} (:broken-golden ctx)]
+      (s/check! (some #(and (str/includes? % (str ":" component)) (str/includes? % (pr-str key))
+                            (str/includes? % item) (str/includes? % ":pass") (str/includes? % ":fail"))
+                      (s/err-lines r))
+                (str "no line names :" component " " (pr-str key) ", " item ", :pass and :fail\n" (s/show r)))
       nil)))
 
-(defstep #"it rewrites that golden, names it, and appends the reason with the date to dhf/harness/oracle/RECORDED\.md"
+(defstep #"it stores a new artifact whose oracle\.edn rewrites that golden and appends to :recorded the date, the reason and the component changed"
   (fn [ctx]
     (let [r (kc/exits! ctx 0)
-          dir (:dir ctx)
-          reason (second (drop-while #(not= "--reason" %) (:args r)))
-          after (snapshot dir)
-          changed (set (for [[k v] after :when (not= v (get (:before ctx) k))] k))
-          recorded (str oracle-dir "/RECORDED.md")
-          golden (edn/read-string (get after corrupted))]
-      (s/check! (= #{corrupted recorded} changed)
-                (str "the files changed are " (pr-str (sort changed)) ", expected " corrupted " and " recorded))
-      (s/check! (= :fail (get-in golden [:items 1 :verdict])) (str "the golden was not rewritten: " (pr-str golden)))
-      (s/check! (some #(= corrupted %) (get-in (kc/stdout-edn r) [:oracle :recorded]))
-                (str "the result does not name " corrupted "\n" (s/show r)))
-      (let [text (get after recorded)
-            today (str (java.time.LocalDate/now))]
-        (s/check! (some #(and (str/includes? % reason) (str/includes? % today)) (str/split-lines text))
-                  (str "RECORDED.md holds no line with the reason and " today ":\n" text)))
-      (let [again (kc/run! ctx dir ["oracle"])]
-        (s/check! (zero? (:exit again)) (str "the oracle still fails after recording\n" (s/show again))))
-      nil)))
+          digest (get-in (config-of (:dir ctx)) [:oracle :digest])
+          _ (s/check! (not= digest (:digest ctx)) (str "the configuration still names the old digest\n" (s/show r)))
+          pulled (pull (:layout ctx) digest)
+          _ (s/check! pulled (str "the layout holds no artifact " digest))
+          m (edn/read-string (:text pulled))
+          reason (second (re-find #"--reason (.+)$" (str/join " " (:args r))))
+          {:keys [component key]} (:broken-golden ctx)]
+      (s/check! (= good-scoreboard (get-in m [component key])) (str "the golden was not rewritten: " (pr-str (get-in m [component key]))))
+      (s/check! (= (dissoc (:oracle ctx) :scoreboard :recorded) (dissoc m :scoreboard :recorded)) "another golden changed")
+      (s/check! (= (conj (:recorded (:oracle ctx))
+                         {:date (str (java.time.LocalDate/now)) :reason reason :changed [component]})
+                   (:recorded m))
+                (str ":recorded is " (pr-str (:recorded m))))
+      (assoc ctx :new-digest digest))))
 
-(defstep #"it exits 2, says a reason is required, and rewrites nothing"
+(defstep #"the configuration's :oracle names the new digest, and the old artifact is unchanged"
   (fn [ctx]
-    (let [r (kc/exits! ctx 2)]
-      (s/check! (some #(and (str/starts-with? % "cannot-run: ") (str/includes? % "reason is required")) (s/err-lines r))
-                (str "it does not say a reason is required\n" (s/show r)))
-      (s/check! (= (:before ctx) (snapshot (:dir ctx))) "a file under dhf/harness/oracle/ changed")
+    (let [c (config-of (:dir ctx))
+          old (pull (:layout ctx) (:digest ctx))]
+      (s/check! (= {:repository repository :digest (:new-digest ctx)} (:oracle c)) (str "the configuration names " (pr-str (:oracle c))))
+      (s/check! (= (:digest (:recorded (result ctx))) (:new-digest ctx)) "the result names another digest")
+      (s/check! (= (:oracle-text ctx) (:text old)) "the old artifact changed")
       nil)))
 
-(defn- finding-lines [r]
-  (remove #(or (str/starts-with? % "cannot-run: ") (str/starts-with? % "event: ") (str/includes? % "warning: "))
-          (s/err-lines r)))
+(defstep #"it exits 2, says a reason is required, stores nothing and leaves the configuration's :oracle unchanged"
+  (fn [ctx]
+    (let [r (kc/refused-naming! ctx "a reason is required")]
+      (s/check! (= 1 (manifests (:layout ctx))) (str "the layout holds another artifact\n" (s/show r)))
+      (s/check! (= {:repository repository :digest (:digest ctx)} (:oracle (config-of (:dir ctx))))
+                "the configuration's :oracle changed")
+      nil)))
 
 (defstep #"it exits 1, prints the oracle's findings unchanged, and (builds no room|writes no ratified\.edn)"
-  (fn [ctx does-nothing]
+  (fn [ctx what]
     (let [r (kc/exits! ctx 1)
           oracle (kc/run! ctx (:dir ctx) ["oracle"])
-          want (finding-lines oracle)]
-      (s/check! (= 1 (:exit oracle)) (str "the oracle alone does not fail\n" (s/show oracle)))
+          want (remove #(str/starts-with? % "event: ") (s/err-lines oracle))
+          got (s/err-lines r)]
+      (s/check! (= 1 (:exit oracle)) (str "the oracle itself does not fail\n" (s/show oracle)))
       (s/check! (seq want) "the oracle names no finding")
-      (s/check! (= want (finding-lines r))
-                (str "the findings differ from the oracle's\noracle:\n" (str/join "\n" want) "\n" (s/show r)))
-      (case does-nothing
-        "builds no room" (s/check! (not (fs/exists? (:room ctx))) (str "a room was built at " (:room ctx)))
-        "writes no ratified.edn" (s/check! (not (fs/exists? (fs/file (:dir ctx) (mc/cycle-path "03" "ratified.edn"))))
-                                           "a ratified.edn was written"))
+      (s/check! (= want (filter (set want) got)) (str "the oracle's findings are not printed unchanged\n" (s/show r)))
+      (if (= what "builds no room")
+        (s/check! (empty? (fs/list-dir (:room ctx))) "a room was built")
+        (s/check! (not (fs/exists? (fs/file (:dir ctx) (mc/cycle-path "03" "ratified.edn")))) "ratify wrote ratified.edn"))
       nil)))
 
 (defstep #"it exits 0 and says there is no oracle to run"
   (fn [ctx]
     (let [r (kc/exits! ctx 0)]
-      (s/check! (re-find #"no oracle to run" (str (:out r) (:err r))) (str "it does not say there is no oracle to run\n" (s/show r)))
+      (s/check! (re-find #"no oracle" (str (:err r) (:out r))) (str "it does not say there is no oracle\n" (s/show r)))
       nil)))
