@@ -1,0 +1,9 @@
+;; Cycle 13's runs (dhf/spec/agency/observe.feature). Observed by the
+;; integrator by hand, in observe's shape, until the observe task is installed.
+[{:role :builder :room "/home/user/c13/room"
+  :began "2026-10-26T05:44:57Z" :ended "2026-10-26T06:35:10Z" :minutes 49.83 :tokens 603427
+  :defence {:writes-outside []
+            :tmp-left 1          ; /tmp/tmp.IUZiCvx5Ls, a scratch directory made at 05:46 and never removed
+            :repo-touched []
+            :results-in-room false
+            :unobserved ["reads outside the room"]}}]

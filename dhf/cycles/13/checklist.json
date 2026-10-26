@@ -1,0 +1,648 @@
+{
+  "cycle" : "13",
+  "cut" : "spec-17",
+  "items" : [ {
+    "id" : "spec-0001",
+    "title" : "A view with no description fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0002",
+    "title" : "An element with no description fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0003",
+    "title" : "An unlabelled relationship fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0005",
+    "title" : "A context view with no person fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0006",
+    "title" : "A container that neither runs nor stores fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0007",
+    "title" : "A relationship that publishes an unknown event fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0008",
+    "title" : "A view with more elements than the configured limit warns",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0009",
+    "title" : "A person or system description longer than the configured limit fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0010",
+    "title" : "The lint prints the checklist items no machine can judge",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0012",
+    "title" : "A bounded context with no component view fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0013",
+    "title" : "A component that owns no feature file fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0014",
+    "title" : "A feature file that belongs to no component fails the lint",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0015",
+    "title" : "Components of different contexts relate only through an event",
+    "context" : "architecture",
+    "component" : "Lint",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0019",
+    "title" : "The checklist is derived from the spec at the cut, one item per stamped scenario",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0020",
+    "title" : "Both directions are counted, never the net",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0021",
+    "title" : "A moved denominator is said out loud",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0037",
+    "title" : "A commit that is not a cut is refused",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0038",
+    "title" : "The clean room is the cut's committed files minus the denied ones, as one root commit",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0051",
+    "title" : "A feature file using every supported construct passes the check",
+    "context" : "spec",
+    "component" : "Parser",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0052",
+    "title" : "An unknown keyword is refused with its line",
+    "context" : "spec",
+    "component" : "Parser",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0053",
+    "title" : "A feature file holds exactly one feature",
+    "context" : "spec",
+    "component" : "Parser",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0064",
+    "title" : "The status report lists a scenario tagged @wip as planned",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0065",
+    "title" : "Status is derived from the results, never written",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0066",
+    "title" : "A scenario outline is one requirement, verified by all its rows",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0067",
+    "title" : "A passed result with the scenario's id verifies it",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0068",
+    "title" : "Any status but passed does not verify",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0069",
+    "title" : "One failing result among several fails the scenario",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0070",
+    "title" : "A scenario with no result is unverified, never left out",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0086",
+    "title" : "Init writes the skeleton and names what it wrote",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0087",
+    "title" : "Init refuses a path that already exists",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0089",
+    "title" : "The id prefix is chosen at init",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0090",
+    "title" : "The check passes on a skeleton nobody has touched",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0092",
+    "title" : "Each component gets one page",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0093",
+    "title" : "A component page carries the component's prose and scenarios",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0094",
+    "title" : "Each bounded context gets an index page with its component view",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0095",
+    "title" : "The home page shows the context and container views and the needs",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0096",
+    "title" : "With results, each scenario shows its status",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0097",
+    "title" : "A planned scenario shows as planned",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0098",
+    "title" : "Without results, the site says no status was derived",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0099",
+    "title" : "Publishing refuses views older than the model",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0100",
+    "title" : "Publishing writes nothing in the spec",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0101",
+    "title" : "The same inputs publish the same site",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0133",
+    "title" : "Every wiki page is published with its footnotes linked to their sources",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0146",
+    "title" : "The site's navigation follows the model",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0147",
+    "title" : "The site builds when every link resolves",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0148",
+    "title" : "A broken link fails the build, naming the page and the link",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0149",
+    "title" : "Without the site builder, building fails and names the missing tool",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0176",
+    "title" : "Each task is run as rdm-spec <task>",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0177",
+    "title" : "A task that passes exits 0",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0178",
+    "title" : "A task that finds a problem exits 1 and names it on the error stream",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0179",
+    "title" : "A task that cannot run exits 2 and says why",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0180",
+    "title" : "An unknown task exits 2 and lists the tasks",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0182",
+    "title" : "The project scope keeps no implementation",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0183",
+    "title" : "A context scope removes that context's code and keeps the rest",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0184",
+    "title" : "A component scope removes that component's code and keeps the rest",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0185",
+    "title" : "A scope the model does not name is refused",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0191",
+    "title" : "A scenario tagged @wip is planned whatever its results say",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0192",
+    "title" : "The scoreboard marks a bootstrap cycle and compares nothing against it",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0193",
+    "title" : "A task's results directory defaults to the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0210",
+    "title" : "checklist.json has one shape",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0211",
+    "title" : "A cut holding an unstamped scenario has no checklist",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0219",
+    "title" : "A task's results directory is --results, else RESULTS_DIR, else the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0220",
+    "title" : "A task that names a cut reads the spec as it was at that cut",
+    "context" : "spec",
+    "component" : "Parser",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0222",
+    "title" : "The kernel is a scope like a bounded context",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0223",
+    "title" : "The id prefix defaults to spec and must start a tag",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0225",
+    "title" : "A scoped cycle is compared over its scope only",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0226",
+    "title" : "A list of scopes removes the code of each, and keeps the rest",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0235",
+    "title" : "A task with no gate reports the findings of every stage",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0237",
+    "title" : "The components whose feature files changed are listed as scopes",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0238",
+    "title" : "A changed file no component owns is named for a person to judge",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0239",
+    "title" : "The wiki is reachable from the home page and the navigation",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0241",
+    "title" : "A component's design prose is its own",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0242",
+    "title" : "A record the release check refuses has no audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0243",
+    "title" : "A clause no audit tag names refuses the audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0244",
+    "title" : "A project without :regulated has no audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0245",
+    "title" : "An existing directory is never written into",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0246",
+    "title" : "The auditor's copy keeps the audit tags, the engineer's copy drops them",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0247",
+    "title" : "What the engineer's copy drops",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0248",
+    "title" : "The documents directory's layout is kept",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0249",
+    "title" : "Each copy is also a PDF whose first page names the document",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0250",
+    "title" : "The clauses page names where each clause is met",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0251",
+    "title" : "The traceability page links each need to its scenarios and their status",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0252",
+    "title" : "The results the record was verified by are kept",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0253",
+    "title" : "The manifest pins every file of the audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0254",
+    "title" : "Same commit, same results, same audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0266",
+    "title" : "Each clause of the cut's clause lists is an item after the scenarios",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0271",
+    "title" : "A cycle scoped away from the compliance context carries no clause item",
+    "context" : "measurement",
+    "component" : "Checklist",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0272",
+    "title" : "Init takes an absolute path as well as a relative one",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0273",
+    "title" : "The wiki's index is published with its footnotes linked, as a page is",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0274",
+    "title" : "The audit copy is refused while what it is made from is not committed",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0283",
+    "title" : "Two cycles of the whole project give one comparison",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0284",
+    "title" : "A scoped cycle gives its target first and the rest apart",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0285",
+    "title" : "An outline with a row that has no result is unverified",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0286",
+    "title" : "A run's record has one shape",
+    "context" : "agency",
+    "component" : "Observe",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0287",
+    "title" : "A write outside the room is recorded, and the run is not stopped",
+    "context" : "agency",
+    "component" : "Observe",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0288",
+    "title" : "Entries left in the temporary directory are counted",
+    "context" : "agency",
+    "component" : "Observe",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0289",
+    "title" : "A change to the project outside its cycle is recorded",
+    "context" : "agency",
+    "component" : "Observe",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0290",
+    "title" : "Results written into the room are recorded",
+    "context" : "agency",
+    "component" : "Observe",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0291",
+    "title" : "What cannot be observed is said, never assumed clean",
+    "context" : "agency",
+    "component" : "Observe",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0292",
+    "title" : "Ending a run that never began cannot run",
+    "context" : "agency",
+    "component" : "Observe",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0293",
+    "title" : "The report sets two cycles' runs side by side",
+    "context" : "agency",
+    "component" : "Observe",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0294",
+    "title" : "Uncommitted and ignored files never reach a clean room",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0295",
+    "title" : "A kept file carrying a removed implementation file's bytes stops the fence",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0296",
+    "title" : "A committed path neither denied nor kept fails the check",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0297",
+    "title" : "A path under dhf/ is classified on its own",
+    "context" : "regeneration",
+    "component" : "Fence",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0298",
+    "title" : "A changed event's publisher and subscribers are scopes",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0299",
+    "title" : "The kernel first, then each publisher before its subscribers",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  } ],
+  "planned" : [ ]
+}
