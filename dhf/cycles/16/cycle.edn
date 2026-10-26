@@ -1,0 +1,24 @@
+;; Cycle 16: spec-20 (verify, abstract and the project's; results in Allure's
+;; own model), tagged locally. Run by cycle 15's release (514bc1d), whose gate
+;; is still ratify: it reads :test-command, kept for it. The scopes are what
+;; that release's scopes lists, in build order; ratification/ratify is the
+;; component spec-20 removed, so its code goes and verification/verify takes
+;; its place. fence refuses a component the cut no longer has, so the
+;; integrator fenced the other nine and removed ratify's code from the room by
+;; hand (src/rdm_spec/ratification/ratify.clj, its unit test and its step
+;; file); its step helper test/steps/ratification_support.clj, which
+;; measurement's steps also read, is left for the builder. One builder.
+{:cut "spec-20"
+ :scope [{:component :kernel/command}
+         {:component :kernel/runner}
+         {:component :project/init}
+         {:component :verification/results}
+         {:component :verification/status}
+         {:component :verification/verify}
+         {:component :regeneration/scopes}
+         {:component :measurement/scorer}
+         {:component :measurement/oracle}
+         {:component :ratification/ratify}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "one grader subagent, its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
