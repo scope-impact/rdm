@@ -1,55 +1,62 @@
 (ns rdm-spec.verification.verify-test
-  "Unit tests of Verify's pure parts: the declared checks, a :runs check's
-  answer, and what the tests check finds in a run's results. No fixture on
-  disk."
-  (:require [clojure.string :as str]
+  (:require [babashka.fs :as fs]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [rdm-spec.kernel.gherkin :as gherkin]
-            [rdm-spec.kernel.runner :as runner]
+            [rdm-spec.kernel.command :as command]
             [rdm-spec.verification.verify :as verify]))
 
-(def ^:private impl ["src" "test" "test.clj"])
+(def impl ["src" "test" "test.clj" "bb.edn"])
 
-(deftest the-declared-checks-are-checked-before-anything-runs
-  (is (nil? (verify/checks-problem [{:kind :tests :command ["bb" "test.clj"]}] impl)))
-  (is (str/includes? (verify/checks-problem nil impl) "the configuration declares no :verify"))
-  (is (str/includes? (verify/checks-problem [{:kind :runs :name "a" :command ["x"]}] impl)
+(defn- why [checks]
+  (try (verify/checks-of {:verify checks :implementation impl}) nil
+       (catch Exception e (when (command/cannot-run? e) (ex-message e)))))
+
+(deftest a-configuration-verify-cannot-trust-is-refused
+  (is (nil? (why [{:kind :tests :command ["bb" "test.clj"]}])))
+  (is (str/includes? (why nil) "declares no :verify"))
+  (is (str/includes? (why [{:kind :runs :name "a" :command ["x"] :expect {:exit 0} :budget {:seconds 1}}])
                      "a project is verified by its tests first"))
-  (is (str/includes? (verify/checks-problem [{:kind :tests :command ["x"]} {:kind :renders}] impl)
-                     ":renders is not a kind of check"))
-  (is (str/includes? (verify/checks-problem [{:kind :tests}] impl) "the tests check names no command"))
-  (is (str/includes? (verify/checks-problem [{:kind :tests :command ["x"]}
-                                             {:kind :serves :name "app" :start ["x"] :port 1 :budget {:seconds 1 :polls 1}
-                                              :probe ["bb" "src/probe.clj" "{url}"]}]
-                                            impl)
-                     "the probe is in the implementation the builder writes")))
+  (is (str/includes? (why [{:kind :tests :command ["x"]} {:kind :renders}]) ":renders is not a kind of check"))
+  (is (str/includes? (why [{:kind :tests}]) "the tests check names no command"))
+  (is (str/includes? (why [{:kind :tests :command ["x"]}
+                           {:kind :serves :start ["x"] :port 1 :budget {:seconds 1 :polls 1} :probe ["bb" "src/probe.clj"]}])
+                     "the probe is in the implementation the builder writes"))
+  (testing "a check's name is its kind's when it names none"
+    (is (= ["tests" "answers"] (mapv :name (verify/checks-of {:implementation impl
+                                                               :verify [{:kind :tests :command ["x"]}
+                                                                        {:kind :runs :name "answers" :command ["y"]
+                                                                         :expect {:exit 0} :budget {:seconds 1}}]}))))))
 
-(deftest a-runs-check-answers-as-expected-or-names-the-difference
-  (let [check {:kind :runs :name "answers" :expect {:exit 0 :stdout-starts "{:help"} :budget {:seconds 10}}]
-    (is (nil? (verify/runs-difference check {:exit 0 :out "{:help 1}\n"})))
-    (is (str/includes? (verify/runs-difference check {:exit 3 :out "{:help"}) "the exit 3 where 0 was expected"))
-    (is (str/includes? (verify/runs-difference check {:exit 0 :out "usage\nmore\n"}) "usage"))
-    (is (str/includes? (verify/runs-difference check {:timed-out? true}) "the budget of 10 seconds"))))
+(deftest an-answer-is-an-http-response
+  (is (verify/http-response? "HTTP/1.1 404 Not Found"))
+  (is (verify/http-response? "HTTP/1.0 200 OK"))
+  (is (not (verify/http-response? nil)))
+  (is (not (verify/http-response? "hello"))))
 
-(def ^:private text
-  (str "@UN-001\nFeature: Lint\n\n  Rule: R\n\n"
-       "    @spec-0003 @e2e\n    Scenario: Three\n      Given a model\n\n"
-       "    @spec-0004 @e2e @wip\n    Scenario: Four\n      Given a model\n"))
+(deftest seconds-are-held-to-the-hundredth
+  (is (= 1.23 (verify/seconds 1234)))
+  (is (= 0.0 (verify/seconds 0))))
 
-(defn- pickles []
-  (runner/pickles-of "dhf/spec/a/b.feature" (gherkin/parse-feature "dhf/spec/a/b.feature" text)
-                     {:prefix "spec" :owner {:context :a :component :a/b :context-name "a" :component-name "B"}}))
+(deftest a-command-is-run-within-its-budget
+  (let [dir (str (fs/create-temp-dir))]
+    (try
+      (let [r (verify/run-command ["bb" "-e" "(println \"hi\") (System/exit 3)"] {:dir dir :budget-ms 30000})]
+        (is (= 3 (:exit r)))
+        (is (str/starts-with? (:out r) "hi")))
+      (let [r (verify/run-command ["bb" "-e" "(Thread/sleep 20000)"] {:dir dir :budget-ms 500})]
+        (is (:timed-out? r)))
+      (is (command/cannot-run? (try (verify/run-command ["rdm-spec-no-such-command-x"] {:dir dir :budget-ms 500}) nil
+                                    (catch Exception e e))))
+      (finally (fs/delete-tree dir)))))
 
-(deftest the-tests-check-names-every-scenario-not-passed-or-not-named
-  (let [ps (pickles)
-        good (runner/allure-result (first ps) {:status "passed" :steps [{:name "Given a model" :status "passed"}]}
-                                   runner/default-mapping)]
-    (testing "untested"
-      (is (= ["scenario-untested"] (map :rule (verify/scenario-findings ps [] runner/default-mapping)))))
-    (testing "passed and following the mapping"
-      (is (empty? (verify/scenario-findings ps [{:spec "spec-0003" :status "passed" :result good :file "r.json"}]
-                                            runner/default-mapping))))
-    (testing "failed"
-      (is (= ["scenario-not-passed"]
-             (map :rule (verify/scenario-findings ps [{:spec "spec-0003" :status "failed" :result (assoc good :status "failed") :file "r.json"}]
-                                                  runner/default-mapping)))))))
+(deftest the-room-tree-is-the-git-tree-of-the-implementation
+  (let [room (str (fs/create-temp-dir))]
+    (try
+      (is (= "4b825dc642cb6eb9a060e54bf8d69288fbee4904" (verify/room-tree room impl)) "an empty room is the empty tree")
+      (spit (str (fs/file room "test.clj")) "x\n")
+      (spit (str (fs/file room "notes.md")) "not implementation\n")
+      (let [h (verify/room-tree room impl)]
+        (is (= 40 (count h)))
+        (spit (str (fs/file room "notes.md")) "changed\n")
+        (is (= h (verify/room-tree room impl)) "only the implementation counts"))
+      (finally (fs/delete-tree room)))))

@@ -131,7 +131,9 @@
         (s/check! (some #(and (str/includes? % id) (str/includes? % (subs level 1))) (str/split-lines text))
                   (str "no line of the page names " id " and its level"))
         (doseq [st (:steps sc)]
-          (s/check! (str/includes? text (:text st)) (str "the page does not hold the step " (pr-str (:text st))))))
+          ;; a step's text as the page shows it: Markdown's escapes ("\\[") read as the characters they stand for
+          (s/check! (str/includes? (str/replace text #"\\([\\`*_{}\[\]()#+\-.!|<>])" "$1") (:text st))
+                    (str "the page does not hold the step " (pr-str (:text st))))))
       nil)))
 
 (defstep #"the bounded context architecture and its rendered component view"

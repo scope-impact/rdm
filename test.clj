@@ -43,7 +43,13 @@
                                        (str root "/test.clj")]
                                       *command-line-args*)
                               {:inherit true :dir root
-                               :extra-env {fixtures-var run-dir "TMPDIR" run-dir}})
+                               :extra-env {fixtures-var run-dir "TMPDIR" run-dir
+                                           ;; every fixture lies under run-dir, which may lie in a git
+                                           ;; repository: git never looks above a fixture (README, "A
+                                           ;; fixture inside another git repository is fenced from it")
+                                           "GIT_CEILING_DIRECTORIES"
+                                           (str/join java.io.File/pathSeparator
+                                                     (remove str/blank? [run-dir (System/getenv "GIT_CEILING_DIRECTORIES")]))}})
                    deref
                    :exit)
                (finally

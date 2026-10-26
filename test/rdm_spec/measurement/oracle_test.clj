@@ -1,45 +1,39 @@
 (ns rdm-spec.measurement.oracle-test
-  "Unit tests of the Oracle's pure parts: comparing an answer with its
-  golden, what a record may change, and the order goldens are judged in.
-  No fixture on disk."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [rdm-spec.kernel.command :as command]
             [rdm-spec.measurement.oracle :as oracle]))
 
-(def ^:private golden
-  {:out {:score {:cycle "01" :passed 1}} :exit 0 :err ""
-   :wrote {"dhf/cycles/01/score.edn" {:items [{:id "spec-0012" :verdict :pass} {:id "spec-0014" :verdict :pass}]}}})
+(deftest every-seconds-is-held-as-measured
+  (is (= {:verify {:checks [{:name "tests" :seconds :measured} {:seconds :measured :x [1 {:seconds :measured}]}]}}
+         (oracle/hold-seconds {:verify {:checks [{:name "tests" :seconds 1.2} {:seconds 3 :x [1 {:seconds 0.1}]}]}}))))
 
-(deftest an-answer-that-is-its-golden-differs-in-nothing
-  (is (empty? (oracle/differences golden golden))))
+(deftest the-cases-are-ordered-by-component-then-case
+  (is (= [[:measurement/scorer "01"] [:regeneration/scopes "a"] [:regeneration/scopes "b"]]
+         (oracle/cases {:project {} :cycles {} :recorded []
+                        :regeneration/scopes {"b" {} "a" {}} :measurement/scorer {"01" {}}}))))
 
-(deftest every-difference-is-named-with-both-values
-  (let [actual (assoc-in golden [:wrote "dhf/cycles/01/score.edn" :items 1 :verdict] :fail)
-        [d & more] (oracle/differences golden actual)]
-    (is (nil? more))
-    (is (= [:pass :fail] [(:golden d) (:actual d)]))
-    (is (= "spec-0014" (:item d))))
-  (testing "the exit and the error stream, word for word"
-    (is (= #{"exit" "error stream"}
-           (set (map :what (oracle/differences golden (assoc golden :exit 1 :err "a line"))))))))
+(deftest differences-name-the-path-and-both-values
+  (is (= [] (oracle/differences {:exit 0 :out {:a 1}} {:exit 0 :out {:a 1}})))
+  (is (= [[[:out :a] 1 2]] (oracle/differences {:exit 0 :out {:a 1}} {:exit 0 :out {:a 2}})))
+  (is (= [[[:wrote "s" :items 1 :verdict] :pass :fail]]
+         (oracle/differences {:wrote {"s" {:items [{:id "a" :verdict :pass} {:id "b" :verdict :pass}]}}}
+                             {:wrote {"s" {:items [{:id "a" :verdict :pass} {:id "b" :verdict :fail}]}}})))
+  (testing "a finding names the item's id where the path passes through one"
+    (let [g {:wrote {"s" {:items [{:id "a"} {:id "spec-0014" :verdict :pass}]}}}
+          a {:wrote {"s" {:items [{:id "a"} {:id "spec-0014" :verdict :fail}]}}}
+          f (first (oracle/difference-findings :measurement/scorer "01" g a))]
+      (is (= "oracle-golden-differs" (:rule f)))
+      (doseq [w [":measurement/scorer" "\"01\"" "spec-0014" ":pass" ":fail"]]
+        (is (str/includes? (:message f) w) w)))))
 
-(deftest timing-never-enters-a-golden
-  (is (= {:verify {:checks [{:name "tests" :seconds :measured}]}}
-         (oracle/normalize {:verify {:checks [{:name "tests" :seconds 1.23}]}}))))
+(deftest changes-are-named-component-colon-case
+  (is (= #{[:measurement/scoreboard "01-02"] [:regeneration/scopes "order"]}
+         (oracle/parse-changes "measurement/scoreboard:01-02,regeneration/scopes:order")))
+  (is (= #{} (oracle/parse-changes nil)))
+  (is (command/cannot-run? (try (oracle/parse-changes "nonsense") nil (catch Exception e e)))))
 
-(deftest goldens-are-judged-in-the-order-of-the-judging-components-then-by-case
-  (is (= [[:measurement/scorer "01"] [:measurement/scorer "02"] [:regeneration/scopes "a"]]
-         (oracle/cases {:regeneration/scopes {"a" nil} :measurement/scorer {"02" nil "01" nil} :cycles {}}))))
-
-(deftest a-record-adds-new-cases-and-changes-only-named-goldens
-  (let [plan (fn [changed added named] (oracle/record-refusals changed added named))]
-    (is (empty? (plan [] [[:regeneration/scopes "new"]] #{})))
-    (is (empty? (plan [[:regeneration/scopes "order"]] [[:regeneration/scopes "new"]] #{[:regeneration/scopes "order"]})))
-    (is (= [[:regeneration/scopes "order"]] (plan [[:regeneration/scopes "order"]] [[:regeneration/scopes "new"]] #{})))
-    (testing "a record that adds no case may change what it records, every change named in :recorded"
-      (is (empty? (plan [[:regeneration/scopes "order"]] [] #{}))))))
-
-(deftest changes-are-named-component-and-case
-  (is (= #{[:regeneration/scopes "order"] [:measurement/scorer "01"]}
-         (oracle/parse-changes "regeneration/scopes:order,measurement/scorer:01")))
-  (is (empty? (oracle/parse-changes nil))))
+(deftest the-configuration-names-the-new-digest-and-keeps-its-text
+  (let [text ";; c\n{:oracle {:repository \"r\"\n          :digest \"sha256:aaa\"}\n :x 1}\n"]
+    (is (= ";; c\n{:oracle {:repository \"r\"\n          :digest \"sha256:bbb\"}\n :x 1}\n"
+           (oracle/with-digest text "sha256:aaa" "sha256:bbb")))))
