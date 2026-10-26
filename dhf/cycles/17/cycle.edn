@@ -13,4 +13,10 @@
          {:component :measurement/oracle}]
  :builder {:name "one builder subagent, one room" :actor :agent}
  :grader {:name "one grader subagent, its own grading room" :actor :agent}
- :spec-owner {:name "Sathish Narayanan" :actor :human}}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
+ ;; The first grader's run was cancelled at 15:11, about 8 minutes in, when
+ ;; the integrator's own turn was stopped by the spec owner; it wrote no
+ ;; verdicts. Its observation (runs.edn) ran to 15:48, idle after 15:11, and
+ ;; counts the 155,279 tokens it spent. A new grader is needed to score the
+ ;; cycle.
+ :grading [{:run 1 :outcome :cancelled :verdicts 0}]}
