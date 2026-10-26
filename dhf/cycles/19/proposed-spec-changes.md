@@ -50,3 +50,12 @@ cycle; the held-still oracle judged it first.
 - The grading room had no `docs/wow/harness.md`; the grader followed the
   brief alone. The grade room must carry `docs/wow/` (it is in `:keep`
   since this cycle).
+
+## Installing cycle 19
+
+Installed as release 13832de (OCI tag cycle-19). The held-still oracle first
+gave it 15 differences, of which 5 were goldens holding what no scenario
+states (cycle 17's wording after `RULE:`, stdout's `:reason`, check's
+`:lint :findings`). `oracle.clj` now compares only error heads and skips the
+paths in its `unstated` table; the 6 cases spec-22 and spec-23 changed were
+re-recorded with `--changes`. Cycle 19's release: 0 differences.

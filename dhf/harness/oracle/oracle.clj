@@ -12,8 +12,18 @@
 ;; WHAT IT JUDGES. rdm-spec as a black box: for each case it writes the case's
 ;; files, commits them as the case says, runs the case's command lines with the
 ;; rdm-spec under judgement, and compares the last one's exit, standard output
-;; (read as data), error stream (word for word) and the files it names with the
-;; case's golden. It never calls rdm-spec's code: it only runs its commands.
+;; (read as data), error stream and the files it names with the case's golden.
+;; It never calls rdm-spec's code: it only runs its commands.
+;;
+;; ONLY WHAT THE SPEC STATES. A golden holds nothing the spec does not state
+;; (README.md, "Recording"), so two things are left out before comparing and
+;; recording. Of each error line, only its head is kept: FILE:LINE: RULE, and
+;; the element a rule names (`mapping-differs: story`), as the spec's
+;; FILE:LINE: RULE: what states it; the words after are each build's own. And
+;; the paths in `unstated` below are dropped from the answer, each with the
+;; reason no scenario states it. A path joins `unstated` only by a reviewed
+;; commit (cycle 19: the goldens held cycle 17's wording, an unstated
+;; :reason and an unstated count, and so turned red on a correct build).
 ;;
 ;; THE ARTIFACT. oracle.edn, in one OCI artifact pinned by digest in pin.edn
 ;; beside this file, read from the layout ORACLE_LAYOUT names, else pulled from
@@ -31,7 +41,8 @@
 ;;
 ;;   Every step but the last must exit 0. In :out and :err the fixture's own
 ;;   path reads FIXTURE, and every :seconds reads :measured, so neither the
-;;   machine nor the clock moves a golden.
+;;   machine nor the clock moves a golden. :err is the error stream's heads,
+;;   one per line.
 ;;
 ;; USE
 ;;   bb dhf/harness/oracle/oracle.clj                    judge (exit 0 none differ, 1 some differ, 2 cannot run)
@@ -150,6 +161,36 @@
 
 ;; ---------------------------------------------------------------- comparing
 
+;; Paths in a component's answers that no scenario states, so never compared.
+(def unstated
+  {:verification/verify [[[:out :verify :checks 0 :reason]
+                          "spec-0315 puts a failed check's :reason in ratified.edn; its standard output's checks are stated by spec-0314 without it"]]
+   :spec/check          [[[:out :lint :findings]
+                          "no scenario states check's :lint summary beyond its questions for a person (spec-0010)"]]})
+
+(defn dissoc-in [m [k & ks]]
+  (cond (nil? ks) (if (map? m) (dissoc m k) m)
+        (and (map? m) (contains? m k)) (update m k dissoc-in ks)
+        (and (vector? m) (integer? k) (< k (count m))) (update m k dissoc-in ks)
+        :else m))
+
+;; FILE:LINE: [warning: ]RULE, and for the rules whose finding the spec states
+;; with an element (spec-0331: `mapping-differs: story`, `evidence-missing:
+;; browser-trace`) that element too; a line of any other form is kept whole.
+(def element-rules #{"mapping-differs" "evidence-missing"})
+(def head-re #"^((?:\S+:\d+: )?(?:warning: )?([a-z][a-z0-9-]*))(?:(: [^\s:]+)(?=:))?(?=:|$)")
+
+(defn heads [err]
+  (if (string? err)
+    (vec (for [l (str/split-lines err) :when (not (str/blank? l))]
+           (if-let [[_ h rule e] (re-find head-re l)] (str h (when (element-rules rule) e)) l)))
+    err))
+
+(defn stated [c x]
+  (when x
+    (let [x (if (contains? x :err) (update x :err heads) x)]
+      (reduce (fn [x [path _]] (dissoc-in x path)) x (unstated c)))))
+
 (defn component-keys [data] (sort-by str (filter #(and (keyword? %) (namespace %)) (keys data))))
 
 (defn cases [data]
@@ -168,8 +209,8 @@
     (try
       (reduce (fn [acc [c k]]
                 (let [{:keys [fixture golden]} (get-in data [c k])
-                      answer (run-case tmp fixture)
-                      ds (if (nil? golden) :new (diffs [] golden answer))]
+                      answer (stated c (run-case tmp fixture))
+                      ds (if (nil? golden) :new (diffs [] (stated c golden) answer))]
                   (-> acc
                       (update :compared conj {:component c :case k})
                       (assoc-in [:answers [c k]] answer)
@@ -206,7 +247,7 @@
         {:keys [answers]} (judge data)
         added (vec (for [[c k] (cases data) :when (nil? (get-in data [c k :golden]))] {:component c :case k}))
         changed (vec (for [[c k] (cases data) :let [g (get-in data [c k :golden])]
-                           :when (and g (not= g (answers [c k])))] [c k]))
+                           :when (and g (not= (stated c g) (answers [c k])))] [c k]))
         unnamed (remove changes changed)]
     (when (seq unnamed)
       (die! 1 (str "oracle-record-refused: these existing goldens would change and --changes does not name them: "

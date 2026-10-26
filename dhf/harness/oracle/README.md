@@ -28,6 +28,16 @@ gets 17 differences:
 
 Cycle 18's grader found none of them.
 
+**Cycle 19's install:** the goldens still held cycle 17's wording, a
+`:reason` and a count no scenario states, so cycle 19's correct build got 15
+differences. The oracle now compares only what the spec states: each error
+line's head (FILE:LINE: RULE, and the element for `mapping-differs` and
+`evidence-missing`), and nothing on a path in `unstated`, each with its
+reason. With that, cycle 17's release gets 0 differences against its own
+goldens. The 6 cases spec-22 and spec-23 changed were re-recorded from cycle
+19's release, which then gets 0; cycle 17's gets exactly those 10
+differences.
+
 ## Recording
 
 - **A golden holds nothing the spec does not state.** Before a golden is
