@@ -55,7 +55,7 @@ Feature: Oracle
     Scenario: The oracle's result is exactly this shape
       Given the configured oracle holds goldens for the components :measurement/scorer and :regeneration/scopes, one case each, both reproduced
       When "rdm-spec oracle" is run
-      Then it exits 0, and its standard output, read as EDN, is exactly {:oracle {:repository R :digest D :compared [{:component :measurement/scorer :case "01"} {:component :regeneration/scopes :case "flat-read-by"}] :differences 0}}, R and D the configuration's, the goldens in the model's order of their components, then by case
+      Then it exits 0, and its standard output, read as EDN, is exactly {:oracle {:repository R :digest D :compared [{:component :measurement/scorer :case "01"} {:component :regeneration/scopes :case "flat-read-by"}] :differences 0}}, R and D the configuration's, the goldens ordered by component id, then by case, both as text
 
     @spec-0277 @e2e
     Scenario: An oracle that holds no fixture cycle fails
@@ -85,11 +85,14 @@ Feature: Oracle
 
     # Re-recording to get a green destroys the only evidence that anything
     # moved (loyly:harness/README.md@17d68d2, "What makes the checks run").
+    # spec-0230 said a record rewrites a changed golden on a reason alone;
+    # spec-0327 says it needs --changes; cycle 17's builder found the two
+    # disagreeing. A changed golden is named, always (spec-22).
     @spec-0230 @e2e
     Scenario: Recording goldens says which changed, and why
-      Given the configured oracle holds goldens, one of which the instrument no longer reproduces
-      When "rdm-spec oracle record --reason 'the scoreboard now says the denominator moved'" is run
-      Then it stores a new artifact whose oracle.edn rewrites that golden and appends to :recorded the date, the reason and the component changed
+      Given the configured oracle holds goldens, one of which, :measurement/scoreboard "01-02", the instrument no longer reproduces
+      When "rdm-spec oracle record --reason 'the scoreboard now says the denominator moved' --changes measurement/scoreboard:01-02" is run
+      Then it stores a new artifact whose oracle.edn rewrites that golden and appends to :recorded the date, the reason and {:component :measurement/scoreboard :case "01-02"}
       And the configuration's :oracle names the new digest, left for a person to commit, and the old artifact is unchanged
 
     @spec-0231 @e2e
@@ -123,9 +126,11 @@ Feature: Oracle
       When "rdm-spec oracle" is run
       Then it exits 0 and says there is no oracle to run
 
-  # A golden is a component's whole answer on a fixture: its standard output
-  # read as data, its exit, and every line it printed on the error stream,
-  # word for word, as Löyly's oracle compares every refusal's words
+  # A golden is a component's whole answer on a fixture, exactly
+  # {:exit N :out <standard output read as data> :err "<the error stream>"}
+  # plus :wrote {path content} for a component that writes its record, with
+  # every :seconds held as :measured so timing never moves a golden (cycle
+  # 17, builder). The error stream is compared word for word, as Löyly's oracle compares every refusal's words
   # (loyly:harness/oracle.sh@17d68d2, CHECK 8). A component that judges
   # nothing in a cycle is still run: the oracle judges the whole instrument.
   Rule: Every component that judges has its goldens, on fixtures the spec states

@@ -91,17 +91,10 @@ Steps that run at different times meet through files instead.
 
 **Event catalogue**: a project's events, in the file the configuration's
 `:events` names (`dhf/spec/events.edn`): each with its description, its one
-publisher, the keys it carries, their shape and, optionally, `:read-by`. It
+publisher, the keys it carries and their shape. It
 is the project's design record: the model's lint checks it against the
 model's relationships, and `scopes` compares it between cuts. It never
 declares rdm-spec's own events, and the bus never reads it.
-
-**Read-by**: for each carried key of an event (for a key holding a collection
-of maps, for each of their keys), the subscribers that read it, so a change
-to that key rebuilds only them. Optional: a key it names no readers for is
-read by every subscriber the model's relationships name for the event; an
-empty list is read by none. It is metadata: writing or changing it reaches no
-component.
 
 **Event bus**: rdm-spec's in-process bus, synchronous and in subscription
 order. It carries rdm-spec's own events, the ones between its contexts, which
@@ -109,6 +102,26 @@ a release carries built in from rdm-spec's own spec; it refuses one rdm-spec
 does not declare, whatever a project's catalogue holds. A refusal is
 `cannot-run` (exit 2): a defect in rdm-spec, never a finding about the
 project.
+
+**Domain model**: a project's optional `dhf/spec/domain.edn` (the
+configuration's `:domain`): its bounded contexts' aggregates, with their
+commands, invariants and what they read; the events; the read models those
+feed; the policies they trigger; the repositories; each element citing the
+raw sources it is distilled from. `rdm-spec check` holds it to the rules of
+domain-driven design (dhf/spec/architecture/domain.feature) when it exists,
+and asks for nothing when it does not.
+
+**Event storm**: a way of finding the domain model with the people who know
+the domain: actors, commands, events, policies, read models and hotspots. It
+is a way of working, kept as prose when kept at all (dhf/storm/), never part
+of the spec; what it decides goes into the domain model.
+
+**Aggregate**: a cluster of domain state guarded by its invariants, changed
+only through its commands. **Command**: an intent an actor or a policy sends
+to one aggregate, which emits events or names a refusal. **Invariant**: a
+rule an aggregate never lets break, verified by at least one scenario. **Read
+model**: a view fed only by events. **Policy**: "whenever this event, then
+this command". **Repository**: where aggregates are kept.
 
 **Skeleton**: what `rdm-spec init` writes and `rdm-spec adopt` adds: the spec,
 the harness configuration, the raw and wiki directories, decisions, the
@@ -219,9 +232,10 @@ carry the bytes of a removed implementation file.
 or one component, or a list of contexts and components. The kernel counts as
 a context named `kernel`. A cycle's scopes are what `rdm-spec scopes` lists
 between two cuts: the components whose own spec changed, and, for each
-event key whose shape changed or that was added or removed, the event's
-publisher and the subscribers that read the key (Read-by); a component whose
-only change is upstream code is not rebuilt. The rest of the implementation stays in the clean
+event whose shape changed or that was added or removed, its publisher and
+every subscriber; a component whose only change is upstream code is not
+rebuilt. Every few cycles one is a whole-project cycle, rebuilding everything,
+because a scoped cycle hides what it does not rebuild. The rest of the implementation stays in the clean
 room as it was at the cut. A checklist names an item's context and component by
 the model's `:name`. A cycle's checklist holds the items of its scope,
 and nothing else: a scoped cycle is graded on its scope only.
@@ -252,7 +266,10 @@ serves starts fresh, answers within its budget, and passes a probe that lives
 in a kept path, never in the implementation. `:runs`: a command answers with
 the exit and output the project expects, within its budget. Every check has a
 budget and reports its margin; a check that cannot run (a command not found,
-a port held) refuses the gate, never passes it. Declared in the
+a port held) refuses the gate, never passes it. A `:serves` app answers when
+`GET /` on its port returns any HTTP response, whatever its status; an
+accepted connection with no response is not an answer (cycles 16 and 17 read
+it two ways). Declared in the
 configuration's `:verify` as `{:kind :tests :command [...]}`, `{:kind :serves
 :name N :start [... "{port}" ...] :port P :budget {:seconds S :polls K} :probe
 [... "{url}" ...]}` and `{:kind :runs :name N :command [...] :expect {:exit E

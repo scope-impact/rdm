@@ -25,7 +25,7 @@ Feature: Command
         | init       | init PATH [--id-prefix P]                                | write the skeleton into a path that does not exist                   |
         | adopt      | adopt                                                    | add the skeleton to the current repository, overwriting nothing      |
         | stamp      | stamp                                                    | give every unstamped scenario its id                                 |
-        | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the views' freshness, sources, wiki, clauses, paths |
+        | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the domain model, the views' freshness, sources, wiki, clauses, paths |
         | views      | views                                                    | generate and render every view to dhf/views/                         |
         | cut        | cut                                                      | tag HEAD spec-N when it is origin/HEAD, and push the tag             |
         | scopes     | scopes CUT CUT                                           | list the scopes a spec change touched between two cuts               |

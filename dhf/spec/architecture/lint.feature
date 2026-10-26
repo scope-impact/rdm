@@ -95,3 +95,14 @@ Feature: Lint
       Given a relationship from a component of one bounded context to a component of another, naming no event
       When "rdm-spec check" is run
       Then it fails rule a-contract-only and names the relationship
+
+    # The rule is rdm-spec's own architecture, and it bit the first other
+    # project: the Löyly app's booking had to read the schedule through an
+    # event its spec never names (dhf/cycles/loyly-comparison.md, finding 3).
+    # A project declares how its contexts may relate; events only is the
+    # default, and a project's domain.edn, where it has one, says why.
+    @spec-0339 @e2e
+    Scenario: A project that lets its contexts relate by call is not held to events only
+      Given a configuration whose :c4 holds :contexts-relate-by [:events :calls], and a relationship from a component of one bounded context to a component of another, naming no event
+      When "rdm-spec check" is run
+      Then it passes rule a-contract-only

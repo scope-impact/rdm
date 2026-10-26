@@ -187,6 +187,14 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then it exits 1, the check is :failed, and it relays the probe's output
 
+    # Cycle 16's build counted any HTTP response to GET / as an answer, cycle
+    # 17's an accepted connection; the spec said neither (cycle 17, builder).
+    @spec-0341 @e2e
+    Scenario: An app that accepts connections but never sends an HTTP response does not answer
+      Given a :serves check with the budget of 2 seconds in 4 polls, whose start command listens on its port and never writes a response
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, the check is :failed, and it says no answer came within 2 seconds
+
   Rule: A :runs check proves a command answers as the project expects
 
     @spec-0322 @e2e

@@ -31,64 +31,26 @@ Feature: Scopes
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists no scope, and names glossary.md as a changed shared file whose readers a person must judge
 
-  # A context is rebuilt when its own spec changed, or when a key it reads of an
-  # event it subscribes to changed: that key is its contract. A context whose
-  # only change is upstream code, or a key it does not read, is not rebuilt
-  # (spec owner, cycles 13 and 14: cycle 13 rebuilt four subscribers for a key
-  # only one of them reads, about 20 minutes and 300,000 tokens).
-  Rule: A changed event key reaches its publisher and the subscribers that read it
+  # A changed event reaches its publisher and every subscriber the model
+  # names for it. Reading :read-by per key, and per key of a map, saved a few
+  # scopes and broke twice: cycle 14 read its first appearance as every key
+  # added, cycle 16 regressed on a flat list under a nested key. The spec
+  # owner chose Löyly's simplicity over the saving (spec-22; about 5 to 15%
+  # more build cost): :read-by is gone, and a whole-project cycle every few
+  # cycles catches what scoping hides (README, "A whole-project cycle").
+  Rule: A changed event reaches its publisher and every subscriber
 
     @spec-0298 @e2e
-    Scenario: A changed key's publisher and readers are scopes
+    Scenario: A changed event's publisher and subscribers are scopes
       Given the cuts spec-3 and spec-4, between which only the shape of one carried key of one event in dhf/spec/events.edn changed
       When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes the event's publisher, then the subscribers its :read-by names for that key, in the order the model's relationships name them, and no other subscriber
+      Then it lists as scopes the event's publisher, then every subscriber the model's relationships name for that event, in the order they name them
 
-    # Cycle 15's scopes read a flat :read-by list for a key holding maps;
-    # cycle 16's rebuilt one fell back to every subscriber, and spec-0298 went
-    # worse (dhf/cycles/16/proposed-spec-changes.md, the fails).
-    @spec-0330 @e2e
-    Scenario: A changed inner key of a key read by a flat list reaches the readers that list names
-      Given the cuts spec-3 and spec-4, between which the maps SpecParsed's :needs holds gained the key :x, and :read-by gives :needs the flat list [:publishing/site :compliance/audit]
-      When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes spec/parser, then publishing/site and compliance/audit, and no other subscriber
-
-    @spec-0300 @e2e
-    Scenario: An added key reaches only the subscribers that read it
-      Given the cuts spec-3 and spec-4, between which one event's scenarios gained a key that :read-by names one subscriber as reading
-      When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes the event's publisher, then that one subscriber, and no other subscriber
-
-    # :read-by is what a project states to rebuild less; it is optional. A key
-    # it names no readers for is read by every subscriber, so leaving it out
-    # costs build time, never a missed scope. :read-by is metadata: writing it,
-    # changing it or adding it where there was none reaches no component.
-    # The cycle 14 build read :read-by's first appearance as every key
-    # added, and listed eight scopes where spec-0301 lists none (cycle 14,
-    # integrator).
-    @spec-0301 @e2e
-    Scenario Outline: A change to who reads a key reaches no component
-      Given the cuts spec-3 and spec-4, between which only <change>
+    @spec-0340 @e2e
+    Scenario: A change to an event's description alone reaches no component
+      Given the cuts spec-3 and spec-4, between which only an event's :description changed
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists no scope
-
-      Examples:
-        | change                                                                   |
-        | an event's :read-by changed                                              |
-        | an event that had no :read-by gained one naming every key                |
-        | an event that had no :read-by gained one naming a scenario key's readers |
-
-    @spec-0305 @e2e
-    Scenario: A changed key :read-by names no readers for reaches every subscriber
-      Given the cuts spec-3 and spec-4, between which only the shape of one carried key of an event without :read-by changed
-      When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes the event's publisher, then every subscriber the model's relationships name for that event
-
-    @spec-0306 @e2e
-    Scenario: A key :read-by gives no subscriber reaches only the publisher
-      Given the cuts spec-3 and spec-4, between which only the shape of one carried key changed, whose :read-by entry is empty
-      When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists the event's publisher as the only scope
 
   # One builder rebuilds a cycle's scopes one after another (spec owner, cycle
   # 13), so the list is in the order they can be built.

@@ -90,7 +90,9 @@
        {:id :architecture/lint :name "Lint" :spec "architecture/lint"
         :description "The C4 skill's checklist and the bounded-context rules"}
        {:id :architecture/views :name "Views" :spec "architecture/views"
-        :description "Generates each view as diagram source and renders it"}]}
+        :description "Generates each view as diagram source and renders it"}
+       {:id :architecture/domain :name "Domain model" :spec "architecture/domain"
+        :description "Holds an optional domain.edn to the DDD rules"}]}
 
      {:id :verification :name "verification"
       :description "Derives each scenario's status from Allure results, traces it, and verifies a build"
@@ -193,6 +195,7 @@
   ;; events between contexts, within one run: the contracts
   {:from :knowledge/sources :to :publishing/site :description "Publishes" :event :KnowledgeIndexed}
   {:from :spec/parser :to :architecture/lint :description "Publishes" :event :SpecParsed}
+  {:from :spec/parser :to :architecture/domain :description "Publishes" :event :SpecParsed}
   {:from :spec/parser :to :verification/status :description "Publishes" :event :SpecParsed}
   {:from :spec/parser :to :measurement/checklist :description "Publishes" :event :SpecParsed}
   {:from :spec/parser :to :publishing/site :description "Publishes" :event :SpecParsed}

@@ -56,6 +56,14 @@ The spec of rdm-spec, the source of truth for what it does
 - **One builder per cycle.** Never contexts in parallel: a cycle's scopes are
   built one after another by one builder, in the order `scopes` lists them
   (spec owner, cycle 13; dhf/cycles/retrospective-01-12.md).
+- **A whole-project cycle at least every fifth cycle.** A scoped cycle hides
+  what it does not rebuild (dhf/cycles/retrospective-01-12.md, root cause 2);
+  Löyly rebuilds the whole application every cycle. Scoping saves about two
+  thirds of a cycle's cost, so it stays, and the whole-project cycle is the
+  check on it (spec owner, spec-22).
+- **A fixture inside another git repository is fenced from it:** its commands
+  run with GIT_CEILING_DIRECTORIES set to the fixture's parent, so git never
+  finds the enclosing repository (cycle 17, builder).
 - **Every run is observed** (dhf/spec/agency/observe.feature): its capability
   is proven by its result, and its defence is recorded beside it.
 - **A golden holds nothing the spec does not state.** Before a golden is
