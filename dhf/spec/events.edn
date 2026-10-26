@@ -20,7 +20,7 @@
 ;; (dhf/spec/kernel/bus.feature).
 ;;
 ;; Events travel on the in-process bus (kernel/bus), so only within one run of
-;; the rdm-spec command. Steps that run at different times (cut, fence, ratify,
+;; the rdm-spec command. Steps that run at different times (cut, fence, verify,
 ;; score) meet through files instead: the spec-N tag, the clean room, the
 ;; cycle's cycle.edn and results directory (the model's store relationships).
 {:KnowledgeIndexed

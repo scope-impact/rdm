@@ -42,7 +42,7 @@ Feature: Scopes
     Scenario: A changed key's publisher and readers are scopes
       Given the cuts spec-3 and spec-4, between which only the shape of one carried key of one event in dhf/spec/events.edn changed
       When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes the event's publisher, then the subscribers its :read-by names for that key, and no other subscriber
+      Then it lists as scopes the event's publisher, then the subscribers its :read-by names for that key, in the order the model's relationships name them, and no other subscriber
 
     @spec-0300 @e2e
     Scenario: An added key reaches only the subscribers that read it

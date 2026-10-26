@@ -1,0 +1,203 @@
+# Component Verify, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
+#
+# Verify is the gate: what a builder claims is done is decided by checks the
+# builder does not control, as Löyly's verify.sh decides it
+# (loyly:harness/README.md@17d68d2, "The idea in five lines" 3). It was named
+# ratify until spec-20; the record it writes keeps its name, ratified.edn, so
+# every cycle's record reads the same and the oracle's goldens still hold.
+
+@UN-007
+Feature: Verify
+  Decides whether a build is done, by checks the builder does not control and
+  the project declares.
+
+  # The clean room is only where the builder works. What is judged is the
+  # room's implementation, put into a fresh checkout of the cut, so the spec
+  # and the configuration always come from the cut, never from the room, as
+  # Löyly verifies impl/ in its trusted repository
+  # (loyly:harness/README.md@17d68d2, "The idea in five lines" 3).
+  Rule: Verify trusts only the cut
+
+    @spec-0202 @e2e
+    Scenario: Verify reads the cycle before anything else it does
+      Given dhf/cycles/03/cycle.edn names the cut spec-3
+      When "rdm-spec verify ROOM 03" is run
+      Then it verifies against a fresh export of spec-3: its files, and no history
+
+    @spec-0203 @e2e
+    Scenario: A cycle with no cycle.edn is refused
+      Given no dhf/cycles/03/cycle.edn
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 2 and names the missing file
+
+    @spec-0204 @e2e
+    Scenario: The checkout's implementation is replaced by the room's, never merged with it
+      Given the cut spec-3 holds src/rdm_spec/old.clj and the room holds no such file
+      When "rdm-spec verify ROOM 03" is run
+      Then the checkout it verifies holds no src/rdm_spec/old.clj
+      And every configured implementation path holds exactly what the room holds
+
+    @spec-0205 @e2e
+    Scenario: Edits the builder made outside the implementation are not used
+      Given the builder has edited dhf/harness/config.edn and a feature file in the room
+      When "rdm-spec verify ROOM 03" is run
+      Then the configuration and the spec used are those of spec-3, unedited
+
+  # Incident: a gate once reported success over a test command that had become
+  # a no-op exiting 0 (loyly:harness/README.md@17d68d2, "The failure modes this
+  # shape was learned from").
+  Rule: The tests check passes only when the tests pass and every scenario passed
+
+    @spec-0206 @contract
+    Scenario: The builder's tests are told where to write their results
+      When "rdm-spec verify ROOM 03" runs the command of the :tests check
+      Then the command runs with the environment variable RESULTS_DIR set to the absolute path of dhf/cycles/03/results in the repository rdm-spec verify was run in
+
+    @spec-0207 @e2e
+    Scenario: The tests check passes when the builder's tests pass and every scenario's results passed
+      Given the :tests check's command exits 0
+      And it wrote Allure results into dhf/cycles/03/results
+      And every stamped scenario not tagged @wip is named by at least one result, and every result naming it passed
+      When "rdm-spec verify ROOM 03" is run
+      Then the tests check passes
+
+    @spec-0197 @e2e
+    Scenario: A failing test command fails verification
+      Given the :tests check's command exits 1
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1 and says the test command failed, with its exit status
+      And the test command's output is in dhf/cycles/03/test.log, which the refusal names
+
+    @spec-0033 @e2e
+    Scenario: The tests check requires results
+      Given the :tests check's command exits 0 without writing any Allure result
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1 and says a green exit with no results is not a run
+
+    # Every scenario is tested before it counts as built (loyly:docs/wow/invariants.md@17d68d2, INV-5).
+    @spec-0208 @e2e
+    Scenario: A scenario no test names fails verification
+      Given the stamped scenario @spec-0012 is not tagged @wip
+      And no result in dhf/cycles/03/results is labelled spec=spec-0012
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1 and names spec-0012
+
+    # Incident: a gate once passed while a step failed, because only the
+    # command's exit status was read (cycle 00, dhf/cycles/00/proposed-spec-changes.md, A1).
+    @spec-0218 @e2e
+    Scenario: A failed or broken result fails verification
+      Given the :tests check's command exits 0
+      And a result in dhf/cycles/03/results labelled spec=spec-0012 is failed
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1 and names spec-0012 and its status
+
+  # The grader grades the build that was verified, and only that build.
+  Rule: Verify records what it verified
+
+    @spec-0215 @contract
+    Scenario: Verify writes ratified.edn with the cut, the room's tree, the outcome and every check
+      Given a room whose implementation has a tree hash H, and a configuration declaring a :tests check and a :runs check
+      When "rdm-spec verify ROOM 03" is run and passes
+      Then dhf/cycles/03/ratified.edn holds exactly :cut "spec-3", :room-tree H in full, :outcome :passed, :checkout "dhf/cycles/03/build" and :checks, each check as its standard output reports it
+      And dhf/cycles/03/build is the verified checkout, which the grader grades
+
+    @spec-0216 @contract
+    Scenario: A failed verification is recorded with its reason
+      When "rdm-spec verify ROOM 03" is run and the :tests check's command exits 1
+      Then dhf/cycles/03/ratified.edn holds :outcome :refused and the reason
+
+    @spec-0217 @e2e
+    Scenario: A cut holding an unstamped scenario is not verified
+      Given the spec at cut spec-3 holds a scenario with no id
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1 and names the file and line of the unstamped scenario
+
+  # What verifying means depends on what the project is: a served app proves
+  # it serves, a command proves it answers, a library has its tests (spec
+  # owner, after the Löyly comparison, dhf/cycles/loyly-comparison.md, finding
+  # 1: ratify proved the results and never that the app came up). So a project
+  # declares its checks, and rdm-spec guarantees how every check runs. The
+  # kinds are closed: a new kind is a spec change, never a configuration.
+  Rule: A project declares its checks, and verify runs every one the same way
+
+    @spec-0314 @contract
+    Scenario: Verify reports every declared check, in order, with its outcome and margin
+      Given a configuration whose :verify declares a :tests check, then a :runs check named "answers"
+      And both pass
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 0, and its standard output, read as EDN, is exactly {:verify {:cycle "03" :cut "spec-3" :outcome :passed :checks [{:name "tests" :kind :tests :outcome :passed :seconds S1 :scenarios N} {:name "answers" :kind :runs :outcome :passed :seconds S2 :budget B :margin M}]}}, S1 and S2 the seconds each took, N the scenarios named, B the check's budget in seconds and M the seconds of it left unused
+
+    @spec-0315 @e2e
+    Scenario: The first check that fails stops the gate, and the rest are named as not run
+      Given a configuration whose :verify declares a :tests check, a :serves check and a :runs check, and the :tests check's command exits 1
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, the tests check is :failed, and the :serves and :runs checks are listed with the outcome :not-run
+
+    @spec-0316 @e2e
+    Scenario Outline: A configuration verify cannot trust is refused before anything runs
+      Given a configuration whose :verify <is>
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 2, says <why>, and runs no check
+
+      Examples:
+        | is                                                        | why                                           |
+        | declares no :tests check                                  | a project is verified by its tests first      |
+        | declares a check of the kind :renders                     | :renders is not a kind of check               |
+        | declares a :serves check whose probe is under src/         | the probe is in the implementation the builder writes |
+        | is absent                                                 | the configuration declares no :verify         |
+        | declares a :tests check with no command                   | the tests check names no command              |
+
+    # Incident: a missing configuration turned a gate's test command into a
+    # no-op exiting 0 (loyly:harness/README.md@17d68d2, "The failure modes this
+    # shape was learned from"). A check that cannot run is never a pass.
+    @spec-0317 @e2e
+    Scenario: A check whose command is not found refuses the gate
+      Given a configuration whose :runs check names a command that is not on PATH
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 2 and names the check and the command it could not find
+
+  # Löyly's gate boots the app fresh and polls it inside a named budget, and
+  # reports the margin, so a boot creeping toward the limit is seen before it
+  # fails (loyly:harness/README.md@17d68d2, "The gate's boot budget").
+  Rule: A :serves check proves the app comes up and is this application
+
+    @spec-0318 @e2e
+    Scenario: A served app that answers and passes its probe passes, with its margin
+      Given a :serves check with the budget of 10 seconds in 20 polls, whose app answers on the second poll and whose probe exits 0
+      When "rdm-spec verify ROOM 03" is run
+      Then the check passes with :answered-on-poll 2, :polls 20 and :margin 18
+      And no process the check started is still running
+
+    @spec-0319 @e2e
+    Scenario: An app that does not answer within its budget fails, naming the budget
+      Given a :serves check with the budget of 10 seconds in 20 polls, whose app never answers
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, the check is :failed, and it says no answer came within 10 seconds
+      And no process the check started is still running
+
+    @spec-0320 @e2e
+    Scenario: A port already held refuses the gate rather than measure another process
+      Given a :serves check on a port another process already holds
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 2, names the port, and starts nothing
+
+    @spec-0321 @e2e
+    Scenario: An app that answers but fails its probe is not this application
+      Given a :serves check whose app answers and whose probe exits 1
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, the check is :failed, and it relays the probe's output
+
+  Rule: A :runs check proves a command answers as the project expects
+
+    @spec-0322 @e2e
+    Scenario Outline: A command that answers otherwise than expected fails the check
+      Given a :runs check expecting <expected>
+      And its command <does>
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, the check is :failed, and it names <difference>
+
+      Examples:
+        | expected                          | does                               | difference                          |
+        | the exit 0                         | exits 3                            | the exit 3 where 0 was expected     |
+        | standard output starting "{:help"  | prints "usage" and exits 0         | the first line it printed           |
+        | an answer within 10 seconds        | is still running after 10 seconds  | the budget of 10 seconds            |

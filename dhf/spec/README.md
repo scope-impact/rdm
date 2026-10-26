@@ -70,7 +70,7 @@ The spec of rdm-spec, the source of truth for what it does
   spec-0090 and spec-0187 found no definition).
 - **A scenario's project is one the scenario makes,** a fixture, never the
   room or the repository the tests run in, whose files change from cut to
-  cut and differ in ratify's checkout. The ids, needs, pages and commits a
+  cut and differ in verify's checkout. The ids, needs, pages and commits a
   scenario names are its fixture's (cycle 06: spec-0231; cycle 07:
   spec-0239).
 - **A fixture copied from the room holds what a clean room holds:** the
@@ -108,7 +108,8 @@ The spec of rdm-spec, the source of truth for what it does
   result, `{}` when there is none. A warning line is `FILE:LINE: warning: RULE: what`, `FILE: warning: RULE:
 what` when no line applies, or `warning: RULE: what` when no file applies; a task that cannot
   run says `cannot-run: why` and prints nothing on standard output; with
-  `--events`, each event is a line `event: NAME published-by PUBLISHER`, after
+  `--events`, each event is a line `event: NAME published-by PUBLISHER`
+  (PUBLISHER the component's id without its colon, `spec/parser`), after
   the findings and warnings. Exit 0 is a pass; 1 a finding in what the task checked (the spec, the
   model, the sources, the results, a build); 2 a task that cannot run as
   asked: an unknown task, argument or id, a missing directory or tool, a

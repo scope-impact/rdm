@@ -74,16 +74,16 @@ Feature: Oracle
       When "rdm-spec oracle record" is run
       Then it exits 2, says a reason is required, stores nothing and leaves the configuration's :oracle unchanged
 
-  # A room built, or a build ratified, by an instrument nobody checked hands
+  # A room built, or a build verified, by an instrument nobody checked hands
   # the next cycle a judge nobody checked (loyly:harness/README.md@17d68d2,
   # "What makes the checks run").
-  # The oracle is a gate stage of fence and ratify: the command runs it first
-  # and stops the task when it has findings, so neither fence nor ratify knows
+  # The oracle is a gate stage of fence and verify: the command runs it first
+  # and stops the task when it has findings, so neither fence nor verify knows
   # the oracle (dhf/spec/kernel/command.feature, "A gate stops the task").
-  Rule: Nothing is fenced or ratified while the oracle is red
+  Rule: Nothing is fenced or verified while the oracle is red
 
     @spec-0232 @e2e
-    Scenario Outline: Fence and ratify refuse while the oracle fails
+    Scenario Outline: Fence and verify refuse while the oracle fails
       Given a project whose configured oracle holds a golden the instrument does not reproduce
       When "rdm-spec <task>" is run
       Then it exits 1, prints the oracle's findings unchanged, and <does-nothing>
@@ -91,7 +91,7 @@ Feature: Oracle
       Examples:
         | task                  | does-nothing                       |
         | fence ROOM spec-3     | builds no room                     |
-        | ratify ROOM 03        | writes no ratified.edn             |
+        | verify ROOM 03        | writes no ratified.edn             |
 
     @spec-0233 @e2e
     Scenario: A project with no oracle is not refused

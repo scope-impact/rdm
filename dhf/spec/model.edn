@@ -8,7 +8,7 @@
 ;; run. A context is drawn as a boundary around its components (the C4 skill:
 ;; bounded contexts as boundaries around C4 elements). Composable means each
 ;; context can be regenerated alone while the others stand, and the whole still
-;; ratifies.
+;; passes verify.
 ;;
 ;; Shape; ids are keywords, unique across the model, components namespaced by
 ;; their context.
@@ -40,7 +40,7 @@
   {:id :builder :name "Builder" :actor #{:human :agent}
    :description "Regenerates the build in a clean room"}
   {:id :grader :name "Grader" :actor #{:human :agent}
-   :description "Grades a ratified build, never their own"}
+   :description "Grades a verified build, never their own"}
   {:id :spec-owner :name "Spec owner" :actor #{:human :agent}
    :description "Decides what the spec must learn next"}]
 
@@ -93,7 +93,7 @@
         :description "Generates each view as diagram source and renders it"}]}
 
      {:id :verification :name "verification"
-      :description "Derives each scenario's status from Allure results and traces it"
+      :description "Derives each scenario's status from Allure results, traces it, and verifies a build"
       :components
       [{:id :verification/results :name "Results reader" :spec "verification/results"
         :description "Reads a run's Allure results, naming what it cannot read"}
@@ -102,7 +102,9 @@
        {:id :verification/trace :name "Trace" :spec "verification/trace"
         :description "A need or scenario with everything linked to it"}
        {:id :verification/release :name "Release check" :spec "verification/release"
-        :description "Refuses a release with an unverified, failed or planned scenario"}]}
+        :description "Refuses a release with an unverified, failed or planned scenario"}
+       {:id :verification/verify :name "Verify" :spec "verification/verify"
+        :description "Runs the project's checks on a room's code in a checkout of the cut"}]}
 
      {:id :regeneration :name "regeneration"
       :description "Cuts merged spec changes and builds clean rooms from them, for the project, one context or one component"
@@ -113,12 +115,6 @@
         :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}
        {:id :regeneration/scopes :name "Scopes" :spec "regeneration/scopes"
         :description "Lists the scopes a spec change touched between two cuts"}]}
-
-     {:id :ratification :name "ratification"
-      :description "Ratifies a build against its cut: the builder's tests pass, write results and name every scenario"
-      :components
-      [{:id :ratification/ratify :name "Ratify" :spec "ratification/ratify"
-        :description "Puts the room's implementation into a checkout of the cut and runs the builder's tests"}]}
 
      {:id :measurement :name "measurement"
       :description "Derives the checklist, files a grader's verdicts and compares cycles, never for the builder"
@@ -165,8 +161,8 @@
  [;; people and external systems
   {:from :engineer :to :rdm-spec :description "Writes, checks and publishes the spec with"}
   {:from :reviewer :to :git-host :description "Approves spec merges in"}
-  {:from :builder :to :rdm-spec :description "Builds a clean room and is ratified by"}
-  {:from :grader :to :rdm-spec :description "Grades each checklist item of a ratified build for"}
+  {:from :builder :to :rdm-spec :description "Builds a clean room and is verified by"}
+  {:from :grader :to :rdm-spec :description "Grades each checklist item of a verified build for"}
   {:from :spec-owner :to :rdm-spec :description "Reads the scoreboard from"}
   {:from :rdm-spec :to :git-host :description "Tags cuts on merges in"}
   {:from :rdm-spec :to :test-runner :description "Runs the declared test command through"}
@@ -180,7 +176,8 @@
   {:from :architecture/views :to :repository :description "Writes views to"}
   {:from :regeneration/cut :to :repository :description "Tags merges spec-N in"}
   {:from :regeneration/fence :to :repository :description "Builds clean rooms from cuts in"}
-  {:from :ratification/ratify :to :repository :description "Reads cycle.edn and the cut, writes the cycle's results to"}
+  {:from :verification/verify :to :repository :description "Reads cycle.edn and the cut, writes the cycle's results to"}
+  {:from :verification/verify :to :verification/results :description "Reads the tests check's results with"}
   {:from :measurement/checklist :to :repository :description "Writes checklist.json to"}
   {:from :measurement/scorer :to :repository :description "Reads cycle.edn, the checklist and verdicts, writes score.edn to"}
   {:from :measurement/scoreboard :to :repository :description "Reads scores from"}
@@ -240,8 +237,6 @@
    :description "From Allure results to status, trace and the release check"}
   {:key "regeneration-components" :level :component :context :regeneration
    :description "The cut and the fence"}
-  {:key "ratification-components" :level :component :context :ratification
-   :description "Ratifying a build"}
   {:key "measurement-components" :level :component :context :measurement
    :description "The checklist, the score and the scoreboard"}
   {:key "publishing-components" :level :component :context :publishing
@@ -254,7 +249,7 @@
    :description "One cycle, from a merged spec change to a score the spec owner reads"
    :steps [[:regeneration/cut :repository "1. Tags the merge spec-N"]
            [:regeneration/fence :repository "2. Builds the clean room from the cut"]
-           [:ratification/ratify :repository "3. Ratifies the room's implementation against the cut"]
-           [:grader :rdm-spec "4. Grades each checklist item of the ratified build"]
+           [:verification/verify :repository "3. Verifies the room's implementation against the cut"]
+           [:grader :rdm-spec "4. Grades each checklist item of the verified build"]
            [:measurement/scorer :repository "5. Files the verdicts into score.edn"]
            [:spec-owner :rdm-spec "6. Reads the scoreboard"]]}]}

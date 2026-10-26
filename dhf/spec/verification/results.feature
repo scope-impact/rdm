@@ -43,3 +43,20 @@ Feature: Results reader
       When "rdm-spec status" is run
       Then it counts toward no scenario
       And it is not listed as an unknown result
+
+  # A result is read for what status, trace and verify depend on, and every
+  # other Allure element is kept: an attachment, a link, a parameter are
+  # evidence a person reads in the report, never what decides a status.
+  Rule: What decides a status, and what is only kept
+
+    @spec-0312 @contract
+    Scenario: A result counts by its status, its spec label and an outline row's parameters alone
+      Given two passing Allure results labelled spec=spec-0012, one with attachments, links and extra labels, and one with none
+      When "rdm-spec status" is run
+      Then spec-0012 is verified, and the other elements change nothing
+
+    @spec-0313 @contract
+    Scenario: A result whose status is not one of Allure's is unreadable
+      Given an Allure result labelled spec=spec-0012 whose status is "green"
+      When "rdm-spec status" is run
+      Then the report names its file as unreadable, saying the status must be passed, failed, broken or skipped

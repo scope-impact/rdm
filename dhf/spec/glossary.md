@@ -8,7 +8,7 @@ or changes, this file changes in the same commit.
 
 **rdm-spec**: the product this spec describes: a harness that any project
 uses to keep its spec, regenerate its implementation from it in a clean room,
-ratify, grade and measure the result, and, under the regulated profile, audit
+verify, grade and measure the result, and, under the regulated profile, audit
 it. It is RDM rebuilt around this decision: the suffix says the spec is the
 source and the code is built from it. `RDM` alone means the old record, before
 the cutover.
@@ -19,7 +19,7 @@ spec (see Release). Its spec, model and event catalogue describe the project,
 never the harness that reads them.
 
 **Release**: a build of rdm-spec accepted by the spec owner after it was
-scored, and installed. Release N runs cycle N+1 (fence, ratify, checklist,
+scored, and installed. Release N runs cycle N+1 (fence, verify, checklist,
 score, the oracle) on the build of N+1; a build never judges itself, and none
 is installed before it is scored, as a compiler builds its next version and
 is replaced only once that version passes.
@@ -106,7 +106,9 @@ component.
 **Event bus**: rdm-spec's in-process bus, synchronous and in subscription
 order. It carries rdm-spec's own events, the ones between its contexts, which
 a release carries built in from rdm-spec's own spec; it refuses one rdm-spec
-does not declare, whatever a project's catalogue holds.
+does not declare, whatever a project's catalogue holds. A refusal is
+`cannot-run` (exit 2): a defect in rdm-spec, never a finding about the
+project.
 
 **Skeleton**: what `rdm-spec init` writes and `rdm-spec adopt` adds: the spec,
 the harness configuration, the raw and wiki directories, decisions, the
@@ -155,7 +157,7 @@ must learn next. Never the builder of the cycle it reads.
 
 ## The harness
 
-**Harness**: the bounded contexts that check the spec, ratify a build and score
+**Harness**: the bounded contexts that check the spec, verify a build and score
 it.
 In rdm-spec the harness is the product, so it is specified like every other
 component, under `dhf/spec/`; only its configuration (`dhf/harness/config.edn`)
@@ -169,16 +171,22 @@ builder's tests: implementation, rebuilt with the code, never scored.
 labelled with its id passed, and no result labelled with its id did not pass
 (failed, broken, skipped or unknown).
 
-**Allure result**: one `<uuid>-result.json` file in a results directory: a
-JSON object with `name`, `status` (`passed`, `failed`, `broken` or `skipped`),
-`steps` (each with `name` and `status`), `statusDetails.message` when it did
-not pass, and `labels`: `spec` (the scenario id, exactly one), `component`,
-`context` (`kernel` for kernel scenarios), and `planned` = `true` for a
-scenario tagged `@wip`. A row of an outline is one result, its `name` ending
-with the row as `key=value` pairs and its `parameters` holding them. A
-result with no `spec` label verifies nothing.
+**Allure result**: one `<uuid>-result.json` file in a results directory, in
+Allure's own model, filled from the Gherkin scenario
+(`dhf/spec/kernel/runner.feature`): `name` (the title), `fullName`,
+`historyId` (the scenario's id, and the row's values for an outline row),
+`status` (`passed`, `failed`, `broken` or `skipped`) and `stage`,
+`statusDetails` when it did not pass, `start` and `stop`, `steps` (one per
+Gherkin step), `parameters` (an outline row's values), `labels` (`feature`,
+`story` from the rule, `suite` from the context, `subSuite` from the
+component, a `tag` per Gherkin tag, `framework` `gherkin`, and rdm-spec's own
+`spec` (the scenario id, exactly one), `context`, `component` and `planned` =
+`true` for a scenario tagged `@wip`), `links` (one `issue` per need) and
+`attachments` (evidence). A status is decided by `status`, the `spec` label
+and an outline row's `parameters` only; everything else is kept for the
+report. A result with no `spec` label verifies nothing.
 
-**Grader**: the role that grades each checklist item against a ratified build,
+**Grader**: the role that grades each checklist item against a verified build,
 however they grade. A human or an agent, never the builder of what is graded.
 
 **Verdict**: a grader's pass or fail for one checklist item, with the evidence. Verdicts are
@@ -224,17 +232,36 @@ level per scenario, only known tags, needs resting on resolving sources,
 planned work marked and no stack word. `rdm-spec check` also runs the model's
 lint, the views' freshness and the wiki check.
 
-**Ratify**: `rdm-spec ratify ROOM CYCLE`: the room's implementation, in place
-of the implementation of a fresh checkout of the cut, passes the builder's
-test command, which writes results naming every scenario. Run by the installed
-rdm-spec; it gates and never scores.
-_Avoid_: gate, on its own (say spec check or ratify).
+**Verify**: `rdm-spec verify ROOM CYCLE`, a cycle's gate: the room's
+implementation, in place of the implementation of a fresh checkout of the cut,
+passes every check the project declares (`:verify` in its configuration), in
+order, the first that fails stopping it. Run by the installed rdm-spec; it
+gates and never scores. Its record keeps the name `ratified.edn`, the step's
+name until spec-20, so every cycle's record reads the same.
+_Avoid_: ratify (the old name, still in a few comments until their feature
+next changes); gate, on its own (say spec check or verify); confusing it with
+**Verified**, a scenario's status.
+
+**Check**: one thing verify proves about a build, declared by the project, of
+one of three kinds; a new kind is a spec change, never a configuration.
+`:tests` (always declared, first): the project's test command passes and its
+Allure results name and pass every scenario. `:serves`: the app the project
+serves starts fresh, answers within its budget, and passes a probe that lives
+in a kept path, never in the implementation. `:runs`: a command answers with
+the exit and output the project expects, within its budget. Every check has a
+budget and reports its margin; a check that cannot run (a command not found,
+a port held) refuses the gate, never passes it. Declared in the
+configuration's `:verify` as `{:kind :tests :command [...]}`, `{:kind :serves
+:name N :start [... "{port}" ...] :port P :budget {:seconds S :polls K} :probe
+[... "{url}" ...]}` and `{:kind :runs :name N :command [...] :expect {:exit E
+:stdout-starts T} :budget {:seconds S}}`; a check's name is its kind's when
+it names none.
 
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
-first), with `results/`, `build/` and `ratified.edn` (ratify), `checklist.json`
+first), with `results/`, `build/` and `ratified.edn` (verify), `checklist.json`
 and `score.edn` beside it, `test.log`, the test command's output
-(ratify), and `runs.edn`, each run observed (observe). The checkout is an
+(verify), and `runs.edn`, each run observed (observe). The checkout is an
 export of the cut: its files, and no history.
 
 **Oracle (instrument)**: `rdm-spec oracle`: the checklist, the scorer and the
@@ -251,7 +278,7 @@ per instrument component with its goldens (`:checklist {"NN" ...}`,
 `:recorded`. No `:oracle` in the configuration is no oracle, said on
 standard output only, so the gates stay quiet; one holding no
 fixture cycle is a finding, since it judged nothing; one that cannot be read
-cannot run (exit 2). It is the gate before fence and ratify: the command runs
+cannot run (exit 2). It is the gate before fence and verify: the command runs
 it first and stops the task when it has findings. A golden is re-recorded
 only with a stated reason: a new artifact, its entry in `:recorded`, and the
 configuration's new digest, written by `record` and committed by a person,
@@ -340,7 +367,7 @@ only if they meet the clause. Named is not met.
 
 **Run**: one agent's or person's turn in a cycle, as a builder, a grader or
 the integrator. It has two halves, never netted: its **capability**, what it
-was for, proven by its result (ratify, the score), never by its report; and
+was for, proven by its result (verify, the score), never by its report; and
 its **defence**, what it did outside its brief, observed from outside.
 
 **Observation**: `rdm-spec observe begin` before a run and `observe end` after
@@ -355,5 +382,5 @@ directory, a change it made to the project outside its cycle, or results it
 wrote inside its room. Counted per cycle beside the score, never inside it.
 
 **Integrator**: the role that fences, merges what builders built and runs
-ratify, checklist and score. Every fix it makes by hand is an integration
+verify, checklist and score. Every fix it makes by hand is an integration
 fix, recorded in the cycle's findings.

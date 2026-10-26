@@ -81,7 +81,16 @@
  ;; (dhf/spec/ratification/ratify.feature): the builder's own tests, written
  ;; from the spec, writing Allure results labelled with scenario ids into the
  ;; directory given as RESULTS_DIR. They gate; they are never the score.
+ ;; Read only by releases before spec-20, whose gate was ratify; removed once
+ ;; a spec-20 build is installed.
  :test-command ["bb" "test.clj"]
+
+ ;; What verify proves (dhf/spec/verification/verify.feature; glossary,
+ ;; "Check"), in order, the first failure stopping it. rdm-spec is a command,
+ ;; so it has no :serves check: its tests, then the command answering.
+ :verify [{:kind :tests :command ["bb" "test.clj"]}
+          {:kind :runs :name "answers" :command ["bb" "-m" "rdm-spec.kernel.command" "help"]
+           :expect {:exit 0 :stdout-starts "{:help"} :budget {:seconds 30}}]
  :results-dir "dhf/allure-results"
 
  ;; Cycles: dhf/cycles/NN/ holds cycle.edn (written by hand), results/, build/

@@ -4,7 +4,7 @@
 # command, installed once, with nothing per project. It belongs to no bounded
 # context: it dispatches each task to the context that owns it.
 # Specs are written by editing files; the command only checks, stamps, draws,
-# cuts, fences, runs, ratifies, derives checklists, files scores and publishes.
+# cuts, fences, runs, verifies, derives checklists, files scores and publishes.
 # Grading is not a task: a grader grades, however they grade.
 
 @UN-009
@@ -31,12 +31,12 @@ Feature: Command
         | scopes     | scopes CUT CUT                                           | list the scopes a spec change touched between two cuts               |
         | fence      | fence ROOM CUT [--context C,...] [--component C/N,...]   | build a clean room from a cut                                        |
         | run        | run [--results DIR]                                      | run the scenarios against a project's step definitions               |
-        | ratify     | ratify ROOM CYCLE                                        | run the builder's tests on the room's code in a checkout of the cut  |
+        | verify     | verify ROOM CYCLE                                        | run the project's checks on the room's code in a checkout of the cut |
         | checklist  | checklist CYCLE                                          | derive the cycle's checklist into dhf/cycles/CYCLE/checklist.json    |
         | status     | status [--results DIR]                                   | each scenario's status                                               |
         | trace      | trace ID [--results DIR]                                 | a need or a scenario with everything linked to it                    |
         | release    | release [--results DIR]                                  | the release check                                                    |
-        | score      | score CYCLE --verdicts FILE                              | file a grader's verdicts on a ratified cycle into its score.edn      |
+        | score      | score CYCLE --verdicts FILE                              | file a grader's verdicts on a verified cycle into its score.edn      |
         | scoreboard | scoreboard CYCLE CYCLE                                   | compare two cycles                                                   |
         | oracle     | oracle [record --reason R]                               | judge the instrument against its recorded goldens                    |
         | publish    | publish [--results DIR]                                  | write the site and build it                                          |
@@ -65,7 +65,7 @@ Feature: Command
   # A task runs its stages in order and every stage reports, so one run names
   # every finding. A gate is the exception: a stage the task table marks as a
   # gate stops the task when it has findings, and the stages after it never
-  # run. The oracle is the gate before fence and ratify (dhf/spec/measurement/
+  # run. The oracle is the gate before fence and verify (dhf/spec/measurement/
   # oracle.feature, spec-0232). It replaces an event the gated stages would
   # each have had to interpret (cycle 04).
   Rule: A gate stops the task

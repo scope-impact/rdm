@@ -2,14 +2,14 @@
 #
 # Scoring is independent of the builder's tests, as in Löyly: a grader, human
 # or agent and never the builder, grades each checklist item against the
-# ratified build, however they grade, and the scorer files the verdicts
+# verified build, however they grade, and the scorer files the verdicts
 # (loyly:README.md@17d68d2, "3. Measure").
 
 @UN-008
 Feature: Scorer
   Files a grader's verdicts against the checklist, and nothing when nothing was graded.
 
-  Rule: A cycle is one directory, declared before it is ratified
+  Rule: A cycle is one directory, declared before it is verified
 
     @spec-0173 @contract
     Scenario: A cycle is declared by hand in dhf/cycles/NN/cycle.edn
@@ -21,7 +21,7 @@ Feature: Scorer
          :grader {:name "grader-b" :actor :agent}
          :spec-owner {:name "Sami" :actor :human}}
         """
-      When "rdm-spec checklist 03" and "rdm-spec ratify ROOM 03" are run
+      When "rdm-spec checklist 03" and "rdm-spec verify ROOM 03" are run
       Then both work on the cut spec-3, and the checklist holds the items of that scope
 
     @spec-0200 @contract
@@ -39,7 +39,7 @@ Feature: Scorer
 
     @spec-0174 @contract
     Scenario: The score is written beside the cycle
-      Given cycle 03's checklist holds 2 items and its ratification passed on the room tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904
+      Given cycle 03's checklist holds 2 items and its verification passed on the room tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904
       And a verdicts file grading spec-0012 pass and spec-0014 fail
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then dhf/cycles/03/score.edn holds:
@@ -131,13 +131,13 @@ Feature: Scorer
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then it exits 1, writes nothing, and names the missing role
 
-  Rule: Only a ratified build is scored
+  Rule: Only a verified build is scored
 
     @spec-0214 @e2e
-    Scenario Outline: A cycle whose ratification did not pass is not scored
+    Scenario Outline: A cycle whose verification did not pass is not scored
       Given dhf/cycles/03/ratified.edn <state>
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
-      Then it exits 1, writes nothing, and says the cycle has no passing ratification
+      Then it exits 1, writes nothing, and says the cycle has no passing verification
 
       Examples:
         | state                     |

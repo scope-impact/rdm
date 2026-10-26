@@ -16,7 +16,7 @@ Feature: Status
       Given a project with the stamped scenarios @spec-0001 "One", @spec-0002 "Two" and @spec-0003 "Three", in dhf/spec/a/b.feature at lines 4, 8 and 12, and @spec-0003 tagged @wip
       And a results directory DIR holding a passing result for @spec-0001 and a passing result labelled spec=spec-0099
       When "rdm-spec status --results DIR" is run
-      Then it exits 0, and its standard output, read as EDN, is exactly {:status {:results DIR :scenarios [{:id "spec-0001" :title "One" :file "dhf/spec/a/b.feature" :line 4 :status :verified} {:id "spec-0002" :title "Two" :file "dhf/spec/a/b.feature" :line 8 :status :unverified} {:id "spec-0003" :title "Three" :file "dhf/spec/a/b.feature" :line 12 :status :planned}] :counts {:verified 1 :failed 0 :unverified 1 :planned 1} :unknown-results [{:file F :spec "spec-0099"}]}}, F the name of that result's file within DIR, DIR as given
+      Then it exits 0, and its standard output, read as EDN, is exactly {:status {:results DIR :scenarios [{:id "spec-0001" :title "One" :file "dhf/spec/a/b.feature" :line 4 :status :verified} {:id "spec-0002" :title "Two" :file "dhf/spec/a/b.feature" :line 8 :status :unverified} {:id "spec-0003" :title "Three" :file "dhf/spec/a/b.feature" :line 12 :status :planned}] :counts {:verified 1 :failed 0 :unverified 1 :planned 1} :unknown-results [{:file F :spec "spec-0099"}]}}, F the result's file as DIR names it (DIR/name), as trace and release name a result, DIR as given
 
   Rule: Planned work is a scenario tagged @wip
 
