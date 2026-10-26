@@ -1,31 +1,59 @@
 (ns rdm-spec.compliance.audit-test
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [rdm-spec.compliance.audit :as audit]))
 
-(deftest the-clauses-page-has-one-section-per-declared-list
-  (let [page (audit/clauses-page ["c/std.txt"]
-                                 [{:key "STD:4.1" :description "Quality" :declared "c/std.txt" :clause-list "c/base.txt" :named-at []}
-                                  {:key "STD:5.1" :description "Plan | spec" :declared "c/std.txt" :clause-list "c/std.txt"
-                                   :named-at [{:file "d/plan.md" :line 8} {:file "d/r.md" :line 9}]}])]
-    (is (= ["# Clauses" "## c/std.txt"] (filter #(str/starts-with? % "#") (str/split-lines page))))
-    (is (str/includes? page "| STD:5.1 | Plan \\| spec | d/plan.md:8, d/r.md:9 |"))
-    (is (< (str/index-of page "STD:4.1") (str/index-of page "STD:5.1")))))
+(deftest git-status-names-every-path-that-differs-from-head
+  (is (= ["d/a.md" "d/new.md" "d/ign.md" "d/renamed.md" "d/old.md"]
+         (audit/status-paths (str " M d/a.md\u0000?? d/new.md\u0000!! d/ign.md\u0000"
+                                  "R  d/renamed.md\u0000d/old.md\u0000")))))
 
-(deftest the-traceability-page-lists-each-need
-  (let [page (audit/traceability-page {:needs [{:id "UN-001" :text "A need."} {:id "UN-002" :text "Another."}]
-                                       :scenarios [{:id "spec-0001" :title "T" :needs ["UN-001"] :component-name "Alpha"
-                                                    :context-name "demo" :level :e2e}]}
-                                      {"spec-0001" :verified})]
-    (is (str/includes? page "| @spec-0001 | T | Alpha | demo | e2e | verified |"))
-    (is (str/includes? page "No scenario traces to UN-002."))))
+(deftest a-path-is-made-from-when-it-is-or-lies-under-an-input
+  (is (audit/under? ["dhf/spec" "dhf/harness/config.edn"] "dhf/spec/demo/alpha.feature"))
+  (is (audit/under? ["dhf/spec" "dhf/harness/config.edn"] "dhf/harness/config.edn"))
+  (is (not (audit/under? ["dhf/spec"] "dhf/specs/x")))
+  (is (not (audit/under? ["dhf/harness/config.edn"] "dhf/harness/stack.md"))))
 
-(deftest the-manifest-is-edn
-  (is (= {:commit "abc" :files [{:path "a" :sha256 "1"} {:path "b" :sha256 "2"}]}
-         (edn/read-string (audit/manifest-text "abc" [{:path "a" :sha256 "1"} {:path "b" :sha256 "2"}])))))
+(def clauses
+  [{:key "STD:4.1" :description "Quality system" :clause-list "dhf/clauses/base.txt" :line 1
+    :declared "dhf/clauses/std.txt" :named-at [{:file "dhf/documents/plan.md" :line 9}]}
+   {:key "STD:5.1" :description "Development plan" :clause-list "dhf/clauses/std.txt" :line 2
+    :declared "dhf/clauses/std.txt" :named-at [{:file "dhf/documents/plan.md" :line 8}
+                                                {:file "dhf/documents/risk/register.md" :line 9}]}
+   {:key "X:1" :description "Other | piped" :clause-list "dhf/clauses/other.txt" :line 1
+    :declared "dhf/clauses/other.txt" :named-at []}])
 
-(deftest a-pdf-starts-with-the-documents-identity
-  (let [{:keys [title markdown]} (audit/pdf-markdown "---\nid: P-1\nrevision: 3\ntitle: Plan\n---\n\nBody\n")]
-    (is (= "Plan" title))
-    (is (str/starts-with? markdown "**P-1**, revision 3\n\n"))))
+(deftest the-clauses-page-has-a-section-per-declared-list-includes-in-place
+  (let [page (audit/clauses-page ["dhf/clauses/std.txt" "dhf/clauses/other.txt"] clauses)
+        ls (str/split-lines page)
+        idx (fn [s] (first (keep-indexed #(when (str/includes? %2 s) %1) ls)))]
+    (is (= 2 (count (filter #(str/starts-with? % "## ") ls))))
+    (is (< (idx "## dhf/clauses/std.txt") (idx "STD:4.1") (idx "STD:5.1") (idx "## dhf/clauses/other.txt")))
+    (is (str/includes? (nth ls (idx "STD:5.1")) "dhf/documents/plan.md:8, dhf/documents/risk/register.md:9"))
+    (testing "a cell's pipe is escaped"
+      (is (str/includes? page "Other \\| piped")))))
+
+(deftest the-traceability-page-lists-each-need-with-its-scenarios
+  (let [page (audit/traceability-page
+              [{:id "UN-001" :text "A need."} {:id "UN-002" :text "Untraced."}]
+              [{:id "spec-0001" :title "One" :needs ["UN-001"] :component-name "Alpha" :context-name "demo"}
+               {:id "spec-0002" :title "Two" :needs ["UN-001"] :component-name "Alpha" :context-name "demo"}]
+              {"spec-0001" :verified "spec-0002" :failed})
+        ls (str/split-lines page)]
+    (is (some #(and (str/includes? % "spec-0001") (str/includes? % "One") (str/includes? % "Alpha")
+                    (str/includes? % "verified")) ls))
+    (is (some #(and (str/includes? % "spec-0002") (str/includes? % "failed")) ls))
+    (is (str/includes? page "A need."))
+    (is (str/includes? page "No scenario traces to UN-002"))))
+
+(deftest the-manifest-is-the-commit-and-every-file-sorted
+  (let [m (edn/read-string (audit/manifest-text "abc" [{:path "b" :sha256 "2"} {:path "a" :sha256 "1"}]))]
+    (is (= {:commit "abc" :files [{:path "a" :sha256 "1"} {:path "b" :sha256 "2"}]} m))))
+
+(deftest the-pdf-input-names-the-document-first
+  (let [{:keys [title body]} (audit/pdf-input "---\nid: PLAN-001\nrevision: 3\ntitle: Development plan\n---\n\n# Development plan\nWe plan.\n")]
+    (is (= "Development plan" title))
+    (is (str/starts-with? body "PLAN-001, revision 3"))
+    (is (not (str/includes? body "---\nid:")))
+    (is (str/includes? body "We plan."))))

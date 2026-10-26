@@ -2,20 +2,47 @@
   (:require [clojure.test :refer [deftest is testing]]
             [rdm-spec.verification.status :as status]))
 
-(defn- r [id st] {:spec id :status st :file (str id "-" st)})
+(defn- sc [id & {:as more}] (merge {:id id :title id :file "f" :line 1} more))
 
-(deftest a-status-is-derived-from-the-results
-  (let [scs [{:id "spec-0001"} {:id "spec-0002"} {:id "spec-0003"} {:id "spec-0004" :wip? true} {:id nil :title "unstamped"}]
-        d (status/derive-statuses scs {:results [(r "spec-0001" "passed") (r "spec-0002" "passed") (r "spec-0002" "skipped")
-                                                 (r "spec-0004" "passed") (r "spec-9999" "passed") (r nil "failed")]})]
-    (is (= {"spec-0001" :verified "spec-0002" :failed "spec-0003" :unverified "spec-0004" :planned} (:statuses d)))
-    (is (= [{:file "spec-9999-passed" :spec "spec-9999"}] (:unknown-results d)))
-    (is (= {:verified 1 :failed 1 :unverified 1 :planned 1} (status/counts (:statuses d))))))
+(defn- r [spec st & [nm]] {:file (str "r/" spec "-" st) :spec spec :status st :name nm})
 
-(deftest any-status-but-passed-does-not-verify
+(def outline
+  (sc "spec-0001" :outline? true
+      :examples [{:line 9 :header ["n"] :rows [{:line 10 :cells ["1"]} {:line 11 :cells ["2"]}
+                                                {:line 12 :cells ["3"]}]}]))
+
+(deftest a-scenario-is-verified-failed-unverified-or-planned
+  (is (= :verified (status/status-of (sc "a") [(r "a" "passed")])))
+  (is (= :unverified (status/status-of (sc "a") [])))
   (doseq [st ["failed" "broken" "skipped" "unknown"]]
-    (is (= :failed (status/status-of {:id "spec-0007"} [(r "spec-0007" st)])))))
+    (is (= :failed (status/status-of (sc "a") [(r "a" "passed") (r "a" st)])) st))
+  (testing "@wip is planned whatever the results"
+    (is (= :planned (status/status-of (sc "a" :wip? true) [(r "a" "passed")])))
+    (is (= :planned (status/status-of (sc "a" :wip? true) [(r "a" "failed")])))))
 
-(deftest a-scenario-is-counted-once
-  (testing "an id carried twice is one scenario"
-    (is (= 1 (count (status/stamped [{:id "spec-0001"} {:id "spec-0001"}]))))))
+(deftest an-outline-is-verified-only-when-every-row-passed
+  (let [row (fn [n st] (r "spec-0001" st (str "An outline over " n " [n=" n "]")))]
+    (is (= :verified (status/status-of outline [(row 1 "passed") (row 2 "passed") (row 3 "passed")])))
+    (is (= :failed (status/status-of outline [(row 1 "passed") (row 2 "passed") (row 3 "failed")])))
+    (is (= :unverified (status/status-of outline [(row 1 "passed") (row 2 "passed")])))
+    (testing "two results for one row do not stand for another"
+      (is (= :unverified (status/status-of outline [(row 1 "passed") (row 1 "passed") (row 2 "passed")]))))
+    (testing "a result naming no row verifies no row"
+      (is (= :unverified (status/status-of outline [(r "spec-0001" "passed" "x") (r "spec-0001" "passed" "y")
+                                                    (r "spec-0001" "passed" "z")]))))))
+
+(deftest a-row-is-named-by-its-pairs-at-the-end-of-the-name
+  (let [row ["n" "1"]]
+    (is (status/names-row? "An outline over 1 [n=1]" [row]))
+    (is (status/names-row? "t (a=x, b=y)" [["a" "x"] ["b" "y"]]))
+    (is (not (status/names-row? "An outline over 1 [n=11]" [row])))
+    (is (not (status/names-row? "An outline [n=1] then more" [row])))
+    (is (not (status/names-row? nil [row])))))
+
+(deftest statuses-are-derived-for-every-stamped-scenario
+  (let [scs [(sc "a") (sc "b") (sc "c") (sc nil)]
+        d (status/derive-statuses scs [(r "a" "passed") (r "b" "failed") (r "zz" "passed") (r nil "passed")])]
+    (is (= {"a" :verified "b" :failed "c" :unverified} (:statuses d)))
+    (testing "a result naming no stamped scenario is unknown; one with no spec label is neither"
+      (is (= [{:file "r/zz-passed" :spec "zz"}] (:unknown-results d))))
+    (is (= {:verified 1 :failed 1 :unverified 1 :planned 0} (status/counts (:statuses d))))))
