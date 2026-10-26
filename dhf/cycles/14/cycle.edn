@@ -1,0 +1,17 @@
+;; Cycle 14: spec-18 (the read-by rule and cycle 13's findings), tagged
+;; locally. The first cycle run by cycle 13's release (48c82ae): fenced by the
+;; deny-list, its runs observed by `rdm-spec observe`. The installed scopes
+;; (spec-17's rule) listed 12 scopes, reading the added :read-by as a change
+;; to every event; spec-18's own rule, which this cycle builds (spec-0301: a
+;; change to :read-by alone reaches no subscriber), gives the four below,
+;; applied by hand: the three components whose feature files changed, and
+;; kernel/command, which the README's fixture rule and the glossary's gate rule
+;; reach. One builder, in build order.
+{:cut "spec-18"
+ :scope [{:component :kernel/command}
+         {:component :regeneration/scopes}
+         {:component :project/init}
+         {:component :verification/status}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
