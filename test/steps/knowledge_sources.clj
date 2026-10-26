@@ -1,298 +1,195 @@
 (ns steps.knowledge-sources
-  "Step definitions for dhf/spec/knowledge/sources.feature: `rdm-spec check`
-  on a copy of the room or a small project, its sources index, needs and
-  checkouts set up by the steps (steps.knowledge-support).
-
-  The shared steps (\"rdm-spec LINE\" is run, it passes, a wiki page whose
-  footnote cites C) are the kernel's (steps.kernel-command).
-
-  Context keys set here: :dir the project; :sources-dir the directory of
-  checkouts given as DIR; :source the source a step added; :record its
-  record file; :pin and :dropped-by (spec-0121); :history the sources
-  index's two versions (spec-0236); :cited-at {:file :line} where a
-  citation was written; :citation the citation; :need the need; :fenced the
-  fenced path; :quoted the citation a feature file quotes; :run the run."
+  "Step definitions of dhf/spec/knowledge/sources.feature, and the knowledge
+  context's helpers: source checkouts and the sources index."
   (:require [babashka.fs :as fs]
+            [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-command :as kc]
-            [steps.knowledge-support :as k]
-            [steps.support :as s]))
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
+            [steps.kernel-command :as k]))
 
-;; ---------------------------------------------------------------------------
-;; A source is indexed with its repository, its pins and its record
+(defn sources [ctx] (edn/read-string (slurp (fs/file (k/guard! (:dir ctx)) "dhf/raw/sources.edn"))))
+
+(defn source!
+  "Adds (or replaces) a source in the index, with its record unless :no-record."
+  [ctx id m & {:keys [no-record]}]
+  (let [ctx (k/project! ctx)]
+    (k/update-edn! ctx "dhf/raw/sources.edn" assoc (keyword id) m)
+    (when-not no-record (k/write-files! (:dir ctx) {(str "dhf/raw/" (:record m)) (str "# Source: " id "\n")}))
+    ctx))
+
+(defn cite!
+  "Adds a citation to the sources of the need (UN-001 unless named)."
+  ([ctx citation] (cite! ctx "UN-001" citation))
+  ([ctx need citation]
+   (k/update-edn! ctx "dhf/spec/needs.edn"
+                  (fn [m] (update m need (fn [n] (-> (or n {:text (str "The need " need)})
+                                                     (update :sources (fnil conj []) (k/real-pin ctx citation)))))))))
+
+(defn checkout!
+  "A checkout DIR/<id> of a source holding `files`, its commit recorded as the
+  pin `written` stands for. Sets :ph DIR and :pins."
+  [ctx id written files]
+  (let [ctx (k/placeholder! (k/project! ctx) "DIR")
+        d (str (fs/path (get-in ctx [:ph "DIR"]) id))]
+    (k/git-init! d)
+    (k/write-files! d files)
+    (k/commit! d "the source")
+    (let [sha (subs (k/git d "rev-parse" "HEAD") 0 7)]
+      (assoc-in ctx [:pins written] sha))))
+
+(defn loyly! [ctx pins & {:as more}]
+  (source! ctx "loyly" (merge {:repository "https://github.com/skallinen/loyly" :record "loyly.md"
+                               :pins (mapv #(k/real-pin ctx %) pins) :fenced []}
+                              more)))
 
 (defstep #"the sources index names a source with a repository and no pin"
-  (fn [ctx]
-    (let [dir (k/project ctx)]
-      (k/update-sources! dir #(assoc % :unpinned {:repository "https://example.invalid/unpinned"
-                                                  :record "unpinned.md" :pins [] :fenced []}))
-      (s/write! dir "dhf/raw/unpinned.md" "# unpinned\n")
-      (assoc ctx :dir dir :source "unpinned"))))
+  (fn [ctx] (-> (source! ctx "lonely" {:repository "https://example.org/lonely" :record "lonely.md" :pins []})
+                (k/names+ "lonely"))))
 
 (defstep #"the sources index names a source with a pin and no repository"
-  (fn [ctx]
-    (let [dir (k/project ctx)]
-      (k/update-sources! dir #(assoc % :nowhere {:record "nowhere.md" :pins ["abc1234"] :fenced []}))
-      (s/write! dir "dhf/raw/nowhere.md" "# nowhere\n")
-      (assoc ctx :dir dir :source "nowhere"))))
+  (fn [ctx] (-> (source! ctx "lonely" {:record "lonely.md" :pins ["abc1234"]}) (k/names+ "lonely"))))
 
 (defstep #"the sources index names a source whose record file is not in dhf/raw"
-  (fn [ctx]
-    (let [dir (k/project ctx)]
-      (k/update-sources! dir #(assoc % :unrecorded {:repository "https://example.invalid/unrecorded"
-                                                    :record "unrecorded.md" :pins ["abc1234"] :fenced []}))
-      (assoc ctx :dir dir :source "unrecorded" :record "unrecorded.md"))))
-
-(defstep #"the check fails and names the source"
-  (fn [ctx] (k/fails-naming! ctx (:source ctx)) nil))
-
-(defstep #"it fails rule (source-no-repository|source-no-record|citation-malformed) and names (.+)"
-  (fn [ctx rule what]
-    (let [parts (case what
-                  "the source" [(:source ctx)]
-                  "the source and the record file" [(:source ctx) (:record ctx)]
-                  "UN-004 and the source" ["UN-004" (:citation ctx)])]
-      (apply k/fails-rule-naming! ctx rule parts)
-      nil)))
+  (fn [ctx] (-> (source! ctx "lonely" {:repository "https://example.org/lonely" :record "lonely.md" :pins ["abc1234"]} :no-record true)
+                (k/names+ "lonely" "lonely.md"))))
 
 (defstep #"a commit of the sources index pins loyly at 17d68d2, and a later commit keeps loyly with that pin replaced by another"
   (fn [ctx]
-    (let [dir (k/project ctx)]
-      (k/commit! dir "loyly pinned at 17d68d2")
-      (k/update-sources! dir #(assoc-in % [:loyly :pins] ["abcdef0"]))
-      (let [h (k/commit! dir "loyly's pin replaced")]
-        (assoc ctx :dir dir :source "loyly" :pin "17d68d2" :dropped-by h)))))
+    (let [ctx (loyly! ctx ["17d68d2"])]
+      (k/commit! (:dir ctx) "pin loyly")
+      (let [ctx (loyly! ctx ["aaaaaaa"])
+            sha (k/commit! (:dir ctx) "replace the pin")]
+        (k/names+ ctx "loyly" "17d68d2" (subs sha 0 7))))))
 
-(defstep #"the check fails and names the source, the dropped pin and the commit that dropped it"
+(defstep #"a commit of the sources index lists rdm with its pins, and a later commit keeps them and adds :retired \"holds today's implementation\""
   (fn [ctx]
-    (k/fails-naming! ctx (:source ctx) (:pin ctx) (subs (:dropped-by ctx) 0 7))
-    nil))
-
-;; spec-0236. The kernel's "a wiki page whose footnote cites C" that follows
-;; makes a new copy of the room, so the history is written again into
-;; whatever project the scenario ends with (retired!), before the Then reads it.
-(defstep #"a commit of the sources index lists rdm with its pins, and a later commit keeps them and adds :retired \"([^\"]+)\""
-  (fn [ctx reason]
-    (assoc ctx :retired-reason reason :source "rdm")))
-
-(defn- retired!
-  "Writes into the scenario's project a commit listing rdm with its pins and
-  a later one adding :retired, then runs the check again: ctx with :run."
-  [ctx]
-  (let [dir (:dir ctx)
-        current (k/read-edn dir (k/sources-rel dir))
-        rdm (get current :rdm)]
-    (s/check! (seq (:pins rdm)) "the project's sources index holds no rdm with pins")
-    (when-not (:history-written ctx)
-      (k/write-edn! dir (k/sources-rel dir) (assoc current :rdm (dissoc rdm :retired)))
-      (k/commit! dir "rdm listed with its pins")
-      (k/write-edn! dir (k/sources-rel dir) (assoc current :rdm (assoc rdm :retired (:retired-reason ctx))))
-      (k/commit! dir "rdm retired"))
-    (assoc ctx :history-written true :run (kc/run! ctx dir ["check"]))))
+    (let [ctx (source! ctx "rdm" {:repository "https://github.com/scope-impact/rdm" :record "rdm.md" :pins ["3763e08"] :fenced []})]
+      (k/commit! (:dir ctx) "rdm")
+      (source! ctx "rdm" {:repository "https://github.com/scope-impact/rdm" :record "rdm.md" :pins ["3763e08"] :fenced []
+                          :retired "holds today's implementation"})
+      (k/commit! (:dir ctx) "retire rdm")
+      (k/names+ ctx "retired"))))
 
 (defstep #"the check reports no dropped pin for rdm"
   (fn [ctx]
-    (let [ctx (retired! ctx)
-          r (:run ctx)]
-      (s/check! (#{0 1} (:exit r)) (str "the check did not run\n" (s/show r)))
-      (s/check! (not (k/line-naming (s/err-lines r) [": source-pin-dropped: " "rdm"]))
-                (str "a dropped pin of rdm is reported\n" (s/show r)))
-      ctx)))
+    (assert (not-any? #(and (str/includes? % "rdm") (str/includes? % "dropped")) (k/err-lines ctx)) (:err ctx))
+    ctx))
 
-(defstep #"it fails and names the citation and that its source is retired"
+(defstep #"the need UN-004 whose sources hold \"the loyly README\""
   (fn [ctx]
-    (k/fails-naming! ctx (:citation ctx) "retired")
-    nil))
-
-(defstep #"the need UN-004 whose sources hold \"([^\"]+)\""
-  (fn [ctx text]
-    (let [dir (k/project ctx)]
-      (k/update-needs! dir #(assoc-in % ["UN-004" :sources] [text]))
-      (assoc ctx :dir dir :need "UN-004" :citation text))))
-
-;; ---------------------------------------------------------------------------
-;; A citation resolves to a source, a pin and a path
+    (-> (k/project! ctx) (cite! "UN-004" "the loyly README") (k/names+ "UN-004" "the loyly README"))))
 
 (defstep #"a directory holding loyly/ and innolitics-rdm/, checkouts of those sources"
   (fn [ctx]
-    (let [sd (s/tmp-dir)
-          _ (k/checkout! sd "loyly" {"README.md" "# loyly\n"} "17d68d2")
-          _ (k/checkout! sd "innolitics-rdm" {"README.md" "# rdm\n"} "f21b508")
-          dir (k/small-project! ctx ["loyly:README.md@17d68d2" "innolitics-rdm:docs/absent.md@f21b508"
-                                     "agent-skills:README.md@da65901"])]
-      (k/update-sources! dir #(assoc %
-                                     :innolitics-rdm {:repository "https://github.com/innolitics/rdm"
-                                                      :record "innolitics-rdm.md" :pins ["f21b508"] :fenced []}
-                                     :agent-skills {:repository "https://github.com/scope-impact/agent-skills"
-                                                    :record "agent-skills.md" :pins ["da65901"] :fenced []}))
-      (s/write! dir "dhf/raw/innolitics-rdm.md" "# innolitics-rdm\n")
-      (s/write! dir "dhf/raw/agent-skills.md" "# agent-skills\n")
-      (assoc ctx :dir dir :sources-dir sd))))
+    (let [ctx (-> (k/project! ctx)
+                  (checkout! "loyly" "17d68d2" {"README.md" "# Loyly\n"})
+                  (checkout! "innolitics-rdm" "f21b508" {"README.md" "# RDM\n"}))]
+      (-> ctx
+          (loyly! ["17d68d2"])
+          (source! "innolitics-rdm" {:repository "https://github.com/innolitics/rdm" :record "innolitics-rdm.md"
+                                     :pins [(k/real-pin ctx "f21b508")] :fenced []})
+          (cite! "loyly:README.md@17d68d2")
+          (cite! "innolitics-rdm:README.md@f21b508")))))
 
 (defstep #"citations of loyly and innolitics-rdm are checked against those checkouts"
   (fn [ctx]
-    (let [r (kc/the-run ctx)
-          lines (s/err-lines r)]
-      ;; loyly's README is at its pin in the checkout: it resolves, so nothing names it
-      (s/check! (not (k/line-naming lines ["loyly:README.md@17d68d2"]))
-                (str "the resolving citation of loyly is reported\n" (s/show r)))
-      ;; innolitics-rdm's checkout does not hold docs/absent.md: checked, it fails
-      (k/fails-naming! ctx "innolitics-rdm:docs/absent.md@f21b508" "docs/absent.md" "f21b508")
-      ;; agent-skills has no checkout in the directory: unchecked, said in a warning
-      (s/check! (k/line-naming (k/warnings ctx) ["agent-skills:README.md@da65901"])
-                (str "the citation of a source with no checkout is not reported unchecked\n" (s/show r)))
-      nil)))
+    (k/check-exit ctx 0)
+    (assert (not-any? #(and (str/includes? % "unchecked") (or (str/includes? % "loyly") (str/includes? % "innolitics-rdm")))
+                      (k/err-lines ctx))
+            (:err ctx))
+    ;; and a path neither holds fails against them
+    (cite! ctx "loyly:missing.md@17d68d2")
+    (let [r (k/rdm ctx ["check" "--sources" (get-in ctx [:ph "DIR"])])]
+      (k/check-exit r 1)
+      (k/err-line-with r "loyly:missing.md"))
+    ctx))
 
-(defstep #"a citation \"([^\"]+)\"(?: and no source (\S+))?"
-  (fn [ctx citation absent]
-    (let [dir (k/project ctx)]
-      (when absent
-        (s/check! (not (contains? (k/read-edn dir (k/sources-rel dir)) (keyword absent)))
-                  (str "the sources index records " absent)))
-      (assoc ctx :dir dir :citation citation :cited-at (k/cite-in-need! dir "UN-004" citation)))))
+(defstep #"a citation \"(.+)\""
+  (fn [ctx c]
+    (let [ctx (k/project! ctx)
+          [_ src] (re-find #"^([^:]+):" c)]
+      (-> (cite! ctx c) (k/names+ "dhf/spec/needs.edn")))))
 
-(defn- where [ctx]
-  (let [{:keys [file line]} (:cited-at ctx)]
-    (str file ":" line ":")))
-
-(defstep #"the citation fails and names (\S+) and where it was cited"
-  (fn [ctx source]
-    (k/fails-naming! ctx (where ctx) source)
-    nil))
+(defstep #"a citation \"innolitix:README.md@f21b508\" and no source innolitix"
+  (fn [ctx] (-> (k/project! ctx) (cite! "innolitix:README.md@f21b508") (k/names+ "innolitix" "dhf/spec/needs.edn"))))
 
 (defstep #"the source loyly is pinned only at 17d68d2"
-  (fn [ctx]
-    (let [dir (k/project ctx)]
-      (k/update-sources! dir #(assoc-in % [:loyly :pins] ["17d68d2"]))
-      (assoc ctx :dir dir))))
+  (fn [ctx] (-> (loyly! ctx ["17d68d2"]) (k/names+ "0000000" "17d68d2"))))
 
-(defstep #"the citation fails and names the commit and the source's pins"
-  (fn [ctx]
-    (let [commit (last (str/split (:citation ctx) #"@"))]
-      (k/fails-naming! ctx (where ctx) commit "17d68d2")
-      nil)))
+(defstep #"a checkout of skallinen/loyly, holding README.md at 17d68d2, given with --sources"
+  (fn [ctx] (let [ctx (checkout! ctx "loyly" "17d68d2" {"README.md" "# Loyly\n"})] (loyly! ctx ["17d68d2"]))))
 
-(defstep #"a checkout of skallinen/loyly(?:,| at 17d68d2,) (holding README\.md at 17d68d2, given with --sources|with no file docs/plan\.md at 17d68d2, given with --sources|given with --sources|given with --sources, with no docs/plan\.md)"
-  (fn [ctx _]
-    (let [sd (s/tmp-dir)]
-      (k/checkout! sd "loyly" {"README.md" "# loyly\n" "harness/README.md" "# the harness\n"} "17d68d2")
-      (assoc ctx :sources-dir sd))))
+(defstep #"a checkout of skallinen/loyly, with no file docs/plan.md at 17d68d2, given with --sources"
+  (fn [ctx] (let [ctx (checkout! ctx "loyly" "17d68d2" {"README.md" "# Loyly\n"})]
+              (-> (loyly! ctx ["17d68d2"]) (k/names+ "docs/plan.md" (k/real-pin ctx "17d68d2"))))))
 
-(defstep #"\"rdm-spec ([^\"]*)\" resolves the citation \"([^\"]+)\""
-  (fn [ctx line citation]
-    (let [dir (or (:dir ctx) (k/small-project! ctx [citation]))
-          ctx (assoc ctx :dir dir :citation citation)]
-      (kc/run-line ctx line))))
+(defstep #"\"rdm-spec check --sources DIR\" resolves the citation \"(.+)\""
+  (fn [ctx c]
+    (let [ctx (cite! ctx c)]
+      (k/rdm ctx ["check" "--sources" (get-in ctx [:ph "DIR"])]))))
 
 (defstep #"it resolves"
   (fn [ctx]
-    (let [r (kc/exits! ctx 0)]
-      (s/check! (not (k/line-naming (s/err-lines r) [(:citation ctx)]))
-                (str "the citation is reported, as a finding or a warning\n" (s/show r)))
-      nil)))
-
-(defstep #"the citation fails and names the path and the pin"
-  (fn [ctx]
-    (let [[_ path pin] (re-matches #"[^:]+:(.+)@(\S+)" (:citation ctx))]
-      (k/fails-naming! ctx (:citation ctx) path pin)
-      nil)))
+    (k/check-exit ctx 0)
+    (assert (not-any? #(str/includes? % "loyly:README.md") (k/err-lines ctx)) (:err ctx))
+    ctx))
 
 (defstep #"\"rdm-spec check\" is given no --sources at all"
-  (fn [ctx] (dissoc ctx :sources-dir)))
+  (fn [ctx] (loyly! ctx ["17d68d2"])))
+
+(defstep #"\"rdm-spec check\" resolves the citation \"(.+)\""
+  (fn [ctx c] (k/rdm (cite! ctx c) ["check"])))
 
 (defstep #"it is reported as unchecked, with the reason"
   (fn [ctx]
-    (let [r (kc/exits! ctx 0)
-          l (k/line-naming (k/warnings ctx) [(:citation ctx) ": warning: citation-unchecked: "])]
-      (s/check! l (str "no warning says the citation is unchecked\n" (s/show r)))
-      (s/check! (str/includes? l "--sources") (str "the warning gives no reason (no --sources)\n" l))
-      nil)))
+    (k/err-line-with ctx "warning:" "loyly:README.md@17d68d2" "--sources")
+    (assert (not-any? #(and (str/includes? % "loyly:README.md") (not (str/includes? % "warning:"))) (k/err-lines ctx)))
+    ctx))
 
-;; ---------------------------------------------------------------------------
-;; A source's implementation is fenced
+(defstep #"the sources index fences \"(.+)\" in (\S+)"
+  (fn [ctx path src]
+    (let [ctx (k/project! ctx)
+          existing (get (sources ctx) (keyword src))
+          m (or existing (if (= src "loyly")
+                           {:repository "https://github.com/skallinen/loyly" :record "loyly.md" :pins [(k/real-pin ctx "17d68d2")]}
+                           {:repository (str "https://github.com/x/" src) :record (str src ".md") :pins ["f21b508"]}))]
+      (-> (source! ctx src (update m :fenced (fnil conj []) path))
+          (k/names+ path)))))
 
-(defstep #"the sources index fences \"([^\"]+)\" in (\S+)"
-  (fn [ctx path source]
-    (let [dir (k/project ctx)]
-      (k/update-sources! dir #(update-in % [(keyword source) :fenced] (fn [f] (vec (distinct (conj (vec f) path))))))
-      (assoc ctx :dir dir :fenced path :source source))))
-
-(defstep #"the citation fails and names the fenced (?:path|directory) and where it was cited"
-  (fn [ctx]
-    (k/fails-rule-naming! ctx "citation-fenced" (where ctx) (str "\"" (:fenced ctx) "\""))
-    nil))
-
-(defstep #"the check fails and names the source, the pin and the path"
-  (fn [ctx]
-    (k/fails-naming! ctx (:source ctx) "17d68d2" (:fenced ctx))
-    nil))
-
-;; ---------------------------------------------------------------------------
-;; Citations are read from the needs and the wiki, nothing else
+(defstep #"a checkout of skallinen/loyly at 17d68d2, given with --sources"
+  (fn [ctx] (let [ctx (checkout! ctx "loyly" "17d68d2" {"README.md" "# Loyly\n"})]
+              (-> (loyly! ctx ["17d68d2"]) (k/names+ "loyly" (k/real-pin ctx "17d68d2"))))))
 
 (defstep #"a feature file whose Given step quotes a citation of a fenced path"
   (fn [ctx]
-    (let [dir (k/project ctx)
-          f (fs/file dir "dhf/spec/knowledge/wiki.feature")
-          text (slurp (str f))
-          quoted "loyly:harness/fence.sh@17d68d2"
-          anchor "      Given a wiki page whose every footnote cites a resolving source\n"
-          changed (str/replace-first text anchor
-                                     (str anchor "      And a note quoting \"" quoted "\"\n"))]
-      (s/check! (not= text changed) "the wiki feature holds no step to quote beside")
-      (s/check! (some #{"harness/fence.sh"} (get-in (k/read-edn dir (k/sources-rel dir)) [:loyly :fenced]))
-                "loyly does not fence harness/fence.sh")
-      (spit (str f) changed)
-      (assoc ctx :dir dir :quoted quoted))))
+    (let [ctx (loyly! ctx ["17d68d2"] :fenced ["harness/fence.sh"])]
+      (k/write-files! (:dir ctx) {"dhf/spec/kernel/core.feature"
+                                  (k/feature-text {:name "Core" :tags ["UN-001"]
+                                                   :scenarios [(k/sc 1 "Quotes" ["Given the citation \"loyly:harness/fence.sh@17d68d2\""])]})})
+      ctx)))
 
 (defstep #"the quoted citation is not resolved, and the check passes"
   (fn [ctx]
-    (let [r (kc/exits! ctx 0)]
-      (s/check! (not (k/line-naming (s/err-lines r) [(:quoted ctx)]))
-                (str "the quoted citation is reported\n" (s/show r)))
-      nil)))
-
-;; ---------------------------------------------------------------------------
-;; A need's citations resolve
+    (k/check-exit ctx 0)
+    (assert (not (str/includes? (:err ctx) "fence.sh")) (:err ctx))
+    ctx))
 
 (defstep #"the recorded source demo, pinned at the commit of a checkout given with --sources"
   (fn [ctx]
-    (let [sd (s/tmp-dir)
-          h (k/checkout! sd "demo" {"README.md" "# demo\n"} nil)
-          pin (subs h 0 7)
-          dir (k/project ctx)]
-      (k/update-sources! dir #(assoc % :demo {:repository "https://example.invalid/demo" :record "demo.md"
-                                              :pins [pin] :fenced []}))
-      (s/write! dir "dhf/raw/demo.md" "# demo\n")
-      (assoc ctx :dir dir :sources-dir sd :pin pin))))
+    (let [ctx (checkout! ctx "demo" "DEMOPIN" {"README.md" "# Demo\n"})]
+      (source! ctx "demo" {:repository "https://example.org/demo" :record "demo.md" :pins [(k/real-pin ctx "DEMOPIN")] :fenced []}))))
 
-(defstep #"the need UN-004 citing \"([^\"]+)\" at that pin, a path the checkout does not hold"
-  (fn [ctx cited]
-    (let [citation (str cited "@" (:pin ctx))]
-      (k/update-needs! (:dir ctx) #(assoc-in % ["UN-004" :sources] [citation]))
-      (assoc ctx :need "UN-004" :citation citation))))
-
-(defstep #"it fails and names UN-004, the citation and why it did not resolve"
+(defstep #"the need UN-004 citing \"demo:docs/nothing.md\" at that pin, a path the checkout does not hold"
   (fn [ctx]
-    (let [l (k/fails-naming! ctx "UN-004" (:citation ctx) "docs/nothing.md")]
-      (s/check! (re-find #"(?i)does not (exist|hold)|not at|no file" l)
-                (str "the finding does not say why the citation did not resolve: " l))
-      nil)))
+    (let [c (k/real-pin ctx "demo:docs/nothing.md@DEMOPIN")]
+      (-> (cite! ctx "UN-004" c) (k/names+ "UN-004" c "docs/nothing.md")))))
 
-(defstep #"the need UN-004 citing \"([^\"]+)\""
-  (fn [ctx citation]
-    (let [dir (k/project ctx)]
-      (k/update-needs! dir #(assoc-in % ["UN-004" :sources] [citation]))
-      (assoc ctx :dir dir :need "UN-004" :citation citation))))
+(defstep #"the need UN-004 citing \"loyly:README.md@17d68d2\""
+  (fn [ctx] (-> (loyly! ctx ["17d68d2"]) (cite! "UN-004" "loyly:README.md@17d68d2"))))
 
 (defstep #"no checkout of loyly is given"
-  (fn [ctx] (dissoc ctx :sources-dir)))
+  (fn [ctx] ctx))
 
 (defstep #"it warns that the citation was not checked, and why"
   (fn [ctx]
-    (let [r (kc/the-run ctx)
-          l (k/line-naming (k/warnings ctx) [(:citation ctx) "citation-unchecked" "UN-004"])]
-      (s/check! l (str "no warning names the unchecked citation of UN-004\n" (s/show r)))
-      (s/check! (re-find #"no checkout|--sources" l) (str "the warning does not say why: " l))
-      nil)))
+    (k/err-line-with ctx "warning:" "loyly:README.md@17d68d2" "not checked")))

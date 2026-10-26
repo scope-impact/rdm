@@ -1,71 +1,125 @@
 (ns rdm-spec.kernel.runner-test
-  "Unit tests of the Gherkin runner's pure parts: pickles, matching,
-  outcomes and the Allure result. No fixture on disk."
-  (:require [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
-            [rdm-spec.kernel.gherkin :as g]
-            [rdm-spec.kernel.runner :as runner]))
+  (:require [clojure.test :refer [deftest is testing]]
+            [babashka.fs :as fs]
+            [cheshire.core :as json]
+            [rdm-spec.kernel.runner :as r]))
 
-(def text
-  (str "@UN-001\nFeature: Lint\n  A fixture.\n\n  Background:\n    Given a background\n\n"
-       "  Rule: Every view is described\n\n"
-       "    @spec-0012 @e2e @UN-002\n    Scenario: Lint names the view\n      Given a step\n      Then it holds\n\n"
-       "    @spec-0013 @contract\n    Scenario Outline: Keeps <written>\n      Given a step with <written>\n\n"
-       "      Examples:\n        | written | kept |\n        | plan    | 3    |\n        | code    | 4    |\n"))
+(def feature-text
+  "@UN-001
+Feature: Demo
+  Some description: with a colon.
 
-(def owners {"architecture/lint" {:context "architecture" :component "Lint" :component-id "architecture/lint"}})
+  Background:
+    Given a base
 
-(defn- pickles [] (runner/pickles-of "dhf/spec/architecture/lint.feature" (g/parse-feature "f" text)
-                                     {:spec-dir "dhf/spec" :id-prefix "spec" :owners owners}))
+  Rule: The rule
 
-(deftest a-scenario-is-one-pickle-and-an-outline-one-per-row
-  (let [ps (pickles)]
-    (is (= 3 (count ps)))
-    (is (= ["spec-0012" "spec-0013" "spec-0013"] (map :id ps)))
-    (is (= ["Given a background" "Given a step" "Then it holds"] (map runner/step-name (:steps (first ps)))))
-    (is (= "Given a step with plan" (runner/step-name (last (:steps (second ps))))))
-    (is (= [["written" "plan"] ["kept" "3"]] (:parameters (second ps))))
-    (is (= "spec-0013|plan|3" (runner/history-id (second ps))))
-    (is (= "spec-0012" (runner/history-id (first ps))))))
+    @spec-0001 @e2e
+    Scenario: One
+      Given a step with \"quotes\"
+      When a table
+        | a | b |
+        | 1 | 2 |
+      Then a doc
+        \"\"\"
+        hello
+          world
+        \"\"\"
 
-(deftest a-step-and-its-keyword
-  (testing "And and But take the keyword before them"
-    (is (= ["Given" "Given" "Then" "Then"] (runner/effective-keywords [{:keyword "Given"} {:keyword "And"} {:keyword "Then"} {:keyword "But"}])))))
+    @spec-0002 @contract
+    Scenario Outline: Two <x>
+      Given the value <x>
+      But not <y>
 
-(deftest only-a-then-that-does-not-hold-fails
-  (let [assertion (try (runner/fail! "no such view") (catch Throwable e e))]
-    (is (= "failed" (runner/outcome "Then" assertion)))
-    (is (= "broken" (runner/outcome "Given" assertion)))
-    (is (= "broken" (runner/outcome "Then" (ex-info "boom" {}))))
-    (is (= "failed" (runner/outcome "Then" (AssertionError. "x"))))
-    (is (= "failed" (runner/outcome "Then" (ex-info "x" {:steps.support/failed true}))))
-    (is (= "broken" (runner/outcome "When" (ArithmeticException. "/ by zero"))))))
+      Examples:
+        | x | y |
+        | 1 | 2 |
+        | 3 | 4 |
+")
 
-(deftest matching-a-step
-  (let [defs [{:pattern #"a spec" :f identity :file "a.clj"}
-              {:pattern #"a (s\w+)" :f identity :file "b.clj"}
-              {:pattern #"the spec holds (\d+) features" :f identity :file "c.clj"}]]
-    (is (= ["20"] (:captured (first (runner/matches defs "the spec holds 20 features")))))
-    (is (= 2 (count (runner/matches defs "a spec"))))
-    (is (empty? (runner/matches defs "a spec holds")) "a pattern matches the whole text only")))
+(deftest reads-a-feature
+  (let [f (r/read-feature "dhf/spec/a/b.feature" feature-text)
+        [s1 s2] (:scenarios f)]
+    (is (empty? (:refusals f)))
+    (is (= "Demo" (get-in f [:feature :name])))
+    (is (= ["UN-001"] (map :tag (get-in f [:feature :tags]))))
+    (is (= "One" (:name s1)))
+    (is (= 11 (:line s1)))
+    (is (= "The rule" (get-in s1 [:rule :name])))
+    (is (= ["spec-0001" "e2e"] (map :tag (:tags s1))))
+    (is (= [["1" "2"]] (map :cells (rest (:table (second (:steps s1)))))))
+    (is (= "hello\n  world" (:doc-string (nth (:steps s1) 2))))
+    (is (= ["Given a base"] (map #(str (:keyword %) " " (:text %)) (:background f))))
+    (is (= "Scenario Outline" (:keyword s2)))
+    (is (= ["x" "y"] (:headings (first (:examples s2)))))
+    (is (= [["1" "2"] ["3" "4"]] (map :cells (:rows (first (:examples s2))))))))
 
-(deftest the-default-mapping-is-the-specs
-  (is (= {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row
-          :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags}
-          :links {:need {:type "issue" :url "dhf/spec/needs.edn#{id}"}}
-          :evidence {}}
-         runner/default-mapping)))
+(deftest refuses-unknown-keywords-and-two-features
+  (let [f (r/read-feature "x.feature" "Feature: A\n\n  Scenario Template: B\n    Given x\n")]
+    (is (= [3] (map :line (:refusals f))))
+    )
+  (let [f (r/read-feature "x.feature" "Feature: A\nFeature: B\n")]
+    (is (= [2] (map :line (:refusals f))))))
 
-(deftest a-result-in-allures-model
-  (let [p (first (pickles))
-        r (runner/result-of p {:status "passed" :start 1 :stop 2 :steps [] :needs-rel "dhf/spec/needs.edn"})
-        label (fn [n] (some #(when (= n (:name %)) (:value %)) (:labels r)))]
-    (is (= "Lint names the view" (:name r)))
-    (is (= "dhf/spec/architecture/lint.feature:Lint names the view" (:fullName r)))
-    (is (= ["Lint" "Every view is described" "architecture" "architecture" "architecture/lint" "gherkin" "spec-0012" "Lint"]
-           (map label ["feature" "story" "epic" "suite" "subSuite" "framework" "spec" "component"])))
-    (is (= #{"UN-001" "spec-0012" "e2e" "UN-002"} (set (keep #(when (= "tag" (:name %)) (:value %)) (:labels r)))))
-    (is (= [{:type "issue" :name "UN-001" :url "dhf/spec/needs.edn#UN-001"}
-            {:type "issue" :name "UN-002" :url "dhf/spec/needs.edn#UN-002"}]
-           (:links r)))
-    (is (str/blank? (label "planned")))))
+(deftest expands-outline-rows
+  (let [f (r/read-feature "x.feature" feature-text)
+        runs (r/pickles f)]
+    (is (= 3 (count runs)))
+    (is (= ["Given a base" "Given the value 3" "But not 4"]
+           (map #(str (:keyword %) " " (:text %)) (:steps (nth runs 2)))))
+    (is (= [{"name" "x" "value" "3"} {"name" "y" "value" "4"}] (:parameters (nth runs 2))))))
+
+(defn- tmpdir [] (str (fs/create-temp-dir {:dir (or (System/getenv "TMPDIR") (System/getProperty "java.io.tmpdir"))})))
+
+(deftest runs-steps-and-writes-results
+  (let [dir (tmpdir)]
+    (try
+      (r/clear-steps!)
+      (r/defstep #"a base" (fn [ctx] (assoc ctx :base true)))
+      (r/defstep #"a step with \"(.*)\"" (fn [ctx q] (assert (:base ctx)) (assoc ctx :q q)))
+      (r/defstep #"a table" (fn [ctx table] (r/attach! "t" "text") (assoc ctx :t table)))
+      (r/defstep #"a doc" (fn [ctx doc] (when-not (= "quotes" (:q ctx)) (r/fail! "no q")) nil))
+      (r/defstep #"the value (\d+)" (fn [ctx v] (when (= v "3") (throw (Exception. "boom"))) ctx))
+      (r/defstep #"not (\d+)" (fn [ctx v] ctx))
+      (let [summary (r/run-features {:root "." :files [{:file "dhf/spec/a/b.feature" :text feature-text}]
+                                     :results-dir dir :owner (constantly {:context "a" :component "B" :sub-suite "a/b"})
+                                     :needs-path "dhf/spec/needs.edn"})
+            results (->> (fs/glob dir "*-result.json") (map #(json/parse-string (slurp (str %)))) (sort-by #(get % "historyId")))]
+        (is (= {:passed 2 :broken 1} (select-keys (:counts summary) [:passed :broken])))
+        (is (= ["spec-0001" "spec-0002|1|2" "spec-0002|3|4"] (map #(get % "historyId") results)))
+        (is (= "broken" (get (nth results 2) "status")))
+        (is (= ["passed" "broken" "skipped"] (map #(get % "status") (get (nth results 2) "steps"))))
+        (is (some #(= {"name" "spec" "value" "spec-0001"} %) (get (first results) "labels")))
+        (is (= [{"type" "issue" "name" "UN-001" "url" "dhf/spec/needs.edn#UN-001"}] (get (first results) "links")))
+        (is (= 1 (count (fs/glob dir "*-attachment*")))))
+      (finally (fs/delete-tree dir) (r/clear-steps!)))))
+
+(deftest failed-only-for-a-then-assertion
+  (let [dir (tmpdir)
+        text "@UN-001\nFeature: F\n  @spec-0001 @e2e\n  Scenario: S\n    Given g\n    Then t\n"]
+    (try
+      (doseq [[g t expect] [[(fn [c] c) (fn [c] (assert false "nope")) "failed"]
+                            [(fn [c] (assert false)) (fn [c] c) "broken"]
+                            [(fn [c] c) (fn [c] (throw (Exception. "x"))) "broken"]]]
+        (r/clear-steps!)
+        (r/defstep #"g" g) (r/defstep #"t" t)
+        (fs/delete-tree dir) (fs/create-dirs dir)
+        (r/run-features {:root "." :files [{:file "x.feature" :text text}] :results-dir dir :owner (constantly nil)})
+        (let [res (json/parse-string (slurp (str (first (fs/glob dir "*-result.json")))))]
+          (is (= expect (get res "status")))))
+      (finally (fs/delete-tree dir) (r/clear-steps!)))))
+
+(deftest ambiguous-and-missing-steps-are-broken
+  (let [dir (tmpdir)
+        text "@UN-001\nFeature: F\n  @spec-0001 @e2e\n  Scenario: S\n    Given a spec\n  @spec-0002 @e2e\n  Scenario: T\n    Given nothing matches\n  @spec-0003 @e2e @wip\n  Scenario: U\n    Given a spec\n"]
+    (try
+      (r/clear-steps!)
+      (r/defstep #"a spec" (fn [c] c))
+      (r/defstep #"a (.*)" (fn [c _] c))
+      (r/run-features {:root "." :files [{:file "x.feature" :text text}] :results-dir dir :owner (constantly nil)})
+      (let [rs (->> (fs/glob dir "*-result.json") (map #(json/parse-string (slurp (str %)))) (sort-by #(get % "historyId")))]
+        (is (= ["broken" "broken" "skipped"] (map #(get % "status") rs)))
+        (is (re-find #"a spec.*a \(\.\*\)" (get-in (first rs) ["statusDetails" "message"])))
+        (is (re-find #"nothing matches" (get-in (second rs) ["statusDetails" "message"])))
+        (is (some #(= {"name" "planned" "value" "true"} %) (get (nth rs 2) "labels"))))
+      (finally (fs/delete-tree dir) (r/clear-steps!)))))

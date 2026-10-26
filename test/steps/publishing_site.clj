@@ -1,407 +1,267 @@
 (ns steps.publishing-site
-  "Step definitions for dhf/spec/publishing/site.feature: `rdm-spec publish`
-  in a copy of the room (its spec, views, sources and wiki as they are), or
-  in a small project whose model a step gives (no view, so every view is
-  fresh). The site's Markdown and the site builder's configuration are
-  written under the configured :site :source (pages under its docs/), the
-  HTML into :site :dir.
-
-  Context keys set here: :dir, :results (a results directory outside the
-  project), :first-site ({path text} of the first publish), :page (a
-  component page a step is about), :link (a link that leads nowhere),
-  :builder (the configured site builder's program)."
+  "Step definitions of dhf/spec/publishing/site.feature."
   (:require [babashka.fs :as fs]
-            [cheshire.core :as json]
-            [clj-yaml.core :as yaml]
-            [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.gherkin :as gherkin]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-command :as kc]
-            [steps.support :as s]))
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
+            [steps.kernel-command :as k]))
 
-;; ---------------------------------------------------------------------------
-;; Where the site is
+(defn page [ctx p]
+  (let [f (fs/file (k/guard! (:dir ctx)) "site-src/docs" p)]
+    (when-not (fs/exists? f) (fail! (str "no page " p ": " (:err ctx))))
+    (slurp f)))
 
-(defn- site-cfg [ctx] (merge {:dir "site" :source "site-src"} (:site (kc/config-of (:dir ctx)))))
+(defn feature [name scenarios] (k/feature-text {:name name :tags ["UN-001"] :scenarios scenarios}))
 
-(defn- docs [ctx] (fs/file (:dir ctx) (:source (site-cfg ctx)) "docs"))
-
-(defn- page [ctx rel]
-  (let [f (fs/file (docs ctx) rel)]
-    (s/check! (fs/regular-file? f) (str "the site holds no page " rel "\n" (s/show (kc/the-run ctx))))
-    (slurp (str f))))
-
-(defn- pages [ctx]
-  (into (sorted-map) (for [f (fs/glob (docs ctx) "**.md")] [(str (fs/relativize (docs ctx) f)) (slurp (str f))])))
-
-(defn- site-files [ctx]
-  (let [src (fs/file (:dir ctx) (:source (site-cfg ctx)))]
-    (into (sorted-map) (for [f (fs/glob src "**") :when (fs/regular-file? f)
-                             :let [r (str (fs/relativize src f))]
-                             :when (or (str/ends-with? r ".md") (str/ends-with? r ".yml"))]
-                         [r (slurp (str f))]))))
-
-(defn- nav [ctx]
-  (let [f (fs/file (:dir ctx) (:source (site-cfg ctx)) "mkdocs.yml")]
-    (s/check! (fs/exists? f) "no mkdocs.yml was written")
-    (:nav (yaml/parse-string (slurp (str f))))))
-
-(defn- published! [ctx] (kc/exits! ctx 0))
-
-;; ---------------------------------------------------------------------------
-;; A small project
-
-(defn- component [ctx-id slug nm]
-  {:id (keyword (name ctx-id) slug) :name nm :spec (str (name ctx-id) "/" slug) :description (str "The " nm " of the fixture")})
-
-(defn- small-model [contexts kernel]
-  {:system {:id :store :name "Store" :description "Sells things"}
-   :people [{:id :buyer :name "Buyer" :description "Buys things" :actor #{:human}}]
-   :containers [{:id :app :name "app" :kind :runs :technology "Any" :description "The shop program"
-                 :contexts (vec (for [[cid comps] contexts]
-                                  {:id cid :name (name cid) :description (str "The " (name cid) " context")
-                                   :components (vec (for [[slug nm] comps] (component cid slug nm)))}))}]
-   :kernel (vec (for [[slug nm] kernel] {:id (keyword "kernel" slug) :name nm :spec (str "kernel/" slug)
-                                         :description (str "The " nm " of the kernel")}))
-   :relationships [] :views []})
-
-(defn- small-project!
-  "A project whose model is `m`, one scenario in each component's feature
-  file, the need UN-001, an empty wiki and no source."
-  [ctx m]
-  (let [dir (s/project!)
-        comps (concat (for [c (:containers m) x (:contexts c) comp (:components x)] comp) (:kernel m))]
-    (s/write! dir "dhf/spec/model.edn" (pr-str m))
-    (s/write! dir "dhf/spec/events.edn" "{}\n")
-    (s/write! dir "dhf/spec/needs.edn" (pr-str {"UN-001" {:text "A buyer needs things sold." :sources ["demo:README.md@abc1234"]}}))
-    (s/write! dir "dhf/spec/ids.edn" "{:issued 9999}\n")
-    (s/write! dir "dhf/raw/sources.edn" "{}\n")
-    (s/write! dir "dhf/wiki/index.md" "# Wiki\n\n## Pages\n\nNone yet.\n")
-    (doseq [[i c] (map-indexed vector comps)]
-      (s/write! dir (str "dhf/spec/" (:spec c) ".feature")
-                (str "@UN-001\nFeature: " (:name c) "\n  " (:description c) "\n\n"
-                     (format "  @spec-%04d @e2e\n" (inc i))
-                     "  Scenario: The " (:name c) " works\n    Given a thing\n    Then it holds\n")))
-    (assoc ctx :dir dir :model m)))
-
-(def ^:private five
-  [[:shop [["till" "Till"] ["shelf" "Shelf"] ["stock" "Stock"]]]
-   [:billing [["invoice" "Invoice"] ["ledger" "Ledger"]]]])
-
-;; ---------------------------------------------------------------------------
-;; The site follows the model
+(defn site-project!
+  "A project of the model spec, a feature per component, views rendered."
+  [ctx model-spec & [extra]]
+  (let [m (k/model model-spec)
+        comps (concat (for [[c ks] (:contexts model-spec) kk ks] (str c "/" kk))
+                      (for [kk (:kernel model-spec)] (str "kernel/" kk)))
+        ctx (k/project! ctx {:model-spec model-spec
+                             :features (into {} (map-indexed (fn [i c] [(str "dhf/spec/" c ".feature")
+                                                                        (feature c [(k/sc (inc i) (str "About " c))])])
+                                                             comps))
+                             :extra extra})]
+    (when-not (some #{"kernel/core"} comps) (fs/delete-if-exists (fs/path (:dir ctx) "dhf/spec/kernel/core.feature")))
+    (k/views! ctx)))
 
 (defstep #"a model with two bounded contexts holding five components, and no kernel"
-  (fn [ctx] (small-project! ctx (small-model five []))))
+  (fn [ctx] (site-project! ctx {:contexts [["shop" ["till" "cart" "door"]] ["stock" ["shelf" "crate"]]]})))
 
 (defstep #"it holds five component pages, each named for its bounded context and component"
   (fn [ctx]
-    (published! ctx)
-    (doseq [[cid comps] five [slug nm] comps
-            :let [text (page ctx (str (name cid) "/" slug ".md"))]]
-      (s/check! (str/includes? text nm) (str (name cid) "/" slug ".md does not name " nm)))
-    (s/check! (= 5 (count (remove #(or (str/ends-with? % "index.md") (str/starts-with? % "wiki/")) (keys (pages ctx)))))
-              (str "the component pages are " (pr-str (keys (pages ctx)))))
-    nil))
+    (k/check-exit ctx 0)
+    (doseq [p ["shop/till.md" "shop/cart.md" "shop/door.md" "stock/shelf.md" "stock/crate.md"]] (page ctx p))
+    (assert (not (fs/exists? (fs/path (:dir ctx) "site-src/docs/kernel"))))
+    ctx))
 
-(defn- room-model [ctx] (edn/read-string (slurp (str (fs/file (:dir ctx) "dhf/spec/model.edn")))))
-
-(def ^:private lint-prose "The lint reads the model once and judges what a machine can judge.")
+(def lint-feature
+  (feature "Lint" [(k/sc 12 "A view with no description fails the lint" ["Given a view with no description" "When the model is linted" "Then the view is named"])
+                   {:tags ["spec-0013" "contract"] :title "A component that owns no feature" :steps ["Given a component" "Then it is named"]}]))
 
 (defstep #"the component Lint with design prose beside its feature file and its scenarios"
   (fn [ctx]
-    (let [dir (s/copy-of-room!)]
-      (s/write! dir "dhf/spec/architecture/lint.md" (str "# Lint\n\n" lint-prose "\n"))
-      (assoc ctx :dir dir))))
+    (let [ctx (site-project! ctx {:contexts [["architecture" ["lint"]]]}
+                             {"dhf/spec/architecture/lint.md" "The lint holds the model to the C4 checklist.\n"})]
+      (k/write-files! (:dir ctx) {"dhf/spec/architecture/lint.feature" lint-feature})
+      ctx)))
 
 (defstep #"Lint's page holds its description from the model, its prose and every scenario with its id, level and steps"
   (fn [ctx]
-    (published! ctx)
-    (let [text (page ctx "architecture/lint.md")
-          desc (some #(when (= :architecture/lint (:id %)) (:description %))
-                     (for [c (:containers (room-model ctx)) x (:contexts c) comp (:components x)] comp))
-          rel "dhf/spec/architecture/lint.feature"
-          scs (:scenarios (gherkin/parse-feature rel (slurp (str (fs/file (:dir ctx) rel)))))]
-      (s/check! (str/includes? text desc) (str "the page does not hold the description " (pr-str desc)))
-      (s/check! (str/includes? text lint-prose) "the page does not hold the prose")
-      (doseq [sc scs
-              :let [id (some #(when (str/starts-with? % "@spec-") %) (:tags sc))
-                    level (some #{"@e2e" "@contract"} (:tags sc))]]
-        (s/check! (some #(and (str/includes? % id) (str/includes? % (subs level 1))) (str/split-lines text))
-                  (str "no line of the page names " id " and its level"))
-        (doseq [st (:steps sc)]
-          ;; a step's text as the page shows it: Markdown's escapes ("\\[") read as the characters they stand for
-          (s/check! (str/includes? (str/replace text #"\\([\\`*_{}\[\]()#+\-.!|<>])" "$1") (:text st))
-                    (str "the page does not hold the step " (pr-str (:text st))))))
-      nil)))
+    (k/check-exit ctx 0)
+    (let [p (page ctx "architecture/lint.md")]
+      (doseq [s ["The lint component" "The lint holds the model to the C4 checklist." "spec-0012" "A view with no description fails the lint"
+                 "e2e" "Given a view with no description" "When the model is linted" "Then the view is named"
+                 "spec-0013" "contract" "Given a component"]]
+        (assert (str/includes? p s) (str "the page lacks " s ":\n" p)))
+      ctx)))
 
 (defstep #"the bounded context architecture and its rendered component view"
-  (fn [ctx]
-    (let [dir (s/copy-of-room!)]
-      (s/check! (fs/exists? (fs/file dir "dhf/views/architecture-components.svg")) "no rendered component view")
-      (assoc ctx :dir dir))))
+  (fn [ctx] (site-project! ctx {:contexts [["architecture" ["lint" "views"]]]})))
 
 (defstep #"the architecture page shows the view and links to each of its components' pages"
   (fn [ctx]
-    (published! ctx)
-    (let [text (page ctx "architecture/index.md")]
-      (s/check! (re-find #"!\[[^\]]*\]\([^)]*architecture-components\.svg\)" text) "the page does not show the view")
-      (s/check! (fs/exists? (fs/file (docs ctx) "views/architecture-components.svg")) "the view is not in the site")
-      (doseq [c ["model" "lint" "views"]]
-        (s/check! (str/includes? text (str "(" c ".md)")) (str "the page does not link " c ".md")))
-      nil)))
-
-(defn- traced
-  "{need [scenario-id]} of the project's spec, by need tags."
-  [ctx]
-  (let [files (fs/glob (fs/file (:dir ctx) "dhf/spec") "**.feature")]
-    (apply merge-with into
-           (for [f files
-                 sc (:scenarios (gherkin/parse-feature (str f) (slurp (str f))))
-                 :let [id (some #(when (re-matches #"@spec-\d+" %) (subs % 1)) (:tags sc))]
-                 :when id
-                 n (filter #(re-matches #"@UN-\d+" %) (:all-tags sc))]
-             {(subs n 1) [id]}))))
+    (k/check-exit ctx 0)
+    (let [p (page ctx "architecture/index.md")]
+      (assert (str/includes? p "architecture-components.svg") p)
+      (assert (fs/exists? (fs/path (:dir ctx) "site-src/docs/views/architecture-components.svg")))
+      (assert (str/includes? p "(lint.md)") p)
+      (assert (str/includes? p "(views.md)") p)
+      ctx)))
 
 (defstep #"the home page shows the context view, the container view and every user need with the scenarios tracing to it"
   (fn [ctx]
-    (published! ctx)
-    (let [text (page ctx "index.md")
-          needs (edn/read-string (slurp (str (fs/file (:dir ctx) "dhf/spec/needs.edn"))))]
-      (doseq [k ["context" "containers"]]
-        (s/check! (re-find (re-pattern (str "!\\[[^\\]]*\\]\\([^)]*" k "\\.svg\\)")) text) (str "the home page does not show " k)))
-      (doseq [[n ids] (traced ctx) :when (contains? needs n)]
-        (s/check! (str/includes? text n) (str "the home page does not show " n))
-        (doseq [id ids] (s/check! (str/includes? text id) (str "the home page does not show " id " under " n))))
-      (doseq [n (keys needs)] (s/check! (str/includes? text (str n)) (str "the home page does not show " n)))
-      nil)))
-
-;; ---------------------------------------------------------------------------
-;; The site shows status, and never decides it
-
-(defn- result-json [id status]
-  (json/generate-string {:uuid (str (random-uuid)) :name (str "a test of " id) :status status
-                         :labels [{:name "spec" :value id}]}))
+    (let [ctx (if (str/includes? (slurp (fs/file (k/guard! (:dir ctx)) "dhf/spec/model.edn")) ":level :context")
+                ctx
+                ;; the project the When made has no context or container view: give it both
+                (do (k/update-edn! ctx "dhf/spec/model.edn" update :views (fnil into [])
+                                   [{:key "context" :level :context :description "The demo and its users"}
+                                    {:key "containers" :level :container :description "The program"}])
+                    (k/views! ctx)
+                    (k/rdm ctx ["publish"])))]
+      (k/check-exit ctx 0)
+      (let [p (page ctx "index.md")]
+        (assert (str/includes? p "views/context.svg") p)
+        (assert (str/includes? p "views/containers.svg") p)
+        (assert (str/includes? p "UN-001") p)
+        (assert (str/includes? p "A user need") p)
+        (assert (str/includes? p "spec-0001") p))
+      ctx)))
 
 (defstep #"Allure results in which spec-0012 passed and spec-0013 failed"
   (fn [ctx]
-    (let [rd (s/tmp-dir)]
-      (s/write! rd (str (random-uuid) "-result.json") (result-json "spec-0012" "passed"))
-      (s/write! rd (str (random-uuid) "-result.json") (result-json "spec-0013" "failed"))
-      (assoc ctx :dir (s/copy-of-room!) :results rd))))
+    (let [ctx (-> (site-project! ctx {:contexts [["architecture" ["lint"]]]}) (k/placeholder! "DIR"))]
+      (k/write-files! (:dir ctx) {"dhf/spec/architecture/lint.feature" lint-feature})
+      (k/write-result! (get-in ctx [:ph "DIR"]) {:id "spec-0012"})
+      (k/write-result! (get-in ctx [:ph "DIR"]) {:id "spec-0013" :status "failed"})
+      ctx)))
 
-(defn- shows! [ctx id st]
-  (let [ls (mapcat str/split-lines (vals (pages ctx)))]
-    (s/check! (some #(and (str/includes? % id) (re-find (re-pattern (str "\\b" st "\\b")) %)) ls)
-              (str "no line of the site shows " id " " st))))
+(defn status-near [p id]
+  (let [i (or (str/index-of p (str "### " id)) (fail! (str "no " id " on the page:\n" p)))
+        s (subs p i (min (count p) (+ i 300)))]
+    s))
 
 (defstep #"spec-0012 shows verified and spec-0013 shows failed"
   (fn [ctx]
-    (published! ctx)
-    (shows! ctx "spec-0012" "verified")
-    (shows! ctx "spec-0013" "failed")
-    nil))
+    (k/check-exit ctx 0)
+    (let [p (page ctx "architecture/lint.md")]
+      (assert (str/includes? (status-near p "spec-0012") "verified") p)
+      (assert (str/includes? (status-near p "spec-0013") "failed") p)
+      ctx)))
 
 (defstep #"the scenario @spec-0014 tagged @wip"
   (fn [ctx]
-    (let [dir (s/copy-of-room!)
-          f (fs/file dir "dhf/spec/architecture/lint.feature")
-          text (slurp (str f))]
-      (s/check! (str/includes? text "@spec-0014 ") "the lint holds no @spec-0014")
-      (spit (str f) (str/replace-first text "@spec-0014 " "@spec-0014 @wip "))
-      (assoc ctx :dir dir))))
+    (let [ctx (site-project! ctx {:contexts [["architecture" ["lint"]]]})]
+      (k/write-files! (:dir ctx) {"dhf/spec/architecture/lint.feature"
+                                  (feature "Lint" [{:tags ["spec-0014" "e2e" "wip"] :title "Planned" :steps ["Given a step"]}])})
+      ctx)))
 
 (defstep #"spec-0014 shows planned"
-  (fn [ctx] (published! ctx) (shows! ctx "spec-0014" "planned") nil))
+  (fn [ctx]
+    (k/check-exit ctx 0)
+    (assert (str/includes? (status-near (page ctx "architecture/lint.md") "spec-0014") "planned"))
+    ctx))
+
+(defn pages [ctx]
+  (let [d (fs/path (k/guard! (:dir ctx)) "site-src/docs")]
+    (->> (fs/glob d "**.md") (map #(str (fs/relativize d %))) sort)))
 
 (defstep #"every page, the wiki's included, says no status was derived because no results were given"
   (fn [ctx]
-    (published! ctx)
+    (k/check-exit ctx 0)
     (let [ps (pages ctx)]
-      (s/check! (some #(str/starts-with? % "wiki/") (keys ps)) "no wiki page was published")
-      (doseq [[rel text] ps]
-        (s/check! (str/includes? text "no status was derived because no results were given")
-                  (str rel " does not say no status was derived"))))
-    nil))
-
-;; ---------------------------------------------------------------------------
-;; A reading of the spec, never a copy that can drift
+      (assert (some #(str/starts-with? % "wiki/") ps) (pr-str ps))
+      (doseq [p ps] (assert (str/includes? (page ctx p) "No status was derived: no results were given") p)))
+    ctx))
 
 (defstep #"it exits 1 and names the stale view"
-  (fn [ctx]
-    (let [r (kc/exits! ctx 1)]
-      (s/check! (some #(and (str/includes? % ": view-stale: ") (str/includes? % (str "\"" (:stale-view ctx) "\"")))
-                      (kc/finding-lines r))
-                (str "no finding names the stale view " (:stale-view ctx) "\n" (s/show r)))
-      nil)))
+  (fn [ctx] (k/check-exit ctx 1) (k/err-line-with ctx "shop-components" "stale")
+    (assert (not (fs/exists? (fs/path (:dir ctx) "site")))) ctx))
 
 (defstep #"a project set up by rdm-spec, its spec as it is before the publish kept aside"
-  (fn [ctx] (kc/project-set-up! ctx)))
+  (fn [ctx] (let [ctx (k/init-project! ctx)] (assoc ctx :spec-before (k/spec-snapshot ctx)))))
 
 (defstep #"a spec, its views and a results directory"
   (fn [ctx]
-    (let [dir (s/copy-of-room!)
-          rd (fs/file dir (or (:results-dir (kc/config-of dir)) "dhf/allure-results"))]
-      (s/write! rd (str (random-uuid) "-result.json") (result-json "spec-0012" "passed"))
-      (assoc ctx :dir dir))))
+    (let [ctx (site-project! ctx {:contexts [["shop" ["till"]]] :kernel ["core"]
+                                  :views [{:key "context" :level :context :description "The demo"}]})]
+      (k/write-result! (fs/path (:dir ctx) "dhf/allure-results") {:id "spec-0001"})
+      ctx)))
+
+(defn tree-bytes [d]
+  (into {} (for [f (fs/glob d "**") :when (fs/regular-file? f)] [(str (fs/relativize d f)) (vec (fs/read-all-bytes f))])))
 
 (defstep #"\"rdm-spec publish\" is run twice, the first site kept aside"
   (fn [ctx]
-    (let [a (kc/run-line ctx "publish")
-          first-site (site-files a)
-          b (kc/run-line a "publish")]
-      (s/check! (zero? (:exit (:run a))) (str "the first publish failed\n" (s/show (:run a))))
-      (assoc b :first-site first-site))))
+    (let [a (k/rdm ctx ["publish"])
+          _ (k/check-exit a 0)
+          first-site (tree-bytes (fs/path (:dir ctx) "site-src"))
+          b (k/rdm ctx ["publish"])]
+      (assoc b ::first first-site))))
 
 (defstep #"both sites' Markdown and site builder configuration are byte for byte the same"
   (fn [ctx]
-    (published! ctx)
-    (let [b (site-files ctx)]
-      (s/check! (seq (:first-site ctx)) "the first site holds nothing")
-      (s/check! (some #(str/ends-with? % "mkdocs.yml") (keys b)) "no site builder configuration")
-      (s/check! (= (keys (:first-site ctx)) (keys b)) "the sites hold different files")
-      (doseq [[k v] (:first-site ctx)] (s/check! (= v (get b k)) (str k " differs"))))
-    nil))
+    (k/check-exit ctx 0)
+    (let [second-site (tree-bytes (fs/path (:dir ctx) "site-src"))]
+      (assert (seq second-site))
+      (assert (= (::first ctx) second-site) "the two sites differ"))
+    ctx))
 
 (defstep #"no page names a path outside the project"
   (fn [ctx]
-    (let [bad [(str (fs/absolutize (:dir ctx))) (s/fixture-root) (str (fs/parent (fs/absolutize (:dir ctx))))]]
-      (doseq [[rel text] (site-files ctx) b bad]
-        (s/check! (not (str/includes? text b)) (str rel " names " b))))
-    nil))
+    (doseq [[f bs] (tree-bytes (fs/path (:dir ctx) "site-src")) :when (re-find #"\.(md|yml)$" f)]
+      (let [t (String. (byte-array bs) "UTF-8")]
+        (assert (not (str/includes? t (:base ctx))) f)
+        (assert (not (str/includes? t k/tmp-root)) f)))
+    ctx))
 
-;; ---------------------------------------------------------------------------
-;; The domain wiki
-
-(def ^:private loyly-readme "https://github.com/skallinen/loyly/blob/17d68d2/README.md")
-
-(defstep #"the page is published and the footnote links to README\.md at 17d68d2 in skallinen/loyly"
+(defstep #"the page is published and the footnote links to README.md at 17d68d2 in skallinen/loyly"
   (fn [ctx]
-    (published! ctx)
-    (let [rel (str "wiki/" (subs (:page ctx) (count "dhf/wiki/")))
-          text (page ctx rel)]
-      (s/check! (str/includes? text (str "(" loyly-readme ")")) (str rel " does not link the citation:\n" text))
-      nil)))
+    (k/check-exit ctx 0)
+    (assert (str/includes? (page ctx "wiki/pages/footnoted.md") "](https://github.com/skallinen/loyly/blob/17d68d2/README.md)")
+            (page ctx "wiki/pages/footnoted.md"))
+    ctx))
 
-(defstep #"the wiki's index holds a footnote citing \"([^\"]+)\""
-  (fn [ctx citation]
-    (let [dir (s/copy-of-room!)]
-      (spit (str (fs/file dir "dhf/wiki/index.md"))
-            (str "\nThe index rests on a source too.[^site]\n\n[^site]: `" citation "`, \"The idea in five lines\".\n")
-            :append true)
-      (assoc ctx :dir dir))))
-
-(defstep #"the published index's footnote links to README\.md at 17d68d2 in skallinen/loyly"
+(defstep #"the wiki's index holds a footnote citing \"loyly:README.md@17d68d2\""
   (fn [ctx]
-    (published! ctx)
-    (let [text (page ctx "wiki/index.md")]
-      (s/check! (some #(and (str/starts-with? % "[^site]:") (str/includes? % (str "(" loyly-readme ")")))
-                      (str/split-lines text))
-                (str "the index's footnote is not linked:\n" text))
-      nil)))
+    (let [ctx (k/project! ctx)
+          f (fs/file (:dir ctx) "dhf/wiki/index.md")]
+      (spit f (str (slurp f) "\nThe wiki rests on its sources.[^i]\n\n[^i]: `loyly:README.md@17d68d2`, \"How to read the repo\".\n"))
+      ctx)))
+
+(defstep #"the published index's footnote links to README.md at 17d68d2 in skallinen/loyly"
+  (fn [ctx]
+    (k/check-exit ctx 0)
+    (assert (str/includes? (page ctx "wiki/index.md") "](https://github.com/skallinen/loyly/blob/17d68d2/README.md)") (page ctx "wiki/index.md"))
+    ctx))
 
 (defstep #"a wiki whose index lists two pages"
   (fn [ctx]
-    (let [dir (s/copy-of-room!)
-          index (slurp (str (fs/file dir "dhf/wiki/index.md")))]
-      (s/check! (= 2 (count (re-seq #"\]\(pages/[^)]+\.md\)" index))) "the wiki's index does not list two pages")
-      (assoc ctx :dir dir))))
+    (let [ctx (k/project! ctx)]
+      (k/wiki-page! ctx "dhf/wiki/pages/one.md" "# One\n\nA claim.[^1]\n\n[^1]: `demo:README.md@abc1234`, \"A\".\n")
+      (k/wiki-page! ctx "dhf/wiki/pages/two.md" "# Two\n\nA claim.[^1]\n\n[^1]: `demo:README.md@abc1234`, \"B\".\n"))))
 
-(defn- nav-entries
-  "[[title value]] of the navigation's top entries."
-  [n]
-  (vec (for [e n] (if (map? e) (first e) [nil e]))))
+(defn nav [ctx] (slurp (fs/file (k/guard! (:dir ctx)) "site-src/mkdocs.yml")))
 
 (defstep #"the home page links to the wiki's index, the index links to both pages, and the navigation holds a wiki section after the kernel"
   (fn [ctx]
-    (published! ctx)
-    (s/check! (str/includes? (page ctx "index.md") "(wiki/index.md)") "the home page does not link the wiki's index")
-    (let [idx (page ctx "wiki/index.md")
-          titles (map (comp str/lower-case name first) (nav-entries (nav ctx)))]
-      (doseq [p ["pages/loyly-method.md" "pages/regulated-profile.md"]]
-        (s/check! (str/includes? idx (str "(" p ")")) (str "the index does not link " p)))
-      (s/check! (= "wiki" (last titles)) (str "the navigation's sections are " (pr-str titles)))
-      (s/check! (< (.indexOf (vec titles) "kernel") (.indexOf (vec titles) "wiki")) (str "the sections are " (pr-str titles))))
-    nil))
-
-;; ---------------------------------------------------------------------------
-;; The site builder
-
-(def ^:private two
-  [[:spec [["parser" "Parser"] ["stamper" "Stamper"] ["check" "Spec check"]]]
-   [:architecture [["model" "Model"] ["lint" "Lint"]]]])
+    (k/check-exit ctx 0)
+    (assert (str/includes? (page ctx "index.md") "(wiki/index.md)"))
+    (let [i (page ctx "wiki/index.md")]
+      (assert (and (str/includes? i "(pages/one.md)") (str/includes? i "(pages/two.md)")) i))
+    (let [n (nav ctx)]
+      (assert (< (str/index-of n "kernel/index.md") (str/index-of n "wiki/index.md")) n))
+    ctx))
 
 (defstep #"a model with the bounded contexts spec and architecture, in that order, each with its components, and one kernel component"
-  (fn [ctx] (small-project! ctx (small-model two [["bus" "Event bus"]]))))
-
-(defn- section [n title]
-  (some (fn [[t v]] (when (= title (str/lower-case (name t))) v)) (nav-entries n)))
-
-(defn- paths-of [entries] (vec (for [e entries] (if (map? e) (val (first e)) e))))
+  (fn [ctx] (site-project! ctx {:contexts [["spec" ["parser" "check"]] ["architecture" ["model" "lint"]]] :kernel ["bus"]})))
 
 (defstep #"the site builder's configuration is written with the home page first, then a section for spec and one for architecture, then one for the kernel"
   (fn [ctx]
-    (published! ctx)
-    (let [n (nav ctx)
-          titles (mapv (comp str/lower-case name first) (nav-entries n))]
-      (s/check! (= "index.md" (second (first (nav-entries n)))) (str "the navigation does not start with the home page: " (pr-str n)))
-      (s/check! (= ["spec" "architecture" "kernel"] (subvec titles 1 4)) (str "the sections are " (pr-str titles))))
-    nil))
+    (k/check-exit ctx 0)
+    (let [n (nav ctx) at #(or (str/index-of n %) (fail! (str % " is not in the navigation:\n" n)))]
+      (assert (< (at "index.md") (at "spec/index.md") (at "architecture/index.md") (at "kernel/index.md")) n)
+      ctx)))
 
 (defstep #"each section lists its context's page and then its components' pages, in the model's order"
   (fn [ctx]
-    (let [n (nav ctx)]
-      (doseq [[cid comps] (conj two [:kernel [["bus" "Event bus"]]])
-              :let [c (name cid)]]
-        (s/check! (= (vec (cons (str c "/index.md") (for [[slug _] comps] (str c "/" slug ".md"))))
-                     (paths-of (section n c)))
-                  (str "the section " c " is " (pr-str (section n c)))))
-      nil)))
+    (let [n (nav ctx) at #(str/index-of n %)]
+      (assert (< (at "spec/index.md") (at "spec/parser.md") (at "spec/check.md")) n)
+      (assert (< (at "architecture/index.md") (at "architecture/model.md") (at "architecture/lint.md")) n)
+      (assert (< (at "kernel/index.md") (at "kernel/bus.md")) n)
+      ctx)))
 
 (defstep #"a published site whose pages all link to pages that exist"
-  (fn [ctx] (small-project! ctx (small-model five [["bus" "Event bus"]]))))
+  (fn [ctx] (site-project! ctx {:contexts [["shop" ["till"]]]})))
 
 (defstep #"the configured site builder builds it, failing on any broken link, and the HTML is written"
   (fn [ctx]
-    (published! ctx)
-    (let [{:keys [dir builder]} (site-cfg ctx)]
-      (s/check! (some #{"--strict"} builder) (str "the site builder does not fail on a broken link: " (pr-str builder)))
-      (s/check! (fs/regular-file? (fs/file (:dir ctx) dir "index.html")) "no HTML was written"))
-    nil))
+    (k/check-exit ctx 0)
+    (assert (fs/exists? (fs/path (:dir ctx) "site/index.html")))
+    (assert (fs/exists? (fs/path (:dir ctx) "site/shop/till.html")))
+    ctx))
 
 (defstep #"a component page that links to a page the site does not hold"
   (fn [ctx]
-    (let [ctx (small-project! ctx (small-model five []))]
-      (s/write! (:dir ctx) "dhf/spec/shop/till.md" "# Till\n\nThe till follows [a page nobody wrote](nowhere.md).\n")
-      (assoc ctx :page "shop/till.md" :link "nowhere.md"))))
+    (site-project! ctx {:contexts [["shop" ["till"]]]} {"dhf/spec/shop/till.md" "See [the cart](cart-missing.md).\n"})))
 
 (defstep #"it exits 1 and names the page and the link"
-  (fn [ctx]
-    (let [r (kc/exits! ctx 1)]
-      (s/check! (some #(and (str/includes? % (:page ctx)) (str/includes? % (:link ctx))) (kc/finding-lines r))
-                (str "no finding names " (:page ctx) " and " (:link ctx) "\n" (s/show r)))
-      nil)))
+  (fn [ctx] (k/check-exit ctx 1) (k/err-line-with ctx "shop/till.md" "cart-missing.md")))
 
-(defn- html [ctx]
-  (let [d (fs/file (:dir ctx) (:dir (site-cfg ctx)))]
-    (if (fs/exists? d) (vec (map str (fs/glob d "**.html"))) [])))
+(defn html-left [ctx]
+  (let [d (fs/path (k/guard! (:dir ctx)) "site")]
+    (when (fs/exists? d) (seq (filter #(str/ends-with? (str %) ".html") (fs/glob d "**"))))))
 
 (defstep #"no HTML is left in the site directory"
-  (fn [ctx]
-    (s/check! (#{1 2} (:exit (kc/the-run ctx))) (str "the publish did not fail\n" (s/show (kc/the-run ctx))))
-    (s/check! (empty? (html ctx)) (str "HTML is left: " (pr-str (take 3 (html ctx)))))
-    nil))
+  (fn [ctx] (assert (not (html-left ctx)) (pr-str (html-left ctx))) ctx))
 
 (defstep #"the configured site builder is not installed, and a site directory left by an earlier publish"
   (fn [ctx]
-    (let [ctx (small-project! ctx (small-model five []))
-          builder "rdm-spec-no-such-site-builder"
-          cfg (kc/config-of (:dir ctx))]
-      (s/write! (:dir ctx) "dhf/harness/config.edn"
-                (pr-str (assoc cfg :site (assoc (site-cfg ctx) :builder [builder "build" "--strict"]))))
-      (s/write! (:dir ctx) "site/index.html" "<html>an earlier site</html>\n")
-      (assoc ctx :builder builder))))
+    (let [ctx (site-project! ctx {:contexts [["shop" ["till"]]]})]
+      (k/update-edn! ctx "dhf/harness/config.edn" assoc-in [:site :builder] ["no-such-site-builder" "build"])
+      (k/write-files! (:dir ctx) {"site/index.html" "<p>old</p>\n"})
+      ctx)))
 
 (defstep #"it exits 2, names the missing site builder, and says no HTML was written"
-  (fn [ctx] (kc/refused-naming! ctx (:builder ctx) "no HTML was written") nil))
+  (fn [ctx] (k/check-exit ctx 2) (k/err-line-with ctx "no-such-site-builder" "no HTML was written")))

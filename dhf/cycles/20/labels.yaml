@@ -1,0 +1,7 @@
+# What each fail of cycle 20 turned out to be (see 16/labels.yaml for the labels).
+- scenario: spec-0344
+  label: real
+  evidence: "run from the packaged jar, RDM_SPEC was 'bb -cp file:...rdm-spec.jar! -m ...', which does not start: the build derived it from a source classpath; only grading the jar could show it"
+- scenario: spec-0086
+  label: wording
+  evidence: "cut.yml runs on pushes to main while init's repository is on git's local default (master); 'the default branch' does not say whose default, and init does not name the branch"

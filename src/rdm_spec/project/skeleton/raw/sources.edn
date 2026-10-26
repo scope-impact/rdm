@@ -1,6 +1,0 @@
-;; The sources index: each raw source's repository, every pin ever cited and
-;; its fenced paths, keyed by the id citations use:
-;;
-;;   :source-id {:repository "https://..." :record "source-id.md"
-;;               :pins ["commit"] :fenced ["path"]}
-{}

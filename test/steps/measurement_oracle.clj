@@ -1,125 +1,89 @@
 (ns steps.measurement-oracle
-  "Step definitions for dhf/spec/measurement/oracle.feature: `rdm-spec
-  oracle [ARGS]`, and the oracle as the gate of fence and verify, on a cycle
-  project (steps.measurement-cycle) whose configuration's :oracle names a
-  small command the step writes into the project, never the room's oracle.
-
-  The fixture oracle, dhf/harness/oracle/oracle.clj of the project, records
-  what it was run with (its directory, arguments and RDM_SPEC) in a file
-  outside the project, prints its answer and exits as the step says.
-
-  Context keys set here: :dir (the project), :room, :record (the file the
-  oracle records into), :finding (the line the oracle prints on its error
-  stream)."
+  "Step definitions of dhf/spec/measurement/oracle.feature. Each fixture's
+  oracle is a small command the scenario writes; the real one is never run."
   (:require [babashka.fs :as fs]
-            [babashka.process :as p]
-            [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-command :as kc]
-            [steps.measurement-cycle :as mc]
-            [steps.support :as s]))
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
+            [steps.kernel-command :as k]))
 
-(def oracle-rel "dhf/harness/oracle/oracle.clj")
-
-(def finding "oracle-differs: :verification/verify \"a case\": at [:exit] the golden holds 0 and the instrument gives 1")
-
-(defn- oracle-text [record exit]
-  (str "(spit " (pr-str record) " (pr-str {:dir (System/getProperty \"user.dir\") :args (vec *command-line-args*)"
-       " :rdm-spec (System/getenv \"RDM_SPEC\")}))\n"
-       "(println (pr-str {:oracle {:differences " (if (zero? exit) 0 1) "}}))\n"
-       "(binding [*out* *err*] (println " (pr-str (if (zero? exit) "the oracle judged 1 case" finding)) "))\n"
+(defn oracle-script
+  "An oracle that records its directory, arguments and RDM_SPEC under `rec`,
+  prints `out` and `err`, and exits `exit`."
+  [rec out err exit]
+  (str "(require '[babashka.fs :as fs])\n"
+       "(spit \"" rec "/cwd\" (str (fs/absolutize \".\")))\n"
+       "(spit \"" rec "/args\" (pr-str (vec *command-line-args*)))\n"
+       "(spit \"" rec "/rdm-spec\" (str (System/getenv \"RDM_SPEC\")))\n"
+       "(print " (pr-str out) ") (flush)\n"
+       "(binding [*out* *err*] (print " (pr-str err) ") (flush))\n"
        "(System/exit " exit ")\n"))
 
-(defn- project!
-  "ctx with a cycle project cut spec-3, cycle 03 declared, a passing room,
-  and :oracle `oracle` (nil: none) in its configuration."
-  [ctx oracle exit]
-  (let [dir (mc/project! {mc/lint-feature mc/default-scenarios})
-        cfg (kc/config-of dir)
-        record (str (fs/file (s/tmp-dir) "oracle-run.edn"))]
-    (s/write! dir "dhf/harness/config.edn"
-              (str (pr-str (cond-> (assoc cfg :verify [{:kind :tests :command ["bb" "test.clj"]}]
-                                          :allure {:labels {"spec" :scenario-id}})
-                             oracle (assoc :oracle oracle)))
-                   "\n"))
-    (s/write! dir oracle-rel (oracle-text record exit))
-    (mc/cut! dir "spec-3")
-    (s/hooks-off! dir)
-    (mc/write-cycle! dir "03" {})
-    (assoc ctx :dir dir :record record :finding finding
-           :room (mc/passing-room! ["spec-0012" "spec-0014"]))))
+(defn oracle-project!
+  ([ctx] (oracle-project! ctx "{:oracle {:differences 0}}\n" "note: 0 cases differ\n" 0))
+  ([ctx out err exit]
+   (let [ctx (k/project! ctx)
+         rec (k/path-in ctx "oracle-record")]
+     (fs/create-dirs rec)
+     (k/write-files! (:dir ctx) {"dhf/harness/oracle/oracle.clj" (oracle-script rec out err exit)})
+     (k/update-edn! ctx "dhf/harness/config.edn" assoc :oracle {:command ["bb" "dhf/harness/oracle/oracle.clj"]})
+     (assoc ctx ::rec rec ::out out ::err err))))
 
-(defn- recorded [ctx]
-  (let [f (:record ctx)]
-    (s/check! (fs/exists? f) (str "the oracle did not run\n" (s/show (kc/the-run ctx))))
-    (edn/read-string (slurp f))))
+(defn recorded [ctx k] (let [f (fs/file (::rec ctx) k)] (when (fs/exists? f) (slurp f))))
 
-;; ---------------------------------------------------------------------------
-
-(defstep #"a configuration whose :oracle is \{:command \[\"bb\" \"dhf/harness/oracle/oracle\.clj\"\]\}, a command that prints \{:oracle \{:differences 0\}\} and exits 0"
-  (fn [ctx] (project! ctx {:command ["bb" oracle-rel]} 0)))
+(defstep #"a configuration whose :oracle is \{:command \[\"bb\" \"dhf/harness/oracle/oracle.clj\"\]\}, a command that prints \{:oracle \{:differences 0\}\} and exits 0"
+  (fn [ctx] (oracle-project! ctx)))
 
 (defstep #"it runs the command in the project's root, prints its standard output and error stream unchanged, and exits as it exits"
   (fn [ctx]
-    (let [r (kc/exits! ctx 0)]
-      (s/check! (= (str (fs/canonicalize (:dir ctx))) (str (fs/canonicalize (:dir (recorded ctx)))))
-                (str "the oracle ran in " (:dir (recorded ctx))))
-      (s/check! (= "{:oracle {:differences 0}}\n" (:out r)) (str "standard output is not the oracle's\n" (s/show r)))
-      (s/check! (= "the oracle judged 1 case\n" (:err r)) (str "the error stream is not the oracle's\n" (s/show r)))
-      nil)))
+    (k/check-exit ctx 0)
+    (assert (= (str (fs/canonicalize (:dir ctx))) (str (fs/canonicalize (recorded ctx "cwd")))))
+    (assert (= (::out ctx) (:out ctx)) (:out ctx))
+    (assert (= (::err ctx) (:err ctx)) (:err ctx))
+    ctx))
 
 (defstep #"a configuration whose :oracle names a command"
-  (fn [ctx] (project! ctx {:command ["bb" oracle-rel]} 0)))
+  (fn [ctx] (oracle-project! ctx)))
 
 (defstep #"the command runs with the arguments record, --reason and the spec grew, in that order"
   (fn [ctx]
-    (kc/exits! ctx 0)
-    (s/check! (= ["record" "--reason" "the spec grew"] (:args (recorded ctx))) (str "the arguments were " (pr-str (:args (recorded ctx)))))
-    nil))
+    (k/check-exit ctx 0)
+    (assert (= "[\"record\" \"--reason\" \"the spec grew\"]" (recorded ctx "args")) (recorded ctx "args"))
+    ctx))
 
 (defstep #"the command runs with the environment variable RDM_SPEC set to a command line that runs this same rdm-spec, so the oracle judges the instrument that is about to gate"
   (fn [ctx]
-    (kc/exits! ctx 0)
-    (let [line (:rdm-spec (recorded ctx))
-          _ (s/check! (not (str/blank? line)) "RDM_SPEC is not set")
-          words (str/split line #"\s+")
-          cp (second (drop-while #(not= "-cp" %) words))
-          r (apply p/shell {:dir (str (:dir ctx)) :out :string :err :string :continue true :in ""} (concat words ["help"]))]
-      (s/check! (and cp (= (str (fs/canonicalize (fs/file s/room-root "src"))) (str (fs/canonicalize cp))))
-                (str "RDM_SPEC runs the code of " cp ", not of this room: " line))
-      (s/check! (and (zero? (:exit r)) (str/starts-with? (:out r) "{:help")) (str "RDM_SPEC help did not answer: " (pr-str r)))
-      nil)))
-
-(defstep #"a configuration whose :oracle names the command \[\"no-such-oracle\"\]"
-  (fn [ctx] (project! ctx {:command ["no-such-oracle"]} 0)))
-
-(defstep #"it exits 2 and names the command"
-  (fn [ctx] (kc/refused-naming! ctx "no-such-oracle") nil))
-
-(defstep #"a project whose configured oracle command exits 1, printing a finding on its error stream"
-  (fn [ctx] (project! ctx {:command ["bb" oracle-rel]} 1)))
-
-(defstep #"it exits 1, prints the oracle's findings unchanged, and (builds no room|writes no ratified\.edn)"
-  (fn [ctx does]
-    (let [r (kc/exits! ctx 1)]
-      (s/check! (some #{(:finding ctx)} (s/err-lines r)) (str "the oracle's finding is not printed unchanged\n" (s/show r)))
-      (s/check! (fs/exists? (:record ctx)) "the oracle did not run")
-      (case does
-        "builds no room" (s/check! (not (fs/exists? (fs/file (:room ctx) ".git"))) "a room was built")
-        "writes no ratified.edn" (s/check! (not (fs/exists? (fs/file (:dir ctx) "dhf/cycles/03/ratified.edn"))) "ratified.edn was written"))
-      nil)))
-
-(defstep #"a project whose configuration names no :oracle"
-  (fn [ctx]
-    (let [ctx (project! ctx nil 0)]
-      (s/check! (not (contains? (kc/config-of (:dir ctx)) :oracle)) "the configuration names an :oracle")
+    (k/check-exit ctx 0)
+    (let [words (str/split (str/trim (recorded ctx "rdm-spec")) #" ")
+          r (apply k/sh (:dir ctx) {} (concat words ["help"]))]
+      (assert (= 0 (:exit r)) (pr-str words r))
+      (assert (str/starts-with? (:out r) "{:help") (:out r))
+      (assert (some #(str/includes? % (str k/room "/src")) words) (pr-str words))
       ctx)))
 
-(defstep #"it exits 0 and says there is no oracle to run"
+(defstep #"a configuration whose :oracle names the command \[\"no-such-oracle\"\]"
   (fn [ctx]
-    (let [r (kc/exits! ctx 0)]
-      (s/check! (str/includes? (pr-str (kc/stdout-edn r)) "no oracle to run") (str "it does not say so\n" (s/show r)))
-      (s/check! (str/blank? (:err r)) (str "it said so on the error stream\n" (s/show r)))
-      (s/check! (not (fs/exists? (:record ctx))) "an oracle ran")
-      nil)))
+    (let [ctx (k/project! ctx)]
+      (k/update-edn! ctx "dhf/harness/config.edn" assoc :oracle {:command ["no-such-oracle"]}))))
+
+(defstep #"it exits 2 and names the command"
+  (fn [ctx] (k/check-exit ctx 2) (k/err-has ctx "no-such-oracle")))
+
+(defstep #"a project whose configured oracle command exits 1, printing a finding on its error stream"
+  (fn [ctx]
+    (let [ctx (k/cycle-ready! (oracle-project! ctx "{:oracle {:differences 1}}\n" "dhf/harness/oracle/cases/x: differs: :exit 1 where 0 was recorded\n" 1))]
+      (k/tag-cut! ctx "spec-3"))))
+
+(defstep #"it exits 1, prints the oracle's findings unchanged, and (builds no room|writes no ratified.edn)"
+  (fn [ctx what]
+    (k/check-exit ctx 1)
+    (assert (str/includes? (:err ctx) (::err ctx)) (:err ctx))
+    (if (= what "builds no room")
+      (assert (not (fs/exists? (fs/path (k/guard! (get-in ctx [:ph "ROOM"])) ".git"))) "a room was built")
+      (assert (not (fs/exists? (fs/file (:dir ctx) "dhf/cycles/03/ratified.edn"))) "ratified.edn was written"))
+    ctx))
+
+(defstep #"a project whose configuration names no :oracle"
+  (fn [ctx] (k/project! ctx)))
+
+(defstep #"it exits 0 and says there is no oracle to run"
+  (fn [ctx] (k/check-exit ctx 0) (assert (str/includes? (:out ctx) "no oracle to run") (:out ctx)) ctx))

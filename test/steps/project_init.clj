@@ -1,130 +1,141 @@
 (ns steps.project-init
-  "Step definitions for dhf/spec/project/init.feature: `rdm-spec init` in a
-  new empty directory of the scenario's own (:dir). Context keys: see
-  steps.project-support; :placeholders {\"DIR\" dir} for an absolute path."
+  "Step definitions of dhf/spec/project/init.feature, and the project
+  context's helpers."
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-command :as kc]
-            [steps.project-support :as ps]
-            [steps.support :as s]))
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
+            [steps.kernel-command :as k]))
 
-(defn- empty-dir [ctx]
-  (if (:dir ctx) ctx (assoc ctx :dir (s/tmp-dir))))
+(def skeleton
+  ["dhf/spec/model.edn" "dhf/spec/events.edn" "dhf/spec/needs.edn" "dhf/spec/ids.edn" "dhf/spec/glossary.md"
+   "dhf/spec/README.md" "dhf/harness/config.edn" "dhf/harness/stack.md" "dhf/raw/README.md" "dhf/raw/sources.edn"
+   "dhf/wiki/index.md" "dhf/decisions/README.md" ".githooks/pre-commit" ".github/workflows/cut.yml" ".gitignore"])
 
-(defn- at [ctx p] (str (fs/file (:dir ctx) p)))
+(defn tree
+  "Every file under dir, but .git, relative, sorted."
+  [dir]
+  (->> (fs/glob dir "**" {:hidden true})
+       (filter #(or (fs/regular-file? %) (fs/sym-link? %)))
+       (map #(str (fs/relativize dir %)))
+       (remove #(str/starts-with? % ".git/"))
+       sort vec))
 
-;; ---------------------------------------------------------------------------
-;; Init starts a project from nothing
+(defn in-base
+  "Commands run in the scenario's own directory: init makes the project."
+  [ctx]
+  (let [ctx (k/base! ctx)] (if (:dir ctx) ctx (assoc ctx :dir (:base ctx)))))
 
-(defstep #"no directory at the path \"([^\"]+)\""
-  (fn [ctx p]
-    (let [ctx (empty-dir ctx)]
-      (s/check! (not (fs/exists? (at ctx p))) (str p " exists"))
-      (assoc ctx :target p))))
+(defn sauna [ctx] (str (fs/path (k/guard! (:dir ctx)) "sauna")))
 
-(def ^:private default-mapping-forms
-  "rdm-spec's default Allure mapping, as spec-0333 states it."
-  {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row
-   :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags}
-   :links {:need {:type "issue" :url "dhf/spec/needs.edn#{id}"}} :evidence {}})
+(defn read-edn-file [d p] (edn/read-string (slurp (fs/file d p))))
 
-(defn- readme-states-the-mapping! [dir]
-  (let [text (slurp (str (fs/file dir "dhf/spec/README.md")))
-        forms (for [[_ body] (re-seq #"(?s)```edn\n(.*?)```" text)]
-                (try (edn/read-string body) (catch Exception _ nil)))]
-    (s/check! (str/includes? text "`epic`") "dhf/spec/README.md does not name the Allure element epic")
-    (s/check! (some #{default-mapping-forms} forms)
-              (str "dhf/spec/README.md does not state rdm-spec's default Allure mapping, as an edn block:\n"
-                   (pr-str default-mapping-forms)))
-    (s/check! (str/includes? text ":allure") "dhf/spec/README.md does not say a configuration's :allure may replace it")))
+(defn check-skeleton
+  "Asserts dir holds exactly the skeleton, each file what the table says."
+  [dir]
+  (assert (= (sort skeleton) (tree dir)) (pr-str (tree dir)))
+  (let [m (read-edn-file dir "dhf/spec/model.edn")
+        cfg (read-edn-file dir "dhf/harness/config.edn")
+        txt #(slurp (fs/file dir %))]
+    (assert (:system m) "the model holds the system")
+    (assert (every? empty? (vals (dissoc m :system))) (pr-str m))
+    (assert (= {} (read-edn-file dir "dhf/spec/events.edn")))
+    (assert (= {} (read-edn-file dir "dhf/spec/needs.edn")))
+    (assert (= {:issued 0} (read-edn-file dir "dhf/spec/ids.edn")))
+    (assert (= {} (read-edn-file dir "dhf/raw/sources.edn")))
+    (doseq [s ["historyId" "subSuite" "statusDetails" "framework" "planned" "dhf/spec/needs.edn#" ":allure" ":epic :context"]]
+      (assert (str/includes? (txt "dhf/spec/README.md") s) (str "the spec README does not hold " s)))
+    (assert (string? (:id-prefix cfg)))
+    (doseq [k [:spec-dir :ledger :model :events :needs :views-dir :raw-dir :wiki-dir :results-dir :cycles-dir]]
+      (assert (contains? cfg k) (str "the configuration lacks " k)))
+    (assert (= true (get-in cfg [:clean-room :deny :implementation])))
+    (assert (= ["dhf/cycles"] (get-in cfg [:clean-room :deny :measurements])))
+    (assert (some #{"site"} (get-in cfg [:clean-room :deny :generated])))
+    (assert (= #{".gitignore" ".githooks" ".github" "dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"}
+               (set (get-in cfg [:clean-room :keep]))))
+    (assert (= {:watch ["/" "~"] :tmp "/tmp"} (:agency cfg)))
+    (assert (= [:tests] (map :kind (:verify cfg))))
+    (assert (nil? (:command (first (:verify cfg)))))
+    (assert (empty? (:implementation cfg)))
+    (assert (not (str/includes? (txt "dhf/harness/stack.md") "| Clojure")))
+    (assert (str/includes? (txt ".githooks/pre-commit") "rdm-spec check"))
+    (assert (= ".githooks" (k/git-config dir "core.hooksPath")))
+    (assert (str/includes? (txt ".github/workflows/cut.yml") "rdm-spec cut"))
+    (assert (str/includes? (txt ".github/workflows/cut.yml") "push"))
+    (assert (= #{"dhf/allure-results/" "dhf/cycles/*/results/" "dhf/cycles/*/build/" "site-src/" "site/"}
+               (set (remove #(or (str/blank? %) (str/starts-with? % "#")) (str/split-lines (txt ".gitignore"))))))))
 
-(defstep #"\"([^\"]+)\" is a git repository with no commit yet, whose working tree holds exactly:"
-  (fn [ctx p _table]
-    (kc/exits! ctx 0)
-    (let [dir (at ctx p)]
-      (ps/skeleton-at! dir)
-      (s/check! (not (zero? (:exit (ps/git dir {} "rev-parse" "-q" "--verify" "HEAD")))) (str p " has a commit"))
-      (readme-states-the-mapping! dir)
-      nil)))
+(defstep #"no directory at the path \"sauna\""
+  (fn [ctx] (in-base ctx)))
+
+(defstep #"\"sauna\" is a git repository with no commit yet, whose working tree holds exactly:"
+  (fn [ctx table]
+    (k/check-exit ctx 0)
+    (let [d (sauna ctx)]
+      (assert (= (sort skeleton) (sort (map first (rest table)))) "the table and the skeleton differ")
+      (assert (fs/directory? (fs/path d ".git")))
+      (assert (not= 0 (:exit (k/sh d {} "git" "rev-parse" "--verify" "HEAD"))) "a commit was made")
+      (check-skeleton d)
+      ctx)))
 
 (defstep #"init lists every file it wrote and the next steps"
   (fn [ctx]
-    (let [out (ps/result-of (kc/exits! ctx 0) :init)]
-      (s/check! (= (ps/skeleton-paths) (set (:wrote out))) (str "init lists " (pr-str (:wrote out))))
-      (s/check! (and (seq (:next-steps out)) (every? string? (:next-steps out)))
-                (str "init names no next steps: " (pr-str out)))
-      nil)))
+    (let [r (:init (k/edn-out ctx))]
+      (assert (= (sort skeleton) (sort (:wrote r))) (pr-str r))
+      (assert (seq (:next r)))
+      ctx)))
 
 (defstep #"no directory at DIR/sauna"
-  (fn [ctx]
-    (let [d (s/tmp-dir)]
-      (assoc-in (empty-dir ctx) [:placeholders "DIR"] d))))
+  (fn [ctx] (-> (in-base ctx) (k/placeholder! "DIR"))))
 
 (defstep #"DIR/sauna is a git repository holding the skeleton"
   (fn [ctx]
-    (kc/exits! ctx 0)
-    (ps/skeleton-at! (str (fs/file (get-in ctx [:placeholders "DIR"]) "sauna")))
-    nil))
+    (k/check-exit ctx 0)
+    (check-skeleton (str (fs/path (get-in ctx [:ph "DIR"]) "sauna")))
+    ctx))
 
-(defstep #"a directory at the path \"([^\"]+)\""
-  (fn [ctx p]
-    (let [ctx (empty-dir ctx)]
-      (s/write! (at ctx p) "notes.md" "kept\n")
-      (assoc ctx :target p :before (ps/files-of (at ctx p))))))
+(defstep #"a directory at the path \"sauna\""
+  (fn [ctx]
+    (let [ctx (in-base ctx)]
+      (k/write-files! (sauna ctx) {"notes.txt" "mine\n"})
+      (assoc ctx ::before (tree (sauna ctx))))))
 
 (defstep #"it exits 2 and names the path"
-  (fn [ctx] (kc/refused-naming! ctx (:target ctx)) nil))
+  (fn [ctx] (k/check-exit ctx 2) (k/err-has ctx "sauna")))
 
-(defstep #"nothing in \"([^\"]+)\" changes"
-  (fn [ctx p]
-    (s/check! (= (:before ctx) (ps/files-of (at ctx p))) (str p " changed"))
-    nil))
+(defstep #"nothing in \"sauna\" changes"
+  (fn [ctx]
+    (assert (= (::before ctx) (tree (sauna ctx))))
+    (assert (= "mine\n" (slurp (fs/file (sauna ctx) "notes.txt"))))
+    ctx))
 
-(defn- prefix-of [ctx]
-  (let [r (kc/exits! ctx 0)]
-    (:id-prefix (edn/read-string (slurp (at ctx "sauna/dhf/harness/config.edn"))))))
+(defstep #"the harness configuration sets the id prefix to \"sauna\""
+  (fn [ctx]
+    (k/check-exit ctx 0)
+    (assert (= "sauna" (:id-prefix (read-edn-file (sauna ctx) "dhf/harness/config.edn"))))
+    ctx))
 
-(defstep #"the harness configuration sets the id prefix to \"([^\"]+)\""
-  (fn [ctx p]
-    (s/check! (= p (prefix-of ctx)) (str "the id prefix is " (pr-str (prefix-of ctx))))
-    nil))
-
-(defstep #"it sets the id prefix to \"([^\"]+)\""
-  (fn [ctx p]
-    (s/check! (= p (prefix-of ctx)) (str "the id prefix is " (pr-str (prefix-of ctx))))
-    nil))
+(defstep #"it sets the id prefix to \"spec\""
+  (fn [ctx]
+    (k/check-exit ctx 0)
+    (assert (= "spec" (:id-prefix (read-edn-file (sauna ctx) "dhf/harness/config.edn"))))
+    ctx))
 
 (defstep #"it exits 2 and says a prefix starts with a letter and holds letters, digits and single hyphens"
-  (fn [ctx]
-    (kc/refused-naming! ctx "starts with a letter" "letters, digits and single hyphens")
-    (s/check! (not (fs/exists? (at ctx "sauna"))) "init wrote sauna")
-    nil))
+  (fn [ctx] (k/check-exit ctx 2) (k/err-line-with ctx "starts with a letter" "letters, digits and single hyphens")
+    (assert (not (fs/exists? (sauna ctx)))) ctx))
 
 (defstep #"it exits 2 and says the prefix UN is taken by need tags"
+  (fn [ctx] (k/check-exit ctx 2) (k/err-line-with ctx "UN" "need tags")
+    (assert (not (fs/exists? (sauna ctx)))) ctx))
+
+(defstep #"a project just initialised at \"sauna\""
   (fn [ctx]
-    (kc/refused-naming! ctx "UN" "need tags")
-    (s/check! (not (fs/exists? (at ctx "sauna"))) "init wrote sauna")
-    nil))
+    (let [ctx (in-base ctx)
+          r (k/rdm ctx ["init" "sauna"])]
+      (k/check-exit r 0)
+      (k/git (sauna ctx) "config" "core.hooksPath" "/dev/null")
+      ctx)))
 
-;; ---------------------------------------------------------------------------
-;; A new project is green before anything is written in it
-
-(defstep #"a project just initialised at \"([^\"]+)\""
-  (fn [ctx p]
-    (let [parent (s/tmp-dir)
-          r (kc/run! ctx parent ["init" p])]
-      (s/check! (zero? (:exit r)) (str "rdm-spec init failed\n" (s/show r)))
-      (s/hooks-off! (str (fs/file parent p)))
-      (assoc ctx :dir parent :target p))))
-
-(defstep #"\"rdm-spec ([^\"]*)\" is run in \"([^\"]+)\""
-  (fn [ctx line p]
-    (kc/run-line (assoc ctx :dir (at ctx p)) line)))
-
-;; ---------------------------------------------------------------------------
-;; The project context's When in a repository a Given made (adopt.feature)
-
-(defstep #"\"rdm-spec ([^\"]*)\" is run in it(?: again)?"
-  (fn [ctx line] (kc/run-line ctx line)))
+(defstep #"\"rdm-spec check\" is run in \"sauna\""
+  (fn [ctx] (k/rdm ctx (sauna ctx) ["check"])))

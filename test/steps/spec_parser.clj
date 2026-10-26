@@ -1,126 +1,83 @@
 (ns steps.spec-parser
-  "Step definitions for dhf/spec/spec/parser.feature: `rdm-spec check` on a
-  spec project (steps.spec-support) holding the feature file a step writes,
-  and `rdm-spec checklist` on a cycle project whose cut and working tree
-  differ.
-
-  A cycle project here is a copy of the room (its configuration without
-  :oracle) whose spec holds only the lint's feature file, a git repository
-  tagged spec-3 at the cut. Its helpers are this file's own (copied, as the
-  spec asks of a helper needed from elsewhere).
-
-  Context keys set here: :dir, :file (the feature file written), :line (the
-  line a Then names), :keyword (the keyword refused), :cut-ids (the ids of
-  the scenarios at the cut)."
+  "Step definitions of dhf/spec/spec/parser.feature."
   (:require [babashka.fs :as fs]
-            [babashka.process :as p]
             [cheshire.core :as json]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-command :as kc]
-            [steps.spec-support :as sp]
-            [steps.support :as s]))
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
+            [steps.kernel-command :as k]))
 
-;; ---------------------------------------------------------------------------
-;; The spec is read at a revision
-
-(def ^:private lint-feature "dhf/spec/architecture/lint.feature")
-
-(defn- git! [dir & args]
-  (let [r (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""
-                          :extra-env {"GIT_AUTHOR_NAME" "steps" "GIT_AUTHOR_EMAIL" "steps@rdm-spec.invalid"
-                                      "GIT_COMMITTER_NAME" "steps" "GIT_COMMITTER_EMAIL" "steps@rdm-spec.invalid"}}
-                 "git" (map str args))]
-    (s/check! (zero? (:exit r)) (str "git " (str/join " " args) " failed in " dir ": " (:err r)))
-    (str/trim (:out r))))
-
-(defn- lint-text [n]
-  (str "# A fixture feature file of the parser's steps.\n\n@UN-005\nFeature: Lint\n  A fixture.\n"
-       (str/join (for [i (range 1 (inc n))]
-                   (format "\n  @spec-%04d @e2e\n  Scenario: Scenario number %d\n    Given a model\n    Then it passes\n" i i)))))
-
-(defstep #"dhf/cycles/03/cycle\.edn names the cut spec-3 and the scope :project"
-  (fn [ctx]
-    (let [dir (s/copy-of-room!)]
-      (doseq [f (fs/glob (fs/file dir "dhf/spec") "**.feature")] (fs/delete f))
-      (s/write! dir "dhf/cycles/03/cycle.edn"
-                (pr-str {:cut "spec-3" :scope :project
-                         :builder {:name "builder-a" :actor :agent}
-                         :grader {:name "grader-b" :actor :agent}
-                         :spec-owner {:name "Sami" :actor :human}}))
-      (assoc ctx :dir dir))))
+(defn n-scenarios [n]
+  (k/feature-text {:name "Core" :tags ["UN-001"]
+                   :scenarios (for [i (range 1 (inc n))] (k/sc i (str "Scenario " i)))}))
 
 (defstep #"the spec at spec-3 holds 12 stamped scenarios and the working tree's spec holds 13"
   (fn [ctx]
-    (let [dir (:dir ctx)]
-      (s/write! dir lint-feature (lint-text 12))
-      (git! dir "init" "-q")
-      (git! dir "config" "commit.gpgsign" "false")
-      (git! dir "add" "-A" "-f" "--" ".")
-      (git! dir "commit" "-q" "--no-verify" "-m" "the cut spec-3")
-      (git! dir "tag" "spec-3")
-      (s/write! dir lint-feature (lint-text 13))
-      (assoc ctx :cut-ids (mapv #(format "spec-%04d" %) (range 1 13))))))
+    (let [ctx (k/project! ctx)]
+      (k/write-files! (:dir ctx) {"dhf/spec/kernel/core.feature" (n-scenarios 12)})
+      (k/tag-cut! ctx "spec-3")
+      (k/write-files! (:dir ctx) {"dhf/spec/kernel/core.feature" (n-scenarios 13)})
+      ctx)))
+
+(defn checklist [ctx]
+  (let [f (fs/file (k/guard! (:dir ctx)) "dhf/cycles/03/checklist.json")]
+    (when-not (fs/exists? f) (fail! (str "no checklist was written: " (:err ctx))))
+    (json/parse-string (slurp f))))
 
 (defstep #"the checklist holds the 12 scenarios of spec-3"
   (fn [ctx]
-    (let [r (kc/exits! ctx 0)
-          f (fs/file (:dir ctx) "dhf/cycles/03/checklist.json")
-          _ (s/check! (fs/exists? f) (str "no checklist.json\n" (s/show r)))
-          cl (json/parse-string (slurp (str f)) true)
-          ids (sort (map :id (concat (:items cl) (:planned cl))))]
-      (s/check! (= (:cut-ids ctx) ids) (str "the checklist holds " (pr-str ids)))
-      nil)))
+    (k/check-exit ctx 0)
+    (let [items (get (checklist ctx) "items")]
+      (assert (= (for [i (range 1 13)] (format "spec-%04d" i)) (map #(get % "id") items)) (pr-str items))
+      ctx)))
 
-;; ---------------------------------------------------------------------------
-;; The declared subset
+(def every-construct
+  "# A comment
+@UN-001
+Feature: Every construct
+  A description of the feature.
 
-(def ^:private every-construct
-  (str "# Every construct of the subset.\n\n"
-       "@UN-001\nFeature: Desk\n  Every construct the subset declares.\n\n"
-       "  Background:\n    Given a desk\n\n"
-       "  @spec-0001 @e2e\n  Scenario: A plain scenario\n    Given a thing\n    When it is used\n"
-       "    Then it holds\n    And it stays\n    But it never breaks\n\n"
-       "  @UN-002\n  Rule: A rule of the desk\n\n"
-       "    Background:\n      Given a rule's desk\n\n"
-       "    # A comment in a rule.\n"
-       "    @spec-0002 @contract\n    Scenario: A doc string and a table\n"
-       "      Given a text:\n        \"\"\"\n        some text\n        \"\"\"\n"
-       "      And a table:\n        | a | b |\n        | 1 | 2 |\n\n"
-       "    @spec-0003 @e2e\n    Scenario Outline: An outline over <n>\n      Given the number <n>\n\n"
-       "      Examples:\n        | n |\n        | 1 |\n        | 2 |\n"))
+  Background:
+    Given a background step
+
+  Rule: A rule
+
+    @spec-0001 @e2e
+    Scenario: A scenario
+      Given a step with a doc string
+        \"\"\"
+        some text
+        \"\"\"
+      When a step with a table
+        | a | b |
+        | 1 | 2 |
+      Then it holds
+      And it also holds
+      But not this
+
+    # another comment
+    @spec-0002 @contract
+    Scenario Outline: An outline <x>
+      Given the value <x>
+
+      Examples:
+        | x |
+        | 1 |
+        | 2 |
+")
 
 (defstep #"a stamped feature file using Feature, Background, Rule, Scenario, Scenario Outline, Examples, Given, When, Then, And, But, tags, comments, doc strings and data tables"
   (fn [ctx]
-    (let [dir (sp/spec-project! {:features {"desk" every-construct} :ledger 3})]
-      (assoc ctx :dir dir :file (sp/feature-rel "desk")))))
+    (k/project! ctx {:features {"dhf/spec/kernel/core.feature" every-construct}})))
 
-(defstep #"a feature file containing a line starting with \"([^\"]+):\""
-  (fn [ctx kw]
-    (let [text (str "@UN-001\nFeature: Desk\n  A fixture.\n\n"
-                    "  @spec-0001 @e2e\n  Scenario: A known one\n    Given a thing\n\n"
-                    "  " kw ": An unknown one\n    Given a thing\n")
-          dir (sp/spec-project! {:features {"desk" text} :ledger 1})]
-      (assoc ctx :dir dir :file (sp/feature-rel "desk") :line (sp/line-of text (str kw ":")) :keyword kw))))
-
-(defstep #"it fails and names the file, the line number and the keyword"
+(defstep #"a feature file containing a line starting with \"Scenario Template:\""
   (fn [ctx]
-    (let [r (kc/exits! ctx 1)
-          l (sp/finding-naming (kc/finding-lines r) [(str (:file ctx) ":" (:line ctx) ": ") (:keyword ctx)])]
-      (s/check! l (str "no finding names " (:file ctx) ":" (:line ctx) " and " (:keyword ctx) "\n" (s/show r)))
-      nil)))
+    (-> (k/project! ctx {:features {"dhf/spec/kernel/core.feature"
+                                    "@UN-001\nFeature: Core\n\n  @spec-0001 @e2e\n  Scenario Template: Old\n    Given a step\n"}})
+        (k/names+ "dhf/spec/kernel/core.feature:5" "Scenario Template:"))))
 
 (defstep #"a feature file with two Feature lines"
   (fn [ctx]
-    (let [text (str "@UN-001\nFeature: Desk\n  A fixture.\n\n"
-                    "  @spec-0001 @e2e\n  Scenario: One\n    Given a thing\n\n"
-                    "Feature: Another desk\n  A second feature.\n")
-          dir (sp/spec-project! {:features {"desk" text} :ledger 1})]
-      (assoc ctx :dir dir :file (sp/feature-rel "desk") :line (sp/line-of text "Feature: Another")))))
+    (-> (k/project! ctx {:features {"dhf/spec/kernel/core.feature"
+                                    (str (n-scenarios 1) "\nFeature: Again\n")}})
+        (k/names+ "dhf/spec/kernel/core.feature:9"))))
 
-(defstep #"it fails and names the file and the line of the second Feature"
-  (fn [ctx]
-    (let [r (kc/exits! ctx 1)]
-      (s/check! (some #(str/starts-with? % (str (:file ctx) ":" (:line ctx) ": ")) (kc/finding-lines r))
-                (str "no finding names " (:file ctx) ":" (:line ctx) "\n" (s/show r)))
-      nil)))

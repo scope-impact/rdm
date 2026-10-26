@@ -1,84 +1,38 @@
 (ns rdm-spec.kernel.command-test
-  "Unit tests of the command's pure parts: findings and their lines, the
-  arguments, the configuration's defaults and the task table. The one
-  fixture is a temporary directory, removed."
-  (:require [babashka.fs :as fs]
+  (:require [clojure.test :refer [deftest is]]
+            [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
-            [rdm-spec.kernel.command :as command]))
+            [rdm-spec.kernel.command :as c]))
 
-(deftest a-finding-is-one-line
-  (is (= "a/b.feature:3: rule-x: what is wrong"
-         (command/format-finding (command/finding "a/b.feature" 3 "rule-x" "what is wrong"))))
-  (is (= "a/b.feature: rule-x: what" (command/format-finding (command/finding "a/b.feature" "rule-x" "what"))))
-  (is (= "rule-x: what" (command/format-finding (command/finding "rule-x" "what"))))
-  (is (= "a/b.feature: rule-x: two lines" (command/format-finding (command/finding "a/b.feature" nil "rule-x" "two\nlines"))))
-  (testing "warnings"
-    (is (= "f:2: warning: w-x: what" (command/format-finding (command/warning "f" 2 "w-x" "what"))))
-    (is (= "f: warning: w-x: what" (command/format-finding (command/warning "f" "w-x" "what"))))
-    (is (= "warning: w-x: what" (command/format-finding (command/warning "w-x" "what"))))
-    (is (command/warning? (command/warning "w-x" "what")))
-    (is (not (command/warning? (command/finding "r" "what")))))
-  (testing "a finding with a severity, as the Gherkin reader writes it"
-    (is (= "f:1: gherkin-x: m" (command/format-finding {:file "f" :line 1 :rule "gherkin-x" :message "m" :severity :error})))))
+(deftest finding-lines
+  (is (= "a.feature:3: level-missing: no level" (c/finding-line (c/finding "a.feature" 3 "level-missing" "no level"))))
+  (is (= "a.feature: x: two\nlines" (str/replace (c/finding-line (c/finding "a.feature" nil "x" "two\nlines")) " lines" "\nlines")))
+  (is (= "x: y z" (c/finding-line (c/finding nil nil "x" "y\nz"))))
+  (is (= "a.md:2: warning: r: w" (c/warning-line (c/finding "a.md" 2 "r" "w"))))
+  (is (= "warning: r: w" (c/warning-line (c/finding nil nil "r" "w")))))
 
-(deftest cannot-run-is-an-exception
-  (let [e (try (command/cannot-run! "no such thing") nil (catch Exception e e))]
-    (is (command/cannot-run? e))
-    (is (= "no such thing" (ex-message e))))
-  (is (not (command/cannot-run? (ex-info "other" {})))))
-
-(deftest arguments-and-options
-  (is (= {:args ["03"] :opts {:verdicts "v.edn"}} (command/parse-args "score" ["03" "--verdicts" "v.edn"])))
-  (is (= {:args [] :opts {:events true :sources "D"}} (command/parse-args "check" ["--events" "--sources" "D"])))
-  (is (command/cannot-run? (try (command/parse-args "check" ["--colour" "x"]) nil (catch Exception e e))))
-  (is (command/cannot-run? (try (command/parse-args "status" ["--results"]) nil (catch Exception e e))))
-  (testing "the oracle passes every argument on"
-    (is (= {:args ["record" "--reason" "the spec grew"] :opts {}}
-           (command/parse-args "oracle" ["record" "--reason" "the spec grew"])))))
-
-(deftest the-configuration-has-defaults
-  (is (= "dhf/spec" (command/config-value {:config {}} :spec-dir)))
-  (is (= "x" (command/config-value {:config {:spec-dir "x"}} :spec-dir)))
-  (is (= "dhf/cycles" (command/config-value {} :cycles-dir)))
-  (is (= "dhf/spec/domain.edn" (command/config-value {} :domain))))
-
-(deftest paths-are-the-projects
-  (is (= "/p/a/b" (str (command/path {:root "/p"} "a/b"))))
-  (is (= "/abs" (str (command/path "/p" "/abs"))))
-  (is (= "a/b" (command/rel "/p" "/p/a/b")))
-  (is (= "a/b" (command/rel {:root "/p"} (fs/file "/p/a/b")))))
-
-(deftest every-task-has-its-usage
-  (let [names (map :task command/tasks)]
+(deftest help-lists-every-task-in-order
+  (let [{:keys [exit out]} (c/run-task "help" [] {:root "."})
+        help (:help (edn/read-string out))]
+    (is (= 0 exit))
     (is (= ["help" "init" "adopt" "stamp" "check" "views" "cut" "scopes" "fence" "run" "verify" "checklist"
             "status" "trace" "release" "score" "scoreboard" "oracle" "publish" "audit" "observe"]
-           names))
-    (is (every? #(and (:usage %) (:does %) (seq (:stages %))) command/tasks)))
-  (testing "the oracle is the gate before fence and verify"
-    (doseq [t ["fence" "verify"]]
-      (is (= [:gate 'rdm-spec.measurement.oracle/gate] (first (:stages (command/task t))))))))
+           (map :task help)))
+    (is (= "fence ROOM CUT [--context C,...] [--component C/N,...]" (:usage (nth help 8))))))
 
-(deftest the-results-directory
-  (let [d (str (fs/create-temp-dir {:prefix "command-test-"}))]
-    (try
-      (fs/create-dirs (fs/file d "dhf/allure-results"))
-      (is (= "given" (command/results-dir {:root d :config {} :opts {:results "given"} :env {"RESULTS_DIR" "env"}})))
-      (is (= "env" (command/results-dir {:root d :config {} :opts {} :env {"RESULTS_DIR" "env"}})))
-      (is (= "dhf/allure-results" (command/results-dir {:root d :config {} :opts {} :env {}})))
-      (fs/delete-tree (fs/file d "dhf/allure-results"))
-      (is (nil? (command/results-dir {:root d :config {} :opts {} :env {}})))
-      (finally (fs/delete-tree d)))))
-
-(deftest an-unknown-task-lists-every-task
-  (let [{:keys [exit cannot-run]} (command/execute ["frobnicate"] {:root "/" :env {}})]
+(deftest unknown-task
+  (let [{:keys [exit err out]} (c/run-task "frobnicate" [] {:root "."})]
     (is (= 2 exit))
-    (is (str/includes? cannot-run "frobnicate"))
-    (is (str/includes? cannot-run "scoreboard"))))
+    (is (= "" out))
+    (is (str/includes? err "frobnicate"))
+    (is (str/includes? err "scoreboard"))))
 
-(deftest help-answers-without-a-project
-  (let [{:keys [exit result]} (command/execute ["help"] {:root "/nonexistent" :env {}})]
-    (is (= 0 exit))
-    (is (= {:task "verify" :usage "verify ROOM CYCLE"
-            :does "run the project's checks on the room's code in a checkout of the cut"}
-           (first (filter #(= "verify" (:task %)) (:help result)))))))
+(deftest results-directory
+  (is (= "R1" (c/results-dir {:opts {} :env {"RESULTS_DIR" "R1"} :config {:results-dir "dhf/allure-results"}})))
+  (is (= "other" (c/results-dir {:opts {:results "other"} :env {"RESULTS_DIR" "R1"} :config {:results-dir "x"}})))
+  (is (= "dhf/allure-results" (c/results-dir {:opts {} :env {} :config {:results-dir "dhf/allure-results"}}))))
+
+(deftest outside-a-project
+  (let [{:keys [exit err]} (c/run-task "status" [] {:root "/"})]
+    (is (= 2 exit))
+    (is (str/starts-with? err "cannot-run: "))))

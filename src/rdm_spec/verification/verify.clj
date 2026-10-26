@@ -1,58 +1,14 @@
 (ns rdm-spec.verification.verify
-  "The Verify component of the verification context
-  (dhf/spec/verification/verify.feature; glossary, \"Verify\", \"Check\"):
-  `rdm-spec verify ROOM CYCLE`, a cycle's gate. The room's implementation,
-  put in place of the implementation of a fresh export of the cycle's cut,
-  passes every check the cut's configuration declares (:verify), in order,
-  the first that fails stopping it; the rest are listed :not-run.
-
-  In order, before any check runs:
-    the cycle's cycle.edn and its :cut (cannot run without them);
-    the cut's configuration: its :verify (a :tests check first, with a
-    command; every kind :tests, :serves or :runs; a :serves probe outside
-    the implementation) and its :allure (rdm-spec's default when none),
-    else cannot run;
-    the spec at the cut: a scenario with no single id stops it (exit 1);
-    the room exists, and every :serves port is free (a port only closing
-    connections hold is free), else cannot run.
-  Then dhf/cycles/CYCLE/build is the export of the cut with the
-  implementation paths (:implementation) replaced by the room's.
-
-  Checks, each reporting its outcome and the seconds it took:
-    :tests   its command, run in the checkout with RESULTS_DIR the absolute
-             dhf/cycles/CYCLE/results of this repository, its output in
-             dhf/cycles/CYCLE/test.log; it passes when the command exits 0,
-             wrote results, every stamped scenario not tagged @wip is named by
-             a result and every result naming it passed, and every result of
-             a stamped scenario holds to the mapping (a planned scenario's to
-             its spec label only). :scenarios is how many such scenarios
-             results name.
-    :serves  starts the app ({port}), polls GET / on the port every
-             seconds/polls seconds; any HTTP response answers, an accepted
-             connection with none does not; then its probe ({url}) must exit
-             0. :answered-on-poll, :polls, :margin (polls left unused). Every
-             process it started is stopped.
-    :runs    its command answers within :budget with :expect's :exit and
-             :stdout-starts; :budget and :margin in seconds.
-  A command that cannot be started cannot run (exit 2), naming the check.
-
-  dhf/cycles/CYCLE/ratified.edn: {:cut :room-tree (the git tree of the
-  room's implementation paths) :outcome :passed | :refused :checkout
-  :checks}, with :reason when refused. Result: {:verify {:cycle :cut
-  :outcome :checks}}.
-
-  Mapping findings name the result's file and the line of the element in
-  it: steps-differ-from-scenario, mapping-differs (ELEMENT: what),
-  evidence-missing (NAME: what)."
+  "Verify (dhf/spec/verification/verify.feature): the gate. The room's
+  implementation is put into a fresh export of the cycle's cut, and every
+  check the cut's configuration declares runs there, in order, the first
+  that fails stopping it. It records what it verified in ratified.edn."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
-            [cheshire.core :as json]
+            [clojure.pprint]
             [clojure.string :as str]
-            [rdm-spec.kernel.command :as command]
-            [rdm-spec.kernel.gherkin :as g]
-            [rdm-spec.kernel.runner :as runner]
-            [rdm-spec.regeneration.cut :as cut]
-            [rdm-spec.spec.parser :as parser]
+            [rdm-spec.kernel.bus :as bus]
+            [rdm-spec.kernel.command :as cmd]
             [rdm-spec.verification.results :as results]))
 
 ;; ---------------------------------------------------------------------------
@@ -60,400 +16,366 @@
 
 (def kinds #{:tests :serves :runs})
 
-(defn- under? [w p]
-  (let [p (str/replace (str p) #"/+$" "")
-        w (str/replace (str w) #"^\./" "")]
-    (or (= w p) (str/starts-with? w (str p "/")))))
+(defn- under-implementation? [impl word]
+  (some #(let [e (str/replace % #"/$" "")] (or (= word e) (str/starts-with? word (str e "/")))) impl))
 
-(defn config-problem
-  "Why the declared checks `checks` cannot be trusted, or nil."
-  [checks implementation]
+(defn verify-problem
+  "Why verify cannot trust the configuration's :verify, or nil."
+  [checks impl]
   (cond
-    (nil? checks) "the configuration declares no :verify: a project says what verifies it"
-    (not (and (sequential? checks) (every? map? checks))) ":verify is not a list of checks"
-    (not= :tests (:kind (first checks))) "the first check is not a :tests check: a project is verified by its tests first"
+    (nil? checks) "the configuration declares no :verify"
+    (not (and (sequential? checks) (seq checks) (every? map? checks))) "the configuration's :verify is not a vector of checks"
     :else
-    (or (some (fn [c]
-                (cond
-                  (not (kinds (:kind c))) (str (pr-str (:kind c)) " is not a kind of check: the kinds are :tests, :serves and :runs")
-                  (and (= :tests (:kind c)) (empty? (:command c))) "the tests check names no command"
-                  (and (= :runs (:kind c)) (empty? (:command c))) (str "the check " (:name c) " names no command")
-                  (and (= :serves (:kind c)) (or (empty? (:start c)) (not (integer? (:port c)))))
-                  (str "the check " (or (:name c) "serves") " names no :start or no :port")
-                  (and (= :serves (:kind c)) (some (fn [w] (some #(under? w %) implementation)) (:probe c)))
-                  (str "the probe of the check " (or (:name c) "serves")
-                       " is under the implementation: the probe is in the implementation the builder writes")))
-              checks)
-        (when-not (some #(= :tests (:kind %)) checks) "a project is verified by its tests first"))))
+    (or (first (for [c checks :when (not (kinds (:kind c)))]
+                 (str (pr-str (:kind c)) " is not a kind of check: the kinds are :tests, :serves and :runs")))
+        (when-not (= :tests (:kind (first checks)))
+          "a project is verified by its tests first: the configuration declares no :tests check before its others")
+        (first (for [c checks :when (and (= :tests (:kind c)) (empty? (:command c)))]
+                 "the tests check names no command: set its :command"))
+        (first (for [c checks :when (and (= :runs (:kind c)) (empty? (:command c)))]
+                 (str "the check " (:name c "runs") " names no command")))
+        (first (for [c checks :when (= :serves (:kind c))
+                     :when (or (empty? (:start c)) (not (integer? (:port c))) (empty? (:probe c))
+                               (not (pos? (get-in c [:budget :seconds] 0))) (not (pos? (get-in c [:budget :polls] 0))))]
+                 (str "the :serves check " (:name c "serves") " needs :start, :port, :budget {:seconds :polls} and :probe")))
+        (first (for [c checks :when (= :serves (:kind c)) w (:probe c) :when (under-implementation? impl (str w))]
+                 (str "the probe " w " of the check " (:name c "serves")
+                      " is in the implementation the builder writes: a probe lives in a kept path"))))))
 
-(def allure-elements #{:epic :feature :story :suite :subSuite :name :fullName :step :parameter :labels :links :evidence})
-(def label-elements #{:epic :feature :story :suite :subSuite})
-(def spec-elements #{:context :feature :rule :scenario :scenario-id :component :component-id :gherkin-tags
-                     :gherkin-step :example-row})
+(def default-mapping
+  {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row
+   :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags}
+   :links {:need {:type "issue" :url "dhf/spec/needs.edn#{id}"}} :evidence {}})
 
-(defn mapping-problem
-  "Why the mapping `m` cannot be read, or nil."
+(def allure-elements #{:epic :feature :story :name :step :parameter :labels :links :evidence :suite :sub-suite :full-name :description})
+(def spec-elements #{:context :feature :rule :scenario :gherkin-step :example-row :component :scenario-id :gherkin-tags :level :need})
+
+(defn allure-problem
+  "Why verify cannot read the mapping, or nil."
   [m]
   (cond
-    (not (map? m)) ":allure is not a map"
+    (not (map? m)) "the configuration's :allure is not a map"
     :else
-    (or (some (fn [k] (when-not (allure-elements k) (str (pr-str k) " is not an element of an Allure result"))) (keys m))
-        (some (fn [[k v]] (when (and (or (label-elements k) (#{:name :fullName :step :parameter} k)) (not (spec-elements v)))
-                            (str (pr-str v) " is not an element of the spec")))
-              m)
-        (some (fn [[_ v]] (when-not (spec-elements v) (str (pr-str v) " is not an element of the spec"))) (:labels m))
-        (when-not (= :scenario-id (get (:labels m) "spec"))
-          "the label spec, from the scenario's id, is required: :labels {\"spec\" :scenario-id}"))))
+    (or (first (for [k (keys m) :when (not (allure-elements k))]
+                 (str k " is not an element of an Allure result")))
+        (first (for [[k v] m :when (and (not (#{:labels :links :evidence} k)) (not (spec-elements v)))]
+                 (str (pr-str v) " is not an element of the spec (mapped from " k ")")))
+        (first (for [[_ v] (:labels m) :when (not (spec-elements v))]
+                 (str (pr-str v) " is not an element of the spec (a label)")))
+        (when-not (= :scenario-id (get-in m [:labels "spec"]))
+          "the label spec, from the scenario's id, is required in the mapping's :labels"))))
 
 ;; ---------------------------------------------------------------------------
-;; A result held to the mapping
+;; Small helpers
 
-(defn- expected [p el]
-  (case el
-    :context (:context p)
-    :feature (:feature p)
-    :rule (:rule p)
-    :scenario (:name p)
-    :scenario-id (:id p)
-    :component (:component p)
-    :component-id (:component-id p)
-    :gherkin-tags (set (map #(subs % 1) (:tags p)))
-    :gherkin-step (mapv runner/step-name (:steps p))
-    :example-row (mapv (fn [[n v]] {:name n :value v}) (:parameters p))
+(defn round2 [x] (/ (Math/round (* 100.0 (double x))) 100.0))
+(defn margin [budget seconds] (max 0.0 (round2 (- budget seconds))))
+(defn- since [t0] (round2 (/ (- (System/nanoTime) t0) 1e9)))
+
+(defn- rev-ok? [root rev] (= 0 (:exit (cmd/git root "rev-parse" "-q" "--verify" (str rev "^{commit}")))))
+
+(defn- impl-files
+  "Every file of the implementation paths under dir, relative."
+  [dir impl]
+  (sort
+   (for [e impl
+         :let [p (fs/path dir e)]
+         :when (fs/exists? p)
+         f (if (fs/directory? p) (filter fs/regular-file? (fs/glob p "**" {:hidden true})) [p])]
+     (str (fs/relativize dir f)))))
+
+(defn room-tree
+  "The git tree hash of the room's implementation paths."
+  [room impl]
+  (let [gd (cmd/temp-dir "rdm-spec-tree-")]
+    (try
+      (let [env {"GIT_DIR" (str gd) "GIT_WORK_TREE" (str room) "GIT_INDEX_FILE" (str (fs/path gd "index"))}
+            g (fn [& a] (let [r (apply cmd/sh {:dir (str room) :env env} "git" a)]
+                          (when-not (= 0 (:exit r)) (cmd/cannot-run! (str "git " (first a) " failed: " (:err r))))
+                          (str/trim (:out r))))]
+        (let [r (cmd/sh {:dir (str gd)} "git" "init" "-q" "--bare" (str gd))]
+          (when-not (= 0 (:exit r)) (cmd/cannot-run! (str "git init failed: " (:err r)))))
+        (let [files (impl-files room impl)]
+          (when (seq files)
+            (apply g "add" "-f" "--" files)))
+        (g "write-tree"))
+      (finally (fs/delete-tree gd)))))
+
+;; ---------------------------------------------------------------------------
+;; The mapping: does a result carry what its scenario says?
+
+(defn- label-values [j n] (keep #(when (= n (get % "name")) (get % "value")) (get j "labels")))
+
+(defn- element-value [s element row]
+  (case element
+    :context (some-> (:context s) name)
+    :feature (:feature s)
+    :rule (:rule s)
+    :scenario (:title s)
+    :component (:component-name s)
+    :scenario-id (:id s)
+    :level (some-> (:level s) name)
+    :example-row row
     nil))
 
-(defn- label-values [r nm] (vec (keep #(when (= nm (:name %)) (:value %)) (:labels r))))
-
-(defn- line-of [text token]
-  (or (some (fn [[i l]] (when (str/includes? l token) (inc i))) (map-indexed vector (str/split-lines (str text)))) 1))
+(defn- substitute [text row]
+  (reduce-kv (fn [t k v] (str/replace t (str "<" k ">") v)) text (or row {})))
 
 (defn mapping-findings
-  "The findings of the result `r` (read with keyword keys) of the pickle
-  `p` held to the `mapping`; `at` {:file :text} is the result's file."
-  [mapping p r {:keys [file text]}]
-  (let [id (:id p)
-        f (fn [token rule msg] (command/finding file (line-of text token) rule msg))
-        label-name {:epic "epic" :feature "feature" :story "story" :suite "suite" :subSuite "subSuite"}]
+  "The findings about one result of a stamped scenario that is not planned."
+  [mapping s r row]
+  (let [j (:json r)
+        f (fn [rule what] (cmd/finding (:file s) (:line s) rule (str what " (" (:file r) ")")))
+        lbl {:epic "epic" :feature "feature" :story "story" :suite "suite" :sub-suite "subSuite"}]
     (vec
      (concat
-      (for [[k el] mapping :when (label-elements k)
-            :let [want (expected p el) got (label-values r (label-name k))]
-            :when (not= (if want [want] []) got)]
-        (f (str "\"" (label-name k) "\"") "mapping-differs"
-           (str (name k) ": the result of " id " carries the label " (label-name k) " " (pr-str got)
-                " where the scenario's " (name el) " is " (pr-str want))))
+      (for [[k el] mapping
+            :when (lbl k)
+            :let [want (element-value s el row) got (label-values j (lbl k))]
+            :when (not= (if want [want] []) (vec got))]
+        (f "mapping-differs" (str (name k) ": " (:id s) "'s result holds the " (lbl k) " "
+                                  (if (seq got) (pr-str (first got)) "nothing")
+                                  " where the scenario's " (name el) " is " (pr-str want))))
       (when-let [el (:name mapping)]
-        (when (not= (expected p el) (:name r))
-          [(f "\"name\"" "mapping-differs"
-              (str "name: the result of " id " is named " (pr-str (:name r)) " where the scenario's " (name el)
-                   " is " (pr-str (expected p el))))]))
-      (when (:step mapping)
-        (let [want (expected p (:step mapping)) got (mapv :name (:steps r))]
+        (let [want (element-value s el row)]
+          (when (not= want (get j "name"))
+            [(f "mapping-differs" (str "name: " (:id s) "'s result is named " (pr-str (get j "name")) " where the scenario is " (pr-str want)))])))
+      (when (= :gherkin-step (:step mapping))
+        (let [want (mapv #(str (:keyword %) " " (substitute (:text %) row)) (concat (:background s) (:steps s)))
+              got (mapv #(get % "name") (get j "steps"))]
           (when (not= want got)
-            [(f "\"steps\"" "steps-differ-from-scenario"
-                (str id ": the result's steps are " (pr-str got) " where the scenario's lines are " (pr-str want)))])))
-      (when (and (:parameter mapping) (seq (:parameters p)))
-        (let [want (expected p (:parameter mapping)) got (mapv #(select-keys % [:name :value]) (:parameters r))]
-          (when (not= want got)
-            [(f "\"parameters\"" "mapping-differs"
-                (str "parameter: the result of " id " holds the parameters " (pr-str got) " where the row's are " (pr-str want)))])))
-      (for [[lname el] (:labels mapping)
-            :let [want (expected p el) got (label-values r lname)]
-            :when (if (set? want) (not= want (set got)) (not= (if want [want] []) got))]
-        (f (str "\"" lname "\"") "mapping-differs"
-           (str "labels: the result of " id " carries the label " lname " " (pr-str got)
-                " where the scenario's " (name el) " is " (pr-str (if (set? want) (sort want) want)))))
+            [(f "steps-differ-from-scenario"
+                (str (:id s) "'s result has the steps " (pr-str got) " where the scenario's lines are " (pr-str want)))])))
+      (when (and (= :example-row (:parameter mapping)) (:outline? s) row)
+        (let [got (into {} (map (fn [p] [(get p "name") (str (get p "value"))]) (get j "parameters")))]
+          (when (not= row got)
+            [(f "mapping-differs" (str "parameter: " (:id s) "'s result holds the parameters " (pr-str got) " where its row is " (pr-str row)))])))
+      (for [[label el] (:labels mapping)
+            :when (not= "spec" label)
+            :let [got (set (label-values j label))]
+            :when (case el
+                    :gherkin-tags (not (every? got (:tags s)))
+                    (let [want (element-value s el row)] (and want (not (got want)))))]
+        (f "mapping-differs" (str "labels: " (:id s) "'s result lacks the label " label " the scenario's " (name el) " gives")))
       (when-let [{:keys [type url]} (get-in mapping [:links :need])]
-        (for [n (:needs p)
-              :let [u (str/replace (str url) "{id}" n)]
-              :when (not-any? #(and (= type (:type %)) (= u (:url %))) (:links r))]
-          (f "\"links\"" "mapping-differs"
-             (str "links: the result of " id " holds no " type " link to " n " (" u "), the need the scenario traces to"))))
-      (let [level (some #(when (#{"@e2e" "@contract"} %) (keyword (subs % 1))) (:tags p))
-            names (set (map :name (concat (:attachments r) (mapcat :attachments (:steps r)))))]
-        (for [a (get-in mapping [:evidence level]) :when (not (names a))]
-          (f "\"attachments\"" "evidence-missing"
-             (str a ": the result of " id " carries no attachment named " a ", which :evidence requires of a "
-                  (name level) " scenario"))))))))
-
-;; ---------------------------------------------------------------------------
-;; A :runs check's answer
-
-(defn runs-problem
-  "Why the answer `a` ({:exit :out :timed-out?}) is not what `expect`
-  holds, within `budget` seconds, or nil."
-  [expect a budget]
-  (cond
-    (:timed-out? a) (str "it did not answer within the budget of " budget " seconds")
-    (and (contains? expect :exit) (not= (:exit expect) (:exit a)))
-    (str "it exited " (:exit a) " where " (:exit expect) " was expected")
-    (and (:stdout-starts expect) (not (str/starts-with? (str (:out a)) (:stdout-starts expect))))
-    (str "its standard output starts " (pr-str (first (str/split-lines (str (:out a)))))
-         " where " (pr-str (:stdout-starts expect)) " was expected")))
-
-;; ---------------------------------------------------------------------------
-;; Processes
-
-(defn- seconds-since [t0] (/ (Math/round (/ (- (System/nanoTime) t0) 1e7)) 100.0))
-
-(defn- stop! [proc]
-  (when proc
-    (let [^Process pr (:proc proc)]
-      (doseq [h (iterator-seq (.iterator (.descendants (.toHandle pr))))] (.destroyForcibly ^java.lang.ProcessHandle h))
-      (.destroyForcibly pr)
-      (.waitFor pr 5 java.util.concurrent.TimeUnit/SECONDS))))
-
-(defn- start! [check cmd opts]
-  (try (apply p/process (merge {:in ""} opts) (map str cmd))
-       (catch java.io.IOException e
-         (command/cannot-run! (str "the check " (:name check) " cannot run: the command " (first cmd)
-                                   " is not found (" (ex-message e) ")")))))
-
-(defn- fill [words k v] (mapv #(str/replace (str %) k (str v)) words))
-
-(defn port-held?
-  "Whether a process holds `port`: one accepts connections on it, or it
-  cannot be bound. A port only closing connections hold is free."
-  [port]
-  (or (try (with-open [s (java.net.Socket.)]
-             (.connect s (java.net.InetSocketAddress. "127.0.0.1" (int port)) 300)
-             true)
-           (catch Exception _ false))
-      (try (with-open [ss (java.net.ServerSocket.)]
-             (.setReuseAddress ss true)
-             (.bind ss (java.net.InetSocketAddress. (int port)))
-             false)
-           (catch Exception _ true))))
-
-(defn- answers?
-  "Whether GET / on `port` gets any HTTP response within `ms`."
-  [port ms]
-  (try
-    (with-open [s (java.net.Socket.)]
-      (.connect s (java.net.InetSocketAddress. "127.0.0.1" (int port)) (int (max 50 ms)))
-      (.setSoTimeout s (int (max 50 ms)))
-      (let [o (.getOutputStream s)]
-        (.write o (.getBytes (str "GET / HTTP/1.0\r\nHost: 127.0.0.1:" port "\r\n\r\n")))
-        (.flush o))
-      (let [buf (byte-array 5) n (.read (.getInputStream s) buf)]
-        (and (pos? n) (str/starts-with? (String. buf 0 (int n)) "HTTP"))))
-    (catch Exception _ false)))
+        (let [links (set (map (juxt #(get % "type") #(get % "url")) (get j "links")))]
+          (for [n (:needs s)
+                :let [u (str/replace (str url) "{id}" n)]
+                :when (not (links [type u]))]
+            (f "mapping-differs" (str "links: " (:id s) "'s result has no " type " link to " n " (" u ")")))))
+      (let [names (set (concat (map #(get % "name") (get j "attachments"))
+                               (mapcat (fn [st] (map #(get % "name") (get st "attachments"))) (get j "steps"))))]
+        (for [a (get-in mapping [:evidence (:level s)]) :when (not (names a))]
+          (f "evidence-missing" (str a ": " (:id s) "'s result carries no attachment named " a))))))))
 
 ;; ---------------------------------------------------------------------------
 ;; The checks
 
-(defn- tests-check [req c {:keys [checkout results-rel log-rel cut-req commit cfg mapping]}]
+(defn- subst [words m] (mapv (fn [w] (reduce-kv (fn [w k v] (str/replace w (str "{" k "}") (str v))) (str w) m)) words))
+
+(defn- not-found! [check command]
+  (cmd/cannot-run! (str "the check " (:name check) " cannot run: the command " (first command) " was not found")))
+
+(defn run-tests-check
+  [{:keys [root build cycle-dir check scenarios mapping]}]
   (let [t0 (System/nanoTime)
-        results-abs (str (fs/absolutize (command/path req results-rel)))
-        _ (fs/delete-tree results-abs)
-        _ (fs/create-dirs results-abs)
-        proc (start! (assoc c :name "tests") (:command c)
-                     {:dir (str checkout) :out :string :err :string
-                      :extra-env {"RESULTS_DIR" results-abs}})
-        r @proc
-        _ (spit (str (command/path req log-rel)) (str (:out r) (:err r)))
-        cmd (str/join " " (:command c))
-        fail (fn [why fs*] {:outcome :failed :seconds (seconds-since t0) :reason why :findings fs*})]
+        results-dir (fs/path root cycle-dir "results")
+        log (str cycle-dir "/test.log")
+        _ (do (fs/delete-tree results-dir) (fs/create-dirs results-dir))
+        r (apply cmd/sh {:dir (str build) :env {"RESULTS_DIR" (str (fs/absolutize results-dir))}} (:command check))
+        _ (when (:not-found r) (not-found! check (:command check)))
+        _ (spit (fs/file root log) (str (:out r) (:err r)))
+        seconds (since t0)
+        base {:name (:name check) :kind :tests}
+        files (fs/glob results-dir "*-result.json")]
     (cond
-      (not (zero? (:exit r)))
-      (let [why (str "the test command " cmd " failed: it exited " (:exit r) "; its output is in " log-rel)]
-        (fail why [(command/finding log-rel "tests-failed" why)]))
-      (empty? (fs/glob results-abs "*-result.json"))
-      (let [why (str "the test command " cmd " exited 0 and wrote no Allure result into " results-rel
-                     ": a green exit with no results is not a run")]
-        (fail why [(command/finding results-rel "tests-no-results" why)]))
+      (not= 0 (:exit r))
+      {:check (assoc base :outcome :failed :seconds seconds)
+       :findings [(cmd/finding log nil "tests-failed"
+                               (str "the test command failed with the exit status " (:exit r) "; its output is in " log))]}
+      (empty? files)
+      {:check (assoc base :outcome :failed :seconds seconds)
+       :findings [(cmd/finding (str cycle-dir "/results") nil "tests-no-results"
+                               "the test command exited 0 and wrote no Allure result: a green exit with no results is not a run")]}
       :else
-      (let [read (results/read-results req results-rel {:keep? true})
-            spec (parser/read-spec (:root req) cfg {:revision commit})
-            owners (runner/owners-of (or (cut/edn-at cut-req commit (command/config-value {:config cfg} :model)) {}))
-            pickles (vec (mapcat (fn [{:keys [file text]}]
-                                   (when (str/ends-with? file ".feature")
-                                     (runner/pickles-of file (g/parse-feature file text)
-                                                        {:spec-dir (command/config-value {:config cfg} :spec-dir)
-                                                         :id-prefix (command/config-value {:config cfg} :id-prefix)
-                                                         :owners owners})))
-                                 (:files spec)))
-            by-id (group-by :id (filter :id pickles))
-            scs (filter :id (:scenarios spec))
-            rs-of (group-by :spec (:results read))
-            fs* (vec (concat
-                      (results/unreadable-findings read)
-                      (for [sc scs :when (not (:wip? sc))
-                            :let [rs (get rs-of (:id sc))]
-                            :when (empty? rs)]
-                        (command/finding (:file sc) (:line sc) "scenario-unnamed"
-                                         (str (:id sc) " \"" (:title sc) "\" is named by no result: every scenario not"
-                                              " tagged @wip is tested before it counts as built")))
-                      (for [sc scs :when (not (:wip? sc))
-                            r (get rs-of (:id sc))
-                            :when (not= "passed" (:status r))]
-                        (command/finding (:file r) "result-not-passed"
-                                         (str (:id sc) " \"" (:title sc) "\": a result labelled with its id is " (:status r))))
-                      (for [sc scs :when (not (:wip? sc))
-                            r (get rs-of (:id sc))
-                            :let [ps (get by-id (:id sc))
-                                  params (vec (sort (map (juxt :name :value) (get-in r [:result :parameters]))))
-                                  p (or (first (filter #(= params (vec (sort (:parameters %)))) ps)) (first ps))]
-                            :when p
-                            f (mapping-findings mapping p (:result r)
-                                                {:file (:file r) :text (slurp (str (command/path req (:file r))))})]
-                        f)))
-            named (count (filter #(and (not (:wip? %)) (seq (get rs-of (:id %)))) scs))]
-        (if (seq (remove command/warning? fs*))
-          (assoc (fail (str "the tests check found " (count (remove command/warning? fs*)) " problems in the results") fs*)
-                 :scenarios named)
-          {:outcome :passed :seconds (seconds-since t0) :scenarios named :findings fs*})))))
+      (let [{rs :results unreadable :unreadable} (results/read-dir root (str cycle-dir "/results"))
+            stamped (filter :id scenarios)
+            by-id (group-by :spec rs)
+            checked (for [s stamped :when (not (:wip? s))] [s (by-id (:id s))])
+            findings (vec
+                      (concat
+                       (results/unreadable-findings unreadable)
+                       (for [[s mine] checked :when (empty? mine)]
+                         (cmd/finding (:file s) (:line s) "scenario-untested" (str (:id s) " is named by no result: every scenario is tested")))
+                       (for [[s mine] checked r mine :when (not= "passed" (:status r))]
+                         (cmd/finding (:file s) (:line s) "scenario-not-passed"
+                                      (str (:id s) "'s result is " (:status r) " (" (:file r) ")")))
+                       (for [[s mine] checked r mine
+                             :let [row (when (:outline? s)
+                                         (let [pm (into {} (map (fn [p] [(get p "name") (str (get p "value"))]) (:parameters r)))]
+                                           (first (filter #(= % pm) (for [ex (:examples s) rw (:rows ex)]
+                                                                      (zipmap (:headings ex) (map str (:cells rw))))))))]
+                             x (mapping-findings mapping s r row)]
+                         x)))]
+        {:check (assoc base :outcome (if (seq findings) :failed :passed) :seconds seconds
+                       :scenarios (count (filter (fn [[_ mine]] (seq mine)) checked)))
+         :findings findings}))))
 
-(defn- serves-check [req c {:keys [checkout cycle-rel]}]
-  (let [t0 (System/nanoTime)
-        nm (or (:name c) "serves")
-        port (:port c)
-        {:keys [seconds polls]} (:budget c)
-        interval-ms (/ (* 1000.0 seconds) polls)
-        log (str (command/path req (str cycle-rel "/" nm ".log")))
-        err-log (str (command/path req (str cycle-rel "/" nm ".err.log")))
-        proc (start! (assoc c :name nm) (fill (:start c) "{port}" port)
-                     {:dir (str checkout) :out (fs/file log) :err (fs/file err-log)})]
+(defn run-runs-check [{:keys [build check]}]
+  (let [budget (get-in check [:budget :seconds] 60)
+        t0 (System/nanoTime)
+        r (apply cmd/sh {:dir (str build) :timeout-ms (long (* 1000 budget))} (:command check))
+        _ (when (:not-found r) (not-found! check (:command check)))
+        seconds (since t0)
+        base {:name (:name check) :kind :runs :seconds seconds :budget budget :margin (margin budget seconds)}
+        {:keys [exit stdout-starts]} (:expect check)
+        f (fn [msg] {:check (assoc base :outcome :failed)
+                     :findings [(cmd/finding nil nil "check-failed" (str "the check " (:name check) " " msg))]})]
+    (cond
+      (:timed-out r) (f (str "gave no answer within its budget of " budget " seconds"))
+      (and (some? exit) (not= exit (:exit r))) (f (str "answered with the exit " (:exit r) " where " exit " was expected"))
+      (and stdout-starts (not (str/starts-with? (str (:out r)) stdout-starts)))
+      (f (str "printed " (pr-str (first (str/split-lines (str (:out r))))) " first, where its output was expected to start "
+              (pr-str stdout-starts)))
+      :else {:check (assoc base :outcome :passed)})))
+
+(defn port-held? [port]
+  (try (with-open [s (java.net.ServerSocket.)]
+         (.setReuseAddress s true)
+         (.bind s (java.net.InetSocketAddress. (int port)))
+         false)
+       (catch java.io.IOException _ true)))
+
+(defn answers?
+  "True when GET / on the port returns any HTTP response."
+  [port timeout-ms]
+  (try
+    (with-open [s (java.net.Socket.)]
+      (.connect s (java.net.InetSocketAddress. "127.0.0.1" (int port)) (int timeout-ms))
+      (.setSoTimeout s (int timeout-ms))
+      (let [out (.getOutputStream s)]
+        (.write out (.getBytes "GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"))
+        (.flush out)
+        (let [buf (byte-array 5) n (.read (.getInputStream s) buf)]
+          (and (pos? n) (str/starts-with? (String. buf 0 (int n)) "HTTP")))))
+    (catch Exception _ false)))
+
+(defn run-serves-check [{:keys [root build cycle-dir check]}]
+  (let [{:keys [port budget]} check
+        {:keys [seconds polls]} budget
+        url (str "http://127.0.0.1:" port "/")
+        start (subst (:start check) {"port" port "url" url})
+        probe (subst (:probe check) {"port" port "url" url})
+        t0 (System/nanoTime)
+        log (fs/file root cycle-dir (str (:name check) ".log"))
+        proc (try (p/process start {:dir (str build) :out log :err log})
+                  (catch java.io.IOException _ (not-found! check start)))
+        interval (/ (* 1000.0 seconds) polls)
+        base {:name (:name check) :kind :serves :budget seconds :polls polls}]
     (try
-      (let [start (System/currentTimeMillis)
-            answered (loop [i 1]
+      (let [answered (loop [i 1]
                        (when (<= i polls)
-                         (let [due (+ start (* i interval-ms))
-                               wait (- due (System/currentTimeMillis))]
-                           (when (pos? wait) (Thread/sleep (long wait)))
-                           (if (answers? port (long (* 0.8 interval-ms)))
+                         (let [due (+ t0 (* i interval 1e6)) wait (- due (System/nanoTime))]
+                           (when (pos? wait) (Thread/sleep (long (/ wait 1e6))))
+                           (if (answers? port (long (max 50 (min 1000 (* 0.8 interval)))))
                              i
-                             (recur (inc i))))))
-            base {:seconds nil :budget seconds :polls polls}]
+                             (recur (inc i))))))]
         (if-not answered
-          (let [why (str "the check " nm ": no answer came within " seconds " seconds on port " port
-                         " (" polls " polls)")]
-            (merge base {:outcome :failed :seconds (seconds-since t0) :reason why
-                         :findings [(command/finding "serves-no-answer" why)]}))
-          (let [url (str "http://127.0.0.1:" port "/")
-                pr @(start! (assoc c :name nm) (fill (:probe c) "{url}" url)
-                            {:dir (str checkout) :out :string :err :string})
-                margin (- polls answered)]
-            (if (zero? (:exit pr))
-              (merge base {:outcome :passed :seconds (seconds-since t0) :answered-on-poll answered :margin margin})
-              (let [why (str "the check " nm ": the app answered, but its probe exited " (:exit pr)
-                             ", so it is not this application: " (str/trim (str (:out pr) " " (:err pr))))]
-                (merge base {:outcome :failed :seconds (seconds-since t0) :answered-on-poll answered :margin margin
-                             :reason why :findings [(command/finding "serves-probe-failed" why)]}))))))
-      (finally (stop! proc)))))
-
-(defn- runs-check [_req c {:keys [checkout]}]
-  (let [t0 (System/nanoTime)
-        budget (get-in c [:budget :seconds] 30)
-        proc (start! c (:command c) {:dir (str checkout) :out :string :err :string})
-        r (deref proc (long (* 1000 budget)) ::timeout)
-        a (if (= ::timeout r) (do (stop! proc) {:timed-out? true}) r)
-        secs (seconds-since t0)
-        margin (/ (Math/round (* 100 (- budget secs))) 100.0)
-        why (runs-problem (:expect c) a budget)]
-    (if why
-      {:outcome :failed :seconds secs :budget budget :margin margin :reason (str "the check " (:name c) ": " why)
-       :findings [(command/finding "runs-failed" (str "the check " (:name c) ": " why))]}
-      {:outcome :passed :seconds secs :budget budget :margin margin})))
+          {:check (assoc base :outcome :failed :seconds (since t0) :margin 0)
+           :findings [(cmd/finding nil nil "check-failed"
+                                   (str "the check " (:name check) ": no answer came within " seconds " seconds (" polls " polls of GET / on port " port ")"))]}
+          (let [pr (apply cmd/sh {:dir (str build) :timeout-ms (long (* 1000 seconds))} probe)
+                _ (when (:not-found pr) (not-found! check probe))
+                c (assoc base :seconds (since t0) :answered-on-poll answered :margin (- polls answered))]
+            (if (= 0 (:exit pr))
+              {:check (assoc c :outcome :passed)}
+              {:check (assoc c :outcome :failed)
+               :findings [(cmd/finding nil nil "check-failed"
+                                       (str "the check " (:name check) ": the app answered, and its probe exited " (:exit pr)
+                                            ", so it is not this application; the probe said: " (str/trim (str (:out pr) " " (:err pr)))))]}))))
+      (finally
+        (p/destroy-tree proc)
+        (deref proc 5000 nil)))))
 
 ;; ---------------------------------------------------------------------------
-;; The stage
+;; The stages
 
-(defn- strip [s] (str/replace (str s) #"/+$" ""))
+(defn prepare-stage
+  "Reads the cycle before anything else, then the cut's configuration, and
+  refuses what verify cannot trust before anything runs."
+  [{:keys [root config args]}]
+  (let [[room-arg cycle] args
+        cycles (:cycles-dir config "dhf/cycles")
+        cycle-dir (str cycles "/" cycle)
+        cycle-file (str cycle-dir "/cycle.edn")
+        decl (or (try (cmd/read-edn (cmd/read-at root nil cycle-file)) (catch Exception _ nil))
+                 (cmd/cannot-run! (str "the cycle " cycle " has no readable " cycle-file)))
+        cut (or (:cut decl) (cmd/cannot-run! (str cycle-file " names no :cut")))
+        _ (when-not (rev-ok? root cut) (cmd/cannot-run! (str "the cut " cut " that " cycle-file " names does not exist")))
+        cut-config (or (try (cmd/read-edn (cmd/read-at root cut "dhf/harness/config.edn")) (catch Exception _ nil))
+                       (cmd/cannot-run! (str "the cut " cut " holds no readable dhf/harness/config.edn")))
+        room (fs/absolutize (fs/path root room-arg))]
+    (when-let [why (verify-problem (:verify cut-config) (:implementation cut-config []))] (cmd/cannot-run! why))
+    (when-let [why (allure-problem (get cut-config :allure default-mapping))] (cmd/cannot-run! why))
+    (when-not (fs/directory? room) (cmd/cannot-run! (str "the room " room-arg " does not exist")))
+    {:ctx {:revision cut :config cut-config
+           ::verify {:cycle cycle :cycle-dir cycle-dir :cut cut :room room}}}))
 
-(defn- tree-of [req room paths]
-  (let [g (str (fs/create-temp-dir {:prefix "rdm-spec-tree-"}))]
-    (try
-      (let [run (fn [& args]
-                  (let [r (apply p/shell {:out :string :err :string :continue true :in ""}
-                                 "git" (str "--git-dir=" g) (str "--work-tree=" room) args)]
-                    (when-not (zero? (:exit r)) (command/cannot-run! (str "the room's tree cannot be read: " (str/trim (:err r)))))
-                    (str/trim (:out r))))]
-        (run "init" "-q")
-        (let [present (filter #(fs/exists? (fs/file room %)) paths)]
-          (when (seq present) (apply run "add" "-A" "-f" "--" present))
-          (run "write-tree")))
-      (finally (fs/delete-tree g)))))
-
-(defn- copy-path! [from to]
-  (when (fs/exists? from)
-    (if (fs/directory? from)
-      (fs/copy-tree from to {:replace-existing true})
-      (do (fs/create-dirs (fs/parent to)) (fs/copy from to {:replace-existing true})))))
-
-(defn verify
-  "The verify stage: `rdm-spec verify ROOM CYCLE`."
-  [req]
-  (let [[room-arg cycle] (:args req)
-        cycle-rel (str (strip (command/config-value req :cycles-dir)) "/" cycle)
-        cycle-file (str cycle-rel "/cycle.edn")
-        cf (command/path req cycle-file)
-        _ (when-not (fs/regular-file? cf)
-            (command/cannot-run! (str "there is no " cycle-file ": a cycle is declared in its cycle.edn before it is verified")))
-        c (try (clojure.edn/read-string (slurp (str cf)))
-               (catch Exception e (command/cannot-run! (str cycle-file " is not readable EDN: " (ex-message e)))))
-        tag (or (when (map? c) (:cut c)) (command/cannot-run! (str cycle-file " names no :cut")))
-        _ (cut/repository! req)
-        commit (or (cut/commit-of req tag)
-                   (command/cannot-run! (str "the cut " tag " that " cycle-file " names is not in this repository")))
-        cfg (or (cut/config-at req commit) (command/cannot-run! (str "the cut " tag " holds no " command/config-file)))
-        checks (:verify cfg)
-        impl (vec (:implementation cfg))
-        _ (when-let [why (config-problem checks impl)] (command/cannot-run! why))
-        mapping (if (contains? cfg :allure) (:allure cfg) runner/default-mapping)
-        _ (when-let [why (mapping-problem mapping)] (command/cannot-run! (str ":allure: " why)))
-        spec (parser/read-spec (:root req) cfg {:revision commit})
-        stops (vec (concat
-                    (for [{:keys [file line rule message]} (:refusals spec)] (command/finding file line rule message))
-                    (for [sc (:scenarios spec) :when (not= 1 (count (:ids sc)))]
-                      (command/finding (:file sc) (:line sc) "verify-unstamped"
-                                       (str "the scenario \"" (:title sc) "\" carries " (count (:ids sc))
-                                            " ids at the cut " tag ": a cut holding an unstamped scenario is not verified")))))
-        room (command/path req room-arg)
-        _ (when-not (fs/directory? room) (command/cannot-run! (str "the room " room-arg " is not a directory")))
-        write-ratified! (fn [m] (spit (str (command/path req (str cycle-rel "/ratified.edn")))
-                                      (str (pr-str m) "\n")))
-        tree (tree-of req (str room) impl)
-        checkout-rel (str cycle-rel "/build")
-        record {:cut tag :room-tree tree :checkout checkout-rel}]
-    (fs/create-dirs (command/path req cycle-rel))
-    (if (seq stops)
-      (do (write-ratified! (assoc record :outcome :refused :checks []
-                                  :reason (str "the spec at " tag " holds " (count stops) " scenarios that are not stamped or not read")))
-          {:result {:verify {:cycle cycle :cut tag :outcome :refused :checks []}} :findings stops})
-      (do
-        (doseq [s checks :when (and (= :serves (:kind s)) (port-held? (:port s)))]
-          (command/cannot-run! (str "the port " (:port s) " of the check " (or (:name s) "serves")
-                                    " is held by another process: verify would measure it, not the app")))
-        (let [checkout (command/path req checkout-rel)]
-          (fs/delete-tree checkout)
-          (cut/export! req commit checkout)
-          (doseq [p impl] (fs/delete-tree (fs/file checkout p)))
-          (doseq [p impl] (copy-path! (fs/file room p) (fs/file checkout p)))
-          (let [opts {:checkout checkout :cycle-rel cycle-rel :results-rel (str cycle-rel "/results")
-                      :log-rel (str cycle-rel "/test.log") :cut-req req :commit commit :cfg cfg :mapping mapping}
-                outs (loop [[s & more] checks out [] failed? false]
-                       (if (nil? s)
-                         out
-                         (let [nm (or (:name s) (name (:kind s)))
-                               head {:name nm :kind (:kind s)}]
-                           (if failed?
-                             (recur more (conj out (assoc head :outcome :not-run)) true)
-                             (let [r (case (:kind s)
-                                       :tests (tests-check req s opts)
-                                       :serves (serves-check req s opts)
-                                       :runs (runs-check req s opts))]
-                               (recur more (conj out (merge head r)) (not= :passed (:outcome r))))))))
-                shown (fn [o] (let [base (dissoc o :findings :reason)]
-                                (case (:kind o)
-                                  :tests (select-keys base [:name :kind :outcome :seconds :scenarios])
-                                  :serves (select-keys base [:name :kind :outcome :seconds :budget :polls :answered-on-poll :margin])
-                                  :runs (select-keys base [:name :kind :outcome :seconds :budget :margin])
-                                  base)))
-                checks-out (mapv shown outs)
-                failed (first (filter #(= :failed (:outcome %)) outs))
-                outcome (if failed :refused :passed)]
-            (write-ratified! (cond-> (assoc record :outcome outcome :checks checks-out)
-                               failed (assoc :reason (:reason failed))))
-            {:result {:verify {:cycle cycle :cut tag :outcome outcome :checks checks-out}}
-             :findings (vec (mapcat :findings outs))}))))))
+(defn stage [{:keys [root config] :as ctx}]
+  (let [{:keys [cycle cycle-dir cut room]} (::verify ctx)
+        impl (:implementation config [])
+        tree (room-tree room impl)
+        {:keys [scenarios refusals]} (bus/latest :SpecParsed)
+        unstamped (filter #(empty? (:ids %)) scenarios)
+        ratified (fs/file root cycle-dir "ratified.edn")
+        record! (fn [m] (fs/create-dirs (fs/parent ratified)) (spit ratified (with-out-str (clojure.pprint/pprint m))))]
+    (if (or (seq refusals) (seq unstamped))
+      (let [fs (vec (concat refusals
+                            (for [s unstamped]
+                              (cmd/finding (:file s) (:line s) "scenario-unstamped"
+                                           (str "the cut " cut " holds the unstamped scenario \"" (:title s) "\": it is not verified")))))]
+        (record! {:cut cut :room-tree tree :outcome :refused :checks []
+                  :reason (str "the spec at " cut " holds a scenario with no id or a construct the parser refuses")})
+        {:findings fs :result {:verify {:cycle cycle :cut cut :outcome :refused :checks []}}})
+      (let [build (fs/path root cycle-dir "build")
+            build-rel (str cycle-dir "/build")
+            tar (cmd/temp-file ".tar")]
+        ;; the checkout: an export of the cut, its implementation replaced by the room's
+        (fs/delete-tree build)
+        (fs/create-dirs build)
+        (try
+          (let [a (cmd/sh {:dir root} "git" "archive" "--format=tar" "-o" (str tar) cut)]
+            (when-not (= 0 (:exit a)) (cmd/cannot-run! (str "git archive failed: " (:err a)))))
+          (let [x (cmd/sh {:dir (str build)} "tar" "-x" "-f" (str tar))]
+            (when-not (= 0 (:exit x)) (cmd/cannot-run! (str "tar failed: " (:err x)))))
+          (finally (fs/delete-if-exists tar)))
+        (doseq [e impl] (fs/delete-tree (fs/path build e)))
+        (doseq [f (impl-files room impl)]
+          (fs/create-dirs (fs/parent (fs/path build f)))
+          (fs/copy (fs/path room f) (fs/path build f) {:replace-existing true :copy-attributes true}))
+        (let [mapping (get config :allure default-mapping)
+              checks (:verify config)
+              named (fn [c] (assoc c :name (or (:name c) (name (:kind c)))))
+              run (loop [cs (map named checks) out [] findings []]
+                    (if-let [c (first cs)]
+                      (let [{:keys [check] :as r}
+                            (case (:kind c)
+                              :tests (run-tests-check {:root root :build build :cycle-dir cycle-dir :check c
+                                                       :scenarios scenarios :mapping mapping})
+                              :runs (run-runs-check {:build build :check c})
+                              :serves (do (when (port-held? (:port c))
+                                            (cmd/cannot-run! (str "the port " (:port c) " of the check " (:name c)
+                                                                  " is held by another process: verify measures no other process")))
+                                          (run-serves-check {:root root :build build :cycle-dir cycle-dir :check c})))
+                            findings (into findings (:findings r))]
+                        (if (= :passed (:outcome check))
+                          (recur (rest cs) (conj out check) findings)
+                          {:checks (into (conj out check) (map (fn [x] {:name (:name x) :kind (:kind x) :outcome :not-run}) (rest cs)))
+                           :findings findings :failed check}))
+                      {:checks out :findings findings}))
+              outcome (if (:failed run) :refused :passed)]
+          (record! (cond-> {:cut cut :room-tree tree :outcome outcome :checkout build-rel :checks (:checks run)}
+                     (:failed run) (assoc :reason (str "the check " (:name (:failed run)) " failed: "
+                                                       (str/join "; " (map :message (:findings run)))))))
+          {:findings (:findings run)
+           :result {:verify {:cycle cycle :cut cut :outcome outcome :checks (:checks run)}}})))))

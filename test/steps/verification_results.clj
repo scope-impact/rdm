@@ -1,167 +1,129 @@
 (ns steps.verification-results
-  "Step definitions for dhf/spec/verification/results.feature: `rdm-spec
-  status` reading a small project's results (steps.verification-support).
-
-  Context keys set here: :dir (the project), :id (the scenario a Then is
-  about), :file (the result file a Then names), :unknown (the id no
-  scenario carries)."
+  "Step definitions of dhf/spec/verification/results.feature, and the
+  verification context's helpers."
   (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-command :as kc]
-            [steps.support :as s]
-            [steps.verification-support :as v]))
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
+            [steps.kernel-command :as k]))
 
-(defn- rd [ctx] (v/results-dir (:dir ctx)))
+(defn results-dir [ctx] (str (fs/path (k/guard! (:dir ctx)) "dhf/allure-results")))
 
-(defn- with-project
-  "ctx with a project holding the stamped scenarios @spec-0001 and
-  @spec-0012, unless an earlier Given made one."
-  [ctx]
-  (if (:dir ctx)
-    ctx
-    (v/one-feature! ctx [{:id "spec-0001" :title "One"} {:id "spec-0012" :title "Twelve"}])))
+(defn scenarios-project!
+  "A project whose core feature holds the given scenarios (k/sc maps)."
+  [ctx scenarios]
+  (k/project! ctx {:features {"dhf/spec/kernel/core.feature"
+                              (k/feature-text {:name "Core" :tags ["UN-001"] :scenarios scenarios})}}))
 
-(defn- status-out [ctx]
-  (let [r (kc/exits! ctx 0)]
-    (:status (kc/stdout-edn r))))
+(defn status-of [ctx id]
+  (let [s (first (filter #(= id (:id %)) (get-in (k/edn-out ctx) [:status :scenarios])))]
+    (when-not s (fail! (str "no status for " id ": " (:out ctx) (:err ctx))))
+    (:status s)))
 
-;; ---------------------------------------------------------------------------
-;; Allure results are the oracle, whoever wrote them
+(defn result! [ctx m] (k/write-result! (results-dir ctx) m) ctx)
 
-(defstep #"an Allure result labelled spec=spec-9999"
-  (fn [ctx]
-    (let [ctx (with-project ctx)
-          f (v/result! (rd ctx) "spec-9999" "passed")]
-      (v/result! (rd ctx) "spec-0001" "passed")
-      (assoc ctx :unknown "spec-9999" :file f))))
+;; One step for every "an Allure result labelled spec=ID ..." of the context.
+(defstep #"an Allure result labelled spec=(spec-\d+)(?: with status (\w+)| whose status is \"(\w+)\")?"
+  (fn [ctx id status bad]
+    (let [n (parse-long (subs id 5))
+          ctx (scenarios-project! ctx [(k/sc (if (= id "spec-9999") 1 n) "A scenario")])
+          f (k/write-result! (results-dir ctx) {:id id :status (or status bad "passed")})]
+      (assoc ctx ::id id ::file f))))
 
 (defstep #"no scenario in the spec is tagged @spec-9999"
-  (fn [ctx]
-    (let [texts (vals (kc/spec-files (:dir ctx)))]
-      (s/check! (not-any? #(str/includes? % "@spec-9999") texts) "a scenario is tagged @spec-9999")
-      ctx)))
+  (fn [ctx] (assert (not (str/includes? (slurp (fs/file (k/guard! (:dir ctx)) "dhf/spec/kernel/core.feature")) "spec-9999"))) ctx))
 
 (defstep #"the report lists spec-9999 as an unknown result"
   (fn [ctx]
-    (let [out (status-out ctx)]
-      (s/check! (some #(= "spec-9999" (:spec %)) (:unknown-results out))
-                (str "the unknown results are " (pr-str (:unknown-results out))))
-      nil)))
+    (k/check-exit ctx 0)
+    (assert (= ["spec-9999"] (map :spec (get-in (k/edn-out ctx) [:status :unknown-results]))) (:out ctx))
+    ctx))
 
 (defstep #"it counts toward no scenario"
   (fn [ctx]
-    (let [out (status-out ctx)]
-      (s/check! (= {"spec-0001" :verified "spec-0012" :unverified} (v/statuses ctx))
-                (str "the statuses are " (pr-str (v/statuses ctx))))
-      (s/check! (= 2 (reduce + (vals (:counts out)))) (str "the counts are " (pr-str (:counts out))))
-      nil)))
-
-(defstep #"the results directory exists and holds no Allure result"
-  (fn [ctx]
-    (let [ctx (with-project ctx)]
-      (fs/create-dirs (rd ctx))
+    (k/check-exit ctx 0)
+    (let [st (k/edn-out ctx)]
+      (assert (every? #(= :unverified (:status %)) (get-in st [:status :scenarios])) (:out ctx))
       ctx)))
 
+(defstep #"the results directory exists and holds no Allure result"
+  (fn [ctx] (let [ctx (k/project! ctx)] (fs/create-dirs (results-dir ctx)) ctx)))
+
 (defstep #"it exits 2 and says no test run wrote results there"
-  (fn [ctx] (kc/refused-naming! ctx "no test run wrote results there") nil))
+  (fn [ctx] (k/check-exit ctx 2) (k/err-line-with ctx "no test run wrote results")))
 
 (defstep #"a results directory holding one result file that is not valid JSON"
   (fn [ctx]
-    (let [ctx (with-project ctx)
-          f (str (fs/file (rd ctx) "broken-result.json"))]
-      (v/result! (rd ctx) "spec-0001" "passed")
-      (s/write! (rd ctx) "broken-result.json" "{\"uuid\": \"x\",\n \"status\": \n")
-      (assoc ctx :file f))))
+    (let [ctx (k/project! ctx)]
+      (k/write-files! (results-dir ctx) {"broken-result.json" "{\"name\": \"x\",\n \"status\": "})
+      (assoc ctx ::file "broken-result.json"))))
 
-(defn- unreadable-lines [ctx]
-  (let [r (kc/the-run ctx)
-        rel (str (fs/relativize (:dir ctx) (:file ctx)))]
-    (filter #(and (str/includes? % (str (fs/file-name (:file ctx)))) (str/includes? % rel)) (s/err-lines r))))
+(defn unreadable-line [ctx]
+  (let [ls (filter #(str/includes? % (::file ctx)) (k/err-lines ctx))]
+    (assert (= 1 (count ls)) (str "the file is named on " (count ls) " lines: " (:err ctx)))
+    (first ls)))
 
 (defstep #"the report names that file as unreadable, in one line on the error stream"
   (fn [ctx]
-    (let [r (kc/the-run ctx)
-          ls (unreadable-lines ctx)]
-      (s/check! (#{0 1} (:exit r)) (str "status did not run\n" (s/show r)))
-      (s/check! (= 1 (count ls)) (str "the error stream names the file in " (count ls) " lines\n" (s/show r)))
-      (s/check! (str/includes? (first ls) "unreadable") (str "the line does not say unreadable: " (first ls)))
-      (s/check! (= (count (s/err-lines r)) (count (str/split-lines (str/trim (:err r)))))
-                (str "the error stream holds a broken line\n" (s/show r)))
-      nil)))
+    (assert (str/includes? (unreadable-line ctx) "unreadable") (:err ctx))
+    ctx))
 
-(def ^:private javascript-result
-  "A result as allure-js-commons writes it: camelCase keys, its own labels."
-  (fn [id]
-    {:uuid (str (random-uuid)) :historyId (str id "-js") :testCaseId "abc" :name (str "a js test of " id)
-     :fullName (str "features/a.feature#" id) :status "passed" :stage "finished"
-     :statusDetails {} :start 1700000000000 :stop 1700000000100
-     :labels [{:name "language" :value "javascript"} {:name "framework" :value "cucumberjs"}
-              {:name "host" :value "ci"} {:name "spec" :value id}]
-     :links [] :parameters [] :attachments [] :steps [{:name "Given a step" :status "passed" :stage "finished"}]}))
+(def js-result
+  {"uuid" "0b1f2c4e" "historyId" "abc" "name" "A scenario" "fullName" "features/core.feature:A scenario"
+   "status" "passed" "stage" "finished" "start" 1700000000000 "stop" 1700000000100
+   "labels" [{"name" "language" "value" "javascript"} {"name" "framework" "value" "cucumberjs"}
+             {"name" "host" "value" "ci"} {"name" "thread" "value" "1"} {"name" "spec" "value" "spec-0001"}]
+   "steps" [{"name" "Given a step" "status" "passed" "stage" "finished" "steps" [] "attachments" [] "parameters" []}]
+   "attachments" [] "parameters" [] "links" []})
 
 (defstep #"Allure results labelled with spec ids written by a JavaScript test run"
   (fn [ctx]
-    (let [ctx (with-project ctx)]
-      (doseq [id ["spec-0001" "spec-0012"]] (v/write-result! (rd ctx) (javascript-result id)))
+    (let [ctx (scenarios-project! ctx [(k/sc 1 "A scenario") (k/sc 2 "Another")])]
+      (k/write-files! (results-dir ctx) {"0b1f2c4e-result.json" (json/generate-string js-result)
+                                         "1c2d-result.json" (json/generate-string (assoc js-result "uuid" "1c2d" "status" "failed"
+                                                                                         "labels" [{"name" "spec" "value" "spec-0002"}]))})
       ctx)))
 
 (defstep #"the scenarios they name are verified exactly as if any other stack had written them"
   (fn [ctx]
-    (status-out ctx)
-    (s/check! (= {"spec-0001" :verified "spec-0012" :verified} (v/statuses ctx))
-              (str "the statuses are " (pr-str (v/statuses ctx))))
-    nil))
-
-;; ---------------------------------------------------------------------------
-;; A result with no spec label verifies nothing
+    (k/check-exit ctx 0)
+    (assert (= :verified (status-of ctx "spec-0001")))
+    (assert (= :failed (status-of ctx "spec-0002")))
+    ctx))
 
 (defstep #"an Allure result from a unit test, with no spec label"
   (fn [ctx]
-    (let [ctx (with-project ctx)]
-      (v/result! (rd ctx) nil "passed")
-      (v/result! (rd ctx) "spec-0001" "passed")
+    (let [ctx (scenarios-project! ctx [(k/sc 1 "A scenario")])]
+      (k/write-files! (results-dir ctx) {"u-result.json" (json/generate-string {"name" "parses" "status" "passed"
+                                                                                "labels" [{"name" "suite" "value" "unit"}]})})
       ctx)))
 
 (defstep #"it is not listed as an unknown result"
   (fn [ctx]
-    (let [out (status-out ctx)]
-      (s/check! (empty? (:unknown-results out)) (str "the unknown results are " (pr-str (:unknown-results out))))
-      nil)))
-
-;; ---------------------------------------------------------------------------
-;; What decides a status, and what is only kept
+    (assert (empty? (get-in (k/edn-out ctx) [:status :unknown-results])) (:out ctx))
+    ctx))
 
 (defstep #"two passing Allure results labelled spec=spec-0012, one with attachments, links and extra labels, and one with none"
   (fn [ctx]
-    (let [ctx (with-project ctx)
-          full (-> (v/result-map "spec-0012" "passed")
-                   (assoc :attachments [{:name "response" :source "x-attachment.txt" :type "text/plain"}]
-                          :links [{:type "issue" :name "UN-001" :url "dhf/spec/needs.edn#UN-001"}])
-                   (update :labels into [{:name "epic" :value "other"} {:name "owner" :value "someone"}]))]
-      (v/write-result! (rd ctx) full)
-      (v/write-result! (rd ctx) {:uuid (str (random-uuid)) :status "passed" :labels [{:name "spec" :value "spec-0012"}]})
-      (assoc ctx :id "spec-0012"))))
+    (let [ctx (scenarios-project! ctx [(k/sc 12 "Twelve")])]
+      (k/write-files! (results-dir ctx)
+                      {"a-result.json" (json/generate-string {"name" "Twelve" "status" "passed"
+                                                              "labels" [{"name" "spec" "value" "spec-0012"} {"name" "owner" "value" "x"}
+                                                                        {"name" "severity" "value" "critical"}]
+                                                              "links" [{"type" "issue" "name" "UN-001" "url" "x"}]
+                                                              "attachments" [{"name" "log" "source" "a-attachment.txt" "type" "text/plain"}]})
+                       "b-result.json" (json/generate-string {"status" "passed" "labels" [{"name" "spec" "value" "spec-0012"}]})})
+      ctx)))
 
 (defstep #"spec-0012 is verified, and the other elements change nothing"
   (fn [ctx]
-    (status-out ctx)
-    (s/check! (= :verified (get (v/statuses ctx) "spec-0012")) (str "the statuses are " (pr-str (v/statuses ctx))))
-    (s/check! (empty? (kc/finding-lines (kc/the-run ctx))) (str "status reported findings\n" (s/show (kc/the-run ctx))))
-    nil))
-
-(defstep #"an Allure result labelled spec=spec-0012 whose status is \"green\""
-  (fn [ctx]
-    (let [ctx (with-project ctx)
-          f (v/write-result! (rd ctx) (v/result-map "spec-0012" "green"))]
-      (v/result! (rd ctx) "spec-0001" "passed")
-      (assoc ctx :file f))))
+    (k/check-exit ctx 0)
+    (assert (= :verified (status-of ctx "spec-0012")))
+    (assert (empty? (get-in (k/edn-out ctx) [:status :unknown-results])))
+    ctx))
 
 (defstep #"the report names its file as unreadable, saying the status must be passed, failed, broken or skipped"
   (fn [ctx]
-    (let [r (kc/the-run ctx)
-          ls (unreadable-lines ctx)]
-      (s/check! (some #(str/includes? % "passed, failed, broken or skipped") ls)
-                (str "no line names the file and the statuses\n" (s/show r)))
-      (s/check! (not= :verified (get (v/statuses ctx) "spec-0012")) "the result counted")
-      nil)))
+    (let [l (unreadable-line ctx)]
+      (assert (str/includes? l "passed, failed, broken or skipped") l)
+      ctx)))

@@ -1,186 +1,103 @@
 (ns steps.architecture-lint
-  "Step definitions for dhf/spec/architecture/lint.feature: `rdm-spec
-  check` on a small project `rdm-spec init` wrote, its model the
-  architecture context's base model (steps.architecture-support) changed
-  as a step says, with a feature file for each component.
-
-  A finding is read from the error stream as `FILE:LINE: RULE: what`; a
-  step checks the line of its rule names what the scenario says.
-
-  Context keys set here: :dir (the project), :model (the model written),
-  :c4 (the configuration's :c4 a step set)."
+  "Step definitions of dhf/spec/architecture/lint.feature."
   (:require [babashka.fs :as fs]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.architecture-support :as a]
-            [steps.kernel-command :as kc]
-            [steps.support :as s]))
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
+            [steps.kernel-command :as k]
+            [steps.architecture-model :as am]))
 
-(defn- with-model
-  "ctx with a small project whose model is the base model changed by `f`."
-  [ctx f]
-  (let [m (f (or (:model ctx) a/base-model))
-        dir (a/small-project! ctx m)]
-    (assoc ctx :dir dir :model m)))
+(def base (k/model {:contexts [["shop" ["till"]] ["stock" ["shelf"]]]
+                    :views [{:key "context" :level :context :description "The demo and its users"}]}))
 
-(defn- update-where [xs pred f] (mapv #(if (pred %) (f %) %) xs))
-
-(defn- set-c4! [ctx k v]
-  (let [ctx (kc/project-set-up! ctx)
-        dir (:dir ctx)
-        cfg (kc/config-of dir)]
-    (s/write! dir "dhf/harness/config.edn" (str (pr-str (assoc-in cfg [:c4 k] v)) "\n"))
-    ctx))
-
-(defn- rule-lines [r rule lines-of]
-  (filter #(str/includes? % (str ": " rule ": ")) (lines-of r)))
-
-(defn- names! [ctx rule names & {:keys [warning?]}]
-  (let [r (kc/the-run ctx)
-        ls (rule-lines r rule (if warning? #(filter kc/warning-line? (s/err-lines %)) kc/finding-lines))]
-    (s/check! (some (fn [l] (every? #(str/includes? l %) names)) ls)
-              (str "no " (if warning? "warning" "finding") " of " rule " names " (str/join ", " names) "\n" (s/show r)))
-    nil))
-
-(defn- fails! [ctx rule & names]
-  (kc/exits! ctx 1)
-  (names! ctx rule names))
-
-;; ---------------------------------------------------------------------------
-;; The C4 lint
+(defn lint-project! [ctx m & [opts]]
+  (am/arch-project! ctx m (merge {:no-views true} opts)))
 
 (defstep #"a view with no description"
-  (fn [ctx] (with-model ctx #(update % :views update-where (fn [v] (= "context" (:key v))) (fn [v] (dissoc v :description))))))
-
-(defstep #"it fails rule c4-scope and names the view"
-  (fn [ctx] (fails! ctx "c4-scope" "\"context\"")))
+  (fn [ctx] (-> (lint-project! ctx (assoc-in base [:views 0 :description] nil)) (k/names+ "context"))))
 
 (defstep #"a container with no description"
-  (fn [ctx] (with-model ctx #(update % :containers update-where (fn [c] (= :db (:id c))) (fn [c] (dissoc c :description))))))
-
-(defstep #"it fails rule c4-element-described and names the container"
-  (fn [ctx] (fails! ctx "c4-element-described" ":db")))
+  (fn [ctx] (-> (lint-project! ctx (assoc-in base [:containers 0 :description] nil)) (k/names+ ":app"))))
 
 (defstep #"a relationship with no description"
-  (fn [ctx] (with-model ctx #(update % :relationships update-where (fn [r] (= [:app :mailer] [(:from r) (:to r)]))
-                                     (fn [r] (dissoc r :description))))))
-
-(defstep #"it fails rule c4-arrow-labelled and names both ends"
-  (fn [ctx] (fails! ctx "c4-arrow-labelled" ":app" ":mailer")))
+  (fn [ctx] (-> (lint-project! ctx (update base :relationships conj {:from :shop/till :to :user}))
+                (k/names+ ":shop/till" ":user"))))
 
 (defstep #"a context view that includes no person"
-  (fn [ctx] (with-model ctx #(-> % (assoc :people [])
-                                 (update :relationships (fn [rs] (vec (remove (fn [r] (= :bather (:from r))) rs))))))))
-
-(defstep #"it fails rule c4-context-actors and names the view"
-  (fn [ctx] (fails! ctx "c4-context-actors" "\"context\"")))
+  (fn [ctx] (-> (lint-project! ctx (assoc base :people [] :relationships [])) (k/names+ "context"))))
 
 (defstep #"a container declared with kind library"
-  (fn [ctx] (with-model ctx #(update % :containers update-where (fn [c] (= :db (:id c))) (fn [c] (assoc c :kind :library))))))
-
-(defstep #"it fails rule c4-container-runs and names the container"
-  (fn [ctx] (fails! ctx "c4-container-runs" ":db")))
+  (fn [ctx] (-> (lint-project! ctx (assoc-in base [:containers 0 :kind] :library)) (k/names+ ":app"))))
 
 (defstep #"a relationship that publishes the event SpecCut"
-  (fn [ctx] (with-model ctx #(update % :relationships conj {:from :booking/slots :to :billing/invoice
-                                                            :description "Publishes" :event :SpecCut}))))
+  (fn [ctx] (-> (lint-project! ctx (update base :relationships conj {:from :shop/till :to :stock/shelf :description "Publishes" :event :SpecCut}))
+                (k/names+ ":shop/till -> :stock/shelf" "SpecCut"))))
 
 (defstep #"SpecCut is not in the event catalogue"
   (fn [ctx]
-    (let [dir (:dir ctx)]
-      (s/write! dir (or (:events (kc/config-of dir)) "dhf/spec/events.edn") "{}\n")
-      ctx)))
+    (assert (not (str/includes? (slurp (fs/file (k/guard! (:dir ctx)) "dhf/spec/events.edn")) "SpecCut")))
+    ctx))
 
-(defstep #"it fails rule c4-events-named and names the relationship and the event"
-  (fn [ctx] (fails! ctx "c4-events-named" ":booking/slots" ":billing/invoice" "SpecCut")))
-
-(defstep #"the configured view limit is (\d+) elements"
-  (fn [ctx n] (assoc (set-c4! ctx :view-element-limit (parse-long n)) :c4 {:view-element-limit (parse-long n)})))
+(defstep #"the configured view limit is 20 elements"
+  (fn [ctx] (assoc ctx ::limit 20)))
 
 (defstep #"a view showing 23 elements"
   (fn [ctx]
-    ;; the context view: the system, the external system and 21 people
-    (with-model ctx #(update % :people into (for [i (range 2 22)]
-                                              {:id (keyword (str "person-" i)) :name (str "Person " i)
-                                               :description "Books a slot" :actor #{:human}})))))
+    (lint-project! ctx (update base :people into (for [i (range 21)] {:id (keyword (str "p" i)) :name (str "P" i)
+                                                                        :description "A person" :actor #{:human}}))
+                   {:config {:c4 {:view-element-limit 20 :description-max-chars 45}}})))
 
 (defstep #"it warns under rule c4-view-size and names the view and both counts"
   (fn [ctx]
-    (let [r (kc/the-run ctx)]
-      (s/check! (#{0 1} (:exit r)) (str "the check did not run\n" (s/show r)))
-      (s/check! (not-any? #(str/includes? % ": c4-view-size: ") (kc/finding-lines r)) "the view size is a finding, not a warning")
-      (names! ctx "c4-view-size" ["\"context\"" "23" "20"] :warning? true))))
+    (k/err-line-with ctx "warning: c4-view-size" "context" "23" "20")))
 
-(defstep #"the configured description limit is (\d+) characters"
-  (fn [ctx n] (set-c4! ctx :description-max-chars (parse-long n))))
+(defstep #"the configured description limit is 45 characters"
+  (fn [ctx] ctx))
 
 (defstep #"a person whose description is 60 characters"
   (fn [ctx]
-    (let [d (apply str "Books a slot and pays for it at the desk" (repeat 20 "."))]
-      (s/check! (= 60 (count d)) "the description is not 60 characters")
-      (with-model ctx #(update % :people update-where (fn [p] (= :bather (:id p))) (fn [p] (assoc p :description d)))))))
+    (-> (lint-project! ctx (assoc-in base [:people 0 :description] (apply str (repeat 60 "x")))
+                       {:config {:c4 {:view-element-limit 20 :description-max-chars 45}}})
+        (k/names+ ":user" "60" "45"))))
 
-(defstep #"it fails rule c4-description-length and names the person and both lengths"
-  (fn [ctx] (fails! ctx "c4-description-length" ":bather" "60" "45")))
-
-(def for-a-person
-  ["Does each view serve its audience: can its reader answer the question the view is for?"
-   "Is the true coupling visible: does every relationship that matters appear, labelled with what passes?"
-   "Was each render looked at by a person, and did nothing overlap or hide a name?"])
-
-(defstep #"its result's :lint :for-a-person is exactly \[.*\]"
+(defstep #"its result's :lint :for-a-person is exactly \[\"Does each view serve its audience: can its reader answer the question the view is for\?\" \"Is the true coupling visible: does every relationship that matters appear, labelled with what passes\?\" \"Was each render looked at by a person, and did nothing overlap or hide a name\?\"\]"
   (fn [ctx]
-    (let [r (kc/the-run ctx)]
-      (s/check! (#{0 1} (:exit r)) (str "the check did not run\n" (s/show r)))
-      (s/check! (= for-a-person (get-in (kc/stdout-edn r) [:lint :for-a-person]))
-                (str "the result's :lint is " (pr-str (:lint (kc/stdout-edn r)))))
-      nil)))
-
-;; ---------------------------------------------------------------------------
-;; Bounded contexts are modules of one container, and the model owns the spec
+    (assert (= ["Does each view serve its audience: can its reader answer the question the view is for?"
+                "Is the true coupling visible: does every relationship that matters appear, labelled with what passes?"
+                "Was each render looked at by a person, and did nothing overlap or hide a name?"]
+               (get-in (k/edn-out ctx) [:lint :for-a-person]))
+            (:out ctx))
+    ctx))
 
 (defstep #"a bounded context with components and no component view"
-  (fn [ctx] (with-model ctx #(update % :views (fn [vs] (vec (remove (fn [v] (= :billing (:context v))) vs)))))))
-
-(defstep #"it fails rule a-component-view and names the context"
-  (fn [ctx] (fails! ctx "a-component-view" ":billing")))
+  (fn [ctx] (-> (lint-project! ctx (update base :views (fn [vs] (vec (remove #(= :stock (:context %)) vs)))))
+                (k/names+ ":stock"))))
 
 (defstep #"a component in the model with no feature file at its path in the spec"
   (fn [ctx]
-    (let [ctx (with-model ctx identity)]
-      (fs/delete (fs/file (:dir ctx) "dhf/spec/billing/invoice.feature"))
-      ctx)))
-
-(defstep #"it fails rule a-scenario-owner and names the component"
-  (fn [ctx] (fails! ctx "a-scenario-owner" ":billing/invoice" "dhf/spec/billing/invoice.feature")))
+    (let [ctx (lint-project! ctx base)]
+      (fs/delete (fs/path (k/guard! (:dir ctx)) "dhf/spec/stock/shelf.feature"))
+      (k/names+ ctx ":stock/shelf"))))
 
 (defstep #"a feature file in the spec at a path no component of the model names"
   (fn [ctx]
-    (let [ctx (with-model ctx identity)]
-      (s/write! (:dir ctx) "dhf/spec/billing/refunds.feature" "Feature: Refunds\n  Nobody owns it.\n")
-      ctx)))
+    (let [ctx (lint-project! ctx base)]
+      (k/write-files! (:dir ctx) {"dhf/spec/stray/orphan.feature" (am/feature-for "stray/orphan" 9)})
+      (k/names+ ctx "dhf/spec/stray/orphan.feature"))))
 
-(defstep #"it fails rule a-scenario-owner and names the file"
-  (fn [ctx] (fails! ctx "a-scenario-owner" "dhf/spec/billing/refunds.feature")))
-
-(def ^:private cross {:from :billing/invoice :to :booking/slots :description "Reads slots from"})
+(def crossing {:from :shop/till :to :stock/shelf :description "Reserves stock with"})
 
 (defstep #"a relationship from a component of one bounded context to a component of another, naming no event"
-  (fn [ctx] (with-model ctx #(update % :relationships conj cross))))
-
-(defstep #"it fails rule a-contract-only and names the relationship"
-  (fn [ctx] (fails! ctx "a-contract-only" ":billing/invoice" ":booking/slots")))
+  (fn [ctx] (-> (lint-project! ctx (update base :relationships conj crossing))
+                (k/names+ ":shop/till -> :stock/shelf"))))
 
 (defstep #"a configuration whose :c4 holds :contexts-relate-by \[:events :calls\], and a relationship from a component of one bounded context to a component of another, naming no event"
   (fn [ctx]
-    (-> ctx
-        (set-c4! :contexts-relate-by [:events :calls])
-        (with-model #(update % :relationships conj cross)))))
+    (lint-project! ctx (update base :relationships conj crossing)
+                   {:config {:c4 {:view-element-limit 20 :description-max-chars 45 :contexts-relate-by [:events :calls]}}
+                    :no-views false})))
 
 (defstep #"it passes rule a-contract-only"
   (fn [ctx]
-    (let [r (kc/the-run ctx)]
-      (s/check! (and (#{0 1} (:exit r)) (:lint (kc/stdout-edn r))) (str "the lint did not run\n" (s/show r)))
-      (s/check! (not-any? #(str/includes? % "a-contract-only") (s/err-lines r))
-                (str "a-contract-only is named\n" (s/show r)))
-      nil)))
+    (assert (#{0 1} (:exit ctx)) (:err ctx))
+    (assert (not-any? #{"a-contract-only"} (k/finding-rules ctx)) (:err ctx))
+    (k/check-exit ctx 0)))

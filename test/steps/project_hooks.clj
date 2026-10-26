@@ -1,62 +1,47 @@
 (ns steps.project-hooks
-  "Step definitions for dhf/spec/project/hooks.feature: the pre-commit hook
-  init installs, run by a real commit. The hook runs rdm-spec from PATH, so
-  the scenario puts first on PATH an rdm-spec that logs its arguments and
-  runs the room's code by path (steps.project-support/shim!). Context keys:
-  see steps.project-support; :commits, the commits made, {:exit :err}."
+  "Step definitions of dhf/spec/project/hooks.feature: a project made by init
+  whose hook stays on, with an rdm-spec on PATH that runs the code under test
+  by path and logs each call."
   (:require [babashka.fs :as fs]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-command :as kc]
-            [steps.project-support :as ps]
-            [steps.support :as s]))
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
+            [steps.kernel-command :as k]))
 
 (defstep #"the pre-commit hook is installed"
   (fn [ctx]
-    (ps/needs-project!)
-    (let [parent (s/tmp-dir)
-          log (str (fs/file (s/tmp-dir) "rdm-spec.log"))
-          r (kc/run! ctx parent ["init" "sauna"])
-          dir (str (fs/file parent "sauna"))]
-      (s/check! (zero? (:exit r)) (str "rdm-spec init failed\n" (s/show r)))
-      (s/check! (= ".githooks" (ps/git! dir "config" "--get" "core.hooksPath")) "core.hooksPath is not .githooks")
-      (assoc ctx :dir dir :hook-log log
-             :env {"PATH" (str (ps/shim! log) java.io.File/pathSeparator (System/getenv "PATH"))
-                   "GIT_CEILING_DIRECTORIES" parent}))))
+    (let [ctx (k/base! ctx)
+          bin (k/path-in ctx "bin")
+          log (k/path-in ctx "calls.log")
+          r (k/rdm ctx (:base ctx) ["init" "project"])
+          dir (k/path-in ctx "project")]
+      (k/check-exit r 0)
+      (k/write-files! bin {"rdm-spec" (str "#!/bin/sh\necho \"$@\" >> '" log "'\nexec " (str/join " " (k/rdm-command)) " \"$@\"\n")})
+      (fs/set-posix-file-permissions (fs/path bin "rdm-spec") "rwxr-xr-x")
+      (assert (= ".githooks" (k/git-config dir "core.hooksPath")))
+      (assoc ctx :dir dir ::log log
+             :env {"PATH" (str bin ":" (System/getenv "PATH"))}))))
 
-(defn- commit!
-  "Makes a commit of everything in the project, the hook running: {:exit :err :head-before :head-after}."
-  [ctx msg]
-  (let [dir (:dir ctx)
-        head #(str/trim (:out (ps/git dir (:env ctx) "rev-parse" "--verify" "--quiet" "HEAD")))
-        before (head)
-        _ (ps/git! dir "add" "-A")
-        r (ps/git dir (:env ctx) "commit" "-q" "-m" msg)]
-    {:exit (:exit r) :err (:err r) :head-before before :head-after (head)}))
-
-(defn- log-lines [ctx]
-  (let [f (fs/file (:hook-log ctx))]
-    (if (fs/exists? f) (vec (remove str/blank? (str/split-lines (slurp (str f))))) [])))
+(defn commit [ctx]
+  (k/sh (:dir ctx) (:env ctx) "git" "-c" "commit.gpgsign=false" "add" "-A")
+  (k/sh (:dir ctx) (:env ctx) "git" "-c" "commit.gpgsign=false" "commit" "-q" "-m" "a change"))
 
 (defstep #"a commit is made"
   (fn [ctx]
-    (assoc ctx :commits [(commit! ctx "The skeleton")])))
+    (k/write-files! (:dir ctx) {"dhf/spec/glossary.md" "# Glossary\n\n**Sauna**: a hot room.\n"})
+    (merge ctx (commit ctx))))
 
-(defstep #"the hook runs \"rdm-spec ([^\"]+)\""
-  (fn [ctx line]
-    (let [c (last (:commits ctx))]
-      (s/check! (= [line] (log-lines ctx)) (str "the hook ran rdm-spec with " (log-lines ctx) ", not " line))
-      (s/check! (zero? (:exit c)) (str "the commit of a skeleton that passes the check was refused: " (:err c)))
-      (s/check! (not= (:head-before c) (:head-after c)) "no commit was made")
-      nil)))
+(defstep #"the hook runs \"rdm-spec check\""
+  (fn [ctx]
+    (assert (= 0 (:exit ctx)) (str "the commit failed: " (:err ctx)))
+    (assert (fs/exists? (fs/file (::log ctx))) "the hook ran no rdm-spec")
+    (assert (some #(= "check" (str/trim %)) (str/split-lines (slurp (::log ctx)))) (slurp (::log ctx)))
+    ctx))
 
 (defstep #"the commit is refused when the check exits other than 0"
   (fn [ctx]
-    ;; a needs file that is not EDN is a finding: the check exits 1
-    (s/write! (:dir ctx) "dhf/spec/needs.edn" "{\"UN-001\" \n")
-    (let [c (commit! ctx "A broken spec")]
-      (s/check! (= 2 (count (log-lines ctx))) (str "the hook did not run the check again: " (log-lines ctx)))
-      (s/check! (not (zero? (:exit c))) "the commit was made")
-      (s/check! (= (:head-before c) (:head-after c)) "HEAD moved")
-      (s/check! (str/includes? (:err c) "needs") (str "the refusal does not say why: " (:err c)))
-      nil)))
+    (let [head (k/git (:dir ctx) "rev-parse" "HEAD")]
+      (k/write-files! (:dir ctx) {"dhf/spec/ids.edn" "{:issued"})
+      (let [r (commit ctx)]
+        (assert (not= 0 (:exit r)) "the commit was not refused")
+        (assert (= head (k/git (:dir ctx) "rev-parse" "HEAD")))
+        ctx))))

@@ -1,6 +1,0 @@
-# What rdm-spec writes and nothing commits.
-dhf/allure-results/
-dhf/cycles/*/results/
-dhf/cycles/*/build/
-site-src/
-site/

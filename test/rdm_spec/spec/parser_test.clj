@@ -1,102 +1,63 @@
 (ns rdm-spec.spec.parser-test
-  (:require [babashka.fs :as fs]
+  (:require [clojure.test :refer [deftest is]]
+            [babashka.fs :as fs]
             [babashka.process :as p]
-            [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [rdm-spec.kernel.bus :as bus]
             [rdm-spec.spec.parser :as parser]))
 
-(def feature
-  (str "@UN-001\nFeature: Desk\n  A fixture.\n\n"
-       "  Background:\n    Given a desk\n\n"
-       "  @spec-0001 @e2e\n  Scenario: One\n    Given a thing\n    Then it holds\n\n"
-       "  @UN-002\n  Rule: A rule\n\n"
-       "    @spec-0002 @spec-0003 @contract @wip\n    Scenario Outline: Two <n>\n      Given <n>\n\n"
-       "      Examples:\n        | n |\n        | 1 |\n        | 2 |\n\n"
-       "    @e2e\n    Scenario: Three\n      Given nothing\n"))
+(def model "{:containers [{:id :app :contexts [{:id :architecture :name \"architecture\" :components [{:id :architecture/lint :name \"Lint\" :spec \"architecture/lint\"}]}]}] :kernel [{:id :kernel/bus :name \"Event bus\" :spec \"kernel/bus\"}]}")
 
-(deftest a-feature-file-is-read-into-scenarios
-  (let [{:keys [scenarios refusals feature file]} (parser/parse-text "dhf/spec/kernel/desk.feature" feature {:prefix "spec"})
-        [one two three] scenarios]
-    (is (empty? refusals))
-    (is (= "dhf/spec/kernel/desk.feature" file))
-    (is (= "Desk" (:name feature)))
-    (testing "ids"
-      (is (= ["spec-0001"] (:ids one)))
-      (is (= "spec-0001" (:id one)))
-      (is (= ["spec-0002" "spec-0003"] (:ids two)))
-      (is (nil? (:id two)))
-      (is (= [] (:ids three))))
-    (testing "levels, needs, planned work and rules"
-      (is (= [:e2e] (:levels one)))
-      (is (= :e2e (:level one)))
-      (is (= :contract (:level two)))
-      (is (= ["UN-001"] (:needs one)))
-      (is (= ["UN-001" "UN-002"] (:needs two)))
-      (is (:wip? two))
-      (is (not (:wip? one)))
-      (is (nil? (:rule one)))
-      (is (= "A rule" (:rule two))))
-    (testing "the scenario as written"
-      (is (= "One" (:title one) (:name one)))
-      (is (= "Scenario" (:keyword one)))
-      (is (= "Scenario Outline" (:keyword two)))
-      (is (:outline? two))
-      (is (= [{:line 22 :values {"n" "1"}} {:line 23 :values {"n" "2"}}] (:rows two)))
-      (is (= [{:keyword "Given" :text "a desk"}] (map #(select-keys % [:keyword :text]) (:background one))))
-      (is (= [{:keyword "Given" :text "a thing"} {:keyword "Then" :text "it holds"}]
-             (map #(select-keys % [:keyword :text]) (:steps one))))
-      (is (= 9 (:line one)))
-      (is (every? #(= "dhf/spec/kernel/desk.feature" (:file %)) scenarios)))))
+(def lint "@UN-005\nFeature: Lint\n\n  @UN-002\n  Rule: Views\n\n    @spec-0012 @e2e\n    Scenario: Names the view\n      Given a view\n\n    @spec-0013 @contract @wip @UN-003\n    Scenario Outline: Rows <a>\n      Given <a>\n\n      Examples:\n        | a |\n        | 1 |\n")
 
-(deftest refusals-are-kept
-  (let [{:keys [refusals]} (parser/parse-text "a.feature" "Feature: A\n\n  Scenario Template: x\n" {:prefix "spec"})]
-    (is (= ["gherkin-unknown-keyword"] (map :rule refusals)))
-    (is (= [3] (map :line refusals)))))
+(defn- project []
+  (let [d (str (fs/create-temp-dir {:dir (or (System/getenv "TMPDIR") (System/getProperty "java.io.tmpdir"))}))]
+    (fs/create-dirs (fs/path d "dhf/spec/architecture"))
+    (fs/create-dirs (fs/path d "dhf/spec/kernel"))
+    (spit (str d "/dhf/spec/model.edn") model)
+    (spit (str d "/dhf/spec/needs.edn") "{\"UN-005\" {:text \"t\" :sources [\"a:b@c\"]}}")
+    (spit (str d "/dhf/spec/architecture/lint.feature") lint)
+    (spit (str d "/dhf/spec/kernel/bus.feature") "Feature: Bus\n  @e2e\n  Scenario: Unstamped\n    Given x\n")
+    d))
 
-(defn- write! [dir rel text]
-  (let [f (fs/file dir rel)]
-    (fs/create-dirs (fs/parent f))
-    (spit (str f) text)))
+(def config {:spec-dir "dhf/spec" :model "dhf/spec/model.edn" :needs "dhf/spec/needs.edn" :id-prefix "spec"})
 
-(def model
-  (pr-str {:system {:id :s :name "S" :description "d"}
-           :containers [{:id :app :name "app" :kind :runs
-                         :contexts [{:id :desks :name "desks" :components [{:id :desks/desk :name "Desk" :spec "desks/desk"}]}]}]
-           :kernel [{:id :kernel/bus :name "Event bus" :spec "kernel/bus"}]}))
-
-(deftest the-spec-is-read-with-its-owners-and-needs
-  (let [dir (str (fs/create-temp-dir {:prefix "parser-test-"}))]
+(deftest parses-scenarios-with-their-owners
+  (let [d (project)]
     (try
-      (write! dir "dhf/spec/model.edn" model)
-      (write! dir "dhf/spec/needs.edn" "{\"UN-001\" {:text \"A need.\" :sources [\"s:p@1234567\"]}\n \"UN-002\" {:text \"B\" :sources []}}\n")
-      (write! dir "dhf/spec/desks/desk.feature" feature)
-      (write! dir "dhf/spec/kernel/bus.feature" "@UN-001\nFeature: Bus\n\n  @spec-0009 @e2e\n  Scenario: Nine\n    Given x\n")
-      (let [spec (parser/read-spec dir {:id-prefix "spec"})
-            by-title (into {} (map (juxt :title identity)) (:scenarios spec))]
-        (is (= :working-tree (:revision spec)))
-        (is (= {:context :desks :component :desks/desk :context-name "desks" :component-name "Desk"}
-               (select-keys (by-title "One") [:context :component :context-name :component-name])))
-        (is (= {:context :kernel :component :kernel/bus :context-name "kernel" :component-name "Event bus"}
-               (select-keys (by-title "Nine") [:context :component :context-name :component-name])))
-        (is (= [{:id "UN-001" :text "A need." :sources ["s:p@1234567"]} {:id "UN-002" :text "B" :sources []}]
-               (:needs spec)))
-        (is (= {"UN-001" 1 "UN-002" 2} (:needs-lines spec)))
-        (is (some #(= "dhf/spec/model.edn" (:file %)) (:files spec))))
-      (testing "the spec at a commit, not the working tree"
-        (let [git #(apply p/shell {:dir dir :out :string :err :string :continue true
-                                   :extra-env {"GIT_AUTHOR_NAME" "t" "GIT_AUTHOR_EMAIL" "t@t.invalid"
-                                               "GIT_COMMITTER_NAME" "t" "GIT_COMMITTER_EMAIL" "t@t.invalid"}}
-                          "git" %&)]
-          (git "init" "-q")
-          (git "add" "-A")
-          (git "commit" "-q" "--no-verify" "-m" "c")
-          (let [commit (str/trim (:out (git "rev-parse" "HEAD")))]
-            (fs/delete (fs/file dir "dhf/spec/kernel/bus.feature"))
-            (is (= 3 (count (:scenarios (parser/read-spec dir {:id-prefix "spec"})))))
-            (let [at (parser/read-spec dir {:id-prefix "spec"} {:revision commit})]
-              (is (= commit (:revision at)))
-              (is (= 4 (count (:scenarios at))))))))
-      (testing "needs that cannot be read are a finding"
-        (write! dir "dhf/spec/needs.edn" "[not a map")
-        (is (= ["needs-unreadable"] (map :rule (:needs-findings (parser/read-spec dir {:id-prefix "spec"}))))))
-      (finally (fs/delete-tree dir)))))
+      (bus/start!)
+      (let [r (parser/stage {:root d :config config})
+            {:keys [scenarios needs]} (bus/latest :SpecParsed)
+            [s12 s13 bus-s] (sort-by :file (sort-by :line scenarios))]
+        (is (empty? (:findings r)))
+        (is (= 3 (count scenarios)))
+        (is (= [{:id "UN-005" :text "t" :sources ["a:b@c"]}] needs))
+        (let [s12 (first (filter #(= "spec-0012" (:id %)) scenarios))
+              s13 (first (filter #(= "spec-0013" (:id %)) scenarios))
+              sb (first (filter #(nil? (:id %)) scenarios))]
+          (is (= {:title "Names the view" :file "dhf/spec/architecture/lint.feature" :line 8 :level :e2e
+                  :needs ["UN-005" "UN-002"] :wip? false :outline? false :rule "Views"
+                  :context :architecture :component :architecture/lint :context-name "architecture" :component-name "Lint"}
+                 (select-keys s12 [:title :file :line :level :needs :wip? :outline? :rule :context :component :context-name :component-name])))
+          (is (= [{:keyword "Given" :text "a view"}] (:steps s12)))
+          (is (:wip? s13))
+          (is (:outline? s13))
+          (is (= [["1"]] (:rows s13)))
+          (is (= ["UN-005" "UN-002" "UN-003"] (:needs s13)))
+          (is (= :kernel (:context sb)))
+          (is (= [] (:ids sb)))))
+      (finally (fs/delete-tree d)))))
+
+(deftest reads-at-a-revision
+  (let [d (project)
+        g (fn [& a] (apply p/shell {:dir d :out :string :err :string :extra-env {"GIT_CEILING_DIRECTORIES" (str (fs/parent d))}} "git" "-c" "user.name=x" "-c" "user.email=x@x" "-c" "core.hooksPath=/dev/null" a))]
+    (try
+      (g "init" "-q") (g "add" "-A") (g "commit" "-q" "--no-verify" "-m" "one") (g "tag" "spec-1")
+      (spit (str d "/dhf/spec/kernel/bus.feature") "Feature: Bus\n")
+      (bus/start!)
+      (parser/stage {:root d :config config :revision "spec-1"})
+      (is (= 3 (count (:scenarios (bus/latest :SpecParsed)))))
+      (is (= "spec-1" (:revision (bus/latest :SpecParsed))))
+      (bus/start!)
+      (parser/stage {:root d :config config})
+      (is (= 2 (count (:scenarios (bus/latest :SpecParsed)))))
+      (finally (fs/delete-tree d)))))

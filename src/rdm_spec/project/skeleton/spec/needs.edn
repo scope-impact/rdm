@@ -1,7 +1,0 @@
-;; User needs: what a user requires, independent of any solution. Every
-;; scenario traces to at least one, by a @UN-nnn tag on itself, its rule or its
-;; feature. Each need cites the raw sources it rests on, as
-;; <source>:<path>@<commit>:
-;;
-;;   "UN-001" {:text "What a user requires." :sources ["source:path@commit"]}
-{}

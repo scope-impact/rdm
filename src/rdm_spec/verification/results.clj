@@ -1,83 +1,51 @@
 (ns rdm-spec.verification.results
-  "The Results reader of the verification context
-  (dhf/spec/verification/results.feature): reads a run's Allure results,
-  whatever stack wrote them, naming what it cannot read.
-
-  A result is read for what a status depends on, its `status`, its `spec`
-  label and an outline row's `parameters`, and nothing else decides
-  anything (spec-0312). Each `*-result.json` of the directory is read; any
-  other file (attachments, containers) is left alone.
-
-    {:file \"DIR/NAME-result.json\"   ; DIR as given
-     :spec \"spec-0012\" or nil       ; no spec label: counts toward nothing
-     :status \"passed\"               ; passed failed broken skipped unknown
-     :parameters {name value} or nil}
-
-  Unreadable (named, never skipped; finding result-unreadable, one line):
-  not JSON, not a JSON object, a status outside Allure's, labels that are
-  not a list, more than one spec label. A directory that does not exist or
-  holds no result cannot be read (cannot-run): no test run wrote results
-  there.
-
-  API: read-results, unreadable-findings."
+  "The results reader (dhf/spec/verification/results.feature): reads a run's
+  Allure results, whatever stack wrote them, naming each file it cannot read.
+  A result counts by its status, its spec label and an outline row's
+  parameters; every other element is kept for the report."
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
             [clojure.string :as str]
-            [rdm-spec.kernel.command :as command]))
+            [rdm-spec.kernel.command :as cmd]))
 
-(def statuses
-  "Allure's statuses: unknown is Allure's own, and never a pass."
-  #{"passed" "failed" "broken" "skipped" "unknown"})
+(def statuses #{"passed" "failed" "broken" "skipped" "unknown"})
 
-(defn- one-line [s] (str/trim (str/replace (str s) #"\s*\r?\n\s*" " ")))
+(defn- labels [j n]
+  (keep #(when (and (map? %) (= n (get % "name"))) (get % "value")) (get j "labels")))
 
-(defn- read-one [file text keep?]
-  (let [parsed (try {:ok (json/parse-string text)} (catch Exception e {:error (ex-message e)}))
-        m (:ok parsed)
-        labels (when (map? m) (get m "labels"))
-        specs (when (sequential? labels)
-                (vec (keep #(when (and (map? %) (= "spec" (get % "name"))) (get % "value")) labels)))
-        params (when (map? m) (get m "parameters"))]
+(defn parse-result
+  "One result's text: {:spec :status :parameters :json}, or {:unreadable why}."
+  [text]
+  (let [j (try (json/parse-string text) (catch Exception e {::error (ex-message e)}))]
     (cond
-      (:error parsed) {:unreadable {:file file :why (str "it is not valid JSON: " (one-line (:error parsed)))}}
-      (not (map? m)) {:unreadable {:file file :why "it is not a JSON object, an Allure result"}}
-      (not (contains? statuses (get m "status")))
-      {:unreadable {:file file :why (str "its status is " (pr-str (get m "status"))
-                                         ": the status must be passed, failed, broken or skipped")}}
-      (and (some? labels) (not (sequential? labels)))
-      {:unreadable {:file file :why "its labels are not a list of {name value}"}}
-      (< 1 (count specs))
-      {:unreadable {:file file :why (str "it carries " (count specs) " spec labels, " (str/join ", " specs)
-                                         ": a result names exactly one scenario")}}
-      :else
-      {:result (cond-> {:file file
-                        :spec (some-> (first specs) str)
-                        :status (get m "status")
-                        :parameters (when (and (sequential? params) (seq params))
-                                      (into {} (for [p params :when (map? p)]
-                                                 [(str (get p "name")) (str (get p "value"))])))}
-                 keep? (assoc :result (json/parse-string text true)))})))
+      (::error j) {:unreadable (str "not valid JSON: " (::error j))}
+      (not (map? j)) {:unreadable "not a JSON object"}
+      (not (statuses (get j "status")))
+      {:unreadable (str "its status " (pr-str (get j "status"))
+                        " is not one of Allure's: the status must be passed, failed, broken or skipped (or unknown)")}
+      (> (count (labels j "spec")) 1)
+      {:unreadable (str "it carries " (count (labels j "spec")) " spec labels: a result names exactly one scenario")}
+      :else {:spec (first (labels j "spec"))
+             :status (get j "status")
+             :parameters (vec (filter map? (get j "parameters")))
+             :json j})))
 
-(defn read-results
-  "The results of the directory `dir` (relative to the project of `req`, or
-  absolute): {:dir :results :unreadable [{:file :why}]}. `opts` :keep? also
-  keeps each whole result, read with keyword keys, as :result."
-  ([req dir] (read-results req dir {}))
-  ([req dir {:keys [keep?]}]
-   (let [d (command/path req dir)]
-     (when-not (fs/directory? d)
-       (command/cannot-run! (str "the results directory " dir " does not exist: no test run wrote results there")))
-     (let [files (sort (map #(str (fs/file-name %)) (fs/glob d "*-result.json")))]
-       (when (empty? files)
-         (command/cannot-run! (str "the results directory " dir " holds no Allure result: no test run wrote results there")))
-       (let [read (for [n files]
-                    (read-one (str (str/replace (str dir) #"/+$" "") "/" n) (slurp (str (fs/file d n))) keep?))]
-         {:dir dir
-          :results (vec (keep :result read))
-          :unreadable (vec (keep :unreadable read))})))))
+(defn read-dir
+  "Reads every result in a results directory. `named` is the directory as
+  the task was given it, so each file is named DIR/name. Cannot run when the
+  directory is missing or holds no result."
+  [root named]
+  (let [abs (fs/absolutize (fs/path root named))]
+    (when-not (fs/directory? abs)
+      (cmd/cannot-run! (str "the results directory " named " does not exist")))
+    (let [files (sort (map str (fs/glob abs "*-result.json")))]
+      (when (empty? files)
+        (cmd/cannot-run! (str "no test run wrote results there: the results directory " named " holds no Allure result")))
+      (let [read (for [f files]
+                   (assoc (parse-result (slurp f)) :file (str (str/replace named #"/$" "") "/" (fs/file-name f))))]
+        {:results (vec (remove :unreadable read))
+         :unreadable (vec (filter :unreadable read))}))))
 
-(defn unreadable-findings
-  "A finding per file of `read` that could not be read, each one line."
-  [read]
-  (vec (for [{:keys [file why]} (:unreadable read)]
-         (command/finding file "result-unreadable" (one-line (str "the result is unreadable, so it counts toward nothing: " why))))))
+(defn unreadable-findings [unreadable]
+  (vec (for [u unreadable]
+         (cmd/finding (:file u) nil "result-unreadable" (str "the result cannot be read: " (:unreadable u))))))

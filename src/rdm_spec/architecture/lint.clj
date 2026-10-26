@@ -1,147 +1,93 @@
 (ns rdm-spec.architecture.lint
-  "The Lint component of the architecture context
-  (dhf/spec/architecture/lint.feature): holds the model to the C4 skill's
-  quality checklist where a machine can judge it, and to the bounded-context
-  rules. A stage of `rdm-spec check`; a model the Model component refuses is
-  not linted (its refusals are relayed once, by whichever stage reads the
-  model first).
-
-  Rules, each a stable name on the error stream, at the model's line naming
-  the element:
-    c4-scope               a view with no description
-    c4-element-described   an element with no description
-    c4-arrow-labelled      a relationship with no description (names both ends)
-    c4-context-actors      a context view that includes no person
-    c4-container-runs      a container whose :kind is neither :runs nor :stores
-    c4-events-named        a relationship publishing an event the catalogue
-                           does not declare, or from another publisher than
-                           its declared one
-    c4-view-size           (warning) a view showing more elements than
-                           :c4 :view-element-limit (default 20)
-    c4-description-length  a person's or a system's description longer than
-                           :c4 :description-max-chars (default 45)
-    a-component-view       a bounded context with components and no component view
-    a-scenario-owner       a component with no feature file at its spec path,
-                           or a feature file no component's spec path names
-    a-contract-only        a relationship between components of two bounded
-                           contexts naming no event, unless :c4
-                           :contexts-relate-by holds :calls
-
-  Its result: {:lint {:findings n :for-a-person [question]}}, the checklist
-  items no machine can judge (spec-0010)."
-  (:require [babashka.fs :as fs]
-            [clojure.string :as str]
+  "The lint (dhf/spec/architecture/lint.feature): the C4 skill's quality
+  checklist where a machine can judge it, and the bounded-context rules: a
+  component view per context, the model owning every feature file, and
+  contexts relating only through events unless the project says otherwise."
+  (:require [clojure.string :as str]
             [rdm-spec.architecture.model :as model]
             [rdm-spec.architecture.views :as views]
-            [rdm-spec.kernel.command :as command]))
+            [rdm-spec.kernel.command :as cmd]))
 
 (def for-a-person
-  "The C4 checklist's items no machine can judge."
   ["Does each view serve its audience: can its reader answer the question the view is for?"
    "Is the true coupling visible: does every relationship that matters appear, labelled with what passes?"
    "Was each render looked at by a person, and did nothing overlap or hide a name?"])
 
-(defn- blank? [s] (or (nil? s) (and (string? s) (str/blank? s))))
-
-(defn- q [s] (str "\"" s "\""))
+(defn- f [{:keys [file text]} needle rule msg]
+  (cmd/finding file (model/line-of text needle) rule msg))
 
 (defn findings
-  "Pure: every finding of the lint. `in`: {:model :text :file :catalogue
-  {event {:published-by}} :feature-files [rel] :spec-dir :config}."
-  [{:keys [model text file catalogue feature-files spec-dir config]}]
-  (let [m model
-        c4 (merge (command/config-value {} :c4) (:c4 config))
-        limit (:view-element-limit c4)
-        max-chars (:description-max-chars c4)
-        relate-by (set (or (:contexts-relate-by c4) [:events]))
-        els (model/elements m)
-        by-id (into {} (map (juxt :id identity)) els)
-        at (fn [line rule msg] (command/finding file line rule msg))
-        rels (filter map? (:relationships m))
-        vs (filter map? (:views m))
-        spec-dir (str/replace (str spec-dir) #"/+$" "")
-        components (filter #(#{:component :kernel} (:kind %)) els)
-        owned (set (keep #(get-in % [:el :spec]) components))]
+  "The lint's findings. opts: :features (set of feature files) :spec-dir
+  :events (catalogue) :max-chars :relate-by :file :text."
+  [m {:keys [features spec-dir events max-chars relate-by] :as opts}]
+  (let [els (model/elements m)
+        idx (into {} (map (juxt :id identity) els))
+        label (fn [x] (str "the " (model/kind-name (:kind x)) " " (:id x)))
+        rel-name (fn [r] (str "the relationship " (:from r) " -> " (:to r)))
+        comps (model/components m)
+        owned (set (for [c comps :when (get-in c [:el :spec])] (str spec-dir "/" (get-in c [:el :spec]) ".feature")))
+        component-views (set (keep #(when (= :component (:level %)) (:context %)) (:views m)))]
     (vec
      (concat
-      ;; the C4 checklist
-      (for [v vs :when (blank? (:description v))]
-        (at (model/view-line text v) "c4-scope"
-            (str "the view " (q (:key v)) " has no description: say what question it answers, for whom")))
-      (for [e els :when (blank? (get-in e [:el :description]))]
-        (at (model/element-line text e) "c4-element-described" (str (model/describe e) " has no description")))
-      (for [r rels :when (blank? (:description r))]
-        (at (model/rel-line text r) "c4-arrow-labelled"
-            (str "the relationship " (pr-str (:from r)) " -> " (pr-str (:to r)) " has no description: label what passes")))
-      (for [v vs :when (= :context (:level v))
-            :let [c (views/view-contents m v)]
-            :when (not-any? #(= :person (:kind %)) (:elements c))]
-        (at (model/view-line text v) "c4-context-actors"
-            (str "the context view " (q (:key v)) " includes no person: who uses the system?")))
-      (for [e els :when (= :container (:kind e))
-            :let [k (get-in e [:el :kind])]
-            :when (not (#{:runs :stores} k))]
-        (at (model/element-line text e) "c4-container-runs"
-            (str (model/describe e) " is of the kind " (pr-str k) ": a container runs (:runs) or stores data (:stores)")))
-      (for [r rels :when (:event r)
-            :let [decl (get catalogue (:event r))]
-            :when (or (nil? decl) (not= (:published-by decl) (:from r)))]
-        (at (model/rel-line text r) "c4-events-named"
-            (if decl
-              (str (model/rel-name r) " publishes " (name (:event r)) ", which the event catalogue declares published by "
-                   (pr-str (:published-by decl)))
-              (str (model/rel-name r) " publishes " (name (:event r)) ", which the event catalogue does not declare"))))
-      (for [v vs
-            :let [n (count (:elements (views/view-contents m v)))]
-            :when (and limit (> n limit))]
-        (command/warning file (model/view-line text v) "c4-view-size"
-                         (str "the view " (q (:key v)) " shows " n " elements, more than the configured limit of " limit
-                              ": split it")))
-      (for [e els :when (#{:person :system :external} (:kind e))
-            :let [d (get-in e [:el :description])]
-            :when (and (string? d) max-chars (> (count d) max-chars))]
-        (at (model/element-line text e) "c4-description-length"
-            (str (model/describe e) " has a description of " (count d) " characters, more than the configured "
-                 max-chars ": the renderer draws the name over a longer one")))
-      ;; the bounded-context rules
-      (for [e els :when (and (= :context (:kind e)) (seq (get-in e [:el :components])))
-            :when (not-any? #(and (= :component (:level %)) (= (:id e) (:context %))) vs)]
-        (at (model/element-line text e) "a-component-view"
-            (str (model/describe e) " has components and no component view")))
-      (for [e components
-            :let [sp (get-in e [:el :spec])
-                  f (when sp (str spec-dir "/" sp ".feature"))]
-            :when (or (nil? f) (not (some #{f} feature-files)))]
-        (at (model/element-line text e) "a-scenario-owner"
-            (if f
-              (str (model/describe e) " owns no feature file: there is no " f)
-              (str (model/describe e) " names no :spec, so it owns no feature file"))))
-      (for [f feature-files
-            :let [sp (when (str/starts-with? f (str spec-dir "/"))
-                       (str/replace (subs f (inc (count spec-dir))) #"\.feature$" ""))]
-            :when (not (owned sp))]
-        (command/finding f "a-scenario-owner" (str "the feature file " f " belongs to no component of the model")))
-      (when-not (:calls relate-by)
-        (for [r rels
-              :let [a (get by-id (:from r)) b (get by-id (:to r))]
-              :when (and (= :component (:kind a)) (= :component (:kind b))
-                         (not= (:context a) (:context b)) (not (:event r)))]
-          (at (model/rel-line text r) "a-contract-only"
-              (str (model/rel-name r) " joins the bounded contexts " (pr-str (:context a)) " and " (pr-str (:context b))
-                   " and names no event: contexts relate only through events"))))))))
+      (for [v (:views m) :when (str/blank? (:description v))]
+        (f opts (str "\"" (:key v) "\"") "c4-scope" (str "the view " (:key v) " has no description: say what question it answers")))
+      (for [x els :when (str/blank? (get-in x [:el :description]))]
+        (f opts (str (:id x)) "c4-element-described" (str (label x) " has no description")))
+      (for [r (:relationships m) :when (str/blank? (:description r))]
+        (f opts (str (:from r)) "c4-arrow-labelled" (str (rel-name r) " is not labelled: say what passes from " (:from r) " to " (:to r))))
+      (for [v (:views m) :when (and (= :context (:level v)) (empty? (:people m)))]
+        (f opts (str "\"" (:key v) "\"") "c4-context-actors" (str "the context view " (:key v) " includes no person")))
+      (for [c (:containers m) :when (not (#{:runs :stores} (:kind c)))]
+        (f opts (str (:id c)) "c4-container-runs"
+           (str "the container " (:id c) " is of the kind " (pr-str (:kind c)) ": a container either runs (:runs) or stores (:stores)")))
+      (for [r (:relationships m) :when (:event r)
+            :let [decl (get events (:event r))]
+            :when (or (nil? decl) (not= (:from r) (:published-by decl)))]
+        (f opts (str (:event r)) "c4-events-named"
+           (if decl
+             (str (rel-name r) " publishes the event " (name (:event r)) ", whose publisher is " (:published-by decl) ", not " (:from r))
+             (str (rel-name r) " publishes the event " (name (:event r)) ", which the event catalogue does not declare"))))
+      (for [x els :when (#{:person :system :external} (:kind x))
+            :let [d (str (get-in x [:el :description]))]
+            :when (> (count d) max-chars)]
+        (f opts (str (:id x)) "c4-description-length"
+           (str (label x) " has a description of " (count d) " characters, above the limit of " max-chars)))
+      (for [cn (:containers m) cx (:contexts cn)
+            :when (and (seq (:components cx)) (not (component-views (:id cx))))]
+        (f opts (str (:id cx)) "a-component-view" (str "the bounded context " (:id cx) " has components and no component view")))
+      (for [c comps :let [p (str spec-dir "/" (get-in c [:el :spec]) ".feature")]
+            :when (not (contains? features p))]
+        (f opts (str (:id c)) "a-scenario-owner" (str (label c) " owns no feature file: " p " does not exist")))
+      (for [p (sort features) :when (not (owned p))]
+        (cmd/finding p nil "a-scenario-owner" (str "the feature file " p " belongs to no component of the model")))
+      (when-not (some #{:calls} relate-by)
+        (for [r (:relationships m)
+              :let [a (idx (:from r)) b (idx (:to r))]
+              :when (and a b (= :component (:kind a)) (= :component (:kind b))
+                         (not= (:context a) (:context b)) (nil? (:event r)))]
+          (f opts (str (:from r)) "a-contract-only"
+             (str (rel-name r) " crosses from the bounded context " (:context a) " to " (:context b)
+                  " naming no event: contexts relate only through events"))))))))
 
-(defn lint
-  "The lint's stage of `rdm-spec check`."
-  [req]
-  (let [{m :model :keys [text file catalogue] refusals :findings} (model/load! req)
-        spec-dir (str/replace (command/config-value req :spec-dir) #"/+$" "")
-        d (command/path req spec-dir)
-        feature-files (if (fs/directory? d)
-                        (vec (sort (for [f (fs/glob d "**.feature") :when (fs/regular-file? f)] (command/rel req f))))
-                        [])
-        fs* (if m
-              (findings {:model m :text text :file file :catalogue (or (:catalogue catalogue) {})
-                         :feature-files feature-files :spec-dir spec-dir :config (:config req)})
-              [])]
-    {:result {:lint {:findings (count (remove command/warning? fs*)) :for-a-person for-a-person}}
-     :findings (vec (concat refusals fs*))}))
+(defn warnings [m {:keys [limit] :as opts}]
+  (vec
+   (for [v (:views m)
+         :let [n (views/element-count m v)]
+         :when (> n limit)]
+     (f opts (str "\"" (:key v) "\"") "c4-view-size"
+        (str "the view " (:key v) " shows " n " elements, above the configured limit of " limit)))))
+
+(defn stage [{:keys [root config revision]}]
+  (let [{:keys [model file text]} (model/read-model root revision config)]
+    (if-not model
+      {:result {:lint {:for-a-person for-a-person}}}
+      (let [spec-dir (:spec-dir config "dhf/spec")
+            opts {:file file :text text :spec-dir spec-dir
+                  :features (set (filter #(str/ends-with? % ".feature") (cmd/files-at root revision spec-dir)))
+                  :events (:events (model/read-events root revision config))
+                  :limit (get-in config [:c4 :view-element-limit] 20)
+                  :max-chars (get-in config [:c4 :description-max-chars] 45)
+                  :relate-by (get-in config [:c4 :contexts-relate-by] [:events])}]
+        {:findings (findings model opts)
+         :warnings (warnings model opts)
+         :result {:lint {:for-a-person for-a-person}}}))))

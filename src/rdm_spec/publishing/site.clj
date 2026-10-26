@@ -1,318 +1,157 @@
 (ns rdm-spec.publishing.site
-  "The Site, the publishing context's one component
-  (dhf/spec/publishing/site.feature): `rdm-spec publish [--results DIR]`
-  writes the spec, its views, its status and the domain wiki as one site of
-  Markdown pages and the site builder's configuration, under the configured
-  :site :source, and has the configured site builder (:site :builder, which
-  fails on any broken link) build it into :site :dir. The site is a reading
-  of the spec, never a copy that can drift: it computes no model hash (the
-  views' freshness check is publish's gate) and writes nothing in the spec.
-
-  It reads the spec (SpecParsed), the spec check's verdict (SpecGated), the
-  wiki's pages and citations (KnowledgeIndexed) and, with results, every
-  scenario's status (VerificationDerived); the model, the views, each
-  component's design prose (<spec-dir>/<context>/<component>.md) and the
-  wiki's files it reads from the project.
-
-  Pages, under <source>/docs/:
-    index.md                    the system, its context and container views,
-                                the bounded contexts, the wiki, and every user
-                                need with the scenarios tracing to it
-    <context>/index.md          the context, its component view, its components
-    <context>/<component>.md    the component's description, its prose and
-                                every scenario with its id, level, status and
-                                steps
-    kernel/index.md, kernel/<component>.md   likewise for the kernel
-    wiki/...                    the wiki's index and pages, each footnote's
-                                citation linked to its source at its commit
-    views/<key>.svg             the rendered views
-  Without results, every page says no status was derived because no results
-  were given; a scenario tagged @wip shows planned whatever. The
-  configuration, <source>/mkdocs.yml, lists the home page first, then a
-  section per bounded context in the model's order (its page, then its
-  components' pages), then the kernel, then the wiki. The same inputs give
-  the same bytes, and no page names a path outside the project.
-
-  A build that fails is a finding (exit 1): site-link-broken names the page
-  and the link, site-build-failed the builder's words; a builder that is not
-  installed cannot run (exit 2). Either way no HTML is left in :site :dir.
-
-  Result: {:publish {:source :site :pages n :statuses? bool}}."
+  "The site (dhf/spec/publishing/site.feature): one Markdown page per
+  component and bounded context, a home page, the domain wiki, and the site
+  builder's configuration, written under the configured source directory and
+  built to HTML by the configured site builder. It reads the scenarios
+  (SpecParsed), the check (SpecGated), the statuses (VerificationDerived) and
+  the sources (KnowledgeIndexed) from the bus; it shows status, never decides it."
   (:require [babashka.fs :as fs]
-            [babashka.process :as p]
-            [cheshire.core :as json]
-            [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.command :as command]))
+            [rdm-spec.kernel.bus :as bus]
+            [rdm-spec.kernel.command :as cmd]))
 
-(def no-status "no status was derived because no results were given")
+(def no-status "No status was derived: no results were given.")
 
-;; ---------------------------------------------------------------------------
-;; Pure: Markdown
-
-(defn- esc
-  "Text as Markdown shows it, never as markup or a link."
-  [s]
-  (-> (str s) (str/replace "&" "&amp;") (str/replace "<" "&lt;") (str/replace ">" "&gt;")
-      (str/replace "[" "\\[") (str/replace "]" "\\]")))
-
-(defn citation-url
-  "The address of a cited file at its commit in its source's repository."
-  [{:keys [repository]} {:keys [path commit]}]
-  (str (-> (str repository) (str/replace #"/+$" "") (str/replace #"\.git$" "")) "/blob/" commit "/" path))
+(def citation-re #"`?([A-Za-z0-9][\w.-]*):([^\s`@\"'()\[\]]+)@([0-9a-fA-F]{4,40})`?")
 
 (defn link-citations
-  "`line` with each citation of `cites` it holds linked to its source
-  (`sources` {id {:repository}}); a citation of no known source is left."
-  [line cites sources]
-  (reduce (fn [l {:keys [citation source] :as c}]
-            (if-let [src (get sources source)]
-              (let [url (citation-url src c)
-                    quoted (str "`" citation "`")]
-                (cond
-                  (str/includes? l (str "[" quoted "]")) l
-                  (str/includes? l quoted) (str/replace l quoted (str "[" quoted "](" url ")"))
-                  (str/includes? l citation) (str/replace l citation (str "[" citation "](" url ")"))
-                  :else l))
-              l))
-          line
-          (distinct cites)))
-
-(defn- status-word [sc statuses]
-  (cond (:wip? sc) "planned"
-        (nil? statuses) "no status"
-        :else (some-> (get statuses (:id sc)) name)))
-
-(defn- steps-md [steps]
-  (str/join (for [st steps]
-              (str "- **" (:keyword st) "** " (esc (:text st)) "\n"
-                   (when (:doc-string st)
-                     (str "\n    ```\n" (str/join "\n" (map #(str "    " %) (str/split-lines (:doc-string st)))) "\n    ```\n\n"))
-                   (when (:data-table st)
-                     (str "\n    ```\n" (str/join "\n" (for [row (:data-table st)] (str "    | " (str/join " | " row) " |")))
-                          "\n    ```\n\n"))))))
-
-(defn scenario-md
-  "A scenario's section: its title, id, level, status and steps."
-  [sc statuses]
-  (str "### " (esc (:title sc)) "\n\n"
-       "`@" (:id sc) "` · " (some-> (:level sc) name) " · **" (status-word sc statuses) "**"
-       (when (and (nil? statuses) (not (:wip? sc))) (str ": " no-status))
-       "\n\n"
-       (when (seq (:background sc)) (str "Background:\n\n" (steps-md (:background sc)) "\n"))
-       (steps-md (:steps sc))
-       (when (seq (:rows sc))
-         (str "\nExamples: " (str/join "; " (for [r (:rows sc)] (esc (str/join ", " (for [[k v] (:values r)] (str k "=" v))))))
-              "\n"))))
-
-(defn- component-paths
-  "[[context-dir component-id page name description el]] of every
-  component, the kernel's last, in the model's order."
-  [m]
-  (vec (concat
-        (for [c (:containers m) :when (map? c) x (:contexts c) :when (map? x)
-              comp (:components x) :when (map? comp)]
-          {:context (name (:id x)) :context-name (or (:name x) (name (:id x))) :el comp
-           :page (str (name (:id x)) "/" (name (:id comp)) ".md")})
-        (for [comp (:kernel m) :when (map? comp)]
-          {:context "kernel" :context-name "kernel" :el comp :page (str "kernel/" (name (:id comp)) ".md")}))))
-
-(defn nav
-  "The navigation: [[title page-or-entries]]."
-  [m wiki-pages wiki-titles]
-  (let [ctxs (for [c (:containers m) :when (map? c) x (:contexts c) :when (map? x)] x)
-        section (fn [dir title comps]
-                  [title (vec (cons [title (str dir "/index.md")]
-                                    (for [comp comps] [(or (:name comp) (name (:id comp))) (str dir "/" (name (:id comp)) ".md")])))])]
-    (vec (concat
-          [["Home" "index.md"]]
-          (for [x ctxs] (section (name (:id x)) (or (:name x) (name (:id x))) (filter map? (:components x))))
-          (when (seq (:kernel m)) [(section "kernel" "kernel" (filter map? (:kernel m)))])
-          (when (seq wiki-pages)
-            [["wiki" (vec (cons ["wiki" "wiki/index.md"]
-                                (for [p wiki-pages :when (not= p "wiki/index.md")] [(get wiki-titles p p) p])))]])))))
-
-(defn nav-yaml
-  "The navigation as the site builder's configuration writes it."
-  [n]
-  (let [q json/generate-string]
-    (str "nav:\n"
-         (str/join (for [[t v] n]
-                     (if (string? v)
-                       (str "  - " (q t) ": " (q v) "\n")
-                       (str "  - " (q t) ":\n"
-                            (str/join (for [[t2 v2] v] (str "      - " (q t2) ": " (q v2) "\n"))))))))))
+  "Each citation of a source whose repository is known becomes a link to the cited file at its commit."
+  [text repos]
+  (str/replace text citation-re
+               (fn [[m src path commit]]
+                 (if-let [repo (get repos src)]
+                   (str "[" src ":" path "@" commit "](" (str/replace repo #"/$" "") "/blob/" commit "/" path ")")
+                   m))))
 
 (defn broken-links
-  "[[page link]] of every broken link the builder's output names."
-  [output]
-  (vec (for [[_ pg link] (re-seq #"Doc file '([^']+)' contains a link '([^']+)'" (str output))] [pg link])))
+  "[[page link] ...] from the site builder's warnings about links it could not resolve."
+  [output source]
+  (for [[_ page link] (re-seq #"Doc file '([^']+)' contains a link '([^']+)', but the target[^\n]*" (str output))]
+    [(str source "/docs/" page) link]))
 
-;; ---------------------------------------------------------------------------
-;; Reading the project
+(defn- yq [s] (str "\"" (str/replace (str s) "\"" "\\\"") "\""))
 
-(defn- read-text [req rel]
-  (let [f (command/path req rel)] (when (fs/regular-file? f) (slurp (str f)))))
+(defn mkdocs-yml
+  "The site builder's configuration: the home page first, then a section per
+  bounded context and one for the kernel, each its index then its
+  components, then the wiki."
+  [site-name sections wiki-pages]
+  (str "site_name: " (yq site-name) "\n"
+       "docs_dir: docs\n"
+       "site_dir: ../site\n"
+       "use_directory_urls: false\n"
+       "nav:\n"
+       "  - Home: index.md\n"
+       (str/join (for [[title pages] sections]
+                   (str "  - " (yq title) ":\n"
+                        (str/join (for [[p label] pages]
+                                    (if label (str "      - " (yq label) ": " p "\n") (str "      - " p "\n")))))))
+       (when (seq wiki-pages)
+         (str "  - Wiki:\n" (str/join (for [p wiki-pages] (str "      - " p "\n")))))))
 
-(defn- strip-slash [s] (str/replace (str s) #"/+$" ""))
+(defn- status-line [statuses id]
+  (if statuses (str "**" (name (get statuses id :unverified)) "**") "*no status derived*"))
 
-(defn subscriptions
-  "Keeps what the site reads: KnowledgeIndexed, SpecParsed, SpecGated and
-  VerificationDerived."
-  [req]
-  (for [[e k] [[:KnowledgeIndexed ::knowledge] [:SpecParsed ::spec] [:SpecGated ::gated]
-               [:VerificationDerived ::verification]]]
-    [e (fn [payload] (swap! (:state req) assoc k payload) nil)]))
+(defn- scenario-md [s statuses]
+  (str "### " (:id s) ": " (:title s) "\n\n"
+       "*" (some-> (:level s) name) "*" (when (:wip? s) " · planned (@wip)") " · status: " (status-line statuses (:id s)) "\n\n"
+       (str/join (for [st (concat (:background s) (:steps s))] (str "- " (:keyword st) " " (:text st) "\n")))
+       (when (:outline? s)
+         (str "\nExamples: " (str/join "; " (map #(str/join ", " %) (:rows s))) "\n"))
+       "\n"))
 
-(defn- note [statuses] (if statuses "" (str "\n---\n\n_Status: " no-status "._\n")))
-
-(defn- pages-of
-  "{path text} of every page of the site."
-  [req m spec statuses gated knowledge views]
-  (let [spec-dir (strip-slash (command/config-value req :spec-dir))
-        comps (component-paths m)
-        page-of (into {} (map (juxt (comp :id :el) :page)) comps)
-        stamped (sort-by :id (filter :id (:scenarios spec)))
-        by-comp (group-by :component stamped)
-        ctxs (for [c (:containers m) :when (map? c) x (:contexts c) :when (map? x)] x)
-        view-img (fn [prefix v] (when (views (:key v))
-                                  (str "![" (esc (or (:description v) (:key v))) "](" prefix "views/" (:key v) ".svg)\n\n")))
-        wiki-dir (strip-slash (command/config-value req :wiki-dir))
-        wiki-files (let [d (command/path req wiki-dir)]
-                     (if (fs/directory? d)
-                       (vec (sort (for [f (fs/glob d "**.md") :when (fs/regular-file? f)] (command/rel req f))))
-                       []))
-        sources (into {} (for [s (:sources knowledge)] [(some-> (:id s) name) s]))
-        cites-at (group-by (juxt :file :line) (:citations knowledge))
-        wiki-pages (into (sorted-map)
-                         (for [f wiki-files
-                               :let [rel (str "wiki" (subs f (count wiki-dir)))
-                                     text (str/join "\n" (map-indexed (fn [i l] (link-citations l (get cites-at [f (inc i)]) sources))
-                                                                      (str/split (or (read-text req f) "") #"\n" -1)))]]
-                           [rel (str text (note statuses))]))
-        context-page (fn [dir title desc view comps]
-                       (str "# " (esc title) "\n\n" (esc desc) "\n\n" (when view (view-img "../" view))
-                            "## Components\n\n"
-                            (str/join (for [{:keys [el page]} comps]
-                                        (str "- [" (esc (:name el)) "](" (subs page (inc (count dir))) "): " (esc (:description el)) "\n")))
-                            (note statuses)))]
-    (merge
-     {"index.md"
-      (str "# " (esc (get-in m [:system :name])) "\n\n" (esc (get-in m [:system :description])) "\n\n"
-           (str/join (keep #(view-img "" %) (filter #(#{:context :container} (:level %)) (filter map? (:views m)))))
-           (when gated (str "The spec check " (if (:passed? gated) "passed" (str "found " (count (:findings gated)) " problems")) ".\n\n"))
-           "## Bounded contexts\n\n"
-           (str/join (for [x ctxs] (str "- [" (esc (or (:name x) (name (:id x)))) "](" (name (:id x)) "/index.md): "
-                                        (esc (:description x)) "\n")))
-           (when (seq (:kernel m)) "- [kernel](kernel/index.md): shared code in no bounded context\n")
-           (when (seq wiki-pages) "\n## The domain wiki\n\nThe domain, distilled from the raw sources: [the wiki](wiki/index.md).\n")
-           "\n## User needs\n"
-           (str/join (for [n (:needs spec)
-                           :let [scs (filter #(some #{(:id n)} (:needs %)) stamped)]]
-                       (str "\n### " (esc (:id n)) "\n\n" (esc (:text n)) "\n\n"
-                            (if (seq scs)
-                              (str/join (for [sc scs]
-                                          (str "- " (if-let [pg (page-of (:component sc))]
-                                                      (str "[`@" (:id sc) "` " (esc (:title sc)) "](" pg ")")
-                                                      (str "`@" (:id sc) "` " (esc (:title sc))))
-                                               " · " (status-word sc statuses) "\n")))
-                              "No scenario traces to it.\n"))))
-           (note statuses))}
-     (into {} (for [x ctxs
-                    :let [dir (name (:id x))
-                          view (first (filter #(and (= :component (:level %)) (= (:id x) (:context %))) (filter map? (:views m))))]]
-                [(str dir "/index.md")
-                 (context-page dir (or (:name x) dir) (:description x) view (filter #(= dir (:context %)) comps))]))
-     (when (seq (:kernel m))
-       {"kernel/index.md" (context-page "kernel" "kernel" "Shared code every bounded context may use, in none of them."
-                                        nil (filter #(= "kernel" (:context %)) comps))})
-     (into {} (for [{:keys [el page context-name context]} comps
-                    :let [prose (when (string? (:spec el)) (read-text req (str spec-dir "/" (:spec el) ".md")))]]
-                [page (str "# " (esc (:name el)) "\n\n"
-                           (if (= "kernel" context) "_A kernel component._" (str "_A component of the bounded context " (esc context-name) "._"))
-                           "\n\n" (esc (:description el)) "\n\n"
-                           (when prose (str "## Design\n\n" prose (when-not (str/ends-with? prose "\n") "\n") "\n"))
-                           "## Scenarios\n\n"
-                           (let [scs (get by-comp (:id el))]
-                             (if (seq scs)
-                               (str/join "\n" (map #(scenario-md % statuses) scs))
-                               "No stamped scenario.\n"))
-                           (note statuses))]))
-     wiki-pages)))
-
-;; ---------------------------------------------------------------------------
-;; Building
-
-(defn- inside! [req rel what]
-  (let [root (fs/normalize (fs/absolutize (:root req)))
-        f (fs/normalize (fs/absolutize (command/path req rel)))]
-    (when-not (and (fs/starts-with? f root) (not= f root))
-      (command/cannot-run! (str "the configured " what " " rel " is not a directory inside the project")))
-    f))
-
-(defn- build!
-  "Runs the site builder: {:findings} when it failed, nil when it built."
-  [req builder source-rel site-dir]
-  (let [r (try (apply p/shell {:dir (str (:root req)) :out :string :err :string :continue true :in ""
-                               :env (or (:env req) (into {} (System/getenv)))}
-                      builder)
-               (catch java.io.IOException e
-                 (fs/delete-tree site-dir)
-                 (command/cannot-run! (str "the site builder " (first builder) " is not installed (" (ex-message e)
-                                           "), so no HTML was written"))))]
-    (when-not (zero? (:exit r))
-      (fs/delete-tree site-dir)
-      (let [out (str (:err r) "\n" (:out r))
-            broken (broken-links out)]
-        {:findings (if (seq broken)
-                     (vec (for [[pg link] broken]
-                            (command/finding (str source-rel "/docs/" pg) "site-link-broken"
-                                             (str "the page " pg " links to " link ", which the site does not hold;"
-                                                  " the build failed and no HTML was written"))))
-                     [(command/finding "site-build-failed"
-                                       (str "the site builder " (str/join " " builder) " failed with exit status " (:exit r)
-                                            ", so no HTML was written: "
-                                            (str/join " " (take-last 5 (remove str/blank? (str/split-lines out)))))) ])}))))
-
-(defn publish
-  "The site's stage of `rdm-spec publish`."
-  [req]
-  (let [st (some-> (:state req) deref)
-        spec (or (::spec st) (command/cannot-run! "no SpecParsed reached the site: the spec was not read"))
-        statuses (:statuses (::verification st))
-        site (merge (command/config-value {} :site) (command/config-value req :site))
-        source-rel (strip-slash (:source site))
-        site-rel (strip-slash (:dir site))
-        source (inside! req source-rel "site source")
-        site-dir (inside! req site-rel "site directory")
-        builder (vec (:builder site))
-        _ (when (empty? builder) (command/cannot-run! "the configuration's :site names no :builder"))
-        m (or (try (edn/read-string (read-text req (command/config-value req :model))) (catch Exception _ nil)) {})
-        views-dir (strip-slash (command/config-value req :views-dir))
-        views (into {} (for [v (filter map? (:views m))
-                             :let [f (command/path req (str views-dir "/" (:key v) ".svg"))]
-                             :when (fs/regular-file? f)]
-                         [(:key v) f]))
-        pages (pages-of req m spec statuses (::gated st) (::knowledge st) views)
-        wiki-pages (vec (sort (filter #(str/starts-with? % "wiki/") (keys pages))))
-        wiki-titles (into {} (for [p wiki-pages] [p (or (second (re-find #"(?m)^# (.+)$" (get pages p))) p)]))
-        n (nav m (if (some #{"wiki/index.md"} wiki-pages) wiki-pages []) wiki-titles)
-        docs (fs/file source "docs")]
-    (fs/delete-tree source)
-    (fs/create-dirs docs)
-    (doseq [[rel text] pages]
-      (let [f (fs/file docs rel)]
-        (fs/create-dirs (fs/parent f))
-        (spit (str f) text)))
-    (doseq [[k f] views]
-      (fs/create-dirs (fs/file docs "views"))
-      (fs/copy f (fs/file docs "views" (str k ".svg")) {:replace-existing true}))
-    (spit (str (fs/file source "mkdocs.yml"))
-          (str "site_name: " (json/generate-string (str (or (get-in m [:system :name]) "rdm-spec"))) "\n"
-               "docs_dir: \"docs\"\n"
-               "site_dir: " (json/generate-string (str (fs/relativize source site-dir))) "\n"
-               "markdown_extensions:\n  - footnotes\n  - tables\n"
-               (nav-yaml n)))
-    (let [failed (build! req builder source-rel site-dir)]
-      {:result {:publish {:source source-rel :site site-rel :pages (count pages) :statuses? (some? statuses)}}
-       :findings (vec (:findings failed))})))
+(defn stage [{:keys [root config no-results]}]
+  (let [{:keys [scenarios needs]} (bus/latest :SpecParsed)
+        gated (bus/latest :SpecGated)
+        derived (when-not no-results (bus/latest :VerificationDerived))
+        statuses (:statuses derived)
+        knowledge (bus/latest :KnowledgeIndexed)
+        repos (into {} (for [s (:sources knowledge)] [(:id s) (:repository s)]))
+        model (try (cmd/read-edn (cmd/read-at root nil (:model config "dhf/spec/model.edn"))) (catch Exception _ nil))
+        spec-dir (:spec-dir config "dhf/spec")
+        views-dir (:views-dir config "dhf/views")
+        wiki-dir (:wiki-dir config "dhf/wiki")
+        source (get-in config [:site :source] "site-src")
+        site (get-in config [:site :dir] "site")
+        docs (fs/path root source "docs")
+        banner (when-not statuses (str "> " no-status "\n\n"))
+        pages (atom {})
+        page! (fn [p text] (swap! pages assoc p text))
+        by-file (group-by :file scenarios)
+        contexts (for [c (:containers model) cx (:contexts c)] cx)
+        sections (concat (for [cx contexts] [(name (:id cx)) (:name cx) (:description cx) (:components cx)])
+                         (when (seq (:kernel model)) [["kernel" "kernel" "Shared code no bounded context owns" (:kernel model)]]))
+        view-of (fn [level ctx-id] (first (filter #(and (= level (:level %)) (or (nil? ctx-id) (= ctx-id (:context %)))) (:views model))))
+        img (fn [v prefix] (when v (str "![" (:key v) "](" prefix "views/" (:key v) ".svg)\n\n")))]
+    ;; components and their contexts
+    (doseq [[dir title desc comps] sections]
+      (page! (str dir "/index.md")
+             (str "# " title "\n\n" banner (or desc "") "\n\n"
+                  (img (view-of :component (keyword dir)) "../")
+                  "## Components\n\n"
+                  (str/join (for [k comps]
+                              (str "- [" (:name k) "](" (last (str/split (:spec k) #"/")) ".md): " (:description k) "\n")))))
+      (doseq [k comps]
+        (let [feature (str spec-dir "/" (:spec k) ".feature")
+              prose (cmd/read-at root nil (str spec-dir "/" (:spec k) ".md"))]
+          (page! (str dir "/" (last (str/split (:spec k) #"/")) ".md")
+                 (str "# " (:name k) "\n\n" banner (:description k) "\n\n"
+                      (when prose (str prose "\n\n"))
+                      "## Scenarios\n\n"
+                      (str/join (for [s (sort-by :line (by-file feature)) :when (:id s)] (scenario-md s statuses))))))))
+    ;; the home page
+    (page! "index.md"
+           (str "# " (get-in model [:system :name] "Spec") "\n\n" banner
+                (get-in model [:system :description] "") "\n\n"
+                (when gated (str "The spec check " (if (:passed? gated) "passes" (str "has " (count (:findings gated)) " findings")) ".\n\n"))
+                (when-let [v (view-of :context nil)] (str "## Context\n\n" (img v "")))
+                (when-let [v (view-of :container nil)] (str "## Containers\n\n" (img v "")))
+                "## Bounded contexts\n\n"
+                (str/join (for [[dir title] sections] (str "- [" title "](" dir "/index.md)\n")))
+                "\n## The domain wiki\n\n- [The wiki's index](wiki/index.md)\n\n"
+                "## User needs\n\n"
+                (str/join (for [n needs]
+                            (str "### " (:id n) "\n\n" (:text n) "\n\n"
+                                 (str/join (for [s scenarios :when (and (:id s) (some #{(:id n)} (:needs s)))
+                                                 :let [k (first (filter #(= (:component s) (:id %)) (mapcat #(nth % 3) sections)))
+                                                       dir (if (= :kernel (:context s)) "kernel" (some-> (:context s) name))]]
+                                             (str "- [" (:id s) "](" dir "/" (last (str/split (str (:spec k)) #"/")) ".md): "
+                                                  (:title s) " (" (if statuses (name (get statuses (:id s) :unverified)) "no status") ")\n")))
+                                 "\n")))))
+    ;; the wiki
+    (let [index (cmd/read-at root nil (str wiki-dir "/index.md"))
+          wpages (filter #(str/ends-with? % ".md") (cmd/files-at root nil (str wiki-dir "/pages")))]
+      (page! "wiki/index.md" (str banner (link-citations (or index "# Wiki\n") repos)))
+      (doseq [p wpages]
+        (page! (str "wiki/" (subs p (inc (count wiki-dir)))) (str banner (link-citations (cmd/read-at root nil p) repos))))
+      ;; write it all afresh
+      (fs/delete-tree (fs/path root source))
+      (doseq [[p text] (sort @pages)]
+        (fs/create-dirs (fs/parent (fs/path docs p)))
+        (spit (fs/file docs p) text))
+      (when (fs/directory? (fs/path root views-dir))
+        (fs/create-dirs (fs/path docs "views"))
+        (doseq [f (sort (map str (fs/glob (fs/path root views-dir) "*.svg")))]
+          (fs/copy f (fs/path docs "views" (fs/file-name f)) {:replace-existing true})))
+      (spit (fs/file root source "mkdocs.yml")
+            (mkdocs-yml (get-in model [:system :name] "Spec")
+                        (for [[dir title _ comps] sections]
+                          [title (cons [(str dir "/index.md") nil]
+                                       (for [k comps] [(str dir "/" (last (str/split (:spec k) #"/")) ".md") (:name k)]))])
+                        (cons "wiki/index.md" (for [p wpages] (str "wiki/" (subs p (inc (count wiki-dir)))))))))
+    ;; build it
+    (let [builder (get-in config [:site :builder] ["mkdocs" "build" "--strict" "-f" (str source "/mkdocs.yml")])
+          r (apply cmd/sh {:dir root} builder)
+          clean! #(fs/delete-tree (fs/path root site))]
+      (cond
+        (:not-found r)
+        (do (clean!) (cmd/cannot-run! (str "the site builder " (first builder) " is not installed: no HTML was written")))
+        (not= 0 (:exit r))
+        (let [out (str (:out r) (:err r))
+              broken (broken-links out source)]
+          (clean!)
+          {:findings (if (seq broken)
+                       (vec (for [[p l] broken] (cmd/finding p nil "broken-link" (str "the page links " l ", which the site does not hold: no HTML was written"))))
+                       [(cmd/finding nil nil "site-build-failed" (str "the site builder failed, so no HTML was written: " out))])})
+        :else
+        {:result {:publish {:source source :site site :pages (count @pages)}}}))))

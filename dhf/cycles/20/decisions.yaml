@@ -1,0 +1,22 @@
+# What cycle 20's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml).
+- {scenario: spec-0062, decision: "an unreadable result is a finding result-unreadable, exit 1"}
+- {scenario: spec-0052, decision: "Scenario Template, Example, Scenarios and * steps are refused; free text after a header is description"}
+- {scenario: spec-0168, decision: "a doc string or table is passed after the captures; a pattern matches the whole step text; defer! added for cleanup"}
+- {scenario: spec-0308, decision: "tag labels hold the feature's, rule's and scenario's tags; the mapping requires only the scenario's own"}
+- {scenario: spec-0054, decision: "a new id goes first on the tag line above the scenario, or on a new line; stamping in file then line order"}
+- {scenario: spec-0108, decision: "a trace without results has :status nil and a :note"}
+- {scenario: spec-0215, decision: ":room-tree is the git tree of the room's implementation paths only"}
+- {scenario: spec-0216, decision: "a refused verify records :reason; a refusal before the checkout records no :checkout"}
+- {scenario: spec-0346, decision: "a port is free when an SO_REUSEADDR bind succeeds; an answer is a reply starting HTTP"}
+- {scenario: spec-0266, decision: "a clause item's component is the list file where the clause is written"}
+- {scenario: spec-0287, decision: ":writes-outside is new direct entries of the watched directories; :breaches counts runs with any breach"}
+- {scenario: spec-0238, decision: "scopes are components only; model.edn changed alone is a shared-file warning; events.edn compared by contract"}
+- {scenario: spec-0185, decision: "an unknown --context exits 2; only --component falls back to the code layout"}
+- {scenario: spec-0038, decision: "fence refuses a ROOM that exists and is not empty"}
+- {scenario: spec-0162, decision: "a HEAD already cut exits 0 and names its tag"}
+- {scenario: spec-0095, decision: "a When with no Given adds views to the project it made and publishes again"}
+- {scenario: spec-0232, decision: "a failing oracle gate relays its error stream, prints {} and exits 1 (2 when it cannot run)"}
+- {scenario: spec-0100, decision: "inside publish the sources and spec-check stages run quietly"}
+- {scenario: spec-0084, decision: "adopt must run at the top level of the git repository"}
+- {scenario: spec-0331, decision: "a mapping finding is FEATURE:LINE: RULE: what (the result's file); cycle 19 read FILE as the result's file"}
