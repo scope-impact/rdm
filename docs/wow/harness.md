@@ -1,26 +1,29 @@
----
-name: builder
-description: How the one builder of a cycle regenerates its scopes in a fenced clean room, test-first, and reports. Use when you are a cycle's builder.
----
+# The agent harness
 
-# The builder
+As Löyly's `docs/wow/harness.md` (loyly@17d68d2): how to point an agent at
+this repository, as a builder or as a grader. A brief names the role, the
+cycle, the room and the scopes; everything else is here, so every cycle's
+agents work the same way. Guidance, not spec: the spec says what rdm-spec
+does, and a grader holds a build to nothing else. The rules here, with what
+enforces each, are in `docs/wow/invariants.md`.
+
+## The builder
 
 You rebuild part, or all, of the implementation from a cut of the spec, in a
 clean room fenced from it. Nobody checks your claim of done but the gate
-(`rdm-spec verify`) and a grader who never sees your tests. This is Löyly's
-`docs/wow/harness.md` for rdm-spec (loyly@17d68d2).
+(`rdm-spec verify`) and a grader who never sees your tests. 
 
-## Read first, in this order
+### Read first, in this order
 
 1. `dhf/decisions/adr-0002-spec-first-regeneration.md`
 2. `dhf/spec/README.md` (the spec's conventions) and `dhf/spec/glossary.md`
 3. `dhf/wiki/pages/loyly-method.md` (where the spec is silent)
-4. `dhf/harness/stack.md`, `dhf/harness/config.edn`, the skill for the stack
-   (for TypeScript, `functional-ddd-typescript`)
+4. `dhf/harness/stack.md`, `dhf/harness/config.edn`, the stack's guidance
+   (for TypeScript, `docs/wow/functional-ddd-typescript.md`)
 5. `dhf/spec/model.edn`, `dhf/spec/events.edn`, then the feature files of your
    scopes
 
-## How you work
+### How you work
 
 - **One builder, your scopes in the order the brief lists them** (the order
   `rdm-spec scopes` gives: the kernel first, then publishers before their
@@ -36,7 +39,7 @@ clean room fenced from it. Nobody checks your claim of done but the gate
 - **Done** is: every scenario of your scopes passes, the whole suite passes,
   your unit tests pass, and a run leaves no fixture and no process behind.
 
-## Where you may write
+### Where you may write
 
 - **Only in your room,** plus directories you make inside it with
   `mktemp -d -p <room>`, deleted before you finish. Never `/tmp`, a
@@ -50,7 +53,7 @@ clean room fenced from it. Nobody checks your claim of done but the gate
   `rdm-spec` on PATH. Stop every process you start, also when a test gives
   up on it. Do not run long commands in the background.
 
-## Writing the tests
+### Writing the tests
 
 The rules below came from builds that broke without them; each names its
 incident.
@@ -90,7 +93,7 @@ incident.
 - **A suite removes every fixture it makes,** unit tests included (cycle 06:
   the disk filled; cycle 07: 8,934 directories left behind).
 
-## Your report (under 30 lines)
+### Your report (under 30 lines)
 
 1. Per scope: scenarios passing, and the first failing summary line you saw.
 2. The full suite's counts at the end.
@@ -98,3 +101,46 @@ incident.
 4. Numbered decisions where the spec was silent, each with its scenario id
    (they become `dhf/cycles/NN/decisions.yaml`).
 5. Your tool-call count, and any write outside your room, however small.
+
+## The grader
+
+You did not build what you grade, and you never read its tests. You judge,
+item by item, whether the build does what each checklist scenario says. Your
+verdicts are the score; the builder's tests never are (Löyly: "grade each item
+against the running app, however you grade"; the instrument reports to a
+person, never into the loop).
+
+### How you grade
+
+- **The checklist** (`dhf/cycles/NN/checklist.json`) lists the items; find
+  each scenario by its tag (`grep -rn "@spec-NNNN" build/dhf/spec`) and read it
+  exactly.
+- **For each item, make a fixture** (`mktemp -d -p <your room>`): a copy of the
+  build or a project made with `bin/rdm-spec init`. Commit when the scenario
+  needs history. Remove `:oracle` from a copied configuration unless the
+  scenario needs one.
+- **Run the build through `bin/rdm-spec` only,** never an `rdm-spec` on PATH,
+  and compare what happened with every clause of the Then.
+- **A pass needs evidence:** the command you ran, its exit code and the key
+  output. Outlines: every row. A clause that differs is a fail; if you cannot
+  reach a verdict, fail, and say why.
+- **Write verdicts as you go** to `out/verdicts.partial.edn` (one map per
+  line), so an interruption loses nothing; at the end, `out/verdicts.edn`, one
+  `{:id :verdict :evidence}` per item in checklist order.
+
+### Rules
+
+- **Never read `build/test/` or the test runner.** Do not run the builder's
+  suite as a whole.
+- **In a fixture made by `init` or `adopt`,** turn hooks off
+  (`git config core.hooksPath /dev/null`) before any commit. Set
+  `GIT_CEILING_DIRECTORIES` when a fixture sits inside another repository.
+- **Write only inside your room,** with `TMPDIR` inside it. Never `/tmp`, `/`,
+  `~`, the repository or the artifact layouts. Stop every process you start,
+  remove your fixtures, and leave only `out/`.
+
+### Your report
+
+Pass and fail counts, each fail with its reason, what the scenarios leave
+unstated, and your tool-call count. The unstated things are the next spec
+change.

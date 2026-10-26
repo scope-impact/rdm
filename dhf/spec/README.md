@@ -79,7 +79,6 @@ what` when no line applies, or `warning: RULE: what` when no file applies; a tas
   unreadable file of the spec itself (the ledger, the needs, the model) is a
   finding, exit 1: it is part of what the task checked.
 - **How builders, graders and the integrator work is not spec.** It is the way
-  of working, kept as skills beside the harness (`dhf/harness/skills/`:
-  builder, grader, cycle) with the rules that hold it and what enforces each
-  (`dhf/harness/invariants.md`), as Löyly keeps it in `docs/wow/`. The spec
+  of working, kept in `docs/wow/` as Löyly keeps it: `way-of-working.md`,
+  `harness.md`, and `invariants.md` with what enforces each rule. The spec
   says what rdm-spec does; a grader holds a build to nothing else.

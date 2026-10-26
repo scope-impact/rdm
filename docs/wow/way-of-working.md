@@ -1,11 +1,6 @@
----
-name: cycle
-description: How the integrator runs one regeneration cycle of rdm-spec, from a cut to an accepted release, and what to record. Use when you run a cycle.
----
+# rdm-spec: the way we work
 
-# A cycle, for the integrator
-
-Löyly's `docs/wow/way-of-working.md` for rdm-spec. The integrator runs the
+As Löyly's `docs/wow/way-of-working.md` (loyly@17d68d2). How a cycle runs, for the integrator. The integrator runs the
 steps, never builds or grades, and reports time and tokens after every run.
 
 ## The rules
@@ -35,13 +30,13 @@ steps, never builds or grades, and reports time and tokens after every run.
    names; record the cycle in `dhf/cycles/NN/cycle.edn` (cut, scope, builder,
    grader, spec owner, model).
 3. **Fence** the room; `rdm-spec observe begin NN builder ROOM`; brief one
-   builder with the `builder` skill and the scopes.
+   builder with `docs/wow/harness.md`, "The builder" and the scopes.
 4. **When it ends:** `observe end NN builder --tokens N`; run the suite twice
    (no fixture, no process, `/tmp` unchanged); run the held-still oracle on the
    build (`RDM_SPEC=... bb dhf/harness/oracle/oracle.clj`); `rdm-spec verify ROOM NN`
    with the installed release; `rdm-spec checklist NN`.
 5. **Grade:** a grading room with the build, `bin/rdm-spec`, the sources;
-   `observe begin NN grader`; brief with the `grader` skill.
+   `observe begin NN grader`; brief with `docs/wow/harness.md`, "The grader".
 6. **Record:** merge the verdicts; `rdm-spec score NN --verdicts FILE`;
    `rdm-spec scoreboard (NN-1) NN`; `observe report`; the posterior
    (`dhf/cycles/analysis/posterior.py`); `labels.yaml` for each fail you looked

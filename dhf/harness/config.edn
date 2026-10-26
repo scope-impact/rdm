@@ -70,7 +70,7 @@
               :deny {:implementation true
                      :measurements ["dhf/cycles"]
                      :generated ["site" "site-src" "dhf/allure-results"]}
-              :keep [".gitignore" "AGENTS.md" "CLAUDE.md" "LICENSE.txt" "README.md"
+              :keep [".gitignore" "AGENTS.md" "CLAUDE.md" "LICENSE.txt" "README.md" "docs"
                      "dhf/decisions" "dhf/harness" "dhf/raw" "dhf/spec" "dhf/storm"
                      "dhf/views" "dhf/wiki"]}
 

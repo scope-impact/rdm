@@ -4,8 +4,8 @@ Rules that must hold, and **what enforces each one**: "a principle without a
 named enforcement point is a wish: the sentence stays in the document while
 quietly ceasing to be true" (loyly:docs/wow/invariants.md@17d68d2). Each
 entry gives the rule, what enforces it, and what breaks without it. Where
-nothing enforces a rule, the entry says so: those are the wishes, kept by a
-skill (`dhf/harness/skills/`) and a person's attention until something
+nothing enforces a rule, the entry says so: those are the wishes, kept by
+`docs/wow/` (`harness.md`, `way-of-working.md`) and a person's attention until something
 enforces them.
 
 ## Enforced by the product
@@ -51,13 +51,13 @@ outside the room, `/tmp` entries left, the repository touched). *Without
 it:* a run's cost and side effects are unknown. *Not enforced:* reads; a
 write below a watched directory's own entries.
 
-## Not enforced: kept by the skills
+## Not enforced: kept by docs/wow
 
 **INV-10: Graders never read the builder's tests.** *Enforced by:*
-nothing; the grader skill and the grader's honour. *Without it:* grading
+nothing; docs/wow/harness.md and the grader's honour. *Without it:* grading
 mirrors the tests and stops being independent.
 
-**INV-11: One builder per cycle.** *Enforced by:* nothing; the cycle skill
+**INV-11: One builder per cycle.** *Enforced by:* nothing; docs/wow/way-of-working.md
 and the integrator. *Without it:* the merge seams of cycles 01 to 09.
 
 **INV-12: A builder's fixtures never touch the room, its hooks, its oracle
@@ -65,7 +65,7 @@ or /tmp.** *Enforced by:* partly by `observe` (`tmp-left`); the rest by the
 builder skill. *Without it:* the leaks of cycles 06, 07, 09 and 14.
 
 **INV-13: A whole-project cycle at least every fifth cycle.** *Enforced by:*
-nothing; the cycle skill. *Without it:* scoped cycles hide what they do not
+nothing; docs/wow/way-of-working.md. *Without it:* scoped cycles hide what they do not
 rebuild (cycles 12 to 19 ran without one).
 
 **INV-14: The model a cycle used is recorded.** *Enforced by:* nothing;

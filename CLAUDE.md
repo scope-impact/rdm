@@ -20,11 +20,11 @@ see `README.md` and `dhf/decisions/adr-0002-spec-first-regeneration.md`.
   `dhf/wiki/pages/loyly-method.md`.
 - **A cut is tagged `spec-N`** on a merged spec change; a regeneration reads
   that cut and nothing else.
-- **The way of working is kept as skills,** not spec: `dhf/harness/skills/`
-  (builder, grader, cycle, and the stack's skill), with the rules that hold
-  them and what enforces each in `dhf/harness/invariants.md`. One builder per
-  cycle; builders and graders stay in their rooms; graders never read
-  `test/`.
+- **The way of working is in `docs/wow/`,** not spec, as Löyly keeps it:
+  `way-of-working.md` (a cycle, for the integrator), `harness.md` (the
+  builder and the grader), `invariants.md` (each rule and what enforces it).
+  One builder per cycle; builders and graders stay in their rooms; graders
+  never read `test/`.
 - **The oracle is held still:** `dhf/harness/oracle/oracle.clj` is written by
   hand and never regenerated; its goldens never enter the repository
   (`oracle.edn` in an artifact pinned by digest in `dhf/harness/oracle/pin.edn`),

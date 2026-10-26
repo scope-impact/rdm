@@ -1,8 +1,3 @@
----
-name: functional-ddd-typescript
-description: How a builder lays out and writes rdm-spec's implementation in functional TypeScript, one bounded context and component at a time, with pure derivers, zod-validated data and events. Use when the stack in dhf/harness/stack.md is TypeScript.
----
-
 # Functional DDD in TypeScript
 
 Guidance for a builder, not spec: the spec says what rdm-spec does, this says

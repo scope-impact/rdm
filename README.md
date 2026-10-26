@@ -20,6 +20,7 @@ Python record is readable in git history before the cutover commit.
 | `dhf/spec/` | the spec: feature files by bounded context, the C4 model (`model.edn`), events, needs, glossary, the id ledger, its README of conventions |
 | `dhf/views/` | the architecture views, generated from the model |
 | `dhf/harness/` | the configuration (`config.edn`) and the stack (`stack.md`) |
+| `docs/wow/` | the way we work, as Löyly keeps it: a cycle, the agent harness, the invariants and what enforces each |
 | `dhf/raw/`, `dhf/wiki/` | the sources the spec is distilled from, and the domain wiki that cites them |
 | `dhf/decisions/`, `dhf/storm/` | the decision to work this way, and the event storm that shaped the spec |
 | `dhf/cycles/NN/` | each regeneration: its cut, checklist, verdicts, score and proposed spec changes |
