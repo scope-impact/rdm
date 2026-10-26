@@ -1,0 +1,16 @@
+;; Cycle 17: spec-21 (the flat oracle, the Allure mapping, cycle 16's
+;; fixes), tagged locally. Run by cycle 16's release (ff9b56e), whose gate is
+;; verify. The scopes are what that release's scopes lists, in build order;
+;; that release has the spec-0298 regression, which errs toward more scopes,
+;; and spec-20 to spec-21 changes no event, so its list stands. One builder.
+{:cut "spec-21"
+ :scope [{:component :kernel/runner}
+         {:component :project/init}
+         {:component :verification/results}
+         {:component :verification/verify}
+         {:component :regeneration/fence}
+         {:component :regeneration/scopes}
+         {:component :measurement/oracle}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "one grader subagent, its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
