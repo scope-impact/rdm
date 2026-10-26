@@ -1,0 +1,17 @@
+;; Cycle 19: spec-23 (the oracle held still and run as a command by the gate;
+;; cycle 18's findings), tagged locally. Run by cycle 17's release (f733640),
+;; whose gate still runs its built-in oracle; the held-still oracle
+;; (dhf/harness/oracle/oracle.clj) also judges the build. The scopes are what
+;; that release's scopes lists, in build order. It builds on cycle 18's code,
+;; which is in the repository but was not accepted (its verify demanded
+;; evidence from @wip scenarios). One builder.
+{:cut "spec-23"
+ :scope [{:component :kernel/command}
+         {:component :kernel/runner}
+         {:component :architecture/lint}
+         {:component :verification/verify}
+         {:component :regeneration/scopes}
+         {:component :measurement/oracle}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "one grader subagent, its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
