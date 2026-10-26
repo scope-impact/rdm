@@ -1,0 +1,17 @@
+;; Cycle 15: spec-19 (rdm-spec is the harness; a project's catalogue is its
+;; own; :read-by optional and metadata; status's result pinned), tagged
+;; locally. Run by cycle 14's release (4833f7d). The release's scopes listed
+;; four: kernel/bus, project/init, verification/status, regeneration/scopes.
+;; kernel/command is added by the integrator: the bus no longer reads the
+;; configured catalogue, which the command passes it, and the README's
+;; fixture-hooks rule is the kernel's shared steps'. One builder, in build
+;; order.
+{:cut "spec-19"
+ :scope [{:component :kernel/bus}
+         {:component :kernel/command}
+         {:component :project/init}
+         {:component :verification/status}
+         {:component :regeneration/scopes}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "one grader subagent, its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
