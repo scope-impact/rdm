@@ -117,7 +117,9 @@ score.
 _Avoid_: user (for a role), person (when either is meant).
 
 **Builder**: the role that regenerates the build from a cut, inside a clean
-room. A human or an agent.
+room. A human or an agent. One builder per cycle, in one room, building its
+scopes one after another in the order `scopes` lists them; never contexts in
+parallel (spec owner, cycle 13).
 _Avoid_: coding agent (as the role's name).
 
 **Spec owner**: the role that reads the scoreboard and decides what the spec
@@ -165,12 +167,21 @@ enters a score: only a grader's verdicts do.
 nothing else.
 
 **Fence**: the step that builds a clean room from a cut: one fresh commit
-holding only the allowed paths (`:clean-room :allow`) and whatever
-implementation its scope keeps.
+holding every file committed at the cut except the denied ones
+(`:clean-room :deny`: the scope's implementation, the measurements, the
+generated output), as Löyly's fence is the repository minus every
+implementation and measurement. Robust by three rules: it reads only the cut's
+committed tree, so nothing untracked or ignored reaches a room; every
+committed top-level path and every path directly under `dhf/` is either denied
+or kept (`:clean-room :keep`), or `rdm-spec check` fails; and no kept file may
+carry the bytes of a removed implementation file.
 
 **Scope**: what a regeneration rebuilds: the whole project, one bounded context
 or one component, or a list of contexts and components. The kernel counts as
-a context named `kernel`. The rest of the implementation stays in the clean
+a context named `kernel`. A cycle's scopes are what `rdm-spec scopes` lists
+between two cuts: the components whose own spec changed, and the publisher
+and subscribers of any event whose shape changed; a component whose only
+change is upstream code is not rebuilt. The rest of the implementation stays in the clean
 room as it was at the cut. A checklist names an item's context and component by
 the model's `:name`. A cycle's checklist holds the items of its scope,
 and nothing else: a scoped cycle is graded on its scope only.
@@ -192,8 +203,9 @@ _Avoid_: gate, on its own (say spec check or ratify).
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
 first), with `results/`, `build/` and `ratified.edn` (ratify), `checklist.json`
-and `score.edn` beside it, and `test.log`, the test command's output
-(ratify). The checkout is an export of the cut: its files, and no history.
+and `score.edn` beside it, `test.log`, the test command's output
+(ratify), and `runs.edn`, each run observed (observe). The checkout is an
+export of the cut: its files, and no history.
 
 **Oracle (instrument)**: `rdm-spec oracle`: the checklist, the scorer and the
 scoreboard run on recorded fixture cycles and compared with their recorded
@@ -222,7 +234,9 @@ has findings that are not warnings; the stages after it never see it. Every othe
 one run names every finding. A gate whose code is not built refuses the task
 (exit 2), as Löyly's gate refuses an instrument nobody checked
 (loyly:harness/README.md@17d68d2, "What makes the checks run"). Publish runs
-the views' freshness check as a gate before the site.
+the views' freshness check as a gate before the site; audit runs its check
+that everything it is made from is committed as a gate, before the release
+check.
 
 **Scoreboard**: the comparison of two cycles over the items both scored,
 counting what got better and what got worse, never a net.
@@ -290,3 +304,25 @@ same bytes, PDFs included.
 `clause`, in a cycle scoped to the whole project or naming the context
 compliance. Its grader reads the sections whose audit tags name it and passes it
 only if they meet the clause. Named is not met.
+
+## Runs
+
+**Run**: one agent's or person's turn in a cycle, as a builder, a grader or
+the integrator. It has two halves, never netted: its **capability**, what it
+was for, proven by its result (ratify, the score), never by its report; and
+its **defence**, what it did outside its brief, observed from outside.
+
+**Observation**: `rdm-spec observe begin` before a run and `observe end` after
+it: the entries of the watched directories and of the temporary directory
+compared, the project's git status outside the cycle compared, the results
+directory looked for inside the room, the time measured and the cost given.
+Each run is one entry of `dhf/cycles/NN/runs.edn`. Observing never prevents
+and never stops a run; reads are not observed, and the record says so.
+
+**Breach**: a run's write outside its room, an entry it left in the temporary
+directory, a change it made to the project outside its cycle, or results it
+wrote inside its room. Counted per cycle beside the score, never inside it.
+
+**Integrator**: the role that fences, merges what builders built and runs
+ratify, checklist and score. Every fix it makes by hand is an integration
+fix, recorded in the cycle's findings.

@@ -143,7 +143,12 @@
       [{:id :compliance/gap :name "Gap analysis" :spec "compliance/gap"
         :description "Every declared clause named by an audit tag in a controlled document"}
        {:id :compliance/audit :name "Audit copy" :spec "compliance/audit"
-        :description "The auditor's and engineer's copies, with their evidence"}]}]}
+        :description "The auditor's and engineer's copies, with their evidence"}]}
+     {:id :agency :name "agency"
+      :description "Each run's capability and defence, observed from outside"
+      :components
+      [{:id :agency/observe :name "Observe" :spec "agency/observe"
+        :description "A run's time, cost and what it touched outside its room"}]}]}
 
   {:id :repository :name "Repository" :kind :stores :technology "git"
    :description "The spec, the model, the ledger, cuts, cycles and results"}]
@@ -185,6 +190,7 @@
   {:from :measurement/oracle :to :measurement/scoreboard :description "Runs and compares"}
   {:from :publishing/site :to :repository :description "Reads views from and writes the site to"}
   {:from :compliance/gap :to :repository :description "Reads clause lists and documents from"}
+  {:from :agency/observe :to :repository :description "Writes each cycle's runs to"}
   {:from :compliance/audit :to :repository :description "Reads documents and results from"}
 
   ;; events between contexts, within one run: the contracts
@@ -242,6 +248,8 @@
    :description "The published site"}
   {:key "compliance-components" :level :component :context :compliance
    :description "Clauses, documents and the audit copy"}
+  {:key "agency-components" :level :component :context :agency
+   :description "Runs observed: time, cost, defence"}
   {:key "regeneration-cycle" :level :dynamic
    :description "One cycle, from a merged spec change to a score the spec owner reads"
    :steps [[:regeneration/cut :repository "1. Tags the merge spec-N"]

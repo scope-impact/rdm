@@ -53,6 +53,14 @@ The spec of rdm-spec, the source of truth for what it does
 - **A task's result shape is the spec's.** Where another context's step reads
   a task's standard output, the task's feature holds a contract scenario for
   that shape, and the step reads only what it states (cycle 08: spec-0047).
+- **One builder per cycle.** Never contexts in parallel: a cycle's scopes are
+  built one after another by one builder, in the order `scopes` lists them
+  (spec owner, cycle 13; dhf/cycles/retrospective-01-12.md).
+- **Every run is observed** (dhf/spec/agency/observe.feature): its capability
+  is proven by its result, and its defence is recorded beside it.
+- **A golden holds nothing the spec does not state.** Before a golden is
+  recorded or re-recorded, every key it holds traces to a scenario (cycle 11:
+  the scorer's and scoreboard's goldens held shapes no scenario stated).
 - **Step definitions are the scope's own.** A step file uses only the
   kernel's shared steps and its own context's step files; a helper it needs
   from elsewhere is copied in. A step text used by the features of more than

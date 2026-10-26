@@ -60,13 +60,16 @@ states it in its own readable record, never its tools, which are fenced.
 
 - **One installed command** instead of scripts carried by hand between
   repositories: no fork check is needed.
-- **The clean room is an allow-list,** not a deny-list: nothing reaches it by
-  being forgotten.
+- **The clean room is a deny-list, as Löyly's, made robust by classifying
+  every path** (it was an allow-list until cycle 13): every committed path is
+  denied or kept, or the check fails, and no kept file may carry a removed
+  implementation file's bytes.
+- **A cycle rebuilds the scopes a spec change touched,** one builder building
+  them one after another, where Löyly regenerates the whole application every
+  cycle; a whole-project cycle is still run from time to time.
 - **Ratify also requires every scenario named by a passing result,** which
   Löyly leaves to the grader; rdm-spec boots nothing, being a command rather
   than a server.
-- **A cycle may regenerate one bounded context or one component,** not only the
-  whole application.
 - **The oracle lives outside the repository,** one file in one artifact read
   by its digest, where Löyly keeps `harness/oracle` in the repository and
   fences it.[^fenced] No allow-list can leak goldens that are not in the

@@ -58,7 +58,7 @@ Feature: Scoreboard
     Scenario: Two cycles of the whole project give one comparison
       Given cycle 01 and cycle 02 each scored 5 items of the whole project, 1 better and 1 worse
       When "rdm-spec scoreboard 01 02" is run
-      Then standard output is exactly:
+      Then standard output, read as EDN, is exactly:
         """
         {:scoreboard {:cycles ["01" "02"]
                       :scored {"01" 5 "02" 5}
@@ -73,7 +73,7 @@ Feature: Scoreboard
     Scenario: A scoped cycle gives its target first and the rest apart
       Given cycle 02 scored 5 items of the whole project and cycle 03, scoped to the component shop/till, scored 2 of them, 1 better
       When "rdm-spec scoreboard 02 03" is run
-      Then standard output is exactly:
+      Then standard output, read as EDN, is exactly:
         """
         {:scoreboard {:cycles ["02" "03"]
                       :target {:scope {:component :shop/till} :cycle "03"

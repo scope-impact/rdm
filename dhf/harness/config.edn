@@ -48,13 +48,12 @@
                            "test/rdm_spec/{context}/{component}_test.clj"
                            "test/steps/{context}_{component}.clj"]}
 
- ;; The clean room is an allow-list (dhf/spec/regeneration/fence.feature): these
- ;; paths, plus the implementation a scoped regeneration keeps, and nothing
- ;; else. Giving the builder no network is the builder's obligation.
- ;; dhf/harness is allowed file by file. The instrument's goldens, the
- ;; measurements a builder of the instrument must never see
- ;; (loyly:harness/README.md@17d68d2, "The idea in five lines" 2), are not in
- ;; the repository at all: see :oracle.
+ ;; The clean room is the cut minus what is denied (dhf/spec/regeneration/
+ ;; fence.feature), as Löyly's fence is the repository minus every
+ ;; implementation and measurement. Every committed top-level path, and every
+ ;; path directly under dhf/, is denied or kept here, or `rdm-spec check`
+ ;; fails. The instrument's goldens are not in the repository at all: see
+ ;; :oracle.
  ;; The oracle (dhf/spec/measurement/oracle.feature): one oracle.edn in one
  ;; artifact, read by its digest only. Locally, ORACLE_LAYOUT names an artifact
  ;; layout holding it; otherwise it is pulled from the repository. A golden
@@ -63,9 +62,25 @@
  :oracle {:repository "ghcr.io/scope-impact/rdm-spec-oracle"
           :digest "sha256:cf29099c1bd3fb0dd61b45af285fca7c4652000768fb7497942c5b373d1a4772"}
 
- :clean-room {:allow ["dhf/spec" "dhf/harness/config.edn" "dhf/harness/stack.md"
+ :clean-room {;; :implementation is the scope's implementation (see :implementation and
+              ;; :code-layout); the measurements are every cycle's record; the
+              ;; generated output is what publish and the tests write.
+              :deny {:implementation true
+                     :measurements ["dhf/cycles"]
+                     :generated ["site" "site-src" "dhf/allure-results"]}
+              :keep [".gitignore" "AGENTS.md" "CLAUDE.md" "LICENSE.txt" "README.md"
+                     "dhf/decisions" "dhf/harness" "dhf/raw" "dhf/spec" "dhf/storm"
+                     "dhf/views" "dhf/wiki"]
+              ;; Read only by releases before spec-17, whose fence is an
+              ;; allow-list; removed once a spec-17 build is installed.
+              :allow ["dhf/spec" "dhf/harness/config.edn" "dhf/harness/stack.md"
                       "dhf/raw" "dhf/wiki" "dhf/views"
                       "dhf/decisions/adr-0002-spec-first-regeneration.md"]}
+
+ ;; Observe (dhf/spec/agency/observe.feature): the directories whose entries are
+ ;; compared before and after a run ("~" is the home directory), and the
+ ;; temporary directory whose entries are counted.
+ :agency {:watch ["/" "~"] :tmp "/tmp"}
 
  ;; What ratify runs in a checkout of the cut holding the room's implementation
  ;; (dhf/spec/ratification/ratify.feature): the builder's own tests, written

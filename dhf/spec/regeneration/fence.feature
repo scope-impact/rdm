@@ -2,8 +2,8 @@
 
 @UN-006
 Feature: Fence
-  Builds a clean room from a cut, for the whole project, one bounded context or
-  one component, and proves it holds nothing else.
+  Builds a clean room from a cut, for the whole project or the scopes a spec
+  change touched, and proves it holds nothing it should not.
 
   # Every prior implementation and every measurement is out of the clean room,
   # so nothing can be copied, only rebuilt (loyly:harness/README.md@17d68d2, "The idea in five lines" 2).
@@ -17,22 +17,49 @@ Feature: Fence
 
   # Incident: a weaker fence probe once passed while the previous implementation
   # was still reachable from an older commit (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
-  # A clean room is an allow-list, so nothing reaches it by being forgotten.
-  Rule: A clean room holds what is allowed, and nothing else
+  # The clean room is the cut minus what is denied, as Löyly's fence is the
+  # repository minus every implementation and measurement (spec owner, cycle
+  # 13). A deny-list leaks what nobody remembered to deny; so every committed
+  # path is classified, denied or kept, and an unclassified one stops the
+  # check, and no kept file may carry a removed implementation file's bytes.
+  # spec-0040 (an allowed path missing at the cut) is retired with the
+  # allow-list.
+  Rule: A clean room is the cut minus what is denied
 
     @spec-0038 @e2e
-    Scenario: The clean room holds only the allowed paths, as one root commit
-      Given the configuration allows dhf/spec, dhf/harness/config.edn, dhf/harness/stack.md, dhf/raw, dhf/wiki, dhf/views and dhf/decisions/adr-0002-spec-first-regeneration.md, and the cut also holds dhf/harness/oracle/
+    Scenario: The clean room is the cut's committed files minus the denied ones, as one root commit
+      Given the configuration denies the implementation, the measurements dhf/cycles and the generated site, and keeps every other path
+      And the cut also holds dhf/cycles/01/score.edn
       When "rdm-spec fence ROOM spec-3" is run
       Then ROOM is a repository with a single root commit
-      And its working tree holds the allowed paths, unchanged, and no other file
-      And no object reachable in it belongs to any other path
+      And its working tree holds every file committed at the cut that is not denied, unchanged, and no other file
+      And no object reachable in it belongs to a denied path
 
-    @spec-0040 @e2e
-    Scenario: An allowed path missing at the cut is refused
-      Given the configuration allows dhf/wiki and the cut holds no dhf/wiki
+    @spec-0294 @e2e
+    Scenario: Uncommitted and ignored files never reach a clean room
+      Given a project whose working tree holds an untracked file notes.md and a file git ignores, beside its commit tagged spec-3
       When "rdm-spec fence ROOM spec-3" is run
-      Then it exits 2 and names dhf/wiki
+      Then ROOM holds neither file
+
+    @spec-0295 @e2e
+    Scenario: A kept file carrying a removed implementation file's bytes stops the fence
+      Given a project whose commit tagged spec-3 holds dhf/wiki/pages/copy.md with the same bytes as an implementation file
+      When "rdm-spec fence ROOM spec-3" is run
+      Then it exits 1, names dhf/wiki/pages/copy.md and the implementation file, and builds no room
+
+  Rule: Every committed path is denied or kept
+
+    @spec-0296 @e2e
+    Scenario: A committed path neither denied nor kept fails the check
+      Given a project whose configuration denies the implementation and the measurements and keeps dhf/spec, and a committed top-level file notes.md
+      When "rdm-spec check" is run
+      Then it exits 1 with a finding naming notes.md as neither denied nor kept
+
+    @spec-0297 @e2e
+    Scenario: A path under dhf/ is classified on its own
+      Given a project whose configuration keeps dhf/spec, and a committed directory dhf/scratch
+      When "rdm-spec check" is run
+      Then it exits 1 with a finding naming dhf/scratch as neither denied nor kept
 
   # The configuration's :code-layout places each component's code and unit
   # tests by context and component, and :implementation lists every
