@@ -1,92 +1,150 @@
 # What the graded cycles say, as beliefs
 
-Written by `bb dhf/cycles/analysis/posterior.clj dhf/cycles` on 2026-10-26,
-over the 14 graded cycles (02 to 11, 13 to 16): 1,376 verdicts, 11 fails.
-Cycle 12 was never graded; cycle 17 was still being graded.
-
-**The model:**
-- **What it estimates:** θ, the probability that a build passes a scenario.
-- **How it pools:** scenarios within their component, components within
-  their context. Each level's posterior is the next level's prior, at a
-  fixed strength (κ = 10).
-- **What each verdict counts as:** one draw of θ.
-- **What it leaves out:** grader error. No item has been graded twice, so
-  grader error cannot be identified yet.
+Written by `dhf/cycles/analysis/posterior.py` (Python with numpy and scipy;
+`dhf/harness/stack.md`, "Cycle analysis") on 2026-10-26, over every graded
+cycle. Cycle 12 was never graded; cycle 17 was still being graded. The
+model is in the script's docstring.
 
 **How to read it:**
-- **Posterior mean and 95% lower bound:** what the verdicts support about θ,
-  with their width.
-- **"P(every item of the slice right)":** the predicted chance that a fresh
-  build of the same slice passes every item, on that cycle's evidence alone.
-  It is about 50% even for a perfect cycle: one all-pass build of 107 items
-  is weak evidence that the next build will be.
-- **The last table:** the scenarios where one more grading would move belief
-  most. They make the sample for a grading budget smaller than "everything".
+- Every number is a belief with a width, not a score.
+- **Grader error is a prior, not learned.** No item has been graded twice,
+  and no fail has been fed back as confirmed. So questions 1 and 3 are shown
+  twice: at a 5% grader-error prior, then at 1%.
+- **Questions 1 and 3 swing with that prior.** They will stop swinging once
+  graders are double-graded, or once fails confirmed by hand are fed back as
+  labels.
+- **Known labels:** the two fails of cycle 16 (spec-0298, spec-0062) were
+  confirmed real by hand. Even at 1% the model gives them only about 70%,
+  because its prior belief in the build is high. That gap is the case for
+  feeding confirmed fails back as labels.
 
-## Per cycle: P(a scenario of the slice passes), flat prior
+Graded cycles: 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 13, 14, 15, 16; 1376 verdicts, 8 fails; 279 scenarios.
 
-| Cycle | Graded | Fails | Posterior mean | 95% lower bound | P(every item of the slice right) |
-|---|---|---|---|---|---|
-| 02 | 180 | 1 | 98.9% | 97.4% | 25.1% |
-| 03 | 105 | 2 | 97.2% | 94.2% | 12.5% |
-| 04 | 102 | 0 | 99.0% | 97.1% | 50.2% |
-| 05 | 74 | 0 | 98.7% | 96.1% | 50.3% |
-| 06 | 71 | 0 | 98.6% | 95.9% | 50.3% |
-| 07 | 41 | 1 | 95.3% | 89.2% | 25.3% |
-| 08 | 122 | 0 | 99.2% | 97.6% | 50.2% |
-| 09 | 107 | 0 | 99.1% | 97.3% | 50.2% |
-| 10 | 62 | 0 | 98.4% | 95.4% | 50.4% |
-| 11 | 238 | 1 | 99.2% | 98.0% | 25.1% |
-| 13 | 107 | 0 | 99.1% | 97.3% | 50.2% |
-| 14 | 31 | 0 | 97.0% | 91.1% | 50.8% |
-| 15 | 38 | 1 | 95.0% | 88.4% | 25.3% |
-| 16 | 98 | 2 | 97.0% | 93.8% | 12.5% |
+## 1. Can the latest build ship?
 
-## Per bounded context, all cycles pooled
+Cycle 16: P(some item of its slice is wrong, given its verdicts) = **71.4%** (90% interval 22.0% to 99.6%). Over the 5.0% bar.
 
-| Context | Graded | Fails | Posterior mean | 95% lower bound |
-|---|---|---|---|---|
-| agency | 8 | 0 | 90.0% | 71.7% |
-| architecture | 84 | 0 | 98.8% | 96.5% |
-| compliance | 147 | 2 | 98.0% | 95.8% |
-| kernel | 157 | 0 | 99.4% | 98.1% |
-| knowledge | 139 | 0 | 99.3% | 97.9% |
-| measurement | 159 | 2 | 98.1% | 96.1% |
-| project | 69 | 0 | 98.6% | 95.8% |
-| publishing | 161 | 1 | 98.8% | 97.1% |
-| ratification | 52 | 0 | 98.1% | 94.5% |
-| regeneration | 118 | 1 | 98.3% | 96.1% |
-| spec | 123 | 0 | 99.2% | 97.6% |
-| verification | 159 | 2 | 98.1% | 96.1% |
-
-## The ten least certain components (shrunk to their context)
-
-| Component | Graded | Posterior mean | 95% lower bound |
+| Cycle | Graded | Fails | P(something wrong) |
 |---|---|---|---|
-| agency/Observe | 8 | 94.4% | 83.8% |
-| verification/Results reader | 22 | 96.3% | 89.7% |
-| measurement/Scoreboard | 23 | 96.4% | 90.0% |
-| regeneration/Scopes | 38 | 97.6% | 93.2% |
-| compliance/Audit copy | 82 | 97.6% | 94.5% |
-| verification/Status | 57 | 98.2% | 95.0% |
-| measurement/Scorer | 60 | 98.3% | 95.3% |
-| project/Hooks | 2 | 98.8% | 93.4% |
-| regeneration/Cut | 15 | 99.3% | 96.4% |
-| publishing/Site | 161 | 99.3% | 98.1% |
+| 02 | 180 | 1 | 24.2% |
+| 03 | 105 | 2 | 34.8% |
+| 04 | 102 | 0 | 6.9% |
+| 05 | 74 | 0 | 4.5% |
+| 06 | 71 | 0 | 5.4% |
+| 07 | 41 | 1 | 21.6% |
+| 08 | 122 | 0 | 8.1% |
+| 09 | 107 | 0 | 5.9% |
+| 10 | 62 | 0 | 4.0% |
+| 11 | 238 | 1 | 33.3% |
+| 13 | 107 | 0 | 12.0% |
+| 14 | 31 | 0 | 5.3% |
+| 15 | 38 | 1 | 32.7% |
+| 16 | 98 | 2 | 71.0% |
 
-## Where the next grading buys most: highest posterior variance
+## 2. What the next grading should cover
 
-| Scenario | Component | Graded | Fails | Last verdict | Posterior mean | 95% lower bound |
+| Scenario | Component | Graded | Fails | Last | Belief | 95% lower |
 |---|---|---|---|---|---|---|
-| spec-0172 | measurement/Scoreboard | 2 | 1 | fail | 88.7% | 71.3% |
-| spec-0307 | verification/Status | 2 | 1 | pass | 90.2% | 73.7% |
-| spec-0062 | verification/Results reader | 4 | 1 | fail | 90.2% | 75.0% |
-| spec-0298 | regeneration/Scopes | 4 | 1 | fail | 91.1% | 76.5% |
-| spec-0274 | compliance/Audit copy | 4 | 1 | pass | 91.1% | 76.5% |
-| spec-0173 | measurement/Scorer | 5 | 1 | pass | 92.2% | 78.8% |
-| spec-0250 | compliance/Audit copy | 6 | 1 | pass | 92.3% | 79.3% |
-| spec-0289 | agency/Observe | 1 | 0 | pass | 94.9% | 81.8% |
-| spec-0290 | agency/Observe | 1 | 0 | pass | 94.9% | 81.8% |
-| spec-0286 | agency/Observe | 1 | 0 | pass | 94.9% | 81.8% |
-| spec-0287 | agency/Observe | 1 | 0 | pass | 94.9% | 81.8% |
-| spec-0293 | agency/Observe | 1 | 0 | pass | 94.9% | 81.8% |
+| spec-0298 | regeneration/scopes | 4 | 1 | fail (16) | 90.2% | 72.8% |
+| spec-0062 | verification/results | 4 | 1 | fail (16) | 90.7% | 73.7% |
+| spec-0307 | verification/status | 2 | 1 | pass (16) | 93.3% | 78.9% |
+| spec-0305 | regeneration/scopes | 2 | 0 | pass (16) | 94.7% | 81.0% |
+| spec-0306 | regeneration/scopes | 2 | 0 | pass (16) | 94.7% | 81.0% |
+| spec-0300 | regeneration/scopes | 3 | 0 | pass (16) | 94.7% | 81.2% |
+| spec-0301 | regeneration/scopes | 3 | 0 | pass (16) | 94.7% | 81.2% |
+| spec-0312 | verification/results | 1 | 0 | pass (16) | 95.1% | 81.8% |
+| spec-0313 | verification/results | 1 | 0 | pass (16) | 95.1% | 81.8% |
+| spec-0299 | regeneration/scopes | 4 | 0 | pass (16) | 94.8% | 81.3% |
+| spec-0241 | regeneration/scopes | 6 | 0 | pass (16) | 94.8% | 81.4% |
+| spec-0237 | regeneration/scopes | 7 | 0 | pass (16) | 94.8% | 81.4% |
+
+## 3. Is each fail real?
+
+With the grader prior only (5.0% false fail, 5.0% false pass): how likely each fail was a real defect.
+
+| Cycle | Scenario | P(real) | 90% interval |
+|---|---|---|---|
+| 02 | spec-0173 | 12.0% | 0.0% to 74.2% |
+| 03 | spec-0098 | 12.8% | 0.0% to 75.7% |
+| 03 | spec-0172 | 19.4% | 0.0% to 86.0% |
+| 07 | spec-0250 | 19.5% | 0.0% to 85.4% |
+| 11 | spec-0274 | 19.5% | 0.0% to 85.0% |
+| 15 | spec-0307 | 28.1% | 0.0% to 90.8% |
+| 16 | spec-0062 | 44.0% | 0.6% to 95.2% |
+| 16 | spec-0298 | 47.2% | 1.1% to 95.8% |
+
+## 4. Which scenarios the spec should look at first (lowest belief)
+
+| Scenario | Component | Graded | Fails | Belief | 95% lower |
+|---|---|---|---|---|---|
+| spec-0298 | regeneration/scopes | 4 | 1 | 90.2% | 72.8% |
+| spec-0062 | verification/results | 4 | 1 | 90.7% | 73.7% |
+| spec-0307 | verification/status | 2 | 1 | 93.3% | 78.9% |
+| spec-0305 | regeneration/scopes | 2 | 0 | 94.7% | 81.0% |
+| spec-0306 | regeneration/scopes | 2 | 0 | 94.7% | 81.0% |
+| spec-0300 | regeneration/scopes | 3 | 0 | 94.7% | 81.2% |
+| spec-0301 | regeneration/scopes | 3 | 0 | 94.7% | 81.2% |
+| spec-0299 | regeneration/scopes | 4 | 0 | 94.8% | 81.3% |
+
+## 5. Did a spec change help?
+
+No cycle records its builder's decisions per scenario (dhf/cycles/NN/decisions.edn), so this cannot be answered yet. Recording them each cycle (E6) gives a Poisson rate per scenario, and a spec change helped when that rate drops for the scenarios it touched.
+
+## 6. How many more gradings until the 95% lower bound clears 95.0%
+
+| Scenario | More all-pass gradings needed |
+|---|---|
+| spec-0298 | 52 |
+| spec-0062 | 50 |
+| spec-0307 | 39 |
+| spec-0305 | 31 |
+| spec-0306 | 31 |
+
+## 7. Is rdm-spec cheaper than Löyly's harness (the Löyly app, tokens per cycle)?
+
+Ratio rdm-spec / Löyly-harness = **0.64** (90% interval 0.41 to 1.01); P(rdm-spec cheaper) = **94.8%**. The spread is rdm-spec's own builders' (log sd 0.23). Runs per side to know at 95%: about **2**.
+
+## 8. Is the spec done?
+
+68 of 279 scenarios (24.4%) have a 95% lower bound at or above 95.0%. Done would be all of them, with builder decisions near zero (question 5).
+
+---
+
+# The same, with a 1% grader-error prior (questions 1 and 3 only)
+
+## 1. Can the latest build ship?
+
+Cycle 16: P(some item of its slice is wrong, given its verdicts) = **88.7%** (90% interval 46.6% to 100.0%). Over the 5.0% bar.
+
+| Cycle | Graded | Fails | P(something wrong) |
+|---|---|---|---|
+| 02 | 180 | 1 | 24.3% |
+| 03 | 105 | 2 | 48.5% |
+| 04 | 102 | 0 | 1.4% |
+| 05 | 74 | 0 | 0.9% |
+| 06 | 71 | 0 | 1.1% |
+| 07 | 41 | 1 | 33.9% |
+| 08 | 122 | 0 | 1.7% |
+| 09 | 107 | 0 | 1.2% |
+| 10 | 62 | 0 | 0.8% |
+| 11 | 238 | 1 | 36.0% |
+| 13 | 107 | 0 | 2.6% |
+| 14 | 31 | 0 | 1.1% |
+| 15 | 38 | 1 | 47.4% |
+| 16 | 98 | 2 | 88.6% |
+
+## 3. Is each fail real?
+
+With the grader prior only (1.0% false fail, 1.0% false pass): how likely each fail was a real defect.
+
+| Cycle | Scenario | P(real) | 90% interval |
+|---|---|---|---|
+| 02 | spec-0173 | 21.5% | 0.0% to 94.1% |
+| 03 | spec-0098 | 22.7% | 0.0% to 94.4% |
+| 03 | spec-0172 | 33.4% | 0.0% to 97.0% |
+| 07 | spec-0250 | 33.6% | 0.0% to 96.9% |
+| 11 | spec-0274 | 33.6% | 0.0% to 96.9% |
+| 15 | spec-0307 | 46.2% | 0.0% to 98.1% |
+| 16 | spec-0062 | 66.6% | 3.3% to 99.1% |
+| 16 | spec-0298 | 69.9% | 5.4% to 99.2% |
+
