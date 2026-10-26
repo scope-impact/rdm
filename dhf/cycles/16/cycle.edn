@@ -21,4 +21,9 @@
          {:component :ratification/ratify}]
  :builder {:name "one builder subagent, one room" :actor :agent}
  :grader {:name "one grader subagent, its own grading room" :actor :agent}
- :spec-owner {:name "Sathish Narayanan" :actor :human}}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
+ ;; The spec owner's review of the build, 2026-10-26: accepted with the
+ ;; spec-0298 regression known (it errs toward more scopes), and installed as
+ ;; the release that runs the next cycles (replacing cycle 15's 514bc1d): the
+ ;; first whose gate is verify. :test-command is removed with it.
+ :reviewed {:by {:name "Sathish Narayanan" :actor :human} :build "ff9b56e" :outcome :accepted}}
