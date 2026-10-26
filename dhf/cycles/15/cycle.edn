@@ -14,4 +14,9 @@
          {:component :regeneration/scopes}]
  :builder {:name "one builder subagent, one room" :actor :agent}
  :grader {:name "one grader subagent, its own grading room" :actor :agent}
- :spec-owner {:name "Sathish Narayanan" :actor :human}}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
+ ;; The spec owner's review of the build, 2026-10-26: accepted, and installed
+ ;; as the release that runs the next cycles (replacing cycle 14's 4833f7d).
+ ;; spec-0307's fail is the spec's wording, not the build (see
+ ;; proposed-spec-changes.md).
+ :reviewed {:by {:name "Sathish Narayanan" :actor :human} :build "514bc1d" :outcome :accepted}}
