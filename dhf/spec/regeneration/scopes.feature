@@ -44,11 +44,19 @@ Feature: Scopes
     Scenario: A changed event's publisher and subscribers are scopes
       Given the cuts spec-3 and spec-4, between which only the shape of one carried key of one event in dhf/spec/events.edn changed
       When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes the event's publisher, then every subscriber the model's relationships name for that event, in the order they name them
+      Then it lists as scopes the event's publisher, then every subscriber the model's relationships name for that event, in the model's order
+
+    # An event's publisher is part of its contract: the subscribers' events
+    # now come from another component (spec owner, spec-24).
+    @spec-0348 @e2e
+    Scenario: A changed publisher reaches both publishers and every subscriber
+      Given the cuts spec-3 and spec-4, between which only an event's :published-by changed from shop/cart to shop/till
+      When "rdm-spec scopes spec-3 spec-4" is run
+      Then it lists as scopes shop/cart, shop/till and every subscriber the model's relationships name for that event, in the order the next rule gives
 
     # Removing :read-by from every event reached every subscriber of every
     # event: spec-21 to spec-22 listed 15 scopes (cycle 18, integrator). An
-    # event's contract is what it carries and their shape.
+    # event's contract is its publisher, what it carries and their shape.
     @spec-0340 @e2e
     Scenario Outline: A change that leaves an event's contract unchanged reaches no component
       Given the cuts spec-3 and spec-4, between which only <change>
@@ -69,4 +77,4 @@ Feature: Scopes
       Given the cuts spec-3 and spec-4, between which the kernel's command, the spec parser and the status component changed
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists kernel/command, then spec/parser, then verification/status
-      And components with no order between them come in the model's order
+      And components with no order between them come in the model's order, the subscribers of one event among them (cycles 18 and 19 read spec-0298's "the order they name them" two ways; spec-24 settles on the model's)

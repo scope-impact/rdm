@@ -35,9 +35,13 @@ steps, never builds or grades, and reports time and tokens after every run.
    (no fixture, no process, `/tmp` unchanged); run the held-still oracle on the
    build (`RDM_SPEC=... bb dhf/harness/oracle/oracle.clj`); `rdm-spec verify ROOM NN`
    with the installed release; `rdm-spec checklist NN`.
-5. **Grade:** a grading room with no implementation in it: `project/` (the
-   cut's `dhf/` and documents, without `src/`, `test/` or the oracle),
-   `bin/rdm-spec` running the build installed outside the room, the sources;
+5. **Package, then grade.** Package the build outside the room from its
+   `src/` only (`bb --classpath src uberjar rdm-spec.jar -m
+   rdm-spec.kernel.command`; plain `bb uberjar` would take `bb.edn`'s
+   `:paths`, `test` among them). The grading
+   room has no implementation in it: `project/` (the cut's `dhf/` and
+   `docs/`, without `src/`, `test/` or the oracle), `bin/rdm-spec` running
+   that jar (`bb JAR`), the sources;
    `observe begin NN grader`; brief with `docs/wow/harness.md`, "The grader".
 6. **Record:** merge the verdicts; `rdm-spec score NN --verdicts FILE`;
    `rdm-spec scoreboard (NN-1) NN`; `observe report`; the posterior

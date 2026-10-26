@@ -17,7 +17,8 @@ Feature: Command
     Scenario Outline: Each task is run as rdm-spec <task>
       Given a project set up by rdm-spec
       When "rdm-spec help" is run
-      Then it lists the task <task> with its usage <usage>, described as <does>
+      Then its standard output, read as EDN, is {:help [{:task T :usage U :does D} ...]}, one map per task in the order below, T the task's name as a string
+      And it lists the task <task> with its usage <usage>, described as <does>
 
       Examples:
         | task       | usage                                                    | does                                                                 |

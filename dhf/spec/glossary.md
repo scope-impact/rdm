@@ -16,7 +16,9 @@ the cutover.
 **Project**: a repository rdm-spec is used on, set up by `init` or `adopt`.
 This repository is one of them as well: rdm-spec regenerates itself from this
 spec (see Release). Its spec, model and event catalogue describe the project,
-never the harness that reads them.
+never the harness that reads them. rdm-spec runs in a project's root; run in
+any other directory, a project's subdirectory too, it refuses (exit 2) and
+says so.
 
 **Release**: a build of rdm-spec accepted by the spec owner after it was
 scored, and installed. Release N runs cycle N+1 (fence, verify, checklist,
@@ -91,7 +93,9 @@ Steps that run at different times meet through files instead.
 
 **Event catalogue**: a project's events, in the file the configuration's
 `:events` names (`dhf/spec/events.edn`): each with its description, its one
-publisher, the keys it carries and their shape. It
+publisher, the keys it carries and their shape. Its publisher, its keys
+and their shape are its contract: a change to any reaches the publisher and
+every subscriber (`scopes`); its description is not. It
 is the project's design record: the model's lint checks it against the
 model's relationships, and `scopes` compares it between cuts. It never
 declares rdm-spec's own events, and the bus never reads it.
@@ -274,7 +278,12 @@ configuration's `:verify` as `{:kind :tests :command [...]}`, `{:kind :serves
 :name N :start [... "{port}" ...] :port P :budget {:seconds S :polls K} :probe
 [... "{url}" ...]}` and `{:kind :runs :name N :command [...] :expect {:exit E
 :stdout-starts T} :budget {:seconds S}}`; a check's name is its kind's when
-it names none.
+it names none. A `:serves` check polls K times, poll i at i x S/K seconds
+after its app starts; `:answered-on-poll` is the first poll answered and its
+margin is the polls left (K minus that poll). A `:runs` check's margin is the
+seconds of its budget left unused, to 0.01. A verify that cannot run (exit
+2) writes no `ratified.edn`, since nothing was verified; one refused (exit 1)
+writes it, with `:checkout` only when the checkout was made.
 
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
@@ -287,7 +296,8 @@ export of the cut: its files, and no history.
 command the project keeps by hand, outside its implementation, never
 regenerated, named by the configuration's `:oracle {:command [...]}`.
 `rdm-spec oracle [ARGS]` runs it in the project's root with ARGS and with
-`RDM_SPEC` set to a command line running the same rdm-spec, relays its
+`RDM_SPEC` set to a command line running the same rdm-spec (words separated
+by spaces; the rdm-spec it runs keeps the caller's `TMPDIR`), relays its
 output, and exits as it exits; fence and verify run it first as their gate
 and stop while it fails. No `:oracle` is no oracle, said on standard output
 only. rdm-spec's own is `dhf/harness/oracle/oracle.clj`: it runs rdm-spec as
@@ -302,7 +312,10 @@ scenarios.
 **Allure mapping**: the configuration's `:allure`: which element of the spec
 each Allure element of a result carries (`:epic :context`, `:feature
 :feature`, `:story :rule`, `:step :gherkin-step`, the labels and the need
-links, and the `:evidence` each scenario level requires). rdm-spec's default
+links, and the `:evidence` each scenario level requires). `:evidence` is
+`{level [attachment-name ...]}`, as `{:e2e ["browser-trace"]}`: a result of a
+scenario at that level carries an attachment of each name, on the result or
+on any of its steps. rdm-spec's default
 is used when a project declares none; verify's tests check holds every result
 to it.
 

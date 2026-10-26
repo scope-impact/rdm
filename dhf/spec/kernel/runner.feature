@@ -25,6 +25,7 @@ Feature: Gherkin runner
       When "rdm-spec run" runs a scenario with both steps
       Then the second function receives the key the first added
       And the next scenario's first step receives an empty context
+      And a step whose function returns anything but a map leaves the context as it was
 
     @spec-0170 @contract
     Scenario: A step two definitions match makes the result broken, naming both

@@ -12,7 +12,7 @@ loyly:docs/wow/invariants.md@17d68d2, INV-2). Decided in
 | Entry point | `rdm-spec`, a Babashka program; tasks dispatched by `rdm-spec.kernel.command` |
 | Namespaces and files | `rdm-spec.<context>.<component>` in `src/rdm_spec/<context>/<component>.clj` (`-` written `_`); kernel in `src/rdm_spec/kernel/` |
 | Builder's tests | `test.clj` runs every test: unit tests under `test/` and the scenarios, writing Allure results to `$RESULTS_DIR` |
-| Runner's step API | `rdm-spec.kernel.runner/defstep`: `(defstep #"pattern" (fn [ctx & captured] ctx'))` |
+| Runner's step API | `rdm-spec.kernel.runner`: `(defstep #"pattern" (fn [ctx & captured] ctx'))`; `(attach! name content)` or `(attach! name content type)` attaches evidence to the running step (type `text/plain` by default); an assertion that does not hold is Clojure's `assert` or `(fail! message)`, and every other error is broken |
 | Version control | git; the cut is a git tag; the pre-commit hook is `.githooks/pre-commit` with `core.hooksPath` set to `.githooks` |
 | CI workflow | GitHub Actions, `.github/workflows/cut.yml` |
 | Diagram source and render | Mermaid C4 (`dhf/views/<key>.mmd`), rendered to SVG (`dhf/views/<key>.svg`) by `mmdr` (mermaid-rs-renderer) |
