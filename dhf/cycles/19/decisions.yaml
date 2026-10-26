@@ -1,0 +1,20 @@
+# What cycle 19's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml).
+- {scenario: spec-0323, decision: "an assertion is fail!, an AssertionError, or an ex-info flagged failed or assertion; failed only from a Then (or an And/But after one)"}
+- {scenario: spec-0169, decision: "a step returning anything but a map leaves the context unchanged"}
+- {scenario: spec-0170, decision: "the same pattern in two files keeps both, so a step both match is broken; the second is a warning step-defined-twice"}
+- {scenario: spec-0308, decision: "tag labels are all the scenario's Gherkin tags, the feature's and rule's included"}
+- {scenario: spec-0176, decision: "help's result is {:help [{:task :usage :does}]}"}
+- {scenario: spec-0343, decision: "oracle passes every argument through untouched, --events included"}
+- {scenario: spec-0232, decision: "a passing gate adds nothing to the result; exit 1 relays each error line as a finding; any other exit is cannot-run"}
+- {scenario: spec-0344, decision: "RDM_SPEC is bb -Djava.io.tmpdir=<current> -cp <src> -m rdm-spec.kernel.command"}
+- {scenario: spec-0331, decision: "a mapping finding's LINE is the line in the result's JSON naming the element, 1 when none does"}
+- {scenario: spec-0320, decision: "every :serves port is checked before any check runs; held means accepting, or not bindable with SO_REUSEADDR"}
+- {scenario: spec-0318, decision: "poll i at i x seconds/polls; a :serves margin in polls, a :runs margin in seconds; seconds to 0.01"}
+- {scenario: spec-0217, decision: "an unstamped cut is refused before any check, recorded :refused with :checks []"}
+- {scenario: spec-0315, decision: "a failed check writes ratified.edn with :reason; the checks after it are :not-run"}
+- {scenario: spec-0299, decision: "ties between scopes in the model's order"}
+- {scenario: spec-0238, decision: "scopes' result shape; the event catalogue is never a shared file"}
+- {scenario: spec-0340, decision: "an event's contract is :carries and :shape; a changed :published-by alone reaches nothing"}
+- {scenario: spec-0235, decision: "the task table's gates and quiet stages per task"}
+- {scenario: spec-0095, decision: "a When with no project runs in a copy of the room"}

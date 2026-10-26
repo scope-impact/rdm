@@ -60,9 +60,12 @@ write below a watched directory's own entries.
 
 ## Not enforced: kept by docs/wow
 
-**INV-10: Graders never read the builder's tests.** *Enforced by:*
-nothing; docs/wow/harness.md and the grader's honour. *Without it:* grading
-mirrors the tests and stops being independent.
+**INV-10: Graders grade a black box: never the build's code or tests.**
+*Enforced by:* construction, partly: the grading room holds no `src/` or
+`test/`, and `bin/rdm-spec` runs the build installed outside it
+(docs/wow/way-of-working.md, step 5). Reading outside the room is a rule only:
+reads are not observed. *Without it:* grading mirrors the code and stops being
+independent.
 
 **INV-11: One builder per cycle.** *Enforced by:* nothing; docs/wow/way-of-working.md
 and the integrator. *Without it:* the merge seams of cycles 01 to 09.

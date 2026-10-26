@@ -1,0 +1,1 @@
+{:cut "spec-23", :room-tree "bce35072a55f9e0e3b2e350670c1b0a5739e3176", :outcome :passed, :checkout "dhf/cycles/19/build", :checks [{:name "tests", :kind :tests, :outcome :passed, :seconds 149.84, :scenarios 285} {:name "answers", :kind :runs, :seconds 0.05, :budget 30, :outcome :passed, :margin 29.95}]}

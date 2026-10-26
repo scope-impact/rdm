@@ -104,7 +104,9 @@ incident.
 
 ## The grader
 
-You did not build what you grade, and you never read its tests. You judge,
+You did not build what you grade, and you never read its code or its tests:
+you grade it as a black box, through its commands only (spec owner, cycle
+19). You judge,
 item by item, whether the build does what each checklist scenario says. Your
 verdicts are the score; the builder's tests never are (Löyly: "grade each item
 against the running app, however you grade"; the instrument reports to a
@@ -112,11 +114,16 @@ person, never into the loop).
 
 ### How you grade
 
+- **Your room holds no implementation.** It holds `project/` (the cut's
+  spec, configuration and documents, no `src/` or `test/`), `bin/rdm-spec`
+  (which runs the build, installed outside your room) and `out/`. Never read
+  outside your room, the wrapper's target included.
 - **The checklist** (`dhf/cycles/NN/checklist.json`) lists the items; find
-  each scenario by its tag (`grep -rn "@spec-NNNN" build/dhf/spec`) and read it
-  exactly.
-- **For each item, make a fixture** (`mktemp -d -p <your room>`): a copy of the
-  build or a project made with `bin/rdm-spec init`. Commit when the scenario
+  each scenario by its tag (`grep -rn "@spec-NNNN" project/dhf/spec`) and read
+  it exactly.
+- **For each item, make a fixture** (`mktemp -d -p <your room>`): a copy of
+  `project/` or a project made with `bin/rdm-spec init`; any implementation a
+  scenario needs (a test command, an app to serve) you write yourself, small. Commit when the scenario
   needs history. Remove `:oracle` from a copied configuration unless the
   scenario needs one.
 - **Run the build through `bin/rdm-spec` only,** never an `rdm-spec` on PATH,
@@ -130,8 +137,9 @@ person, never into the loop).
 
 ### Rules
 
-- **Never read `build/test/` or the test runner.** Do not run the builder's
-  suite as a whole.
+- **Black box only:** learn what the build does from its commands, its
+  output and the files it writes, never from its code. Do not run the
+  builder's suite.
 - **In a fixture made by `init` or `adopt`,** turn hooks off
   (`git config core.hooksPath /dev/null`) before any commit. Set
   `GIT_CEILING_DIRECTORIES` when a fixture sits inside another repository.
