@@ -18,7 +18,7 @@ Feature: Init
         | dhf/spec/ids.edn                  | the ledger at 0                                                          |
         | dhf/spec/glossary.md              | an empty glossary                                                        |
         | dhf/spec/README.md                | the spec's conventions                                                   |
-        | dhf/harness/config.edn            | the id prefix, every directory the tasks read, the clean room's deny-list (the implementation, the measurements dhf/cycles, the generated site) and kept paths (dhf/spec, dhf/harness, dhf/raw, dhf/wiki, dhf/views, dhf/decisions), the watched directories ("/" and "~") and temporary directory ("/tmp"), and no implementation paths |
+        | dhf/harness/config.edn            | the id prefix, every directory the tasks read, the clean room's deny-list (the implementation, the measurements dhf/cycles, the generated site) and kept paths (.gitignore, .githooks, .github, dhf/spec, dhf/harness, dhf/raw, dhf/wiki, dhf/views, dhf/decisions), the watched directories ("/" and "~") and temporary directory ("/tmp"), and no implementation paths |
         | dhf/harness/stack.md              | a stack table with no rows yet                                           |
         | dhf/raw/README.md                 | the rules for raw sources                                                |
         | dhf/raw/sources.edn               | no sources                                                               |

@@ -23,25 +23,38 @@ Feature: Scopes
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists the scope {:component :architecture/views}
 
-    # A shared file is one on the clean room's allow-list that no component
-    # owns; it is named as a warning, and the task exits 0.
+    # A shared file is a changed, kept path that no component owns; it is
+    # named as a warning, and the task exits 0.
     @spec-0238 @e2e
     Scenario: A changed file no component owns is named for a person to judge
       Given the cuts spec-3 and spec-4, between which only dhf/spec/glossary.md changed
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists no scope, and names glossary.md as a changed shared file whose readers a person must judge
 
-  # A context is rebuilt when its own spec changed, or when an event it
-  # subscribes to changed shape: that event is its contract. A context whose
-  # only change is upstream code is not rebuilt; the event's shape holds
-  # (spec owner, cycle 13).
-  Rule: A changed event reaches its publisher and its subscribers
+  # A context is rebuilt when its own spec changed, or when a key it reads of an
+  # event it subscribes to changed: that key is its contract. A context whose
+  # only change is upstream code, or a key it does not read, is not rebuilt
+  # (spec owner, cycles 13 and 14: cycle 13 rebuilt four subscribers for a key
+  # only one of them reads, about 20 minutes and 300,000 tokens).
+  Rule: A changed event key reaches its publisher and the subscribers that read it
 
     @spec-0298 @e2e
-    Scenario: A changed event's publisher and subscribers are scopes
-      Given the cuts spec-3 and spec-4, between which only the shape of one event in dhf/spec/events.edn changed
+    Scenario: A changed key's publisher and readers are scopes
+      Given the cuts spec-3 and spec-4, between which only the shape of one carried key of one event in dhf/spec/events.edn changed
       When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes the component the event catalogue names as its publisher and every component the model draws subscribing to it
+      Then it lists as scopes the event's publisher and the subscribers its :read-by names for that key, and no other subscriber
+
+    @spec-0300 @e2e
+    Scenario: An added key reaches only the subscribers that read it
+      Given the cuts spec-3 and spec-4, between which one event's scenarios gained a key that :read-by names one subscriber as reading
+      When "rdm-spec scopes spec-3 spec-4" is run
+      Then it lists as scopes the event's publisher and that one subscriber, and no other subscriber
+
+    @spec-0301 @e2e
+    Scenario: A change to who reads a key reaches no subscriber
+      Given the cuts spec-3 and spec-4, between which only an event's :read-by changed
+      When "rdm-spec scopes spec-3 spec-4" is run
+      Then it lists no subscriber of that event as a scope
 
   # One builder rebuilds a cycle's scopes one after another (spec owner, cycle
   # 13), so the list is in the order they can be built.

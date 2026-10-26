@@ -73,6 +73,9 @@ The spec of rdm-spec, the source of truth for what it does
   cut and differ in ratify's checkout. The ids, needs, pages and commits a
   scenario names are its fixture's (cycle 06: spec-0231; cycle 07:
   spec-0239).
+- **A fixture copied from the room holds what a clean room holds:** the
+  paths the configuration keeps, never the denied ones (cycle 13: the copy
+  still read the old allow-list).
 - **A fixture never carries the room's oracle** unless its scenario sets
   one: the oracle a fixture's configuration names is the scenario's (cycle
   09: 22 fixtures reached for the room's registry).

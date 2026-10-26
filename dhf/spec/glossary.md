@@ -160,7 +160,8 @@ the score; the builder's tests never are.
 from the oracle: a passing result and none that did not pass; a result that did
 not pass; no result at all; tagged `@wip`, whatever the results. An outline is
 one scenario: verified only when every row has a passing result, failed when
-any row's result did not pass, else unverified. Status never
+any row's result did not pass, else unverified. A result counts toward a row
+only when it names the row, by its parameters. Status never
 enters a score: only a grader's verdicts do.
 
 **Cut**: a merged spec change tagged `spec-N`. Regeneration reads a cut and
@@ -231,8 +232,9 @@ scenarios.
 
 **Gate**: a stage the task table runs first and that stops the task when it
 has findings that are not warnings; the stages after it never see it. Every other stage reports, so
-one run names every finding. A gate whose code is not built refuses the task
-(exit 2), as Löyly's gate refuses an instrument nobody checked
+one run names every finding. A stage whose code is not built, a gate or not,
+refuses the task (exit 2), since a stage skipped is a check that reads as a
+pass (cycle 13, builder), as Löyly's gate refuses an instrument nobody checked
 (loyly:harness/README.md@17d68d2, "What makes the checks run"). Publish runs
 the views' freshness check as a gate before the site; audit runs its check
 that everything it is made from is committed as a gate, before the release

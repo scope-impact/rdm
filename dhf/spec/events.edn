@@ -5,6 +5,12 @@
 ;;
 ;; :shape says what each carried key holds.
 ;;
+;; :read-by names, for each carried key, the subscribers that read it; for a key
+;; holding a collection of maps (SpecParsed's :scenarios), for each of their
+;; keys. A change to the shape of an event reaches its publisher and only the
+;; subscribers that read a changed key; an added key reaches only its readers
+;; (dhf/spec/regeneration/scopes.feature; cycle 13, the read-by rule).
+;;
 ;; Events travel on the in-process bus (kernel/bus), so only within one run of
 ;; the rdm-spec command. Steps that run at different times (cut, fence, ratify,
 ;; score) meet through files instead: the spec-N tag, the clean room, the
@@ -12,6 +18,7 @@
 {:KnowledgeIndexed
  {:description "The raw sources and the wiki were read: every pinned source, every page, and which citations resolve"
   :published-by :knowledge/sources
+  :read-by {:sources [:publishing/site] :pages [:publishing/site] :citations [:publishing/site] :findings [:publishing/site]}
   :carries [:revision :sources :pages :citations :findings]
   :shape {:revision "the commit read, or :working-tree"
           :sources "[{:id :repository :pins [pin] :fenced [path]}]"
@@ -22,6 +29,7 @@
  :SpecParsed
  {:description "The spec at a revision was read: every scenario with its id, tags, steps and owning component"
   :published-by :spec/parser
+  :read-by {:revision [:verification/status :compliance/audit] :needs [:publishing/site :compliance/audit] :refusals [:measurement/checklist] :scenarios {:id [:architecture/lint :verification/status :measurement/checklist :publishing/site :compliance/audit] :ids [:measurement/checklist] :title [:verification/status :measurement/checklist :publishing/site :compliance/audit] :name [:verification/status :publishing/site] :keyword [:publishing/site] :file [:architecture/lint :verification/status :measurement/checklist :publishing/site :compliance/audit] :line [:verification/status :measurement/checklist :publishing/site] :level [:architecture/lint :measurement/checklist :publishing/site] :needs [:publishing/site :compliance/audit] :wip? [:verification/status :measurement/checklist :publishing/site] :outline? [:verification/status] :rows [:verification/status :publishing/site] :examples [] :background [:publishing/site] :rule [] :steps [:publishing/site] :context [:architecture/lint :measurement/checklist :publishing/site] :component [:architecture/lint :measurement/checklist :publishing/site] :context-name [:measurement/checklist :publishing/site] :component-name [:measurement/checklist :compliance/audit]}}
   :carries [:revision :scenarios :needs :refusals]
   :shape {:revision "the commit read, or :working-tree"
           :scenarios "[{:id :ids :title :name :keyword :file :line :level :needs [UN-n] :wip? :outline? :rows :examples :background :rule :steps [{:keyword :text}] :context :component :context-name :component-name}]; :ids every scenario id the scenario carries (:id is it when there is exactly one), :name is the title as written, :keyword Scenario or Scenario Outline, :rule the rule's name or nil, :background the feature's background steps, :examples the outline's tables; :context and :component are the model's ids, the -name keys its :name"
@@ -31,6 +39,7 @@
  :SpecGated
  {:description "The spec at a revision passed or failed the spec check, with every finding"
   :published-by :spec/check
+  :read-by {:passed? [:publishing/site] :findings [:publishing/site]}
   :carries [:revision :passed? :findings]
   :shape {:revision "the commit read, or :working-tree"
           :passed? "true when the spec check found nothing; other stages report their own"
@@ -40,6 +49,7 @@
  :VerificationDerived
  {:description "Each scenario's status (verified, failed, unverified, planned) was derived from a run's Allure results"
   :published-by :verification/status
+  :read-by {:statuses [:publishing/site :compliance/audit]}
   :carries [:revision :statuses :unknown-results :unreadable-files]
   :shape {:revision "the commit read, or :working-tree"
           :statuses "{scenario-id :verified | :failed | :unverified | :planned}"
@@ -49,6 +59,7 @@
  :ClausesIndexed
  {:description "Under the regulated profile, the clause lists and the controlled documents were read: every clause, where each is named, and the gaps"
   :published-by :compliance/gap
+  :read-by {:clauses [:verification/release :measurement/checklist] :findings [:verification/release :measurement/checklist]}
   :carries [:revision :clauses :documents :findings]
   :shape {:revision "the commit read, or :working-tree"
           :clauses "[{:key :description :clause-list :line :declared :named-at [{:file :line}]}] in the clause lists' order, includes in place, each key once; :clause-list and :line where the clause is written, :declared the declared list it was reached through; :named-at empty is a gap"

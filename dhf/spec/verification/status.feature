@@ -39,6 +39,15 @@ Feature: Status
 
     # An outline with fewer results than rows, all passing, counted as
     # verified (cycle 11, builder): a release could pass on rows never run.
+    # Three results naming no row verified a three-row outline (cycle 13,
+    # grading): re-runs of one row could pass a release.
+    @spec-0302 @contract
+    Scenario: Results that name no row do not verify an outline
+      Given a stamped scenario outline with three example rows
+      And three passing Allure results for it, none of which names its row
+      When "rdm-spec status" is run
+      Then the scenario is unverified
+
     @spec-0285 @contract
     Scenario: An outline with a row that has no result is unverified
       Given a stamped scenario outline with three example rows
