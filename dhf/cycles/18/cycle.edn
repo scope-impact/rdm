@@ -1,0 +1,15 @@
+;; Cycle 18: spec-22 (simpler scoping without :read-by, the domain model, a
+;; project's contexts may relate by call, cycle 17's findings), tagged
+;; locally. Run by cycle 17's release (f733640), with the flat oracle pinned.
+;; The scopes are what that release's scopes lists, in build order. One
+;; builder.
+{:cut "spec-22"
+ :scope [{:component :kernel/command}
+         {:component :architecture/lint}
+         {:component :architecture/domain}
+         {:component :verification/verify}
+         {:component :regeneration/scopes}
+         {:component :measurement/oracle}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "one grader subagent, its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
