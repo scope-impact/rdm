@@ -39,6 +39,13 @@ the byte guard. *Without it:* a regeneration copies instead of rebuilding.
 only when named.** *Enforced by:* `oracle.clj record` refuses an unnamed
 change. *Without it:* re-recording to get a green destroys the evidence.
 
+**INV-15: The builder never grades its own build, nor reads its own score.**
+*Enforced by:* `rdm-spec score` (measurement/scorer.feature, spec-0142 to
+spec-0144): a cycle whose builder is also its grader or spec owner, or that
+leaves a role unnamed, is refused, and nothing is written. *Without it:* the
+one who built the thing judges it, and the score measures the builder's
+confidence rather than the build.
+
 ## Enforced by how the harness is kept
 
 **INV-8: The oracle is held still.** *Enforced by:* it lives in
