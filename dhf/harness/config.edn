@@ -70,8 +70,7 @@
                      :generated ["site" "site-src" "dhf/allure-results"]}
               :keep [".gitignore" "AGENTS.md" "CLAUDE.md" "LICENSE.txt" "README.md"
                      "dhf/decisions" "dhf/harness" "dhf/raw" "dhf/spec" "dhf/storm"
-                     "dhf/views" "dhf/wiki"]
-
+                     "dhf/views" "dhf/wiki"]}
 
  ;; Observe (dhf/spec/agency/observe.feature): the directories whose entries are
  ;; compared before and after a run ("~" is the home directory), and the
