@@ -1,0 +1,11 @@
+;; Cycle 20: spec-24, tagged locally: the whole-project baseline in Clojure,
+;; before cycle 21 rebuilds it in TypeScript. Run by cycle 19's release
+;; (13832de), whose gate runs the held-still oracle. The room holds no
+;; implementation at all: one builder builds every component, kernel first.
+;; The build is packaged as a jar from src/ only, and three graders grade the
+;; jar as a black box, splitting the checklist by context.
+{:cut "spec-24"
+ :scope :project
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "three grader subagents, each its own grading room, splitting the checklist by context" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
