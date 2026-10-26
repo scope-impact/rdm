@@ -104,51 +104,21 @@ incident.
 
 ## The grader
 
-You did not build what you grade, and you never read its code or its tests:
-you grade it as a black box, through its commands only (spec owner, cycle
-19). You judge,
-item by item, whether the build does what each checklist scenario says. Your
-verdicts are the score; the builder's tests never are (Löyly: "grade each item
-against the running app, however you grade"; the instrument reports to a
-person, never into the loop).
+Grade each checklist item against the running build, however you grade, with
+the spec in one hand (loyly:README.md@17d68d2, "3. Measure"). You did not
+build it and you never read its code: drive it through its commands only.
 
-### How you grade
+- **You get** `project/` (the cut's spec and configuration, no code),
+  `bin/rdm-spec` (the build) and the checklist (`dhf/cycles/NN/checklist.json`).
+- **For each item,** read its scenario (`grep -rn "@spec-NNNN" project/dhf/spec`),
+  set up what its Given says in a scratch directory inside your room, run the
+  When with `bin/rdm-spec`, and check every clause of the Then.
+- **File a verdict per item,** pass or fail, with the evidence: the command,
+  its exit code, what it printed. Unsure is a fail. Write each verdict to
+  `out/verdicts.partial.edn` as you go; end with `out/verdicts.edn`, in
+  checklist order.
+- **Report** your counts, each fail's reason, and what the scenarios leave
+  unstated.
 
-- **Your room holds no implementation.** It holds `project/` (the cut's
-  spec, configuration and documents, no `src/` or `test/`), `bin/rdm-spec`
-  (which runs the build, installed outside your room) and `out/`. Never read
-  outside your room, the wrapper's target included.
-- **The checklist** (`dhf/cycles/NN/checklist.json`) lists the items; find
-  each scenario by its tag (`grep -rn "@spec-NNNN" project/dhf/spec`) and read
-  it exactly.
-- **For each item, make a fixture** (`mktemp -d -p <your room>`): a copy of
-  `project/` or a project made with `bin/rdm-spec init`; any implementation a
-  scenario needs (a test command, an app to serve) you write yourself, small. Commit when the scenario
-  needs history. Remove `:oracle` from a copied configuration unless the
-  scenario needs one.
-- **Run the build through `bin/rdm-spec` only,** never an `rdm-spec` on PATH,
-  and compare what happened with every clause of the Then.
-- **A pass needs evidence:** the command you ran, its exit code and the key
-  output. Outlines: every row. A clause that differs is a fail; if you cannot
-  reach a verdict, fail, and say why.
-- **Write verdicts as you go** to `out/verdicts.partial.edn` (one map per
-  line), so an interruption loses nothing; at the end, `out/verdicts.edn`, one
-  `{:id :verdict :evidence}` per item in checklist order.
-
-### Rules
-
-- **Black box only:** learn what the build does from its commands, its
-  output and the files it writes, never from its code. Do not run the
-  builder's suite.
-- **In a fixture made by `init` or `adopt`,** turn hooks off
-  (`git config core.hooksPath /dev/null`) before any commit. Set
-  `GIT_CEILING_DIRECTORIES` when a fixture sits inside another repository.
-- **Write only inside your room,** with `TMPDIR` inside it. Never `/tmp`, `/`,
-  `~`, the repository or the artifact layouts. Stop every process you start,
-  remove your fixtures, and leave only `out/`.
-
-### Your report
-
-Pass and fail counts, each fail with its reason, what the scenarios leave
-unstated, and your tool-call count. The unstated things are the next spec
-change.
+The rules that keep a grading run clean (hooks off in fixtures, only your
+room, no process left) are in `docs/wow/invariants.md` (INV-10, INV-12).

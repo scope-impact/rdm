@@ -70,8 +70,10 @@ independent.
 **INV-11: One builder per cycle.** *Enforced by:* nothing; docs/wow/way-of-working.md
 and the integrator. *Without it:* the merge seams of cycles 01 to 09.
 
-**INV-12: A builder's fixtures never touch the room, its hooks, its oracle
-or /tmp.** *Enforced by:* partly by `observe` (`tmp-left`); the rest by the
+**INV-12: A builder's or grader's fixtures never touch anything outside
+their room: hooks off in fixtures made by init or adopt
+(`git config core.hooksPath /dev/null`), GIT_CEILING_DIRECTORIES set,
+TMPDIR inside the room, no process left, no fixture left.** *Enforced by:* partly by `observe` (`tmp-left`); the rest by the
 builder skill. *Without it:* the leaks of cycles 06, 07, 09 and 14.
 
 **INV-13: A whole-project cycle at least every fifth cycle.** *Enforced by:*
