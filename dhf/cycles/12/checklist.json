@@ -1,0 +1,426 @@
+{
+  "cycle" : "12",
+  "cut" : "spec-16",
+  "items" : [ {
+    "id" : "spec-0020",
+    "title" : "Both directions are counted, never the net",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0021",
+    "title" : "A moved denominator is said out loud",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0022",
+    "title" : "Zero verdicts records nothing",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0023",
+    "title" : "An item nobody graded is scored as a fail",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0051",
+    "title" : "A feature file using every supported construct passes the check",
+    "context" : "spec",
+    "component" : "Parser",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0052",
+    "title" : "An unknown keyword is refused with its line",
+    "context" : "spec",
+    "component" : "Parser",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0053",
+    "title" : "A feature file holds exactly one feature",
+    "context" : "spec",
+    "component" : "Parser",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0064",
+    "title" : "The status report lists a scenario tagged @wip as planned",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0065",
+    "title" : "Status is derived from the results, never written",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0066",
+    "title" : "A scenario outline is one requirement, verified by all its rows",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0067",
+    "title" : "A passed result with the scenario's id verifies it",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0068",
+    "title" : "Any status but passed does not verify",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0069",
+    "title" : "One failing result among several fails the scenario",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0070",
+    "title" : "A scenario with no result is unverified, never left out",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0092",
+    "title" : "Each component gets one page",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0093",
+    "title" : "A component page carries the component's prose and scenarios",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0094",
+    "title" : "Each bounded context gets an index page with its component view",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0095",
+    "title" : "The home page shows the context and container views and the needs",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0096",
+    "title" : "With results, each scenario shows its status",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0097",
+    "title" : "A planned scenario shows as planned",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0098",
+    "title" : "Without results, the site says no status was derived",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0099",
+    "title" : "Publishing refuses views older than the model",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0100",
+    "title" : "Publishing writes nothing in the spec",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0101",
+    "title" : "The same inputs publish the same site",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0133",
+    "title" : "Every wiki page is published with its footnotes linked to their sources",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0142",
+    "title" : "A cycle records who built, graded and reads it, each as human or agent",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0143",
+    "title" : "A cycle whose builder is also its grader or spec owner is refused",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0144",
+    "title" : "A cycle that leaves a role unnamed is refused",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0146",
+    "title" : "The site's navigation follows the model",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0147",
+    "title" : "The site builds when every link resolves",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0148",
+    "title" : "A broken link fails the build, naming the page and the link",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0149",
+    "title" : "Without the site builder, building fails and names the missing tool",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0173",
+    "title" : "A cycle is declared by hand in dhf/cycles/NN/cycle.edn",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0174",
+    "title" : "The score is written beside the cycle",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0176",
+    "title" : "Each task is run as rdm-spec <task>",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0177",
+    "title" : "A task that passes exits 0",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0178",
+    "title" : "A task that finds a problem exits 1 and names it on the error stream",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0179",
+    "title" : "A task that cannot run exits 2 and says why",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0180",
+    "title" : "An unknown task exits 2 and lists the tasks",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0191",
+    "title" : "A scenario tagged @wip is planned whatever its results say",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0192",
+    "title" : "The scoreboard marks a bootstrap cycle and compares nothing against it",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0193",
+    "title" : "A task's results directory defaults to the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0200",
+    "title" : "A scope is the project, one context or one component, or a list of contexts and components",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0201",
+    "title" : "A verdict for an item not on the checklist is refused",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0212",
+    "title" : "A verdicts file is a vector of id, verdict and evidence",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0213",
+    "title" : "A malformed verdicts file is refused and nothing is written",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0214",
+    "title" : "A cycle whose ratification did not pass is not scored",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0219",
+    "title" : "A task's results directory is --results, else RESULTS_DIR, else the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0220",
+    "title" : "A task that names a cut reads the spec as it was at that cut",
+    "context" : "spec",
+    "component" : "Parser",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0225",
+    "title" : "A scoped cycle is compared over its scope only",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0235",
+    "title" : "A task with no gate reports the findings of every stage",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0239",
+    "title" : "The wiki is reachable from the home page and the navigation",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0242",
+    "title" : "A record the release check refuses has no audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0243",
+    "title" : "A clause no audit tag names refuses the audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0244",
+    "title" : "A project without :regulated has no audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0245",
+    "title" : "An existing directory is never written into",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0246",
+    "title" : "The auditor's copy keeps the audit tags, the engineer's copy drops them",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0247",
+    "title" : "What the engineer's copy drops",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0248",
+    "title" : "The documents directory's layout is kept",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0249",
+    "title" : "Each copy is also a PDF whose first page names the document",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0250",
+    "title" : "The clauses page names where each clause is met",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0251",
+    "title" : "The traceability page links each need to its scenarios and their status",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0252",
+    "title" : "The results the record was verified by are kept",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0253",
+    "title" : "The manifest pins every file of the audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0254",
+    "title" : "Same commit, same results, same audit copy",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0273",
+    "title" : "The wiki's index is published with its footnotes linked, as a page is",
+    "context" : "publishing",
+    "component" : "Site",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0274",
+    "title" : "The audit copy is refused while what it is made from is not committed",
+    "context" : "compliance",
+    "component" : "Audit copy",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0283",
+    "title" : "Two cycles of the whole project give one comparison",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0284",
+    "title" : "A scoped cycle gives its target first and the rest apart",
+    "context" : "measurement",
+    "component" : "Scoreboard",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0285",
+    "title" : "An outline with a row that has no result is unverified",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  } ],
+  "planned" : [ ]
+}
