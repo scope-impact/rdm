@@ -38,7 +38,7 @@ Feature: Command
         | release    | release [--results DIR]                                  | the release check                                                    |
         | score      | score CYCLE --verdicts FILE                              | file a grader's verdicts on a verified cycle into its score.edn      |
         | scoreboard | scoreboard CYCLE CYCLE                                   | compare two cycles                                                   |
-        | oracle     | oracle [record --reason R]                               | judge the instrument against its recorded goldens                    |
+        | oracle     | oracle [ARGS]                                            | run the oracle the project keeps, the command its configuration names |
         | publish    | publish [--results DIR]                                  | write the site and build it                                          |
         | audit      | audit OUT [--results DIR]                                | write the auditor's and the engineer's copy, with their evidence, to OUT |
         | observe    | observe begin CYCLE ROLE ROOM, or end CYCLE ROLE [--tokens N], or report CYCLE CYCLE | record a run: its time, its cost and what it touched outside its room |

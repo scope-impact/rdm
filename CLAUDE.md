@@ -25,9 +25,11 @@ see `README.md` and `dhf/decisions/adr-0002-spec-first-regeneration.md`.
 - **Builders and graders** work only inside their rooms (plus their own
   mktemp directories), never edit `dhf/`, never commit, and run the code by
   path, never an `rdm-spec` on PATH. Graders never read `test/`.
-- **The oracle's goldens never enter the repository:** `oracle.edn` lives in an
-  artifact pinned by digest in `dhf/harness/config.edn`; a golden changes only
-  by `rdm-spec oracle record --reason R`.
+- **The oracle is held still:** `dhf/harness/oracle/oracle.clj` is written by
+  hand and never regenerated; its goldens never enter the repository
+  (`oracle.edn` in an artifact pinned by digest in `dhf/harness/oracle/pin.edn`),
+  and a golden changes only by `bb dhf/harness/oracle/oracle.clj record --reason R`,
+  naming with `--changes` every existing golden it changes.
 - **Never re-record a golden to get a green.** A golden holds nothing the spec
   does not state.
 - **The regulated profile** is on only where a project's configuration holds

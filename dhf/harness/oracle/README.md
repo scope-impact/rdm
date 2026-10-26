@@ -14,10 +14,10 @@ same reason).
   layout.
 - `pin.edn`: the artifact holding `oracle.edn`, pinned by digest.
 
-**Status:** proposed, awaiting the spec owner's review of `oracle.clj` and of
-its 20 goldens. Nothing runs it yet: the gate still runs the installed
-release's own oracle (`:oracle` in `dhf/harness/config.edn`). spec-23 makes
-the gate run this one.
+**Status:** approved by the spec owner (2026-10-26). The gate runs it
+from releases built from spec-23 on (`:oracle :command` in
+`dhf/harness/config.edn`); until one is installed, the installed release still
+gates with its own built-in oracle. Run it by hand meanwhile.
 
 **Its first findings:** recorded from cycle 17's release, the accepted
 instrument, it gives that release 0 differences, twice. Cycle 18's build

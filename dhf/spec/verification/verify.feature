@@ -125,7 +125,7 @@ Feature: Verify
       Given a configuration whose :verify declares a :tests check, then a :runs check named "answers"
       And both pass
       When "rdm-spec verify ROOM 03" is run
-      Then it exits 0, and its standard output, read as EDN, is exactly {:verify {:cycle "03" :cut "spec-3" :outcome :passed :checks [{:name "tests" :kind :tests :outcome :passed :seconds S1 :scenarios N} {:name "answers" :kind :runs :outcome :passed :seconds S2 :budget B :margin M}]}}, S1 and S2 the seconds each took, N the scenarios named, B the check's budget in seconds and M the seconds of it left unused
+      Then it exits 0, and its standard output, read as EDN, is exactly {:verify {:cycle "03" :cut "spec-3" :outcome :passed :checks [{:name "tests" :kind :tests :outcome :passed :seconds S1 :scenarios N} {:name "answers" :kind :runs :outcome :passed :seconds S2 :budget B :margin M}]}}, S1 and S2 the seconds each took, N the stamped scenarios not tagged @wip that results name, B the check's budget in seconds and M the seconds of it left unused
 
     @spec-0315 @e2e
     Scenario: The first check that fails stops the gate, and the rest are named as not run
@@ -179,7 +179,15 @@ Feature: Verify
     Scenario: A port already held refuses the gate rather than measure another process
       Given a :serves check on a port another process already holds
       When "rdm-spec verify ROOM 03" is run
-      Then it exits 2, names the port, and starts nothing
+      Then it exits 2, names the port, and starts no app of a :serves check
+
+    # A port whose last app has gone but whose connections the system still
+    # holds for a minute (TIME_WAIT) was refused as held (cycle 18, grader).
+    @spec-0346 @e2e
+    Scenario: A port held only by the closing connections of an app that has gone is free
+      Given a :serves check whose app was started and stopped on its port a moment ago, so only closing connections remain
+      When "rdm-spec verify ROOM 03" is run
+      Then the check starts its app on that port and passes
 
     @spec-0321 @e2e
     Scenario: An app that answers but fails its probe is not this application
@@ -223,7 +231,7 @@ Feature: Verify
       Given a configuration whose :allure is rdm-spec's default mapping
       And the tests check's results for @spec-0003 hold <wrong>
       When "rdm-spec verify ROOM 03" is run
-      Then it exits 1, the tests check is :failed, and it names spec-0003 and <finding>
+      Then it exits 1, the tests check is :failed, and it names spec-0003, <finding> and the result's file, as FILE:LINE: RULE: what (the result's file)
 
       Examples:
         | wrong                                                        | finding                         |
@@ -233,6 +241,16 @@ Feature: Verify
         | the epic of another bounded context                          | mapping-differs: epic           |
         | no issue link to UN-001, the need the scenario traces to     | mapping-differs: links          |
         | no browser-trace attachment, where :evidence requires one for @e2e | evidence-missing: browser-trace |
+
+    # Cycle 18's verify demanded a trace from a @wip scenario, which is never
+    # run and so can carry no evidence; the grader gave 72 of 72, and the
+    # held-still oracle found it on its first run (dhf/harness/oracle/README.md).
+    @spec-0347 @e2e
+    Scenario: A planned scenario's result is held to its spec label only
+      Given a configuration whose :allure requires a browser-trace attachment for @e2e, and a stamped scenario tagged @e2e and @wip
+      And the tests check's results hold that scenario's skipped result, labelled planned, with no attachment
+      When "rdm-spec verify ROOM 03" is run
+      Then the tests check passes, and names no finding about that scenario
 
     @spec-0332 @e2e
     Scenario Outline: A mapping verify cannot read is refused before anything runs

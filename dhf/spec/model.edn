@@ -128,7 +128,7 @@
        {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
         :description "Better and worse over shared items, a moved denominator said aloud"}
        {:id :measurement/oracle :name "Oracle" :spec "measurement/oracle"
-        :description "Judges the instrument against recorded goldens"}]}
+        :description "Runs the oracle the project keeps, as a gate"}]}
 
      {:id :publishing :name "publishing"
       :description "Publishes the spec, its views and its status as one site"

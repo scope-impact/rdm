@@ -66,7 +66,7 @@ Feature: Lint
     @spec-0010 @e2e
     Scenario: The lint prints the checklist items no machine can judge
       When "rdm-spec check" is run
-      Then it lists, for a person to answer, whether the view serves its audience, whether the true coupling is visible and whether the render was looked at
+      Then its result's :lint :for-a-person is exactly ["Does each view serve its audience: can its reader answer the question the view is for?" "Is the true coupling visible: does every relationship that matters appear, labelled with what passes?" "Was each render looked at by a person, and did nothing overlap or hide a name?"]
 
   # rdm-spec is a modular monolith: one container whose bounded contexts are
   # composable modules, each drawn as a boundary around its components.

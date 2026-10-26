@@ -46,11 +46,14 @@ Feature: Gherkin runner
     Scenario: A scenario outline writes one result per example row, all with the outline's id
       Given a stamped scenario outline with three example rows
       When "rdm-spec run" is run
-      Then it writes three Allure results, each labelled with the outline's id and naming its row
+      Then it writes three Allure results, each labelled with the outline's id, sharing its name, and told apart by its parameters and historyId
 
+    # spec-0153 and spec-0310 said a step that throws fails the result;
+    # spec-0323 says only a Then whose assertion does not hold is failed
+    # (cycle 17, grader).
     @spec-0153 @e2e
     Scenario: A failing step fails the result and names the step
-      Given a scenario whose second step's definition throws
+      Given a scenario whose second step, a Then, finds what it asserts does not hold
       When "rdm-spec run" is run
       Then the result is failed and names the second step and the error
       And the steps after it are reported as not run
@@ -123,13 +126,13 @@ Feature: Gherkin runner
       Given a stamped scenario outline @spec-0013 whose example row has the values plan and 3
       When "rdm-spec run" is run
       Then that row's result holds the parameters [{"name" "written" "value" "plan"} {"name" "kept" "value" "3"}], named by the table's headings
-      And its historyId is "spec-0013" followed by the row's values, so each row has its own history
+      And its historyId is "spec-0013|plan|3", the id and the row's values joined by |, so each row has its own history
 
     @spec-0310 @contract
     Scenario: A result that did not pass says why, in Allure's statusDetails
-      Given a scenario whose second step throws the error "no such view"
+      Given a scenario whose second step, a Then, fails its assertion with the message "no such view"
       When "rdm-spec run" is run
-      Then its result's status is "failed" and its statusDetails hold the message "no such view" and the trace
+      Then its result's status is "failed", its statusDetails message holds "no such view", and its statusDetails hold the trace
       And its third step's status is "skipped"
 
     @spec-0311 @contract

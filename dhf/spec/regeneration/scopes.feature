@@ -46,11 +46,19 @@ Feature: Scopes
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists as scopes the event's publisher, then every subscriber the model's relationships name for that event, in the order they name them
 
+    # Removing :read-by from every event reached every subscriber of every
+    # event: spec-21 to spec-22 listed 15 scopes (cycle 18, integrator). An
+    # event's contract is what it carries and their shape.
     @spec-0340 @e2e
-    Scenario: A change to an event's description alone reaches no component
-      Given the cuts spec-3 and spec-4, between which only an event's :description changed
+    Scenario Outline: A change that leaves an event's contract unchanged reaches no component
+      Given the cuts spec-3 and spec-4, between which only <change>
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists no scope
+
+      Examples:
+        | change                                                                 |
+        | an event's :description changed                                        |
+        | an event lost a key its catalogue entry does not declare, as :read-by was |
 
   # One builder rebuilds a cycle's scopes one after another (spec owner, cycle
   # 13), so the list is in the order they can be built.
@@ -61,3 +69,4 @@ Feature: Scopes
       Given the cuts spec-3 and spec-4, between which the kernel's command, the spec parser and the status component changed
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists kernel/command, then spec/parser, then verification/status
+      And components with no order between them come in the model's order
