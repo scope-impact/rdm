@@ -7,8 +7,7 @@
 ;;
 ;; Restated by the first event storm (dhf/storm/2026-10-24-rdm.md) for the
 ;; first version's scope (ADR 0002). Numbered afresh: greenfield, no aliases.
-;; The needs of today's record stay in
-;; dhf/documents/verification_and_validation_plan.md until cutover.
+;; Since the cutover (2026-10-26) these are this repository's only needs.
 {"UN-001" {:text "A team keeps its product's requirements as executable scenarios, the one source of truth for what the product does."
            :sources ["loyly:README.md@17d68d2"
                      "innolitics-rdm:README.md@f21b508"]}

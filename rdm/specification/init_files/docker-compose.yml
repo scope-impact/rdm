@@ -1,6 +1,0 @@
-services:
-  rdm:
-    build:
-      context: .
-    volumes:
-      - .:/dhf

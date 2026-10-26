@@ -1,11 +1,13 @@
 # ADR 0002: Spec first, then regenerate
 
-> Status: Proposed. Nothing in this ADR changes how RDM behaves today: the
-> current record (`dhf/documents/`) and its gates keep governing this
-> repository until the cutover described below. The new spec lives beside it
-> under `dhf/spec/` and `dhf/harness/` and is read by nothing in the current
-> implementation. It is written in files the current design gate does not
-> parse: `.feature` and `.edn` files, and Markdown without frontmatter.
+> Status: Accepted. **Cutover, 2026-10-26:** on the spec owner's decision
+> ("we are recreating from spec; we trust our spec"), the Python
+> implementation and its record (`rdm/`, `tests/`, `dhf/documents/`,
+> `dhf/c4/`, its docs, hooks, workflows and packaging) were removed. The
+> repository is now the spec (`dhf/spec/`), its harness (`dhf/harness/`), its
+> sources and wiki, its cycles, and the implementation regenerated from it
+> (cycle 11's whole-project build onward). The old record stays readable in
+> git history before the cutover commit.
 
 ## Context
 
@@ -236,7 +238,9 @@ removed.
 - `CONTEXT.md` describes the current record and is replaced at cutover by
   `dhf/spec/glossary.md`, which carries this decision's vocabulary from now on.
 - The graph and its MCP server either stay on a frozen Python release after
-  cutover or are switched off until rebuilt. That is decided before cutover.
+  cutover or are switched off until rebuilt. Decided at cutover: switched
+  off and removed with the Python implementation; they return only if a user
+  need asks for them and the spec specifies them.
 
 ## Ambiguity follows Löyly
 
@@ -285,8 +289,8 @@ other.
 
 ## References
 
-- `dhf/decisions/adr-0001-bounded-context-user-needs.md`: the design-input
-  model this ADR replaces at cutover.
+- ADR 0001 (bounded contexts and user needs, the design-input model this
+  ADR replaced): removed at cutover, readable in git history.
 - `skallinen/loyly`, `README.md` and `harness/README.md`: the regenerate,
   ratify, measure loop and the honesty rules of the instrument.
 - `scope-impact/agent-skills`, `skills/engineering/c4-diagrams/reference/c4-guide.md`:

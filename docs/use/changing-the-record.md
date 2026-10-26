@@ -1,1 +1,0 @@
---8<-- "rdm/specification/adopt_files/dhf/AGENT_WORKFLOW.md"

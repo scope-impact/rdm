@@ -1,8 +1,7 @@
 # Glossary of the spec
 
-The vocabulary of `dhf/decisions/adr-0002-spec-first-regeneration.md`. It
-replaces `CONTEXT.md` at cutover; until then `CONTEXT.md` describes the current
-record and this file describes the spec beside it. When a term here is resolved
+The vocabulary of `dhf/decisions/adr-0002-spec-first-regeneration.md`, and
+of this repository since the cutover (2026-10-26). When a term here is resolved
 or changes, this file changes in the same commit.
 
 ## The spec
@@ -232,7 +231,8 @@ counting what got better and what got worse, never a net.
 definitions and writes Allure results labelled with each scenario's id.
 
 **Cutover**: the moment the regenerated core, passing the whole spec
-at a cut, takes over this repository from the current record.
+at a cut, took over this repository from the old record: 2026-10-26
+(ADR 0002).
 
 ## The regulated profile
 
