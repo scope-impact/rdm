@@ -1,0 +1,27 @@
+;; Cycle 13: spec-17 (one builder, Löyly's fence made robust, dependency
+;; scopes, agency observed), tagged locally. Run by cycle 10's release
+;; (9a7a5ae); cycle 12's build is the cut's implementation. The first cycle
+;; built by one builder in one room, and the first whose runs are observed.
+;; Its scopes are what `rdm-spec scopes spec-16 spec-17` listed, plus, by
+;; spec-17's own rule applied by hand (the installed scopes predates it): the
+;; publisher and subscribers of SpecParsed, whose shape gained :ids. In build
+;; order. The installed release fences by its allow-list (:clean-room :allow,
+;; kept for it); the deny-list fence is what this cycle builds. Its runs are
+;; observed by the integrator by hand, in runs.edn's shape, until observe is
+;; built.
+{:cut "spec-17"
+ :scope [{:component :kernel/command}
+         {:component :spec/parser}
+         {:component :agency/observe}
+         {:component :regeneration/fence}
+         {:component :regeneration/scopes}
+         {:component :project/init}
+         {:component :verification/status}
+         {:component :measurement/checklist}
+         {:component :measurement/scoreboard}
+         {:component :architecture/lint}
+         {:component :compliance/audit}
+         {:component :publishing/site}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "grader subagents, each in its own grading room" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
