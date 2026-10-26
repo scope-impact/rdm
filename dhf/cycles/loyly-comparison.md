@@ -101,3 +101,44 @@ is not in Track B's count.
   - Track B's grader configured the days itself.
 - **One build each.** A single cycle per track; the difference in cost may
   not hold over more cycles or a larger slice.
+
+## Cycle 02: rebuilt with rdm-spec's new gate (cycle 16's release)
+
+After spec-20, `verify` replaced ratify, and `loyly-rdm` declared two
+checks:
+- its tests
+- a `:serves` check that starts `bb serve.clj` fresh, polls it within
+  10 seconds in 20 polls, and runs `dhf/harness/probe.sh`, which lives in a
+  kept path
+
+The project's README now carries the results contract. The builder's brief
+no longer describes the Allure format. The app was rebuilt from nothing
+(`spec-2`).
+
+| | A: Löyly harness | B: rdm-spec, cycle 01 | B: rdm-spec, cycle 02 |
+|---|---|---|---|
+| Builder | 11.6 min; 278,311 tokens | 8.8 min; 129,155 tokens | 10.2 min; 149,895 tokens |
+| Gate | `verify.sh`: suite, boot, probe | ratify: results only | **verify: tests, then serves (answered on poll 1 of 20, probe passed)** |
+| Grader | 2.9 min; 81,249 tokens | 2.0 min; 80,868 tokens | 3.6 min; 100,885 tokens |
+| Score | 11 / 11 | 11 / 11 | 11 / 11 |
+| Cycle | 14.6 min; 359,560 tokens | 10.8 min; 210,023 tokens | 13.8 min; 250,780 tokens |
+
+**Finding 1 (serving proof) is closed.** The gate was checked to fail:
+- A start command that never answers failed the tests first, and `serves`
+  was listed as not run.
+- With the port already held, verify refused (exit 2) and started nothing.
+
+**Finding 2 (result contract) is closed.** The builder wrote valid results
+from the project's README alone. Things it found unsaid, for spec-21:
+- the values of `suite` and `subSuite`
+- whether a `tag` keeps its `@`
+- an issue link's URL
+- `failed` against `broken`
+- where results go when RESULTS_DIR is unset
+
+**Also found:**
+- When the app hung, one of the builder's own tests left the app running
+  after it gave up on it. Verify's checks left nothing behind.
+- spec-0008's judge is not truly blind: its Given names the days, so
+  whoever sets the state up already knows them. That is finding 4 (a judged
+  level) again.
