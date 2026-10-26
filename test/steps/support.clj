@@ -111,13 +111,14 @@
   (write! dir "dhf/harness/config.edn" (str (pr-str c) "\n")))
 
 (defn copy-of-room!
-  "A new directory holding a copy of the room's allow-listed paths (its
-  :clean-room :allow), its configuration without :oracle: a fixture never
-  carries the room's oracle unless its scenario sets one."
+  "A new directory holding what a clean room holds: a copy of the room's
+  kept paths (its :clean-room :keep), never the denied ones, and its
+  configuration without :oracle: a fixture never carries the room's oracle
+  unless its scenario sets one."
   []
   (let [dir (tmp-dir)
         cfg (room-config)]
-    (doseq [a (get-in cfg [:clean-room :allow])
+    (doseq [a (get-in cfg [:clean-room :keep])
             :let [src (fs/file room-root a)
                   dst (fs/file dir a)]
             :when (fs/exists? src)]

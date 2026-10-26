@@ -11,12 +11,13 @@
   `read-dir` returns
 
     {:dir \"DIR\"                        ; as given
-     :results [{:file :spec :status :name}]  ; :spec nil for no spec label
+     :results [{:file :spec :status :name [:parameters]}]  ; :spec nil for no spec label
      :unreadable [{:file :why}]}
 
   where :file is the result's path as DIR names it (DIR/name), and :status a
   string: passed, failed, broken, skipped or unknown (a result naming no
-  status is unknown: it does not pass). A file that is not valid JSON, not
+  status is unknown: it does not pass); :parameters, when it has any, is
+  {name value}: the row of an outline the result names. A file that is not valid JSON, not
   a JSON object, or labelled with more than one spec id is unreadable: it
   verifies nothing and is named, never skipped.
 
@@ -53,9 +54,13 @@
             st (get m "status")]
         (if (> (count specs) 1)
           {:why (str "it is labelled with more than one scenario (" (str/join ", " specs) "): a result verifies one")}
-          {:spec (first specs)
-           :status (if (contains? statuses st) st "unknown")
-           :name (get m "name")})))))
+          (let [params (into {} (for [x (get m "parameters") :when (and (map? x) (contains? x "name"))]
+                                  [(str (get x "name")) (str (get x "value"))]))]
+            (cond-> {:spec (first specs)
+                     :status (if (contains? statuses st) st "unknown")
+                     :name (get m "name")}
+              ;; the row of an outline a result names (spec-0302)
+              (seq params) (assoc :parameters params))))))))
 
 (defn read-dir
   "The results in the directory `dir` (as given: relative to the project

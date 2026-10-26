@@ -1,0 +1,124 @@
+[{:id "spec-0064",
+  :verdict :pass,
+  :evidence
+  "Fresh init project, stamped @wip scenario spec-0001 with no result (one result for spec-0002 only); `status` exit 0 listed spec-0001 :status :planned, counts {:planned 1 :verified 1}."}
+ {:id "spec-0065",
+  :verdict :pass,
+  :evidence
+  "Project with exactly three stamped scenarios, results: spec-0001 passed, spec-0002 failed, none for spec-0003; `status --results DIR` exit 0 gave :verified/:failed/:unverified, counts 1/1/1; sha256 of every file under dhf/spec identical before and after, git status unchanged."}
+ {:id "spec-0066",
+  :verdict :pass,
+  :evidence
+  "Stamped outline spec-0011 with rows x=a,b,c; results naming rows a,b passed and c failed (parameters x); `status` exit 0 gave spec-0011 :failed."}
+ {:id "spec-0067",
+  :verdict :pass,
+  :evidence
+  "Stamped spec-0007, one result labelled spec=spec-0007 status passed; `status` exit 0 gave spec-0007 :verified (others :unverified)."}
+ {:id "spec-0068",
+  :verdict :pass,
+  :evidence
+  "All four rows run separately (failed, broken, skipped, unknown) with one spec=spec-0007 result each; `status` exit 0 gave spec-0007 :failed in every row."}
+ {:id "spec-0069",
+  :verdict :pass,
+  :evidence
+  "Two results for spec-0007, one passed and one failed; `status` exit 0 gave spec-0007 :failed."}
+ {:id "spec-0070",
+  :verdict :pass,
+  :evidence
+  "Project with exactly ten stamped scenarios, passing results for spec-0001..0009; `status` exit 0 listed all ten scenarios, counts {:verified 9 :unverified 1}, spec-0010 :unverified."}
+ {:id "spec-0086",
+  :verdict :pass,
+  :evidence
+  "`init sauna` exit 0: sauna is a git repo (core.hooksPath=.githooks) holding exactly the 15 tabled files with the stated contents (model with only :system, {} events/needs/sources, {:issued 0}, config with prefix, dirs, deny/keep lists, agency watch/tmp, no :implementation; hook execs rdm-spec check; cut.yml on push to default branch; .gitignore with the five entries); stdout EDN listed :wrote (all 15) and :next-steps."}
+ {:id "spec-0087",
+  :verdict :pass,
+  :evidence
+  "Existing directory ex with a file; `init ex` exit 2, stderr `cannot-run: ex exists: ...`, no stdout; stat of every entry identical before and after."}
+ {:id "spec-0089",
+  :verdict :pass,
+  :evidence
+  "`init s2 --id-prefix sauna` exit 0; s2/dhf/harness/config.edn holds :id-prefix \"sauna\" (and result :id-prefix \"sauna\")."}
+ {:id "spec-0090",
+  :verdict :pass,
+  :evidence
+  "`check` in a just-initialised project exit 0, no findings on stderr, result {:spec {:scenarios 0 :passed? true} :views {:fresh? true} ...}."}
+ {:id "spec-0176",
+  :verdict :pass,
+  :evidence
+  "`help` exit 0 printed {:help [{:task :usage :does}...]}; compared programmatically against all 21 rows of the Examples table: every task, usage and description identical, same order."}
+ {:id "spec-0177",
+  :verdict :pass,
+  :evidence
+  "`check` exit 0 on an untouched init skeleton and on a copy of the build's project (oracle removed, committed), warnings only."}
+ {:id "spec-0178",
+  :verdict :pass,
+  :evidence
+  "Removed @e2e from spec-0064 in a project copy; `check` exit 1, stderr `dhf/spec/verification/status.feature:12: scenario-no-level: ...` (FILE:LINE: RULE: what; file-only findings as FILE: RULE:), stdout one EDN map {:knowledge :spec :lint :views :paths}."}
+ {:id "spec-0179",
+  :verdict :pass,
+  :evidence
+  "Copy of rdm-spec's project with no dhf/allure-results, RESULTS_DIR unset; `status` exit 2, stderr `cannot-run: the results directory dhf/allure-results does not exist`, empty stdout."}
+ {:id "spec-0180",
+  :verdict :pass,
+  :evidence
+  "`frobnicate` exit 2, stderr `cannot-run: the task frobnicate is unknown: the tasks are help, init, ... observe` naming all 21 tasks."}
+ {:id "spec-0191",
+  :verdict :pass,
+  :evidence
+  "@wip spec-0001 with one skipped and one passed result labelled spec=spec-0001; `status` exit 0 still gave :planned (not verified/failed/unverified)."}
+ {:id "spec-0193",
+  :verdict :pass,
+  :evidence
+  "Configured :results-dir dhf/allure-results, RESULTS_DIR unset, no --results; `status` exit 0 reported :results \"dhf/allure-results\" and verified only the scenario whose result was in that directory."}
+ {:id "spec-0219",
+  :verdict :pass,
+  :evidence
+  "Three rows with distinct result sets: unset/no flag read dhf/allure-results (spec-0001 verified); RESULTS_DIR=R1 read R1 (spec-0002); RESULTS_DIR=R1 with --results other read other (spec-0003); all exit 0."}
+ {:id "spec-0223",
+  :verdict :pass,
+  :evidence
+  "No flag: exit 0, :id-prefix \"spec\"; --id-prefix 9lives: exit 2 `cannot-run: ... a prefix starts with a letter and holds letters, digits and single hyphens`; --id-prefix UN: exit 2 `cannot-run: the prefix UN is taken by need tags (@UN-nnn)...`; neither refused path was created."}
+ {:id "spec-0235",
+  :verdict :pass,
+  :evidence
+  "Removed a level tag and changed a model description (no views run); `check` exit 1, stderr named both scenario-no-level for status.feature:12 and view-stale for each dhf/views/*.mmd (plus a c4 lint finding), :views {:fresh? false}."}
+ {:id "spec-0237",
+  :verdict :pass,
+  :evidence
+  "Committed repo tagged spec-3, then only architecture/views.feature and kernel/bus.feature changed and tagged spec-4; `scopes spec-3 spec-4` exit 0, :scopes [{:component :kernel/bus} {:component :architecture/views}], :shared [], nothing else."}
+ {:id "spec-0238",
+  :verdict :pass,
+  :evidence
+  "Only dhf/spec/glossary.md changed between spec-3 and spec-4; `scopes` exit 0, :scopes [], :shared [\"dhf/spec/glossary.md\"], stderr `dhf/spec/glossary.md: warning: shared-file-changed: ... a person must judge whose code reads it`."}
+ {:id "spec-0241",
+  :verdict :pass,
+  :evidence
+  "Only architecture/views.md changed (added, none existed at spec-3); `scopes spec-3 spec-4` exit 0, :scopes [{:component :architecture/views}]."}
+ {:id "spec-0272",
+  :verdict :pass,
+  :evidence
+  "`init <abs DIR>/abs/sauna` exit 0; the directory is a git work tree holding the 15 skeleton files."}
+ {:id "spec-0285",
+  :verdict :pass,
+  :evidence
+  "Outline spec-0011 (rows a,b,c), passing results naming rows a and b only; `status` exit 0 gave spec-0011 :unverified (control with all three rows passing gave :verified)."}
+ {:id "spec-0298",
+  :verdict :pass,
+  :evidence
+  "Only SpecParsed's :needs shape changed in events.edn; `scopes` exit 0 listed spec/parser, publishing/site, compliance/audit (its :read-by for :needs), not lint, status or checklist, which also subscribe."}
+ {:id "spec-0299",
+  :verdict :pass,
+  :evidence
+  "kernel/command, spec/parser and verification/status feature files changed; `scopes` exit 0 listed [:kernel/command :spec/parser :verification/status] in that order."}
+ {:id "spec-0300",
+  :verdict :pass,
+  :evidence
+  "SpecParsed :scenarios gained sub-key :foo (shape and :read-by {:foo [:measurement/checklist]}); `scopes` exit 0 listed spec/parser and measurement/checklist only."}
+ {:id "spec-0301",
+  :verdict :pass,
+  :evidence
+  "Only :read-by changed (VerificationDerived :statuses dropped compliance/audit; separately SpecParsed :needs added verification/status); `scopes` exit 0 gave :scopes [] in both, no subscriber listed."}
+ {:id "spec-0302",
+  :verdict :pass,
+  :evidence
+  "Outline spec-0011 with three passing results labelled spec=spec-0011 and no parameters; `status` exit 0 gave spec-0011 :unverified."}]
