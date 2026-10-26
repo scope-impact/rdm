@@ -1,0 +1,594 @@
+{
+  "cycle" : "16",
+  "cut" : "spec-20",
+  "items" : [ {
+    "id" : "spec-0022",
+    "title" : "Zero verdicts records nothing",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0023",
+    "title" : "An item nobody graded is scored as a fail",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0032",
+    "title" : "A step with no definition makes the result broken",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0033",
+    "title" : "The tests check requires results",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0060",
+    "title" : "A result naming no scenario is reported, not counted",
+    "context" : "verification",
+    "component" : "Results reader",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0061",
+    "title" : "An empty results directory is refused",
+    "context" : "verification",
+    "component" : "Results reader",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0062",
+    "title" : "A results file that cannot be read is named, never skipped",
+    "context" : "verification",
+    "component" : "Results reader",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0063",
+    "title" : "The stack that wrote the results does not matter",
+    "context" : "verification",
+    "component" : "Results reader",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0064",
+    "title" : "The status report lists a scenario tagged @wip as planned",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0065",
+    "title" : "Status is derived from the results, never written",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0066",
+    "title" : "A scenario outline is one requirement, verified by all its rows",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0067",
+    "title" : "A passed result with the scenario's id verifies it",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0068",
+    "title" : "Any status but passed does not verify",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0069",
+    "title" : "One failing result among several fails the scenario",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0070",
+    "title" : "A scenario with no result is unverified, never left out",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0086",
+    "title" : "Init writes the skeleton and names what it wrote",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0087",
+    "title" : "Init refuses a path that already exists",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0089",
+    "title" : "The id prefix is chosen at init",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0090",
+    "title" : "The check passes on a skeleton nobody has touched",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0142",
+    "title" : "A cycle records who built, graded and reads it, each as human or agent",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0143",
+    "title" : "A cycle whose builder is also its grader or spec owner is refused",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0144",
+    "title" : "A cycle that leaves a role unnamed is refused",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0151",
+    "title" : "A scenario's result is labelled with its id, component and context",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0152",
+    "title" : "A scenario outline writes one result per example row, all with the outline's id",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0153",
+    "title" : "A failing step fails the result and names the step",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0154",
+    "title" : "A planned scenario is not run, and its result says it is planned",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0155",
+    "title" : "The runner runs every feature file the spec holds, found by looking, never listed",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0156",
+    "title" : "A run that finds no feature file is refused",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0164",
+    "title" : "A result with no spec label counts toward nothing and is not reported as unknown",
+    "context" : "verification",
+    "component" : "Results reader",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0168",
+    "title" : "A step is defined by a pattern and a function",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0169",
+    "title" : "Each step's return is the next step's context, and each scenario starts empty",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0170",
+    "title" : "A step two definitions match makes the result broken, naming both",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0173",
+    "title" : "A cycle is declared by hand in dhf/cycles/NN/cycle.edn",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0174",
+    "title" : "The score is written beside the cycle",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0176",
+    "title" : "Each task is run as rdm-spec <task>",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0177",
+    "title" : "A task that passes exits 0",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0178",
+    "title" : "A task that finds a problem exits 1 and names it on the error stream",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0179",
+    "title" : "A task that cannot run exits 2 and says why",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0180",
+    "title" : "An unknown task exits 2 and lists the tasks",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0191",
+    "title" : "A scenario tagged @wip is planned whatever its results say",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0193",
+    "title" : "A task's results directory defaults to the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0197",
+    "title" : "A failing test command fails verification",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0200",
+    "title" : "A scope is the project, one context or one component, or a list of contexts and components",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0201",
+    "title" : "A verdict for an item not on the checklist is refused",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0202",
+    "title" : "Verify reads the cycle before anything else it does",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0203",
+    "title" : "A cycle with no cycle.edn is refused",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0204",
+    "title" : "The checkout's implementation is replaced by the room's, never merged with it",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0205",
+    "title" : "Edits the builder made outside the implementation are not used",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0206",
+    "title" : "The builder's tests are told where to write their results",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0207",
+    "title" : "The tests check passes when the builder's tests pass and every scenario's results passed",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0208",
+    "title" : "A scenario no test names fails verification",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0212",
+    "title" : "A verdicts file is a vector of id, verdict and evidence",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0213",
+    "title" : "A malformed verdicts file is refused and nothing is written",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0214",
+    "title" : "A cycle whose verification did not pass is not scored",
+    "context" : "measurement",
+    "component" : "Scorer",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0215",
+    "title" : "Verify writes ratified.edn with the cut, the room's tree, the outcome and every check",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0216",
+    "title" : "A failed verification is recorded with its reason",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0217",
+    "title" : "A cut holding an unstamped scenario is not verified",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0218",
+    "title" : "A failed or broken result fails verification",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0219",
+    "title" : "A task's results directory is --results, else RESULTS_DIR, else the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0223",
+    "title" : "The id prefix defaults to spec and must start a tag",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0228",
+    "title" : "The oracle passes when every output matches its golden",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0229",
+    "title" : "An output that differs from its golden fails the oracle, naming the difference",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0230",
+    "title" : "Recording goldens says which changed, and why",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0231",
+    "title" : "Recording without a reason is refused",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0232",
+    "title" : "Fence and verify refuse while the oracle fails",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0233",
+    "title" : "A project with no oracle is not refused",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0235",
+    "title" : "A task with no gate reports the findings of every stage",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0237",
+    "title" : "The components whose feature files changed are listed as scopes",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0238",
+    "title" : "A changed file no component owns is named for a person to judge",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0241",
+    "title" : "A component's design prose is its own",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0272",
+    "title" : "Init takes an absolute path as well as a relative one",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0276",
+    "title" : "The oracle reads one oracle.edn, one key per instrument component",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0277",
+    "title" : "An oracle that holds no fixture cycle fails",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0280",
+    "title" : "An oracle the store does not hold cannot run",
+    "context" : "measurement",
+    "component" : "Oracle",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0285",
+    "title" : "An outline with a row that has no result is unverified",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0298",
+    "title" : "A changed key's publisher and readers are scopes",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0299",
+    "title" : "The kernel first, then each publisher before its subscribers",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0300",
+    "title" : "An added key reaches only the subscribers that read it",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0301",
+    "title" : "A change to who reads a key reaches no component",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0302",
+    "title" : "Results that name no row do not verify an outline",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0305",
+    "title" : "A changed key :read-by names no readers for reaches every subscriber",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0306",
+    "title" : "A key :read-by gives no subscriber reaches only the publisher",
+    "context" : "regeneration",
+    "component" : "Scopes",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0307",
+    "title" : "The status result is exactly this shape",
+    "context" : "verification",
+    "component" : "Status",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0308",
+    "title" : "A scenario's result carries each Allure element, filled from the scenario",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0309",
+    "title" : "An outline row's values are the result's parameters, and its history is the row's",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0310",
+    "title" : "A result that did not pass says why, in Allure's statusDetails",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0311",
+    "title" : "Evidence a step attaches is an Allure attachment",
+    "context" : "kernel",
+    "component" : "Gherkin runner",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0312",
+    "title" : "A result counts by its status, its spec label and an outline row's parameters alone",
+    "context" : "verification",
+    "component" : "Results reader",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0313",
+    "title" : "A result whose status is not one of Allure's is unreadable",
+    "context" : "verification",
+    "component" : "Results reader",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0314",
+    "title" : "Verify reports every declared check, in order, with its outcome and margin",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "contract"
+  }, {
+    "id" : "spec-0315",
+    "title" : "The first check that fails stops the gate, and the rest are named as not run",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0316",
+    "title" : "A configuration verify cannot trust is refused before anything runs",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0317",
+    "title" : "A check whose command is not found refuses the gate",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0318",
+    "title" : "A served app that answers and passes its probe passes, with its margin",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0319",
+    "title" : "An app that does not answer within its budget fails, naming the budget",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0320",
+    "title" : "A port already held refuses the gate rather than measure another process",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0321",
+    "title" : "An app that answers but fails its probe is not this application",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  }, {
+    "id" : "spec-0322",
+    "title" : "A command that answers otherwise than expected fails the check",
+    "context" : "verification",
+    "component" : "Verify",
+    "level" : "e2e"
+  } ],
+  "planned" : [ ]
+}
