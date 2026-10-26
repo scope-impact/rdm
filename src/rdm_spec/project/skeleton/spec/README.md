@@ -47,16 +47,33 @@ carries, and what it is filled from:
 | `name` | the scenario's title |
 | `fullName` | the feature file's path and the title, `FILE:TITLE` |
 | `historyId` | the scenario's id; an outline row's is the id followed by the row's values, so each row has its own history |
-| `status` | `passed`, `failed`, `broken` or `skipped` |
+| `status` | `passed`, `failed`, `broken` or `skipped`: `failed` is a Then whose assertion did not hold, `broken` anything else that went wrong |
 | `stage` | `finished` |
 | `statusDetails` | when it did not pass: the message and the trace |
 | `start`, `stop` | the scenario's start and stop, in milliseconds since the epoch |
 | `steps` | one per Gherkin step, in order: its keyword and text as its name, its status, start and stop, and the evidence it attached |
 | `parameters` | an outline row's values, named by the table's headings |
-| `labels` | `feature` (the feature's name), `story` (the rule's), `suite` (the bounded context), `subSuite` (the component), a `tag` per Gherkin tag, `framework` `gherkin`, and `spec` (the scenario id, exactly one), `context`, `component`, and `planned` `true` for a scenario tagged `@wip` |
-| `links` | one `issue` per need the scenario traces to |
+| `labels` | `feature` (the feature's name), `story` (the rule's), `epic` and `suite` (the bounded context's id), `subSuite` (the component's id without its colon), a `tag` per Gherkin tag without its `@`, `framework` `gherkin`, and `spec` (the scenario id, exactly one), `context`, `component`, and `planned` `true` for a scenario tagged `@wip` |
+| `links` | one `issue` per need the scenario traces to, its `url` the need's entry in the needs file |
 | `attachments` | evidence: a file beside the result, named by its `source` |
 
 A status is decided by `status`, the `spec` label and an outline row's
 `parameters` only; everything else is kept for the report. A result with no
-`spec` label verifies nothing.
+`spec` label verifies nothing. Results go to the directory `RESULTS_DIR`
+names, else to the configured `:results-dir`.
+
+## The Allure mapping
+
+Which element of the spec each Allure element of a result carries. A
+configuration's `:allure` may replace it; this is rdm-spec's default, used
+when the configuration declares none, and `rdm-spec verify` holds every
+result of the tests check to it: the steps one for one with the scenario's
+Gherkin lines, the epic, the story, the need links, and the evidence each
+level requires (`:evidence`, `{:e2e ["attachment name" ...]}`).
+
+```edn
+{:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row
+ :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags}
+ :links {:need {:type "issue" :url "dhf/spec/needs.edn#{id}"}}
+ :evidence {}}
+```

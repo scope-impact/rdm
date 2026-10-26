@@ -69,7 +69,11 @@
   (let [dir (mc/project! {mc/lint-feature mc/default-scenarios
                           "dhf/spec/verification/status.feature" [{:id "spec-0020" :title "A status"}]})
         cfg (kc/config-of dir)]
-    (s/write! dir "dhf/harness/config.edn" (str (pr-str (assoc cfg :verify [{:kind :tests :command ["bb" "test.clj"]}])) "\n"))
+    (s/write! dir "dhf/harness/config.edn" (str (pr-str (assoc cfg :verify [{:kind :tests :command ["bb" "test.clj"]}]
+                                                                  ;; its room's results carry the spec label only, so its
+                                                                  ;; mapping asks for no more (spec-0333: :allure replaces
+                                                                  ;; rdm-spec's default)
+                                                                  :allure {:labels {"spec" :scenario-id}})) "\n"))
     (mc/cut! dir "spec-3")))
 
 (defstep #"dhf/cycles/03/cycle\.edn holds:"

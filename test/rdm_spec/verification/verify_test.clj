@@ -1,56 +1,55 @@
 (ns rdm-spec.verification.verify-test
-  (:require [babashka.fs :as fs]
-            [clojure.string :as str]
+  "Unit tests of Verify's pure parts: the declared checks, a :runs check's
+  answer, and what the tests check finds in a run's results. No fixture on
+  disk."
+  (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [rdm-spec.kernel.gherkin :as gherkin]
+            [rdm-spec.kernel.runner :as runner]
             [rdm-spec.verification.verify :as verify]))
 
-(def impl ["src" "test" "test.clj"])
+(def ^:private impl ["src" "test" "test.clj"])
 
-(deftest a-configuration-verify-cannot-trust-is-refused
-  (let [why #(verify/config-problem {:verify % :implementation impl})]
-    (is (nil? (why [{:kind :tests :command ["bb" "test.clj"]}])))
-    (is (re-find #"the configuration declares no :verify" (verify/config-problem {:implementation impl})))
-    (is (re-find #"a project is verified by its tests first" (why [{:kind :runs :name "a" :command ["x"] :budget {:seconds 1}}])))
-    (is (re-find #"a project is verified by its tests first"
-                 (why [{:kind :runs :name "a" :command ["x"] :budget {:seconds 1}} {:kind :tests :command ["t"]}])))
-    (is (re-find #":renders is not a kind of check" (why [{:kind :tests :command ["t"]} {:kind :renders}])))
-    (is (re-find #"the tests check names no command" (why [{:kind :tests}])))
-    (is (re-find #"the tests check names no command" (why [{:kind :tests :command []}])))
-    (is (re-find #"the probe is in the implementation the builder writes"
-                 (why [{:kind :tests :command ["t"]}
-                       {:kind :serves :name "app" :start ["x" "{port}"] :port 1 :budget {:seconds 1 :polls 2}
-                        :probe ["bb" "src/probe.clj" "{url}"]}])))
-    (is (nil? (why [{:kind :tests :command ["t"]}
-                    {:kind :serves :name "app" :start ["x" "{port}"] :port 1 :budget {:seconds 1 :polls 2}
-                     :probe ["bb" "dhf/harness/probe.clj" "{url}"]}])))
-    (is (re-find #"budget" (why [{:kind :tests :command ["t"]} {:kind :runs :name "a" :command ["x"]}])))
-    (is (re-find #"twice" (why [{:kind :tests :command ["t"]} {:kind :tests :command ["t"]}])))))
+(deftest the-declared-checks-are-checked-before-anything-runs
+  (is (nil? (verify/checks-problem [{:kind :tests :command ["bb" "test.clj"]}] impl)))
+  (is (str/includes? (verify/checks-problem nil impl) "the configuration declares no :verify"))
+  (is (str/includes? (verify/checks-problem [{:kind :runs :name "a" :command ["x"]}] impl)
+                     "a project is verified by its tests first"))
+  (is (str/includes? (verify/checks-problem [{:kind :tests :command ["x"]} {:kind :renders}] impl)
+                     ":renders is not a kind of check"))
+  (is (str/includes? (verify/checks-problem [{:kind :tests}] impl) "the tests check names no command"))
+  (is (str/includes? (verify/checks-problem [{:kind :tests :command ["x"]}
+                                             {:kind :serves :name "app" :start ["x"] :port 1 :budget {:seconds 1 :polls 1}
+                                              :probe ["bb" "src/probe.clj" "{url}"]}]
+                                            impl)
+                     "the probe is in the implementation the builder writes")))
 
-(deftest a-check-is-named-by-its-kind-when-it-names-none
-  (is (= ["tests" "answers" "runs"]
-         (map verify/check-name [{:kind :tests} {:kind :runs :name "answers"} {:kind :runs}]))))
+(deftest a-runs-check-answers-as-expected-or-names-the-difference
+  (let [check {:kind :runs :name "answers" :expect {:exit 0 :stdout-starts "{:help"} :budget {:seconds 10}}]
+    (is (nil? (verify/runs-difference check {:exit 0 :out "{:help 1}\n"})))
+    (is (str/includes? (verify/runs-difference check {:exit 3 :out "{:help"}) "the exit 3 where 0 was expected"))
+    (is (str/includes? (verify/runs-difference check {:exit 0 :out "usage\nmore\n"}) "usage"))
+    (is (str/includes? (verify/runs-difference check {:timed-out? true}) "the budget of 10 seconds"))))
 
-(deftest the-tests-check-reads-every-scenario
-  (let [scs [{:id "spec-0001"} {:id "spec-0002"} {:id "spec-0003" :wip? true}]]
-    (is (= {:named 2 :missing [] :not-passed []}
-           (verify/coverage scs [{:spec "spec-0001" :status "passed"} {:spec "spec-0002" :status "passed"}])))
-    (is (= {:named 1 :missing ["spec-0002"] :not-passed [["spec-0001" ["failed"]]]}
-           (verify/coverage scs [{:spec "spec-0001" :status "passed"} {:spec "spec-0001" :status "failed"}])))))
+(def ^:private text
+  (str "@UN-001\nFeature: Lint\n\n  Rule: R\n\n"
+       "    @spec-0003 @e2e\n    Scenario: Three\n      Given a model\n\n"
+       "    @spec-0004 @e2e @wip\n    Scenario: Four\n      Given a model\n"))
 
-(deftest seconds-and-margins-are-rounded-to-the-hundredth
-  (is (= 1.23 (verify/hundredths 1.2345)))
-  (is (= 28.77 (verify/hundredths (- 30 1.2345)))))
+(defn- pickles []
+  (runner/pickles-of "dhf/spec/a/b.feature" (gherkin/parse-feature "dhf/spec/a/b.feature" text)
+                     {:prefix "spec" :owner {:context :a :component :a/b :context-name "a" :component-name "B"}}))
 
-(deftest a-room-tree-is-the-tree-of-its-implementation
-  (let [d (str (fs/create-temp-dir {:prefix "verify-test-"}))]
-    (try
-      (spit (str (fs/file d "test.clj")) "x\n")
-      (fs/create-dirs (fs/file d "other"))
-      (spit (str (fs/file d "other/a.txt")) "not implementation\n")
-      (let [h (verify/room-tree d impl)]
-        (is (re-matches #"[0-9a-f]{40}" h))
-        (spit (str (fs/file d "other/a.txt")) "changed\n")
-        (is (= h (verify/room-tree d impl)))
-        (spit (str (fs/file d "test.clj")) "y\n")
-        (is (not= h (verify/room-tree d impl))))
-      (finally (fs/delete-tree d)))))
+(deftest the-tests-check-names-every-scenario-not-passed-or-not-named
+  (let [ps (pickles)
+        good (runner/allure-result (first ps) {:status "passed" :steps [{:name "Given a model" :status "passed"}]}
+                                   runner/default-mapping)]
+    (testing "untested"
+      (is (= ["scenario-untested"] (map :rule (verify/scenario-findings ps [] runner/default-mapping)))))
+    (testing "passed and following the mapping"
+      (is (empty? (verify/scenario-findings ps [{:spec "spec-0003" :status "passed" :result good :file "r.json"}]
+                                            runner/default-mapping))))
+    (testing "failed"
+      (is (= ["scenario-not-passed"]
+             (map :rule (verify/scenario-findings ps [{:spec "spec-0003" :status "failed" :result (assoc good :status "failed") :file "r.json"}]
+                                                  runner/default-mapping)))))))

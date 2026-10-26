@@ -218,7 +218,7 @@
    {:task "scoreboard" :usage "scoreboard CYCLE CYCLE" :does "compare two cycles" :arity [2 2]
     :stages [(st 'rdm-spec.measurement.scoreboard/scoreboard)]}
    {:task "oracle" :usage "oracle [record --reason R]" :does "judge the instrument against its recorded goldens"
-    :arity [0 1] :options #{"--reason"}
+    :arity [0 1] :options #{"--reason" "--changes"}
     :stages [(st 'rdm-spec.measurement.oracle/oracle)]}
    {:task "publish" :usage "publish [--results DIR]" :does "write the site and build it" :arity [0 0]
     :options #{"--results"}

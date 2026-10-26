@@ -1,39 +1,45 @@
 (ns rdm-spec.project.init-test
+  "Unit tests of Init's pure parts and of the skeleton it writes. The one
+  fixture is a temporary directory, removed."
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.kernel.command :as command]
+            [rdm-spec.kernel.runner :as runner]
             [rdm-spec.project.init :as init]))
 
-(deftest an-id-prefix-starts-a-tag
+(deftest a-prefix-starts-with-a-letter-and-is-not-a-need-tag
   (is (nil? (init/prefix-problem "spec")))
-  (is (nil? (init/prefix-problem "sauna-x2")))
-  (is (re-find #"starts with a letter" (init/prefix-problem "9lives")))
-  (is (re-find #"single hyphens" (init/prefix-problem "a--b")))
-  (is (re-find #"need tags" (init/prefix-problem "UN"))))
+  (is (nil? (init/prefix-problem "sauna-2")))
+  (is (str/includes? (init/prefix-problem "9lives") "starts with a letter"))
+  (is (str/includes? (init/prefix-problem "a--b") "single hyphens"))
+  (is (str/includes? (init/prefix-problem "a-") "single hyphens"))
+  (is (str/includes? (init/prefix-problem "UN") "need tags")))
 
-(deftest the-skeleton-is-every-destination-once
-  (is (= (count init/destinations) (count (distinct init/destinations))))
-  (is (some #{".githooks/pre-commit"} init/destinations))
-  (is (every? #(some? (init/skeleton-text (second %) {:name "x" :id-prefix "spec"})) init/skeleton)))
+(deftest the-system-is-named-after-the-path
+  (is (= :sauna-booking (init/system-id "Sauna Booking")))
+  (is (= :project (init/system-id "!!"))))
 
-(deftest the-configuration-has-a-tests-check-without-a-command
-  (let [c (edn/read-string (init/skeleton-text "harness/config.edn" {:name "sauna" :id-prefix "sauna"}))]
-    (is (= "sauna" (:id-prefix c)))
-    (is (= [{:kind :tests}] (:verify c)))))
+(deftest every-skeleton-file-is-a-resource
+  (is (= 15 (count init/destinations)))
+  (doseq [[_ resource] init/skeleton]
+    (is (string? (init/skeleton-text resource {:name "sauna" :id-prefix "spec"})) resource)))
 
-(deftest the-spec-readme-carries-the-results-contract
-  (let [t (init/skeleton-text "spec/README.md" {:name "x" :id-prefix "spec"})]
-    (doseq [e ["historyId" "statusDetails" "parameters" "subSuite" "links" "attachments" "planned"]]
-      (is (str/includes? t (str "`" e "`")) e))))
+(deftest the-readme-states-the-default-mapping
+  (let [text (init/skeleton-text "spec/README.md" {:name "sauna" :id-prefix "spec"})]
+    (is (some #{runner/default-mapping}
+              (for [[_ b] (re-seq #"(?s)```edn\n(.*?)```" text)] (edn/read-string b))))))
 
-(deftest init-refuses-a-path-that-exists
-  (let [d (str (fs/create-temp-dir {:prefix "init-test-"}))]
+(deftest init-writes-a-repository-with-the-skeleton
+  (let [dir (str (fs/create-temp-dir {:prefix "init-test-"}))]
     (try
-      (is (command/cannot-run? (try (init/init {:root d :args ["."] :opts {}}) nil (catch Exception e e))))
-      (let [out (init/init {:root d :args ["p"] :opts {}})]
-        (is (= (set init/destinations) (set (get-in out [:result :init :wrote]))))
-        (is (fs/executable? (fs/file d "p/.githooks/pre-commit")))
-        (is (= :p (get-in (edn/read-string (slurp (str (fs/file d "p/dhf/spec/model.edn")))) [:system :id]))))
-      (finally (fs/delete-tree d)))))
+      (let [out (get-in (init/init {:root dir :args ["sauna"] :opts {}}) [:result :init])]
+        (is (= init/destinations (:wrote out)))
+        (is (fs/directory? (fs/file dir "sauna/.git")))
+        (is (= {:issued 0} (edn/read-string (slurp (str (fs/file dir "sauna/dhf/spec/ids.edn"))))))
+        (is (= "spec" (:id-prefix (edn/read-string (slurp (str (fs/file dir "sauna/dhf/harness/config.edn"))))))))
+      (testing "an existing path is refused"
+        (let [e (try (init/init {:root dir :args ["sauna"] :opts {}}) nil (catch Exception e e))]
+          (is (command/cannot-run? e))))
+      (finally (fs/delete-tree dir)))))

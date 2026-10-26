@@ -1,0 +1,360 @@
+[{:id "spec-0032",
+  :verdict :pass,
+  :evidence
+  "Fixture scenario @spec-0016 with step 'When nobody defined this step'; rdm-spec run (exit 1) wrote a result status \"broken\" with statusDetails.message 'no step definition matches \"When nobody defined this step\"'."}
+ {:id "spec-0033",
+  :verdict :pass,
+  :evidence
+  "Room test.clj exits 0 without running anything: verify ROOM 03 exit 1, tests check :failed, 'tests-no-results: the test command exited 0 and wrote no Allure result into dhf/cycles/03/results: a green exit with no results is not a run'."}
+ {:id "spec-0037",
+  :verdict :pass,
+  :evidence
+  "Fixture repo (build copy, synthetic test/), HEAD a commit after spec-3 with no tag: rdm-spec fence ROOM HEAD exit 2 'cannot-run: HEAD carries no spec-N tag: regeneration reads only a cut'; no ROOM created."}
+ {:id "spec-0038",
+  :verdict :pass,
+  :evidence
+  "Cut spec-3 also holding dhf/cycles/01/score.edn: fence ROOM spec-3 exit 0 {:files 80 :removed 197}; ROOM has one root commit (no parents, rev-list 1); its files equal git ls-tree of spec-3 minus src/test/test.clj/bb.edn/dhf/cycles/site paths, byte-identical; none of the 197 denied blobs exists in ROOM's object store."}
+ {:id "spec-0060",
+  :verdict :pass,
+  :evidence
+  "rdm-spec status --results r60 (results for spec-9999 and spec-0012) exit 0: :unknown-results [{:file \"r60/a-result.json\" :spec \"spec-9999\"}] plus warning result-unknown; counts {:verified 1 ...} only spec-0012, so spec-9999 counts toward no scenario."}
+ {:id "spec-0061",
+  :verdict :pass,
+  :evidence
+  "status --results r61 (empty dir) exit 2 'cannot-run: the results directory r61 holds no Allure result: no test run wrote results there'; same for the configured empty dhf/allure-results."}
+ {:id "spec-0062",
+  :verdict :pass,
+  :evidence
+  "status --results r62 with a truncated JSON file: exit 1, stderr exactly one line 'r62/bad-result.json: result-unreadable: the result is unreadable ... it is not valid JSON: ...'; the valid result still counted."}
+ {:id "spec-0063",
+  :verdict :pass,
+  :evidence
+  "allure-js style results (language=javascript, framework=cucumberjs, testCaseId, host/thread labels, container file) for spec-0012 and the 3 rows of spec-0013: both verified, counts {:verified 2 :unverified 9 :planned 1}, identical to the counts from rdm-spec run's own results for the same scenarios."}
+ {:id "spec-0086",
+  :verdict :pass,
+  :evidence
+  "bin/rdm-spec init sauna exit 0, printed {:init {:wrote [15 paths] :next-steps [...]}}; sauna is a git repo with no commit (git log: no commits), working tree holds exactly the 15 listed files; config has id prefix, dirs, deny (implementation, dhf/cycles, site/site-src/dhf/allure-results), keep list, :agency {:watch [\"/\" \"~\"] :tmp \"/tmp\"}, :verify [{:kind :tests}] and no :implementation; README has the results contract table and default mapping; hook runs rdm-spec check with core.hooksPath .githooks; .gitignore as listed."}
+ {:id "spec-0087",
+  :verdict :pass,
+  :evidence
+  "init ex (existing dir with a file) exit 2: 'cannot-run: ex exists: init writes a new project into a path that does not exist...'; stat of ex before/after identical; an empty existing dir also refused exit 2."}
+ {:id "spec-0089",
+  :verdict :pass,
+  :evidence
+  "init s89 --id-prefix sauna exit 0; dhf/harness/config.edn line 4 ':id-prefix \"sauna\"'."}
+ {:id "spec-0090",
+  :verdict :pass,
+  :evidence
+  "rdm-spec check in a freshly initialised project exit 0, {:spec {:scenarios 0 :passed? true} :views {:fresh? true} ...}, no findings."}
+ {:id "spec-0151",
+  :verdict :pass,
+  :evidence
+  "rdm-spec run on fixture with @spec-0012 in component Lint of context architecture: result labels spec=spec-0012, component=Lint, context=architecture; kernel scenario @spec-0023 labelled context=kernel; each Gherkin step is a result step with its own status."}
+ {:id "spec-0152",
+  :verdict :pass,
+  :evidence
+  "Outline @spec-0013 with 3 rows: run wrote 3 results each labelled spec=spec-0013, each naming its row in parameters (written/kept = plan/3, do/4, check/5) and historyId spec-0013|plan|3 etc."}
+ {:id "spec-0153",
+  :verdict :pass,
+  :evidence
+  "Scenario whose second step (a Then) definition throws (assert): run exit 1, result status failed, statusDetails.message names '\"Then it does not hold ...\" (line 14): Assert failed: no such view'; the step after it has status skipped and its fn never ran (no record in log)."}
+ {:id "spec-0154",
+  :verdict :pass,
+  :evidence
+  "@wip scenario @spec-0018 with defined steps whose fn writes a marker: run did not write the marker; result status skipped, all steps skipped, label planned=true."}
+ {:id "spec-0155",
+  :verdict :pass,
+  :evidence
+  "Spec with 20 feature files scattered over nested dirs, none listed anywhere: rdm-spec run exit 0, {:scenarios 20 :statuses {passed 20}}, results for spec-0101..spec-0120."}
+ {:id "spec-0156",
+  :verdict :pass,
+  :evidence
+  "Spec dir with no feature file: run exit 2 'cannot-run: no scenario was found: dhf/spec holds no feature file'; neither RESULTS_DIR nor dhf/allure-results was created."}
+ {:id "spec-0164",
+  :verdict :pass,
+  :evidence
+  "A failed result with no spec label (suite=unit) beside a passing spec-0012: status shows spec-0012 verified, counts unchanged by the unit result, :unknown-results [] and no warning."}
+ {:id "spec-0168",
+  :verdict :pass,
+  :evidence
+  "test/steps/a.clj (defstep #\"the spec holds (\\d+) features\" (fn [ctx n] ...)) via rdm-spec.kernel.runner; running 'Given the spec holds 20 features' recorded the call with ctx {} and \"20\"."}
+ {:id "spec-0169",
+  :verdict :pass,
+  :evidence
+  "Recorded contexts: second step got {:first-ran true :a 1} (the key the first added); the next scenario's first step got {}."}
+ {:id "spec-0170",
+  :verdict :pass,
+  :evidence
+  "Patterns #\"a spec\" (steps.a) and #\"a sp.c\" (steps.b) both match 'Given a spec': result broken, message 'the step \"Given a spec\" is matched by 2 definitions: #\"a spec\" (steps.a:12) and #\"a sp.c\" (steps.b:2)'."}
+ {:id "spec-0182",
+  :verdict :pass,
+  :evidence
+  "fence ROOM spec-3 (project scope) exit 0: ROOM holds none of src, test, test.clj, bb.edn (the configured :implementation)."}
+ {:id "spec-0183",
+  :verdict :pass,
+  :evidence
+  "fence ROOM spec-3 --context verification exit 0: the 11 files under src/rdm_spec/verification/, test/rdm_spec/verification/, test/steps/verification_ removed; the other 74 implementation files present and byte-identical to the cut."}
+ {:id "spec-0184",
+  :verdict :pass,
+  :evidence
+  "fence ROOM spec-3 --component spec/parser exit 0: src/rdm_spec/spec/parser.clj, test/rdm_spec/spec/parser_test.clj (and test/steps/spec_parser.clj) absent; every other implementation file present, unchanged."}
+ {:id "spec-0185",
+  :verdict :pass,
+  :evidence
+  "fence --context archive exit 2 'the context archive is not a scope the model at spec-3 names: its bounded contexts are agency, ..., verification, and kernel'; --component spec/nothere (no files) and archive/thing likewise exit 2 with the same list; no room built."}
+ {:id "spec-0197",
+  :verdict :pass,
+  :evidence
+  "Room test.clj exits 1: verify exit 1, 'dhf/cycles/03/test.log: tests-failed: the test command failed with exit status 1: its output is in dhf/cycles/03/test.log'; test.log holds the command's output."}
+ {:id "spec-0202",
+  :verdict :pass,
+  :evidence
+  "cycle.edn names spec-3; verify exit 0 built dhf/cycles/03/build whose non-implementation files equal git ls-tree spec-3 byte for byte (cmp each) and which holds no .git (no history); implementation paths are the room's."}
+ {:id "spec-0203",
+  :verdict :pass,
+  :evidence
+  "No dhf/cycles/03/cycle.edn: verify exit 2 'cannot-run: there is no dhf/cycles/03/cycle.edn: a cycle is declared before it is verified'."}
+ {:id "spec-0204",
+  :verdict :pass,
+  :evidence
+  "Cut spec-3 holds src/rdm_spec/old.clj (and a different src/heat.clj); room has neither old.clj: verify exit 0; build has no src/rdm_spec/old.clj, and src, test, test.clj are diff -r identical to the room's."}
+ {:id "spec-0205",
+  :verdict :pass,
+  :evidence
+  "Room holds an edited dhf/harness/config.edn (test command 'false', spec-dir nowhere) and an edited heat.feature: verify exit 0 using the cut's command; build's config.edn and heat.feature cmp-equal to spec-3's."}
+ {:id "spec-0206",
+  :verdict :pass,
+  :evidence
+  "The tests command (room test.clj) recorded RESULTS_DIR = /home/.../vp/dhf/cycles/03/results, the absolute path in the repository verify ran in."}
+ {:id "spec-0207",
+  :verdict :pass,
+  :evidence
+  "Command exits 0, rdm-spec run results in dhf/cycles/03/results, every non-@wip stamped scenario (spec-0003, spec-0012, both rows of spec-0013) passed: verify exit 0, tests check :passed :scenarios 4."}
+ {:id "spec-0208",
+  :verdict :pass,
+  :evidence
+  "spec-0012's result removed after the run: verify exit 1, 'dhf/spec/bathing/heat.feature:14: scenario-untested: spec-0012 is named by no result ...'."}
+ {:id "spec-0215",
+  :verdict :pass,
+  :evidence
+  "Config :tests then :runs \"answers\", both pass: ratified.edn keys exactly :cut \"spec-3\" :room-tree c1455054a25a0e9721bfcb910f09cc2dbadb5120 (= git write-tree of the room's src/test/test.clj computed independently, in full) :outcome :passed :checkout \"dhf/cycles/03/build\" :checks equal to stdout's; dhf/cycles/03/build is the checkout."}
+ {:id "spec-0216",
+  :verdict :pass,
+  :evidence
+  "Tests command exits 1: ratified.edn {:outcome :refused ... :reason \"dhf/cycles/03/test.log: tests-failed: the test command failed with exit status 1 ...\"}."}
+ {:id "spec-0217",
+  :verdict :pass,
+  :evidence
+  "Cut spec-3 holds an id-less scenario at cooling/fan.feature:9: verify exit 1 'dhf/spec/cooling/fan.feature:9: scenario-unstamped: the scenario \"No id here\" has no id ...'."}
+ {:id "spec-0218",
+  :verdict :pass,
+  :evidence
+  "Command exits 0 but spec-0012's result is failed: verify exit 1 'dhf/spec/bathing/heat.feature:14: scenario-not-passed: spec-0012: the result dhf/cycles/03/results/...-result.json is failed'."}
+ {:id "spec-0222",
+  :verdict :pass,
+  :evidence
+  "fence ROOM spec-3 --component kernel/bus exit 0: src/rdm_spec/kernel/bus.clj and test/rdm_spec/kernel/bus_test.clj absent; all 83 other implementation files present and identical."}
+ {:id "spec-0223",
+  :verdict :pass,
+  :evidence
+  "Row 1: init s1 exit 0, :id-prefix \"spec\". Row 2: --id-prefix 9lives exit 2 'a prefix starts with a letter and holds letters, digits and single hyphens', nothing written. Row 3: --id-prefix UN exit 2 'the prefix UN is taken by need tags (@UN-nnn)', nothing written."}
+ {:id "spec-0226",
+  :verdict :pass,
+  :evidence
+  "fence ROOM spec-3 --context knowledge,publishing --component spec/parser exit 0: the 11 files of knowledge, publishing and spec/parser removed; the other 74 implementation files present, unchanged."}
+ {:id "spec-0228",
+  :verdict :pass,
+  :evidence
+  "Fixture artifact (oras push --oci-layout, ORACLE_LAYOUT, digest in config) with cycles 01 and 02, verdicts, and recorded checklist/score/scoreboard goldens (plus all other judging components): rdm-spec oracle exit 0, :differences 0, :compared lists all 18 goldens incl. checklist 01/02, scorer 01/02, scoreboard 01-02."}
+ {:id "spec-0229",
+  :verdict :pass,
+  :evidence
+  "Golden score 01 edited so item 2 (spec-0002) says :pass while the scorer files :fail: oracle exit 1, ':differences 1', 'oracle-differs: the golden :measurement/scorer \"01\": its record dhf/cycles/01/score.edn differs at [:items 1 :verdict] (item spec-0002): the golden says :pass, the instrument gives :fail'."}
+ {:id "spec-0230",
+  :verdict :pass,
+  :evidence
+  "Scoreboard golden 01-02 made stale (:better 0); oracle record --reason 'the scoreboard now says the denominator moved' exit 0: new digest in layout; new oracle.edn has :better 1, :recorded gains {:date \"2026-10-26\" :reason ... :changed [{:component :measurement/scoreboard :case \"01-02\"}]}; config :digest rewritten (uncommitted); old artifact pulled by old digest is byte-identical."}
+ {:id "spec-0231",
+  :verdict :pass,
+  :evidence
+  "oracle record (no --reason, and --reason '') exit 2 'cannot-run: a reason is required: rdm-spec oracle record --reason R ...'; layout files' hashes unchanged, config.edn hash unchanged."}
+ {:id "spec-0232",
+  :verdict :pass,
+  :evidence
+  "Committed project tagged spec-3 whose :oracle golden is not reproduced: fence ROOM spec-3 exit 1, stderr identical to rdm-spec oracle's finding line (diff empty), no ROOM; verify ROOM 03 exit 1, same stderr, dhf/cycles/03 still holds only cycle.edn (no ratified.edn)."}
+ {:id "spec-0233",
+  :verdict :pass,
+  :evidence
+  "Init project with no :oracle: rdm-spec oracle exit 0, stdout {:oracle {:none \"there is no oracle to run: the configuration names no :oracle\"}}, stderr empty."}
+ {:id "spec-0237",
+  :verdict :pass,
+  :evidence
+  "Fixture repo (spec at the build's spec), spec-4 changes architecture/views.feature and kernel/bus.feature: scopes spec-3 spec-4 exit 0, :scopes [{:component :kernel/bus} {:component :architecture/views}], :shared []."}
+ {:id "spec-0238",
+  :verdict :pass,
+  :evidence
+  "Only dhf/spec/glossary.md changed: scopes exit 0, :scopes [], :shared [\"dhf/spec/glossary.md\"] and warning 'changed-shared-file: ... owned by no component: a person must judge its readers'."}
+ {:id "spec-0241",
+  :verdict :pass,
+  :evidence
+  "Only a new dhf/spec/architecture/views.md added: scopes exit 0, :scopes [{:component :architecture/views}]."}
+ {:id "spec-0272",
+  :verdict :pass,
+  :evidence
+  "init <abs DIR>/abs/sauna exit 0; git rev-parse --show-toplevel is that path; it holds .githooks .github .gitignore dhf (the skeleton)."}
+ {:id "spec-0276",
+  :verdict :pass,
+  :evidence
+  "Artifact holding one flat oracle.edn {:project :cycles :results :cuts, one key per judging component (:measurement/checklist ... :spec/check) with case goldens, :recorded}, pulled by the config digest from ORACLE_LAYOUT: oracle exit 0, :compared names each golden as {:component :case} (18 entries)."}
+ {:id "spec-0277",
+  :verdict :pass,
+  :evidence
+  "oracle.edn with :cycles {}: oracle exit 1, 'oracle-empty: the oracle holds no fixture cycle, so it judged nothing', :compared []."}
+ {:id "spec-0280",
+  :verdict :pass,
+  :evidence
+  "Config :digest sha256:000...001 not in the layout: oracle exit 2 'cannot-run: the oracle example.invalid/sauna-oracle@sha256:000...001 cannot be read from the layout ...: not found' (names repository and digest)."}
+ {:id "spec-0294",
+  :verdict :pass,
+  :evidence
+  "Working tree with untracked notes.md, ignored dhf/allure-results/ign.json and ignored (info/exclude) dhf/spec/secret.md: fence ROOM spec-3 exit 0, ROOM holds none of them."}
+ {:id "spec-0295",
+  :verdict :pass,
+  :evidence
+  "Cut spec-5 holding dhf/wiki/pages/copy.md = bytes of src/rdm_spec/kernel/bus.clj: fence exit 1, 'dhf/wiki/pages/copy.md: fence-copied-implementation: ... carries the bytes of the implementation file src/rdm_spec/kernel/bus.clj ...'; no ROOM directory created."}
+ {:id "spec-0296",
+  :verdict :pass,
+  :evidence
+  "Init project committed + committed top-level notes.md: rdm-spec check exit 1, 'notes.md: path-unclassified: notes.md is committed but neither denied nor kept by :clean-room'. (Baseline check exit 0.)"}
+ {:id "spec-0297",
+  :verdict :pass,
+  :evidence
+  "Committed dhf/scratch/a.md in an init project keeping dhf/spec: check exit 1, 'dhf/scratch: path-unclassified: dhf/scratch is committed but neither denied nor kept'."}
+ {:id "spec-0298",
+  :verdict :pass,
+  :evidence
+  "Only SpecParsed :shape :revision changed (:read-by :revision [:verification/status :compliance/audit]): scopes exit 0 [spec/parser, verification/status, compliance/audit] in relationship order; lint, checklist, site not listed."}
+ {:id "spec-0299",
+  :verdict :pass,
+  :evidence
+  "kernel/command, spec/parser and verification/status feature files changed: scopes lists [:kernel/command :spec/parser :verification/status] in that order, exit 0."}
+ {:id "spec-0300",
+  :verdict :pass,
+  :evidence
+  "SpecParsed's :scenarios shape gained :foo and :read-by :scenarios {:foo [:measurement/checklist]}: scopes exit 0 [spec/parser, measurement/checklist] only."}
+ {:id "spec-0301",
+  :verdict :pass,
+  :evidence
+  "Row1 SpecParsed :read-by :revision narrowed: :scopes []. Row2 SpecGated with no :read-by gained one naming all three keys: :scopes []. Row3 SpecParsed with no :read-by gained {:scenarios {:id [:architecture/lint]}}: :scopes []. All exit 0."}
+ {:id "spec-0305",
+  :verdict :pass,
+  :evidence
+  "SpecParsed without :read-by in both cuts, :shape :revision changed: scopes exit 0 [spec/parser, architecture/lint, verification/status, measurement/checklist, publishing/site, compliance/audit], every subscriber in the model's relationship order."}
+ {:id "spec-0306",
+  :verdict :pass,
+  :evidence
+  "SpecParsed :read-by :refusals [] in both cuts, :shape :refusals changed: scopes exit 0 :scopes [{:component :spec/parser}] only."}
+ {:id "spec-0308",
+  :verdict :pass,
+  :evidence
+  "@spec-0012 'Lint names the view' tagged @e2e @UN-002 under rule 'Every view is described' in architecture/lint.feature, passing: name, fullName 'dhf/spec/architecture/lint.feature:Lint names the view', historyId spec-0012, passed/finished, ms start/stop, 3 steps named keyword+text with status/start/stop, labels feature=Lint story epic=architecture suite=architecture subSuite=architecture/lint tag spec-0012/e2e/UN-002 spec/context/component, framework=gherkin, link {type issue name UN-002 url dhf/spec/needs.edn#UN-002}: every row matches."}
+ {:id "spec-0309",
+  :verdict :pass,
+  :evidence
+  "Outline row (plan, 3) under headings written|kept: parameters [{name written value plan} {name kept value 3}], historyId \"spec-0013|plan|3\" (each row distinct)."}
+ {:id "spec-0310",
+  :verdict :pass,
+  :evidence
+  "Second step (a Then) throwing ex-info \"no such view\" {:failed true}: status failed, statusDetails.message '\"Then the view is checked\" (line 8): no such view' plus a trace (clojure.lang.ExceptionInfo...), third step skipped. (A non-Then step throwing is broken, per spec-0323.)"}
+ {:id "spec-0311",
+  :verdict :pass,
+  :evidence
+  "Step calling (attach! \"response\" \"GET / answered 200\"): that result step holds attachment {name response, type text/plain, source <uuid>-attachment.txt}; the file sits in the results dir beside the results and holds 'GET / answered 200'."}
+ {:id "spec-0312",
+  :verdict :pass,
+  :evidence
+  "Two passing spec-0012 results, one with extra labels/links/attachments/a failed step, one bare: status exit 0, spec-0012 :verified, no findings."}
+ {:id "spec-0313",
+  :verdict :pass,
+  :evidence
+  "Result with status \"green\" for spec-0012: status exit 1, stderr 'r313/g-result.json: result-unreadable: ... its status is \"green\": the status must be passed, failed, broken or skipped'; spec-0012 unverified."}
+ {:id "spec-0314",
+  :verdict :pass,
+  :evidence
+  "Tests + :runs \"answers\" passing: exit 0, stdout EDN {:verify {:cycle \"03\" :cut \"spec-3\" :outcome :passed :checks [{:name \"tests\" :kind :tests :outcome :passed :seconds 0.09 :scenarios 4} {:name \"answers\" :kind :runs :seconds 0.01 :budget 30 :outcome :passed :margin 29.99}]}}; key sets exactly as stated, margin = 30 - seconds."}
+ {:id "spec-0315",
+  :verdict :pass,
+  :evidence
+  "Tests (exit 1), :serves, :runs declared: verify exit 1, tests :failed, app (:serves) and answers (:runs) listed {:outcome :not-run}; no app process started."}
+ {:id "spec-0316",
+  :verdict :pass,
+  :evidence
+  "All 5 rows exit 2 with nothing in dhf/cycles/03 but cycle.edn: no :tests first 'a project is verified by its tests first'; :renders ':renders is not a kind of check'; probe src/probe.clj 'the probe is in the implementation the builder writes'; absent ':the configuration declares no :verify'; tests without command 'the tests check names no command'."}
+ {:id "spec-0317",
+  :verdict :pass,
+  :evidence
+  ":runs check 'answers' with command no-such-cmd-xyz: verify exit 2 'cannot-run: the check answers cannot start its command no-such-cmd-xyz: ... No such file or directory'."}
+ {:id "spec-0318",
+  :verdict :pass,
+  :evidence
+  ":serves budget 10s/20 polls, python app listening after 0.3s, probe curl exits 0: check {:outcome :passed :answered-on-poll 2 :polls 20 :margin 18}, exit 0; afterwards no app process (ps) and the port is closed."}
+ {:id "spec-0319",
+  :verdict :pass,
+  :evidence
+  "App that never listens, 10s/20 polls: verify exit 1, check :failed, 'no answer came within 10 seconds (20 polls)'; no app process remains."}
+ {:id "spec-0320",
+  :verdict :pass,
+  :evidence
+  "Port 18435 held by my own listener: verify exit 2 'cannot-run: the port 18435 of the check app is already held by another process ...'; the app's start command (which would touch a marker) never ran; no ratified.edn. (The :tests check before it did run.)"}
+ {:id "spec-0321",
+  :verdict :pass,
+  :evidence
+  "App answers on poll 2, probe prints 'this is not the sauna app' and exits 1: verify exit 1, check :failed, reason 'the app answered on poll 2, and its probe exited 1: this is not the sauna app'."}
+ {:id "spec-0322",
+  :verdict :pass,
+  :evidence
+  "Row1 command exits 3: exit 1, :failed 'the exit 3 where 0 was expected'. Row2 prints usage: exit 1, 'standard output does not start with \"{:help\": the first line it printed is \"usage\"'. Row3 sleep 30 with budget 10: exit 1, 'no answer within the budget of 10 seconds' after 10.01s, process stopped."}
+ {:id "spec-0323",
+  :verdict :pass,
+  :evidence
+  "Row1 Then assert fails -> failed (spec-0015); row2 Given throws RuntimeException -> broken; row3 When throws -> broken; row4 Then throws RuntimeException (not assertion) -> broken."}
+ {:id "spec-0324",
+  :verdict :pass,
+  :evidence
+  "Config :results-dir \"dhf/allure-results\", run with RESULTS_DIR unset (env -u): result JSON written into dhf/allure-results/."}
+ {:id "spec-0325",
+  :verdict :pass,
+  :evidence
+  "Artifact with goldens only for :measurement/scorer \"01\" and :regeneration/scopes \"flat-read-by\", both reproduced: oracle exit 0, stdout read as EDN = exactly {:oracle {:repository R :digest D :compared [{:component :measurement/scorer :case \"01\"} {:component :regeneration/scopes :case \"flat-read-by\"}] :differences 0}} (checked with =), empty stderr."}
+ {:id "spec-0326",
+  :verdict :pass,
+  :evidence
+  "All 13 rows held as fixtures (5 verify result sets, 2 status sets, 3 scopes cut pairs, fence removed-component, check refusals, oracle self): recorded answers fit each fixture (steps-match passed; steps-differ/wrong-story/no-need-link/no-trace refused naming that defect; flat-read-by [a/pub b/sub]; first-read-by []; order [kernel/k a/pub b/sub]; fence removed c/gone); perturbing out/exit/err goldens of 6 components gave oracle exit 1 with oracle-differs naming each component and case and the differing out path, exit or error-stream line."}
+ {:id "spec-0327",
+  :verdict :pass,
+  :evidence
+  "scopes \"order\" golden stale and new case \"flat-read-by\" nil: record --reason 'scopes cases added' exit 1, 'oracle-change-unnamed: :regeneration/scopes \"order\" is an existing golden the record would change ...; nothing was recorded'; layout and config unchanged."}
+ {:id "spec-0328",
+  :verdict :pass,
+  :evidence
+  "scopes \"order\" stale: record --reason 'the kernel is listed first' --changes regeneration/scopes:order exit 0, new artifact whose :recorded gains {:date \"2026-10-26\" :reason ... :changed [{:component :regeneration/scopes :case \"order\"}]}; order golden rewritten; every other golden equal and its printed form found verbatim in the new oracle.edn; fixtures identical."}
+ {:id "spec-0329",
+  :verdict :pass,
+  :evidence
+  "Cut spec-4 whose model names no ratification, holding src/rdm_spec/ratification/ratify.clj, test/.../ratify_test.clj and other.clj: fence --component ratification/ratify exit 0, {:removed-components [\"ratification/ratify\"]}; both files absent, other.clj and every other implementation file present, identical."}
+ {:id "spec-0330",
+  :verdict :pass,
+  :evidence
+  "SpecParsed :needs shape maps gained :x, :read-by :needs [:publishing/site :compliance/audit]: scopes exit 0 [spec/parser, publishing/site, compliance/audit], no other subscriber."}
+ {:id "spec-0331",
+  :verdict :pass,
+  :evidence
+  "Default mapping, spec-0003 result mutated after a real run: rows 1-2 exit 1 'steps-differ-from-scenario' naming spec-0003; row3 'mapping-differs: story'; row4 'mapping-differs: epic'; row5 'mapping-differs: links'; row6 (:evidence {:e2e [\"browser-trace\"]}, attachment removed) 'evidence-missing: browser-trace' (unmutated control passes). All tests check :failed."}
+ {:id "spec-0332",
+  :verdict :pass,
+  :evidence
+  "Row1 :epic :aggregate exit 2 ':aggregate is not an element of the spec'; row2 :colour exit 2 ':colour is not an element of an Allure result'; row3 no \"spec\" label exit 2 'the label spec, from the scenario's id, is required'; dhf/cycles/03 holds only cycle.edn (no check ran)."}
+ {:id "spec-0333",
+  :verdict :pass,
+  :evidence
+  "Config with no :allure: results were held to the default mapping: mutating name, label feature/story/epic/component/tag, links or step lines each failed verify (mapping-differs name/feature/story/epic/component/tag/links, steps-differ-from-scenario); outline parameters matched to rows; no :evidence required (all attachments stripped from every result: verify exit 0, passed)."}]
