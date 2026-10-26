@@ -1,0 +1,19 @@
+# What cycle 16's builder decided where the spec was silent, by scenario,
+# from its report. Read by dhf/cycles/analysis/posterior.py: a scenario's
+# rate of decisions falling after a spec change is the change helping.
+- scenario: spec-0318
+  decision: "a :serves app answers on any HTTP response to GET /"
+- scenario: spec-0318
+  decision: "polled every budget / polls seconds; a :serves margin in polls, a :runs margin in seconds"
+- scenario: spec-0317
+  decision: "verify checks every command and port before running any check; a cannot-run writes no ratified.edn"
+- scenario: spec-0309
+  decision: "an outline row's historyId is spec-0013[plan, 3]"
+- scenario: spec-0207
+  decision: "the tests check does not demand a result per outline row"
+- scenario: spec-0086
+  decision: "the skeleton's tests check is {:kind :tests} with no command"
+- scenario: spec-0299
+  decision: "ties in build order follow the model's relationship order"
+- scenario: spec-0068
+  decision: "Allure's unknown status counts as not passed; any other value is unreadable"

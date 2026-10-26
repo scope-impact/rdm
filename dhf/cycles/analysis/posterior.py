@@ -2,14 +2,17 @@
 
 An analysis of the cycles' record, not product code. It reads, through bb
 (the record is EDN): every cycle's checklist.json, verdicts.edn, cycle.edn and
-runs.edn, and the model's component names; then answers, each with its
+runs.edn, and the model's component names; and directly, in YAML, what the
+integrator writes beside a cycle: labels.yaml (each fail, once looked at:
+real, grader or wording) and decisions.yaml (the builder's decisions where the
+spec was silent, by scenario). Then it answers, each with its
 uncertainty, the questions a cycle faces:
 
   1. Can this build ship?               P(some graded item is wrong anyway)
   2. What should the next grading cover? expected information per item
   3. Is this fail real?                 P(real | the grader said fail)
   4. Which scenario should the spec fix? the lowest-belief scenarios
-  5. Did a spec change help?            needs builder decisions per scenario
+  5. Did a spec change help?            builder decisions per scenario, per cycle
   6. How many more runs?                gradings until the 95% bound clears
   7. Is rdm-spec cheaper than Löyly's?  posterior on the token ratio
   8. Is the spec done?                  share of scenarios above the bar
@@ -20,9 +23,12 @@ The model:
             scenarios' prior, each at strength KAPPA.
   recency   a verdict on a component later rebuilt counts DISCOUNT per rebuild
             since (a power prior): it judged code that is gone.
-  grader    a false-fail and a false-pass rate, each Beta(1, 19) (mean 5%):
-            a prior only. No item has been graded twice, so it cannot be
-            learned yet; double grading (two graders, same items) would.
+  grader    a false-fail and a false-pass rate, each Beta(1, 19) (mean 5%).
+            The false-fail rate learns from labels.yaml (a fail labelled grader
+            is a false fail; real or wording, a true one). The false-pass rate
+            stays a prior until items are graded twice.
+  labels    a fail labelled wording leaves the build's evidence; labelled
+            grader, it counts as a pass.
 
 Run: <analysis venv>/bin/python dhf/cycles/analysis/posterior.py [--json]
 Stack: dhf/harness/stack.md, "Cycle analysis".
@@ -35,6 +41,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+import yaml
 from scipy import stats
 
 KAPPA = 10.0          # prior strength of a level on the one below
@@ -70,14 +77,20 @@ EXPORT = r"""
                        "scope" (scope (:scope cy))
                        "checklist" (when (fs/exists? (str c "/checklist.json")) (json/parse-string (slurp (str c "/checklist.json"))))
                        "verdicts" (some->> (rd (str c "/verdicts.edn")) (mapv (fn [v] {"id" (:id v) "pass" (= :pass (:verdict v))})))
-                       "decisions" (rd (str c "/decisions.edn"))
                        "runs" (some->> (rd (str c "/runs.edn")) (mapv (fn [r] {"role" (:role r) "minutes" (:minutes r) "tokens" (:tokens r)})))})))})))
 """
 
 
 def export(cycles_dir):
     out = subprocess.run(["bb", "-e", EXPORT, str(cycles_dir)], capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)
+    data = json.loads(out.stdout)
+    for c in data["cycles"]:
+        # What the integrator writes beside a cycle, in YAML: the labels of
+        # its fails once looked at, and its builder's decisions per scenario.
+        for key in ("labels", "decisions"):
+            f = Path(cycles_dir) / c["cycle"] / f"{key}.yaml"
+            c[key] = (yaml.safe_load(f.read_text()) or []) if f.exists() else []
+    return data
 
 
 def component_id(names, context, name):
@@ -99,14 +112,19 @@ def observations(data):
         if not (c["checklist"] and c["verdicts"]):
             continue
         items = {it["id"]: it for it in c["checklist"]["items"]}
+        labels = {l["scenario"]: l["label"] for l in c.get("labels", [])}
         for v in c["verdicts"]:
             it = items.get(v["id"])
             if not it:
                 continue
+            label = None if v["pass"] else labels.get(v["id"])
+            if label == "wording":
+                continue                      # evidence about the spec, not the build
+            passed = v["pass"] or label == "grader"
             comp = component_id(data["names"], it["context"], it["component"])
             later = sum(1 for d in cycles[i + 1:] if d["scope"] and rebuilt(d["scope"], comp))
             obs.append({"id": v["id"], "context": it["context"], "component": comp, "cycle": c["cycle"],
-                        "pass": v["pass"], "weight": DISCOUNT ** later})
+                        "pass": passed, "weight": DISCOUNT ** later})
     return obs
 
 
@@ -144,8 +162,11 @@ def _group(xs, keyf):
     return g
 
 
+FF_LABELS = (0, 0)  # (fails the grader got wrong, fails it got right), from labels.yaml
+
+
 def grader_draws():
-    ff = RNG.beta(*GRADER, DRAWS)  # P(says fail | correct)
+    ff = RNG.beta(GRADER[0] + FF_LABELS[0], GRADER[1] + FF_LABELS[1], DRAWS)  # P(says fail | correct), learned from labels
     fp = RNG.beta(*GRADER, DRAWS)  # P(says pass | wrong)
     return ff, fp
 
@@ -185,12 +206,17 @@ def q2_next_grading(scen, n=12):
 
 
 def q3_fail_real(scen, cycles):
-    """For each fail on record: P(the build really was wrong | the grader said fail)."""
+    """For each fail on record: its label where the integrator looked, else
+    P(the build really was wrong | the grader said fail)."""
     ff, fp = grader_draws()
     out = []
     for c in cycles:
+        labels = {l["scenario"]: l["label"] for l in c.get("labels", [])}
         for v in c["verdicts"] or []:
             if v["pass"] or v["id"] not in scen:
+                continue
+            if v["id"] in labels:
+                out.append({"cycle": c["cycle"], "id": v["id"], "label": labels[v["id"]]})
                 continue
             a, b = scen[v["id"]]["prior"]
             th = RNG.beta(a, b, DRAWS)
@@ -205,8 +231,14 @@ def q4_fix_next(scen, n=8):
 
 
 def q5_change_helped(cycles):
-    have = [c["cycle"] for c in cycles if c.get("decisions")]
-    return have
+    """Builder decisions per cycle and per scenario: a scenario decided in
+    several cycles is one the spec keeps leaving open."""
+    per_cycle = [(c["cycle"], len(c["decisions"])) for c in cycles if c.get("decisions")]
+    by_scen = defaultdict(list)
+    for c in cycles:
+        for d in c.get("decisions", []):
+            by_scen[d["scenario"]].append(c["cycle"])
+    return per_cycle, sorted(by_scen.items(), key=lambda kv: (-len(set(kv[1])), -len(kv[1]), kv[0]))
 
 
 def q6_runs_needed(scen, ids):
@@ -254,7 +286,10 @@ def main():
     if "--grader-error" in sys.argv:
         e = float(sys.argv[sys.argv.index("--grader-error") + 1])
         GRADER = (1.0, 1.0 / e - 1.0)
+    global FF_LABELS
     data = export(CYCLES)
+    labelled = [l["label"] for c in data["cycles"] for l in c.get("labels", [])]
+    FF_LABELS = (labelled.count("grader"), labelled.count("real") + labelled.count("wording"))
     cycles = [c for c in data["cycles"] if c["checklist"] and c["verdicts"]]
     obs = observations(data)
     ctx, comp, scen = pool(obs)
@@ -279,22 +314,32 @@ def main():
                      f"{'pass' if s['last_pass'] else 'fail'} ({s['last_cycle']}) | {pct(s['mean'])} | {pct(s['lo95'])} |")
 
     lines += ["", "## 3. Is each fail real?", "",
-              f"With the grader prior only ({pct(GRADER[0] / sum(GRADER))} false fail, {pct(GRADER[0] / sum(GRADER))} false pass): how likely each fail was a real defect.", "",
+              f"Grader false fail {pct((GRADER[0] + FF_LABELS[0]) / (sum(GRADER) + sum(FF_LABELS)))} (the prior, learned from {sum(FF_LABELS)} labelled fails), "
+              f"false pass {pct(GRADER[0] / sum(GRADER))} (prior only): how likely each fail not yet looked at was a real defect.", "",
               "| Cycle | Scenario | P(real) | 90% interval |", "|---|---|---|---|"]
     for f in q3_fail_real(scen, cycles):
-        lines.append(f"| {f['cycle']} | {f['id']} | {pct(f['p_real'])} | {pct(f['ci'][0])} to {pct(f['ci'][1])} |")
+        if "label" in f:
+            lines.append(f"| {f['cycle']} | {f['id']} | labelled **{f['label']}** | (looked at) |")
+        else:
+            lines.append(f"| {f['cycle']} | {f['id']} | {pct(f['p_real'])} | {pct(f['ci'][0])} to {pct(f['ci'][1])} |")
 
     lines += ["", "## 4. Which scenarios the spec should look at first (lowest belief)", "",
               "| Scenario | Component | Graded | Fails | Belief | 95% lower |", "|---|---|---|---|---|---|"]
     for s in q4_fix_next(scen):
         lines.append(f"| {s['id']} | {s['component']} | {s['graded']} | {s['fails']} | {pct(s['mean'])} | {pct(s['lo95'])} |")
 
-    have = q5_change_helped(data["cycles"])
-    lines += ["", "## 5. Did a spec change help?", "",
-              ("Cycles with builder decisions recorded: " + ", ".join(have)) if have else
-              "No cycle records its builder's decisions per scenario (dhf/cycles/NN/decisions.edn), so this cannot "
-              "be answered yet. Recording them each cycle (E6) gives a Poisson rate per scenario, and a spec change "
-              "helped when that rate drops for the scenarios it touched."]
+    per_cycle, by_scen = q5_change_helped(data["cycles"])
+    lines += ["", "## 5. Did a spec change help?", ""]
+    if not per_cycle:
+        lines.append("No cycle records its builder's decisions (dhf/cycles/NN/decisions.yaml) yet.")
+    else:
+        lines += ["Builder decisions where the spec was silent: " +
+                  ", ".join(f"cycle {c}: {n}" for c, n in per_cycle) + ".", "",
+                  "Scenarios decided in more than one cycle are the ones the spec keeps leaving open; a spec change "
+                  "helped when they stop appearing.", "",
+                  "| Scenario | Cycles it was decided in |", "|---|---|"]
+        for sid, cs in by_scen[:10]:
+            lines.append(f"| {sid} | {', '.join(c + (f' (x{cs.count(c)})' if cs.count(c) > 1 else '') for c in sorted(set(cs)))} |")
 
     worst = [s["id"] for s in q4_fix_next(scen, 5)]
     lines += ["", f"## 6. How many more gradings until the 95% lower bound clears {pct(BAR)}", "",

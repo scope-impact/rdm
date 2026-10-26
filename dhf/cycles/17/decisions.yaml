@@ -1,0 +1,38 @@
+# What cycle 17's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml).
+- scenario: spec-0230
+  decision: "an unnamed change is refused only when the record also adds a case (spec-0230 and spec-0327 disagreed)"
+- scenario: spec-0325
+  decision: "goldens in the glossary's order of judging components (the scenario's 'model order' contradicted its own example)"
+- scenario: spec-0326
+  decision: "a component's cases are the keys of its map; which fixture feeds which component"
+- scenario: spec-0326
+  decision: "the self case runs the oracle on the first two goldens of other components"
+- scenario: spec-0326
+  decision: "every :seconds in a golden is held as :measured"
+- scenario: spec-0326
+  decision: "an error-stream difference is reported by line number, not quoted"
+- scenario: spec-0229
+  decision: "the checklist's and scorer's goldens include the record they write (:wrote)"
+- scenario: spec-0169
+  decision: "a step returning nil leaves the context unchanged"
+- scenario: spec-0323
+  decision: "failed is a Then whose error is an AssertionError or an ex-info flagged as failed"
+- scenario: spec-0032
+  decision: "a step with no definition, or two, makes the result broken before any step runs"
+- scenario: spec-0309
+  decision: "an outline row's historyId is id|values"
+- scenario: spec-0311
+  decision: "attachments are made with (attach! name text [type])"
+- scenario: spec-0318
+  decision: "a :serves app answers when it accepts a TCP connection; polls start immediately"
+- scenario: spec-0331
+  decision: "tag labels are compared without regard to order"
+- scenario: spec-0316
+  decision: "a probe under an implementation path is refused"
+- scenario: spec-0329
+  decision: "fence refuses only a non-empty ROOM; an empty kept file never counts as a copied implementation file"
+- scenario: spec-0298
+  decision: "a key whose text changed with the same inner keys reaches the readers of every inner key"
+- scenario: spec-0299
+  decision: "ties in build order follow the model's order"

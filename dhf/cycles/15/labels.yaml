@@ -1,0 +1,4 @@
+# What each fail of cycle 15 turned out to be (see 16/labels.yaml for the labels).
+- scenario: spec-0307
+  label: wording
+  evidence: "the build printed DIR/name on purpose, as trace and release do; the scenario said 'its name within DIR'; spec-20 changed the words"

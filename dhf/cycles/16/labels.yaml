@@ -1,0 +1,10 @@
+# What each fail of cycle 16 turned out to be, once the integrator looked.
+# real: the build was wrong. grader: the grader was wrong. wording: the build
+# did what was meant and the spec's words said otherwise (evidence about the
+# spec, not the build). Read by dhf/cycles/analysis/posterior.py.
+- scenario: spec-0298
+  label: real
+  evidence: "scopes.clj's readers looks a flat :read-by up by the full path, misses, and falls back to every subscriber; cycle 15's handled it"
+- scenario: spec-0062
+  label: real
+  evidence: "the relayed JSON parser message holds a newline, so the finding takes two lines"
