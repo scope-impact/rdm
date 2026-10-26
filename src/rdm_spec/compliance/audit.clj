@@ -1,37 +1,37 @@
 (ns rdm-spec.compliance.audit
   "The Audit copy, the compliance context's second component
   (dhf/spec/compliance/audit.feature; dhf/spec/glossary.md, \"Audit copy\"):
-  what a team hands an auditor, of one commit, for a record the release
-  check passes.
+  `rdm-spec audit OUT [--results DIR]` writes what a team hands an auditor,
+  only for a record the release check passes and only of one commit, HEAD.
 
-  The task audit OUT runs, in order (rdm-spec.kernel.command's task table):
+  The task, in order: `revision` (HEAD, the commit the copy is of; cannot
+  run without :regulated, with an OUT that exists, or outside a git
+  repository with a commit), the gate `committed` (every file the copy is
+  made from, the configuration, the spec, the clause lists and the
+  documents, is HEAD's: an untracked, ignored, changed or deleted one is a
+  finding, audit-uncommitted, naming it), the spec and the clauses read at
+  HEAD, the release check as a gate (its findings printed unchanged), then
+  `audit`, which reads the scenarios (SpecParsed), their statuses
+  (VerificationDerived) and the clauses (ClausesIndexed) and writes:
 
-    prepare  cannot run (exit 2) without :regulated, when OUT exists, or
-             outside a git repository with a commit; names (exit 1,
-             audit-uncommitted) every file the audit copy is made from that
-             differs from HEAD's tree: the configuration, the spec (with the
-             model, needs, events and ledger), every clause list the declared
-             ones reach, and the documents, untracked and ignored files
-             included. When it names one, the audit stage writes nothing.
-    parse, gap (quietly), release (the gate: a record it refuses has no
-             audit copy, its findings printed unchanged)
-    audit    writes OUT, from HEAD's tree (the documents) and from what the
-             run published (SpecParsed, VerificationDerived, ClausesIndexed),
-             which are HEAD's too once prepare found nothing:
+    OUT/auditor/<doc>      every controlled document, every audit tag kept
+    OUT/engineer/<doc>     every audit tag removed with the space before it
+                           (in the frontmatter too), its line breaks kept
+    OUT/auditor/<doc>.pdf and OUT/engineer/<doc>.pdf, each naming on its
+                           first page the document's id, revision and title
+    OUT/clauses.md         one section per declared clause list, included
+                           clauses in place, each with where it is named
+    OUT/traceability.md    each need, its text, and the scenarios tracing
+                           to it with their title, component and status
+    OUT/results/           a copy of every file of the results directory
+    OUT/manifest.edn       {:commit HEAD :files [{:path :sha256}]}: every
+                           other file of OUT, sorted by path
 
-    OUT/auditor/<doc>.md, .pdf    every controlled document, audit tags kept
-    OUT/engineer/<doc>.md, .pdf   every audit tag removed (gap/strip-tags)
-    OUT/clauses.md                one section per declared clause list,
-                                  included clauses in place, where each is met
-    OUT/traceability.md           each need, its scenarios and their status
-    OUT/results/                  a copy of every file of the results directory
-    OUT/manifest.edn              {:commit HEAD :files [{:path :sha256}]},
-                                  every other file, sorted by path
+  <doc> is the document's path under the documents directory. The same
+  commit and results give the same bytes, PDFs included. A copy that cannot
+  be finished (a missing tool) leaves no OUT.
 
-  OUT is built beside itself and moved into place whole, so a run that fails
-  leaves no OUT. A PDF is Pandoc's Typst output (the document's id and
-  revision first, its title as the title, `#set document(date: none)` first)
-  compiled by Typst: the same commit and results give the same bytes."
+  Result: {:audit {:out OUT :commit C :documents n :files n}}."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.string :as str]
@@ -39,252 +39,208 @@
             [rdm-spec.kernel.command :as command]))
 
 ;; ---------------------------------------------------------------------------
-;; What the run published
-
-(defn subscriptions
-  "Keeps SpecParsed, VerificationDerived and ClausesIndexed in the run's state."
-  [req]
-  (for [[e k] [[:SpecParsed ::spec] [:VerificationDerived ::derived] [:ClausesIndexed ::clauses]]]
-    [e (fn [payload] (some-> (:state req) (swap! assoc k payload)) nil)]))
-
-(defn- state [req k] (some-> (:state req) deref (get k)))
-
-;; ---------------------------------------------------------------------------
 ;; git
 
-(defn- git [root & args]
-  (apply p/shell {:dir (str root) :out :string :err :string :continue true :in ""} "git" args))
+(defn- git [req & args]
+  (try (apply p/shell {:dir (str (:root req)) :out :string :err :string :continue true :in ""} "git" args)
+       (catch Exception e (command/cannot-run! (str "git cannot be run: " (ex-message e))))))
 
-(defn status-paths
-  "Pure: every path of `git status --porcelain=v1 -z` output, a rename's
-  both paths included."
-  [out]
-  (loop [[t & more] (remove str/blank? (str/split (str out) #"\u0000")) acc []]
-    (if (nil? t)
-      acc
-      (let [xy (subs t 0 (min 2 (count t)))
-            path (if (> (count t) 3) (subs t 3) "")]
-        (if (and (#{\R \C} (first xy)) (seq more))
-          (recur (rest more) (conj acc path (first more)))
-          (recur more (conj acc path)))))))
-
-(defn under?
-  "Whether the path `rel` is one of `inputs` or lies under one."
-  [inputs rel]
-  (boolean (some #(or (= rel %) (str/starts-with? rel (str % "/"))) inputs)))
+(defn- show-at [req commit rel]
+  (let [r (git req "show" (str commit ":" rel))]
+    (when (zero? (:exit r)) (:out r))))
 
 (defn- strip-slash [s] (str/replace (str s) #"/+$" ""))
 
-(defn inputs
-  "Every path, relative to the project root, the audit copy is made from."
-  [req]
-  (let [{:keys [clause-lists documents]} (gap/regulated req)
-        {read-text :read} (gap/reader (:root req) nil)]
-    (vec (distinct (map strip-slash
-                        (concat [command/config-file]
-                                (map #(command/config-value req %) [:spec-dir :model :needs :events :ledger])
-                                (gap/list-files read-text (mapv strip-slash clause-lists))
-                                [documents]))))))
+;; ---------------------------------------------------------------------------
+;; Before anything is read
 
-(defn- uncommitted
-  "Every input path that differs from HEAD's tree, sorted."
-  [req ins]
-  (let [root (:root req)
-        prefix (str/trim (:out (git root "rev-parse" "--show-prefix")))
-        r (apply git root "status" "--porcelain=v1" "-z" "--ignored=traditional" "--untracked-files=all" "--" ins)]
+(defn revision
+  "The commit the audit copy is of: HEAD. The task cannot run without the
+  regulated profile, into an OUT that exists, or without a commit."
+  [req]
+  (when-not (contains? (:config req) :regulated)
+    (command/cannot-run! (str "the configuration holds no :regulated: there is no audit copy without the"
+                              " regulated profile's clause lists and controlled documents")))
+  (let [out (first (:args req))]
+    (when (fs/exists? (command/path req out))
+      (command/cannot-run! (str out " exists: the audit copy is written into a new directory, never into one"))))
+  (let [r (git req "rev-parse" "--verify" "-q" "HEAD^{commit}")]
     (when-not (zero? (:exit r))
-      (command/cannot-run! (str "git status failed: " (str/trim (:err r)))))
-    (vec (sort (distinct (for [path (status-paths (:out r))
-                               :let [rel (if (and (seq prefix) (str/starts-with? path prefix)) (subs path (count prefix)) path)]
-                               :when (under? ins rel)]
-                           rel))))))
+      (command/cannot-run! (str (:root req) " has no commit: an audit copy is of one commit, HEAD")))
+    (str/trim (:out r))))
 
-;; ---------------------------------------------------------------------------
-;; The prepare stage
+(defn- made-from
+  "The paths the audit copy is made from, at HEAD and in the working tree."
+  [req commit]
+  (let [{:keys [clause-lists documents]} (get-in req [:config :regulated])
+        lists (mapv strip-slash clause-lists)
+        working (:read (gap/reader (:root req) nil))
+        at-head (:read (gap/reader (:root req) commit))]
+    (vec (distinct (concat [command/config-file
+                            (strip-slash (command/config-value req :spec-dir))
+                            (strip-slash documents)]
+                           (gap/list-files working lists)
+                           (gap/list-files at-head lists))))))
 
-(defn prepare
-  "The stage before the audit: refuses what cannot be audited (see the
-  namespace doc)."
+(defn- why-of [code]
+  (cond (= "??" code) "untracked"
+        (= "!!" code) "ignored by git"
+        (str/includes? code "D") "deleted in the working tree"
+        :else "changed since HEAD"))
+
+(defn committed
+  "The audit's first gate: every file the copy is made from is HEAD's."
   [req]
-  (let [config (:config req)
-        _ (when-not (contains? config :regulated)
-            (command/cannot-run! (str "the configuration " command/config-file " holds no :regulated:"
-                                      " only a regulated project has an audit copy")))
-        _ (gap/regulated req)
-        shown (str (first (:args req)))
-        out (command/path req shown)
-        _ (when (or (fs/exists? out) (fs/sym-link? out))
-            (command/cannot-run! (str "OUT " shown " already exists: the audit copy is never written into"
-                                      " an existing directory")))
-        head (let [r (git (:root req) "rev-parse" "--verify" "--quiet" "HEAD^{commit}")]
-               (when (zero? (:exit r)) (not-empty (str/trim (:out r)))))
-        _ (when-not head
-            (command/cannot-run! (str (:root req) " has no commit: the audit copy is of one commit")))
-        findings (vec (for [rel (uncommitted req (inputs req))]
-                        (command/finding rel "audit-uncommitted"
-                                         (str rel " is not committed: it differs from HEAD's tree (" (subs head 0 (min 12 (count head)))
-                                              "), and the audit copy is of one commit; commit it or remove it"))))]
-    (swap! (:state req) assoc ::commit head ::refused (boolean (seq findings)))
-    {:result {} :findings findings}))
+  (let [commit (:revision req)
+        r (apply git req "status" "--porcelain=v1" "-z" "--ignored=matching" "--untracked-files=all" "--"
+                 (made-from req commit))
+        entries (loop [[x & more] (str/split (:out r) #"\u0000") out []]
+                  (cond (nil? x) out
+                        (str/blank? x) (recur more out)
+                        :else (let [code (subs x 0 2) path (subs x 3)]
+                                (if (re-find #"[RC]" code)
+                                  (recur (rest more) (conj out [code path]))
+                                  (recur more (conj out [code path]))))))]
+    (when-not (zero? (:exit r))
+      (command/cannot-run! (str "git cannot tell what is committed: " (str/trim (:err r)))))
+    {:result {}
+     :findings (vec (for [[code path] (sort-by second entries)]
+                      (command/finding path "audit-uncommitted"
+                                       (str "is not committed (" (why-of code) "): an audit copy is of one commit,"
+                                            " HEAD, and every file it is made from is HEAD's; no OUT was written"))))}))
 
 ;; ---------------------------------------------------------------------------
-;; Pages
+;; Pure: the pages
 
-(defn- cell [s] (-> (str s) (str/replace "|" "\\|") (str/replace #"\s*\n\s*" " ")))
-
-(defn- row [& cells] (str "| " (str/join " | " (map cell cells)) " |\n"))
+(defn- cell [s] (str/replace (str s) "|" "\\|"))
 
 (defn clauses-page
-  "Pure: OUT/clauses.md of the declared lists and ClausesIndexed's clauses."
+  "clauses.md: a section per declared clause list `declared`, its
+  clauses (included ones in place) with where each is named."
   [declared clauses]
-  (str "# Clauses\n\nWhere each clause of each declared clause list is met: the audit tags naming it,"
-       " as FILE:LINE.\n"
+  (str "# Clauses\n\nEvery clause of every declared clause list, with the audit tags that name it."
+       " Named is not met: the auditor reads each place.\n"
        (str/join
-        (for [l declared]
-          (str "\n## " l "\n\n"
-               (row "Clause" "Description" "Clause list" "Where it is met")
-               "|---|---|---|---|\n"
-               (str/join (for [c clauses :when (= l (:declared c))]
-                           (row (:key c) (:description c) (str (:clause-list c) ":" (:line c))
+        (for [l declared
+              :let [cs (filter #(= l (:declared %)) clauses)]]
+          (str "\n## " l "\n\n| Clause | Description | Named in |\n|---|---|---|\n"
+               (str/join (for [c cs]
+                           (str "| " (cell (:key c)) " | " (cell (:description c)) " | "
                                 (if (seq (:named-at c))
-                                  (str/join ", " (map #(str (:file %) ":" (:line %)) (:named-at c)))
-                                  "not met")))))))))
-
-(defn- scenario-rows [scs statuses]
-  (str (row "Scenario" "Title" "Component" "Status")
-       "|---|---|---|---|\n"
-       (str/join (for [sc scs]
-                   (row (str "@" (:id sc)) (:title sc)
-                        (str (:context-name sc) " / " (:component-name sc))
-                        (name (or (get statuses (:id sc)) :unverified)))))))
+                                  (str/join ", " (for [{:keys [file line]} (:named-at c)] (str file ":" line)))
+                                  "named nowhere")
+                                " |\n"))))))))
 
 (defn traceability-page
-  "Pure: OUT/traceability.md of the needs, the stamped scenarios and their
-  statuses."
+  "traceability.md: each need, its text, and every stamped scenario tracing
+  to it with its title, component and status."
   [needs scenarios statuses]
-  (let [need-ids (set (map :id needs))
-        untraced (remove #(some need-ids (:needs %)) scenarios)]
-    (str "# Traceability\n\nEach user need, the scenarios tracing to it, and each one's status.\n"
-         (str/join
-          (for [n (sort-by :id needs)
-                :let [scs (filter #(some #{(:id n)} (:needs %)) scenarios)]]
-            (str "\n## " (:id n) "\n\n" (:text n) "\n\n"
-                 (if (seq scs)
-                   (scenario-rows scs statuses)
-                   (str "No scenario traces to " (:id n) ".\n")))))
-         (when (seq untraced)
-           (str "\n## Scenarios tracing to no declared need\n\n" (scenario-rows untraced statuses))))))
+  (str "# Traceability\n\nEach user need, and every scenario that traces to it, with its status.\n"
+       (str/join
+        (for [n needs
+              :let [scs (sort-by :id (filter #(some #{(:id n)} (:needs %)) scenarios))]]
+          (str "\n## " (:id n) "\n\n" (:text n) "\n\n"
+               (if (seq scs)
+                 (str "| Scenario | Title | Component | Status |\n|---|---|---|---|\n"
+                      (str/join (for [sc scs]
+                                  (str "| @" (:id sc) " | " (cell (:title sc)) " | " (cell (:component-name sc)) " | "
+                                       (some-> (get statuses (:id sc)) name) " |\n"))))
+                 "No scenario traces to it.\n"))))))
 
-(defn manifest-text
-  "Pure: OUT/manifest.edn of the commit and the files ({:path :sha256})."
+(defn manifest
+  "The manifest of the commit `commit` and the files {path sha256}."
   [commit files]
-  (str "{:commit " (pr-str commit) "\n :files ["
-       (str/join "\n         " (for [f (sort-by :path files)] (pr-str (array-map :path (:path f) :sha256 (:sha256 f)))))
-       "]}\n"))
+  {:commit commit :files (vec (for [[path h] (sort-by key files)] {:path path :sha256 h}))})
+
+(defn pdf-source
+  "The Markdown a document's PDF is made from: the copy, the document's id
+  and revision named first after its frontmatter, as its first page shows."
+  [text {:keys [id revision]}]
+  (let [ls (str/split (str text) #"\n" -1)
+        fm (gap/frontmatter ls)
+        line (str "**" id ", revision " revision "**")]
+    (if fm
+      (str/join "\n" (concat (take (inc (:end fm)) ls) ["" line ""] (drop (inc (:end fm)) ls)))
+      (str line "\n\n" text))))
 
 ;; ---------------------------------------------------------------------------
-;; PDFs
+;; Writing OUT
 
-(defn pdf-input
-  "Pure: {:title :body} of a document's text for its PDF: the frontmatter
-  left out, the id and revision first."
-  [text]
-  (let [lines (str/split (str text) #"\n" -1)
-        fm (gap/frontmatter lines)
-        f (:fields fm)
-        body (str/join "\n" (if fm (drop (inc (:end fm)) lines) lines))
-        head (str/join ", " (remove str/blank? [(get f "id") (when-not (str/blank? (get f "revision"))
-                                                                 (str "revision " (get f "revision")))]))]
-    {:title (get f "title")
-     :body (str (when-not (str/blank? head) (str head "\n\n")) (str/replace body #"^\n+" ""))}))
+(defn- sha256-of [f]
+  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256") (fs/read-all-bytes f))]
+    (apply str (map #(format "%02x" %) d))))
 
-(defn- need-tool! [t]
-  (when-not (fs/which t)
-    (command/cannot-run! (str t " is not installed, so the audit copy's PDFs cannot be written"))))
+(defn- run-tool! [dir & args]
+  (let [r (try (apply p/shell {:dir (str dir) :out :string :err :string :continue true :in ""} args)
+               (catch java.io.IOException e
+                 (command/cannot-run! (str (first args) " cannot be run (" (ex-message e) "): the audit copy's PDFs need it"
+                                           " (dhf/harness/stack.md)"))))]
+    (when-not (zero? (:exit r))
+      (command/cannot-run! (str (first args) " failed: " (str/trim (str (:err r) (:out r))))))))
 
-(defn- pdf!
-  "Writes the PDF of the document text `text` to `out`."
-  [text out work]
-  (let [{:keys [title body]} (pdf-input text)
-        r (apply p/shell {:in body :out :string :err :string :continue true}
-                 (concat ["pandoc" "-f" "markdown" "-s" "-t" "typst" "-V" "mainfont=DejaVu Sans"]
-                         (when-not (str/blank? title) ["-M" (str "title=" title)])))
-        _ (when-not (zero? (:exit r))
-            (command/cannot-run! (str "pandoc could not convert " out ": " (str/trim (:err r)))))
-        typ (str (fs/file work "document.typ"))
-        _ (spit typ (str "#set document(date: none)\n" (:out r)))
-        c (p/shell {:out :string :err :string :continue true :in ""} "typst" "compile" typ (str out))]
-    (when-not (zero? (:exit c))
-      (command/cannot-run! (str "typst could not compile " out ": " (str/trim (str (:err c) (:out c))))))))
-
-;; ---------------------------------------------------------------------------
-;; The audit stage
-
-(defn- sha256 [f]
-  (let [md (java.security.MessageDigest/getInstance "SHA-256")]
-    (apply str (map #(format "%02x" (bit-and % 0xff)) (.digest md (fs/read-all-bytes f))))))
-
-(defn- files-of
-  "Every file under `d`: [[relative-path file]], sorted by path."
-  [d]
-  (vec (sort-by first (for [f (fs/glob d "**" {:hidden true}) :when (fs/regular-file? f)]
-                        [(str/replace (str (fs/relativize d f)) "\\" "/") f]))))
-
-(defn- write! [dir rel text]
-  (let [f (fs/file dir rel)]
-    (fs/create-dirs (fs/parent f))
-    (spit (str f) text)))
-
-(defn- build!
-  "Writes the audit copy into the directory `d`; returns how many documents."
-  [req d commit]
-  (let [{:keys [clause-lists documents]} (gap/regulated req)
-        docs-dir (strip-slash documents)
-        {list-files :list read-text :read} (gap/reader (:root req) commit)
-        docs (vec (for [f (list-files docs-dir) :when (str/ends-with? f ".md")
-                        :let [t (read-text f)] :when t]
-                    [(subs f (inc (count docs-dir))) t]))
-        spec (or (state req ::spec) (command/cannot-run! "the spec was not read: no SpecParsed event reached the audit"))
-        derived (or (state req ::derived)
-                    (command/cannot-run! "no status was derived: no VerificationDerived event reached the audit"))
-        clauses (or (state req ::clauses)
-                    (command/cannot-run! "the clauses were not read: no ClausesIndexed event reached the audit"))
-        results (command/path req (:results req))
-        work (str (fs/create-temp-dir {:prefix "rdm-spec-audit-"}))]
+(defn- pdf! [md out-file]
+  (let [tmp (fs/create-temp-dir {:prefix "rdm-spec-audit-pdf-"})]
     (try
-      (doseq [[rel text] docs
-              [copy t] [["auditor" text] ["engineer" (gap/strip-tags text)]]
-              :let [md (str copy "/" rel)]]
-        (write! d md t)
-        (pdf! t (fs/file d (str/replace md #"\.md$" ".pdf")) work))
-      (finally (fs/delete-tree work)))
-    (write! d "clauses.md" (clauses-page (mapv strip-slash clause-lists) (:clauses clauses)))
-    (write! d "traceability.md" (traceability-page (:needs spec) (filterv :id (:scenarios spec)) (:statuses derived)))
-    (doseq [[rel f] (files-of results)]
-      (let [to (fs/file d "results" rel)]
-        (fs/create-dirs (fs/parent to))
-        (fs/copy f to)))
-    (write! d "manifest.edn" (manifest-text commit (for [[rel f] (files-of d)] {:path rel :sha256 (sha256 f)})))
-    (count docs)))
+      (spit (str (fs/file tmp "in.md")) md)
+      (run-tool! tmp "pandoc" "-s" "-f" "markdown" "-t" "typst" "-V" "mainfont=DejaVu Sans" "in.md" "-o" "pandoc.typ")
+      (spit (str (fs/file tmp "in.typ")) (str "#set document(date: none)\n" (slurp (str (fs/file tmp "pandoc.typ")))))
+      (run-tool! tmp "typst" "compile" "in.typ" "out.pdf")
+      (fs/create-dirs (fs/parent out-file))
+      (fs/copy (fs/file tmp "out.pdf") out-file {:replace-existing true})
+      (finally (fs/delete-tree tmp)))))
+
+(defn- write! [f text]
+  (fs/create-dirs (fs/parent f))
+  (spit (str f) text))
+
+(defn subscriptions
+  "Keeps SpecParsed, VerificationDerived and ClausesIndexed."
+  [req]
+  [[:SpecParsed (fn [x] (swap! (:state req) assoc ::spec x) nil)]
+   [:VerificationDerived (fn [x] (swap! (:state req) assoc ::verification x) nil)]
+   [:ClausesIndexed (fn [x] (swap! (:state req) assoc ::clauses x) nil)]])
 
 (defn audit
-  "The audit stage: writes OUT, unless prepare named a file not committed."
+  "The audit copy's stage: writes OUT."
   [req]
-  (if (or (state req ::refused) (nil? (state req ::commit)))
-    {:result {} :findings []}
-    (let [commit (state req ::commit)
-          shown (str (first (:args req)))
-          out (fs/absolutize (command/path req shown))
-          parent (fs/parent out)
-          _ (need-tool! "pandoc")
-          _ (need-tool! "typst")
-          _ (fs/create-dirs parent)
-          tmp (fs/create-temp-dir {:dir parent :prefix ".audit-"})
-          n (try (let [n (build! req tmp commit)]
-                   (fs/set-posix-file-permissions tmp "rwxr-xr-x")
-                   (fs/move tmp out)
-                   n)
-                 (catch Throwable e (fs/delete-tree tmp) (throw e)))]
-      {:result {:audit {:out shown :commit commit :documents n
-                        :files (count (files-of out))}}
-       :findings []})))
+  (let [out-arg (first (:args req))
+        out (command/path req out-arg)
+        commit (:revision req)
+        st (some-> (:state req) deref)
+        spec (or (::spec st) (command/cannot-run! "no SpecParsed reached the audit copy"))
+        statuses (:statuses (or (::verification st) (command/cannot-run! "no VerificationDerived reached the audit copy")))
+        clauses (or (::clauses st) (command/cannot-run! "no ClausesIndexed reached the audit copy"))
+        {:keys [clause-lists documents]} (get-in req [:config :regulated])
+        docs-dir (strip-slash documents)
+        results (:results req)]
+    (when (fs/exists? out)
+      (command/cannot-run! (str out-arg " exists: the audit copy is written into a new directory, never into one")))
+    (try
+      (fs/create-dirs out)
+      (doseq [d (sort-by :file (:documents clauses))
+              :let [text (or (show-at req commit (:file d))
+                             (command/cannot-run! (str (:file d) " is not in HEAD")))
+                    rel (subs (:file d) (inc (count docs-dir)))
+                    pdf-rel (str/replace rel #"\.md$" ".pdf")
+                    engineer (gap/strip-tags text)]]
+        (write! (fs/file out "auditor" rel) text)
+        (write! (fs/file out "engineer" rel) engineer)
+        (pdf! (pdf-source text d) (fs/file out "auditor" pdf-rel))
+        (pdf! (pdf-source engineer d) (fs/file out "engineer" pdf-rel)))
+      (write! (fs/file out "clauses.md") (clauses-page (mapv strip-slash clause-lists) (:clauses clauses)))
+      (write! (fs/file out "traceability.md")
+              (traceability-page (:needs spec) (filter :id (:scenarios spec)) statuses))
+      (let [rd (command/path req results)]
+        (doseq [f (sort (map str (fs/glob rd "**"))) :when (fs/regular-file? f)
+                :let [dest (fs/file out "results" (str (fs/relativize rd f)))]]
+          (fs/create-dirs (fs/parent dest))
+          (fs/copy f dest {:replace-existing true})))
+      (let [files (into {} (for [f (fs/glob out "**") :when (fs/regular-file? f)]
+                             [(str/replace (str (fs/relativize out f)) "\\" "/") (sha256-of f)]))]
+        (write! (fs/file out "manifest.edn")
+                (binding [*print-namespace-maps* false] (str (pr-str (manifest commit files)) "\n")))
+        {:result {:audit {:out out-arg :commit commit :documents (count (:documents clauses)) :files (inc (count files))}}
+         :findings []})
+      (catch Throwable e
+        (fs/delete-tree out)
+        (throw e)))))

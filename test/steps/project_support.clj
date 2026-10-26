@@ -82,8 +82,9 @@
 
 (defn- edn-of [dir rel] (edn/read-string (slurp (str (fs/file dir rel)))))
 
-(def allow-list
-  ["dhf/spec" "dhf/harness/config.edn" "dhf/harness/stack.md" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"])
+(def kept-paths
+  "The paths spec-0086 says the skeleton's configuration keeps."
+  ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"])
 
 (def gitignore-lines
   ["dhf/allure-results/" "dhf/cycles/*/results/" "dhf/cycles/*/build/" "site-src/" "site/"])
@@ -113,7 +114,11 @@
         (ok! (every? #(string? (get c %)) [:spec-dir :ledger :model :events :needs :views-dir :raw-dir :wiki-dir
                                             :results-dir :cycles-dir])
              "every directory the tasks read")
-        (ok! (= (set allow-list) (set (get-in c [:clean-room :allow]))) (str "the allow-list " allow-list))
+        (ok! (= {:implementation true :measurements ["dhf/cycles"]} (select-keys (get-in c [:clean-room :deny]) [:implementation :measurements]))
+             "a deny-list of the implementation and the measurements dhf/cycles")
+        (ok! (some #{"site"} (get-in c [:clean-room :deny :generated])) "the generated site denied")
+        (ok! (every? (set (get-in c [:clean-room :keep])) kept-paths) (str "the kept paths " kept-paths))
+        (ok! (= {:watch ["/" "~"] :tmp "/tmp"} (:agency c)) "the watched directories \"/\" and \"~\" and the temporary directory \"/tmp\"")
         (ok! (not (str/includes? text "dhf/harness/oracle")) "no dhf/harness/oracle")
         (ok! (not-any? #(contains? c %) [:implementation :code-layout :test-command]) "no implementation paths"))
       "dhf/harness/stack.md" (ok! (= 2 (count (filter #(str/starts-with? % "|") (lines text))))

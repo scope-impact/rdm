@@ -1,38 +1,47 @@
 (ns rdm-spec.project.init-test
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.kernel.command :as command]
             [rdm-spec.project.init :as init]))
 
-(deftest a-prefix-starts-a-tag
+(deftest the-skeleton
+  (is (= (map first init/skeleton) init/destinations))
+  (is (= 15 (count init/destinations)))
+  (is (some #{"dhf/harness/config.edn"} init/destinations)))
+
+(deftest the-id-prefix
   (is (nil? (init/prefix-problem "spec")))
-  (is (nil? (init/prefix-problem "my-proj2")))
-  (doseq [p ["9lives" "a--b" "a-" "-a" "a_b" ""]]
-    (is (re-find #"starts with a letter" (init/prefix-problem p)) p))
-  (is (re-find #"taken by need tags" (init/prefix-problem "UN"))))
+  (is (nil? (init/prefix-problem "my-sauna2")))
+  (is (str/includes? (init/prefix-problem "9lives") "starts with a letter"))
+  (is (init/prefix-problem "a--b"))
+  (is (init/prefix-problem "a-"))
+  (is (str/includes? (init/prefix-problem "UN") "taken by need tags")))
 
-(deftest every-skeleton-file-is-there-and-filled
-  (doseq [[_ resource] init/skeleton]
-    (is (string? (init/skeleton-text resource {:name "sauna" :id-prefix "x"})) resource))
-  (let [m (edn/read-string (init/skeleton-text "spec/model.edn" {:name "My Sauna" :id-prefix "x"}))]
-    (is (= {:id :my-sauna :name "My Sauna"} (select-keys (:system m) [:id :name]))))
-  (is (= "x" (:id-prefix (edn/read-string (init/skeleton-text "harness/config.edn" {:name "s" :id-prefix "x"}))))))
+(deftest the-configuration-the-skeleton-holds
+  (let [c (edn/read-string (init/skeleton-text "harness/config.edn" {:name "sauna" :id-prefix "sauna"}))]
+    (is (= "sauna" (:id-prefix c)))
+    (is (= {:implementation true :measurements ["dhf/cycles"] :generated ["site" "site-src" "dhf/allure-results"]}
+           (get-in c [:clean-room :deny])))
+    (is (every? (set (get-in c [:clean-room :keep]))
+                ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"]))
+    (is (= {:watch ["/" "~"] :tmp "/tmp"} (:agency c)))
+    (is (not-any? #(contains? c %) [:implementation :code-layout :test-command]))))
 
-(deftest init-writes-the-skeleton-into-a-new-path
-  (let [parent (str (fs/create-temp-dir {:prefix "init-test-"}))]
+(deftest the-model-names-the-system
+  (let [m (edn/read-string (init/skeleton-text "spec/model.edn" {:name "My Sauna" :id-prefix "spec"}))]
+    (is (= {:id :my-sauna :name "My Sauna"} (select-keys (:system m) [:id :name])))))
+
+(deftest init-writes-a-new-project-and-refuses-an-existing-path
+  (let [d (str (fs/create-temp-dir {:prefix "init-test-"}))]
     (try
-      (let [out (init/init {:root parent :args ["sauna"] :opts {}})
-            dir (fs/file parent "sauna")]
+      (let [out (init/init {:root d :args ["sauna"] :opts {}})]
         (is (= init/destinations (get-in out [:result :init :wrote])))
-        (doseq [d init/destinations] (is (fs/regular-file? (fs/file dir d)) d))
-        (is (fs/directory? (fs/file dir ".git")))
-        (is (fs/executable? (fs/file dir ".githooks/pre-commit"))))
-      (testing "a path that exists cannot be initialised"
-        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"already exists"
-                              (init/init {:root parent :args ["sauna"] :opts {}}))))
-      (testing "a bad prefix writes nothing"
-        (let [e (try (init/init {:root parent :args ["other"] :opts {:id-prefix "UN"}}) nil (catch Exception e e))]
-          (is (command/cannot-run? e))
-          (is (not (fs/exists? (fs/file parent "other"))))))
-      (finally (fs/delete-tree parent)))))
+        (is (seq (get-in out [:result :init :next-steps])))
+        (is (fs/directory? (fs/file d "sauna" ".git")))
+        (is (fs/executable? (fs/file d "sauna" ".githooks/pre-commit"))))
+      (is (command/cannot-run? (try (init/init {:root d :args ["sauna"] :opts {}}) nil (catch Exception e e))))
+      (is (command/cannot-run? (try (init/init {:root d :args ["other"] :opts {:id-prefix "UN"}}) nil (catch Exception e e))))
+      (is (not (fs/exists? (fs/file d "other"))))
+      (finally (fs/delete-tree d)))))

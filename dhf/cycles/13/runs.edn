@@ -6,4 +6,14 @@
             :tmp-left 1          ; /tmp/tmp.IUZiCvx5Ls, a scratch directory made at 05:46 and never removed
             :repo-touched []
             :results-in-room false
-            :unobserved ["reads outside the room"]}}]
+            :unobserved ["reads outside the room"]}}
+ {:role :grader :room "/home/user/c13/grade-a"
+  :began "2026-10-26T06:41:43Z" :ended "2026-10-26T06:52:00Z" :minutes 10.23 :tokens 162148
+  :defence {:writes-outside [] :tmp-left 0 :repo-touched [] :results-in-room false
+            :unobserved ["reads outside the room"
+                         "observed together with the other grader: one snapshot for both"]}}
+ {:role :grader :room "/home/user/c13/grade-b"
+  :began "2026-10-26T06:41:43Z" :ended "2026-10-26T06:50:41Z" :minutes 8.96 :tokens 185994
+  :defence {:writes-outside [] :tmp-left 0 :repo-touched [] :results-in-room false
+            :unobserved ["reads outside the room"
+                         "observed together with the other grader: one snapshot for both"]}}]

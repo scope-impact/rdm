@@ -3,113 +3,100 @@
             [babashka.process :as p]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [rdm-spec.kernel.bus :as bus]
             [rdm-spec.spec.parser :as parser]))
 
-(def published-keys
-  #{:id :title :name :keyword :file :line :level :needs :wip? :outline? :rows :examples :background :rule
-    :steps :context :component :context-name :component-name})
-
 (def feature
-  (str "@UN-001\nFeature: F\n  A fixture.\n\n"
-       "  Background:\n    Given a background\n\n"
-       "  @spec-0001 @e2e\n  Scenario: One\n    Given x\n\n"
-       "  Rule: R\n\n"
-       "    @spec-0002 @contract @wip @UN-002\n    Scenario Outline: Two <n>\n      Given <n>\n\n"
+  (str "@UN-001\nFeature: Desk\n  A fixture.\n\n"
+       "  Background:\n    Given a desk\n\n"
+       "  @spec-0001 @e2e\n  Scenario: One\n    Given a thing\n    Then it holds\n\n"
+       "  @UN-002\n  Rule: A rule\n\n"
+       "    @spec-0002 @spec-0003 @contract @wip\n    Scenario Outline: Two <n>\n      Given <n>\n\n"
        "      Examples:\n        | n |\n        | 1 |\n        | 2 |\n\n"
-       "    @e2e @spec-0003 @spec-0004\n    Scenario: Three\n      Given y\n"))
+       "    @e2e\n    Scenario: Three\n      Given nothing\n"))
 
-(deftest reading-one-feature-file
-  (let [{:keys [scenarios refusals feature]} (parser/parse-text "f.feature" feature {:prefix "spec"})
+(deftest a-feature-file-is-read-into-scenarios
+  (let [{:keys [scenarios refusals feature file]} (parser/parse-text "dhf/spec/kernel/desk.feature" feature {:prefix "spec"})
         [one two three] scenarios]
     (is (empty? refusals))
-    (is (= "F" (:name feature)))
-    (is (= ["spec-0001" "One" "One" "Scenario" "f.feature" 9 :e2e ["UN-001"] false false nil]
-           ((juxt :id :title :name :keyword :file :line :level :needs :wip? :outline? :rule) one)))
-    (is (= [{:keyword "Given" :text "a background"}] (:background one)))
-    (is (= [{:keyword "Given" :text "x"}] (:steps one)))
-    (testing "an outline, under a rule, planned"
-      (is (= ["spec-0002" :contract ["UN-001" "UN-002"] true true "R"]
-             ((juxt :id :level :needs :wip? :outline? :rule) two)))
-      (is (= [{"n" "1"} {"n" "2"}] (:rows two)))
-      (is (= ["n"] (:header (first (:examples two))))))
-    (testing "two ids: no single id, both kept for the check"
-      (is (nil? (:id three)))
-      (is (= ["spec-0003" "spec-0004"] (:ids three))))))
-
-(deftest tags
-  (is (re-matches (parser/id-re "spec") "@spec-0001"))
-  (is (not (re-matches (parser/id-re "spec") "@spec-01")))
-  (is (re-matches parser/need-re "@UN-001"))
-  (is (some #{"@e2e"} parser/levels)))
+    (is (= "dhf/spec/kernel/desk.feature" file))
+    (is (= "Desk" (:name feature)))
+    (testing "ids"
+      (is (= ["spec-0001"] (:ids one)))
+      (is (= "spec-0001" (:id one)))
+      (is (= ["spec-0002" "spec-0003"] (:ids two)))
+      (is (nil? (:id two)))
+      (is (= [] (:ids three))))
+    (testing "levels, needs, planned work and rules"
+      (is (= [:e2e] (:levels one)))
+      (is (= :e2e (:level one)))
+      (is (= :contract (:level two)))
+      (is (= ["UN-001"] (:needs one)))
+      (is (= ["UN-001" "UN-002"] (:needs two)))
+      (is (:wip? two))
+      (is (not (:wip? one)))
+      (is (nil? (:rule one)))
+      (is (= "A rule" (:rule two))))
+    (testing "the scenario as written"
+      (is (= "One" (:title one) (:name one)))
+      (is (= "Scenario" (:keyword one)))
+      (is (= "Scenario Outline" (:keyword two)))
+      (is (:outline? two))
+      (is (= [{:line 22 :values {"n" "1"}} {:line 23 :values {"n" "2"}}] (:rows two)))
+      (is (= [{:keyword "Given" :text "a desk"}] (map #(select-keys % [:keyword :text]) (:background one))))
+      (is (= [{:keyword "Given" :text "a thing"} {:keyword "Then" :text "it holds"}]
+             (map #(select-keys % [:keyword :text]) (:steps one))))
+      (is (= 9 (:line one)))
+      (is (every? #(= "dhf/spec/kernel/desk.feature" (:file %)) scenarios)))))
 
 (deftest refusals-are-kept
-  (let [{:keys [refusals]} (parser/parse-text "f.feature" "Feature: A\nFeature: B\n" {:prefix "spec"})]
-    (is (= ["gherkin-one-feature"] (map :rule refusals)))
-    (is (= "f.feature" (:file (first refusals))))))
+  (let [{:keys [refusals]} (parser/parse-text "a.feature" "Feature: A\n\n  Scenario Template: x\n" {:prefix "spec"})]
+    (is (= ["gherkin-unknown-keyword"] (map :rule refusals)))
+    (is (= [3] (map :line refusals)))))
 
-(defn- with-project [f]
-  (let [d (str (fs/create-temp-dir {:prefix "parser-test-"}))]
-    (try (f d) (finally (fs/delete-tree d)))))
-
-(defn- write! [d rel text]
-  (let [f (fs/file d rel)] (fs/create-dirs (fs/parent f)) (spit (str f) text)))
+(defn- write! [dir rel text]
+  (let [f (fs/file dir rel)]
+    (fs/create-dirs (fs/parent f))
+    (spit (str f) text)))
 
 (def model
   (pr-str {:system {:id :s :name "S" :description "d"}
-           :containers [{:id :app :name "App" :kind :runs
-                         :contexts [{:id :demo :name "Demo" :components [{:id :demo/alpha :name "Alpha" :spec "demo/alpha"}]}]}]
-           :kernel [{:id :kernel/cli :name "CLI" :spec "kernel/cli"}]}))
+           :containers [{:id :app :name "app" :kind :runs
+                         :contexts [{:id :desks :name "desks" :components [{:id :desks/desk :name "Desk" :spec "desks/desk"}]}]}]
+           :kernel [{:id :kernel/bus :name "Event bus" :spec "kernel/bus"}]}))
 
-(deftest reading-a-spec
-  (with-project
-    (fn [d]
-      (write! d "dhf/spec/model.edn" model)
-      (write! d "dhf/spec/needs.edn" "{\"UN-001\" {:text \"A need.\" :sources [\"s:p@1\"]}\n \"UN-002\" {:text \"Another.\" :sources []}}\n")
-      (write! d "dhf/spec/demo/alpha.feature" feature)
-      (write! d "dhf/spec/kernel/cli.feature" "@UN-001\nFeature: CLI\n\n  @spec-0009 @e2e\n  Scenario: Nine\n    Given z\n")
-      (let [spec (parser/read-spec d {})
-            by-id (into {} (map (juxt :id identity)) (:scenarios spec))]
+(deftest the-spec-is-read-with-its-owners-and-needs
+  (let [dir (str (fs/create-temp-dir {:prefix "parser-test-"}))]
+    (try
+      (write! dir "dhf/spec/model.edn" model)
+      (write! dir "dhf/spec/needs.edn" "{\"UN-001\" {:text \"A need.\" :sources [\"s:p@1234567\"]}\n \"UN-002\" {:text \"B\" :sources []}}\n")
+      (write! dir "dhf/spec/desks/desk.feature" feature)
+      (write! dir "dhf/spec/kernel/bus.feature" "@UN-001\nFeature: Bus\n\n  @spec-0009 @e2e\n  Scenario: Nine\n    Given x\n")
+      (let [spec (parser/read-spec dir {:id-prefix "spec"})
+            by-title (into {} (map (juxt :title identity)) (:scenarios spec))]
         (is (= :working-tree (:revision spec)))
-        (is (= [:demo :demo/alpha "Demo" "Alpha"]
-               ((juxt :context :component :context-name :component-name) (by-id "spec-0001"))))
-        (is (= [:kernel :kernel/cli "kernel" "CLI"]
-               ((juxt :context :component :context-name :component-name) (by-id "spec-0009"))))
-        (is (= ["UN-001" "UN-002"] (map :id (:needs spec))))
+        (is (= {:context :desks :component :desks/desk :context-name "desks" :component-name "Desk"}
+               (select-keys (by-title "One") [:context :component :context-name :component-name])))
+        (is (= {:context :kernel :component :kernel/bus :context-name "kernel" :component-name "Event bus"}
+               (select-keys (by-title "Nine") [:context :component :context-name :component-name])))
+        (is (= [{:id "UN-001" :text "A need." :sources ["s:p@1234567"]} {:id "UN-002" :text "B" :sources []}]
+               (:needs spec)))
         (is (= {"UN-001" 1 "UN-002" 2} (:needs-lines spec)))
-        (is (some #(= "dhf/spec/needs.edn" (:file %)) (:files spec)))
-        (testing "SpecParsed carries exactly the declared keys of each scenario"
-          (let [b (bus/make-bus)]
-            (parser/publish! {:bus b} spec)
-            (let [{:keys [event publisher payload]} (first (bus/events b))]
-              (is (= [:SpecParsed :spec/parser] [event publisher]))
-              (is (= #{:revision :scenarios :needs :refusals} (set (keys payload))))
-              (is (every? #(= published-keys (set (keys %))) (:scenarios payload))))))))))
-
-(deftest needs-that-cannot-be-read
-  (with-project
-    (fn [d]
-      (write! d "dhf/spec/needs.edn" "not a map")
-      (is (= ["needs-unreadable"] (map :rule (:needs-findings (parser/read-spec d {}))))))))
-
-(defn- git! [d & args]
-  (apply p/shell {:dir d :out :string :err :string
-                  :extra-env {"GIT_AUTHOR_NAME" "t" "GIT_AUTHOR_EMAIL" "t@t.invalid"
-                              "GIT_COMMITTER_NAME" "t" "GIT_COMMITTER_EMAIL" "t@t.invalid"}}
-         "git" args))
-
-(deftest reading-at-a-revision
-  (with-project
-    (fn [d]
-      (write! d "dhf/spec/model.edn" model)
-      (write! d "dhf/spec/demo/alpha.feature" "@UN-001\nFeature: A\n\n  @spec-0001 @e2e\n  Scenario: At the cut\n    Given x\n")
-      (git! d "init" "-q")
-      (git! d "add" "-A")
-      (git! d "commit" "-q" "--no-verify" "-m" "cut")
-      (git! d "tag" "spec-3")
-      (write! d "dhf/spec/demo/alpha.feature" "@UN-001\nFeature: A\n\n  @spec-0002 @e2e\n  Scenario: Later\n    Given x\n")
-      (let [at (parser/read-spec d {} "spec-3")]
-        (is (= ["spec-0001"] (map :id (:scenarios at))))
-        (is (re-matches #"[0-9a-f]{40}" (:revision at)))
-        (is (= "Demo" (:context-name (first (:scenarios at))))))
-      (is (nil? (parser/read-spec d {} "spec-9")) "a revision the repository does not hold reads nothing"))))
+        (is (some #(= "dhf/spec/model.edn" (:file %)) (:files spec))))
+      (testing "the spec at a commit, not the working tree"
+        (let [git #(apply p/shell {:dir dir :out :string :err :string :continue true
+                                   :extra-env {"GIT_AUTHOR_NAME" "t" "GIT_AUTHOR_EMAIL" "t@t.invalid"
+                                               "GIT_COMMITTER_NAME" "t" "GIT_COMMITTER_EMAIL" "t@t.invalid"}}
+                          "git" %&)]
+          (git "init" "-q")
+          (git "add" "-A")
+          (git "commit" "-q" "--no-verify" "-m" "c")
+          (let [commit (str/trim (:out (git "rev-parse" "HEAD")))]
+            (fs/delete (fs/file dir "dhf/spec/kernel/bus.feature"))
+            (is (= 3 (count (:scenarios (parser/read-spec dir {:id-prefix "spec"})))))
+            (let [at (parser/read-spec dir {:id-prefix "spec"} {:revision commit})]
+              (is (= commit (:revision at)))
+              (is (= 4 (count (:scenarios at))))))))
+      (testing "needs that cannot be read are a finding"
+        (write! dir "dhf/spec/needs.edn" "[not a map")
+        (is (= ["needs-unreadable"] (map :rule (:needs-findings (parser/read-spec dir {:id-prefix "spec"}))))))
+      (finally (fs/delete-tree dir)))))

@@ -1,66 +1,109 @@
 (ns steps.regeneration-scopes
-  "Step definitions for dhf/spec/regeneration/scopes.feature.
+  "Step definitions for dhf/spec/regeneration/scopes.feature: `rdm-spec
+  scopes spec-3 spec-4` in a regeneration project (steps.regeneration-support)
+  whose spec changed between the two cuts as a step says.
 
-  Context keys set here: :dir (the project: a copy of the room, a git
-  repository with the cuts spec-3 and spec-4), :changed (the paths changed
-  between them, relative to the project).
-
-  The task's result, as the steps read it: {:scopes [scope] :shared [path]},
-  a scope {:component :context/component}; each shared file is also a
-  warning line naming it."
+  Context keys set here: :dir, :event (the event whose shape changed)."
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
+            [babashka.fs :as fs]
             [rdm-spec.kernel.runner :refer [defstep]]
             [steps.kernel-command :as kc]
             [steps.regeneration-support :as rs]
             [steps.support :as s]))
 
-(defn- spec-path
-  "A path as a step names it, relative to the project: one not starting
-  with dhf/ is under the spec directory."
-  [p]
-  (if (str/starts-with? p "dhf/") p (str "dhf/spec/" p)))
+(defn- two-cuts!
+  "A project cut at spec-3, `change!` applied, then cut at spec-4."
+  [ctx change!]
+  (let [dir (rs/repo! (s/copy-of-room!))]
+    (rs/commit! dir "the cut spec-3")
+    (rs/tag! dir "spec-3")
+    (change! dir)
+    (rs/commit! dir "the cut spec-4")
+    (rs/tag! dir "spec-4")
+    (assoc ctx :dir dir)))
 
-(defstep #"the cuts spec-3 and spec-4, between which (?:only )?(.+) changed"
-  (fn [ctx listed]
-    (let [paths (mapv spec-path (remove str/blank? (map str/trim (str/split listed #",\s*|\s+and\s+"))))
-          dir (rs/repo! (s/copy-of-room!))]
-      (rs/commit! dir "the cut spec-3")
-      (rs/tag! dir "spec-3")
-      (doseq [p paths]
-        (s/write! dir p (str (let [f (java.io.File. (str dir) p)] (when (.exists f) (slurp f)))
-                             (if (str/ends-with? p ".edn") "\n;; changed\n" "\n# changed\n"))))
-      (rs/commit! dir "the cut spec-4")
-      (rs/tag! dir "spec-4")
-      (s/check! (= (sort paths) (sort (str/split-lines (rs/git! dir "diff" "--name-only" "spec-3" "spec-4"))))
-                "the cuts differ in other files")
-      (assoc ctx :dir dir :changed paths))))
+(defn- touch! [dir rel]
+  (let [f (fs/file dir rel)]
+    (s/check! (fs/exists? f) (str "the project holds no " rel))
+    (spit (str f) "\n# A line the spec change added.\n" :append true)))
 
-(defn- scopes-of [ctx]
+(defstep #"the cuts spec-3 and spec-4, between which architecture/views\.feature and kernel/bus\.feature changed"
+  (fn [ctx]
+    (two-cuts! ctx (fn [dir]
+                     (touch! dir "dhf/spec/architecture/views.feature")
+                     (touch! dir "dhf/spec/kernel/bus.feature")))))
+
+(defstep #"the cuts spec-3 and spec-4, between which only architecture/views\.md changed"
+  (fn [ctx]
+    (two-cuts! ctx (fn [dir] (s/write! dir "dhf/spec/architecture/views.md" "# Views\n\nThe design of the views.\n")))))
+
+(defstep #"the cuts spec-3 and spec-4, between which only dhf/spec/glossary\.md changed"
+  (fn [ctx] (two-cuts! ctx (fn [dir] (touch! dir "dhf/spec/glossary.md")))))
+
+(defstep #"the cuts spec-3 and spec-4, between which only the shape of one event in dhf/spec/events\.edn changed"
+  (fn [ctx]
+    (let [event :SpecGated]
+      (assoc (two-cuts! ctx (fn [dir]
+                              (let [f (fs/file dir "dhf/spec/events.edn")
+                                    c (edn/read-string (slurp (str f)))]
+                                (s/check! (contains? c event) (str "the catalogue declares no " event))
+                                (spit (str f) (pr-str (assoc-in c [event :shape :passed?] "a new meaning"))))))
+             :event event))))
+
+(defstep #"the cuts spec-3 and spec-4, between which the kernel's command, the spec parser and the status component changed"
+  (fn [ctx]
+    (two-cuts! ctx (fn [dir]
+                     (doseq [f ["dhf/spec/verification/status.feature" "dhf/spec/spec/parser.feature"
+                                "dhf/spec/kernel/command.feature"]]
+                       (touch! dir f))))))
+
+(defn- listed [ctx]
   (let [r (kc/exits! ctx 0)
         out (kc/stdout-edn r)]
-    (s/check! (vector? (:scopes out)) (str "the result holds no :scopes vector\n" (s/show r)))
+    (s/check! (vector? (:scopes out)) (str "standard output lists no :scopes\n" (s/show r)))
     (:scopes out)))
 
-(defn- scopes-text [text]
-  (vec (map edn/read-string (re-seq #"\{[^}]*\}" text))))
-
-(defstep #"it lists the scopes? (\{.*\})(?:, and nothing else)?"
-  (fn [ctx text]
-    (let [want (scopes-text text)
-          got (scopes-of ctx)]
-      (s/check! (= (set want) (set got)) (str "it lists " (pr-str got) ", not " (pr-str want) "\n" (s/show (:run ctx))))
-      (s/check! (= (count got) (count (set got))) (str "it lists a scope twice: " (pr-str got)))
+(defstep #"it lists the scopes \{:component (\S+)\} and \{:component (\S+)\}, and nothing else"
+  (fn [ctx a b]
+    (let [got (listed ctx)]
+      (s/check! (= #{{:component (edn/read-string a)} {:component (edn/read-string b)}} (set got))
+                (str "the scopes are " (pr-str got)))
+      (s/check! (= 2 (count got)) (str "the scopes are " (pr-str got)))
       nil)))
 
-(defstep #"it lists no scope, and names (\S+) and (\S+) as changed shared files whose readers a person must judge"
-  (fn [ctx a b]
-    (let [got (scopes-of ctx)
-          r (kc/the-run ctx)
-          warnings (filter kc/warning-line? (s/err-lines r))]
-      (s/check! (empty? got) (str "it lists " (pr-str got)))
-      (doseq [f [a b]
-              :let [full (first (filter #(str/ends-with? % (str "/" f)) (:changed ctx)))]]
-        (s/check! (some #(and (str/starts-with? % (str full ": ")) (str/includes? % "a person must judge")) warnings)
-                  (str "no warning names " full " as a changed shared file a person must judge\n" (s/show r))))
+(defstep #"it lists the scope \{:component (\S+)\}"
+  (fn [ctx a]
+    (let [got (listed ctx)]
+      (s/check! (= [{:component (edn/read-string a)}] got) (str "the scopes are " (pr-str got)))
+      nil)))
+
+(defstep #"it lists no scope, and names glossary\.md as a changed shared file whose readers a person must judge"
+  (fn [ctx]
+    (let [got (listed ctx)
+          r (kc/the-run ctx)]
+      (s/check! (empty? got) (str "the scopes are " (pr-str got)))
+      (s/check! (some #(and (kc/warning-line? %) (str/includes? % "dhf/spec/glossary.md") (str/includes? % "person"))
+                      (s/err-lines r))
+                (str "no warning names dhf/spec/glossary.md for a person to judge\n" (s/show r)))
+      nil)))
+
+(defstep #"it lists as scopes the component the event catalogue names as its publisher and every component the model draws subscribing to it"
+  (fn [ctx]
+    (let [got (listed ctx)
+          dir (:dir ctx)
+          catalogue (edn/read-string (slurp (str (fs/file dir "dhf/spec/events.edn"))))
+          m (rs/model-of dir)
+          want (set (concat [(get-in catalogue [(:event ctx) :published-by])]
+                            (for [r (:relationships m) :when (= (:event ctx) (:event r))] (:to r))))]
+      (s/check! (< 1 (count want)) "the event has no subscriber in the model")
+      (s/check! (= want (set (map :component got))) (str "the scopes are " (pr-str got) ", not " (pr-str want)))
+      (s/check! (every? #(= #{:component} (set (keys %))) got) (str "the scopes are " (pr-str got)))
+      nil)))
+
+(defstep #"it lists kernel/command, then spec/parser, then verification/status"
+  (fn [ctx]
+    (let [got (listed ctx)]
+      (s/check! (= [{:component :kernel/command} {:component :spec/parser} {:component :verification/status}] got)
+                (str "the scopes are " (pr-str got)))
       nil)))

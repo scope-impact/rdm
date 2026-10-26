@@ -1,65 +1,50 @@
 (ns rdm-spec.measurement.checklist-test
-  (:require [cheshire.core :as json]
+  (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [rdm-spec.kernel.command :as command]
             [rdm-spec.measurement.checklist :as checklist]))
 
-(def scenarios
-  [{:id "spec-0014" :title "b" :context :architecture :component :architecture/lint
-    :context-name "architecture" :component-name "Lint" :level :contract}
-   {:id "spec-0012" :title "a" :context :architecture :component :architecture/lint
-    :context-name "architecture" :component-name "Lint" :level :e2e}
-   {:id "spec-0013" :title "w" :context :architecture :component :architecture/lint :wip? true}
-   {:id "spec-0031" :title "v" :context :verification :component :verification/status
-    :context-name "verification" :component-name "Status" :level :e2e}])
+(defn- sc [id & {:as more}]
+  (merge {:id id :ids [id] :title (str "Title " id) :file "dhf/spec/a/b.feature" :line 3 :level :e2e
+          :context :architecture :component :architecture/lint :context-name "architecture" :component-name "Lint"}
+         more))
 
-(def clauses
-  [{:key "STD:4" :description "General" :clause-list "dhf/clauses/std.txt"}
-   {:key "STD:4" :description "General again" :clause-list "dhf/clauses/part.txt"}
-   {:key "STD:5.1" :description "Plan" :clause-list "dhf/clauses/std.txt"}])
+(deftest a-scope-holds-its-scenarios
+  (let [a (sc "spec-0001")
+        k (sc "spec-0002" :context :kernel :component :kernel/bus)]
+    (is (checklist/in-scope? :project a))
+    (is (checklist/in-scope? {:context :architecture} a))
+    (is (not (checklist/in-scope? {:context :architecture} k)))
+    (is (checklist/in-scope? {:context :kernel} k))
+    (is (checklist/in-scope? {:component :kernel/bus} k))
+    (is (checklist/in-scope? [{:context :knowledge} {:component :kernel/bus}] k))
+    (is (not (checklist/in-scope? [{:context :knowledge}] a))))
+  (doseq [bad [:everything {:context "architecture"} {:module :x} [] [:project]]]
+    (is (command/cannot-run? (try (checklist/check-scope! bad) nil (catch Exception e e))) (pr-str bad))))
 
-(deftest scopes
-  (is (nil? (checklist/scope-parts :project)))
-  (is (nil? (checklist/scope-parts nil)))
-  (is (= [{:context :verification}] (checklist/scope-parts {:context :verification})))
-  (is (= [{:component :spec/parser}] (checklist/scope-parts {:component :spec/parser})))
-  (is (= [{:context :knowledge} {:component :spec/parser}]
-         (checklist/scope-parts [{:context :knowledge} {:component :spec/parser}])))
-  (testing "another shape is invalid"
-    (doseq [s [:everything {:context "verification"} {:component :parser} [] {:context :a :component :a/b} 3]]
-      (is (= :invalid (checklist/scope-parts s)) (pr-str s)))))
+(deftest the-checklist-is-one-item-per-stamped-scenario
+  (let [{:keys [items planned]} (checklist/checklist-of :project [(sc "spec-0012") (sc "spec-0003" :level :contract)
+                                                                  (sc "spec-0005" :wip? true)]
+                                                        nil)]
+    (is (= ["spec-0003" "spec-0012"] (map #(get % "id") items)))
+    (is (= ["id" "title" "context" "component" "level"] (keys (first items))))
+    (is (= {"id" "spec-0003" "title" "Title spec-0003" "context" "architecture" "component" "Lint" "level" "contract"}
+           (first items)))
+    (is (= [{"id" "spec-0005" "title" "Title spec-0005"}] planned))))
 
-(deftest items-sorted-by-id-planned-apart
-  (let [cl (checklist/derive-checklist "03" "spec-3" scenarios nil nil)]
-    (is (= ["cycle" "cut" "items" "planned"] (keys cl)))
-    (is (= ["spec-0012" "spec-0014" "spec-0031"] (map #(get % "id") (get cl "items"))))
-    (is (= ["id" "title" "context" "component" "level"] (keys (first (get cl "items")))))
-    (is (= [{"id" "spec-0013" "title" "w"}] (get cl "planned")))
-    (is (= {"id" "spec-0014" "title" "b" "context" "architecture" "component" "Lint" "level" "contract"}
-           (second (get cl "items"))))))
+(deftest clauses-come-after-the-scenarios
+  (let [clauses [{:key "STD:4.1" :description "Quality" :clause-list "dhf/clauses/base.txt"}
+                 {:key "STD:5.1" :description "Plan" :clause-list "dhf/clauses/std.txt"}]
+        {:keys [items]} (checklist/checklist-of :project [(sc "spec-0001")] clauses)]
+    (is (= ["spec-0001" "STD:4.1" "STD:5.1"] (map #(get % "id") items)))
+    (is (= {"id" "STD:5.1" "title" "Plan" "context" "compliance" "component" "dhf/clauses/std.txt" "level" "clause"}
+           (last items))))
+  (testing "a scope away from compliance carries no clause"
+    (is (= ["spec-0001"] (map #(get % "id") (:items (checklist/checklist-of {:context :architecture} [(sc "spec-0001")]
+                                                                             [{:key "STD:5.1" :description "P" :clause-list "c"}])))))))
 
-(deftest a-scope-keeps-its-own
-  (let [cl (checklist/derive-checklist "03" "spec-3" scenarios clauses [{:context :verification}])]
-    (is (= ["spec-0031"] (map #(get % "id") (get cl "items"))))
-    (is (= [] (get cl "planned")))))
-
-(deftest clauses-follow-scenarios-each-key-once
-  (let [cl (checklist/derive-checklist "03" "spec-3" scenarios clauses nil)
-        items (get cl "items")]
-    (is (= ["spec-0012" "spec-0014" "spec-0031" "STD:4" "STD:5.1"] (map #(get % "id") items)))
-    (is (= {"id" "STD:4" "title" "General" "context" "compliance" "component" "dhf/clauses/std.txt" "level" "clause"}
-           (nth items 3))))
-  (testing "a scope naming compliance carries them, another does not"
-    (is (checklist/clauses-in-scope? [{:context :compliance}]))
-    (is (not (checklist/clauses-in-scope? [{:component :compliance/gap}])))
-    (is (not (checklist/clauses-in-scope? [{:context :architecture}])))))
-
-(deftest the-json-keeps-key-order
-  (let [text (json/generate-string (checklist/derive-checklist "03" "spec-3" scenarios nil nil))]
-    (is (< (.indexOf text "\"cycle\"") (.indexOf text "\"cut\"") (.indexOf text "\"items\"") (.indexOf text "\"planned\"")))))
-
-(deftest unstamped-scenarios-are-findings
-  (let [fs (checklist/unstamped-findings [{:id nil :ids [] :file "f.feature" :line 7 :title "x"}
-                                          {:id nil :ids ["spec-1" "spec-2"] :file "f.feature" :line 9 :title "y"}
-                                          {:id "spec-0001" :ids ["spec-0001"] :file "f.feature" :line 11}])]
-    (is (= [["f.feature" 7 "checklist-unstamped"] ["f.feature" 9 "checklist-ids"]]
-           (map (juxt :file :line :rule) fs)))))
+(deftest an-unstamped-scenario-stops-the-checklist
+  (let [fs* (checklist/stops [(sc "spec-0001") (sc nil :ids []) (sc nil :ids ["spec-0002" "spec-0003"] :line 9)] [])]
+    (is (= ["checklist-unstamped" "checklist-ids"] (map :rule fs*)))
+    (is (str/includes? (command/format-finding (first fs*)) "dhf/spec/a/b.feature:3:")))
+  (is (= ["checklist-empty"] (map :rule (checklist/stops [] [])))))

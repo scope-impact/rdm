@@ -1,35 +1,36 @@
 (ns rdm-spec.project.init
   "Init (dhf/spec/project/init.feature): `rdm-spec init PATH [--id-prefix P]`
-  writes a new project's skeleton into a path that does not exist yet, makes
-  it a git repository and installs the pre-commit hook (core.hooksPath set to
-  .githooks). PATH is relative to the working directory, or absolute.
+  writes a new project's skeleton into a path that does not exist, makes it
+  a git repository and installs the pre-commit hook (core.hooksPath set to
+  .githooks). Nothing is committed: the first commit is the project's.
 
-  The skeleton is the files under src/rdm_spec/project/skeleton/, each
-  written to its destination (`skeleton`), with the system's name (the
-  path's last part) and the id prefix filled in. It holds no feature file,
-  no need and no source: a new project passes `rdm-spec check` before
-  anything is written in it.
+  The skeleton is spec-0086's table, one resource under
+  rdm_spec/project/skeleton/ per destination (`skeleton`, in the table's
+  order). The configuration holds the id prefix, every directory the tasks
+  read, the clean room's deny-list (the implementation, the measurements
+  dhf/cycles, the generated site) and kept paths, the watched directories
+  and the temporary directory, and no implementation paths.
 
-  The id prefix defaults to spec. It starts a tag: it starts with a letter
-  and holds letters, digits and single hyphens, and it is not UN, which need
-  tags start with.
+  The id prefix (default spec) starts with a letter and holds letters,
+  digits and single hyphens, and is not UN, which need tags take.
 
   Cannot run (exit 2), writing nothing: a path that exists (a file, a
-  directory or a symbolic link, even a broken one), a prefix that cannot
-  start a tag, git missing.
+  directory or a symbolic link), a malformed prefix.
 
-  Result: {:init {:path PATH :wrote [path ...] :next-steps [\"...\"]}}, the
-  paths relative to the new project."
+  Result: {:init {:path PATH :id-prefix P :wrote [path] :next-steps [..]}}.
+
+  Used by Adopt: skeleton, destinations, skeleton-text, write-file!,
+  exists?, default-prefix, next-steps."
   (:require [babashka.fs :as fs]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]
             [rdm-spec.project.hooks :as hooks]))
 
+(def default-prefix "spec")
+
 (def skeleton
-  "Every file of the skeleton: [destination resource], in the order written.
-  Dot files are kept under names without the dot, so they never act inside
-  this repository."
+  "[destination resource] of every file of the skeleton, in spec-0086's order."
   [["dhf/spec/model.edn" "spec/model.edn"]
    ["dhf/spec/events.edn" "spec/events.edn"]
    ["dhf/spec/needs.edn" "spec/needs.edn"]
@@ -48,78 +49,70 @@
 
 (def destinations (mapv first skeleton))
 
-(def executable #{".githooks/pre-commit"})
-
-(def default-prefix "spec")
+(def next-steps
+  ["Describe the system in dhf/spec/model.edn and record the raw sources in dhf/raw/"
+   "Declare the user needs in dhf/spec/needs.edn, each citing a source"
+   "Write scenarios in dhf/spec/<context>/<component>.feature, then run rdm-spec stamp"
+   "Run rdm-spec check; the pre-commit hook runs it on every commit"
+   "Make the first commit, and push it to a remote whose default branch the cut workflow tags"])
 
 (defn prefix-problem
-  "Pure: why `prefix` cannot start an id tag, or nil."
-  [prefix]
+  "Why `p` cannot be the id prefix, or nil."
+  [p]
   (cond
-    (not (re-matches #"[A-Za-z](?:[A-Za-z0-9]|-(?=[A-Za-z0-9]))*" (str prefix)))
-    (str "the prefix " (pr-str prefix) " cannot start a tag: a prefix starts with a letter and holds letters,"
-         " digits and single hyphens")
-    (= "UN" prefix)
-    (str "the prefix UN is taken by need tags (@UN-nnn): choose another")))
+    (= "UN" p) "the prefix UN is taken by need tags (@UN-nnn): choose another"
+    (not (re-matches #"[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*" (str p)))
+    (str "the prefix " (pr-str p) " is not one: a prefix starts with a letter and holds letters, digits and"
+         " single hyphens")
+    :else nil))
 
-(defn system-id
-  "Pure: the model id of a system named `nm`."
-  [nm]
-  (let [s (-> (str/lower-case (str nm)) (str/replace #"[^a-z0-9]+" "-") (str/replace #"^-+|-+$" ""))]
-    (keyword (if (re-matches #"[a-z].*" s) s (str "system-" s)))))
-
-(defn render
-  "Pure: the skeleton file `text` with its placeholders filled."
-  [text {:keys [name id-prefix]}]
-  (-> text
-      (str/replace "{{system-id}}" (str (system-id name)))
-      (str/replace "{{system-name}}" (pr-str (str name)))
-      (str/replace "{{id-prefix}}" (pr-str (str id-prefix)))))
+(defn- system-id [nm]
+  (let [slug (-> (str/lower-case (str nm)) (str/replace #"[^a-z0-9]+" "-") (str/replace #"^-+|-+$" ""))]
+    (keyword (if (re-matches #"[a-z][a-z0-9-]*" slug) slug "system"))))
 
 (defn skeleton-text
-  "The text of the skeleton file `resource`, filled for `opts` ({:name :id-prefix})."
-  [resource opts]
-  (let [r (io/resource (str "rdm_spec/project/skeleton/" resource))]
-    (when-not r (command/cannot-run! (str "the skeleton file " resource " is missing from rdm-spec")))
-    (render (slurp r) opts)))
-
-(defn write-file!
-  "Writes the skeleton file `dest` of the project `dir`."
-  [dir dest resource opts]
-  (let [f (fs/file dir dest)]
-    (fs/create-dirs (fs/parent f))
-    (spit (str f) (skeleton-text resource opts))
-    (when (executable dest) (fs/set-posix-file-permissions f "rwxr-xr-x"))))
+  "The text of the skeleton's `resource` for a project named `:name` with
+  the id prefix `:id-prefix`."
+  [resource {:keys [name id-prefix]}]
+  (let [r (or (io/resource (str "rdm_spec/project/skeleton/" resource))
+              (command/cannot-run! (str "the skeleton's " resource " is missing from rdm-spec")))
+        nm (if (str/blank? (str name)) "System" (str name))]
+    (-> (slurp r)
+        (str/replace "{{id-prefix}}" (pr-str (or id-prefix default-prefix)))
+        (str/replace "{{system-id}}" (pr-str (system-id nm)))
+        (str/replace "{{system-name}}" (pr-str nm)))))
 
 (defn exists?
-  "Whether something is at `f`: a file, a directory or a symbolic link, even a broken one."
+  "Whether anything is at `f`: a file, a directory or a symbolic link, even
+  a broken one."
   [f]
   (or (fs/exists? f {:nofollow-links true}) (fs/sym-link? f)))
 
-(def next-steps
-  ["Name the system in dhf/spec/model.edn and describe it."
-   "Record each raw source in dhf/raw/ and dhf/raw/sources.edn, and write the user needs in dhf/spec/needs.edn."
-   "Write each component's scenarios in dhf/spec/<context>/<component>.feature, then run rdm-spec stamp."
-   "Run rdm-spec check; the pre-commit hook runs it on every commit."
-   "Commit the skeleton."])
+(defn write-file!
+  "Writes the skeleton's `resource` to `dest` under `root`."
+  [root dest resource opts]
+  (let [f (fs/file root dest)]
+    (fs/create-dirs (fs/parent f))
+    (spit (str f) (skeleton-text resource opts))
+    (when (str/starts-with? dest ".githooks/")
+      (fs/set-posix-file-permissions f "rwxr-xr-x"))
+    dest))
 
 (defn init
   "The init task's stage."
   [req]
-  (let [given (first (:args req))
+  (let [[path] (:args req)
         prefix (or (get-in req [:opts :id-prefix]) default-prefix)
         _ (when-let [why (prefix-problem prefix)] (command/cannot-run! why))
-        target (fs/file (command/path req given))
+        target (command/path req path)
         _ (when (exists? target)
-            (command/cannot-run! (str "the path " given " already exists: init writes a new project into a path"
-                                      " that does not exist (rdm-spec adopt adds the skeleton to a repository)")))
-        _ (when-not (fs/which "git") (command/cannot-run! "git is not installed (not on PATH): a project is a git repository"))
-        opts {:name (fs/file-name (fs/normalize (fs/absolutize target))) :id-prefix prefix}]
+            (command/cannot-run! (str path " exists: init writes a new project into a path that does not exist"
+                                      " (rdm-spec adopt adds the skeleton to an existing repository)")))
+        opts {:name (str (fs/file-name target)) :id-prefix prefix}]
     (fs/create-dirs target)
-    (when-not (hooks/init-repository! target)
-      (fs/delete-tree target)
-      (command/cannot-run! (str "git could not make " given " a repository")))
-    (doseq [[dest resource] skeleton] (write-file! target dest resource opts))
-    (hooks/install! target)
-    {:result {:init {:path given :wrote destinations :next-steps next-steps}}
-     :findings []}))
+    (let [wrote (mapv (fn [[dest resource]] (write-file! target dest resource opts)) skeleton)]
+      (when-not (hooks/init-repository! target)
+        (command/cannot-run! (str path " could not be made a git repository: init needs git on PATH")))
+      (hooks/install! target)
+      {:result {:init {:path path :id-prefix prefix :wrote wrote :next-steps next-steps}}
+       :findings []})))

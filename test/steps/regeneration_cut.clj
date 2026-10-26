@@ -19,10 +19,10 @@
   (let [dir (rs/repo! (s/copy-of-room!))]
     (rs/commit! dir "the first merge")
     (rs/tag! dir "spec-5")
-    (s/write! dir "NOTES.md" "a second merge\n")
+    (s/write! dir "README.md" "a second merge\n")
     (rs/commit! dir "the second merge")
     (rs/tag! dir "spec-6")
-    (s/write! dir "NOTES.md" "a third merge\n")
+    (s/write! dir "README.md" "a third merge\n")
     (edit! dir)
     (let [head (rs/commit! dir "the third merge")
           bare (rs/origin! dir)]
@@ -99,7 +99,7 @@
     (let [ctx (project-with-origin! ctx (fn [_]))
           dir (:dir ctx)]
       (rs/git! dir "checkout" "-q" "-b" "feature")
-      (s/write! dir "NOTES.md" "work not merged\n")
+      (s/write! dir "README.md" "work not merged\n")
       (rs/commit! dir "work not merged")
       (assoc ctx :branch "feature" :default-branch "main"
              :tags-before (rs/tags dir) :remote-before (rs/remote-tags (:origin ctx))))))

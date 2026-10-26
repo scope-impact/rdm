@@ -1,188 +1,124 @@
 (ns rdm-spec.measurement.scoreboard
   "The Scoreboard component (dhf/spec/measurement/scoreboard.feature):
-  `rdm-spec scoreboard A B` compares two filed scores for the spec owner,
-  honestly: what got better and what got worse (A to B), counted apart and
-  never as a net, over the items both scored; a moved denominator and the
-  items only one cycle scored are said aloud.
+  `rdm-spec scoreboard A B` compares the filed scores of two cycles, for the
+  spec owner, never the builder. It counts both directions over the items
+  both cycles scored, never a net; a moved denominator is said out loud and
+  the items one cycle alone scored are counted apart; a scoped cycle is
+  reported target first, the rest apart; a bootstrap cycle is never a
+  baseline.
 
-  It reads each cycle's score.edn (the scorer's) and cycle.edn (for
-  :bootstrap; a cycle's scope is its score's :scope, else its cycle.edn's,
-  else the project). An item passed when its verdict is :pass; an ungraded
-  item was filed as a fail, and counts as one.
+  It reads each cycle's score.edn (its :scope and :items) and cycle.edn
+  (:bootstrap). An item is better when it failed in A and passed in B, worse
+  when it passed in A and failed in B. Item lists are sorted by id.
 
-  The result, on standard output, in one of three shapes, each with
-  :cycles [A B] first and :statements last:
+  Its result, exactly (spec-0283, spec-0284):
 
-    whole project (spec-0283):
-      {:scoreboard {:cycles :scored {A n B n} :compared :better :worse
-                    :better-items :worse-items :only-in {A [id] B [id]}
-                    :statements}}
-    a scoped cycle (spec-0284): the scoped cycle's scope is the target (B's
-    when both are scoped), everything else the rest:
-      {:scoreboard {:cycles
-                    :target {:scope :cycle :compared :better :worse
-                             :better-items :worse-items}
-                    :rest {:compared :better :worse :better-items
-                           :worse-items :not-scored {cycle n}}
-                    :statements}}
-      :not-scored counts, per cycle that left some, the items of the rest
-      the other cycle scored and it did not.
-    a bootstrap cycle (spec-0192): never a baseline, so nothing is counted:
-      {:scoreboard {:cycles :bootstrap [cycle] :scored {cycle n} :statements}}
-      :scored names only the cycles that were scored.
+    two cycles of the whole project:
+      {:scoreboard {:cycles [A B] :scored {A n B n} :compared n
+                    :better n :worse n :better-items [id] :worse-items [id]
+                    :only-in {A [id] B [id]} :statements [text]}}
+    a scoped cycle (B, else A, when its :scope is not :project):
+      {:scoreboard {:cycles [A B]
+                    :target {:scope S :cycle C :compared n :better n :worse n
+                             :better-items [id] :worse-items [id]}
+                    :rest {:compared n :better n :worse n :better-items [id]
+                           :worse-items [id] :not-scored {C n}}
+                    :statements [text]}}
+    a bootstrap cycle:
+      {:scoreboard {:cycles [A B] :bootstrap [C] :statements [text]}}
 
-  Cannot run (exit 2): a cycle name that is not one, the same cycle twice,
-  a cycle with no score.edn (a bootstrap cycle needs none), an unreadable
-  score.edn or cycle.edn."
+  A scoped cycle's checklist holds its scope only, so every item it scored
+  is its target's, and the rest is what the other cycle scored outside it,
+  not compared.
+
+  Cannot run (exit 2): a cycle with no score.edn (a bootstrap cycle aside),
+  or one that is not readable EDN."
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.command :as command]))
 
 ;; ---------------------------------------------------------------------------
-;; Pure: comparing
+;; Pure
 
-(defn- passed? [item] (= :pass (:verdict item)))
+(defn- verdicts [score] (into {} (for [it (:items score) :when (map? it)] [(:id it) (:verdict it)])))
 
-(defn- by-id [items] (into {} (map (juxt :id identity)) items))
+(defn- directions
+  "{:compared :better :worse :better-items :worse-items} over the `shared` ids."
+  [va vb shared]
+  (let [better (sort (filter #(and (= :fail (va %)) (= :pass (vb %))) shared))
+        worse (sort (filter #(and (= :pass (va %)) (= :fail (vb %))) shared))]
+    {:compared (count shared) :better (count better) :worse (count worse)
+     :better-items (vec better) :worse-items (vec worse)}))
 
-(defn- scope-of [{:keys [score cycle]}]
-  (let [s (if (contains? score :scope) (:scope score) (:scope cycle))]
-    (if (nil? s) :project s)))
+(defn- scoped? [score] (let [s (:scope score)] (and (some? s) (not= :project s))))
 
-(defn- scoped? [c] (not= :project (scope-of c)))
-
-(defn- bootstrap? [c] (true? (get-in c [:cycle :bootstrap])))
-
-(defn- direction
-  "{:compared :better :worse :better-items :worse-items} over `ids`, A to B."
-  [a-items b-items ids]
-  (let [better (sort (filter #(and (not (passed? (a-items %))) (passed? (b-items %))) ids))
-        worse (sort (filter #(and (passed? (a-items %)) (not (passed? (b-items %)))) ids))]
-    (array-map :compared (count ids) :better (count better) :worse (count worse)
-               :better-items (vec better) :worse-items (vec worse))))
-
-(defn- n-items
-  "\"1 item\" or \"N items\"."
-  [n]
-  (str n (if (= 1 n) " item" " items")))
-
-(defn- whole
-  [{a :name :as ca} {b :name :as cb}]
-  (let [ai (by-id (get-in ca [:score :items]))
-        bi (by-id (get-in cb [:score :items]))
-        shared (sort (filter bi (keys ai)))
-        only-a (vec (sort (remove bi (keys ai))))
-        only-b (vec (sort (remove ai (keys bi))))
-        d (direction ai bi shared)
-        statements (concat
-                    (when (or (seq only-a) (seq only-b))
-                      [(str "the denominator moved from " (count ai) " to " (count bi) ": only the "
-                            (n-items (count shared)) " both scored "
-                            (if (= 1 (count shared)) "is" "are") " compared")])
-                    (when (seq only-a)
-                      [(str (n-items (count only-a)) (if (= 1 (count only-a)) " was" " were")
-                            " scored only in cycle " a ": " (if (= 1 (count only-a)) "it is" "they are")
-                            " not compared")])
-                    (when (seq only-b)
-                      [(str (n-items (count only-b)) (if (= 1 (count only-b)) " was" " were")
-                            " scored only in cycle " b ": " (if (= 1 (count only-b)) "it is" "they are")
-                            " counted apart, not compared")]))]
-    (array-map :cycles [a b]
-               :scored (array-map a (count ai) b (count bi))
-               :compared (:compared d) :better (:better d) :worse (:worse d)
-               :better-items (:better-items d) :worse-items (:worse-items d)
-               :only-in (array-map a only-a b only-b)
-               :statements (vec statements))))
-
-(defn- scoped
-  [{a :name :as ca} {b :name :as cb}]
-  (let [ai (by-id (get-in ca [:score :items]))
-        bi (by-id (get-in cb [:score :items]))
-        [t other] (if (scoped? cb) [cb ca] [ca cb])
-        tn (:name t)
-        on (:name other)
-        target-ids (set (map :id (get-in t [:score :items])))
-        other-ids (set (map :id (get-in other [:score :items])))
-        t-shared (sort (filter other-ids target-ids))
-        t-only (sort (remove other-ids target-ids))
-        rest-ids (remove target-ids (distinct (concat (keys ai) (keys bi))))
-        r-shared (sort (filter #(and (ai %) (bi %)) rest-ids))
-        not-scored (into (array-map)
-                         (for [[nm own] [[a ai] [b bi]]
-                               :let [n (count (remove own rest-ids))]
-                               :when (pos? n)]
-                           [nm n]))
-        td (direction ai bi t-shared)
-        rd (direction ai bi r-shared)
-        statements (concat
-                    [(str "cycle " tn " is scoped to " (pr-str (scope-of t)) ": its scope is reported first")]
-                    (when (seq t-only)
-                      [(str (n-items (count t-only)) " of the scope " (if (= 1 (count t-only)) "was" "were")
-                            " scored only in cycle " tn ", not compared: " (str/join ", " t-only))])
-                    (for [[nm n] not-scored]
-                      (str "the rest was not scored in cycle " nm ": " (n-items n) " of cycle "
-                           (if (= nm a) b a) " outside the scope " (if (= 1 n) "is" "are") " not compared")))]
-    (array-map :cycles [a b]
-               :target (merge (array-map :scope (scope-of t) :cycle tn) td)
-               :rest (assoc rd :not-scored not-scored)
-               :statements (vec statements))))
-
-(defn- bootstrap
-  [{a :name :as ca} {b :name :as cb}]
-  (let [boots (filterv bootstrap? [ca cb])]
-    (array-map :cycles [a b]
-               :bootstrap (mapv :name boots)
-               :scored (into (array-map) (for [c [ca cb] :when (:score c)]
-                                           [(:name c) (count (get-in c [:score :items]))]))
-               :statements (mapv #(str "cycle " (:name %) " is a bootstrap cycle: it is never a baseline,"
-                                       " and nothing is compared against it")
-                                 boots))))
+(defn- show [x] (binding [*print-namespace-maps* false] (pr-str x)))
 
 (defn compare-cycles
-  "Pure: the scoreboard (the value of :scoreboard) of cycle `a` against
-  cycle `b`, each {:name :score score.edn-or-nil :cycle cycle.edn-or-nil}."
-  [a b]
-  (cond
-    (or (bootstrap? a) (bootstrap? b)) (bootstrap a b)
-    (or (scoped? a) (scoped? b)) (scoped a b)
-    :else (whole a b)))
-
-;; ---------------------------------------------------------------------------
-;; Reading cycles
-
-(defn- cycle-rel [req cycle file]
-  (str (str/replace (str (command/config-value req :cycles-dir)) #"/+$" "") "/" cycle "/" file))
-
-(defn- read-edn-file [req rel]
-  (let [f (command/path req rel)]
-    (when (fs/regular-file? f)
-      (let [v (try (edn/read-string (slurp (str f)))
-                   (catch Exception e (command/cannot-run! (str rel " is not readable EDN: " (ex-message e)))))]
-        (when-not (map? v) (command/cannot-run! (str rel " is not an EDN map")))
-        v))))
-
-(defn- read-cycle [req nm]
-  (when-not (and (string? nm) (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]*" nm))
-    (command/cannot-run! (str "the cycle " (pr-str nm) " is not a cycle's name, such as 03")))
-  (let [c {:name nm
-           :cycle (read-edn-file req (cycle-rel req nm "cycle.edn"))
-           :score (read-edn-file req (cycle-rel req nm "score.edn"))}]
-    (when (and (nil? (:score c)) (not (bootstrap? c)))
-      (command/cannot-run! (str "no " (cycle-rel req nm "score.edn") ": cycle " nm
-                                " has not been scored (rdm-spec score " nm " --verdicts FILE)")))
-    (when (and (:score c) (not (vector? (get-in c [:score :items]))))
-      (command/cannot-run! (str (cycle-rel req nm "score.edn") " holds no :items vector")))
-    c))
+  "Pure: the scoreboard of the cycles [a b], each {:cycle cycle.edn :score
+  score.edn} in `cycles`."
+  [[a b] cycles]
+  (let [boot (vec (filter #(get-in cycles [% :cycle :bootstrap]) [a b]))]
+    (if (seq boot)
+      {:cycles [a b] :bootstrap boot
+       :statements (vec (for [c boot] (str "cycle " c " is a bootstrap cycle: it is never a baseline,"
+                                           " so nothing is compared against it")))}
+      (let [sa (get-in cycles [a :score]) sb (get-in cycles [b :score])
+            va (verdicts sa) vb (verdicts sb)
+            ida (set (keys va)) idb (set (keys vb))
+            shared (filter idb ida)]
+        (if-let [t (cond (scoped? sb) b (scoped? sa) a)]
+          (let [other (if (= t b) a b)
+                [vt vo] (if (= t b) [vb va] [va vb])
+                not-scored (count (remove (set (keys vt)) (keys vo)))
+                scope (get-in cycles [t :score :scope])]
+            {:cycles [a b]
+             :target (merge {:scope scope :cycle t} (directions va vb shared))
+             :rest (assoc (directions va vb []) :not-scored {t not-scored})
+             :statements (vec (concat
+                               [(str "cycle " t " is scoped to " (show scope) ": its scope is reported first")]
+                               (when (pos? not-scored)
+                                 [(str "the rest was not scored in cycle " t ": " not-scored " items of cycle " other
+                                       " outside the scope are not compared")])))})
+          (let [only-a (vec (sort (remove idb ida)))
+                only-b (vec (sort (remove ida idb)))]
+            (merge {:cycles [a b] :scored {a (count ida) b (count idb)}}
+                   (directions va vb shared)
+                   {:only-in {a only-a b only-b}
+                    :statements (vec (concat
+                                      (when (not= (count ida) (count idb))
+                                        [(str "the denominator moved from " (count ida) " to " (count idb)
+                                              ": only the " (count shared) " items both cycles scored are compared")])
+                                      (when (seq only-b)
+                                        [(str (count only-b) " items are new in cycle " b ": counted apart, never compared")])
+                                      (when (seq only-a)
+                                        [(str (count only-a) " items of cycle " a " were not scored in cycle " b
+                                              ": counted apart, never compared")])))})))))))
 
 ;; ---------------------------------------------------------------------------
 ;; The stage
 
+(defn- read-edn [req rel]
+  (let [f (command/path req rel)]
+    (when (fs/regular-file? f)
+      (try (edn/read-string (slurp (str f)))
+           (catch Exception e (command/cannot-run! (str rel " is not readable EDN: " (ex-message e))))))))
+
 (defn scoreboard
-  "The scoreboard stage: compares the two cycles named."
+  "The scoreboard stage: `rdm-spec scoreboard A B`."
   [req]
-  (let [[a b] (:args req)]
-    (when (= a b)
-      (command/cannot-run! (str "the scoreboard compares two cycles, not cycle " a " with itself")))
-    {:result {:scoreboard (compare-cycles (read-cycle req a) (read-cycle req b))}
-     :findings []}))
+  (let [dir (str/replace (str (command/config-value req :cycles-dir)) #"/+$" "")
+        [a b] (:args req)
+        cycles (into {}
+                     (for [c [a b]
+                           :let [cyc (read-edn req (str dir "/" c "/cycle.edn"))
+                                 score-rel (str dir "/" c "/score.edn")
+                                 score (read-edn req score-rel)]]
+                       (do
+                         (when (and (nil? score) (not (:bootstrap cyc)))
+                           (command/cannot-run! (str "there is no " score-rel ": cycle " c " has no filed score to compare")))
+                         (when (and score (not (map? score)))
+                           (command/cannot-run! (str score-rel " is not a score, a map")))
+                         [c {:cycle cyc :score score}])))]
+    {:result {:scoreboard (compare-cycles [a b] cycles)} :findings []}))

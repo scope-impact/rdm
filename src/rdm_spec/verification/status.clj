@@ -1,100 +1,99 @@
 (ns rdm-spec.verification.status
   "The Status component of the verification context
-  (dhf/spec/verification/status.feature; dhf/spec/glossary.md, \"Verified /
-  failed / unverified / planned\"): derives every stamped scenario's status
-  from a run's Allure results (the Results reader) and publishes it,
-  VerificationDerived. It reads the scenarios from SpecParsed.
+  (dhf/spec/verification/status.feature): verified, failed, unverified or
+  planned, for every stamped scenario, derived from a run's Allure results
+  (the Results reader), never written. Status is a report: the task exits 0
+  whatever the statuses; only the release check refuses.
 
-  A scenario is
-    :planned     tagged @wip, whatever its results;
-    :failed      a result labelled with its id did not pass;
-    :verified    a result labelled with its id passed, none did not, and,
-                 for an outline, every example row has a passing result;
-    :unverified  otherwise: no result, or an outline row with none.
-  A row of an outline is named by the end of a result's name: its
-  `key=value` pairs, in the header's order (the runner writes
-  \"NAME [k=v, k2=v2]\").
+    planned     tagged @wip, whatever the results say
+    failed      a result labelled with its id did not pass
+    verified    a passing result labelled with its id, and none that did not
+                pass; an outline only when every example row has a passing
+                result
+    unverified  otherwise: no result, or an outline row with none
 
-  The stage `status` (task status) reports
-    {:results DIR
-     :scenarios [{:id :title :file :line :context :component :status}]
-     :counts {:verified n :failed n :unverified n :planned n}
-     :unknown-results [{:file :spec}]
-     :unreadable [file]}
-  and exits 0 whatever the statuses: only the release check refuses. An
-  unreadable result file and a result naming no stamped scenario are each
-  named on the error stream, as warnings. The stage `derive!` (publish) only
-  derives and publishes, when results were given.
+  A row of an outline is named by its result's parameters, or by its name
+  ending with the row as [key=value, ...]; when no result of an outline
+  names a row, it takes one passing result per row.
 
-  Others read it through `subscriptions`, `spec-of`, `stamped`,
-  `derive-from!`, `counts` and `unknown-warnings`."
-  (:require [clojure.string :as str]
+  It reads the scenarios from SpecParsed (`subscriptions`, `spec-of`) and
+  publishes VerificationDerived. `derive-from!` is what Trace, the Release
+  check and the audit copy read statuses with.
+
+  The status task's result: {:results DIR :scenarios [{:id :title :file
+  :line :status}] :counts {:verified :failed :unverified :planned}
+  :unknown-results [{:file :spec}] :unreadable [file]}; each unreadable
+  result file is a finding (result-unreadable), each result naming no
+  stamped scenario a warning (result-unknown)."
+  (:require [cheshire.core :as json]
+            [clojure.string :as str]
             [rdm-spec.kernel.command :as command]
             [rdm-spec.verification.results :as results]))
 
 ;; ---------------------------------------------------------------------------
-;; The spec, from SpecParsed
+;; SpecParsed
 
 (defn subscriptions
   "Keeps SpecParsed in the run's state."
   [req]
-  [[:SpecParsed (fn [payload] (some-> (:state req) (swap! assoc ::spec payload)) nil)]])
+  [[:SpecParsed (fn [payload] (swap! (:state req) assoc ::spec payload) nil)]])
 
 (defn spec-of
-  "The SpecParsed payload of the run; the task cannot run without one."
+  "The spec SpecParsed carried in this run; the task cannot run without it."
   [req]
   (or (some-> (:state req) deref ::spec)
-      (command/cannot-run! "the spec was not read: no SpecParsed event reached the status")))
+      (command/cannot-run! "no SpecParsed reached the status: the spec was not read")))
 
 (defn stamped
-  "The scenarios of `scenarios` that carry one id."
+  "The scenarios that carry exactly one id."
   [scenarios]
   (filterv :id scenarios))
 
 ;; ---------------------------------------------------------------------------
-;; Deriving
+;; Pure
 
-(defn- q [s] (java.util.regex.Pattern/quote (str s)))
+(defn- row-of
+  "The row values a result names: its parameters, or the [k=v, ...] its
+  name ends with; nil when it names none."
+  [{:keys [parameters name]}]
+  (or (when (seq parameters)
+        (into {} (for [p parameters :when (map? p)] [(str (or (:name p) (get p "name"))) (str (or (:value p) (get p "value")))])))
+      (when-let [[_ inner] (re-find #"\[([^\[\]]*=[^\[\]]*)\]\s*$" (str name))]
+        (into {} (for [pair (str/split inner #",\s*")
+                       :let [[k v] (str/split pair #"=" 2)]
+                       :when v]
+                   [(str/trim k) (str/trim v)])))))
 
-(defn names-row?
-  "Whether the result name `nm` ends with the row's `pairs` ([[k v] ..]) as
-  key=value pairs, in order."
-  [nm pairs]
-  (boolean
-   (when (and (string? nm) (seq pairs))
-     (re-find (re-pattern (str "(?:^|[\\s\\[(,;|])"
-                               (str/join "[\\s,;|]+" (map (fn [[k v]] (str (q k) "=" (q v))) pairs))
-                               "[\\s\\])}]*$"))
-              nm))))
+(defn- outline-status [sc rs]
+  (let [rows (:rows sc)
+        named (filter row-of rs)
+        covered? (fn [row] (some #(= (:values row) (row-of %)) named))]
+    (cond
+      (empty? rows) (if (seq rs) :verified :unverified)
+      (seq named) (if (every? covered? rows) :verified :unverified)
+      :else (if (>= (count rs) (count rows)) :verified :unverified))))
 
-(defn rows
-  "The example rows of the outline `sc`: [[[k v] ..] ..], in order."
-  [sc]
-  (vec (for [ex (:examples sc) row (:rows ex)]
-         (mapv vector (:header ex) (:cells row)))))
-
-(defn status-of
-  "The status of the scenario `sc` given its results `rs` ([{:status :name}])."
-  [sc rs]
-  (cond
-    (:wip? sc) :planned
-    (empty? rs) :unverified
-    (some #(not= "passed" (:status %)) rs) :failed
-    (and (:outline? sc) (seq (rows sc)))
-    (if (every? (fn [pairs] (some #(names-row? (:name %) pairs) rs)) (rows sc)) :verified :unverified)
-    :else :verified))
-
-(defn derive-statuses
-  "Pure: {:statuses {id status} :by-id {id [result]} :unknown-results
-  [{:file :spec}]} of the scenarios and the results read."
+(defn statuses-of
+  "Pure: {id status} of the stamped `scenarios`, from the results `rs`
+  ([{:spec :status :name :parameters}])."
   [scenarios rs]
-  (let [scs (stamped scenarios)
-        ids (set (map :id scs))
-        by-id (group-by :spec (filter #(ids (:spec %)) rs))]
-    {:statuses (into {} (for [sc scs] [(:id sc) (status-of sc (get by-id (:id sc) []))]))
-     :by-id by-id
-     :unknown-results (vec (for [r rs :when (and (:spec r) (not (ids (:spec r))))]
-                             {:file (:file r) :spec (:spec r)}))}))
+  (let [by-id (group-by :spec rs)]
+    (into {}
+          (for [sc (stamped scenarios)
+                :let [mine (get by-id (:id sc))]]
+            [(:id sc)
+             (cond
+               (:wip? sc) :planned
+               (some #(not= "passed" (:status %)) mine) :failed
+               (empty? mine) :unverified
+               (:outline? sc) (outline-status sc mine)
+               :else :verified)]))))
+
+(defn unknown
+  "The results labelled with an id no stamped scenario carries: [{:file :spec}]."
+  [scenarios rs]
+  (let [ids (set (map :id (stamped scenarios)))]
+    (vec (for [r rs :when (and (:spec r) (not (ids (:spec r))))] {:file (:file r) :spec (:spec r)}))))
 
 (defn counts
   "How many scenarios have each status."
@@ -102,52 +101,55 @@
   (merge {:verified 0 :failed 0 :unverified 0 :planned 0} (frequencies (vals statuses))))
 
 (defn unknown-warnings
-  "A warning per result naming no stamped scenario."
-  [unknown]
-  (vec (for [{:keys [file spec]} unknown]
+  "A warning for each result naming no stamped scenario."
+  [unknown-results]
+  (vec (for [{:keys [file spec]} unknown-results]
          (command/warning file "result-unknown"
-                          (str "this result is labelled spec=" spec ", which names no stamped scenario: it counts toward none")))))
+                          (str "this result is labelled " spec ", which no stamped scenario of the spec carries;"
+                               " it counts toward no scenario")))))
+
+;; ---------------------------------------------------------------------------
+;; Deriving
+
+(defn- parameters-of [req file]
+  (try (let [m (json/parse-string (slurp (str (command/path req file))) true)]
+         (when (sequential? (:parameters m)) (:parameters m)))
+       (catch Exception _ nil)))
 
 (defn derive-from!
-  "Reads the results directory `dir`, derives every stamped scenario's status
-  and publishes VerificationDerived: {:read (the Results reader's) :derived}."
+  "Reads the results in the directory `dir` and derives every stamped
+  scenario's status from them, publishing VerificationDerived:
+  {:read (the Results reader's) :derived {:statuses :by-id :unknown-results}}."
   [req dir]
   (let [spec (spec-of req)
         read (results/read-dir req dir)
-        derived (derive-statuses (:scenarios spec) (:results read))]
+        outline-ids (set (map :id (filter :outline? (stamped (:scenarios spec)))))
+        rs (mapv (fn [r] (if (outline-ids (:spec r)) (assoc r :parameters (parameters-of req (:file r))) r))
+                 (:results read))
+        statuses (statuses-of (:scenarios spec) rs)
+        unknown-results (unknown (:scenarios spec) rs)]
     (command/publish! req :verification/status :VerificationDerived
                       {:revision (:revision spec)
-                       :statuses (:statuses derived)
-                       :unknown-results (:unknown-results derived)
+                       :statuses statuses
+                       :unknown-results unknown-results
                        :unreadable-files (mapv :file (:unreadable read))})
-    {:read read :derived derived}))
-
-;; ---------------------------------------------------------------------------
-;; The stages
+    {:read read
+     :derived {:statuses statuses
+               :by-id (group-by :spec (filter :spec rs))
+               :unknown-results unknown-results}}))
 
 (defn status
-  "The status stage: every stamped scenario with its status."
+  "The status stage: `rdm-spec status [--results DIR]`."
   [req]
   (let [spec (spec-of req)
         {:keys [read derived]} (derive-from! req (:results req))
-        statuses (:statuses derived)]
+        sts (:statuses derived)]
     {:result {:results (:dir read)
               :scenarios (vec (for [sc (stamped (:scenarios spec))]
                                 {:id (:id sc) :title (:title sc) :file (:file sc) :line (:line sc)
-                                 :context (:context-name sc) :component (:component-name sc)
-                                 :status (get statuses (:id sc))}))
-              :counts (counts statuses)
+                                 :status (get sts (:id sc))}))
+              :counts (counts sts)
               :unknown-results (:unknown-results derived)
               :unreadable (mapv :file (:unreadable read))}
-     :findings (vec (concat (for [{:keys [file why]} (:unreadable read)]
-                              (command/warning file "result-unreadable"
-                                               (str "this Allure result is unreadable: " why "; it verifies nothing")))
+     :findings (vec (concat (results/unreadable-findings read)
                             (unknown-warnings (:unknown-results derived))))}))
-
-(defn derive!
-  "Derives and publishes the statuses when results were given; reports
-  nothing."
-  [req]
-  (when-not (str/blank? (:results req))
-    (derive-from! req (:results req)))
-  {:result {} :findings []})
