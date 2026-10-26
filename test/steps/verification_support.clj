@@ -130,11 +130,12 @@
   (kc/stdout-edn (kc/the-run ctx)))
 
 (defn statuses
-  "{id status} of the last status run (status a keyword)."
+  "{id status} of the last status run (status a keyword), read from its
+  result {:status {:scenarios [{:id :status ..}]}} (spec-0307)."
   [ctx]
   (let [r (kc/the-run ctx)
-        out (kc/stdout-edn r)]
-    (s/check! (sequential? (:scenarios out)) (str "the report lists no :scenarios\n" (s/show r)))
+        out (:status (kc/stdout-edn r))]
+    (s/check! (sequential? (:scenarios out)) (str "the report lists no {:status {:scenarios ..}}\n" (s/show r)))
     (into {} (map (juxt :id :status)) (:scenarios out))))
 
 (defn status-of!

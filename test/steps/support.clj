@@ -12,8 +12,14 @@
   value unsets a variable).
 
   API: room-root, bb, fixture-root, tmp-dir, check!, fail!, write!,
-  room-config, built?, needs-built!, copy-of-room!, project!, env-for,
-  command, rdm-spec!, err-lines, show, split-args."
+  room-config, built?, needs-built!, copy-of-room!, project!, hooks-off!,
+  env-for, command, rdm-spec!, err-lines, show, split-args.
+
+  A fixture's git hooks never run (dhf/spec/README.md): a fixture made by
+  init or adopt carries the skeleton's pre-commit hook, which runs whatever
+  rdm-spec is on PATH, so a scenario that commits in one turns its hooks off
+  (hooks-off!) unless it is about the hook; every commit a step makes passes
+  --no-verify as well."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.edn :as edn]
@@ -137,6 +143,20 @@
    (let [dir (tmp-dir)]
      (write-config! dir (merge (dissoc (room-config) :oracle) overrides))
      dir)))
+
+;; ---------------------------------------------------------------------------
+;; Git hooks
+
+(defn hooks-off!
+  "Turns the git hooks of the repository `dir` off: core.hooksPath names a
+  new empty directory under the fixture root, so no hook runs, the
+  skeleton's pre-commit hook included. Returns `dir`."
+  [dir]
+  (let [empty-hooks (tmp-dir)
+        r (p/shell {:dir (str dir) :out :string :err :string :continue true :in ""}
+                   "git" "config" "--local" "core.hooksPath" empty-hooks)]
+    (check! (zero? (:exit r)) (str "the hooks of " dir " cannot be turned off: " (:err r)))
+    dir))
 
 ;; ---------------------------------------------------------------------------
 ;; Running rdm-spec

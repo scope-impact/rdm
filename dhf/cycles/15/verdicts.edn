@@ -1,0 +1,152 @@
+[{:id "spec-0064",
+  :verdict :pass,
+  :evidence
+  "Fixture from init with @spec-0020 @wip (no result) and @spec-0021 with a passing result in dhf/allure-results; `status` exited 0 and listed spec-0020 :planned (spec-0021 :verified)."}
+ {:id "spec-0065",
+  :verdict :pass,
+  :evidence
+  "Committed fixture with spec-0030 passed, spec-0031 failed, spec-0032 no result; `status` exited 0 listing :verified, :failed, :unverified respectively; sha256 of every dhf/spec file identical before/after and git status clean."}
+ {:id "spec-0066",
+  :verdict :pass,
+  :evidence
+  "Outline @spec-0010 with rows k=a,b,c; results with parameters k=a passed, k=b passed, k=c failed; `status --results r66` exited 0, spec-0010 :failed."}
+ {:id "spec-0067",
+  :verdict :pass,
+  :evidence
+  "Stamped @spec-0007, one result labelled spec=spec-0007 status passed; `status` exited 0, spec-0007 :verified."}
+ {:id "spec-0068",
+  :verdict :pass,
+  :evidence
+  "Four rows: a single spec=spec-0007 result with status failed, broken, skipped, unknown each in its own results dir; `status` exited 0 and spec-0007 was :failed in all four."}
+ {:id "spec-0069",
+  :verdict :pass,
+  :evidence
+  "Two spec=spec-0007 results, one passed and one failed; `status` exited 0, spec-0007 :failed."}
+ {:id "spec-0070",
+  :verdict :pass,
+  :evidence
+  "Fresh project with ten stamped scenarios spec-0040..0049 and passing results for nine; `status` exited 0, 10 scenarios listed, counts {:verified 9 :unverified 1}, spec-0049 :unverified."}
+ {:id "spec-0086",
+  :verdict :pass,
+  :evidence
+  "`init sauna` exited 0; git repo with no commit, core.hooksPath=.githooks; working tree holds exactly the 15 tabled files with the stated contents (model with system only, {} catalogue/needs, {:issued 0}, config with prefix, dirs, deny/keep lists, watch [\"/\" \"~\"] /tmp, no implementation paths, hook exec rdm-spec check, cut.yml on push, .gitignore 5 entries); stdout {:init {:wrote [...15 paths] :next-steps [...]}}."}
+ {:id "spec-0087",
+  :verdict :pass,
+  :evidence
+  "Existing dir ex with a file; `init ex` exited 2 with 'cannot-run: ex exists: ...'; listing of ex (names, sizes, mtimes) unchanged."}
+ {:id "spec-0089",
+  :verdict :pass,
+  :evidence
+  "`init p89 --id-prefix sauna` exited 0; config.edn has :id-prefix \"sauna\"."}
+ {:id "spec-0090",
+  :verdict :pass,
+  :evidence
+  "`check` in a freshly initialised project exited 0 with :spec {:passed? true} and no findings on stderr."}
+ {:id "spec-0166",
+  :verdict :pass,
+  :evidence
+  "`check --events` on a copy of the build (oracle removed) exited 0; stderr ends, after the warnings, with 'event: KnowledgeIndexed published-by knowledge/sources', 'event: SpecParsed published-by spec/parser', 'event: SpecGated published-by spec/check'."}
+ {:id "spec-0167",
+  :verdict :pass,
+  :evidence
+  "Ran `check --events` twice on the unchanged copy; both exited 0 and the event: lines were identical in content and order."}
+ {:id "spec-0176",
+  :verdict :pass,
+  :evidence
+  "`help` exited 0; scripted comparison of all 21 outline rows against {:help {:tasks [...]}} found task, usage and does identical for every row (21 tasks listed)."}
+ {:id "spec-0177",
+  :verdict :pass,
+  :evidence
+  "`check` on a copy of rdm-spec's own spec exited 0 (:spec {:passed? true}), only warnings on stderr."}
+ {:id "spec-0178",
+  :verdict :pass,
+  :evidence
+  "Removed @contract from spec-0180; `check` exited 1, stderr 'dhf/spec/kernel/command.feature:102: scenario-no-level: ...' (other lines are FILE:LINE: warning: lines), stdout one EDN map {:knowledge :spec :lint :views :paths}."}
+ {:id "spec-0179",
+  :verdict :pass,
+  :evidence
+  "Copy of rdm-spec without dhf/allure-results, RESULTS_DIR unset; `status` exited 2, stdout empty, stderr 'cannot-run: the results directory dhf/allure-results does not exist'."}
+ {:id "spec-0180",
+  :verdict :pass,
+  :evidence
+  "`frobnicate` exited 2: 'cannot-run: unknown task frobnicate: the tasks are help, init, ... observe' (all 21)."}
+ {:id "spec-0191",
+  :verdict :pass,
+  :evidence
+  "@wip spec-0020 with a skipped and a passed result in dhf/allure-results; `status` exited 0 and listed spec-0020 :planned."}
+ {:id "spec-0193",
+  :verdict :pass,
+  :evidence
+  "RESULTS_DIR unset, result for spec-0177 in dhf/allure-results; `status` exited 0 with :results \"dhf/allure-results\" and spec-0177 :verified."}
+ {:id "spec-0219",
+  :verdict :pass,
+  :evidence
+  "Distinct results in dhf/allure-results, R1, other: unset/no flag read dhf/allure-results; RESULTS_DIR=R1 read R1; RESULTS_DIR=R1 --results other read other (shown by :results and which scenario was verified), all exit 0."}
+ {:id "spec-0223",
+  :verdict :pass,
+  :evidence
+  "No flag: exit 0, :id-prefix \"spec\"; --id-prefix 9lives: exit 2 'a prefix starts with a letter and holds letters, digits and single hyphens', nothing written; --id-prefix UN: exit 2 'the prefix UN is taken by need tags', nothing written."}
+ {:id "spec-0235",
+  :verdict :pass,
+  :evidence
+  "Copy with spec-0180's level removed and a model description changed (views stale); `check` exited 1 naming scenario-no-level at command.feature:102 and view-stale for every dhf/views/*.mmd."}
+ {:id "spec-0237",
+  :verdict :pass,
+  :evidence
+  "Tags spec-3/spec-4 differing only in architecture/views.feature and kernel/bus.feature; `scopes spec-3 spec-4` exited 0 with :scopes [{:component :kernel/bus} {:component :architecture/views}], :shared []."}
+ {:id "spec-0238",
+  :verdict :pass,
+  :evidence
+  "Only dhf/spec/glossary.md changed; `scopes` exited 0, :scopes [] :shared [\"dhf/spec/glossary.md\"], stderr 'dhf/spec/glossary.md: warning: scope-shared: ... a person must judge whose readers to rebuild'."}
+ {:id "spec-0241",
+  :verdict :pass,
+  :evidence
+  "Only new architecture/views.md added; `scopes` exited 0 with :scopes [{:component :architecture/views}]."}
+ {:id "spec-0272",
+  :verdict :pass,
+  :evidence
+  "`init /home/user/c15/grade/fx.../abs/sauna` exited 0; the directory is a git repository holding the skeleton (.githooks .github .gitignore dhf)."}
+ {:id "spec-0285",
+  :verdict :pass,
+  :evidence
+  "Outline spec-0010, passing results naming rows k=a and k=b only; `status` exited 0, spec-0010 :unverified (all three rows passing gave :verified as a control)."}
+ {:id "spec-0298",
+  :verdict :pass,
+  :evidence
+  "Only SpecParsed's :revision shape changed (read-by [status audit]); `scopes` exited 0 with [spec/parser, verification/status, compliance/audit], no lint/checklist/site."}
+ {:id "spec-0299",
+  :verdict :pass,
+  :evidence
+  "kernel/command, spec/parser, verification/status feature files changed; `scopes` exited 0 listing kernel/command, spec/parser, verification/status in that order."}
+ {:id "spec-0300",
+  :verdict :pass,
+  :evidence
+  "SpecParsed :scenarios gained key :foo with :read-by naming only verification/status; `scopes` exited 0 with [spec/parser, verification/status]."}
+ {:id "spec-0301",
+  :verdict :pass,
+  :evidence
+  "Row1 VerificationDerived :read-by changed; row2 SpecGated with no :read-by gained one naming all three keys; row3 SpecParsed with no :read-by gained {:scenarios {:id [...]}}; each `scopes` exited 0 with :scopes []."}
+ {:id "spec-0302",
+  :verdict :pass,
+  :evidence
+  "Outline spec-0010 with three passing spec=spec-0010 results with no parameters; `status` exited 0, spec-0010 :unverified."}
+ {:id "spec-0303",
+  :verdict :pass,
+  :evidence
+  "Init project with component orders/cart (model, feature, need, source, views) and events.edn declaring only OrderPlaced published-by :orders/cart; `check --events` exited 0 listing KnowledgeIndexed/knowledge/sources, SpecParsed/spec/parser, SpecGated/spec/check."}
+ {:id "spec-0304",
+  :verdict :pass,
+  :evidence
+  "Three init projects with empty, OrderPlaced-only and SpecParsed-with-publisher-:orders/cart catalogues; `check --events` exited 0 in each and the event: lines were identical to the empty catalogue's."}
+ {:id "spec-0305",
+  :verdict :pass,
+  :evidence
+  "SpecParsed without :read-by at both cuts, its :needs shape changed; `scopes` exited 0 with spec/parser then all five subscribers (lint, status, checklist, site, audit)."}
+ {:id "spec-0306",
+  :verdict :pass,
+  :evidence
+  "SpecGated :read-by {:passed? [] ...} at both cuts, :passed? shape changed; `scopes` exited 0 with :scopes [{:component :spec/check}] only."}
+ {:id "spec-0307",
+  :verdict :fail,
+  :evidence
+  "Fixture as stated (lines 4/8/12, @spec-0003 @wip, DIR with spec-0001 passed and spec=spec-0099 in bbb-result.json); `status --results DIR` exited 0 and everything matched except :unknown-results [{:file \"DIR/bbb-result.json\" ...}], where the scenario states F is the name of the result's file within DIR (bbb-result.json)."}]

@@ -1,77 +1,87 @@
 (ns rdm-spec.kernel.bus
-  "The event bus (dhf/spec/kernel/bus.feature): bounded contexts meet only on
-  it, within one run of the command. Delivery is synchronous, in
-  subscription order; every event published is kept, in order, so a run can
-  show its events.
+  "The event bus (dhf/spec/kernel/bus.feature; dhf/spec/glossary.md, \"Event
+  bus\"): rdm-spec's in-process bus, within one run, synchronous and in
+  subscription order.
 
-  The bus carries only what the project's event catalogue (the configured
-  :events, dhf/spec/events.edn) declares: an event it does not declare, one
-  from another publisher than the declared one, or one missing a key it
-  carries is refused, and the task cannot run (exit 2), naming the event and
-  the catalogue. An empty catalogue, as init writes, declares nothing and so
-  checks nothing.
+  It carries rdm-spec's own events, the ones between its bounded contexts,
+  built in: `catalogue` is rdm-spec's own spec, dhf/spec/events.edn, as the
+  release was built from it (each event's publisher and the keys it
+  carries). A project's configured catalogue is that project's design
+  record: the bus never reads it, so it never changes what a run publishes
+  (spec-0303, spec-0304).
 
-    (make-bus {:catalogue {:Event {:published-by :ctx/comp :carries [:k]}}
-               :source \"dhf/spec/events.edn\"})
-    (subscribe! bus :Event :ctx/subscriber (fn [payload] ...))
-    (publish! bus :ctx/comp :Event payload)
-    (events bus)  ; [{:event :publisher :payload}], in order"
-  (:require [clojure.string :as str]))
+  It refuses (ex-info, `refused?`) an event the catalogue it was built with
+  does not declare, one from another publisher than the declared one, and
+  one missing a key it carries. Refusals are programming errors of
+  rdm-spec, never findings about a project.
 
-(defn make-bus
-  "A new bus. `opts`: :catalogue (the declared events; empty or absent checks
-  nothing) and :source (the catalogue's path, named in a refusal)."
-  ([] (make-bus {}))
-  ([{:keys [catalogue source]}]
-   {:catalogue (if (map? catalogue) catalogue {})
-    :source source
-    :subscribers (atom [])
-    :events (atom [])}))
+    (def b (bus))                        ; rdm-spec's own catalogue
+    (subscribe! b :SpecParsed f)         ; f gets the payload
+    (publish! b :spec/parser :SpecParsed payload)
+    (published b)                        ; [{:event :publisher}] in order
+    (event-line e)                       ; \"event: SpecParsed published-by spec/parser\"")
+
+(def catalogue
+  "rdm-spec's own events (dhf/spec/events.edn): {event {:published-by :carries}}."
+  {:KnowledgeIndexed {:published-by :knowledge/sources
+                      :carries [:revision :sources :pages :citations :findings]}
+   :SpecParsed {:published-by :spec/parser
+                :carries [:revision :scenarios :needs :refusals]}
+   :SpecGated {:published-by :spec/check
+               :carries [:revision :passed? :findings]}
+   :VerificationDerived {:published-by :verification/status
+                         :carries [:revision :statuses :unknown-results :unreadable-files]}
+   :ClausesIndexed {:published-by :compliance/gap
+                    :carries [:revision :clauses :documents :findings]}})
+
+(defn refused?
+  "Whether `e` is the bus's refusal."
+  [e]
+  (boolean (::refused (ex-data e))))
+
+(defn- refuse! [msg]
+  (throw (ex-info msg {::refused true})))
+
+(defn bus
+  "A new bus carrying the events of `cat` (rdm-spec's own `catalogue` when
+  none is given)."
+  ([] (bus catalogue))
+  ([cat] (atom {:catalogue cat :subscriptions [] :published []})))
+
+(defn- declared! [b event]
+  (or (get-in @b [:catalogue event])
+      (refuse! (str "the event " (name event) " is not one of rdm-spec's events, so the bus does not carry it"))))
 
 (defn subscribe!
-  "Subscribes `handler` (a function of the payload) to `event`, on behalf
-  of `subscriber`. Returns the bus."
-  [bus event subscriber handler]
-  (swap! (:subscribers bus) conj {:event event :subscriber subscriber :handler handler})
-  bus)
-
-(defn- kw-name [k] (if (keyword? k) (subs (str k) 1) (str k)))
-
-(defn refusal
-  "Why the bus refuses `publisher` publishing `event` with `payload`, or nil."
-  [{:keys [catalogue source]} publisher event payload]
-  (when (seq catalogue)
-    (let [where (str "the configured catalogue" (when source (str " " source)))
-          decl (get catalogue event)]
-      (cond
-        (nil? decl)
-        (str "the event " (kw-name event) " is not declared by " where ", so the bus does not carry it"
-             " (published by " (kw-name publisher) ")")
-
-        (and (:published-by decl) (not= (:published-by decl) publisher))
-        (str "the event " (kw-name event) " is published by " (kw-name publisher) ", but " where
-             " declares its publisher " (kw-name (:published-by decl)))
-
-        :else
-        (when-let [missing (seq (remove #(contains? payload %) (:carries decl)))]
-          (str "the event " (kw-name event) " carries no " (str/join ", " (map pr-str missing))
-               ", which " where " says it carries"))))))
-
-(defn publish!
-  "Publishes `event` with `payload` from `publisher`: kept, then delivered
-  to each subscriber in subscription order. A task cannot run when the
-  catalogue refuses it."
-  [bus publisher event payload]
-  (when bus
-    (when-let [why (refusal bus publisher event payload)]
-      (throw (ex-info why {:rdm-spec.kernel.command/cannot-run true :event event})))
-    (swap! (:events bus) conj {:event event :publisher publisher :payload payload})
-    (doseq [{e :event h :handler} @(:subscribers bus)
-            :when (= e event)]
-      (h payload)))
+  "Subscribes `handler` (fn [payload]) to `event`; deliveries follow the
+  order of subscription."
+  [b event handler]
+  (declared! b event)
+  (swap! b update :subscriptions conj [event handler])
   nil)
 
-(defn events
-  "Every event published on the bus, in order: [{:event :publisher :payload}]."
-  [bus]
-  (if bus @(:events bus) []))
+(defn publish!
+  "Publishes `event` with `payload` from `publisher`: delivers it to every
+  subscriber, in order, before returning."
+  [b publisher event payload]
+  (let [{:keys [published-by carries]} (declared! b event)
+        missing (remove #(contains? payload %) carries)]
+    (when (not= published-by publisher)
+      (refuse! (str "the event " (name event) " is published by " (subs (str published-by) 1)
+                    ", not " (subs (str publisher) 1))))
+    (when (seq missing)
+      (refuse! (str "the event " (name event) " carries " (pr-str (vec missing)) ", which its payload lacks")))
+    (swap! b update :published conj {:event event :publisher publisher})
+    (doseq [[e h] (:subscriptions @b) :when (= e event)]
+      (h payload))
+    nil))
+
+(defn published
+  "Every event published on `b`, in order: [{:event :publisher}]."
+  [b]
+  (:published @b))
+
+(defn event-line
+  "The line a run prints for a published event, with --events."
+  [{:keys [event publisher]}]
+  (str "event: " (name event) " published-by " (subs (str publisher) 1)))

@@ -1,43 +1,45 @@
 (ns rdm-spec.project.init-test
   (:require [babashka.fs :as fs]
+            [babashka.process :as p]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.kernel.command :as command]
             [rdm-spec.project.init :as init]))
 
-(defn- refused [f] (try (f) nil (catch Exception e (when (command/cannot-run? e) (ex-message e)))))
+(defn- cannot-run [f]
+  (try (f) nil (catch Exception e (when (command/cannot-run? e) (ex-message e)))))
 
-(deftest the-id-prefix-must-start-a-tag
-  (is (nil? (init/prefix-problem "spec")))
-  (is (nil? (init/prefix-problem "sauna-2")))
-  (doseq [bad ["9lives" "a--b" "a-" "-a" "a b" "a_b" ""]]
-    (is (str/includes? (init/prefix-problem bad) "starts with a letter") bad))
-  (is (str/includes? (init/prefix-problem "UN") "need tags")))
+(deftest a-prefix-starts-a-tag
+  (doseq [p ["spec" "sauna" "a1" "my-app" "x-1-y"]] (is (nil? (init/prefix-problem p)) p))
+  (doseq [p ["9lives" "-a" "a--b" "a-" "a_b" ""]] (is (re-find #"starts with a letter" (init/prefix-problem p)) p))
+  (is (re-find #"taken by need tags" (init/prefix-problem "UN"))))
 
-(deftest the-skeleton-is-rendered
-  (let [cfg (edn/read-string (init/skeleton-text "harness/config.edn" {:name "My Sauna" :id-prefix "sauna"}))
-        m (edn/read-string (init/skeleton-text "spec/model.edn" {:name "My Sauna" :id-prefix "sauna"}))]
-    (is (= "sauna" (:id-prefix cfg)))
-    (is (= "My Sauna" (get-in m [:system :name])))
+(deftest the-skeleton-is-the-specs-table
+  (is (= [".githooks/pre-commit" ".github/workflows/cut.yml" ".gitignore"]
+         (filter #(str/starts-with? % ".") init/destinations)))
+  (is (= 15 (count init/destinations)))
+  (let [t (init/skeleton-text "spec/model.edn" {:name "My sauna" :id-prefix "spec"})
+        m (edn/read-string t)]
+    (is (= #{:system} (set (keys m))))
+    (is (= "My sauna" (get-in m [:system :name])))
     (is (keyword? (get-in m [:system :id]))))
-  (is (= (count init/destinations) (count (distinct init/destinations))))
-  (is (some #{".githooks/pre-commit"} init/destinations)))
+  (is (= "sauna" (:id-prefix (edn/read-string (init/skeleton-text "harness/config.edn" {:name "x" :id-prefix "sauna"}))))))
 
-(deftest init-writes-into-a-new-path-only
+(deftest init-writes-a-repository-with-no-commit
   (let [d (str (fs/create-temp-dir {:prefix "init-test-"}))]
     (try
-      (testing "a path that exists is refused"
-        (fs/create-dirs (fs/file d "taken"))
-        (is (str/includes? (refused #(init/init {:root d :args ["taken"] :opts {}})) "taken")))
+      (let [out (get-in (init/init {:root d :args ["sauna"] :opts {}}) [:result :init])
+            s (fs/file d "sauna")]
+        (is (= init/destinations (:wrote out)))
+        (is (seq (:next-steps out)))
+        (is (fs/executable? (fs/file s ".githooks/pre-commit")))
+        (is (= ".githooks" (str/trim (:out (p/shell {:dir (str s) :out :string} "git" "config" "--get" "core.hooksPath")))))
+        (is (not (zero? (:exit (p/shell {:dir (str s) :out :string :err :string :continue true}
+                                        "git" "rev-parse" "--verify" "--quiet" "HEAD"))))))
+      (testing "a path that exists cannot run"
+        (is (re-find #"sauna" (cannot-run #(init/init {:root d :args ["sauna"] :opts {}})))))
       (testing "a bad prefix writes nothing"
-        (is (refused #(init/init {:root d :args ["x"] :opts {:id-prefix "9lives"}})))
-        (is (not (fs/exists? (fs/file d "x")))))
-      (testing "the skeleton, a repository, the hook installed"
-        (let [out (get-in (init/init {:root d :args ["new"] :opts {}}) [:result :init])]
-          (is (= (set init/destinations) (set (:wrote out))))
-          (is (seq (:next-steps out)))
-          (is (fs/directory? (fs/file d "new" ".git")))
-          (is (fs/executable? (fs/file d "new" ".githooks/pre-commit")))
-          (is (= "spec" (:id-prefix (edn/read-string (slurp (str (fs/file d "new" "dhf/harness/config.edn")))))))))
+        (is (cannot-run #(init/init {:root d :args ["other"] :opts {:id-prefix "UN"}})))
+        (is (not (fs/exists? (fs/file d "other")))))
       (finally (fs/delete-tree d)))))

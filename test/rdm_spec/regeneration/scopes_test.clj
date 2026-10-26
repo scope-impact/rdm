@@ -1,59 +1,57 @@
 (ns rdm-spec.regeneration.scopes-test
-  "Unit tests of Scopes' pure parts. They make no fixture on disk."
   (:require [clojure.test :refer [deftest is testing]]
             [rdm-spec.regeneration.scopes :as scopes]))
 
 (def model
   {:containers [{:id :app :contexts [{:id :spec :components [{:id :spec/parser :spec "spec/parser"}]}
                                      {:id :verification :components [{:id :verification/status :spec "verification/status"}
-                                                                      {:id :verification/trace :spec "verification/trace"}]}
-                                     {:id :publishing :components [{:id :publishing/site :spec "publishing/site"}]}]}]
-   :kernel [{:id :kernel/bus :spec "kernel/bus"}]})
+                                                                     {:id :verification/trace :spec "verification/trace"}]}
+                                     {:id :site :components [{:id :site/pages :spec "site/pages"}]}]}]
+   :kernel [{:id :kernel/command :spec "kernel/command"} {:id :kernel/bus :spec "kernel/bus"}]
+   :relationships [{:from :spec/parser :to :verification/status :event :Parsed}
+                   {:from :spec/parser :to :site/pages :event :Parsed}
+                   {:from :verification/status :to :site/pages :event :Derived}]})
 
-(deftest a-components-own-files
-  (let [owners (scopes/owners model)]
-    (is (= :spec/parser (scopes/owner-of owners "dhf/spec" "dhf/spec/spec/parser.feature")))
-    (is (= :spec/parser (scopes/owner-of owners "dhf/spec" "dhf/spec/spec/parser.md")))
-    (is (= :kernel/bus (scopes/owner-of owners "dhf/spec" "dhf/spec/kernel/bus.feature")))
-    (is (nil? (scopes/owner-of owners "dhf/spec" "dhf/spec/glossary.md")))
-    (is (nil? (scopes/owner-of owners "dhf/spec" "dhf/spec/spec/nobody.feature")))))
+(def cat
+  {:Parsed {:published-by :spec/parser :carries [:revision :scenarios]
+            :read-by {:revision [:site/pages] :scenarios {:id [:verification/status] :title []}}
+            :shape {:revision "a commit" :scenarios "[{:id :title}]; the scenarios"}}
+   :Derived {:published-by :verification/status :carries [:statuses]
+             :shape {:statuses "{id status}"}}})
 
-(def catalogue
-  {:SpecParsed {:published-by :spec/parser
-                :carries [:revision :scenarios :needs]
-                :read-by {:revision [:verification/status]
-                          :needs [:publishing/site]
-                          :scenarios {:id [:verification/status :publishing/site] :title [:publishing/site]}}
-                :shape {:revision "r" :scenarios "s" :needs "n"}}})
+(deftest a-changed-path-is-a-components-own-or-shared
+  (is (= {:component :spec/parser} (scopes/owner model "dhf/spec" "dhf/spec/spec/parser.feature")))
+  (is (= {:component :kernel/bus} (scopes/owner model "dhf/spec" "dhf/spec/kernel/bus.md")))
+  (is (nil? (scopes/owner model "dhf/spec" "dhf/spec/glossary.md"))))
 
-(deftest a-changed-key-reaches-its-readers
-  (testing "a shape changed"
-    (is (= #{:spec/parser :publishing/site}
-           (scopes/event-scopes catalogue (assoc-in catalogue [:SpecParsed :shape :needs] "n2")))))
-  (testing "a key added to the scenarios reaches its readers only"
+(deftest the-subkeys-of-a-shape
+  (is (= [:id :title] (scopes/subkeys "[{:id :title}]; the scenarios")))
+  (is (nil? (scopes/subkeys "a commit"))))
+
+(deftest a-changed-key-reaches-its-publisher-and-readers
+  (testing "readers named"
+    (is (= #{:spec/parser :site/pages}
+           (scopes/event-scopes model cat (assoc-in cat [:Parsed :shape :revision] "another")))))
+  (testing "a gained subkey reaches only its readers"
     (is (= #{:spec/parser :verification/status}
-           (scopes/event-scopes catalogue (-> catalogue
-                                              (assoc-in [:SpecParsed :shape :scenarios] "s2")
-                                              (assoc-in [:SpecParsed :read-by :scenarios :new] [:verification/status]))))))
-  (testing "a carried key added"
+           (scopes/event-scopes model cat (-> cat
+                                              (assoc-in [:Parsed :shape :scenarios] "[{:id :title :n}]; the scenarios")
+                                              (assoc-in [:Parsed :read-by :scenarios :n] [:verification/status]))))))
+  (testing "an empty list reaches only the publisher"
+    (is (= #{:spec/parser}
+           (scopes/event-scopes model (assoc-in cat [:Parsed :read-by :revision] [])
+                                (-> cat (assoc-in [:Parsed :read-by :revision] []) (assoc-in [:Parsed :shape :revision] "another"))))))
+  (testing "a reworded collection of maps reaches the readers of every key of its maps"
     (is (= #{:spec/parser :verification/status}
-           (scopes/event-scopes catalogue (-> catalogue
-                                              (update-in [:SpecParsed :carries] conj :more)
-                                              (assoc-in [:SpecParsed :shape :more] "m")
-                                              (assoc-in [:SpecParsed :read-by :more] [:verification/status]))))))
-  (testing "the readers changed alone reach nothing"
-    (is (= #{} (scopes/event-scopes catalogue (assoc-in catalogue [:SpecParsed :read-by :needs] [])))))
-  (testing "a description changed reaches nothing"
-    (is (= #{} (scopes/event-scopes catalogue (assoc-in catalogue [:SpecParsed :description] "d")))))
-  (testing "an event added reaches its publisher and every reader"
-    (is (= #{:verification/status :publishing/site}
-           (scopes/event-scopes {} {:VerificationDerived {:published-by :verification/status
-                                                          :read-by {:statuses [:publishing/site]}}})))))
+           (scopes/event-scopes model cat (assoc-in cat [:Parsed :shape :scenarios] "[{:id :title}]; reworded")))))
+  (testing "no :read-by: every subscriber the model names"
+    (is (= #{:verification/status :site/pages}
+           (scopes/event-scopes model cat (assoc-in cat [:Derived :shape :statuses] "another")))))
+  (testing ":read-by is metadata"
+    (is (= #{} (scopes/event-scopes model cat (assoc-in cat [:Parsed :read-by :revision] [:verification/status]))))
+    (is (= #{} (scopes/event-scopes model cat (assoc-in cat [:Derived :read-by] {:statuses []}))))))
 
-(deftest scopes-are-listed-in-build-order
-  (is (= [:kernel/bus :spec/parser :verification/status :publishing/site]
-         (scopes/build-order model catalogue #{:publishing/site :verification/status :spec/parser :kernel/bus})))
-  (testing "a subscriber listed earlier in the model comes after its publisher"
-    (let [m (update-in model [:containers 0 :contexts] (comp vec reverse))]
-      (is (= [:spec/parser :publishing/site]
-             (scopes/build-order m catalogue #{:publishing/site :spec/parser}))))))
+(deftest scopes-are-in-build-order
+  (is (= [:kernel/bus :spec/parser :verification/status :site/pages]
+         (scopes/build-order model #{:site/pages :verification/status :spec/parser :kernel/bus})))
+  (is (= [:kernel/command :kernel/bus] (scopes/build-order model #{:kernel/bus :kernel/command}))))
