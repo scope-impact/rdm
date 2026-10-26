@@ -91,6 +91,13 @@
     (s/check! listed "spec-0086 names no kept paths for dhf/harness/config.edn")
     (mapv str/trim (str/split listed #","))))
 
+(def results-contract
+  "Every Allure element a result carries (dhf/spec/kernel/runner.feature;
+  glossary, \"Allure result\"), as the skeleton's spec README names it."
+  ["name" "fullName" "historyId" "status" "stage" "statusDetails" "start" "stop" "steps" "parameters"
+   "labels" "links" "attachments" "feature" "story" "suite" "subSuite" "tag" "framework" "spec" "context"
+   "component" "planned"])
+
 (def gitignore-lines
   ["dhf/allure-results/" "dhf/cycles/*/results/" "dhf/cycles/*/build/" "site-src/" "site/"])
 
@@ -110,9 +117,12 @@
       "dhf/spec/ids.edn" (ok! (= {:issued 0} (edn-of dir rel)) "the ledger at 0")
       "dhf/spec/glossary.md" (ok! (and (str/starts-with? text "#") (not-any? #(str/starts-with? % "**") (lines text)))
                                   "an empty glossary")
-      "dhf/spec/README.md" (ok! (and (str/includes? text "Conventions") (str/includes? text "@wip")
-                                     (str/includes? text "rdm-spec stamp"))
-                                "the spec's conventions")
+      "dhf/spec/README.md" (do (ok! (and (str/includes? text "Conventions") (str/includes? text "@wip")
+                                         (str/includes? text "rdm-spec stamp"))
+                                    "the spec's conventions")
+                               (doseq [e results-contract]
+                                 (ok! (str/includes? text (str "`" e "`"))
+                                      (str "the results contract: the Allure element " e))))
       "dhf/harness/config.edn"
       (let [c (edn-of dir rel)]
         (ok! (string? (:id-prefix c)) "the id prefix")
@@ -126,6 +136,8 @@
           (ok! (every? (set (get-in c [:clean-room :keep])) kept) (str "the kept paths " kept)))
         (ok! (= {:watch ["/" "~"] :tmp "/tmp"} (:agency c)) "the watched directories \"/\" and \"~\" and the temporary directory \"/tmp\"")
         (ok! (not (str/includes? text "dhf/harness/oracle")) "no dhf/harness/oracle")
+        (ok! (= [{:kind :tests}] (mapv #(select-keys % [:kind :command]) (:verify c)))
+             "a :verify holding one :tests check whose command is not yet set")
         (ok! (not-any? #(contains? c %) [:implementation :code-layout :test-command]) "no implementation paths"))
       "dhf/harness/stack.md" (ok! (= 2 (count (filter #(str/starts-with? % "|") (lines text))))
                                   "a stack table with no rows yet")

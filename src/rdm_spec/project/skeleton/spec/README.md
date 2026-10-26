@@ -34,3 +34,29 @@ never the other way round. The vocabulary is `glossary.md`.
   something once went wrong says so in a comment above it.
 - **`rdm-spec check` holds the spec to these rules** on every commit (the
   pre-commit hook).
+
+## The results contract
+
+A scenario is verified by Allure results, whatever stack wrote them: one
+`<uuid>-result.json` per scenario, and per row of a scenario outline, in
+Allure's own model, filled from the Gherkin scenario. Every element a result
+carries, and what it is filled from:
+
+| Element | Filled from |
+|---|---|
+| `name` | the scenario's title |
+| `fullName` | the feature file's path and the title, `FILE:TITLE` |
+| `historyId` | the scenario's id; an outline row's is the id followed by the row's values, so each row has its own history |
+| `status` | `passed`, `failed`, `broken` or `skipped` |
+| `stage` | `finished` |
+| `statusDetails` | when it did not pass: the message and the trace |
+| `start`, `stop` | the scenario's start and stop, in milliseconds since the epoch |
+| `steps` | one per Gherkin step, in order: its keyword and text as its name, its status, start and stop, and the evidence it attached |
+| `parameters` | an outline row's values, named by the table's headings |
+| `labels` | `feature` (the feature's name), `story` (the rule's), `suite` (the bounded context), `subSuite` (the component), a `tag` per Gherkin tag, `framework` `gherkin`, and `spec` (the scenario id, exactly one), `context`, `component`, and `planned` `true` for a scenario tagged `@wip` |
+| `links` | one `issue` per need the scenario traces to |
+| `attachments` | evidence: a file beside the result, named by its `source` |
+
+A status is decided by `status`, the `spec` label and an outline row's
+`parameters` only; everything else is kept for the report. A result with no
+`spec` label verifies nothing.

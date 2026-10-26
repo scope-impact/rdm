@@ -44,6 +44,12 @@
               :keep ["dhf/spec" "dhf/harness" "dhf/raw" "dhf/wiki" "dhf/views" "dhf/decisions"
                      ".gitignore" ".githooks" ".github"]}
 
+ ;; What rdm-spec verify proves about a build, in order, the first failure
+ ;; stopping it: the tests check first, always, then any :serves or :runs
+ ;; check. Name the command that runs your tests, writing Allure results into
+ ;; the directory RESULTS_DIR names: {:kind :tests :command ["..."]}.
+ :verify [{:kind :tests}]
+
  ;; Observing a run: the directories whose entries are compared before and
  ;; after it ("~" is the home directory), and the temporary directory whose
  ;; entries are counted.

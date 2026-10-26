@@ -13,8 +13,8 @@
   passing-room!, write-edn!, read-edn, checklist-json, write-checklist!,
   write-ratified!, numbered.
 
-  Other contexts' step files (spec_parser.clj, ratification_ratify.clj)
-  require this namespace too; the spec says a helper needed from elsewhere is
+  Another context's step file (spec_parser.clj) requires this namespace
+  too; the spec says a helper needed from elsewhere is
   copied in (dhf/spec/README.md, \"Step definitions are the scope's own\"),
   so the API above is kept stable for them until they copy it."
   (:require [babashka.fs :as fs]

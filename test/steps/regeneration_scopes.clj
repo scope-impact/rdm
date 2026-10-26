@@ -1,17 +1,13 @@
 (ns steps.regeneration-scopes
   "Step definitions for dhf/spec/regeneration/scopes.feature: `rdm-spec
-  scopes spec-3 spec-4` in a regeneration project (steps.regeneration-support):
-  a copy of the room made a git repository, committed and tagged spec-3, a
-  change a step describes committed and tagged spec-4. The model and the
-  event catalogue are the room's own; the catalogue is written back as EDN
-  before the first cut, so only what a step changes differs between cuts.
+  scopes spec-3 spec-4` in a regeneration project (a copy of the room's
+  kept paths, steps.regeneration-support) committed and tagged spec-3, a
+  step's change committed and tagged spec-4. Its model and event catalogue
+  are the room's, edited as a step says.
 
-  The result: {:scopes {:from :to :scopes [{:component id}] :shared [path]}};
-  a changed shared file is also a warning on the error stream.
+  The result: {:scopes {:from :to :scopes [{:component id}] :shared [path]}}.
 
-  Context keys set here: :dir, :event (the event a step changed), :key (the
-  carried key it changed), :readers (the subscribers expected after the
-  publisher, as a set)."
+  Context keys set here: :dir, :expected (the scopes, in order)."
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
@@ -20,175 +16,151 @@
             [steps.regeneration-support :as rs]
             [steps.support :as s]))
 
-(defn- events-rel [dir] (or (:events (kc/config-of dir)) "dhf/spec/events.edn"))
+(def events-rel "dhf/spec/events.edn")
 
-(defn- read-events [dir] (edn/read-string (slurp (str (fs/file dir (events-rel dir))))))
-
-(defn- write-events! [dir cat] (s/write! dir (events-rel dir) (str (pr-str cat) "\n")))
-
-(defn- update-events! [dir f] (write-events! dir (f (read-events dir))))
-
-(defn- append! [dir rel line]
-  (let [f (fs/file dir rel)]
-    (s/check! (fs/exists? f) (str "the project has no " rel))
-    (spit (str f) (str "\n# " line "\n") :append true)))
+(defn- events [dir] (edn/read-string (slurp (str (fs/file dir events-rel)))))
+(defn- write-events! [dir m] (s/write! dir events-rel (str ";; the fixture's catalogue\n" (pr-str m) "\n")))
 
 (defn- cuts!
-  "ctx with :dir: spec-3 is the room's copy after `base`, spec-4 after `change`."
-  [ctx base change]
+  "ctx with :dir: the room's copy, `before!` applied and cut spec-3,
+  `change!` applied and cut spec-4."
+  [ctx before! change!]
   (let [dir (rs/repo! (s/copy-of-room!))]
-    (update-events! dir identity)
-    (base dir)
-    (rs/commit! dir "spec-3")
+    (before! dir)
+    (rs/commit! dir "the cut spec-3")
     (rs/tag! dir "spec-3")
-    (change dir)
-    (rs/commit! dir "spec-4")
+    (change! dir)
+    (rs/commit! dir "the cut spec-4")
     (rs/tag! dir "spec-4")
     (assoc ctx :dir dir)))
 
-(defn- subscribers
-  "The components the room's model names as subscribers of `event`."
-  [dir event]
-  (set (for [r (:relationships (rs/model-of dir)) :when (= event (:event r))] (:to r))))
+(defn- append! [dir rel line]
+  (spit (str (fs/file dir rel)) (str "\n" line "\n") :append true))
 
-(defn- scopes-out [ctx]
+(defn- edit-events! [dir f] (write-events! dir (f (events dir))))
+
+(defn- scopes-of [ctx]
   (let [r (kc/exits! ctx 0)
         out (:scopes (kc/stdout-edn r))]
-    (s/check! (and (map? out) (vector? (:scopes out))) (str "standard output holds no {:scopes {:scopes [..]}}\n" (s/show r)))
+    (s/check! (vector? (:scopes out)) (str "the result holds no {:scopes {:scopes [..]}}\n" (s/show r)))
     out))
 
-(defn- listed [ctx] (mapv :component (:scopes (scopes-out ctx))))
+(defn- lists! [ctx want]
+  (let [got (:scopes (scopes-of ctx))]
+    (s/check! (= want got) (str "the scopes are " (pr-str got) ", not " (pr-str want) "\n" (s/show (kc/the-run ctx))))
+    nil))
+
+(defn- comps [& ids] (mapv (fn [id] {:component id}) ids))
 
 ;; ---------------------------------------------------------------------------
-;; Feature files and prose
+;; A cycle's scopes come from the spec change
 
 (defstep #"the cuts spec-3 and spec-4, between which architecture/views\.feature and kernel/bus\.feature changed"
   (fn [ctx]
-    (cuts! ctx (fn [_]) (fn [d]
-                          (append! d "dhf/spec/architecture/views.feature" "a change")
-                          (append! d "dhf/spec/kernel/bus.feature" "a change")))))
+    (cuts! ctx (fn [_]) (fn [dir]
+                          (append! dir "dhf/spec/architecture/views.feature" "# changed")
+                          (append! dir "dhf/spec/kernel/bus.feature" "# changed")))))
+
+(defstep #"it lists the scopes \{:component :kernel/bus\}, then \{:component :architecture/views\}, and nothing else"
+  (fn [ctx] (lists! ctx (comps :kernel/bus :architecture/views))))
 
 (defstep #"the cuts spec-3 and spec-4, between which only architecture/views\.md, design prose that spec-3 did not have, was added"
   (fn [ctx]
-    (cuts! ctx
-           (fn [d] (fs/delete-if-exists (fs/file d "dhf/spec/architecture/views.md")))
-           (fn [d] (s/write! d "dhf/spec/architecture/views.md" "# Views\n\nHow a view is drawn.\n")))))
-
-(defstep #"the cuts spec-3 and spec-4, between which only dhf/spec/glossary\.md changed"
-  (fn [ctx]
-    (cuts! ctx (fn [_]) (fn [d] (spit (str (fs/file d "dhf/spec/glossary.md")) "\n**Turn**: an hour.\n" :append true)))))
-
-(defstep #"the cuts spec-3 and spec-4, between which the kernel's command, the spec parser and the status component changed"
-  (fn [ctx]
-    (cuts! ctx (fn [_]) (fn [d]
-                          (doseq [rel ["dhf/spec/verification/status.feature" "dhf/spec/spec/parser.feature"
-                                       "dhf/spec/kernel/command.feature"]]
-                            (append! d rel "a change"))))))
-
-(defstep #"it lists the scopes \{:component :kernel/bus\}, then \{:component :architecture/views\}, and nothing else"
-  (fn [ctx]
-    (s/check! (= [:kernel/bus :architecture/views] (listed ctx)) (str "it lists " (pr-str (listed ctx))))
-    nil))
+    (cuts! ctx (fn [dir] (fs/delete-if-exists (fs/file dir "dhf/spec/architecture/views.md")))
+           (fn [dir] (s/write! dir "dhf/spec/architecture/views.md" "# Views\n\nDesign prose.\n")))))
 
 (defstep #"it lists the scope \{:component :architecture/views\}"
-  (fn [ctx]
-    (s/check! (= [:architecture/views] (listed ctx)) (str "it lists " (pr-str (listed ctx))))
-    nil))
+  (fn [ctx] (lists! ctx (comps :architecture/views))))
+
+(defstep #"the cuts spec-3 and spec-4, between which only dhf/spec/glossary\.md changed"
+  (fn [ctx] (cuts! ctx (fn [_]) (fn [dir] (append! dir "dhf/spec/glossary.md" "**Term**: a fixture's term.")))))
 
 (defstep #"it lists no scope, and names glossary\.md as a changed shared file whose readers a person must judge"
   (fn [ctx]
-    (let [out (scopes-out ctx)
+    (let [out (scopes-of ctx)
           r (kc/the-run ctx)]
-      (s/check! (= [] (:scopes out)) (str "it lists " (pr-str (:scopes out))))
-      (s/check! (some #{"dhf/spec/glossary.md"} (:shared out)) (str "the shared files are " (pr-str (:shared out))))
-      (s/check! (some #(and (kc/warning-line? %) (str/includes? % "glossary.md") (str/includes? % "person"))
+      (s/check! (= [] (:scopes out)) (str "the scopes are " (pr-str (:scopes out))))
+      (s/check! (= ["dhf/spec/glossary.md"] (:shared out)) (str "the shared files are " (pr-str (:shared out))))
+      (s/check! (some #(and (kc/warning-line? %) (str/includes? % "glossary.md") (str/includes? % "a person must judge"))
                       (s/err-lines r))
                 (str "no warning names glossary.md for a person to judge\n" (s/show r)))
       nil)))
 
-(defstep #"it lists kernel/command, then spec/parser, then verification/status"
-  (fn [ctx]
-    (s/check! (= [:kernel/command :spec/parser :verification/status] (listed ctx)) (str "it lists " (pr-str (listed ctx))))
-    nil))
-
 ;; ---------------------------------------------------------------------------
-;; Event keys
+;; A changed event key reaches its publisher and the subscribers that read it
 
-(defn- reshape [cat event k]
-  (update-in cat [event :shape k] #(str % "; reworded")))
+(defn- shape! [dir event k f]
+  (edit-events! dir #(update-in % [event :shape k] f)))
 
 (defstep #"the cuts spec-3 and spec-4, between which only the shape of one carried key of one event in dhf/spec/events\.edn changed"
   (fn [ctx]
-    (let [ctx (cuts! ctx (fn [_]) (fn [d] (update-events! d #(reshape % :SpecParsed :needs))))
-          readers (set (get-in (read-events (:dir ctx)) [:SpecParsed :read-by :needs]))]
-      (s/check! (seq readers) "SpecParsed's :needs names no readers")
-      (s/check! (not= readers (subscribers (:dir ctx) :SpecParsed)) "every subscriber reads :needs")
-      (assoc ctx :event :SpecParsed :publisher :spec/parser :readers readers))))
+    ;; :read-by names the readers of SpecParsed's :needs against the
+    ;; relationships' order, so the order listed is the relationships'
+    (-> (cuts! ctx #(edit-events! % (fn [m] (assoc-in m [:SpecParsed :read-by :needs] [:compliance/audit :publishing/site])))
+               #(shape! % :SpecParsed :needs (fn [x] (str x "; each need's sources in the order written"))))
+        (assoc :expected (comps :spec/parser :publishing/site :compliance/audit)))))
+
+(defstep #"it lists as scopes the event's publisher, then the subscribers its :read-by names for that key, in the order the model's relationships name them, and no other subscriber"
+  (fn [ctx] (lists! ctx (:expected ctx))))
+
+(defn- add-nested-key [shape]
+  (str/replace-first shape ":component-name}]" ":component-name :tested-by}]"))
 
 (defstep #"the cuts spec-3 and spec-4, between which one event's scenarios gained a key that :read-by names one subscriber as reading"
   (fn [ctx]
     (-> (cuts! ctx (fn [_])
-               (fn [d] (update-events! d #(-> %
-                                              (update-in [:SpecParsed :shape :scenarios] (fn [sh] (str/replace-first sh "[{:id " "[{:id :weight ")))
-                                              (assoc-in [:SpecParsed :read-by :scenarios :weight] [:verification/status])))))
-        (assoc :publisher :spec/parser :readers #{:verification/status}))))
+               (fn [dir]
+                 (edit-events! dir (fn [m]
+                                     (-> m
+                                         (update-in [:SpecParsed :shape :scenarios] add-nested-key)
+                                         (assoc-in [:SpecParsed :read-by :scenarios :tested-by] [:measurement/checklist]))))))
+        (assoc :expected (comps :spec/parser :measurement/checklist)))))
+
+(defstep #"it lists as scopes the event's publisher, then that one subscriber, and no other subscriber"
+  (fn [ctx] (lists! ctx (:expected ctx))))
+
+(defstep #"the cuts spec-3 and spec-4, between which only (an event's :read-by changed|an event that had no :read-by gained one naming every key|an event that had no :read-by gained one naming a scenario key's readers)"
+  (fn [ctx which]
+    (case which
+      "an event's :read-by changed"
+      (cuts! ctx (fn [_]) #(edit-events! % (fn [m] (assoc-in m [:SpecGated :read-by :passed?] []))))
+      "an event that had no :read-by gained one naming every key"
+      (cuts! ctx #(edit-events! % (fn [m] (update m :SpecGated dissoc :read-by)))
+             #(edit-events! % (fn [m] (assoc-in m [:SpecGated :read-by]
+                                                {:revision [:publishing/site] :passed? [:publishing/site] :findings [:publishing/site]}))))
+      "an event that had no :read-by gained one naming a scenario key's readers"
+      (cuts! ctx #(edit-events! % (fn [m] (update m :SpecParsed dissoc :read-by)))
+             #(edit-events! % (fn [m] (assoc-in m [:SpecParsed :read-by] {:scenarios {:id [:architecture/lint]}})))))))
+
+(defstep #"it lists no scope"
+  (fn [ctx] (lists! ctx [])))
 
 (defstep #"the cuts spec-3 and spec-4, between which only the shape of one carried key of an event without :read-by changed"
   (fn [ctx]
-    (let [ctx (cuts! ctx
-                     (fn [d] (update-events! d #(update % :SpecParsed dissoc :read-by)))
-                     (fn [d] (update-events! d #(reshape % :SpecParsed :needs))))]
-      (assoc ctx :publisher :spec/parser :readers (subscribers (:dir ctx) :SpecParsed)))))
+    (-> (cuts! ctx #(edit-events! % (fn [m] (update m :SpecParsed dissoc :read-by)))
+               #(shape! % :SpecParsed :needs (fn [x] (str x "; changed"))))
+        (assoc :expected (comps :spec/parser :architecture/lint :verification/status :measurement/checklist
+                                :publishing/site :compliance/audit)))))
+
+(defstep #"it lists as scopes the event's publisher, then every subscriber the model's relationships name for that event"
+  (fn [ctx] (lists! ctx (:expected ctx))))
 
 (defstep #"the cuts spec-3 and spec-4, between which only the shape of one carried key changed, whose :read-by entry is empty"
   (fn [ctx]
-    (-> (cuts! ctx
-               (fn [d] (update-events! d #(assoc-in % [:SpecParsed :read-by :refusals] [])))
-               (fn [d] (update-events! d #(reshape % :SpecParsed :refusals))))
-        (assoc :publisher :spec/parser :readers #{}))))
-
-(defn- publisher-then-readers! [ctx]
-  (let [l (listed ctx)]
-    (s/check! (= (:publisher ctx) (first l)) (str "it lists " (pr-str l) ", not the publisher first"))
-    (s/check! (= (:readers ctx) (set (rest l))) (str "it lists " (pr-str l) " after the publisher, not " (pr-str (:readers ctx))))
-    (s/check! (= (count (rest l)) (count (set (rest l)))) (str "it lists a scope twice: " (pr-str l)))
-    nil))
-
-(defstep #"it lists as scopes the event's publisher, then the subscribers its :read-by names for that key, and no other subscriber"
-  (fn [ctx] (publisher-then-readers! ctx)))
-
-(defstep #"it lists as scopes the event's publisher, then that one subscriber, and no other subscriber"
-  (fn [ctx] (publisher-then-readers! ctx)))
-
-(defstep #"it lists as scopes the event's publisher, then every subscriber the model's relationships name for that event"
-  (fn [ctx] (publisher-then-readers! ctx)))
+    (cuts! ctx #(edit-events! % (fn [m] (assoc-in m [:SpecGated :read-by :findings] [])))
+           #(shape! % :SpecGated :findings (fn [x] (str x "; changed"))))))
 
 (defstep #"it lists the event's publisher as the only scope"
-  (fn [ctx]
-    (s/check! (= [(:publisher ctx)] (listed ctx)) (str "it lists " (pr-str (listed ctx))))
-    nil))
+  (fn [ctx] (lists! ctx (comps :spec/check))))
 
 ;; ---------------------------------------------------------------------------
-;; Who reads a key is metadata (spec-0301)
+;; Scopes are listed in the order a builder builds them
 
-(def ^:private read-by-changes
-  {"an event's :read-by changed"
-   [(fn [_]) (fn [d] (update-events! d #(update-in % [:SpecParsed :read-by :needs] conj :verification/status)))]
-
-   "an event that had no :read-by gained one naming every key"
-   [(fn [d] (update-events! d #(update % :SpecGated dissoc :read-by)))
-    (fn [d] (update-events! d #(assoc-in % [:SpecGated :read-by] {:revision [] :passed? [:publishing/site] :findings [:publishing/site]})))]
-
-   "an event that had no :read-by gained one naming a scenario key's readers"
-   [(fn [d] (update-events! d #(update % :SpecParsed dissoc :read-by)))
-    (fn [d] (update-events! d #(assoc-in % [:SpecParsed :read-by] {:scenarios {:id [:verification/status]}})))]})
-
-(defstep #"the cuts spec-3 and spec-4, between which only (an event.*)"
-  (fn [ctx change]
-    (let [[base after] (or (get read-by-changes change) (s/fail! (str "no such change: " change)))]
-      (cuts! ctx base after))))
-
-(defstep #"it lists no scope"
+(defstep #"the cuts spec-3 and spec-4, between which the kernel's command, the spec parser and the status component changed"
   (fn [ctx]
-    (s/check! (= [] (listed ctx)) (str "it lists " (pr-str (listed ctx))))
-    nil))
+    (cuts! ctx (fn [_]) (fn [dir]
+                          (doseq [f ["verification/status" "spec/parser" "kernel/command"]]
+                            (append! dir (str "dhf/spec/" f ".feature") "# changed"))))))
+
+(defstep #"it lists kernel/command, then spec/parser, then verification/status"
+  (fn [ctx] (lists! ctx (comps :kernel/command :spec/parser :verification/status))))

@@ -1,20 +1,17 @@
 (ns steps.kernel-runner
   "Step definitions for dhf/spec/kernel/runner.feature: `rdm-spec run` in a
-  project the scenario makes (a fixture): its configuration (the room's,
-  without :oracle), a model, feature files and a step definition file under
-  its configured step directory, written for the runner's step API. Each
-  definition the fixture writes appends what it was given to a log, so the
-  scenario sees which steps ran and with what.
+  runner project the scenario makes: the room's configuration (without
+  :oracle), a model with the bounded context architecture (its component
+  Lint, spec architecture/lint) and the kernel component Gadget (spec
+  kernel/gadget), the feature files a step gives, and step definition
+  files in the configured step directory, written through the runner's
+  step API. A step definition records what it was given in log.edn in the
+  project, one EDN form a line.
 
-  Shared: \"a stamped scenario outline with three example rows\" (the
-  verification context's status.feature uses it too) sets
-    :dir  the project: one component, demo/alpha, holding spec-0001, an
-          outline over n = 1, 2, 3 (\"An outline over <n>\"), its steps defined
-    :id   \"spec-0001\"
-  and :log (the log), :defs (the definitions written).
+  Results are read from the project's configured results directory.
 
-  Other context keys set here: :defs [{:pattern :name :throw :adds :line}],
-  :scenarios [[step-line ..] ..] the scenarios the When writes, :log."
+  Context keys set here: :dir, :log (the log file); the shared Given \"a
+  stamped scenario outline with three example rows\" also :id and :rows."
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
             [clojure.edn :as edn]
@@ -24,296 +21,280 @@
             [steps.support :as s]))
 
 ;; ---------------------------------------------------------------------------
-;; The fixture project
+;; The runner project
 
-(def ^:private steps-rel "fixture_steps.clj")
-
-(def ^:private model
-  {:system {:id :demo :name "Demo" :description "A demo system"}
-   :containers [{:id :app :name "App" :kind :runs :description "The demo app" :technology "a language"
-                 :contexts [{:id :architecture :name "architecture" :description "The C4 model"
+(def model
+  {:system {:id :demo-system :name "Demo" :description "A demo"}
+   :containers [{:id :demo-app :name "demo" :kind :runs :technology "Any" :description "The demo"
+                 :contexts [{:id :architecture :name "architecture" :description "The model"
                              :components [{:id :architecture/lint :name "Lint" :spec "architecture/lint"
-                                           :description "The lint"}]}
-                            {:id :demo :name "demo" :description "A demo context"
-                             :components [{:id :demo/alpha :name "Alpha" :spec "demo/alpha"
-                                           :description "The demo component"}]}]}]
-   :kernel [{:id :kernel/runner :name "Gherkin runner" :spec "kernel/runner" :description "The runner"}]})
+                                           :description "The lint"}]}]}]
+   :kernel [{:id :kernel/gadget :name "Gadget" :spec "kernel/gadget" :description "A gadget"}]
+   :relationships [] :views []})
 
-(defn- project!
-  "ctx with :dir, a project with the room's configuration, a model, needs
-  and a log, and no feature file yet."
-  [ctx]
-  (if (:dir ctx)
-    ctx
-    (let [dir (s/project!)]
-      (s/write! dir "dhf/spec/model.edn" (pr-str model))
-      (s/write! dir "dhf/spec/needs.edn" (pr-str {"UN-001" {:text "A need." :sources ["demo:README.md@abc1234"]}}))
-      (s/write! dir "dhf/spec/ids.edn" "{:issued 9999}\n")
-      (assoc ctx :dir dir :log (str (fs/file dir "steps.log"))))))
+(defn- log-form [dir] (str "(fn [x] (spit " (pr-str (str (fs/file dir "log.edn"))) " (str (pr-str x) \"\\n\") :append true))"))
 
-(defn- steps-dir [dir] (or (:steps-dir (kc/config-of dir)) "test/steps"))
+(defn step-file
+  "A step definition file: `defs` [[pattern body]], body a function form
+  that may call (log x)."
+  [dir defs]
+  (str "(require '[rdm-spec.kernel.runner :refer [defstep attach!]])\n"
+       "(def log " (log-form dir) ")\n"
+       (str/join (for [[pat body] defs]
+                   (str "(defstep #\"" pat "\"\n  " body ")\n")))))
 
-(defn- defs-text
-  "The step definition file for `defs`, each {:pattern :name [:throw msg]
-  [:adds k]}, logging to `log`; with each def's :line."
-  [log defs]
-  (let [head ["(ns steps.fixture-steps"
-              "  (:require [rdm-spec.kernel.runner :refer [defstep]]))"
-              ""
-              (str "(defn- log! [x] (spit " (pr-str log) " (str (pr-str x) \"\\n\") :append true))")
-              ""]
-        [lines defs] (reduce (fn [[lines out] d]
-                               (let [line (inc (count lines))
-                                     body [(str "(defstep (re-pattern " (pr-str (:pattern d)) ")")
-                                           (str "  (fn [ctx & args]")
-                                           (str "    (log! {:step " (pr-str (:name d)) " :ctx ctx :args (vec args)})")
-                                           (if (:throw d)
-                                             (str "    (throw (ex-info " (pr-str (:throw d)) " {}))))")
-                                             (str "    " (if (:adds d) (str "(assoc ctx " (:adds d) " true)") "ctx") "))"))
-                                           ""]]
-                                 [(into lines body) (conj out (assoc d :line line))]))
-                             [head []] defs)]
-    {:text (str/join "\n" lines) :defs defs}))
+(defn feature
+  "A feature file named `fname` (tags `tags`) holding scenario texts `scs`."
+  [fname tags & scs]
+  (str (when tags (str tags "\n")) "Feature: " fname "\n  A fixture.\n" (str/join scs)))
 
-(defn- with-defs!
-  "ctx with the step definitions `defs` written into the project's step directory."
-  [ctx defs]
-  (let [ctx (project! ctx)
-        {:keys [text defs]} (defs-text (:log ctx) defs)]
-    (s/write! (:dir ctx) (str (steps-dir (:dir ctx)) "/" steps-rel) text)
-    (assoc ctx :defs defs)))
+(defn scenario
+  "A scenario's text: its tag line, title and steps (each a full step line)."
+  [tags title & steps]
+  (str "\n  " tags "\n  Scenario: " title "\n" (str/join (map #(str "    " % "\n") steps))))
 
-(defn- scenario-text [{:keys [tags title steps]}]
-  (str "\n    " tags "\n    Scenario: " title "\n"
-       (str/join (map #(str "      " % "\n") steps))))
+(defn project!
+  "ctx with :dir: a runner project holding `features` ({spec-path text}) and
+  the step files `steps` ({name [[pattern body]]})."
+  [ctx features steps]
+  (let [dir (s/project!)]
+    (s/write! dir "dhf/spec/model.edn" (pr-str model))
+    (doseq [[sp text] features] (s/write! dir (str "dhf/spec/" sp ".feature") text))
+    (doseq [[n defs] steps] (s/write! dir (str "test/steps/" n ".clj") (step-file dir defs)))
+    (assoc ctx :dir dir :log (str (fs/file dir "log.edn")))))
 
-(defn- feature!
-  "Writes the feature file `spec-path` holding `scenarios` under one rule."
-  [dir spec-path feature-name scenarios]
-  (s/write! dir (str "dhf/spec/" spec-path ".feature")
-            (str "@UN-001\nFeature: " feature-name "\n  A fixture of the runner's steps.\n\n  Rule: The fixture's rule\n"
-                 (str/join (map scenario-text scenarios)))))
-
-(defn- log-of [ctx]
+(defn- logged [ctx]
   (let [f (:log ctx)]
     (if (and f (fs/exists? f))
       (mapv edn/read-string (remove str/blank? (str/split-lines (slurp f))))
       [])))
 
-(defn- results
-  "Every Allure result in the project's configured results directory."
+(defn- results-dir [ctx]
+  (str (fs/file (:dir ctx) (or (:results-dir (kc/config-of (:dir ctx))) "dhf/allure-results"))))
+
+(defn results
+  "Every Allure result the run wrote, read (string keys)."
   [ctx]
-  (let [d (fs/file (:dir ctx) (or (:results-dir (kc/config-of (:dir ctx))) "dhf/allure-results"))]
+  (let [d (results-dir ctx)]
     (if (fs/directory? d)
-      (vec (for [f (sort (map str (fs/glob d "*-result.json")))] (json/parse-string (slurp f) true)))
+      (vec (for [f (sort (map str (fs/glob d "*-result.json")))]
+             (assoc (json/parse-string (slurp f)) ::file f)))
       [])))
 
-(defn- label [r k] (some #(when (= (name k) (:name %)) (:value %)) (:labels r)))
-
-(defn- results-for [ctx id] (filterv #(= id (label % :spec)) (results ctx)))
-
-(defn- the-result
-  "The one result of the scenario `id`."
-  [ctx id]
-  (let [rs (results-for ctx id)]
-    (s/check! (= 1 (count rs)) (str (count rs) " results are labelled spec=" id "\n" (s/show (kc/the-run ctx))))
+(defn- the-result [ctx]
+  (let [rs (results ctx)]
+    (s/check! (= 1 (count rs)) (str "the run wrote " (count rs) " results, not one\n" (s/show (kc/the-run ctx))))
     (first rs)))
+
+(defn labels
+  "The values of the label `n` of the result `r`."
+  [r n]
+  (vec (for [l (get r "labels") :when (= n (get l "name"))] (get l "value"))))
+
+(defn- label [r n]
+  (let [vs (labels r n)]
+    (s/check! (= 1 (count vs)) (str "the result has " (count vs) " labels " n ": " (pr-str vs)))
+    (first vs)))
+
+(defn- run! [ctx] (kc/run-line ctx "run"))
 
 ;; ---------------------------------------------------------------------------
 ;; Step definitions are written against one small API
 
-(defstep #"a step definition file in the project's configured step directory that defines a step by the pattern \"([^\"]+)\" and a function of the context and the captured text, through the runner's step API"
-  (fn [ctx pattern]
-    (with-defs! ctx [{:pattern pattern :name "holds"}])))
+(defstep #"a step definition file in the project's configured step directory that defines a step by the pattern \"the spec holds \(\\d\+\) features\" and a function of the context and the captured text, through the runner's step API"
+  (fn [ctx]
+    (assoc ctx ::steps {"holds" [["the spec holds (\\d+) features" "(fn [ctx n] (log [ctx n]) ctx)"]]})))
 
-(defstep #"\"rdm-spec run\" runs a scenario with (?:the step \"([^\"]+)\"|both steps|that step)"
-  (fn [ctx step]
-    (let [ctx (project! ctx)
-          scs (cond
-                step [[step]]
-                (:scenarios ctx) (:scenarios ctx)
-                :else (s/fail! "no scenario was planned"))]
-      (feature! (:dir ctx) "demo/alpha" "Alpha"
-                (map-indexed (fn [i steps] {:tags (format "@spec-%04d @e2e" (inc i)) :title (str "Scenario " (inc i))
-                                            :steps steps})
-                             scs))
-      (kc/run-line ctx "run"))))
+(defstep #"\"rdm-spec run\" runs a scenario with the step \"Given ([^\"]+)\""
+  (fn [ctx text]
+    (-> (project! ctx {"architecture/lint" (feature "Lint" "@UN-001"
+                                                     (scenario "@spec-0012 @e2e" "One step" (str "Given " text)))}
+                  (::steps ctx))
+        run!)))
 
-(defstep #"the function is called with the scenario's context and \"([^\"]*)\""
-  (fn [ctx arg]
-    (let [log (log-of ctx)]
-      (s/check! (= [{:step "holds" :ctx {} :args [arg]}] log)
-                (str "the function was called with " (pr-str log) "\n" (s/show (kc/the-run ctx))))
-      nil)))
+(defstep #"the function is called with the scenario's context and \"20\""
+  (fn [ctx]
+    (kc/exits! ctx 0)
+    (s/check! (= [[{} "20"]] (logged ctx)) (str "the function was called with " (pr-str (logged ctx))))
+    nil))
 
 (defstep #"two steps whose functions each add a key to the context they are given"
   (fn [ctx]
-    (-> ctx
-        (with-defs! [{:pattern "the first step" :name "first" :adds :first}
-                     {:pattern "the second step" :name "second" :adds :second}])
-        (assoc :scenarios [["Given the first step" "And the second step"] ["Given the first step"]]))))
+    (assoc ctx ::steps {"keys" [["the first adds a key" "(fn [ctx] (log [:first ctx]) (assoc ctx :first 1))"]
+                                ["the second adds a key" "(fn [ctx] (log [:second ctx]) (assoc ctx :second 2))"]]})))
+
+(defstep #"\"rdm-spec run\" runs a scenario with both steps"
+  (fn [ctx]
+    (-> (project! ctx {"architecture/lint"
+                       (feature "Lint" "@UN-001"
+                                (scenario "@spec-0012 @e2e" "Both steps" "Given the first adds a key" "Then the second adds a key")
+                                (scenario "@spec-0014 @e2e" "The next scenario" "Given the second adds a key"))}
+                  (::steps ctx))
+        run!)))
 
 (defstep #"the second function receives the key the first added"
   (fn [ctx]
-    (let [log (log-of ctx)]
-      (s/check! (= {:step "second" :ctx {:first true} :args []} (second log))
-                (str "the second function was given " (pr-str (second log)) "\n" (s/show (kc/the-run ctx))))
-      nil)))
+    (kc/exits! ctx 0)
+    (s/check! (= [[:first {}] [:second {:first 1}]] (take 2 (logged ctx))) (str "the log is " (pr-str (logged ctx))))
+    nil))
 
 (defstep #"the next scenario's first step receives an empty context"
   (fn [ctx]
-    (let [log (log-of ctx)]
-      (s/check! (= 3 (count log)) (str "the log holds " (pr-str log)))
-      (s/check! (= {:step "first" :ctx {} :args []} (nth log 2))
-                (str "the next scenario's first step was given " (pr-str (nth log 2))))
-      nil)))
+    (s/check! (= [:second {}] (nth (logged ctx) 2 nil)) (str "the log is " (pr-str (logged ctx))))
+    nil))
 
-(defstep #"two step definitions whose patterns both match \"(?:Given|When|Then) ([^\"]+)\""
-  (fn [ctx text]
-    (-> ctx
-        (with-defs! [{:pattern text :name "exact"} {:pattern "a (\\w+)" :name "any"}])
-        (assoc :scenarios [[(str "Given " text)]]))))
+(defstep #"two step definitions whose patterns both match \"Given a spec\""
+  (fn [ctx]
+    (assoc ctx ::steps {"one" [["a spec" "(fn [ctx] ctx)"]]
+                        "two" [["a (\\w+)" "(fn [ctx _] ctx)"]]})))
+
+(defstep #"\"rdm-spec run\" runs a scenario with that step"
+  (fn [ctx]
+    (-> (project! ctx {"architecture/lint" (feature "Lint" "@UN-001" (scenario "@spec-0012 @e2e" "Ambiguous" "Given a spec"))}
+                  (::steps ctx))
+        run!)))
 
 (defstep #"its result is broken and names both definitions"
   (fn [ctx]
-    (let [r (the-result ctx "spec-0001")
-          msg (str (get-in r [:statusDetails :message]))]
-      (s/check! (= "broken" (:status r)) (str "the result is " (:status r)))
-      (doseq [d (:defs ctx)]
-        (s/check! (str/includes? msg (str steps-rel ":" (:line d)))
-                  (str "the result does not name " steps-rel ":" (:line d) ": " msg)))
+    (let [r (the-result ctx)
+          msg (get-in r ["statusDetails" "message"])]
+      (s/check! (= "broken" (get r "status")) (str "the result is " (get r "status")))
+      (doseq [part ["a spec" "a (\\w+)" "one.clj" "two.clj"]]
+        (s/check! (str/includes? (str msg) part) (str "the result does not name " part ": " msg)))
       nil)))
 
 ;; ---------------------------------------------------------------------------
 ;; Every scenario run leaves one result, labelled with what it verifies
 
-(defstep #"the scenario @(spec-\d+) in the component (\S+) of the bounded context (\S+)"
-  (fn [ctx id component context]
-    (let [ctx (with-defs! ctx [{:pattern "a passing step" :name "passing"}
-                               {:pattern "another passing step" :name "another"}])
-          comp (first (for [c (:containers model) x (:contexts c) k (:components x)
-                            :when (and (= context (:name x)) (= component (:name k)))]
-                        k))]
-      (s/check! comp (str "the fixture's model has no component " component " in " context))
-      (feature! (:dir ctx) (:spec comp) component
-                [{:tags (str "@" id " @e2e") :title "A scenario of the component"
-                  :steps ["Given a passing step" "Then another passing step"]}])
-      (feature! (:dir ctx) "kernel/runner" "Gherkin runner"
-                [{:tags "@spec-0020 @contract" :title "A kernel scenario" :steps ["Given a passing step"]}])
-      (assoc ctx :id id :component component :context context :kernel-id "spec-0020"))))
+(def ^:private passing {"pass" [["a step that passes" "(fn [ctx] ctx)"]
+                                ["another step that passes" "(fn [ctx] ctx)"]]})
 
-(defstep #"it writes one Allure result labelled spec=(\S+), component=(\S+) and context=(\S+)"
-  (fn [ctx id component context]
+(defstep #"the scenario @spec-0012 in the component Lint of the bounded context architecture"
+  (fn [ctx]
+    (project! ctx {"architecture/lint" (feature "Lint" "@UN-001"
+                                                (scenario "@spec-0012 @e2e" "Lint names the view"
+                                                          "Given a step that passes" "Then another step that passes"))
+                   "kernel/gadget" (feature "Gadget" "@UN-001"
+                                            (scenario "@spec-0020 @contract" "The gadget works" "Given a step that passes"))}
+              passing)))
+
+(defn- result-of [ctx id]
+  (let [rs (filter #(some #{id} (labels % "spec")) (results ctx))]
+    (s/check! (= 1 (count rs)) (str (count rs) " results are labelled spec=" id "\n" (s/show (kc/the-run ctx))))
+    (first rs)))
+
+(defstep #"it writes one Allure result labelled spec=spec-0012, component=Lint and context=architecture"
+  (fn [ctx]
     (kc/exits! ctx 0)
-    (let [r (the-result ctx id)]
-      (s/check! (= [component context] [(label r :component) (label r :context)])
-                (str "the result is labelled " (pr-str (:labels r))))
+    (let [r (result-of ctx "spec-0012")]
+      (s/check! (= ["Lint" "architecture"] [(label r "component") (label r "context")])
+                (str "the labels are " (pr-str (get r "labels"))))
       nil)))
 
 (defstep #"a kernel scenario's result is labelled context=kernel"
   (fn [ctx]
-    (let [r (the-result ctx (:kernel-id ctx))]
-      (s/check! (= "kernel" (label r :context)) (str "the kernel scenario is labelled " (pr-str (:labels r))))
+    (let [r (result-of ctx "spec-0020")]
+      (s/check! (= ["kernel" "Gadget"] [(label r "context") (label r "component")]) (str "the labels are " (pr-str (get r "labels"))))
       nil)))
 
 (defstep #"each step is a step of the result, with its own status"
   (fn [ctx]
-    (let [r (the-result ctx (:id ctx))]
-      (s/check! (= [["Given a passing step" "passed"] ["Then another passing step" "passed"]]
-                   (map (juxt :name :status) (:steps r)))
-                (str "the result's steps are " (pr-str (:steps r))))
+    (let [r (result-of ctx "spec-0012")
+          steps (get r "steps")]
+      (s/check! (= [["Given a step that passes" "passed"] ["Then another step that passes" "passed"]]
+                   (map (juxt #(get % "name") #(get % "status")) steps))
+                (str "the steps are " (pr-str steps)))
       nil)))
 
-;; Shared with dhf/spec/verification/status.feature. Sets :dir (when unset), :id, :log, :defs.
+(defn- outline [id title & rows]
+  (str "\n  @" id " @e2e\n  Scenario Outline: " title "\n    Given a row with <written> and <kept>\n\n"
+       "    Examples:\n      | written | kept |\n"
+       (str/join (for [[a b] rows] (str "      | " a " | " b " |\n")))))
+
+(def ^:private row-steps {"rows" [["a row with (\\S+) and (\\S+)" "(fn [ctx a b] ctx)"]]})
+
+;; Shared by runner.feature and status.feature, so the kernel's: a runner
+;; project whose one outline, spec-0013, has three rows, with step
+;; definitions for its steps. Sets :dir, :log, :id "spec-0013" and :rows
+;; (each row's values, [[heading value] ..]).
 (defstep #"a stamped scenario outline with three example rows"
   (fn [ctx]
-    (let [ctx (with-defs! ctx [{:pattern "the number (\\d+)" :name "number"}
-                               {:pattern "it is counted" :name "counted"}])]
-      (s/write! (:dir ctx) "dhf/spec/demo/alpha.feature"
-                (str "@UN-001\nFeature: Alpha\n  A fixture of the kernel's shared steps.\n\n"
-                     "  @spec-0001 @contract\n  Scenario Outline: An outline over <n>\n"
-                     "    Given the number <n>\n    Then it is counted\n\n"
-                     "    Examples:\n      | n |\n      | 1 |\n      | 2 |\n      | 3 |\n"))
-      (assoc ctx :id "spec-0001"))))
+    (-> (project! ctx {"architecture/lint" (feature "Lint" "@UN-001" (outline "spec-0013" "Rows" ["plan" "3"] ["draft" "4"] ["note" "5"]))}
+                  row-steps)
+        (assoc :id "spec-0013"
+               :rows [[["written" "plan"] ["kept" "3"]] [["written" "draft"] ["kept" "4"]] [["written" "note"] ["kept" "5"]]]))))
 
 (defstep #"it writes three Allure results, each labelled with the outline's id and naming its row"
   (fn [ctx]
     (kc/exits! ctx 0)
-    (let [rs (results-for ctx (:id ctx))]
-      (s/check! (= 3 (count rs)) (str (count rs) " results are labelled " (:id ctx)))
-      (s/check! (= #{"1" "2" "3"} (set (map #(second (re-find #"\[n=(\d+)\]$" (str (:name %)))) rs)))
-                (str "the results are named " (pr-str (map :name rs))))
-      (s/check! (= #{[{:name "n" :value "1"}] [{:name "n" :value "2"}] [{:name "n" :value "3"}]}
-                   (set (map :parameters rs)))
-                (str "the results' parameters are " (pr-str (map :parameters rs))))
+    (let [rs (results ctx)]
+      (s/check! (= 3 (count rs)) (str "the run wrote " (count rs) " results"))
+      (s/check! (every? #(= ["spec-0013"] (labels % "spec")) rs) "a result is not labelled spec=spec-0013")
+      (s/check! (= #{"plan" "draft" "note"}
+                   (set (for [r rs p (get r "parameters") :when (= "written" (get p "name"))] (get p "value"))))
+                (str "the rows named are " (pr-str (map #(get % "parameters") rs))))
       nil)))
 
 (defstep #"a scenario whose second step's definition throws"
   (fn [ctx]
-    (let [ctx (with-defs! ctx [{:pattern "a first step" :name "first"}
-                               {:pattern "a second step" :name "second" :throw "the second step broke"}
-                               {:pattern "a third step" :name "third"}])]
-      (feature! (:dir ctx) "demo/alpha" "Alpha"
-                [{:tags "@spec-0001 @e2e" :title "A scenario that fails"
-                  :steps ["Given a first step" "When a second step" "Then a third step"]}])
-      (assoc ctx :id "spec-0001"))))
+    (project! ctx {"architecture/lint" (feature "Lint" "@UN-001"
+                                                (scenario "@spec-0012 @e2e" "Throws" "Given a step that passes"
+                                                          "When a step that throws" "Then a step that passes"))}
+              {"throws" [["a step that passes" "(fn [ctx] ctx)"]
+                         ["a step that throws" "(fn [ctx] (throw (ex-info \"no such view\" {})))"]]})))
 
 (defstep #"the result is failed and names the second step and the error"
   (fn [ctx]
     (kc/exits! ctx 1)
-    (let [r (the-result ctx (:id ctx))
-          msg (str (get-in r [:statusDetails :message]))]
-      (s/check! (= "failed" (:status r)) (str "the result is " (:status r)))
-      (s/check! (and (str/includes? msg "When a second step") (str/includes? msg "the second step broke"))
-                (str "the result says " (pr-str msg)))
+    (let [r (the-result ctx)
+          msg (str (get-in r ["statusDetails" "message"]))]
+      (s/check! (= "failed" (get r "status")) (str "the result is " (get r "status")))
+      (s/check! (and (str/includes? msg "a step that throws") (str/includes? msg "no such view"))
+                (str "the result says " msg))
       nil)))
 
 (defstep #"the steps after it are reported as not run"
   (fn [ctx]
-    (let [r (the-result ctx (:id ctx))]
-      (s/check! (= ["passed" "failed" "skipped"] (mapv :status (:steps r)))
-                (str "the steps are " (pr-str (map (juxt :name :status) (:steps r)))))
-      (s/check! (not-any? #(= "third" (:step %)) (log-of ctx)) "the third step ran")
+    (let [steps (get (the-result ctx) "steps")]
+      (s/check! (= ["passed" "failed" "skipped"] (map #(get % "status") steps)) (str "the steps are " (pr-str steps)))
       nil)))
 
 (defstep #"a stamped scenario with a step no step definition matches"
   (fn [ctx]
-    (let [ctx (with-defs! ctx [{:pattern "a defined step" :name "defined"}])]
-      (feature! (:dir ctx) "demo/alpha" "Alpha"
-                [{:tags "@spec-0001 @e2e" :title "A scenario with an undefined step"
-                  :steps ["Given a defined step" "When a step nobody defined"]}])
-      (assoc ctx :id "spec-0001" :unmatched "a step nobody defined"))))
+    (project! ctx {"architecture/lint" (feature "Lint" "@UN-001"
+                                                (scenario "@spec-0012 @e2e" "Unmatched" "Given a step that passes"
+                                                          "When nothing defines this step"))}
+              passing)))
 
 (defstep #"the scenario's Allure result is broken"
   (fn [ctx]
-    (let [r (the-result ctx (:id ctx))]
-      (s/check! (= "broken" (:status r)) (str "the result is " (:status r)))
-      nil)))
+    (kc/exits! ctx 1)
+    (s/check! (= "broken" (get (the-result ctx) "status")) (str "the result is " (get (the-result ctx) "status")))
+    nil))
 
 (defstep #"the result names the unmatched step"
   (fn [ctx]
-    (let [msg (str (get-in (the-result ctx (:id ctx)) [:statusDetails :message]))]
-      (s/check! (str/includes? msg (:unmatched ctx)) (str "the result says " (pr-str msg)))
+    (let [msg (str (get-in (the-result ctx) ["statusDetails" "message"]))]
+      (s/check! (str/includes? msg "nothing defines this step") (str "the result says " msg))
       nil)))
 
 (defstep #"a stamped scenario tagged @wip, with step definitions for its steps"
   (fn [ctx]
-    (let [ctx (with-defs! ctx [{:pattern "a planned step" :name "planned"}])]
-      (feature! (:dir ctx) "demo/alpha" "Alpha"
-                [{:tags "@spec-0001 @e2e @wip" :title "Planned work" :steps ["Given a planned step"]}])
-      (assoc ctx :id "spec-0001"))))
+    (project! ctx {"architecture/lint" (feature "Lint" "@UN-001"
+                                                (scenario "@spec-0012 @e2e @wip" "Planned" "Given a logged step"))}
+              {"wip" [["a logged step" "(fn [ctx] (log :ran) ctx)"]]})))
 
 (defstep #"the scenario's steps are not run"
   (fn [ctx]
-    (kc/the-run ctx)
-    (s/check! (empty? (log-of ctx)) (str "steps ran: " (pr-str (log-of ctx))))
+    (kc/exits! ctx 0)
+    (s/check! (empty? (logged ctx)) (str "a step ran: " (pr-str (logged ctx))))
     nil))
 
 (defstep #"its result is skipped and labelled planned"
   (fn [ctx]
-    (let [r (the-result ctx (:id ctx))]
-      (s/check! (= "skipped" (:status r)) (str "the result is " (:status r)))
-      (s/check! (= "true" (label r :planned)) (str "the result is labelled " (pr-str (:labels r))))
+    (let [r (the-result ctx)]
+      (s/check! (= "skipped" (get r "status")) (str "the result is " (get r "status")))
+      (s/check! (= ["true"] (labels r "planned")) (str "the labels are " (pr-str (get r "labels"))))
       nil)))
 
 ;; ---------------------------------------------------------------------------
@@ -321,32 +302,145 @@
 
 (defstep #"a spec holding twenty feature files"
   (fn [ctx]
-    (let [ctx (with-defs! ctx [{:pattern "a step of feature (\\d+)" :name "step"}])
-          ids (vec (for [i (range 1 21)] (format "spec-%04d" i)))]
-      (doseq [[i id] (map-indexed vector ids)]
-        (feature! (:dir ctx) (format "demo/feature_%02d" (inc i)) (str "Feature " (inc i))
-                  [{:tags (str "@" id " @e2e") :title (str "Scenario of feature " (inc i))
-                    :steps [(str "Given a step of feature " (inc i))]}]))
-      (assoc ctx :ids ids))))
+    (project! ctx (into {} (for [i (range 20)]
+                             [(format "architecture/part%02d" i)
+                              (feature (str "Part " i) "@UN-001"
+                                       (scenario (format "@spec-%04d @e2e" (+ 100 i)) (str "Part " i) "Given a step that passes"))]))
+              passing)))
 
 (defstep #"it runs the scenarios of all twenty"
   (fn [ctx]
     (kc/exits! ctx 0)
-    (let [rs (results ctx)
-          ids (set (keep #(label % :spec) rs))]
-      (s/check! (= (set (:ids ctx)) ids) (str "results name " (pr-str (sort ids))))
-      (s/check! (every? #(= "passed" (:status %)) rs) "a scenario did not pass")
-      (s/check! (= 20 (count (log-of ctx))) (str (count (log-of ctx)) " steps ran"))
+    (let [ids (set (mapcat #(labels % "spec") (results ctx)))]
+      (s/check! (= (set (for [i (range 20)] (format "spec-%04d" (+ 100 i)))) ids) (str "the run wrote " (sort ids)))
       nil)))
 
 (defstep #"a spec directory holding no feature file"
-  (fn [ctx]
-    (let [ctx (with-defs! ctx [{:pattern "a step" :name "step"}])]
-      (s/check! (empty? (fs/glob (fs/file (:dir ctx) "dhf/spec") "**.feature")) "the spec holds a feature file")
-      ctx)))
+  (fn [ctx] (project! ctx {} passing)))
 
 (defstep #"it exits 2, says no scenario was found, and writes no result"
   (fn [ctx]
     (kc/refused-naming! ctx "no scenario was found")
     (s/check! (empty? (results ctx)) "a result was written")
     nil))
+
+;; ---------------------------------------------------------------------------
+;; Every result is written in Allure's own model, from its Gherkin scenario
+
+(defstep #"the stamped scenario @spec-0012 \"Lint names the view\", tagged @e2e and @UN-002, under the rule \"Every view is described\" of the feature \"Lint\" in dhf/spec/architecture/lint\.feature, owned by the component Lint of the bounded context architecture"
+  (fn [ctx]
+    (project! ctx {"architecture/lint"
+                   (str "Feature: Lint\n  A fixture.\n\n  Rule: Every view is described\n"
+                        "\n    @spec-0012 @e2e @UN-002\n    Scenario: Lint names the view\n"
+                        "      Given a step that passes\n      Then another step that passes\n")}
+              passing)))
+
+(defstep #"\"rdm-spec run\" is run and the scenario passes"
+  (fn [ctx]
+    (let [before (System/currentTimeMillis)
+          ctx (run! ctx)]
+      (kc/exits! ctx 0)
+      (s/check! (= "passed" (get (the-result ctx) "status")) "the scenario did not pass")
+      (assoc ctx ::window [before (System/currentTimeMillis)]))))
+
+(defn- millis? [ctx v]
+  (let [[a b] (::window ctx)]
+    (and (integer? v) (<= a v b))))
+
+(defstep #"its Allure result holds (.+?) as (.+)"
+  (fn [ctx element value]
+    (let [r (the-result ctx)
+          is! (fn [ok] (s/check! ok (str "the result does not hold " element " as " value ":\n" (json/generate-string r {:pretty true}))))]
+      (case element
+        "name" (is! (= "Lint names the view" (get r "name")))
+        "fullName" (is! (= "dhf/spec/architecture/lint.feature:Lint names the view" (get r "fullName")))
+        "historyId" (is! (= "spec-0012" (get r "historyId")))
+        "status and stage" (is! (= ["passed" "finished"] [(get r "status") (get r "stage")]))
+        "start and stop" (is! (and (millis? ctx (get r "start")) (millis? ctx (get r "stop")) (<= (get r "start") (get r "stop"))))
+        "steps" (is! (and (= ["Given a step that passes" "Then another step that passes"] (map #(get % "name") (get r "steps")))
+                          (every? #(and (= "passed" (get % "status")) (millis? ctx (get % "start")) (millis? ctx (get % "stop")))
+                                  (get r "steps"))))
+        "the label feature" (is! (= ["Lint"] (labels r "feature")))
+        "the label story" (is! (= ["Every view is described"] (labels r "story")))
+        "the label suite" (is! (= ["architecture"] (labels r "suite")))
+        "the label subSuite" (is! (= ["Lint"] (labels r "subSuite")))
+        "the labels tag" (is! (= #{"@spec-0012" "@e2e" "@UN-002"} (set (labels r "tag"))))
+        "the labels spec, context and component" (is! (= [["spec-0012"] ["architecture"] ["Lint"]]
+                                                          [(labels r "spec") (labels r "context") (labels r "component")]))
+        "the label framework" (is! (= ["gherkin"] (labels r "framework")))
+        "links" (is! (= [{"type" "issue" "name" "UN-002"}] (get r "links")))
+        (s/fail! (str "no such element: " element))))
+    nil))
+
+(defstep #"a stamped scenario outline @spec-0013 whose example row has the values plan and 3"
+  (fn [ctx]
+    (project! ctx {"architecture/lint" (feature "Lint" "@UN-001" (outline "spec-0013" "Rows" ["plan" "3"] ["draft" "4"]))}
+              row-steps)))
+
+(defn- row-result [ctx v]
+  (let [rs (filter (fn [r] (some #(= ["written" v] [(get % "name") (get % "value")]) (get r "parameters"))) (results ctx))]
+    (s/check! (= 1 (count rs)) (str (count rs) " results name the row " v))
+    (first rs)))
+
+(defstep #"that row's result holds the parameters \[\{\"name\" \"written\" \"value\" \"plan\"\} \{\"name\" \"kept\" \"value\" \"3\"\}\], named by the table's headings"
+  (fn [ctx]
+    (kc/exits! ctx 0)
+    (let [ps (get (row-result ctx "plan") "parameters")]
+      (s/check! (= [{"name" "written" "value" "plan"} {"name" "kept" "value" "3"}] ps) (str "the parameters are " (pr-str ps)))
+      nil)))
+
+(defstep #"its historyId is \"spec-0013\" followed by the row's values, so each row has its own history"
+  (fn [ctx]
+    (let [a (get (row-result ctx "plan") "historyId")
+          b (get (row-result ctx "draft") "historyId")]
+      (s/check! (and (str/starts-with? a "spec-0013") (str/includes? a "plan") (str/includes? a "3"))
+                (str "the historyId is " (pr-str a)))
+      (s/check! (not= a b) (str "two rows share the history " a))
+      nil)))
+
+(defstep #"a scenario whose second step throws the error \"no such view\""
+  (fn [ctx]
+    (project! ctx {"architecture/lint" (feature "Lint" "@UN-001"
+                                                (scenario "@spec-0012 @e2e" "Throws" "Given a step that passes"
+                                                          "When a step that throws" "Then a step that passes"))}
+              {"throws" [["a step that passes" "(fn [ctx] ctx)"]
+                         ["a step that throws" "(fn [ctx] (throw (ex-info \"no such view\" {})))"]]})))
+
+(defstep #"its result's status is \"failed\" and its statusDetails hold the message \"no such view\" and the trace"
+  (fn [ctx]
+    (let [r (the-result ctx)
+          d (get r "statusDetails")]
+      (s/check! (= "failed" (get r "status")) (str "the status is " (get r "status")))
+      (s/check! (str/includes? (str (get d "message")) "no such view") (str "the message is " (get d "message")))
+      (s/check! (not (str/blank? (get d "trace"))) "statusDetails hold no trace")
+      nil)))
+
+(defstep #"its third step's status is \"skipped\""
+  (fn [ctx]
+    (s/check! (= "skipped" (get (nth (get (the-result ctx) "steps") 2 nil) "status")) "the third step is not skipped")
+    nil))
+
+(defstep #"a step definition that attaches the text \"GET / answered 200\" as evidence named \"response\""
+  (fn [ctx]
+    (project! ctx {"architecture/lint" (feature "Lint" "@UN-001" (scenario "@spec-0012 @e2e" "Evidence" "Given a step with evidence"))}
+              {"evidence" [["a step with evidence" "(fn [ctx] (attach! \"response\" \"GET / answered 200\") ctx)"]]})))
+
+(defn- the-attachment [ctx]
+  (let [a (first (get (first (get (the-result ctx) "steps")) "attachments"))]
+    (s/check! a (str "the step holds no attachment\n" (s/show (kc/the-run ctx))))
+    a))
+
+(defstep #"the result's step holds an attachment named \"response\" of the type \"text/plain\""
+  (fn [ctx]
+    (kc/exits! ctx 0)
+    (let [a (the-attachment ctx)]
+      (s/check! (= ["response" "text/plain"] [(get a "name") (get a "type")]) (str "the attachment is " (pr-str a)))
+      nil)))
+
+(defstep #"its source is a file beside the result in the results directory, holding that text"
+  (fn [ctx]
+    (let [a (the-attachment ctx)
+          f (fs/file (results-dir ctx) (str (get a "source")))]
+      (s/check! (and (not (str/includes? (str (get a "source")) "/")) (fs/regular-file? f)) (str "no attachment file " f))
+      (s/check! (= "GET / answered 200" (slurp (str f))) (str "the attachment holds " (pr-str (slurp (str f)))))
+      nil)))
