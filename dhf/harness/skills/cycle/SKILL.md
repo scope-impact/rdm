@@ -1,0 +1,60 @@
+---
+name: cycle
+description: How the integrator runs one regeneration cycle of rdm-spec, from a cut to an accepted release, and what to record. Use when you run a cycle.
+---
+
+# A cycle, for the integrator
+
+Löyly's `docs/wow/way-of-working.md` for rdm-spec. The integrator runs the
+steps, never builds or grades, and reports time and tokens after every run.
+
+## The rules
+
+- **One builder per cycle.** Never contexts in parallel: a cycle's scopes are
+  built one after another by one builder, in the order `scopes` lists them
+  (spec owner, cycle 13; dhf/cycles/retrospective-01-12.md).
+- **A whole-project cycle at least every fifth cycle.** A scoped cycle hides
+  what it does not rebuild (dhf/cycles/retrospective-01-12.md, root cause 2);
+  Löyly rebuilds the whole application every cycle. Scoping saves about two
+  thirds of a cycle's cost, so it stays, and the whole-project cycle is the
+  check on it (spec owner, spec-22).
+- **Every run is observed** (dhf/spec/agency/observe.feature): its capability
+  is proven by its result, and its defence is recorded beside it.
+- **One grader at a time per item;** several graders may split a large
+  checklist, each in its own room, since nothing of theirs is merged but
+  their verdict files.
+- **Agents run in the background:** stopping the integrator's own turn stops
+  them too (cycle 17 lost a grader that way). Ask while they run; do not stop.
+
+## The steps
+
+1. **Spec change** in `dhf/spec/`, `rdm-spec stamp` (take ids from its output,
+   never from memory), `rdm-spec views` if the model changed, `rdm-spec check`;
+   commit; tag the cut `spec-N`.
+2. **Scopes:** `rdm-spec scopes spec-(N-1) spec-N`; judge the shared files it
+   names; record the cycle in `dhf/cycles/NN/cycle.edn` (cut, scope, builder,
+   grader, spec owner, model).
+3. **Fence** the room; `rdm-spec observe begin NN builder ROOM`; brief one
+   builder with the `builder` skill and the scopes.
+4. **When it ends:** `observe end NN builder --tokens N`; run the suite twice
+   (no fixture, no process, `/tmp` unchanged); run the held-still oracle on the
+   build (`RDM_SPEC=... bb dhf/harness/oracle/oracle.clj`); `rdm-spec verify ROOM NN`
+   with the installed release; `rdm-spec checklist NN`.
+5. **Grade:** a grading room with the build, `bin/rdm-spec`, the sources;
+   `observe begin NN grader`; brief with the `grader` skill.
+6. **Record:** merge the verdicts; `rdm-spec score NN --verdicts FILE`;
+   `rdm-spec scoreboard (NN-1) NN`; `observe report`; the posterior
+   (`dhf/cycles/analysis/posterior.py`); `labels.yaml` for each fail you looked
+   at; `decisions.yaml` from the builder's report; `proposed-spec-changes.md`.
+7. **Bring the build in** (src, test, runner) and run its suite in the
+   repository; commit.
+8. **The spec owner decides:** accepted, the build is installed as the release
+   (an artifact in the release layout, the wrapper pointed at it), and
+   recorded as `:reviewed` in `cycle.edn`.
+
+## Mistakes already made, not to repeat
+
+- Ids copied into a commit message from memory instead of the stamper.
+- A config edit that dropped a closing brace (run `check` before committing).
+- A scratch clone left behind with a trial change in it.
+- A golden recorded by a build nobody accepted.

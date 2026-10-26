@@ -53,56 +53,9 @@ The spec of rdm-spec, the source of truth for what it does
 - **A task's result shape is the spec's.** Where another context's step reads
   a task's standard output, the task's feature holds a contract scenario for
   that shape, and the step reads only what it states (cycle 08: spec-0047).
-- **One builder per cycle.** Never contexts in parallel: a cycle's scopes are
-  built one after another by one builder, in the order `scopes` lists them
-  (spec owner, cycle 13; dhf/cycles/retrospective-01-12.md).
-- **A whole-project cycle at least every fifth cycle.** A scoped cycle hides
-  what it does not rebuild (dhf/cycles/retrospective-01-12.md, root cause 2);
-  Löyly rebuilds the whole application every cycle. Scoping saves about two
-  thirds of a cycle's cost, so it stays, and the whole-project cycle is the
-  check on it (spec owner, spec-22).
-- **A fixture inside another git repository is fenced from it:** its commands
-  run with GIT_CEILING_DIRECTORIES set to the fixture's parent, so git never
-  finds the enclosing repository (cycle 17, builder).
-- **Every run is observed** (dhf/spec/agency/observe.feature): its capability
-  is proven by its result, and its defence is recorded beside it.
-- **A golden holds nothing the spec does not state.** Before a golden is
-  recorded or re-recorded, every key it holds traces to a scenario (cycle 11:
-  the scorer's and scoreboard's goldens held shapes no scenario stated).
-- **Step definitions are the scope's own.** A step file uses only the
-  kernel's shared steps and its own context's step files; a helper it needs
-  from elsewhere is copied in. A step text used by the features of more than
-  one context is the kernel's; one used within one context is that
-  context's. Its owner defines it once, when its step file loads, never only
-  inside another step's body (cycle 03: four integration fixes; cycle 06:
-  spec-0090 and spec-0187 found no definition).
-- **A scenario's project is one the scenario makes,** a fixture, never the
-  room or the repository the tests run in, whose files change from cut to
-  cut and differ in verify's checkout. The ids, needs, pages and commits a
-  scenario names are its fixture's (cycle 06: spec-0231; cycle 07:
-  spec-0239).
-- **A fixture copied from the room holds what a clean room holds:** the
-  paths the configuration keeps, never the denied ones (cycle 13: the copy
-  still read the old allow-list).
-- **A fixture's git hooks never run.** A fixture made by `init` or `adopt`
-  carries the skeleton's pre-commit hook, which runs whatever `rdm-spec` is
-  on PATH; a scenario that commits in a fixture runs with the fixture's hooks
-  turned off, unless it is about the hook (cycle 14: the grader's commit ran
-  the installed release).
-- **A fixture never carries the room's oracle** unless its scenario sets
-  one: the oracle a fixture's configuration names is the scenario's (cycle
-  09: 22 fixtures reached for the room's registry).
-- **A Given builds on the project an earlier Given of its scenario made;**
-  only the first Given makes one (cycle 11: a shared Given threw away the
-  history spec-0236's first Given made).
 - **A Then that says nothing changed is paired with the outcome the command
   must have,** so a command that never ran cannot pass it (cycle 11:
   spec-0100 passed while publish exited 2).
-- **A shared step's context keys are the kernel's.** The kernel's step file
-  names, beside each shared step, the keys it sets; another step file reads
-  only those (cycle 09: `:wiki-file` read as `:wiki-rel`).
-- **A suite removes every fixture it makes,** unit tests included (cycle 06:
-  the disk filled; cycle 07: 8,934 directories left behind).
 - **Each rule a file breaks is its own finding,** so one file may have
   several.
 - **One step text, one meaning.** A Given worded the same in two feature files
@@ -125,3 +78,8 @@ what` when no line applies, or `warning: RULE: what` when no file applies; a tas
   missing or unreadable configuration, a state that forbids it. A missing or
   unreadable file of the spec itself (the ledger, the needs, the model) is a
   finding, exit 1: it is part of what the task checked.
+- **How builders, graders and the integrator work is not spec.** It is the way
+  of working, kept as skills beside the harness (`dhf/harness/skills/`:
+  builder, grader, cycle) with the rules that hold it and what enforces each
+  (`dhf/harness/invariants.md`), as Löyly keeps it in `docs/wow/`. The spec
+  says what rdm-spec does; a grader holds a build to nothing else.

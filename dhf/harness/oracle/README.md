@@ -27,3 +27,9 @@ gets 17 differences:
 - 4 a regression: verify demands evidence from a `@wip` scenario
 
 Cycle 18's grader found none of them.
+
+## Recording
+
+- **A golden holds nothing the spec does not state.** Before a golden is
+  recorded or re-recorded, every key it holds traces to a scenario (cycle 11:
+  the scorer's and scoreboard's goldens held shapes no scenario stated).
