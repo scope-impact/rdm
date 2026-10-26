@@ -1,62 +1,70 @@
 (ns rdm-spec.verification.verify-test
-  (:require [babashka.fs :as fs]
-            [clojure.string :as str]
+  "Unit tests of Verify's pure parts: the declared checks, the Allure
+  mapping, a result held to it, and a :runs check's answer. No fixture on
+  disk."
+  (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [rdm-spec.kernel.command :as command]
+            [rdm-spec.kernel.runner :as runner]
             [rdm-spec.verification.verify :as verify]))
 
 (def impl ["src" "test" "test.clj" "bb.edn"])
 
-(defn- why [checks]
-  (try (verify/checks-of {:verify checks :implementation impl}) nil
-       (catch Exception e (when (command/cannot-run? e) (ex-message e)))))
-
-(deftest a-configuration-verify-cannot-trust-is-refused
-  (is (nil? (why [{:kind :tests :command ["bb" "test.clj"]}])))
-  (is (str/includes? (why nil) "declares no :verify"))
-  (is (str/includes? (why [{:kind :runs :name "a" :command ["x"] :expect {:exit 0} :budget {:seconds 1}}])
-                     "a project is verified by its tests first"))
-  (is (str/includes? (why [{:kind :tests :command ["x"]} {:kind :renders}]) ":renders is not a kind of check"))
-  (is (str/includes? (why [{:kind :tests}]) "the tests check names no command"))
-  (is (str/includes? (why [{:kind :tests :command ["x"]}
-                           {:kind :serves :start ["x"] :port 1 :budget {:seconds 1 :polls 1} :probe ["bb" "src/probe.clj"]}])
+(deftest the-declared-checks
+  (is (nil? (verify/config-problem [{:kind :tests :command ["bb" "test.clj"]}] impl)))
+  (is (str/includes? (verify/config-problem nil impl) "declares no :verify"))
+  (is (str/includes? (verify/config-problem [{:kind :runs :name "a" :command ["x"] :budget {:seconds 1}}] impl)
+                     "verified by its tests first"))
+  (is (str/includes? (verify/config-problem [{:kind :tests}] impl) "names no command"))
+  (is (str/includes? (verify/config-problem [{:kind :tests :command ["t"]} {:kind :renders}] impl)
+                     ":renders is not a kind of check"))
+  (is (str/includes? (verify/config-problem [{:kind :tests :command ["t"]}
+                                             {:kind :serves :start ["a" "{port}"] :port 1 :budget {:seconds 1 :polls 1}
+                                              :probe ["bb" "src/probe.clj" "{url}"]}]
+                                            impl)
                      "the probe is in the implementation the builder writes"))
-  (testing "a check's name is its kind's when it names none"
-    (is (= ["tests" "answers"] (mapv :name (verify/checks-of {:implementation impl
-                                                               :verify [{:kind :tests :command ["x"]}
-                                                                        {:kind :runs :name "answers" :command ["y"]
-                                                                         :expect {:exit 0} :budget {:seconds 1}}]}))))))
+  (is (nil? (verify/config-problem [{:kind :tests :command ["t"]}
+                                    {:kind :serves :start ["a" "{port}"] :port 1 :budget {:seconds 1 :polls 1}
+                                     :probe ["bb" "dhf/harness/probe.clj" "{url}"]}]
+                                   impl))))
 
-(deftest an-answer-is-an-http-response
-  (is (verify/http-response? "HTTP/1.1 404 Not Found"))
-  (is (verify/http-response? "HTTP/1.0 200 OK"))
-  (is (not (verify/http-response? nil)))
-  (is (not (verify/http-response? "hello"))))
+(deftest the-mapping
+  (is (nil? (verify/mapping-problem runner/default-mapping)))
+  (is (str/includes? (verify/mapping-problem (assoc runner/default-mapping :epic :aggregate)) ":aggregate is not an element of the spec"))
+  (is (str/includes? (verify/mapping-problem (assoc runner/default-mapping :colour :context)) ":colour is not an element of an Allure result"))
+  (is (str/includes? (verify/mapping-problem (update runner/default-mapping :labels dissoc "spec"))
+                     "the label spec, from the scenario's id, is required")))
 
-(deftest seconds-are-held-to-the-hundredth
-  (is (= 1.23 (verify/seconds 1234)))
-  (is (= 0.0 (verify/seconds 0))))
+(def pickle
+  {:id "spec-0003" :name "Labelled" :feature "Lint" :rule "Every view" :context "architecture" :component "Lint"
+   :component-id "architecture/lint" :tags ["@UN-001" "@spec-0003" "@e2e"] :needs ["UN-001"]
+   :steps [{:keyword "Given" :text "a model"} {:keyword "Then" :text "it fails"}] :parameters []})
 
-(deftest a-command-is-run-within-its-budget
-  (let [dir (str (fs/create-temp-dir))]
-    (try
-      (let [r (verify/run-command ["bb" "-e" "(println \"hi\") (System/exit 3)"] {:dir dir :budget-ms 30000})]
-        (is (= 3 (:exit r)))
-        (is (str/starts-with? (:out r) "hi")))
-      (let [r (verify/run-command ["bb" "-e" "(Thread/sleep 20000)"] {:dir dir :budget-ms 500})]
-        (is (:timed-out? r)))
-      (is (command/cannot-run? (try (verify/run-command ["rdm-spec-no-such-command-x"] {:dir dir :budget-ms 500}) nil
-                                    (catch Exception e e))))
-      (finally (fs/delete-tree dir)))))
+(def result
+  {:name "Labelled" :status "passed"
+   :steps [{:name "Given a model"} {:name "Then it fails"}]
+   :labels [{:name "feature" :value "Lint"} {:name "story" :value "Every view"} {:name "epic" :value "architecture"}
+            {:name "spec" :value "spec-0003"} {:name "component" :value "Lint"}
+            {:name "tag" :value "UN-001"} {:name "tag" :value "spec-0003"} {:name "tag" :value "e2e"}]
+   :links [{:type "issue" :name "UN-001" :url "dhf/spec/needs.edn#UN-001"}]
+   :attachments []})
 
-(deftest the-room-tree-is-the-git-tree-of-the-implementation
-  (let [room (str (fs/create-temp-dir))]
-    (try
-      (is (= "4b825dc642cb6eb9a060e54bf8d69288fbee4904" (verify/room-tree room impl)) "an empty room is the empty tree")
-      (spit (str (fs/file room "test.clj")) "x\n")
-      (spit (str (fs/file room "notes.md")) "not implementation\n")
-      (let [h (verify/room-tree room impl)]
-        (is (= 40 (count h)))
-        (spit (str (fs/file room "notes.md")) "changed\n")
-        (is (= h (verify/room-tree room impl)) "only the implementation counts"))
-      (finally (fs/delete-tree room)))))
+(defn- rules [mapping r]
+  (mapv (fn [f] (str (:rule f) ": " (first (str/split (:message f) #" ")))) (verify/mapping-findings mapping pickle r {:file "r.json" :text ""})))
+
+(deftest a-result-held-to-the-mapping
+  (is (= [] (rules runner/default-mapping result)))
+  (is (= ["mapping-differs: story:"] (rules runner/default-mapping (assoc-in result [:labels 1 :value] "Else"))))
+  (is (= ["mapping-differs: epic:"] (rules runner/default-mapping (assoc-in result [:labels 2 :value] "other"))))
+  (is (= ["steps-differ-from-scenario: spec-0003:"] (rules runner/default-mapping (update result :steps pop))))
+  (is (= ["mapping-differs: links:"] (rules runner/default-mapping (assoc result :links []))))
+  (is (= ["evidence-missing: browser-trace:"] (rules (assoc runner/default-mapping :evidence {:e2e ["browser-trace"]}) result)))
+  (is (= [] (rules (assoc runner/default-mapping :evidence {:e2e ["browser-trace"]})
+                   (assoc-in result [:steps 0 :attachments] [{:name "browser-trace"}]))))
+  (testing "a mapping holds only what it names"
+    (is (= [] (rules {:labels {"spec" :scenario-id}} (assoc result :steps [] :labels [{:name "spec" :value "spec-0003"}]))))))
+
+(deftest a-commands-answer
+  (is (nil? (verify/runs-problem {:exit 0 :stdout-starts "{:help"} {:exit 0 :out "{:help []}"} 30)))
+  (is (str/includes? (verify/runs-problem {:exit 0} {:exit 3 :out ""} 30) "exited 3 where 0 was expected"))
+  (is (str/includes? (verify/runs-problem {:exit 0 :stdout-starts "{:help"} {:exit 0 :out "usage\nmore"} 30) "\"usage\""))
+  (is (str/includes? (verify/runs-problem {:exit 0} {:timed-out? true} 10) "the budget of 10 seconds")))

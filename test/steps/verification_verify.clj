@@ -1,17 +1,27 @@
 (ns steps.verification-verify
   "Step definitions for dhf/spec/verification/verify.feature: `rdm-spec
-  verify ROOM 03` in a cycle project (the kernel's: a copy of the room
-  whose spec holds the lint's feature file, its :verify the tests check,
-  cut spec-3, cycle 03 naming it) with a room whose test.clj the scenario
-  writes. A room's tests copy the result files a step gives into
-  RESULTS_DIR, print what a step says and exit as it says.
+  verify ROOM 03` on a verify project the scenario makes, and a room.
 
-  Context keys set here: :dir, :room, :expected-files ({rel text} the
-  checkout must hold), :room-tree (H), :port, :pid-file (where an app a
-  check starts writes its process id), :started (a file the app writes when
-  it starts), :held (a socket holding a port), :env-file (where the tests
-  write the RESULTS_DIR they were given), :named (the words a finding must
-  hold)."
+  The verify project: the room's configuration without :oracle, a model
+  with the bounded context architecture (Lint), the need UN-001, and
+  dhf/spec/architecture/lint.feature holding, under the rule \"Every view is
+  described\", spec-0003 and spec-0012 (both @e2e), plus what a step adds;
+  a git repository whose commit (dhf/cycles excluded) is tagged spec-3, and
+  dhf/cycles/03/cycle.edn naming it. The room: src/rdm_spec/demo.clj and a
+  test.clj that prints a line, writes the results its plan holds into
+  RESULTS_DIR and exits as planned; by default a result for every stamped
+  scenario not tagged @wip that holds to rdm-spec's default Allure mapping.
+
+  Every Given changes the scenario's plan and rebuilds both (`build!`): the
+  project is committed again and spec-3 moved to the new commit, so a
+  Given can change the cut's configuration after another Given made it.
+
+  Context keys set here: :dir, :room, :cfg (the configuration at the cut),
+  :scenarios, :cut-files ({rel text} committed at the cut beyond the spec),
+  :plan ({:exit :results :log}), :room-files ({rel text} beyond test.clj),
+  :pid-file (where a served app writes its pid), :marker (a file a served
+  app writes when it starts), :held (a socket this process holds),
+  :port, :tree (the room's tree hash)."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [cheshire.core :as json]
@@ -22,108 +32,112 @@
             [steps.support :as s]))
 
 ;; ---------------------------------------------------------------------------
-;; Fixtures
+;; The project and the room
 
-(def ^:private cycle-rel "dhf/cycles/03")
+(def model
+  {:system {:id :demo-system :name "Demo" :description "A demo system"}
+   :people [] :external []
+   :containers [{:id :demo-app :name "demo" :kind :runs :technology "Any" :description "The demo program"
+                 :contexts [{:id :architecture :name "architecture" :description "The C4 model"
+                             :components [{:id :architecture/lint :name "Lint" :spec "architecture/lint"
+                                           :description "The lint"}]}]}]
+   :relationships [] :views []})
 
-(defn- room-with!
-  "A room whose test.clj writes `results` ({file-name text}) into
-  RESULTS_DIR, prints `out`, writes RESULTS_DIR to `env-file` when given,
-  and exits `code`."
-  [{:keys [results out code env-file]}]
-  (let [r (s/tmp-dir)]
-    (s/write! r "src/rdm_spec/demo.clj" "(ns rdm-spec.demo)\n")
-    (doseq [[n text] results] (s/write! r (str "test/fixture-results/" n) text))
-    (s/write! r "test.clj"
-              (str "(require '[babashka.fs :as fs])\n"
-                   "(def results-dir (System/getenv \"RESULTS_DIR\"))\n"
-                   (when env-file (str "(spit " (pr-str env-file) " (str results-dir))\n"))
-                   "(doseq [f (fs/glob \"test/fixture-results\" \"*\")]\n"
-                   "  (fs/copy f (fs/file results-dir (fs/file-name f)) {:replace-existing true}))\n"
-                   (when out (str "(println " (pr-str out) ")\n"))
-                   "(System/exit " (or code 0) ")\n"))
-    r))
+(def default-scenarios
+  [{:id "spec-0003" :title "An unlabelled relationship fails the lint"
+    :steps ["Given a relationship with no description" "When \"rdm-spec check\" is run" "Then it fails"]}
+   {:id "spec-0012" :title "A view with no description fails the lint"
+    :steps ["Given a view with no description" "Then it fails"]}])
 
-(defn- result-json [spec status]
-  (json/generate-string {:uuid (str (random-uuid)) :name spec :status status :steps []
-                         :labels [{:name "spec" :value spec}]}))
+(def rule-name "Every view is described")
 
-(defn- results-for [statuses]
-  (into {} (map-indexed (fn [i [spec st]] [(str "r" i "-result.json") (result-json spec st)]) statuses)))
+(defn- scenario-text [{:keys [id title steps wip? level]}]
+  (str "\n    " (str/join " " (remove nil? [(when id (str "@" id)) (str "@" (or level "e2e")) (when wip? "@wip")]))
+       "\n    Scenario: " title "\n"
+       (str/join (map #(str "      " % "\n") steps))))
 
-(defn- project!
-  "ctx with :dir, a cycle project at spec-3 whose cycle 03 names the cut,
-  its configuration changed by `cfg-f` before the cut."
-  ([ctx] (project! ctx identity))
-  ([ctx cfg-f] (project! ctx cfg-f kc/default-scenarios))
-  ([ctx cfg-f scenarios]
-   (let [dir (s/copy-of-room!)]
-     (doseq [f (fs/glob (fs/file dir "dhf/spec") "**.feature")] (fs/delete f))
-     (s/write! dir kc/lint-rel (kc/lint-text scenarios))
-     (s/write! dir "dhf/harness/config.edn"
-               (str (pr-str (cfg-f (assoc (kc/config-of dir)
-                                          :verify [{:kind :tests :command ["bb" "test.clj"]}]
-                                          :allure {:labels {"spec" :scenario-id}}))) "\n"))
-     (kc/cut! dir "spec-3")
-     (kc/write-cycle! dir)
-     (assoc ctx :dir dir))))
+(defn feature-text [scenarios]
+  (str "@UN-001\nFeature: Lint\n  A fixture.\n\n  Rule: " rule-name "\n" (str/join (map scenario-text scenarios))))
 
-(defn- recut!
-  "Writes `cfg-f` of the project's configuration and cuts spec-3 again."
-  [ctx cfg-f]
-  (let [dir (:dir ctx)]
-    (s/write! dir "dhf/harness/config.edn" (str (pr-str (cfg-f (kc/config-of dir))) "\n"))
+(def lint-rel "dhf/spec/architecture/lint.feature")
+
+(defn good-result
+  "A result of the scenario `sc` that holds to rdm-spec's default mapping."
+  [{:keys [id title steps wip? level]}]
+  (cond-> {:uuid (str "r-" id) :name title :status (if wip? "skipped" "passed") :stage "finished"
+           :fullName (str lint-rel ":" title) :historyId id
+           :steps (vec (for [st steps] {:name st :status (if wip? "skipped" "passed")}))
+           :labels (vec (concat [{:name "feature" :value "Lint"} {:name "story" :value rule-name}
+                                 {:name "epic" :value "architecture"} {:name "suite" :value "architecture"}
+                                 {:name "subSuite" :value "architecture/lint"}]
+                                (for [t (remove nil? [id (or level "e2e") "UN-001" (when wip? "wip")])] {:name "tag" :value t})
+                                [{:name "framework" :value "gherkin"} {:name "spec" :value id}
+                                 {:name "context" :value "architecture"} {:name "component" :value "Lint"}]
+                                (when wip? [{:name "planned" :value "true"}])))
+           :links [{:type "issue" :name "UN-001" :url "dhf/spec/needs.edn#UN-001"}]
+           :parameters [] :attachments []}
+    (not wip?) (assoc :attachments [{:name "browser-trace" :source (str id "-trace.zip") :type "application/zip"}])))
+
+(def default-cfg-extra
+  {:verify [{:kind :tests :command ["bb" "test.clj"]}]})
+
+(defn- base-cfg [] (merge (dissoc (s/room-config) :oracle :allure) default-cfg-extra))
+
+(defn- git! [dir & args] (apply kc/git! dir args))
+
+(defn- room-test-clj [{:keys [exit results log env-file]}]
+  (str "(require '[cheshire.core :as json])\n"
+       "(def results-dir (System/getenv \"RESULTS_DIR\"))\n"
+       "(println " (pr-str (or log "the room's tests ran")) ")\n"
+       (when env-file (str "(spit " (pr-str env-file) " results-dir)\n"))
+       "(doseq [[i r] (map-indexed vector " (pr-str (mapv #(json/generate-string % {:pretty true}) results)) ")]\n"
+       "  (spit (str results-dir \"/r\" i \"-result.json\") r))\n"
+       "(System/exit " (or exit 0) ")\n"))
+
+(defn build!
+  "Writes the scenario's project and room from ctx; ctx with both."
+  [ctx]
+  (let [dir (or (:dir ctx) (s/tmp-dir))
+        room (or (:room ctx) (s/tmp-dir))
+        scs (or (:scenarios ctx) default-scenarios)
+        plan (merge {:exit 0 :results (mapv good-result (remove :wip? scs))} (:plan ctx))
+        cfg (or (:cfg ctx) (base-cfg))]
+    (s/write! dir "dhf/harness/config.edn" (str (pr-str cfg) "\n"))
+    (s/write! dir "dhf/spec/model.edn" (pr-str model))
+    (s/write! dir "dhf/spec/needs.edn" (pr-str {"UN-001" {:text "A need." :sources ["demo:README.md@abc1234"]}}))
+    (s/write! dir "dhf/spec/ids.edn" "{:issued 9999}\n")
+    (s/write! dir lint-rel (feature-text scs))
+    (doseq [[rel text] (:cut-files ctx)] (s/write! dir rel text))
     (kc/cut! dir "spec-3")
-    ctx))
+    (when-not (:no-cycle? ctx) (kc/write-cycle! dir))
+    (s/write! room "src/rdm_spec/demo.clj" "(ns rdm-spec.demo)\n")
+    (s/write! room "test.clj" (room-test-clj plan))
+    (doseq [[rel text] (:room-files ctx)] (s/write! room rel text))
+    (assoc ctx :dir dir :room room :scenarios scs :plan plan :cfg cfg)))
 
-(defn- ensure-project [ctx] (if (:dir ctx) ctx (project! ctx)))
+(defn- cfg [ctx] (or (:cfg ctx) (base-cfg)))
 
-(defn- passing [ctx] (assoc ctx :room (room-with! {:results (results-for [["spec-0012" "passed"] ["spec-0014" "passed"]])})))
+(defn- with-cfg [ctx f] (build! (assoc ctx :cfg (f (cfg ctx)))))
 
-(defn- verify-out [r] (:verify (kc/stdout-edn r)))
+(defn- plan [ctx f] (build! (assoc ctx :plan (f (merge {:exit 0 :results (mapv good-result (remove :wip? (or (:scenarios ctx) default-scenarios)))}
+                                                        (:plan ctx))))))
 
-(defn- check-named [r nm] (first (filter #(= nm (:name %)) (:checks (verify-out r)))))
+(defn- cycle-file [ctx rel] (fs/file (:dir ctx) "dhf/cycles/03" rel))
 
-(defn- ratified [ctx] (let [f (fs/file (:dir ctx) cycle-rel "ratified.edn")] (when (fs/exists? f) (edn/read-string (slurp (str f))))))
+(defn- ratified [ctx]
+  (let [f (cycle-file ctx "ratified.edn")]
+    (when (fs/exists? f) (edn/read-string (slurp (str f))))))
 
-(defn- files-under [dir]
-  (into (sorted-map)
-        (for [f (fs/glob dir "**" {:hidden true})
-              :let [r (str/replace (str (fs/relativize dir f)) "\\" "/")]
-              :when (and (fs/regular-file? f) (not (str/starts-with? r ".git/")))]
-          [r (slurp (str f))])))
+(defn- out [ctx] (:verify (kc/stdout-edn (kc/the-run ctx))))
 
-(defn- files-at [dir rev]
-  (into (sorted-map)
-        (for [r (remove str/blank? (str/split-lines (:out (p/shell {:dir (str dir) :out :string :err :string}
-                                                                   "git" "ls-tree" "-r" "--name-only" rev))))]
-          [r (:out (p/shell {:dir (str dir) :out :string :err :string} "git" "show" (str rev ":" r)))])))
+(defn- check-of [ctx nm] (first (filter #(= nm (:name %)) (:checks (out ctx)))))
 
-(defn- impl? [cfg rel] (some #(or (= rel %) (str/starts-with? rel (str (str/replace % #"/+$" "") "/"))) (:implementation cfg)))
+(defn- names! [r & parts]
+  (s/check! (some (fn [l] (every? #(str/includes? l %) parts)) (s/err-lines r))
+            (str "no line names " (str/join ", " (map pr-str parts)) "\n" (s/show r)))
+  r)
 
-(defn- tree-hash
-  "The git tree hash of the room's implementation paths, as verify records it."
-  [room cfg]
-  (let [g (s/tmp-dir)
-        git (fn [& args] (apply p/shell {:dir (str room) :out :string :err :string :continue true
-                                         :extra-env {"GIT_DIR" (str g) "GIT_WORK_TREE" (str room)}}
-                                "git" args))
-        paths (filter #(fs/exists? (fs/file room %)) (:implementation cfg))]
-    (git "init" "-q")
-    (when (seq paths) (apply git "add" "-f" "--" paths))
-    (str/trim (:out (git "write-tree")))))
-
-(defn- finding-with! [ctx code parts]
-  (let [r (kc/exits! ctx code)
-        ls (if (= 2 code) (kc/cannot-run-lines r) (kc/finding-lines r))]
-    (s/check! (some (fn [l] (every? #(str/includes? l (str %)) parts)) ls)
-              (str "no line names all of " (pr-str parts) "\n" (s/show r)))
-    r))
-
-(defn- free-port []
-  (with-open [ss (java.net.ServerSocket. 0)] (.getLocalPort ss)))
-
-(defn- alive? [pid] (let [h (java.lang.ProcessHandle/of pid)] (and (.isPresent h) (.isAlive (.get h)))))
+(defn- verify! [ctx] (kc/run-line ctx "verify ROOM 03"))
 
 ;; ---------------------------------------------------------------------------
 ;; Verify trusts only the cut
@@ -131,69 +145,58 @@
 (defstep #"it verifies against a fresh export of spec-3: its files, and no history"
   (fn [ctx]
     (let [r (kc/exits! ctx 0)
-          build (fs/file (:dir ctx) cycle-rel "build")
-          cfg (kc/config-of (:dir ctx))
-          at-cut (into {} (remove (fn [[k _]] (impl? cfg k)) (files-at (:dir ctx) "spec-3")))
-          built (into {} (remove (fn [[k _]] (impl? cfg k)) (files-under build)))]
-      (s/check! (fs/directory? build) (str "no checkout at " build "\n" (s/show r)))
-      (s/check! (not (fs/exists? (fs/file build ".git"))) "the checkout has a history")
-      (s/check! (= at-cut built) (str "the checkout's files are not spec-3's: "
-                                      (pr-str (take 5 (remove #(= (get at-cut %) (get built %)) (distinct (concat (keys at-cut) (keys built))))))))
+          build (fs/file (:dir ctx) "dhf/cycles/03/build")
+          at-cut (set (str/split-lines (git! (:dir ctx) "ls-tree" "-r" "--name-only" "spec-3")))
+          impl (:implementation (kc/config-of (:dir ctx)))
+          in-build (set (for [f (fs/glob build "**" {:hidden true}) :when (fs/regular-file? f)]
+                          (str (fs/relativize build f))))
+          outside-impl (set (remove (fn [rel] (some #(or (= rel %) (str/starts-with? rel (str % "/"))) impl)) in-build))]
+      (s/check! (not (fs/exists? (fs/file build ".git"))) "the checkout holds history")
+      (s/check! (= at-cut outside-impl) (str "the checkout holds " (sort outside-impl) "\nthe cut holds " (sort at-cut) "\n" (s/show r)))
       nil)))
 
 (defstep #"no dhf/cycles/03/cycle\.edn"
-  (fn [ctx]
-    (let [ctx (passing (project! ctx))]
-      (fs/delete (fs/file (:dir ctx) cycle-rel "cycle.edn"))
-      ctx)))
+  (fn [ctx] (build! (assoc ctx :no-cycle? true))))
 
 (defstep #"it exits 2 and names the missing file"
-  (fn [ctx] (kc/refused-naming! ctx (str cycle-rel "/cycle.edn")) nil))
+  (fn [ctx] (kc/refused-naming! ctx "dhf/cycles/03/cycle.edn") nil))
 
 (defstep #"the cut spec-3 holds src/rdm_spec/old\.clj and the room holds no such file"
-  (fn [ctx]
-    (let [ctx (passing ctx)
-          dir (s/copy-of-room!)]
-      (doseq [f (fs/glob (fs/file dir "dhf/spec") "**.feature")] (fs/delete f))
-      (s/write! dir kc/lint-rel (kc/lint-text kc/default-scenarios))
-      (s/write! dir "src/rdm_spec/old.clj" "(ns rdm-spec.old)\n")
-      (s/write! dir "dhf/harness/config.edn"
-                (str (pr-str (assoc (kc/config-of dir) :verify [{:kind :tests :command ["bb" "test.clj"]}]
-                                    :allure {:labels {"spec" :scenario-id}})) "\n"))
-      (kc/cut! dir "spec-3")
-      (kc/write-cycle! dir)
-      (assoc ctx :dir dir))))
+  (fn [ctx] (build! (assoc ctx :cut-files {"src/rdm_spec/old.clj" "(ns rdm-spec.old)\n"}))))
 
 (defstep #"the checkout it verifies holds no src/rdm_spec/old\.clj"
   (fn [ctx]
     (kc/exits! ctx 0)
-    (s/check! (not (fs/exists? (fs/file (:dir ctx) cycle-rel "build/src/rdm_spec/old.clj"))) "the checkout holds old.clj")
+    (s/check! (not (fs/exists? (fs/file (:dir ctx) "dhf/cycles/03/build/src/rdm_spec/old.clj"))) "the checkout holds old.clj")
     nil))
+
+(defn- files-under [d]
+  (into (sorted-map) (for [f (fs/glob d "**" {:hidden true}) :when (fs/regular-file? f)]
+                       [(str (fs/relativize d f)) (slurp (str f))])))
 
 (defstep #"every configured implementation path holds exactly what the room holds"
   (fn [ctx]
-    (let [cfg (kc/config-of (:dir ctx))
-          build (fs/file (:dir ctx) cycle-rel "build")
-          of (fn [d] (into {} (filter (fn [[k _]] (impl? cfg k)) (files-under d))))]
-      (s/check! (= (of (:room ctx)) (of build))
-                (str "the checkout's implementation is " (pr-str (keys (of build))) ", the room's " (pr-str (keys (of (:room ctx))))))
+    (let [build (fs/file (:dir ctx) "dhf/cycles/03/build")]
+      (doseq [p (:implementation (cfg ctx))
+              :let [a (fs/file (:room ctx) p) b (fs/file build p)]]
+        (cond
+          (fs/directory? a) (s/check! (= (files-under a) (files-under b)) (str p " differs from the room's"))
+          (fs/exists? a) (s/check! (= (slurp (str a)) (slurp (str b))) (str p " differs from the room's"))
+          :else (s/check! (not (fs/exists? b)) (str p " is in the checkout but not in the room"))))
       nil)))
 
 (defstep #"the builder has edited dhf/harness/config\.edn and a feature file in the room"
   (fn [ctx]
-    (let [ctx (passing (project! ctx))
-          room (:room ctx)]
-      (s/write! room "dhf/harness/config.edn" (pr-str {:verify [{:kind :tests :command ["bb" "-e" "(System/exit 0)"]}]}))
-      (s/write! room kc/lint-rel "Feature: Lint\n  Edited by the builder.\n")
-      ctx)))
+    (let [ctx (build! ctx)]
+      (build! (assoc ctx :room-files {"dhf/harness/config.edn" (pr-str (assoc (cfg ctx) :verify [{:kind :tests :command ["bb" "-e" "(System/exit 1)"]}]))
+                                      lint-rel "Feature: Edited\n  By the builder.\n"})))))
 
 (defstep #"the configuration and the spec used are those of spec-3, unedited"
   (fn [ctx]
     (kc/exits! ctx 0)
-    (let [build (fs/file (:dir ctx) cycle-rel "build")
-          at-cut (files-at (:dir ctx) "spec-3")]
-      (doseq [rel ["dhf/harness/config.edn" kc/lint-rel]]
-        (s/check! (= (get at-cut rel) (slurp (str (fs/file build rel)))) (str rel " in the checkout is not spec-3's"))))
+    (doseq [rel ["dhf/harness/config.edn" lint-rel]]
+      (s/check! (= (git! (:dir ctx) "show" (str "spec-3:" rel)) (str/trim (slurp (str (fs/file (:dir ctx) "dhf/cycles/03/build" rel)))))
+                (str rel " in the checkout is not the cut's")))
     nil))
 
 ;; ---------------------------------------------------------------------------
@@ -201,399 +204,452 @@
 
 (defstep #"\"rdm-spec verify ROOM 03\" runs the command of the :tests check"
   (fn [ctx]
-    (let [ctx (project! ctx)
-          env-file (str (fs/file (s/tmp-dir) "results-dir.txt"))
-          ctx (assoc ctx :env-file env-file
-                     :room (room-with! {:results (results-for [["spec-0012" "passed"] ["spec-0014" "passed"]])
-                                        :env-file env-file}))]
-      (kc/run-line ctx "verify ROOM 03"))))
+    (let [f (str (fs/file (s/tmp-dir) "results-dir.txt"))
+          ctx (plan ctx #(assoc % :env-file f))]
+      (assoc (verify! ctx) :env-file f))))
 
 (defstep #"the command runs with the environment variable RESULTS_DIR set to the absolute path of dhf/cycles/03/results in the repository rdm-spec verify was run in"
   (fn [ctx]
-    (let [r (kc/the-run ctx)
-          f (:env-file ctx)]
-      (s/check! (fs/exists? f) (str "the tests never ran\n" (s/show r)))
-      (s/check! (= (str (fs/file (:dir ctx) cycle-rel "results")) (slurp f))
-                (str "RESULTS_DIR was " (pr-str (slurp f))))
+    (kc/exits! ctx 0)
+    (let [got (str/trim (slurp (:env-file ctx)))
+          want (str (fs/canonicalize (fs/file (:dir ctx) "dhf/cycles/03/results")))]
+      (s/check! (fs/absolute? got) (str "RESULTS_DIR is " got ", not absolute"))
+      (s/check! (= want (str (fs/canonicalize got))) (str "RESULTS_DIR is " got ", not " want))
       nil)))
 
-(defstep #"the :tests check's command exits 0"
-  (fn [ctx] (passing (ensure-project ctx))))
+(defstep #"the :tests check's command exits (\d)"
+  (fn [ctx n] (plan ctx #(assoc % :exit (parse-long n)))))
 
 (defstep #"it wrote Allure results into dhf/cycles/03/results"
-  (fn [ctx] (s/check! (:room ctx) "no room") ctx))
+  (fn [ctx] (s/check! (seq (get-in ctx [:plan :results])) "the room writes no result") ctx))
 
 (defstep #"every stamped scenario not tagged @wip is named by at least one result, and every result naming it passed"
-  (fn [ctx] (passing ctx)))
+  (fn [ctx]
+    (let [named (set (for [r (get-in ctx [:plan :results]) :when (= "passed" (:status r)) l (:labels r)
+                           :when (= "spec" (:name l))] (:value l)))]
+      (s/check! (every? named (keep #(when-not (:wip? %) (:id %)) (:scenarios ctx))) "a scenario is not named")
+      ctx)))
 
 (defstep #"the tests check passes"
   (fn [ctx]
-    (let [r (kc/exits! ctx 0)
-          c (check-named r "tests")]
-      (s/check! (= :passed (:outcome c)) (str "the tests check is " (pr-str c)))
-      nil)))
-
-(defstep #"the :tests check's command exits 1"
-  (fn [ctx]
-    (assoc (ensure-project ctx) :room (room-with! {:out "a test failed: boom" :code 1}))))
+    (kc/exits! ctx 0)
+    (s/check! (= :passed (:outcome (check-of ctx "tests"))) (str "the tests check is " (pr-str (check-of ctx "tests"))))
+    nil))
 
 (defstep #"it exits 1 and says the test command failed, with its exit status"
-  (fn [ctx] (finding-with! ctx 1 ["test command" "exited 1"]) nil))
+  (fn [ctx]
+    (names! (kc/exits! ctx 1) "test command" "failed" "exited 1")
+    nil))
 
 (defstep #"the test command's output is in dhf/cycles/03/test\.log, which the refusal names"
   (fn [ctx]
-    (finding-with! ctx 1 [(str cycle-rel "/test.log")])
-    (let [f (fs/file (:dir ctx) cycle-rel "test.log")]
-      (s/check! (and (fs/exists? f) (str/includes? (slurp (str f)) "a test failed: boom")) "test.log does not hold the output"))
+    (s/check! (str/includes? (slurp (str (cycle-file ctx "test.log"))) "the room's tests ran") "test.log does not hold the output")
+    (names! (kc/the-run ctx) "test command" "dhf/cycles/03/test.log")
     nil))
 
 (defstep #"the :tests check's command exits 0 without writing any Allure result"
-  (fn [ctx] (assoc (project! ctx) :room (room-with! {}))))
+  (fn [ctx] (plan ctx #(assoc % :exit 0 :results []))))
 
 (defstep #"it exits 1 and says a green exit with no results is not a run"
-  (fn [ctx] (finding-with! ctx 1 ["no results is not a run"]) nil))
+  (fn [ctx] (names! (kc/exits! ctx 1) "a green exit with no results is not a run") nil))
 
 (defstep #"the stamped scenario @spec-0012 is not tagged @wip"
-  (fn [ctx] (project! ctx)))
+  (fn [ctx]
+    (let [ctx (build! ctx)]
+      (s/check! (not (:wip? (first (filter #(= "spec-0012" (:id %)) (:scenarios ctx))))) "spec-0012 is planned")
+      ctx)))
+
+(defn- without [results id] (vec (remove #(some (fn [l] (= {:name "spec" :value id} l)) (:labels %)) results)))
 
 (defstep #"no result in dhf/cycles/03/results is labelled spec=spec-0012"
-  (fn [ctx] (assoc ctx :room (room-with! {:results (results-for [["spec-0014" "passed"]])}))))
+  (fn [ctx] (plan ctx #(update % :results without "spec-0012"))))
 
-(defstep #"it exits 1 and names spec-0012"
-  (fn [ctx] (finding-with! ctx 1 ["spec-0012"]) nil))
+(defstep #"it exits 1 and names (spec-\d+)"
+  (fn [ctx id] (names! (kc/exits! ctx 1) id) nil))
 
 (defstep #"a result in dhf/cycles/03/results labelled spec=spec-0012 is failed"
-  (fn [ctx] (assoc ctx :room (room-with! {:results (results-for [["spec-0012" "failed"] ["spec-0014" "passed"]])}))))
+  (fn [ctx]
+    (plan ctx (fn [p] (update p :results (fn [rs] (mapv #(if (= "r-spec-0012" (:uuid %)) (assoc % :status "failed") %) rs)))))))
 
-(defstep #"it exits 1 and names spec-0012 and its status"
-  (fn [ctx] (finding-with! ctx 1 ["spec-0012" "failed"]) nil))
+(defstep #"it exits 1 and names (spec-\d+) and its status"
+  (fn [ctx id] (names! (kc/exits! ctx 1) id "failed") nil))
 
 ;; ---------------------------------------------------------------------------
 ;; Verify records what it verified
 
-(def ^:private answers
-  {:kind :runs :name "answers" :command ["bb" "-e" "(println \"{:ok true}\")"]
-   :expect {:exit 0 :stdout-starts "{:ok"} :budget {:seconds 30}})
+(defn tree-of
+  "The git tree hash of the room's implementation paths `paths`."
+  [room paths]
+  (let [g (s/tmp-dir)
+        run (fn [& args] (let [r (apply p/shell {:out :string :err :string :continue true :in ""}
+                                        "git" (str "--git-dir=" g) (str "--work-tree=" room) args)]
+                           (s/check! (zero? (:exit r)) (str "git " (str/join " " args) ": " (:err r)))
+                           (str/trim (:out r))))]
+    (run "init" "-q")
+    (let [present (filter #(fs/exists? (fs/file room %)) paths)]
+      (when (seq present) (apply run "add" "-A" "-f" "--" present))
+      (run "write-tree"))))
+
+(def answers {:kind :runs :name "answers" :command ["bb" "-e" "(println \"{:help []}\")"]
+              :expect {:exit 0 :stdout-starts "{:help"} :budget {:seconds 30}})
 
 (defstep #"a room whose implementation has a tree hash H, and a configuration declaring a :tests check and a :runs check"
   (fn [ctx]
-    (let [ctx (passing (project! ctx #(update % :verify conj answers)))]
-      (assoc ctx :room-tree (tree-hash (:room ctx) (kc/config-of (:dir ctx)))))))
+    (let [ctx (with-cfg ctx #(assoc % :verify [{:kind :tests :command ["bb" "test.clj"]} answers]))]
+      (assoc ctx :tree (tree-of (:room ctx) (:implementation (cfg ctx)))))))
 
 (defstep #"\"rdm-spec verify ROOM 03\" is run and passes"
-  (fn [ctx]
-    (let [ctx (kc/run-line ctx "verify ROOM 03")]
-      (kc/exits! ctx 0)
-      ctx)))
+  (fn [ctx] (let [ctx (verify! ctx)] (kc/exits! ctx 0) ctx)))
 
 (defstep #"dhf/cycles/03/ratified\.edn holds exactly :cut \"spec-3\", :room-tree H in full, :outcome :passed, :checkout \"dhf/cycles/03/build\" and :checks, each check as its standard output reports it"
   (fn [ctx]
-    (let [r (kc/the-run ctx)
-          want {:cut "spec-3" :room-tree (:room-tree ctx) :outcome :passed :checkout (str cycle-rel "/build")
-                :checks (:checks (verify-out r))}]
-      (s/check! (= 40 (count (:room-tree ctx))) (str "H is " (:room-tree ctx)))
-      (s/check! (= want (ratified ctx)) (str "ratified.edn holds\n" (pr-str (ratified ctx)) "\nnot\n" (pr-str want)))
+    (let [want {:cut "spec-3" :room-tree (:tree ctx) :outcome :passed :checkout "dhf/cycles/03/build"
+                :checks (:checks (out ctx))}]
+      (s/check! (= 40 (count (:tree ctx))) "H is not a full hash")
+      (s/check! (= want (ratified ctx)) (str "ratified.edn holds " (pr-str (ratified ctx)) "\nnot " (pr-str want)))
       nil)))
 
 (defstep #"dhf/cycles/03/build is the verified checkout, which the grader grades"
   (fn [ctx]
-    (let [b (fs/file (:dir ctx) cycle-rel "build")]
-      (s/check! (= (slurp (str (fs/file (:room ctx) "test.clj"))) (slurp (str (fs/file b "test.clj"))))
-                "the checkout does not hold the room's implementation")
-      (s/check! (fs/exists? (fs/file b kc/lint-rel)) "the checkout does not hold the cut's spec")
-      nil)))
+    (s/check! (= (slurp (str (fs/file (:room ctx) "test.clj"))) (slurp (str (cycle-file ctx "build/test.clj"))))
+              "the checkout does not hold the room's tests")
+    nil))
 
 (defstep #"\"rdm-spec verify ROOM 03\" is run and the :tests check's command exits 1"
-  (fn [ctx]
-    (let [ctx (assoc (project! ctx) :room (room-with! {:out "boom" :code 1}))]
-      (kc/run-line ctx "verify ROOM 03"))))
+  (fn [ctx] (verify! (plan ctx #(assoc % :exit 1)))))
 
 (defstep #"dhf/cycles/03/ratified\.edn holds :outcome :refused and the reason"
   (fn [ctx]
     (kc/exits! ctx 1)
-    (let [rat (ratified ctx)]
-      (s/check! (= :refused (:outcome rat)) (str "ratified.edn is " (pr-str rat)))
-      (s/check! (and (string? (:reason rat)) (str/includes? (:reason rat) "exited 1")) (str "the reason is " (pr-str (:reason rat))))
+    (let [r (ratified ctx)]
+      (s/check! (= :refused (:outcome r)) (str "ratified.edn holds " (pr-str r)))
+      (s/check! (and (string? (:reason r)) (str/includes? (:reason r) "exited 1")) (str "the reason is " (pr-str (:reason r))))
       nil)))
 
 (defstep #"it exits 1 and names the file and line of the unstamped scenario"
   (fn [ctx]
     (let [{:keys [file line]} (:unstamped ctx)]
-      (finding-with! ctx 1 [(str file ":" line ": ")])
+      (s/check! (some #(str/starts-with? % (str file ":" line ": ")) (kc/finding-lines (kc/exits! ctx 1)))
+                (str "no finding names " file ":" line "\n" (s/show (kc/the-run ctx))))
       nil)))
 
 ;; ---------------------------------------------------------------------------
-;; Declared checks
+;; A project declares its checks
 
 (defstep #"a configuration whose :verify declares a :tests check, then a :runs check named \"answers\""
-  (fn [ctx] (project! ctx #(update % :verify conj answers))))
+  (fn [ctx] (with-cfg ctx #(assoc % :verify [{:kind :tests :command ["bb" "test.clj"]} answers]))))
 
 (defstep #"both pass"
-  (fn [ctx] (passing ctx)))
+  (fn [ctx] (build! ctx)))
 
-(defstep #"it exits 0, and its standard output, read as EDN, is exactly \{:verify \{:cycle \"03\" .*"
+(defstep #"it exits 0, and its standard output, read as EDN, is exactly \{:verify .*"
   (fn [ctx]
     (let [r (kc/exits! ctx 0)
-          out (kc/stdout-edn r)
-          [t a] (get-in out [:verify :checks])]
-      (s/check! (= {:cycle "03" :cut "spec-3" :outcome :passed} (dissoc (:verify out) :checks)) (str "the result is " (pr-str out)))
-      (s/check! (= [:verify] (keys out)) (str "the result is " (pr-str out)))
-      (s/check! (= 2 (count (get-in out [:verify :checks]))) (str "the checks are " (pr-str (get-in out [:verify :checks]))))
-      (s/check! (= #{:name :kind :outcome :seconds :scenarios} (set (keys t))) (str "the tests check is " (pr-str t)))
-      (s/check! (= ["tests" :tests :passed 2] [(:name t) (:kind t) (:outcome t) (:scenarios t)]) (str "the tests check is " (pr-str t)))
-      (s/check! (number? (:seconds t)) (str "S1 is " (pr-str (:seconds t))))
-      (s/check! (= #{:name :kind :outcome :seconds :budget :margin} (set (keys a))) (str "the runs check is " (pr-str a)))
-      (s/check! (= ["answers" :runs :passed 30] [(:name a) (:kind a) (:outcome a) (:budget a)]) (str "the runs check is " (pr-str a)))
-      (s/check! (and (number? (:seconds a)) (number? (:margin a)) (< (Math/abs (double (- (+ (:seconds a) (:margin a)) 30))) 0.02))
-                (str "M is not B less S2: " (pr-str a)))
+          v (out ctx)
+          [t a] (:checks v)]
+      (s/check! (= {:cycle "03" :cut "spec-3" :outcome :passed}
+                   (select-keys v [:cycle :cut :outcome])) (str "the result is " (pr-str v)))
+      (s/check! (= #{:verify} (set (keys (kc/stdout-edn r)))) "the result holds more than :verify")
+      (s/check! (= #{:cycle :cut :outcome :checks} (set (keys v))) (str "the result holds " (keys v)))
+      (s/check! (and (= {:name "tests" :kind :tests :outcome :passed :scenarios 2} (dissoc t :seconds))
+                     (number? (:seconds t)))
+                (str "the tests check is " (pr-str t)))
+      (s/check! (and (= {:name "answers" :kind :runs :outcome :passed :budget 30} (dissoc a :seconds :margin))
+                     (number? (:seconds a)) (number? (:margin a))
+                     (< (Math/abs (double (- (:margin a) (- 30 (:seconds a))))) 0.02))
+                (str "the runs check is " (pr-str a)))
+      (s/check! (= 2 (count (:checks v))) "more checks than declared")
       nil)))
 
-(def ^:private serves-ok
-  {:kind :serves :name "serves" :start ["bb" "-e" "(System/exit 0)" "{port}"] :port 0
-   :budget {:seconds 2 :polls 4} :probe ["bb" "-e" "(System/exit 0)" "{url}"]})
+(defn- serves
+  "A :serves check of the app src/app.clj on `port`, its probe the kept
+  dhf/harness/probe.clj."
+  [port seconds polls]
+  {:kind :serves :name "app" :start ["bb" "src/app.clj" "{port}"] :port port
+   :budget {:seconds seconds :polls polls} :probe ["bb" "dhf/harness/probe.clj" "{url}"]})
+
+(defn free-port []
+  (with-open [ss (java.net.ServerSocket. 0)] (.getLocalPort ss)))
+
+(defn- app-text
+  "A served app: writes its pid and a marker, then on its port answers
+  connections as `mode` says: :second (closes the first connection unanswered,
+  answers the rest), :never-listens, :silent (accepts, never answers),
+  :answers."
+  [ctx mode]
+  (str "(spit " (pr-str (:pid-file ctx)) " (str (.pid (java.lang.ProcessHandle/current))))\n"
+       "(spit " (pr-str (:marker ctx)) " \"started\")\n"
+       "(def port (parse-long (first *command-line-args*)))\n"
+       (case mode
+         :never-listens "(Thread/sleep 60000)\n"
+         (str "(def ss (doto (java.net.ServerSocket.) (.setReuseAddress true) (.bind (java.net.InetSocketAddress. \"127.0.0.1\" port))))\n"
+              "(loop [n 1]\n"
+              "  (let [c (.accept ss)]\n"
+              (case mode
+                :silent "    (future (Thread/sleep 60000) (.close c))\n"
+                :second "    (if (= 1 n) (.close c) (future (with-open [c c] (Thread/sleep 50) (let [o (.getOutputStream c)] (.write o (.getBytes \"HTTP/1.0 200 OK\\r\\nContent-Length: 2\\r\\n\\r\\nok\")) (.flush o)))))\n"
+                :answers "    (future (with-open [c c] (Thread/sleep 50) (let [o (.getOutputStream c)] (.write o (.getBytes \"HTTP/1.0 404 Not Found\\r\\nContent-Length: 0\\r\\n\\r\\n\")) (.flush o))))\n")
+              "    (recur (inc n))))\n"))))
+
+(defn- probe-text [exit] (str "(println \"probed\" (first *command-line-args*) " (if (zero? exit) "\"ok\"" "\"not this app\"") ")\n(System/exit " exit ")\n"))
+
+(defn- served
+  "ctx with a :serves check of an app in `mode`, budget `seconds` in `polls`."
+  [ctx mode seconds polls & {:keys [probe port] :or {probe 0}}]
+  (let [t (s/tmp-dir)
+        port (or port (free-port))
+        ctx (assoc ctx :pid-file (str (fs/file t "pid")) :marker (str (fs/file t "marker")) :port port)]
+    (build! (-> ctx
+                (assoc :cfg (assoc (cfg ctx) :verify [{:kind :tests :command ["bb" "test.clj"]} (serves port seconds polls)]))
+                (assoc :room-files {"src/app.clj" (app-text ctx mode)})
+                (assoc :cut-files {"dhf/harness/probe.clj" (probe-text probe)})))))
 
 (defstep #"a configuration whose :verify declares a :tests check, a :serves check and a :runs check, and the :tests check's command exits 1"
   (fn [ctx]
-    (let [ctx (project! ctx #(update % :verify into [(assoc serves-ok :port (free-port)) answers]))]
-      (assoc ctx :room (room-with! {:out "boom" :code 1})))))
+    (let [ctx (served ctx :answers 10 20)]
+      (-> ctx
+          (assoc :cfg (update (cfg ctx) :verify conj answers))
+          (assoc-in [:plan :exit] 1)
+          build!))))
 
 (defstep #"it exits 1, the tests check is :failed, and the :serves and :runs checks are listed with the outcome :not-run"
   (fn [ctx]
-    (let [r (kc/exits! ctx 1)
-          cs (:checks (verify-out r))]
-      (s/check! (= [["tests" :failed] ["serves" :not-run] ["answers" :not-run]] (mapv (juxt :name :outcome) cs))
-                (str "the checks are " (pr-str cs)))
-      nil)))
+    (kc/exits! ctx 1)
+    (s/check! (= [[:tests :failed] [:serves :not-run] [:runs :not-run]] (mapv (juxt :kind :outcome) (:checks (out ctx))))
+              (str "the checks are " (pr-str (:checks (out ctx)))))
+    (s/check! (not (fs/exists? (:marker ctx))) "the app was started")
+    nil))
 
 (def ^:private untrusted
   {"declares no :tests check" #(assoc % :verify [answers])
-   "declares a check of the kind :renders" #(update % :verify conj {:kind :renders :name "renders"})
-   "declares a :serves check whose probe is under src/" #(update % :verify conj (assoc serves-ok :probe ["bb" "src/probe.clj" "{url}"]))
+   "declares a check of the kind :renders" #(update % :verify conj {:kind :renders :name "pictures"})
+   "declares a :serves check whose probe is under src/" #(update % :verify conj (assoc (serves 8999 10 20) :probe ["bb" "src/probe.clj" "{url}"]))
    "is absent" #(dissoc % :verify)
    "declares a :tests check with no command" #(assoc % :verify [{:kind :tests}])})
 
 (defstep #"a configuration whose :verify (declares no :tests check|declares a check of the kind :renders|declares a :serves check whose probe is under src/|is absent|declares a :tests check with no command)"
-  (fn [ctx is]
-    (passing (project! ctx (get untrusted is)))))
+  (fn [ctx is] (with-cfg ctx (get untrusted is))))
+
+(defn- ran-no-check! [ctx]
+  (s/check! (not (fs/exists? (cycle-file ctx "test.log"))) "a check ran: test.log was written")
+  (s/check! (not (fs/exists? (cycle-file ctx "ratified.edn"))) "ratified.edn was written"))
 
 (defstep #"it exits 2, says (.+), and runs no check"
   (fn [ctx why]
     (kc/refused-naming! ctx why)
-    (s/check! (not (fs/exists? (fs/file (:dir ctx) cycle-rel "test.log"))) "a check ran: test.log was written")
-    (s/check! (not (fs/exists? (fs/file (:dir ctx) cycle-rel "ratified.edn"))) "ratified.edn was written")
+    (ran-no-check! ctx)
     nil))
 
 (defstep #"a configuration whose :runs check names a command that is not on PATH"
-  (fn [ctx]
-    (passing (project! ctx #(update % :verify conj (assoc answers :command ["rdm-spec-no-such-command-x"]))))))
+  (fn [ctx] (with-cfg ctx #(assoc % :verify [{:kind :tests :command ["bb" "test.clj"]}
+                                             (assoc answers :command ["rdm-spec-no-such-command" "help"])]))))
 
 (defstep #"it exits 2 and names the check and the command it could not find"
-  (fn [ctx] (kc/refused-naming! ctx "answers" "rdm-spec-no-such-command-x") nil))
+  (fn [ctx] (kc/refused-naming! ctx "answers" "rdm-spec-no-such-command") nil))
 
-;; --- :serves ---------------------------------------------------------------------
+;; ---------------------------------------------------------------------------
+;; A :serves check
 
-(defn- app-start
-  "The start command of an app: bb, writing its process id to `pid-file`
-  and `started`, then `body` (source using port p)."
-  [pid-file body]
-  ["bb" "-e" (str "(def p (parse-long (first *command-line-args*)))"
-                  "(spit " (pr-str pid-file) " (str (.pid (java.lang.ProcessHandle/current))))"
-                  body)
-   "{port}"])
-
-(def ^:private http-app
-  "(Thread/sleep 250) (require '[org.httpkit.server :as hs]) (hs/run-server (fn [_] {:status 200 :body \"ok\"}) {:port p}) @(promise)")
-
-(def ^:private silent-app
-  "(with-open [ss (java.net.ServerSocket. p)] (loop [cs []] (recur (conj cs (.accept ss)))))")
-
-(def ^:private sleeping-app "(Thread/sleep 60000)")
-
-(defn- serves! [ctx {:keys [seconds polls body probe]}]
-  (let [port (free-port)
-        pid-file (str (fs/file (s/tmp-dir) "app.pid"))
-        check {:kind :serves :name "serves" :start (app-start pid-file body) :port port
-               :budget {:seconds seconds :polls polls}
-               :probe (or probe ["bb" "-e" "(System/exit 0)" "{url}"])}]
-    (assoc (passing (project! ctx #(update % :verify conj check))) :port port :pid-file pid-file)))
+(defn- stopped! [ctx]
+  (let [f (:pid-file ctx)]
+    (when (fs/exists? f)
+      (let [pid (parse-long (str/trim (slurp f)))
+            h (.orElse (java.lang.ProcessHandle/of pid) nil)]
+        (when (and h (.isAlive h))
+          (.destroyForcibly h)
+          (s/fail! (str "the app " pid " is still running")))))))
 
 (defstep #"a :serves check with the budget of 10 seconds in 20 polls, whose app answers on the second poll and whose probe exits 0"
-  (fn [ctx] (serves! ctx {:seconds 10 :polls 20 :body http-app})))
+  (fn [ctx] (served ctx :second 10 20)))
 
 (defstep #"the check passes with :answered-on-poll 2, :polls 20 and :margin 18"
   (fn [ctx]
     (let [r (kc/exits! ctx 0)
-          c (check-named r "serves")]
-      (s/check! (= [:passed 2 20 18] [(:outcome c) (:answered-on-poll c) (:polls c) (:margin c)]) (str "the check is " (pr-str c)))
+          c (check-of ctx "app")]
+      (s/check! (= {:outcome :passed :answered-on-poll 2 :polls 20 :margin 18} (select-keys c [:outcome :answered-on-poll :polls :margin]))
+                (str "the check is " (pr-str c) "\n" (s/show r)))
       nil)))
 
 (defstep #"no process the check started is still running"
-  (fn [ctx]
-    (let [f (:pid-file ctx)]
-      (s/check! (fs/exists? f) "the app never started")
-      (let [pid (parse-long (str/trim (slurp f)))]
-        (when (alive? pid) (Thread/sleep 500))
-        (when (alive? pid) (.destroyForcibly (.get (java.lang.ProcessHandle/of pid))))
-        (s/check! (not (alive? pid)) (str "the app " pid " is still running")))
-      nil)))
+  (fn [ctx] (stopped! ctx) nil))
 
 (defstep #"a :serves check with the budget of 10 seconds in 20 polls, whose app never answers"
-  (fn [ctx] (serves! ctx {:seconds 10 :polls 20 :body sleeping-app})))
+  (fn [ctx] (served ctx :never-listens 10 20)))
 
 (defstep #"it exits 1, the check is :failed, and it says no answer came within (\d+) seconds"
   (fn [ctx n]
-    (let [r (finding-with! ctx 1 ["no answer came within " (str n " seconds")])]
-      (s/check! (= :failed (:outcome (check-named r "serves"))) (str "the check is " (pr-str (check-named r "serves"))))
+    (let [r (kc/exits! ctx 1)]
+      (s/check! (= :failed (:outcome (check-of ctx "app"))) (str "the check is " (pr-str (check-of ctx "app"))))
+      (names! r "app" (str "no answer came within " n " seconds"))
+      (stopped! ctx)
       nil)))
 
 (defstep #"a :serves check on a port another process already holds"
   (fn [ctx]
-    (let [ctx (serves! ctx {:seconds 2 :polls 4 :body http-app})
-          held (java.net.ServerSocket. (int (:port ctx)))]
-      (assoc ctx :held held))))
+    (let [ss (java.net.ServerSocket. 0 50 (java.net.InetAddress/getByName "127.0.0.1"))
+          ctx (served ctx :answers 10 20 :port (.getLocalPort ss))]
+      (assoc ctx :held ss))))
 
-(defstep #"it exits 2, names the port, and starts nothing"
+(defstep #"it exits 2, names the port, and starts no app of a :serves check"
   (fn [ctx]
     (try
       (kc/refused-naming! ctx (str (:port ctx)))
-      (s/check! (not (fs/exists? (:pid-file ctx))) "the app was started")
-      (finally (some-> ^java.net.ServerSocket (:held ctx) .close)))
-    nil))
+      (s/check! (not (fs/exists? (:marker ctx))) "an app was started")
+      (ran-no-check! ctx)
+      nil
+      (finally (.close ^java.net.ServerSocket (:held ctx))))))
+
+(defstep #"a :serves check whose app was started and stopped on its port a moment ago, so only closing connections remain"
+  (fn [ctx]
+    (let [port (free-port)
+          ctx (served ctx :second 10 20 :port port)
+          proc (p/process {:dir (str (:room ctx)) :out :string :err :string} "bb" "src/app.clj" (str port))]
+      (try
+        ;; the first connection is closed unanswered, the second answered: both leave closing connections
+        (loop [i 0]
+          (when (< i 50)
+            (when-not (try (with-open [c (java.net.Socket. "127.0.0.1" (int port))] (.read (.getInputStream c)) true)
+                           (catch Exception _ nil))
+              (Thread/sleep 100) (recur (inc i)))))
+        (with-open [c (java.net.Socket. "127.0.0.1" (int port))]
+          (let [o (.getOutputStream c)] (.write o (.getBytes "GET / HTTP/1.0\r\n\r\n")) (.flush o))
+          (.read (.getInputStream c)))
+        (finally (.destroyForcibly ^java.lang.Process (:proc proc)) @proc))
+      (fs/delete-if-exists (:marker ctx))
+      ctx)))
+
+(defstep #"the check starts its app on that port and passes"
+  (fn [ctx]
+    (let [r (kc/exits! ctx 0)]
+      (s/check! (fs/exists? (:marker ctx)) "the app was not started")
+      (s/check! (= :passed (:outcome (check-of ctx "app"))) (str "the check is " (pr-str (check-of ctx "app")) "\n" (s/show r)))
+      (stopped! ctx)
+      nil)))
 
 (defstep #"a :serves check whose app answers and whose probe exits 1"
-  (fn [ctx]
-    (serves! ctx {:seconds 10 :polls 20 :body http-app
-                  :probe ["bb" "-e" "(println \"this is not the application\") (System/exit 1)" "{url}"]})))
+  (fn [ctx] (served ctx :answers 10 20 :probe 1)))
 
 (defstep #"it exits 1, the check is :failed, and it relays the probe's output"
   (fn [ctx]
-    (let [r (finding-with! ctx 1 ["this is not the application"])]
-      (s/check! (= :failed (:outcome (check-named r "serves"))) "the check did not fail")
+    (let [r (kc/exits! ctx 1)]
+      (s/check! (= :failed (:outcome (check-of ctx "app"))) (str "the check is " (pr-str (check-of ctx "app"))))
+      (names! r "app" "not this app")
+      (stopped! ctx)
       nil)))
 
 (defstep #"a :serves check with the budget of 2 seconds in 4 polls, whose start command listens on its port and never writes a response"
-  (fn [ctx] (serves! ctx {:seconds 2 :polls 4 :body silent-app})))
+  (fn [ctx] (served ctx :silent 2 4)))
 
-;; --- :runs -------------------------------------------------------------------------
+;; ---------------------------------------------------------------------------
+;; A :runs check
 
-(def ^:private expectations
-  {"the exit 0" {:expect {:exit 0} :budget {:seconds 30}}
-   "standard output starting \"{:help\"" {:expect {:exit 0 :stdout-starts "{:help"} :budget {:seconds 30}}
-   "an answer within 10 seconds" {:expect {:exit 0} :budget {:seconds 10}}})
-
-(def ^:private doings
-  {"exits 3" [["bb" "-e" "(System/exit 3)"] ["exited 3" "0 was expected"]]
-   "prints \"usage\" and exits 0" [["bb" "-e" "(println \"usage\")"] ["usage"]]
-   "is still running after 10 seconds" [["bb" "-e" "(Thread/sleep 30000)"] ["10 seconds"]]})
-
-(defstep #"a :runs check expecting (.+)"
+(defstep #"a :runs check expecting (the exit 0|standard output starting \"\{:help\"|an answer within 10 seconds)"
   (fn [ctx expected]
-    (assoc ctx :expected (or (get expectations expected) (s/fail! (str "no such expectation: " expected))))))
+    (let [check (case expected
+                  "the exit 0" (assoc answers :expect {:exit 0})
+                  "standard output starting \"{:help\"" (assoc answers :expect {:exit 0 :stdout-starts "{:help"})
+                  "an answer within 10 seconds" (assoc answers :expect {:exit 0} :budget {:seconds 10}))]
+      (with-cfg ctx #(assoc % :verify [{:kind :tests :command ["bb" "test.clj"]} check])))))
 
 (defstep #"its command (exits 3|prints \"usage\" and exits 0|is still running after 10 seconds)"
   (fn [ctx does]
-    (let [[cmd named] (get doings does)
-          check (merge {:kind :runs :name "answers" :command cmd} (:expected ctx))]
-      (assoc (passing (project! ctx #(update % :verify conj check))) :named named))))
+    (let [cmd (case does
+                "exits 3" ["bb" "-e" "(System/exit 3)"]
+                "prints \"usage\" and exits 0" ["bb" "-e" "(println \"usage\")"]
+                "is still running after 10 seconds" ["bb" "-e" "(Thread/sleep 15000)"])]
+      (with-cfg ctx #(update % :verify (fn [vs] (mapv (fn [c] (if (= :runs (:kind c)) (assoc c :command cmd) c)) vs)))))))
 
-(defstep #"it exits 1, the check is :failed, and it names (?:the exit 3 where 0 was expected|the first line it printed|the budget of 10 seconds)"
-  (fn [ctx]
-    (let [r (finding-with! ctx 1 (:named ctx))]
-      (s/check! (= :failed (:outcome (check-named r "answers"))) (str "the check is " (pr-str (check-named r "answers"))))
+(defstep #"it exits 1, the check is :failed, and it names (the exit 3 where 0 was expected|the first line it printed|the budget of 10 seconds)"
+  (fn [ctx difference]
+    (let [r (kc/exits! ctx 1)]
+      (s/check! (= :failed (:outcome (check-of ctx "answers"))) (str "the check is " (pr-str (check-of ctx "answers"))))
+      (case difference
+        "the exit 3 where 0 was expected" (names! r "answers" "exited 3 where 0 was expected")
+        "the first line it printed" (names! r "answers" "\"usage\"")
+        "the budget of 10 seconds" (names! r "answers" "10 seconds"))
       nil)))
 
 ;; ---------------------------------------------------------------------------
-;; The Allure mapping
-
-(def ^:private mapped-scenarios
-  "The lint feature file of the mapping's scenarios: a rule, the need
-  UN-001, spec-0003 at @e2e."
-  (str "# A fixture feature file of verify's steps.\n\n@UN-001\nFeature: Lint\n  A fixture.\n\n"
-       "  Rule: The lint names what it finds\n\n"
-       "    @spec-0003 @e2e\n    Scenario: A view with no description fails the lint\n"
-       "      Given a view with no description\n      When \"rdm-spec check\" is run\n      Then it fails rule c4-scope\n\n"
-       "    @spec-0004 @contract\n    Scenario: A container with no description fails the lint\n"
-       "      Given a container with no description\n      When \"rdm-spec check\" is run\n      Then it fails\n"))
-
-(defn- mapped-results
-  "{file text}: a result per scenario of the project `dir`, filled through
-  `m` as a faithful test would, each with a browser-trace attachment, then
-  changed by `f` for spec-0003."
-  [dir m f]
-  (let [cfg (kc/config-of dir)
-        {:keys [pickles]} (runner/plan dir {:spec-dir (:spec-dir cfg) :id-prefix (:id-prefix cfg) :model (:model cfg)})]
-    (into {}
-          (for [[i pk] (map-indexed vector pickles)
-                :let [outcome {:status "passed" :start 1 :stop 2 :uuid (str "u" i)
-                               :steps (mapv (fn [st] {:name (runner/step-name st) :status "passed"}) (:steps pk))
-                               :attachments [{:name "browser-trace" :source "t.zip" :type "application/zip"}]}
-                      r (runner/allure-result pk outcome m)]]
-            [(str "u" i "-result.json") (json/generate-string (if (= "spec-0003" (:id pk)) (f r) r))]))))
-
-(defn- mapped-project!
-  "ctx with :dir (the mapping's scenarios, `m` as its :allure, cut spec-3)
-  and :room (results through `result-m`, spec-0003's changed by `f`)."
-  [ctx m result-m f]
-  (let [dir (s/copy-of-room!)]
-    (doseq [x (fs/glob (fs/file dir "dhf/spec") "**.feature")] (fs/delete x))
-    (s/write! dir kc/lint-rel mapped-scenarios)
-    (s/write! dir "dhf/harness/config.edn"
-              (str (pr-str (cond-> (assoc (kc/config-of dir) :verify [{:kind :tests :command ["bb" "test.clj"]}])
-                             true (dissoc :allure)
-                             m (assoc :allure m))) "\n"))
-    (kc/cut! dir "spec-3")
-    (kc/write-cycle! dir)
-    (assoc ctx :dir dir :room (room-with! {:results (mapped-results dir result-m f)}))))
-
-(defn- relabel [r n f] (update r :labels (fn [ls] (vec (keep #(if (= n (:name %)) (f %) %) ls)))))
-
-(def ^:private wrong-results
-  {"a second step reworded from the scenario's line"
-   [nil #(assoc-in % [:steps 1 :name] "When \"rdm-spec lint\" is run") ["spec-0003" "steps-differ-from-scenario"]]
-   "one step fewer than the scenario's lines"
-   [nil #(update % :steps pop) ["spec-0003" "steps-differ-from-scenario"]]
-   "the story \"Something else\", not the scenario's rule"
-   [nil #(relabel % "story" (fn [l] (assoc l :value "Something else"))) ["spec-0003" "mapping-differs: story"]]
-   "the epic of another bounded context"
-   [nil #(relabel % "epic" (fn [l] (assoc l :value "verification"))) ["spec-0003" "mapping-differs: epic"]]
-   "no issue link to UN-001, the need the scenario traces to"
-   [nil #(assoc % :links []) ["spec-0003" "mapping-differs: links"]]
-   "no browser-trace attachment, where :evidence requires one for @e2e"
-   [{:e2e ["browser-trace"]} #(assoc % :attachments []) ["spec-0003" "evidence-missing: browser-trace"]]})
+;; The tests check holds every result to the project's Allure mapping
 
 (defstep #"a configuration whose :allure is rdm-spec's default mapping"
-  (fn [ctx] (assoc ctx :mapping runner/default-mapping)))
+  (fn [ctx] (with-cfg ctx #(assoc % :allure runner/default-mapping))))
+
+(defn- spec-0003 [f] (fn [rs] (mapv #(if (= "r-spec-0003" (:uuid %)) (f %) %) rs)))
+
+(defn- relabel [r nm v] (update r :labels (fn [ls] (mapv #(if (= nm (:name %)) (assoc % :value v) %) ls))))
+
+(def ^:private wrongs
+  {"a second step reworded from the scenario's line" #(assoc-in % [:steps 1 :name] "When \"rdm-spec check\" runs")
+   "one step fewer than the scenario's lines" #(update % :steps pop)
+   "the story \"Something else\", not the scenario's rule" #(relabel % "story" "Something else")
+   "the epic of another bounded context" #(relabel % "epic" "measurement")
+   "no issue link to UN-001, the need the scenario traces to" #(assoc % :links [])
+   "no browser-trace attachment, where :evidence requires one for @e2e" #(assoc % :attachments [])})
 
 (defstep #"the tests check's results for @spec-0003 hold (.+)"
   (fn [ctx wrong]
-    (let [[evidence f named] (or (get wrong-results wrong) (s/fail! (str "no such result: " wrong)))
-          m (cond-> (:mapping ctx) evidence (assoc :evidence evidence))]
-      (assoc (mapped-project! ctx m m f) :named named))))
+    (let [f (or (get wrongs wrong) (s/fail! (str "no such change: " wrong)))
+          ctx (if (str/includes? wrong ":evidence requires")
+                (assoc ctx :cfg (assoc-in (cfg ctx) [:allure :evidence] {:e2e ["browser-trace"]}))
+                ctx)]
+      (plan ctx #(update % :results (spec-0003 f))))))
 
-(defstep #"it exits 1, the tests check is :failed, and it names spec-0003 and (?:.+)"
-  (fn [ctx]
-    (let [r (finding-with! ctx 1 (:named ctx))]
-      (s/check! (= :failed (:outcome (check-named r "tests"))) "the tests check did not fail")
+(defstep #"it exits 1, the tests check is :failed, and it names spec-0003, (.+) and the result's file, as FILE:LINE: RULE: what \(the result's file\)"
+  (fn [ctx finding]
+    (let [r (kc/exits! ctx 1)]
+      (s/check! (= :failed (:outcome (check-of ctx "tests"))) (str "the tests check is " (pr-str (check-of ctx "tests"))))
+      (s/check! (some #(re-find (re-pattern (str "^dhf/cycles/03/results/[^:]+-result\\.json:\\d+: "
+                                                 (java.util.regex.Pattern/quote finding) ".*spec-0003")) %)
+                      (kc/finding-lines r))
+                (str "no finding FILE:LINE: " finding " ... spec-0003 at the result's file\n" (s/show r)))
       nil)))
+
+(defstep #"a configuration whose :allure requires a browser-trace attachment for @e2e, and a stamped scenario tagged @e2e and @wip"
+  (fn [ctx]
+    (build! (-> ctx
+                (assoc :cfg (assoc (cfg ctx) :allure (assoc runner/default-mapping :evidence {:e2e ["browser-trace"]})))
+                (assoc :scenarios (conj default-scenarios {:id "spec-0020" :title "A planned one" :wip? true
+                                                           :steps ["Given a plan"]}))))))
+
+(defstep #"the tests check's results hold that scenario's skipped result, labelled planned, with no attachment"
+  (fn [ctx]
+    (let [planned (good-result (last (:scenarios ctx)))]
+      (s/check! (empty? (:attachments planned)) "the planned result has an attachment")
+      (plan ctx #(update % :results conj planned)))))
+
+(defstep #"the tests check passes, and names no finding about that scenario"
+  (fn [ctx]
+    (let [r (kc/exits! ctx 0)]
+      (s/check! (= :passed (:outcome (check-of ctx "tests"))) (str "the tests check is " (pr-str (check-of ctx "tests"))))
+      (s/check! (not-any? #(str/includes? % "spec-0020") (s/err-lines r)) (str "spec-0020 is named\n" (s/show r)))
+      nil)))
+
+(def ^:private unreadable
+  {"maps :epic to :aggregate" #(assoc % :epic :aggregate)
+   "maps :colour to :context" #(assoc % :colour :context)
+   "maps no label \"spec\"" #(update % :labels dissoc "spec")})
 
 (defstep #"a configuration whose :allure (maps :epic to :aggregate|maps :colour to :context|maps no label \"spec\")"
-  (fn [ctx is]
-    (let [m (case is
-              "maps :epic to :aggregate" (assoc runner/default-mapping :epic :aggregate)
-              "maps :colour to :context" (assoc runner/default-mapping :colour :context)
-              "maps no label \"spec\"" (update runner/default-mapping :labels dissoc "spec"))]
-      (mapped-project! ctx m runner/default-mapping identity))))
+  (fn [ctx is] (with-cfg ctx #(assoc % :allure ((get unreadable is) runner/default-mapping)))))
 
 (defstep #"a configuration that declares no :allure"
-  (fn [ctx] (mapped-project! ctx nil runner/default-mapping identity)))
+  (fn [ctx]
+    (let [ctx (build! ctx)]
+      (s/check! (not (contains? (cfg ctx) :allure)) "the configuration declares :allure")
+      ctx)))
 
-(defstep #"each result is held to (\{.+\})"
-  (fn [ctx doc]
-    (s/check! (= runner/default-mapping (edn/read-string doc)) "the default mapping is not the one the scenario states")
+(defstep #"each result is held to \{.*\}"
+  (fn [ctx]
     (kc/exits! ctx 0)
-    ;; a result that breaks the default mapping, its component label dropped, fails
-    (let [ctx (mapped-project! (dissoc ctx :dir :room) nil runner/default-mapping
-                               (fn [r] (update r :labels (fn [ls] (vec (remove #(= "component" (:name %)) ls))))))
-          ctx (kc/run-line ctx "verify ROOM 03")]
-      (finding-with! ctx 1 ["spec-0003" "mapping-differs: component"])
-      nil)))
+    (doseq [[what f finding] [["the label feature" #(relabel % "feature" "Other") "mapping-differs: feature"]
+                              ["the name" #(assoc % :name "Another title") "mapping-differs: name"]
+                              ["the label component" #(relabel % "component" "Views") "mapping-differs: labels"]
+                              ["the tags" #(update % :labels (fn [ls] (vec (remove (fn [l] (= {:name "tag" :value "UN-001"} l)) ls))))
+                               "mapping-differs: labels"]]]
+      (let [c (verify! (plan ctx #(update % :results (spec-0003 f))))
+            r (kc/the-run c)]
+        (s/check! (= 1 (:exit r)) (str "a result with another " what " passes\n" (s/show r)))
+        (s/check! (some #(and (str/includes? % finding) (str/includes? % "spec-0003")) (kc/finding-lines r))
+                  (str "no finding " finding " for " what "\n" (s/show r)))))
+    nil))

@@ -1,39 +1,34 @@
 (ns rdm-spec.measurement.oracle-test
-  (:require [clojure.string :as str]
+  "Unit tests of the Oracle component: the command it runs, and the gate.
+  Its one fixture is a temporary directory, removed."
+  (:require [babashka.fs :as fs]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [rdm-spec.kernel.command :as command]
             [rdm-spec.measurement.oracle :as oracle]))
 
-(deftest every-seconds-is-held-as-measured
-  (is (= {:verify {:checks [{:name "tests" :seconds :measured} {:seconds :measured :x [1 {:seconds :measured}]}]}}
-         (oracle/hold-seconds {:verify {:checks [{:name "tests" :seconds 1.2} {:seconds 3 :x [1 {:seconds 0.1}]}]}}))))
+(deftest no-oracle-is-no-oracle
+  (is (= {:result {} :findings []} (oracle/gate {:config {}})))
+  (let [out (oracle/oracle {:config {} :args []})]
+    (is (str/includes? (get-in out [:relay :out]) "no oracle to run"))
+    (is (= 0 (get-in out [:relay :exit])))
+    (is (= "" (get-in out [:relay :err])))))
 
-(deftest the-cases-are-ordered-by-component-then-case
-  (is (= [[:measurement/scorer "01"] [:regeneration/scopes "a"] [:regeneration/scopes "b"]]
-         (oracle/cases {:project {} :cycles {} :recorded []
-                        :regeneration/scopes {"b" {} "a" {}} :measurement/scorer {"01" {}}}))))
+(deftest a-configured-oracle-is-a-command
+  (is (= ["bb" "o.clj" "record" "--reason" "r"] (oracle/command-line {:oracle {:command ["bb" "o.clj"]}} ["record" "--reason" "r"])))
+  (is (command/cannot-run? (try (oracle/command-line {:oracle {:command []}} []) nil (catch Exception e e)))))
 
-(deftest differences-name-the-path-and-both-values
-  (is (= [] (oracle/differences {:exit 0 :out {:a 1}} {:exit 0 :out {:a 1}})))
-  (is (= [[[:out :a] 1 2]] (oracle/differences {:exit 0 :out {:a 1}} {:exit 0 :out {:a 2}})))
-  (is (= [[[:wrote "s" :items 1 :verdict] :pass :fail]]
-         (oracle/differences {:wrote {"s" {:items [{:id "a" :verdict :pass} {:id "b" :verdict :pass}]}}}
-                             {:wrote {"s" {:items [{:id "a" :verdict :pass} {:id "b" :verdict :fail}]}}})))
-  (testing "a finding names the item's id where the path passes through one"
-    (let [g {:wrote {"s" {:items [{:id "a"} {:id "spec-0014" :verdict :pass}]}}}
-          a {:wrote {"s" {:items [{:id "a"} {:id "spec-0014" :verdict :fail}]}}}
-          f (first (oracle/difference-findings :measurement/scorer "01" g a))]
-      (is (= "oracle-golden-differs" (:rule f)))
-      (doseq [w [":measurement/scorer" "\"01\"" "spec-0014" ":pass" ":fail"]]
-        (is (str/includes? (:message f) w) w)))))
-
-(deftest changes-are-named-component-colon-case
-  (is (= #{[:measurement/scoreboard "01-02"] [:regeneration/scopes "order"]}
-         (oracle/parse-changes "measurement/scoreboard:01-02,regeneration/scopes:order")))
-  (is (= #{} (oracle/parse-changes nil)))
-  (is (command/cannot-run? (try (oracle/parse-changes "nonsense") nil (catch Exception e e)))))
-
-(deftest the-configuration-names-the-new-digest-and-keeps-its-text
-  (let [text ";; c\n{:oracle {:repository \"r\"\n          :digest \"sha256:aaa\"}\n :x 1}\n"]
-    (is (= ";; c\n{:oracle {:repository \"r\"\n          :digest \"sha256:bbb\"}\n :x 1}\n"
-           (oracle/with-digest text "sha256:aaa" "sha256:bbb")))))
+(deftest the-gate-stops-on-a-failing-oracle
+  (let [d (str (fs/create-temp-dir {:prefix "oracle-test-"}))]
+    (try
+      (spit (str (fs/file d "o.clj")) "(binding [*out* *err*] (println \"oracle-differs: x\")) (System/exit 1)")
+      (let [req {:root d :config {:oracle {:command ["bb" "o.clj"]}} :env {}}
+            out (oracle/gate req)]
+        (is (= ["oracle-differs: x"] (map command/format-finding (:findings out))))
+        (is (not (command/warning? (first (:findings out))))))
+      (spit (str (fs/file d "o.clj")) "(println {:oracle {:differences 0}}) (System/exit 0)")
+      (is (= [] (:findings (oracle/gate {:root d :config {:oracle {:command ["bb" "o.clj"]}} :env {}}))))
+      (testing "a command that cannot be started"
+        (is (command/cannot-run? (try (oracle/gate {:root d :config {:oracle {:command ["no-such-oracle"]}} :env {}})
+                                      nil (catch Exception e e)))))
+      (finally (fs/delete-tree d)))))

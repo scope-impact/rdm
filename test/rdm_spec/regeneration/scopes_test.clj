@@ -1,40 +1,41 @@
 (ns rdm-spec.regeneration.scopes-test
+  "Unit tests of Scopes' pure parts: who owns a changed file, which events
+  changed their contract, and the order a builder builds in. No fixture."
   (:require [clojure.test :refer [deftest is testing]]
             [rdm-spec.regeneration.scopes :as scopes]))
 
 (def model
-  {:containers [{:id :app :contexts [{:id :spec :components [{:id :spec/parser :spec "spec/parser"}
-                                                             {:id :spec/check :spec "spec/check"}]}
-                                     {:id :verification :components [{:id :verification/status :spec "verification/status"}]}
-                                     {:id :publishing :components [{:id :publishing/site :spec "publishing/site"}]}]}]
-   :kernel [{:id :kernel/bus :spec "kernel/bus"} {:id :kernel/command :spec "kernel/command"}]
-   :relationships [{:from :spec/parser :to :publishing/site :event :SpecParsed}
-                   {:from :spec/parser :to :verification/status :event :SpecParsed}
-                   {:from :verification/status :to :publishing/site :event :VerificationDerived}]})
+  {:containers [{:id :app :contexts [{:id :spec :components [{:id :spec/parser :spec "spec/parser"}]}
+                                     {:id :architecture :components [{:id :architecture/lint :spec "architecture/lint"}
+                                                                      {:id :architecture/views :spec "architecture/views"}]}
+                                     {:id :verification :components [{:id :verification/status :spec "verification/status"}]}]}]
+   :kernel [{:id :kernel/command :spec "kernel/command"} {:id :kernel/bus :spec "kernel/bus"}]
+   :relationships [{:from :spec/parser :to :verification/status :event :SpecParsed}
+                   {:from :spec/parser :to :architecture/lint :event :SpecParsed}]})
 
-(def catalogue
-  {:SpecParsed {:description "d" :published-by :spec/parser :carries [:a] :shape {:a "x"}}
-   :VerificationDerived {:description "d" :published-by :verification/status :carries [:b] :shape {:b "y"}}})
+(deftest a-components-own-files
+  (let [own (scopes/owners "dhf/spec" model)]
+    (is (= :spec/parser (own "dhf/spec/spec/parser.feature")))
+    (is (= :architecture/views (own "dhf/spec/architecture/views.md")))
+    (is (nil? (own "dhf/spec/glossary.md")))))
 
-(deftest a-spec-file-belongs-to-its-component
-  (is (= :spec/parser (scopes/owner-of model "dhf/spec" "dhf/spec/spec/parser.feature")))
-  (is (= :spec/parser (scopes/owner-of model "dhf/spec" "dhf/spec/spec/parser.md")))
-  (is (= :kernel/bus (scopes/owner-of model "dhf/spec" "dhf/spec/kernel/bus.feature")))
-  (is (nil? (scopes/owner-of model "dhf/spec" "dhf/spec/glossary.md"))))
+(deftest an-events-contract-is-what-it-carries
+  (let [a {:E {:description "x" :published-by :spec/parser :carries [:k] :shape {:k "a"} :read-by {:x [:k]}}
+           :F {:carries [:j] :shape {:j "b"}}}]
+    (is (= [] (scopes/changed-events a (assoc-in a [:E :description] "y"))))
+    (is (= [] (scopes/changed-events a (update a :E dissoc :read-by))))
+    (is (= [:E] (scopes/changed-events a (assoc-in a [:E :shape :k] "c"))))
+    (is (= [:E] (scopes/changed-events a (assoc-in a [:E :carries] [:k :l]))))
+    (testing "an event added or removed"
+      (is (= [:F] (scopes/changed-events a (dissoc a :F))))
+      (is (= [:G] (scopes/changed-events a (assoc a :G {:carries []})))))))
 
-(deftest a-changed-event-reaches-its-publisher-and-subscribers
-  (is (= [] (scopes/changed-events catalogue catalogue)))
-  (is (= [] (scopes/changed-events catalogue (assoc-in catalogue [:SpecParsed :description] "new"))))
-  (is (= [:SpecParsed] (scopes/changed-events catalogue (assoc-in catalogue [:SpecParsed :shape :a] "z"))))
-  (is (= [:New] (scopes/changed-events catalogue (assoc catalogue :New {:published-by :spec/check}))))
-  (is (= [:SpecParsed] (scopes/changed-events catalogue (dissoc catalogue :SpecParsed))))
-  (is (= [:spec/parser :publishing/site :verification/status]
-         (scopes/event-scopes model catalogue :SpecParsed))))
-
-(deftest scopes-are-ordered-kernel-first-then-publishers-before-subscribers
-  (is (= [:kernel/command :spec/parser :publishing/site]
-         (scopes/ordered model [:publishing/site :spec/parser :kernel/command])))
-  (testing "a subscriber listed before its publisher waits for it"
-    (is (= [:spec/parser :verification/status :publishing/site]
-           (scopes/ordered model [:publishing/site :verification/status :spec/parser]))))
-  (is (= [:kernel/bus :kernel/command] (scopes/ordered model [:kernel/command :kernel/bus]))))
+(deftest the-order-a-builder-builds-in
+  (testing "the kernel first, each publisher before its subscribers"
+    (is (= [:kernel/command :spec/parser :verification/status]
+           (scopes/ordered model #{:verification/status :spec/parser :kernel/command}))))
+  (testing "a subscriber the model names first among several comes after its publisher"
+    (is (= [:spec/parser :architecture/lint :verification/status]
+           (scopes/ordered model #{:verification/status :architecture/lint :spec/parser}))))
+  (testing "no order between them: the model's"
+    (is (= [:kernel/command :kernel/bus :architecture/views] (scopes/ordered model #{:architecture/views :kernel/bus :kernel/command})))))

@@ -1,0 +1,4 @@
+# What each fail of cycle 19 turned out to be (see 16/labels.yaml for the labels).
+- scenario: spec-0298
+  label: wording
+  evidence: "the build listed a changed event's subscribers in the model's order; spec-0298 says relationship order and spec-0299 says model order for components with no order between them; the spec must say which wins"
