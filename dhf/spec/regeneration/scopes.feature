@@ -15,11 +15,11 @@ Feature: Scopes
     Scenario: The components whose feature files changed are listed as scopes
       Given the cuts spec-3 and spec-4, between which architecture/views.feature and kernel/bus.feature changed
       When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists the scopes {:component :architecture/views} and {:component :kernel/bus}, and nothing else
+      Then it lists the scopes {:component :kernel/bus}, then {:component :architecture/views}, and nothing else
 
     @spec-0241 @e2e
     Scenario: A component's design prose is its own
-      Given the cuts spec-3 and spec-4, between which only architecture/views.md changed
+      Given the cuts spec-3 and spec-4, between which only architecture/views.md, design prose that spec-3 did not have, was added
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists the scope {:component :architecture/views}
 
@@ -42,19 +42,44 @@ Feature: Scopes
     Scenario: A changed key's publisher and readers are scopes
       Given the cuts spec-3 and spec-4, between which only the shape of one carried key of one event in dhf/spec/events.edn changed
       When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes the event's publisher and the subscribers its :read-by names for that key, and no other subscriber
+      Then it lists as scopes the event's publisher, then the subscribers its :read-by names for that key, and no other subscriber
 
     @spec-0300 @e2e
     Scenario: An added key reaches only the subscribers that read it
       Given the cuts spec-3 and spec-4, between which one event's scenarios gained a key that :read-by names one subscriber as reading
       When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists as scopes the event's publisher and that one subscriber, and no other subscriber
+      Then it lists as scopes the event's publisher, then that one subscriber, and no other subscriber
 
+    # :read-by is what a project states to rebuild less; it is optional. A key
+    # it names no readers for is read by every subscriber, so leaving it out
+    # costs build time, never a missed scope. :read-by is metadata: writing it,
+    # changing it or adding it where there was none reaches no component.
+    # The cycle 14 build read :read-by's first appearance as every key
+    # added, and listed eight scopes where spec-0301 lists none (cycle 14,
+    # integrator).
     @spec-0301 @e2e
-    Scenario: A change to who reads a key reaches no subscriber
-      Given the cuts spec-3 and spec-4, between which only an event's :read-by changed
+    Scenario Outline: A change to who reads a key reaches no component
+      Given the cuts spec-3 and spec-4, between which only <change>
       When "rdm-spec scopes spec-3 spec-4" is run
-      Then it lists no subscriber of that event as a scope
+      Then it lists no scope
+
+      Examples:
+        | change                                                                   |
+        | an event's :read-by changed                                              |
+        | an event that had no :read-by gained one naming every key                |
+        | an event that had no :read-by gained one naming a scenario key's readers |
+
+    @spec-0305 @e2e
+    Scenario: A changed key :read-by names no readers for reaches every subscriber
+      Given the cuts spec-3 and spec-4, between which only the shape of one carried key of an event without :read-by changed
+      When "rdm-spec scopes spec-3 spec-4" is run
+      Then it lists as scopes the event's publisher, then every subscriber the model's relationships name for that event
+
+    @spec-0306 @e2e
+    Scenario: A key :read-by gives no subscriber reaches only the publisher
+      Given the cuts spec-3 and spec-4, between which only the shape of one carried key changed, whose :read-by entry is empty
+      When "rdm-spec scopes spec-3 spec-4" is run
+      Then it lists the event's publisher as the only scope
 
   # One builder rebuilds a cycle's scopes one after another (spec owner, cycle
   # 13), so the list is in the order they can be built.

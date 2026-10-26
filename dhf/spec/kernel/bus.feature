@@ -22,14 +22,30 @@ Feature: Event bus
       When "rdm-spec check --events" is run twice
       Then both runs list the same events in the same order
 
-  # One catalogue: the project's, so the bus and the lint can never disagree
-  # (cycle 00, dhf/cycles/00/proposed-spec-changes.md, A5). An empty
-  # catalogue, as init writes, declares nothing and so checks nothing
-  # (cycle 01, A2).
-  Rule: The bus carries only the events the project's catalogue declares
+  # rdm-spec is the harness, and a project is what it is used on. Its own
+  # events, those between its contexts, are part of rdm-spec: a release
+  # carries them, built from rdm-spec's own spec. A project's catalogue holds
+  # the project's events, its design record, and never what the bus carries:
+  # a project that declared one event of its own had its check refused until
+  # it copied rdm-spec's five, and an empty catalogue left rdm-spec's
+  # contracts unchecked (spec owner, cycle 14; it replaces spec-0221, cycle
+  # 00, A5, whose bus read the project's catalogue).
+  Rule: The bus carries rdm-spec's own events, whatever a project's catalogue declares
 
-    @spec-0221 @e2e
-    Scenario: Publishing an event the catalogue does not declare is refused
-      Given the configured event catalogue declares every other event, each with its publisher, but not SpecParsed
-      When "rdm-spec check" is run
-      Then it exits 2 and names SpecParsed and the configured catalogue
+    @spec-0303 @e2e
+    Scenario: A project whose catalogue declares only its own events passes check
+      Given a project set up by rdm-spec whose configured event catalogue declares only the event OrderPlaced, published by its own component
+      When "rdm-spec check --events" is run
+      Then it exits 0 and lists KnowledgeIndexed, SpecParsed and SpecGated, each with its publisher
+
+    @spec-0304 @e2e
+    Scenario Outline: A project's catalogue never changes the events a run publishes
+      Given a project set up by rdm-spec whose configured event catalogue is <catalogue>
+      When "rdm-spec check --events" is run
+      Then it lists the same events, with the same publishers, in the same order, as with an empty catalogue
+
+      Examples:
+        | catalogue                                                       |
+        | empty                                                           |
+        | one that declares only its own event OrderPlaced                |
+        | one that declares SpecParsed with another publisher             |

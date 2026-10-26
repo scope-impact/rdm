@@ -9,7 +9,15 @@
 ;; holding a collection of maps (SpecParsed's :scenarios), for each of their
 ;; keys. A change to the shape of an event reaches its publisher and only the
 ;; subscribers that read a changed key; an added key reaches only its readers
-;; (dhf/spec/regeneration/scopes.feature; cycle 13, the read-by rule).
+;; (dhf/spec/regeneration/scopes.feature; cycle 13, the read-by rule). It is
+;; optional: a key it names no readers for is read by every subscriber the
+;; model names for the event, and an empty list by none. Changing it reaches
+;; no one.
+;;
+;; This is rdm-spec's own catalogue, as this repository is rdm-spec's project:
+;; a release carries these events built in, and its bus carries only them. A
+;; project's catalogue holds that project's events and never these
+;; (dhf/spec/kernel/bus.feature).
 ;;
 ;; Events travel on the in-process bus (kernel/bus), so only within one run of
 ;; the rdm-spec command. Steps that run at different times (cut, fence, ratify,

@@ -10,7 +10,7 @@ Feature: Init
     Scenario: Init writes the skeleton and names what it wrote
       Given no directory at the path "sauna"
       When "rdm-spec init sauna" is run
-      Then "sauna" is a git repository holding exactly:
+      Then "sauna" is a git repository with no commit yet, whose working tree holds exactly:
         | path                              | holds                                                                    |
         | dhf/spec/model.edn                | a model with the system and nothing else                                 |
         | dhf/spec/events.edn               | an empty event catalogue                                                 |

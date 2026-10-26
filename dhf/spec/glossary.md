@@ -6,10 +6,23 @@ or changes, this file changes in the same commit.
 
 ## The spec
 
-**rdm-spec**: the product this spec describes: RDM rebuilt around this
-decision. The suffix says what changed: the spec is the source and the code is
-built from it. Until cutover today's implementation and the `rdm` command keep
-their name; `RDM` alone means today's implementation.
+**rdm-spec**: the product this spec describes: a harness that any project
+uses to keep its spec, regenerate its implementation from it in a clean room,
+ratify, grade and measure the result, and, under the regulated profile, audit
+it. It is RDM rebuilt around this decision: the suffix says the spec is the
+source and the code is built from it. `RDM` alone means the old record, before
+the cutover.
+
+**Project**: a repository rdm-spec is used on, set up by `init` or `adopt`.
+This repository is one of them as well: rdm-spec regenerates itself from this
+spec (see Release). Its spec, model and event catalogue describe the project,
+never the harness that reads them.
+
+**Release**: a build of rdm-spec accepted by the spec owner after it was
+scored, and installed. Release N runs cycle N+1 (fence, ratify, checklist,
+score, the oracle) on the build of N+1; a build never judges itself, and none
+is installed before it is scored, as a compiler builds its next version and
+is replaced only once that version passes.
 
 **Spec**: the source of truth for what the product does: the C4 model, the
 event catalogue, the user needs, and the feature files the model's components
@@ -73,12 +86,27 @@ one, the `rdm-spec` command (a modular monolith), beside the repository.
 3). Each owns one feature file, `dhf/spec/<context>/<component>.feature`, and
 may have design prose beside it as `<component>.md`.
 
-**Event**: a domain event that passes between bounded contexts within one run,
-declared in `dhf/spec/events.edn`. Steps that run at different times meet
-through files instead.
+**Event**: a domain event that passes between bounded contexts within one run.
+Steps that run at different times meet through files instead.
 
-**Event bus**: the in-process bus every event travels on, synchronous and in
-subscription order. It refuses an event the catalogue does not declare.
+**Event catalogue**: a project's events, in the file the configuration's
+`:events` names (`dhf/spec/events.edn`): each with its description, its one
+publisher, the keys it carries, their shape and, optionally, `:read-by`. It
+is the project's design record: the model's lint checks it against the
+model's relationships, and `scopes` compares it between cuts. It never
+declares rdm-spec's own events, and the bus never reads it.
+
+**Read-by**: for each carried key of an event (for a key holding a collection
+of maps, for each of their keys), the subscribers that read it, so a change
+to that key rebuilds only them. Optional: a key it names no readers for is
+read by every subscriber the model's relationships name for the event; an
+empty list is read by none. It is metadata: writing or changing it reaches no
+component.
+
+**Event bus**: rdm-spec's in-process bus, synchronous and in subscription
+order. It carries rdm-spec's own events, the ones between its contexts, which
+a release carries built in from rdm-spec's own spec; it refuses one rdm-spec
+does not declare, whatever a project's catalogue holds.
 
 **Skeleton**: what `rdm-spec init` writes and `rdm-spec adopt` adds: the spec,
 the harness configuration, the raw and wiki directories, decisions, the
@@ -180,9 +208,10 @@ carry the bytes of a removed implementation file.
 **Scope**: what a regeneration rebuilds: the whole project, one bounded context
 or one component, or a list of contexts and components. The kernel counts as
 a context named `kernel`. A cycle's scopes are what `rdm-spec scopes` lists
-between two cuts: the components whose own spec changed, and the publisher
-and subscribers of any event whose shape changed; a component whose only
-change is upstream code is not rebuilt. The rest of the implementation stays in the clean
+between two cuts: the components whose own spec changed, and, for each
+event key whose shape changed or that was added or removed, the event's
+publisher and the subscribers that read the key (Read-by); a component whose
+only change is upstream code is not rebuilt. The rest of the implementation stays in the clean
 room as it was at the cut. A checklist names an item's context and component by
 the model's `:name`. A cycle's checklist holds the items of its scope,
 and nothing else: a scoped cycle is graded on its scope only.

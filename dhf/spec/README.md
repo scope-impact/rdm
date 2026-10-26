@@ -7,7 +7,7 @@ The spec of rdm-spec, the source of truth for what it does
 | Path | What it is |
 |---|---|
 | `model.edn` | The C4 model: the container, its bounded contexts and components, and every view |
-| `events.edn` | The events between bounded contexts, within one run: their contracts |
+| `events.edn` | The event catalogue: the events between rdm-spec's bounded contexts, within one run, and their contracts. As rdm-spec's own spec, it is also what a release's bus carries |
 | `needs.edn` | The user needs every scenario traces to |
 | `ids.edn` | The id ledger; only the stamper writes it |
 | `glossary.md` | The vocabulary |
@@ -76,6 +76,11 @@ The spec of rdm-spec, the source of truth for what it does
 - **A fixture copied from the room holds what a clean room holds:** the
   paths the configuration keeps, never the denied ones (cycle 13: the copy
   still read the old allow-list).
+- **A fixture's git hooks never run.** A fixture made by `init` or `adopt`
+  carries the skeleton's pre-commit hook, which runs whatever `rdm-spec` is
+  on PATH; a scenario that commits in a fixture runs with the fixture's hooks
+  turned off, unless it is about the hook (cycle 14: the grader's commit ran
+  the installed release).
 - **A fixture never carries the room's oracle** unless its scenario sets
   one: the oracle a fixture's configuration names is the scenario's (cycle
   09: 22 fixtures reached for the room's registry).
