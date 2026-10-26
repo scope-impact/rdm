@@ -1,0 +1,40 @@
+# What cycle 18's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml).
+- scenario: spec-0176
+  decision: "help's result is {:help [{:task :usage :does}]}; --events is accepted by every task"
+- scenario: spec-0166
+  decision: "a When with no Given runs in a fresh copy of the room's kept paths"
+- scenario: spec-0010
+  decision: "the questions for a person are in the result, {:lint {:for-a-person [...]}}"
+- scenario: spec-0008
+  decision: "a view's size is the number of elements it draws"
+- scenario: spec-0339
+  decision: ":contexts-relate-by defaults to [:events]"
+- scenario: spec-0336
+  decision: "domain citations are checked against dhf/raw/sources.edn's pins, read directly"
+- scenario: spec-0335
+  decision: "added the rules domain-context-unknown, domain-shape and domain-unreadable"
+- scenario: spec-0337
+  decision: "a read model may be fed by any catalogued event"
+- scenario: spec-0215
+  decision: ":room-tree is the git tree hash of the room's implementation paths"
+- scenario: spec-0318
+  decision: "a :serves margin is in polls, polling every budget / polls seconds"
+- scenario: spec-0217
+  decision: "an unstamped cut is recorded as refused in ratified.edn; a task that cannot run writes nothing"
+- scenario: spec-0314
+  decision: "the tests check reports a budget and margin only when one is declared"
+- scenario: spec-0237
+  decision: "scopes' result shape {:scopes {:from :to :scopes [{:component}] :shared [path]}}"
+- scenario: spec-0238
+  decision: "an unowned spec file is a warning; the ledger and the event catalogue are excluded"
+- scenario: spec-0299
+  decision: "ties in build order follow the model's order"
+- scenario: spec-0326
+  decision: "how each judging component runs on its fixture (the oracle's case harness)"
+- scenario: spec-0326
+  decision: "fixture commits use a fixed author and time; the fixture's path is written FIXTURE"
+- scenario: spec-0327
+  decision: "a case with a nil golden is new; :recorded gains :added for those"
+- scenario: spec-0232
+  decision: "the gate passes on the oracle's findings only, never its result"

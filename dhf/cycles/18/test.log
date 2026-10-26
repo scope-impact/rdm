@@ -1,0 +1,406 @@
+scenarios: 401 in 31 feature files
+passed  spec-0286  dhf/spec/agency/observe.feature:26  A run's record has one shape
+passed  spec-0287  dhf/spec/agency/observe.feature:35  A write outside the room is recorded, and the run is not stopped
+passed  spec-0288  dhf/spec/agency/observe.feature:44  Entries left in the temporary directory are counted
+passed  spec-0289  dhf/spec/agency/observe.feature:52  A change to the project outside its cycle is recorded
+passed  spec-0290  dhf/spec/agency/observe.feature:60  Results written into the room are recorded
+passed  spec-0291  dhf/spec/agency/observe.feature:68  What cannot be observed is said, never assumed clean
+passed  spec-0292  dhf/spec/agency/observe.feature:75  Ending a run that never began cannot run
+passed  spec-0293  dhf/spec/agency/observe.feature:86  The report sets two cycles' runs side by side
+passed  spec-0334  dhf/spec/architecture/domain.feature:20  A project without a domain model is not asked for one
+passed  spec-0335  dhf/spec/architecture/domain.feature:26  The domain model is one EDN file of this shape
+passed  spec-0336  dhf/spec/architecture/domain.feature:57  An element with no source, or a source that is not recorded, is a finding [an aggregate with no :sources, domain-unsourced]
+passed  spec-0336  dhf/spec/architecture/domain.feature:58  An element with no source, or a source that is not recorded, is a finding [an invariant with no :sources, domain-unsourced]
+passed  spec-0336  dhf/spec/architecture/domain.feature:59  An element with no source, or a source that is not recorded, is a finding [a command citing loyly:raw/x.md@0000000, a pin dhf/raw/sources.edn lacks, domain-source-unknown]
+passed  spec-0337  dhf/spec/architecture/domain.feature:72  A domain model that breaks a rule is a finding naming the element [the command RequestStandingSlot in two aggregates, domain-command-handlers, the command and both]
+passed  spec-0337  dhf/spec/architecture/domain.feature:73  A domain model that breaks a rule is a finding naming the element [a command that emits no event and names no refusal, domain-command-silent, the command]
+passed  spec-0337  dhf/spec/architecture/domain.feature:74  A domain model that breaks a rule is a finding naming the element [an event in :events that no command emits, domain-event-orphan, the event]
+passed  spec-0337  dhf/spec/architecture/domain.feature:75  A domain model that breaks a rule is a finding naming the element [a read model fed by :RequestStandingSlot, a command, domain-read-model-fed, the read model]
+passed  spec-0337  dhf/spec/architecture/domain.feature:76  A domain model that breaks a rule is a finding naming the element [an invariant whose :verified-by is empty, domain-invariant-unverified, the invariant]
+passed  spec-0337  dhf/spec/architecture/domain.feature:77  A domain model that breaks a rule is a finding naming the element [an invariant verified by spec-9999, which no stamped scenario carries, domain-invariant-unverified, the invariant and id]
+passed  spec-0337  dhf/spec/architecture/domain.feature:78  A domain model that breaks a rule is a finding naming the element [an aggregate that :reads an aggregate of another context, domain-contexts-coupled, both aggregates]
+passed  spec-0337  dhf/spec/architecture/domain.feature:79  A domain model that breaks a rule is a finding naming the element [an event a command emits that the event catalogue does not declare, domain-event-uncatalogued, the event]
+passed  spec-0338  dhf/spec/architecture/domain.feature:82  A domain model that keeps every rule passes
+passed  spec-0001  dhf/spec/architecture/lint.feature:13  A view with no description fails the lint
+passed  spec-0002  dhf/spec/architecture/lint.feature:19  An element with no description fails the lint
+passed  spec-0003  dhf/spec/architecture/lint.feature:25  An unlabelled relationship fails the lint
+passed  spec-0005  dhf/spec/architecture/lint.feature:31  A context view with no person fails the lint
+passed  spec-0006  dhf/spec/architecture/lint.feature:37  A container that neither runs nor stores fails the lint
+passed  spec-0007  dhf/spec/architecture/lint.feature:43  A relationship that publishes an unknown event fails the lint
+passed  spec-0008  dhf/spec/architecture/lint.feature:50  A view with more elements than the configured limit warns
+passed  spec-0009  dhf/spec/architecture/lint.feature:60  A person or system description longer than the configured limit fails the lint
+passed  spec-0010  dhf/spec/architecture/lint.feature:67  The lint prints the checklist items no machine can judge
+passed  spec-0012  dhf/spec/architecture/lint.feature:76  A bounded context with no component view fails the lint
+passed  spec-0013  dhf/spec/architecture/lint.feature:82  A component that owns no feature file fails the lint
+passed  spec-0014  dhf/spec/architecture/lint.feature:88  A feature file that belongs to no component fails the lint
+passed  spec-0015  dhf/spec/architecture/lint.feature:94  Components of different contexts relate only through an event
+passed  spec-0339  dhf/spec/architecture/lint.feature:105  A project that lets its contexts relate by call is not held to events only
+passed  spec-0072  dhf/spec/architecture/model.feature:11  A model that is not EDN is refused with its line
+passed  spec-0227  dhf/spec/architecture/model.feature:17  A closing bracket with no opening one is refused with its line
+passed  spec-0073  dhf/spec/architecture/model.feature:23  A key the model's shape does not declare is refused
+passed  spec-0074  dhf/spec/architecture/model.feature:29  An id used twice anywhere in the model is refused
+passed  spec-0075  dhf/spec/architecture/model.feature:35  A relationship naming an element that does not exist is refused
+passed  spec-0076  dhf/spec/architecture/model.feature:43  A component's spec path names its feature file
+passed  spec-0077  dhf/spec/architecture/model.feature:53  Reformatting the model leaves its views fresh
+passed  spec-0078  dhf/spec/architecture/model.feature:60  Changing any value makes the views stale
+passed  spec-0017  dhf/spec/architecture/views.feature:10  Every view in the model is generated and rendered
+passed  spec-0018  dhf/spec/architecture/views.feature:17  A view older than the model fails the check
+passed  spec-0198  dhf/spec/architecture/views.feature:32  A view of a level holds exactly its elements [context, the system, every person and every external system, and the relationships between them]
+passed  spec-0198  dhf/spec/architecture/views.feature:33  A view of a level holds exactly its elements [container, every container, every person and every external system, and the relationships between them]
+passed  spec-0198  dhf/spec/architecture/views.feature:34  A view of a level holds exactly its elements [component, one context's components inside its boundary, and the elements outside it they relate to, drawn as external]
+passed  spec-0198  dhf/spec/architecture/views.feature:35  A view of a level holds exactly its elements [dynamic, the elements its steps name, and its steps in order]
+passed  spec-0242  dhf/spec/compliance/audit.feature:26  A record the release check refuses has no audit copy
+passed  spec-0243  dhf/spec/compliance/audit.feature:32  A clause no audit tag names refuses the audit copy
+passed  spec-0244  dhf/spec/compliance/audit.feature:38  A project without :regulated has no audit copy
+passed  spec-0245  dhf/spec/compliance/audit.feature:44  An existing directory is never written into
+passed  spec-0246  dhf/spec/compliance/audit.feature:54  The auditor's copy keeps the audit tags, the engineer's copy drops them
+passed  spec-0247  dhf/spec/compliance/audit.feature:70  What the engineer's copy drops [the line "We plan [[STD:5.1]].", the line "We plan."]
+passed  spec-0247  dhf/spec/compliance/audit.feature:71  What the engineer's copy drops [the line "We plan [[STD:5.1]] and test [[STD:5.2]].", the line "We plan and test."]
+passed  spec-0247  dhf/spec/compliance/audit.feature:72  What the engineer's copy drops [a tag that opens on one line and closes on the next, both lines without the tag]
+passed  spec-0247  dhf/spec/compliance/audit.feature:73  What the engineer's copy drops [the line "We plan `[[STD:5.1]]`.", that line unchanged]
+passed  spec-0247  dhf/spec/compliance/audit.feature:74  What the engineer's copy drops [a "[[" with no "]]" before the paragraph's blank line, the paragraph unchanged]
+passed  spec-0247  dhf/spec/compliance/audit.feature:75  What the engineer's copy drops [a fenced code block holding [[STD:5.1]], the code block unchanged]
+passed  spec-0247  dhf/spec/compliance/audit.feature:76  What the engineer's copy drops [an indented code block holding [[STD:5.1]], the code block unchanged]
+passed  spec-0247  dhf/spec/compliance/audit.feature:77  What the engineer's copy drops [the title "Development plan [[STD:5.1]]" in its frontmatter, the title "Development plan"]
+passed  spec-0248  dhf/spec/compliance/audit.feature:80  The documents directory's layout is kept
+passed  spec-0249  dhf/spec/compliance/audit.feature:86  Each copy is also a PDF whose first page names the document
+passed  spec-0250  dhf/spec/compliance/audit.feature:96  The clauses page names where each clause is met
+passed  spec-0251  dhf/spec/compliance/audit.feature:104  The traceability page links each need to its scenarios and their status
+passed  spec-0252  dhf/spec/compliance/audit.feature:110  The results the record was verified by are kept
+passed  spec-0253  dhf/spec/compliance/audit.feature:116  The manifest pins every file of the audit copy
+passed  spec-0274  dhf/spec/compliance/audit.feature:138  The audit copy is refused while what it is made from is not committed [an untracked document dhf/documents/draft.md, dhf/documents/draft.md]
+passed  spec-0274  dhf/spec/compliance/audit.feature:139  The audit copy is refused while what it is made from is not committed [a document dhf/documents/draft.md that git ignores, dhf/documents/draft.md]
+passed  spec-0274  dhf/spec/compliance/audit.feature:140  The audit copy is refused while what it is made from is not committed [an uncommitted change to a document, that document]
+passed  spec-0274  dhf/spec/compliance/audit.feature:141  The audit copy is refused while what it is made from is not committed [an uncommitted change to a scenario's title, that feature file]
+passed  spec-0274  dhf/spec/compliance/audit.feature:142  The audit copy is refused while what it is made from is not committed [an uncommitted change to the clause list, dhf/clauses/std.txt]
+passed  spec-0274  dhf/spec/compliance/audit.feature:143  The audit copy is refused while what it is made from is not committed [an uncommitted change to the configuration, dhf/harness/config.edn]
+passed  spec-0254  dhf/spec/compliance/audit.feature:146  Same commit, same results, same audit copy
+passed  spec-0255  dhf/spec/compliance/gap.feature:25  A project without :regulated has no gap stage
+passed  spec-0256  dhf/spec/compliance/gap.feature:34  Each line is a clause key and its description, an include, a comment or blank
+passed  spec-0257  dhf/spec/compliance/gap.feature:50  A clause list that holds no clause stops the check
+passed  spec-0258  dhf/spec/compliance/gap.feature:57  An include that names no readable file stops the check
+passed  spec-0282  dhf/spec/compliance/gap.feature:65  A line of prose in a clause list is malformed, never a clause
+passed  spec-0259  dhf/spec/compliance/gap.feature:74  A clause no audit tag names is a finding
+passed  spec-0260  dhf/spec/compliance/gap.feature:92  What names a clause [We plan [[STD:5.1]]., named]
+passed  spec-0260  dhf/spec/compliance/gap.feature:93  What names a clause [[[This section meets STD:5.1]], named]
+passed  spec-0260  dhf/spec/compliance/gap.feature:94  What names a clause [[[STD:5.1: the plan is this document]], named]
+passed  spec-0260  dhf/spec/compliance/gap.feature:95  What names a clause [We plan [[STD:5.1.a]]., named]
+passed  spec-0260  dhf/spec/compliance/gap.feature:96  What names a clause [We meet STD:5.1 here., not named]
+passed  spec-0260  dhf/spec/compliance/gap.feature:97  What names a clause [We plan [[STD:5.12]]., not named]
+passed  spec-0260  dhf/spec/compliance/gap.feature:98  What names a clause [We plan [[STD:5]]., not named]
+passed  spec-0260  dhf/spec/compliance/gap.feature:99  What names a clause [`[[STD:5.1]]`, not named]
+passed  spec-0281  dhf/spec/compliance/gap.feature:104  An audit tag in a list item's continuation paragraph names its clause
+passed  spec-0275  dhf/spec/compliance/gap.feature:113  An audit tag in an indented code block names nothing
+passed  spec-0261  dhf/spec/compliance/gap.feature:121  An audit tag never runs past a blank line
+passed  spec-0262  dhf/spec/compliance/gap.feature:129  An audit tag that is one key no clause list holds is a warning
+passed  spec-0268  dhf/spec/compliance/gap.feature:142  An audit tag in a document's frontmatter names nothing
+passed  spec-0263  dhf/spec/compliance/gap.feature:153  A document still holding TODO is named in a warning
+passed  spec-0264  dhf/spec/compliance/gap.feature:166  A document with no id, revision or title is a finding
+passed  spec-0265  dhf/spec/compliance/gap.feature:174  Two documents with one id is a finding
+passed  spec-0166  dhf/spec/kernel/bus.feature:15  A task run with --events prints each event it published, in order
+passed  spec-0167  dhf/spec/kernel/bus.feature:20  The same inputs publish the same events in the same order
+passed  spec-0303  dhf/spec/kernel/bus.feature:36  A project whose catalogue declares only its own events passes check
+passed  spec-0304  dhf/spec/kernel/bus.feature:49  A project's catalogue never changes the events a run publishes [empty]
+passed  spec-0304  dhf/spec/kernel/bus.feature:50  A project's catalogue never changes the events a run publishes [one that declares only its own event OrderPlaced]
+passed  spec-0304  dhf/spec/kernel/bus.feature:51  A project's catalogue never changes the events a run publishes [one that declares SpecParsed with another publisher]
+passed  spec-0176  dhf/spec/kernel/command.feature:24  Each task is run as rdm-spec help [help, help, list every task with its usage]
+passed  spec-0176  dhf/spec/kernel/command.feature:25  Each task is run as rdm-spec init [init, init PATH [--id-prefix P], write the skeleton into a path that does not exist]
+passed  spec-0176  dhf/spec/kernel/command.feature:26  Each task is run as rdm-spec adopt [adopt, adopt, add the skeleton to the current repository, overwriting nothing]
+passed  spec-0176  dhf/spec/kernel/command.feature:27  Each task is run as rdm-spec stamp [stamp, stamp, give every unstamped scenario its id]
+passed  spec-0176  dhf/spec/kernel/command.feature:28  Each task is run as rdm-spec check [check, check [--sources DIR] [--events], the spec check, the model lint, the domain model, the views' freshness, sources, wiki, clauses, paths]
+passed  spec-0176  dhf/spec/kernel/command.feature:29  Each task is run as rdm-spec views [views, views, generate and render every view to dhf/views/]
+passed  spec-0176  dhf/spec/kernel/command.feature:30  Each task is run as rdm-spec cut [cut, cut, tag HEAD spec-N when it is origin/HEAD, and push the tag]
+passed  spec-0176  dhf/spec/kernel/command.feature:31  Each task is run as rdm-spec scopes [scopes, scopes CUT CUT, list the scopes a spec change touched between two cuts]
+passed  spec-0176  dhf/spec/kernel/command.feature:32  Each task is run as rdm-spec fence [fence, fence ROOM CUT [--context C,...] [--component C/N,...], build a clean room from a cut]
+passed  spec-0176  dhf/spec/kernel/command.feature:33  Each task is run as rdm-spec run [run, run [--results DIR], run the scenarios against a project's step definitions]
+passed  spec-0176  dhf/spec/kernel/command.feature:34  Each task is run as rdm-spec verify [verify, verify ROOM CYCLE, run the project's checks on the room's code in a checkout of the cut]
+passed  spec-0176  dhf/spec/kernel/command.feature:35  Each task is run as rdm-spec checklist [checklist, checklist CYCLE, derive the cycle's checklist into dhf/cycles/CYCLE/checklist.json]
+passed  spec-0176  dhf/spec/kernel/command.feature:36  Each task is run as rdm-spec status [status, status [--results DIR], each scenario's status]
+passed  spec-0176  dhf/spec/kernel/command.feature:37  Each task is run as rdm-spec trace [trace, trace ID [--results DIR], a need or a scenario with everything linked to it]
+passed  spec-0176  dhf/spec/kernel/command.feature:38  Each task is run as rdm-spec release [release, release [--results DIR], the release check]
+passed  spec-0176  dhf/spec/kernel/command.feature:39  Each task is run as rdm-spec score [score, score CYCLE --verdicts FILE, file a grader's verdicts on a verified cycle into its score.edn]
+passed  spec-0176  dhf/spec/kernel/command.feature:40  Each task is run as rdm-spec scoreboard [scoreboard, scoreboard CYCLE CYCLE, compare two cycles]
+passed  spec-0176  dhf/spec/kernel/command.feature:41  Each task is run as rdm-spec oracle [oracle, oracle [record --reason R], judge the instrument against its recorded goldens]
+passed  spec-0176  dhf/spec/kernel/command.feature:42  Each task is run as rdm-spec publish [publish, publish [--results DIR], write the site and build it]
+passed  spec-0176  dhf/spec/kernel/command.feature:43  Each task is run as rdm-spec audit [audit, audit OUT [--results DIR], write the auditor's and the engineer's copy, with their evidence, to OUT]
+passed  spec-0176  dhf/spec/kernel/command.feature:44  Each task is run as rdm-spec observe [observe, observe begin CYCLE ROLE ROOM, or end CYCLE ROLE [--tokens N], or report CYCLE CYCLE, record a run: its time, its cost and what it touched outside its room]
+passed  spec-0193  dhf/spec/kernel/command.feature:47  A task's results directory defaults to the configured one
+passed  spec-0219  dhf/spec/kernel/command.feature:61  A task's results directory is --results, else RESULTS_DIR, else the configured one [unset, , dhf/allure-results]
+passed  spec-0219  dhf/spec/kernel/command.feature:62  A task's results directory is --results, else RESULTS_DIR, else the configured one [R1, , R1]
+passed  spec-0219  dhf/spec/kernel/command.feature:63  A task's results directory is --results, else RESULTS_DIR, else the configured one [R1, --results other, other]
+passed  spec-0235  dhf/spec/kernel/command.feature:74  A task with no gate reports the findings of every stage
+passed  spec-0177  dhf/spec/kernel/command.feature:82  A task that passes exits 0
+passed  spec-0178  dhf/spec/kernel/command.feature:88  A task that finds a problem exits 1 and names it on the error stream
+passed  spec-0179  dhf/spec/kernel/command.feature:96  A task that cannot run exits 2 and says why
+passed  spec-0180  dhf/spec/kernel/command.feature:102  An unknown task exits 2 and lists the tasks
+passed  spec-0168  dhf/spec/kernel/runner.feature:17  A step is defined by a pattern and a function
+passed  spec-0169  dhf/spec/kernel/runner.feature:23  Each step's return is the next step's context, and each scenario starts empty
+passed  spec-0170  dhf/spec/kernel/runner.feature:30  A step two definitions match makes the result broken, naming both
+passed  spec-0151  dhf/spec/kernel/runner.feature:38  A scenario's result is labelled with its id, component and context
+passed  spec-0152  dhf/spec/kernel/runner.feature:46  A scenario outline writes one result per example row, all with the outline's id
+passed  spec-0153  dhf/spec/kernel/runner.feature:52  A failing step fails the result and names the step
+passed  spec-0032  dhf/spec/kernel/runner.feature:59  A step with no definition makes the result broken
+passed  spec-0154  dhf/spec/kernel/runner.feature:66  A planned scenario is not run, and its result says it is planned
+passed  spec-0155  dhf/spec/kernel/runner.feature:77  The runner runs every feature file the spec holds, found by looking, never listed
+passed  spec-0156  dhf/spec/kernel/runner.feature:83  A run that finds no feature file is refused
+passed  spec-0308  dhf/spec/kernel/runner.feature:105  A scenario's result carries each Allure element, filled from the scenario [name, "Lint names the view"]
+passed  spec-0308  dhf/spec/kernel/runner.feature:106  A scenario's result carries each Allure element, filled from the scenario [fullName, "dhf/spec/architecture/lint.feature:Lint names the view"]
+passed  spec-0308  dhf/spec/kernel/runner.feature:107  A scenario's result carries each Allure element, filled from the scenario [historyId, "spec-0012", so its history follows the id however the title is reworded]
+passed  spec-0308  dhf/spec/kernel/runner.feature:108  A scenario's result carries each Allure element, filled from the scenario [status and stage, "passed" and "finished"]
+passed  spec-0308  dhf/spec/kernel/runner.feature:109  A scenario's result carries each Allure element, filled from the scenario [start and stop, the scenario's start and stop, in milliseconds since the epoch]
+passed  spec-0308  dhf/spec/kernel/runner.feature:110  A scenario's result carries each Allure element, filled from the scenario [steps, one step per Gherkin step, in order, each with its keyword and text as its name, its status, start and stop]
+passed  spec-0308  dhf/spec/kernel/runner.feature:111  A scenario's result carries each Allure element, filled from the scenario [the label feature, "Lint"]
+passed  spec-0308  dhf/spec/kernel/runner.feature:112  A scenario's result carries each Allure element, filled from the scenario [the label story, "Every view is described"]
+passed  spec-0308  dhf/spec/kernel/runner.feature:113  A scenario's result carries each Allure element, filled from the scenario [the label epic, "architecture", the bounded context's id]
+passed  spec-0308  dhf/spec/kernel/runner.feature:114  A scenario's result carries each Allure element, filled from the scenario [the label suite, "architecture", the bounded context's id]
+passed  spec-0308  dhf/spec/kernel/runner.feature:115  A scenario's result carries each Allure element, filled from the scenario [the label subSuite, "architecture/lint", the component's id without its colon]
+passed  spec-0308  dhf/spec/kernel/runner.feature:116  A scenario's result carries each Allure element, filled from the scenario [the labels tag, one per Gherkin tag, without its @: "spec-0012", "e2e", "UN-002"]
+passed  spec-0308  dhf/spec/kernel/runner.feature:117  A scenario's result carries each Allure element, filled from the scenario [the labels spec, context and component, "spec-0012", "architecture" and "Lint"]
+passed  spec-0308  dhf/spec/kernel/runner.feature:118  A scenario's result carries each Allure element, filled from the scenario [the label framework, "gherkin"]
+passed  spec-0308  dhf/spec/kernel/runner.feature:119  A scenario's result carries each Allure element, filled from the scenario [links, one per need the scenario traces to: {"type" "issue" "name" "UN-002" "url" "dhf/spec/needs.edn#UN-002"}]
+passed  spec-0309  dhf/spec/kernel/runner.feature:122  An outline row's values are the result's parameters, and its history is the row's
+passed  spec-0310  dhf/spec/kernel/runner.feature:129  A result that did not pass says why, in Allure's statusDetails
+passed  spec-0311  dhf/spec/kernel/runner.feature:136  Evidence a step attaches is an Allure attachment
+passed  spec-0323  dhf/spec/kernel/runner.feature:152  Failed is a Then that did not hold; broken is anything else that went wrong [Then step, finds what it asserts does not hold, failed]
+passed  spec-0323  dhf/spec/kernel/runner.feature:153  Failed is a Then that did not hold; broken is anything else that went wrong [Given step, throws an error, broken]
+passed  spec-0323  dhf/spec/kernel/runner.feature:154  Failed is a Then that did not hold; broken is anything else that went wrong [When step, throws an error, broken]
+passed  spec-0323  dhf/spec/kernel/runner.feature:155  Failed is a Then that did not hold; broken is anything else that went wrong [Then step, throws an error that is not an assertion, broken]
+passed  spec-0324  dhf/spec/kernel/runner.feature:158  Results go to the configured results directory when RESULTS_DIR is not set
+passed  spec-0120  dhf/spec/knowledge/sources.feature:12  A source with no pin fails the check
+passed  spec-0270  dhf/spec/knowledge/sources.feature:18  A source with no repository fails the check
+passed  spec-0269  dhf/spec/knowledge/sources.feature:24  A source whose record is missing fails the check
+passed  spec-0121  dhf/spec/knowledge/sources.feature:30  A source that drops a pin it had fails the check
+passed  spec-0236  dhf/spec/knowledge/sources.feature:37  A source is retired, never deleted, and nothing may cite it
+passed  spec-0240  dhf/spec/knowledge/sources.feature:45  A need's source that is not a citation fails the check
+passed  spec-0171  dhf/spec/knowledge/sources.feature:56  Source checkouts are given as one directory, one checkout per source
+passed  spec-0122  dhf/spec/knowledge/sources.feature:62  A citation naming no recorded source fails
+passed  spec-0123  dhf/spec/knowledge/sources.feature:68  A citation at a commit that is not one of its source's pins fails
+passed  spec-0124  dhf/spec/knowledge/sources.feature:75  A citation resolves when its path exists at its pin
+passed  spec-0125  dhf/spec/knowledge/sources.feature:81  A path that does not exist at its pin fails
+passed  spec-0126  dhf/spec/knowledge/sources.feature:87  Without a checkout, a citation's path is reported unchecked, never passed
+passed  spec-0136  dhf/spec/knowledge/sources.feature:98  A citation of a fenced path fails
+passed  spec-0137  dhf/spec/knowledge/sources.feature:105  A citation inside a fenced directory fails
+passed  spec-0138  dhf/spec/knowledge/sources.feature:112  A fenced path that matches nothing at a pin fails the check
+passed  spec-0199  dhf/spec/knowledge/sources.feature:121  Only needs.edn and the wiki's pages are scanned for citations
+passed  spec-0135  dhf/spec/knowledge/sources.feature:132  A user need citing a source that does not resolve fails the check
+passed  spec-0187  dhf/spec/knowledge/sources.feature:139  A citation that could not be checked passes the check with a warning
+passed  spec-0127  dhf/spec/knowledge/wiki.feature:16  A page with no footnote fails the check
+passed  spec-0128  dhf/spec/knowledge/wiki.feature:22  A footnote whose citation does not resolve fails the check
+passed  spec-0129  dhf/spec/knowledge/wiki.feature:29  A page whose footnotes all resolve passes
+passed  spec-0130  dhf/spec/knowledge/wiki.feature:37  A page the index does not list fails the check
+passed  spec-0131  dhf/spec/knowledge/wiki.feature:43  An index entry with no page fails the check
+passed  spec-0132  dhf/spec/knowledge/wiki.feature:53  A page naming a configured stack word fails the check
+passed  spec-0019  dhf/spec/measurement/checklist.feature:13  The checklist is derived from the spec at the cut, one item per stamped scenario
+passed  spec-0210  dhf/spec/measurement/checklist.feature:21  checklist.json has one shape
+passed  spec-0211  dhf/spec/measurement/checklist.feature:40  A cut holding an unstamped scenario has no checklist
+passed  spec-0266  dhf/spec/measurement/checklist.feature:52  Each clause of the cut's clause lists is an item after the scenarios
+passed  spec-0271  dhf/spec/measurement/checklist.feature:63  A cycle scoped away from the compliance context carries no clause item
+passed  spec-0276  dhf/spec/measurement/oracle.feature:29  The oracle reads one oracle.edn, flat, one key per judging component
+passed  spec-0325  dhf/spec/measurement/oracle.feature:55  The oracle's result is exactly this shape
+passed  spec-0277  dhf/spec/measurement/oracle.feature:61  An oracle that holds no fixture cycle fails
+passed  spec-0280  dhf/spec/measurement/oracle.feature:67  An oracle the store does not hold cannot run
+passed  spec-0228  dhf/spec/measurement/oracle.feature:75  The oracle passes when every output matches its golden
+passed  spec-0229  dhf/spec/measurement/oracle.feature:81  An output that differs from its golden fails the oracle, naming the difference
+passed  spec-0230  dhf/spec/measurement/oracle.feature:92  Recording goldens says which changed, and why
+passed  spec-0231  dhf/spec/measurement/oracle.feature:99  Recording without a reason is refused
+passed  spec-0232  dhf/spec/measurement/oracle.feature:120  Fence and verify refuse while the oracle fails [fence ROOM spec-3, builds no room]
+passed  spec-0232  dhf/spec/measurement/oracle.feature:121  Fence and verify refuse while the oracle fails [verify ROOM 03, writes no ratified.edn]
+passed  spec-0233  dhf/spec/measurement/oracle.feature:124  A project with no oracle is not refused
+passed  spec-0326  dhf/spec/measurement/oracle.feature:146  Each judging component is run on its fixture cases and compared with their goldens [:verification/verify, steps-match, results whose steps are their scenarios' Gherkin lines]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:147  Each judging component is run on its fixture cases and compared with their goldens [:verification/verify, steps-differ, one result whose second step is reworded]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:148  Each judging component is run on its fixture cases and compared with their goldens [:verification/verify, wrong-story, one result whose story is not its scenario's rule]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:149  Each judging component is run on its fixture cases and compared with their goldens [:verification/verify, no-need-link, one result with no issue link to its scenario's need]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:150  Each judging component is run on its fixture cases and compared with their goldens [:verification/verify, no-trace, an @e2e result with no browser trace, where :evidence requires one]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:151  Each judging component is run on its fixture cases and compared with their goldens [:verification/status, outline-rows, a three-row outline, one row with no result]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:152  Each judging component is run on its fixture cases and compared with their goldens [:verification/status, unknown-result, a result labelled spec=spec-9999]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:153  Each judging component is run on its fixture cases and compared with their goldens [:regeneration/scopes, flat-read-by, two cuts between which a nested key of a key with a flat :read-by changed]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:154  Each judging component is run on its fixture cases and compared with their goldens [:regeneration/scopes, first-read-by, two cuts between which an event first gained :read-by]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:155  Each judging component is run on its fixture cases and compared with their goldens [:regeneration/scopes, order, two cuts between which the kernel, a publisher and its subscriber changed]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:156  Each judging component is run on its fixture cases and compared with their goldens [:regeneration/fence, removed-component, a cut whose model no longer names a component the earlier cut had]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:157  Each judging component is run on its fixture cases and compared with their goldens [:spec/check, refusals, a spec breaking each rule of the spec check once]
+passed  spec-0326  dhf/spec/measurement/oracle.feature:158  Each judging component is run on its fixture cases and compared with their goldens [:measurement/oracle, self, the oracle's own run on two reproduced goldens]
+passed  spec-0327  dhf/spec/measurement/oracle.feature:166  Recording adds the goldens of new cases freely, and changes an existing one only when named
+passed  spec-0328  dhf/spec/measurement/oracle.feature:172  A named change to an existing golden is recorded with its component and case
+passed  spec-0020  dhf/spec/measurement/scoreboard.feature:10  Both directions are counted, never the net
+passed  spec-0021  dhf/spec/measurement/scoreboard.feature:18  A moved denominator is said out loud
+passed  spec-0225  dhf/spec/measurement/scoreboard.feature:34  A scoped cycle is compared over its scope only
+passed  spec-0192  dhf/spec/measurement/scoreboard.feature:45  The scoreboard marks a bootstrap cycle and compares nothing against it
+passed  spec-0283  dhf/spec/measurement/scoreboard.feature:58  Two cycles of the whole project give one comparison
+passed  spec-0284  dhf/spec/measurement/scoreboard.feature:73  A scoped cycle gives its target first and the rest apart
+passed  spec-0173  dhf/spec/measurement/scorer.feature:15  A cycle is declared by hand in dhf/cycles/NN/cycle.edn
+passed  spec-0200  dhf/spec/measurement/scorer.feature:35  A scope is the project, one context or one component, or a list of contexts and components [:project]
+passed  spec-0200  dhf/spec/measurement/scorer.feature:36  A scope is the project, one context or one component, or a list of contexts and components [{:context :verification}]
+passed  spec-0200  dhf/spec/measurement/scorer.feature:37  A scope is the project, one context or one component, or a list of contexts and components [{:component :spec/parser}]
+passed  spec-0200  dhf/spec/measurement/scorer.feature:38  A scope is the project, one context or one component, or a list of contexts and components [[{:context :knowledge} {:component :spec/parser}]]
+passed  spec-0174  dhf/spec/measurement/scorer.feature:41  The score is written beside the cycle
+passed  spec-0212  dhf/spec/measurement/scorer.feature:63  A verdicts file is a vector of id, verdict and evidence
+passed  spec-0213  dhf/spec/measurement/scorer.feature:80  A malformed verdicts file is refused and nothing is written [is a map, not a vector]
+passed  spec-0213  dhf/spec/measurement/scorer.feature:81  A malformed verdicts file is refused and nothing is written [grades spec-0012 twice]
+passed  spec-0213  dhf/spec/measurement/scorer.feature:82  A malformed verdicts file is refused and nothing is written [gives spec-0012 the verdict :maybe]
+passed  spec-0213  dhf/spec/measurement/scorer.feature:83  A malformed verdicts file is refused and nothing is written [gives spec-0012 no evidence]
+passed  spec-0022  dhf/spec/measurement/scorer.feature:91  Zero verdicts records nothing
+passed  spec-0023  dhf/spec/measurement/scorer.feature:97  An item nobody graded is scored as a fail
+passed  spec-0201  dhf/spec/measurement/scorer.feature:105  A verdict for an item not on the checklist is refused
+passed  spec-0142  dhf/spec/measurement/scorer.feature:117  A cycle records who built, graded and reads it, each as human or agent
+passed  spec-0143  dhf/spec/measurement/scorer.feature:123  A cycle whose builder is also its grader or spec owner is refused
+passed  spec-0144  dhf/spec/measurement/scorer.feature:129  A cycle that leaves a role unnamed is refused
+passed  spec-0214  dhf/spec/measurement/scorer.feature:144  A cycle whose verification did not pass is not scored [holds :outcome :refused]
+passed  spec-0214  dhf/spec/measurement/scorer.feature:145  A cycle whose verification did not pass is not scored [does not exist]
+passed  spec-0079  dhf/spec/project/adopt.feature:10  Adopt adds the skeleton beside what is already there
+passed  spec-0080  dhf/spec/project/adopt.feature:18  A destination that already exists is skipped and named
+passed  spec-0081  dhf/spec/project/adopt.feature:25  A symbolic link at a destination counts as existing
+passed  spec-0082  dhf/spec/project/adopt.feature:32  An existing ignore file is kept, and the lines to add are named
+passed  spec-0083  dhf/spec/project/adopt.feature:39  Adopting twice changes nothing
+passed  spec-0084  dhf/spec/project/adopt.feature:46  Adopt refuses a directory that is not a git repository
+passed  spec-0085  dhf/spec/project/adopt.feature:54  The adopted spec is empty whatever the repository holds
+passed  spec-0025  dhf/spec/project/hooks.feature:10  The pre-commit hook runs the check
+passed  spec-0086  dhf/spec/project/init.feature:10  Init writes the skeleton and names what it wrote
+passed  spec-0272  dhf/spec/project/init.feature:34  Init takes an absolute path as well as a relative one
+passed  spec-0087  dhf/spec/project/init.feature:40  Init refuses a path that already exists
+passed  spec-0089  dhf/spec/project/init.feature:47  The id prefix is chosen at init
+passed  spec-0223  dhf/spec/project/init.feature:58  The id prefix defaults to spec and must start a tag [, sets the id prefix to "spec"]
+passed  spec-0223  dhf/spec/project/init.feature:59  The id prefix defaults to spec and must start a tag [--id-prefix 9lives, exits 2 and says a prefix starts with a letter and holds letters, digits and single hyphens]
+passed  spec-0223  dhf/spec/project/init.feature:60  The id prefix defaults to spec and must start a tag [--id-prefix UN, exits 2 and says the prefix UN is taken by need tags]
+passed  spec-0090  dhf/spec/project/init.feature:65  The check passes on a skeleton nobody has touched
+passed  spec-0092  dhf/spec/publishing/site.feature:14  Each component gets one page
+passed  spec-0093  dhf/spec/publishing/site.feature:20  A component page carries the component's prose and scenarios
+passed  spec-0094  dhf/spec/publishing/site.feature:26  Each bounded context gets an index page with its component view
+passed  spec-0095  dhf/spec/publishing/site.feature:32  The home page shows the context and container views and the needs
+passed  spec-0096  dhf/spec/publishing/site.feature:39  With results, each scenario shows its status
+passed  spec-0097  dhf/spec/publishing/site.feature:45  A planned scenario shows as planned
+passed  spec-0098  dhf/spec/publishing/site.feature:51  Without results, the site says no status was derived
+passed  spec-0099  dhf/spec/publishing/site.feature:63  Publishing refuses views older than the model
+passed  spec-0100  dhf/spec/publishing/site.feature:69  Publishing writes nothing in the spec
+passed  spec-0101  dhf/spec/publishing/site.feature:76  The same inputs publish the same site
+passed  spec-0133  dhf/spec/publishing/site.feature:85  Every wiki page is published with its footnotes linked to their sources
+passed  spec-0273  dhf/spec/publishing/site.feature:93  The wiki's index is published with its footnotes linked, as a page is
+passed  spec-0239  dhf/spec/publishing/site.feature:101  The wiki is reachable from the home page and the navigation
+passed  spec-0146  dhf/spec/publishing/site.feature:109  The site's navigation follows the model
+passed  spec-0147  dhf/spec/publishing/site.feature:116  The site builds when every link resolves
+passed  spec-0148  dhf/spec/publishing/site.feature:122  A broken link fails the build, naming the page and the link
+passed  spec-0149  dhf/spec/publishing/site.feature:131  Without the site builder, building fails and names the missing tool
+passed  spec-0036  dhf/spec/regeneration/cut.feature:14  HEAD on origin/HEAD is tagged spec-N and the tag is pushed
+passed  spec-0162  dhf/spec/regeneration/cut.feature:25  Cutting a commit already cut changes nothing
+passed  spec-0224  dhf/spec/regeneration/cut.feature:33  A HEAD whose spec fails the check is not cut
+passed  spec-0163  dhf/spec/regeneration/cut.feature:39  A HEAD that is not origin/HEAD is refused
+passed  spec-0037  dhf/spec/regeneration/fence.feature:13  A commit that is not a cut is refused
+passed  spec-0038  dhf/spec/regeneration/fence.feature:30  The clean room is the cut's committed files minus the denied ones, as one root commit
+passed  spec-0294  dhf/spec/regeneration/fence.feature:39  Uncommitted and ignored files never reach a clean room
+passed  spec-0295  dhf/spec/regeneration/fence.feature:45  A kept file carrying a removed implementation file's bytes stops the fence
+passed  spec-0296  dhf/spec/regeneration/fence.feature:53  A committed path neither denied nor kept fails the check
+passed  spec-0297  dhf/spec/regeneration/fence.feature:59  A path under dhf/ is classified on its own
+passed  spec-0182  dhf/spec/regeneration/fence.feature:71  The project scope keeps no implementation
+passed  spec-0183  dhf/spec/regeneration/fence.feature:77  A context scope removes that context's code and keeps the rest
+passed  spec-0184  dhf/spec/regeneration/fence.feature:84  A component scope removes that component's code and keeps the rest
+passed  spec-0226  dhf/spec/regeneration/fence.feature:91  A list of scopes removes the code of each, and keeps the rest
+passed  spec-0329  dhf/spec/regeneration/fence.feature:101  A component the cut removed is fenced by the files the code layout finds for it
+passed  spec-0185  dhf/spec/regeneration/fence.feature:108  A scope the model does not name is refused
+passed  spec-0222  dhf/spec/regeneration/fence.feature:117  The kernel is a scope like a bounded context
+passed  spec-0237  dhf/spec/regeneration/scopes.feature:15  The components whose feature files changed are listed as scopes
+passed  spec-0241  dhf/spec/regeneration/scopes.feature:21  A component's design prose is its own
+passed  spec-0238  dhf/spec/regeneration/scopes.feature:29  A changed file no component owns is named for a person to judge
+passed  spec-0298  dhf/spec/regeneration/scopes.feature:44  A changed event's publisher and subscribers are scopes
+passed  spec-0340  dhf/spec/regeneration/scopes.feature:50  A change to an event's description alone reaches no component
+passed  spec-0299  dhf/spec/regeneration/scopes.feature:60  The kernel first, then each publisher before its subscribers
+passed  spec-0042  dhf/spec/spec/check.feature:11  A scenario with two ids fails the spec check
+passed  spec-0043  dhf/spec/spec/check.feature:17  An id used by two scenarios fails the spec check
+passed  spec-0186  dhf/spec/spec/check.feature:23  A scenario with no id fails the spec check
+passed  spec-0234  dhf/spec/spec/check.feature:29  An id the ledger never issued fails the spec check
+passed  spec-0044  dhf/spec/spec/check.feature:44  Each level is accepted [@e2e]
+passed  spec-0044  dhf/spec/spec/check.feature:45  Each level is accepted [@contract]
+passed  spec-0045  dhf/spec/spec/check.feature:48  A scenario with no level fails the spec check
+passed  spec-0046  dhf/spec/spec/check.feature:54  A scenario with two levels fails the spec check
+passed  spec-0150  dhf/spec/spec/check.feature:62  A tag that is not an id, a level, a need or @wip fails the spec check
+passed  spec-0047  dhf/spec/spec/check.feature:70  A need tag on the feature is inherited by every scenario under it
+passed  spec-0048  dhf/spec/spec/check.feature:78  A scenario that traces to no need fails the spec check
+passed  spec-0049  dhf/spec/spec/check.feature:84  A need tag naming no declared need fails the spec check
+passed  spec-0134  dhf/spec/spec/check.feature:93  A user need citing no source fails the spec check
+passed  spec-0050  dhf/spec/spec/check.feature:101  The spec check accepts a scenario tagged @wip
+passed  spec-0209  dhf/spec/spec/check.feature:113  A spec file naming a configured stack word fails the spec check
+passed  spec-0220  dhf/spec/spec/parser.feature:14  A task that names a cut reads the spec as it was at that cut
+passed  spec-0051  dhf/spec/spec/parser.feature:23  A feature file using every supported construct passes the check
+passed  spec-0052  dhf/spec/spec/parser.feature:29  An unknown keyword is refused with its line
+passed  spec-0053  dhf/spec/spec/parser.feature:35  A feature file holds exactly one feature
+passed  spec-0054  dhf/spec/spec/stamper.feature:10  The stamper gives every unstamped scenario the next id from the ledger
+passed  spec-0055  dhf/spec/spec/stamper.feature:18  Stamping twice changes nothing
+passed  spec-0056  dhf/spec/spec/stamper.feature:25  A deleted scenario's id is never issued again
+passed  spec-0057  dhf/spec/spec/stamper.feature:33  The id does not depend on the wording or the location
+passed  spec-0058  dhf/spec/spec/stamper.feature:40  The id prefix is configuration
+passed  spec-0059  dhf/spec/verification/release.feature:10  The release check refuses while any scenario is tagged @wip
+passed  spec-0188  dhf/spec/verification/release.feature:16  The release check refuses a failed scenario
+passed  spec-0189  dhf/spec/verification/release.feature:22  The release check refuses an unverified scenario
+passed  spec-0190  dhf/spec/verification/release.feature:28  The release check passes when every scenario is verified
+passed  spec-0267  dhf/spec/verification/release.feature:39  The release check refuses a clause no audit tag names
+passed  spec-0278  dhf/spec/verification/release.feature:45  The release check refuses a controlled document with no id
+passed  spec-0060  dhf/spec/verification/results.feature:13  A result naming no scenario is reported, not counted
+passed  spec-0061  dhf/spec/verification/results.feature:21  An empty results directory is refused
+passed  spec-0062  dhf/spec/verification/results.feature:30  A results file that cannot be read is named, never skipped
+passed  spec-0063  dhf/spec/verification/results.feature:36  The stack that wrote the results does not matter
+passed  spec-0164  dhf/spec/verification/results.feature:44  A result with no spec label counts toward nothing and is not reported as unknown
+passed  spec-0312  dhf/spec/verification/results.feature:56  A result counts by its status, its spec label and an outline row's parameters alone
+passed  spec-0313  dhf/spec/verification/results.feature:62  A result whose status is not one of Allure's is unreadable
+passed  spec-0307  dhf/spec/verification/status.feature:15  The status result is exactly this shape
+passed  spec-0064  dhf/spec/verification/status.feature:24  The status report lists a scenario tagged @wip as planned
+passed  spec-0191  dhf/spec/verification/status.feature:30  A scenario tagged @wip is planned whatever its results say
+passed  spec-0065  dhf/spec/verification/status.feature:37  Status is derived from the results, never written
+passed  spec-0066  dhf/spec/verification/status.feature:46  A scenario outline is one requirement, verified by all its rows
+passed  spec-0302  dhf/spec/verification/status.feature:57  Results that name no row do not verify an outline
+passed  spec-0285  dhf/spec/verification/status.feature:64  An outline with a row that has no result is unverified
+passed  spec-0067  dhf/spec/verification/status.feature:76  A passed result with the scenario's id verifies it
+passed  spec-0068  dhf/spec/verification/status.feature:91  Any status but passed does not verify [failed]
+passed  spec-0068  dhf/spec/verification/status.feature:92  Any status but passed does not verify [broken]
+passed  spec-0068  dhf/spec/verification/status.feature:93  Any status but passed does not verify [skipped]
+passed  spec-0068  dhf/spec/verification/status.feature:94  Any status but passed does not verify [unknown]
+passed  spec-0069  dhf/spec/verification/status.feature:97  One failing result among several fails the scenario
+passed  spec-0070  dhf/spec/verification/status.feature:104  A scenario with no result is unverified, never left out
+passed  spec-0102  dhf/spec/verification/trace.feature:10  Tracing a need lists every scenario that traces to it, however it is tagged
+passed  spec-0103  dhf/spec/verification/trace.feature:17  A need nothing traces to says so
+passed  spec-0104  dhf/spec/verification/trace.feature:25  Tracing a scenario names its needs, its component and its bounded context
+passed  spec-0105  dhf/spec/verification/trace.feature:31  With results, the trace gives each scenario's status and the results behind it
+passed  spec-0279  dhf/spec/verification/trace.feature:42  A need's trace is one map under :trace
+passed  spec-0106  dhf/spec/verification/trace.feature:51  An id that names nothing is refused
+passed  spec-0107  dhf/spec/verification/trace.feature:57  A results directory that does not exist is refused
+passed  spec-0108  dhf/spec/verification/trace.feature:62  Without results, the trace says no status was derived
+passed  spec-0202  dhf/spec/verification/verify.feature:22  Verify reads the cycle before anything else it does
+passed  spec-0203  dhf/spec/verification/verify.feature:28  A cycle with no cycle.edn is refused
+passed  spec-0204  dhf/spec/verification/verify.feature:34  The checkout's implementation is replaced by the room's, never merged with it
+passed  spec-0205  dhf/spec/verification/verify.feature:41  Edits the builder made outside the implementation are not used
+passed  spec-0206  dhf/spec/verification/verify.feature:52  The builder's tests are told where to write their results
+passed  spec-0207  dhf/spec/verification/verify.feature:57  The tests check passes when the builder's tests pass and every scenario's results passed
+passed  spec-0197  dhf/spec/verification/verify.feature:65  A failing test command fails verification
+passed  spec-0033  dhf/spec/verification/verify.feature:72  The tests check requires results
+passed  spec-0208  dhf/spec/verification/verify.feature:79  A scenario no test names fails verification
+passed  spec-0218  dhf/spec/verification/verify.feature:88  A failed or broken result fails verification
+passed  spec-0215  dhf/spec/verification/verify.feature:98  Verify writes ratified.edn with the cut, the room's tree, the outcome and every check
+passed  spec-0216  dhf/spec/verification/verify.feature:105  A failed verification is recorded with its reason
+passed  spec-0217  dhf/spec/verification/verify.feature:110  A cut holding an unstamped scenario is not verified
+passed  spec-0314  dhf/spec/verification/verify.feature:124  Verify reports every declared check, in order, with its outcome and margin
+passed  spec-0315  dhf/spec/verification/verify.feature:131  The first check that fails stops the gate, and the rest are named as not run
+passed  spec-0316  dhf/spec/verification/verify.feature:144  A configuration verify cannot trust is refused before anything runs [declares no :tests check, a project is verified by its tests first]
+passed  spec-0316  dhf/spec/verification/verify.feature:145  A configuration verify cannot trust is refused before anything runs [declares a check of the kind :renders, :renders is not a kind of check]
+passed  spec-0316  dhf/spec/verification/verify.feature:146  A configuration verify cannot trust is refused before anything runs [declares a :serves check whose probe is under src/, the probe is in the implementation the builder writes]
+passed  spec-0316  dhf/spec/verification/verify.feature:147  A configuration verify cannot trust is refused before anything runs [is absent, the configuration declares no :verify]
+passed  spec-0316  dhf/spec/verification/verify.feature:148  A configuration verify cannot trust is refused before anything runs [declares a :tests check with no command, the tests check names no command]
+passed  spec-0317  dhf/spec/verification/verify.feature:154  A check whose command is not found refuses the gate
+passed  spec-0318  dhf/spec/verification/verify.feature:165  A served app that answers and passes its probe passes, with its margin
+passed  spec-0319  dhf/spec/verification/verify.feature:172  An app that does not answer within its budget fails, naming the budget
+passed  spec-0320  dhf/spec/verification/verify.feature:179  A port already held refuses the gate rather than measure another process
+passed  spec-0321  dhf/spec/verification/verify.feature:185  An app that answers but fails its probe is not this application
+passed  spec-0341  dhf/spec/verification/verify.feature:193  An app that accepts connections but never sends an HTTP response does not answer
+passed  spec-0322  dhf/spec/verification/verify.feature:209  A command that answers otherwise than expected fails the check [the exit 0, exits 3, the exit 3 where 0 was expected]
+passed  spec-0322  dhf/spec/verification/verify.feature:210  A command that answers otherwise than expected fails the check [standard output starting "{:help", prints "usage" and exits 0, the first line it printed]
+passed  spec-0322  dhf/spec/verification/verify.feature:211  A command that answers otherwise than expected fails the check [an answer within 10 seconds, is still running after 10 seconds, the budget of 10 seconds]
+passed  spec-0331  dhf/spec/verification/verify.feature:230  A result that breaks the mapping fails the tests check, naming the scenario and the element [a second step reworded from the scenario's line, steps-differ-from-scenario]
+passed  spec-0331  dhf/spec/verification/verify.feature:231  A result that breaks the mapping fails the tests check, naming the scenario and the element [one step fewer than the scenario's lines, steps-differ-from-scenario]
+passed  spec-0331  dhf/spec/verification/verify.feature:232  A result that breaks the mapping fails the tests check, naming the scenario and the element [the story "Something else", not the scenario's rule, mapping-differs: story]
+passed  spec-0331  dhf/spec/verification/verify.feature:233  A result that breaks the mapping fails the tests check, naming the scenario and the element [the epic of another bounded context, mapping-differs: epic]
+passed  spec-0331  dhf/spec/verification/verify.feature:234  A result that breaks the mapping fails the tests check, naming the scenario and the element [no issue link to UN-001, the need the scenario traces to, mapping-differs: links]
+passed  spec-0331  dhf/spec/verification/verify.feature:235  A result that breaks the mapping fails the tests check, naming the scenario and the element [no browser-trace attachment, where :evidence requires one for @e2e, evidence-missing: browser-trace]
+passed  spec-0332  dhf/spec/verification/verify.feature:245  A mapping verify cannot read is refused before anything runs [maps :epic to :aggregate, :aggregate is not an element of the spec]
+passed  spec-0332  dhf/spec/verification/verify.feature:246  A mapping verify cannot read is refused before anything runs [maps :colour to :context, :colour is not an element of an Allure result]
+passed  spec-0332  dhf/spec/verification/verify.feature:247  A mapping verify cannot read is refused before anything runs [maps no label "spec", the label spec, from the scenario's id, is required]
+passed  spec-0333  dhf/spec/verification/verify.feature:250  A configuration with no :allure is held to rdm-spec's default mapping
+
+unit tests: 128 run, 0 not passed
+scenarios: 401 run, {"passed" 401}
+results: /home/user/rdm/dhf/cycles/18/results
