@@ -57,12 +57,8 @@
  ;; The oracle (dhf/spec/measurement/oracle.feature; glossary "Oracle
  ;; (instrument)"): held still, outside the implementation, never regenerated.
  ;; :command is what the gate runs (spec-23); dhf/harness/oracle/ holds the
- ;; tool, its README and pin.edn, the artifact of its goldens. :repository and
- ;; :digest are the flat artifact the releases before spec-23 read for their
- ;; own built-in oracle; removed once a spec-23 build is installed.
- :oracle {:command ["bb" "dhf/harness/oracle/oracle.clj"]
-          :repository "ghcr.io/scope-impact/rdm-spec-oracle"
-          :digest "sha256:262e7ce8c340d940a66445cdd4bc8e3b747a85207f5a1229f676dfa9db374130"}
+ ;; tool, its README and pin.edn, the artifact of its goldens.
+ :oracle {:command ["bb" "dhf/harness/oracle/oracle.clj"]}
 
  :clean-room {;; :implementation is the scope's implementation (see :implementation and
               ;; :code-layout); the measurements are every cycle's record; the
