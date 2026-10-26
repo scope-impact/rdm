@@ -19,4 +19,13 @@
  ;; verdicts. Its observation (runs.edn) ran to 15:48, idle after 15:11, and
  ;; counts the 155,279 tokens it spent. A new grader is needed to score the
  ;; cycle.
- :grading [{:run 1 :outcome :cancelled :verdicts 0}]}
+ :grading [{:run 1 :outcome :cancelled :verdicts 0}]
+ ;; The spec owner's review of the build, 2026-10-26: accepted (90 of 90, P of
+ ;; something wrong 5.2%), and installed as the release (replacing cycle 16's
+ ;; ff9b56e). The oracle was migrated with it: flat keys, the 8 old goldens
+ ;; reshaped with their values unchanged, 13 new cases recorded by this
+ ;; release and read against their scenarios; the new digest is in
+ ;; dhf/harness/config.edn and reproduces with no difference, twice. Its
+ ;; goldens still hold raw :seconds (the release's record keeps them; its
+ ;; comparison ignores them); spec-22 pins :measured.
+ :reviewed {:by {:name "Sathish Narayanan" :actor :human} :build "f733640" :outcome :accepted}}

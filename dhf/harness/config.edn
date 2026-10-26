@@ -60,7 +60,7 @@
  ;; changes only by `rdm-spec oracle record --reason R`, which stores a new
  ;; artifact and rewrites :digest here.
  :oracle {:repository "ghcr.io/scope-impact/rdm-spec-oracle"
-          :digest "sha256:cf29099c1bd3fb0dd61b45af285fca7c4652000768fb7497942c5b373d1a4772"}
+          :digest "sha256:262e7ce8c340d940a66445cdd4bc8e3b747a85207f5a1229f676dfa9db374130"}
 
  :clean-room {;; :implementation is the scope's implementation (see :implementation and
               ;; :code-layout); the measurements are every cycle's record; the
