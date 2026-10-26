@@ -7,8 +7,10 @@
 
 @UN-008
 Feature: Oracle
-  Runs the checklist, the scorer and the scoreboard on recorded fixture cycles
-  and compares what they produce with recorded goldens.
+  Runs every component that judges (the checklist, the scorer, the scoreboard,
+  the oracle itself, verify, status, scopes, fence and the spec check) on
+  recorded fixtures, and compares what each produces with its recorded
+  goldens.
 
   # The layout was never written down, and the oracle never enters a clean
   # room, so cycle 08's builder invented one and its oracle refused this
@@ -18,20 +20,42 @@ Feature: Oracle
   # can change unseen (dhf/wiki/pages/loyly-method.md, departures).
   Rule: The oracle is one EDN file in one artifact, pinned by digest
 
+    # One file, flat: each golden is keyed by its component's id in the model,
+    # the same id scopes, fence and cycle.edn name, so the goldens of a cycle's
+    # scopes are found by the scope itself (spec owner, after cycle 16: its
+    # scopes regressed and its oracle changed its own output, and no golden
+    # judged either). The fixtures many components read are shared, once.
     @spec-0276 @contract
-    Scenario: The oracle reads one oracle.edn, one key per instrument component
-      Given the configured oracle holds two fixture cycles, their verdicts and the golden checklist, score and scoreboard of each
+    Scenario: The oracle reads one oracle.edn, flat, one key per judging component
+      Given the configured oracle holds fixture cycles, fixture result sets, fixture cuts, and goldens for every judging component
       When "rdm-spec oracle" is run
       Then it reads the artifact the configuration's :oracle names by its digest, holding the one file oracle.edn:
         """
-        {:project    {"dhf/spec/model.edn" "..." ...}
-         :cycles     {"01" {:cycle {...} :ratified {...} :verdicts [...]} ...}
-         :checklist  {"01" {:cycle "01" :cut "spec-1" :items [...] :planned [...]} ...}
-         :scorer     {"01" {...score.edn...} ...}
-         :scoreboard {"01-02" {...the :scoreboard...} ...}
-         :recorded   [{:date "2026-10-25" :reason "..." :changed [:scorer]} ...]}
+        {:project  {"dhf/spec/model.edn" "..." ...}
+         :cycles   {"01" {:cycle {...} :ratified {...} :verdicts [...]} ...}
+         :results  {"steps-match" {"<uuid>-result.json" "..." ...} ...}
+         :cuts     {"flat-read-by" {"spec-3" {path text ...} "spec-4" {path text ...}} ...}
+         :measurement/checklist  {"01" golden ...}
+         :measurement/scorer     {"01" golden ...}
+         :measurement/scoreboard {"01-02" golden ...}
+         :measurement/oracle     {"self" golden}
+         :verification/verify    {"steps-match" golden ...}
+         :verification/status    {"outline-rows" golden ...}
+         :regeneration/scopes    {"flat-read-by" golden ...}
+         :regeneration/fence     {"removed-component" golden ...}
+         :spec/check             {"refusals" golden}
+         :recorded [{:date "2026-10-26" :reason "..." :changed [{:component :regeneration/scopes :case "flat-read-by"}]} ...]}
         """
-      And it exits 0 and names each golden it compared, as its component and key
+      And it exits 0 and names each golden it compared, as its component and case
+
+    # The oracle's own result changed shape in cycle 16 (:differences became
+    # :differs) and nothing noticed: no scenario pinned it
+    # (dhf/cycles/16/proposed-spec-changes.md, 4).
+    @spec-0325 @contract
+    Scenario: The oracle's result is exactly this shape
+      Given the configured oracle holds goldens for the components :measurement/scorer and :regeneration/scopes, one case each, both reproduced
+      When "rdm-spec oracle" is run
+      Then it exits 0, and its standard output, read as EDN, is exactly {:oracle {:repository R :digest D :compared [{:component :measurement/scorer :case "01"} {:component :regeneration/scopes :case "flat-read-by"}] :differences 0}}, R and D the configuration's, the goldens in the model's order of their components, then by case
 
     @spec-0277 @e2e
     Scenario: An oracle that holds no fixture cycle fails
@@ -98,3 +122,50 @@ Feature: Oracle
       Given a project whose configuration names no :oracle
       When "rdm-spec oracle" is run
       Then it exits 0 and says there is no oracle to run
+
+  # A golden is a component's whole answer on a fixture: its standard output
+  # read as data, its exit, and every line it printed on the error stream,
+  # word for word, as Löyly's oracle compares every refusal's words
+  # (loyly:harness/oracle.sh@17d68d2, CHECK 8). A component that judges
+  # nothing in a cycle is still run: the oracle judges the whole instrument.
+  Rule: Every component that judges has its goldens, on fixtures the spec states
+
+    @spec-0326 @e2e
+    Scenario Outline: Each judging component is run on its fixture cases and compared with their goldens
+      Given the configured oracle holds, for <component>, the case <case>: <fixture>
+      When "rdm-spec oracle" is run
+      Then it runs <component> on that fixture and compares its standard output, exit and error stream with the golden, naming <component> and <case>
+
+      Examples:
+        | component              | case              | fixture                                                                 |
+        | :verification/verify   | steps-match       | results whose steps are their scenarios' Gherkin lines                  |
+        | :verification/verify   | steps-differ      | one result whose second step is reworded                                |
+        | :verification/verify   | wrong-story       | one result whose story is not its scenario's rule                       |
+        | :verification/verify   | no-need-link      | one result with no issue link to its scenario's need                    |
+        | :verification/verify   | no-trace          | an @e2e result with no browser trace, where :evidence requires one      |
+        | :verification/status   | outline-rows      | a three-row outline, one row with no result                             |
+        | :verification/status   | unknown-result    | a result labelled spec=spec-9999                                        |
+        | :regeneration/scopes   | flat-read-by      | two cuts between which a nested key of a key with a flat :read-by changed |
+        | :regeneration/scopes   | first-read-by     | two cuts between which an event first gained :read-by                  |
+        | :regeneration/scopes   | order             | two cuts between which the kernel, a publisher and its subscriber changed |
+        | :regeneration/fence    | removed-component | a cut whose model no longer names a component the earlier cut had       |
+        | :spec/check            | refusals          | a spec breaking each rule of the spec check once                        |
+        | :measurement/oracle    | self              | the oracle's own run on two reproduced goldens                          |
+
+    # Löyly tells three moves of a golden apart: the behaviour changed (an
+    # alarm), the wording was replaced, the spec grew; and the third is
+    # tested, never judged: the diff is additions only
+    # (loyly:harness/README.md@17d68d2, "The goldens, and the three reasons
+    # one can change").
+    @spec-0327 @e2e
+    Scenario: Recording adds the goldens of new cases freely, and changes an existing one only when named
+      Given the configured oracle holds the golden of :regeneration/scopes "order", which the instrument no longer reproduces, and a new case "flat-read-by" with no golden
+      When "rdm-spec oracle record --reason 'scopes cases added'" is run
+      Then it exits 1, records nothing, and names :regeneration/scopes "order" as an existing golden the record would change
+
+    @spec-0328 @e2e
+    Scenario: A named change to an existing golden is recorded with its component and case
+      Given the configured oracle holds the golden of :regeneration/scopes "order", which the instrument no longer reproduces
+      When "rdm-spec oracle record --reason 'the kernel is listed first' --changes regeneration/scopes:order" is run
+      Then it stores a new artifact whose :recorded gains the date, the reason and {:component :regeneration/scopes :case "order"}
+      And every other golden is byte for byte what it was

@@ -201,3 +201,45 @@ Feature: Verify
         | the exit 0                         | exits 3                            | the exit 3 where 0 was expected     |
         | standard output starting "{:help"  | prints "usage" and exits 0         | the first line it printed           |
         | an answer within 10 seconds        | is still running after 10 seconds  | the budget of 10 seconds            |
+
+  # The results are the oracle of a project's scenarios; the mapping says how
+  # each one carries the spec, and verify holds every result to it, so a test
+  # that claims a scenario it does not follow fails the gate instead of
+  # waiting for a grader (spec owner, after the Löyly comparison,
+  # dhf/cycles/loyly-comparison.md, cycle 02: the builder had to decide six
+  # things the contract left unsaid).
+  Rule: The tests check holds every result to the project's Allure mapping
+
+    @spec-0331 @e2e
+    Scenario Outline: A result that breaks the mapping fails the tests check, naming the scenario and the element
+      Given a configuration whose :allure is rdm-spec's default mapping
+      And the tests check's results for @spec-0003 hold <wrong>
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, the tests check is :failed, and it names spec-0003 and <finding>
+
+      Examples:
+        | wrong                                                        | finding                         |
+        | a second step reworded from the scenario's line              | steps-differ-from-scenario      |
+        | one step fewer than the scenario's lines                     | steps-differ-from-scenario      |
+        | the story "Something else", not the scenario's rule          | mapping-differs: story          |
+        | the epic of another bounded context                          | mapping-differs: epic           |
+        | no issue link to UN-001, the need the scenario traces to     | mapping-differs: links          |
+        | no browser-trace attachment, where :evidence requires one for @e2e | evidence-missing: browser-trace |
+
+    @spec-0332 @e2e
+    Scenario Outline: A mapping verify cannot read is refused before anything runs
+      Given a configuration whose :allure <is>
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 2, says <why>, and runs no check
+
+      Examples:
+        | is                                                  | why                                                   |
+        | maps :epic to :aggregate                            | :aggregate is not an element of the spec              |
+        | maps :colour to :context                            | :colour is not an element of an Allure result         |
+        | maps no label "spec"                                | the label spec, from the scenario's id, is required   |
+
+    @spec-0333 @contract
+    Scenario: A configuration with no :allure is held to rdm-spec's default mapping
+      Given a configuration that declares no :allure
+      When "rdm-spec verify ROOM 03" is run
+      Then each result is held to {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags} :links {:need {:type "issue" :url "dhf/spec/needs.edn#{id}"}} :evidence {}}

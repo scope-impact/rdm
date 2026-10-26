@@ -44,6 +44,15 @@ Feature: Scopes
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists as scopes the event's publisher, then the subscribers its :read-by names for that key, in the order the model's relationships name them, and no other subscriber
 
+    # Cycle 15's scopes read a flat :read-by list for a key holding maps;
+    # cycle 16's rebuilt one fell back to every subscriber, and spec-0298 went
+    # worse (dhf/cycles/16/proposed-spec-changes.md, the fails).
+    @spec-0330 @e2e
+    Scenario: A changed inner key of a key read by a flat list reaches the readers that list names
+      Given the cuts spec-3 and spec-4, between which the maps SpecParsed's :needs holds gained the key :x, and :read-by gives :needs the flat list [:publishing/site :compliance/audit]
+      When "rdm-spec scopes spec-3 spec-4" is run
+      Then it lists as scopes spec/parser, then publishing/site and compliance/audit, and no other subscriber
+
     @spec-0300 @e2e
     Scenario: An added key reaches only the subscribers that read it
       Given the cuts spec-3 and spec-4, between which one event's scenarios gained a key that :read-by names one subscriber as reading

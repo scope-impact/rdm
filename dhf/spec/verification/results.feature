@@ -23,6 +23,9 @@ Feature: Results reader
       When "rdm-spec status" is run
       Then it exits 2 and says no test run wrote results there
 
+    # Cycle 16's reader relayed the parser's message, which held a newline, so
+    # the finding took two lines (dhf/cycles/16/proposed-spec-changes.md, 2;
+    # README, "How every task reports").
     @spec-0062 @e2e
     Scenario: A results file that cannot be read is named, never skipped
       Given a results directory holding one result file that is not valid JSON

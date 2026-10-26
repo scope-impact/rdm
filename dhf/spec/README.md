@@ -104,7 +104,8 @@ The spec of rdm-spec, the source of truth for what it does
   wrong`, then one line per warning, `warning: what`. A RULE is a stable
   kebab-case name the owning component chooses, unless a scenario names it.
   A finding about a file with no line says `FILE: RULE: what`; a relayed
-  finding keeps its line unchanged; on exit 1 standard output still holds the
+  finding keeps its line unchanged; a message relayed from a tool or a parser
+  is one line, each newline in it replaced by a space; on exit 1 standard output still holds the
   result, `{}` when there is none. A warning line is `FILE:LINE: warning: RULE: what`, `FILE: warning: RULE:
 what` when no line applies, or `warning: RULE: what` when no file applies; a task that cannot
   run says `cannot-run: why` and prints nothing on standard output; with

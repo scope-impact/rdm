@@ -110,12 +110,13 @@ Feature: Gherkin runner
         | steps                    | one step per Gherkin step, in order, each with its keyword and text as its name, its status, start and stop |
         | the label feature        | "Lint"                                                                                |
         | the label story          | "Every view is described"                                                             |
-        | the label suite          | "architecture"                                                                        |
-        | the label subSuite       | "Lint"                                                                                |
-        | the labels tag           | one per Gherkin tag: "@spec-0012", "@e2e", "@UN-002"                                  |
+        | the label epic           | "architecture", the bounded context's id                                              |
+        | the label suite          | "architecture", the bounded context's id                                              |
+        | the label subSuite       | "architecture/lint", the component's id without its colon                             |
+        | the labels tag           | one per Gherkin tag, without its @: "spec-0012", "e2e", "UN-002"                      |
         | the labels spec, context and component | "spec-0012", "architecture" and "Lint"                                   |
         | the label framework      | "gherkin"                                                                             |
-        | links                    | one per need the scenario traces to: {"type" "issue" "name" "UN-002"}                 |
+        | links                    | one per need the scenario traces to: {"type" "issue" "name" "UN-002" "url" "dhf/spec/needs.edn#UN-002"} |
 
     @spec-0309 @contract
     Scenario: An outline row's values are the result's parameters, and its history is the row's
@@ -137,3 +138,24 @@ Feature: Gherkin runner
       When "rdm-spec run" is run
       Then the result's step holds an attachment named "response" of the type "text/plain"
       And its source is a file beside the result in the results directory, holding that text
+
+    # Two of the six things cycle 02's builder of the Löyly app decided alone
+    # (dhf/cycles/loyly-comparison.md, cycle 02).
+    @spec-0323 @contract
+    Scenario Outline: Failed is a Then that did not hold; broken is anything else that went wrong
+      Given a scenario whose <step> <goes-wrong>
+      When "rdm-spec run" is run
+      Then its result's status is "<status>"
+
+      Examples:
+        | step        | goes-wrong                                  | status |
+        | Then step   | finds what it asserts does not hold         | failed |
+        | Given step  | throws an error                             | broken |
+        | When step   | throws an error                             | broken |
+        | Then step   | throws an error that is not an assertion    | broken |
+
+    @spec-0324 @e2e
+    Scenario: Results go to the configured results directory when RESULTS_DIR is not set
+      Given a configuration whose :results-dir is dhf/allure-results, and RESULTS_DIR unset
+      When "rdm-spec run" is run
+      Then the results are written into dhf/allure-results

@@ -178,11 +178,13 @@ Allure's own model, filled from the Gherkin scenario
 `status` (`passed`, `failed`, `broken` or `skipped`) and `stage`,
 `statusDetails` when it did not pass, `start` and `stop`, `steps` (one per
 Gherkin step), `parameters` (an outline row's values), `labels` (`feature`,
-`story` from the rule, `suite` from the context, `subSuite` from the
-component, a `tag` per Gherkin tag, `framework` `gherkin`, and rdm-spec's own
+`story` from the rule, `epic` and `suite` from the context, `subSuite`
+the component's id without its colon, a `tag` per Gherkin tag without its
+`@`, `framework` `gherkin`, and rdm-spec's own
 `spec` (the scenario id, exactly one), `context`, `component` and `planned` =
-`true` for a scenario tagged `@wip`), `links` (one `issue` per need) and
-`attachments` (evidence). A status is decided by `status`, the `spec` label
+`true` for a scenario tagged `@wip`), `links` (one `issue` per need, its url
+`dhf/spec/needs.edn#UN-nnn`) and `attachments` (evidence). `failed` is a Then
+whose assertion did not hold; `broken` is anything else that went wrong. A status is decided by `status`, the `spec` label
 and an outline row's `parameters` only; everything else is kept for the
 report. A result with no `spec` label verifies nothing.
 
@@ -264,27 +266,37 @@ and `score.edn` beside it, `test.log`, the test command's output
 (verify), and `runs.edn`, each run observed (observe). The checkout is an
 export of the cut: its files, and no history.
 
-**Oracle (instrument)**: `rdm-spec oracle`: the checklist, the scorer and the
-scoreboard run on recorded fixture cycles and compared with their recorded
-goldens. The oracle is one file, `oracle.edn`, in one artifact kept outside
-the repository and named by the configuration's `:oracle {:repository R
-:digest D}`; it is read by its digest only, from the registry repository R, or
-from the local artifact layout the environment variable `ORACLE_LAYOUT` names
-when set. `oracle.edn` holds `:project` (the one fixture project, each file's
-path and text, committed in a scratch repository and tagged with every cut
-the cycles name), `:cycles` (`{"NN" {:cycle :ratified :verdicts}}`), one key
-per instrument component with its goldens (`:checklist {"NN" ...}`,
-`:scorer {"NN" ...}`, `:scoreboard {"NN-MM" ...}`, compared as data) and
-`:recorded`. No `:oracle` in the configuration is no oracle, said on
-standard output only, so the gates stay quiet; one holding no
-fixture cycle is a finding, since it judged nothing; one that cannot be read
-cannot run (exit 2). It is the gate before fence and verify: the command runs
-it first and stops the task when it has findings. A golden is re-recorded
-only with a stated reason: a new artifact, its entry in `:recorded`, and the
-configuration's new digest, written by `record` and committed by a person,
-reviewed like any spec change. It
-judges the instrument; the Allure results remain the oracle of a project's
-scenarios.
+**Oracle (instrument)**: `rdm-spec oracle`: every component that judges
+(the checklist, the scorer, the scoreboard, the oracle itself, verify, status,
+scopes, fence and the spec check) run on recorded fixtures and compared with
+its recorded goldens: its standard output as data, its exit, and its error
+stream word for word. The oracle is one file, `oracle.edn`, in one artifact
+kept outside the repository and named by the configuration's `:oracle
+{:repository R :digest D}`; it is read by its digest only, from the registry
+repository R, or from the local artifact layout the environment variable
+`ORACLE_LAYOUT` names when set. `oracle.edn` is flat: the shared fixtures
+(`:project`, the one fixture project; `:cycles`, `{"NN" {:cycle :ratified
+:verdicts}}`; `:results`, fixture Allure result sets; `:cuts`, fixture pairs of
+cuts), then one key per judging component, its id in the model
+(`:regeneration/scopes`), holding a golden per case, then `:recorded`. No
+`:oracle` in the configuration is no oracle, said on standard output only, so
+the gates stay quiet; one holding no fixture cycle is a finding, since it
+judged nothing; one that cannot be read cannot run (exit 2). It is the gate
+before fence and verify: the command runs it first and stops the task when it
+has findings. `record --reason R` adds the goldens of new cases freely and
+changes an existing golden only when `--changes COMPONENT:CASE` names it, as
+Löyly tells a spec that grew (additions only) from a behaviour that changed:
+a new artifact, its entry in `:recorded` naming each component and case
+changed, and the configuration's new digest, written by `record` and
+committed by a person, reviewed like any spec change. It judges the
+instrument; the Allure results remain the oracle of a project's scenarios.
+
+**Allure mapping**: the configuration's `:allure`: which element of the spec
+each Allure element of a result carries (`:epic :context`, `:feature
+:feature`, `:story :rule`, `:step :gherkin-step`, the labels and the need
+links, and the `:evidence` each scenario level requires). rdm-spec's default
+is used when a project declares none; verify's tests check holds every result
+to it.
 
 **Gate**: a stage the task table runs first and that stops the task when it
 has findings that are not warnings; the stages after it never see it. Every other stage reports, so

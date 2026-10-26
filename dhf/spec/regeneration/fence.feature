@@ -94,11 +94,22 @@ Feature: Fence
       Then ROOM holds no file of the bounded contexts knowledge and publishing or of the component spec/parser
       And it holds every other implementation file at the cut, unchanged
 
+    # scopes lists a component the cut removed, and fence refused it, so its
+    # code was removed from cycle 16's room by hand
+    # (dhf/cycles/16/proposed-spec-changes.md, 3).
+    @spec-0329 @e2e
+    Scenario: A component the cut removed is fenced by the files the code layout finds for it
+      Given the cut spec-4's model no longer names ratification/ratify, and the cut still holds src/rdm_spec/ratification/ratify.clj and test/rdm_spec/ratification/ratify_test.clj
+      When "rdm-spec fence ROOM spec-4 --component ratification/ratify" is run
+      Then ROOM holds neither file, and its result names ratification/ratify as a removed component
+      And it holds every other implementation file at the cut, unchanged
+
     @spec-0185 @e2e
     Scenario: A scope the model does not name is refused
       Given a project whose commit tagged spec-3 holds an implementation
       When "rdm-spec fence ROOM spec-3 --context archive" is run
       Then it exits 2 and names archive and the model's bounded contexts and kernel
+      And so does a component the model does not name whose files the code layout finds none of
 
     # The kernel is shared code in no bounded context, but it changes with the
     # spec like any other (cycle 01, D).
