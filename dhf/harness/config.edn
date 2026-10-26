@@ -71,11 +71,7 @@
               :keep [".gitignore" "AGENTS.md" "CLAUDE.md" "LICENSE.txt" "README.md"
                      "dhf/decisions" "dhf/harness" "dhf/raw" "dhf/spec" "dhf/storm"
                      "dhf/views" "dhf/wiki"]
-              ;; Read only by releases before spec-17, whose fence is an
-              ;; allow-list; removed once a spec-17 build is installed.
-              :allow ["dhf/spec" "dhf/harness/config.edn" "dhf/harness/stack.md"
-                      "dhf/raw" "dhf/wiki" "dhf/views"
-                      "dhf/decisions/adr-0002-spec-first-regeneration.md"]}
+
 
  ;; Observe (dhf/spec/agency/observe.feature): the directories whose entries are
  ;; compared before and after a run ("~" is the home directory), and the
