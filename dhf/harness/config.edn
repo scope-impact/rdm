@@ -53,18 +53,12 @@
  ;; implementation and measurement. Every committed top-level path, and every
  ;; path directly under dhf/, is denied or kept here, or `rdm-spec check`
  ;; fails. The instrument's goldens are not in the repository at all: see
- ;; :oracle.
- ;; The oracle (dhf/spec/measurement/oracle.feature; glossary "Oracle
- ;; (instrument)"): held still, outside the implementation, never regenerated.
- ;; :command is what the gate runs (spec-23); dhf/harness/oracle/ holds the
- ;; tool, its README and pin.edn, the artifact of its goldens.
- :oracle {:command ["bb" "dhf/harness/oracle/oracle.clj"]}
-
+ ;; :plugins.
  ;; The project's plugins (dhf/spec/kernel/plugins.feature; ADR 0003), in the
- ;; order they run. The oracle is the plugin named "oracle", answering :Gate.
- ;; :oracle above is for the installed release (cycle 19's, which reads it);
- ;; it goes when a spec-25 release is installed (cycle 21's is accepted, held
- ;; back until spec-26 settles the dropped-pin rule).
+ ;; order they run. The oracle is the plugin named "oracle", answering :Gate
+ ;; (dhf/spec/measurement/oracle.feature; glossary "Oracle (instrument)"): held
+ ;; still, outside the implementation, never regenerated. dhf/harness/oracle/
+ ;; holds the tool, its README and pin.edn, the artifact of its goldens.
  :plugins [{:name "oracle" :answers :Gate :command ["bb" "dhf/harness/oracle/oracle.clj"]}]
 
  :clean-room {;; :implementation is the scope's implementation (see :implementation and

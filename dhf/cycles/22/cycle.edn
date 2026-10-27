@@ -11,4 +11,5 @@
          {:component :verification/verify}]
  :builder {:name "one builder subagent, one room" :actor :agent}
  :grader {:name "graders, each its own grading room, black box on the packaged jar" :actor :agent}
- :spec-owner {:name "Sathish Narayanan" :actor :human}}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
+ :reviewed {:by "Sathish Narayanan" :accepted true :installed true :why "chosen for halla-health; 63 of 65, check passes on this repository and plugin add works from the jar; the full oracle finds 0 differences, so no golden moves; spec-0354's broken-pipe line known"}}
