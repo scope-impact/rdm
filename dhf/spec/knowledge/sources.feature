@@ -26,11 +26,22 @@ Feature: Sources
       When "rdm-spec check" is run
       Then it fails rule source-no-record and names the source and the record file
 
+    # A pin is dropped when the index as it stands lacks a pin some earlier
+    # commit of it had. Cycle 21 read the rule as "no commit may ever have
+    # lacked one", and so failed this repository, whose index once deleted rdm
+    # (967c1de) and then restored it as retired, its pin kept (spec owner,
+    # spec-26).
     @spec-0121 @e2e
     Scenario: A source that drops a pin it had fails the check
       Given a commit of the sources index pins loyly at 17d68d2, and a later commit keeps loyly with that pin replaced by another
       When "rdm-spec check" is run
       Then the check fails and names the source, the dropped pin and the commit that dropped it
+
+    @spec-0365 @e2e
+    Scenario: A pin dropped and later restored is not a dropped pin
+      Given a commit of the sources index lists rdm pinned at 3763e08, a later commit removes rdm, and a later commit lists rdm again, pinned at 3763e08 and retired
+      When "rdm-spec check" is run
+      Then the check reports no dropped pin for rdm
 
     # A source removed on purpose once read as dropped pins (cycle 04).
     @spec-0236 @e2e

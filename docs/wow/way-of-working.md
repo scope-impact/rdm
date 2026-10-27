@@ -40,9 +40,11 @@ steps, never builds or grades, and reports time and tokens after every run.
    graders'. `rdm-spec verify ROOM NN`
    with the installed release; `rdm-spec checklist NN`.
 5. **Package, then grade.** Package the build outside the room from its
-   `src/` only (`bb --classpath src uberjar rdm-spec.jar -m
+   `src/` and the plugin templates (copy `plugins/` to `res/rdm-spec/plugins/`
+   in a scratch directory, then `bb --classpath src:res uberjar rdm-spec.jar -m
    rdm-spec.kernel.command`; plain `bb uberjar` would take `bb.edn`'s
-   `:paths`, `test` among them). The grading
+   `:paths`, `test` among them; cycle 21's jar, from `src/` alone, carried no
+   template). The grading
    room has no implementation in it: `project/` (the cut's `dhf/` and
    `docs/`, without `src/`, `test/` or the oracle), `bin/rdm-spec` running
    that jar (`bb JAR`), the sources;

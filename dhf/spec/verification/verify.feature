@@ -168,6 +168,24 @@ Feature: Verify
       Then the check passes with :answered-on-poll 2, :polls 20 and :margin 18
       And no process the check started is still running
 
+    # Löyly's cycle 04: its probe built "//" paths from a url that ends in
+    # "/", and the release stopped it at the check's whole budget, reporting
+    # "exited ," with nothing it printed; three cuts to diagnose (spec owner,
+    # spec-26).
+    @spec-0366 @contract
+    Scenario: A probe is given the app's url, ending in "/", and has its own time limit
+      Given a :serves check whose app answers on port P, with :probe-seconds 20
+      When "rdm-spec verify ROOM 03" is run
+      Then its probe runs in the checkout with {url} filled in as "http://127.0.0.1:P/", and may run for 20 seconds after the app answered
+      And a :serves check with no :probe-seconds gives its probe 30 seconds
+
+    @spec-0367 @e2e
+    Scenario: A probe that runs past its time limit is stopped and named as having timed out
+      Given a :serves check whose probe, with :probe-seconds 2, prints "probing" and then sleeps for 10 seconds
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1 within 6 seconds, the check is :failed, and it says the probe timed out after 2 seconds and relays "probing"
+      And no process the check started is still running
+
     @spec-0319 @e2e
     Scenario: An app that does not answer within its budget fails, naming the budget
       Given a :serves check with the budget of 10 seconds in 20 polls, whose app never answers
@@ -233,7 +251,7 @@ Feature: Verify
       Examples:
         | answers                                                      | exits                                         | outcome   |
         | exits 0                                                      | exits 0                                       | :passed   |
-        | prints "src/app.clj:9: form-missing: …" and exits 1          | exits 1, relaying the finding unchanged       | :failed   |
+        | writes "src/app.clj:9: form-missing: …" on its error stream and exits 1 | exits 1, relaying the finding unchanged | :failed   |
         | exits 2                                                      | exits 2, naming the plugin                    | :refused  |
 
     @spec-0362 @contract

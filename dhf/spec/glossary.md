@@ -126,7 +126,8 @@ input, or answers a request the core makes: `:Gate` before fence and verify,
 error stream, exit 0 holds, 1 findings, 2 cannot run; past its `:seconds`
 (60 by default) it is stopped and named as timed out. A plugin is added from a
 template rdm-spec carries (`rdm-spec plugin add NAME`, which records the
-template in `origin.edn`) and is then the project's own, evolving with it
+template in `origin.edn`; every package of rdm-spec carries the same
+templates as its sources) and is then the project's own, evolving with it
 (dhf/spec/kernel/plugins.feature; ADR 0003).
 
 **Published language**: the events rdm-spec publishes, as `events.edn`
@@ -268,7 +269,7 @@ next changes); gate, on its own (say spec check or verify); confusing it with
 **Verified**, a scenario's status.
 
 **Check**: one thing verify proves about a build, declared by the project, of
-one of three kinds; a new kind is a spec change, never a configuration.
+one of four kinds; a new kind is a spec change, never a configuration.
 `:tests` (always declared, first): the project's test command passes and its
 Allure results name and pass every scenario. `:serves`: the app the project
 serves starts fresh, answers within its budget, and passes a probe that lives
@@ -282,8 +283,12 @@ it two ways). Declared in the
 configuration's `:verify` as `{:kind :tests :command [...]}`, `{:kind :serves
 :name N :start [... "{port}" ...] :port P :budget {:seconds S :polls K} :probe
 [... "{url}" ...]}` and `{:kind :runs :name N :command [...] :expect {:exit E
-:stdout-starts T} :budget {:seconds S}}`; a check's name is its kind's when
-it names none. A `:serves` check polls K times, poll i at i x S/K seconds
+:stdout-starts T} :budget {:seconds S}}` and `{:kind :plugin :name N}` (the
+project's plugin N answering `:Check`, dhf/spec/kernel/plugins.feature); a
+check's name is its kind's when it names none. A `:serves` check's probe is
+given `{url}` as `http://127.0.0.1:PORT/` (with its "/") and runs for at most
+`:probe-seconds` (30 by default) after the app answered; past it, it is stopped
+and named as timed out, what it printed kept. A `:serves` check polls K times, poll i at i x S/K seconds
 after its app starts; `:answered-on-poll` is the first poll answered and its
 margin is the polls left (K minus that poll). A `:runs` check's margin is the
 seconds of its budget left unused, to 0.01. A verify that cannot run (exit
