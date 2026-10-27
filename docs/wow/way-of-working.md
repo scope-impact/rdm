@@ -27,13 +27,17 @@ steps, never builds or grades, and reports time and tokens after every run.
    never from memory), `rdm-spec views` if the model changed, `rdm-spec check`;
    commit; tag the cut `spec-N`.
 2. **Scopes:** `rdm-spec scopes spec-(N-1) spec-N`; judge the shared files it
-   names; record the cycle in `dhf/cycles/NN/cycle.edn` (cut, scope, builder,
-   grader, spec owner, model).
+   names; record the cycle in `dhf/cycles/NN/cycle.edn` (cut, `:from` = the
+   cut of the installed release that judges it, scope, builder, grader, spec
+   owner, model).
 3. **Fence** the room; `rdm-spec observe begin NN builder ROOM`; brief one
    builder with `docs/wow/harness.md`, "The builder" and the scopes.
 4. **When it ends:** `observe end NN builder --tokens N`; run the suite twice
    (no fixture, no process, `/tmp` unchanged); run the held-still oracle on the
-   build (`RDM_SPEC=... bb dhf/harness/oracle/oracle.clj`); `rdm-spec verify ROOM NN`
+   build, scoped to the spec change (`RDM_SPEC=... bb dhf/harness/oracle/oracle.clj
+   --from <:from> --to spec-N`): it judges only the components the change did
+   not reach, so any difference is a regression; the in-scope ones are the
+   graders'. `rdm-spec verify ROOM NN`
    with the installed release; `rdm-spec checklist NN`.
 5. **Package, then grade.** Package the build outside the room from its
    `src/` only (`bb --classpath src uberjar rdm-spec.jar -m
@@ -51,7 +55,9 @@ steps, never builds or grades, and reports time and tokens after every run.
    repository; commit.
 8. **The spec owner decides:** accepted, the build is installed as the release
    (an artifact in the release layout, the wrapper pointed at it), and
-   recorded as `:reviewed` in `cycle.edn`.
+   recorded as `:reviewed` in `cycle.edn`. Then the in-scope goldens move to
+   the new release: `oracle.clj record --reason "spec-N" --changes C:K,...
+   --from <:from> --to spec-N`, which refuses any golden outside the scopes.
 
 ## Mistakes already made, not to repeat
 

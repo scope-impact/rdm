@@ -45,9 +45,23 @@
 ;;   one per line.
 ;;
 ;; USE
-;;   bb dhf/harness/oracle/oracle.clj                    judge (exit 0 none differ, 1 some differ, 2 cannot run)
-;;   bb dhf/harness/oracle/oracle.clj record --reason R [--changes COMPONENT:CASE,...]
+;;   bb dhf/harness/oracle/oracle.clj [--from CUT --to CUT]   judge (exit 0 none differ, 1 some differ, 2 cannot run)
+;;   bb dhf/harness/oracle/oracle.clj record --reason R [--changes COMPONENT:CASE,...] [--from CUT --to CUT]
 ;;   RDM_SPEC="bb -cp <src> -m rdm-spec.kernel.command" names the rdm-spec judged (default: rdm-spec on PATH).
+;;
+;; ONLY WHAT THE SPEC CHANGE DID NOT TOUCH. With --from (the cut of the release
+;; that judges the cycle) and --to (the cycle's cut), the cases of the
+;; components the spec change reaches are skipped, each reported as "in scope,
+;; not judged": they are meant to change, and the graders judge them. Every
+;; other case is judged, so a difference outside the scopes is a regression.
+;; The scopes are asked of the accepted release (`rdm-spec scopes FROM TO`, the
+;; rdm-spec on PATH, or RDM_SPEC_SCOPES), never of the build under judgement,
+;; so a build cannot widen its own scope. Scopes come from the spec's diff,
+;; not from what was rebuilt: in a whole-project cycle, a component rebuilt from
+;; nothing whose spec did not change must still match its goldens. Without
+;; --from and --to every case is judged (the gate: the installed release
+;; against its own goldens). With them, `record` moves only in-scope goldens:
+;; a change outside the scopes is refused as a regression.
 ;;
 ;; A golden changes only by `record`, with a reason. A case with no golden is
 ;; added freely; an existing golden that changes must be named in --changes,
@@ -204,7 +218,9 @@
 
 (defn short [x] (let [s (pr-str x)] (if (> (count s) 160) (str (subs s 0 157) "...") s)))
 
-(defn judge [data]
+(defn judge
+  ([data] (judge data #{}))
+  ([data in-scope]
   (let [tmp (fs/create-temp-dir {:prefix "oracle-"})]
     (try
       (reduce (fn [acc [c k]]
@@ -220,25 +236,52 @@
                                             (str "oracle-differs: " c " " (pr-str k) ": at " (pr-str path)
                                                  " the golden holds " (short g) " and the instrument gives " (short a))))))))
               {:compared [] :findings [] :answers {}}
-              (cases data))
-      (finally (fs/delete-tree tmp)))))
+              (remove (fn [[c _]] (in-scope c)) (cases data)))
+      (finally (fs/delete-tree tmp))))))
+
+;; ---------------------------------------------------------------- the scope
+
+(defn opt [args k] (second (drop-while #(not= k %) args)))
+
+(defn scopes-cmd [] (str/split (or (System/getenv "RDM_SPEC_SCOPES") "rdm-spec") #"\s+"))
+
+(defn in-scope
+  "The components the spec change between the cuts --from and --to reaches, as
+  the accepted release lists them; #{} when no cuts are given."
+  [args]
+  (let [from (opt args "--from") to (opt args "--to")]
+    (cond
+      (and (nil? from) (nil? to)) #{}
+      (not (and from to)) (die! 2 "cannot-run: --from and --to name the two cuts of the spec change, both or neither")
+      :else
+      (let [r (apply p/shell {:out :string :err :string :continue true :in ""} (concat (scopes-cmd) ["scopes" from to]))
+            data (try (edn/read-string (:out r)) (catch Exception _ nil))]
+        (when-not (and (zero? (:exit r)) (map? (:scopes data)))
+          (die! 2 (str "cannot-run: " (str/join " " (scopes-cmd)) " scopes " from " " to ": " (str/trim (str (:err r) (:out r))))))
+        (set (map :component (get-in data [:scopes :scopes])))))))
+
+(defn skipped [data in-scope]
+  (vec (for [[c k] (cases data) :when (in-scope c)] {:component c :case k :why "in scope, not judged"})))
 
 ;; ---------------------------------------------------------------- the tasks
 
-(defn result [p data compared differences]
-  {:oracle {:repository (:repository p) :digest (:digest p) :compared compared :differences differences}})
+(defn result [p compared differences scope skip]
+  {:oracle (cond-> {:repository (:repository p) :digest (:digest p) :compared compared :differences differences}
+             (seq scope) (assoc :scope (vec (sort-by str scope)) :skipped skip))})
 
-(defn judge! []
+(defn judge! [args]
   (let [p (or (pin) (do (println (pr-str {:oracle {:says "there is no oracle to run: no pin.edn"}})) (System/exit 0)))
+        scope (in-scope args)
         data (read-oracle p)
-        {:keys [compared findings]} (judge data)]
-    (when (empty? compared) (die! 1 "oracle-empty: the oracle holds no case, so it judged nothing"))
-    (println (pr-str (result p data compared (count (filter #(str/starts-with? % "oracle-differs") findings)))))
+        {:keys [compared findings]} (judge data scope)]
+    (when (and (empty? compared) (empty? scope)) (die! 1 "oracle-empty: the oracle holds no case, so it judged nothing"))
+    (println (pr-str (result p compared (count (filter #(str/starts-with? % "oracle-differs") findings)) scope (skipped data scope))))
     (binding [*out* *err*] (doseq [f findings] (println f)))
     (System/exit (if (seq findings) 1 0))))
 
 (defn record! [args]
-  (let [opt (fn [k] (second (drop-while #(not= k %) args)))
+  (let [opt (fn [k] (opt args k))
+        scope (in-scope args)
         reason (or (opt "--reason") (die! 2 "cannot-run: record needs --reason R: a golden changes only for a stated reason"))
         changes (set (for [s (some-> (opt "--changes") (str/split #",")) :let [[c k] (str/split s #":" 2)]]
                        [(keyword c) k]))
@@ -248,7 +291,11 @@
         added (vec (for [[c k] (cases data) :when (nil? (get-in data [c k :golden]))] {:component c :case k}))
         changed (vec (for [[c k] (cases data) :let [g (get-in data [c k :golden])]
                            :when (and g (not= (stated c g) (answers [c k])))] [c k]))
-        unnamed (remove changes changed)]
+        unnamed (remove changes changed)
+        outside (when (seq scope) (remove (fn [[c _]] (scope c)) changed))]
+    (when (seq outside)
+      (die! 1 (str "oracle-record-refused: these goldens are outside the spec change's scopes, so a difference there is a regression, never a recording: "
+                   (str/join ", " (map (fn [[c k]] (str (subs (str c) 1) ":" k)) outside)))))
     (when (seq unnamed)
       (die! 1 (str "oracle-record-refused: these existing goldens would change and --changes does not name them: "
                    (str/join ", " (map (fn [[c k]] (str (subs (str c) 1) ":" k)) unnamed)))))
@@ -265,6 +312,6 @@
 (require 'clojure.pprint)
 (let [[task & args] *command-line-args*]
   (case task
-    nil (judge!)
+    (nil "--from" "--to") (judge! (or (seq (cons task args)) []))
     "record" (record! args)
-    (die! 2 (str "cannot-run: unknown task " task ": oracle.clj, or oracle.clj record --reason R [--changes C:K,...]"))))
+    (die! 2 (str "cannot-run: unknown task " task ": oracle.clj [--from CUT --to CUT], or oracle.clj record --reason R [--changes C:K,...] [--from CUT --to CUT]"))))

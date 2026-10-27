@@ -38,6 +38,24 @@ goldens. The 6 cases spec-22 and spec-23 changed were re-recorded from cycle
 19's release, which then gets 0; cycle 17's gets exactly those 10
 differences.
 
+## Scoped to the spec change
+
+A scoped cycle changes the components its spec change reaches, on purpose; their
+goldens differ by design, and the graders judge them. So on a new build the
+oracle runs with `--from` (the installed release's cut) and `--to` (the cycle's
+cut) and judges only the other components: a difference there is a regression.
+The scopes are asked of the installed release, never of the build under
+judgement. They come from the spec's diff, not from what was rebuilt, so a
+whole-project cycle still holds every unchanged component to its goldens (how
+cycle 20 found 21 unstated behaviours). Unscoped, as the gate runs it, every case
+is judged: the installed release against its own goldens. `record` with the same
+two cuts moves only in-scope goldens and refuses the rest as regressions.
+
+Tried 27.10.2026: the installed release (cycle 19), scoped spec-23 to spec-24,
+judged 17 cases and skipped 3 (`regeneration/scopes`), 0 differences; cycle 20's
+build, scoped the same, gave its 25 differences, all outside the scopes; and
+`record` refused to move those goldens.
+
 ## Recording
 
 - **A golden holds nothing the spec does not state.** Before a golden is
