@@ -58,8 +58,13 @@
  ;; (instrument)"): held still, outside the implementation, never regenerated.
  ;; :command is what the gate runs (spec-23); dhf/harness/oracle/ holds the
  ;; tool, its README and pin.edn, the artifact of its goldens.
+ :oracle {:command ["bb" "dhf/harness/oracle/oracle.clj"]}
+
  ;; The project's plugins (dhf/spec/kernel/plugins.feature; ADR 0003), in the
  ;; order they run. The oracle is the plugin named "oracle", answering :Gate.
+ ;; :oracle above is for the installed release (cycle 19's, which reads it);
+ ;; it goes when a spec-25 release is installed (cycle 21's is accepted, held
+ ;; back until spec-26 settles the dropped-pin rule).
  :plugins [{:name "oracle" :answers :Gate :command ["bb" "dhf/harness/oracle/oracle.clj"]}]
 
  :clean-room {;; :implementation is the scope's implementation (see :implementation and

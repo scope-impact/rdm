@@ -6,6 +6,7 @@
 ;; is removed. The held-still oracle on the build is scoped from the release's
 ;; cut, spec-23, to spec-25. One builder.
 {:cut "spec-25"
+ :reviewed {:by "Sathish Narayanan" :accepted true :installed false :why "its check fails on this repository's history (source-pin-dropped, rdm 3763e08); held back until spec-26"}
  :from "spec-23"
  :scope [{:component :kernel/command}
          {:component :kernel/plugins}
