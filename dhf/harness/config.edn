@@ -60,6 +60,12 @@
  ;; tool, its README and pin.edn, the artifact of its goldens.
  :oracle {:command ["bb" "dhf/harness/oracle/oracle.clj"]}
 
+ ;; The project's plugins (dhf/spec/kernel/plugins.feature; ADR 0003), in the
+ ;; order they run. From spec-25 the oracle is the plugin named "oracle",
+ ;; answering :Gate; :oracle above stays for the installed release (cycle 19's,
+ ;; which reads it) and goes once a spec-25 release is installed.
+ :plugins [{:name "oracle" :answers :Gate :command ["bb" "dhf/harness/oracle/oracle.clj"]}]
+
  :clean-room {;; :implementation is the scope's implementation (see :implementation and
               ;; :code-layout); the measurements are every cycle's record; the
               ;; generated output is what publish and the tests write.
@@ -68,7 +74,7 @@
                      :generated ["site" "site-src" "dhf/allure-results"]}
               :keep [".gitignore" "AGENTS.md" "CLAUDE.md" "LICENSE.txt" "README.md" "docs"
                      "dhf/decisions" "dhf/harness" "dhf/raw" "dhf/spec" "dhf/storm"
-                     "dhf/views" "dhf/wiki"]}
+                     "dhf/views" "dhf/wiki" "plugins"]}
 
  ;; Observe (dhf/spec/agency/observe.feature): the directories whose entries are
  ;; compared before and after a run ("~" is the home directory), and the

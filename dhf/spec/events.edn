@@ -10,6 +10,11 @@
 ;; project's catalogue holds that project's events and never these
 ;; (dhf/spec/kernel/bus.feature).
 ;;
+;; These events are also rdm-spec's published language: a project's plugin
+;; that subscribes to one is given it as EDN, {:event <name>} merged with the
+;; keys it carries (dhf/spec/kernel/plugins.feature; ADR 0003). A change to an
+;; event's contract reaches the plugins that subscribe to it.
+;;
 ;; Events travel on the in-process bus (kernel/bus), so only within one run of
 ;; the rdm-spec command. Steps that run at different times (cut, fence, verify,
 ;; score) meet through files instead: the spec-N tag, the clean room, the

@@ -90,9 +90,7 @@
        {:id :architecture/lint :name "Lint" :spec "architecture/lint"
         :description "The C4 skill's checklist and the bounded-context rules"}
        {:id :architecture/views :name "Views" :spec "architecture/views"
-        :description "Generates each view as diagram source and renders it"}
-       {:id :architecture/domain :name "Domain model" :spec "architecture/domain"
-        :description "Holds an optional domain.edn to the DDD rules"}]}
+        :description "Generates each view as diagram source and renders it"}]}
 
      {:id :verification :name "verification"
       :description "Derives each scenario's status from Allure results, traces it, and verifies a build"
@@ -157,7 +155,9 @@
   {:id :kernel/bus :name "Event bus" :spec "kernel/bus"
    :description "Delivers each catalogued event to its subscribers, within one run"}
   {:id :kernel/runner :name "Gherkin runner" :spec "kernel/runner"
-   :description "Runs the scenarios' steps and writes Allure results"}]
+   :description "Runs the scenarios' steps and writes Allure results"}
+  {:id :kernel/plugins :name "Plugins" :spec "kernel/plugins"
+   :description "Runs the project's plugins: subscribers to the core's events, answerers of its Gate and Check requests"}]
 
  :relationships
  [;; people and external systems
@@ -195,7 +195,11 @@
   ;; events between contexts, within one run: the contracts
   {:from :knowledge/sources :to :publishing/site :description "Publishes" :event :KnowledgeIndexed}
   {:from :spec/parser :to :architecture/lint :description "Publishes" :event :SpecParsed}
-  {:from :spec/parser :to :architecture/domain :description "Publishes" :event :SpecParsed}
+  {:from :knowledge/sources :to :kernel/plugins :description "Publishes" :event :KnowledgeIndexed}
+  {:from :spec/parser :to :kernel/plugins :description "Publishes" :event :SpecParsed}
+  {:from :spec/check :to :kernel/plugins :description "Publishes" :event :SpecGated}
+  {:from :verification/status :to :kernel/plugins :description "Publishes" :event :VerificationDerived}
+  {:from :compliance/gap :to :kernel/plugins :description "Publishes" :event :ClausesIndexed}
   {:from :spec/parser :to :verification/status :description "Publishes" :event :SpecParsed}
   {:from :spec/parser :to :measurement/checklist :description "Publishes" :event :SpecParsed}
   {:from :spec/parser :to :publishing/site :description "Publishes" :event :SpecParsed}

@@ -142,7 +142,7 @@ Feature: Verify
       Examples:
         | is                                                        | why                                           |
         | declares no :tests check                                  | a project is verified by its tests first      |
-        | declares a check of the kind :renders                     | :renders is not a kind of check               |
+        | declares a check of the kind :renders                     | :renders is not a kind of check: the kinds are :tests, :serves, :runs and :plugin |
         | declares a :serves check whose probe is under src/         | the probe is in the implementation the builder writes |
         | is absent                                                 | the configuration declares no :verify         |
         | declares a :tests check with no command                   | the tests check names no command              |
@@ -217,6 +217,36 @@ Feature: Verify
         | the exit 0                         | exits 3                            | the exit 3 where 0 was expected     |
         | standard output starting "{:help"  | prints "usage" and exits 0         | the first line it printed           |
         | an answer within 10 seconds        | is still running after 10 seconds  | the budget of 10 seconds            |
+
+  # A project's own judge joins verify as a plugin answering :Check
+  # (dhf/spec/kernel/plugins.feature; ADR 0003): verify asks it at its place in
+  # :verify, in the checkout, and it answers as every plugin does.
+  Rule: A :plugin check asks the project's own judge
+
+    @spec-0361 @e2e
+    Scenario Outline: A :plugin check passes, fails or cannot run as its plugin answers
+      Given a configuration whose :verify declares a :tests check, then {:kind :plugin :name "judge"}, and whose :plugins has "judge" answering :Check
+      And the tests check passes, and the plugin <answers>
+      When "rdm-spec verify ROOM 03" is run
+      Then it <exits>, and the check "judge" is <outcome>
+
+      Examples:
+        | answers                                                      | exits                                         | outcome   |
+        | exits 0                                                      | exits 0                                       | :passed   |
+        | prints "src/app.clj:9: form-missing: …" and exits 1          | exits 1, relaying the finding unchanged       | :failed   |
+        | exits 2                                                      | exits 2, naming the plugin                    | :refused  |
+
+    @spec-0362 @contract
+    Scenario: A Check plugin is asked in the checkout, with its cycle and cut
+      Given a :plugin check whose plugin writes what it is given to a file
+      When "rdm-spec verify ROOM 03" is run
+      Then the plugin ran in the checkout, dhf/cycles/03/build, and its standard input was {:request :Check :cycle "03" :cut "spec-3" :checkout "dhf/cycles/03/build"}
+
+    @spec-0363 @e2e
+    Scenario: A :plugin check naming no plugin answering :Check is refused before anything runs
+      Given a configuration whose :verify declares {:kind :plugin :name "judge"}, and whose :plugins has no "judge" answering :Check
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 2, says the check names no plugin answering :Check, and runs no check
 
   # The results are the oracle of a project's scenarios; the mapping says how
   # each one carries the spec, and verify holds every result to it, so a test

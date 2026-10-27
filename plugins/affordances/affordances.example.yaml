@@ -1,0 +1,134 @@
+# Löyly's UX contract: what can be done, by whom, where, and what it must say.
+# The abstract UI (Cameleon): an agent may design any concrete UI that realises it.
+# One contract, three renderers: the UX for people, WebMCP tools for agents, the
+# step vocabulary for tests. The conformance check holds each UI to it.
+# It names no framework: components are abstract (Open UI / ARIA names), a
+# design system joins through a binding (dhf/harness/binding.yaml), the theme
+# is design tokens (tokens.json, the DTCG 2025.10 format). The research behind
+# it: rdm's dhf/raw/affordance-contracts.md.
+slice: 01-booking-core
+version: 1
+
+audience:
+  manager: sets which weekdays each dressing room opens and its slot starts
+  resident: a household, named by its apartment; requests and gives up standing slots
+
+actions:
+  ConfigureDays:
+    intent: Set which weekdays a dressing room is open and the start times of its 90-minute slots
+    submit: Save
+    audience: [manager]
+    input:
+      dressingRoom: {component: textbox, type: string, required: true, label: Dressing room, example: pukuhuone 8}
+      sauna:        {component: textbox, type: string, required: true, label: Sauna, example: F}
+      weekdays:     {component: checkbox-group, type: list, of: weekday, required: true, label: Open on}
+      slots:        {component: textbox, type: list, of: time, separator: ",", required: true, label: Slot starts, example: ["17:00", "18:30"]}
+    outcomes:
+      DaysConfigured: {must: "Saved: {dressingRoom} opens on {weekdays} at {slots}."}
+    rejections:
+      NoSauna:    {must: "Name the sauna {dressingRoom} belongs to."}
+      NotATime:   {must: "A slot start is a time of day, as 17:00."}
+    call: {method: PUT, path: "/api/rooms/{dressingRoom}/days", body: {sauna: "{sauna}", weekdays: "{weekdays}", slots: "{slots}"}}
+    tool: {name: configureDays}
+
+  RequestStandingSlot:
+    intent: Ask for a weekly standing sauna slot for a household
+    submit: Request
+    audience: [resident]
+    input:
+      household:    {component: textbox, type: string, required: true, label: Apartment, example: "12"}
+      dressingRoom: {component: textbox, type: string, required: true, label: Dressing room}
+      weekday:      {component: select, type: weekday, required: true, label: Day}
+      start:        {component: textbox, type: time, required: true, label: Start}
+    outcomes:
+      SlotConfirmed: {must: "Confirmed: apartment {household} holds {weekday} {start} to {end} in {dressingRoom}, every week until it gives the slot up."}
+    rejections:
+      ClosedDay:   {must: "{dressingRoom} is not open on {weekday}.", offers: [RequestStandingSlot], with: free slots on its open days}
+      Held:        {must: "{weekday} at {start} in {dressingRoom} is held by another household.", offers: [RequestStandingSlot], with: the nearest free slot}
+      NothingYet:  {must: "No sauna days are configured yet.", links: [Manage]}
+    call: {method: POST, path: /api/standing-slots, body: {household: "{household}", dressing-room: "{dressingRoom}", weekday: "{weekday}", start: "{start}"}}
+    tool: {name: requestStandingSlot}
+
+  GiveUpStandingSlot:
+    intent: Give up a household's weekly standing slot so another household can take it
+    submit: Give up
+    audience: [resident]
+    input:
+      household:    {component: textbox, type: string, required: true, label: Apartment}
+      dressingRoom: {component: textbox, type: string, required: true, label: Dressing room}
+      weekday:      {component: select, type: weekday, required: true, label: Day}
+      start:        {component: textbox, type: time, required: true, label: Start}
+    outcomes:
+      SlotGivenUp: {must: "Apartment {household} gave up {weekday} {start} in {dressingRoom}."}
+    rejections:
+      NotHeld: {must: "Apartment {household} does not hold {weekday} at {start} in {dressingRoom}."}
+    call: {method: POST, path: /api/standing-slots/give-up, body: {household: "{household}", dressing-room: "{dressingRoom}", weekday: "{weekday}", start: "{start}"}}
+    tool: {name: giveUpStandingSlot}
+
+  ReadWeeklySchedule:
+    intent: See, for every weekday, each dressing room of a sauna and the slots it opens
+    submit: Show
+    audience: [resident, manager]
+    readOnly: true
+    input:
+      sauna: {component: textbox, type: string, label: Sauna}
+    call: {method: GET, path: "/api/schedule?sauna={sauna}"}
+    tool: {name: readWeeklySchedule}
+
+types:
+  weekday: {enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]}
+  time:    {pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"}
+
+# Where each action is offered. A UI may lay a screen out however it likes
+# ("seen"); what it offers, how it is reached and what it says ("must") are contract.
+screens:
+  Home:
+    path: /
+    offers: [RequestStandingSlot, GiveUpStandingSlot, ReadWeeklySchedule]
+    links: {Manage sauna days: Manage}
+    must:
+      heading: Löyly
+      buttons: [Request, Give up]
+    seen: the week's schedule beside the two forms
+  Manage:
+    path: /manage
+    reachedFrom: Home
+    offers: [ConfigureDays]
+    links: {Back to booking: Home}
+    must:
+      heading: Manage sauna days
+      buttons: [Save]
+
+# The concrete UI, abstractly: which abstract component realises each part.
+# A binding (dhf/harness/binding.yaml) says which component of a design system
+# realises each abstract one and how to recognise it; tokens.json (DTCG
+# 2025.10) is the theme every binding draws its colours from.
+ui:
+  action: card              # each offered action is a card holding its form
+  submit: button
+  outcome: alert
+  refusal: alert            # destructive, holding the actions it offers
+  link: link
+  tokens: tokens.json
+  tokensOnly: true          # colours only through the tokens: no inline style, no arbitrary colour
+
+# What the conformance check holds every generated UI to.
+conformance:
+  - every action a screen offers is a form whose toolname is the action's tool name
+  - every screen is reachable from / by its links
+  - every control has an ARIA role and an accessible name equal to its input's label
+  - every "must" text appears where the contract puts it
+  - no toolname the contract does not declare
+  - a form's submit and its tool's execute make the action's call, and nothing else
+  - a refusal offers the actions its rejection names, filled in
+  - every control is realised by its abstract component, as the active binding recognises it, and colours are tokens only
+  - an outcome and a refusal are shown as an alert (role alert) inside the action's card
+  - the API paths in each action's call are the app's: the forms and the tools make exactly those calls
+
+# The scenarios' vocabulary: each step means this and nothing else, and a harness
+# may drive it through the UI (the forms) or through the tools; both must agree.
+steps:
+  "{actor} configures {string} open on {weekdays} with slots {strings}": ConfigureDays
+  "apartment {string} requests {weekday} at {time} in {string}": RequestStandingSlot
+  "apartment {string} gives up {weekday} at {time} in {string}": GiveUpStandingSlot
+  "the weekly schedule of sauna {string} shows {string} free on {weekday} at {time}": ReadWeeklySchedule

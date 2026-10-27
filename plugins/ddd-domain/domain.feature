@@ -1,4 +1,7 @@
-# Component Domain model, bounded context architecture of the rdm-spec container: dhf/spec/model.edn.
+# The ddd-domain plugin's rules: what rdm-spec's core held as architecture/domain
+# until spec-25 (spec-0334 to spec-0338). A project that adds this plugin
+# copies these scenarios into its own spec and owns them.
+#
 #
 # What an event storm finds, kept as data: the aggregates, their commands and
 # invariants, the events, the read models they feed and the policies they
@@ -16,13 +19,13 @@ Feature: Domain model
 
   Rule: The domain model is optional
 
-    @spec-0334 @e2e
+    @e2e
     Scenario: A project without a domain model is not asked for one
       Given a project set up by rdm-spec with no dhf/spec/domain.edn
       When "rdm-spec check" is run
       Then it exits 0 and names no finding about a domain model
 
-    @spec-0335 @contract
+    @contract
     Scenario: The domain model is one EDN file of this shape
       Given a project whose dhf/spec/domain.edn holds one context with one aggregate
       When "rdm-spec check" is run
@@ -46,7 +49,7 @@ Feature: Domain model
   @UN-011
   Rule: Every element of the domain model rests on a source
 
-    @spec-0336 @e2e
+    @e2e
     Scenario Outline: An element with no source, or a source that is not recorded, is a finding
       Given a project whose dhf/spec/domain.edn holds <element>
       When "rdm-spec check" is run
@@ -61,7 +64,7 @@ Feature: Domain model
   # The rules of the storm, where a machine can judge them.
   Rule: The domain model keeps the rules of domain-driven design
 
-    @spec-0337 @e2e
+    @e2e
     Scenario Outline: A domain model that breaks a rule is a finding naming the element
       Given a project whose dhf/spec/domain.edn holds <wrong>
       When "rdm-spec check" is run
@@ -78,7 +81,7 @@ Feature: Domain model
         | an aggregate that :reads an aggregate of another context                      | domain-contexts-coupled     | both aggregates        |
         | an event a command emits that the event catalogue does not declare            | domain-event-uncatalogued   | the event              |
 
-    @spec-0338 @e2e
+    @e2e
     Scenario: A domain model that keeps every rule passes
       Given a project whose dhf/spec/domain.edn holds two contexts, each command emitting a catalogued event, each invariant verified by a stamped scenario, each read model fed by events, and every element sourced
       When "rdm-spec check" is run

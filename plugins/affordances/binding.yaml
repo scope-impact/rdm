@@ -1,0 +1,14 @@
+# The design system realising the affordance contract's abstract components
+# (dhf/spec/affordances.yaml, "ui" and each input's "component"), and how the
+# conformance check recognises each one from outside: a CSS selector matching
+# only this system's component. Basecoat marks its components by class.
+system: Basecoat (basecoat-css 1.1.0)
+recognise:
+  card: '.card'
+  textbox: 'input.input'
+  select: 'select.select'
+  checkbox: 'input.input[type="checkbox"]'
+  checkbox-group: 'fieldset.fieldset'
+  button: '.btn'
+  alert: '.alert'
+  link: 'a'

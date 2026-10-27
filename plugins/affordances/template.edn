@@ -1,0 +1,4 @@
+{:name "affordances"
+ :version 1
+ :plugin {:name "conformance" :answers :Check
+          :command ["sh" "dhf/harness/plugins/affordances/probe.sh"]}}

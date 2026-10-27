@@ -107,25 +107,30 @@ does not declare, whatever a project's catalogue holds. A refusal is
 `cannot-run` (exit 2): a defect in rdm-spec, never a finding about the
 project.
 
-**Domain model**: a project's optional `dhf/spec/domain.edn` (the
-configuration's `:domain`): its bounded contexts' aggregates, with their
-commands, invariants and what they read; the events; the read models those
-feed; the policies they trigger; the repositories; each element citing the
-raw sources it is distilled from. `rdm-spec check` holds it to the rules of
-domain-driven design (dhf/spec/architecture/domain.feature) when it exists,
-and asks for nothing when it does not.
+**Domain model**: what a project's event storm decides, kept as data when a
+project keeps it at all. It is not the core's: a project that keeps one adds
+the `ddd-domain` plugin, which holds it to the rules of domain-driven design
+(ADR 0003; until spec-25 it was the core's `architecture/domain`).
 
 **Event storm**: a way of finding the domain model with the people who know
 the domain: actors, commands, events, policies, read models and hotspots. It
 is a way of working, kept as prose when kept at all (dhf/storm/), never part
-of the spec; what it decides goes into the domain model.
+of the spec.
 
-**Aggregate**: a cluster of domain state guarded by its invariants, changed
-only through its commands. **Command**: an intent an actor or a policy sends
-to one aggregate, which emits events or names a refusal. **Invariant**: a
-rule an aggregate never lets break, verified by at least one scenario. **Read
-model**: a view fed only by events. **Policy**: "whenever this event, then
-this command". **Repository**: where aggregates are kept.
+**Plugin**: a judge a project keeps for itself, outside the core: a command in
+a kept path (`dhf/harness/plugins/<name>/`), declared in the configuration's
+`:plugins` in the order it runs. It subscribes to events the core publishes
+(its published language, `events.edn`), given each as EDN on its standard
+input, or answers a request the core makes: `:Gate` before fence and verify,
+`:Check` as one of verify's checks. It reports as a task does: findings on its
+error stream, exit 0 holds, 1 findings, 2 cannot run; past its `:seconds`
+(60 by default) it is stopped and named as timed out. A plugin is added from a
+template rdm-spec carries (`rdm-spec plugin add NAME`, which records the
+template in `origin.edn`) and is then the project's own, evolving with it
+(dhf/spec/kernel/plugins.feature; ADR 0003).
+
+**Published language**: the events rdm-spec publishes, as `events.edn`
+declares them: what a plugin may read of the core, and all it may.
 
 **Skeleton**: what `rdm-spec init` writes and `rdm-spec adopt` adds: the spec,
 the harness configuration, the raw and wiki directories, decisions, the
@@ -294,13 +299,13 @@ export of the cut: its files, and no history.
 
 **Oracle (instrument)**: the judge of a project's instrument, held still: a
 command the project keeps by hand, outside its implementation, never
-regenerated, named by the configuration's `:oracle {:command [...]}`.
-`rdm-spec oracle [ARGS]` runs it in the project's root with ARGS and with
-`RDM_SPEC` set to a command line running the same rdm-spec (words separated
-by spaces; the rdm-spec it runs keeps the caller's `TMPDIR`), relays its
-output, and exits as it exits; fence and verify run it first as their gate
-and stop while it fails. No `:oracle` is no oracle, said on standard output
-only. rdm-spec's own is `dhf/harness/oracle/oracle.clj`: it runs rdm-spec as
+regenerated: since spec-25 the project's plugin named "oracle", answering
+`:Gate`. `rdm-spec oracle [ARGS]` runs it in the project's root with ARGS and
+with `RDM_SPEC` set to a command line starting the same rdm-spec, however it
+was installed (words separated by spaces; the rdm-spec it runs keeps the
+caller's `TMPDIR`), relays its output, and exits as it exits; fence and verify
+ask it first, with every other Gate plugin, and stop while it fails. No plugin
+named "oracle" is no oracle, said on standard output only. rdm-spec's own is `dhf/harness/oracle/oracle.clj`: it runs rdm-spec as
 a black box on cases that each carry their whole fixture, and compares exit,
 output, error stream and written files with goldens recorded from an
 accepted release and pinned by digest (`dhf/harness/oracle/README.md`). A

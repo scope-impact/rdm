@@ -1,0 +1,188 @@
+{
+ "$description": "L\u00f6yly's theme in the Design Tokens Format Module 2025.10 (DTCG). Every design draws its colours and radius from these; the names are the design system's CSS variable names (dhf/harness/stack.md).",
+ "color": {
+  "background": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     1,
+     0,
+     0
+    ]
+   }
+  },
+  "foreground": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.18,
+     0.02,
+     45
+    ]
+   }
+  },
+  "card": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.995,
+     0.004,
+     60
+    ]
+   }
+  },
+  "card-foreground": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.18,
+     0.02,
+     45
+    ]
+   }
+  },
+  "primary": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.58,
+     0.17,
+     40
+    ]
+   }
+  },
+  "primary-foreground": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.985,
+     0.01,
+     60
+    ]
+   }
+  },
+  "secondary": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.95,
+     0.02,
+     60
+    ]
+   }
+  },
+  "secondary-foreground": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.3,
+     0.05,
+     40
+    ]
+   }
+  },
+  "muted": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.96,
+     0.01,
+     60
+    ]
+   }
+  },
+  "muted-foreground": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.5,
+     0.03,
+     45
+    ]
+   }
+  },
+  "accent": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.95,
+     0.02,
+     60
+    ]
+   }
+  },
+  "accent-foreground": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.3,
+     0.05,
+     40
+    ]
+   }
+  },
+  "destructive": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.577,
+     0.245,
+     27.325
+    ]
+   }
+  },
+  "border": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.9,
+     0.015,
+     60
+    ]
+   }
+  },
+  "input": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.9,
+     0.015,
+     60
+    ]
+   }
+  },
+  "ring": {
+   "$type": "color",
+   "$value": {
+    "colorSpace": "oklch",
+    "components": [
+     0.7,
+     0.12,
+     40
+    ]
+   }
+  }
+ },
+ "radius": {
+  "$type": "dimension",
+  "$value": {
+   "value": 0.75,
+   "unit": "rem"
+  }
+ }
+}

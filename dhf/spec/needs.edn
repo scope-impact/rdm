@@ -40,4 +40,6 @@
  "UN-013" {:text "A team building regulated software shows an auditor, for every clause of the standards it declares, the controlled document that meets it, and hands over an auditor's copy and an engineer's copy of every document."
            :sources ["innolitics-rdm:README.md@f21b508"]}
  "UN-014" {:text "The spec owner sees, for every run in a cycle, what it achieved, what it did outside its brief, its time and its cost, without having to take the run's word for any of it."
+           :sources ["loyly:harness/README.md@17d68d2"]}
+ "UN-015" {:text "A team adds the judges its own project needs (its own contracts, its own checks) to the harness without changing the harness, and keeps them as the project evolves."
            :sources ["loyly:harness/README.md@17d68d2"]}}

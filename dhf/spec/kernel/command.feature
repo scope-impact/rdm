@@ -26,7 +26,7 @@ Feature: Command
         | init       | init PATH [--id-prefix P]                                | write the skeleton into a path that does not exist                   |
         | adopt      | adopt                                                    | add the skeleton to the current repository, overwriting nothing      |
         | stamp      | stamp                                                    | give every unstamped scenario its id                                 |
-        | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the domain model, the views' freshness, sources, wiki, clauses, paths |
+        | check      | check [--sources DIR] [--events]                         | the spec check, the model lint, the views' freshness, sources, wiki, clauses, paths, and the plugins that subscribe to what it reads |
         | views      | views                                                    | generate and render every view to dhf/views/                         |
         | cut        | cut                                                      | tag HEAD spec-N when it is origin/HEAD, and push the tag             |
         | scopes     | scopes CUT CUT                                           | list the scopes a spec change touched between two cuts               |
@@ -39,7 +39,8 @@ Feature: Command
         | release    | release [--results DIR]                                  | the release check                                                    |
         | score      | score CYCLE --verdicts FILE                              | file a grader's verdicts on a verified cycle into its score.edn      |
         | scoreboard | scoreboard CYCLE CYCLE                                   | compare two cycles                                                   |
-        | oracle     | oracle [ARGS]                                            | run the oracle the project keeps, the command its configuration names |
+        | oracle     | oracle [ARGS]                                            | run the oracle the project keeps: its plugin named "oracle"          |
+        | plugin     | plugin add NAME                                          | copy a plugin template rdm-spec carries into dhf/harness/plugins/NAME |
         | publish    | publish [--results DIR]                                  | write the site and build it                                          |
         | audit      | audit OUT [--results DIR]                                | write the auditor's and the engineer's copy, with their evidence, to OUT |
         | observe    | observe begin CYCLE ROLE ROOM, or end CYCLE ROLE [--tokens N], or report CYCLE CYCLE | record a run: its time, its cost and what it touched outside its room |
@@ -66,8 +67,9 @@ Feature: Command
   # A task runs its stages in order and every stage reports, so one run names
   # every finding. A gate is the exception: a stage the task table marks as a
   # gate stops the task when it has findings, and the stages after it never
-  # run. The oracle is the gate before fence and verify (dhf/spec/measurement/
-  # oracle.feature, spec-0232). It replaces an event the gated stages would
+  # run. The plugins answering :Gate are the gate before fence and verify, the
+  # oracle among them (dhf/spec/kernel/plugins.feature; dhf/spec/measurement/
+  # oracle.feature, spec-0232). A gate replaces an event the gated stages would
   # each have had to interpret (cycle 04).
   Rule: A gate stops the task
 
