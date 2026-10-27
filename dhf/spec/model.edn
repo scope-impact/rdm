@@ -199,6 +199,7 @@
   {:from :spec/parser :to :kernel/plugins :description "Publishes" :event :SpecParsed}
   {:from :spec/check :to :kernel/plugins :description "Publishes" :event :SpecGated}
   {:from :verification/status :to :kernel/plugins :description "Publishes" :event :VerificationDerived}
+  {:from :verification/verify :to :kernel/plugins :description "Publishes" :event :CycleVerified}
   {:from :compliance/gap :to :kernel/plugins :description "Publishes" :event :ClausesIndexed}
   {:from :spec/parser :to :verification/status :description "Publishes" :event :SpecParsed}
   {:from :spec/parser :to :measurement/checklist :description "Publishes" :event :SpecParsed}

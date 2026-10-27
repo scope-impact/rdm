@@ -128,7 +128,10 @@ a kept path (`dhf/harness/plugins/<name>/`), declared in the configuration's
 input, or answers a request the core makes: `:Gate` before fence and verify,
 `:Check` as one of verify's checks. It reports as a task does: findings on its
 error stream, exit 0 holds, 1 findings, 2 cannot run; past its `:seconds`
-(60 by default) it is stopped and named as timed out. A plugin is added from a
+(60 by default) it is stopped and named as timed out. Its `:env` is added to its
+environment beside `RDM_SPEC` (spec-29); a `:Check` plugin may write results
+of the spec's scenarios into the directory its request names, held to the
+`:allure` mapping as the tests check's are. A plugin is added from a
 template rdm-spec carries (`rdm-spec plugin add NAME`, which records the
 template in `origin.edn`; every package of rdm-spec carries the same
 templates as its sources) and is then the project's own, evolving with it
@@ -229,6 +232,13 @@ one scenario: verified only when every row has a passing result, failed when
 any row's result did not pass, else unverified. A result counts toward a row
 only when it names the row, by its parameters. Status never
 enters a score: only a grader's verdicts do.
+
+**Spec folder**: one spec of a project that keeps several (spec-29): a folder
+with its own feature files, model, event catalogue, needs, glossary, id ledger
+and domain model, declared in the configuration's `:specs` with its name and
+id prefix. A need, a component and a context resolve within their own spec; a
+cycle may be scoped to one spec, and `status` and `release` read every spec or
+the one named. A project that keeps one spec declares no `:specs`.
 
 **Cut**: a merged spec change tagged `spec-N`. Regeneration reads a cut and
 nothing else: the project's root as committed at the tagged commit. A tag

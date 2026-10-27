@@ -23,7 +23,7 @@ Feature: Plugins
     Scenario: The plugins are the configuration's :plugins, in this shape
       Given a configuration whose :plugins is [{:name "lint-a" :subscribes [:SpecParsed] :command ["bb" "dhf/harness/plugins/lint-a/run.clj"] :seconds 20} {:name "oracle" :answers :Gate :command ["bb" "dhf/harness/oracle/oracle.clj"]}]
       When "rdm-spec check" is run
-      Then each entry is read as exactly :name, :command, one of :subscribes (a vector of event names) or :answers (:Gate or :Check), and an optional :seconds, its time limit
+      Then each entry is read as exactly :name, :command, one of :subscribes (a vector of event names) or :answers (:Gate or :Check), an optional :seconds, its time limit, and an optional :env
       And a plugin with no :seconds has 60 seconds
 
     @spec-0350 @e2e
@@ -149,3 +149,33 @@ Feature: Plugins
         | given                                        | name       | exit | says                                                         |
         | that already has dhf/harness/plugins/ddd-domain | ddd-domain | 1    | names the directory and copies nothing                       |
         | and nothing else                             | no-such    | 2    | names no-such and lists the templates rdm-spec carries       |
+
+  # spec-29, from halla-health's wallet: its oracle needed the e2e tests'
+  # folder and the sandbox's send window, which lived in the integrator's
+  # environment and the plugin's script, a difference nobody declared.
+  Rule: What a plugin needs to know is in the configuration
+
+    @spec-0382 @e2e
+    Scenario: A plugin's :env is its environment, beside RDM_SPEC
+      Given a plugin subscribing to :SpecParsed with :env {"ORACLE_DIR" "../e2e" "SEND_LIMIT" "5"} whose command writes its environment to a file in the project
+      When "rdm-spec check" is run
+      Then the plugin's environment held ORACLE_DIR "../e2e", SEND_LIMIT "5" and RDM_SPEC, and the rest of the caller's environment
+      And an :env that is not a map of strings to strings is refused before anything runs, naming the plugin
+
+  # spec-29: a project's grading (deploying its build for its graders, however
+  # the project ships) starts when a cycle is verified, which no event said.
+  Rule: A plugin can follow a verified cycle
+
+    @spec-0383 @e2e
+    Scenario: A subscriber to :CycleVerified runs after verify passes, given the cycle
+      Given a plugin subscribing to :CycleVerified whose command writes what it is given to a file in the project
+      When "rdm-spec verify ROOM 03" is run and passes
+      Then after every check passed, the plugin ran once, in the project's root, with {:event :CycleVerified :cycle "03" :cut "spec-3" :checkout "dhf/cycles/03/build" :checks [...]} on its input, the checks as ratified.edn holds them
+      And its findings are verify's, and a plugin that cannot run makes verify exit 2 after ratified.edn is written
+
+    @spec-0384 @e2e
+    Scenario: A cycle that is not verified publishes nothing
+      Given a plugin subscribing to :CycleVerified
+      When "rdm-spec verify ROOM 03" is run and its tests check fails
+      Then the plugin did not run
+

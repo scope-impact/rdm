@@ -264,6 +264,16 @@ Feature: Verify
         | writes "src/app.clj:9: form-missing: …" on its error stream and exits 1 | exits 1, relaying the finding unchanged | :failed   |
         | exits 2                                                      | exits 2, naming the plugin                    | :refused  |
 
+    # spec-29: halla-health's acceptance harness answers :Check with Allure
+    # results of the spec's scenarios; they reached no task.
+    @spec-0391 @e2e
+    Scenario: A Check plugin's results are held to the mapping, and count
+      Given a :plugin check "acceptance" whose plugin writes Allure results of every scenario into the :results directory its request names
+      When "rdm-spec verify ROOM 03" is run
+      Then its request held :results "dhf/cycles/03/results/acceptance", and each result there was held to the :allure mapping as the tests check's are
+      And a result that did not pass, or a scenario with no result, fails the check "acceptance", naming the scenario
+      And a plugin that writes no results is judged by its exit alone, as before
+
     @spec-0362 @contract
     Scenario: A Check plugin is asked in the checkout, with its cycle and cut
       Given a :plugin check whose plugin writes what it is given to a file

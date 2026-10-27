@@ -47,6 +47,15 @@
           :findings "[{:file :line :rule :message}]"}}
 
 
+ :CycleVerified
+ {:description "A cycle's build passed every check verify ran on it, in a checkout of the cut"
+  :published-by :verification/verify
+  :carries [:cycle :cut :checkout :checks]
+  :shape {:cycle "the cycle, e.g. \"03\""
+          :cut "the cut verified, e.g. \"spec-3\""
+          :checkout "the verified checkout, dhf/cycles/NN/build"
+          :checks "[{:name :kind :outcome ...}], as ratified.edn holds them"}}
+
  :VerificationDerived
  {:description "Each scenario's status (verified, failed, unverified, planned) was derived from a run's Allure results"
   :published-by :verification/status
