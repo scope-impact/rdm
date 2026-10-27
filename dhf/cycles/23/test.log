@@ -1,0 +1,63 @@
+
+Testing rdm-spec.agency.observe-test
+
+Testing rdm-spec.architecture.lint-test
+
+Testing rdm-spec.architecture.model-test
+
+Testing rdm-spec.architecture.views-test
+
+Testing rdm-spec.compliance.gap-test
+
+Testing rdm-spec.kernel.bus-test
+
+Testing rdm-spec.kernel.command-test
+
+Testing rdm-spec.kernel.plugins-test
+
+Testing rdm-spec.kernel.runner-test
+
+Testing rdm-spec.knowledge.sources-test
+
+Testing rdm-spec.knowledge.wiki-test
+
+Testing rdm-spec.measurement.checklist-test
+
+Testing rdm-spec.measurement.oracle-test
+
+Testing rdm-spec.measurement.scoreboard-test
+
+Testing rdm-spec.measurement.scorer-test
+
+Testing rdm-spec.project.adopt-test
+
+Testing rdm-spec.project.init-test
+
+Testing rdm-spec.publishing.site-test
+
+Testing rdm-spec.regeneration.cut-test
+
+Testing rdm-spec.regeneration.fence-test
+
+Testing rdm-spec.regeneration.scopes-test
+
+Testing rdm-spec.spec.check-test
+
+Testing rdm-spec.spec.parser-test
+
+Testing rdm-spec.spec.stamper-test
+
+Testing rdm-spec.verification.release-test
+
+Testing rdm-spec.verification.results-test
+
+Testing rdm-spec.verification.status-test
+
+Testing rdm-spec.verification.trace-test
+
+Testing rdm-spec.verification.verify-test
+
+Ran 77 tests containing 250 assertions.
+0 failures, 0 errors.
+unit: 77 tests, 250 assertions, 0 failures, 0 errors
+scenarios: 428 run, 428 passed, 0 failed, 0 broken, 0 planned

@@ -1,0 +1,14 @@
+[{:role "builder",
+  :room "/home/user/c23/room",
+  :began "2026-10-27T20:55:34.969407695Z",
+  :ended "2026-10-27T21:46:15.161639752Z",
+  :minutes 50.67,
+  :tokens 600000,
+  :defence
+  {:writes-outside [],
+   :tmp-left 0,
+   :repo-touched [],
+   :results-in-room false,
+   :unobserved
+   ["reads outside the room: no read is observed"
+    "writes below a watched directory's own entries, and anything undone before the run ended"]}}]
