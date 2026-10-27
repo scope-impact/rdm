@@ -183,7 +183,8 @@
                           "no scenario states check's :lint summary beyond its questions for a person (spec-0010)"]
                          [[:out :knowledge] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
                          [[:out :spec] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
-                         [[:out :views] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]]
+                         [[:out :views] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
+                         [[:out :sources] "no scenario states check's standard output beyond the lint's questions (cycle 22)"]]
    :measurement/scorer  [[[:out :score :ungraded] "no scenario states score's standard output; score.edn is what spec-0123 and its kin state (cycle 20)"]]
    :regeneration/fence  [[[:out] "no scenario states fence's standard output; what it builds is stated, and judged by :wrote and the room (cycle 20)"]]
    :verification/status [[[:err] "no scenario states status's warning line; spec-0060 states the unknown result in its standard output (cycle 20)"]]})
