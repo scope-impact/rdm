@@ -31,6 +31,16 @@ repositories themselves are not copied in: a citation names
 | [agent-skills.md](agent-skills.md) | `scope-impact/agent-skills` | `da65901` (2026-10-12) | what a C4 model is, its levels and views, and the quality checklist the lint enforces |
 | [loyly.md](loyly.md) | `skallinen/loyly` | `17d68d2` (2026-09-08) | spec first and regenerate: the fence, ratification, the honest instrument, sources and a cited domain wiki |
 
+## Research records
+
+A research record is the spec owner's own investigation, written down so a
+later spec change can cite it. It is not a repository and has no pin in
+`sources.edn`; the external works it rests on are linked from it.
+
+| Record | Written | Evidence for |
+|---|---|---|
+| [affordance-contracts.md](affordance-contracts.md) | 2026-10-27 | judging agent-designed UI against an affordance contract: the model, the framework-agnostic layers, the measured conformance runs, the research lineage |
+
 `scope-impact/rdm`, this repository before rdm-spec, is deliberately not a
 source: it holds today's implementation of what rdm-spec regenerates, so
 citing it would point a coding agent at the answer. It never reaches a clean room
