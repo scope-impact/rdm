@@ -1,0 +1,14 @@
+;; Cycle 22: spec-26 (cycle 21's findings: the dropped-pin rule, templates in
+;; every package, the probe's url and time limit), tagged locally. Run by
+;; cycle 19's release (13832de, built at spec-23). Scoped: the components the
+;; change from spec-25 reaches, on top of cycle 21's code (accepted, held back
+;; from install). The held-still oracle on the build is scoped from the
+;; release's cut, spec-23, to spec-26. One builder.
+{:cut "spec-26"
+ :from "spec-23"
+ :scope [{:component :knowledge/sources}
+         {:component :kernel/plugins}
+         {:component :verification/verify}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "graders, each its own grading room, black box on the packaged jar" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
