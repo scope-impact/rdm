@@ -1,0 +1,26 @@
+;; Cycle 23: spec-27 (a project in a folder of a repository; verify commits the
+;; room as git would), spec-28 (score takes several graders' files) and
+;; spec-29 (several spec folders, plugin :env, :CycleVerified, Check
+;; results), from halla-health's wallet. Run by cycle 22's release (425e941,
+;; built at spec-26). Scoped, on cycle 22's code: the components
+;; `rdm-spec scopes spec-26 spec-29` names, plus those spec-29's several spec
+;; folders reach though their scenarios sit in spec/parser.feature (stamper,
+;; check, fence, checklist, status, trace, release). One builder.
+{:cut "spec-29"
+ :from "spec-26"
+ :scope [{:component :kernel/command}
+         {:component :kernel/runner}
+         {:component :spec/parser}
+         {:component :spec/stamper}
+         {:component :spec/check}
+         {:component :regeneration/fence}
+         {:component :verification/verify}
+         {:component :kernel/plugins}
+         {:component :measurement/checklist}
+         {:component :measurement/scorer}
+         {:component :verification/status}
+         {:component :verification/trace}
+         {:component :verification/release}]
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "graders, each its own grading room, black box on the packaged jar" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
