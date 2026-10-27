@@ -70,7 +70,9 @@ Feature: Scorer
       Then both verdicts are filed
 
     # spec-28: two graders grade one cycle in two rooms; their files are scored
-    # as one. A file that is not readable EDN names where it stops.
+    # as one. A file that is not readable EDN names where it stops. How the
+    # graders' rooms are built is the project's own (its grading, like its
+    # oracle, is a project's judge, ADR 0003).
     @spec-0379 @e2e
     Scenario: The verdicts of several files are filed as one
       Given two verdicts files, one grading spec-0012 and spec-0013, the other spec-0014

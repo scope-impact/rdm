@@ -30,14 +30,13 @@ Feature: Command
         | views      | views                                                    | generate and render every view to dhf/views/                         |
         | cut        | cut                                                      | tag HEAD spec-N when it is origin/HEAD, and push the tag             |
         | scopes     | scopes CUT CUT                                           | list the scopes a spec change touched between two cuts               |
-        | fence      | fence ROOM CUT [--context C,...] [--component C/N,...] [--cycle CYCLE] | build a clean room from a cut                          |
+        | fence      | fence ROOM CUT [--context C,...] [--component C/N,...]   | build a clean room from a cut                                        |
         | run        | run [--results DIR]                                      | run the scenarios against a project's step definitions               |
         | verify     | verify ROOM CYCLE                                        | run the project's checks on the room's code in a checkout of the cut |
         | checklist  | checklist CYCLE                                          | derive the cycle's checklist into dhf/cycles/CYCLE/checklist.json    |
         | status     | status [--results DIR]                                   | each scenario's status                                               |
         | trace      | trace ID [--results DIR]                                 | a need or a scenario with everything linked to it                    |
         | release    | release [--results DIR]                                  | the release check                                                    |
-        | grade      | grade CYCLE DIR                                          | build the grading rooms of a verified cycle in DIR, the build packaged outside them |
         | score      | score CYCLE --verdicts FILE [--verdicts FILE ...]        | file the graders' verdicts on a verified cycle into its score.edn    |
         | scoreboard | scoreboard CYCLE CYCLE                                   | compare two cycles                                                   |
         | oracle     | oracle [ARGS]                                            | run the oracle the project keeps: its plugin named "oracle"          |

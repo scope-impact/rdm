@@ -117,12 +117,10 @@
         :description "Lists the scopes a spec change touched between two cuts"}]}
 
      {:id :measurement :name "measurement"
-      :description "Derives the checklist, builds the grading rooms, files the graders' verdicts and compares cycles, never for the builder"
+      :description "Derives the checklist, files a grader's verdicts and compares cycles, never for the builder"
       :components
       [{:id :measurement/checklist :name "Checklist" :spec "measurement/checklist"
         :description "One item per stamped scenario at the cut, into checklist.json"}
-       {:id :measurement/grading :name "Grading" :spec "measurement/grading"
-        :description "Packages a verified build, builds graders' rooms"}
        {:id :measurement/scorer :name "Scorer" :spec "measurement/scorer"
         :description "Files a grader's verdicts, and nothing when nothing was graded"}
        {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
@@ -184,7 +182,6 @@
   {:from :verification/verify :to :verification/results :description "Reads the tests check's results with"}
   {:from :measurement/checklist :to :repository :description "Writes checklist.json to"}
   {:from :measurement/scorer :to :repository :description "Reads cycle.edn, the checklist and verdicts, writes score.edn to"}
-  {:from :measurement/grading :to :repository :description "Reads ratified.edn, the verified checkout and the cut from"}
   {:from :measurement/scoreboard :to :repository :description "Reads scores from"}
   {:from :measurement/oracle :to :repository :description "Reads fixtures and goldens from"}
   {:from :regeneration/scopes :to :repository :description "Reads two cuts from"}
@@ -227,7 +224,6 @@
   {:from :verification/release :to :verification/status :description "Refuses on"}
   {:from :regeneration/fence :to :regeneration/cut :description "Builds clean rooms only from"}
   {:from :measurement/scorer :to :measurement/checklist :description "Scores"}
-  {:from :measurement/grading :to :measurement/checklist :description "Shares out the items of"}
   {:from :measurement/scoreboard :to :measurement/scorer :description "Compares the filed scores of"}
   {:from :compliance/audit :to :compliance/gap :description "Lists where each clause is met with"}]
 

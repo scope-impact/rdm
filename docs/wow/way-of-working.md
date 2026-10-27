@@ -39,15 +39,16 @@ steps, never builds or grades, and reports time and tokens after every run.
    not reach, so any difference is a regression; the in-scope ones are the
    graders'. `rdm-spec verify ROOM NN`
    with the installed release; `rdm-spec checklist NN`.
-5. **Package, then grade.** `rdm-spec grade NN DIR` packages the verified
-   checkout outside every room (the configuration's `:grading :package`),
-   builds the grading rooms (the cut's spec without its code, a share of the
-   checklist, `bin/run`, the filled brief) and begins observing the graders.
-   Until a release carries it (spec-28), build them by hand as before: the
-   jar from `src/` and `res/rdm-spec/plugins/` (`bb --classpath src:res
-   uberjar rdm-spec.jar -m rdm-spec.kernel.command`), `project/` the cut's
-   `dhf/` and `docs/` without code or the oracle, `bin/rdm-spec` running the
-   jar; brief with `docs/wow/harness.md`, "The grader".
+5. **Package, then grade.** Package the build outside the room from its
+   `src/` and the plugin templates (copy `plugins/` to `res/rdm-spec/plugins/`
+   in a scratch directory, then `bb --classpath src:res uberjar rdm-spec.jar -m
+   rdm-spec.kernel.command`; plain `bb uberjar` would take `bb.edn`'s
+   `:paths`, `test` among them; cycle 21's jar, from `src/` alone, carried no
+   template). The grading
+   room has no implementation in it: `project/` (the cut's `dhf/` and
+   `docs/`, without `src/`, `test/` or the oracle), `bin/rdm-spec` running
+   that jar (`bb JAR`), the sources;
+   `observe begin NN grader`; brief with `docs/wow/harness.md`, "The grader".
 6. **Record:** `rdm-spec score NN --verdicts A --verdicts B` (one file per grader);
    `rdm-spec scoreboard (NN-1) NN`; `observe report`; the posterior
    (`dhf/cycles/analysis/posterior.py`); `labels.yaml` for each fail you looked

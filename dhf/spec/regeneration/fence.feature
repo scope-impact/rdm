@@ -119,14 +119,3 @@ Feature: Fence
       When "rdm-spec fence ROOM spec-3 --component kernel/bus" is run
       Then ROOM holds neither src/rdm_spec/kernel/bus.clj nor test/rdm_spec/kernel/bus_test.clj
       And it holds every other implementation file at the cut, unchanged
-
-  # spec-28: the brief a builder is given, kept by the project as a template
-  # (measurement/grading.feature, "Briefs").
-  Rule: A project that keeps a builder's brief gets it filled
-
-    @spec-0381 @e2e
-    Scenario: The fence writes the builder's brief beside the room
-      Given a project that keeps dhf/harness/briefs/builder.md holding "Build cycle {{cycle}} in {{room}} from {{cut}}", and dhf/cycles/03/cycle.edn naming the cut spec-3
-      When "rdm-spec fence ROOM spec-3 --cycle 03" is run
-      Then ROOM.brief.md, beside the room and not in it, is "Build cycle 03 in ROOM from spec-3" with ROOM absolute
-      And ROOM holds dhf/harness/briefs/builder.md as committed, since the fence keeps it
