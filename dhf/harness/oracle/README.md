@@ -56,6 +56,18 @@ judged 17 cases and skipped 3 (`regeneration/scopes`), 0 differences; cycle 20's
 build, scoped the same, gave its 25 differences, all outside the scopes; and
 `record` refused to move those goldens.
 
+## What it does not compare
+
+Beyond the `unstated` table's paths (each with its reason), two things are left
+out because no scenario states them: the order of finding lines (heads are
+compared sorted), and, for `spec/check`, the rule names in its findings (only
+FILE:LINE is compared; its scenarios state where a finding is and what it
+names). Cycle 20, rebuilt from nothing, showed each: its rule names, its
+fence, check and score standard output and status's warning line were its own,
+and the goldens, recorded from a release grown out of the same code, had
+held them by inheritance. Stating them in the spec instead is open (cycle 20's
+proposed-spec-changes, the oracle question).
+
 ## Recording
 
 - **A golden holds nothing the spec does not state.** Before a golden is

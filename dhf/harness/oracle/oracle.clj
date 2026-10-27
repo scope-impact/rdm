@@ -180,7 +180,19 @@
   {:verification/verify [[[:out :verify :checks 0 :reason]
                           "spec-0315 puts a failed check's :reason in ratified.edn; its standard output's checks are stated by spec-0314 without it"]]
    :spec/check          [[[:out :lint :findings]
-                          "no scenario states check's :lint summary beyond its questions for a person (spec-0010)"]]})
+                          "no scenario states check's :lint summary beyond its questions for a person (spec-0010)"]
+                         [[:out :knowledge] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
+                         [[:out :spec] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
+                         [[:out :views] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]]
+   :measurement/scorer  [[[:out :score :ungraded] "no scenario states score's standard output; score.edn is what spec-0123 and its kin state (cycle 20)"]]
+   :regeneration/fence  [[[:out] "no scenario states fence's standard output; what it builds is stated, and judged by :wrote and the room (cycle 20)"]]
+   :verification/status [[[:err] "no scenario states status's warning line; spec-0060 states the unknown result in its standard output (cycle 20)"]]})
+
+;; Components whose scenarios state where a finding is (its file and line) but
+;; not its rule's name: of their error lines only FILE:LINE (or FILE) is kept
+;; (cycle 20: check's rule names were each build's own, as scenario-no-id and
+;; scenario-unstamped).
+(def location-only #{:spec/check})
 
 (defn dissoc-in [m [k & ks]]
   (cond (nil? ks) (if (map? m) (dissoc m k) m)
@@ -200,9 +212,19 @@
            (if-let [[_ h rule e] (re-find head-re l)] (str h (when (element-rules rule) e)) l)))
     err))
 
+(defn location [l] (or (second (re-find #"^(\S+?:(?:\d+:)?) " l)) l))
+
+;; The order of findings is stated nowhere, so heads are compared sorted.
 (defn stated [c x]
   (when x
-    (let [x (if (contains? x :err) (update x :err heads) x)]
+    (let [x (if (contains? x :err)
+              (update x :err (fn [e] (let [h (heads e)]
+                                      (if (sequential? h)
+                                        (vec (sort (if (location-only c)
+                                                     (map location (if (sequential? e) e (str/split-lines (str e))))
+                                                     h)))
+                                        h))))
+              x)]
       (reduce (fn [x [path _]] (dissoc-in x path)) x (unstated c)))))
 
 (defn component-keys [data] (sort-by str (filter #(and (keyword? %) (namespace %)) (keys data))))
