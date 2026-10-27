@@ -1,0 +1,15 @@
+# What cycle 21's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml).
+- {scenario: spec-0349, decision: "check's result holds :plugins as read, :seconds filled in, only when plugins are declared; an entry with another key is refused"}
+- {scenario: spec-0354, decision: "a plugin's standard output is relayed as 'warning: plugin-output: NAME: line'; exit 1 with no finding line is a plugin-findings finding; an exit other than 0, 1, 2 is cannot-run"}
+- {scenario: spec-0355, decision: "a timeout is one cannot-run line naming the plugin and its limit, what it printed joined by ' / '"}
+- {scenario: spec-0357, decision: "every Gate plugin runs and reports, then the task stops if any had findings"}
+- {scenario: spec-0358, decision: "fence's request is {:request :Gate :task :fence :cut CUT}, no :cycle; verify reads its cycle first and its Gate plugins from the cut's configuration"}
+- {scenario: spec-0361, decision: "a :plugin check whose plugin cannot run makes verify exit 2, no stdout, no ratified.edn"}
+- {scenario: spec-0359, decision: "templates are found in plugins/ beside rdm-spec's sources, so a package built from src carries none"}
+- {scenario: spec-0342, decision: "the oracle task has no time limit, passes stdin through and streams its output"}
+- {scenario: spec-0233, decision: "no oracle: {:oracle {:oracle nil :note \"there is no oracle to run: …\"}}"}
+- {scenario: spec-0344, decision: "RDM_SPEC is '<bb executable> -cp <absolute classpath> -m rdm-spec.kernel.command', from sources or a jar"}
+- {scenario: spec-0331, decision: "a mapping finding is 'RESULT: RULE: …' with no line; a project's :allure merged over the default at the top level"}
+- {scenario: spec-0318, decision: "each poll waits at most min(S/K, 1 s) for an answer"}
+- {scenario: spec-0178, decision: "help, init and adopt run anywhere; each task accepts only its own options; identical finding lines printed once"}

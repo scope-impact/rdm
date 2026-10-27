@@ -1,0 +1,7 @@
+# What each fail of cycle 21 turned out to be (see 16/labels.yaml for the labels).
+- scenario: spec-0359
+  label: wording
+  evidence: "from its sources the build copies the template (its own scenario passes); packaged as the way of working says (src only), it carries none. The spec says 'the templates rdm-spec carries' without saying a package carries them, and the packaging step leaves plugins/ out"
+- scenario: spec-0360
+  label: wording
+  evidence: "the same cause: with no templates carried, both rows exit 2 ('carries no template … the templates it carries are none')"

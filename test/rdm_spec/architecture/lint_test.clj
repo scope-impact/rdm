@@ -1,37 +1,63 @@
 (ns rdm-spec.architecture.lint-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [rdm-spec.architecture.lint :as lint]))
 
-(def m {:system {:id :s :name "S" :description "d"}
-        :people [{:id :p :name "P" :description "d" :actor #{:human}}]
-        :external []
-        :containers [{:id :c :name "C" :description "d" :kind :runs :technology "t"
-                      :contexts [{:id :x :name "x" :description "d" :components [{:id :x/a :name "A" :description "d" :spec "x/a"}]}
-                                 {:id :y :name "y" :description "d" :components [{:id :y/b :name "B" :description "d" :spec "y/b"}]}]}]
-        :relationships [{:from :p :to :s :description "uses"}]
-        :views [{:key "ctx" :level :context :description "d"}
-                {:key "x" :level :component :context :x :description "d"}
-                {:key "y" :level :component :context :y :description "d"}]})
+(def model
+  {:system {:id :demo :name "demo" :description "A demo"}
+   :people [{:id :user :name "User" :description "Uses it" :actor #{:human}}]
+   :external []
+   :containers [{:id :app :name "app" :kind :runs :technology "x" :description "The program"
+                 :contexts [{:id :shop :name "shop" :description "Shop"
+                             :components [{:id :shop/till :name "Till" :description "Till" :spec "shop/till"}]}
+                            {:id :stock :name "stock" :description "Stock"
+                             :components [{:id :stock/shelf :name "Shelf" :description "Shelf" :spec "stock/shelf"}]}]}]
+   :kernel [{:id :kernel/core :name "Core" :description "Core" :spec "kernel/core"}]
+   :relationships [{:from :user :to :app :description "Uses"}]
+   :views [{:key "context" :level :context :description "Users"}
+           {:key "shop-components" :level :component :context :shop :description "Shop"}
+           {:key "stock-components" :level :component :context :stock :description "Stock"}]})
 
-(def opts {:features #{"dhf/spec/x/a.feature" "dhf/spec/y/b.feature"} :spec-dir "dhf/spec" :events {}
-           :limit 20 :max-chars 45 :relate-by [:events]})
+(def features ["dhf/spec/shop/till.feature" "dhf/spec/stock/shelf.feature" "dhf/spec/kernel/core.feature"])
 
-(defn rules [model & {:as o}] (map :rule (lint/findings model (merge opts o))))
+(defn run [m & {:keys [events config files]}]
+  (lint/lint {:model m :file "dhf/spec/model.edn" :text (pr-str m) :events (or events {})
+              :config (merge {:c4 {:view-element-limit 20 :description-max-chars 45}} config)
+              :features (or files features) :spec-dir "dhf/spec"}))
 
-(deftest a-good-model-passes (is (empty? (rules m))))
-(deftest view-description (is (= ["c4-scope"] (rules (assoc-in m [:views 0 :description] nil)))))
-(deftest element-description (is (= ["c4-element-described"] (rules (assoc-in m [:containers 0 :description] nil)))))
-(deftest arrow-label (is (= ["c4-arrow-labelled"] (rules (assoc-in m [:relationships 0 :description] "")))))
-(deftest context-actors (is (= ["c4-context-actors"] (rules (assoc m :people [] :relationships [])))))
-(deftest container-runs (is (= ["c4-container-runs"] (rules (assoc-in m [:containers 0 :kind] :library)))))
-(deftest events-named (is (= ["c4-events-named"] (rules (update m :relationships conj {:from :x/a :to :y/b :description "Publishes" :event :SpecCut})))))
-(deftest description-length (is (= ["c4-description-length"] (rules (assoc-in m [:people 0 :description] (apply str (repeat 60 "x")))))))
-(deftest component-view (is (= ["a-component-view"] (rules (update m :views (comp vec butlast))))))
-(deftest scenario-owner
-  (is (= ["a-scenario-owner"] (rules m :features #{"dhf/spec/x/a.feature"})))
-  (is (= ["a-scenario-owner"] (rules m :features #{"dhf/spec/x/a.feature" "dhf/spec/y/b.feature" "dhf/spec/z/c.feature"}))))
-(deftest contract-only
-  (is (= ["a-contract-only"] (rules (update m :relationships conj {:from :x/a :to :y/b :description "calls"}))))
-  (is (empty? (rules (update m :relationships conj {:from :x/a :to :y/b :description "calls"}) :relate-by [:events :calls]))))
-(deftest view-size-is-a-warning
-  (is (= ["c4-view-size"] (map :rule (lint/warnings (update m :people into (for [i (range 25)] {:id (keyword (str "p" i)) :name "P" :description "d" :actor #{:human}})) opts)))))
+(defn rules [r] (set (map :rule (:findings r))))
+
+(deftest a-sound-model-passes
+  (is (= {:findings [] :warnings []} (run model))))
+
+(deftest the-c4-rules
+  (is (= #{"c4-scope"} (rules (run (update-in model [:views 0] dissoc :description)))))
+  (is (= #{"c4-element-described"} (rules (run (update-in model [:containers 0] dissoc :description)))))
+  (is (= #{"c4-arrow-labelled"} (rules (run (update-in model [:relationships 0] dissoc :description)))))
+  (is (= #{"c4-context-actors"} (rules (run (assoc model :people [] :relationships [])))))
+  (is (= #{"c4-container-runs"} (rules (run (assoc-in model [:containers 0 :kind] :library)))))
+  (let [r (run (update model :relationships conj {:from :shop/till :to :stock/shelf :description "P" :event :SpecCut}))]
+    (is (= #{"c4-events-named"} (rules r)))
+    (is (str/includes? (:message (first (:findings r))) "SpecCut")))
+  (testing "an event published by another than its declared publisher"
+    (is (= #{"c4-events-named"}
+           (rules (run (update model :relationships conj {:from :stock/shelf :to :shop/till :description "P" :event :Sold})
+                       :events {:Sold {:published-by :shop/till}})))))
+  (let [r (run (assoc-in model [:people 0 :description] (apply str (repeat 60 "a"))))]
+    (is (= #{"c4-description-length"} (rules r)))
+    (is (str/includes? (:message (first (:findings r))) "60")))
+  (testing "a view over the limit warns"
+    (let [r (run model :config {:c4 {:view-element-limit 0 :description-max-chars 45}})]
+      (is (empty? (:findings r)))
+      (is (= #{"c4-view-size"} (set (map :rule (:warnings r))))))))
+
+(deftest the-bounded-context-rules
+  (is (= #{"a-component-view"} (rules (run (update model :views #(vec (take 2 %)))))))
+  (is (= #{"a-scenario-owner"} (rules (run model :files (rest features)))))
+  (is (= #{"a-scenario-owner"} (rules (run model :files (conj features "dhf/spec/shop/ghost.feature")))))
+  (let [calls (update model :relationships conj {:from :shop/till :to :stock/shelf :description "Reads"})]
+    (is (= #{"a-contract-only"} (rules (run calls))))
+    (is (empty? (rules (run calls :config {:c4 {:contexts-relate-by [:events :calls]}}))))))
+
+(deftest what-no-machine-judges
+  (is (= 3 (count lint/for-a-person))))

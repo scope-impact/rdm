@@ -1,32 +1,31 @@
 (ns rdm-spec.measurement.oracle
-  "The oracle (dhf/spec/measurement/oracle.feature): runs the command the
-  project keeps as its oracle (the configuration's :oracle), in the project's
-  root, telling it which rdm-spec it judges, and relays its answer. As a gate
-  of fence and verify, it stops them while it fails. The oracle itself is not
-  this component: it is held still, outside the implementation."
-  (:require [clojure.string :as str]
+  "The oracle task (dhf/spec/measurement/oracle.feature): the shorthand that
+  runs the oracle the project keeps, its plugin named \"oracle\" (which
+  answers :Gate, so fence and verify stop while it fails; kernel/plugins asks
+  it there). Runs its command in the project's root with the task's own
+  arguments and RDM_SPEC set, its output passed through unchanged, and exits
+  as it exits. No plugin named \"oracle\" is no oracle, said on standard output."
+  (:require [babashka.process :as p]
             [rdm-spec.kernel.command :as cmd]))
 
-(defn- run [{:keys [root config]} args]
-  (let [command (get-in config [:oracle :command])
-        r (apply cmd/sh {:dir root :env {"RDM_SPEC" (str/join " " (cmd/self-command))}} (concat command args))]
-    (when (:not-found r)
-      (cmd/cannot-run! (str "the oracle command " (pr-str command) " cannot be started: " (first command) " was not found")))
-    r))
+(defn oracle-of
+  "The plugin named \"oracle\", or nil."
+  [config]
+  (first (filter #(= "oracle" (:name %)) (:plugins config))))
 
-(defn stage
-  "rdm-spec oracle [ARGS]: the oracle's own output and exit, unchanged."
-  [{:keys [config args] :as ctx}]
-  (if (empty? (get-in config [:oracle :command]))
-    {:result {:oracle {:command nil :note "the configuration names no :oracle: there is no oracle to run"}}}
-    {:raw (run ctx args)}))
+(defn command-of
+  "The oracle's command line with the task's arguments after it."
+  [oracle args]
+  (into (vec (:command oracle)) args))
 
-(defn gate-stage
-  "The gate before fence and verify: nothing runs after it while it fails."
-  [{:keys [config] :as ctx}]
-  (if (empty? (get-in config [:oracle :command]))
-    {}
-    (let [{:keys [exit err]} (run ctx [])]
-      (if (= 0 exit)
-        {}
-        {:stop true :exit (if (= 2 exit) 2 1) :err-raw err}))))
+(defn stage [{:keys [root config args]}]
+  (if-let [o (oracle-of config)]
+    (let [cmdline (command-of o args)
+          r (try
+              @(p/process cmdline {:dir (str root) :in :inherit :out :inherit :err :inherit
+                                   :extra-env {"RDM_SPEC" (cmd/this-command-line)}})
+              (catch java.io.IOException _
+                (cmd/cannot-run! (str "the oracle's command " (pr-str (:command o)) " cannot be started: it was not found"))))]
+      {:stop true :raw true :exit (:exit r)})
+    {:result {:oracle {:oracle nil
+                       :note "there is no oracle to run: the configuration's :plugins names no plugin \"oracle\""}}}))
