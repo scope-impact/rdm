@@ -120,7 +120,7 @@ Feature: Gherkin runner
         | the labels tag           | one per Gherkin tag, without its @: "spec-0012", "e2e", "UN-002"                      |
         | the labels spec, context and component | "spec-0012", "architecture" and "Lint"                                   |
         | the label framework      | "gherkin"                                                                             |
-        | links                    | one per need the scenario traces to: {"type" "issue" "name" "UN-002" "url" "dhf/spec/needs.edn#UN-002"} |
+        | links                    | one per need the scenario traces to: {"type" "issue" "name" "UN-002" "url" "dhf/spec/needs.edn#UN-002"}, the url's file the configuration's :needs |
 
     @spec-0309 @contract
     Scenario: An outline row's values are the result's parameters, and its history is the row's

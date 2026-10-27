@@ -13,12 +13,16 @@ it. It is RDM rebuilt around this decision: the suffix says the spec is the
 source and the code is built from it. `RDM` alone means the old record, before
 the cutover.
 
-**Project**: a repository rdm-spec is used on, set up by `init` or `adopt`.
-This repository is one of them as well: rdm-spec regenerates itself from this
-spec (see Release). Its spec, model and event catalogue describe the project,
-never the harness that reads them. rdm-spec runs in a project's root; run in
-any other directory, a project's subdirectory too, it refuses (exit 2) and
-says so.
+**Project**: a repository rdm-spec is used on, set up by `init` or `adopt`,
+or one folder of a larger repository (a monorepo) that holds its own
+`dhf/harness/config.edn` (spec-27, from halla-health, whose wallet is one
+folder of four). This repository is one of them as well: rdm-spec regenerates
+itself from this spec (see Release). Its spec, model and event catalogue
+describe the project, never the harness that reads them. rdm-spec runs in a
+project's root, the folder that holds its configuration; run in any other
+directory, a project's subdirectory too, it refuses (exit 2) and says so.
+Every path a project's configuration and spec name is relative to that root,
+at a cut as in the working tree.
 
 **Release**: a build of rdm-spec accepted by the spec owner after it was
 scored, and installed. Release N runs cycle N+1 (fence, verify, checklist,
@@ -206,7 +210,8 @@ the component's id without its colon, a `tag` per Gherkin tag without its
 `@`, `framework` `gherkin`, and rdm-spec's own
 `spec` (the scenario id, exactly one), `context`, `component` and `planned` =
 `true` for a scenario tagged `@wip`), `links` (one `issue` per need, its url
-`dhf/spec/needs.edn#UN-nnn`) and `attachments` (evidence). `failed` is a Then
+`<needs>#UN-nnn`, `<needs>` the configuration's `:needs`, `dhf/spec/needs.edn`
+unless it says otherwise) and `attachments` (evidence). `failed` is a Then
 whose assertion did not hold; `broken` is anything else that went wrong. A status is decided by `status`, the `spec` label
 and an outline row's `parameters` only; everything else is kept for the
 report. A result with no `spec` label verifies nothing.
@@ -226,7 +231,9 @@ only when it names the row, by its parameters. Status never
 enters a score: only a grader's verdicts do.
 
 **Cut**: a merged spec change tagged `spec-N`. Regeneration reads a cut and
-nothing else.
+nothing else: the project's root as committed at the tagged commit. A tag
+belongs to the whole repository; in a monorepo, the cut of a project is its
+folder at that commit.
 
 **Fence**: the step that builds a clean room from a cut: one fresh commit
 holding every file committed at the cut except the denied ones

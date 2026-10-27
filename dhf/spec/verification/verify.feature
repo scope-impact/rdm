@@ -37,6 +37,16 @@ Feature: Verify
       Then the checkout it verifies holds no src/rdm_spec/old.clj
       And every configured implementation path holds exactly what the room holds
 
+    # Cycle 01 of halla-health's wallet (spec-27): verify copied the room's
+    # node_modules, which .gitignore excludes, into the checkout, its links
+    # copied as files, and the install in the checkout broke.
+    @spec-0370 @e2e
+    Scenario: The room's implementation reaches the checkout as git would commit it
+      Given a room whose implementation holds a file its .gitignore excludes, a directory it excludes, and a symbolic link to a file beside it
+      When "rdm-spec verify ROOM 03" is run
+      Then the checkout holds neither the excluded file nor the excluded directory
+      And the symbolic link is a symbolic link in the checkout, to the same target
+
     @spec-0205 @e2e
     Scenario: Edits the builder made outside the implementation are not used
       Given the builder has edited dhf/harness/config.edn and a feature file in the room
@@ -316,4 +326,5 @@ Feature: Verify
     Scenario: A configuration with no :allure is held to rdm-spec's default mapping
       Given a configuration that declares no :allure
       When "rdm-spec verify ROOM 03" is run
-      Then each result is held to {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags} :links {:need {:type "issue" :url "dhf/spec/needs.edn#{id}"}} :evidence {}}
+      Then each result is held to {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags} :links {:need {:type "issue" :url "N#{id}"}} :evidence {}}, N the configuration's :needs
+      And N is dhf/spec/needs.edn for a configuration that names no :needs
