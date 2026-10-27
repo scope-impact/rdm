@@ -1,63 +1,66 @@
 (ns rdm-spec.spec.parser-test
-  (:require [clojure.test :refer [deftest is]]
-            [babashka.fs :as fs]
-            [babashka.process :as p]
-            [rdm-spec.kernel.bus :as bus]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [rdm-spec.spec.parser :as parser]))
 
-(def model "{:containers [{:id :app :contexts [{:id :architecture :name \"architecture\" :components [{:id :architecture/lint :name \"Lint\" :spec \"architecture/lint\"}]}]}] :kernel [{:id :kernel/bus :name \"Event bus\" :spec \"kernel/bus\"}]}")
+(def text
+  "@UN-001
+Feature: Lint
+  Its description.
 
-(def lint "@UN-005\nFeature: Lint\n\n  @UN-002\n  Rule: Views\n\n    @spec-0012 @e2e\n    Scenario: Names the view\n      Given a view\n\n    @spec-0013 @contract @wip @UN-003\n    Scenario Outline: Rows <a>\n      Given <a>\n\n      Examples:\n        | a |\n        | 1 |\n")
+  Background:
+    Given a model
 
-(defn- project []
-  (let [d (str (fs/create-temp-dir {:dir (or (System/getenv "TMPDIR") (System/getProperty "java.io.tmpdir"))}))]
-    (fs/create-dirs (fs/path d "dhf/spec/architecture"))
-    (fs/create-dirs (fs/path d "dhf/spec/kernel"))
-    (spit (str d "/dhf/spec/model.edn") model)
-    (spit (str d "/dhf/spec/needs.edn") "{\"UN-005\" {:text \"t\" :sources [\"a:b@c\"]}}")
-    (spit (str d "/dhf/spec/architecture/lint.feature") lint)
-    (spit (str d "/dhf/spec/kernel/bus.feature") "Feature: Bus\n  @e2e\n  Scenario: Unstamped\n    Given x\n")
-    d))
+  @UN-002
+  Rule: Every view is described
 
-(def config {:spec-dir "dhf/spec" :model "dhf/spec/model.edn" :needs "dhf/spec/needs.edn" :id-prefix "spec"})
+    @spec-0012 @e2e
+    Scenario: Lint names the view
+      Given a view with no description
+      When the model is linted
+      Then the view is named
+      And a doc:
+        \"\"\"
+        text
+        \"\"\"
 
-(deftest parses-scenarios-with-their-owners
-  (let [d (project)]
-    (try
-      (bus/start!)
-      (let [r (parser/stage {:root d :config config})
-            {:keys [scenarios needs]} (bus/latest :SpecParsed)
-            [s12 s13 bus-s] (sort-by :file (sort-by :line scenarios))]
-        (is (empty? (:findings r)))
-        (is (= 3 (count scenarios)))
-        (is (= [{:id "UN-005" :text "t" :sources ["a:b@c"]}] needs))
-        (let [s12 (first (filter #(= "spec-0012" (:id %)) scenarios))
-              s13 (first (filter #(= "spec-0013" (:id %)) scenarios))
-              sb (first (filter #(nil? (:id %)) scenarios))]
-          (is (= {:title "Names the view" :file "dhf/spec/architecture/lint.feature" :line 8 :level :e2e
-                  :needs ["UN-005" "UN-002"] :wip? false :outline? false :rule "Views"
-                  :context :architecture :component :architecture/lint :context-name "architecture" :component-name "Lint"}
-                 (select-keys s12 [:title :file :line :level :needs :wip? :outline? :rule :context :component :context-name :component-name])))
-          (is (= [{:keyword "Given" :text "a view"}] (:steps s12)))
-          (is (:wip? s13))
-          (is (:outline? s13))
-          (is (= [["1"]] (:rows s13)))
-          (is (= ["UN-005" "UN-002" "UN-003"] (:needs s13)))
-          (is (= :kernel (:context sb)))
-          (is (= [] (:ids sb)))))
-      (finally (fs/delete-tree d)))))
+    @spec-0013 @contract @wip
+    Scenario Outline: Rows of <n>
+      Given <n> rows
+        | a | b |
 
-(deftest reads-at-a-revision
-  (let [d (project)
-        g (fn [& a] (apply p/shell {:dir d :out :string :err :string :extra-env {"GIT_CEILING_DIRECTORIES" (str (fs/parent d))}} "git" "-c" "user.name=x" "-c" "user.email=x@x" "-c" "core.hooksPath=/dev/null" a))]
-    (try
-      (g "init" "-q") (g "add" "-A") (g "commit" "-q" "--no-verify" "-m" "one") (g "tag" "spec-1")
-      (spit (str d "/dhf/spec/kernel/bus.feature") "Feature: Bus\n")
-      (bus/start!)
-      (parser/stage {:root d :config config :revision "spec-1"})
-      (is (= 3 (count (:scenarios (bus/latest :SpecParsed)))))
-      (is (= "spec-1" (:revision (bus/latest :SpecParsed))))
-      (bus/start!)
-      (parser/stage {:root d :config config})
-      (is (= 2 (count (:scenarios (bus/latest :SpecParsed)))))
-      (finally (fs/delete-tree d)))))
+      Examples:
+        | n |
+        | 1 |
+        | 2 |
+")
+
+(deftest a-feature-is-read-whole
+  (let [{:keys [scenarios refusals feature]} (parser/parse-feature "dhf/spec/architecture/lint.feature" text)
+        [a b] scenarios]
+    (is (empty? refusals))
+    (is (= "Lint" (:name feature)))
+    (is (= 2 (count scenarios)))
+    (is (= {:id "spec-0012" :ids ["spec-0012"] :title "Lint names the view" :line 12 :level :e2e
+            :needs ["UN-001" "UN-002"] :wip? false :outline? false :rule "Every view is described" :feature "Lint"}
+           (select-keys a [:id :ids :title :line :level :needs :wip? :outline? :rule :feature])))
+    (is (= [{:keyword "Given" :text "a model"}] (map #(select-keys % [:keyword :text]) (:background a))))
+    (is (= ["Given" "When" "Then" "And"] (map :keyword (:steps a))))
+    (is (= "text" (:doc (last (:steps a)))))
+    (is (= [["a" "b"]] (:table (first (:steps b)))))
+    (is (:wip? b))
+    (is (:outline? b))
+    (is (= [["1"] ["2"]] (:rows b)))
+    (is (= ["n"] (:headings (first (:examples b)))))
+    (is (= #{"UN-001" "spec-0013" "contract" "wip" "UN-002"} (set (:all-tags b))))))
+
+(deftest what-is-outside-the-subset-is-refused
+  (let [r (parser/parse-feature "f.feature" "Feature: A\n\n  Scenario: x\n    Given y\n\n  Scenario Template: z\n")]
+    (is (= [[6 "gherkin-keyword-unknown"]] (map (juxt :line :rule) (:refusals r))))
+    (is (str/includes? (:message (first (:refusals r))) "Scenario Template")))
+  (let [r (parser/parse-feature "f.feature" "Feature: A\n\nFeature: B\n")]
+    (is (= [3] (map :line (:refusals r))))))
+
+(deftest an-id-is-a-tag-of-the-prefix
+  (is (= ["spec-0001"] (parser/ids-of ["spec-0001" "e2e" "UN-001"] "spec")))
+  (is (= ["auth-0004"] (parser/ids-of ["auth-0004" "spec-0001"] "auth"))))

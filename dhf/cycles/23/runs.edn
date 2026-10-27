@@ -3,7 +3,21 @@
   :began "2026-10-27T20:55:34.969407695Z",
   :ended "2026-10-27T21:46:15.161639752Z",
   :minutes 50.67,
-  :tokens 600000,
+  :tokens 610617,
+  :defence
+  {:writes-outside [],
+   :tmp-left 0,
+   :repo-touched [],
+   :results-in-room false,
+   :unobserved
+   ["reads outside the room: no read is observed"
+    "writes below a watched directory's own entries, and anything undone before the run ended"]}}
+ {:role "grader",
+  :room "/home/user/c23/grade-a",
+  :began "2026-10-27T21:50:09.135966071Z",
+  :ended "2026-10-27T22:09:48.099597320Z",
+  :minutes 19.65,
+  :tokens 587860,
   :defence
   {:writes-outside [],
    :tmp-left 0,

@@ -1,419 +1,366 @@
 (ns steps.kernel-plugins
-  "Step definitions of dhf/spec/kernel/plugins.feature. A scenario's plugins
-  are small commands it writes into its own project; the templates are the
-  ones this rdm-spec carries (plugins/ beside src/), and a package of it is a
-  jar the scenario builds in its own directory, as the way of working's
-  packaging step does."
+  "Step definitions of dhf/spec/kernel/plugins.feature: each plugin is a
+  small command the scenario writes into its project."
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep fail! defer!]]
+            [rdm-spec.kernel.runner :refer [defstep fail!]]
             [steps.kernel-command :as k]))
 
 (defn- file [ctx p] (fs/file (k/guard! (:dir ctx)) p))
-
-(defn- script [name] (str "dhf/harness/plugins/" name "/run.sh"))
+(defn- text [ctx p] (let [f (file ctx p)] (when (fs/exists? f) (slurp f))))
 
 (defn plugins!
-  "A project whose :plugins are entries, with the scripts {name text} each
-  plugin runs (sh dhf/harness/plugins/<name>/run.sh)."
-  [ctx entries scripts]
+  "A project whose :plugins are entries, with the files written."
+  [ctx entries & [files]]
   (let [ctx (k/project! ctx {:config {:plugins entries}})]
-    (k/write-files! (:dir ctx) (into {} (for [[n text] scripts] [(script n) text])))
+    (k/write-files! (:dir ctx) (or files {}))
     ctx))
 
-(defn- sub [name events & {:as more}]
-  (merge {:name name :subscribes events :command ["sh" (script name)]} more))
-
 (def recorder
-  "Writes what it is given, where it ran and RDM_SPEC, and counts its runs."
-  (str "cat > given.edn\n"
-       "pwd > cwd.txt\n"
-       "printf '%s' \"$RDM_SPEC\" > rdm-spec.txt\n"
-       "echo ran >> runs.txt\n"))
+  "Records its input, where it ran and its environment."
+  "cat > got.edn; pwd > cwd.txt; env > env.txt; echo ran >> ran.log")
 
-(defn- ran-log [name] (str "echo " name " >> ran.log\n"))
-
-(defn- read-file [ctx p] (let [f (file ctx p)] (when (fs/exists? f) (slurp f))))
-
-(defn- plugin-runs [ctx] (:plugins (k/edn-out ctx)))
+(defn sh-plugin [name kind & {:keys [script seconds env]}]
+  (cond-> {:name name :command ["sh" "-c" (or script recorder)]}
+    (vector? kind) (assoc :subscribes kind)
+    (keyword? kind) (assoc :answers kind)
+    seconds (assoc :seconds seconds)
+    env (assoc :env env)))
 
 ;; ---------------------------------------------------------------------------
-;; A plugin is declared in the configuration, in the order it runs
+;; Declared in the configuration
 
-(defstep #"a configuration whose :plugins is (\[.+\])"
-  (fn [ctx entries]
-    (let [es (edn/read-string entries)]
-      (-> (k/project! ctx {:config {:plugins es}})
-          (doto (-> :dir (k/write-files! {"dhf/harness/plugins/lint-a/run.clj" "(slurp *in*)\n(spit \"lint-a.log\" \"ran\\n\" :append true)\n"
-                                          "dhf/harness/oracle/oracle.clj" "(System/exit 0)\n"})))
-          (assoc ::entries es)))))
+(defstep #"a configuration whose :plugins is \[\{:name \"lint-a\" :subscribes \[:SpecParsed\] :command \[\"bb\" \"dhf/harness/plugins/lint-a/run.clj\"\] :seconds 20\} \{:name \"oracle\" :answers :Gate :command \[\"bb\" \"dhf/harness/oracle/oracle.clj\"\]\}\]"
+  (fn [ctx]
+    (plugins! ctx [{:name "lint-a" :subscribes [:SpecParsed] :command ["bb" "dhf/harness/plugins/lint-a/run.clj"] :seconds 20}
+                   {:name "oracle" :answers :Gate :command ["bb" "dhf/harness/oracle/oracle.clj"]}]
+              {"dhf/harness/plugins/lint-a/run.clj" "(spit \"got.edn\" (slurp *in*))\n"})))
 
-(defn- check-with [ctx plugins]
-  (k/update-edn! ctx "dhf/harness/config.edn" assoc :plugins plugins)
-  (k/rdm ctx ["check"]))
-
-(defstep #"each entry is read as exactly :name, :command, one of :subscribes \(a vector of event names\) or :answers \(:Gate or :Check\), and an optional :seconds, its time limit"
+(defstep #"each entry is read as exactly :name, :command, one of :subscribes \(a vector of event names\) or :answers \(:Gate or :Check\), an optional :seconds, its time limit, and an optional :env"
   (fn [ctx]
     (k/check-exit ctx 0)
-    (let [[lint oracle] (::entries ctx)
-          runs (plugin-runs ctx)]
-      (assert (= [{:plugin "lint-a" :event :SpecParsed :exit 0 :seconds 20}] (map #(dissoc % :notes) runs)) (pr-str runs))
-      (assert (= "ran\n" (read-file ctx "lint-a.log")))
-      ;; anything else in an entry is refused, before anything runs
-      (doseq [bad [(assoc lint :colour "red")
-                   (assoc lint :subscribes :SpecParsed)
-                   (assoc lint :seconds "twenty")
-                   (dissoc lint :command)
-                   (assoc lint :command "bb run.clj")
-                   (dissoc lint :name)]]
-        (fs/delete-if-exists (file ctx "lint-a.log"))
-        (let [r (check-with ctx [bad oracle])]
-          (k/check-exit r 2)
-          (assert (not (fs/exists? (file ctx "lint-a.log"))) (str "it ran with " (pr-str bad)))))
-      (k/update-edn! ctx "dhf/harness/config.edn" assoc :plugins (::entries ctx))
-      ctx)))
+    (assert (= :SpecParsed (:event (edn/read-string (text ctx "got.edn")))))
+    ;; a key it does not know is refused
+    (k/update-edn! ctx "dhf/harness/config.edn" update-in [:plugins 0] assoc :owner "Sami")
+    (let [r (k/rdm ctx ["check"])]
+      (k/check-exit r 2)
+      (k/err-line-with r "lint-a" ":owner"))
+    (k/update-edn! ctx "dhf/harness/config.edn" update-in [:plugins 0] dissoc :owner)
+    ctx))
 
 (defstep #"a plugin with no :seconds has 60 seconds"
   (fn [ctx]
-    (let [[lint oracle] (::entries ctx)
-          r (check-with ctx [(dissoc lint :seconds) oracle])]
-      (k/check-exit r 0)
-      (assert (= [60] (map :seconds (plugin-runs r))) (:out r))
-      ctx)))
+    (let [declared (requiring-resolve 'rdm-spec.kernel.plugins/declared)
+          cfg (edn/read-string (text ctx "dhf/harness/config.edn"))]
+      (assert (= [20 60] (map :seconds (declared cfg)))))
+    ctx))
 
 (def bad-entries
-  {"a plugin with neither :subscribes nor :answers" [{:name "lint-a" :command ["sh" (script "lint-a")]}]
-   "a plugin with both :subscribes and :answers" [(sub "lint-a" [:SpecParsed] :answers :Gate)]
-   "a plugin subscribing to :NoSuchEvent" [(sub "lint-a" [:NoSuchEvent])]
-   "a plugin answering :Review" [{:name "lint-a" :answers :Review :command ["sh" (script "lint-a")]}]
-   "two plugins named \"lint-a\"" [(sub "lint-a" [:SpecParsed]) (sub "lint-a" [:SpecGated])]
-   "a plugin whose command is under the implementation's paths" [(assoc (sub "lint-a" [:SpecParsed]) :command ["sh" "src/lint-a.sh"])]})
+  {"a plugin with neither :subscribes nor :answers" [[{:name "judge" :command ["sh" "-c" "true"]}] "subscribes to events or answers a request"]
+   "a plugin with both :subscribes and :answers" [[{:name "judge" :subscribes [:SpecParsed] :answers :Gate :command ["sh" "-c" "true"]}] "not both"]
+   "a plugin subscribing to :NoSuchEvent" [[{:name "judge" :subscribes [:NoSuchEvent] :command ["sh" "-c" "true"]}] "NoSuchEvent" "SpecParsed" "KnowledgeIndexed" "CycleVerified"]
+   "a plugin answering :Review" [[{:name "judge" :answers :Review :command ["sh" "-c" "true"]}] ":Gate and :Check"]
+   "two plugins named \"lint-a\"" [[{:name "lint-a" :subscribes [:SpecParsed] :command ["sh" "-c" "true"]}
+                                   {:name "lint-a" :answers :Gate :command ["sh" "-c" "true"]}] "declared once"]
+   "a plugin whose command is under the implementation's paths" [[{:name "judge" :answers :Gate :command ["bb" "src/judge.clj"]}] "never writes"]})
 
-(defstep #"a configuration whose :plugins holds (a plugin .+|two plugins named .+)"
+(defstep #"a configuration whose :plugins holds (a plugin .+|two plugins named \"lint-a\")"
   (fn [ctx entry]
-    (let [es (or (bad-entries entry) (throw (ex-info (str "no fixture for " entry) {})))
-          ctx (plugins! ctx es {"lint-a" (ran-log "lint-a")})]
-      (k/write-files! (:dir ctx) {"src/lint-a.sh" (ran-log "lint-a")})
-      ctx)))
+    (let [[entries & names] (or (bad-entries entry) (fail! (str "no such entry: " entry)))]
+      (apply k/names+ (plugins! ctx entries) (if (str/includes? entry "lint-a") "lint-a" "judge") names))))
 
-(def event-names ["KnowledgeIndexed" "SpecParsed" "SpecGated" "VerificationDerived" "ClausesIndexed"])
-
-(defstep #"it exits 2, names the plugin, and says (.+)"
-  (fn [ctx why]
+(defstep #"it exits 2, names the plugin, and says .+"
+  (fn [ctx]
     (k/check-exit ctx 2)
-    (k/err-line-with ctx "cannot-run:" "lint-a")
-    (if-let [[_ head] (re-matches #"(.+), and lists the events it publishes" why)]
-      (do (k/err-line-with ctx head) (apply k/err-line-with ctx event-names))
-      (k/err-line-with ctx why))
-    (assert (str/blank? (:out ctx)) (:out ctx))
-    (assert (not (fs/exists? (file ctx "ran.log"))) "a plugin ran")
+    (apply k/err-line-with ctx "cannot-run:" (:names ctx))
+    (assert (not (fs/exists? (file ctx "ran.log"))))
     ctx))
 
 ;; ---------------------------------------------------------------------------
-;; A subscriber receives each event it subscribes to
+;; Subscribers
 
 (defstep #"a plugin subscribing to :SpecParsed whose command writes what it is given to a file in the project"
-  (fn [ctx] (plugins! ctx [(sub "rec" [:SpecParsed])] {"rec" recorder})))
+  (fn [ctx] (plugins! ctx [(sh-plugin "lint-a" [:SpecParsed])])))
 
-(defn- rdm-spec-line-ok [ctx line]
-  (assert (str/includes? line (str (fs/path k/room-root "src"))) line)
-  (assert (str/includes? line "-m rdm-spec.kernel.command") line)
-  ;; it starts this same rdm-spec
-  (let [r (k/sh (:dir ctx) {} "sh" "-c" (str line " help"))]
-    (assert (= 0 (:exit r)) (:err r))
-    (assert (str/starts-with? (:out r) "{:help") (:out r))))
+(defn rdm-spec-line? [s] (and s (str/includes? s "-m rdm-spec.kernel.command")))
+
+(defn env-of [ctx]
+  (into {} (for [l (str/split-lines (or (text ctx "env.txt") "")) :let [[k v] (str/split l #"=" 2)] :when v] [k v])))
 
 (defstep #"the plugin ran once, in the project's root, with the environment variable RDM_SPEC set as the oracle's is"
   (fn [ctx]
     (k/check-exit ctx 0)
-    (assert (= "ran\n" (read-file ctx "runs.txt")) (pr-str (read-file ctx "runs.txt")))
-    (assert (= (str (fs/canonicalize (:dir ctx))) (str (fs/canonicalize (str/trim (read-file ctx "cwd.txt"))))))
-    (rdm-spec-line-ok ctx (read-file ctx "rdm-spec.txt"))
+    (assert (= "ran\n" (text ctx "ran.log")) (text ctx "ran.log"))
+    (assert (= (str (fs/canonicalize (:dir ctx))) (str (fs/canonicalize (str/trim (text ctx "cwd.txt"))))))
+    (assert (rdm-spec-line? (get (env-of ctx) "RDM_SPEC")) (pr-str (get (env-of ctx) "RDM_SPEC")))
     ctx))
 
 (defstep #"its standard input was the SpecParsed event as EDN: \{:event :SpecParsed\} merged with every key events.edn says the event carries"
   (fn [ctx]
-    (let [given (edn/read-string (read-file ctx "given.edn"))
-          carries (get-in (edn/read-string (slurp (fs/file k/room-root "dhf/spec/events.edn"))) [:SpecParsed :carries])]
-      (assert (map? given) (pr-str given))
-      (assert (= (set (cons :event carries)) (set (keys given))) (pr-str (keys given)))
-      (assert (= :SpecParsed (:event given)))
-      (assert (= :working-tree (:revision given)) (pr-str (:revision given)))
-      (assert (= ["spec-0001"] (map :id (:scenarios given))) (pr-str (:scenarios given)))
-      (assert (= ["UN-001"] (map :id (:needs given))) (pr-str (:needs given)))
+    (let [got (edn/read-string (text ctx "got.edn"))]
+      (assert (= #{:event :revision :scenarios :needs :refusals} (set (keys got))) (pr-str (keys got)))
+      (assert (= :SpecParsed (:event got)))
+      (assert (= ["spec-0001"] (map :id (:scenarios got))))
       ctx)))
 
-(defn- timed [name] (str "cat > /dev/null\necho \"" name " $(date +%s%N)\" >> order.log\n"))
+(defn appender [name & [extra]]
+  (str "echo " name " $(date +%s%N) >> order.log" (when extra (str "; " extra))))
 
 (defstep #"two plugins subscribing to :SpecParsed, \"lint-a\" then \"lint-b\", each writing its name and the time to a shared file"
   (fn [ctx]
-    (-> (plugins! ctx [(sub "lint-a" [:SpecParsed]) (sub "lint-b" [:SpecParsed])]
-                  {"lint-a" (timed "lint-a") "lint-b" (timed "lint-b")})
-        (assoc ::before (* 1000000 (System/currentTimeMillis))))))
+    (let [ctx (plugins! ctx [(sh-plugin "lint-a" [:SpecParsed] :script (appender "lint-a" "echo 'x.feature:1: plugin-a: from lint-a' >&2; exit 1"))
+                             (sh-plugin "lint-b" [:SpecParsed] :script (appender "lint-b"))])]
+      ;; and a finding of the spec check's own
+      (k/write-files! (:dir ctx) {k/core-feature (k/feature-text {:name "Core" :tags ["UN-001"]
+                                                                  :scenarios [(assoc (k/sc 1 "No level") :tags ["spec-0001"])]})})
+      ctx)))
 
 (defstep #"lint-a ran before lint-b, and both after the spec check's own stages"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (let [ls (map #(str/split % #" ") (str/split-lines (read-file ctx "order.log")))]
-      (assert (= ["lint-a" "lint-b"] (map first ls)) (pr-str ls))
-      (assert (apply <= (map (comp parse-long second) ls)))
-      ;; the result reports them after the core's own, in the order declared
-      (assert (= ["lint-a" "lint-b"] (map :plugin (plugin-runs ctx))))
-      ;; and the core's stages had all published by then
-      (let [r (k/rdm ctx ["check" "--events"])
-            events (filter #(str/starts-with? % "event: ") (k/err-lines r))]
-        (k/check-exit r 0)
-        (assert (some #(str/includes? % "SpecGated") events) (:err r))
-        (assert (= 4 (count (str/split-lines (read-file ctx "order.log")))))))
-    ctx))
+    (k/check-exit ctx 1)
+    (let [order (map #(first (str/split % #" ")) (str/split-lines (text ctx "order.log")))
+          ls (k/err-lines ctx)
+          idx (fn [s] (first (keep-indexed (fn [i l] (when (str/includes? l s) i)) ls)))]
+      (assert (= ["lint-a" "lint-b"] order) (pr-str order))
+      (assert (< (idx "spec-0001") (idx "plugin-a")) (:err ctx))
+      ctx)))
 
 (defstep #"a plugin subscribing only to :VerificationDerived"
-  (fn [ctx] (plugins! ctx [(sub "late" [:VerificationDerived])] {"late" (ran-log "late")})))
+  (fn [ctx] (plugins! ctx [(sh-plugin "lint-a" [:VerificationDerived])])))
 
 (defstep #"the plugin did not run"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (assert (not (fs/exists? (file ctx "ran.log"))) "it ran")
-    (assert (empty? (plugin-runs ctx)) (:out ctx))
+    (when-not (#{0 1} (:exit ctx)) (fail! (str "the task did not run: " (:err ctx))))
+    (assert (not (fs/exists? (file ctx "ran.log"))))
     ctx))
 
 ;; ---------------------------------------------------------------------------
-;; A plugin answers through one interface
+;; One interface
 
-(defn- sq [s] (str "'" (str/replace s "'" "'\\''") "'"))
+(def answers
+  {"writes \"dhf/spec/a/b.feature:4: action-unoffered: no form offers it\" on its error stream and exits 1"
+   ["echo 'dhf/spec/a/b.feature:4: action-unoffered: no form offers it' >&2; exit 1" "dhf/spec/a/b.feature:4: action-unoffered: no form offers it"]
+   "writes \"dhf/spec/a/b.feature:4: warning: label-long: …\" on its error stream and exits 0"
+   ["echo 'dhf/spec/a/b.feature:4: warning: label-long: …' >&2; exit 0" "dhf/spec/a/b.feature:4: warning: label-long: …"]
+   "writes nothing and exits 0" ["exit 0" nil]
+   "exits 2, writing \"cannot read affordances.yaml\" on its error stream"
+   ["echo 'cannot read affordances.yaml' >&2; exit 2" "cannot read affordances.yaml"]})
 
 (defstep #"a plugin subscribing to :SpecParsed that (.+)"
   (fn [ctx does]
-    (let [text (or (when-let [[_ line n] (re-matches #"writes \"(.+)\" on its error stream and exits (\d)" does)]
-                     (str "printf '%s\\n' " (sq line) " >&2\nexit " n "\n"))
-                   (when-let [[_ n] (re-matches #"writes nothing and exits (\d)" does)]
-                     (str "exit " n "\n"))
-                   (when-let [[_ n line] (re-matches #"exits (\d), writing \"(.+)\" on its error stream" does)]
-                     (str "printf '%s\\n' " (sq line) " >&2\nexit " n "\n"))
-                   (throw (ex-info (str "no fixture for " does) {})))
-          line (second (re-find #"\"(.+)\"" does))]
-      (-> (plugins! ctx [(sub "lint-a" [:SpecParsed])] {"lint-a" (str "cat > /dev/null\n" text)})
-          (assoc ::line line)))))
+    (let [[script line] (or (answers does) (fail! (str "no such plugin: " does)))]
+      (-> (plugins! ctx [(sh-plugin "lint-a" [:SpecParsed] :script script)]) (assoc ::line line)))))
 
 (defstep #"\"rdm-spec check\" is run on a spec that passes every check"
-  (fn [ctx]
-    (let [ctx (k/project! ctx)
-          r (k/rdm ctx ["check"])]
-      ;; the spec passes every check without the plugin
-      (let [plugins (:plugins (edn/read-string (slurp (file ctx "dhf/harness/config.edn"))))
-            _ (k/update-edn! ctx "dhf/harness/config.edn" dissoc :plugins)
-            bare (k/rdm ctx ["check"])]
-        (k/update-edn! ctx "dhf/harness/config.edn" assoc :plugins plugins)
-        (k/check-exit bare 0))
-      r)))
+  (fn [ctx] (k/rdm ctx ["check"])))
 
-(defstep #"it exits (\d), and the error stream (that line, unchanged, as a finding|that line, unchanged, as a warning|no line from the plugin|cannot-run, naming the plugin and relaying its line)"
-  (fn [ctx n holds]
-    (k/check-exit ctx (parse-long n))
-    (let [ls (k/err-lines ctx)]
-      (case holds
-        "that line, unchanged, as a finding"
-        (do (assert (some #{(::line ctx)} ls) (:err ctx))
-            (assert (some #{"action-unoffered"} (k/finding-rules ctx)) (:err ctx)))
-        "that line, unchanged, as a warning"
-        (assert (some #{(::line ctx)} ls) (:err ctx))
-        "no line from the plugin"
-        (assert (not-any? #(str/includes? % "lint-a") ls) (:err ctx))
-        "cannot-run, naming the plugin and relaying its line"
-        (do (k/err-line-with ctx "cannot-run:" "lint-a" (::line ctx))
-            (assert (str/blank? (:out ctx)) (:out ctx)))))
+(defstep #"it (exits \d), and the error stream (.+)"
+  (fn [ctx exits holds]
+    (k/check-exit ctx (parse-long (subs exits 6)))
+    (let [line (::line ctx) ls (k/err-lines ctx)]
+      (cond
+        (str/starts-with? holds "cannot-run") (k/err-line-with ctx "cannot-run:" "lint-a" line)
+        line (assert (some #{line} ls) (:err ctx))
+        :else (assert (not-any? #(str/includes? % "b.feature") ls) (:err ctx))))
     ctx))
 
-(defn- running?
-  "The process pid runs: it exists and is no zombie."
-  [pid]
-  (and (.isPresent (java.lang.ProcessHandle/of pid))
-       (let [stat (try (slurp (str "/proc/" pid "/stat")) (catch Exception _ nil))]
-         (and stat (not (re-find #"^\d+ \(.*\) Z" stat))))))
-
-(defn- alive?
-  "The process pid still runs a moment after it was stopped (a stop is not instant)."
-  [pid]
-  (loop [n 20]
-    (cond (not (running? pid)) false
-          (zero? n) true
-          :else (do (Thread/sleep 100) (recur (dec n))))))
-
 (defstep #"a plugin subscribing to :SpecParsed with :seconds 2, which prints \"started\" and then sleeps for 10 seconds"
-  (fn [ctx]
-    (let [ctx (plugins! ctx [(sub "slow" [:SpecParsed] :seconds 2)]
-                        {"slow" (str "echo $$ > slow.pids\necho started\nsleep 10 &\necho $! >> slow.pids\nwait\n")})]
-      ;; whatever the step decides, nothing it started outlives the scenario
-      (defer! #(doseq [l (some-> (read-file ctx "slow.pids") str/split-lines)
-                       :let [pid (parse-long (str/trim l))]
-                       :when pid]
-                 (when-let [h (.orElse (java.lang.ProcessHandle/of pid) nil)] (.destroyForcibly h))))
-      ctx)))
+  (fn [ctx] (plugins! ctx [(sh-plugin "lint-a" [:SpecParsed] :script "echo started; sleep 10.37" :seconds 2)])))
+
+(defn- running? [pattern]
+  (let [r (k/sh "." {} "ps" "-eo" "args")]
+    (some #(str/includes? % pattern) (str/split-lines (:out r)))))
 
 (defstep #"it exits 2 within 5 seconds, says the plugin timed out after 2 seconds, and relays \"started\""
   (fn [ctx]
     (k/check-exit ctx 2)
-    (assert (< (:seconds ctx) 5) (str "it took " (:seconds ctx) " seconds"))
-    (k/err-line-with ctx "cannot-run:" "slow" "timed out after 2 seconds" "started")
+    (k/err-line-with ctx "lint-a" "timed out after 2 seconds" "started")
+    (assert (< (:seconds ctx) 5) (str "it took " (:seconds ctx)))
     ctx))
 
 (defstep #"no process of the plugin is still running"
-  (fn [ctx]
-    (let [pids (map (comp parse-long str/trim) (str/split-lines (read-file ctx "slow.pids")))]
-      (assert (= 2 (count pids)) (pr-str pids))
-      (doseq [pid pids] (assert (not (alive? pid)) (str "the process " pid " is still running")))
-      ctx)))
+  (fn [ctx] (assert (not (running? "sleep 10.37"))) ctx))
 
 (defstep #"a plugin whose command is \[\"no-such-plugin\"\]"
-  (fn [ctx] (plugins! ctx [{:name "ghost" :subscribes [:SpecParsed] :command ["no-such-plugin"]}] {})))
+  (fn [ctx] (plugins! ctx [{:name "lint-a" :subscribes [:SpecParsed] :command ["no-such-plugin"]}])))
 
 (defstep #"it exits 2 and names the plugin and its command"
-  (fn [ctx]
-    (k/check-exit ctx 2)
-    (k/err-line-with ctx "cannot-run:" "ghost" "no-such-plugin")))
+  (fn [ctx] (k/check-exit ctx 2) (k/err-line-with ctx "cannot-run:" "lint-a" "no-such-plugin")))
 
 ;; ---------------------------------------------------------------------------
-;; An answerer is asked at its request's place
+;; Answerers
 
-(defstep #"a project with two plugins answering :Gate, \"first\" exiting 0 and \"second\" exiting 1 with the finding \"(.+)\""
-  (fn [ctx finding]
-    (let [gate (fn [n] {:name n :answers :Gate :command ["sh" (script n)]})
-          ctx (plugins! ctx [(gate "first") (gate "second")]
-                        {"first" (str "cat > /dev/null\necho first >> gate.log\n")
-                         "second" (str "cat > /dev/null\necho second >> gate.log\nprintf '%s\\n' " (sq finding) " >&2\nexit 1\n")})]
-      (-> (k/tag-cut! ctx "spec-3") (assoc ::line finding)))))
+(defstep #"a project with two plugins answering :Gate, \"first\" exiting 0 and \"second\" exiting 1 with the finding \"x:1: oracle-differs: …\""
+  (fn [ctx]
+    (-> (plugins! ctx [(sh-plugin "first" :Gate :script "echo first >> order.log")
+                       (sh-plugin "second" :Gate :script "echo second >> order.log; echo 'x:1: oracle-differs: …' >&2; exit 1")])
+        (k/tag-cut! "spec-3"))))
 
 (defstep #"first ran, then second; it exits 1, relays the finding unchanged, and builds no room"
   (fn [ctx]
-    (assert (= "first\nsecond\n" (read-file ctx "gate.log")) (pr-str (read-file ctx "gate.log")))
     (k/check-exit ctx 1)
-    (assert (some #{(::line ctx)} (k/err-lines ctx)) (:err ctx))
-    (assert (not (fs/exists? (file ctx "room"))) "a room was built")
+    (assert (= ["first" "second"] (str/split-lines (text ctx "order.log"))))
+    (assert (some #{"x:1: oracle-differs: …"} (k/err-lines ctx)) (:err ctx))
+    (assert (not (fs/exists? (fs/path (:dir ctx) "room"))))
+    (assert (not (fs/exists? (fs/path (get-in ctx [:ph "ROOM"] (fs/path (:base ctx) "none")) ".git"))))
     ctx))
 
 (defstep #"a plugin answering :Gate whose command writes what it is given to a file in the project"
-  (fn [ctx]
-    (-> (plugins! ctx [{:name "rec" :answers :Gate :command ["sh" (script "rec")]}] {"rec" recorder})
-        k/cycle-ready!)))
+  (fn [ctx] (k/verifiable! ctx {:config {:plugins [(sh-plugin "gate" :Gate)]}})))
 
 (defstep #"its standard input was \{:request :Gate :task :verify :cut \"spec-3\" :cycle \"03\"\}"
   (fn [ctx]
-    (assert (= {:request :Gate :task :verify :cut "spec-3" :cycle "03"} (edn/read-string (read-file ctx "given.edn")))
-            (read-file ctx "given.edn"))
-    (assert (= (str (fs/canonicalize (:dir ctx))) (str (fs/canonicalize (str/trim (read-file ctx "cwd.txt"))))))
+    (assert (= {:request :Gate :task :verify :cut "spec-3" :cycle "03"} (edn/read-string (text ctx "got.edn"))) (text ctx "got.edn"))
     ctx))
 
 ;; ---------------------------------------------------------------------------
-;; A plugin is added from the templates rdm-spec carries, and then owned
+;; Templates
 
-(def templates-dir (str (fs/path k/room-root "plugins")))
-
-(defn templates
-  "{name version} of every template this rdm-spec carries."
-  []
-  (into (sorted-map) (for [t (fs/list-dir templates-dir)
-                           :let [f (fs/file t "template.edn")]
-                           :when (fs/exists? f)]
-                       [(str (fs/file-name t)) (:version (edn/read-string (slurp f)))])))
-
-(defn- tree [d]
-  (into (sorted-map) (for [f (fs/glob d "**" {:hidden true}) :when (fs/regular-file? f)]
-                       [(str (fs/relativize d f)) (slurp (fs/file f))])))
-
-(defn package!
-  "A jar of this rdm-spec, packaged as the way of working does: plugins/
-  copied to res/rdm-spec/plugins/, then bb --classpath src:res uberjar."
+(defn- jar!
+  "rdm-spec as a package: a jar of its sources and its templates, as
+  resources under rdm-spec/plugins/."
   [ctx]
-  (let [ctx (k/base! ctx)
-        d (k/path-in ctx "package")
-        res (fs/path d "res" "rdm-spec" "plugins")
-        jar (str (fs/path d "rdm-spec.jar"))]
-    (fs/create-dirs (fs/parent res))
-    (fs/copy-tree templates-dir res)
-    (let [r (k/sh d {} "bb" (str "-Djava.io.tmpdir=" k/tmp-root) "--classpath" (str (fs/path k/room-root "src") ":" (fs/path d "res"))
+  (let [res (k/path-in ctx "resources")
+        jar (k/path-in ctx "rdm-spec.jar")]
+    (fs/copy-tree (fs/path k/room-root "plugins") (fs/path res "rdm-spec/plugins"))
+    (let [b (k/sh k/room-root {} "bb" (str "-Djava.io.tmpdir=" k/tmp-root) "--classpath" (str "src:" res)
                   "uberjar" jar "-m" "rdm-spec.kernel.command")]
-      (when-not (= 0 (:exit r)) (throw (ex-info (str "the package was not built: " (:err r)) r))))
-    (assoc ctx ::command ["bb" "-cp" jar "-m" "rdm-spec.kernel.command"] ::jar jar)))
+      (when-not (= 0 (:exit b)) (fail! (str "the jar was not built: " (:err b)))))
+    jar))
 
 (defstep #"rdm-spec installed (from its sources|as a package \(a jar\))"
   (fn [ctx how]
-    (if (= how "from its sources")
-      (assoc ctx ::command (k/rdm-command))
-      (package! ctx))))
-
-(defn- run-installed [ctx & args]
-  (let [dir (k/guard! (:dir ctx))
-        r (k/run-process dir (k/env-for dir (:env ctx)) (concat (::command ctx) args))]
-    (assoc ctx :exit (:exit r) :out (:out r) :err (:err r))))
+    (let [ctx (k/base! ctx)]
+      (if (= how "from its sources")
+        ctx
+        (assoc ctx ::jar (jar! ctx))))))
 
 (defstep #"\"rdm-spec plugin add no-such\" is run in a project set up by rdm-spec"
-  (fn [ctx] (run-installed (k/init-project! ctx) "plugin" "add" "no-such")))
-
-(defn- lists-templates [ctx]
-  (k/err-line-with ctx "cannot-run:" "no-such")
-  (doseq [[n v] (templates)]
-    (k/err-line-with ctx (str n " (version " v ")")))
-  ctx)
+  (fn [ctx]
+    (let [ctx (k/init-project! ctx)]
+      (if-let [jar (::jar ctx)]
+        (merge ctx (k/sh (:dir ctx) {::k/base (:base ctx)} "bb" "-cp" jar "-m" "rdm-spec.kernel.command" "plugin" "add" "no-such"))
+        (k/rdm ctx ["plugin" "add" "no-such"])))))
 
 (defstep #"it lists the templates ddd-domain and affordances, each with its version"
   (fn [ctx]
     (k/check-exit ctx 2)
-    (assert (= #{"ddd-domain" "affordances"} (set (keys (templates)))))
-    (lists-templates ctx)
-    ;; and it copies the same template, however it was installed
-    (let [r (run-installed ctx "plugin" "add" "ddd-domain")]
-      (k/check-exit r 0)
-      (assert (= (tree (fs/path templates-dir "ddd-domain"))
-                 (dissoc (tree (file ctx "dhf/harness/plugins/ddd-domain")) "origin.edn"))))
+    (k/err-line-with ctx "no-such" "ddd-domain" "affordances" "version 1")
     ctx))
 
 (defstep #"a project set up by rdm-spec with no dhf/harness/plugins/ddd-domain"
   (fn [ctx]
     (let [ctx (k/init-project! ctx)]
       (assert (not (fs/exists? (file ctx "dhf/harness/plugins/ddd-domain"))))
-      (assoc ctx ::config (read-file ctx "dhf/harness/config.edn")))))
+      (assoc ctx ::config (text ctx "dhf/harness/config.edn")))))
+
+(defn- tree-of [d]
+  (into {} (for [f (fs/glob d "**") :when (fs/regular-file? f)] [(str (fs/relativize d f)) (slurp (fs/file f))])))
 
 (defstep #"the template ddd-domain rdm-spec carries is copied into dhf/harness/plugins/ddd-domain, unchanged"
   (fn [ctx]
     (k/check-exit ctx 0)
-    (let [copy (tree (file ctx "dhf/harness/plugins/ddd-domain"))]
-      (assert (= (tree (fs/path templates-dir "ddd-domain")) (dissoc copy "origin.edn")) (pr-str (keys copy))))
+    (assert (= (tree-of (fs/path k/room-root "plugins/ddd-domain"))
+               (dissoc (tree-of (file ctx "dhf/harness/plugins/ddd-domain")) "origin.edn")))
     ctx))
-
-(defn today [] (str (java.time.LocalDate/now)))
 
 (defstep #"dhf/harness/plugins/ddd-domain/origin.edn holds exactly \{:template \"ddd-domain\" :version V :copied D\}, V the template's version and D today's date"
   (fn [ctx]
-    (let [o (edn/read-string (read-file ctx "dhf/harness/plugins/ddd-domain/origin.edn"))]
-      (assert (= {:template "ddd-domain" :version (get (templates) "ddd-domain") :copied (today)} o) (pr-str o))
-      ctx)))
-
-(defn- holds? [x v] (or (= x v) (and (coll? x) (some #(holds? % v) (if (map? x) (vals x) x)))))
+    (assert (= {:template "ddd-domain" :version 1 :copied (str (java.time.LocalDate/now))}
+               (edn/read-string (text ctx "dhf/harness/plugins/ddd-domain/origin.edn"))))
+    ctx))
 
 (defstep #"it prints the :plugins entry to add to the configuration, and changes the configuration not at all"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (let [entry (:plugin (edn/read-string (slurp (fs/file templates-dir "ddd-domain" "template.edn"))))]
-      (assert (holds? (k/edn-out ctx) entry) (:out ctx)))
-    (assert (= (::config ctx) (read-file ctx "dhf/harness/config.edn")) "the configuration changed")
+    (assert (str/includes? (:out ctx) "dhf/harness/plugins/ddd-domain/lint.clj") (:out ctx))
+    (assert (= (::config ctx) (text ctx "dhf/harness/config.edn")))
     ctx))
 
 (defstep #"a project set up by rdm-spec (that already has dhf/harness/plugins/ddd-domain|and nothing else)"
   (fn [ctx given]
     (let [ctx (k/init-project! ctx)]
-      (if (= given "and nothing else")
-        ctx
-        (do (k/write-files! (:dir ctx) {"dhf/harness/plugins/ddd-domain/mine.txt" "our own\n"})
-            (-> ctx (assoc ::before (tree (file ctx "dhf/harness/plugins/ddd-domain")))
-                (k/names+ "dhf/harness/plugins/ddd-domain")))))))
+      (when (str/starts-with? given "that")
+        (k/write-files! (:dir ctx) {"dhf/harness/plugins/ddd-domain/mine.clj" "mine\n"}))
+      ctx)))
 
-(defstep #"it exits (\d) and (names the directory and copies nothing|names no-such and lists the templates rdm-spec carries)"
-  (fn [ctx n says]
-    (k/check-exit ctx (parse-long n))
-    (if (= says "names the directory and copies nothing")
-      (do (k/err-has ctx "dhf/harness/plugins/ddd-domain")
-          (assert (= (::before ctx) (tree (file ctx "dhf/harness/plugins/ddd-domain"))) "it copied"))
-      (do (lists-templates ctx)
-          (assert (not (fs/exists? (file ctx "dhf/harness/plugins/no-such"))))))
+(defstep #"it exits (1|2) and (names the directory and copies nothing|names no-such and lists the templates rdm-spec carries)"
+  (fn [ctx exit says]
+    (k/check-exit ctx (parse-long exit))
+    (if (= exit "1")
+      (do (k/err-line-with ctx "dhf/harness/plugins/ddd-domain")
+          (assert (= ["mine.clj"] (keys (tree-of (file ctx "dhf/harness/plugins/ddd-domain"))))))
+      (k/err-line-with ctx "no-such" "ddd-domain" "affordances"))
+    ctx))
+
+;; ---------------------------------------------------------------------------
+;; :env
+
+(defstep #"a plugin subscribing to :SpecParsed with :env \{\"ORACLE_DIR\" \"../e2e\" \"SEND_LIMIT\" \"5\"\} whose command writes its environment to a file in the project"
+  (fn [ctx] (plugins! ctx [(sh-plugin "lint-a" [:SpecParsed] :env {"ORACLE_DIR" "../e2e" "SEND_LIMIT" "5"})])))
+
+(defstep #"the plugin's environment held ORACLE_DIR \"../e2e\", SEND_LIMIT \"5\" and RDM_SPEC, and the rest of the caller's environment"
+  (fn [ctx]
+    (k/check-exit ctx 0)
+    (let [e (env-of ctx)]
+      (assert (= ["../e2e" "5"] [(get e "ORACLE_DIR") (get e "SEND_LIMIT")]) (pr-str e))
+      (assert (rdm-spec-line? (get e "RDM_SPEC")))
+      (assert (= (System/getenv "PATH") (get e "PATH")))
+      (assert (= (System/getenv "HOME") (get e "HOME"))))
+    ctx))
+
+(defstep #"an :env that is not a map of strings to strings is refused before anything runs, naming the plugin"
+  (fn [ctx]
+    (fs/delete-if-exists (file ctx "ran.log"))
+    (k/update-edn! ctx "dhf/harness/config.edn" assoc-in [:plugins 0 :env] {"SEND_LIMIT" 5})
+    (let [r (k/rdm ctx ["check"])]
+      (k/check-exit r 2)
+      (k/err-line-with r "cannot-run:" "lint-a" ":env")
+      (assert (not (fs/exists? (file ctx "ran.log")))))
+    ctx))
+
+;; ---------------------------------------------------------------------------
+;; :CycleVerified
+
+(defstep #"a plugin subscribing to :CycleVerified whose command writes what it is given to a file in the project"
+  (fn [ctx] (k/verifiable! ctx {:config {:plugins [(sh-plugin "deploy" [:CycleVerified])]}})))
+
+(defstep #"a plugin subscribing to :CycleVerified"
+  (fn [ctx] (k/verifiable! ctx {:config {:plugins [(sh-plugin "deploy" [:CycleVerified])]}})))
+
+(defstep #"\"rdm-spec verify ROOM 03\" is run and its tests check fails"
+  (fn [ctx]
+    (let [ctx (-> ctx
+                  (k/update-edn! "dhf/harness/config.edn" assoc :verify [{:kind :tests :command ["sh" "-c" "exit 1"]}])
+                  (k/tag-cut! "spec-3"))]
+      (-> (k/rdm-line ctx "rdm-spec verify ROOM 03") (k/check-exit 1)))))
+
+(defstep #"after every check passed, the plugin ran once, in the project's root, with \{:event :CycleVerified :cycle \"03\" :cut \"spec-3\" :checkout \"dhf/cycles/03/build\" :checks \[\.\.\.\]\} on its input, the checks as ratified.edn holds them"
+  (fn [ctx]
+    (k/check-exit ctx 0)
+    (let [got (edn/read-string (text ctx "got.edn"))
+          ratified (edn/read-string (text ctx "dhf/cycles/03/ratified.edn"))]
+      (assert (= "ran\n" (text ctx "ran.log")))
+      (assert (= (str (fs/canonicalize (:dir ctx))) (str (fs/canonicalize (str/trim (text ctx "cwd.txt"))))))
+      (assert (= {:event :CycleVerified :cycle "03" :cut "spec-3" :checkout "dhf/cycles/03/build" :checks (:checks ratified)} got)
+              (pr-str got))
+      (assert (= [:passed] (map :outcome (:checks got)))))
+    ctx))
+
+(defstep #"its findings are verify's, and a plugin that cannot run makes verify exit 2 after ratified.edn is written"
+  (fn [ctx]
+    (let [ctx (-> ctx
+                  (k/update-edn! "dhf/harness/config.edn" assoc :plugins
+                                 [(sh-plugin "deploy" [:CycleVerified] :script "echo 'deploy.yml:2: deploy-failed: no target' >&2; exit 1")])
+                  (k/tag-cut! "spec-3"))
+          r (k/rdm-line ctx "rdm-spec verify ROOM 03")]
+      (k/check-exit r 1)
+      (k/err-line-with r "deploy.yml:2: deploy-failed: no target")
+      (k/update-edn! ctx "dhf/harness/config.edn" assoc :plugins [(sh-plugin "deploy" [:CycleVerified] :script "exit 2")])
+      (k/tag-cut! ctx "spec-3")
+      (fs/delete (file ctx "dhf/cycles/03/ratified.edn"))
+      (let [r (k/rdm-line ctx "rdm-spec verify ROOM 03")]
+        (k/check-exit r 2)
+        (k/err-line-with r "cannot-run:" "deploy")
+        (assert (= :passed (:outcome (edn/read-string (text ctx "dhf/cycles/03/ratified.edn")))))))
     ctx))

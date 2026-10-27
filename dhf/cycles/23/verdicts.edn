@@ -1,0 +1,652 @@
+[{:id "spec-0019",
+  :verdict :pass,
+  :evidence
+  "Fixture: git repo, tag spec-3 holds 12 stamped scenarios (spec-0008 tagged @wip); working tree adds an uncommitted 13th; dhf/cycles/03/cycle.edn {:cut \"spec-3\" :scope :project ...}. `rdm-spec checklist 03` exit 0; stdout {:checklist {:cycle \"03\", :cut \"spec-3\", :file \"dhf/cycles/03/checklist.json\", :items 11, :planned 1}}; checklist.json \"items\" holds 11 entries (spec-0001..0012 minus 0008, not 0013) each with id, title, context, component, level; \"planned\": [{\"id\": \"spec-0008\", \"title\": \"Check 8\"}]."}
+ {:id "spec-0022",
+  :verdict :pass,
+  :evidence
+  "Fixture: cycle 03 with checklist (12 items) and passing ratified.edn; verdicts file holding []. `rdm-spec score 03 --verdicts V` exit 2; stderr \"cannot-run: no verdict was given: the grading did not happen, so nothing is recorded\"; md5 of every file in dhf/cycles/03 unchanged, no score.edn. (A zero-byte verdicts file instead exits 1, verdicts-unreadable, also writing nothing.)"}
+ {:id "spec-0023",
+  :verdict :pass,
+  :evidence
+  "Fixture: cycle 03 checklist.json with 12 items (spec-0001..0012), passing verification; verdicts grading 11 (all but spec-0008) :pass. `rdm-spec score 03 --verdicts V` exit 0; stdout {:score {:cycle \"03\", :file \"dhf/cycles/03/score.edn\", :passed 11, :scored 12, :ungraded 1}}; score.edn :passed 11 :scored 12 and item {:id \"spec-0008\", :verdict :fail, :evidence \"ungraded: no verdict was given\", :ungraded true}."}
+ {:id "spec-0032",
+  :verdict :pass,
+  :evidence
+  "Fixture r2: test/steps/demo_steps.clj (defstep via rdm-spec.kernel.runner), scenario @spec-0004 with step \"When a step nobody defined runs\". `RESULTS_DIR=DIR rdm-spec run` exit 1; stderr \"dhf/spec/demo/widget.feature:20: scenario-broken: spec-0004 broken: no step definition matches the step \\\"When a step nobody defined runs\\\"\"; its result status \"broken\", statusDetails.message names the step, that step broken, next step skipped."}
+ {:id "spec-0033",
+  :verdict :pass,
+  :evidence
+  "Fixture: cut spec-3, config :implementation [\"impl\"], :verify [{:kind :tests :command [\"sh\" \"impl/test.sh\"]}]; ROOM impl/test.sh echoes and exits 0, writes no result. `rdm-spec verify ROOM 03` exit 1; stdout {:verify {... :outcome :refused, :checks [{:name \"tests\" ... :outcome :failed ... :reason \"the test command exited 0 and wrote no result into dhf/cycles/03/results: a green exit with no results is not a run\"}]}}; stderr \"dhf/cycles/03/results: tests-no-results: ... a green exit with no results is not a run\"; ratified.edn :outcome :refused."}
+ {:id "spec-0037",
+  :verdict :pass,
+  :evidence
+  "Fixture: repo with tag spec-3 and a later commit HEAD carrying no tag (`git tag --points-at HEAD` empty). `rdm-spec fence ROOM HEAD` exit 2; stderr \"cannot-run: HEAD is not a cut: regeneration reads only a cut, a commit tagged spec-N\"; ROOM not created."}
+ {:id "spec-0038",
+  :verdict :pass,
+  :evidence
+  "Fixture: config :implementation [\"impl\"], deny measurements dhf/cycles and generated site/site-src/dhf/allure-results, keep every other path; cut spec-3 (24 committed files) holds impl/main.sh, dhf/cycles/01/score.edn and site/index.html. `rdm-spec fence ROOM spec-3` exit 0; stdout {:fence {... :cut \"spec-3\" ... :files 21, :removed [\"impl/main.sh\"] ...}}. In ROOM: `git rev-list --all` 1 commit with no parent; working tree file list equals the cut list minus impl/, dhf/cycles/, site/ (21 files, diff empty), every blob hash equals the cut blob (git hash-object), status clean; `git rev-list --all --objects` names no impl/cycles/site path and `git cat-file -e` finds none of the three denied blobs."}
+ {:id "spec-0042",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget scenario tagged @spec-0002 @spec-0003 @e2e (ledger 3). `rdm-spec check` exit 1; stderr: \"dhf/spec/demo/widget.feature:8: scenario-ids: the scenario carries 2 ids, spec-0002 and spec-0003: a scenario carries exactly one\". Scenario named by file:line, both ids named."}
+ {:id "spec-0043",
+  :verdict :pass,
+  :evidence
+  "Fixture: gadget.feature and widget.feature scenarios both tagged @spec-0001. `rdm-spec check` exit 1; stderr: \"dhf/spec/demo/gadget.feature:6: id-duplicate: spec-0001 is used by 2 scenarios: dhf/spec/demo/gadget.feature:6 and dhf/spec/demo/widget.feature:8\" (and same line for widget.feature:8). Both files and the id named."}
+ {:id "spec-0044",
+  :verdict :pass,
+  :evidence
+  "Row @e2e: base fixture with scenarios tagged @spec-0001 @e2e / @spec-0002 @e2e: `rdm-spec check` exit 0, :spec {:scenarios 2 :findings 0}. Row @contract: widget retagged @spec-0002 @contract: `rdm-spec check` exit 0, :findings 0, no level finding."}
+ {:id "spec-0045",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget scenario tagged @spec-0002 only. `rdm-spec check` exit 1; stderr: \"dhf/spec/demo/widget.feature:8: level-missing: spec-0002 carries no level: a scenario carries exactly one of @e2e and @contract\". Id and both levels named."}
+ {:id "spec-0046",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget scenario tagged @spec-0002 @e2e @contract. `rdm-spec check` exit 1; stderr: \"dhf/spec/demo/widget.feature:8: level-twice: spec-0002 carries @e2e and @contract: a scenario carries exactly one of @e2e and @contract\"."}
+ {:id "spec-0047",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget.feature tagged @UN-003 on the Feature, scenario spec-0002 with no need tag, no dhf/allure-results. `rdm-spec trace UN-003` exit 0; stdout {:trace {:kind :need, :id \"UN-003\", ... :scenarios [{:id \"spec-0002\", :title \"A widget is made\", :component \"Widget\", :context \"demo\", :level :e2e}], :note \"no status was derived because no results were given\"}}: the scenario is listed."}
+ {:id "spec-0048",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget.feature with no @UN tag on feature, rule or scenario. `rdm-spec check` exit 1; stderr: \"dhf/spec/demo/widget.feature:7: need-missing: spec-0002 traces to no user need: tag it, its rule or its feature with @UN-nnn\"."}
+ {:id "spec-0049",
+  :verdict :pass,
+  :evidence
+  "Fixture: needs.edn declares UN-001..UN-005; widget scenario tagged @UN-009 (tried on the feature and on the scenario). `rdm-spec check` exit 1 both times; stderr: \"dhf/spec/demo/widget.feature:8: need-undeclared: spec-0002 traces to UN-009, which the needs do not declare\"."}
+ {:id "spec-0050",
+  :verdict :pass,
+  :evidence
+  "Fixture: spec with one component and one stamped scenario tagged @spec-0002 @e2e @wip (views regenerated). `rdm-spec check` exit 0; stdout :spec {:scenarios 1, :findings 0}; no finding on stderr (only citation-unchecked warnings)."}
+ {:id "spec-0051",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget.feature stamped (ledger 3) using a comment, feature and rule and scenario tags, Feature, Background (Given/And), Rule, Scenario (Given, When with a doc string, Then, But), Scenario Outline with a step data table and Examples. `rdm-spec stamp` exit 0 (nothing to stamp); `rdm-spec check` exit 0; stdout :spec {:scenarios 3, :findings 0}; no findings on stderr."}
+ {:id "spec-0052",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget.feature line 8 starts with \"Scenario Template: A widget is made\". `rdm-spec check` exit 1; stderr first line: \"dhf/spec/demo/widget.feature:8: gherkin-keyword-unknown: the keyword \\\"Scenario Template\\\" is not in the declared subset of Gherkin: ...\" (followed by gherkin-step-outside findings for the orphaned steps). File, line and keyword named."}
+ {:id "spec-0053",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget.feature with a second \"Feature: Another\" on line 13. `rdm-spec check` exit 1; stderr: \"dhf/spec/demo/widget.feature:13: gherkin-feature-twice: a feature file holds exactly one feature: a second Feature on line 13\" (plus a gherkin-line-unknown for its description line). File and line named."}
+ {:id "spec-0054",
+  :verdict :pass,
+  :evidence
+  "Fixture: ids.edn {:issued 41}; widget scenario tagged only @e2e. `rdm-spec stamp` exit 0; stdout {:stamp {:stamped [{:file \"dhf/spec/demo/widget.feature\", :line 8, :id \"spec-0042\"}], :issued 42}}; file now carries \"@spec-0042 @e2e\"; ids.edn now {:issued 42}."}
+ {:id "spec-0055",
+  :verdict :pass,
+  :evidence
+  "Fixture: base, every scenario stamped, committed clean. `rdm-spec stamp` exit 0; stdout {:stamp {:stamped [], :issued 2}}; `git status --short` and `git diff --stat` empty afterwards: no spec file and not the ledger changed."}
+ {:id "spec-0056",
+  :verdict :pass,
+  :evidence
+  "Fixture: ids.edn {:issued 42}, widget scenario @spec-0042 committed then deleted, a new scenario with only @e2e. `rdm-spec stamp` exit 0; stdout {:stamp {:stamped [{... :line 6, :id \"spec-0043\"}], :issued 43}}; new scenario tagged @spec-0043."}
+ {:id "spec-0057",
+  :verdict :pass,
+  :evidence
+  "Fixture: ledger 7, widget scenario @spec-0007 committed; then moved into gadget.feature (another component) and retitled \"A widget gets built, reworded\". `rdm-spec stamp` exit 0; stdout {:stamp {:stamped [], :issued 7}}; grep shows gadget.feature:11 \"@spec-0007 @e2e\"; `rdm-spec check` exit 0, 0 findings."}
+ {:id "spec-0058",
+  :verdict :pass,
+  :evidence
+  "Fixture: config :id-prefix \"loyly\", existing ids rewritten @loyly-0001, widget scenario with only @e2e. `rdm-spec stamp` exit 0; stdout {:stamp {:stamped [{:file \"dhf/spec/demo/widget.feature\", :line 8, :id \"loyly-0003\"}], :issued 3}}; scenario tagged @loyly-0003; check exit 0. (Also with @spec- ids left in place: the new scenario got @loyly-0004.)"}
+ {:id "spec-0059",
+  :verdict :pass,
+  :evidence
+  "Fixture: spec-0002 tagged @wip; passed result for spec-0001 (the only other scenario). `rdm-spec release` exit 1; stdout {:release {:results \"dhf/allure-results\", :scenarios 2, :refused 1}}; stderr \"dhf/spec/demo/widget.feature:8: release-refused: spec-0002 is planned (tagged @wip): a release needs every scenario verified\"."}
+ {:id "spec-0064",
+  :verdict :pass,
+  :evidence
+  "Fixture: spec-0002 tagged @wip with no result; dhf/allure-results holds a passed result labelled spec=spec-0001. `rdm-spec status` exit 0; stdout lists {:id \"spec-0002\" ... :status :planned} and spec-0001 :verified; :counts {:verified 1, :failed 0, :unverified 0, :planned 1}."}
+ {:id "spec-0065",
+  :verdict :pass,
+  :evidence
+  "Fixture: three stamped scenarios (committed), results: spec-0001 passed, spec-0002 failed, none for spec-0003. `rdm-spec status` exit 0; stdout: spec-0001 :verified, spec-0002 :failed, spec-0003 :unverified, :counts {:verified 1, :failed 1, :unverified 1, :planned 0}. `git status --short` empty afterwards: no spec file changed (results dir is gitignored)."}
+ {:id "spec-0066",
+  :verdict :pass,
+  :evidence
+  "Fixture: outline spec-0003 with rows red/blue/green; results labelled spec=spec-0003 with parameters colour=red passed, blue passed, green failed. `rdm-spec status` exit 0; spec-0003 :status :failed. Control: all three rows passed gives :verified."}
+ {:id "spec-0067",
+  :verdict :pass,
+  :evidence
+  "Fixture: stamped scenario @spec-0007; one result labelled spec=spec-0007 status passed. `rdm-spec status` exit 0; {:id \"spec-0007\" ... :status :verified}."}
+ {:id "spec-0068",
+  :verdict :pass,
+  :evidence
+  "Fixture: @spec-0007 with a single result labelled spec=spec-0007, one run per row. `rdm-spec status` exit 0 each time; spec-0007 :status :failed for status failed, broken, skipped and unknown (counts {:verified 0, :failed 1, :unverified 1})."}
+ {:id "spec-0069",
+  :verdict :pass,
+  :evidence
+  "Fixture: @spec-0007 with two results labelled spec=spec-0007, one passed and one failed. `rdm-spec status` exit 0; spec-0007 :status :failed."}
+ {:id "spec-0070",
+  :verdict :pass,
+  :evidence
+  "Fixture: ten stamped scenarios spec-0001..spec-0010 (check exit 0); passed results for spec-0001..spec-0009. `rdm-spec status` exit 0; :scenarios holds ten entries, spec-0010 :status :unverified; :counts {:verified 9, :failed 0, :unverified 1, :planned 0} (sums to ten)."}
+ {:id "spec-0102",
+  :verdict :pass,
+  :evidence
+  "Fixture: UN-003 on widget.feature (spec-0002, spec-0003), on rule \"Under the rule\" in gadget.feature (spec-0001, spec-0004; spec-0005 under another rule, not traced), on scenario spec-0006 in gizmo.feature (spec-0007 untagged). check exit 0. `rdm-spec trace UN-003` exit 0; :scenarios lists exactly spec-0001, spec-0004, spec-0006, spec-0002, spec-0003, each with :id, :title, :component, :context, :level; spec-0005 and spec-0007 absent."}
+ {:id "spec-0103",
+  :verdict :pass,
+  :evidence
+  "Fixture: needs.edn declares UN-007, no scenario tags it. `rdm-spec trace UN-007` exit 0; stdout {:trace {:kind :need, :id \"UN-007\", :text \"Need seven.\", :scenarios [], :note \"no scenario traces to UN-007\"}}."}
+ {:id "spec-0104",
+  :verdict :pass,
+  :evidence
+  "Fixture: model context :architecture with component :architecture/lint \"Lint\" (spec architecture/lint), lint.feature tagged @UN-005 holding @spec-0012 @contract; check exit 0. `rdm-spec trace spec-0012` exit 0; stdout {:trace {:needs [\"UN-005\"], :file \"dhf/spec/architecture/lint.feature\", :component \"Lint\", ... :level :contract, :line 8, :id \"spec-0012\", :kind :scenario, :context \"architecture\"}}."}
+ {:id "spec-0105",
+  :verdict :pass,
+  :evidence
+  "Same fixture; DIR holds two results labelled spec=spec-0012, one passed one failed. `rdm-spec trace spec-0012 --results DIR` exit 0; stdout has :status :failed and :results [{:file \"DIR/cd0bf174-...-result.json\", :status \"passed\"} {:file \"DIR/dc86c02b-...-result.json\", :status \"failed\"}]."}
+ {:id "spec-0106",
+  :verdict :pass,
+  :evidence
+  "Fixture: no @spec-0999 and no UN-999. `rdm-spec trace spec-0999` exit 2; stderr \"cannot-run: spec-0999 names nothing: no scenario is tagged @spec-0999 and no need is spec-0999\"; stdout empty."}
+ {:id "spec-0107",
+  :verdict :pass,
+  :evidence
+  "Fixture with @spec-0012. `rdm-spec trace spec-0012 --results <abs nonexistent dir>` exit 2; stderr \"cannot-run: the results directory /home/user/c23/grade-a/tmp.../fx/nonexistent-dir does not exist\". Relative \"nope-rel\" likewise exit 2, names nope-rel."}
+ {:id "spec-0108",
+  :verdict :pass,
+  :evidence
+  "Fixture: a copy of project/ (spec-29) with no dhf/allure-results (config :results-dir \"dhf/allure-results\"). `rdm-spec trace spec-0012` exit 0; stdout {:trace {:needs [\"UN-005\"], :file \"dhf/spec/architecture/lint.feature\", :component \"Lint\", :title \"A bounded context with no component view fails the lint\", :note \"no status was derived because no results were given\", :level :e2e, ... :context \"architecture\"}}."}
+ {:id "spec-0134",
+  :verdict :pass,
+  :evidence
+  "Fixture: needs.edn UN-004 with :sources [] (and, separately, with no :sources key). `rdm-spec check` exit 1 both times; stderr: \"dhf/spec/needs.edn:4: need-unsourced: UN-004 cites no source: every user need rests on a raw source\"."}
+ {:id "spec-0142",
+  :verdict :pass,
+  :evidence
+  "Fixture: cycle.edn declares :builder {:name \"builder-a\" :actor :agent}, :grader {:name \"grader-b\" :actor :agent}, :spec-owner {:name \"Sami\" :actor :human}. `rdm-spec score 03 --verdicts V` exit 0; score.edn holds :builder {:name \"builder-a\", :actor :agent}, :grader {:name \"grader-b\", :actor :agent}, :spec-owner {:name \"Sami\", :actor :human}."}
+ {:id "spec-0143",
+  :verdict :pass,
+  :evidence
+  "Fixture: cycle.edn with :grader {:name \"builder-a\" ...} (same as builder). `rdm-spec score 03 --verdicts V` exit 1; stdout {}; stderr \"dhf/cycles/03/cycle.edn: builder-grades: builder-a is the cycle's builder and its grader: the builder may not grade or read its own score\"; dhf/cycles/03 files unchanged (md5), no score.edn. Same with builder-a as spec owner: exit 1, \"...its builder and its spec owner...\"."}
+ {:id "spec-0144",
+  :verdict :pass,
+  :evidence
+  "Fixture: cycle.edn with builder and grader and no :spec-owner. `rdm-spec score 03 --verdicts V` exit 1; stdout {}; stderr \"dhf/cycles/03/cycle.edn: role-missing: the cycle names no spec owner (:spec-owner): a cycle names who built, graded and reads it\"; dhf/cycles/03 unchanged (md5), no score.edn."}
+ {:id "spec-0150",
+  :verdict :pass,
+  :evidence
+  "Fixture: widget scenario tagged @spec-0002 @e2e @persona. `rdm-spec check` exit 1; stderr: \"dhf/spec/demo/widget.feature:8: tag-unknown: spec-0002 carries @persona: a scenario may carry @spec-NNNN (its id), @e2e or @contract (its level), @UN-nnn (a need) and @wip\". Id, @persona and allowed tags named."}
+ {:id "spec-0151",
+  :verdict :pass,
+  :evidence
+  "Fixture: context :architecture, component Lint owning @spec-0012, plus a :kernel component Bus owning @spec-0013; steps defined. `RESULTS_DIR=DIR rdm-spec run` exit 0, {:run {... :scenarios 3, :passed 3}}. spec-0012 result: labels spec=spec-0012, context=architecture, component=Lint (one result); kernel result labels spec=spec-0013 context=kernel component=Bus; each result holds one step per Gherkin step, each with its own status (also seen as passed/broken/skipped per step in fixture r2)."}
+ {:id "spec-0152",
+  :verdict :pass,
+  :evidence
+  "Fixture r2: outline @spec-0010 \"Colours\" with rows red/blue/green. `rdm-spec run` wrote three results, each labelled spec=spec-0010, name \"Colours\", parameters [{\"name\":\"colour\",\"value\":\"red\"}] / blue / green, historyId \"spec-0010|red\", \"spec-0010|blue\", \"spec-0010|green\"."}
+ {:id "spec-0153",
+  :verdict :pass,
+  :evidence
+  "Fixture r2: @spec-0003 steps Given a widget is made / Then there is a gadget (assert does not hold) / And the context is shown. `rdm-spec run` exit 1; stderr \"dhf/spec/demo/widget.feature:14: scenario-failed: spec-0003 failed: Then there is a gadget: Assert failed: nothing of that kind was made (= what (:made ctx))\"; result status \"failed\", statusDetails.message names the step and the error; the third step status \"skipped\" and the step log shows it never ran."}
+ {:id "spec-0154",
+  :verdict :pass,
+  :evidence
+  "Fixture r2: @spec-0005 tagged @wip, its steps defined by a step that logs :PLANNED-RAN. `rdm-spec run`: the log has no :PLANNED-RAN entry (steps not run); result status \"skipped\", label planned=true, steps skipped; run summary :planned 1."}
+ {:id "spec-0155",
+  :verdict :pass,
+  :evidence
+  "Fixture: twenty feature files dhf/spec/demo/f01..f20.feature, one scenario each (check exit 0), listed nowhere. `RESULTS_DIR=DIR rdm-spec run` exit 0; {:run {... :scenarios 20, :passed 20 ...}}; DIR holds 20 results, spec-0001..spec-0020, one per file."}
+ {:id "spec-0156",
+  :verdict :pass,
+  :evidence
+  "Fixture: dhf/spec holding no feature file. `RESULTS_DIR=DIR rdm-spec run` exit 2; stderr \"cannot-run: no scenario was found: the spec dhf/spec holds no feature file with a scenario\"; DIR not created (and with DIR pre-made, it stays empty); no dhf/allure-results."}
+ {:id "spec-0168",
+  :verdict :pass,
+  :evidence
+  "Fixture r2: test/steps/demo_steps.clj defines (defstep #\"the spec holds (\\\\d+) features\" (fn [ctx & captured] ...)) via rdm-spec.kernel.runner; scenario @spec-0006 \"Given the spec holds 20 features\". `rdm-spec run`: the function logged [:holds {} [\"20\"]] (called with the scenario context and \"20\"); result passed."}
+ {:id "spec-0169",
+  :verdict :pass,
+  :evidence
+  "Fixture r2: @spec-0007 steps key one is added -> key two is added -> a non-map is returned (returns 42) -> the context is shown; next scenario @spec-0008 shows its context. Log: [:k1 {}], [:k2 {:one 1}], [:nonmap {:one 1, :two 2}], [:show {:one 1, :two 2}] (non-map left context unchanged), then [:show {}] for the next scenario (starts empty)."}
+ {:id "spec-0170",
+  :verdict :pass,
+  :evidence
+  "Fixture r2: patterns #\"a spec\" and #\"a sp.c\" both match \"Given a spec\" (@spec-0009). `rdm-spec run` exit 1; result status \"broken\", statusDetails.message \"the step \\\"Given a spec\\\" is matched by 2 step definitions: #\\\"a spec\\\" in demo-steps (demo_steps.clj) and #\\\"a sp.c\\\" in demo-steps (demo_steps.clj)\"; same on stderr as scenario-broken."}
+ {:id "spec-0173",
+  :verdict :pass,
+  :evidence
+  "Fixture: dhf/cycles/03/cycle.edn exactly as the scenario (cut spec-3, :scope {:context :verification}, builder-a/grader-b agents, Sami human); working tree spec differs from the cut (uncommitted 13th scenario). `rdm-spec checklist 03` exit 0; :cut \"spec-3\", items spec-0003..spec-0007 (the verification context only), planned spec-0008. `rdm-spec verify ROOM 03` (ROOM impl/test.sh runs `rdm-spec run`) exit 0; {:verify {:cycle \"03\", :cut \"spec-3\", :outcome :passed, :checks [{:name \"tests\" ... :scenarios 11}]}}; ratified.edn :cut \"spec-3\"; dhf/cycles/03/build holds the cut version of gadget.feature (2 scenarios, not the working tree 3); test.log shows the run read 12 scenarios of the cut."}
+ {:id "spec-0174",
+  :verdict :pass,
+  :evidence
+  "Fixture sc: c1 plus @spec-0014 \"Fourteen\", tagged spec-3; \"rdm-spec checklist 03\" -> 2 items (spec-0012, spec-0014), 1 planned; cycle.edn {:cut \"spec-3\" :scope :project :builder {:name \"builder-a\" :actor :agent} :grader {:name \"grader-b\" :actor :agent} :spec-owner {:name \"Sami\" :actor :human}}; ratified.edn written as verify writes it with :outcome :passed and :room-tree \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\". verdicts.edn grades spec-0012 pass, spec-0014 fail. \"rdm-spec score 03 --verdicts verdicts.edn\" exit 0, stdout {:score {:cycle \"03\", :file \"dhf/cycles/03/score.edn\", :passed 1, :scored 2, :ungraded 0}}; score.edn read as EDN = the stated map (bb =: true), keys in the stated order."}
+ {:id "spec-0176",
+  :verdict :pass,
+  :evidence
+  "In fixture p1 (rdm-spec init + spec): \"rdm-spec help\" exit 0, stdout EDN {:help [{:task \"help\", :usage \"help\", :does \"list every task with its usage\"} ...]}; parsed 22 maps, compared all 22 example rows (task, usage, does) in order: all equal exactly, including observe and oracle (escaped quotes)."}
+ {:id "spec-0177",
+  :verdict :pass,
+  :evidence
+  "Fixture: rdm-spec init p1 plus a need citing loyly, a model with context architecture/component lint and two views (rendered by rdm-spec views), a stamped feature (spec-0012, spec-0013 @wip). \"rdm-spec check --sources sources\" exit 0, stdout {:sources {:resolved 2 ...} :spec {:scenarios 2, :findings 0} ...}, empty stderr. Without --sources also exit 0 with only citation-unchecked warnings."}
+ {:id "spec-0178",
+  :verdict :pass,
+  :evidence
+  "Fixture p1 with @e2e removed from spec-0012: \"rdm-spec check\" exit 1; stderr: \"dhf/spec/architecture/lint.feature:7: level-missing: spec-0012 carries no level: a scenario carries exactly one of @e2e and @contract\" (one finding line, FILE:LINE: RULE: what) then warning lines \"dhf/spec/needs.edn:1: warning: citation-unchecked: ...\"; stdout only an EDN map {:sources ... :spec {:scenarios 2, :findings 1} :lint ...}."}
+ {:id "spec-0179",
+  :verdict :pass,
+  :evidence
+  "Fixture rp (git copy of project/, no dhf/allure-results): \"rdm-spec status\" exit 2, stdout empty, stderr \"cannot-run: the results directory dhf/allure-results does not exist\"."}
+ {:id "spec-0180",
+  :verdict :pass,
+  :evidence
+  "cd fixture dir; \"rdm-spec frobnicate\" exit 2, stdout empty, stderr: \"cannot-run: unknown task frobnicate: the tasks are help, init, adopt, stamp, check, views, cut, scopes, fence, run, verify, checklist, status, trace, release, score, scoreboard, oracle, plugin, publish, audit, observe\" (all 22 tasks)."}
+ {:id "spec-0182",
+  :verdict :pass,
+  :evidence
+  "Fixture rp: copy of project/ (spec-29) as a git repo, :plugins [] (the oracle plugin file is not in the room), plus a fake implementation of 28 files (src/rdm_spec/{verification,knowledge,publishing,spec,kernel,measurement}/*.clj, matching test/..._test.clj, test/steps/*, test.clj, bb.edn), committed and tagged spec-3. \"rdm-spec fence ROOM spec-3\" exit 0, stdout {:fence {:room ... :cut \"spec-3\" :files 99 :removed [bb.edn, every src/ test/ file, test.clj] ...}}; ROOM top level holds .git .gitignore AGENTS.md CLAUDE.md LICENSE.txt README.md dhf docs plugins: no src, test, test.clj or bb.edn; git ls-files in ROOM lists none of them; ROOM history is one commit."}
+ {:id "spec-0183",
+  :verdict :pass,
+  :evidence
+  "Fixture rp: copy of project/ (spec-29) as a git repo, :plugins [] (the oracle plugin file is not in the room), plus a fake implementation of 28 files (src/rdm_spec/{verification,knowledge,publishing,spec,kernel,measurement}/*.clj, matching test/..._test.clj, test/steps/*, test.clj, bb.edn), committed and tagged spec-3. \"rdm-spec fence ROOM spec-3 --context verification\" exit 0; comparing every cut implementation file with ROOM: gone src/rdm_spec/verification/{status,verify}.clj, test/rdm_spec/verification/{status,verify}_test.clj, test/steps/verification_verify.clj (per the configured layout); the other 23 present and byte-identical to the cut (git show spec-3:F | cmp)."}
+ {:id "spec-0184",
+  :verdict :pass,
+  :evidence
+  "Fixture rp: copy of project/ (spec-29) as a git repo, :plugins [] (the oracle plugin file is not in the room), plus a fake implementation of 28 files (src/rdm_spec/{verification,knowledge,publishing,spec,kernel,measurement}/*.clj, matching test/..._test.clj, test/steps/*, test.clj, bb.edn), committed and tagged spec-3. \"rdm-spec fence ROOM spec-3 --component spec/parser\" exit 0; gone src/rdm_spec/spec/parser.clj, test/rdm_spec/spec/parser_test.clj, test/steps/spec_parser.clj; the other 25 implementation files present and byte-identical (spec/check.clj kept)."}
+ {:id "spec-0185",
+  :verdict :pass,
+  :evidence
+  "Fixture rp: copy of project/ (spec-29) as a git repo, :plugins [] (the oracle plugin file is not in the room), plus a fake implementation of 28 files (src/rdm_spec/{verification,knowledge,publishing,spec,kernel,measurement}/*.clj, matching test/..._test.clj, test/steps/*, test.clj, bb.edn), committed and tagged spec-3. \"rdm-spec fence ROOM spec-3 --context archive\" exit 2, stderr \"cannot-run: the model names no bounded context archive: its bounded contexts are project, spec, knowledge, architecture, verification, regeneration, measurement, publishing, compliance, agency, and the kernel\", no ROOM made. \"--component spec/nothing\" (no layout files): exit 2, \"cannot-run: the model names no component spec/nothing and the code layout finds no file of it: its bounded contexts are project, ..., agency, and the kernel\"."}
+ {:id "spec-0186",
+  :verdict :pass,
+  :evidence
+  "Fixture p1 plus an @e2e scenario with no @spec- tag whose Scenario line is line 30 of dhf/spec/architecture/lint.feature: \"rdm-spec check\" exit 1, stderr \"dhf/spec/architecture/lint.feature:30: scenario-unstamped: the scenario \\\"Unstamped one\\\" has no id: run \\\"rdm-spec stamp\\\"\"."}
+ {:id "spec-0188",
+  :verdict :pass,
+  :evidence
+  "Fixture s2: s1 without @wip (spec-0001 One, 0002 Two, 0003 Three in dhf/spec/a/b.feature), check exit 0. Results F1: spec-0001 failed, 0002 and 0003 passed. \"rdm-spec release --results F1\" exit 1, stdout {:release {:results \"F1\", :scenarios 3, :refused 1}}, stderr \"dhf/spec/a/b.feature:4: release-refused: spec-0001 is failed: a release needs every scenario verified\"."}
+ {:id "spec-0189",
+  :verdict :pass,
+  :evidence
+  "Fixture s2: s1 without @wip (spec-0001 One, 0002 Two, 0003 Three in dhf/spec/a/b.feature), check exit 0. Results U1: 0001 and 0003 passed, none for 0002. \"rdm-spec release --results U1\" exit 1, stderr \"dhf/spec/a/b.feature:8: release-refused: spec-0002 is unverified: a release needs every scenario verified\"."}
+ {:id "spec-0190",
+  :verdict :pass,
+  :evidence
+  "Fixture s2: s1 without @wip (spec-0001 One, 0002 Two, 0003 Three in dhf/spec/a/b.feature), check exit 0. Passing result for each of the 3 scenarios. \"rdm-spec release --results P1\" exit 0, stdout {:release {:results \"P1\", :scenarios 3, :refused 0}}, empty stderr; \"rdm-spec release\" with them in dhf/allure-results also exit 0."}
+ {:id "spec-0191",
+  :verdict :pass,
+  :evidence
+  "Fixture s1: init project, model context a/component B, dhf/spec/a/b.feature with @spec-0001 One (line 4), @spec-0002 Two (line 8), @spec-0003 Three @wip (line 12); check exit 0. Results are hand-written Allure JSON (uuid, status, labels spec=...). dhf/allure-results holds for @wip spec-0003 one result status skipped and one passed. \"rdm-spec status\" exit 0, :results \"dhf/allure-results\", spec-0003 {:status :planned}, counts {:verified 0 :failed 0 :unverified 2 :planned 1}."}
+ {:id "spec-0193",
+  :verdict :pass,
+  :evidence
+  "Fixture s1: init project, model context a/component B, dhf/spec/a/b.feature with @spec-0001 One (line 4), @spec-0002 Two (line 8), @spec-0003 Three @wip (line 12); check exit 0. Results are hand-written Allure JSON (uuid, status, labels spec=...). configured :results-dir dhf/allure-results, RESULTS_DIR unset: \"rdm-spec status\" exit 0, stdout {:status {:results \"dhf/allure-results\" ...}} and it counted that directory's results (spec-0003 planned). With that directory removed it exits 2 \"cannot-run: the results directory dhf/allure-results does not exist\", so it reads it."}
+ {:id "spec-0197",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. mode fail: test.sh prints a line and exits 1. \"rdm-spec verify ROOM 03\" exit 1, stderr \"dhf/cycles/03/test.log: tests-failed: the test command failed with the exit 1; its output is in dhf/cycles/03/test.log\"; test.log holds \"test output line for mode fail\"."}
+ {:id "spec-0200",
+  :verdict :pass,
+  :evidence
+  "Fixture rsc: git copy of project/ (spec-29 spec, 315 stamped scenarios) tagged spec-3. For each row cycle.edn scope: :project -> exit 0, 315 items over every context; {:context :verification} -> exit 0, 67 items all verification; {:component :spec/parser} -> exit 0, 10 items all spec/Parser; [{:context :knowledge} {:component :spec/parser}] -> exit 0, 35 items (knowledge Sources 19, Wiki 6, spec Parser 10). All accepted."}
+ {:id "spec-0201",
+  :verdict :pass,
+  :evidence
+  "Fixture sc: c1 plus @spec-0014 \"Fourteen\", tagged spec-3; \"rdm-spec checklist 03\" -> 2 items (spec-0012, spec-0014), 1 planned; cycle.edn {:cut \"spec-3\" :scope :project :builder {:name \"builder-a\" :actor :agent} :grader {:name \"grader-b\" :actor :agent} :spec-owner {:name \"Sami\" :actor :human}}; ratified.edn written as verify writes it with :outcome :passed and :room-tree \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\". verdicts grading spec-0012 and spec-0999: \"rdm-spec score 03 --verdicts verdicts.edn\" exit 1, stdout {}, no score.edn written, stderr \"bad.edn: verdict-off-checklist: spec-0999 is not on the cycle's checklist\"."}
+ {:id "spec-0202",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. v1 working tree had an uncommitted edit (# WORKTREE-ONLY) to lint.feature, HEAD after spec-3, and a stale file in dhf/cycles/03/build. \"rdm-spec verify ROOM 03\" exit 0, stdout {:verify {:cycle \"03\", :cut \"spec-3\", ...}}; dhf/cycles/03/build has no .git, stale.txt gone, every non-implementation file name equal to git ls-tree spec-3 and byte-identical (git show spec-3:F | cmp), no WORKTREE marker."}
+ {:id "spec-0203",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. \"rdm-spec verify ROOM 03\" with dhf/cycles/03/cycle.edn moved away: exit 2, stderr \"cannot-run: there is no readable dhf/cycles/03/cycle.edn: a cycle is declared before it is verified\" (same for cycle 04)."}
+ {:id "spec-0204",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. \"rdm-spec verify ROOM 03\" exit 0; dhf/cycles/03/build/src holds rdm_spec/new.clj and mode, no src/rdm_spec/old.clj; diff -r ROOM/src build/src empty and cmp ROOM/test.sh build/test.sh equal."}
+ {:id "spec-0205",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. In ROOM committed edits: config.edn :verify command changed to [\"sh\" \"-c\" \"exit 0\"] plus ;; EDITED, lint.feature plus # EDITED. \"rdm-spec verify ROOM 03\" exit 0; probe shows test.sh ran (so the cut's :verify was used) and the checkout's config.edn shows :verify [{... [\"sh\" \"test.sh\"]}]; grep -c EDITED in checkout's config.edn and lint.feature: 0 and 0."}
+ {:id "spec-0206",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. \"rdm-spec verify ROOM 03\" run in v1: the test command's probe logged RESULTS_DIR=/home/user/c23/grade-b/tmp.zdremthTRe/v1/dhf/cycles/03/results (absolute, in the repository verify ran in), cwd dhf/cycles/03/build."}
+ {:id "spec-0207",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. mode pass: test.sh exits 0 writing a passed result for spec-0012 and a skipped planned result for @wip spec-0013 into RESULTS_DIR. \"rdm-spec verify ROOM 03\" exit 0, stdout checks [{:name \"tests\", :kind :tests, :outcome :passed, :scenarios 1}], outcome :passed."}
+ {:id "spec-0208",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. mode none: exit 0, results only for @wip spec-0013, none labelled spec=spec-0012. \"rdm-spec verify ROOM 03\" exit 1, stderr \"dhf/spec/architecture/lint.feature:7: scenario-without-result: spec-0012: it is named by no result\", tests check :failed."}
+ {:id "spec-0209",
+  :verdict :pass,
+  :evidence
+  "Fixture p1 with :stack-words [\"Cobalt\"] in config.edn and the feature description line 3 \"Lints the model. The parser is written in Cobalt.\": \"rdm-spec check\" exit 1, stderr \"dhf/spec/architecture/lint.feature:3: stack-word: names the stack word Cobalt: the spec never names its stack, which lives in dhf/harness/stack.md\" (file, line 3, word)."}
+ {:id "spec-0210",
+  :verdict :pass,
+  :evidence
+  "Fixture c1: p1 (architecture/Lint: spec-0012 \"A view with no description fails the lint\" @e2e, spec-0013 \"A component that owns no feature file fails the lint\" @e2e @wip) tagged spec-3, dhf/cycles/03/cycle.edn {:cut \"spec-3\" :scope :project ...}. \"rdm-spec checklist 03\" exit 0, stdout {:checklist {:cycle \"03\", :cut \"spec-3\", :file \"dhf/cycles/03/checklist.json\", :items 1, :planned 1}}; checklist.json parsed: keys cycle, cut, items, planned in that order; items [{id spec-0012, title, context architecture, component Lint, level e2e}] keys in that order; planned [{id spec-0013, title}]; equal to the stated JSON. Sorting: with spec-0016 (contract) and spec-0015 (@wip) placed before 0012/0013 in the file, items were [spec-0012, spec-0016], planned [spec-0013, spec-0015]."}
+ {:id "spec-0211",
+  :verdict :pass,
+  :evidence
+  "Fixture c3: c1 plus an @e2e scenario \"No id here\" with no id at line 19, committed and tagged spec-3. \"rdm-spec checklist 03\" exit 1, stdout {}, stderr \"dhf/spec/architecture/lint.feature:19: scenario-unstamped: the scenario \\\"No id here\\\" at the cut spec-3 has no id: an unstamped scenario stops the checklist; run \\\"rdm-spec stamp\\\"\"; dhf/cycles/03 holds only cycle.edn afterwards; with a prior checklist.json present it stays byte-unchanged."}
+ {:id "spec-0212",
+  :verdict :pass,
+  :evidence
+  "Fixture sc: c1 plus @spec-0014 \"Fourteen\", tagged spec-3; \"rdm-spec checklist 03\" -> 2 items (spec-0012, spec-0014), 1 planned; cycle.edn {:cut \"spec-3\" :scope :project :builder {:name \"builder-a\" :actor :agent} :grader {:name \"grader-b\" :actor :agent} :spec-owner {:name \"Sami\" :actor :human}}; ratified.edn written as verify writes it with :outcome :passed and :room-tree \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\". verdicts.edn holds exactly the stated vector of two maps. \"rdm-spec score 03 --verdicts verdicts.edn\" exit 0; score.edn :items holds both verdicts with their evidence, :passed 1 :scored 2."}
+ {:id "spec-0213",
+  :verdict :pass,
+  :evidence
+  "Fixture sc: c1 plus @spec-0014 \"Fourteen\", tagged spec-3; \"rdm-spec checklist 03\" -> 2 items (spec-0012, spec-0014), 1 planned; cycle.edn {:cut \"spec-3\" :scope :project :builder {:name \"builder-a\" :actor :agent} :grader {:name \"grader-b\" :actor :agent} :spec-owner {:name \"Sami\" :actor :human}}; ratified.edn written as verify writes it with :outcome :passed and :room-tree \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\". Each row, no score.edn before, and none after (also: an existing score.edn stayed byte-identical, md5 unchanged): map -> exit 1, stdout {}, \"bad.edn: verdicts-malformed: the verdicts are a map, not a vector of {:id :verdict :evidence}\"; spec-0012 twice -> exit 1, \"bad.edn: verdict-twice: spec-0012 is graded twice, in bad.edn: an item is graded once\"; :maybe -> exit 1, \"bad.edn: verdict-malformed: spec-0012's verdict :maybe is neither :pass nor :fail\"; no evidence -> exit 1, \"bad.edn: verdict-malformed: spec-0012 gives no evidence: a verdict carries its evidence\"."}
+ {:id "spec-0214",
+  :verdict :pass,
+  :evidence
+  "Fixture sc: c1 plus @spec-0014 \"Fourteen\", tagged spec-3; \"rdm-spec checklist 03\" -> 2 items (spec-0012, spec-0014), 1 planned; cycle.edn {:cut \"spec-3\" :scope :project :builder {:name \"builder-a\" :actor :agent} :grader {:name \"grader-b\" :actor :agent} :spec-owner {:name \"Sami\" :actor :human}}; ratified.edn written as verify writes it with :outcome :passed and :room-tree \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\". Row :outcome :refused -> exit 1, stdout {}, no score.edn, \"dhf/cycles/03/ratified.edn: cycle-unverified: the cycle has no passing verification: dhf/cycles/03/ratified.edn holds :outcome :refused; only a verified build is scored\". Row no ratified.edn -> exit 1, no score.edn, \"... the cycle has no passing verification: dhf/cycles/03/ratified.edn does not exist; ...\"."}
+ {:id "spec-0215",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. plus a :runs check {:kind :runs :name \"answers\" :command [\"sh\" \"-c\" \"echo {:help []}\"] :expect {:exit 0 :stdout-starts \"{:help\"} :budget {:seconds 30}} at the cut. \"rdm-spec verify ROOM 03\" exit 0; ratified.edn holds exactly {:cut \"spec-3\", :room-tree \"58483cfa153fc33993cfb3b64bea03bb0c01eb8a\", :outcome :passed, :checkout \"dhf/cycles/03/build\", :checks [tests ... answers ...]}; H = git mktree of the room's src and test.sh entries = 58483cfa... in full; :checks equal to stdout's checks; build holds the verified checkout."}
+ {:id "spec-0216",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. mode fail: \"rdm-spec verify ROOM 03\" exit 1; ratified.edn holds :outcome :refused and :reason \"the test command failed with the exit 1; its output is in dhf/cycles/03/test.log\" (and the check's :reason)."}
+ {:id "spec-0217",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. plus an @e2e scenario \"No id here\" with no id at line 19 of lint.feature, committed and tagged spec-3. \"rdm-spec verify ROOM 03\" exit 1, stderr \"dhf/spec/architecture/lint.feature:19: scenario-unstamped: the scenario \\\"No id here\\\" at the cut spec-3 has no id: a cut holding an unstamped scenario is not verified\"; checks :not-run."}
+ {:id "spec-0218",
+  :verdict :pass,
+  :evidence
+  "Fixture v1: p1 with :implementation [\"src\" \"test.sh\"], :verify [{:kind :tests :command [\"sh\" \"test.sh\"]}], cut spec-3 holding src/rdm_spec/old.clj and test.sh, cycle.edn {:cut \"spec-3\" :scope :project ...}. ROOM = \"rdm-spec fence ROOM spec-3\" plus a committed src/rdm_spec/new.clj, src/mode and a test.sh that logs its env/cwd to a probe file and writes Allure results (default mapping) by mode. test.sh exits 0 with a result spec=spec-0012 status failed: \"rdm-spec verify ROOM 03\" exit 1, stderr \"dhf/cycles/03/results/<uuid>-result.json: result-not-passed: spec-0012 is failed: every result naming a scenario passes\". With status broken: exit 1, \"... spec-0012 is broken ...\"."}
+ {:id "spec-0219",
+  :verdict :pass,
+  :evidence
+  "Fixture s1: init project, model context a/component B, dhf/spec/a/b.feature with @spec-0001 One (line 4), @spec-0002 Two (line 8), @spec-0003 Three @wip (line 12); check exit 0. Results are hand-written Allure JSON (uuid, status, labels spec=...). dhf/allure-results (no passing results), R1o (passed spec-0001), other (failed spec-0002). Row unset/none: :results \"dhf/allure-results\", counts verified 0 failed 0. Row RESULTS_DIR=R1o, no flag: :results \"R1o\", verified 1. Row RESULTS_DIR=R1o --results other: :results \"other\", failed 1, verified 0. All exit 0."}
+ {:id "spec-0220",
+  :verdict :pass,
+  :evidence
+  "Fixture c2: spec-3 holds 4 stamped scenarios (0012, 0016 items; 0013, 0015 @wip); a later untagged commit at HEAD adds spec-0017. cycle.edn names spec-3, scope :project. \"rdm-spec checklist 03\" exit 0, {:items 2, :planned 2}; checklist ids spec-0012 spec-0016 / spec-0013 spec-0015, no spec-0017: the cut, not the working tree. (Counts 4 vs 5 instead of 12 vs 13.)"}
+ {:id "spec-0222",
+  :verdict :pass,
+  :evidence
+  "Fixture rp: copy of project/ (spec-29) as a git repo, :plugins [] (the oracle plugin file is not in the room), plus a fake implementation of 28 files (src/rdm_spec/{verification,knowledge,publishing,spec,kernel,measurement}/*.clj, matching test/..._test.clj, test/steps/*, test.clj, bb.edn), committed and tagged spec-3. \"rdm-spec fence ROOM spec-3 --component kernel/bus\" exit 0; gone src/rdm_spec/kernel/bus.clj, test/rdm_spec/kernel/bus_test.clj, test/steps/kernel_bus.clj; other 25 present and byte-identical (kernel/command kept)."}
+ {:id "spec-0226",
+  :verdict :pass,
+  :evidence
+  "Fixture rp: copy of project/ (spec-29) as a git repo, :plugins [] (the oracle plugin file is not in the room), plus a fake implementation of 28 files (src/rdm_spec/{verification,knowledge,publishing,spec,kernel,measurement}/*.clj, matching test/..._test.clj, test/steps/*, test.clj, bb.edn), committed and tagged spec-3. \"rdm-spec fence ROOM spec-3 --context knowledge,publishing --component spec/parser\" exit 0; gone: knowledge/{sources,wiki}, publishing/site src and tests, spec/parser src and test, steps knowledge_wiki, publishing_site, spec_parser (11); the other 17 present and byte-identical."}
+ {:id "spec-0234",
+  :verdict :pass,
+  :evidence
+  "Fixture p1 (ledger {:issued 13}) plus a scenario tagged @spec-0901: \"rdm-spec check\" exit 1, stderr \"dhf/spec/architecture/lint.feature:19: id-unissued: spec-0901 is above the ledger's highest id, 13: the ledger never issued it; run \\\"rdm-spec stamp\\\"\"."}
+ {:id "spec-0235",
+  :verdict :pass,
+  :evidence
+  "Fixture p1, spec-0012 without level and model.edn edited after rdm-spec views: \"rdm-spec check\" exit 1; stderr names both: \"dhf/spec/architecture/lint.feature:7: level-missing: spec-0012 carries no level ...\" and \"dhf/views/context.mmd: view-stale: the view context is stale ... run \\\"rdm-spec views\\\"\" (and the same for architecture-components)."}
+ {:id "spec-0266",
+  :verdict :pass,
+  :evidence
+  "Fixture c4: c1 made regulated (:regulated {:clause-lists [\"dhf/clauses/std.txt\"] :documents \"dhf/documents\"}), std.txt = \"# Std / include base.txt / STD:5.1 Development plan\", base.txt = \"STD:4.1 Quality system\", committed and tagged spec-3, scope :project. \"rdm-spec checklist 03\" exit 0, {:items 3, :planned 1}; items: spec-0012, then {\"id\":\"STD:4.1\",\"title\":\"Quality system\",\"context\":\"compliance\",\"component\":\"dhf/clauses/base.txt\",\"level\":\"clause\"}, then {\"id\":\"STD:5.1\",\"title\":\"Development plan\",\"context\":\"compliance\",\"component\":\"dhf/clauses/std.txt\",\"level\":\"clause\"} (ends with the stated item; include in place). Fixture c5 adds a second list other.txt = \"include base.txt / STD:6.1 Risk\": items [spec-0012, STD:4.1, STD:5.1, STD:6.1], STD:4.1 once."}
+ {:id "spec-0267",
+  :verdict :pass,
+  :evidence
+  "Fixture g1: s2 (3 stamped scenarios, results P1 all passed) plus :regulated {:clause-lists [\"dhf/clauses/std.txt\"] :documents \"dhf/documents\"}; std.txt holds STD:5.1 Development plan and STD:5.2 Requirements analysis; dhf/documents/plan.md has frontmatter id PLAN-001, revision 1, title. plan.md names only [[STD:5.1]]. \"rdm-spec release --results P1\" exit 1, stderr \"dhf/clauses/std.txt:2: clause-unreferenced: STD:5.2 Requirements analysis is named by no audit tag in a controlled document\" (clause and its list). Note stdout says {:release {:results \"P1\", :scenarios 3, :refused 0}}: :refused counts scenarios only; the scenario does not state the result."}
+ {:id "spec-0271",
+  :verdict :pass,
+  :evidence
+  "Fixture c5 (regulated, clause lists holding STD:4.1, 5.1, 6.1 at the cut) with cycle.edn scope {:context :architecture}: \"rdm-spec checklist 03\" exit 0, {:items 1, :planned 1}; checklist items [(spec-0012, e2e)], no item at level clause."}
+ {:id "spec-0278",
+  :verdict :pass,
+  :evidence
+  "Fixture g1: s2 (3 stamped scenarios, results P1 all passed) plus :regulated {:clause-lists [\"dhf/clauses/std.txt\"] :documents \"dhf/documents\"}; std.txt holds STD:5.1 Development plan and STD:5.2 Requirements analysis; dhf/documents/plan.md has frontmatter id PLAN-001, revision 1, title. plan.md names both clauses (release then exit 0), and dhf/documents/notes.md has frontmatter with revision and title but no id. \"rdm-spec release --results P1\" exit 1, stderr \"dhf/documents/notes.md: document-unidentified: the document has no id in its frontmatter: a controlled document carries its id, revision and title\"."}
+ {:id "spec-0279",
+  :verdict :pass,
+  :evidence
+  "Fixture s2 with @UN-003 on scenario spec-0002 only (check exit 0), results P1 passing for all. \"rdm-spec trace UN-003 --results P1\" exit 0, stdout {:trace {:kind :need, :id \"UN-003\", :text \"Status.\", :scenarios [{:id \"spec-0002\", :title \"Two\", :component \"B\", :context \"a\", :level :e2e, :status :verified}]}}: one map under :trace, the scenario map holds exactly :id :title :component :context :level :status."}
+ {:id "spec-0285",
+  :verdict :pass,
+  :evidence
+  "Fixture s3: s2 plus outline @spec-0004 \"Four <n>\" (line 16) with Examples rows (n,m) = (a,1),(b,2),(c,3); check exit 0. dhf/allure-results holds passed results for rows (a,1) and (b,2) (parameters named by the headings), none for (c,3). \"rdm-spec status\" exit 0, spec-0004 :status :unverified. Control with all three rows -> :verified."}
+ {:id "spec-0294",
+  :verdict :pass,
+  :evidence
+  "Fixture rp (project/ copy with fake 28-file implementation, tagged spec-3). Working tree also held untracked notes.md, ignored site/ignored.html (.gitignore site/) and ignored dhf/spec/ignored.log (in a kept path, via info/exclude); git status showed ?? notes.md, !! site/, !! dhf/spec/ignored.log. \"rdm-spec fence ROOM spec-3\" exit 0; find ROOM -name notes.md -o -name 'ignored*' found nothing."}
+ {:id "spec-0295",
+  :verdict :pass,
+  :evidence
+  "Fixture rp (project/ copy with fake 28-file implementation, tagged spec-3). plus committed dhf/wiki/pages/copy.md = bytes of src/rdm_spec/spec/parser.clj, retagged spec-3. \"rdm-spec fence ROOM spec-3\" exit 1, stdout {}, stderr \"dhf/wiki/pages/copy.md: kept-carries-implementation: dhf/wiki/pages/copy.md carries the bytes of the removed implementation file src/rdm_spec/spec/parser.clj: no kept file may, so no room was built\"; ROOM does not exist."}
+ {:id "spec-0296",
+  :verdict :pass,
+  :evidence
+  "Fixture p1 (init project: denies implementation, dhf/cycles, site; keeps dhf/spec etc.) plus committed top-level notes.md: \"rdm-spec check\" exit 1, stderr \"notes.md: path-unclassified: notes.md is neither denied nor kept by the configuration's :clean-room: deny it or keep it\"."}
+ {:id "spec-0297",
+  :verdict :pass,
+  :evidence
+  "Fixture p1 (keeps dhf/spec, dhf/harness, ...) plus committed dhf/scratch/a.txt: \"rdm-spec check\" exit 1, stderr \"dhf/scratch: path-unclassified: dhf/scratch is neither denied nor kept by the configuration's :clean-room: deny it or keep it\" (names dhf/scratch on its own, not dhf)."}
+ {:id "spec-0302",
+  :verdict :pass,
+  :evidence
+  "Fixture s3: s2 plus outline @spec-0004 \"Four <n>\" (line 16) with Examples rows (n,m) = (a,1),(b,2),(c,3); check exit 0. dhf/allure-results holds three passed results labelled spec=spec-0004 with no parameters. \"rdm-spec status\" exit 0, {:id \"spec-0004\" ... :status :unverified}. Control: three results with parameters n/m of each row -> :verified."}
+ {:id "spec-0307",
+  :verdict :pass,
+  :evidence
+  "Fixture s1: init project, model context a/component B, dhf/spec/a/b.feature with @spec-0001 One (line 4), @spec-0002 Two (line 8), @spec-0003 Three @wip (line 12); check exit 0. Results are hand-written Allure JSON (uuid, status, labels spec=...). DIR holds passed spec-0001 and passed spec-0099. \"rdm-spec status --results rr\" exit 0; stdout read with clojure.edn and compared with = to {:status {:results \"rr\" :scenarios [...0001 line 4 :verified, 0002 line 8 :unverified, 0003 line 12 :planned] :counts {:verified 1 :failed 0 :unverified 1 :planned 1} :unknown-results [{:file \"rr/a2-result.json\" :spec \"spec-0099\"}]}}: true. Also with ../D1 and an absolute DIR, :results and :file echo DIR as given."}
+ {:id "spec-0308",
+  :verdict :pass,
+  :evidence
+  "Fixture: init project, component architecture/lint \"Lint\", dhf/spec/architecture/lint.feature, rule \"Every view is described\", scenario @spec-0012 @e2e @UN-002 \"Lint names the view\" (check exit 0). rdm-spec run --results res: exit 0, {:run {... :passed 3}}. Result JSON: name \"Lint names the view\"; fullName \"dhf/spec/architecture/lint.feature:Lint names the view\"; historyId \"spec-0012\"; status passed, stage finished; start/stop 1793137961022 (ms epoch, today); steps 3 in order named \"Given a view\"/\"When it is linted\"/\"Then it is named\" each with status, start, stop; labels feature Lint, story \"Every view is described\", epic architecture, suite architecture, subSuite architecture/lint, tag spec-0012/e2e/UN-002, spec spec-0012, context architecture, component Lint, framework gherkin; links [{type issue name UN-002 url dhf/spec/needs.edn#UN-002}]. Every row holds."}
+ {:id "spec-0309",
+  :verdict :pass,
+  :evidence
+  "Same fixture, outline @spec-0013 with headings written|kept and row plan|3. rdm-spec run --results res: exit 0. That row's result: parameters [{\"name\" \"written\" \"value\" \"plan\"} {\"name\" \"kept\" \"value\" \"3\"}], historyId \"spec-0013|plan|3\"; other row historyId \"spec-0013|other|4\"."}
+ {:id "spec-0310",
+  :verdict :pass,
+  :evidence
+  "Scenario spec-0014: Given a view / Then nothing holds (fail! \"no such view\") / And it is named. rdm-spec run --results res: exit 1, stderr lint.feature:23: scenario-failed: spec-0014 failed: Then nothing holds: no such view. Result: status \"failed\", statusDetails message \"Then nothing holds: no such view\", statusDetails trace present (ExceptionInfo stack); steps: passed, failed, third \"And it is named\" status \"skipped\"."}
+ {:id "spec-0311",
+  :verdict :pass,
+  :evidence
+  "Step def (attach! \"response\" \"GET / answered 200\") in the When step. rdm-spec run --results res: exit 0. The result's step \"When it is linted\" holds attachments [{\"name\" \"response\" \"source\" \"dfa59f64-...-attachment.txt\" \"type\" \"text/plain\"}]; res/dfa59f64-...-attachment.txt exists beside the result and holds \"GET / answered 200\"."}
+ {:id "spec-0314",
+  :verdict :pass,
+  :evidence
+  "Base fixture, cut spec-3 config :verify [{:kind :tests :command [\"rdm-spec\" \"run\"]} {:kind :runs :name \"answers\" :command [\"sh\" \"-c\" \"sleep 1; echo hi\"] :expect {:exit 0 :stdout-starts \"hi\"} :budget {:seconds 10}}]. rdm-spec verify ../room0 03 -> exit 0, stdout {:verify {:cycle \"03\", :cut \"spec-3\", :outcome :passed, :checks [{:name \"tests\", :kind :tests, :outcome :passed, :seconds 0.09, :scenarios 2} {:name \"answers\", :kind :runs, :outcome :passed, :seconds 1.01, :budget 10, :margin 8.99}]}}; 2 = stamped non-wip scenarios; margin = 10 - 1.01."}
+ {:id "spec-0315",
+  :verdict :pass,
+  :evidence
+  "Cut config :verify tests [sh -c \"exit 1\"], :serves \"web\", :runs \"answers\" (both touch a marker if started). rdm-spec verify ../room0 03 -> exit 1; stdout checks [{:name \"tests\" :kind :tests :outcome :failed ...} {:name \"web\" :kind :serves :outcome :not-run} {:name \"answers\" :kind :runs :outcome :not-run}], :outcome :refused; stderr tests-failed line; no marker file created."}
+ {:id "spec-0316",
+  :verdict :pass,
+  :evidence
+  "Each row: cut spec-3 config edited, rdm-spec verify ../room0 03; each check would touch a marker (none created; no results/build written). No :tests (only :runs): exit 2 \"cannot-run: the configuration's :verify declares no :tests check first: a project is verified by its tests first\". :renders: exit 2 \"cannot-run: :renders is not a kind of check: the kinds are :tests, :serves, :runs and :plugin\". :serves probe [sh src/probe.sh {url}]: exit 2 \"cannot-run: the :serves check w cannot be trusted: the probe is in the implementation the builder writes ...\". :verify absent: exit 2 \"cannot-run: the configuration declares no :verify: a project is verified by its tests first\". {:kind :tests} no command: exit 2 \"cannot-run: the tests check names no command\"."}
+ {:id "spec-0317",
+  :verdict :pass,
+  :evidence
+  "Cut config :verify [tests, {:kind :runs :name \"answers\" :command [\"no-such-cmd-xyz\" \"help\"] ...}]. rdm-spec verify ../room0 03 -> exit 2, \"cannot-run: the check answers cannot run: its command no-such-cmd-xyz was not found\" (names the check and the command)."}
+ {:id "spec-0318",
+  :verdict :pass,
+  :evidence
+  "Cut config :serves web: start [sh -c \"sleep 0.7; exec python3 -m http.server {port} --bind 127.0.0.1\"], :port 18433, :budget {:seconds 10 :polls 20}, probe dhf/harness/probe/probe.sh (kept path, exits 0). rdm-spec verify ../room0 03 -> exit 0 in 1.3s; check {:polls 20 :probe-seconds 30 :answered-on-poll 2 :name \"web\" :outcome :passed :kind :serves :budget 10 :margin 18}. Afterwards ps shows no http.server process and lsof finds port 18433 free."}
+ {:id "spec-0319",
+  :verdict :pass,
+  :evidence
+  "Cut config :serves web start [sh -c \"sleep 60\"] (never listens), :port 18436, :budget {:seconds 10 :polls 20}. rdm-spec verify ../room0 03 -> exit 1 after 11s; check :outcome :failed, :reason \"web: no answer came within 10 seconds (20 polls of GET / on port 18436)\"; stderr check-failed line. ps afterwards: no sleep 60 left."}
+ {:id "spec-0320",
+  :verdict :pass,
+  :evidence
+  "Another python3 http.server held 127.0.0.1:18439 beforehand; cut config :serves web on :port 18439 whose start would touch a marker. rdm-spec verify ../room0 03 -> exit 2, \"cannot-run: the port 18439 of the :serves check web is already held by another process: no app was started\"; marker absent (no app started)."}
+ {:id "spec-0321",
+  :verdict :pass,
+  :evidence
+  "App python3 http.server answers; probe dhf/harness/probe/bad.sh prints \"probe says: wrong app\" and exits 1. rdm-spec verify ../room0 03 -> exit 1; check web :outcome :failed, :reason \"web: the app answered, and its probe exited 1, so it is not this application: probe says: wrong app\" (probe output relayed)."}
+ {:id "spec-0322",
+  :verdict :pass,
+  :evidence
+  "Cut config :runs answers, rdm-spec verify ../room0 03 each row. exit 0 expected, command exits 3: exit 1, check :failed, \"answers: it answered with the exit 3 where 0 was expected\". stdout-starts \"{:help\", command prints usage (first line) and exits 0: exit 1, :failed, \"its standard output starts \\\"usage\\\" where \\\"{:help\\\" was expected\". Budget 10s, command sleeps 20: exit 1 after 10s, :failed, \"it gave no answer within its budget of 10 seconds, and was stopped\"; no sleep left."}
+ {:id "spec-0323",
+  :verdict :pass,
+  :evidence
+  "rdm-spec run --results res: exit 1, {:run {... :failed 2 :broken 3}}. Row Then assert not holding (clojure assert, and fail!): status \"failed\" (spec-0015, spec-0014). Row Given throws ex-info: status \"broken\" (spec-0016). Row When throws: \"broken\" (spec-0017). Row Then throws a non-assertion ex-info: \"broken\" (spec-0018). stderr names scenario-failed / scenario-broken accordingly."}
+ {:id "spec-0324",
+  :verdict :pass,
+  :evidence
+  "Base fixture (:results-dir \"dhf/allure-results\"), dhf/allure-results absent. RESULTS_DIR unset: rdm-spec run -> exit 0, {:run {:results \"dhf/allure-results\" ...}}, 2 result files in dhf/allure-results. Row R1: RESULTS_DIR=R1 rdm-spec run -> exit 0, :results R1, 2 files in R1. Row R1 + --results other -> exit 0, :results \"other\", 2 files in other, 0 in R1, dhf/allure-results not created."}
+ {:id "spec-0329",
+  :verdict :pass,
+  :evidence
+  "Fixture: cut spec-4 whose model names only shop/cart, holding src/rdm_spec/ratification/ratify.clj and test/rdm_spec/ratification/ratify_test.clj (code-layout component src/rdm_spec/{context}/{component}.clj, test/rdm_spec/{context}/{component}_test.clj). rdm-spec fence ROOM spec-4 --component ratification/ratify -> exit 0, {:fence {... :removed [\"src/rdm_spec/ratification/ratify.clj\" \"test/rdm_spec/ratification/ratify_test.clj\"] :removed-components [\"ratification/ratify\"]}}; ROOM holds neither file; the other 5 implementation files (incl. src/rdm_spec/ratification/helper_other.clj) byte-identical to git show spec-4:<file>."}
+ {:id "spec-0331",
+  :verdict :pass,
+  :evidence
+  "Fixture adds @spec-0003 (@e2e, rule \"Items are kept\", need UN-001); cut config :allure = the default mapping written out; tests command runs rdm-spec run then edits spec-0003's result. rdm-spec verify ../room331 03 per row, each exit 1 with tests :failed and one FILE:LINE: RULE: finding naming the result file and spec-0003: reworded 2nd step -> \"<results>/<uuid>-result.json:1: steps-differ-from-scenario: ... step 2 is \\\"When an item is put in\\\" where the scenario's line is \\\"When an item is added\\\" (spec-0003)\"; one step fewer -> \"...:1: steps-differ-from-scenario: the result has 2 steps where the scenario has 3 (spec-0003)\"; story -> \"...:1: mapping-differs: story: ... (spec-0003)\"; epic billing -> \"...:1: mapping-differs: epic: ... (spec-0003)\"; links removed -> \"...:1: mapping-differs: links: no issue link to UN-001 at dhf/spec/needs.edn#UN-001 (spec-0003)\"; :evidence {:e2e [\"browser-trace\"]} -> \"...:1: evidence-missing: browser-trace: ... (spec-0003)\" (and the same for spec-0001, also @e2e). Unmutated control: exit 0."}
+ {:id "spec-0332",
+  :verdict :pass,
+  :evidence
+  "Cut config :verify tests (touches a marker); rdm-spec verify ../room0 03 per row. :epic :aggregate -> exit 2 \"cannot-run: the configuration's :allure cannot be read: :aggregate is not an element of the spec, which :epic is mapped to\". :colour :context -> exit 2 \"... :colour is not an element of an Allure result\". :labels without \"spec\" -> exit 2 \"... the label spec, from the scenario's id, is required: :labels maps \\\"spec\\\" to :scenario-id\". Each: marker absent, dhf/cycles/03 holds only cycle.edn (no check ran)."}
+ {:id "spec-0333",
+  :verdict :pass,
+  :evidence
+  "No :allure in the cut config (t331 fixture). rdm-spec verify ../room331 03: unmutated results exit 0 (@e2e with no attachment passes: :evidence {}); reworded step / one step fewer -> exit 1 steps-differ-from-scenario (spec-0003); story -> mapping-differs: story; epic -> mapping-differs: epic; links removed -> mapping-differs: links \"no issue link to UN-001 at dhf/spec/needs.edn#UN-001\". :needs \"dhf/spec/needs2.edn\": a link url dhf/spec/needs.edn#UN-001 -> exit 1 \"no issue link to UN-001 at dhf/spec/needs2.edn#UN-001\", url needs2.edn#UN-001 -> exit 0. :needs removed: url needs2 -> exit 1 naming dhf/spec/needs.edn#UN-001; url dhf/spec/needs.edn#UN-001 -> exit 0."}
+ {:id "spec-0341",
+  :verdict :pass,
+  :evidence
+  "Start [python3 dhf/harness/probe/hold.py {port}] accepts connections and never writes (checked by hand: nc -z succeeds, curl hangs to timeout 124). :budget {:seconds 2 :polls 4}. rdm-spec verify ../room0 03 -> exit 1 in 3s; check :failed, :reason \"web: no answer came within 2 seconds (4 polls of GET / on port 18437)\". No hold.py left."}
+ {:id "spec-0346",
+  :verdict :pass,
+  :evidence
+  "Started python3 http.server on 127.0.0.1:18441, made 5 requests, killed it: /proc/net/tcp showed 5 sockets on :4809 (18441) in state 06 (TIME_WAIT) only. Then cut config :serves web on :port 18441; rdm-spec verify ../room0 03 -> exit 0, check web :outcome :passed :answered-on-poll 1."}
+ {:id "spec-0347",
+  :verdict :pass,
+  :evidence
+  "Cut config :allure default mapping with :evidence {:e2e [\"browser-trace\"]}; stamped @spec-0003 tagged @e2e @wip; room's step defs attach browser-trace for the other @e2e scenario. Tests check = rdm-spec run, which wrote spec-0003's result status skipped, label planned=true, no attachment on result or steps. rdm-spec verify ../room347 03 -> exit 0, tests :passed :scenarios 2, empty error stream (no finding about spec-0003)."}
+ {:id "spec-0349",
+  :verdict :pass,
+  :evidence
+  "Config :plugins [{:name \"lint-a\" :subscribes [:SpecParsed] :command [\"bb\" \"dhf/harness/plugins/lint-a/run.clj\"] :seconds 20} {:name \"oracle\" :answers :Gate :command [\"bb\" \"dhf/harness/oracle/oracle.clj\"]}]: rdm-spec check -> exit 0, lint-a ran (wrote its SpecParsed input). Entry read as exactly that shape: an extra :colour -> exit 2 \"cannot-run: the plugin lint-a cannot be trusted: it declares :colour, which a plugin's entry does not hold: an entry is :name, :command, :subscribes or :answers, :seconds and :env\"; :seconds \"x\" -> exit 2 \":seconds is its time limit, a number of seconds\"; :subscribes not a vector -> exit 2; no :name -> exit 2; no :command -> exit 2. No :seconds and a plugin printing started then sleeping 65s: exit 2 after 61s, \"cannot-run: the plugin lint-a timed out after 60 seconds and was stopped; it printed: started\"; no process left."}
+ {:id "spec-0350",
+  :verdict :pass,
+  :evidence
+  "rdm-spec check per row (plugin would write a marker; none written): neither -> exit 2 \"cannot-run: the plugin lint-a cannot be trusted: a plugin subscribes to events or answers a request\"; both -> exit 2 \"... a plugin subscribes to events or answers a request, not both\"; :NoSuchEvent -> exit 2 \"... rdm-spec publishes no event NoSuchEvent; it publishes ClausesIndexed, CycleVerified, KnowledgeIndexed, SpecGated, SpecParsed, VerificationDerived\"; :answers :Review -> exit 2 \"... it answers :Review, and the requests are :Gate and :Check\"; two named lint-a -> exit 2 \"the plugin lint-a is declared 2 times: a plugin's name is declared once\"; command [sh src/shop/lint.sh] -> exit 2 \"... its command [\\\"sh\\\" \\\"src/shop/lint.sh\\\"] is under the implementation's paths: a plugin is a judge the builder never writes\"."}
+ {:id "spec-0351",
+  :verdict :pass,
+  :evidence
+  "Plugin lint-a subscribing to :SpecParsed (sh script appending to plugin.runs, writing pwd, RDM_SPEC and stdin). rdm-spec check -> exit 0; plugin.runs has 1 line; pwd = the project root (<fixture>); RDM_SPEC = \"bb -cp /home/user/c23/release/rdm-spec.jar -m rdm-spec.kernel.command\", identical to what the oracle plugin got under rdm-spec oracle. stdin read as EDN has exactly the keys :event :revision :scenarios :needs :refusals, :event :SpecParsed, :revision :working-tree, :needs [{:id \"UN-001\" :text ... :sources [...]}], :refusals [], 2 scenarios each carrying every key the events.edn shape names (:id :ids :title :name :keyword :file :line :level :needs :wip? :outline? :rows :examples :background :rule :steps :context :component :context-name :component-name)."}
+ {:id "spec-0352",
+  :verdict :pass,
+  :evidence
+  "Plugins lint-a then lint-b subscribing to :SpecParsed, each appending its name and nanotime to order.log. rdm-spec check --events -> order.log \"lint-a 1793138828850315119\" then \"lint-b 1793138828857612903\"; stderr has the core's finding and warning lines, then lint-a's, then lint-b's lines. strace -f -tt of check: the core's reads (spec files, model, views .mmd/.svg) end at 22:07:23.735, the plugins' sh execve at 23.855 and 23.883, the final stderr write at 23.906: both plugins after the core's stages, lint-a first."}
+ {:id "spec-0353",
+  :verdict :pass,
+  :evidence
+  "Plugin subscribing only to :VerificationDerived (records each run to plugin.runs). rdm-spec check -> exit 0, plugin.runs absent (did not run). Control: rdm-spec status --results R -> exit 0, plugin.runs holds one run."}
+ {:id "spec-0354",
+  :verdict :pass,
+  :evidence
+  "Spec passing every check (only a citation-unchecked warning). Plugin lint-a on :SpecParsed, rdm-spec check per row: writes \"dhf/spec/a/b.feature:4: action-unoffered: no form offers it\" and exits 1 -> exit 1, that line unchanged on stderr among the findings (before the warnings). Writes \"dhf/spec/a/b.feature:4: warning: label-long: the label is long\" and exits 0 -> exit 0, that line unchanged among the warnings. Writes nothing, exits 0 -> exit 0, stderr holds only the core's warning. Writes \"cannot read affordances.yaml\" and exits 2 -> exit 2, stdout empty, stderr \"cannot-run: the plugin lint-a cannot run (it exited 2): cannot read affordances.yaml\"."}
+ {:id "spec-0355",
+  :verdict :pass,
+  :evidence
+  "Plugin lint-a on :SpecParsed, :seconds 2, prints \"started\" then sleeps 10. rdm-spec check -> exit 2 after 2.23s, stdout empty, stderr \"cannot-run: the plugin lint-a timed out after 2 seconds and was stopped; it printed: started\"; ps afterwards: no sleepy.sh or sleep 10 process."}
+ {:id "spec-0356",
+  :verdict :pass,
+  :evidence
+  "Plugin lint-a with :command [\"no-such-plugin\"]. rdm-spec check -> exit 2, \"cannot-run: the plugin lint-a cannot be started: its command [\\\"no-such-plugin\\\"] was not found\"."}
+ {:id "spec-0357",
+  :verdict :pass,
+  :evidence
+  "Cut config :plugins [first :answers :Gate (exit 0), second :answers :Gate (writes \"x:1: oracle-differs: the golden differs\", exit 1)]. rdm-spec fence ROOM spec-3 -> exit 1, stdout {}, stderr \"x:1: oracle-differs: the golden differs\" unchanged; gates.log: first (t=...345702220) then second (t=...355168614); ROOM does not exist (no room built). first's stdin {:request :Gate, :task :fence, :cut \"spec-3\"}."}
+ {:id "spec-0358",
+  :verdict :pass,
+  :evidence
+  "Cut config :plugins [first :answers :Gate, writing its stdin to a file]. rdm-spec verify ../room0 03 -> exit 0; stdin was {:request :Gate, :task :verify, :cut \"spec-3\", :cycle \"03\"}."}
+ {:id "spec-0359",
+  :verdict :pass,
+  :evidence
+  "Base project (made by rdm-spec init) with no dhf/harness/plugins/ddd-domain. rdm-spec plugin add ddd-domain -> exit 0, {:plugin {:added \"ddd-domain\" :version 1 :path \"dhf/harness/plugins/ddd-domain\" :entry {:name \"ddd-domain\" :subscribes [:SpecParsed] :command [\"bb\" \"dhf/harness/plugins/ddd-domain/lint.clj\"]} :next \"add the entry to :plugins in dhf/harness/config.edn: ...\"}}. diff -r against the cut's plugins/ddd-domain: identical except origin.edn; origin.edn = {:template \"ddd-domain\", :version 1, :copied \"2026-10-27\"} (today); dhf/harness/config.edn byte-identical to before."}
+ {:id "spec-0360",
+  :verdict :pass,
+  :evidence
+  "Row 1: project with an existing (locally edited) dhf/harness/plugins/ddd-domain: rdm-spec plugin add ddd-domain -> exit 1, stdout {}, stderr \"dhf/harness/plugins/ddd-domain: plugin-exists: the directory dhf/harness/plugins/ddd-domain already exists: plugin add never overwrites, so nothing was copied\"; md5sums of every file under dhf/harness/plugins unchanged. Row 2: rdm-spec plugin add no-such -> exit 2, \"cannot-run: rdm-spec carries no template no-such: it carries affordances (version 1), ddd-domain (version 1)\"."}
+ {:id "spec-0361",
+  :verdict :pass,
+  :evidence
+  "Cut config :verify [tests, {:kind :plugin :name \"judge\"}], :plugins [{:name \"judge\" :answers :Check :command [sh dhf/harness/plugins/judge/run.sh]}]. rdm-spec verify ../room0 03: plugin exits 0 -> exit 0, check {:name \"judge\" :kind :plugin :outcome :passed}. Plugin writes \"src/app.clj:9: form-missing: no form\" to stderr, exits 1 -> exit 1, judge :outcome :failed, stderr relays \"src/app.clj:9: form-missing: no form\" unchanged. Plugin exits 2 -> exit 2, stdout empty, stderr \"cannot-run: the plugin judge cannot run (it exited 2): cannot read\"; ratified.edn records judge :outcome :refused."}
+ {:id "spec-0362",
+  :verdict :pass,
+  :evidence
+  "Same fixture; the judge plugin writes its stdin and pwd to files. rdm-spec verify ../room0 03 -> exit 0. pwd: <fixture>/dhf/cycles/03/build (the checkout). stdin: {:request :Check, :cycle \"03\", :cut \"spec-3\", :checkout \"dhf/cycles/03/build\", :results \"dhf/cycles/03/results/judge\"}: the stated keys and values exactly, plus :results, which spec-0391 requires the request to hold."}
+ {:id "spec-0363",
+  :verdict :pass,
+  :evidence
+  "Cut config :verify [tests (touches marker), {:kind :plugin :name \"judge\"}] with no :plugins, and again with judge declared only as a :SpecParsed subscriber. rdm-spec verify ../room0 03 -> exit 2 both times, \"cannot-run: the :plugin check judge names no plugin answering :Check in :plugins\"; marker absent (tests not run), dhf/cycles/03 holds only cycle.edn."}
+ {:id "spec-0364",
+  :verdict :fail,
+  :evidence
+  "Row \"as a package (a jar)\": bin/rdm-spec runs bb -cp /home/user/c23/release/rdm-spec.jar (RDM_SPEC shows it); in a project made by rdm-spec init, rdm-spec plugin add no-such -> exit 2, \"cannot-run: rdm-spec carries no template no-such: it carries affordances (version 1), ddd-domain (version 1)\": passes. Row \"from its sources\": not checked. The grading room has no source install of rdm-spec, only the packaged build, so this row could not be run. Unsure, so fail."}
+ {:id "spec-0366",
+  :verdict :pass,
+  :evidence
+  "Probe logs its cwd and : with :probe-seconds 20 and the probe sleeping 15s: verify exit 0, check :passed :probe-seconds 20; log \"pwd=.../t318/dhf/cycles/03/build url=http://127.0.0.1:18434/\" (in the checkout, url ends in /). Probe sleeping 22s with :probe-seconds 20: exit 1 after 21s, \"web: the probe timed out after 20 seconds and was stopped\". Same 22s probe with no :probe-seconds: exit 0 after 23s, check reports :probe-seconds 30. No process left."}
+ {:id "spec-0367",
+  :verdict :pass,
+  :evidence
+  "Probe dhf/harness/probe/slow.sh prints \"probing\" then sleeps 10; :probe-seconds 2. rdm-spec verify ../room0 03 -> exit 1 in 3s; check web :outcome :failed, :reason \"web: the probe timed out after 2 seconds and was stopped; it printed: probing\"; stderr check-failed line with same. ps afterwards: no http.server/slow.sh/sleep 10 process; port free."}
+ {:id "spec-0368",
+  :verdict :pass,
+  :evidence
+  "Fixture: repo mono/ whose project is wallet/ (components shop/cart, shop/till), tags spec-2 and spec-3 (spec-3 adds a cart scenario), wallet/dhf/cycles/03/cycle.edn names spec-3; decoys mono/dhf/harness/config.edn and mono/dhf/spec/model.edn hold unreadable EDN. Twin solo/ = same project at a repo root. Run in wallet/: fence ROOM spec-3 -> exit 0 as solo; ROOM holds wallet's committed files at its root (dhf/{decisions,harness,raw,spec,views,wiki}, .githooks, .github, .gitignore) minus src/ and test/ (:removed both) and dhf/cycles; diff -r with solo's room equal apart from git metadata. verify ../../room0 03 -> exit 0 as solo, checkout dhf/cycles/03/build holds dhf, src, test at its root. checklist 03 -> exit 0, :items 4, checklist.json identical to solo's (4 stamped scenarios). scopes spec-2 spec-3 -> exit 0, :scopes [{:component :shop/cart}] (till unchanged), same as solo. Decoys never broke a task; strace of fence shows no access under mono/ outside wallet/ and .git."}
+ {:id "spec-0369",
+  :verdict :pass,
+  :evidence
+  "mono/ with a commit after spec-3 (HEAD not spec-3), an uncommitted edit to wallet/dhf/spec/shop/cart.feature and untracked wallet/dhf/spec/untracked.md. In wallet/: rdm-spec fence ROOM spec-3 -> exit 0; ROOM's dhf/spec/shop/cart.feature byte-identical to git show spec-3:wallet/dhf/spec/shop/cart.feature (no edit), ROOM has no untracked.md and no later.md."}
+ {:id "spec-0370",
+  :verdict :pass,
+  :evidence
+  "Room (not a git repo): src/.gitignore excluding secret.txt and node_modules/, src/secret.txt, src/node_modules/pkg/index.js, symlink src/shop/link.txt -> cart.txt. rdm-spec verify ../room370 03 -> exit 0; checkout dhf/cycles/03/build/src holds .gitignore, shop/cart.txt, shop/link.txt only (no secret.txt, no node_modules); ls -l: link.txt -> cart.txt (a symlink, same target). Same result with the excludes in the room's root .gitignore."}
+ {:id "spec-0379",
+  :verdict :pass,
+  :evidence
+  "Verified cycle 03 (cut spec-3, checklist of spec-0012, spec-0013, spec-0014). a.edn grades spec-0012 pass, spec-0013 fail; b.edn grades spec-0014 pass. rdm-spec score 03 --verdicts a.edn --verdicts b.edn -> exit 0, {:score {... :passed 2 :scored 3 :ungraded 0}}; dhf/cycles/03/score.edn :items holds all three verdicts with their evidence, :passed 2 :scored 3."}
+ {:id "spec-0380",
+  :verdict :pass,
+  :evidence
+  "Same cycle. Both files grade spec-0012 (a.edn, b2.edn): rdm-spec score 03 --verdicts a.edn --verdicts b2.edn -> exit 1, stdout {}, stderr \"a.edn: verdict-twice: spec-0012 is graded twice, in a.edn and b2.edn: an item is graded once\", no score.edn. Second file's line 3 holds \"bad \\q escape\": exit 1, stdout {}, stderr \"b3.edn:3: verdicts-unreadable: b3.edn is not readable EDN: [line 3, col 20] Unsupported escape character: \\q.\", no score.edn."}
+ {:id "spec-0382",
+  :verdict :pass,
+  :evidence
+  "Plugin envy on :SpecParsed with :env {\"ORACLE_DIR\" \"../e2e\" \"SEND_LIMIT\" \"5\"}, writing env to a file. GRADER_MARK=yes rdm-spec check -> exit 0; plugin env held ORACLE_DIR=../e2e, SEND_LIMIT=5, RDM_SPEC=bb -cp /home/user/c23/release/rdm-spec.jar -m rdm-spec.kernel.command, plus the caller's GRADER_MARK=yes, HOME, TMPDIR. :env {\"A\" 5}, {:A \"x\"}, [\"A\" \"x\"], \"A=x\": each exit 2 \"cannot-run: the plugin envy cannot be trusted: :env is a map of strings to strings\", plugin did not run."}
+ {:id "spec-0383",
+  :verdict :pass,
+  :evidence
+  "Cut config: :plugins [{:name \"deploy\" :subscribes [:CycleVerified] ...}] (records each run, its pwd, stdin, and whether ratified.edn exists), :verify [tests, runs answers]. rdm-spec verify ../room0 03 -> exit 0; plugin ran once, after both checks passed, with ratified.edn already present; pwd = project root; stdin {:event :CycleVerified, :cycle \"03\", :cut \"spec-3\", :checkout \"dhf/cycles/03/build\", :checks [...]} with :checks = ratified.edn's :checks (compared as EDN: equal). Plugin writes \"dhf/x.edn:2: deploy-failed: the deploy failed\" and exits 1 -> verify exit 1, that line on stderr. Plugin exits 2 -> verify exit 2, \"cannot-run: the plugin deploy cannot run (it exited 2): cannot reach the registry\", ratified.edn written (:outcome :passed)."}
+ {:id "spec-0384",
+  :verdict :pass,
+  :evidence
+  "Cut config :plugins [deploy :subscribes [:CycleVerified]], tests command [sh -c \"rdm-spec run; exit 1\"]. rdm-spec verify ../room0 03 -> exit 1, tests :failed, :outcome :refused; the plugin's run log cv.runs absent (did not run)."}
+ {:id "spec-0385",
+  :verdict :pass,
+  :evidence
+  "Config :specs [{:name \"auth\" :dir \"dhf/sdd/auth\" :id-prefix \"auth\"} {:name \"infra\" :dir \"dhf/sdd/infra\" :id-prefix \"infra\"}], each folder with features, model.edn, events.edn, needs.edn, glossary.md, ids.edn: rdm-spec check -> exit 0. Each file read from its own folder, shown by a break in auth's only: unlevelled scenario -> \"dhf/sdd/auth/login/session.feature:8: level-missing\"; model.edn unreadable -> \"dhf/sdd/auth/model.edn:1: model-unreadable\"; events.edn unreadable -> \"dhf/sdd/auth/events.edn:1: events-unreadable\"; ids.edn {:issued 0} -> \"id-unissued: auth-0001 is above the ledger's highest id, 0\"; needs.edn removed -> \"dhf/sdd/auth/needs.edn: needs-unreadable\"; the same for infra. Base project with no :specs reads dhf/spec as before (check exit 0, findings name dhf/spec/...). glossary.md and domain.edn have no observable effect on check, for one spec or several. Note: check's stdout {:spec {:scenarios 1 ...}} counts only the last spec's scenarios (5 across both specs). The scenario does not state the result's shape."}
+ {:id "spec-0386",
+  :verdict :pass,
+  :evidence
+  "Two-spec project (auth dhf/sdd/auth, infra dhf/sdd/infra). rdm-spec check per row: two specs named auth -> exit 2 \"cannot-run: the configuration's :specs declares \\\"auth\\\" 2 times: a spec's name is declared once\"; two with :id-prefix auth -> exit 2 \"... declares \\\"auth\\\" 2 times: an id prefix is declared once, so no two scenarios share an id\"; two in dhf/sdd/auth -> exit 2 \"... declares \\\"dhf/sdd/auth\\\" 2 times: a folder holds one spec\"; infra at dhf/sdd/nowhere -> exit 2 \"cannot-run: the spec infra's folder dhf/sdd/nowhere does not exist\"."}
+ {:id "spec-0387",
+  :verdict :pass,
+  :evidence
+  "Two specs; infra's needs.edn holds only UN-002, auth's holds UN-001. infra's feature traces to UN-009: rdm-spec check -> exit 1, one finding \"dhf/sdd/infra/deploy/pipeline.feature:8: need-undeclared: infra-0001 traces to UN-009, which the needs do not declare\", none about auth (auth traces to UN-001, resolved). infra's feature tracing to UN-001 (only auth declares it) -> exit 1 need-undeclared naming infra's file and UN-001 (needs resolve within their spec). A feature at dhf/sdd/infra/login/session.feature (auth's context/component) -> exit 1 \"a-scenario-owner: ... belongs to no component\" (components resolve within their spec)."}
+ {:id "spec-0388",
+  :verdict :pass,
+  :evidence
+  "Two specs: auth with auth-0001..0003 stamped (dhf/sdd/auth/ids.edn {:issued 3}) and one unstamped; infra with none stamped ({:issued 0}) and one unstamped. rdm-spec stamp -> exit 0; auth's new scenario now @auth-0004 and dhf/sdd/auth/ids.edn {:issued 4}; infra's @infra-0001 and dhf/sdd/infra/ids.edn {:issued 1}. (Its stdout lists only the infra stamping, {:stamp {:stamped [{... :id \"infra-0001\"}] :issued 1}}, omitting auth-0004: the scenario states no result shape for several specs.)"}
+ {:id "spec-0389",
+  :verdict :pass,
+  :evidence
+  "Two specs (auth: auth-0001; infra: infra-0001) cut spec-3, dhf/cycles/03/cycle.edn :scope [{:spec \"auth\"}]. rdm-spec checklist 03 -> exit 0, :items 1, checklist.json holds only auth-0001. rdm-spec verify ROOM 03 with tests writing results of both -> exit 0 (:scenarios 1); with infra's results deleted -> exit 0 (no result required for infra); with auth-0001's result deleted -> exit 1, \"dhf/sdd/auth/login/session.feature:8: scenario-without-result: auth-0001: it is named by no result\"."}
+ {:id "spec-0390",
+  :verdict :pass,
+  :evidence
+  "Two specs, results R from rdm-spec run with infra-0001's result removed. rdm-spec status --results R -> exit 0, :scenarios [{:id \"auth-0001\" ... :status :verified :spec \"auth\"} {:id \"infra-0001\" ... :status :unverified :spec \"infra\"}]. rdm-spec release --results R -> exit 1, \"dhf/sdd/infra/deploy/pipeline.feature:8: release-refused: infra-0001 is unverified: a release needs every scenario verified\". rdm-spec release --results R --spec auth -> exit 0, {:release {... :scenarios 1 :refused 0}}."}
+ {:id "spec-0391",
+  :verdict :pass,
+  :evidence
+  "Cut config :plugins [{:name \"acceptance\" :answers :Check ...}], :verify [tests, {:kind :plugin :name \"acceptance\"}]. Plugin's stdin: {:request :Check :cycle \"03\" :cut \"spec-3\" :checkout \"dhf/cycles/03/build\" :results \"dhf/cycles/03/results/acceptance\"}. Plugin runs rdm-spec run into the project's dhf/cycles/03/results/acceptance: verify exit 0, acceptance :passed. One result status edited to failed: exit 1, acceptance :failed, \"dhf/cycles/03/results/acceptance/<uuid>-result.json: result-not-passed: spec-0001 is failed\". spec-0002's result removed: exit 1, :failed, \"dhf/spec/shop/cart.feature:14: scenario-without-result: spec-0002: its row plan | 3 is named by no result\". Story label changed: exit 1, \"<file>:1: mapping-differs: story: ... (spec-0001)\" (held to the mapping). No results + exit 0: exit 0, :passed; no results + exit 1: exit 1, :failed \"the plugin exited 1\" (exit alone)."}]

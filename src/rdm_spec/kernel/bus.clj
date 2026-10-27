@@ -14,6 +14,8 @@
                 :carries [:revision :scenarios :needs :refusals]}
    :SpecGated {:published-by :spec/check
                :carries [:revision :passed? :findings]}
+   :CycleVerified {:published-by :verification/verify
+                   :carries [:cycle :cut :checkout :checks]}
    :VerificationDerived {:published-by :verification/status
                          :carries [:revision :statuses :unknown-results :unreadable-files]}
    :ClausesIndexed {:published-by :compliance/gap

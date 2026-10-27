@@ -1,18 +1,22 @@
 (ns rdm-spec.measurement.checklist-test
   (:require [clojure.test :refer [deftest is]]
-            [rdm-spec.measurement.checklist :as c]))
+            [rdm-spec.measurement.checklist :as checklist]))
 
-(def s1 {:id "spec-0002" :context :architecture :component :architecture/lint})
-(def s2 {:id "spec-0001" :context :kernel :component :kernel/bus})
+(deftest a-scope-selects-scenarios
+  (let [s {:id "spec-0001" :context :spec :component :spec/parser :spec nil}]
+    (is (checklist/in-scope? :project s))
+    (is (checklist/in-scope? {:context :spec} s))
+    (is (not (checklist/in-scope? {:context :verification} s)))
+    (is (checklist/in-scope? [{:context :knowledge} {:component :spec/parser}] s))
+    (is (checklist/in-scope? {:spec "auth"} (assoc s :spec "auth")))
+    (is (not (checklist/in-scope? {:spec "auth"} (assoc s :spec "infra"))))))
 
-(deftest scopes
-  (is (c/in-scope? :project s1))
-  (is (c/in-scope? {:context :architecture} s1))
-  (is (not (c/in-scope? {:context :architecture} s2)))
-  (is (c/in-scope? {:component :kernel/bus} s2))
-  (is (c/in-scope? [{:context :verification} {:component :kernel/bus}] s2))
-  (is (nil? (c/scope-problem [{:context :knowledge} {:component :spec/parser}])))
-  (is (c/scope-problem {:area :x})))
+(deftest a-scope-is-one-of-its-shapes
+  (is (checklist/scope? :project))
+  (is (checklist/scope? [{:context :knowledge} {:component :spec/parser}]))
+  (is (not (checklist/scope? {:colour :red}))))
 
-(deftest json-key-order
-  (is (re-find #"(?s)\"cycle\".*\"cut\".*\"items\".*\"planned\"" (c/checklist-json "03" "spec-3" [] []))))
+(deftest clause-items-come-with-the-project-or-the-compliance-context
+  (is (checklist/clauses? :project))
+  (is (checklist/clauses? [{:context :compliance}]))
+  (is (not (checklist/clauses? {:context :architecture}))))

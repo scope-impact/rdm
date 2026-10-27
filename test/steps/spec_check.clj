@@ -1,131 +1,110 @@
 (ns steps.spec-check
   "Step definitions of dhf/spec/spec/check.feature."
   (:require [babashka.fs :as fs]
-            [clojure.edn :as edn]
             [clojure.string :as str]
             [rdm-spec.kernel.runner :refer [defstep fail!]]
             [steps.kernel-command :as k]))
 
-(def core "dhf/spec/kernel/core.feature")
+(defn core!
+  "The project whose core feature holds scenarios (feature-text maps), the ledger at issued."
+  [ctx scenarios & {:keys [issued tags description]}]
+  (k/project! ctx {:features {k/core-feature (k/feature-text {:name "Core" :tags (or tags ["UN-001"]) :description description
+                                                              :scenarios scenarios})}
+                   :extra {"dhf/spec/ids.edn" (str "{:issued " (or issued 1) "}\n")}}))
 
-(defn with-scenarios
-  "A project whose core feature (tagged @UN-001 unless feature-tags say
-  otherwise) holds the given scenarios."
-  ([ctx scenarios] (with-scenarios ctx scenarios ["UN-001"]))
-  ([ctx scenarios feature-tags]
-   (k/project! ctx {:features {core (k/feature-text {:name "Core" :tags feature-tags :scenarios scenarios})}})))
+(defn tagged [n & tags] (assoc (k/sc n (str "Scenario " n)) :tags (vec tags)))
 
 (defstep #"a scenario tagged both @spec-0007 and @spec-0008"
-  (fn [ctx]
-    (-> (with-scenarios ctx [{:tags ["spec-0007" "spec-0008" "e2e"] :title "Two ids" :steps ["Given a step"]}])
-        (k/names+ "spec-0007" "spec-0008" "Two ids"))))
+  (fn [ctx] (-> (core! ctx [(tagged 7 "spec-0007" "spec-0008" "e2e")] :issued 8) (k/names+ "spec-0007" "spec-0008"))))
 
 (defstep #"two scenarios both tagged @spec-0007"
   (fn [ctx]
-    (-> (k/project! ctx {:model-spec {:kernel ["core" "other"]}
-                         :features {core (k/feature-text {:name "Core" :tags ["UN-001"] :scenarios [(k/sc 7 "One")]})
-                                    "dhf/spec/kernel/other.feature"
-                                    (k/feature-text {:name "Other" :tags ["UN-001"] :scenarios [(k/sc 7 "Two")]})}})
-        (k/names+ "spec-0007" core "dhf/spec/kernel/other.feature"))))
+    (let [ctx (core! ctx [(tagged 7 "spec-0007" "e2e")] :issued 7)]
+      (k/write-files! (:dir ctx) {"dhf/spec/kernel/other.feature"
+                                  (k/feature-text {:name "Other" :tags ["UN-001"] :scenarios [(tagged 7 "spec-0007" "e2e")]})})
+      (k/update-edn! ctx "dhf/spec/model.edn" update :kernel conj
+                     {:id :kernel/other :name "Other" :description "The other component" :spec "kernel/other"})
+      (k/names+ ctx k/core-feature "dhf/spec/kernel/other.feature" "spec-0007"))))
 
 (defstep #"a scenario on line 30 of a feature file with no @spec- tag"
   (fn [ctx]
-    (let [filler (apply str (repeat 25 "  # filler\n"))]
-      (k/project! ctx {:features {core (str "@UN-001\nFeature: Core\n\n" filler "  @e2e\n  Scenario: Unstamped\n    Given a step\n")}}))))
+    (let [ctx (k/project! ctx)
+          head (str "@UN-001\nFeature: Core\n" (str/join (repeat 26 "  # a comment\n")) "  @e2e\n")]
+      (k/write-files! (:dir ctx) {k/core-feature (str head "  Scenario: Unstamped\n    Given a step\n")})
+      (assert (= 30 (k/line-of (slurp (fs/file (:dir ctx) k/core-feature)) "Scenario: Unstamped")))
+      ctx)))
 
 (defstep #"it fails, names the file and line 30, and says to run \"rdm-spec stamp\""
-  (fn [ctx]
-    (k/check-exit ctx 1)
-    (k/err-line-with ctx (str core ":30") "rdm-spec stamp")))
+  (fn [ctx] (k/check-exit ctx 1) (k/err-line-with ctx (str k/core-feature ":30") "rdm-spec stamp")))
 
 (defstep #"a scenario tagged @spec-0901, an id above every id the ledger has issued"
-  (fn [ctx] (with-scenarios ctx [(k/sc 901 "Too high")])))
+  (fn [ctx] (core! ctx [(tagged 901 "spec-0901" "e2e")] :issued 41)))
 
 (defstep #"it fails, names spec-0901 and says the ledger never issued it"
-  (fn [ctx]
-    (k/check-exit ctx 1)
-    (k/err-line-with ctx "spec-0901" "never issued")))
+  (fn [ctx] (k/check-exit ctx 1) (k/err-line-with ctx "spec-0901" "never issued")))
 
-(defstep #"a stamped scenario tagged (@e2e|@contract)"
-  (fn [ctx level]
-    (with-scenarios ctx [{:tags ["spec-0001" (subs level 1)] :title "Levelled" :steps ["Given a step"]}])))
+(defstep #"a stamped scenario tagged @(e2e|contract)"
+  (fn [ctx level] (core! ctx [(tagged 1 "spec-0001" level)])))
 
 (defstep #"the scenario passes the level check"
   (fn [ctx]
     (k/check-exit ctx 0)
-    (assert (not-any? #(str/includes? % "level") (k/finding-rules ctx)))
+    (assert (not-any? #(re-find #"level" %) (k/err-lines ctx)) (:err ctx))
     ctx))
 
 (defstep #"a stamped scenario with no level tag"
-  (fn [ctx]
-    (-> (with-scenarios ctx [{:tags ["spec-0001"] :title "No level" :steps ["Given a step"]}])
-        (k/names+ "spec-0001" "@e2e" "@contract"))))
+  (fn [ctx] (-> (core! ctx [(tagged 1 "spec-0001")]) (k/names+ "spec-0001" "e2e" "contract"))))
 
 (defstep #"a stamped scenario tagged both @e2e and @contract"
-  (fn [ctx]
-    (-> (with-scenarios ctx [{:tags ["spec-0001" "e2e" "contract"] :title "Both" :steps ["Given a step"]}])
-        (k/names+ "spec-0001" "@e2e" "@contract"))))
+  (fn [ctx] (-> (core! ctx [(tagged 1 "spec-0001" "e2e" "contract")]) (k/names+ "spec-0001" "e2e" "contract"))))
 
 (defstep #"a stamped scenario tagged @persona"
-  (fn [ctx]
-    (with-scenarios ctx [{:tags ["spec-0001" "e2e" "persona"] :title "Persona" :steps ["Given a step"]}])))
+  (fn [ctx] (core! ctx [(tagged 1 "spec-0001" "e2e" "persona")])))
 
 (defstep #"it fails, names the scenario's id and @persona, and lists the tags a scenario may carry"
-  (fn [ctx]
-    (k/check-exit ctx 1)
-    (k/err-line-with ctx "spec-0001" "@persona" "@e2e" "@contract" "@wip" "@UN-")))
+  (fn [ctx] (k/check-exit ctx 1) (k/err-line-with ctx "spec-0001" "@persona" "@e2e" "@contract" "@wip" "@UN-")))
 
 (defstep #"a feature tagged @UN-003"
   (fn [ctx]
-    (k/project! ctx {:needs {"UN-003" {:text "Need three" :sources ["demo:README.md@abc1234"]}}
-                     :features {core (k/feature-text {:name "Core" :tags ["UN-003"] :scenarios [(k/sc 1 "Inherits")]})}})))
+    (let [ctx (core! ctx [(tagged 1 "spec-0001" "e2e")] :tags ["UN-003"])]
+      (k/update-edn! ctx "dhf/spec/needs.edn" assoc "UN-003" {:text "A third need" :sources ["demo:README.md@abc1234"]}))))
 
 (defstep #"a scenario under it carries no need tag of its own"
   (fn [ctx]
-    (assert (not (str/includes? (k/scenario-text (k/sc 1 "Inherits")) "UN-")))
+    (assert (not (re-find #"(?m)^\s+@.*UN-" (slurp (fs/file (:dir ctx) k/core-feature)))))
     ctx))
 
 (defstep #"no results directory exists"
-  (fn [ctx]
-    (assert (not (fs/exists? (fs/path (k/guard! (:dir ctx)) "dhf/allure-results"))))
-    ctx))
+  (fn [ctx] (assert (not (fs/exists? (fs/path (:dir ctx) "dhf/allure-results")))) ctx))
 
 (defstep #"it lists the scenario"
   (fn [ctx]
     (k/check-exit ctx 0)
-    (let [t (:trace (k/edn-out ctx))]
-      (assert (= ["spec-0001"] (map :id (:scenarios t))) (pr-str t))
-      ctx)))
+    (assert (= ["spec-0001"] (map :id (get-in (k/edn-out ctx) [:trace :scenarios]))) (:out ctx))
+    ctx))
 
 (defstep #"a stamped scenario with no need tag on it, its rule or its feature"
-  (fn [ctx]
-    (-> (with-scenarios ctx [(k/sc 1 "No need")] [])
-        (k/names+ "spec-0001"))))
+  (fn [ctx] (-> (core! ctx [(tagged 1 "spec-0001" "e2e")] :tags []) (k/names+ "spec-0001"))))
 
 (defstep #"the declared needs are UN-001 to UN-005"
   (fn [ctx]
-    (k/project! ctx {:needs (into {} (for [i (range 1 6)]
-                                       [(format "UN-%03d" i) {:text (str "Need " i) :sources ["demo:README.md@abc1234"]}]))})))
+    (let [ctx (k/project! ctx)]
+      (k/update-edn! ctx "dhf/spec/needs.edn"
+                     (fn [_] (into {} (for [i (range 1 6)] [(format "UN-%03d" i) {:text "A need" :sources ["demo:README.md@abc1234"]}])))))))
 
 (defstep #"a scenario tagged @UN-009"
-  (fn [ctx]
-    (k/write-files! (:dir ctx) {core (k/feature-text {:name "Core" :tags ["UN-001"]
-                                                      :scenarios [{:tags ["spec-0002" "e2e" "UN-009"] :title "Nine" :steps ["Given a step"]}]})})
-    (k/names+ ctx "UN-009" "spec-0002")))
+  (fn [ctx] (-> (core! ctx [(tagged 1 "spec-0001" "e2e" "UN-009")]) (k/names+ "UN-009" "spec-0001"))))
 
 (defstep #"the need UN-004 with no sources"
   (fn [ctx]
-    (-> (k/project! ctx {:needs {"UN-001" {:text "One" :sources ["demo:README.md@abc1234"]}
-                                 "UN-004" {:text "Four" :sources []}}})
+    (-> (k/project! ctx)
+        (k/update-edn! "dhf/spec/needs.edn" assoc "UN-004" {:text "A need resting on nothing" :sources []})
         (k/names+ "UN-004"))))
 
 (defstep #"a spec whose one stamped scenario is tagged @wip"
-  (fn [ctx]
-    (with-scenarios ctx [{:tags ["spec-0001" "e2e" "wip"] :title "Planned" :steps ["Given a step"]}])))
+  (fn [ctx] (core! ctx [(tagged 1 "spec-0001" "e2e" "wip")])))
 
 (defstep #"a feature file whose description says the parser is written in Cobalt"
   (fn [ctx]
-    (k/write-files! (:dir ctx) {core (str "@UN-001\nFeature: Core\n  The parser is written in Cobalt.\n\n"
-                                          (k/scenario-text (k/sc 1 "One")))})
-    (k/names+ ctx (str core ":3"))))
-
+    (-> (core! ctx [(tagged 1 "spec-0001" "e2e")] :description "The parser is written in Cobalt.")
+        (k/names+ (str k/core-feature ":3") "Cobalt"))))

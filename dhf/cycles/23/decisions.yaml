@@ -1,0 +1,15 @@
+# What cycle 23's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml).
+- {scenario: spec-0391, decision: "a Check request also holds :results; spec-0362's four keys stay"}
+- {scenario: spec-0361, decision: "a :plugin check whose plugin cannot run is :refused in ratified.edn, and verify exits 2 (against the glossary: exit 2 writes no ratified.edn)"}
+- {scenario: spec-0295, decision: "a kept file carries a removed implementation file's bytes when its git blob is identical; empty files excepted"}
+- {scenario: spec-0038, decision: "fence refuses (exit 2) a ROOM that exists and is not empty"}
+- {scenario: spec-0357, decision: "Gate plugins stop at the first that fails"}
+- {scenario: spec-0389, decision: "only a {:spec S} cycle scope narrows the scenarios verify requires results for; context and component scopes do not"}
+- {scenario: spec-0331, decision: "a mapping finding's LINE is the result file's line holding the element (1 for one-line JSON)"}
+- {scenario: spec-0062, decision: "in status, an unreadable result file is a finding (exit 1); statuses never change the exit (with spec-0313)"}
+- {scenario: spec-0349, decision: "a plugin entry with a key outside :name :command :subscribes :answers :seconds :env is refused (exit 2)"}
+- {scenario: spec-0354, decision: "a plugin's standard output goes into the task's result under :plugins NAME"}
+- {scenario: spec-0108, decision: "trace's 'no status was derived' and 'no scenario traces to' messages are :note in its result (with spec-0103)"}
+- {scenario: spec-0043, decision: "a duplicate id gives one finding per occurrence, each naming every location"}
+- {scenario: spec-0193, decision: "a results directory counts as given only through --results or RESULTS_DIR; only then does a missing one make trace and publish exit 2 (with spec-0108)"}
