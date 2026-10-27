@@ -1,0 +1,260 @@
+[{:id "spec-0033",
+  :verdict :pass,
+  :evidence
+  "Fixture tagged spec-3; room's test command (sh test.sh) exits 0 and writes no Allure result. rdm-spec verify ROOM 03 -> exit 1; stderr: dhf/cycles/03/test.log: tests-no-results: the test command exited 0 and wrote no Allure result into dhf/cycles/03/results: a green exit with no results is not a run; stdout tests check :outcome :failed with that :reason, verify :outcome :refused."}
+ {:id "spec-0120",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; dhf/raw/sources.edn {:loyly {:repository \"https://github.com/skallinen/loyly\" :record \"loyly.md\" :pins [] :fenced []}} with dhf/raw/loyly.md present, committed. rdm-spec check -> exit 1; stderr: dhf/raw/sources.edn:1: source-no-pin: the source loyly has no pin: a source is pinned at every commit it is cited at. Same with the :pins key absent: exit 1, same finding. Fails and names the source."}
+ {:id "spec-0121",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; commit d267d0c: sources.edn loyly :pins [\"17d68d2\"] (record present); commit 246279b replaces that pin by 1234567. rdm-spec check -> exit 1; stderr: dhf/raw/sources.edn:1: pin-dropped: the source loyly dropped the pin 17d68d2 in the commit 246279b: a pin is never dropped; retire a source instead. Names source, dropped pin and the dropping commit. (Uncommitted variant names 'the working tree'.)"}
+ {:id "spec-0122",
+  :verdict :pass,
+  :evidence
+  "Fresh init project, loyly recorded; need UN-004 :sources [\"innolitix:README.md@f21b508\"], no source innolitix. rdm-spec check -> exit 1; stderr: dhf/spec/needs.edn:2: citation-unknown-source: UN-004 cites innolitix:README.md@f21b508: no source innolitix is recorded in the sources index. Same citation in a wiki footnote -> exit 1, dhf/wiki/pages/p.md:5: citation-unknown-source: innolitix:README.md@f21b508: no source innolitix is recorded in the sources index. Names innolitix and where it was cited (file:line, and the need)."}
+ {:id "spec-0123",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; loyly pinned only at 17d68d2; need UN-004 :sources [\"loyly:README.md@0000000\"]. rdm-spec check -> exit 1; stdout :sources {:resolved 0 :unresolved 1 :unchecked 0}; stderr: dhf/spec/needs.edn:2: citation-unpinned: UN-004 cites loyly:README.md@0000000: the commit 0000000 is not one of loyly's pins: 17d68d2. Names the commit and the source's pins."}
+ {:id "spec-0124",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; loyly recorded, pinned [\"17d68d2\"]; need UN-004 cites \"loyly:README.md@17d68d2\"; DIR holds loyly/ (git clone of sources/loyly at 17d68d2) and innolitics-rdm/. rdm-spec check --sources DIR -> exit 0; stdout :sources {:resolved 1 :unresolved 0 :unchecked 0}; stderr empty. Also exit 0 with a relative DIR. Robustness: a checkout without commit 17d68d2 -> exit 1 pin-not-in-checkout / citation-unresolved (not a false resolve)."}
+ {:id "spec-0125",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; loyly pinned 17d68d2; need UN-004 cites \"loyly:docs/plan.md@17d68d2\"; DIR/loyly a clone at 17d68d2 (no docs/plan.md). rdm-spec check --sources DIR -> exit 1; stdout :sources {:resolved 0 :unresolved 1 :unchecked 0}; stderr: dhf/spec/needs.edn:2: citation-unresolved: UN-004 cites loyly:docs/plan.md@17d68d2: the path docs/plan.md does not exist at 17d68d2 in the checkout of loyly. Names the path and the pin. Also fails the same way when the checkout's HEAD is a later commit that adds docs/plan.md (checked at the pin, not the working tree)."}
+ {:id "spec-0126",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; loyly pinned 17d68d2; need UN-004 cites \"loyly:README.md@17d68d2\". rdm-spec check (no --sources) -> exit 0; stdout :sources {:resolved 0 :unresolved 0 :unchecked 1}; stderr: dhf/spec/needs.edn:2: warning: citation-unchecked: UN-004 cites loyly:README.md@17d68d2: not checked: no --sources was given, so no checkout of loyly was read. Reported unchecked with reason, not counted as resolved."}
+ {:id "spec-0135",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; DIR/demo a git repo at commit a360ac4 holding docs/real.md only; sources.edn demo {:repository ... :record \"demo.md\" :pins [\"a360ac4\"]}, record present; need UN-004 :sources [\"demo:docs/nothing.md@a360ac4\"]. rdm-spec check --sources DIR -> exit 1; stdout :sources {:resolved 0 :unresolved 1 :unchecked 0}; stderr: dhf/spec/needs.edn:2: citation-unresolved: UN-004 cites demo:docs/nothing.md@a360ac4: the path docs/nothing.md does not exist at a360ac4 in the checkout of demo. Names UN-004, the citation and why."}
+ {:id "spec-0136",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; sources.edn fences \"harness/fence.sh\" in loyly (pinned 17d68d2); need UN-004 cites \"loyly:harness/fence.sh@17d68d2\". rdm-spec check -> exit 1; stderr: dhf/spec/needs.edn:2: citation-fenced: UN-004 cites loyly:harness/fence.sh@17d68d2: harness/fence.sh is fenced in loyly by its fenced path harness/fence.sh: a source's implementation is never cited. As a wiki footnote: exit 1, dhf/wiki/pages/p.md:5: citation-fenced: ... (with and without --sources). Names the fenced path and where cited."}
+ {:id "spec-0137",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; sources.edn fences \"rdm\" in innolitics-rdm (pinned f21b508); need UN-004 cites \"innolitics-rdm:rdm/render.py@f21b508\". rdm-spec check -> exit 1; stderr: dhf/spec/needs.edn:2: citation-fenced: UN-004 cites innolitics-rdm:rdm/render.py@f21b508: rdm/render.py is fenced in innolitics-rdm by its fenced path rdm: a source's implementation is never cited. Same with --sources. Names the fenced directory and where cited. (rdmx/a.py is not treated as inside rdm: exit 0, unchecked warning.)"}
+ {:id "spec-0138",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; sources.edn loyly pinned 17d68d2, :fenced [\"harness/fence.sh\" \"harness/missing.clj\"]; DIR/loyly a clone at 17d68d2. rdm-spec check --sources DIR -> exit 1; stderr: dhf/raw/sources.edn:1: fenced-path-missing: the fenced path harness/missing.clj of loyly matches nothing at its pin 17d68d2. Names source, pin and path; harness/fence.sh (present) is not reported."}
+ {:id "spec-0171",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; loyly (pin 17d68d2) and innolitics-rdm (pin f21b508) recorded; needs cite loyly:README.md, loyly:docs/wow/invariants.md, innolitics-rdm:README.md, innolitics-rdm:setup.py; DIR holds loyly/ and innolitics-rdm/ (clones). rdm-spec check --sources DIR -> exit 0, :sources {:resolved 4 :unresolved 0 :unchecked 0}. Changing one path per source to a missing one -> exit 1, :sources {:resolved 2 :unresolved 2}, stderr names loyly:docs/none.md ... in the checkout of loyly and innolitics-rdm:nosuch.py ... in the checkout of innolitics-rdm. Each source's citations are checked against its own checkout named by its id."}
+ {:id "spec-0187",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; need UN-004 citing \"loyly:README.md@17d68d2\" (loyly recorded, pinned). rdm-spec check with no --sources -> exit 0, stderr: dhf/spec/needs.edn:2: warning: citation-unchecked: UN-004 cites loyly:README.md@17d68d2: not checked: no --sources was given, so no checkout of loyly was read. With --sources DIR holding only innolitics-rdm/ -> exit 0, warning: ... not checked: the directory given with --sources, DIR, holds no checkout of loyly. Passes and warns with why."}
+ {:id "spec-0197",
+  :verdict :pass,
+  :evidence
+  "Fixture tagged spec-3; room's test command prints a line to stdout (and one to stderr) and exits 1. rdm-spec verify ROOM 03 -> exit 1; stderr: dhf/cycles/03/test.log: tests-failed: the test command failed with exit 1: its output is in dhf/cycles/03/test.log; dhf/cycles/03/test.log holds 'room test output line' (and the stderr line). With exit 3 the message says 'exit 3'. Says it failed, with its exit status, and names test.log."}
+ {:id "spec-0199",
+  :verdict :pass,
+  :evidence
+  "Project from init with a model (context greeting, component hello, views generated), need UN-001 citing loyly:README.md@17d68d2, loyly fencing harness/fence.sh; dhf/spec/greeting/hello.feature has stamped scenarios whose Given step reads: Given a page citing \"loyly:harness/fence.sh@17d68d2\"; committed. rdm-spec check -> exit 0; stdout :sources {:resolved 0 :unresolved 0 :unchecked 1} (only the need's citation); stderr only the need's citation-unchecked warning. With --sources DIR -> exit 0, :sources {:resolved 1 :unresolved 0 :unchecked 0}, stderr empty. The quoted fenced citation is not resolved and the check passes."}
+ {:id "spec-0202",
+  :verdict :pass,
+  :evidence
+  "Project tagged spec-3, later commit tagged spec-4 adds dhf/wiki/later-file.md and edits hello.feature; dhf/cycles/03/cycle.edn {:cut \"spec-3\"}. rdm-spec verify ROOM 03 -> exit 0, stdout :cut \"spec-3\"; dhf/cycles/03/build holds spec-3's files (no later-file.md, hello.feature's old text 'Says hello.'), file list equals git archive spec-3 plus the room's implementation, and no .git of its own (no history). Changing cycle.edn to {:cut \"spec-4\"} -> build holds later-file.md, :cut \"spec-4\"; {:cut \"spec-9\"} -> exit 2 'cannot-run: dhf/cycles/03/cycle.edn names the cut spec-9, which is not a cut: no tag spec-9 exists'. The cut comes from cycle.edn."}
+ {:id "spec-0203",
+  :verdict :pass,
+  :evidence
+  "Project tagged spec-3 with a valid room; dhf/cycles/03/cycle.edn removed (dhf/cycles/03 otherwise empty). rdm-spec verify ROOM 03 -> exit 2, stdout empty, stderr: cannot-run: there is no dhf/cycles/03/cycle.edn: verify reads the cycle before anything else. Nothing written under dhf/cycles/03 and the test command never ran (its probe file absent). Same with no dhf/cycles at all."}
+ {:id "spec-0204",
+  :verdict :pass,
+  :evidence
+  "Cut spec-3 holds src/rdm_spec/old.clj, src/common.txt ('cutver'), src/marker.txt, test.sh; room (fenced from spec-3) holds src/common.txt ('roomver'), src/marker.txt, src/rdm_spec/new.clj, src/results/*.json, test.sh, no old.clj. rdm-spec verify ROOM 03 -> exit 0; dhf/cycles/03/build/src has no rdm_spec/old.clj, holds new.clj; diff -r ROOM/src build/src and diff of test.sh show no difference. With a third configured implementation path extra.txt held by the cut and not the room, build holds no extra.txt."}
+ {:id "spec-0205",
+  :verdict :pass,
+  :evidence
+  "Room fenced from spec-3, then the builder edited the room's dhf/harness/config.edn (:verify tests command changed to [\"sh\" \"-c\" \"echo EDITED > edited.flag; exit 0\"]) and dhf/spec/greeting/hello.feature (description and a Then step reworded), committed in the room. rdm-spec verify ROOM 03 -> exit 0, :scenarios 2; the cut's test.sh ran (its probe file written), no edited.flag in the build; build's dhf/harness/config.edn and hello.feature are byte-identical to git show spec-3:... ; results with the cut's step texts passed the mapping, so the cut's spec was used."}
+ {:id "spec-0206",
+  :verdict :pass,
+  :evidence
+  "Project tagged spec-3; room's test.sh (the :tests command [\"sh\" \"test.sh\"]) records pwd and RESULTS_DIR. Run from the project root /home/user/c22/grade-a/scratch/fx/v4 as rdm-spec verify ../v4-room 03, with RESULTS_DIR=/home/user/c22/grade-a/scratch/elsewhere in the caller's environment -> exit 0; the test command saw RESULTS_DIR=/home/user/c22/grade-a/scratch/fx/v4/dhf/cycles/03/results (absolute, in the repository verify ran in; caller's value overridden, 'elsewhere' never created), pwd=.../dhf/cycles/03/build."}
+ {:id "spec-0207",
+  :verdict :pass,
+  :evidence
+  "Fixture with stamped @spec-0012/@spec-0013 and @spec-0014 tagged @wip; the :tests command (sh test.sh in the room) exits 0 and writes passing Allure results for spec-0012 (twice, two result files) and spec-0013, none for the @wip scenario, into RESULTS_DIR (dhf/cycles/03/results). rdm-spec verify ROOM 03 -> exit 0; stdout tests check {:name \"tests\" :kind :tests :outcome :passed :scenarios 2 ...}, verify :outcome :passed; stderr empty. (Same with only the two non-wip scenarios.)"}
+ {:id "spec-0208",
+  :verdict :pass,
+  :evidence
+  "Project with stamped @spec-0012 and @spec-0013 (neither @wip), tagged spec-3, cycle 03; room's test command exits 0 and writes a passing, mapping-conforming result only for spec-0013 (the same fixture with both results passes, exit 0). rdm-spec verify ROOM 03 -> exit 1; stderr: dhf/spec/greeting/hello.feature:10: scenario-untested: spec-0012 is named by no result in dhf/cycles/03/results; stdout tests check :outcome :failed with that reason, verify :outcome :refused."}
+ {:id "spec-0215",
+  :verdict :pass,
+  :evidence
+  "Same fixture (tests + runs checks), passing. Room implementation tree (git write-tree of the room's src and test.sh) = 56e74d17ebd1effb20a94ab13b9bf0b2c720d4e2. After rdm-spec verify ROOM 03 (exit 0), dhf/cycles/03/ratified.edn = {:cut \"spec-3\", :room-tree \"56e74d17ebd1effb20a94ab13b9bf0b2c720d4e2\", :outcome :passed, :checkout \"dhf/cycles/03/build\", :checks [<the two check maps identical to stdout>]}: exactly those keys, H in full. dhf/cycles/03/build exists and holds the room's src/marker.txt ('room') and the cut's spec files, no .git."}
+ {:id "spec-0216",
+  :verdict :pass,
+  :evidence
+  "Same fixture, the :tests command exits 1. After rdm-spec verify ROOM 03 (exit 1), dhf/cycles/03/ratified.edn = {:cut \"spec-3\", :room-tree \"c186c09d...\", :outcome :refused, :checkout \"dhf/cycles/03/build\", :checks [{:name \"tests\" ... :outcome :failed :reason \"the test command failed with exit 1: its output is in dhf/cycles/03/test.log\"}], :reason \"the check tests failed: the test command failed with exit 1: its output is in dhf/cycles/03/test.log\"}. Holds :outcome :refused and the reason."}
+ {:id "spec-0217",
+  :verdict :pass,
+  :evidence
+  "Fixture whose cut spec-3 holds hello.feature with stamped @spec-0012/@spec-0013 and, at line 22, 'Scenario: It says hi' with no id (tags @e2e only); room with passing results. rdm-spec verify ROOM 03 -> exit 1; stderr: dhf/spec/greeting/hello.feature:22: scenario-unstamped: the scenario \"It says hi\" has no id: a cut holding an unstamped scenario is not verified; stdout {:verify {:cycle \"03\", :cut \"spec-3\", :outcome :refused, :checks []}}; the test command never ran. Names file and line."}
+ {:id "spec-0218",
+  :verdict :pass,
+  :evidence
+  "Fixture with @spec-0012/@spec-0013; room's test command exits 0 and writes a result labelled spec=spec-0012 with status failed (spec-0013 passed). rdm-spec verify ROOM 03 -> exit 1; stderr: dhf/cycles/03/results/a12-result.json: scenario-not-passed: spec-0012's result is failed: every result naming a scenario passes. With status broken: exit 1, '... spec-0012's result is broken: ...'. Names spec-0012 and its status."}
+ {:id "spec-0236",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; commit 1: sources.edn rdm {:repository ... :record \"rdm.md\" :pins [\"3763e08\"]} (check exit 0); commit 2 keeps pins and adds :retired \"holds today's implementation\"; wiki page dhf/wiki/pages/history.md (indexed) with footnote [^old]: `rdm:README.md@3763e08`. rdm-spec check -> exit 1; stdout :sources {:resolved 0 :unresolved 1 :unchecked 0}; stderr only: dhf/wiki/pages/history.md:5: citation-retired: rdm:README.md@3763e08: its source rdm is retired (holds today's implementation): nothing may cite it. No pin-dropped finding for rdm."}
+ {:id "spec-0240",
+  :verdict :pass,
+  :evidence
+  "Fresh init project, loyly recorded and pinned; needs.edn {\"UN-004\" {:text ... :sources [\"the loyly README\"]}}. rdm-spec check -> exit 1; stderr: dhf/spec/needs.edn:2: citation-malformed: UN-004 cites \"the loyly README\", which is not a citation: a citation is <source>:<path>@<commit>. Rule citation-malformed, names UN-004 and the source."}
+ {:id "spec-0269",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; sources.edn names loyly with :repository, :pins [\"17d68d2\"], :record \"loyly.md\", and no dhf/raw/loyly.md. rdm-spec check -> exit 1; stderr: dhf/raw/sources.edn:1: source-no-record: the record dhf/raw/loyly.md of the source loyly is not in dhf/raw. Rule source-no-record, names the source and the record file."}
+ {:id "spec-0270",
+  :verdict :pass,
+  :evidence
+  "Fresh init project; sources.edn {:loyly {:record \"loyly.md\" :pins [\"17d68d2\"] :fenced []}} (no :repository), record present. rdm-spec check -> exit 1; stderr: dhf/raw/sources.edn:1: source-no-repository: the source loyly names no repository. Rule source-no-repository, names loyly."}
+ {:id "spec-0314",
+  :verdict :pass,
+  :evidence
+  "Project (init + model + 2 stamped scenarios spec-0001/0002), config :verify [{:kind :tests :command [\"sh\" \"test.sh\"]} {:kind :runs :name \"answers\" :command [\"sh\" \"-c\" \"echo '{:help yes}'\"] :expect {:exit 0 :stdout-starts \"{:help\"} :budget {:seconds 30}}], tagged spec-3, dhf/cycles/03/cycle.edn {:cut \"spec-3\"}; ROOM fenced from spec-3 with test.sh copying passing Allure results for both scenarios into RESULTS_DIR. rdm-spec verify ROOM 03 -> exit 0; stdout {:verify {:cycle \"03\", :cut \"spec-3\", :outcome :passed, :checks [{:name \"tests\", :kind :tests, :seconds 0.01, :outcome :passed, :scenarios 2} {:name \"answers\", :kind :runs, :seconds 0.01, :budget 30, :outcome :passed, :margin 29.99}]}}: exactly the stated keys, in declared order, N=2, M=B-S2."}
+ {:id "spec-0315",
+  :verdict :pass,
+  :evidence
+  "Fixture config :verify [{:kind :tests :command [\"sh\" \"test.sh\"]} {:kind :serves :name \"app\" :start [...touch marker...] :port 18733 :budget {:seconds 4 :polls 4} :probe [...]} {:kind :runs :name \"answers\" :command [...touch marker...] ...}], tagged spec-3; the room's tests command exits 1. rdm-spec verify ROOM 03 -> exit 1; stdout :checks [{:name \"tests\" :kind :tests :outcome :failed :reason \"the test command failed with exit 1: ...\"} {:name \"app\", :kind :serves, :outcome :not-run} {:name \"answers\", :kind :runs, :outcome :not-run}]; neither the serves start command nor the runs command ran (their marker files absent). ratified.edn holds the same checks."}
+ {:id "spec-0316",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, each row's :verify committed and tagged spec-3, dhf/cycles/03 emptied but for cycle.edn. `rdm-spec verify ROOM 03`, every row exit 2, stdout empty, dhf/cycles/03 left holding only cycle.edn (no test.log, results, build: no check ran): no :tests (only a :runs) -> \"cannot-run: a project is verified by its tests first: :verify declares its :tests check, first\"; {:kind :renders} -> \"cannot-run: :renders is not a kind of check: the kinds are :tests, :serves, :runs and :plugin\"; :serves probe [\"sh\" \"src/probe.sh\" \"{url}\"] with :implementation [\"src\"] -> \"cannot-run: the :serves check app probes with [...]: the probe is in the implementation the builder writes\"; :verify removed -> \"cannot-run: the configuration declares no :verify\"; [{:kind :tests}] -> \"cannot-run: the tests check names no command\"."}
+ {:id "spec-0317",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :verify [tests (python3 src/gen.py), {:kind :runs :name \"answers\" :command [\"no-such-cmd-xyz\" \"--help\"] :expect {:exit 0} :budget {:seconds 5}}], tagged spec-3. `rdm-spec verify ROOM 03` exit 2, stdout empty, stderr \"cannot-run: the check answers cannot run: its command no-such-cmd-xyz was not found ([\\\"no-such-cmd-xyz\\\" \\\"--help\\\"])\"; no ratified.edn written (dhf/cycles/03 holds only cycle.edn)."}
+ {:id "spec-0318",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :verify [tests, {:kind :serves :name \"app\" :start [\"python3\" \"src/app.py\" \"{port}\" \"0.75\" \"http\"] :port P :budget {:seconds 10 :polls 20} :probe [\"sh\" \"dhf/harness/probe/probe.sh\" \"{url}\"]}]; the room's app sleeps 0.75 s then serves HTTP 200 (poll i at i x 0.5 s, so poll 2 is the first answered); the probe (kept path) curls {url} and greps the app's body. `rdm-spec verify ROOM 03` exit 0, stdout check {:name \"app\" :kind :serves :outcome :passed :seconds 1.02 :budget 10 :polls 20 :answered-on-poll 2 :margin 18 :probe-seconds 30}. Afterwards the app's pid (recorded by the app in dhf/cycles/03/build/app-P.pid) is gone (kill -0 fails), no app.py in ps, nothing listening on P."}
+ {:id "spec-0319",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :serves check \"app\" budget {:seconds 10 :polls 20}, start command a python app that never listens (sleeps). `rdm-spec verify ROOM 03` exit 1 after 10.31 s; check {:name \"app\" :kind :serves :seconds 10.0 :budget 10 :polls 20 :outcome :failed :reason \"no answer came within 10 seconds (20 polls of GET http://127.0.0.1:22005/)\"}; stderr \"serves-no-answer: the :serves check app: no answer came within 10 seconds ...\"; afterwards the app's pid is gone and no app.py in ps."}
+ {:id "spec-0320",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :serves check \"app\" on port P=29263; before the run a separate `python3 -m http.server` bound 127.0.0.1:P (confirmed listening), stopped by PID afterwards. `rdm-spec verify ROOM 03` exit 2, stdout empty, stderr \"cannot-run: the :serves check app cannot start its app: the port 29263 is held by another process, which it would measure instead\"; the app (which writes app-P.pid in the checkout as its first act) was never started: no app-*.pid in dhf/cycles/03/build; no ratified.edn. (The tests check had already run: results/ and test.log exist.)"}
+ {:id "spec-0321",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :serves check \"app\" whose app serves HTTP 200 at once, budget 10 s / 20 polls, probe dhf/harness/probe/probe.sh printing \"probe says: not this app at $1\" on stdout and \"probe err line\" on stderr, exiting 1. `rdm-spec verify ROOM 03` exit 1; check app :outcome :failed :answered-on-poll 1 :reason \"the app answered and its probe exited 1: it is not this application; the probe printed: probe says: not this app at http://127.0.0.1:27757/ probe err line\"; stderr \"probe-failed: the :serves check app: ... the probe printed: probe says: not this app at http://127.0.0.1:27757/ probe err line\" (the probe's output relayed); app process gone afterwards."}
+ {:id "spec-0322",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :verify [tests, {:kind :runs :name \"answers\" :command [\"sh\" \"-c\" C] :expect E :budget {:seconds 10}}], tagged spec-3. `rdm-spec verify ROOM 03`: (1) E {:exit 0}, C \"exit 3\" -> exit 1, check answers :outcome :failed :reason \"it answered with the exit 3 where 0 was expected\", stderr \"runs-differs: the :runs check answers: it answered with the exit 3 where 0 was expected\"; (2) E {:stdout-starts \"{:help\"}, C \"echo usage\" -> exit 1, :failed, \"its standard output does not start \\\"{:help\\\": the first line it printed was \\\"usage\\\"\"; (3) E {:exit 0}, C \"sleep 30\" -> exit 1 after 10.27 s, :failed :seconds 10.01 :budget 10, \"it was still running at the end of the budget of 10 seconds, and was stopped\"; no sleep process left (ps). Tests check :passed before it in each."}
+ {:id "spec-0331",
+  :verdict :pass,
+  :evidence
+  "Fixture: project with :allure set to rdm-spec's default mapping but :evidence {:e2e [\"browser-trace\"]}, passing spec (spec-0001 @e2e under rule \"It answers\", need UN-001; spec-0002 @contract), cut spec-3, cycle 03; the room's test command writes one result per scenario, browser-trace attached to @e2e results, spec-0001's result corrupted per row. Baseline: `rdm-spec verify ROOM 03` exit 0. Rows, each exit 1, stdout tests check :outcome :failed (verify :refused), stderr one finding FILE:LINE: RULE: what on the result's file, naming spec-0001 (the fixture's scenario standing in for spec-0003): step reworded -> \"dhf/cycles/03/results/<uuid>-result.json:10: steps-differ-from-scenario: spec-0001: the result's steps [...] differ from the scenario's lines [...]\"; one step fewer -> same rule; story \"Something else\" -> \":67: mapping-differs: story: spec-0001's result has the story [\\\"Something else\\\"] where the scenario's rule is \\\"It answers\\\"\" (line 67 is that label); epic of another context -> \":39: mapping-differs: epic ...\"; no issue link -> \":84: mapping-differs: links: spec-0001's result has no issue link to UN-001 ...\"; no browser-trace -> \":91: evidence-missing: browser-trace: spec-0001's result carries no browser-trace attachment, which :evidence requires for @e2e\"."}
+ {:id "spec-0332",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project (tests check python3 src/gen.py), :allure = the default mapping with one change per row, committed and tagged spec-3; dhf/cycles/03 emptied but for cycle.edn before each run. `rdm-spec verify ROOM 03`: (1) :epic :aggregate -> exit 2, \"cannot-run: :aggregate is not an element of the spec: the elements are :component, :context, :example-row, ...\"; (2) :colour :context -> exit 2, \"cannot-run: :colour is not an element of an Allure result: the elements are :epic, :evidence, ...\"; (3) no \"spec\" label -> exit 2, \"cannot-run: the label spec, from the scenario's id, is required: :allure maps no label \\\"spec\\\" to :scenario-id\". Each: stdout empty, dhf/cycles/03 still holds only cycle.edn (no results, test.log, build or ratified.edn): no check ran."}
+ {:id "spec-0333",
+  :verdict :pass,
+  :evidence
+  "Fixture: init'd project (config declares no :allure), passing spec of 2 stamped scenarios (spec-0001 @e2e, spec-0002 @contract, rule \"It answers\", feature \"Comp\", context ctx, need UN-001 on the feature), :verify [{:kind :tests :command [\"python3\" \"src/gen.py\"]}], cut spec-3, cycle 03; the room's src/gen.py writes one Allure result per scenario, corrupting spec-0001 per a mode file. `rdm-spec verify ROOM 03`: faithful results -> exit 0, tests :passed, :scenarios 2 (no attachments needed: :evidence {}). Each element of the default mapping enforced, exit 1, tests :failed, one finding each on the result file: step reworded / one fewer -> steps-differ-from-scenario; story \"Something else\" -> \"mapping-differs: story: ... where the scenario's rule is \\\"It answers\\\"\"; epic otherctx -> \"mapping-differs: epic ... the scenario's context is \\\"ctx\\\"\"; name changed -> \"mapping-differs: name\"; feature label -> \"mapping-differs: feature\"; component label \"Other\" -> \"mapping-differs: labels: ... label component\"; tag labels dropped -> \"mapping-differs: labels: ... label tag [] where the scenario's gherkin-tags is (\\\"UN-001\\\" \\\"e2e\\\" \\\"spec-0001\\\")\"; issue link missing or with url #UN-999 -> \"mapping-differs: links: ... no issue link to UN-001 (dhf/spec/needs.edn#UN-001)\". (:parameter :example-row not exercised: the fixture has no outline.)"}
+ {:id "spec-0341",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :serves check \"app\" budget {:seconds 2 :polls 4}, start command a python app that binds and listens on {port}, accepts connections and never writes (confirmed separately: a connect succeeds). `rdm-spec verify ROOM 03` exit 1 after 2.81 s; check :outcome :failed :reason \"no answer came within 2 seconds (4 polls of GET http://127.0.0.1:24504/)\"; stderr \"serves-no-answer: the :serves check app: no answer came within 2 seconds ...\"; app pid gone afterwards."}
+ {:id "spec-0346",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :serves check \"app\" on port P=27340. Before the run the same app was started on P, curled 5 times (server closes first), and stopped (kill by PID, confirmed gone); /proc/net/tcp then showed 10 entries on 127.0.0.1:P, all state 06 (TIME_WAIT), none LISTEN. `rdm-spec verify ROOM 03` exit 0, stderr empty, check app :outcome :passed :answered-on-poll 1, verify :passed; its app's pid gone afterwards. (Control: while the app still listened, verify exited 2 \"the port 27340 is held by another process\".)"}
+ {:id "spec-0347",
+  :verdict :pass,
+  :evidence
+  "Fixture: the spec-0331 project (:allure default with :evidence {:e2e [\"browser-trace\"]}) plus a stamped scenario spec-0003 tagged @wip @e2e, re-cut as spec-3; the room's test command writes spec-0003's result as status \"skipped\", labels spec=spec-0003 and planned=true, attachments [] (the other results carry browser-trace). `rdm-spec verify ROOM 03` exit 0, stdout {:verify {... :outcome :passed :checks [{:name \"tests\" :kind :tests :outcome :passed :scenarios 2}]}}, stderr empty: no finding about spec-0003. Also with spec-0003's planned result carrying a wrong story and epic, or a reworded step and no issue link: still exit 0, no finding (held to its spec label only)."}
+ {:id "spec-0349",
+  :verdict :pass,
+  :evidence
+  "Fixture: init'd project with a passing spec, :plugins exactly as the Given ([lint-a :subscribes [:SpecParsed] bb run.clj :seconds 20, oracle :answers :Gate bb oracle.clj]). `rdm-spec check` exit 0, stdout :plugins [{:plugin \"lint-a\" :event :SpecParsed :exit 0 :seconds 20 :notes \"lint-a note\\n\"}]; the Gate plugin oracle was not run by check. With :seconds removed: :seconds 60. Shape enforced: an extra key :colour -> exit 2 \"cannot-run: the plugin lint-a declares :colour: a plugin declares exactly :name, :command, :subscribes or :answers, and :seconds\"; no :name -> exit 2 \"has no :name\"; no :command -> exit 2; :subscribes :SpecParsed (not a vector) -> exit 2 \":subscribes is a vector of event names\"; :answers [:Gate] -> exit 2 \"the requests are :Gate and :Check\"; :seconds \"x\"/0/-1 -> exit 2 \"its time limit is a positive number of seconds\". (Nit: a string :command is refused as \"has no :command\".)"}
+ {:id "spec-0350",
+  :verdict :pass,
+  :evidence
+  "Fixture: init'd project, passing spec, :implementation [\"src\"]; each row's :plugins set, `rdm-spec check` run. All rows exit 2, stdout empty, plugin script never ran (no ran.out): (1) neither -> \"cannot-run: the plugin lint-a: a plugin subscribes to events or answers a request\"; (2) both -> \"... a plugin subscribes to events or answers a request, not both\"; (3) :NoSuchEvent -> \"the plugin lint-a: rdm-spec publishes no event NoSuchEvent; the events it publishes are ClausesIndexed, KnowledgeIndexed, SpecGated, SpecParsed, VerificationDerived\" (the 5 of events.edn); (4) :Review -> \"the plugin lint-a answers :Review: the requests are :Gate and :Check\"; (5) two lint-a -> \"the plugin lint-a is declared twice: a plugin's name is declared once\"; (6) command [\"sh\" \"src/p.sh\"] -> \"the plugin lint-a runs [\\\"sh\\\" \\\"src/p.sh\\\"], under the implementation's paths (src): a plugin is a judge the builder never writes\"."}
+ {:id "spec-0351",
+  :verdict :pass,
+  :evidence
+  "Fixture: project from `rdm-spec init`, minimal spec (2 stamped scenarios), :plugins [{:name \"rec\" :subscribes [:SpecParsed] :command [\"sh\" \"dhf/harness/plugins/rec/run.sh\"]}], the script appending pwd, $RDM_SPEC and stdin to rec-rec.out. `rdm-spec check` exit 0; :plugins [{:plugin \"rec\" :event :SpecParsed :exit 0 :seconds 60 :notes \"\"}]. rec-rec.out holds one record: PWD=<project root>; RDM_SPEC=/root/.local/bin/bb -cp /home/user/c22/release/rdm-spec.jar -m rdm-spec.kernel.command, identical to what `rdm-spec oracle a b` gave a plugin named \"oracle\"; stdin {:event :SpecParsed :revision :working-tree :scenarios [...] :needs [{:id \"UN-001\" ...}] :refusals []}: top-level keys exactly :event plus events.edn's :carries [:revision :scenarios :needs :refusals]; each scenario holds every key the :shape lists (:id :ids :title :name :keyword :file :line :level :needs :wip? :outline? :rows :examples :background :rule :steps :context :component :context-name :component-name), plus extra internal keys (:tags :tag-lines :row-lines :feature-tags :levels :rule-tags :feature)."}
+ {:id "spec-0352",
+  :verdict :pass,
+  :evidence
+  "Fixture: passing spec; :plugins lint-a then lint-b, both :subscribes [:SpecParsed], each `sleep 1`, appending \"NAME epoch-ns\" to shared.out and writing a finding. `rdm-spec check --events` exit 1; shared.out: \"lint-a 1793100411.49\" then \"lint-b 1793100412.50\" (sequential, declared order); stdout :plugins lists lint-a then lint-b; stderr findings: core's own finding (an added @bogus tag-unknown) first, then lint-a's, then lint-b's; events KnowledgeIndexed, SpecParsed, SpecGated. After the core's stages: a lint-a that edits dhf/spec/model.edn left that run's views freshness check unaffected (exit 0), while the next run reported view-stale (exit 1), so the core's view stage had already run when the plugin ran."}
+ {:id "spec-0353",
+  :verdict :pass,
+  :evidence
+  "Fixture: passing spec, :plugins [{:name \"vd\" :subscribes [:VerificationDerived] :command [\"sh\" \"dhf/harness/plugins/vd/run.sh\"]}], the script appending to rec-vd.out on any run. `rdm-spec check --events` exit 0, stdout :plugins [], events KnowledgeIndexed, SpecParsed, SpecGated (no VerificationDerived); rec-vd.out absent: the plugin did not run. (Aside, beyond this Then: `rdm-spec status --events`, which publishes SpecParsed and VerificationDerived, ran neither this plugin nor a SpecParsed subscriber either.)"}
+ {:id "spec-0354",
+  :verdict :fail,
+  :evidence
+  "Fixture: passing spec, :plugins [{:name \"p\" :subscribes [:SpecParsed] :command [\"sh\" \"dhf/harness/plugins/p/run.sh\"]}], `rdm-spec check` per row. With the 2-scenario spec each row holds as stated: (1) exit 1, \"dhf/spec/a/b.feature:4: action-unoffered: no form offers it\" unchanged among findings; (2) exit 0, \"dhf/spec/a/b.feature:4: warning: label-long: …\" unchanged after the core's warning; (3) exit 0, no line from the plugin; (4) exit 2, stdout empty, \"cannot-run: the plugin p cannot run: cannot read affordances.yaml\". FAIL: a plugin that does not read its standard input makes rdm-spec put a stray line \"ERROR while copying :in option:  Broken pipe\" on the task's error stream, a line in no reporting format (not a finding, warning or cannot-run). Seen once in 41 runs with the 2-scenario spec (row 4), and on every run (3/3 per row) once the spec holds 302 scenarios: row 3 (\"writes nothing and exits 0\") gives exit 0 with stderr \"ERROR while copying :in option:  Broken pipe\", so the error stream is not free of the plugin's effect; rows 1 and 4 carry the same stray line before the relayed one. Control: the same plugin with `cat >/dev/null` first gives no stray line."}
+ {:id "spec-0355",
+  :verdict :pass,
+  :evidence
+  "Fixture: passing spec, :plugins [{:name \"slow\" :subscribes [:SpecParsed] :command [\"sh\" \"dhf/harness/plugins/slow/run.sh\"] :seconds 2}], the script recording its pid, echoing \"started\", then `sleep 10`. `rdm-spec check` exit 2 after 2.28 s, stdout empty, stderr \"cannot-run: the plugin slow timed out after 2 seconds and was stopped; it printed: started\". Afterwards the plugin's sh is gone and no `sleep 10` in ps. Variant with the sleep backgrounded (`sleep 10 & wait`): same report in 2.30 s; the backgrounded child was killed too (left only as a <defunct> zombie under PID 1, which this container does not reap)."}
+ {:id "spec-0356",
+  :verdict :pass,
+  :evidence
+  "Fixture: passing spec, :plugins [{:name \"ghost\" :subscribes [:SpecParsed] :command [\"no-such-plugin\"]}]. `rdm-spec check` exit 2, stdout empty, stderr \"cannot-run: the plugin ghost cannot be started: its command [\\\"no-such-plugin\\\"] was not found\". Also a missing script path [\"dhf/harness/plugins/ghost/missing.sh\" \"a\"] -> exit 2, same message naming that command."}
+ {:id "spec-0357",
+  :verdict :pass,
+  :evidence
+  "Fixture: project tagged spec-3 with :plugins [first :answers :Gate (exit 0), second :answers :Gate (writes \"x:1: oracle-differs: …\" on stderr, exit 1)], each appending its name and time to a log. `rdm-spec fence ROOM spec-3` exit 1, stdout {}, stderr exactly \"x:1: oracle-differs: …\"; log \"first 1793100933.913\" then \"second 1793100933.926\"; ROOM not created. `rdm-spec verify ROOM 03` likewise: exit 1, same finding, gates in order, dhf/cycles/03 holds only cycle.edn (nothing ran). Control: with second exiting 0, fence exit 0 and the room is built."}
+ {:id "spec-0358",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project tagged spec-3, cycle 03 naming spec-3, :plugins [{:name \"gate\" :answers :Gate :command [\"sh\" \"dhf/harness/plugins/gate/run.sh\"]}] recording its stdin. `rdm-spec verify ROOM 03` exit 0; the plugin's standard input was exactly {:request :Gate, :task :verify, :cut \"spec-3\", :cycle \"03\"} (run in the project root, RDM_SPEC set). (fence spec-3 gave {:request :Gate, :task :fence, :cut \"spec-3\"}.)"}
+ {:id "spec-0359",
+  :verdict :pass,
+  :evidence
+  "Fixture: fresh project from `rdm-spec init` (no dhf/harness/plugins). `rdm-spec plugin add ddd-domain` exit 0; stdout {:plugin {:added \"ddd-domain\" :version 1 :directory \"dhf/harness/plugins/ddd-domain\" :declare {:name \"ddd-domain\" :subscribes [:SpecParsed] :command [\"bb\" \"dhf/harness/plugins/ddd-domain/lint.clj\"]} :note \"add :declare to the configuration's :plugins, in the order it runs\"}}. `diff -r project/plugins/ddd-domain dhf/harness/plugins/ddd-domain` differs only by \"Only in dhf/harness/plugins/ddd-domain: origin.edn\" (README.md, domain.feature, template.edn byte-identical to the cut's template). origin.edn is exactly {:template \"ddd-domain\", :version 1, :copied \"2026-10-27\"} (today, version 1 as template.edn and plugins/README.md say). dhf/harness/config.edn byte-identical to before (cmp). (Unexercised: the printed entry's command names lint.clj, which the template does not hold.)"}
+ {:id "spec-0360",
+  :verdict :pass,
+  :evidence
+  "Fixture: init'd project. Row 1: dhf/harness/plugins/ddd-domain already present (added, then its README.md edited). `rdm-spec plugin add ddd-domain` exit 1, stdout {}, stderr \"dhf/harness/plugins/ddd-domain: plugin-exists: dhf/harness/plugins/ddd-domain already exists: plugin add never overwrites it, and copied nothing\"; md5 of every file under dhf/harness/plugins unchanged. Row 2: `rdm-spec plugin add no-such` exit 2, stdout empty, stderr \"cannot-run: rdm-spec carries no template no-such; the templates it carries are affordances (version 1), ddd-domain (version 1)\"; nothing new under dhf/harness/plugins."}
+ {:id "spec-0361",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :verify [tests, {:kind :plugin :name \"judge\"}], :plugins [{:name \"judge\" :answers :Check :command [\"sh\" \"dhf/harness/plugins/judge/run.sh\"]}], tests pass, tagged spec-3. `rdm-spec verify ROOM 03`: plugin exits 0 -> exit 0, check {:name \"judge\" :kind :plugin :outcome :passed}; plugin writes \"src/app.clj:9: form-missing: …\" and exits 1 -> exit 1, check judge :outcome :failed (:reason \"the plugin judge found 1\"), stderr exactly \"src/app.clj:9: form-missing: …\" (unchanged); plugin exits 2 -> exit 2, stdout empty, stderr \"cannot-run: the check judge is :refused: the plugin judge cannot run (it exited 2)\"."}
+ {:id "spec-0362",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :verify [tests, {:kind :plugin :name \"judge\"}], judge :answers :Check, its script writing pwd and stdin to rec-judge.out in its working directory. `rdm-spec verify ROOM 03` exit 0; the record appeared at dhf/cycles/03/build/rec-judge.out with PWD=/home/user/c22/grade-b/scratch/v362/dhf/cycles/03/build (the checkout) and stdin exactly {:request :Check, :cycle \"03\", :cut \"spec-3\", :checkout \"dhf/cycles/03/build\"}."}
+ {:id "spec-0363",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :verify [tests, {:kind :plugin :name \"judge\"}], tagged spec-3, with (a) no :plugins, (b) :plugins holding \"judge\" subscribing to :SpecParsed, (c) \"judge\" answering :Gate. `rdm-spec verify ROOM 03` in each: exit 2, stdout empty, stderr \"cannot-run: the :plugin check \\\"judge\\\": the check names no plugin answering :Check (the configuration's :plugins declares no \\\"judge\\\" answering :Check)\"; dhf/cycles/03 holds only cycle.edn (the tests check never ran: no test.log, results or build)."}
+ {:id "spec-0364",
+  :verdict :fail,
+  :evidence
+  "Row \"as a package (a jar)\" holds: with bin/rdm-spec (exec bb /home/user/c22/release/rdm-spec.jar), in a project from `rdm-spec init`, `rdm-spec plugin add no-such` exit 2, stderr \"cannot-run: rdm-spec carries no template no-such; the templates it carries are affordances (version 1), ddd-domain (version 1)\" (versions match the cut's plugins/*/template.edn). Row \"from its sources\" could not be graded: this room holds only the packaged jar, and graders may not look for the build's sources, so no from-sources install of this build exists to run. An Examples row not shown to hold is a fail (unsure is a fail); this is a gap in what the room can grade, not an observed defect."}
+ {:id "spec-0365",
+  :verdict :pass,
+  :evidence
+  "Fixture: project with a passing spec; commit 987182c adds :rdm {:repository ... :record \"rdm.md\" :pins [\"3763e08\"]} to dhf/raw/sources.edn; commit 3141e24 removes rdm; commit 8a8c853 lists rdm again with :pins [\"3763e08\"] and :retired \"holds today's implementation\". Control at 3141e24: `rdm-spec check` exit 1, \"dhf/raw/sources.edn: pin-dropped: the source rdm dropped the pin 3763e08 in the commit 3141e24 ...\". At 8a8c853: `rdm-spec check` exit 0, stderr only the citation-unchecked warning for UN-001: no dropped-pin finding for rdm."}
+ {:id "spec-0366",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :serves check \"app\" on port P=33950 (app answers at once), budget 10 s / 20 polls, :probe-seconds 20, probe dhf/harness/probe/probe.sh \"{url}\" logging its pwd and $1 then sleeping. `rdm-spec verify ROOM 03` with a 15 s probe: exit 0 after 16 s, check :passed :probe-seconds 20 :seconds 15.52; log \"pwd=/home/user/c22/grade-b/scratch/v366/dhf/cycles/03/build url=http://127.0.0.1:33950/\" (the checkout; url ends in \"/\"); the probe outran the 10 s budget and was allowed. With a 25 s probe: exit 1 after 20.8 s, \"probe-timed-out: the :serves check app: the probe timed out after 20 seconds and was stopped\". With :probe-seconds removed: check reports :probe-seconds 30, a 33 s probe stopped after 30.8 s, \"the probe timed out after 30 seconds and was stopped\". No sleep or app.py process left."}
+ {:id "spec-0367",
+  :verdict :pass,
+  :evidence
+  "Fixture: verify project, :serves check \"app\" (app answers at once), :probe-seconds 2, probe `sh probe.sh` printing \"probing\" then `sleep 10`. `rdm-spec verify ROOM 03` exit 1 after 2.81 s (within 6), check :outcome :failed :reason \"the probe timed out after 2 seconds and was stopped; it printed: probing\"; stderr \"probe-timed-out: the :serves check app: the probe timed out after 2 seconds and was stopped; it printed: probing\". Afterwards no probe.sh, sleep 10 or app.py process in ps, the app's pid gone, nothing listening on the port."}]

@@ -1,0 +1,16 @@
+# What cycle 22's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml).
+- {scenario: spec-0121, decision: "the commit named as having dropped a pin is the first after the last that held it; when only the working tree lacks it, the message says 'in the working tree'"}
+- {scenario: spec-0123, decision: "a citation's commit matches a pin when one is a prefix of the other"}
+- {scenario: spec-0125, decision: "a checkout lacking the cited commit is citation-unresolved, not unchecked; a checkout lacking a pin is pin-not-in-checkout"}
+- {scenario: spec-0122, decision: "citations are read from needs.edn and from footnote-definition lines of the wiki's pages/ only; a need's finding points to the citation's line in needs.edn"}
+- {scenario: spec-0349, decision: "an entry with a key besides :name, :command, :subscribes, :answers, :seconds is refused (exit 2); check's result carries :plugins [{:plugin :event :exit :seconds :notes}]"}
+- {scenario: spec-0354, decision: "on exit 0, error-stream lines that are not warnings become 'warning: plugin-output: NAME: line'; exit 1 with no finding line adds plugin-failed; another exit cannot run"}
+- {scenario: spec-0357, decision: "fence's Gate input is {:request :Gate :task :fence :cut CUT}; the first failing Gate stops the task and later Gates do not run"}
+- {scenario: spec-0359, decision: "':copied' is an ISO date string; copies keep the bytes only, no file modes, from sources and jar alike; the result is {:plugin {:added :version :directory :declare :note}}"}
+- {scenario: spec-0358, decision: "verify reads its checks and plugins from the cut's configuration, and validates the cut's plugins and :allure before the gate"}
+- {scenario: spec-0215, decision: "the room tree is the git tree of the room's implementation paths as git add -A would stage them; only those files are copied into the checkout"}
+- {scenario: spec-0331, decision: "a mapping finding's LINE is the line of the element's key in the result file; :evidence is {level [attachment-name ...]}, found anywhere in the result or its steps"}
+- {scenario: spec-0361, decision: "a refused plugin check exits 2 with 'cannot-run: the check judge is :refused: ...' and nothing on standard output"}
+- {scenario: spec-0366, decision: "the serves report includes :probe-seconds; a :runs check with no budget gets 60 s; results/ is cleared before the tests check runs"}
+- {scenario: spec-0367, decision: "'within 6 seconds' is read as the serves check's own :seconds, since the tests check runs before it"}

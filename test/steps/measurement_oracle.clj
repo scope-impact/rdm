@@ -69,7 +69,7 @@
       (assert (str/includes? line (str (fs/path k/room-root "src"))) line)
       ;; as a package: a jar of these sources, run by bb
       (let [jar (k/path-in ctx "rdm-spec.jar")
-            b (k/sh k/room-root {} "bb" "uberjar" jar "-m" "rdm-spec.kernel.command")]
+            b (k/sh k/room-root {} "bb" (str "-Djava.io.tmpdir=" k/tmp-root) "uberjar" jar "-m" "rdm-spec.kernel.command")]
         (assert (= 0 (:exit b)) (:err b))
         (fs/delete-if-exists (file ctx "rdm-spec.txt"))
         (let [r (k/sh (:dir ctx) {} "bb" "-cp" jar "-m" "rdm-spec.kernel.command" "oracle")

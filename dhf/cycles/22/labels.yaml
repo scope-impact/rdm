@@ -1,0 +1,7 @@
+# What each fail of cycle 22 turned out to be (see 16/labels.yaml for the labels).
+- scenario: spec-0354
+  label: real
+  evidence: "a plugin that does not read its standard input can make rdm-spec write 'ERROR while copying :in option:  Broken pipe' on the error stream: 1 of 41 runs with a 2-scenario spec, every run with 302 scenarios, so 'writes nothing and exits 0' leaves a line that is no finding, warning or cannot-run. A plugin that reads its input first gives none"
+- scenario: spec-0364
+  label: grader
+  evidence: "the grading room holds only the jar, so the grader could not grade the 'from its sources' row and failed it as unsure; the jar row held. The integrator ran plugin add no-such from the build's sources in a project set up by rdm-spec: exit 2, 'the templates it carries are affordances (version 1), ddd-domain (version 1)'"
