@@ -69,6 +69,25 @@ Feature: Scorer
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then both verdicts are filed
 
+    # spec-28: two graders grade one cycle in two rooms; their files are scored
+    # as one. A file that is not readable EDN names where it stops.
+    @spec-0379 @e2e
+    Scenario: The verdicts of several files are filed as one
+      Given two verdicts files, one grading spec-0012 and spec-0013, the other spec-0014
+      When "rdm-spec score 03 --verdicts a.edn --verdicts b.edn" is run
+      Then all three verdicts are filed in one score.edn
+
+    @spec-0380 @e2e
+    Scenario Outline: Verdicts across files are held to the same rules as one file
+      Given two verdicts files where <wrong>
+      When "rdm-spec score 03 --verdicts a.edn --verdicts b.edn" is run
+      Then it exits 1, writes nothing, and says <says>
+
+      Examples:
+        | wrong                                                         | says                                                         |
+        | both grade spec-0012                                          | spec-0012 is graded twice, naming both files                 |
+        | b.edn's third line holds a string with an escape EDN refuses  | b.edn is not readable EDN, naming its line, as FILE:LINE     |
+
     @spec-0213 @e2e
     Scenario Outline: A malformed verdicts file is refused and nothing is written
       Given a verdicts file that <is malformed>

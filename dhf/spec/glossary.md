@@ -219,6 +219,15 @@ report. A result with no `spec` label verifies nothing.
 **Grader**: the role that grades each checklist item against a verified build,
 however they grade. A human or an agent, never the builder of what is graded.
 
+**Grading room**: what `rdm-spec grade` builds for one grader of a verified
+cycle: the cut's spec without its code or what the configuration's `:grading
+:leave-out` names, a share of the checklist, `bin/run` running the build
+packaged outside every room, and the grader's brief when the project keeps
+one (spec-28).
+
+**Brief**: what a builder or a grader is given, kept by a project as a
+template in `dhf/harness/briefs/` and filled by `fence` and `grade`.
+
 **Verdict**: a grader's pass or fail for one checklist item, with the evidence. Verdicts are
 the score; the builder's tests never are.
 
