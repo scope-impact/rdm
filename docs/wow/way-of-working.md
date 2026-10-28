@@ -164,6 +164,16 @@ change"). Three events look alike in a diff and are never confused:
 `--changes` names every existing golden a record changes, and the reason
 names the scenario that states the new behaviour.
 
+## When the judge cannot pass a build: pending scenarios
+
+A slice built before the slices whose tasks some of its scenarios need
+(ADR 0006, "Build order") is refused by verify on those scenarios alone. Then
+the planner lists them, each with the cycle that unblocks it; verify is run
+anyway and its record kept; every refusal finding must be a pending
+scenario's; the build is graded black box on the rest; and the spec owner
+decides on that evidence. Each pending scenario is verified and graded in the
+cycle that unblocks it.
+
 ## When the spec changes the judge's own contract
 
 verify is judged by the installed release. When a spec change alters what

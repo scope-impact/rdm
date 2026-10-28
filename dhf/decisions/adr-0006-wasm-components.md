@@ -64,18 +64,17 @@ there is no whole WebAssembly build to install.
 
 ## Build order (spec owner, after slice 01's plan)
 
-Slices are built in the order their tasks are needed, not by number; the
-numbers stay their names. Slice 01's plan found 8 of its 23 scenarios need
-tasks other slices build (check, status, fence, verify), so in number order
-no cycle's verify could pass before about the eighth.
+Slice 01 is built first, whole: it holds the command every task runs
+through. After it, slices are built in the order their tasks are needed, not
+by number; the numbers stay their names.
 
 | Cycle | Builds | Why here |
 |---|---|---|
-| 1 | `kernel/command` (the walking skeleton: host, composition, task table, help, how a task reports) and slice 02, write the spec (parser, stamper, check) | every task runs through the command; check is the first task every other slice's scenarios lean on |
-| 2 | 04, model the architecture (model, lint, views) | check's model and views stages |
-| 3 | 03, ground the spec (sources, wiki) | check's sources and wiki stages |
-| 4 | 08, plugins (plugins, bus, oracle) | check's subscribers; the gate fence and verify ask |
-| 5 | 01, start a project (init, adopt, hooks) | a new project is green only once check's stages exist |
+| 1 | 01, start a project (command, init, adopt, hooks), with the walking skeleton (host, composition, help) | every task runs through the command |
+| 2 | 02, write the spec (parser, stamper, check) | check is the task most others' scenarios lean on |
+| 3 | 04, model the architecture (model, lint, views) | check's model and views stages |
+| 4 | 03, ground the spec (sources, wiki) | check's sources and wiki stages |
+| 5 | 08, plugins (plugins, bus, oracle) | check's subscribers; the gate fence and verify ask |
 | 6 | 05, verify by results (runner, results, status, trace, release) | |
 | 7 | 06, regenerate (cut, scopes, fence, verify) | needs the gate and results |
 | 8 | 07, measure (checklist, scorer, scoreboard, observe) | |
@@ -84,8 +83,13 @@ no cycle's verify could pass before about the eighth.
 | 11 | 11, 12 and 13 | no component's home is in them: their scenarios are built with the components they reach; this cycle verifies and grades them as slices |
 
 A component is built whole in its home slice's cycle, so it carries every
-scenario of it in any slice; where such a scenario needs a task a later
-cycle builds, it waits for that cycle and is named in the plan as pending.
+scenario of it in any slice. Where such a scenario needs a task a later cycle
+builds, it is pending: named in the slice's plan with the cycle that unblocks
+it. A slice-scoped verify requires every scenario of the components it
+reaches, so a cycle with pending scenarios is refused by verify on those
+alone; the spec owner then decides on the evidence (the way of working, "When
+the judge cannot pass a build: pending scenarios"), and the pending scenarios are verified again
+in the cycle that unblocks them.
 
 ## How the command reaches the slices (spec owner)
 

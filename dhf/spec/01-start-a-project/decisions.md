@@ -40,7 +40,7 @@ settles each before the build, or turns it into a scenario. The tickets
 
 ### ED-01: Scenarios whose task another slice builds
 
-**Settled by the spec owner:** slices are built in dependency order, not by number (ADR 0006, "Build order"); this slice is built fifth, its command first, with slice 02.
+**Settled by the spec owner:** this slice is built first, whole (ADR 0006, "Build order"); its scenarios that need a later slice's task are pending, verified again in the cycle that unblocks them, and the cycle is decided on the evidence.
 
 
 Eight of the 23 scenarios this slice's components answer for run a task
