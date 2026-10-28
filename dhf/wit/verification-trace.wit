@@ -1,0 +1,41 @@
+// Component Trace of the verification context (dhf/spec/model.edn,
+// :verification/trace; dhf/spec/05-verify-by-results/trace.feature,
+// dhf/spec/12-several-specs/trace.feature): a need or a scenario, with
+// everything linked to it, in both directions. The task "rdm-spec trace ID
+// [--results DIR] [--spec NAME]".
+//
+// It reads the spec with spec/parser (a need's scenarios, however it is
+// tagged, spec-0102; a scenario's needs, component, context and level,
+// spec-0104) and, with results, the statuses from verification/status (the
+// model's "Reads statuses from"), each with the results behind it
+// (spec-0105). Its result is one map under :trace (spec-0279; G-26 for a
+// scenario's).
+
+interface verification-trace {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types (slice 01's ED-14).
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// Runs "rdm-spec trace ID [--results DIR] [--spec NAME]" with its
+    /// arguments, as given, the results directory the command settled, none
+    /// when the trace derives no status (spec-0108; ED-09), and the
+    /// project's folder. An id that names nothing: exit 2, naming it
+    /// (spec-0106); a need two specs hold, with no --spec: exit 2, naming both
+    /// (spec-0409).
+    run: func(args: list<string>, results-dir: option<string>, folder: option<string>) -> outcome;
+}
+
+/// The component verification/trace builds to. It reads the spec with
+/// spec/parser and statuses with verification/status (whose types bring
+/// verification-events and verification-results). Its WASI imports are those
+/// every component carries, in the version slice 01's worlds name (slice
+/// 02's ED-08).
+world verification-trace-component {
+    import spec-parser;
+    import verification-status;
+    export verification-trace;
+}

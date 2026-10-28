@@ -1,0 +1,69 @@
+// Kernel component Gherkin runner (dhf/spec/model.edn, :kernel/runner;
+// dhf/spec/05-verify-by-results/runner.feature): the task "rdm-spec run
+// [--results DIR]". It runs every scenario of the project's spec, found by
+// looking, never listed (spec-0155), against the project's step definitions,
+// and writes one Allure result per scenario, one per outline row, in Allure's
+// own model, filled from the Gherkin scenario (the glossary's "Allure
+// result"; spec-0308).
+//
+// It reads the scenarios with spec/parser (slice 02), which gives each
+// scenario its tags, rule, background, steps, rows, and its owning context
+// and component from the model (the labels of spec-0151): the model has no
+// relationship from the runner to the parser yet
+// (dhf/spec/05-verify-by-results/decisions.md, ED-03). The parser's types
+// stay inside the component; this interface uses none of them (slice 01's
+// ED-14), so the command's tasks import nothing of slice 02.
+//
+// A project's step definitions run inside the runner's run, not inside the
+// core: each step definition file is a command the project keeps under the
+// configuration's :steps-dir, run through rdm:host/process, and speaking the
+// step API (ED-02, its recommendation; the API itself is the stack's, written
+// in dhf/harness/stack.md once the spec owner settles it, spec gap G-01).
+
+interface kernel-runner {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types (slice 01's ED-14): its exit, its standard output (the
+    /// result as EDN, G-05) and its error lines.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// One step definition, as the step API declares it (ED-02): the file
+    /// that defines it, relative to the project's root, its place among
+    /// that file's definitions, and its pattern as written. A step two
+    /// definitions match is broken, naming both (spec-0170): by file and
+    /// pattern.
+    record definition {
+        file: string,
+        index: u32,
+        pattern: string,
+    }
+
+    /// The step definitions of the project's :steps-dir, every file in it,
+    /// found by looking, in the order of their paths, each file's in the
+    /// order it declares them. The error is why they cannot be read (a file
+    /// that cannot be started, or answers its declaration otherwise than the
+    /// step API says), reported as cannot-run, exit 2.
+    definitions: func() -> result<list<definition>, string>;
+
+    /// Runs "rdm-spec run [--results DIR]" with its arguments, as given, the
+    /// results directory the command settled (--results, else RESULTS_DIR,
+    /// else the configured one: spec-0219, spec-0324), and the project's
+    /// folder within its git repository (tasks.wit, request). No feature file
+    /// found: exit 2, saying no scenario was found, no result written
+    /// (spec-0156).
+    run: func(args: list<string>, results-dir: string, folder: option<string>) -> outcome;
+}
+
+/// The component kernel/runner builds to. It reads the spec with spec/parser
+/// (its import brings the event records the parser exports, events.wit) and
+/// runs each step definition file through the host. Its WASI imports are
+/// those every component carries, in the version slice 01's worlds name
+/// (slice 02's ED-08).
+world kernel-runner-component {
+    import rdm:host/process@0.1.0;
+    import spec-parser;
+    export kernel-runner;
+}

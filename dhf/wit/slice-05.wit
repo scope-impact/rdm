@@ -1,0 +1,64 @@
+// Slice 05, verify by results (dhf/spec/05-verify-by-results/plan.md): a
+// team sees each scenario's status derived from executed test results,
+// whatever stack ran them, traces a need to its evidence, and cannot release
+// until every scenario is verified.
+//
+// Exports the interfaces of the components whose home is this slice (their
+// model spec path names it: kernel/runner, verification/results,
+// verification/status, verification/trace, verification/release), the event
+// record verification/status publishes (verification-events), and the
+// slice's tasks (tasks.wit: run, status, trace and release), which
+// rdm-spec.wac wires to the command's import verify-by-results (tasks.wit,
+// later-slices). verification-results is exported for verify's tests check
+// (slice 06); verification-status and verification-events for publish (09)
+// and audit (10), which show the statuses.
+//
+// Imports what its components use: the host's processes, through which the
+// runner runs the project's step definitions (ED-02); spec/parser and the
+// event records it exports (slice 02), with which the runner, status and
+// trace read the spec (ED-03, ED-04); kernel/plugins (slice 08), to which
+// status delivers VerificationDerived (slice 08's ED-03; ED-06); and
+// compliance/gap's clauses stage (slice 10), which release asks under
+// :regulated, the not-built stand-in's until slice 10 is built (ED-07).
+// Slices 02 and 08 import nothing of this slice, so no cycle: every import is
+// wired in rdm-spec.wac, in this slice's own instance line.
+//
+// WASI is named by no world of this slice, as in slices 02, 03, 04 and 08:
+// the cycle that builds the slice adds the line slice 01's worlds carry, in
+// the version they carry (slice 02's ED-08; ED-12).
+// Composed by slice-05.wac.
+
+world verify-by-results {
+    import rdm:host/process@0.1.0;
+    import spec-parser;
+    import kernel-plugins;
+    import clauses-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export kernel-runner;
+    export verification-results;
+    export verification-events;
+    export verification-status;
+    export verification-trace;
+    export verification-release;
+    export tasks;
+}
+
+/// The slice's tasks (ED-08): composition, not a component of the model,
+/// holding no rdm-spec logic. Its entries are the task table's rows of run,
+/// status, trace and release, as spec-0176 writes them (slice 01's ED-18);
+/// it runs run with kernel/runner, status with verification/status, trace
+/// with verification/trace and release with verification/release, handing
+/// each the results directory the command settled (trace's as ED-09
+/// settles), and answers none for any other task.
+world verify-by-results-tasks {
+    import kernel-runner;
+    import verification-status;
+    import verification-trace;
+    import verification-release;
+    export tasks;
+}

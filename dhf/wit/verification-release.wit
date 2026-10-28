@@ -1,0 +1,54 @@
+// Component Release check of the verification context (dhf/spec/model.edn,
+// :verification/release; dhf/spec/05-verify-by-results/release.feature,
+// dhf/spec/10-regulated-profile/release.feature,
+// dhf/spec/12-several-specs/release.feature,
+// dhf/spec/13-slice-development/release.feature): refuses a release while
+// any scenario of the specs asked, or of the slice asked, is not verified
+// (failed, unverified or planned), exit 1, naming each with its status; under
+// the regulated profile, also while the clauses have a gap or a controlled
+// document has no id (the glossary's "Gap").
+//
+// It refuses on verification/status' statuses (the model's "Refuses on").
+// Under :regulated only, it asks compliance/gap (slice 10) for the clauses
+// and the documents, through clauses-stage, the stage interface check asks
+// (spec-check.wit, check-stages), written out the same: its answer's
+// findings, and ClausesIndexed among its published events as EDN (the
+// model's "Publishes ClausesIndexed to" release; slice 08's ED-02). Until
+// slice 10 is built, the not-built stand-in answers none, and a release of a
+// regulated project cannot run (ED-07). It imports no other slice's types,
+// so slice 10 can import it.
+
+interface verification-release {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types (slice 01's ED-14).
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// Runs "rdm-spec release [--results DIR] [--spec NAME] [--slice SLICE]"
+    /// with its arguments, as given, the results directory the command
+    /// settled and the project's folder: exit 0 when every scenario asked is
+    /// verified (and, under :regulated, gap analysis found nothing), else 1,
+    /// one finding per scenario not verified, naming its id and its status
+    /// (spec-0059, spec-0188, spec-0189; G-31 for the result and the lines).
+    run: func(args: list<string>, results-dir: string, folder: option<string>) -> outcome;
+}
+
+/// The component verification/release builds to. It reads statuses with
+/// verification/status (whose types bring verification-events and
+/// verification-results) and, under :regulated, the clauses through
+/// clauses-stage. Its WASI imports are those every component carries, in the
+/// version slice 01's worlds name (slice 02's ED-08).
+world verification-release-component {
+    import verification-status;
+    import clauses-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export verification-release;
+}

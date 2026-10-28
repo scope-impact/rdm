@@ -1,0 +1,65 @@
+// Slice 05, verify by results (dhf/spec/05-verify-by-results/plan.md),
+// composed from the components whose home is this slice, each built to its
+// own component exporting its interface
+// (wasm/components/<context>-<component>/, dhf/harness/stack.md), and the
+// slice's tasks (ED-08). Targets the slice's world, verify-by-results
+// (slice-05.wit).
+//
+// Each component's imports are wired to another of the slice's components
+// (the model's relationships: status derives statuses from the results;
+// trace reads statuses from status; release refuses on status; each with the
+// types those interfaces use; the tasks run each task with its component).
+// Every other import is left to the composition: WASI's and
+// rdm:host/process (the runner's step definitions), which the host
+// satisfies; spec/parser and its event records (slice 02), kernel/plugins
+// (slice 08) and the clauses stage (slice 10, the not-built stand-in's until
+// then), which rdm-spec.wac wires in this slice's instance line.
+//
+// Packages resolve from the build's dependency directory, as slice-01.wac
+// says: rdm:verification-status is
+// wasm/build/deps/rdm/verification-status.wasm, and rdm:spec@0.1.0 is
+// dhf/wit encoded. Then
+// "wac compose dhf/wit/slice-05.wac --deps-dir wasm/build/deps
+//  -o wasm/build/deps/rdm/verify-by-results.wasm".
+package rdm:verify-by-results targets rdm:spec/verify-by-results@0.1.0;
+
+let results = new rdm:verification-results { ... };
+
+let runner = new rdm:kernel-runner { ... };
+
+let status = new rdm:verification-status {
+    "rdm:spec/verification-results@0.1.0": results["rdm:spec/verification-results@0.1.0"],
+    ...
+};
+
+let trace = new rdm:verification-trace {
+    "rdm:spec/verification-results@0.1.0": results["rdm:spec/verification-results@0.1.0"],
+    "rdm:spec/verification-events@0.1.0": status["rdm:spec/verification-events@0.1.0"],
+    "rdm:spec/verification-status@0.1.0": status["rdm:spec/verification-status@0.1.0"],
+    ...
+};
+
+let release = new rdm:verification-release {
+    "rdm:spec/verification-results@0.1.0": results["rdm:spec/verification-results@0.1.0"],
+    "rdm:spec/verification-events@0.1.0": status["rdm:spec/verification-events@0.1.0"],
+    "rdm:spec/verification-status@0.1.0": status["rdm:spec/verification-status@0.1.0"],
+    ...
+};
+
+let tasks = new rdm:verify-by-results-tasks {
+    "rdm:spec/kernel-runner@0.1.0": runner["rdm:spec/kernel-runner@0.1.0"],
+    "rdm:spec/verification-results@0.1.0": results["rdm:spec/verification-results@0.1.0"],
+    "rdm:spec/verification-events@0.1.0": status["rdm:spec/verification-events@0.1.0"],
+    "rdm:spec/verification-status@0.1.0": status["rdm:spec/verification-status@0.1.0"],
+    "rdm:spec/verification-trace@0.1.0": trace["rdm:spec/verification-trace@0.1.0"],
+    "rdm:spec/verification-release@0.1.0": release["rdm:spec/verification-release@0.1.0"],
+    ...
+};
+
+export runner["rdm:spec/kernel-runner@0.1.0"];
+export results["rdm:spec/verification-results@0.1.0"];
+export status["rdm:spec/verification-events@0.1.0"];
+export status["rdm:spec/verification-status@0.1.0"];
+export trace["rdm:spec/verification-trace@0.1.0"];
+export release["rdm:spec/verification-release@0.1.0"];
+export tasks["rdm:spec/tasks@0.1.0"];

@@ -1,0 +1,75 @@
+// Component Results reader of the verification context (dhf/spec/model.edn,
+// :verification/results; dhf/spec/05-verify-by-results/results.feature):
+// reads a run's Allure results, whatever stack wrote them (spec-0063), naming
+// each file it cannot read, never skipping it (spec-0062).
+//
+// A result is read for what status, trace and verify depend on: its status,
+// its spec label and an outline row's parameters (spec-0312; the glossary's
+// "Allure result"); everything else it holds is kept as written, for verify's
+// tests check (slice 06, the model's "Reads the tests check's results
+// with"), which holds every element to the project's Allure mapping. Its
+// types are its own and builtin (slice 01's ED-14): slice 06 imports this
+// interface from slice 05's composition and nothing else of it.
+
+interface verification-results {
+    /// A result's status: Allure's own (the glossary's "Oracle": failed,
+    /// broken, skipped or unknown do not pass). Any other status makes the
+    /// file unreadable (spec-0313; spec gap G-16 for unknown).
+    enum result-status {
+        passed,
+        failed,
+        broken,
+        skipped,
+        unknown,
+    }
+
+    /// One parameter of a result: an outline row's heading and value
+    /// (spec-0309).
+    record parameter {
+        name: string,
+        value: string,
+    }
+
+    /// One Allure result read: its file as the results directory names it,
+    /// DIR/name with DIR as given (spec-0307), its spec label (none for a
+    /// result with no spec label, which verifies nothing, spec-0164), its
+    /// status, its parameters in order, and the file's text as read, the
+    /// rest of the result kept for whoever reads it (spec-0312).
+    record allure-result {
+        file: string,
+        spec: option<string>,
+        status: result-status,
+        parameters: list<parameter>,
+        json: string,
+    }
+
+    /// A file that cannot be read as an Allure result: its file, DIR/name,
+    /// and why, in one line, each newline of a parser's message replaced by
+    /// a space (spec-0062; dhf/spec/README.md, "How every task reports").
+    record unreadable {
+        file: string,
+        why: string,
+    }
+
+    /// What one reading of a results directory found: every result it read,
+    /// in the order of their file names, and every file it could not read.
+    record reading {
+        results: list<allure-result>,
+        unreadable: list<unreadable>,
+    }
+
+    /// Reads every Allure result (every "<uuid>-result.json" file) of the
+    /// results directory, as given, relative to the project's root or
+    /// absolute. The error is why it cannot be read at all, reported as
+    /// cannot-run, exit 2: a directory that does not exist, naming it
+    /// (spec-0107), or one holding no Allure result, saying no test run wrote
+    /// results there (spec-0061).
+    read: func(dir: string) -> result<reading, string>;
+}
+
+/// The component verification/results builds to: it imports nothing. Its
+/// WASI imports are those every component carries, in the version slice
+/// 01's worlds name (slice 02's ED-08).
+world verification-results-component {
+    export verification-results;
+}

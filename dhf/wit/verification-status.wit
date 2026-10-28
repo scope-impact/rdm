@@ -1,0 +1,190 @@
+// Component Status of the verification context (dhf/spec/model.edn,
+// :verification/status; dhf/spec/05-verify-by-results/status.feature,
+// dhf/spec/12-several-specs/status.feature,
+// dhf/spec/13-slice-development/status.feature): verified, failed,
+// unverified or planned, for every stamped scenario of every spec, derived
+// from a run's Allure results and never written (spec-0065); and each
+// slice's plan status and its scenarios verified of all, under the slices
+// layout (spec-0419). The task "rdm-spec status [--results DIR]" is a
+// report: it exits 0 whatever the statuses (the feature's description).
+//
+// It derives statuses from verification/results (the model's "Derives
+// statuses from"), reads the spec with spec/parser (the model's "Publishes
+// SpecParsed to" status, a value handed on: slice 02's ED-04; this slice's
+// ED-04), and publishes VerificationDerived: the event record is in
+// verification-events, below, which this component exports beside its own
+// interface, as knowledge/sources exports knowledge-events (slice 03's ED-04;
+// this slice's ED-05). The event reaches the project's plugins through
+// kernel/plugins' deliver, as the published language, EDN (slice 08's ED-02
+// and ED-03; this slice's ED-06). trace and release read statuses from this
+// component (the model's "Reads statuses from", "Refuses on").
+
+// Slice 05, verify-by-results: VerificationDerived, published by
+// verification/status (dhf/spec/events.edn). An interface of its own, not a
+// record added to events (events.wit): events is exported by spec/parser
+// (slice 02), whose build an added type would no longer match (slice 03's
+// ED-04). Its types are its own, the revision written out as events writes
+// it. A plugin, or a component of another slice, reads the event as EDN
+// (slice 08's ED-02).
+
+interface verification-events {
+    /// The revision an event read: :working-tree, or the commit read.
+    variant revision {
+        working-tree,
+        commit(string),
+    }
+
+    /// A scenario's status (the glossary's "Verified / failed / unverified /
+    /// planned").
+    enum scenario-status {
+        verified,
+        failed,
+        unverified,
+        planned,
+    }
+
+    /// A result naming no stamped scenario: {:file :spec}, file as the
+    /// results directory names it (DIR/name), spec its spec label
+    /// (spec-0060, spec-0307).
+    record unknown-result {
+        file: string,
+        spec: string,
+    }
+
+    /// :VerificationDerived, published by verification/status: each
+    /// scenario's status was derived from a run's Allure results. statuses
+    /// is {scenario-id status}, one entry per stamped scenario, in the spec's
+    /// order; unreadable-files every file the reader could not read, as the
+    /// results directory names it.
+    record verification-derived {
+        revision: revision,
+        statuses: list<tuple<string, scenario-status>>,
+        unknown-results: list<unknown-result>,
+        unreadable-files: list<string>,
+    }
+}
+
+interface verification-status {
+    use verification-events.{scenario-status, unknown-result, verification-derived};
+    use verification-results.{result-status, parameter, unreadable};
+
+    /// One result behind a scenario's status, as trace lists it (spec-0105):
+    /// its file (DIR/name), its status, and the row it names, an outline's.
+    record evidence {
+        file: string,
+        status: result-status,
+        row: list<parameter>,
+    }
+
+    /// One stamped scenario and its status (spec-0307): its id, its title as
+    /// written, its file relative to the project's root, the line of its
+    /// title; the name of its spec under several specs (spec-0408, G-19), the
+    /// slice whose folder holds it under the slices layout (spec-0419); and
+    /// the results that name it, in the order read.
+    record scenario {
+        id: string,
+        title: string,
+        file: string,
+        line: u32,
+        status: scenario-status,
+        spec: option<string>,
+        slice: option<string>,
+        results: list<evidence>,
+    }
+
+    /// :counts of spec-0307: how many scenarios have each status.
+    record counts {
+        verified: u32,
+        failed: u32,
+        unverified: u32,
+        planned: u32,
+    }
+
+    /// One slice of :slices (spec-0419): its folder's name, its plan's
+    /// status as written, how many of its scenarios are verified, and how
+    /// many it holds.
+    record slice-progress {
+        slice: string,
+        status: option<string>,
+        verified: u32,
+        scenarios: u32,
+    }
+
+    /// What to derive: the results directory, as given (the command settled
+    /// it, spec-0219); the project's folder within its git repository
+    /// (tasks.wit, request); the spec named by --spec (spec-0408, spec-0390),
+    /// and the slice named by --slice (spec-0419, spec-0415), none for all.
+    record request {
+        results-dir: string,
+        folder: option<string>,
+        spec: option<string>,
+        slice: option<string>,
+    }
+
+    /// Every stamped scenario of the specs asked, each with its status, in
+    /// the spec's order; their counts; the results naming no stamped
+    /// scenario, and the files that could not be read; each slice under the
+    /// slices layout, in the order of their numbers (empty otherwise); and
+    /// the event the derivation publishes.
+    record derived {
+        results-dir: string,
+        scenarios: list<scenario>,
+        counts: counts,
+        unknown-results: list<unknown-result>,
+        unreadable: list<unreadable>,
+        slices: list<slice-progress>,
+        event: verification-derived,
+    }
+
+    /// What the plugins given the event said, as kernel-plugins' answer
+    /// (kernel-plugins.wit) in this interface's own types: the exit it makes,
+    /// the plugins' finding and warning lines, relayed unchanged, and why,
+    /// with exit 2.
+    record delivered {
+        exit: u8,
+        findings: list<string>,
+        warnings: list<string>,
+        why: option<string>,
+    }
+
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types (slice 01's ED-14).
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// Derives every status, publishing nothing. The error is why it cannot
+    /// run, reported as cannot-run, exit 2: the results cannot be read at all
+    /// (verification-results' read), the spec cannot be read (spec-parser's
+    /// parse), or a --spec or --slice names none (G-21).
+    derive: func(request: request) -> result<derived, string>;
+
+    /// Hands VerificationDerived, as EDN ({:event :VerificationDerived}
+    /// merged with the keys it carries), to kernel/plugins' deliver, after
+    /// the task's own work (slice 08's ED-03); called by every task that
+    /// publishes it (G-23).
+    deliver: func(event: verification-derived) -> delivered;
+
+    /// Runs "rdm-spec status [--results DIR] [--spec NAME] [--slice SLICE]"
+    /// with its arguments, as given, the results directory the command
+    /// settled and the project's folder: prints {:status {...}} as spec-0307
+    /// states it (with :slices under the slices layout, spec-0419), exit 0
+    /// whatever the statuses; then delivers the event.
+    run: func(args: list<string>, results-dir: string, folder: option<string>) -> outcome;
+}
+
+/// The component verification/status builds to. It reads results with
+/// verification/results, the spec with spec/parser (its import brings
+/// events.wit's records), and delivers its event with kernel/plugins (slice
+/// 08). It exports the event record it publishes. Its WASI imports are those
+/// every component carries, in the version slice 01's worlds name (slice
+/// 02's ED-08).
+world verification-status-component {
+    import verification-results;
+    import spec-parser;
+    import kernel-plugins;
+    export verification-events;
+    export verification-status;
+}
