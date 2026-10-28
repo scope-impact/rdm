@@ -15,6 +15,14 @@ The spec of rdm-spec, the source of truth for what it does
 | `<context>/<component>.md` | The component's design prose, where it has any |
 | `kernel/<component>.feature` | The scenarios of shared code no context owns: the command, the event bus and the Gherkin runner |
 
+Under the slices layout (`:spec-layout :slices` in the configuration,
+spec-30), the spec is grouped by slice first: `<NN-slice>/plan.md` (the
+slice's goal, references, scope in and out, and decisions, as Löyly's
+`docs/plan/` slices) and `<NN-slice>/<component>.feature`, the slice's
+scenarios of one component, named by its name in the model. A component's
+scenarios are those of every feature file named for it; a change to any file
+of a slice rebuilds the slice whole, every component it reaches.
+
 ## Conventions
 
 - **One scenario is one requirement**, tagged with exactly one id

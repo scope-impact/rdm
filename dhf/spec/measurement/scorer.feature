@@ -57,6 +57,13 @@ Feature: Scorer
          :scored 2}
         """
 
+    # spec-30: a slice is rebuilt whole (scopes.feature).
+    @spec-0396 @e2e
+    Scenario: A cycle may be scoped to a slice
+      Given a configuration with :spec-layout :slices, and dhf/cycles/03/cycle.edn whose :scope is [{:slice "12-several-specs"}]
+      When "rdm-spec checklist 03" is run
+      Then it accepts the scope, and a slice the cut does not hold is refused with exit 2, naming it
+
   Rule: Verdicts have one shape
 
     @spec-0212 @contract

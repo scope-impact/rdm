@@ -233,6 +233,14 @@ any row's result did not pass, else unverified. A result counts toward a row
 only when it names the row, by its parameters. Status never
 enters a score: only a grader's verdicts do.
 
+**Slice**: a piece of behaviour, planned and rebuilt whole (spec-30; Löyly's
+`docs/plan/` slice). Under `:spec-layout :slices` it is a folder of the spec,
+`<NN-name>/`, holding its plan (`plan.md`: goal, references to the needs it
+serves, scope in and out, decisions) and one feature file per component it
+reaches. A change to any of its files makes it a scope, and a slice scope
+rebuilds, and grades, every scenario of every component it reaches, in
+whichever slice the scenario sits.
+
 **Spec folder**: one spec of a project that keeps several (spec-29): a folder
 with its own feature files, model, event catalogue, needs, glossary, id ledger
 and domain model, declared in the configuration's `:specs` with its name and
