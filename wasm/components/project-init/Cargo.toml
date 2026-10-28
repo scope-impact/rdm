@@ -1,0 +1,17 @@
+# Component Init of the project context (dhf/spec/model.edn, :project/init),
+# built to project-init-component (dhf/wit/project-init.wit).
+[package]
+name = "project-init"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rdm-kernel = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasip3 = { workspace = true, features = ["bitflags"] }
+wit-bindgen = { workspace = true }

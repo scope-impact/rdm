@@ -1,0 +1,17 @@
+# The stand-in for every slice not built yet (dhf/wit/rdm-spec.wit, world
+# not-built; dhf/spec/01-start-a-project/decisions.md, ED-02): composition, not
+# a component of the model, holding no logic. Its tasks name none and run none.
+[package]
+name = "not-built"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rdm-kernel = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wit-bindgen = { workspace = true }

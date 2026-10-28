@@ -1,0 +1,17 @@
+# The native host (ADR 0006, "A small native host"): runs the composed
+# command on WASI 0.3 and gives it rdm:host/process. It holds no rdm-spec logic.
+[package]
+name = "rdm-spec-host"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[[bin]]
+name = "rdm-spec-host"
+path = "src/main.rs"
+
+[dependencies]
+wasmtime = { workspace = true }
+wasmtime-wasi = { workspace = true }
+tokio = { workspace = true }
+libc = { workspace = true }

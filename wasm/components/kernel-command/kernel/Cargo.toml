@@ -1,0 +1,15 @@
+# The kernel's shared code (the glossary's "Kernel";
+# dhf/spec/01-start-a-project/decisions.md, ED-13): a component's runtime
+# without the standard library, EDN, paths, the report's lines, the task
+# table and the command's rules, and the WASI 0.3 and rdm:host/process calls.
+# Part of kernel/command, in its folder.
+[package]
+name = "rdm-kernel"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasip3 = { workspace = true, features = ["bitflags"] }
+wit-bindgen = { workspace = true }
+dlmalloc = { workspace = true }

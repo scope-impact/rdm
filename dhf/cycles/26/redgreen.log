@@ -1,0 +1,17 @@
+2026-10-28T16:49:01Z ticket-01 red scenarios: 23 results, 23 failed (spec-0176 22 rows, spec-0180); no command built
+2026-10-28T16:49:38Z ticket-01 red unit kernel-command: 4 passed, 8 failed (table, plan, help, results_dir, error_stream unimplemented; edn's 4 pass, written with the reader)
+2026-10-28T16:55:29Z ticket-01 green scenarios: 23 passed (spec-0176 22 rows, spec-0180); unit rdm-kernel 12 passed
+2026-10-28T16:57:32Z ticket-02 red scenarios: 8 results of ticket 02 (spec-0086, 0272, 0087, 0089, 0223 x3, 0025): 7 failed, 1 broken; init not built (spec-0176's Given now runs init: 22 broken, spec-0180 passes)
+2026-10-28T16:58:20Z ticket-02 red unit: rdm-kernel 14 passed 1 failed (init_args); project-init 0 passed 6 failed; project-hooks 0 passed 3 failed
+2026-10-28T17:00:58Z ticket-02 green scenarios: 31 passed (ticket 02's 8 and ticket 01's 23), spec-0090 failed (pending: check not built); unit 25 passed
+2026-10-28T17:02:56Z ticket-03 red scenarios: 7 results, 5 failed, 1 broken, 1 passed (spec-0084 passed already: the adopt shell of ticket 01 reaches hooks' refusal outside git, built in ticket 02)
+2026-10-28T17:04:57Z ticket-03 green scenarios: 38 passed (ticket 03's 7, tickets 01-02's 31); unit 27 passed
+2026-10-28T17:06:29Z ticket-04 green-first scenarios: 9 results, 1 passed (spec-0179: its refusal was written in ticket 01's settle), 8 failed, all pending (check, status not built)
+2026-10-28T17:06:56Z ticket-04 red unit rdm-kernel stages: 15 passed, 5 failed (stages::run unimplemented)
+2026-10-28T17:06:56Z ticket-04 green unit rdm-kernel: 20 passed (stages); scenarios unchanged: spec-0179 passes, the other 8 pending
+2026-10-28T17:09:00Z ticket-05 red scenarios: spec-0368 4 rows failed, all pending (fence, verify, scopes, checklist not built)
+2026-10-28T17:09:15Z ticket-05 red unit rdm-kernel: 20 passed, 1 failed (folder)
+2026-10-28T17:10:58Z ticket-05 green unit rdm-kernel 21 passed; suite: 51 results, 39 passed, 12 failed all pending; unit 33 passed
+2026-10-28T17:28:36Z ED-16-narrowed red unit rdm-kernel: 21 passed, 4 failed (results_for unimplemented)
+2026-10-28T17:28:56Z ED-16-narrowed green unit rdm-kernel: 25 passed
+2026-10-28T17:41:44Z ED-16-narrowed green suite (fresh checkout, clean wasm/target): run 1: exit 0 in 717s, 51 results, scenarios: 51 results, 12 failed, 39 passed; 12 pending not passed, 0 other not passed

@@ -1,0 +1,10 @@
+# What each fail of cycle 26 turned out to be (see 16/labels.yaml for the labels).
+- {scenario: spec-0090, label: pending, evidence: "needs check (slice 02, cycle 27): 'check is not built'"}
+- {scenario: spec-0177, label: pending, evidence: "needs check (cycle 27)"}
+- {scenario: spec-0178, label: pending, evidence: "needs check (cycle 27)"}
+- {scenario: spec-0235, label: pending, evidence: "needs check and views (cycles 27, 28)"}
+- {scenario: spec-0193, label: pending, evidence: "needs status (slice 05)"}
+- {scenario: spec-0219, label: pending, evidence: "needs status (slice 05); the command chose the right directory in every row"}
+- {scenario: spec-0368, label: pending, evidence: "needs fence, verify, scopes (slice 06) and checklist (slice 07)"}
+- {scenario: spec-0420, label: spec-gap, evidence: "stated in spec-36, after the build began: adopt's result shape; the builder's own choice differed (key order, :next, the warning's words, :gitignore-lines when .gitignore was written)"}
+- {scenario: spec-0422, label: spec-gap, evidence: "stated in spec-36, after the build began: init's result shape; :wrote in alphabetical order, :next six steps where the spec states four"}

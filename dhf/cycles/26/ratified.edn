@@ -1,0 +1,14 @@
+{:cut "spec-40",
+ :room-tree "9bbc522f17e7808f041f2950cbccd8b632a70e4a",
+ :outcome :refused,
+ :checkout "dhf/cycles/26/build",
+ :checks
+ [{:name "tests",
+   :kind :tests,
+   :seconds 727.94,
+   :outcome :failed,
+   :reason
+   "the test command failed with exit 1; its output is in dhf/cycles/26/test.log"}
+  {:name "answers", :kind :runs, :outcome :not-run}],
+ :reason
+ "tests: the test command failed with exit 1; its output is in dhf/cycles/26/test.log"}

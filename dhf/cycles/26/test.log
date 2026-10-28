@@ -1,0 +1,23 @@
+scenarios: 55 results, 4 broken, 12 failed, 39 passed; 12 pending not passed, 4 other not passed
+test.sh: 1. tools
+test.sh: 2. components
+test.sh: 3. composition and host
+test.sh: 4. unit tests
+test.sh: unit tests: 44 passed, 0 failed
+test.sh: 5. scenarios
+pending: spec-0193 (failed: expected exit 0: `rdm-spec status` in /tmp/rdm-spec-scenarios-2b46f22c/s31/room/project exited Some(2); stdout: ""; stderr: "cannot-run: status is not built\n")
+pending: spec-0219 [unset |  | dhf/allure-results] (failed: expected exit 0: `rdm-spec status` in /tmp/rdm-spec-scenarios-2b46f22c/s32/room/project exited Some(2); stdout: ""; stderr: "cannot-run: status is not built\n")
+pending: spec-0219 [R1 |  | R1] (failed: expected exit 0: `rdm-spec status` in /tmp/rdm-spec-scenarios-2b46f22c/s33/room/project exited Some(2); stdout: ""; stderr: "cannot-run: status is not built\n")
+pending: spec-0219 [R1 | --results other | other] (failed: expected exit 0: `rdm-spec status --results other` in /tmp/rdm-spec-scenarios-2b46f22c/s34/room/project exited Some(2); stdout: ""; stderr: "cannot-run: status is not built\n")
+pending: spec-0235 (failed: expected exit 1: `rdm-spec check` in /tmp/rdm-spec-scenarios-2b46f22c/s37/room/project exited Some(2); stdout: ""; stderr: "cannot-run: check is not built\n")
+pending: spec-0177 (failed: expected exit 0: `rdm-spec check` in /tmp/rdm-spec-scenarios-2b46f22c/s38/room/project exited Some(2); stdout: ""; stderr: "cannot-run: check is not built\n")
+pending: spec-0178 (failed: expected exit 1: `rdm-spec check` in /tmp/rdm-spec-scenarios-2b46f22c/s39/room/project exited Some(2); stdout: ""; stderr: "cannot-run: check is not built\n")
+pending: spec-0090 (failed: expected exit 0: `rdm-spec check` in /tmp/rdm-spec-scenarios-2b46f22c/s51/room/sauna exited Some(2); stdout: ""; stderr: "cannot-run: check is not built\n")
+pending: spec-0368 [fence ROOM spec-3 | ROOM holds wallet/'s committed files at its own root, minus the denied ones] (failed: expected exit 0: `rdm-spec fence /tmp/rdm-spec-scenarios-2b46f22c/s52/ROOM spec-3` in /tmp/rdm-spec-scenarios-2b46f22c/s52/monorepo/wallet exited Some(2); stdout: ""; stderr: "cannot-run: fence is not built\n")
+pending: spec-0368 [verify ROOM 03 | its checkout is wallet/ exported at spec-3, at the checkout's root] (failed: its checkout is wallet/ exported at spec-3, at the checkout's root: no wallet/dhf/cycles/03/ratified.edn: `rdm-spec verify /tmp/rdm-spec-scenarios-2b46f22c/s53/ROOM 03` in /tmp/rdm-spec-scenarios-2b46f22c/s53/monorepo/wallet exited Some(2); stdout: ""; stderr: "cannot-run: verify is not built\n")
+pending: spec-0368 [checklist 03 | the checklist holds one item per stamped scenario of wallet/'s spec at spec-3] (failed: expected exit 0: `rdm-spec checklist 03` in /tmp/rdm-spec-scenarios-2b46f22c/s54/monorepo/wallet exited Some(2); stdout: ""; stderr: "cannot-run: checklist is not built\n")
+pending: spec-0368 [scopes spec-2 spec-3 | it names the one component whose scenarios changed in wallet/] (failed: expected exit 0: `rdm-spec scopes spec-2 spec-3` in /tmp/rdm-spec-scenarios-2b46f22c/s55/monorepo/wallet exited Some(2); stdout: ""; stderr: "cannot-run: scopes is not built\n")
+not passed: spec-0420 (broken: no step definition matches "a git repository that already holds dhf/spec/glossary.md and its own .gitignore")
+not passed: spec-0421 [help | exits 0 and lists every task] (broken: no step definition matches "a git repository that holds no dhf/harness/config.edn")
+not passed: spec-0421 [check | exits 2 and says rdm-spec runs in a project's root, the folder that holds its configuration] (broken: no step definition matches "a git repository that holds no dhf/harness/config.edn")
+not passed: spec-0422 (broken: no step definition matches "its standard output, read as EDN, is {:init {:path "sauna" :wrote [PATH ...] :next [STEP ...]}}, :path the path as it was given")

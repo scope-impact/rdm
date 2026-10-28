@@ -15,4 +15,5 @@
  :slice "01-start-a-project"
  :builder {:name "one builder subagent, one room" :actor :agent}
  :grader {:name "graders, each its own grading room, black box on the built command" :actor :agent}
- :spec-owner {:name "Sathish Narayanan" :actor :human}}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
+ :reviewed {:by "Sathish Narayanan" :accepted true :installed false :why "accepted on the evidence: verify refused on 16 results, 12 pending (tasks of later slices) and 4 the scenarios spec-36 stated after the build began (spec-0420 to spec-0422); graded 17 of 26 (7 pending, 2 those gaps); not scored, not being verified. The component build stays beside the installed release until all thirteen slices exist (ADR 0006). The two gap-misses are fixed when slice 01 is next built, the final whole-project cycle at the latest"}}

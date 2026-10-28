@@ -1,0 +1,19 @@
+# Kernel component Command (dhf/spec/model.edn, :kernel/command), built to the
+# component kernel-command-component (dhf/wit/kernel-command.wit). The
+# kernel's shared code every component uses (ED-13) is its library crate
+# rdm-kernel, in kernel/ beside it, fenced with it.
+[package]
+name = "kernel-command"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rdm-kernel = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasip3 = { workspace = true, features = ["bitflags"] }
+wit-bindgen = { workspace = true }

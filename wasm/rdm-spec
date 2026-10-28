@@ -1,0 +1,12 @@
+#!/bin/sh
+# rdm-spec, the WebAssembly build (dhf/harness/stack.md, "Entry point"): runs
+# the native host on the composed command with its arguments. It builds
+# nothing: wasm/test.sh builds wasm/build/.
+self=$(readlink -f "$0")
+here=$(dirname "$self")
+host="$here/build/rdm-spec-host"
+if [ ! -x "$host" ] || [ ! -f "$here/build/rdm-spec.wasm" ]; then
+  echo "cannot-run: rdm-spec is not built: run sh wasm/test.sh" >&2
+  exit 2
+fi
+exec "$host" "$here/build/rdm-spec.wasm" "$@"

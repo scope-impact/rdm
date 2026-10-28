@@ -1,0 +1,16 @@
+;; The components this build holds, and so the feature files wasm/test.sh runs
+;; (dhf/spec/01-start-a-project/decisions.md, ED-10): every feature file, in any
+;; slice, named for one of them. Each slice's cycle adds its own.
+;;
+;; :pending names the scenarios whose task a later cycle builds
+;; (dhf/spec/01-start-a-project/pending.md; ED-01). They are run and reported
+;; as they come out; a failure of one of them does not fail wasm/test.sh. A
+;; scenario leaves this list in the cycle that builds its task.
+{:components ["kernel/command" "project/init" "project/adopt" "project/hooks"]
+ :pending {"spec-0177" "check, every stage (cycle 7)"
+           "spec-0178" "check, every stage (cycle 7)"
+           "spec-0235" "check, every stage (cycle 7)"
+           "spec-0090" "check, every stage (cycle 7)"
+           "spec-0193" "status (cycle 6)"
+           "spec-0219" "status (cycle 6)"
+           "spec-0368" "fence, verify, scopes (cycle 7); checklist (cycle 8)"}}

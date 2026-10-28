@@ -1,0 +1,17 @@
+# The scenario driver behind wasm/test.sh (dhf/spec/01-start-a-project/
+# decisions.md, ED-10): a native program, not a component. It finds the
+# feature files of the components this build holds (components.edn) by
+# looking, runs each scenario's steps against their definitions, which drive
+# the rdm-spec on PATH, and writes one Allure result per scenario and outline
+# row. Each component's step definitions are its own: steps.rs in its crate's
+# folder, included here.
+[package]
+name = "scenarios"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+rdm-kernel = { workspace = true }
+serde_json = { workspace = true }
+regex = { workspace = true }

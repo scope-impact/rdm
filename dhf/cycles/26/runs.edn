@@ -3,11 +3,66 @@
   :began "2026-10-28T16:18:23.038954290Z",
   :ended "2026-10-28T17:42:33.496855884Z",
   :minutes 84.2,
-  :tokens 400000,
+  :tokens 408744,
   :defence
   {:writes-outside [],
    :tmp-left 0,
    :repo-touched [],
+   :results-in-room false,
+   :unobserved
+   ["reads outside the room are not observed"
+    "a write below a watched directory's own entries is not observed"]}}
+ {:role "grader",
+  :room "/home/user/c26/grade-a",
+  :began "2026-10-28T17:45:53.799821483Z",
+  :ended "2026-10-28T18:01:24.015768652Z",
+  :minutes 15.5,
+  :tokens 106144,
+  :defence
+  {:writes-outside [],
+   :tmp-left 0,
+   :repo-touched
+   ["wasm/Cargo.lock"
+    "wasm/Cargo.toml"
+    "wasm/components.edn"
+    "wasm/components/kernel-command/Cargo.toml"
+    "wasm/components/kernel-command/kernel/Cargo.toml"
+    "wasm/components/kernel-command/kernel/src/command.rs"
+    "wasm/components/kernel-command/kernel/src/edn.rs"
+    "wasm/components/kernel-command/kernel/src/lib.rs"
+    "wasm/components/kernel-command/kernel/src/path.rs"
+    "wasm/components/kernel-command/kernel/src/report.rs"
+    "wasm/components/kernel-command/kernel/src/rt.rs"
+    "wasm/components/kernel-command/kernel/src/stages.rs"
+    "wasm/components/kernel-command/kernel/src/sys.rs"
+    "wasm/components/kernel-command/kernel/src/table.rs"
+    "wasm/components/kernel-command/src/component.rs"
+    "wasm/components/kernel-command/src/lib.rs"
+    "wasm/components/kernel-command/steps.rs"
+    "wasm/components/project-adopt/Cargo.toml"
+    "wasm/components/project-adopt/src/lib.rs"
+    "wasm/components/project-adopt/src/plan.rs"
+    "wasm/components/project-adopt/steps.rs"
+    "wasm/components/project-hooks/Cargo.toml"
+    "wasm/components/project-hooks/src/hook.rs"
+    "wasm/components/project-hooks/src/lib.rs"
+    "wasm/components/project-hooks/steps.rs"
+    "wasm/components/project-init/Cargo.toml"
+    "wasm/components/project-init/src/lib.rs"
+    "wasm/components/project-init/src/skeleton.rs"
+    "wasm/components/project-init/steps.rs"
+    "wasm/host/Cargo.toml"
+    "wasm/host/src/main.rs"
+    "wasm/host/src/process.rs"
+    "wasm/host/tests/host.rs"
+    "wasm/not-built/Cargo.toml"
+    "wasm/not-built/src/lib.rs"
+    "wasm/rdm-spec"
+    "wasm/scenarios/Cargo.toml"
+    "wasm/scenarios/src/gherkin.rs"
+    "wasm/scenarios/src/main.rs"
+    "wasm/scenarios/src/world.rs"
+    "wasm/test.sh"],
    :results-in-room false,
    :unobserved
    ["reads outside the room are not observed"
