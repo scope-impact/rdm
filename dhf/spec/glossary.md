@@ -170,7 +170,7 @@ pre-commit hook, the cut workflow and `.gitignore`, as listed by
 `dhf/spec/01-start-a-project/init.feature`.
 
 **Kernel**: shared code every bounded context may use and that belongs to none
-of them, such as the event bus. Specified under `dhf/spec/kernel/`, never drawn as
+of them, such as the event bus. Specified in the slices that reach it (the model's `:kernel`), never drawn as
 a container.
 
 **Model**: `dhf/spec/model.edn`, the one C4 source. Every view is generated
