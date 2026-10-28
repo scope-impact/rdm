@@ -1,0 +1,13 @@
+;; Cycle 24: spec-30 (the slices layout: a spec grouped by slice, a slice
+;; rebuilt whole; ADR 0004) and spec-31 (rdm-spec's own spec moved into ten
+;; slices, each component's file whole). Run by cycle 23's release (d2c9b12,
+;; built at spec-29). Whole-project: spec-31 moved every feature file, so the
+;; scopes are every component (ADR 0004, "Consequences"); it is also the
+;; whole-project cycle due every fifth cycle (cycles 21 to 23 were scoped).
+;; One builder; graders black box on the packaged jar.
+{:cut "spec-31"
+ :from "spec-29"
+ :scope :project
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "graders, each its own grading room, black box on the packaged jar" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
