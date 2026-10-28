@@ -6,6 +6,22 @@ docs never name a stack, and stack choices live beside the implementation;
 loyly:docs/wow/invariants.md@17d68d2, INV-2). Decided in
 `dhf/decisions/adr-0002-spec-first-regeneration.md`.
 
+## The WebAssembly build (ADR 0006), growing slice by slice in `wasm/`
+
+| What | Choice |
+|---|---|
+| Language and target | Rust (stable, 1.97), compiled for `wasm32-wasip2`: every crate but the host is a WebAssembly component on WASI 0.2 |
+| Architecture language | WIT, in `dhf/wit/`: package `rdm:spec` (events, one interface per component, one world per slice, the command's world) and `rdm:host` (`host.wit`); bindings by `wit-bindgen` |
+| Crates | a Cargo workspace in `wasm/`: one crate per component, `wasm/components/<context>-<component>/`, exporting its interface; `wasm/host/`, the native host |
+| Composition | `wac` plugs the components into one command component, `wasm/build/rdm-spec.wasm`, exporting `wasi:cli/run` |
+| Host | `wasm/host/`, native Rust embedding `wasmtime` (with `wasmtime-wasi`): preopens the project's folder (and a fixture's), passes the environment and standard streams, implements `rdm:host/process`; no rdm-spec logic |
+| Entry point | `wasm/rdm-spec`, a shell script that builds nothing and runs the host on `wasm/build/rdm-spec.wasm` with its arguments |
+| Builder's tests | `wasm/test.sh`: builds, runs the unit tests (`cargo test`, natively where a crate allows) and the scenarios of the slices built so far, driving `wasm/rdm-spec` through its commands from the feature files, and writes one Allure result per scenario (and outline row) to `$RESULTS_DIR`, under the spec's README's results contract |
+| Tools installed | `cargo`/`rustc` 1.97, target `wasm32-wasip2`; `wasm-tools` 1.227.1, `wac` 0.6.1, `wasmtime` 30.0.2 (CLI) in `~/.local/bin`; crates from crates.io |
+| Output | EDN on standard output and in every record, as the spec states |
+
+## The installed release (Clojure), the judge until the switch
+
 | What | Choice |
 |---|---|
 | Language and runtime | Clojure, run by Babashka; Babashka's built-in libraries only, no other dependency |

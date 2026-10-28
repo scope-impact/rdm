@@ -1,0 +1,42 @@
+/// What the native host gives rdm-spec's core beyond WASI (ADR 0006).
+/// The host holds no logic: it runs what the core asks, and reports.
+package rdm:host@0.1.0;
+
+interface process {
+    /// One argument vector run in a folder.
+    record command {
+        argv: list<string>,
+        /// The folder it runs in, relative to the project's root or absolute.
+        cwd: string,
+        /// Added to the environment rdm-spec itself was given.
+        env: list<tuple<string, string>>,
+        stdin: option<list<u8>>,
+        /// Stopped, with its process group, after this many milliseconds.
+        timeout-ms: option<u64>,
+    }
+
+    record output {
+        /// The exit code; none when it was stopped or killed by a signal.
+        exit: option<s32>,
+        stdout: list<u8>,
+        stderr: list<u8>,
+        timed-out: bool,
+        millis: u64,
+    }
+
+    variant error {
+        /// The program could not be started (not found, not executable).
+        cannot-start(string),
+    }
+
+    run: func(cmd: command) -> result<output, error>;
+
+    /// A process started in the background (a :serves check's app): its id,
+    /// to stop it later with its whole process group.
+    spawn: func(cmd: command) -> result<u32, error>;
+    stop: func(pid: u32);
+}
+
+world host {
+    import process;
+}

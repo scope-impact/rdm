@@ -31,6 +31,7 @@
  ;; The words neither the wiki nor the spec may use: the stack, which lives in
  ;; dhf/harness/stack.md (dhf/spec/02-write-the-spec/check.feature).
  :stack-words ["Babashka" "Clojure" "Python" "Mermaid" "mmdr" "MkDocs" "GitHub Actions" "pytest"
+                "Rust" "Cargo" "WebAssembly" "WASI" "wasmtime"
                 "Pandoc" "Typst" "pdftotext" "ORAS"]
 
  ;; Where a project's step definitions for "rdm-spec run" live
@@ -42,15 +43,16 @@
  ;; context's and component's code and unit tests live, so one context or one
  ;; component can be rebuilt while the rest stands
  ;; (dhf/spec/06-regenerate/fence.feature). test.clj runs the tests.
- :implementation ["src" "test" "test.clj" "bb.edn"]
+ :implementation ["src" "test" "test.clj" "bb.edn" "wasm"]
  ;; {component} is written with - as _, as Clojure file names are. Each entry
  ;; is a path prefix: a scope removes every implementation file starting with
  ;; one of its entries, the step definitions included.
  :code-layout {:context ["src/rdm_spec/{context}/" "test/rdm_spec/{context}/"
-                         "test/steps/{context}_"]
+                         "test/steps/{context}_" "wasm/components/{context}-"]
                :component ["src/rdm_spec/{context}/{component}.clj"
                            "test/rdm_spec/{context}/{component}_test.clj"
-                           "test/steps/{context}_{component}.clj"]}
+                           "test/steps/{context}_{component}.clj"
+                           "wasm/components/{context}-{component}/"]}
 
  ;; The clean room is the cut minus what is denied (dhf/spec/regeneration/
  ;; fence.feature), as Löyly's fence is the repository minus every
@@ -73,7 +75,7 @@
                      :generated ["site" "site-src" "dhf/allure-results"]}
               :keep [".gitignore" "AGENTS.md" "CLAUDE.md" "LICENSE.txt" "README.md" "docs"
                      "dhf/decisions" "dhf/harness" "dhf/raw" "dhf/spec" "dhf/storm"
-                     "dhf/views" "dhf/wiki" "plugins"]}
+                     "dhf/views" "dhf/wiki" "dhf/wit" "plugins"]}
 
  ;; Observe (dhf/spec/07-measure/observe.feature): the directories whose entries are
  ;; compared before and after a run ("~" is the home directory), and the
@@ -87,8 +89,10 @@
  ;; What verify proves (dhf/spec/06-regenerate/verify.feature; glossary,
  ;; "Check"), in order, the first failure stopping it. rdm-spec is a command,
  ;; so it has no :serves check: its tests, then the command answering.
- :verify [{:kind :tests :command ["bb" "test.clj"]}
-          {:kind :runs :name "answers" :command ["bb" "-m" "rdm-spec.kernel.command" "help"]
+ ;; Since ADR 0006 the build verified is the WebAssembly one, growing slice by
+ ;; slice in wasm/: its tests, then its command answering.
+ :verify [{:kind :tests :command ["sh" "wasm/test.sh"]}
+          {:kind :runs :name "answers" :command ["sh" "wasm/rdm-spec" "help"]
            :expect {:exit 0 :stdout-starts "{:help"} :budget {:seconds 30}}]
  :results-dir "dhf/allure-results"
 
