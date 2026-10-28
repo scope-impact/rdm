@@ -11,7 +11,7 @@ rdm-spec is regenerated from its spec; the stack is a choice the spec never
 names. It has been Clojure on Babashka since the cutover, and was rebuilt once
 in TypeScript (cycle 21) with the instrument held still. The spec owner wants
 it rebuilt again, slice by slice, as WebAssembly components: Rust compiled for
-WASI 0.2, its boundaries written in WIT, the component model's interface
+WASI 0.3 (p3: async, with streams and futures in the component model), its boundaries written in WIT, the component model's interface
 language, used as the language of the architecture.
 
 Two facts shape the decision. WASI gives a component files, clocks, standard
@@ -98,6 +98,17 @@ Every slice exports one `tasks` interface: its entries in the task table
 them all; a task whose slice is not built yet answers that it is not built.
 Adding a slice adds one instance and its wiring to `rdm-spec.wac`; nothing
 already there is rewritten.
+
+## WASI 0.3 (spec owner, cycle 26)
+
+The build targets WASI 0.3 (p3), not 0.2: async functions, streams and
+futures in the component model, which suit a command that runs processes and
+reads their output. rustc 1.97 has no WASI 0.3 target, so components are
+compiled for `wasm32-wasip2` and reach WASI 0.3 through bindings (`wasip3`,
+`wit-bindgen`'s async); the host is `wasmtime` 49 with WASI p3 and
+component-model async enabled, both still behind flags there. Where an
+interface does not work on 0.3 in these versions, the narrowest fallback is
+taken and recorded, never a quiet return to 0.2.
 
 ## Consequences
 
