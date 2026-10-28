@@ -7,3 +7,5 @@ site/
 .cpcache/
 .DS_Store
 *.swp
+wasm/target/
+wasm/build/

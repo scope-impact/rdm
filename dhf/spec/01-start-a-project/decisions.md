@@ -31,6 +31,8 @@ An absolute path leaked an exception (cycle 07, grading).
 
 ## Expected decisions (planned for the component build, ADR 0006)
 
+The spec owner accepted this slice's plan, every recommendation below, on 2026-10-28.
+
 Written in the plan phase of the component build (ADR 0006,
 `dhf/decisions/adr-0006-wasm-components.md`; `docs/wow/harness.md`, "The
 planner"): each question a builder of this slice would otherwise decide
@@ -296,6 +298,9 @@ Recommendation: A: they are small and hold no logic.
 
 ### ED-16: The command's refusals before a task not built
 
+**Settled by the spec owner:** the command refuses a missing results directory before saying a task is not built (spec-0179 passes in cycle 1).
+
+
 The command settles the project's root and a task's results directory before
 it runs the task (ticket 04), and answers a task not built with exit 2. When
 both hold, which is reported? It decides whether spec-0179 (a results
@@ -313,6 +318,9 @@ wrong whatever is built.
 
 ### ED-17: check's clauses stage outside the regulated profile
 
+**Settled by the spec owner:** check's clauses stage is not part of a run on a project without `:regulated`; check's scenarios do not wait for cycle 10.
+
+
 check's usage names its clauses stage, gap analysis (slice 10, cycle 10). The
 regulated profile is on only where the configuration holds `:regulated`, and
 spec-0255 has check exit 0 naming no clause on a project without it. Under
@@ -326,6 +334,9 @@ the glossary's "Gate", a stage not built refuses the task.
 Recommendation: A, and a scenario saying so when the spec owner agrees.
 
 ### ED-18: Where the task table lives
+
+**Settled by the spec owner:** the command holds the whole task table; each slice's entries must match it.
+
 
 spec-0176 (help) and spec-0180 (an unknown task lists every task) are the
 command's, and must hold whatever is built; the settlement (ED-02) has each

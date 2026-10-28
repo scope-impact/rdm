@@ -1,6 +1,6 @@
 # Slice 01: Start a project
 
-status: done
+status: building
 
 ## Goal
 
