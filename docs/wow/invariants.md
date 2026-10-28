@@ -46,6 +46,11 @@ leaves a role unnamed, is refused, and nothing is written. *Without it:* the
 one who built the thing judges it, and the score measures the builder's
 confidence rather than the build.
 
+**INV-17: No slice, no code.** *Enforced by:* `rdm-spec check`
+(13-slice-development): a feature file outside every slice, or a slice with
+no plan, no status or no `decisions.md`, is refused. *Without it:* behaviour
+is specified after it is built, and the spec describes rather than leads.
+
 ## Enforced by how the harness is kept
 
 **INV-8: The oracle is held still.** *Enforced by:* it lives in
@@ -83,3 +88,26 @@ rebuild (cycles 12 to 19 ran without one).
 **INV-14: The model a cycle used is recorded.** *Enforced by:* nothing;
 `cycle.edn` by hand. *Without it:* a change of model reads as a change of
 spec.
+
+**INV-16: A test before the code it tests.** *Enforced by:* nothing yet: the
+builder keeps `redgreen.log` and reports a ticket whose first run was green;
+the reviewer reads both. A log the builder writes is the builder's claim, so
+this stays a wish until `observe` records the room's test runs itself.
+*Without it:* tests mirror the code (cycles 23 and 25: unit tests written
+after their code; cycle 24: 14 unit tests in all).
+
+**INV-18: Planning and building are separate invocations.** *Enforced by:*
+nothing; the way of working (step 1, plan phase) and the integrator. *Without
+it:* the plan is retro-fitted to whatever was built.
+
+**INV-19: A golden re-recorded because the spec grew changes no existing
+item.** *Enforced by:* nothing; the integrator reads the diff (the way of
+working, "Re-recording a golden"). *Without it:* a behaviour change is
+recorded wearing a growth's clothes.
+
+**INV-20: A plugin copied from a template is known to have drifted, or not.**
+*Enforced by:* nothing; `plugin add` records the template's version in
+`origin.edn`, and nothing compares the copy with the template since (Löyly's
+`modules.sh` does this for its shared files). *Without it:* two projects'
+copies of one judge drift silently.
+
