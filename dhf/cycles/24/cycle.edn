@@ -10,4 +10,5 @@
  :scope :project
  :builder {:name "one builder subagent, one room" :actor :agent}
  :grader {:name "graders, each its own grading room, black box on the packaged jar" :actor :agent}
- :spec-owner {:name "Sathish Narayanan" :actor :human}}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
+ :reviewed {:by "Sathish Narayanan" :accepted true :installed true :why "the slices layout, so rdm-spec's own rules can be split by slice next; 324 of 325, the one fail the grading room's; accepted with two cautions: verify refuses results carrying a tag inherited from the feature (spec-0308 silent; spec-32 states it), and 14 unit tests against cycle 23's 77. Goldens moved: six verify and check cases recorded, check's :paths and :wiki and checklist's :clauses left unstated"}}

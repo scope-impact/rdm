@@ -184,7 +184,10 @@
                          [[:out :knowledge] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
                          [[:out :spec] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
                          [[:out :views] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
-                         [[:out :sources] "no scenario states check's standard output beyond the lint's questions (cycle 22)"]]
+                         [[:out :sources] "no scenario states check's standard output beyond the lint's questions (cycle 22)"]
+                         [[:out :paths] "no scenario states check's standard output beyond the lint's questions (cycle 24)"]
+                         [[:out :wiki] "no scenario states check's standard output beyond the lint's questions (cycle 24)"]]
+   :measurement/checklist [[[:out :checklist :clauses] "spec-0210 states checklist's result; it names clauses only under the regulated profile, which no golden's fixture holds (cycle 24)"]]
    :measurement/scorer  [[[:out :score :ungraded] "no scenario states score's standard output; score.edn is what spec-0123 and its kin state (cycle 20)"]]
    :regeneration/fence  [[[:out] "no scenario states fence's standard output; what it builds is stated, and judged by :wrote and the room (cycle 20)"]]
    :verification/status [[[:err] "no scenario states status's warning line; spec-0060 states the unknown result in its standard output (cycle 20)"]]})

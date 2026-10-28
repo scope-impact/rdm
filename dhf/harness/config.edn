@@ -10,6 +10,10 @@
 
  ;; Where the product spec, the id ledger and the C4 model live.
  :spec-dir "dhf/spec"
+ ;; The spec is grouped by slice, then by component (ADR 0004;
+ ;; dhf/spec/04-model-the-architecture/model.feature): <NN-slice>/plan.md
+ ;; and <NN-slice>/<component>.feature, a component found by its name.
+ :spec-layout :slices
  :ledger "dhf/spec/ids.edn"
  :model "dhf/spec/model.edn"
  :events "dhf/spec/events.edn"
