@@ -1,0 +1,7 @@
+# What each fail of cycle 25 turned out to be (see 16/labels.yaml for the labels).
+- scenario: spec-0192
+  label: spec
+  evidence: "cycles 24's and 25's builds both refuse to compare against a cycle with no score.edn, bootstrap or not (the integrator ran both on the same fixture: 'cycle 00 has no score.edn'). Cycle 24's grader wrote a score.edn for the bootstrap cycle and passed it; cycle 25's followed the Given literally. The spec never says whether a bootstrap cycle is scored"
+- scenario: spec-0405
+  label: spec
+  evidence: "the ddd-domain row holds; the affordances row cannot: its template answers :Check, which check never asks (only verify does), and its probe.sh needs a URL and reads dhf/harness/conformance.cjs, where the template does not put it. The scenario (written in spec-32) is wrong for an answerer, and the template itself is defective"

@@ -1,0 +1,18 @@
+# What cycle 25's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml). Under slice development (ADR 0005)
+# the accepted ones go into the slices' decisions.md.
+- {scenario: spec-0168, decision: "a step's doc string or data table is one more argument after the captured groups"}
+- {scenario: spec-0323, decision: "an assertion failing in a Given or When is broken; only a failing Then (or its And/But) is failed"}
+- {scenario: spec-0060, decision: "status reports unknown and unreadable results as warnings and exits 0 (with spec-0062)"}
+- {scenario: spec-0068, decision: "unknown counts as a status that did not pass; any other status makes the file unreadable (with spec-0313)"}
+- {scenario: spec-0389, decision: "verify narrows the scenarios it requires only for spec and slice scopes (with spec-0404)"}
+- {scenario: spec-0391, decision: "a Check plugin's results are read from :results relative to the project root, else to the checkout"}
+- {scenario: spec-0342, decision: "the oracle task has no time limit; as a Gate it keeps its :seconds, 60 by default (with spec-0349)"}
+- {scenario: spec-0295, decision: "the fence byte guard ignores empty files"}
+- {scenario: spec-0287, decision: "observe counts only new entries in watched directories as writes outside, and breaches per run (with spec-0293)"}
+- {scenario: spec-0401, decision: "a slice plan needs Goal, References, Scope (In and Out) and Decisions; any missing is slice-unplanned"}
+- {scenario: spec-0392, decision: "under slices, a component's name is its id's name part"}
+- {scenario: spec-0308, decision: "a result's steps list Background steps first, and verify holds results to that order (with spec-0331)"}
+- {scenario: spec-0072, decision: "an unclosed map is reported at the innermost bracket still open"}
+- {scenario: spec-0198, decision: "context views lift containers and components to the system; container views lift components to their container"}
+- {scenario: spec-0247, decision: "an audit tag spanning two lines names a clause only when its key is not split"}
