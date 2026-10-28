@@ -73,6 +73,14 @@ and a regeneration from it is no longer a measurement (loyly:docs/wow/invariants
 
 ## Expected decisions (planned for the component build, ADR 0006)
 
+Accepted as recommended by the integrator on 2026-10-28, under the spec
+owner's goal; the spec owner may overrule any. Proposed for the next spec
+change: the model's "wiki resolves footnotes with sources", which no call
+honours under ED-05; whether a source removed and never restored is a
+finding; rewording the Givens that name real commits (17d68d2, f21b508),
+which a fixture cannot make (ED-14); one events interface per publishing
+slice (ED-04).
+
 Written in the plan phase of the component build (ADR 0006,
 `dhf/decisions/adr-0006-wasm-components.md`, cycle 4 of its build order;
 `docs/wow/harness.md`, "The planner"): each question a builder of this slice
