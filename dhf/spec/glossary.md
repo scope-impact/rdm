@@ -152,8 +152,10 @@ a kept path (`dhf/harness/plugins/<name>/`), declared in the configuration's
 (its published language, `events.edn`), given each as EDN on its standard
 input, or answers a request the core makes: `:Gate` before fence and verify,
 `:Check` as one of verify's checks. It reports as a task does: findings on its
-error stream, exit 0 holds, 1 findings, 2 cannot run; past its `:seconds`
-(60 by default) it is stopped and named as timed out. Its `:env` is added to its
+error stream, exit 0 holds, 1 findings, 2 cannot run, any other exit or a
+signal cannot run; its standard output is not the task's report; past its `:seconds`
+(60 by default) it is stopped and named as timed out. Every task that runs a
+plugin refuses a declaration it cannot trust before anything runs. Its `:env` is added to its
 environment beside `RDM_SPEC`; a `:Check` plugin may write results
 of the spec's scenarios into the directory its request names, held to the
 `:allure` mapping as the tests check's are. A plugin is added from a

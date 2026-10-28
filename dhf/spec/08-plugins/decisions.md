@@ -86,7 +86,8 @@ events.edn declares it, and nothing of the core's internals.
 
 A plugin reports as a task does (dhf/spec/01-start-a-project/command.feature,
 spec-0178): its findings one per line on its error stream, as
-FILE:LINE: RULE: what; its standard output is relayed as notes.
+FILE:LINE: RULE: what; its standard output is not the task's report, since a
+task's standard output holds only its result (spec-38, G-05).
 
 ### `plugins.feature`, Scenario: A plugin that runs past its time limit is stopped and named as having timed out (spec-0355)
 
@@ -320,65 +321,83 @@ or may stay the builder's choice (no grader could).
   in the order declared. Smallest: a row of spec-0352 with two events.
   Recommendation: state before the build; plugin by plugin ("in the order it
   runs").
+  **Stated by spec-38:** spec-0443, plugin by plugin, each given its events in the order published, a run for each.
 - **G-02** (spec-0354, spec-0355). Whether the subscribers after one that
   cannot run still run, and whether the findings of the others are still
   written when the task exits 2. Smallest: "every subscriber runs; a task
   whose plugin cannot run exits 2, naming each that could not". State before
   the build.
+  **Stated by spec-38:** spec-0444, every subscriber runs, the others' findings are written, the task exits 2 naming the one that could not.
 - **G-03** (spec-0357). Whether a Gate plugin after a failing one runs.
   Smallest: "the Gate plugins after a failing one do not run". State before
   cycle 7 (the Gate is asked by fence and verify).
+  **Stated by spec-38:** spec-0449, the Gate plugins after a failing one are not asked.
 - **G-04** (spec-0357, spec-0358). The Gate request fence gives: only
   verify's is stated. Smallest: spec-0358 with a fence row, e.g.
   `{:request :Gate :task :fence :cut "spec-3"}`. State before cycle 7.
+  **Stated by spec-38:** spec-0448, `{:request :Gate :task :fence :cut "spec-3"}`.
 - **G-05** (this file, "Rule: A plugin answers through one interface"). "Its
   standard output is relayed as notes": no scenario says where a note goes
   or how it is written; spec-0354's last row says only "no line" for a plugin
   that writes nothing. State before the build: dropped, or a line of a stated
   shape.
+  **Stated by spec-38:** spec-0445 and the glossary's "Plugin": a plugin's standard output is not the task's report (dropped; only a timed-out plugin's output is relayed, spec-0355). The rule's reason above is reworded to match.
 - **G-06** (spec-0354). An error-stream line of no finding or warning shape,
   on exit 0 or 1; and exit 1 with no finding line. Smallest: "such a line is a
   finding naming the plugin; exit 1 with none is one finding naming the
   plugin". State before the build.
+  **Stated by spec-38:** spec-0446, a finding of `dhf/harness/config.edn` under `plugin-line` (holding the line) or `plugin-findings` (exit 1 naming none), naming the plugin. Chosen differently from the release, which relays the unshaped line raw and writes the plugin's name where a file goes.
 - **G-07** (the glossary's "Plugin"). An exit other than 0, 1 or 2, or a
   plugin killed by a signal. Smallest: "any other exit cannot run, naming
   the plugin and its exit". State before the build.
+  **Stated by spec-38:** spec-0447 and the glossary's "Plugin": cannot run, naming the plugin and its exit, or that a signal ended it. Chosen differently from the release, which reports a signal as exit 137.
 - **G-08** (spec-0359). "Prints the :plugins entry to add": the result's
   shape on standard output (EDN). Smallest: a contract scenario naming the
   key that holds the entry. State before the build.
+  **Stated by spec-38:** spec-0450, `{:plugin {:added :to :version :declare :says}}`, `:declare` the template's `:plugin` entry exactly.
 - **G-09** (spec-0359). `origin.edn`'s V and D: the version as the template
   writes it, or a string; the date's form (e.g. "2026-10-28") and whose
   clock (local or UTC). State before the build.
+  **Stated by spec-38:** spec-0451, the version as `template.edn` writes it, the date the local time zone's, as a string YYYY-MM-DD.
 - **G-10** (spec-0364, the glossary's "Plugin"). "As a package (a jar)": this
   build has no jar. Smallest: the row reworded "as a package (the command
   copied outside its sources)". State before cycle 5's verdict, or the row
   waits for the switch (`pending.md`).
+  **Stated by spec-38:** spec-0364's row reworded "as a package (its command copied outside its sources)".
 - **G-11** (spec-0405, row `affordances`). The template declares a plugin
   answering `:Check`, which check never asks, so "check runs the plugin" cannot
   hold. Smallest: the Then reworded "check accepts its declaration, and
   nothing answers cannot run", or the row moved to verify. State before the
   build.
+  **Stated by spec-38:** spec-0405's row `affordances` dropped; the scenario is ddd-domain's. Its intent is that a template carries the files its command runs, which spec-32 learnt from ddd-domain; the affordances plugin answers `:Check`, which check never asks, and cannot pass in a project just made by init even when verify asks it (its probe needs the app's address and the project's own contract). Its `probe.sh` runs `dhf/harness/conformance.cjs` and reads `dhf/harness/binding.yaml`, not the copies under `dhf/harness/plugins/affordances/`: the defect spec-0405 was written for, open for the spec owner (fix the template, or a scenario for it).
 - **G-12** (spec-0359). "Copied unchanged": contents only, or also each
   file's executable bit. State before the build, or say "its files'
   contents".
+  **Stated by spec-38:** spec-0452, each file's contents and executable bit.
 - **G-13** (spec-0342, spec-0343). Whether the oracle task holds the plugin
   to its `:seconds`, and what its standard input is. Smallest: "the oracle
   task runs it with no time limit and nothing on its input". State before
   the build: a long recording is visible.
+  **Stated by spec-38:** spec-0439, no time limit and nothing on its input.
 - **G-14** (spec-0233). The result's shape when there is no oracle (standard
   output is EDN). State before the build.
+  **Stated by spec-38:** spec-0440, `{:oracle {:says S}}`, the error stream empty.
 - **G-15** (spec-0350, the glossary's "Plugin"). Which tasks refuse an
   untrusted `:plugins` before anything runs: check is stated; oracle, plugin
   add, fence, verify and status are not. And within check, the plugins stage
   is the last: whether the earlier stages' findings are still written with
   the refusal. Smallest: "every task that runs a plugin refuses it first,
   writing nothing else". State before the build.
+  **Stated by spec-38:** spec-0441 (check, oracle, status, fence and verify refuse first, exit 2, one cannot-run line, nothing on standard output, no stage run) and spec-0442 (plugin add, which runs no plugin, is not refused); the glossary's "Plugin".
 - **G-16** (spec-0350, row "under the implementation's paths"). Which words
   of a command are paths (any word, or the first file argument). May stay the
   builder's choice: any reading refuses the row's fixture.
+  **The builder's choice: no grader sees it.**
 - **G-17** (the glossary's "Oracle (instrument)": "words separated by
   spaces"). An install path holding a space cannot be written so. May stay
   the builder's choice (cannot run, saying why).
+  **The builder's choice: no grader sees it.**
 - **G-18** (spec-0361, spec-0363). Whether verify's `:plugin` check reads
   `:plugins` from the cut's configuration or the working tree's. Slice 06's
   to state before cycle 7; `kernel-plugins.ask` takes the root either way.
+  **Left for slice 06's planner** (spec-38 states nothing of it).

@@ -26,6 +26,15 @@ ticket.
 | `@spec-0232` Fence and verify refuse while the oracle fails (2 rows), `oracle.feature` | 06 | fence, verify |
 | `@spec-0383` A subscriber to :CycleVerified runs after verify passes, given the cycle, `plugins.feature` | 06 | verify |
 | `@spec-0384` A cycle that is not verified publishes nothing, `plugins.feature` | 06 | verify |
+| `@spec-0448` A Gate plugin is given the fence it gates, `plugins.feature` | 06 | fence |
+| `@spec-0449` The Gate plugins after a failing one are not asked, `plugins.feature` | 06 | fence |
+| `@spec-0441` the rows `fence ROOM spec-3` and `verify ROOM 03`, `plugins.feature` | 02 | fence, verify |
+
+## Unblocked in cycle 6 (slice 05, verify by results: status)
+
+| Scenario | Ticket | Task it needs |
+|---|---|---|
+| `@spec-0441` the row `status`, `plugins.feature` | 02 | status |
 
 Verify's `:plugin` check, in `verify.feature` beside this file, is
 verification/verify's, built whole in cycle 7, and named by slice 06's
@@ -33,21 +42,16 @@ tickets, never by this slice's: spec-0361 (3 rows), spec-0391, spec-0362 and
 spec-0363. It asks the plugin through `kernel-plugins.ask`, which this slice
 builds (ticket 06).
 
-## Pending on a spec gap
-
-| Scenario | Ticket | What it waits for |
-|---|---|---|
-| `@spec-0364` the row "as a package (a jar)", `plugins.feature` | 05 | G-10: what a package of this build is. Read as `decisions.md` recommends (the command and its host copied outside the repository), it is verified in cycle 5; otherwise at the switch (ADR 0006). |
-
 ## Not pending
 
-The other 22 scenarios (spec-0364 by its row "from its sources") are
+The other 22 scenarios, and spec-0439 to spec-0447 and spec-0450 to
+spec-0452 (spec-37b; spec-0441 by its rows `check` and `oracle`), are
 verified in cycle 5: spec-0166, spec-0167, spec-0303, spec-0304, spec-0351 and
 spec-0353 (ticket 01); spec-0349, spec-0350 and spec-0382 (ticket 02);
 spec-0352, spec-0354, spec-0355 and spec-0356 (ticket 03); spec-0342,
 spec-0343, spec-0344, spec-0345 and spec-0233 (ticket 04); spec-0359,
-spec-0360, spec-0364 and spec-0405 (ticket 05; spec-0405's row
-`affordances` under G-11's reading). Every When runs check, oracle or plugin add, built in this cycle or
+spec-0360, spec-0364 (both rows; its package row as spec-37b states it,
+G-10) and spec-0405 (ticket 05; ddd-domain alone since spec-37b, G-11). Every When runs check, oracle or plugin add, built in this cycle or
 before. The warnings of the stages not built are warnings, not findings.
 
 No scenario of another slice is unblocked in cycle 5: no pending scenario of

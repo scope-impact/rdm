@@ -17,6 +17,12 @@ Feature: Oracle
       When "rdm-spec oracle record --reason 'the spec grew'" is run
       Then the command runs with the arguments record, --reason and the spec grew, in that order
 
+    @spec-0439 @e2e
+    Scenario: The oracle task runs its plugin with no time limit and nothing on its input
+      Given a configuration whose plugin "oracle" has :seconds 1 and a command that writes what its standard input holds to a file in the project, sleeps 3 seconds, prints {:oracle {:differences 0}} and exits 0
+      When "rdm-spec oracle" is run
+      Then it exits 0 and prints {:oracle {:differences 0}}, and the file is empty
+
     @spec-0344 @contract
     Scenario: The oracle command is told which rdm-spec it judges
       Given a configuration whose plugin "oracle" names a command
@@ -48,3 +54,9 @@ Feature: Oracle
       Given a project whose :plugins names no plugin "oracle"
       When "rdm-spec oracle" is run
       Then it exits 0 and says there is no oracle to run
+
+    @spec-0440 @contract
+    Scenario: The oracle task's result when there is no oracle has one shape
+      Given a project whose :plugins names no plugin "oracle"
+      When "rdm-spec oracle" is run
+      Then its standard output, read as EDN, is {:oracle {:says S}}, S a string saying there is no oracle to run, and its error stream is empty

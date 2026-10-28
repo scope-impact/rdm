@@ -27,6 +27,28 @@ Feature: Plugins
         | two plugins named "lint-a"                                                  | a plugin's name is declared once                                          |
         | a plugin whose command is under the implementation's paths                  | a plugin is a judge the builder never writes                              |
 
+    @spec-0441 @contract
+    Scenario Outline: Every task that runs a plugin refuses a declaration it cannot trust first, and says nothing else
+      Given a configuration whose :plugins holds a plugin with neither :subscribes nor :answers, named "x"
+      And a spec in which a scenario carries no id
+      When "rdm-spec <task>" is run
+      Then it exits 2, and its error stream is one line, cannot-run, naming x
+      And its standard output is empty, and it ran no plugin and no stage
+
+      Examples:
+        | task              |
+        | check             |
+        | oracle            |
+        | status            |
+        | fence ROOM spec-3 |
+        | verify ROOM 03    |
+
+    @spec-0442 @e2e
+    Scenario: plugin add, which runs no plugin, is not refused by a declaration it cannot trust
+      Given a project set up by rdm-spec with no dhf/harness/plugins/ddd-domain, whose :plugins holds a plugin with neither :subscribes nor :answers
+      When "rdm-spec plugin add ddd-domain" is run
+      Then it exits 0 and copies the template
+
   Rule: A subscriber receives each event it subscribes to, in every task that publishes it
 
     @spec-0351 @contract
@@ -41,6 +63,13 @@ Feature: Plugins
       Given two plugins subscribing to :SpecParsed, "lint-a" then "lint-b", each writing its name and the time to a shared file
       When "rdm-spec check" is run
       Then lint-a ran before lint-b, and both after the spec check's own stages
+
+    @spec-0443 @e2e
+    Scenario: A plugin is given every event it subscribes to, a run for each, before the next plugin runs
+      Given two plugins, "lint-a" then "lint-b", each subscribing to [:SpecParsed :KnowledgeIndexed] and writing its name and the event it is given to a shared file
+      When "rdm-spec check" is run
+      Then the file holds, in this order: lint-a KnowledgeIndexed, lint-a SpecParsed, lint-b KnowledgeIndexed, lint-b SpecParsed
+      And each plugin is given its events in the order the task published them, whatever order its :subscribes names them in
 
     @spec-0353 @e2e
     Scenario: A plugin subscribing to an event a task does not publish does not run in that task
@@ -76,6 +105,47 @@ Feature: Plugins
       When "rdm-spec check" is run
       Then it exits 2 and names the plugin and its command
 
+    @spec-0444 @e2e
+    Scenario Outline: A plugin that cannot run stops no other plugin, and the others' findings are still written
+      Given two plugins subscribing to :SpecParsed, "<first>" then "<second>": "broken" exits 2, writing "cannot read x" on its error stream; "lint" writes "a.txt:1: r: bad" on its error stream and exits 1
+      When "rdm-spec check" is run on a spec that passes every check
+      Then both plugins ran, in the order declared
+      And it exits 2, its error stream holds "a.txt:1: r: bad" unchanged and a cannot-run line naming broken, and its standard output is empty
+
+      Examples:
+        | first  | second |
+        | broken | lint   |
+        | lint   | broken |
+
+    @spec-0445 @e2e
+    Scenario: A plugin's standard output is not the task's report
+      Given a plugin subscribing to :SpecParsed that writes "a note" on its standard output and exits 0
+      When "rdm-spec check" is run on a spec that passes every check
+      Then it exits 0, its standard output is check's result alone, and neither stream holds "a note"
+
+    @spec-0446 @contract
+    Scenario Outline: A plugin's line of no finding shape, or a failure naming no finding, is a finding about the plugin
+      Given a plugin "lint-a" subscribing to :SpecParsed that <does>
+      When "rdm-spec check" is run on a spec that passes every check
+      Then it exits 1, and its error stream holds the finding "dhf/harness/config.edn: <rule>: …", naming lint-a and <saying>
+
+      Examples:
+        | does                                                           | rule            | saying                  |
+        | writes "this is not a finding" on its error stream and exits 0 | plugin-line     | holding the line        |
+        | writes "this is not a finding" on its error stream and exits 1 | plugin-line     | holding the line        |
+        | writes nothing on its error stream and exits 1                 | plugin-findings | that it named no finding |
+
+    @spec-0447 @e2e
+    Scenario Outline: A plugin that exits otherwise than 0, 1 or 2 cannot run
+      Given a plugin "lint-a" subscribing to :SpecParsed that <ends>
+      When "rdm-spec check" is run on a spec that passes every check
+      Then it exits 2, and its error stream holds a cannot-run line naming lint-a and <names>
+
+      Examples:
+        | ends                                  | names                          |
+        | exits 3                               | its exit, 3                    |
+        | is ended by the signal KILL           | that a signal ended it         |
+
   Rule: An answerer is asked at its request's place
 
     @spec-0357 @e2e
@@ -90,19 +160,26 @@ Feature: Plugins
       When "rdm-spec verify ROOM 03" is run
       Then its standard input was {:request :Gate :task :verify :cut "spec-3" :cycle "03"}
 
+    @spec-0448 @contract
+    Scenario: A Gate plugin is given the fence it gates
+      Given a plugin answering :Gate whose command writes what it is given to a file in the project
+      When "rdm-spec fence ROOM spec-3" is run
+      Then its standard input was {:request :Gate :task :fence :cut "spec-3"}
+
+    @spec-0449 @e2e
+    Scenario: The Gate plugins after a failing one are not asked
+      Given a project with three plugins answering :Gate, "first" exiting 0, "second" exiting 1 with the finding "x:1: oracle-differs: …", and "third" writing that it ran to a file in the project
+      When "rdm-spec fence ROOM spec-3" is run
+      Then it exits 1, relays second's finding unchanged, and third did not run
+
   Rule: A plugin is added from the templates rdm-spec carries, and then owned
 
     @spec-0405 @e2e
-    Scenario Outline: An added template's plugin runs as it is declared
+    Scenario: An added template's plugin runs as it is declared
       Given a project made by "rdm-spec init"
-      When "rdm-spec plugin add <template>" is run, and its entry is added to :plugins as it says
-      Then every file its command names is in dhf/harness/plugins/<template>/
+      When "rdm-spec plugin add ddd-domain" is run, and its entry is added to :plugins as it says
+      Then every file its command names is in dhf/harness/plugins/ddd-domain/
       And "rdm-spec check" runs the plugin, and the plugin does not answer cannot run
-
-      Examples:
-        | template    |
-        | ddd-domain  |
-        | affordances |
 
     @spec-0364 @e2e
     Scenario Outline: rdm-spec carries the same templates however it was installed
@@ -113,7 +190,7 @@ Feature: Plugins
       Examples:
         | how                         |
         | from its sources            |
-        | as a package (a jar)        |
+        | as a package (its command copied outside its sources) |
 
     @spec-0359 @e2e
     Scenario: plugin add copies a template into the project and says how to declare it
@@ -122,6 +199,26 @@ Feature: Plugins
       Then the template ddd-domain rdm-spec carries is copied into dhf/harness/plugins/ddd-domain, unchanged
       And dhf/harness/plugins/ddd-domain/origin.edn holds exactly {:template "ddd-domain" :version V :copied D}, V the template's version and D today's date
       And it prints the :plugins entry to add to the configuration, and changes the configuration not at all
+
+    @spec-0450 @contract
+    Scenario: plugin add's result has one shape
+      Given a project set up by rdm-spec with no dhf/harness/plugins/ddd-domain
+      When "rdm-spec plugin add ddd-domain" is run
+      Then its standard output, read as EDN, is {:plugin {:added "ddd-domain" :to "dhf/harness/plugins/ddd-domain" :version V :declare E :says S}}
+      And V is the :version of the template's template.edn, E its :plugin entry exactly, the entry to add to :plugins, and S a string saying to add it
+
+    @spec-0451 @contract
+    Scenario: origin.edn records the template's version as written and the local date of the copy
+      Given a project set up by rdm-spec with no dhf/harness/plugins/ddd-domain, and TZ set to a time zone whose date, when it runs, is not UTC's
+      When "rdm-spec plugin add ddd-domain" is run
+      Then origin.edn's :version is the template's :version as its template.edn writes it, of the same type
+      And its :copied is that time zone's date as a string YYYY-MM-DD, as "2026-10-29"
+
+    @spec-0452 @e2e
+    Scenario: A file the template carries as executable is copied executable
+      Given a project set up by rdm-spec with no dhf/harness/plugins/affordances
+      When "rdm-spec plugin add affordances" is run
+      Then each file of the copy has the contents and the executable bit of the template's file, probe.sh executable among them
 
     @spec-0360 @e2e
     Scenario Outline: plugin add never overwrites and never guesses
