@@ -1,0 +1,104 @@
+[{:id "spec-0025",
+  :verdict :pass,
+  :evidence
+  "Fixture: rdm-spec init sauna (with an empty global git config, so init set core.hooksPath=.githooks itself), git add -A. git commit with the build: hook printed 'cannot-run: check is not built' and 'pre-commit: rdm-spec check exited 2: the commit is refused', commit exit 1, 0 commits. With a stub rdm-spec first on PATH logging its args: stub exit 1 -> commit exit 1 refused, 0 commits; stub exit 0 -> commit exit 0, 1 commit; stub log shows 'rdm-spec check' called each time. Both clauses hold. (With check not built, every commit in a new project is refused.)"}
+ {:id "spec-0079",
+  :verdict :pass,
+  :evidence
+  "git repo with README.md, src/app.py, test/test_app.py committed; rdm-spec adopt -> exit 0; stdout {:adopt {:wrote [15 skeleton paths] :kept [] ...}}; git diff HEAD empty (code and README unchanged), only skeleton paths untracked; diff -r of the skeleton against a fresh 'rdm-spec init sauna' tree: identical. Every written file listed in :wrote."}
+ {:id "spec-0080",
+  :verdict :pass,
+  :evidence
+  "git repo holding dhf/spec/glossary.md ('MY GLOSSARY'); rdm-spec adopt -> exit 0; sha1 before and after identical (f5373af5...); stdout :kept [\"dhf/spec/glossary.md\"], glossary absent from :wrote; stderr 'dhf/spec/glossary.md: warning: adopt-kept: dhf/spec/glossary.md was already there; kept as it was'."}
+ {:id "spec-0081",
+  :verdict :pass,
+  :evidence
+  "git repo with dhf/harness/config.edn -> ../../elsewhere/cfg.edn; rdm-spec adopt -> exit 0; link target unchanged (ls -l same), target sha1 unchanged; :kept [\"dhf/harness/config.edn\"], stderr names it adopt-kept. Also with a dangling link (target missing): exit 0, link kept and named, no target created."}
+ {:id "spec-0082",
+  :verdict :pass,
+  :evidence
+  "git repo with .gitignore 'node_modules/ *.log'; rdm-spec adopt -> exit 0; .gitignore sha1 unchanged; :kept [\".gitignore\"], :gitignore-lines [\"dhf/allure-results/\" \"dhf/cycles/*/results/\" \"dhf/cycles/*/build/\" \"site-src/\" \"site/\"] = the lines init writes to .gitignore; stderr '.gitignore: warning: adopt-gitignore: add the lines rdm-spec init writes: ...'."}
+ {:id "spec-0083",
+  :verdict :pass,
+  :evidence
+  "On the repo adopted in spec-0079, rdm-spec adopt again -> exit 0; md5 of ls -ld (full-iso mtimes) of every path and of sha1 of every file outside .git identical before and after; stdout :wrote [] and :kept lists all 15 skeleton files; stderr one adopt-kept warning per file."}
+ {:id "spec-0084",
+  :verdict :pass,
+  :evidence
+  "Directory with a.txt, not a git repository (GIT_CEILING_DIRECTORIES set); rdm-spec adopt -> exit 2, stderr 'cannot-run: .../nogit is not a git repository, and the pre-commit hook needs one'; find shows only ./a.txt afterwards: nothing written."}
+ {:id "spec-0085",
+  :verdict :pass,
+  :evidence
+  "git repo holding src/app.py and test/test_app.py; rdm-spec adopt -> exit 0; dhf/spec/model.edn holds only {:system {:id :system :name \"System\" ...}}, needs.edn {}, ids.edn {:issued 0}; find -name '*.feature' finds none."}
+ {:id "spec-0086",
+  :verdict :pass,
+  :evidence
+  "rdm-spec init sauna -> exit 0; git repo, 'No commits yet'; working tree holds exactly the 15 table paths; contents checked: model has the system only, events {}, needs {}, ids {:issued 0}, empty glossary, spec README with conventions, the results contract table (every glossary element) and the default Allure mapping (matches 06-regenerate verify.feature's), config.edn with :id-prefix, every dir, :clean-room deny (implementation, dhf/cycles, site/site-src/dhf/allure-results) and keep list as specified, :agency {:watch [\"/\" \"~\"] :tmp \"/tmp\"}, :verify [{:kind :tests}], :implementation []; stack table no rows; raw README/sources {}; wiki rules + no pages; decisions README; .githooks/pre-commit runs rdm-spec check and .git/config core.hooksPath=.githooks (when no global hooksPath is set; with a global core.hooksPath init sets none); cut.yml runs rdm-spec cut on push to default branch; .gitignore the five lines. stdout lists :wrote and :next. Note: README's status values omit glossary's 'unknown'."}
+ {:id "spec-0087",
+  :verdict :pass,
+  :evidence
+  "mkdir sauna with f.txt; rdm-spec init sauna -> exit 2, stderr 'cannot-run: sauna already exists: init writes only into a path that does not'; ls -laR of sauna identical before and after."}
+ {:id "spec-0089",
+  :verdict :pass,
+  :evidence
+  "rdm-spec init sauna --id-prefix sauna -> exit 0; sauna/dhf/harness/config.edn line 4 ':id-prefix \"sauna\"'."}
+ {:id "spec-0090",
+  :verdict :fail,
+  :evidence
+  "Not built. rdm-spec init sauna, then in sauna: rdm-spec check -> exit 2, stderr 'cannot-run: check is not built'. 'It passes' does not hold."}
+ {:id "spec-0176",
+  :verdict :pass,
+  :evidence
+  "In a project set up by rdm-spec init: rdm-spec help -> exit 0; stdout read as EDN {:help [...]} with 22 maps of exactly :task :usage :does, T a string; compared by bb to the outline's 22 rows: equal in order, usage and does for every row."}
+ {:id "spec-0177",
+  :verdict :fail,
+  :evidence
+  "Not built. On an untouched init skeleton (a spec with nothing to fail): rdm-spec check -> exit 2, 'cannot-run: check is not built'; exit 0 expected."}
+ {:id "spec-0178",
+  :verdict :fail,
+  :evidence
+  "Not built. Skeleton plus dhf/spec/ctx/comp.feature with a scenario with no level tag: rdm-spec check -> exit 2, stderr 'cannot-run: check is not built', stdout empty; exit 1 with a FILE:LINE: RULE line and an EDN result expected."}
+ {:id "spec-0179",
+  :verdict :pass,
+  :evidence
+  "Copy of project/ (rdm-spec's own project), git init, :results-dir \"dhf/allure-results\" absent: rdm-spec status -> exit 2, stderr 'cannot-run: the results directory dhf/allure-results does not exist'."}
+ {:id "spec-0180",
+  :verdict :pass,
+  :evidence
+  "rdm-spec frobnicate -> exit 2, stderr 'cannot-run: unknown task frobnicate; the tasks are: help, init, adopt, stamp, check, views, cut, scopes, fence, run, verify, checklist, status, trace, release, score, scoreboard, oracle, plugin, publish, audit, observe' (all 22)."}
+ {:id "spec-0193",
+  :verdict :fail,
+  :evidence
+  "Not built. Copy of project/ with dhf/allure-results present: rdm-spec status -> exit 2 'cannot-run: status is not built'; it does not read dhf/allure-results. (With the dir missing the command names dhf/allure-results, so it resolves the default, but the task does not run.)"}
+ {:id "spec-0219",
+  :verdict :fail,
+  :evidence
+  "Not built, all 3 rows. Copy of project/ with dhf/allure-results, R1, other present: 'rdm-spec status' (RESULTS_DIR unset), 'RESULTS_DIR=R1 rdm-spec status', 'RESULTS_DIR=R1 rdm-spec status --results other' each -> exit 2 'cannot-run: status is not built'. Resolution looks right (with R1 removed: 'results directory R1 does not exist'; with --results nope: 'results directory nope does not exist'), but nothing is read."}
+ {:id "spec-0223",
+  :verdict :pass,
+  :evidence
+  "Row '': rdm-spec init sauna -> exit 0, :id-prefix \"spec\". Row '--id-prefix 9lives': exit 2, 'cannot-run: the id prefix \"9lives\" cannot start a tag: a prefix starts with a letter and holds letters, digits and single hyphens'. Row '--id-prefix UN': exit 2, 'cannot-run: the prefix UN is taken by need tags (@UN-nnn); choose another'. No sauna written in the refused rows."}
+ {:id "spec-0235",
+  :verdict :fail,
+  :evidence
+  "Not built. Skeleton plus a scenario with no level and dhf/views/x.svg dated 2020 (older than model.edn): rdm-spec check -> exit 2 'cannot-run: check is not built'; exit 1 naming both findings expected."}
+ {:id "spec-0272",
+  :verdict :pass,
+  :evidence
+  "rdm-spec init <abs>/abs/sauna -> exit 0, :path the absolute path; git rev-parse --git-dir = .git; diff -r against the relative-path skeleton: identical."}
+ {:id "spec-0368",
+  :verdict :fail,
+  :evidence
+  "Not built, all 4 rows. Repo with project in wallet/ (init'd), outer dhf/harness/config.edn and dhf/spec/model.edn, tags spec-2/spec-3 changing wallet/dhf/spec/pay/pay.feature, wallet/dhf/cycles/03/cycle.edn naming spec-3; in wallet/: fence ROOM spec-3, verify ROOM 03, checklist 03, scopes spec-2 spec-3 each -> exit 2 'cannot-run: TASK is not built'; ROOM not created. Exit is not as for a root project with those tasks."}
+ {:id "spec-0420",
+  :verdict :fail,
+  :evidence
+  "Wrong. git repo with dhf/spec/glossary.md and own .gitignore: rdm-spec adopt -> exit 0; :kept [\".gitignore\" \"dhf/spec/glossary.md\"], spec requires [\"dhf/spec/glossary.md\" \".gitignore\"]; :next is ['add the lines adopt names to .gitignore, if it kept yours' 'write the first feature file...' 'rdm-spec stamp' 'rdm-spec check' 'set the :tests check...'], not init's next steps (init's begins 'cd sauna', ends with git commit); warnings read 'FILE: warning: adopt-kept: FILE was already there; kept as it was', not '... already exists and is kept unchanged'; and :gitignore-lines [] is present when .gitignore was written (spec-0079 run), spec says present only when kept. :gitignore-lines content correct, :wrote+:kept cover the 15 files once."}
+ {:id "spec-0421",
+  :verdict :pass,
+  :evidence
+  "git repo without dhf/harness/config.edn: rdm-spec help -> exit 0, the same 22-task list; rdm-spec check -> exit 2, 'cannot-run: check runs in a project's root, the folder holding dhf/harness/config.edn, and .../r421 holds none'."}
+ {:id "spec-0422",
+  :verdict :fail,
+  :evidence
+  "Wrong. rdm-spec init sauna -> exit 0, stdout {:init {:path \"sauna\" :wrote [...] :next [...]}}; :wrote names the 15 files once but in alphabetical order (.githooks/pre-commit first), not the table's order (dhf/spec/model.edn first ... .gitignore last); :next is [\"cd sauna\" \"write the first feature file under dhf/spec/, and the needs...\" \"rdm-spec stamp\" \"rdm-spec check\" \"set the :tests check's :command in dhf/harness/config.edn\" \"git add -A && git commit -m \\\"Start the spec\\\"\"], not the four steps the scenario states exactly."}]

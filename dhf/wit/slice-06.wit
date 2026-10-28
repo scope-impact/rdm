@@ -1,0 +1,63 @@
+// Slice 06, regenerate (dhf/spec/06-regenerate/plan.md): a team regenerates
+// its implementation from a merged cut of the spec, in a clean room that
+// provably holds no earlier implementation, and a build is done only when a
+// check the builder does not control says so.
+//
+// The slice's home components are regeneration/cut, regeneration/scopes,
+// regeneration/fence and verification/verify (their model spec paths name
+// it). Slice 02's check imports fence's paths stage, and verify reads the spec
+// with slice 02's parser, so one instance of the slice cannot be both before
+// slice 02 and after it (dhf/spec/02-write-the-spec/decisions.md, ED-02;
+// this slice's ED-01). So cut and fence, which import nothing of slice 02
+// (cut runs check as a command), are instantiated on their own in
+// rdm-spec.wac, ahead of slice 02, fence's paths stage wired by name into
+// slice 02's import of it, as slice 05's ED-07 instantiates compliance/gap
+// for slice 10; and this world, the slice's composition, holds scopes,
+// verify and the slice's tasks, importing cut's and fence's interfaces from
+// those instances.
+//
+// Exports: regeneration/scopes' and verification/verify's interfaces, the
+// event record verify publishes (verify-events), and the slice's tasks
+// (tasks.wit: cut, scopes, fence and verify), which rdm-spec.wac wires to the
+// command's import regenerate (tasks.wit, later-slices). Imports: the host's
+// processes (git, checks, apps); regeneration/cut and regeneration/fence
+// (their own instances); architecture/model (slice 04), with which scopes
+// reads a cut's model; spec/parser and its event records (slice 02) and
+// verification/results (slice 05), with which verify reads the spec at the
+// cut and the tests check's results; kernel/plugins (slice 08), the Gate,
+// the :plugin checks and CycleVerified's delivery. No slice imports this
+// composition but the command, so no cycle.
+//
+// WASI is named by no world of this slice, as in slices 02 to 05 and 08: the
+// cycle that builds the slice adds the line slice 01's worlds carry, in the
+// version they carry (slice 02's ED-08; ED-13).
+// Composed by slice-06.wac.
+
+world regenerate {
+    import rdm:host/process@0.1.0;
+    import regeneration-cut;
+    import regeneration-fence;
+    import architecture-model;
+    import spec-parser;
+    import verification-results;
+    import kernel-plugins;
+    export regeneration-scopes;
+    export verify-events;
+    export verification-verify;
+    export tasks;
+}
+
+/// The slice's tasks (ED-12): composition, not a component of the model,
+/// holding no rdm-spec logic. Its entries are the task table's rows of cut,
+/// scopes, fence and verify, as spec-0176 writes them (slice 01's ED-18); it
+/// runs cut with regeneration/cut, scopes with regeneration/scopes, fence
+/// with regeneration/fence and verify with verification/verify, each with
+/// its arguments and the project's folder, and answers none for any other
+/// task.
+world regenerate-tasks {
+    import regeneration-cut;
+    import regeneration-scopes;
+    import regeneration-fence;
+    import verification-verify;
+    export tasks;
+}

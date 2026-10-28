@@ -1,0 +1,43 @@
+// Slice 06, regenerate (dhf/spec/06-regenerate/plan.md), composed from
+// regeneration/scopes, verification/verify and the slice's tasks (ED-12),
+// each built to its own component exporting its interface
+// (wasm/components/<context>-<component>/, dhf/harness/stack.md). Targets the
+// slice's world, regenerate (slice-06.wit).
+//
+// regeneration/cut and regeneration/fence are built to their own components
+// too (wasm/build/deps/rdm/regeneration-cut.wasm and regeneration-fence.wasm)
+// but are not instantiated here: rdm-spec.wac instantiates them on their own,
+// ahead of slice 02, so check's paths stage (fence's) comes before slice 02
+// while verify, which reads the spec with slice 02's parser, comes after it
+// (ED-01). Their interfaces are imports of this composition, wired in
+// rdm-spec.wac in this slice's instance line.
+//
+// The tasks run scopes and verify with this composition's components; every
+// other import is left to the composition: WASI's and rdm:host/process,
+// which the host satisfies; regeneration/cut and regeneration/fence (their
+// own instances), architecture/model (slice 04), spec/parser and its event
+// records (slice 02), verification/results (slice 05) and kernel/plugins
+// (slice 08), which rdm-spec.wac wires in this slice's instance line.
+//
+// Packages resolve from the build's dependency directory, as slice-01.wac
+// says: rdm:verification-verify is
+// wasm/build/deps/rdm/verification-verify.wasm, and rdm:spec@0.1.0 is
+// dhf/wit encoded. Then
+// "wac compose dhf/wit/slice-06.wac --deps-dir wasm/build/deps
+//  -o wasm/build/deps/rdm/regenerate.wasm".
+package rdm:regenerate targets rdm:spec/regenerate@0.1.0;
+
+let scopes = new rdm:regeneration-scopes { ... };
+
+let verify = new rdm:verification-verify { ... };
+
+let tasks = new rdm:regenerate-tasks {
+    "rdm:spec/regeneration-scopes@0.1.0": scopes["rdm:spec/regeneration-scopes@0.1.0"],
+    "rdm:spec/verification-verify@0.1.0": verify["rdm:spec/verification-verify@0.1.0"],
+    ...
+};
+
+export scopes["rdm:spec/regeneration-scopes@0.1.0"];
+export verify["rdm:spec/verify-events@0.1.0"];
+export verify["rdm:spec/verification-verify@0.1.0"];
+export tasks["rdm:spec/tasks@0.1.0"];

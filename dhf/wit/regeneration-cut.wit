@@ -1,0 +1,114 @@
+// Component Cut of the regeneration context (dhf/spec/model.edn,
+// :regeneration/cut; dhf/spec/06-regenerate/cut.feature): the task "rdm-spec
+// cut", which tags HEAD spec-N when it is the commit origin/HEAD names, once,
+// and only when "rdm-spec check" passes on it, and pushes the tag (spec-0036,
+// spec-0162, spec-0163, spec-0224). And the git helpers every task that reads
+// a cut uses (the model's "Resolves cuts with the git helpers of", from
+// fence; scopes and verify read their cuts with them too,
+// dhf/spec/06-regenerate/decisions.md, ED-04): a cut resolved, a commit's
+// tree listed, a file's committed bytes, a tree written out, the paths two
+// cuts differ by. Every one runs git through rdm:host/process (ED-03), in the
+// project's root, on the project's folder within its repository (tasks.wit,
+// request; spec-0368): every path here is relative to that folder.
+//
+// cut runs check as "rdm-spec check" through the host, with the command line
+// RDM_SPEC names (slice 08's ED-07), and imports nothing of slice 02: slice
+// 02's check imports this slice's paths stage, so an import of slice 02 here
+// would be a cycle no composition can wire (ED-01). Its types are its own and
+// builtin (slice 01's ED-14).
+
+interface regeneration-cut {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types: exit, standard output (the result as EDN), error lines.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// A cut: its tag as written ("spec-3") and the commit it names, in full.
+    record cut {
+        tag: string,
+        commit: string,
+    }
+
+    /// What a committed path is, by its mode in git's tree: a file, an
+    /// executable file, a symbolic link, or a submodule's commit.
+    enum entry-kind {
+        file,
+        executable,
+        symlink,
+        submodule,
+    }
+
+    /// One committed path: relative to the project's folder, its kind, and
+    /// its object (a blob's id, a submodule's commit).
+    record entry {
+        path: string,
+        kind: entry-kind,
+        object: string,
+    }
+
+    /// How a path differs between two revisions: added, changed (its bytes
+    /// or its mode), or deleted. A rename is a deletion and an addition.
+    enum change-kind {
+        added,
+        modified,
+        deleted,
+    }
+
+    /// One path two revisions differ by, relative to the project's folder.
+    record change {
+        path: string,
+        kind: change-kind,
+    }
+
+    /// The cut a revision is: a tag spec-N, or a commit one such tag names,
+    /// resolved to the tag and the commit. The error is why it is no cut,
+    /// "regeneration reads only a cut" (spec-0037), or an unknown revision.
+    resolve: async func(revision: string, folder: option<string>) -> result<cut, string>;
+
+    /// Every path committed in the project's folder, in path order: at the
+    /// revision given (a cut, or HEAD), or, with none, the index (what is
+    /// committed and staged: the paths stage, ED-07). Nothing untracked or
+    /// ignored is ever listed (spec-0294). The error is why git cannot list
+    /// it; outside a git repository, or before the first commit, the list is
+    /// empty.
+    tree: async func(revision: option<string>, folder: option<string>) -> result<list<entry>, string>;
+
+    /// One file's committed bytes at a revision (a configuration, a model, a
+    /// cycle's record at a cut), the path relative to the project's folder;
+    /// none when the revision holds no such file.
+    show: async func(revision: string, folder: option<string>, path: string) -> result<option<list<u8>>, string>;
+
+    /// Writes the entries given, read at the revision, into the directory
+    /// dir (absolute, or relative to the project's root), each at its path:
+    /// its committed bytes exactly (no filter, no line-ending conversion, no
+    /// export attribute), executable when committed so, a symbolic link as a
+    /// link to the same target; a submodule as an empty directory. Nothing
+    /// else, and no history (spec-0038, spec-0202, spec-0369; ED-03).
+    extract: async func(revision: string, folder: option<string>, entries: list<entry>, dir: string) -> result<_, string>;
+
+    /// The paths of the project's folder two revisions differ by, in path
+    /// order; nothing outside the folder (spec-0407).
+    changes: async func(%from: string, to: string, folder: option<string>) -> result<list<change>, string>;
+
+    /// Runs "rdm-spec cut" with its arguments, as given, and the project's
+    /// folder: HEAD not the commit origin/HEAD names, exit 2 naming the
+    /// branch (spec-0163); HEAD already cut, no tag added, saying it is
+    /// already spec-N (spec-0162); "rdm-spec check" run in the project's
+    /// root, and on its exit 1 each of its finding lines relayed unchanged,
+    /// exit 1, nothing tagged (spec-0224); else HEAD tagged spec-N, N one
+    /// more than the highest cut, and the tag pushed to origin (spec-0036).
+    run: async func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The component regeneration/cut builds to: it runs git, and check, through
+/// the host, and imports nothing of any slice, so rdm-spec.wac instantiates
+/// it on its own, ahead of slice 02 (ED-01). Its WASI imports are those every
+/// component carries, in the version slice 01's worlds name (slice 02's
+/// ED-08; ED-13).
+world regeneration-cut-component {
+    import rdm:host/process@0.1.0;
+    export regeneration-cut;
+}

@@ -1,0 +1,95 @@
+// Component Fence of the regeneration context (dhf/spec/model.edn,
+// :regeneration/fence; dhf/spec/06-regenerate/fence.feature,
+// dhf/spec/11-project-in-a-folder/fence.feature,
+// dhf/spec/13-slice-development/fence.feature): the task "rdm-spec fence ROOM
+// CUT [--context C,...] [--component C/N,...] [--slice S]", which builds a
+// clean room from a cut, one fresh root commit holding every file committed
+// at the cut but the denied ones (the scope's implementation, the
+// measurements, the generated output), for the project, contexts,
+// components or a slice (the glossary's "Fence" and "Scope"). And check's
+// paths stage: every committed top-level path, and every path directly under
+// dhf/, denied or kept (spec-0296, spec-0297).
+//
+// It asks the Gate with kernel/plugins before anything else (slice 08's
+// ED-03; spec-0357, spec-0448, spec-0449, spec-0232), resolves and reads the
+// cut with regeneration/cut's git helpers (the model's "Resolves cuts with the
+// git helpers of", "Builds clean rooms only from"), and reads the cut's model
+// with architecture/model (slice 04) to know its contexts, components and
+// slices (spec-0185, spec-0329, spec-0397). It imports nothing of slice 02,
+// whose check imports its paths stage, so rdm-spec.wac instantiates it on
+// its own, ahead of slice 02 (ED-01).
+
+interface regeneration-fence {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types: exit, standard output (the result as EDN), error lines.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// What a clean room rebuilds (the glossary's "Scope"): the project, a
+    /// bounded context (the kernel counts as one, "kernel"), a component
+    /// ("spec/parser"), or a slice ("12-several-specs", under the slices
+    /// layout). Several are given as a list; none is the project.
+    variant scope {
+        project,
+        context(string),
+        component(string),
+        slice(string),
+    }
+
+    /// A committed path neither denied nor kept: relative to the project's
+    /// folder, a top-level path or one directly under dhf/ (spec-0296,
+    /// spec-0297).
+    record unclassified {
+        path: string,
+    }
+
+    /// The committed paths of the project's folder that the configuration
+    /// neither denies nor keeps (its :clean-room, :implementation counting
+    /// as denied where :deny says so), at the revision given, or the index
+    /// with none (ED-07): what check's paths stage reports and what stops
+    /// a fence (G-09). The error is why the configuration or the paths
+    /// cannot be read.
+    unclassified-paths: async func(revision: option<string>, folder: option<string>) -> result<list<unclassified>, string>;
+
+    /// Runs "rdm-spec fence ROOM CUT [--context C,...] [--component C/N,...]
+    /// [--slice S]" with its arguments, as given, and the project's folder:
+    /// the plugins' declaration refused first (spec-0441), then the Gate
+    /// asked (kernel-plugins' gate, {:request :Gate :task :fence :cut CUT}),
+    /// a failing answer relayed and no room built; then a revision carrying
+    /// no spec-N tag refused, exit 2 (spec-0037); a scope the cut's model does
+    /// not name, and whose files the code layout finds none of, refused,
+    /// exit 2, naming the model's contexts and kernel (spec-0185), or the
+    /// slice (spec-0397); a kept file carrying a removed implementation
+    /// file's bytes, exit 1, naming both, no room (spec-0295); else ROOM a
+    /// repository with a single root commit of the cut's committed files of
+    /// the project's folder, at ROOM's root, minus the denied ones, nothing
+    /// else, and no object of a denied path (spec-0038, spec-0369).
+    run: async func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The component regeneration/fence builds to. It exports its interface and
+/// check's paths stage, written out as check-stages writes it
+/// (spec-check.wit), which rdm-spec.wac wires by name into slice 02's import
+/// of it, ahead of the not-built stand-in's spread. The stage reads only the
+/// project's working tree and index: its answer's findings are
+/// unclassified-paths' (none for a project with nothing committed), it
+/// publishes nothing and reports nothing. Its WASI imports are those every
+/// component carries, in the version slice 01's worlds name (slice 02's
+/// ED-08; ED-13).
+world regeneration-fence-component {
+    import rdm:host/process@0.1.0;
+    import regeneration-cut;
+    import kernel-plugins;
+    import architecture-model;
+    export regeneration-fence;
+    export paths-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}

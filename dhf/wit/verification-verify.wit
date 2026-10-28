@@ -1,0 +1,124 @@
+// Component Verify of the verification context (dhf/spec/model.edn,
+// :verification/verify; dhf/spec/06-regenerate/verify.feature,
+// dhf/spec/08-plugins/verify.feature, dhf/spec/11-project-in-a-folder/verify.feature,
+// dhf/spec/12-several-specs/verify.feature,
+// dhf/spec/13-slice-development/verify.feature): the task "rdm-spec verify
+// ROOM CYCLE", a cycle's gate. The room's implementation, in place of the
+// implementation of a fresh export of the cut the cycle names, passes every
+// check the cut's configuration declares (:verify: :tests, :serves, :runs,
+// :plugin), in order, the first that fails stopping it; its record is
+// ratified.edn (the glossary's "Verify" and "Check").
+//
+// It reads cycle.edn and the cut (the model's "Reads cycle.edn and the cut,
+// writes the cycle's results to" the repository) with regeneration/cut's git
+// helpers (ED-04); the spec at the cut with spec/parser (slice 02; ED-09);
+// the tests check's results with verification/results (slice 05; the
+// model's "Reads the tests check's results with"; ED-08); asks the Gate and
+// its :plugin checks, and delivers CycleVerified, with kernel/plugins (slice
+// 08's ED-03; the model's "Publishes" CycleVerified). A check's command runs
+// through rdm:host/process, a :serves check's app spawned and stopped with
+// its process group (ED-06).
+//
+// CycleVerified's record is in verify-events, below, which this component
+// exports beside its own interface, as verification/status exports
+// verification-events (slice 05's ED-05; ED-11). A plugin, or a component of
+// another slice, reads the event as EDN (slice 08's ED-02).
+
+interface verify-events {
+    /// A check's kind, closed (the glossary's "Check"): :tests, :serves,
+    /// :runs, :plugin.
+    enum check-kind {
+        tests,
+        serves,
+        runs,
+        plugin,
+    }
+
+    /// A check's outcome: passed; failed (exit 1); refused, it could not
+    /// run (exit 2: a plugin's, spec-0361); not run, after one that failed
+    /// or was refused (spec-0315).
+    enum check-outcome {
+        passed,
+        failed,
+        refused,
+        not-run,
+    }
+
+    /// One check as verify's standard output and ratified.edn report it
+    /// (spec-0314, spec-0215): its name (its kind's when it names none), its
+    /// kind, its outcome; the seconds it took; and what its kind reports:
+    /// :scenarios (tests: the stamped scenarios not tagged @wip that results
+    /// name), :budget and :margin (runs: seconds; serves: polls),
+    /// :answered-on-poll and :polls (serves: spec-0318). Left out where none
+    /// applies (G-14).
+    record check {
+        name: string,
+        kind: check-kind,
+        outcome: check-outcome,
+        seconds: option<f64>,
+        scenarios: option<u32>,
+        budget: option<f64>,
+        margin: option<f64>,
+        answered-on-poll: option<u32>,
+        polls: option<u32>,
+    }
+
+    /// :CycleVerified, published by verification/verify: a cycle's build
+    /// passed every check verify ran on it, in a checkout of the cut. cycle
+    /// as written ("03"), cut ("spec-3"), checkout the verified checkout
+    /// (dhf/cycles/NN/build, relative to the project's root), checks as
+    /// ratified.edn holds them (spec-0383).
+    record cycle-verified {
+        cycle: string,
+        cut: string,
+        checkout: string,
+        checks: list<check>,
+    }
+}
+
+interface verification-verify {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types (slice 01's ED-14): exit, standard output (the result as
+    /// EDN), error lines. ratified.edn is written by run itself, holding
+    /// exactly :cut, :room-tree (G-16), :outcome (:passed or :refused),
+    /// :checkout where it was made, and :checks, each a check of
+    /// verify-events, and, refused, the reason (spec-0215, spec-0216; G-15);
+    /// never by a verify that cannot run (exit 2) before any check runs (the
+    /// glossary's "Check"). No function here hands a check, so this
+    /// interface uses none of verify-events' types.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// Runs "rdm-spec verify ROOM CYCLE" with its arguments, as given, and
+    /// the project's folder (tasks.wit, request), in this order: the
+    /// cycle's cycle.edn read (spec-0202, spec-0203); the plugins'
+    /// declaration (spec-0441); the Gate ({:request :Gate :task :verify :cut
+    /// CUT :cycle CYCLE}, spec-0358, spec-0232); the checkout made, an export
+    /// of the cut with the room's implementation in place of its own
+    /// (spec-0202, spec-0204, spec-0205, spec-0370); the cut's configuration,
+    /// :verify, :allure and the :plugin checks' plugins held before anything
+    /// runs (spec-0316, spec-0332, spec-0363); the spec at the cut, an
+    /// unstamped scenario a refusal (spec-0217); every check in order
+    /// (spec-0314, spec-0315); ratified.edn written; CycleVerified delivered
+    /// when every check passed (spec-0383, spec-0384). Prints {:verify
+    /// {:cycle :cut :outcome :checks}} (spec-0314).
+    run: async func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The component verification/verify builds to. It exports its interface
+/// and the event record it publishes. Its WASI imports are those every
+/// component carries, in the version slice 01's worlds name (slice 02's
+/// ED-08; ED-13): files, clocks, the environment, and the sockets a :serves
+/// check polls its app and tries its port with (ED-06).
+world verification-verify-component {
+    import rdm:host/process@0.1.0;
+    import regeneration-cut;
+    import spec-parser;
+    import verification-results;
+    import kernel-plugins;
+    export verify-events;
+    export verification-verify;
+}

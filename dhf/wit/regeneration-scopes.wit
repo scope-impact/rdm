@@ -1,0 +1,72 @@
+// Component Scopes of the regeneration context (dhf/spec/model.edn,
+// :regeneration/scopes; dhf/spec/06-regenerate/scopes.feature,
+// dhf/spec/11-project-in-a-folder/scopes.feature,
+// dhf/spec/13-slice-development/scopes.feature): the task "rdm-spec scopes
+// CUT CUT", which lists what a spec change touched between two cuts, in the
+// order a builder builds it, so a cycle's scopes come from the spec: the
+// components whose own spec changed (their feature files, their design
+// prose), each changed event's publishers and subscribers, and, under the
+// slices layout, each touched slice whole; a changed file no component owns
+// named for a person to judge (the glossary's "Scope").
+//
+// It reads the two cuts with regeneration/cut's git helpers (ED-04; the
+// model's "Reads two cuts from" the repository) and each cut's model, event
+// catalogue and ownership with architecture/model (slice 04), on the cut
+// written out to a temporary directory (ED-03, ED-05). Its types are its own
+// and builtin (slice 01's ED-14).
+
+interface regeneration-scopes {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types: exit, standard output (the result as EDN), error lines.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// A touched slice and the components it reaches that no earlier slice
+    /// of the listing holds, in the order a builder builds them (spec-0398,
+    /// spec-0399, spec-0416; ED-05). Components are the model's ids as it
+    /// writes them (":spec/parser").
+    record slice-scope {
+        slice: string,
+        components: list<string>,
+    }
+
+    /// One scope of the listing: a component ({:component :kernel/bus}) or,
+    /// under the slices layout, a slice ({:slice S :components [...]}).
+    variant scope {
+        component(string),
+        slice(slice-scope),
+    }
+
+    /// What a spec change touched: its scopes, in the order a builder builds
+    /// them (kernel first, then each publisher before its subscribers, the
+    /// rest in the model's order: spec-0299; slices in the order of their
+    /// folders' names: spec-0399), and the changed files no component owns
+    /// (spec-0238), relative to the project's folder.
+    record listing {
+        scopes: list<scope>,
+        shared-files: list<string>,
+    }
+
+    /// The listing between two cuts of the project's folder (spec-0407).
+    /// The error is why it cannot run: a cut that is not one, a model that
+    /// cannot be read at either.
+    touched: async func(%from: string, to: string, folder: option<string>) -> result<listing, string>;
+
+    /// Runs "rdm-spec scopes CUT CUT" with its arguments, as given, and the
+    /// project's folder: prints the listing (G-13), each shared file named
+    /// on the error stream as a warning, exit 0.
+    run: async func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The component regeneration/scopes builds to. Its WASI imports are those
+/// every component carries, in the version slice 01's worlds name (slice
+/// 02's ED-08; ED-13).
+world regeneration-scopes-component {
+    import rdm:host/process@0.1.0;
+    import regeneration-cut;
+    import architecture-model;
+    export regeneration-scopes;
+}
