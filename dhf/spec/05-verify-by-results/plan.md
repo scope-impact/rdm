@@ -16,7 +16,7 @@ A team sees each scenario's status derived from executed test results, whatever 
 
 **In:**
 
-- The runner: one small step API, one Allure result per scenario, labelled with what it verifies
+- The runner: the step protocol (each step file a command, in any language, speaking EDN), one Allure result per scenario, labelled with what it verifies
 - Results: Allure results as the oracle, whoever wrote them
 - Status, trace, and the release check (its regulated rule until 10-regulated-profile holds it)
 

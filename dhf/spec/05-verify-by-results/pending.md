@@ -37,8 +37,8 @@ for the cycle that settles it otherwise.
 
 | Scenario | Ticket | What it waits for |
 |---|---|---|
-| `@spec-0168`, `@spec-0169`, `@spec-0170`, `@spec-0032`, `@spec-0155`, `@spec-0156`, `@spec-0324`, `runner.feature` | 06 | G-01 and G-02 (ED-02): the step API of this build, stated in `dhf/harness/stack.md`; a grader writes step files in it |
-| `@spec-0151`, `@spec-0152`, `@spec-0153`, `@spec-0154`, `@spec-0308`, `@spec-0309`, `@spec-0310`, `@spec-0311`, `@spec-0323`, `runner.feature` | 07 | G-01, as above |
+| `@spec-0168`, `@spec-0169`, `@spec-0170`, `@spec-0032`, `@spec-0155`, `@spec-0156`, `@spec-0324`, `runner.feature` | 06 | G-01 and G-02 (ED-02): the step protocol, stated by spec-39 in this file's rule and the glossary; a grader writes step files in it |
+| `@spec-0151`, `@spec-0152`, `@spec-0153`, `@spec-0154`, `@spec-0308`, `@spec-0309`, `@spec-0310`, `@spec-0311`, `@spec-0323`, `runner.feature` | 07 | G-01, as above (stated by spec-39) |
 | `@spec-0108` Without results, the trace says no status was derived, `trace.feature` | 04 | ED-09: the command's refusal of a configured results directory that does not exist, for trace |
 | `@spec-0324` Results go to the configured results directory when RESULTS_DIR is not set, `runner.feature` | 06 | ED-09 and G-03: run's results directory when it does not exist |
 

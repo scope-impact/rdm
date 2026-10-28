@@ -228,7 +228,21 @@ and its stack (`dhf/harness/stack.md`) live apart.
 
 **Step definition**: the code that executes a scenario's steps, for a project
 that runs its scenarios with `rdm-spec run`. For rdm-spec itself they are the
-builder's tests: implementation, rebuilt with the code, never scored.
+builder's tests: implementation, rebuilt with the code, never scored. A step
+file is any executable file under the configuration's `:steps-dir`, in any
+language, run in the project's root with `RDM_SPEC` set as a plugin's is,
+speaking EDN (`dhf/spec/05-verify-by-results/runner.feature`): run as `FILE
+definitions` once per run, it writes a vector of its patterns; run as `FILE
+invoke N` for a step its pattern N (counting from 0) matches, it is given
+`{:context C :captured [S ...]}` on its standard input, with `:doc-string`
+and `:table` when the step has one, and exits 0, writing `{:return R
+:attachments [{:name :content :type}]}` (R the next context when it is a
+map), 1 when its assertion did not hold, anything else broken. A pattern is a
+regular expression matched against the whole of a step's text, its keyword
+left out, each capturing group one captured text, written with what every
+dialect shares: characters, `.`, classes `[...]`, `\d`, `\w`, `\s`, groups
+`(...)` and `(?:...)`, `|`, and the quantifiers `*`, `+`, `?` and `{n,m}`. An
+And or a But step is the keyword before it, for its status alone.
 
 **Oracle**: the Allure results of a run. A scenario is verified when a result
 labelled with its id passed, and no result labelled with its id did not pass
@@ -238,7 +252,7 @@ labelled with its id passed, and no result labelled with its id did not pass
 Allure's own model, filled from the Gherkin scenario
 (`dhf/spec/05-verify-by-results/runner.feature`): `name` (the title), `fullName`,
 `historyId` (the scenario's id, and the row's values for an outline row),
-`status` (`passed`, `failed`, `broken` or `skipped`) and `stage`,
+`status` (`passed`, `failed`, `broken`, `skipped` or `unknown`) and `stage`,
 `statusDetails` when it did not pass, `start` and `stop`, `steps` (one per
 Gherkin step), `parameters` (an outline row's values), `labels` (`feature`,
 `story` from the rule, `epic` and `suite` from the context, `subSuite`
@@ -263,7 +277,11 @@ from the oracle: a passing result and none that did not pass; a result that did
 not pass; no result at all; tagged `@wip`, whatever the results. An outline is
 one scenario: verified only when every row has a passing result, failed when
 any row's result did not pass, else unverified. A result counts toward a row
-only when it names the row, by its parameters. Status never
+only when it names the row, by its parameters: one per heading of the
+outline's table, no other, in any order, each value the row's text; rows
+holding the same values are named by the same results. A result that names
+no row counts toward nothing; a scenario that is no outline reads no
+result's parameters. Status never
 enters a score: only a grader's verdicts do.
 
 **Slice**: a piece of behaviour, planned and rebuilt whole (ADR 0004; Löyly's

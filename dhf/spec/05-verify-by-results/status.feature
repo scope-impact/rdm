@@ -13,6 +13,21 @@ Feature: Status
       When "rdm-spec status --results DIR" is run
       Then it exits 0, and its standard output, read as EDN, is exactly {:status {:results DIR :scenarios [{:id "spec-0001" :title "One" :file "dhf/spec/a/b.feature" :line 4 :status :verified} {:id "spec-0002" :title "Two" :file "dhf/spec/a/b.feature" :line 8 :status :unverified} {:id "spec-0003" :title "Three" :file "dhf/spec/a/b.feature" :line 12 :status :planned}] :counts {:verified 1 :failed 0 :unverified 1 :planned 1} :unknown-results [{:file F :spec "spec-0099"}]}}, F the result's file as DIR names it (DIR/name), as trace and release name a result, DIR as given
 
+    @spec-0468 @contract
+    Scenario: Under several specs, each scenario names its spec, and the counts are of the scenarios listed
+      Given a configuration whose :specs declares auth, with the stamped scenario @auth-0001, and infra, with the stamped scenario @infra-0001, and a results directory DIR with a passing result for each
+      When "rdm-spec status --results DIR" is run
+      Then each map of :scenarios is spec-0307's with :spec added, the name of its spec: {:id "auth-0001" ... :spec "auth"} and {:id "infra-0001" ... :spec "infra"}, and :counts is {:verified 2 :failed 0 :unverified 0 :planned 0}
+      And with --spec auth, :scenarios holds auth's alone and :counts counts them alone
+      And a project that declares no :specs gives no :spec key, as spec-0307 says
+
+    @spec-0469 @contract
+    Scenario: Under the slices layout, status's result gains :slices and nothing else
+      Given a configuration with :spec-layout :slices; the slice 01-a, whose plan says "status: done", with one stamped scenario; the slice 02-b, whose plan holds no status line, with one stamped scenario; the slice 03-c with no scenario; and a results directory DIR verifying 01-a's
+      When "rdm-spec status --results DIR" is run
+      Then its result is spec-0307's shape with :slices [{:slice "01-a" :status "done" :verified 1 :scenarios 1} {:slice "02-b" :status nil :verified 0 :scenarios 1} {:slice "03-c" :status nil :verified 0 :scenarios 0}] added, and each map of :scenarios has exactly spec-0307's keys
+      And with --slice 01-a, :scenarios, :counts and :slices are 01-a's alone
+
   Rule: Planned work is a scenario tagged @wip
 
     @spec-0064 @e2e
@@ -95,3 +110,28 @@ Feature: Status
       When "rdm-spec status" is run
       Then the report counts ten scenarios
       And the tenth is unverified
+
+  Rule: A spec or a slice named that is not there is refused
+
+    @spec-0470 @e2e
+    Scenario Outline: A --spec or --slice that names nothing is refused
+      Given <project>
+      When "rdm-spec status --results DIR <flag>" is run, DIR a results directory with a result in it
+      Then it exits 2, names <names>, and prints nothing on standard output
+
+      Examples:
+        | project                                              | flag            | names                                         |
+        | a configuration whose :specs declares auth and infra | --spec nope     | nope, and the specs auth and infra            |
+        | a configuration that declares no :specs              | --spec auth     | auth, saying the project keeps one spec       |
+        | a configuration with :spec-layout :slices            | --slice 99-none | 99-none                                       |
+        | a configuration with no :spec-layout                 | --slice 01-a    | 01-a, saying the spec is not grouped by slice |
+
+  Rule: Every task that derives statuses publishes them
+
+    @spec-0471 @e2e
+    Scenario: Status publishes VerificationDerived
+      Given a plugin subscribing only to :VerificationDerived whose command writes what it is given to a file in the project
+      And the stamped scenario @spec-0001, and a results directory DIR holding a passing result F for it and a result G labelled spec=spec-9999
+      When "rdm-spec status --results DIR" is run
+      Then the plugin ran once, given {:event :VerificationDerived :revision :working-tree :statuses {"spec-0001" :verified} :unknown-results [{:file G :spec "spec-9999"}] :unreadable-files []}, F and G as DIR/name
+      And "rdm-spec release --results DIR" runs it once too, given the same event, and "rdm-spec trace spec-0001 --results DIR" does not run it

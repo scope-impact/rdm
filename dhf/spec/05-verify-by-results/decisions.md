@@ -40,10 +40,16 @@ runner is kernel code, so any project whose step definitions are written for
 it can use it. A project in another stack uses its own runner and only has
 to write the same Allure results.
 
-### `runner.feature`, Rule: Step definitions are written against one small API
+### `runner.feature`, Rule: A step definition file is a command that speaks EDN
 
 rdm-spec run is offered to any project whose step definitions are written
-for it, so the way a step is defined is a public contract.
+for it, so the way a step is defined is a public contract. Until spec-39 the
+rule was "Step definitions are written against one small API", the API of
+the installed release, in its own language; the spec owner made the protocol
+rdm-spec's behaviour (ED-02, A): a step file is a command in any language,
+as a plugin is, so a project in any stack can write one and a grader can
+write one without a toolchain. spec-0168, spec-0169, spec-0170, spec-0310
+and spec-0323 kept their ids, reworded in the protocol's terms.
 
 ### `runner.feature`, Scenario: A failing step fails the result and names the step (spec-0153)
 
@@ -192,6 +198,12 @@ spec owner decides whether C is kept beside A as a path for them (question
 below). rdm-spec's own scenarios are not run this way: the builder's driver
 is native (slice 01's ED-10).
 
+**Stated by spec-39:** A, in `runner.feature`'s rule "A step definition file
+is a command that speaks EDN" and the glossary's "Step definition" (G-01,
+G-02); `dhf/harness/stack.md`'s "Runner's step API" row says the installed
+release's API is its own, superseded at the switch. Whether C is kept beside
+A remains the spec owner's.
+
 ### ED-03: How the runner reads the scenarios
 
 The runner labels each result with its scenario's id, context, component,
@@ -209,7 +221,8 @@ relationship from kernel/runner to spec/parser.
 - B. A Gherkin reader of the runner's own: the subset, the tags' inheritance
   and the model's ownership in two places.
 
-Recommendation: A.
+Recommendation: A. **Done by spec-39:** the model holds the relationship, and
+the views are regenerated.
 
 ### ED-04: How status reads SpecParsed
 
@@ -352,49 +365,61 @@ see it) or may stay the builder's choice (FREE: no grader could).
   its environment), how it returns, attaches evidence and fails. Smallest:
   the "Runner's step API" row of `dhf/harness/stack.md`'s component-build
   table, as ED-02 settles. VISIBLE: spec-0168's Given writes a file in it.
+  **Stated by spec-39:** the rule "A step definition file is a command that speaks EDN": spec-0168 (`FILE definitions`, `FILE invoke N`, `{:context :captured}`), spec-0169 (`{:return R}`), spec-0457 (every executable file, path order, definitions once per run), spec-0459 (attachments, `text/plain` by default, read on exit 0 and 1), spec-0460 (`:doc-string`, `:table`), spec-0461 (the project's root, `RDM_SPEC`), spec-0462 (a missing step directory, a step file that cannot start or answer: exit 2, no result), spec-0310 and spec-0323 (exit 1 an assertion, failed only in a Then or an And or But after one; any other exit or a signal broken; the error stream's first line the message, the whole the trace); the glossary's "Step definition"; `dhf/harness/stack.md`'s row says the release's API is superseded. Chosen differently from the release: a missing step directory refuses the run (the release ran every step unmatched).
 - **G-02** (spec-0168, spec-0170). How a pattern matches a step: against its
   text without its keyword (spec-0168 implies it), the whole text or any part
   of it, in which expression dialect; whether And and But steps match like
   the step before them. Smallest: glossary "Step definition": "its pattern is
   a regular expression matched against the whole of a step's text, its
   keyword left out; each group is one captured text". VISIBLE.
+  **Stated by spec-39:** spec-0458 and the glossary's "Step definition": the whole of the text, keyword left out, one captured text per capturing group, written in the subset every regular-expression dialect shares; an And or But takes the keyword before it for its status alone, never for matching.
 - **G-03** (spec-0324, spec-0219). Whether run creates its results directory
   when it does not exist, or is refused as status is (slice 01's ticket 04).
   Smallest: spec-0324's Given adds "and no such directory", its Then "creates
   it". VISIBLE (ED-09).
+  **Stated by spec-39:** spec-0324, run creates the directory.
 - **G-04** (spec-0155, spec-0156). Whether run removes the results an earlier
   run left in its directory: a later status reads both. Smallest: "run adds
   its results and removes no file" or "replaces every result there".
   VISIBLE.
+  **Stated by spec-39:** spec-0463, run adds its results and removes nothing.
 - **G-05** (`runner.feature`). run's exit when a scenario failed or broke (0
   as a report, or 1), and its result on standard output (EDN, a shape no
   scenario states: `dhf/spec/README.md`, "A task's result shape is the
   spec's"). Smallest: a contract scenario, e.g. `{:run {:results DIR :counts
   {:passed :failed :broken :skipped}}}` with its exit. VISIBLE.
+  **Stated by spec-39:** spec-0467, `{:run {:results DIR :scenarios N :counts {:passed :failed :broken :skipped}}}`, exit 1 when any result failed or broke, one finding per such result at its scenario's file and line. Chosen differently from the release, which printed the counts flat (its `:results` count overwritten by the directory) and one finding per status with no file.
 - **G-06** (spec-0308, row steps; verify's spec-0331,
   steps-differ-from-scenario). Whether a feature's Background runs before each
   of its scenarios, and whether its steps are among the result's steps.
   Smallest: a row of spec-0308. VISIBLE.
+  **Stated by spec-39:** spec-0465, before each scenario and outline row, sharing its context, its steps the result's first.
 - **G-07** (spec-0151, spec-0155). Which scenarios run under several specs
   (every spec of `:specs`) and under the slices layout; and a scenario with no
   id, or several: run or not, and its result's spec label. Smallest: "run
   runs every scenario of every spec; a result carries a spec label only for a
   scenario with exactly one id". VISIBLE.
+  **Stated by spec-39:** spec-0464, every scenario of every spec and slice; a scenario with no id, or two, is run and carries no spec label.
 - **G-08** (spec-0308, rows epic, suite, links; the glossary's "Allure
   mapping"). Whether run fills a result by the project's `:allure` mapping or
   always by rdm-spec's default; verify holds results to the project's.
   Smallest: "run fills each element as the project's mapping says".
   VISIBLE.
+  **Stated by spec-39:** spec-0466, the project's mapping. Chosen differently from the release, which always filled the default.
 - **G-09** (spec-0169). Under ED-02 A, a step file that prints nothing, or
   no EDN, on exit 0: its return is "anything but a map". FREE once G-01 is
   stated.
+  **The builder's choice: no grader sees it.**
 - **G-10** (spec-0170, spec-0032, spec-0153). Where a result names the
   unmatched step, both definitions, or the failing step: its statusDetails'
   message is Allure's place. FREE: the scenarios say only "names".
+  **The builder's choice: no grader sees it.**
 - **G-11** (spec-0154). A planned scenario's result: its steps listed, each
   skipped, or none. FREE: verify holds it to its spec label only (spec-0347).
+  **The builder's choice: no grader sees it.**
 - **G-12** (spec-0311). An attachment's file name in the results directory.
   FREE (Allure's own `<uuid>-attachment.<ext>`).
+  **The builder's choice: no grader sees it.**
 
 ### Results and status
 
@@ -403,37 +428,45 @@ see it) or may stay the builder's choice (FREE: no grader could).
   RULE: what`, exit 1, the README's "the results") or a warning; its rule is
   the component's to choose. Smallest: spec-0062's Then gains its exit and
   its line's form. VISIBLE.
+  **Stated by spec-39:** spec-0062 (status: exit 0, a warning line `F: warning: RULE: what`, `:unreadable-files [F]` added to its result), spec-0476 (trace: a warning, exit 0), spec-0454 (release: a finding, exit 1). Chosen differently from the release, whose trace said nothing and whose release passed.
 - **G-14** (spec-0068 row unknown, spec-0313). spec-0068 reads the status
   "unknown" as a status that does not pass, as the glossary's "Oracle" does;
   spec-0313's message names four statuses and the glossary's "Allure result"
   lists four. Smallest: spec-0313's message "passed, failed, broken, skipped
   or unknown", and the glossary's list the same. VISIBLE.
+  **Stated by spec-39:** spec-0313's message names unknown, and the glossary's "Allure result" lists five statuses.
 - **G-15** (spec-0060, spec-0307). Whether a result naming no stamped
   scenario is also a warning line, beside `:unknown-results`. VISIBLE.
+  **Stated by spec-39:** spec-0456, a warning line beside `:unknown-results`.
 - **G-16** (spec-0302, spec-0285, spec-0309; the glossary's "a result counts
   toward a row only when it names the row"). What naming a row is: the
   result's parameters exactly the row's headings, each with the row's value,
   in any order or in the header's; two identical rows; a result with
   parameters for a scenario that is no outline. Smallest: one glossary
   sentence. VISIBLE.
+  **Stated by spec-39:** the glossary's "Verified / failed / unverified / planned": one parameter per heading, no other, any order, the row's text; identical rows named by the same results; a scenario that is no outline reads no parameters. Chosen differently from the release, under which the second of two identical rows was never named.
 - **G-17** (spec-0408). The key naming each scenario's spec in status's
   result (`:spec`?), and whether `:counts` is per spec. Smallest: a contract
   row beside spec-0307. VISIBLE.
+  **Stated by spec-39:** spec-0468, `:spec` (the spec's name) on each scenario only under `:specs`; `:counts` of the scenarios listed.
 - **G-18** (spec-0419, spec-0307). Status's result under the slices layout:
   spec-0307 says "exactly this shape", spec-0419 adds `:slices`; whether each
   scenario map gains `:slice`; a slice whose plan has no status line, or no
   scenario. VISIBLE.
+  **Stated by spec-39:** spec-0469, `:slices` added and nothing else (no `:slice` on a scenario), a plan with no status line `:status nil`, a slice with no scenario counted 0 of 0; `--slice` narrows all three.
 - **G-19** (spec-0408, spec-0419, spec-0390, spec-0415, spec-0409). A
   `--spec` or `--slice` that names none, `--slice` without the slices
   layout, `--spec` without `:specs`: exit 2 naming it? And spec-0176's usage
   of status, trace and release names neither flag. Smallest: one row each in
   spec-0219's style, and the usages in spec-0176. VISIBLE.
+  **Stated by spec-39:** spec-0470 (status), spec-0455 (release), spec-0475 (trace): exit 2, naming it. spec-0176's usages are left as they are (slice 01's, and the oracle's `help` golden): for the spec owner.
 - **G-20** (`08-plugins/plugins.feature`, "A subscriber receives each event
   it subscribes to, in every task that publishes it"; `events.edn`,
   VerificationDerived). Which tasks publish VerificationDerived: status only,
   or trace with results and release too, each deriving statuses; and
   `:statuses`' keys (the id as a string) and `:unreadable-files`' paths
   (DIR/name). Smallest: a row of spec-0353's kind for each task. VISIBLE.
+  **Stated by spec-39:** spec-0471, status and release publish it, trace does not; `:statuses` keyed by the id as a string, `:unknown-results` and `:unreadable-files` naming DIR/name.
 
 ### Trace
 
@@ -441,18 +474,22 @@ see it) or may stay the builder's choice (FREE: no grader could).
   states only a need's. Smallest: a contract scenario, e.g. `{:trace {:kind
   :scenario :id :title :needs [...] :component :context :level :status
   :results [{:file :status}]}}`. VISIBLE.
+  **Stated by spec-39:** spec-0472, `{:trace {:kind :scenario :id :title :file :line :needs :component :context :level :status :results [{:file :status}]}}`, `:spec` under several specs.
 - **G-22** (spec-0279, spec-0104). `:component` and `:context`: the model's
   names ("Lint") or ids (`:architecture/lint`), and `:level` as a string or a
   keyword. VISIBLE.
+  **Stated by spec-39:** spec-0473, the component's name, the context's id as a string, the level a keyword.
 - **G-23** (spec-0103, spec-0108). Where "no scenario traces to UN-007" and
   "no status was derived because no results were given" are said: in the
   result (`:scenarios []`, `:status` left out, a key saying why) or as a
   warning line; and their exit, 0. VISIBLE.
+  **Stated by spec-39:** spec-0474 (`:scenarios []` and `:says`, exit 0) and spec-0477 (`:status-note`, no `:status` or `:results`). Chosen differently from the release, which wrote `:status nil` on a need's scenarios with no results.
 - **G-24** (spec-0108, spec-0219). Without `--results`, whether trace reads
   the configured results directory when it exists, as every task's
   directory defaults (spec-0219), or derives no status unless results are
   given. Smallest: a row of spec-0108 where the configured directory exists.
   VISIBLE (ED-09).
+  **Stated by spec-39:** spec-0477's last row, the configured directory is read when it exists.
 
 ### Release
 
@@ -460,11 +497,14 @@ see it) or may stay the builder's choice (FREE: no grader could).
   output (exit 0, and exit 1, `{}` when there is none), and each refusal's
   line: the scenario's file and line, as a finding about it. Smallest: a
   contract scenario of release's result and line. VISIBLE.
+  **Stated by spec-39:** spec-0453, `{:release {:passed? :scenarios :counts :refused}}` on exit 0 and 1, one finding per refused scenario at its file and line.
 - **G-26** (`release.feature`). Whether unknown results, or a file that
   cannot be read, refuse a release. VISIBLE.
+  **Stated by spec-39:** spec-0454, an unknown result warns and does not refuse; an unreadable file refuses (chosen differently from the release, which passed).
 - **G-27** (spec-0267, spec-0278). The order of the clauses' findings and the
   scenarios' in release's report. FREE: findings come in no stated order
   (the glossary's "Finding").
+  **The builder's choice: no grader sees it.**
 
 VISIBLE: 22 (G-01 to G-08, G-13 to G-26). FREE: 5 (G-09 to G-12, G-27).
 

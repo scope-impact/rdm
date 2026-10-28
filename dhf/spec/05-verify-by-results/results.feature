@@ -12,6 +12,13 @@ Feature: Results reader
       Then the report lists spec-9999 as an unknown result
       And it counts toward no scenario
 
+    @spec-0456 @contract
+    Scenario: A result naming no scenario is also a warning line
+      Given a results directory DIR holding a passing result F labelled spec=spec-9999, and no scenario tagged @spec-9999
+      When "rdm-spec status --results DIR" is run
+      Then it exits 0, its result's :unknown-results is [{:file F :spec "spec-9999"}], F as DIR/name
+      And its error stream holds one warning line about it, F: warning: RULE: what, naming spec-9999
+
     @spec-0061 @e2e
     Scenario: An empty results directory is refused
       Given the results directory exists and holds no Allure result
@@ -20,15 +27,10 @@ Feature: Results reader
 
     @spec-0062 @e2e
     Scenario: A results file that cannot be read is named, never skipped
-      Given a results directory holding one result file that is not valid JSON
-      When "rdm-spec status" is run
-      Then the report names that file as unreadable, in one line on the error stream
-
-    @spec-0063 @contract
-    Scenario: The stack that wrote the results does not matter
-      Given Allure results labelled with spec ids written by a JavaScript test run
-      When "rdm-spec status" is run
-      Then the scenarios they name are verified exactly as if any other stack had written them
+      Given a results directory DIR holding one result file F, as DIR/name, that is not valid JSON, beside a passing result for every stamped scenario
+      When "rdm-spec status --results DIR" is run
+      Then it exits 0, and the report names F as unreadable, in one warning line on the error stream, F: warning: RULE: what
+      And its result is spec-0307's shape with :unreadable-files [F] added
 
   Rule: A result with no spec label verifies nothing
 
@@ -51,4 +53,4 @@ Feature: Results reader
     Scenario: A result whose status is not one of Allure's is unreadable
       Given an Allure result labelled spec=spec-0012 whose status is "green"
       When "rdm-spec status" is run
-      Then the report names its file as unreadable, saying the status must be passed, failed, broken or skipped
+      Then the report names its file as unreadable, saying the status must be passed, failed, broken, skipped or unknown
