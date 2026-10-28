@@ -31,7 +31,7 @@ folder of the spec:
 - `@spec-0412` A slice holding planned work is not done, `13-slice-development/check.feature`
 - `@spec-0413` Every slice keeps its decisions, `13-slice-development/check.feature`
 
-5 scenarios, each pending until cycle 7 (`pending.md`): each runs check.
+5 scenarios, verified in cycle 2.
 
 ## Components and interfaces it touches
 
@@ -40,5 +40,5 @@ spec/check (`gate`), spec/parser (each scenario's file, for its slice).
 ## Done when
 
 spec/check's unit tests cover each rule and each row above; `wasm/test.sh`
-runs the five scenarios against this build and reports each as it comes out;
+writes a passing result for each scenario above, every row included;
 earlier tickets' results unchanged.

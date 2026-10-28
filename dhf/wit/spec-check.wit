@@ -35,8 +35,9 @@ interface spec-check {
     /// (spec-0235): sources, the spec read (SpecParsed), the spec check
     /// (SpecGated), the model's lint, the views' freshness, the wiki, the
     /// clauses under :regulated, the paths, the plugins (ED-03). A stage that
-    /// answers none is not built: the task is refused (exit 2, "cannot-run:
-    /// check's STAGE stage is not built"), as the glossary's "Gate" says.
+    /// answers none is not built: check writes one warning line,
+    /// "warning: stage-not-built: STAGE", and goes on to the next stage; the
+    /// exit is what the stages that ran decide (ED-02, settled).
     run: func(args: list<string>, folder: option<string>) -> outcome;
 }
 
@@ -52,7 +53,7 @@ interface spec-check {
 /// events it published, and what it reports: its part of check's result, an
 /// EDN map merged into what check prints (ED-06; the model's lint prints
 /// {:lint ...}). An error is why it cannot run (exit 2); none is a stage not
-/// built.
+/// built, which check warns of and passes over (ED-02).
 world check-stages {
     /// knowledge/sources (slice 03): the raw sources read, every citation
     /// resolved; publishes KnowledgeIndexed.
@@ -117,8 +118,9 @@ world check-stages {
 
 /// The stand-in for every stage of check not built yet: composition, not a
 /// component of the model, holding no rdm-spec logic. Each stage answers none,
-/// so check refuses the task (exit 2), never reads a stage skipped as a pass
-/// (the glossary's "Gate"). The not-built stand-in (rdm-spec.wit) includes
+/// so check writes "warning: stage-not-built: STAGE" in its place and goes on
+/// (ED-02, settled: a partial build names each stage it skipped; the complete
+/// build has every stage). The not-built stand-in (rdm-spec.wit) includes
 /// this world, and rdm-spec.wac spreads it into slice 02's imports
 /// (dhf/spec/02-write-the-spec/ticket-01-the-slice-composed.md); a slice that
 /// builds a stage wires it by name, ahead of the spread.

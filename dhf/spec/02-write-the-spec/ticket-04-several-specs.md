@@ -30,9 +30,7 @@ ADR 0005). Builds on tickets 02 and 03.
 - `@spec-0387` Each spec is checked on its own terms, and one spec's finding fails the check, `12-several-specs/check.feature`
 - `@spec-0388` Each spec stamps from its own ledger, with its own prefix, `12-several-specs/stamper.feature`
 
-4 scenarios. spec-0386 (under ED-03) and spec-0388 are verified in cycle 2;
-spec-0385 and spec-0387 run check to exit 0 or 1 and are pending until cycle 7
-(`pending.md`).
+4 scenarios, verified in cycle 2.
 
 ## Components and interfaces it touches
 
@@ -41,7 +39,7 @@ spec/check (`gate`, `run`).
 
 ## Done when
 
-`wasm/test.sh` writes a passing result for spec-0388 and every row of
-spec-0386, and runs spec-0385 and spec-0387 reporting each as it comes out;
+`wasm/test.sh` writes a passing result for each scenario above, every row of
+spec-0386 included;
 spec/parser has unit tests for each refusal of `:specs` and for resolution
 within one spec; earlier tickets' results unchanged.

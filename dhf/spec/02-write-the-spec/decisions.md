@@ -39,7 +39,8 @@ Written in the plan phase of the component build (ADR 0006,
 `dhf/decisions/adr-0006-wasm-components.md`; `docs/wow/harness.md`, "The
 planner"): each question a builder of this slice would otherwise decide
 alone, with its options and the planner's recommendation. The spec owner
-settles each before the build, or turns it into a scenario. The tickets
+settles each before the build, or turns it into a scenario. The spec owner settled every one on 2026-10-28: ED-02 the other way
+from the planner's recommendation, the others as recommended. The tickets
 (`ticket-01` to `ticket-06`) cite them as ED-NN; slice 01's are cited as
 "slice 01's ED-NN". The architecture is in `dhf/wit/` (`spec-parser.wit`,
 `spec-stamper.wit`, `spec-check.wit`, `slice-02.wit`, `slice-02.wac`, and
@@ -47,20 +48,33 @@ the records `spec-parsed` and `spec-gated` in `events.wit`).
 
 ### ED-01: Scenarios whose task another slice builds
 
+**Settled by the spec owner:** as recommended.
+
 As slice 01's ED-01, settled there: no bridge. This slice's components carry
 every scenario they own in any slice, 32 in all (`02-write-the-spec`,
 `12-several-specs`, `13-slice-development`). A scenario whose When runs a task
-or a stage a later cycle builds runs against this build, is refused, and is
-pending: listed in `pending.md` with the cycle that unblocks it. Verify is run
+a later cycle builds, or whose Then needs a finding of a stage a later cycle
+builds, runs against this build, fails, and is pending: listed in `pending.md` with the cycle that unblocks it. Verify is run
 anyway and its record kept; every refusal finding must be a pending
 scenario's; the build is graded on the rest; the spec owner decides on that
 evidence.
 
-Recommendation: the same as slice 01, and the spec owner records here that
-slice 02's cycle is accepted on its 7 scenarios with the 25 of `pending.md`
-pending (under ED-02 and ED-03 as recommended).
+Recommendation: the same as slice 01. Under ED-02 as settled, slice 02's
+cycle is decided on its 30 scenarios with the 2 of `pending.md` pending.
 
 ### ED-02: How check runs the stages whose components are in later slices
+
+**Settled by the spec owner:** in a partial build, check runs the stages that
+exist and, for each stage not built yet, writes one warning line
+`warning: stage-not-built: STAGE` on the error stream and goes on; the exit
+is what the stages that ran decide. The complete build has every stage, so it
+meets the spec (the glossary's "Gate"). In the component build: check imports
+one stage interface per later stage (`check-stages`, `spec-check.wit`); the
+stand-in (`check-stages-not-built`, included in the not-built stand-in)
+answers none for each, and check then writes the warning and runs the next
+stage. Options A to D below are the ones this settlement weighed; it is close
+to C, with a warning of its own rule name.
+
 
 `rdm-spec check` is the spec check, the model's lint and the views' freshness
 (slice 04), sources and the wiki (slice 03), the clauses (slice 10, only under
@@ -92,7 +106,7 @@ check that reads as a pass.
 - D. check imports later slices' components directly: every later slice's
   cycle rebuilds slice 02, outside its fence.
 
-Recommendation: A, the glossary as it stands. The order of the stages, and
+Recommendation (not taken): A, the glossary as it stands. The order of the stages, and
 of check's own refusals, is ED-03. Two consequences the later slices' plans
 inherit: a stage is handed what it reads (the run's events, ED-04) and never
 imports this slice, or `rdm-spec.wac` holds a cycle no composition can wire;
@@ -101,6 +115,10 @@ instance of slice 06 cannot be both, which its plan settles (for instance,
 the paths stage's component instantiated on its own).
 
 ### ED-03: The order of check's refusals and stages
+
+**Settled by the spec owner:** as recommended. Under ED-02 as settled, a
+stage not built no longer refuses: it is a warning in its place in the order,
+so the order decides only where that warning falls among the others.
 
 The installed release reads the plugins' configuration and the specs'
 declaration first (a configuration refused, exit 2), then runs sources,
@@ -124,6 +142,10 @@ Recommendation: A: "before anything runs" is spec-0386's own wording, and a
 refusal names what is wrong whatever is built (slice 01's ED-16).
 
 ### ED-04: How the events check publishes are carried before the bus
+
+**Settled by the spec owner:** as recommended (A). A stage not built
+publishes nothing, so `--events` lists only what the stages that ran
+published.
 
 The parser publishes SpecParsed and check SpecGated (`events.edn`); sources
 publishes KnowledgeIndexed, before them. kernel/bus, which delivers each
@@ -155,6 +177,8 @@ the EDN, the same text a plugin is given on its input.
 
 ### ED-05: Who exports the slice's tasks
 
+**Settled by the spec owner:** as recommended (A).
+
 The slice exports one `tasks` (stamp and check), but the model has two
 components behind it, spec/stamper and spec/check, and no relationship from
 check to the stamper.
@@ -172,6 +196,10 @@ component of the model.
 
 ### ED-06: What stamp and check print
 
+**Settled by the spec owner:** as recommended (A). The contract scenario for
+stamp's result shape is a proposal for the next spec change, not yet in this
+slice's feature files.
+
 No contract scenario states either result's shape (`dhf/spec/README.md`: a
 task's result shape is the spec's).
 
@@ -186,6 +214,8 @@ task's result shape is the spec's).
 Recommendation: A, and a contract scenario for stamp's result in this slice.
 
 ### ED-07: The event records within the slice
+
+**Settled by the spec owner:** as recommended (A).
 
 `spec-parser`'s interface returns `spec-parsed` from `events.wit`, a
 types-only interface. A type used from another interface is an import of
@@ -205,6 +235,8 @@ Recommendation: A. Its limit, written in ED-02: a later slice's stage never
 uses these types.
 
 ### ED-08: The host's standard interfaces in this slice's worlds
+
+**Settled by the spec owner:** as recommended (A).
 
 Cycle 26 is moving the standard interfaces (`wasi:` packages, vendored in
 `dhf/wit/deps/`) to version 0.3 while this slice is planned, so this slice's

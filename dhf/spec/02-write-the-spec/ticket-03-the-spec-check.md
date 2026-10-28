@@ -45,8 +45,8 @@ names as ED-06 settles.
 - `@spec-0050` The spec check accepts a scenario tagged @wip, `check.feature`
 - `@spec-0209` A spec file naming a configured stack word fails the spec check, `check.feature`
 
-14 scenarios, each pending (`pending.md`): spec-0047 runs trace (cycle 6),
-the others run check (cycle 7). The rule of spec-0047 (a feature's need tag
+14 scenarios: 13 verified in cycle 2; spec-0047 runs trace and is pending
+until cycle 6 (`pending.md`). The rule of spec-0047 (a feature's need tag
 covers its scenarios) is the parser's `needs` of each scenario, unit-tested
 here.
 
@@ -59,5 +59,5 @@ tags), the event record `spec-gated`.
 
 spec/check's unit tests cover every rule above on `spec-parsed` values, a
 passing spec giving `spec-gated` with passed true and no finding;
-`wasm/test.sh` runs the 14 scenarios against this build and reports each as
-it comes out; tickets 01 and 02's results unchanged.
+`wasm/test.sh` writes a passing result for each scenario above but
+spec-0047, which it runs and reports as it comes out; tickets 01 and 02's results unchanged.

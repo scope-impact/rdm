@@ -22,7 +22,8 @@ The whole path through the slice before any rule is checked:
   fills it.
 - The not-built stand-in also answers for check's stages: `rdm-spec.wit`'s
   `not-built` gains one line, `include check-stages-not-built;`, so each
-  stage answers none (ED-02).
+  stage answers none (ED-02), and its comment says so: a stage of check not
+  built answers none, which check warns of and passes over.
 - The composition: `wac compose dhf/wit/slice-02.wac` into
   `wasm/build/deps/rdm/write-the-spec.wasm`, and the command with the slice
   added. `rdm-spec.wac` gains exactly these two lines and rewrites none
@@ -46,9 +47,9 @@ The whole path through the slice before any rule is checked:
   line and keyword, never skipped; each scenario as `spec-parsed` carries it,
   its context and component from the model where the model owns its file.
 - spec/check, `spec-check.run`: the specs' declaration, then every stage in
-  ED-03's order, none a gate, a stage answering none refusing the task
-  (exit 2, `cannot-run: check's STAGE stage is not built`, nothing on
-  standard output); the run's events carried as ED-04 settles, `--events`
+  ED-03's order, none a gate, a stage answering none named by one warning
+  line, `warning: stage-not-built: STAGE`, in its place, and passed over, the
+  exit what the stages that ran decide (ED-02, settled); the run's events carried as ED-04 settles, `--events`
   writing one line per event after the findings and warnings; the parser's
   refusals reported as findings (exit 1); its result as ED-06 settles. The
   stage rule (each stage reports, a stage not built refuses) is the kernel's
@@ -64,7 +65,8 @@ The whole path through the slice before any rule is checked:
 - `@spec-0052` An unknown keyword is refused with its line, `parser.feature`
 - `@spec-0053` A feature file holds exactly one feature, `parser.feature`
 
-3 scenarios, each pending until cycle 7 (`pending.md`): each runs check.
+3 scenarios, verified in cycle 2: the stages not built are warnings, and
+none of these Thens needs their findings.
 
 ## Components and interfaces it touches
 
@@ -78,13 +80,17 @@ host (`rdm:host/process`, which the parser imports for ticket 06).
 - `wasm-tools component wit dhf/wit` parses; each crate's component targets
   its world; `wac compose` writes the slice, and the command with the two
   lines above.
-- `sh wasm/rdm-spec check` in a project set up by `rdm-spec init` exits 2
-  with `cannot-run: check's sources stage is not built` on the error stream
-  and nothing on standard output; `sh wasm/rdm-spec help` still lists every
+- `sh wasm/rdm-spec check` in a project set up by `rdm-spec init` exits 0,
+  its error stream naming each stage not built in one line,
+  `warning: stage-not-built: STAGE` (sources, model-lint, views, wiki, paths,
+  plugins; clauses too where the configuration holds `:regulated`), and its
+  standard output `{}`; `sh wasm/rdm-spec help` still lists every
   task as spec-0176 writes it.
 - spec/parser's unit tests cover every construct of the subset, an unknown
   keyword and a second Feature; spec/check's unit tests run its stage order
-  with test stages: every stage reporting, a stage not built refusing, the
-  events handed on in order.
-- `wasm/test.sh` runs the three scenarios against this build and reports each
-  as it comes out, and slice 01's scenarios still pass.
+  with test stages: every stage reporting, a stage not built warned of and
+  passed over, the exit decided by the stages that ran, the events handed on
+  in order.
+- `wasm/test.sh` writes a passing result for each scenario above, and slice
+  01's scenarios still pass, spec-0177, spec-0178 and spec-0090 now among them
+  (slice 01's `pending.md`).

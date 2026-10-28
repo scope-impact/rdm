@@ -53,4 +53,4 @@ kernel/command's unit tests cover the root, the results directory's order,
 the report's format and exit codes, and a gate stopping a task, with test
 stages; `wasm/test.sh` runs the seven scenarios against this build and reports
 each as it comes out; and, under ED-01, each is verified in the cycle
-`pending.md` names for it (cycle 6 for status's, cycle 7 for check's).
+`pending.md` names for it (cycle 6 for status's, cycles 2 and 3 for check's).

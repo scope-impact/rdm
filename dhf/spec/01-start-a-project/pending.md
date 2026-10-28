@@ -14,6 +14,28 @@ again in the cycle that unblocks it, without slice 01 being rebuilt.
 Cycles are those of ADR 0006's build order. Each scenario stays named by its
 ticket.
 
+## Unblocked in cycle 2 (slice 02, write the spec: check)
+
+In a partial build, check runs the stages that exist and writes
+`warning: stage-not-built: STAGE` for each of the others, the exit decided by
+the stages that ran (settled by the spec owner,
+`dhf/spec/02-write-the-spec/decisions.md`, ED-02). So a scenario that runs
+check waits only for check itself, unless its Then needs a finding of a
+stage a later cycle builds. The clauses stage runs only where the
+configuration holds `:regulated` (ED-17).
+
+| Scenario | Ticket | Task it needs |
+|---|---|---|
+| `@spec-0177` A task that passes exits 0, `command.feature` | 04 | check |
+| `@spec-0178` A task that finds a problem exits 1 and names it on the error stream, `command.feature` | 04 | check (the missing level is the spec check's) |
+| `@spec-0090` The check passes on a skeleton nobody has touched, `init.feature` | 04 | check |
+
+## Unblocked in cycle 3 (slice 04, model the architecture: the views' freshness)
+
+| Scenario | Ticket | Task it needs |
+|---|---|---|
+| `@spec-0235` A task with no gate reports the findings of every stage, `command.feature` | 04 | check, with the views' freshness stage (the missing level: slice 02; the stale view: slice 04) |
+
 ## Unblocked in cycle 6 (slice 05, verify by results: status)
 
 | Scenario | Ticket | Task it needs |
@@ -27,24 +49,10 @@ does not exist (ticket 04), settled before the task is run; whether the
 command refuses it before a task not built answers is ED-16. Settled that way,
 spec-0179 passes in this cycle and is verified here.
 
-## Unblocked in cycle 7 (slice 06, regenerate: check's paths stage; fence, verify, scopes)
-
-check has no gate: every stage of it runs and reports (spec-0235, the
-glossary's "Gate"), and a stage not built refuses the task. Its stages come
-with cycle 2 (the spec check, slice 02), cycle 3 (the model lint and the
-views' freshness, slice 04), cycle 4 (sources and wiki, slice 03), cycle 5
-(the plugins that subscribe to what it reads, slice 08) and cycle 7 (the
-committed paths, slice 06's fence). The clauses stage (slice 10, cycle 10)
-runs only where the configuration holds `:regulated`, which none of these
-projects does; if it counts as a stage everywhere, these move to cycle 10
-(ED-17).
+## Unblocked in cycle 7 (slice 06, regenerate: fence, verify, scopes)
 
 | Scenario | Ticket | Task it needs |
 |---|---|---|
-| `@spec-0177` A task that passes exits 0, `command.feature` | 04 | check, every stage |
-| `@spec-0178` A task that finds a problem exits 1 and names it on the error stream, `command.feature` | 04 | check, every stage |
-| `@spec-0235` A task with no gate reports the findings of every stage, `command.feature` | 04 | check, every stage (the missing level: slice 02; the stale view: slice 04) |
-| `@spec-0090` The check passes on a skeleton nobody has touched, `init.feature` | 04 | check, every stage |
 | `@spec-0368` A task that reads a cut reads the project's folder at the cut, rows `fence`, `verify`, `scopes`, `11-project-in-a-folder/command.feature` | 05 | fence, verify, scopes |
 
 ## Unblocked in cycle 8 (slice 07, measure: checklist)
