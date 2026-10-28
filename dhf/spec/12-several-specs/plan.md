@@ -1,5 +1,7 @@
 # Slice 12: Several specs
 
+status: building
+
 ## Goal
 
 A project keeps one spec, or several, one folder each with its own needs, model, events, glossary, ids and id prefix, and every task reads each on its own terms, or the one it is told.
@@ -30,4 +32,4 @@ A project keeps one spec, or several, one folder each with its own needs, model,
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

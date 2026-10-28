@@ -11,16 +11,19 @@ The spec of rdm-spec, the source of truth for what it does
 | `needs.edn` | The user needs every scenario traces to |
 | `ids.edn` | The id ledger; only the stamper writes it |
 | `glossary.md` | The vocabulary |
-| `<NN-slice>/plan.md` | A slice's plan: its goal, the needs it rests on, its scope in and out (ADR 0004) |
+| `<NN-slice>/plan.md` | A slice's plan: its status (planned, ready, building, done), its goal, the needs it rests on, its scope in and out (ADR 0004, ADR 0005) |
+| `<NN-slice>/decisions.md` | What was decided in the slice: builder decisions accepted, divergences from its plan (ADR 0005) |
 | `<NN-slice>/<component>.feature` | The slice's scenarios of one component, named by the component's name in the model |
 | `<NN-slice>/<component>.md` | The component's design prose, where it has any |
 
 rdm-spec's own spec is grouped by slice (ADR 0004): `01-start-a-project`,
 `02-write-the-spec`, `03-ground-the-spec`, `04-model-the-architecture`,
 `05-verify-by-results`, `06-regenerate`, `07-measure`, `08-plugins`,
-`09-publish`, `10-regulated-profile`. Each component's feature file sits
-whole in one slice, named by the model's spec path, until a release reads
-the slices layout; then a component's rules may sit in several slices.
+`09-publish`, `10-regulated-profile`, `11-project-in-a-folder`,
+`12-several-specs`, `13-slice-development`. A component's rules may sit in
+several slices, one feature file per slice named for it; the model's spec
+path names the slice it started in. Work is slice development (ADR 0005):
+a change starts in a slice, and a cycle builds one.
 
 Under the slices layout (`:spec-layout :slices` in the configuration,
 spec-30), the spec is grouped by slice first: `<NN-slice>/plan.md` (the

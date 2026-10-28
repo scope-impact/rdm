@@ -1,5 +1,7 @@
 # Slice 02: Write the spec
 
+status: done
+
 ## Goal
 
 A team keeps its requirements as executable scenarios in a declared subset of Gherkin, each with one id from the ledger, one level and a need, and is stopped before a spec that breaks its rules is committed, told which scenario and why.
@@ -26,4 +28,4 @@ A team keeps its requirements as executable scenarios in a declared subset of Gh
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

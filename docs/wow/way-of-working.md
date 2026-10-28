@@ -5,6 +5,11 @@ steps, never builds or grades, and reports time and tokens after every run.
 
 ## The rules
 
+- **Slice development** (ADR 0005): the slice is the unit of work. A cycle
+  builds one slice, whole, with every component it reaches; its checklist,
+  score and status are the slice's, regression items apart. A slice goes
+  planned, ready, building, done, in its plan's `status:` line, and keeps what
+  was decided in it in its `decisions.md`.
 - **One builder per cycle.** Never contexts in parallel: a cycle's scopes are
   built one after another by one builder, in the order `scopes` lists them
   (spec owner, cycle 13; dhf/cycles/retrospective-01-12.md).
@@ -23,15 +28,19 @@ steps, never builds or grades, and reports time and tokens after every run.
 
 ## The steps
 
-1. **Spec change** in `dhf/spec/`, `rdm-spec stamp` (take ids from its output,
-   never from memory), `rdm-spec views` if the model changed, `rdm-spec check`;
-   commit; tag the cut `spec-N`.
-2. **Scopes:** `rdm-spec scopes spec-(N-1) spec-N`; judge the shared files it
-   names; record the cycle in `dhf/cycles/NN/cycle.edn` (cut, `:from` = the
-   cut of the installed release that judges it, scope, builder, grader, spec
-   owner, model).
-3. **Fence** the room; `rdm-spec observe begin NN builder ROOM`; brief one
-   builder with `docs/wow/harness.md`, "The builder" and the scopes.
+1. **The slice:** plan it, or change its plan, in `dhf/spec/<NN-slice>/`
+   (`status: ready` once its plan and scenarios are written); `rdm-spec stamp`
+   (take ids from its output, never from memory), `rdm-spec views` if the
+   model changed, `rdm-spec check`; commit; tag the cut `spec-N`.
+2. **The cycle:** `rdm-spec scopes spec-(N-1) spec-N` names the slices the
+   change touched; pick the one to build (one per cycle; every slice, in
+   order, for a whole-project cycle); judge the shared files it names; record
+   the cycle in `dhf/cycles/NN/cycle.edn` (cut, `:from` = the cut of the
+   installed release that judges it, `:slice`, builder, grader, spec owner);
+   set the slice's plan to `status: building`.
+3. **Fence** the room (`--slice S`); `rdm-spec observe begin NN builder ROOM`;
+   brief one builder with `docs/wow/harness.md`, "The builder", naming the
+   slice: its `plan.md` first, then its feature files.
 4. **When it ends:** `observe end NN builder --tokens N`; run the suite twice
    (no fixture, no process, `/tmp` unchanged); run the held-still oracle on the
    build, scoped to the spec change (`RDM_SPEC=... bb dhf/harness/oracle/oracle.clj
@@ -53,6 +62,7 @@ steps, never builds or grades, and reports time and tokens after every run.
    `rdm-spec scoreboard (NN-1) NN`; `observe report`; the posterior
    (`dhf/cycles/analysis/posterior.py`); `labels.yaml` for each fail you looked
    at; `decisions.yaml` from the builder's report; `proposed-spec-changes.md`.
+   The score's `:slice` is the slice's own items, `:regression` the rest.
 7. **Bring the build in** (src, test, runner) and run its suite in the
    repository; commit.
 8. **The spec owner decides:** accepted, the build is installed as the release
@@ -60,6 +70,8 @@ steps, never builds or grades, and reports time and tokens after every run.
    recorded as `:reviewed` in `cycle.edn`. Then the in-scope goldens move to
    the new release: `oracle.clj record --reason "spec-N" --changes C:K,...
    --from <:from> --to spec-N`, which refuses any golden outside the scopes.
+   The decisions accepted go into the slice's `decisions.md`; when every one
+   of its scenarios is verified, the slice's plan says `status: done`.
 
 ## Mistakes already made, not to repeat
 

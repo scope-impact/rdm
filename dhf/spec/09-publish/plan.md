@@ -1,5 +1,7 @@
 # Slice 09: Publish
 
+status: done
+
 ## Goal
 
 A reader reads the spec, its architecture, its wiki and its verification status as one published site.
@@ -20,4 +22,4 @@ A reader reads the spec, its architecture, its wiki and its verification status 
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

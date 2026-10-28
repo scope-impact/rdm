@@ -1,5 +1,7 @@
 # Slice 05: Verify by results
 
+status: done
+
 ## Goal
 
 A team sees each scenario's status derived from executed test results, whatever stack ran them, traces a need to its evidence, and cannot release until every scenario is verified.
@@ -24,4 +26,4 @@ A team sees each scenario's status derived from executed test results, whatever 
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

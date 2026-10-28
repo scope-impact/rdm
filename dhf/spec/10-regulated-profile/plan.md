@@ -1,5 +1,7 @@
 # Slice 10: The regulated profile
 
+status: done
+
 ## Goal
 
 A team building regulated software shows an auditor, for every clause it declares, the controlled document that meets it, and an audit copy with its evidence; a project that does not hold :regulated runs none of it.
@@ -22,4 +24,4 @@ A team building regulated software shows an auditor, for every clause it declare
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

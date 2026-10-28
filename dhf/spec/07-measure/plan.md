@@ -1,5 +1,7 @@
 # Slice 07: Measure
 
+status: done
+
 ## Goal
 
 Someone other than the builder sees, cycle over cycle, how completely the spec carries the product, and what each run achieved, did outside its brief, and cost; the instrument never records what it did not measure.
@@ -26,4 +28,4 @@ Someone other than the builder sees, cycle over cycle, how completely the spec c
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

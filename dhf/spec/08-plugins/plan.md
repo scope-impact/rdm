@@ -1,5 +1,7 @@
 # Slice 08: Plugins
 
+status: done
+
 ## Goal
 
 A team adds the judges its own project needs to the harness without changing the harness, through the core's published language.
@@ -25,4 +27,4 @@ A team adds the judges its own project needs to the harness without changing the
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

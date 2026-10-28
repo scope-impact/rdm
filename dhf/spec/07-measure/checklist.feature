@@ -41,17 +41,3 @@ Feature: Checklist
       Given the spec at cut spec-3 holds a scenario with no id
       When "rdm-spec checklist 03" is run
       Then it exits 1, writes nothing, and names the file and line of the unstamped scenario
-
-  # spec-30, from cycle 23: spec-29's several spec folders were one rule in
-  # parser.feature but reached eight components more; the scopes named six
-  # and the integrator widened them by hand (dhf/cycles/23/cycle.edn). The
-  # spec owner chose Löyly's slice (loyly:README.md@17d68d2, "How to read the
-  # repo", layer 4): a piece of behaviour, planned, and rebuilt whole.
-  Rule: A slice is graded whole
-
-    @spec-0395 @e2e
-    Scenario: A slice scope's checklist holds every scenario of every component the slice reaches
-      Given a configuration with :spec-layout :slices; the slice 12-several-specs reaching :spec/parser and :measurement/checklist; :spec/parser with 2 stamped scenarios in 12-several-specs and 3 in 02-write-the-spec; and dhf/cycles/03/cycle.edn whose :scope is [{:slice "12-several-specs"}]
-      When "rdm-spec checklist 03" is run
-      Then it holds one item for each of the 5 scenarios of :spec/parser and each of :measurement/checklist's, wherever their slice, each item naming its slice and its component
-      And verify requires a result for each of them, as for any scope

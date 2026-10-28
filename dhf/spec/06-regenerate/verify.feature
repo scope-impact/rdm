@@ -288,16 +288,3 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then each result is held to {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags} :links {:need {:type "issue" :url "N#{id}"}} :evidence {}}, N the configuration's :needs
       And N is dhf/spec/needs.edn for a configuration that names no :needs
-
-  # spec-32, from cycle 24: a slice-scoped verify required a result for every
-  # scenario, as a whole-project one does; spec-0389 narrowed a spec scope,
-  # nothing a slice scope. A slice scope rebuilds the components it reaches
-  # (ADR 0004), and those components' scenarios are what it answers to.
-  Rule: A slice-scoped verify answers for the components the slice reaches
-
-    @spec-0404 @e2e
-    Scenario: A cycle scoped to a slice is verified on the scenarios of the components it reaches
-      Given a configuration with :spec-layout :slices; the slice 12-several-specs reaching :spec/parser and :measurement/checklist; dhf/cycles/03/cycle.edn whose :scope is [{:slice "12-several-specs"}]; and a room whose tests write a passing result for every scenario of :spec/parser and :measurement/checklist, in any slice, and none for any other component
-      When "rdm-spec verify ROOM 03" is run
-      Then the tests check passes, counting those components' scenarios only
-      And with one of :spec/parser's results missing, it fails, naming that scenario

@@ -1,5 +1,7 @@
 # Slice 06: Regenerate
 
+status: done
+
 ## Goal
 
 A team regenerates its implementation from a merged cut of the spec, in a clean room that provably holds no earlier implementation, and a build is done only when a check the builder does not control says so.
@@ -26,4 +28,4 @@ A team regenerates its implementation from a merged cut of the spec, in a clean 
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

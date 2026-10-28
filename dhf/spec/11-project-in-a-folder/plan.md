@@ -1,5 +1,7 @@
 # Slice 11: A project in a folder
 
+status: building
+
 ## Goal
 
 A project may be one folder of a larger repository, as halla-health's wallet is: every task run in that folder reads the folder, at the cut as committed, and nothing outside it.
@@ -26,4 +28,4 @@ A project may be one folder of a larger repository, as halla-health's wallet is:
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

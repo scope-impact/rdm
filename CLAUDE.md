@@ -11,10 +11,13 @@ see `README.md` and `dhf/decisions/adr-0002-spec-first-regeneration.md`.
 
 ## Rules
 
-- **Behaviour changes in the spec, never in the code.** Edit `dhf/spec/`
-  (feature files, `model.edn`, `events.edn`, `glossary.md`, `README.md`),
-  then `rdm-spec stamp`, `rdm-spec views` if the model changed, and
-  `rdm-spec check`. `src/` and `test/` are replaced by the next regeneration.
+- **Behaviour changes in a slice, never in the code** (slice development,
+  `dhf/decisions/adr-0005-slice-development.md`). A change starts in a slice
+  under `dhf/spec/<NN-slice>/`: a new one, or an existing one's `plan.md`
+  (its status, goal, scope) and its feature files; then `model.edn`,
+  `events.edn`, `glossary.md` as needed, `rdm-spec stamp`, `rdm-spec views`
+  if the model changed, and `rdm-spec check`. A cycle builds one slice.
+  `src/` and `test/` are replaced by the next regeneration.
 - **The spec's conventions are `dhf/spec/README.md`;** its vocabulary is
   `dhf/spec/glossary.md`. Where the spec is silent, follow
   `dhf/wiki/pages/loyly-method.md`.

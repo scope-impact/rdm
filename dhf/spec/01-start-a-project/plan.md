@@ -1,5 +1,7 @@
 # Slice 01: Start a project
 
+status: done
+
 ## Goal
 
 A team starts a new project, or brings an existing repository under rdm-spec, with one command, and every task it then runs answers the same way: one command, one task table, one way to report, a gate that stops the task.
@@ -26,4 +28,4 @@ A team starts a new project, or brings an existing repository under rdm-spec, wi
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

@@ -67,12 +67,17 @@ folder each, under the configuration's `:specs` (`dhf/spec/02-write-the-spec/par
 A project's own judges, its oracle and its grading among them, are plugins
 (`dhf/decisions/adr-0003-core-and-plugins.md`; `rdm-spec plugin add NAME`).
 
-## A regeneration cycle
+## Slice development
 
-`cut` → `fence ROOM CUT` (behind the project's Gate plugins) → one builder
-rebuilds the implementation in the room → `verify ROOM NN` → `checklist NN` →
+Work is delivered slice by slice (`dhf/decisions/adr-0005-slice-development.md`,
+after Löyly): a slice is a folder of the spec with its plan (status, goal,
+scope), one feature file per component it reaches, and its decisions. A
+behaviour change starts in a slice; a cycle builds one slice, whole:
+`cut` → `scopes` names the slices touched → `fence ROOM CUT --slice S` (behind
+the project's Gate plugins) → one builder rebuilds the slice's components →
+`verify ROOM NN` → `checklist NN` (the slice's items and its regressions) →
 graders file verdicts → `score NN --verdicts FILE ...` → `scoreboard MM NN` →
-findings folded into the spec. The way of working is `docs/wow/`.
+findings folded into the slice. The way of working is `docs/wow/`.
 
 ## License
 

@@ -115,29 +115,3 @@ Feature: Spec check
       And a feature file whose description says the parser is written in Cobalt
       When "rdm-spec check" is run
       Then it fails and names the file, the line and the word
-  # spec-30, from cycle 23: spec-29's several spec folders were one rule in
-  # parser.feature but reached eight components more; the scopes named six
-  # and the integrator widened them by hand (dhf/cycles/23/cycle.edn). The
-  # spec owner chose Löyly's slice (loyly:README.md@17d68d2, "How to read the
-  # repo", layer 4): a piece of behaviour, planned, and rebuilt whole.
-  @UN-001
-  Rule: Every slice is planned
-
-    @spec-0400 @e2e
-    Scenario: A slice's plan says its goal, its scope and what it rests on
-      Given a configuration with :spec-layout :slices, and dhf/spec/12-several-specs/plan.md with the headings "Goal", "References", "Scope" and "Decisions", whose References name UN-001 and whose Scope has "In" and "Out"
-      When "rdm-spec check" is run
-      Then it exits 0 with no finding about the slice
-
-    @spec-0401 @e2e
-    Scenario Outline: A slice that is not planned is a finding
-      Given a configuration with :spec-layout :slices, and a slice 12-several-specs whose <plan>
-      When "rdm-spec check" is run
-      Then it exits 1 with the finding <rule>, naming dhf/spec/12-several-specs/plan.md
-
-      Examples:
-        | plan                                                   | rule                   |
-        | folder holds no plan.md                                | slice-unplanned        |
-        | plan.md has no "Goal" heading                          | slice-unplanned        |
-        | plan.md's References name no user need                 | slice-unfounded        |
-        | plan.md's References name UN-099, which no need is     | slice-unfounded        |

@@ -1,5 +1,7 @@
 # Slice 03: Ground the spec
 
+status: done
+
 ## Goal
 
 A team keeps the sources its spec is distilled from, and a domain wiki whose every claim cites one, so no rule in the spec rests on nothing.
@@ -22,4 +24,4 @@ A team keeps the sources its spec is distilled from, and a domain wiki whose eve
 
 ## Decisions
 
-In the comments above the rules they shaped, each citing its incident (`README.md`, "A guard cites its incident"); a cycle's builder decisions are in `dhf/cycles/NN/decisions.yaml`.
+`decisions.md`, beside this plan.

@@ -20,8 +20,10 @@ clean room fenced from it. Nobody checks your claim of done but the gate
 3. `dhf/wiki/pages/loyly-method.md` (where the spec is silent)
 4. `dhf/harness/stack.md`, `dhf/harness/config.edn`, the stack's guidance
    (for TypeScript, `docs/wow/functional-ddd-typescript.md`)
-5. `dhf/spec/model.edn`, `dhf/spec/events.edn`, then the feature files of your
-   scopes
+5. `dhf/spec/model.edn`, `dhf/spec/events.edn`, then your slice: its
+   `plan.md` (goal, scope in and out), its `decisions.md`, its feature files,
+   then the other feature files of the components it reaches (their
+   scenarios are your regression items; ADR 0005)
 
 ### How you work
 

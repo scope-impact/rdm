@@ -241,6 +241,16 @@ reaches. A change to any of its files makes it a scope, and a slice scope
 rebuilds, and grades, every scenario of every component it reaches, in
 whichever slice the scenario sits.
 
+**Slice development**: working slice by slice (spec-33, ADR 0005; Löyly's
+way of working, sections 1, 2 and 6). A behaviour change starts in a slice;
+a cycle builds one slice (`cycle.edn` `:slice`), whole; its checklist marks
+each item `:role` `"slice"` (the slice's own scenario) or `"regression"` (a
+scenario of a component it reaches, in another slice), and its score counts
+them apart; status reports each slice, and a release can be asked of one. A
+slice's plan says its status, `planned`, `ready`, `building` or `done`, and
+its `decisions.md` keeps what was decided in it. A slice is done when its
+last cycle was accepted and every one of its scenarios is verified.
+
 **Spec folder**: one spec of a project that keeps several (spec-29): a folder
 with its own feature files, model, event catalogue, needs, glossary, id ledger
 and domain model, declared in the configuration's `:specs` with its name and
