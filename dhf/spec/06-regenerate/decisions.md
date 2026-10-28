@@ -498,22 +498,27 @@ see it) or may stay the builder's choice (FREE: no grader could).
   spec-0162's exit. Smallest: a contract scenario, e.g. `{:cut {:tag
   "spec-7" :commit C :pushed true}}`, and `{:cut {:tag "spec-7" :already
   true}}` with exit 0. VISIBLE.
+  **Stated by spec-43:** spec-0478, `{:cut {:tag :commit :tagged true :pushed "origin"}}`, and `{:cut {:tag :commit :tagged false :says S}}` with exit 0, as the release prints.
 - **G-02** (spec-0036). The first cut's name with no spec-N tag yet, and
   which tags count: every tag `spec-N` of the repository, N decimal, the
   next one more than the highest. Smallest: "the first cut is spec-1; N is
   one more than the highest N of the repository's spec-N tags". VISIBLE.
+  **Stated by spec-43:** spec-0479 and the glossary's "Cut": the first is spec-1; N one more than the highest decimal N of the tags `spec-N`, any other tag ignored, as the release.
 - **G-03** (spec-0224). Where cut runs check (the working tree in the
   project's root, or HEAD as committed), and what it does when check cannot
   run (exit 2) or warns. Smallest: "check is run in the project's root; its
   exit 2 is cut's, relaying its line; its warnings are relayed after its
   findings". VISIBLE. Recommendation: as written (ED-01).
+  **Stated by spec-43:** spec-0480: check is run in the project's root; its cannot-run line is relayed unchanged with its exit 2, its warnings relayed and the cut made.
 - **G-04** (spec-0163, spec-0036). No `origin` or no `origin/HEAD`, and a
   push that fails: the tag left or removed, and the exit. Smallest: "exit 2
   naming what is missing; a push that fails removes the tag and exits 2,
   naming it". VISIBLE.
+  **Stated by spec-43:** spec-0481: no origin, or no origin/HEAD, exit 2 naming what is missing; a push that fails removes the tag, exit 2, relaying the push's message. Chosen differently from the release, which said only "not the commit origin/HEAD names" for a missing origin or origin/HEAD.
 - **G-05** (spec-0162, spec-0163, spec-0224). The order of cut's refusals
   when several hold. Recommendation: not origin/HEAD, then already cut (no
   check run), then the check. VISIBLE only on a combined fixture.
+  **Stated by spec-43:** spec-0482: not origin/HEAD first, then already cut (no check run), then the check.
 - **G-06** (spec-0036). A lightweight or an annotated tag. FREE: every
   scenario reads a tag by its name. Recommendation: lightweight (it needs no
   identity).
@@ -527,31 +532,38 @@ see it) or may stay the builder's choice (FREE: no grader could).
   the paths directly under it; and that a project with no commit, or outside
   a repository, has none. Smallest: one glossary sentence. VISIBLE.
   Recommendation: the index (ED-07).
+  **Stated by spec-43:** spec-0487 and the glossary's "Fence": the index; `dhf` classified through the paths under it; none outside a repository. Chosen differently from the release, which read HEAD's tree (a staged path passed).
 - **G-08** (spec-0329, spec-0038, spec-0182). fence's result on standard
   output: spec-0329 says "its result names ratification/ratify as a removed
   component". Smallest: a contract scenario, e.g. `{:fence {:room ROOM :cut
   "spec-3" :scopes [...] :removed-components [...]}}`. VISIBLE.
+  **Stated by spec-43:** spec-0483, `{:fence {:room ROOM :cut :commit :scope :kept :denied}}`, ROOM as given, `:scope` `:project` or a vector of scopes, `:slice` with `--slice` (spec-0488), `:removed` naming each component the cut's model no longer names. `:removed` is the spec's own key (the release's not probed).
 - **G-09** (spec-0038, spec-0296). A cut holding a committed path neither
   denied nor kept: fence refuses it (exit 1, naming each, no room), or
   keeps it. Smallest: a row of spec-0295's kind. VISIBLE. Recommendation:
   refused, so nothing unclassified reaches a room.
+  **Stated by spec-43:** spec-0484, refused, exit 1, naming each, no room. Chosen differently from the release, which kept the path.
 - **G-10** (spec-0298, spec-0398, spec-0399). Under the slices layout, a
   changed event's publishers and subscribers: listed as `{:component ...}`
   scopes after the slices, unless a listed slice holds them, or folded into
   the slices that hold them. VISIBLE.
+  **Stated by spec-43:** spec-0493: the publisher and subscribers a listed slice holds are not listed again; the others follow the slices as `{:component C}` scopes, in build order.
 - **G-11** (spec-0295). Which kept files the bytes rule compares (only
   those outside the implementation, or the scope's kept implementation too)
   and whether an empty file counts: two empty files are the same bytes, and
   the same object (spec-0038). Smallest: "a kept file outside the
   implementation, not empty". VISIBLE.
+  **Stated by spec-43:** spec-0485 and the glossary's "Fence": kept files outside the implementation, not empty.
 - **G-12** (spec-0038). A ROOM that exists already, empty or not.
   Smallest: "a ROOM that exists and is not empty is refused, exit 2".
   VISIBLE.
+  **Stated by spec-43:** spec-0486: a ROOM that exists and is not empty is refused, exit 2, left as it was; an empty one is used, as the release.
 - **G-13** (spec-0183, spec-0226, spec-0397). `--slice` with `--context`
   or `--component`, and `--slice` without `:spec-layout :slices`; and
   spec-0176's usage of fence names no `--slice`. Smallest: rows of
   spec-0185 (exit 2), and the usage. VISIBLE; the usage is the spec owner's
   (slice 01's table, the oracle's `help` golden).
+  **Stated by spec-43:** spec-0488: `--slice` joins `--context` and `--component`, its components added to theirs (as the release, not the planner's refusal: spec-0226 lists scopes the same way); without the slices layout exit 2, saying so (the release said only that the cut holds no such slice). spec-0176's usage gains `[--slice S]`.
 - **G-14** (spec-0038). The room's commit: author, date, message, branch.
   FREE: no scenario reads them. Recommendation: an identity of rdm-spec's
   own, so a fence never fails where git has none configured.
@@ -566,6 +578,7 @@ see it) or may stay the builder's choice (FREE: no grader could).
   `{:scopes {:from "spec-3" :to "spec-4" :scopes [{:component :kernel/bus}
   ...] :shared-files ["dhf/spec/glossary.md"]}}`, each shared file also a
   warning line, exit 0. VISIBLE.
+  **Stated by spec-43:** spec-0489, `{:scopes {:from :to :scopes [...] :shared [...]}}` (the release's `:shared`), each shared file also a warning line, exit 0.
 - **G-17** (spec-0238, spec-0340). Which changed files are shared: the
   model, the needs, the ledger (which every stamp changes), the
   configuration, the wiki, `docs/`; the event catalogue when no contract
@@ -573,71 +586,87 @@ see it) or may stay the builder's choice (FREE: no grader could).
   implementation, the measurements). Smallest: "a shared file is a changed
   kept path no component owns; the event catalogue is read event by event
   and is never one". VISIBLE.
+  **Stated by spec-43:** spec-0490 and spec-0238: a shared file is a changed path the clean room keeps that is no component's feature file or design prose and not the event catalogue (the model, the ledger, the needs, the configuration, the wiki, docs); a denied path is neither scope nor shared.
 - **G-18** (spec-0298, spec-0348). Which cut's relationships name an
   event's subscribers when the event was added, removed or moved: each
   cut's own, together. VISIBLE.
+  **Stated by spec-43:** spec-0491: each cut's own relationships, together (also slice 08's G-18 for the subscribers' side of an event).
 - **G-19** (spec-0399). A touched slice all of whose components an earlier
   slice of the listing holds: listed with `:components []`, or left out.
   VISIBLE. Recommendation: listed.
+  **Stated by spec-43:** spec-0494, listed with `:components []`.
 - **G-20** (spec-0237). Two cuts that are not cuts, the same cut twice, or
   the later first. Smallest: "each is a cut, as fence's (exit 2); the
   change is read from the first to the second". VISIBLE.
 
 ### Verify
+  **Stated by spec-43:** spec-0492: each must be a cut (exit 2 naming the one that is not); the same cut twice lists nothing, exit 0; the later first is read from the first to the second, `:from` the first, as the release.
 
 - **G-21** (spec-0202, spec-0441, spec-0358). spec-0441's verify row gives
   no cycle.edn, so spec-0203's refusal answers before the declaration's if
   verify reads the cycle first, as spec-0202 says. Smallest: spec-0441's
   Given gains "and dhf/cycles/03/cycle.edn naming spec-3". VISIBLE.
+  **Stated by spec-43:** spec-0441's Given gains "and dhf/cycles/03/cycle.edn naming the cut spec-3" (reworded, its id kept).
 - **G-22** (spec-0207, spec-0033, spec-0202, spec-0391). Whether verify
   empties the cycle's results directory, and makes the checkout afresh,
   before it runs (an earlier run's results would pass a no-op test
   command), and makes `results/NAME` for a `:plugin` check before asking
   it. Smallest: "verify starts each run with an empty results directory and
   a fresh checkout". VISIBLE.
+  **Stated by spec-43:** spec-0495 (an empty results directory and a fresh checkout, as the release) and spec-0496 (`results/NAME` made empty before the plugin is asked).
 - **G-23** (spec-0207, spec-0410, spec-0404; `07-measure/scorer.feature`,
   spec-0173, spec-0417). The scenarios the tests check requires under each
   scope: the project, contexts and components (every scenario, as
   spec-0207 says?), `[{:spec S}]` (spec-0410), `[{:slice S}]` and
   cycle.edn's `:slice` (spec-0404). Smallest: one glossary sentence under
   "Check". VISIBLE.
+  **Stated by spec-43:** spec-0498 and the glossary's "Check": the scenarios of what the scope reaches, in any slice; a result outside the scope neither required nor held. The release's reading for a context or component scope was not probed.
 - **G-24** (spec-0361, spec-0363; slice 08's G-18). Which `:plugins` a
   `:plugin` check is asked from: the cut's configuration, read in the
   checkout, as every check is (spec-0205); and the Gate's and
   CycleVerified's subscribers: the project's root's, as every task's.
   Smallest: one sentence in the glossary's "Check". VISIBLE.
+  **Stated by spec-43:** spec-0504 and the glossary's "Check": a `:plugin` check's plugin is the cut's configuration's, read in the checkout; the Gate plugins and CycleVerified subscribers the project root's. Also closes slice 08's G-18.
 - **G-25** (spec-0207, spec-0062). A results file the reader cannot read:
   fails the tests check, naming it, or passed over. VISIBLE.
   Recommendation: fails, as it refuses a release (spec-0454).
+  **Stated by spec-43:** spec-0499, fails the tests check, naming the file, as the release.
 - **G-26** (spec-0207, spec-0208; the glossary's "Verified"). An outline:
   "named by at least one result, and every result naming it passed", or
   verified as status says (a passing result for every row). VISIBLE.
+  **Stated by spec-43:** spec-0500: as status says, a passing result for every row; a row with none fails the check.
 - **G-27** (spec-0204, spec-0370). A ROOM that is not a git repository; an
   implementation path the room does not hold (absent from the checkout too).
   Smallest: "the room's implementation is read as git would commit it in a
   repository at ROOM". VISIBLE.
+  **Stated by spec-43:** spec-0497: the room read as git would commit it in a repository at ROOM, whether or not it is one; an implementation path the room does not hold is absent from the checkout.
 - **G-28** (spec-0215, spec-0216, spec-0314). The record and the result of
   a refusal: the reason's key (`:reason`, a string?), whether `:room-tree`
   and `:checks` are in it, and standard output on exit 1 (`{:verify ...
   :outcome :refused}`?). Smallest: a contract row of spec-0216. VISIBLE.
+  **Stated by spec-43:** spec-0501: on exit 1, `{:verify {:cycle :cut :outcome :refused :checks [...]}}`; ratified.edn with `:room-tree`, `:checkout` (when made), `:checks` and `:reason`, a string; a failed check carries `:reason` too. As the release.
 - **G-29** (spec-0361, spec-0315). After a check refused (exit 2), whether
   the later checks are `:not-run`, as after one that failed. VISIBLE.
   Recommendation: they are.
+  **Stated by spec-43:** spec-0503, the later checks `:not-run`.
 - **G-30** (spec-0215). The room's tree hash H: the id of the git tree
   holding exactly the room's implementation as git would commit it, at its
   paths, or the room's whole tree. Smallest: one sentence in the glossary's
   "Verify". VISIBLE.
+  **Stated by spec-43:** the glossary's "Verify": the git tree of exactly the room's implementation, at its paths, as git would commit it (the release gave the empty tree for an empty implementation).
 - **G-31** (spec-0314, spec-0318, spec-0322). The keys of each check beyond
   those stated: `:serves`' `:seconds` and `:budget`, a failed check's, one
   not run. Smallest: one row per kind of spec-0314. VISIBLE.
   Recommendation: `{:name :kind :outcome :seconds}` and the kind's own
   keys; a check not run, `{:name :kind :outcome}`.
+  **Stated by spec-43:** spec-0502 and spec-0501: every check `{:name :kind :outcome :seconds}`; `:tests` adds `:scenarios`, `:runs` `:budget :margin`, `:serves` `:budget :polls :answered-on-poll :margin :probe-seconds` (as the release), `:plugin` nothing; a failed check adds `:reason`; one not run is `{:name :kind :outcome :not-run}`.
 - **G-32** (spec-0331, spec-0332, spec-0333; the glossary's "Allure
   mapping"). The Allure elements and the spec elements a mapping may name,
   and what each spec element is in a result (`:context` the context's id,
   `:component` its id without the colon, `:gherkin-step` keyword and text,
   an outline's step with its row's values). Smallest: the glossary lists
   them: exactly the default mapping's keys and values. VISIBLE.
+  **Stated by spec-43:** the glossary's "Allure mapping": exactly the default mapping's keys and values, each spec element as the runner fills it (spec-0308): the context's id, the component's name, a step's keyword and text.
 - **G-33** (spec-0197, spec-0319, spec-0321, spec-0322, spec-0331). Each
   failure's line: its file (test.log, ratified.edn's, the result's), rule
   and wording; test.log's content (standard output, then error stream).
@@ -660,9 +689,32 @@ G-14, G-15, G-33 to G-35).
   instantiated on their own ahead of slice 02 (three instance lines in
   `rdm-spec.wac`, not one).
 - ED-04: the model gains "Reads cuts with the git helpers of" cut, from
-  scopes and verify.
+  scopes and verify. **Done by spec-43 for scopes only:** the model's lint
+  refuses verify to cut (a-contract-only: two bounded contexts relate only
+  through events), so verify still reads the cut through the repository. The
+  spec owner chooses: verify reads cuts with git itself (ED-04 B for verify),
+  the helpers move to the kernel (ED-04 C), or the lint's rule changes.
 - spec-0362, spec-0391: a `:plugin` check runs in the checkout but is given
   `:checkout` and `:results` relative to the project's root, which it
   cannot find from where it runs; absolute paths, or paths relative to the
-  checkout, would serve it.
-- G-13: fence's usage in spec-0176 names no `--slice`.
+  checkout, would serve it. **Settled by spec-43:** absolute paths (spec-0362
+  and spec-0391 reworded, ids kept). CycleVerified's `:checkout` stays
+  relative: its subscribers run in the project's root. The oracle's goldens
+  of a `:Check` request, if any, move with it.
+- G-13: fence's usage in spec-0176 names no `--slice`. **Settled by spec-43:**
+  spec-0176's rows gain `[--slice S]` for fence, `[--spec NAME] [--slice S]`
+  for status and release, and `[--spec NAME]` for trace, the options the
+  spec gives them (slice 05's G-19 too). A behaviour change: the oracle's
+  `help` golden must be re-recorded with it (`--changes` naming it).
+
+## Settled after the spec gaps (spec-43)
+
+- ED-04, half: the model's lint holds contexts to events, so verify cannot
+  read cuts with regeneration/cut. Verify reaches git itself through
+  rdm:host/process (accepted by the integrator under the spec owner's goal;
+  the spec owner may choose the kernel or a lint change instead). Scopes
+  reads cuts with cut, as the model now says.
+- spec-0176's usages changed (fence --slice; status, release --spec and
+  --slice; trace --spec): the oracle's help golden moves with them when the
+  component build is installed, recorded with --changes.
+

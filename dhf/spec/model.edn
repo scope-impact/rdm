@@ -187,6 +187,7 @@
   {:from :measurement/oracle :to :repository :description "Reads fixtures and goldens from"}
   {:from :regeneration/scopes :to :repository :description "Reads two cuts from"}
   {:from :regeneration/fence :to :regeneration/cut :description "Resolves cuts with the git helpers of"}
+  {:from :regeneration/scopes :to :regeneration/cut :description "Reads cuts with the git helpers of"}
   {:from :measurement/oracle :to :measurement/scoreboard :description "Runs and compares"}
   {:from :publishing/site :to :repository :description "Reads views from and writes the site to"}
   {:from :compliance/gap :to :repository :description "Reads clause lists and documents from"}

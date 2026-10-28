@@ -34,7 +34,7 @@ Feature: Cut
 
   Rule: Cut names the cut it made, and runs nothing it need not
 
-    @contract
+    @spec-0478 @contract
     Scenario Outline: Cut prints the cut it made, or the one the commit already is
       Given HEAD is the commit origin/HEAD names, C, <state>
       When "rdm-spec cut" is run
@@ -45,7 +45,7 @@ Feature: Cut
         | and the last cut is spec-6           | {:cut {:tag "spec-7" :commit C :tagged true :pushed "origin"}} |
         | and C is tagged spec-7               | {:cut {:tag "spec-7" :commit C :tagged false :says S}}         |
 
-    @e2e
+    @spec-0479 @e2e
     Scenario Outline: The next cut is one more than the highest spec-N tag of the repository
       Given HEAD is the commit origin/HEAD names, and the repository's tags are <tags>
       When "rdm-spec cut" is run
@@ -56,7 +56,7 @@ Feature: Cut
         | none                                   | spec-1  |
         | spec-9, spec-2, spec-10a and release-11 | spec-10 |
 
-    @e2e
+    @spec-0480 @e2e
     Scenario Outline: Cut runs the check in the project's root and relays what it says
       Given HEAD is the commit origin/HEAD names, and "rdm-spec check" run in the project's root <does>
       When "rdm-spec cut" is run
@@ -67,7 +67,7 @@ Feature: Cut
         | exits 2, saying cannot-run: why               | exits 2, tags nothing, and its error stream holds the check's cannot-run line unchanged    |
         | exits 0, writing a warning line on its error stream | tags HEAD, exits 0, and its error stream holds the check's warning line unchanged     |
 
-    @e2e
+    @spec-0481 @e2e
     Scenario Outline: A repository cut cannot reach is refused, and a tag that cannot be pushed is removed
       Given HEAD is a commit of the default branch, and <state>
       When "rdm-spec cut" is run
@@ -79,7 +79,7 @@ Feature: Cut
         | origin names no HEAD                      | names origin/HEAD as missing                                  |
         | pushing to origin fails                   | names the tag it could not push and relays the push's message, as one line |
 
-    @e2e
+    @spec-0482 @e2e
     Scenario Outline: Cut answers its first refusal, and runs the check last
       Given <state>, and "rdm-spec check" exits 1 on HEAD
       When "rdm-spec cut" is run

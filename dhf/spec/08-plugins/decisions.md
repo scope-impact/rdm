@@ -401,3 +401,5 @@ or may stay the builder's choice (no grader could).
   `:plugins` from the cut's configuration or the working tree's. Slice 06's
   to state before cycle 7; `kernel-plugins.ask` takes the root either way.
   **Left for slice 06's planner** (spec-38 states nothing of it).
+  **Stated by spec-43:** the cut's configuration, read in the checkout
+  (spec-0504; the glossary's "Check"), as slice 06's G-24.

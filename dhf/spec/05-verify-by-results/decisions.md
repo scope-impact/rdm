@@ -459,7 +459,7 @@ see it) or may stay the builder's choice (FREE: no grader could).
   layout, `--spec` without `:specs`: exit 2 naming it? And spec-0176's usage
   of status, trace and release names neither flag. Smallest: one row each in
   spec-0219's style, and the usages in spec-0176. VISIBLE.
-  **Stated by spec-39:** spec-0470 (status), spec-0455 (release), spec-0475 (trace): exit 2, naming it. spec-0176's usages are left as they are (slice 01's, and the oracle's `help` golden): for the spec owner.
+  **Stated by spec-39:** spec-0470 (status), spec-0455 (release), spec-0475 (trace): exit 2, naming it. spec-0176's usages are left as they are (slice 01's, and the oracle's `help` golden): for the spec owner. spec-43 adds `--spec` and `--slice` to them (slice 06's decisions, G-13).
 - **G-20** (`08-plugins/plugins.feature`, "A subscriber receives each event
   it subscribes to, in every task that publishes it"; `events.edn`,
   VerificationDerived). Which tasks publish VerificationDerived: status only,

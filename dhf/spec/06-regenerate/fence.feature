@@ -100,7 +100,7 @@ Feature: Fence
 
   Rule: Fence names the room it built, and builds one only where nothing stands
 
-    @contract
+    @spec-0483 @contract
     Scenario Outline: Fence prints the room it built
       Given a project whose commit tagged spec-4 holds an implementation, the cut spec-4's model no longer names ratification/ratify and the cut still holds its files, and C is the commit of the room fence makes
       When "rdm-spec fence ROOM spec-4 <args>" is run
@@ -112,13 +112,13 @@ Feature: Fence
         | --context verification                | [{:context :verification}]                                |                                              |
         | --component ratification/ratify       | [{:component :ratification/ratify}]                       | , and :removed [:ratification/ratify], each scope's component the cut's model no longer names |
 
-    @e2e
+    @spec-0484 @e2e
     Scenario: A cut holding a path neither denied nor kept builds no room
       Given a project whose configuration at the commit tagged spec-3 keeps dhf/spec and denies the implementation and the measurements, and whose commit tagged spec-3 also holds notes.md
       When "rdm-spec fence ROOM spec-3" is run
       Then it exits 1, names notes.md as neither denied nor kept, and builds no room
 
-    @e2e
+    @spec-0485 @e2e
     Scenario Outline: The bytes rule compares the kept files outside the implementation that are not empty
       Given a project whose commit tagged spec-3 holds <files>
       When "rdm-spec fence ROOM spec-3 --component spec/parser" is run
@@ -129,7 +129,7 @@ Feature: Fence
         | an empty dhf/wiki/pages/empty.md, and an empty implementation file of spec/parser                      |
         | an implementation file of spec/stamper with the same bytes as an implementation file of spec/parser    |
 
-    @e2e
+    @spec-0486 @e2e
     Scenario Outline: A room is built only where nothing stands
       Given a project whose commit tagged spec-3 holds an implementation, and ROOM <is>
       When "rdm-spec fence ROOM spec-3" is run
@@ -140,7 +140,7 @@ Feature: Fence
         | is a directory holding a file notes.md | exits 2, names ROOM as not empty, and ROOM holds notes.md and no other file      |
         | is an empty directory               | exits 0 and builds the room in ROOM                                                |
 
-    @e2e
+    @spec-0487 @e2e
     Scenario: A path staged and not yet committed is classified
       Given a project whose configuration keeps dhf/spec, and whose index holds notes.md, added and not yet committed
       When "rdm-spec check" is run
@@ -148,7 +148,7 @@ Feature: Fence
 
   Rule: A slice is a scope beside contexts and components
 
-    @e2e
+    @spec-0488 @e2e
     Scenario Outline: A slice joins the other scopes named, and needs the slices layout
       Given a project whose commit tagged spec-3 holds an implementation, and <config>
       When "rdm-spec fence ROOM spec-3 <args>" is run

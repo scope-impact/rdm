@@ -59,14 +59,14 @@ Feature: Scopes
 
   Rule: Scopes prints what it listed, and names each shared file
 
-    @contract
+    @spec-0489 @contract
     Scenario: Scopes prints the cuts, the scopes and the shared files
       Given the cuts spec-3 and spec-4, between which kernel/bus.feature and dhf/spec/glossary.md changed
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it exits 0, and its standard output, read as EDN, is exactly {:scopes {:from "spec-3" :to "spec-4" :scopes [{:component :kernel/bus}] :shared ["dhf/spec/glossary.md"]}}
       And its error stream holds one warning line about dhf/spec/glossary.md, as FILE: warning: RULE: what
 
-    @e2e
+    @spec-0490 @e2e
     Scenario Outline: A shared file is a changed kept path that is no component's and not the event catalogue
       Given the cuts spec-3 and spec-4, between which only <path> changed
       When "rdm-spec scopes spec-3 spec-4" is run
@@ -80,7 +80,7 @@ Feature: Scopes
         | an implementation file, a path the configuration denies    | []                        |
         | dhf/cycles/03/score.edn, a path the configuration denies   | []                        |
 
-    @e2e
+    @spec-0491 @e2e
     Scenario Outline: An event added or removed reaches the subscribers each cut's model names
       Given the cuts spec-3 and spec-4, between which only the event :Paid <change>, published by shop/till
       When "rdm-spec scopes spec-3 spec-4" is run
@@ -92,7 +92,7 @@ Feature: Scopes
         | was removed, with spec-3's model naming shop/ledger as its subscriber                     | shop/ledger                                              |
         | changed the shape of a key, spec-3's model naming shop/ledger and spec-4's shop/mail as its subscribers | shop/ledger and shop/mail                  |
 
-    @e2e
+    @spec-0492 @e2e
     Scenario Outline: Two cuts are read as given, the change from the first to the second
       Given the cuts spec-3 and spec-4, between which only kernel/bus.feature changed
       When "rdm-spec scopes <args>" is run
@@ -106,14 +106,14 @@ Feature: Scopes
 
   Rule: Under the slices layout, slices first, then the components no listed slice holds
 
-    @e2e
+    @spec-0493 @e2e
     Scenario: A changed event's publisher and subscribers no listed slice holds are scopes after the slices
       Given a configuration with :spec-layout :slices, and the cuts spec-3 and spec-4, between which a feature file of 12-several-specs and the shape of a key of :SpecParsed changed, the slice reaching :spec/parser and not :verification/status
       When "rdm-spec scopes spec-3 spec-4" is run
       Then it lists the scope {:slice "12-several-specs" :components [...]}, then {:component :verification/status} and each other subscriber of :SpecParsed the slice does not reach, in the order a builder builds them
       And it lists :spec/parser, the publisher, in the slice only
 
-    @e2e
+    @spec-0494 @e2e
     Scenario: A touched slice whose every component an earlier slice holds is still listed
       Given a configuration with :spec-layout :slices, and the cuts spec-3 and spec-4, between which a feature file of 11-project-in-a-folder and the plan of 12-several-specs changed, every component 12-several-specs reaches also reached by 11-project-in-a-folder
       When "rdm-spec scopes spec-3 spec-4" is run
