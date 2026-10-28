@@ -1,0 +1,11 @@
+;; Cycle 27: slice 02-write-the-spec (parser, stamper, check) in the component
+;; build (ADR 0006), cycle 2 of its build order, on cycle 26's code (slice 01).
+;; Fenced by slice: the room keeps slice 01's code and holds no implementation
+;; of the installed release (its source left the tree at spec-42). Run by
+;; cycle 25's release (cut spec-33), the judge until the switch.
+{:cut "spec-42"
+ :from "spec-33"
+ :slice "02-write-the-spec"
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "graders, each its own grading room, black box on the built command" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
