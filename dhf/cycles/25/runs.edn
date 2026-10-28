@@ -1,0 +1,1 @@
+[{:role "builder", :room "/home/user/c25/room", :began "2026-10-28T12:52:54.202Z", :ended "2026-10-28T14:23:28.735Z", :minutes 90.58, :tokens 735336, :defence {:writes-outside [], :tmp-left 0, :repo-touched [], :results-in-room false, :unobserved ["reads outside the room: observing records writes, never reads, so a read is not seen"]}}]
