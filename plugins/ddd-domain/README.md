@@ -11,7 +11,9 @@ and its shape is one school of DDD, so it became a template (ADR 0003).
   stamped scenario, no aggregate reading another context's, every emitted event
   catalogued). A project that adds this plugin copies these scenarios into its
   own spec, under a component of its own, and changes them as its model grows.
-- `lint.clj`: not written yet. The first project that adds this plugin writes
-  it, against the `SpecParsed` event it subscribes to (every scenario's id, for
-  "verified by a stamped scenario") and its own `events.edn`; then it comes back
-  here as version 2.
+- `lint.clj`: the lint, a subscriber to `SpecParsed` (every stamped scenario's
+  id, for "verified by a stamped scenario"), reading the configuration's
+  `:model`, `:events` and `:raw-dir`. Written by halla-health's wallet, the
+  first project that added this plugin, and brought back as version 2
+  (spec-32). `bb lint.clj [DOMAIN]`, DOMAIN defaulting to
+  `dhf/spec/domain.edn`; a project with no domain model passes.

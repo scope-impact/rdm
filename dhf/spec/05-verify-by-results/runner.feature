@@ -163,3 +163,18 @@ Feature: Gherkin runner
       Given a configuration whose :results-dir is dhf/allure-results, and RESULTS_DIR unset
       When "rdm-spec run" is run
       Then the results are written into dhf/allure-results
+
+  # spec-32, from cycle 24: cycles 19 to 23 wrote a tag label for every tag a
+  # scenario inherits from its feature and its rule, cycle 24 only for its
+  # own, and each build's verify refused the other's results; spec-0308 said
+  # "one per Gherkin tag" and no more. A need tag sits on a feature or a rule
+  # (README.md, "Conventions"), so the scenario's inherited tags are the ones
+  # that trace it; Allure's own Gherkin adapters write them too.
+  Rule: A scenario's tags are its own and those it inherits
+
+    @spec-0403 @contract
+    Scenario: A scenario's tag labels are its feature's, its rule's and its own, in that order
+      Given a feature tagged @UN-001, a rule under it tagged @UN-002, and under the rule the stamped scenario @spec-0003 tagged @e2e
+      When "rdm-spec run" is run and the scenario passes
+      Then its result's tag labels are "UN-001", "UN-002", "spec-0003" and "e2e", in that order, each once
+      And verify's tests check holds a result to exactly these tags, under the default mapping's "tag" :gherkin-tags

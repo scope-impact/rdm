@@ -37,16 +37,6 @@ Feature: Verify
       Then the checkout it verifies holds no src/rdm_spec/old.clj
       And every configured implementation path holds exactly what the room holds
 
-    # Cycle 01 of halla-health's wallet (spec-27): verify copied the room's
-    # node_modules, which .gitignore excludes, into the checkout, its links
-    # copied as files, and the install in the checkout broke.
-    @spec-0370 @e2e
-    Scenario: The room's implementation reaches the checkout as git would commit it
-      Given a room whose implementation holds a file its .gitignore excludes, a directory it excludes, and a symbolic link to a file beside it
-      When "rdm-spec verify ROOM 03" is run
-      Then the checkout holds neither the excluded file nor the excluded directory
-      And the symbolic link is a symbolic link in the checkout, to the same target
-
     @spec-0205 @e2e
     Scenario: Edits the builder made outside the implementation are not used
       Given the builder has edited dhf/harness/config.edn and a feature file in the room
@@ -246,46 +236,6 @@ Feature: Verify
         | standard output starting "{:help"  | prints "usage" and exits 0         | the first line it printed           |
         | an answer within 10 seconds        | is still running after 10 seconds  | the budget of 10 seconds            |
 
-  # A project's own judge joins verify as a plugin answering :Check
-  # (dhf/spec/08-plugins/plugins.feature; ADR 0003): verify asks it at its place in
-  # :verify, in the checkout, and it answers as every plugin does.
-  Rule: A :plugin check asks the project's own judge
-
-    @spec-0361 @e2e
-    Scenario Outline: A :plugin check passes, fails or cannot run as its plugin answers
-      Given a configuration whose :verify declares a :tests check, then {:kind :plugin :name "judge"}, and whose :plugins has "judge" answering :Check
-      And the tests check passes, and the plugin <answers>
-      When "rdm-spec verify ROOM 03" is run
-      Then it <exits>, and the check "judge" is <outcome>
-
-      Examples:
-        | answers                                                      | exits                                         | outcome   |
-        | exits 0                                                      | exits 0                                       | :passed   |
-        | writes "src/app.clj:9: form-missing: …" on its error stream and exits 1 | exits 1, relaying the finding unchanged | :failed   |
-        | exits 2                                                      | exits 2, naming the plugin                    | :refused  |
-
-    # spec-29: halla-health's acceptance harness answers :Check with Allure
-    # results of the spec's scenarios; they reached no task.
-    @spec-0391 @e2e
-    Scenario: A Check plugin's results are held to the mapping, and count
-      Given a :plugin check "acceptance" whose plugin writes Allure results of every scenario into the :results directory its request names
-      When "rdm-spec verify ROOM 03" is run
-      Then its request held :results "dhf/cycles/03/results/acceptance", and each result there was held to the :allure mapping as the tests check's are
-      And a result that did not pass, or a scenario with no result, fails the check "acceptance", naming the scenario
-      And a plugin that writes no results is judged by its exit alone, as before
-
-    @spec-0362 @contract
-    Scenario: A Check plugin is asked in the checkout, with its cycle and cut
-      Given a :plugin check whose plugin writes what it is given to a file
-      When "rdm-spec verify ROOM 03" is run
-      Then the plugin ran in the checkout, dhf/cycles/03/build, and its standard input was {:request :Check :cycle "03" :cut "spec-3" :checkout "dhf/cycles/03/build"}
-
-    @spec-0363 @e2e
-    Scenario: A :plugin check naming no plugin answering :Check is refused before anything runs
-      Given a configuration whose :verify declares {:kind :plugin :name "judge"}, and whose :plugins has no "judge" answering :Check
-      When "rdm-spec verify ROOM 03" is run
-      Then it exits 2, says the check names no plugin answering :Check, and runs no check
-
   # The results are the oracle of a project's scenarios; the mapping says how
   # each one carries the spec, and verify holds every result to it, so a test
   # that claims a scenario it does not follow fails the gate instead of
@@ -338,3 +288,16 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then each result is held to {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags} :links {:need {:type "issue" :url "N#{id}"}} :evidence {}}, N the configuration's :needs
       And N is dhf/spec/needs.edn for a configuration that names no :needs
+
+  # spec-32, from cycle 24: a slice-scoped verify required a result for every
+  # scenario, as a whole-project one does; spec-0389 narrowed a spec scope,
+  # nothing a slice scope. A slice scope rebuilds the components it reaches
+  # (ADR 0004), and those components' scenarios are what it answers to.
+  Rule: A slice-scoped verify answers for the components the slice reaches
+
+    @spec-0404 @e2e
+    Scenario: A cycle scoped to a slice is verified on the scenarios of the components it reaches
+      Given a configuration with :spec-layout :slices; the slice 12-several-specs reaching :spec/parser and :measurement/checklist; dhf/cycles/03/cycle.edn whose :scope is [{:slice "12-several-specs"}]; and a room whose tests write a passing result for every scenario of :spec/parser and :measurement/checklist, in any slice, and none for any other component
+      When "rdm-spec verify ROOM 03" is run
+      Then the tests check passes, counting those components' scenarios only
+      And with one of :spec/parser's results missing, it fails, naming that scenario

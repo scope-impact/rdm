@@ -316,9 +316,13 @@ given `{url}` as `http://127.0.0.1:PORT/` (with its "/") and runs for at most
 and named as timed out, what it printed kept. A `:serves` check polls K times, poll i at i x S/K seconds
 after its app starts; `:answered-on-poll` is the first poll answered and its
 margin is the polls left (K minus that poll). A `:runs` check's margin is the
-seconds of its budget left unused, to 0.01. A verify that cannot run (exit
-2) writes no `ratified.edn`, since nothing was verified; one refused (exit 1)
-writes it, with `:checkout` only when the checkout was made.
+seconds of its budget left unused, to 0.01. A verify that cannot run before
+any check runs (exit 2) writes no `ratified.edn`, since nothing was verified;
+one refused (exit 1) writes it, with `:checkout` only when the checkout was
+made. Once its checks have run, a check that cannot run (a plugin's, exit 2)
+or a `:CycleVerified` subscriber that cannot run still leaves `ratified.edn`
+written, that check `:refused`, and verify exits 2 (spec-32, from cycles 23
+and 24: spec-0361 and spec-0383 had said so against this entry).
 
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very

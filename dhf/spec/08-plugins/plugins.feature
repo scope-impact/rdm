@@ -117,6 +117,21 @@ Feature: Plugins
   # copies one and then owns it (ADR 0003, "Shared as templates").
   Rule: A plugin is added from the templates rdm-spec carries, and then owned
 
+    # spec-32, from cycle 24's grader: the ddd-domain template's command ran
+    # dhf/harness/plugins/ddd-domain/lint.clj, which the template did not
+    # carry, so a project that added it got a plugin that could not run.
+    @spec-0405 @e2e
+    Scenario Outline: An added template's plugin runs as it is declared
+      Given a project made by "rdm-spec init"
+      When "rdm-spec plugin add <template>" is run, and its entry is added to :plugins as it says
+      Then every file its command names is in dhf/harness/plugins/<template>/
+      And "rdm-spec check" runs the plugin, and the plugin does not answer cannot run
+
+      Examples:
+        | template    |
+        | ddd-domain  |
+        | affordances |
+
     # Cycle 21: packaged from its sources alone, rdm-spec carried no template,
     # and plugin add found none (spec-0359, spec-0360, wording). Every package
     # carries them (spec owner, spec-26).

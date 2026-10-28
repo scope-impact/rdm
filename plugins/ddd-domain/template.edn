@@ -1,4 +1,4 @@
 {:name "ddd-domain"
- :version 1
+ :version 2
  :plugin {:name "ddd-domain" :subscribes [:SpecParsed]
           :command ["bb" "dhf/harness/plugins/ddd-domain/lint.clj"]}}

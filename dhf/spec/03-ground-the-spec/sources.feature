@@ -63,6 +63,14 @@ Feature: Sources
   # the source's id.
   Rule: A citation resolves to a source, a pin and a path
 
+    # spec-32, from cycle 24's grader: with several needs citing one string,
+    # every finding named the line where the string first appeared.
+    @spec-0402 @e2e
+    Scenario: A citation's finding names the line the citation is on
+      Given dhf/spec/needs.edn whose needs UN-001 and UN-004 both cite "loyly:README.md@17d68d2", on lines 3 and 9, and no --sources given
+      When "rdm-spec check" is run
+      Then it warns citation-unchecked twice, naming dhf/spec/needs.edn:3 for UN-001 and dhf/spec/needs.edn:9 for UN-004
+
     @spec-0171 @contract
     Scenario: Source checkouts are given as one directory, one checkout per source
       Given a directory holding loyly/ and innolitics-rdm/, checkouts of those sources

@@ -57,18 +57,22 @@ following it, and a plan beside each slice's files.
 | `09-publish` | site |
 | `10-regulated-profile` | gap, audit |
 
-Once a build that reads `:spec-layout :slices` is installed, the rules that
-belong to another slice move there, keeping their ids: kernel/command's
-"A gate stops the task" and verify's :plugin check to `08-plugins`; the
-checklist's and the release's regulated rules to `10-regulated-profile`;
-command's "A project may be one folder" and verify's spec-0370 to
-`11-project-in-a-folder`; parser's "one spec, or several" to
-`12-several-specs`. A slice reaches exactly the components it holds feature
-files for, never one its plan only names: where a rule written in one
-component reaches others (spec-29's several spec folders reach stamper,
-check, checklist, verify, status, trace and release from one parser rule),
-the slice gets a scenario for each of them, in a feature file named for it,
-so its scope is read from the spec and never widened by hand.
+Split by rule in spec-32, once cycle 24's build read the slices layout,
+every rule keeping its id:
+
+- verify's :plugin check went to `08-plugins/verify.feature`; the
+  checklist's and the release's regulated rules to `10-regulated-profile`.
+- `11-project-in-a-folder` holds command's folder rule, fence's spec-0369,
+  verify's spec-0370, and a scenario each for checklist and scopes.
+- `12-several-specs` holds parser's rule, and a scenario for each component
+  it reaches: check, stamper, checklist, verify, status, trace and release
+  (spec-0390's status row became status's own scenario).
+- command's "A gate stops the task" stayed in `01-start-a-project`: it says
+  how a task reports its stages, not what a plugin does.
+
+A slice reaches exactly the components it holds feature files for, never one
+its plan only names, so its scope is read from the spec and never widened by
+hand.
 
 ## Consequences
 
