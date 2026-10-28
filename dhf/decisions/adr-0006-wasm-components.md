@@ -62,6 +62,39 @@ there is no whole WebAssembly build to install.
 - **Output stays EDN.** Every result and record the spec states is EDN, as
   the spec says; the stack changes nothing a grader can see.
 
+## Build order (spec owner, after slice 01's plan)
+
+Slices are built in the order their tasks are needed, not by number; the
+numbers stay their names. Slice 01's plan found 8 of its 23 scenarios need
+tasks other slices build (check, status, fence, verify), so in number order
+no cycle's verify could pass before about the eighth.
+
+| Cycle | Builds | Why here |
+|---|---|---|
+| 1 | `kernel/command` (the walking skeleton: host, composition, task table, help, how a task reports) and slice 02, write the spec (parser, stamper, check) | every task runs through the command; check is the first task every other slice's scenarios lean on |
+| 2 | 04, model the architecture (model, lint, views) | check's model and views stages |
+| 3 | 03, ground the spec (sources, wiki) | check's sources and wiki stages |
+| 4 | 08, plugins (plugins, bus, oracle) | check's subscribers; the gate fence and verify ask |
+| 5 | 01, start a project (init, adopt, hooks) | a new project is green only once check's stages exist |
+| 6 | 05, verify by results (runner, results, status, trace, release) | |
+| 7 | 06, regenerate (cut, scopes, fence, verify) | needs the gate and results |
+| 8 | 07, measure (checklist, scorer, scoreboard, observe) | |
+| 9 | 09, publish | |
+| 10 | 10, the regulated profile (gap, audit) | |
+| 11 | 11, 12 and 13 | no component's home is in them: their scenarios are built with the components they reach; this cycle verifies and grades them as slices |
+
+A component is built whole in its home slice's cycle, so it carries every
+scenario of it in any slice; where such a scenario needs a task a later
+cycle builds, it waits for that cycle and is named in the plan as pending.
+
+## How the command reaches the slices (spec owner)
+
+Every slice exports one `tasks` interface: its entries in the task table
+(name, usage, what it does) and `run` for its tasks. The command composes
+them all; a task whose slice is not built yet answers that it is not built.
+Adding a slice adds one instance and its wiring to `rdm-spec.wac`; nothing
+already there is rewritten.
+
 ## Consequences
 
 - Building slice 01 builds its components whole, so `kernel/command` is

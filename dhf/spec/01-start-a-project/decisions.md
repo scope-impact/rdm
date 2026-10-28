@@ -40,6 +40,9 @@ settles each before the build, or turns it into a scenario. The tickets
 
 ### ED-01: Scenarios whose task another slice builds
 
+**Settled by the spec owner:** slices are built in dependency order, not by number (ADR 0006, "Build order"); this slice is built fifth, its command first, with slice 02.
+
+
 Eight of the 23 scenarios this slice's components answer for run a task
 another slice builds: spec-0177, spec-0090 (check: slices 02, 03, 04, 06's
 paths, 08's plugins), spec-0178 (check: 02, and every stage check runs),
@@ -70,6 +73,9 @@ cycle is accepted on its 15 scenarios with the 8 named here pending. A and B
 make a green the build did not earn. Givens are a separate question (ED-12).
 
 ### ED-02: How the command reaches another slice's tasks (composition)
+
+**Settled by the spec owner:** every slice exports one `tasks` interface (its task-table entries and `run`); the command composes them, and a slice not built answers that it is not built (ADR 0006, "How the command reaches the slices").
+
 
 kernel/command dispatches every task, but the components owning them come in
 later slices, each composed by its own `slice-NN.wac`, and `rdm-spec.wac`
