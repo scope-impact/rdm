@@ -1,0 +1,76 @@
+// Component Observe of the agency context (dhf/spec/model.edn,
+// :agency/observe; dhf/spec/07-measure/observe.feature): the task "rdm-spec
+// observe begin CYCLE ROLE ROOM, or end CYCLE ROLE [--tokens N], or report
+// CYCLE CYCLE", which records each run's time, cost and defence (what it
+// touched outside its room) into dhf/cycles/CYCLE/runs.edn, and sets two
+// cycles' runs side by side, never netted (the glossary's "Run",
+// "Observation" and "Breach"). It observes from outside: it records, never
+// prevents, never stops a run; reads are not observed, and the record says
+// so.
+//
+// The watched directories (the configuration's :agency :watch, "~" the home
+// directory) and the temporary directory (:agency :tmp) lie outside the
+// project: they are read through the host's standard interfaces from the
+// root folder the host opens (slice 01's ED-05), the home directory from
+// the environment the host passes (dhf/spec/07-measure/decisions.md, ED-02).
+// The project's git status, outside the cycle, is read by running git
+// through rdm:host/process in the project's root, on the project's folder
+// within its repository (ED-10). What begin saw is kept in the cycle's
+// directory until end reads it (ED-08). Its types are its own and builtin.
+
+interface agency-observe {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types: exit, standard output (the result as EDN), error lines
+    /// (each write outside the room a warning naming it, spec-0287).
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// A run's defence (spec-0286): the paths written outside its room in
+    /// the watched directories (spec-0287), the entries it left in the
+    /// temporary directory (spec-0288), the project's paths it changed
+    /// outside its cycle, relative to the project's folder (spec-0289),
+    /// whether the configured results directory was written inside its room
+    /// (spec-0290), and what could not be observed, reads outside the room
+    /// always among them (spec-0291; G-34).
+    record defence {
+        writes-outside: list<string>,
+        tmp-left: u32,
+        repo-touched: list<string>,
+        results-in-room: bool,
+        unobserved: list<string>,
+    }
+
+    /// One entry of runs.edn (spec-0286): exactly :role, :room, :began,
+    /// :ended, :minutes, :tokens and :defence (G-33 for each one's form).
+    record run-entry {
+        role: string,
+        room: string,
+        began: string,
+        ended: string,
+        minutes: f64,
+        tokens: option<u64>,
+        defence: defence,
+    }
+
+    /// Runs "rdm-spec observe begin CYCLE ROLE ROOM", "observe end CYCLE
+    /// ROLE [--tokens N]" or "observe report CYCLE CYCLE" with its
+    /// arguments, as given, and the project's folder (tasks.wit, request).
+    /// begin records what the run starts from (ED-08); end compares, appends
+    /// one entry to runs.edn, warns of each write outside the room and exits
+    /// 0 (spec-0287), and with no begun run of the role in the cycle exits 2
+    /// saying so (spec-0292); report prints {:observe {:cycles :runs
+    /// :minutes :tokens :breaches}} (spec-0293; G-40).
+    run: async func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The component agency/observe builds to: it lists directories and reads
+/// the clock through the host's standard interfaces, and runs git through
+/// the host. Its standard interfaces are those every component carries, in
+/// the version slice 01's worlds name (slice 02's ED-08; ED-12).
+world agency-observe-component {
+    import rdm:host/process@0.1.0;
+    export agency-observe;
+}

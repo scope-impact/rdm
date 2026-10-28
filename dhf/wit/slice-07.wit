@@ -1,0 +1,55 @@
+// Slice 07, measure (dhf/spec/07-measure/plan.md): someone other than the
+// builder sees, cycle over cycle, how completely the spec carries the
+// product, and what each run achieved, did outside its brief, and cost; the
+// instrument never records what it did not measure.
+//
+// The slice's home components are measurement/checklist,
+// measurement/scorer, measurement/scoreboard and agency/observe (their
+// model spec paths name it; measurement/oracle's is slice 08's). The scorer
+// reads the checklist's readers, the scoreboard the checklist's and the
+// scorer's (ED-07), all within this composition.
+//
+// Exports: the four components' interfaces, and the slice's tasks
+// (tasks.wit: checklist, score, scoreboard and observe), which rdm-spec.wac
+// wires to the command's import measure (tasks.wit, later-slices). Imports:
+// the host's processes (observe's git); regeneration/cut (its own instance,
+// slice 06's ED-01), with whose git helpers the checklist resolves a cut,
+// reads its configuration and lists its slices (ED-03); spec/parser and its
+// event records (slice 02), with which the checklist reads the spec at the
+// cut; and compliance/gap's clause index (slice 10), the not-built
+// stand-in's until then (ED-04). No slice imports this composition but the
+// command, and it imports nothing that imports it: no cycle.
+//
+// The standard interfaces are named by no world of this slice, as in slices
+// 02 to 06 and 08: the cycle that builds the slice adds the line slice 01's
+// worlds carry, in the version they carry (slice 02's ED-08; ED-12).
+// Composed by slice-07.wac.
+
+world measure {
+    import rdm:host/process@0.1.0;
+    import regeneration-cut;
+    import spec-parser;
+    import clause-index: interface {
+        index: async func(revision: string, folder: option<string>) -> option<result<string, string>>;
+    }
+    export measurement-checklist;
+    export measurement-scorer;
+    export measurement-scoreboard;
+    export agency-observe;
+    export tasks;
+}
+
+/// The slice's tasks (ED-11): composition, not a component of the model,
+/// holding no rdm-spec logic. Its entries are the task table's rows of
+/// checklist, score, scoreboard and observe, as spec-0176 writes them
+/// (slice 01's ED-18); it runs checklist with measurement/checklist, score
+/// with measurement/scorer, scoreboard with measurement/scoreboard and
+/// observe with agency/observe, each with its arguments (and the project's
+/// folder, for checklist and observe), and answers none for any other task.
+world measure-tasks {
+    import measurement-checklist;
+    import measurement-scorer;
+    import measurement-scoreboard;
+    import agency-observe;
+    export tasks;
+}

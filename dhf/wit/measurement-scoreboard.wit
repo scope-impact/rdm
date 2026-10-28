@@ -1,0 +1,44 @@
+// Component Scoreboard of the measurement context (dhf/spec/model.edn,
+// :measurement/scoreboard; dhf/spec/07-measure/scoreboard.feature): the task
+// "rdm-spec scoreboard CYCLE CYCLE", which compares two cycles' filed scores
+// over the items both scored, better and worse counted apart and never a
+// net, a moved denominator said aloud, a scoped cycle's target reported
+// first and the rest apart, and nothing compared against a bootstrap cycle
+// (the glossary's "Scoreboard").
+//
+// It reads each cycle's cycle.edn with measurement/checklist's reader (its
+// scope, its :bootstrap) and its score.edn with measurement/scorer's (the
+// model's "Compares the filed scores of"; ED-07). It runs no process and
+// writes nothing: its result is its standard output. Its types are its own
+// and builtin.
+
+interface measurement-scoreboard {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types: exit, standard output (the result as EDN, spec-0283,
+    /// spec-0284), error lines.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// Runs "rdm-spec scoreboard CYCLE CYCLE" with its arguments, as given,
+    /// in the project's root: the first cycle the baseline, the second
+    /// compared with it. Two whole-project cycles: {:scoreboard {:cycles
+    /// :scored :compared :better :worse :better-items :worse-items :only-in
+    /// :statements}} (spec-0283, spec-0020, spec-0021); a scoped cycle: its
+    /// :target first, then :rest with what was not scored (spec-0284,
+    /// spec-0225; G-28); a bootstrap cycle marked, no better or worse
+    /// counted against it (spec-0192; G-25). A cycle with no score cannot
+    /// run, exit 2 (G-26).
+    run: func(args: list<string>) -> outcome;
+}
+
+/// The component measurement/scoreboard builds to. It reads files only. Its
+/// standard interfaces are those every component carries, in the version
+/// slice 01's worlds name (slice 02's ED-08; ED-12).
+world measurement-scoreboard-component {
+    import measurement-checklist;
+    import measurement-scorer;
+    export measurement-scoreboard;
+}

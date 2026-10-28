@@ -1,0 +1,170 @@
+// Component Checklist of the measurement context (dhf/spec/model.edn,
+// :measurement/checklist; dhf/spec/07-measure/checklist.feature,
+// dhf/spec/10-regulated-profile/checklist.feature,
+// dhf/spec/11-project-in-a-folder/checklist.feature,
+// dhf/spec/12-several-specs/checklist.feature,
+// dhf/spec/13-slice-development/checklist.feature; and the cycle's scope, as
+// dhf/spec/07-measure/scorer.feature and
+// dhf/spec/13-slice-development/scorer.feature state it, read by "rdm-spec
+// checklist CYCLE"): the task "rdm-spec checklist CYCLE", one item per
+// stamped scenario of the cycle's scope at its cut, never written by hand,
+// the planned ones apart, and, under the regulated profile, each clause an
+// item after them (the glossary's "Clause item").
+//
+// It reads the cycle's cycle.edn from the project's folder (the cycle is
+// written by hand, never cut; dhf/spec/07-measure/decisions.md, ED-07);
+// resolves the cycle's cut, reads the cut's configuration and lists the
+// cut's slices with regeneration/cut's git helpers (ED-03; slice 06's ED-03
+// and ED-04); reads the spec at the cut with spec/parser (slice 02; the
+// model's "Publishes" SpecParsed to checklist); and, under :regulated, the
+// clauses at the cut with compliance/gap's clause index (the model's
+// "Publishes" ClausesIndexed to checklist), which the not-built stand-in
+// answers until slice 10 is built (ED-04). It runs no process of its own.
+//
+// It also exports the readings of cycle.edn and checklist.json, so the
+// scorer and the scoreboard read each file through one reader (the model's
+// "Scores" and "Compares the filed scores of"; ED-07). Its types are its own
+// and builtin (slice 01's ED-14); the scorer and the scoreboard use them
+// within this slice.
+
+interface measurement-checklist {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types: exit, standard output (the result as EDN), error lines.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// One who fills a role of the cycle, as cycle.edn writes it: {:name
+    /// "builder-a" :actor :agent}, actor as written (":agent", ":human";
+    /// spec-0142).
+    record person {
+        name: string,
+        actor: string,
+    }
+
+    /// One part of a scope (the glossary's "Scope"), as cycle.edn writes
+    /// it: {:context :verification} (the context's id without its colon,
+    /// "kernel" for the kernel), {:component :spec/parser} (the component's
+    /// id without its colon), {:spec "auth"} (spec-0389) or {:slice
+    /// "12-several-specs"} (spec-0396).
+    variant scope-part {
+        context(string),
+        component(string),
+        spec(string),
+        slice(string),
+    }
+
+    /// A cycle's scope: the project, or one part or a list of parts
+    /// (spec-0200), read as a list either way.
+    variant scope {
+        project,
+        parts(list<scope-part>),
+    }
+
+    /// dhf/cycles/CYCLE/cycle.edn, read (spec-0173): the cycle as named
+    /// ("03"); its cut ("spec-3"); its scope, a :slice read as [{:slice S}]
+    /// (spec-0417), none given read as the project (G-04); scope-edn, the
+    /// scope as score.edn and the scoreboard print it, EDN; the slice a
+    /// slice cycle builds (:slice, or the one slice of [{:slice S}]); the
+    /// three roles, none where the cycle names none (spec-0144 is the
+    /// scorer's refusal); and :bootstrap (spec-0192).
+    record cycle {
+        cycle: string,
+        cut: string,
+        scope: scope,
+        scope-edn: string,
+        slice: option<string>,
+        builder: option<person>,
+        grader: option<person>,
+        spec-owner: option<person>,
+        bootstrap: bool,
+    }
+
+    /// One item to grade (spec-0210): a stamped scenario not tagged @wip of
+    /// the scope, or a clause (spec-0266). id, title, context and component
+    /// by the model's :name ("architecture", "Lint"; a clause's
+    /// "compliance" and its clause list's path), level ("e2e", "contract",
+    /// "clause"); in a slice cycle, the slice its scenario sits in and its
+    /// role, "slice" or "regression" (spec-0395, spec-0414; G-07).
+    record item {
+        id: string,
+        title: string,
+        context: string,
+        component: string,
+        level: string,
+        slice: option<string>,
+        role: option<string>,
+    }
+
+    /// One planned scenario of the scope, listed apart (spec-0019, spec-0210).
+    record planned {
+        id: string,
+        title: string,
+    }
+
+    /// dhf/cycles/CYCLE/checklist.json: the cycle, its cut, its items
+    /// (scenarios sorted by id, then the clauses in the clause lists'
+    /// order) and its planned scenarios sorted by id (spec-0210, spec-0266).
+    record checklist {
+        cycle: string,
+        cut: string,
+        items: list<item>,
+        planned: list<planned>,
+    }
+
+    /// The cycle's cycle.edn, in the project's folder (the task runs in the
+    /// project's root, tasks.wit). The error is why it cannot be read, for
+    /// the task's cannot-run line (exit 2): no such file, not EDN, no :cut,
+    /// a scope it cannot read, both :slice and :scope (spec-0417; G-02).
+    read-cycle: func(cycle: string) -> result<cycle, string>;
+
+    /// The cycle's checklist.json as checklist wrote it; none when the cycle
+    /// has none. The error is why it cannot be read.
+    derived: func(cycle: string) -> result<option<checklist>, string>;
+
+    /// Runs "rdm-spec checklist CYCLE" with its arguments, as given, and the
+    /// project's folder (tasks.wit, request), in this order: cycle.edn read
+    /// (exit 2 when it cannot be); its cut resolved, not a cut exit 2
+    /// (G-02); the cut's configuration read (G-03); the spec at the cut read
+    /// with spec/parser, a scenario with no id exit 1 naming its file and
+    /// line, nothing written (spec-0211; G-09); the scope held to the cut, a
+    /// slice the cut does not hold exit 2 naming it (spec-0396; G-04);
+    /// under :regulated, with a scope reaching compliance, the clauses at
+    /// the cut (ED-04); then checklist.json written in the project's
+    /// folder's cycles (spec-0406), nothing outside it.
+    run: async func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The component measurement/checklist builds to. It reads git through
+/// regeneration/cut's helpers and spec/parser, both of which run it through
+/// the host, so it imports no process itself. clause-index is compliance/
+/// gap's, wired by name in rdm-spec.wac: the not-built stand-in's until
+/// slice 10 is built (ED-04). Its standard interfaces are those every
+/// component carries, in the version slice 01's worlds name (slice 02's
+/// ED-08; ED-12).
+world measurement-checklist-component {
+    import regeneration-cut;
+    import spec-parser;
+    /// compliance/gap's clause index (slice 10): ClausesIndexed at a
+    /// revision (a cut), as EDN, {:event :ClausesIndexed} merged with the
+    /// keys it carries (dhf/spec/events.edn), for the project's folder.
+    /// None: not built. The error is why the clause lists cannot be read.
+    import clause-index: interface {
+        index: async func(revision: string, folder: option<string>) -> option<result<string, string>>;
+    }
+    export measurement-checklist;
+}
+
+/// The stand-in's clause index until slice 10 is built: composition, not a
+/// component of the model, holding no rdm-spec logic; index answers none.
+/// rdm-spec.wit's not-built includes it (ticket 01, as slice 02 added
+/// check-stages-not-built), so rdm-spec.wac's spread wires it to the
+/// checklist; slice 10's compliance/gap exports the same interface, wired
+/// by name ahead of the spread when it is built (ED-04).
+world clause-index-not-built {
+    export clause-index: interface {
+        index: async func(revision: string, folder: option<string>) -> option<result<string, string>>;
+    }
+}

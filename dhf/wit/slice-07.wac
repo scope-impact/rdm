@@ -1,0 +1,54 @@
+// Slice 07, measure (dhf/spec/07-measure/plan.md), composed from
+// measurement/checklist, measurement/scorer, measurement/scoreboard,
+// agency/observe and the slice's tasks (ED-11), each built to its own
+// component exporting its interface
+// (wasm/components/<context>-<component>/, dhf/harness/stack.md). Targets
+// the slice's world, measure (slice-07.wit).
+//
+// Each component's imports within the slice are wired here (ED-07): the
+// scorer reads cycle.edn and checklist.json with the checklist's readers;
+// the scoreboard reads cycle.edn with the checklist's and score.edn with the
+// scorer's; the tasks run each task with its component. Every other import
+// is left to the composition: the host's standard interfaces and
+// rdm:host/process (observe's git), which the host satisfies;
+// regeneration/cut (its own instance, slice 06's ED-01) and spec/parser and
+// its event records (slice 02), which the checklist reads the cut with; and
+// the clause index (compliance/gap, slice 10; the not-built stand-in's until
+// then, ED-04), which rdm-spec.wac wires in this slice's instance line.
+//
+// Packages resolve from the build's dependency directory, as slice-01.wac
+// says: rdm:measurement-checklist is
+// wasm/build/deps/rdm/measurement-checklist.wasm, and rdm:spec@0.1.0 is
+// dhf/wit encoded. Then
+// "wac compose dhf/wit/slice-07.wac --deps-dir wasm/build/deps
+//  -o wasm/build/deps/rdm/measure.wasm".
+package rdm:measure targets rdm:spec/measure@0.1.0;
+
+let checklist = new rdm:measurement-checklist { ... };
+
+let scorer = new rdm:measurement-scorer {
+    "rdm:spec/measurement-checklist@0.1.0": checklist["rdm:spec/measurement-checklist@0.1.0"],
+    ...
+};
+
+let scoreboard = new rdm:measurement-scoreboard {
+    "rdm:spec/measurement-checklist@0.1.0": checklist["rdm:spec/measurement-checklist@0.1.0"],
+    "rdm:spec/measurement-scorer@0.1.0": scorer["rdm:spec/measurement-scorer@0.1.0"],
+    ...
+};
+
+let observe = new rdm:agency-observe { ... };
+
+let tasks = new rdm:measure-tasks {
+    "rdm:spec/measurement-checklist@0.1.0": checklist["rdm:spec/measurement-checklist@0.1.0"],
+    "rdm:spec/measurement-scorer@0.1.0": scorer["rdm:spec/measurement-scorer@0.1.0"],
+    "rdm:spec/measurement-scoreboard@0.1.0": scoreboard["rdm:spec/measurement-scoreboard@0.1.0"],
+    "rdm:spec/agency-observe@0.1.0": observe["rdm:spec/agency-observe@0.1.0"],
+    ...
+};
+
+export checklist["rdm:spec/measurement-checklist@0.1.0"];
+export scorer["rdm:spec/measurement-scorer@0.1.0"];
+export scoreboard["rdm:spec/measurement-scoreboard@0.1.0"];
+export observe["rdm:spec/agency-observe@0.1.0"];
+export tasks["rdm:spec/tasks@0.1.0"];

@@ -1,0 +1,102 @@
+// Component Scorer of the measurement context (dhf/spec/model.edn,
+// :measurement/scorer; dhf/spec/07-measure/scorer.feature,
+// dhf/spec/13-slice-development/scorer.feature): the task "rdm-spec score
+// CYCLE --verdicts FILE [--verdicts FILE ...]", which files the graders'
+// verdicts on a verified cycle into its score.edn, and nothing when nothing
+// was graded; an item nobody graded a fail; never for a cycle whose builder
+// grades or reads its own score.
+//
+// It reads cycle.edn and checklist.json with measurement/checklist's
+// readers (the model's "Scores" the checklist, and "Reads cycle.edn, the
+// checklist and verdicts"; ED-07), ratified.edn, the record verify wrote,
+// as a file (ED-06: it imports nothing of verify), and the verdicts files
+// as given; it writes score.edn beside the cycle. It runs no process and
+// reads no cut. It exports the reading of score.edn, so the scoreboard
+// reads each filed score through one reader (the model's "Compares the
+// filed scores of").
+
+interface measurement-scorer {
+    use measurement-checklist.{person};
+
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types: exit, standard output (the result as EDN), error lines.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// A grader's verdict on one item: :pass or :fail (spec-0212, spec-0213).
+    enum verdict {
+        pass,
+        fail,
+    }
+
+    /// One item as score.edn files it (spec-0174, spec-0023): its id, its
+    /// verdict and the evidence given, or, ungraded, :fail with "ungraded:
+    /// no verdict was given" and :ungraded true (left out otherwise).
+    record filed-item {
+        id: string,
+        verdict: verdict,
+        evidence: string,
+        ungraded: bool,
+    }
+
+    /// Items passed of items scored.
+    record tally {
+        passed: u32,
+        scored: u32,
+    }
+
+    /// A slice cycle's own items: its slice's name and their tally
+    /// (spec-0418).
+    record slice-tally {
+        name: string,
+        passed: u32,
+        scored: u32,
+    }
+
+    /// dhf/cycles/CYCLE/score.edn (spec-0174, spec-0418): the cycle, its
+    /// cut, its scope as cycle.edn gives it (EDN), the room's tree from
+    /// ratified.edn, the three roles, every item of the checklist filed, the
+    /// passed and scored counts; in a slice cycle, its slice's tally and the
+    /// regression items' (spec-0418), left out otherwise.
+    record score {
+        cycle: string,
+        cut: string,
+        scope-edn: string,
+        room-tree: string,
+        builder: person,
+        grader: person,
+        spec-owner: person,
+        items: list<filed-item>,
+        passed: u32,
+        scored: u32,
+        slice: option<slice-tally>,
+        regression: option<tally>,
+    }
+
+    /// The cycle's score.edn as the scorer filed it; none when the cycle has
+    /// none. The error is why it cannot be read.
+    filed: func(cycle: string) -> result<option<score>, string>;
+
+    /// Runs "rdm-spec score CYCLE --verdicts FILE [--verdicts FILE ...]"
+    /// with its arguments, as given, in the project's root: cycle.edn read,
+    /// each role named and the builder neither grader nor spec owner
+    /// (spec-0143, spec-0144); ratified.edn holding :outcome :passed
+    /// (spec-0214; ED-06); the checklist read (G-16); every verdicts file
+    /// read as EDN, a vector of {:id :verdict :evidence}, held as one
+    /// (spec-0379, spec-0380, spec-0213, spec-0201); no verdict at all,
+    /// exit 2, nothing written (spec-0022); else score.edn written, every
+    /// checklist item filed, an ungraded one a fail (spec-0023). Every exit
+    /// 1 writes nothing.
+    run: func(args: list<string>) -> outcome;
+}
+
+/// The component measurement/scorer builds to. It reads and writes files
+/// only. Its standard interfaces are those every component carries, in the
+/// version slice 01's worlds name (slice 02's ED-08; ED-12).
+world measurement-scorer-component {
+    import measurement-checklist;
+    export measurement-scorer;
+}
