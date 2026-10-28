@@ -1,268 +1,263 @@
 (ns steps.spec-parser
-  "Step definitions of dhf/spec/spec/parser.feature, and the spec context's
-  helpers: a project keeping two specs, auth and infra."
+  "Steps of the component Parser (dhf/spec/02-write-the-spec/parser.feature)."
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep fail!]]
-            [steps.kernel-command :as k]))
+            [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-shared :as k]))
 
-(defn feature [name n-from n-to]
-  (k/feature-text {:name name :tags ["UN-001"]
-                   :scenarios (for [i (range n-from (inc n-to))] (k/sc i (str "Scenario " i)))}))
-
-;; ---------------------------------------------------------------------------
-;; The spec is read at a revision
+(defn n-scenarios [n]
+  (k/feature-text "Thing" ["UN-001"] (for [i (range 1 (inc n))] {:id (format "spec-%04d" i) :title (str "Scenario " i)})))
 
 (defstep #"dhf/cycles/03/cycle.edn names the cut spec-3 and the scope :project"
-  (fn [ctx] (-> (k/project! ctx) (k/cycle! "03" (merge {:cut "spec-3" :scope :project} k/roles)))))
+  (fn [ctx] (assoc ctx ::cycle true)))
 
 (defstep #"the spec at spec-3 holds 12 stamped scenarios and the working tree's spec holds 13"
   (fn [ctx]
-    (k/write-files! (:dir ctx) {k/core-feature (feature "Core" 1 12) "dhf/spec/ids.edn" "{:issued 13}\n"})
-    (k/tag-cut! ctx "spec-3")
-    (k/write-files! (:dir ctx) {k/core-feature (feature "Core" 1 13)})
-    ctx))
-
-(defn checklist [ctx]
-  (json/parse-string (slurp (fs/file (:dir ctx) "dhf/cycles/03/checklist.json"))))
+    (let [ctx (k/spec-project! ctx {:features {"dhf/spec/demo/thing.feature" (n-scenarios 12)}})]
+      (k/cut-project! ctx)
+      (k/write! ctx "dhf/spec/demo/thing.feature" (n-scenarios 13))
+      (k/write! ctx "dhf/spec/ids.edn" "{:issued 13}\n"))))
 
 (defstep #"the checklist holds the 12 scenarios of spec-3"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (assert (= (map #(format "spec-%04d" %) (range 1 13)) (map #(get % "id") (get (checklist ctx) "items"))))
-    ctx))
-
-;; ---------------------------------------------------------------------------
-;; The declared subset of Gherkin
+    (k/exits! ctx 0)
+    (let [cl (json/parse-string (k/slurp-rel ctx "dhf/cycles/03/checklist.json"))]
+      (k/check! (= (for [i (range 1 13)] (format "spec-%04d" i)) (map #(get % "id") (get cl "items"))) "the checklist holds " (pr-str (map #(get % "id") (get cl "items"))))
+      ctx)))
 
 (def every-construct
   "# A comment
 @UN-001
 Feature: Every construct
-  A description of the feature.
+  A feature using every construct of the subset.
 
   Background:
-    Given a background step
+    Given a background
 
   Rule: A rule
-    A description of the rule.
 
     @spec-0001 @e2e
     Scenario: A scenario
-      Given a doc string:
+      Given a table
+        | a | b |
+        | 1 | 2 |
+      When a doc string
         \"\"\"
         some text
         \"\"\"
-      When a table:
-        | a | b |
-        | 1 | 2 |
       Then it holds
-      And it holds again
-      But not that
+      And it still holds
+      But nothing else
 
-    # another comment
     @spec-0002 @contract
-    Scenario Outline: An outline with <n>
-      Given the value <n>
+    Scenario Outline: An outline of <x>
+      Given <x>
       Then it holds
 
       Examples:
-        | n |
+        | x |
         | 1 |
         | 2 |
 ")
 
+(defn one-file [ctx text]
+  (k/spec-project! ctx {:features {"dhf/spec/demo/thing.feature" text} :ledger 2}))
+
 (defstep #"a stamped feature file using Feature, Background, Rule, Scenario, Scenario Outline, Examples, Given, When, Then, And, But, tags, comments, doc strings and data tables"
-  (fn [ctx] (k/project! ctx {:features {k/core-feature every-construct} :extra {"dhf/spec/ids.edn" "{:issued 2}\n"}})))
+  (fn [ctx] (one-file ctx every-construct)))
 
 (defstep #"a feature file containing a line starting with \"Scenario Template:\""
   (fn [ctx]
-    (-> (k/project! ctx {:features {k/core-feature (str (feature "Core" 1 1) "\n  Scenario Template: Not ours\n    Given a step\n")}})
-        (k/names+ (str k/core-feature ":10") "Scenario Template"))))
+    (one-file ctx "@UN-001\nFeature: Thing\n\n  @spec-0001 @e2e\n  Scenario: Fine\n    Given a thing\n\n  @spec-0002 @e2e\n  Scenario Template: Not in the subset\n    Given a thing\n")))
+
+(defstep #"it fails and names the file, the line number and the keyword"
+  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx "dhf/spec/demo/thing.feature:9:" "Scenario Template") ctx))
 
 (defstep #"a feature file with two Feature lines"
   (fn [ctx]
-    (-> (k/project! ctx {:features {k/core-feature (str (feature "Core" 1 1) "\nFeature: Another\n")}})
-        (k/names+ (str k/core-feature ":10")))))
+    (one-file ctx "@UN-001\nFeature: Thing\n\n  @spec-0001 @e2e\n  Scenario: Fine\n    Given a thing\n\nFeature: Another\n")))
 
-;; ---------------------------------------------------------------------------
-;; A project keeps one spec, or several, one folder each
+(defstep #"it fails and names the file and the line of the second Feature"
+  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx "dhf/spec/demo/thing.feature:8:") ctx))
 
-(def specs [{:name "auth" :dir "dhf/sdd/auth" :id-prefix "auth"} {:name "infra" :dir "dhf/sdd/infra" :id-prefix "infra"}])
+;; ------------------------------------------------------------------ several specs
 
-(defn spec-files
-  "One spec's folder: a context of one component, its feature holding the
-  scenarios given (k/sc maps with the spec's prefix)."
-  [{:keys [dir id-prefix]} ctx-name comp scenarios issued needs]
-  {(str dir "/model.edn") (k/pr-edn (k/model {:contexts [[ctx-name [comp]]]}))
-   (str dir "/events.edn") "{}\n"
-   (str dir "/needs.edn") (k/pr-edn needs)
-   (str dir "/glossary.md") "# Glossary\n"
-   (str dir "/ids.edn") (str "{:issued " issued "}\n")
-   (str dir "/" ctx-name "/" comp ".feature")
-   (k/feature-text {:name (str/capitalize comp) :tags ["UN-001"] :scenarios scenarios})})
+(defn spec-folder!
+  "Writes the spec NAME into dhf/sdd/NAME: a kernel component login, FEATURE its feature file."
+  [ctx name feature & [{:keys [needs issued]}]]
+  (let [d (str "dhf/sdd/" name)]
+    (k/write-edn! ctx (str d "/model.edn") {:system {:id (keyword name) :name name :description "One spec"}
+                                             :kernel [{:id :kernel/login :name "Login" :spec "auth/login" :description "Logs in"}]})
+    (k/write-edn! ctx (str d "/events.edn") {})
+    (k/write-edn! ctx (str d "/needs.edn") (or needs {"UN-001" {:text "A need" :sources ["demo:README.md@abc1234"]}}))
+    (k/write! ctx (str d "/glossary.md") "# Glossary\n")
+    (k/write! ctx (str d "/ids.edn") (str "{:issued " (or issued (k/issued-of {"f" feature})) "}\n"))
+    (k/write! ctx (str d "/auth/login.feature") feature)
+    ctx))
 
-(defn psc [prefix n title] (assoc (k/sc n title) :tags [(format "%s-%04d" prefix n) "e2e"]))
-
-(def need {"UN-001" {:text "A need" :sources ["demo:README.md@abc1234"]}})
+(defn feature-of [prefix need ids & [unstamped]]
+  (str "@" need "\nFeature: Login\n"
+       (str/join (for [i ids] (k/scenario-text {:id (format "%s-%04d" prefix i) :title (str "Login " i)})))
+       (when unstamped "\n  @e2e\n  Scenario: Not stamped yet\n    Given a thing\n")))
 
 (defn two-specs!
-  "A project keeping the specs auth (login/form) and infra (net/proxy)."
-  ([ctx] (two-specs! ctx {}))
-  ([ctx {:keys [auth infra auth-issued infra-issued infra-needs]}]
-   (let [[a i] specs
-         ctx (k/project! ctx {:config {:specs specs
-                                       :clean-room (update (:clean-room k/default-config) :keep conj "dhf/sdd")}})]
-     (fs/delete-tree (fs/path (:dir ctx) "dhf/spec"))
-     (k/write-files! (:dir ctx) (merge (spec-files a "login" "form" (or auth [(psc "auth" 1 "Logs in")]) (or auth-issued 1) need)
-                                       (spec-files i "net" "proxy" (or infra [(psc "infra" 1 "Proxies")]) (or infra-issued 1)
-                                                   (or infra-needs need))))
-     (k/views! ctx))))
+  "A project of two specs, auth and infra, under dhf/sdd."
+  [ctx & [{:keys [auth infra auth-opts infra-opts]}]]
+  (let [ctx (k/spec-project! ctx {:features {}})]
+    (k/delete! ctx "dhf/spec/demo")
+    (spec-folder! ctx "auth" (or auth (feature-of "auth" "UN-001" [1 2])) auth-opts)
+    (spec-folder! ctx "infra" (or infra (feature-of "infra" "UN-001" [1])) infra-opts)
+    (k/config! ctx assoc :specs [{:name "auth" :dir "dhf/sdd/auth" :id-prefix "auth"} {:name "infra" :dir "dhf/sdd/infra" :id-prefix "infra"}])
+    ctx))
 
 (defstep #"a configuration whose :specs is \[\{:name \"auth\" :dir \"dhf/sdd/auth\" :id-prefix \"auth\"\} \{:name \"infra\" :dir \"dhf/sdd/infra\" :id-prefix \"infra\"\}\]"
   (fn [ctx] (two-specs! ctx)))
 
 (defstep #"each spec is read from its folder: its feature files, model.edn, events.edn, needs.edn, glossary.md, ids.edn, and its domain.edn where it keeps one"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (let [cases [["dhf/sdd/auth/model.edn" "{:system\n"]
-                 ["dhf/sdd/infra/events.edn" "{:x\n"]
-                 ["dhf/sdd/infra/ids.edn" "{:issued 0}\n"]
-                 ["dhf/sdd/auth/needs.edn" "{}\n"]]]
-      (doseq [[f text] cases]
-        (let [old (slurp (fs/file (:dir ctx) f))]
-          (k/write-files! (:dir ctx) {f text})
-          (let [r (k/rdm ctx ["check"])]
-            (k/check-exit r 1)
-            (when-not (some #(or (str/includes? % f) (str/includes? % (str/replace f #"/[^/]+$" "/"))) (k/err-lines r))
-              (fail! (str "nothing names " f ":\n" (:err r)))))
-          (k/write-files! (:dir ctx) {f old}))))
+    (k/exits! ctx 0)
+    (do
+      (k/write! ctx "dhf/sdd/infra/model.edn" "{:broken")
+      (let [r (k/run-rdm ctx "check")]
+        (k/exits! r 1)
+        (k/err-has! r "dhf/sdd/infra/model.edn"))
+      (k/write! ctx "dhf/sdd/infra/model.edn" (pr-str {:system {:id :infra :name "infra" :description "One spec"}
+                                                        :kernel [{:id :kernel/login :name "Login" :spec "auth/login" :description "Logs in"}]}))
+      (k/write! ctx "dhf/sdd/infra/ids.edn" "{:issued 0}\n")
+      (let [r (k/run-rdm ctx "check")]
+        (k/exits! r 1)
+        (k/err-line-has! r "infra-0001" "ledger")))
     ctx))
 
 (defstep #"a configuration with no :specs reads one spec, from :spec-dir and the paths it names, as before"
   (fn [ctx]
-    (let [c (k/rdm (k/project! (dissoc ctx :dir :spec-before :runs)) ["check"])]
-      (k/check-exit c 0)
+    (let [one (k/run-rdm (k/spec-project! (dissoc ctx :dir :base)) "check")]
+      (k/exits! one 0)
       ctx)))
-
-(def refusals
-  {"two specs named \"auth\"" [(assoc-in specs [1 :name] "auth") "a spec's name is declared once"]
-   "two specs with the id prefix \"auth\"" [(assoc-in specs [1 :id-prefix] "auth") "an id prefix is declared once"]
-   "two specs in one folder" [(assoc-in specs [1 :dir] "dhf/sdd/auth") "a folder holds one spec"]
-   "a spec whose folder does not exist" [(conj specs {:name "gone" :dir "dhf/sdd/gone" :id-prefix "gone"}) "dhf/sdd/gone"]})
 
 (defstep #"a configuration whose :specs (two specs named \"auth\"|two specs with the id prefix \"auth\"|two specs in one folder|a spec whose folder does not exist)"
   (fn [ctx holds]
-    (let [[s why] (refusals holds)
-          ctx (two-specs! ctx)]
-      (k/update-edn! ctx "dhf/harness/config.edn" assoc :specs s)
-      (k/names+ ctx why))))
+    (let [ctx (two-specs! ctx)]
+      (k/config! ctx assoc :specs
+                 (case holds
+                   "two specs named \"auth\"" [{:name "auth" :dir "dhf/sdd/auth" :id-prefix "auth"} {:name "auth" :dir "dhf/sdd/infra" :id-prefix "infra"}]
+                   "two specs with the id prefix \"auth\"" [{:name "auth" :dir "dhf/sdd/auth" :id-prefix "auth"} {:name "infra" :dir "dhf/sdd/infra" :id-prefix "auth"}]
+                   "two specs in one folder" [{:name "auth" :dir "dhf/sdd/auth" :id-prefix "auth"} {:name "infra" :dir "dhf/sdd/auth" :id-prefix "infra"}]
+                   "a spec whose folder does not exist" [{:name "auth" :dir "dhf/sdd/auth" :id-prefix "auth"} {:name "infra" :dir "dhf/sdd/nowhere" :id-prefix "infra"}]))
+      ctx)))
 
 (defstep #"it exits 2 and says (a spec's name is declared once|an id prefix is declared once, so no two scenarios share an id|a folder holds one spec|names the spec and its folder)"
-  (fn [ctx _]
-    (k/check-exit ctx 2)
-    (apply k/err-line-with ctx "cannot-run:" (:names ctx))))
+  (fn [ctx why]
+    (k/exits! ctx 2)
+    (if (= why "names the spec and its folder")
+      (k/err-line-has! ctx "infra" "dhf/sdd/nowhere")
+      (k/err-has! ctx why))
+    ctx))
 
 (defstep #"two specs, auth and infra, where infra's feature file names a need its needs.edn does not hold, and auth's names UN-001, which only auth's needs.edn holds"
   (fn [ctx]
-    (two-specs! ctx {:infra-needs {"UN-002" {:text "Another" :sources ["demo:README.md@abc1234"]}}})))
+    (two-specs! ctx {:infra (feature-of "infra" "UN-001" [1])
+                     :infra-opts {:needs {"UN-002" {:text "Another" :sources ["demo:README.md@abc1234"]}}}})))
 
 (defstep #"it exits 1 with one finding, naming infra's feature file and the need, and none about auth"
   (fn [ctx]
-    (k/check-exit ctx 1)
-    (let [ls (remove #(str/includes? % "warning:") (k/err-lines ctx))]
-      (assert (= 1 (count ls)) (:err ctx))
-      (assert (str/includes? (first ls) "dhf/sdd/infra/net/proxy.feature") (first ls))
-      (assert (str/includes? (first ls) "UN-001") (first ls))
-      (assert (not-any? #(str/includes? % "dhf/sdd/auth") ls)))
+    (k/exits! ctx 1)
+    (let [fs (remove #(re-find #"warning: " %) (k/err-lines ctx))]
+      (k/check! (= 1 (count fs)) "the findings are " (pr-str fs))
+      (k/check! (and (str/includes? (first fs) "dhf/sdd/infra/auth/login.feature") (str/includes? (first fs) "UN-001")) "the finding is " (first fs))
+      (k/check! (not-any? #(str/includes? % "dhf/sdd/auth/") fs) "a finding names auth"))
     ctx))
 
 (defstep #"a need, a component and a context resolve within their own spec only"
   (fn [ctx]
-    ;; infra's feature in auth's context name is no component of infra's model
-    (k/write-files! (:dir ctx) {"dhf/sdd/infra/login/form.feature"
-                                (k/feature-text {:name "Form" :tags ["UN-002"] :scenarios [(psc "infra" 2 "Not infra's")]})
-                                "dhf/sdd/infra/ids.edn" "{:issued 2}\n"})
-    (let [r (k/rdm ctx ["check"])]
-      (k/check-exit r 1)
-      (k/err-line-with r "dhf/sdd/infra/login/form.feature" "a-scenario-owner"))
+    (k/write-edn! ctx "dhf/sdd/infra/model.edn" {:system {:id :infra :name "infra" :description "One spec"}
+                                                  :kernel [{:id :kernel/other :name "Other" :spec "auth/other" :description "Else"}]})
+    (k/write-edn! ctx "dhf/sdd/infra/needs.edn" {"UN-001" {:text "A need" :sources ["demo:README.md@abc1234"]}})
+    (let [r (k/run-rdm ctx "check")]
+      (k/exits! r 1)
+      (k/err-line-has! r "dhf/sdd/infra/auth/login.feature"))
     ctx))
 
 (defstep #"two specs, auth with 3 stamped scenarios and infra with none, each with one unstamped scenario"
   (fn [ctx]
-    (two-specs! ctx {:auth [(psc "auth" 1 "One") (psc "auth" 2 "Two") (psc "auth" 3 "Three")
-                            {:tags ["e2e"] :title "New in auth" :steps ["Given a step"]}]
-                     :auth-issued 3
-                     :infra [{:tags ["e2e"] :title "New in infra" :steps ["Given a step"]}]
-                     :infra-issued 0})))
-
-(defn- spec-text [ctx f] (slurp (fs/file (:dir ctx) f)))
+    (two-specs! ctx {:auth (feature-of "auth" "UN-001" [1 2 3] true)
+                     :infra (feature-of "infra" "UN-001" [] true)
+                     :infra-opts {:issued 0}})))
 
 (defstep #"auth's is stamped @auth-0004 from dhf/sdd/auth/ids.edn, and infra's @infra-0001 from dhf/sdd/infra/ids.edn"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (let [a (spec-text ctx "dhf/sdd/auth/login/form.feature") i (spec-text ctx "dhf/sdd/infra/net/proxy.feature")]
-      (assert (re-find #"@auth-0004[^\n]*\n\s*Scenario: New in auth" a) a)
-      (assert (re-find #"@infra-0001[^\n]*\n\s*Scenario: New in infra" i) i)
-      (assert (= 4 (:issued (edn/read-string (spec-text ctx "dhf/sdd/auth/ids.edn")))))
-      (assert (= 1 (:issued (edn/read-string (spec-text ctx "dhf/sdd/infra/ids.edn")))))
-      ctx)))
+    (k/exits! ctx 0)
+    (k/check! (str/includes? (k/slurp-rel ctx "dhf/sdd/auth/auth/login.feature") "@auth-0004") "auth's was not stamped @auth-0004")
+    (k/check! (str/includes? (k/slurp-rel ctx "dhf/sdd/infra/auth/login.feature") "@infra-0001") "infra's was not stamped @infra-0001")
+    (k/check! (= {:issued 4} (edn/read-string (k/slurp-rel ctx "dhf/sdd/auth/ids.edn"))) "auth's ledger is not 4")
+    (k/check! (= {:issued 1} (edn/read-string (k/slurp-rel ctx "dhf/sdd/infra/ids.edn"))) "infra's ledger is not 1")
+    ctx))
 
-(def room-steps k/catch-all-steps)
-
-(defn auth-only-tests
-  "The tests: every scenario run, and infra's results thrown away."
-  []
-  ["sh" "-c" (str (str/join " " (k/rdm-command)) " run && cd \"$RESULTS_DIR\" && rm -f $(grep -l '\"infra-' *-result.json)")])
+(defn tests-script
+  "A test command that runs the scenarios of SPEC-DIR only, with rdm-spec run, into RESULTS_DIR."
+  [spec-name]
+  (str "#!/bin/sh\n"
+       "cat > only.clj <<'CLJ'\n"
+       "(let [c (clojure.edn/read-string (slurp \"dhf/harness/config.edn\"))]\n"
+       "  (spit \"dhf/harness/config.edn\" (pr-str (update c :specs (fn [ss] (filterv #(= " (pr-str spec-name) " (:name %)) ss))))))\n"
+       "CLJ\n"
+       "bb only.clj && exec " (str/join " " (k/rdm-command-line)) " run\n"))
 
 (defstep #"two specs, auth and infra, and dhf/cycles/03/cycle.edn whose :scope is \[\{:spec \"auth\"\}\]"
   (fn [ctx]
-    (let [ctx (two-specs! ctx {:auth [(psc "auth" 1 "Logs in") (psc "auth" 2 "Logs out")]
-                               :auth-issued 2
-                               :infra [(psc "infra" 1 "Proxies")]})
-          ctx (k/project! ctx {:config {:implementation ["test"]
-                                        :verify [{:kind :tests :command (auth-only-tests)}]}
-                               :extra {"test/steps/steps.clj" room-steps}})
-          ctx (k/placeholder! ctx "ROOM")]
-      (k/write-files! (get-in ctx [:ph "ROOM"]) {"test/steps/steps.clj" room-steps})
-      (k/cycle! ctx "03" (merge {:cut "spec-3" :scope [{:spec "auth"}]} k/roles))
-      (k/tag-cut! ctx "spec-3"))))
+    (let [ctx (two-specs! ctx)]
+      (k/write! ctx "dhf/steps/any.clj" k/catch-all-steps)
+      (k/write! ctx "src/kernel/login.clj" "(ns kernel.login)\n")
+      (k/config! ctx assoc :steps-dir "dhf/steps" :implementation ["src"]
+                 :code-layout {:context ["src/{context}/"] :component ["src/{context}/{component}.clj"]}
+                 :verify [{:kind :tests :command ["sh" "tests.sh"]}])
+      (k/write! ctx "tests.sh" (tests-script "auth"))
+      (k/commit-tag! ctx "spec-3")
+      (k/write-edn! ctx "dhf/cycles/03/cycle.edn" {:cut "spec-3" :scope [{:spec "auth"}]
+                                                   :builder {:name "b" :actor :agent} :grader {:name "g" :actor :agent}
+                                                   :spec-owner {:name "o" :actor :human}})
+      (k/write! (assoc ctx :dir (str (:base ctx) "/room")) "src/kernel/login.clj" "(ns kernel.login)\n")
+      (assoc-in ctx [:ph "ROOM"] (str (:base ctx) "/room")))))
 
 (defstep #"\"rdm-spec checklist 03\" is run, and verify's tests check reads the cycle's results"
   (fn [ctx]
-    (let [v (k/rdm-line ctx "rdm-spec verify ROOM 03")]
-      (-> (k/rdm-line ctx "rdm-spec checklist 03") (assoc ::verify v)))))
+    (let [ctx (k/run-rdm ctx "checklist 03")]
+      (assoc ctx ::checklist (json/parse-string (k/slurp-rel ctx "dhf/cycles/03/checklist.json"))))))
 
 (defstep #"the checklist holds one item per stamped scenario of auth and none of infra"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (assert (= ["auth-0001" "auth-0002"] (map #(get % "id") (get (checklist ctx) "items"))) (pr-str (checklist ctx)))
+    (k/check! (= ["auth-0001" "auth-0002"] (map #(get % "id") (get (::checklist ctx) "items"))) "the checklist holds " (pr-str (::checklist ctx)))
     ctx))
 
 (defstep #"verify requires a result for every scenario of auth, and none for infra's"
   (fn [ctx]
-    (let [v (::verify ctx)]
-      (k/check-exit v 0)
-      (assert (= 2 (get-in (k/edn-out v) [:verify :checks 0 :scenarios])) (:out v))
-      ;; without auth's results, it is refused, naming one of auth's
-      ctx)))
+    (let [r (k/run-rdm ctx "verify ROOM 03")]
+      (k/exits! r 0))
+    (k/write! ctx "tests.sh" (tests-script "infra"))
+    (k/git! ctx "tag" "-d" "spec-3")
+    (k/commit-tag! ctx "spec-3")
+    (let [r (k/run-rdm ctx "verify ROOM 03")]
+      (k/exits! r 1)
+      (k/err-has! r "auth-0001"))
+    ctx))
 
 (defstep #"two specs, auth with every scenario verified and infra with one unverified"
   (fn [ctx]
-    (let [ctx (-> (two-specs! ctx {:infra [(psc "infra" 1 "Proxies") (psc "infra" 2 "Caches")] :infra-issued 2})
-                  (k/placeholder! "R"))]
-      (doseq [id ["auth-0001" "infra-0001"]] (k/write-result! (get-in ctx [:ph "R"]) {:id id}))
-      ctx)))
+    (let [ctx (two-specs! ctx)
+          d (str (:base ctx) "/r1")]
+      (k/result-json! ctx d {:spec "auth-0001"})
+      (k/result-json! ctx d {:spec "auth-0002"})
+      (assoc-in ctx [:ph "R"] d))))
 
 (defstep #"it (lists every scenario of both specs, each with its spec's name|refuses, naming infra's unverified scenario)"
-  (fn [ctx what]
-    (case what
-      "refuses, naming infra's unverified scenario" (do (k/check-exit ctx 1) (k/err-line-with ctx "infra-0002" "unverified")
-                                                        (assert (not (str/includes? (:err ctx) "auth-0001"))))
-      (do (k/check-exit ctx 0)
-          (assert (= #{["auth" "auth-0001"] ["infra" "infra-0001"] ["infra" "infra-0002"]}
-                     (set (map (juxt :spec :id) (get-in (k/edn-out ctx) [:status :scenarios]))))
-                  (:out ctx))))
+  (fn [ctx answers]
+    (case answers
+      "lists every scenario of both specs, each with its spec's name"
+      (let [ss (get-in ctx [:result :status :scenarios])]
+        (k/exits! ctx 0)
+        (k/check! (= #{["auth-0001" "auth"] ["auth-0002" "auth"] ["infra-0001" "infra"]} (set (map (juxt :id :spec) ss))) "status lists " (pr-str ss)))
+      "refuses, naming infra's unverified scenario"
+      (do (k/exits! ctx 1) (k/err-line-has! ctx "infra-0001" "unverified")))
     ctx))

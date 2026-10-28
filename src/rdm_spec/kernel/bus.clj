@@ -1,68 +1,61 @@
 (ns rdm-spec.kernel.bus
-  "The in-process event bus (dhf/spec/kernel/bus.feature): synchronous, in
-  subscription order, within one run. It carries rdm-spec's own events, built
-  in from rdm-spec's own spec (dhf/spec/events.edn), and never reads a
-  project's catalogue. It refuses an event it does not declare, one missing a
-  key it carries, or one from the wrong publisher: a defect in rdm-spec,
-  reported as cannot-run.")
+  "Kernel component Event bus: delivers each of rdm-spec's own events to its
+  subscribers, synchronously and in subscription order, within one run. It
+  carries the events rdm-spec's own spec declares, built in; a project's
+  catalogue never changes them. It refuses an event it does not carry, one
+  missing a key it carries, or one from the wrong publisher: a defect in
+  rdm-spec, so the task cannot run (exit 2)."
+  (:require [rdm-spec.kernel.project :as project]))
 
 (def catalogue
-  "rdm-spec's own events: each one's publisher and the keys it carries."
-  {:KnowledgeIndexed {:published-by :knowledge/sources
-                      :carries [:revision :sources :pages :citations :findings]}
-   :SpecParsed {:published-by :spec/parser
-                :carries [:revision :scenarios :needs :refusals]}
-   :SpecGated {:published-by :spec/check
-               :carries [:revision :passed? :findings]}
-   :CycleVerified {:published-by :verification/verify
-                   :carries [:cycle :cut :checkout :checks]}
-   :VerificationDerived {:published-by :verification/status
-                         :carries [:revision :statuses :unknown-results :unreadable-files]}
-   :ClausesIndexed {:published-by :compliance/gap
-                    :carries [:revision :clauses :documents :findings]}})
+  "rdm-spec's own events (its dhf/spec/events.edn): the publisher and the keys of each."
+  (array-map
+   :KnowledgeIndexed {:published-by :knowledge/sources :carries [:revision :sources :pages :citations :findings]}
+   :SpecParsed {:published-by :spec/parser :carries [:revision :scenarios :needs :refusals]}
+   :SpecGated {:published-by :spec/check :carries [:revision :passed? :findings]}
+   :CycleVerified {:published-by :verification/verify :carries [:cycle :cut :checkout :checks]}
+   :VerificationDerived {:published-by :verification/status :carries [:revision :statuses :unknown-results :unreadable-files]}
+   :ClausesIndexed {:published-by :compliance/gap :carries [:revision :clauses :documents :findings]}))
 
-(def ^:private state (atom {:subscribers [] :log [] :latest {}}))
+(defn event-names [] (vec (keys catalogue)))
 
-(defn start!
-  "Begins a run: no subscriber, nothing published."
-  []
-  (reset! state {:subscribers [] :log [] :latest {}}))
+(defn new-bus [] (atom {:published [] :subscribers []}))
+
+(def ^:dynamic *bus* nil)
+
+(defn- bus [] (or *bus* (throw (ex-info "no bus in this run" {}))))
 
 (defn subscribe!
-  "Delivers every later `event` to `f`, after the subscribers before it."
-  [event subscriber f]
-  (swap! state update :subscribers conj {:event event :subscriber subscriber :f f})
+  "Calls F with each EVENT published from now on in this run, after the
+  subscribers before it."
+  [event f]
+  (when-not (contains? catalogue event)
+    (project/cannot-run! (str "the bus carries no event " (name event))))
+  (swap! (bus) update :subscribers conj [event f])
   nil)
-
-(defn- refuse [msg]
-  (throw (ex-info msg {:cannot-run msg})))
 
 (defn publish!
-  "Publishes `event` from `publisher` carrying `payload`, delivering it to
-  each subscriber in subscription order."
-  [publisher event payload]
-  (let [decl (get catalogue event)]
+  "Publishes EVENT from PUBLISHER with DATA, delivering it to every subscriber in order."
+  [publisher event data]
+  (let [{:keys [published-by carries]} (get catalogue event)]
     (cond
-      (nil? decl)
-      (refuse (str "the bus refuses the event " (name event) ": rdm-spec does not declare it"))
-      (not= publisher (:published-by decl))
-      (refuse (str "the bus refuses the event " (name event) " from " (subs (str publisher) 1)
-                   ": its publisher is " (subs (str (:published-by decl)) 1)))
-      :else
-      (when-let [missing (seq (remove #(contains? payload %) (:carries decl)))]
-        (refuse (str "the bus refuses the event " (name event) ": it does not carry "
-                     (clojure.string/join ", " (map str missing)))))))
-  (swap! state #(-> % (update :log conj [event publisher]) (assoc-in [:latest event] payload)))
-  (doseq [{:keys [f]} (filter #(= event (:event %)) (:subscribers @state))]
-    (f payload))
-  nil)
+      (nil? published-by) (project/cannot-run! (str "the bus refuses the event " (name event) ": rdm-spec does not declare it"))
+      (not= publisher published-by) (project/cannot-run! (str "the bus refuses " (name event) " from " (subs (str publisher) 1)
+                                                               ": its publisher is " (subs (str published-by) 1)))
+      :else (when-let [missing (seq (remove #(contains? data %) carries))]
+              (project/cannot-run! (str "the bus refuses " (name event) ": it carries no " (pr-str (vec missing)))))))
+  (let [msg (select-keys data (get-in catalogue [event :carries]))]
+    (when *bus*
+      (swap! *bus* update :published conj {:event event :publisher publisher :data msg})
+      (doseq [[e f] (:subscribers @*bus*) :when (= e event)] (f msg)))
+    msg))
 
-(defn published
-  "Every event published in this run, in order, as [event publisher]."
-  []
-  (:log @state))
+(defn published [] (if *bus* (:published @*bus*) []))
+
+(defn event-line [{:keys [event publisher]}]
+  (str "event: " (name event) " published-by " (subs (str publisher) 1)))
 
 (defn latest
-  "The last payload of `event` published in this run, or nil."
+  "The data of the last EVENT published in this run, as its subscribers were given it; nil when none was."
   [event]
-  (get-in @state [:latest event]))
+  (some (fn [{e :event d :data}] (when (= e event) d)) (reverse (published))))

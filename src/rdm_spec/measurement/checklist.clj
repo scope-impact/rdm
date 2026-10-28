@@ -1,87 +1,94 @@
 (ns rdm-spec.measurement.checklist
-  "The checklist (dhf/spec/measurement/checklist.feature): derived, never
-  written by hand, from the spec at the cycle's cut: one item per stamped
-  scenario of the cycle's scope, the planned ones listed apart, and, under the
-  regulated profile, one item per clause after them. An unstamped scenario
-  stops it rather than shrinking it."
-  (:require [babashka.fs :as fs]
-            [cheshire.core :as json]
+  "Component Checklist (measurement context): derives the cycle's checklist
+  from the spec at its cut, never by hand: one item per stamped scenario of
+  the cycle's scope, planned scenarios apart, and under the regulated
+  profile one item per clause after them. An unstamped scenario stops it."
+  (:require [cheshire.core :as json]
             [clojure.string :as str]
-            [rdm-spec.kernel.command :as cmd]
-            [rdm-spec.regeneration.cut :as cut]
+            [rdm-spec.kernel.project :as project]
             [rdm-spec.spec.parser :as parser]))
 
-(defn- scope-part? [x]
-  (and (map? x) (= 1 (count x))
-       (let [[k v] (first x)]
-         (case k
-           (:context :component) (keyword? v)
-           :spec (string? v)
-           false))))
+(defn read-cycle [cfg cycle]
+  (let [f (str (:cycles-dir cfg) "/" cycle "/cycle.edn")
+        r (project/read-edn-file (project/root) f)]
+    (cond
+      (:missing r) (project/cannot-run! (str "no " f ": a cycle is declared by hand before its checklist is derived"))
+      (:error r) (project/cannot-run! (str f ":" (get-in r [:error :line]) ": the cycle is not readable EDN: " (get-in r [:error :message])))
+      (not (map? (:value r))) (project/cannot-run! (str f " is not a map"))
+      :else (:value r))))
 
-(defn scope? [scope]
-  (or (= :project scope) (scope-part? scope)
-      (and (sequential? scope) (seq scope) (every? scope-part? scope))))
+(defn ctx-name [sc] (cond (= :kernel (:context sc)) "kernel" (:context sc) (name (:context sc))))
 
-(defn- parts [scope] (if (sequential? scope) scope [scope]))
+(defn scope-pred
+  "Whether a scenario is in the cycle's SCOPE; refuses a scope it cannot read."
+  [scope cfg tree model read]
+  (let [entries (cond (= :project scope) [:project] (nil? scope) [:project] (sequential? scope) scope :else [scope])
+        contexts (set (concat [:kernel] (map :id (project/contexts model))))
+        comps (set (map :id (project/components model)))
+        preds (for [e entries]
+                (cond
+                  (= :project e) (constantly true)
+                  (and (map? e) (:context e)) (do (when-not (contexts (:context e))
+                                                    (project/cannot-run! (str "the scope names the context " (:context e) ", which the model at the cut does not hold")))
+                                                  #(= (:context e) (:context %)))
+                  (and (map? e) (:component e)) (do (when-not (comps (:component e))
+                                                      (project/cannot-run! (str "the scope names the component " (:component e) ", which the model at the cut does not hold")))
+                                                    #(= (:component e) (:component %)))
+                  (and (map? e) (:spec e)) (do (when-not (some #(= (:spec e) (get-in % [:spec :name])) read)
+                                                 (project/cannot-run! (str "the scope names the spec " (:spec e) ", which the configuration does not declare")))
+                                               #(= (:spec e) (:spec %)))
+                  (and (map? e) (:slice e))
+                  (let [s (:slice e)
+                        reached (set (for [r read sc (:scenarios r) :when (= s (:slice sc))] (:component sc)))
+                        held? (some (fn [sp] (babashka.fs/directory? (project/abs tree (str (:dir sp) "/" s)))) (project/specs cfg))]
+                    (when-not (and (project/slices? cfg) held?)
+                      (project/cannot-run! (str "the scope names the slice " s ", which the cut does not hold")))
+                    #(contains? reached (:component %)))
+                  :else (project/cannot-run! (str "the scope " (pr-str e) " is not :project, {:context C}, {:component C/N}, {:spec S} or {:slice S}"))))]
+    (fn [sc] (some #(% sc) preds))))
 
-(defn in-scope? [scope s]
-  (or (= :project scope)
-      (some (fn [{:keys [context component spec]}]
-              (or (and context (= context (:context s)))
-                  (and component (= component (:component s)))
-                  (and spec (= spec (:spec s)))))
-            (parts scope))))
+(defn compliance? [scope]
+  (let [entries (cond (or (nil? scope) (= :project scope)) [:project] (sequential? scope) scope :else [scope])]
+    (some #(or (= :project %) (and (map? %) (= :compliance (:context %)))) entries)))
 
-(defn clauses? [scope]
-  (or (= :project scope) (some #(= :compliance (:context %)) (parts scope))))
+(defn checklist-text [m]
+  (json/generate-string m {:pretty true}))
 
-(defn- spec-in-scope? [scope sc]
-  (let [specs (keep :spec (parts scope))]
-    (or (= :project scope) (empty? specs) (some #{(:name sc)} specs)
-        (some #(or (:context %) (:component %)) (parts scope)))))
-
-(defn read-cycle
-  "A cycle's cycle.edn, and the configuration at its cut: {:cycle :cut :config :dir}."
-  [root config id]
-  (let [dir (str (:cycles-dir config "dhf/cycles") "/" id)
-        f (str dir "/cycle.edn")
-        c (or (try (cmd/read-edn (cmd/read-at root nil f)) (catch Exception _ nil))
-              (cmd/cannot-run! (str "there is no readable " f ": a cycle is declared by hand in its cycle.edn")))
-        tag (or (:cut c) (cmd/cannot-run! (str f " names no :cut")))]
-    (when-not (cut/commit-of root (str "refs/tags/" tag))
-      (cmd/cannot-run! (str "the cut " tag " that " f " names is no tag of this repository")))
-    (when-not (scope? (:scope c :project))
-      (cmd/cannot-run! (str "the scope " (pr-str (:scope c)) " in " f " is not a scope: it is :project, {:context C}, {:component C/N}, {:spec S} or a vector of them")))
-    {:cycle c :cut tag :dir dir
-     :config (or (try (cmd/read-edn (cmd/read-at root tag "dhf/harness/config.edn")) (catch Exception _ nil)) config)}))
-
-(defn stage [{:keys [root config args]}]
-  (let [id (first args)
-        {:keys [cycle cut dir] cfg :config} (read-cycle root config id)
-        scope (:scope cycle :project)
-        specs (for [sc (cmd/spec-configs cfg) :when (spec-in-scope? scope sc)] (parser/parse! root cut sc))
-        scenarios (mapcat :scenarios specs)
-        unstamped (for [s scenarios :when (empty? (:ids s))]
-                    (cmd/finding (:file s) (:line s) "scenario-unstamped"
-                                 (str "the scenario \"" (:title s) "\" at the cut " cut " has no id: an unstamped scenario stops the checklist; run \"rdm-spec stamp\"")))]
-    (if (seq unstamped)
-      {:findings (vec unstamped)}
-      (let [mine (sort-by :id (filter #(in-scope? scope %) (filter :id scenarios)))
-            items (vec (for [s mine :when (not (:wip? s))]
-                         (array-map "id" (:id s) "title" (:title s) "context" (some-> (:context s) name)
-                                    "component" (:component-name s) "level" (some-> (:level s) name))))
-            planned (vec (for [s mine :when (:wip? s)] (array-map "id" (:id s) "title" (:title s))))
-            clause-items (when (and (:regulated cfg) (clauses? scope))
-                           (let [{:keys [clauses]} ((requiring-resolve 'rdm-spec.compliance.gap/read-lists)
-                                                    root cut (get-in cfg [:regulated :clause-lists]))]
-                             (for [c clauses]
-                               (array-map "id" (:key c) "title" (:description c) "context" "compliance"
-                                          "component" (:clause-list c) "level" "clause"))))
-            file (str dir "/checklist.json")]
-        (fs/create-dirs (fs/path root dir))
-        (spit (fs/file root file)
-              (str (json/generate-string (array-map "cycle" id "cut" cut "items" (into items clause-items) "planned" planned)
-                                         {:pretty true})
-                   "\n"))
-        {:result {:checklist {:cycle id :cut cut :file file :items (+ (count items) (count clause-items)) :planned (count planned)}}}))))
+(defn checklist-task [{:keys [cfg args]}]
+  (let [cycle (first args)
+        cyc (read-cycle cfg cycle)
+        cut (:cut cyc)]
+    (when-not (and (string? cut) (project/resolve-commit cut))
+      (project/cannot-run! (str "the cycle " cycle " names the cut " (pr-str cut) ", which this repository does not hold")))
+    (project/with-revision cut
+      (fn [tree]
+        (let [cut-cfg (project/config tree)
+              _ (project/validate-specs! tree cut-cfg)
+              read (parser/read-specs tree cut-cfg)
+              _ (parser/publish! cut read)
+              scenarios (vec (for [r read sc (:scenarios r)] sc))
+              unstamped (for [sc scenarios :when (empty? (:ids sc))]
+                          (project/finding (:file sc) (:line sc) "scenario-unstamped"
+                                           (str "the scenario \"" (:title sc) "\" carries no id at the cut " cut ": the checklist stops rather than shrink")))]
+          (if (seq unstamped)
+            (project/report {} unstamped)
+            (let [model (or (project/read-model tree (first (project/specs cut-cfg))) {})
+                  in? (scope-pred (:scope cyc) cut-cfg tree model read)
+                  slices? (project/slices? cut-cfg)
+                  stamped (sort-by :id (filter #(and (:id %) (in? %)) scenarios))
+                  items (vec (for [sc stamped :when (not (:wip? sc))]
+                               (cond-> (array-map "id" (:id sc) "title" (:title sc) "context" (ctx-name sc)
+                                                  "component" (:component-name sc) "level" (:level sc))
+                                 slices? (assoc "slice" (:slice sc)))))
+                  planned (vec (for [sc stamped :when (:wip? sc)] (array-map "id" (:id sc) "title" (:title sc))))
+                  clauses (when (and (:regulated cut-cfg) (compliance? (:scope cyc)))
+                            (:clauses ((requiring-resolve 'rdm-spec.compliance.gap/index!) cut-cfg tree cut)))
+                  clause-items (vec (for [c clauses]
+                                      (array-map "id" (:key c) "title" (:description c) "context" "compliance"
+                                                 "component" (:declared c) "level" "clause")))
+                  out (str (:cycles-dir cfg) "/" cycle "/checklist.json")
+                  m (array-map "cycle" cycle "cut" cut "items" (into items clause-items) "planned" planned)]
+              (babashka.fs/create-dirs (babashka.fs/parent (project/abs out)))
+              (spit (project/abs out) (str (checklist-text m) "\n"))
+              (project/report {:checklist {:cycle cycle :cut cut :items (count items) :clauses (count clause-items)
+                                           :planned (count planned) :file out}}))))))))

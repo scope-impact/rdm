@@ -1,108 +1,102 @@
 (ns rdm-spec.measurement.scorer
-  "The scorer (dhf/spec/measurement/scorer.feature): files graders' verdicts
-  on a verified cycle into its score.edn. Several verdicts files are scored as
-  one, held to the same rules as one. It refuses to record what it did not
-  measure: no verdict at all is a grading that did not happen; an item nobody
-  graded is a fail; a verdict off the checklist, a malformed file, a cycle
-  whose builder grades or reads its own score, or one with no passing
-  verification is refused, and nothing is written."
+  "Component Scorer (measurement context): files the graders' verdicts on a
+  verified cycle against its checklist into score.edn. It records nothing it
+  did not measure: no verdicts, no score; an item nobody graded is a fail;
+  a verdict for an item not on the checklist is refused; the builder never
+  grades or reads its own score; only a verified build is scored."
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
-            [clojure.pprint :as pp]
             [clojure.string :as str]
-            [edamame.core :as e]
-            [rdm-spec.kernel.command :as cmd]))
+            [rdm-spec.kernel.project :as project]))
 
-(def roles [[:builder "builder"] [:grader "grader"] [:spec-owner "spec owner"]])
+(def role-keys [:builder :grader :spec-owner])
 
-(defn verdict-findings
-  "The findings about the verdicts files [[file value] ...] against the checklist's ids."
-  [files ids]
-  (let [entries (for [[f v] files :when (vector? v) e v] [f e])
-        uses (group-by (comp :id second) (filter (comp map? second) entries))]
-    (vec
-     (concat
-      (for [[f v] files :when (not (vector? v))]
-        (cmd/finding f nil "verdicts-malformed"
-                     (str "the verdicts are " (cond (map? v) "a map" (nil? v) "empty" :else (str "a " (.getSimpleName (class v))))
-                          ", not a vector of {:id :verdict :evidence}")))
-      (for [[f e] entries
-            :let [id (when (map? e) (:id e))
-                  why (cond (not (map? e)) (str (pr-str e) " is not a map of :id, :verdict and :evidence")
-                            (not (string? id)) (str (pr-str e) " names no :id")
-                            (not (#{:pass :fail} (:verdict e))) (str id "'s verdict " (pr-str (:verdict e)) " is neither :pass nor :fail")
-                            (not (and (string? (:evidence e)) (not (str/blank? (:evidence e))))) (str id " gives no evidence: a verdict carries its evidence"))]
-            :when why]
-        (cmd/finding f nil "verdict-malformed" why))
-      (for [[id es] uses :when (> (count es) 1)]
-        (cmd/finding (first (first es)) nil "verdict-twice"
-                     (str id " is graded twice, in " (str/join " and " (distinct (map first es))) ": an item is graded once")))
-      (for [[id es] uses :when (and (string? id) (not (ids id)))]
-        (cmd/finding (first (first es)) nil "verdict-off-checklist" (str id " is not on the cycle's checklist")))))))
+(defn read-verdicts
+  "Every verdict of FILE, each with its :file; or findings."
+  [file]
+  (let [text (project/read-text (project/root) file)]
+    (when (nil? text) (project/cannot-run! (str "the verdicts file " file " does not exist")))
+    (let [r (project/read-edn-text text)
+          f (fn [msg] {:findings [(project/finding file "verdicts-malformed" msg)]})]
+      (cond
+        (:error r) {:findings [(project/finding file (get-in r [:error :line]) "verdicts-unreadable"
+                                                (str file " is not readable EDN: " (get-in r [:error :message])))]}
+        (not (vector? (:value r))) (f (str file " holds " (if (map? (:value r)) "a map" "no vector") ": a verdicts file is a vector of {:id :verdict :evidence}"))
+        :else
+        (let [vs (:value r)
+              bad (for [v vs
+                        msg (cond
+                              (not (map? v)) [(str "a verdict is not a map: " (pr-str v))]
+                              :else (concat
+                                     (when-not (and (string? (:id v)) (not (str/blank? (:id v)))) [(str "a verdict names no :id: " (pr-str v))])
+                                     (when-not (#{:pass :fail} (:verdict v)) [(str (:id v) " is given the verdict " (pr-str (:verdict v)) ": a verdict is :pass or :fail")])
+                                     (when-not (and (string? (:evidence v)) (not (str/blank? (:evidence v))))
+                                       [(str (:id v) " is given no evidence: every verdict carries its :evidence")])))]
+                    msg)]
+          (if (seq bad)
+            {:findings (mapv #(project/finding file "verdicts-malformed" %) bad)}
+            {:verdicts (mapv #(assoc % :file file) vs)}))))))
 
-(defn items
-  "Every checklist item's verdict, an ungraded one a fail."
-  [ids verdicts]
-  (let [by-id (into {} (map (juxt :id identity) verdicts))]
-    (vec (for [id ids]
-           (if-let [v (by-id id)]
-             (select-keys v [:id :verdict :evidence])
-             {:id id :verdict :fail :evidence "ungraded: no verdict was given" :ungraded true})))))
+(defn edn-line [k v] (str " " (pr-str k) " " (pr-str v)))
 
-(defn- read-verdicts
-  "[file value] of a verdicts file, or a finding where it stops being EDN."
-  [root f]
-  (let [p (fs/path root f)]
-    (when-not (fs/regular-file? p) (cmd/cannot-run! (str "the verdicts file " f " does not exist")))
-    (try
-      (let [forms (e/parse-string-all (slurp (fs/file p)))]
-        (if (= 1 (count forms))
-          [f (first forms)]
-          {:finding (cmd/finding f nil "verdicts-unreadable" (str f " holds " (count forms) " forms, not one vector"))}))
-      (catch clojure.lang.ExceptionInfo ex
-        {:finding (cmd/finding f (let [d (ex-data ex)] (or (:row d) (:line d) (some-> (re-find #"line (\d+)" (str (ex-message ex))) second parse-long))) "verdicts-unreadable"
-                               (str f " is not readable EDN: " (ex-message ex)))}))))
+(defn score-text
+  "score.edn, its keys in their order, one item per line."
+  [m]
+  (str "{" (str/triml (str/join "\n" (for [k [:cycle :cut :scope :room-tree :builder :grader :spec-owner]] (edn-line k (get m k)))))
+       "\n :items [" (str/join "\n         " (map pr-str (:items m))) "]"
+       "\n" (edn-line :passed (:passed m))
+       "\n" (edn-line :scored (:scored m)) "}\n"))
 
-(defn stage [{:keys [root config args opts]}]
-  (let [id (first args)
-        dir (str (:cycles-dir config "dhf/cycles") "/" id)
-        read (fn [f] (try (cmd/read-edn (cmd/read-at root nil (str dir "/" f))) (catch Exception _ ::unreadable)))
-        cycle (read "cycle.edn")
-        _ (when-not (map? cycle) (cmd/cannot-run! (str "there is no readable " dir "/cycle.edn")))
-        _ (when (empty? (:verdicts opts)) (cmd/cannot-run! "usage: rdm-spec score CYCLE --verdicts FILE [--verdicts FILE ...]"))
-        checklist (or (try (json/parse-string (cmd/read-at root nil (str dir "/checklist.json"))) (catch Exception _ nil))
-                      (cmd/cannot-run! (str "there is no readable " dir "/checklist.json: derive it with rdm-spec checklist " id)))
-        ids (mapv #(get % "id") (get checklist "items"))
-        ratified (read "ratified.edn")
-        read-files (mapv #(read-verdicts root %) (:verdicts opts))
-        unreadable (keep :finding read-files)
-        files (remove :finding read-files)
-        role-findings (concat
-                       (for [[k n] roles :when (not (and (map? (k cycle)) (string? (:name (k cycle)))))]
-                         (cmd/finding (str dir "/cycle.edn") nil "role-missing"
-                                      (str "the cycle names no " n " (" k "): a cycle names who built, graded and reads it")))
-                       (let [b (get-in cycle [:builder :name])]
-                         (for [[k n] (rest roles) :when (and b (= b (get-in cycle [k :name])))]
-                           (cmd/finding (str dir "/cycle.edn") nil "builder-grades"
-                                        (str b " is the cycle's builder and its " n ": the builder may not grade or read its own score")))))
-        verified (when-not (and (map? ratified) (= :passed (:outcome ratified)))
-                   [(cmd/finding (str dir "/ratified.edn") nil "cycle-unverified"
-                                 (str "the cycle has no passing verification: " dir "/ratified.edn "
-                                      (if (map? ratified) (str "holds :outcome " (:outcome ratified)) "does not exist")
-                                      "; only a verified build is scored"))])
-        findings (vec (concat unreadable role-findings verified (verdict-findings files (set ids))))
-        verdicts (for [[_ v] files :when (vector? v) e v] e)]
-    (cond
-      (seq findings) {:findings findings}
-      (empty? verdicts)
-      (cmd/cannot-run! "no verdict was given: the grading did not happen, so nothing is recorded")
-      :else
-      (let [its (items ids verdicts)
-            passed (count (filter #(= :pass (:verdict %)) its))
-            score (array-map :cycle id :cut (:cut cycle) :scope (:scope cycle :project) :room-tree (:room-tree ratified)
-                             :builder (:builder cycle) :grader (:grader cycle) :spec-owner (:spec-owner cycle)
-                             :items its :passed passed :scored (count its))
-            f (str dir "/score.edn")]
-        (spit (fs/file root f) (binding [*print-namespace-maps* false] (with-out-str (pp/pprint score))))
-        {:result {:score {:cycle id :file f :passed passed :scored (count its)
-                          :ungraded (count (filter :ungraded its))}}}))))
+(defn score-task [{:keys [cfg args opts]}]
+  (let [cycle (first args)
+        files (get opts "--verdicts")
+        cdir (str (:cycles-dir cfg) "/" cycle)
+        cycle-file (str cdir "/cycle.edn")]
+    (when (empty? files) (project/cannot-run! "score needs --verdicts FILE: no verdicts, no score"))
+    (let [r (project/read-edn-file (project/root) cycle-file)
+          _ (when (:missing r) (project/cannot-run! (str "no " cycle-file ": a cycle is declared before it is scored")))
+          _ (when (:error r) (project/cannot-run! (str cycle-file " is not readable EDN: " (get-in r [:error :message]))))
+          cyc (:value r)
+          read (map read-verdicts files)
+          read-findings (mapcat :findings read)]
+      (if (seq read-findings)
+        (project/report {} read-findings)
+        (let [verdicts (vec (mapcat :verdicts read))]
+          (when (empty? verdicts)
+            (project/cannot-run! (str "the verdicts hold no verdict: the grading did not happen, so nothing is scored")))
+          (let [cl-file (str cdir "/checklist.json")
+                cl-text (project/read-text (project/root) cl-file)
+                _ (when-not cl-text (project/cannot-run! (str "no " cl-file ": run rdm-spec checklist " cycle " first")))
+                cl (json/parse-string cl-text true)
+                item-ids (mapv :id (:items cl))
+                on-list (set item-ids)
+                rat (:value (project/read-edn-file (project/root) (str cdir "/ratified.edn")))
+                dup (for [[id vs] (group-by :id verdicts) :when (> (count vs) 1)]
+                      (project/finding (:file (first vs)) "verdicts-graded-twice"
+                                       (str id " is graded twice, in " (str/join " and " (distinct (map :file vs))))))
+                roles (for [k role-keys :when (not (and (map? (get cyc k)) (string? (get-in cyc [k :name]))))]
+                        (project/finding cycle-file "cycle-role-missing" (str "the cycle names no " (name k) ": every role is named, as human or agent")))
+                own (when (and (map? (:builder cyc))
+                               (some #(= (get-in cyc [:builder :name]) (get-in cyc [% :name])) [:grader :spec-owner]))
+                      [(project/finding cycle-file "cycle-builder-grades"
+                                        (str (get-in cyc [:builder :name]) " is the builder: the builder may not grade or read its own score"))])
+                unverified (when-not (= :passed (:outcome rat))
+                             [(project/finding (str cdir "/ratified.edn") "cycle-unverified"
+                                               (str "the cycle has no passing verification: only a verified build is scored"))])
+                unknown (for [v verdicts :when (not (on-list (:id v)))]
+                          (project/finding (:file v) "verdict-unknown" (str (:id v) " is not on cycle " cycle "'s checklist")))
+                findings (concat dup roles own unverified unknown)]
+            (if (seq findings)
+              (project/report {} findings)
+              (let [by-id (into {} (map (juxt :id identity) verdicts))
+                    items (vec (for [id item-ids]
+                                 (if-let [v (by-id id)]
+                                   {:id id :verdict (:verdict v) :evidence (:evidence v)}
+                                   {:id id :verdict :fail :evidence "ungraded: no verdict was given" :ungraded true})))
+                    m {:cycle cycle :cut (:cut cyc) :scope (get cyc :scope :project) :room-tree (:room-tree rat)
+                       :builder (:builder cyc) :grader (:grader cyc) :spec-owner (:spec-owner cyc)
+                       :items items :passed (count (filter #(= :pass (:verdict %)) items)) :scored (count items)}
+                    out (str cdir "/score.edn")]
+                (spit (project/abs out) (score-text m))
+                (project/report {:score {:cycle cycle :passed (:passed m) :scored (:scored m)
+                                         :ungraded (count (filter :ungraded items)) :file out}})))))))))

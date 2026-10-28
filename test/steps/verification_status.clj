@@ -1,129 +1,117 @@
 (ns steps.verification-status
-  "Step definitions of dhf/spec/verification/status.feature."
-  (:require [babashka.fs :as fs]
+  "Steps of the component Status (dhf/spec/05-verify-by-results/status.feature),
+  and the helpers the verification context's steps share."
+  (:require [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep fail!]]
-            [steps.kernel-command :as k]
-            [steps.verification-results :as vr]))
+            [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-shared :as k]))
 
-(def b-feature
-  "@UN-001
-Feature: B
-  @spec-0001 @e2e
-  Scenario: One
-    Given a step
+(def results-dir "dhf/allure-results")
 
-  @spec-0002 @e2e
-  Scenario: Two
-    Given a step
+(defn scenarios-project!
+  "A project whose one feature file holds the stamped scenarios IDS (numbers), tagged @wip where in WIP."
+  [ctx ids & [{:keys [wip]}]]
+  (k/spec-project! ctx {:features {"dhf/spec/demo/thing.feature"
+                                   (k/feature-text "Thing" ["UN-001"] (for [i ids] {:id (format "spec-%04d" i) :title (str "Scenario " i)
+                                                                                 :wip? (contains? (set wip) i)}))}
+                        :ledger (reduce max 0 ids)}))
 
-  @spec-0003 @e2e @wip
-  Scenario: Three
-    Given a step
-")
+(defn result! [ctx id status & [m]] (k/result-json! ctx results-dir (merge {:spec id :status status} m)) ctx)
+
+(defn status-of [ctx id]
+  (some #(when (= id (:id %)) (:status %)) (get-in ctx [:result :status :scenarios])))
+
+(defn status-is! [ctx id st]
+  (k/check! (= st (status-of ctx id)) id " is " (status-of ctx id) ", not " st "; " (k/shows ctx))
+  ctx)
 
 (defstep #"a project with the stamped scenarios @spec-0001 \"One\", @spec-0002 \"Two\" and @spec-0003 \"Three\", in dhf/spec/a/b.feature at lines 4, 8 and 12, and @spec-0003 tagged @wip"
   (fn [ctx]
-    (let [ctx (k/project! ctx {:model-spec {:contexts [["a" ["b"]]]}
-                               :features {"dhf/spec/a/b.feature" b-feature}
-                               :extra {"dhf/spec/ids.edn" "{:issued 3}\n"}})]
-      (fs/delete (fs/path (:dir ctx) k/core-feature))
-      ctx)))
+    (k/spec-project! ctx {:model (assoc k/kernel-model :kernel [{:id :kernel/b :name "B" :spec "a/b" :description "The b"}])
+                          :features {"dhf/spec/a/b.feature"
+                                     (str "@UN-001\nFeature: B\n  @spec-0001 @e2e\n  Scenario: One\n    Given x\n\n"
+                                          "  @spec-0002 @e2e\n  Scenario: Two\n    Given x\n\n"
+                                          "  @spec-0003 @e2e @wip\n  Scenario: Three\n    Given x\n")}})))
 
 (defstep #"a results directory DIR holding a passing result for @spec-0001 and a passing result labelled spec=spec-0099"
   (fn [ctx]
-    (let [ctx (k/placeholder! ctx "DIR")
-          d (get-in ctx [:ph "DIR"])]
-      (k/write-result! d {:id "spec-0001"})
-      (assoc ctx ::unknown (k/write-result! d {:id "spec-0099"})))))
+    (let [d (str (:base ctx) "/dir")
+          f (k/result-json! ctx d {:spec "spec-0099"})]
+      (k/result-json! ctx d {:spec "spec-0001"})
+      (-> ctx (assoc-in [:ph "DIR"] d) (assoc ::unknown-file (str d "/" f))))))
 
-(defstep #"it exits 0, and its standard output, read as EDN, is exactly \{:status .+"
+(defstep #"it exits 0, and its standard output, read as EDN, is exactly \{:status \{:results DIR .*"
   (fn [ctx]
-    (k/check-exit ctx 0)
+    (k/exits! ctx 0)
     (let [d (get-in ctx [:ph "DIR"])
-          want {:status {:results d
-                         :scenarios [{:id "spec-0001" :title "One" :file "dhf/spec/a/b.feature" :line 4 :status :verified}
-                                     {:id "spec-0002" :title "Two" :file "dhf/spec/a/b.feature" :line 8 :status :unverified}
-                                     {:id "spec-0003" :title "Three" :file "dhf/spec/a/b.feature" :line 12 :status :planned}]
-                         :counts {:verified 1 :failed 0 :unverified 1 :planned 1}
-                         :unknown-results [{:file (str d "/" (::unknown ctx)) :spec "spec-0099"}]}}]
-      (when-not (= want (k/edn-out ctx)) (fail! (str "standard output is " (:out ctx) " not " (pr-str want))))
+          expected {:status {:results d
+                             :scenarios [{:id "spec-0001" :title "One" :file "dhf/spec/a/b.feature" :line 4 :status :verified}
+                                         {:id "spec-0002" :title "Two" :file "dhf/spec/a/b.feature" :line 8 :status :unverified}
+                                         {:id "spec-0003" :title "Three" :file "dhf/spec/a/b.feature" :line 12 :status :planned}]
+                             :counts {:verified 1 :failed 0 :unverified 1 :planned 1}
+                             :unknown-results [{:file (::unknown-file ctx) :spec "spec-0099"}]}}]
+      (k/check! (= expected (:result ctx)) "status printed " (pr-str (:result ctx)) "\nexpected " (pr-str expected))
       ctx)))
 
-(defn statuses! [ctx scenarios results]
-  (let [ctx (vr/scenarios-project! ctx scenarios)]
-    (k/write-files! (:dir ctx) {"dhf/spec/ids.edn" (str "{:issued " (count scenarios) "}\n")})
-    (doseq [r results] (k/write-result! (vr/results-dir ctx) r))
-    ctx))
-
-(defn wip [n title] (update (k/sc n title) :tags conj "wip"))
-
 (defstep #"a stamped scenario tagged @wip, with no result, and a passing result for another stamped scenario"
-  (fn [ctx] (statuses! ctx [(wip 1 "Planned") (k/sc 2 "Done")] [{:id "spec-0002"}])))
+  (fn [ctx] (-> (scenarios-project! ctx [1 2] {:wip [1]}) (result! "spec-0002" "passed"))))
 
-(defstep #"it lists the scenario as planned(?:, not as verified, failed or unverified)?"
-  (fn [ctx] (k/check-exit ctx 0) (assert (= :planned (vr/status-of ctx "spec-0001"))) ctx))
+(defstep #"it lists the scenario as planned"
+  (fn [ctx] (k/exits! ctx 0) (status-is! ctx "spec-0001" :planned)))
 
 (defstep #"a stamped scenario tagged @wip, with results"
-  (fn [ctx] (statuses! ctx [(wip 1 "Planned")] [])))
+  (fn [ctx] (scenarios-project! ctx [1] {:wip [1]})))
 
 (defstep #"an Allure result for it with status skipped, and another with status passed"
-  (fn [ctx] (doseq [s ["skipped" "passed"]] (k/write-result! (vr/results-dir ctx) {:id "spec-0001" :status s})) ctx))
+  (fn [ctx] (-> ctx (result! "spec-0001" "skipped") (result! "spec-0001" "passed"))))
+
+(defstep #"it lists the scenario as planned, not as verified, failed or unverified"
+  (fn [ctx] (k/exits! ctx 0) (status-is! ctx "spec-0001" :planned)))
 
 (defstep #"three stamped scenarios: one passing, one failing, one with no result"
-  (fn [ctx] (statuses! ctx [(k/sc 1 "Passing") (k/sc 2 "Failing") (k/sc 3 "Untested")]
-                       [{:id "spec-0001"} {:id "spec-0002" :status "failed"}])))
+  (fn [ctx] (-> (scenarios-project! ctx [1 2 3]) (result! "spec-0001" "passed") (result! "spec-0002" "failed"))))
 
 (defstep #"it lists one as verified, one as failed and one as unverified"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (assert (= [:verified :failed :unverified] (map #(vr/status-of ctx %) ["spec-0001" "spec-0002" "spec-0003"])))
-    ctx))
+    (k/exits! ctx 0)
+    (-> ctx (status-is! "spec-0001" :verified) (status-is! "spec-0002" :failed) (status-is! "spec-0003" :unverified))))
 
-(defn row [n] [{"name" "n" "value" (str n)}])
+(defn row [n] {:parameters [{:name "n" :value (str n)}]})
 
 (defstep #"Allure results for two rows passed and one failed"
-  (fn [ctx]
-    (doseq [[n s] [[1 "passed"] [2 "passed"] [3 "failed"]]]
-      (k/write-result! (vr/results-dir ctx) {:id "spec-0001" :status s :parameters (row n)}))
-    ctx))
+  (fn [ctx] (-> ctx (result! "spec-0001" "passed" (row 1)) (result! "spec-0001" "passed" (row 2)) (result! "spec-0001" "failed" (row 3)))))
+
+(defstep #"the scenario is (verified|failed|unverified)"
+  (fn [ctx st] (k/exits! ctx 0) (status-is! ctx (or (::id ctx) "spec-0001") (keyword st))))
 
 (defstep #"three passing Allure results labelled with its id, none of which names its row"
-  (fn [ctx] (dotimes [_ 3] (k/write-result! (vr/results-dir ctx) {:id "spec-0001"})) ctx))
+  (fn [ctx] (-> ctx (result! "spec-0001" "passed") (result! "spec-0001" "passed") (result! "spec-0001" "passed"))))
 
 (defstep #"Allure results for two rows, both passed, and none for the third"
-  (fn [ctx]
-    (doseq [n [1 2]] (k/write-result! (vr/results-dir ctx) {:id "spec-0001" :parameters (row n)}))
-    ctx))
-
-(defstep #"the scenario is (verified|failed|unverified|planned)"
-  (fn [ctx status]
-    (k/check-exit ctx 0)
-    (let [id (or (some #(when (str/includes? (slurp (fs/file (:dir ctx) k/core-feature)) %) %) ["spec-0007" "spec-0001"]))]
-      (assert (= (keyword status) (vr/status-of ctx id)) (:out ctx)))
-    ctx))
+  (fn [ctx] (-> ctx (result! "spec-0001" "passed" (row 1)) (result! "spec-0001" "passed" (row 2)))))
 
 (defstep #"a stamped scenario @spec-0007"
-  (fn [ctx] (vr/scenarios-project! ctx [(k/sc 7 "Seven")])))
+  (fn [ctx] (assoc (scenarios-project! ctx [7]) ::id "spec-0007")))
+
+(defstep #"an Allure result labelled spec=spec-0007 with status (passed|failed|broken|skipped|unknown)"
+  (fn [ctx st] (result! ctx "spec-0007" st)))
 
 (defstep #"two Allure results labelled spec=spec-0007, one passed and one failed"
-  (fn [ctx]
-    (let [ctx (vr/scenarios-project! ctx [(k/sc 7 "Seven")])]
-      (doseq [s ["passed" "failed"]] (k/write-result! (vr/results-dir ctx) {:id "spec-0007" :status s}))
-      ctx)))
+  (fn [ctx] (-> ctx (result! "spec-0007" "passed") (result! "spec-0007" "failed"))))
 
 (defstep #"ten stamped scenarios"
-  (fn [ctx] (statuses! ctx (for [i (range 1 11)] (k/sc i (str "Scenario " i))) [])))
+  (fn [ctx] (scenarios-project! ctx (range 1 11))))
 
 (defstep #"Allure results for nine of them"
-  (fn [ctx] (doseq [i (range 1 10)] (k/write-result! (vr/results-dir ctx) {:id (format "spec-%04d" i)})) ctx))
+  (fn [ctx] (doseq [i (range 1 10)] (result! ctx (format "spec-%04d" i) "passed")) ctx))
 
 (defstep #"the report counts ten scenarios"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (assert (= 10 (count (get-in (k/edn-out ctx) [:status :scenarios]))))
-    (assert (= {:verified 9 :failed 0 :unverified 1 :planned 0} (get-in (k/edn-out ctx) [:status :counts])))
-    ctx))
+    (k/exits! ctx 0)
+    (let [c (get-in ctx [:result :status :counts])]
+      (k/check! (= 10 (count (get-in ctx [:result :status :scenarios]))) "the report lists " (count (get-in ctx [:result :status :scenarios])))
+      (k/check! (= 10 (reduce + (vals c))) "the counts are " (pr-str c))
+      ctx)))
 
 (defstep #"the tenth is unverified"
-  (fn [ctx] (assert (= :unverified (vr/status-of ctx "spec-0010"))) ctx))
+  (fn [ctx] (status-is! ctx "spec-0010" :unverified)))

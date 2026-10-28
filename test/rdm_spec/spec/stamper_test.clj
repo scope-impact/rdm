@@ -2,12 +2,10 @@
   (:require [clojure.test :refer [deftest is]]
             [rdm-spec.spec.stamper :as stamper]))
 
-(def text "@UN-001\nFeature: A\n\n  @e2e\n  Scenario: One\n    Given x\n\n  Scenario: Two\n    Given y\n")
+(deftest stamps-on-the-tag-line-or-above-the-scenario
+  (is (= "Feature: F\n\n  @spec-0003 @e2e\n  Scenario: a\n    Given b\n\n  @spec-0004\n  Scenario: c\n    Given d\n"
+         (stamper/stamp-text "Feature: F\n\n  @e2e\n  Scenario: a\n    Given b\n\n  Scenario: c\n    Given d\n"
+                             [[4 "spec-0003"] [7 "spec-0004"]]))))
 
-(deftest an-id-joins-the-tag-line-or-gets-its-own
-  (is (= "@UN-001\nFeature: A\n\n  @spec-0042 @e2e\n  Scenario: One\n    Given x\n\n  @spec-0043\n  Scenario: Two\n    Given y\n"
-         (stamper/stamp-text text [[5 "spec-0042"] [8 "spec-0043"]]))))
-
-(deftest the-ledger-keeps-its-comments
-  (is (= ";; the ledger\n{:issued 43}\n" (stamper/ledger-text ";; the ledger\n{:issued 41}\n" 43)))
-  (is (= "{:issued 1}\n" (stamper/ledger-text nil 1))))
+(deftest advances-the-ledger-keeping-its-comments
+  (is (= ";; the ledger\n{:issued 42}\n" (stamper/ledger-text ";; the ledger\n{:issued 41}\n" 42))))

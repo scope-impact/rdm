@@ -1,116 +1,141 @@
 (ns steps.architecture-lint
-  "Step definitions of dhf/spec/architecture/lint.feature."
-  (:require [babashka.fs :as fs]
-            [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep fail!]]
-            [steps.kernel-command :as k]
-            [steps.architecture-model :as am]))
+  "Steps of the component Lint (dhf/spec/04-model-the-architecture/lint.feature)."
+  (:require [clojure.string :as str]
+            [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-shared :as k]
+            [steps.architecture-model :as m]))
 
-(def two-contexts
-  (k/model {:contexts [["shop" ["till"]] ["stock" ["shelf"]]]
-            :views [{:key "context" :level :context :description "The demo and its users"}]}))
-
-(defn lint-project!
-  "A project of the model m (two contexts and a context view unless given),
-  its views not generated."
-  ([ctx f] (lint-project! ctx f {}))
-  ([ctx f opts] (am/arch-project! ctx (f two-contexts) (merge {:no-views true} opts))))
-
-(defstep #"a view with no description"
-  (fn [ctx] (-> (lint-project! ctx #(update-in % [:views 0] dissoc :description)) (k/names+ "c4-scope" "context"))))
-
-(defstep #"a container with no description"
-  (fn [ctx] (-> (lint-project! ctx #(update-in % [:containers 0] dissoc :description))
-                (k/names+ "c4-element-described" ":app"))))
-
-(defstep #"a relationship with no description"
-  (fn [ctx] (-> (lint-project! ctx #(update-in % [:relationships 0] dissoc :description))
-                (k/names+ "c4-arrow-labelled" ":user" ":app"))))
-
-(defstep #"a context view that includes no person"
-  (fn [ctx] (-> (lint-project! ctx #(-> % (assoc :people []) (assoc :relationships [])))
-                (k/names+ "c4-context-actors" "context"))))
-
-(defstep #"a container declared with kind library"
-  (fn [ctx] (-> (lint-project! ctx #(assoc-in % [:containers 0 :kind] :library))
-                (k/names+ "c4-container-runs" ":app"))))
-
-(defstep #"a relationship that publishes the event SpecCut"
-  (fn [ctx] (-> (lint-project! ctx #(update % :relationships conj
-                                            {:from :shop/till :to :stock/shelf :description "Publishes" :event :SpecCut}))
-                (k/names+ "c4-events-named" ":shop/till -> :stock/shelf" "SpecCut"))))
-
-(defstep #"SpecCut is not in the event catalogue"
-  (fn [ctx]
-    (assert (not (str/includes? (slurp (fs/file (k/guard! (:dir ctx)) "dhf/spec/events.edn")) "SpecCut")))
+(defn linted!
+  "A project of the demo model changed by F, its views redrawn."
+  [ctx f]
+  (let [ctx (m/model-project! ctx m/demo)]
+    (m/model! ctx f)
+    (k/run-rdm ctx "views")
     ctx))
 
-(defstep #"the configured view limit is (\d+) elements"
-  (fn [ctx n] (k/project! ctx {:config {:c4 {:view-element-limit (parse-long n) :description-max-chars 45}}})))
+(defn rule! [ctx rule & names] (k/exits! ctx 1) (apply k/err-line-has! ctx (str rule ": ") names) ctx)
+
+(defstep #"a view with no description"
+  (fn [ctx] (linted! ctx #(update-in % [:views 0] dissoc :description))))
+
+(defstep #"it fails rule c4-scope and names the view"
+  (fn [ctx] (rule! ctx "c4-scope" "context")))
+
+(defstep #"a container with no description"
+  (fn [ctx] (linted! ctx #(update-in % [:containers 0] dissoc :description))))
+
+(defstep #"it fails rule c4-element-described and names the container"
+  (fn [ctx] (rule! ctx "c4-element-described" ":app")))
+
+(defstep #"a relationship with no description"
+  (fn [ctx] (linted! ctx #(update-in % [:relationships 0] dissoc :description))))
+
+(defstep #"it fails rule c4-arrow-labelled and names both ends"
+  (fn [ctx] (rule! ctx "c4-arrow-labelled" ":user" ":app")))
+
+(defstep #"a context view that includes no person"
+  (fn [ctx] (linted! ctx #(-> % (assoc :people []) (assoc :relationships [])))))
+
+(defstep #"it fails rule c4-context-actors and names the view"
+  (fn [ctx] (rule! ctx "c4-context-actors" "context")))
+
+(defstep #"a container declared with kind library"
+  (fn [ctx] (linted! ctx #(assoc-in % [:containers 0 :kind] :library))))
+
+(defstep #"it fails rule c4-container-runs and names the container"
+  (fn [ctx] (rule! ctx "c4-container-runs" ":app")))
+
+(defstep #"a relationship that publishes the event SpecCut"
+  (fn [ctx]
+    (let [ctx (linted! ctx (fn [mo] (-> mo
+                              (update-in [:containers 0 :contexts 0 :components] conj {:id :demo/other :name "Other" :spec "demo/other" :description "Another"})
+                              (update :relationships conj {:from :demo/thing :to :demo/other :description "Publishes" :event :SpecCut}))))]
+      (k/write! ctx "dhf/spec/demo/other.feature" (k/feature-text "Other" ["UN-001"] [{:id "spec-0002" :title "Other works"}]))
+      (k/write! ctx "dhf/spec/ids.edn" "{:issued 2}\n"))))
+
+(defstep #"SpecCut is not in the event catalogue"
+  (fn [ctx] (k/write-edn! ctx "dhf/spec/events.edn" {})))
+
+(defstep #"it fails rule c4-events-named and names the relationship and the event"
+  (fn [ctx] (rule! ctx "c4-events-named" ":demo/thing" ":demo/other" "SpecCut")))
+
+(defstep #"the configured view limit is 20 elements"
+  (fn [ctx] (let [ctx (m/model-project! ctx m/demo)] (k/config! ctx assoc-in [:c4 :view-element-limit] 20) ctx)))
 
 (defstep #"a view showing 23 elements"
   (fn [ctx]
-    (let [comps (mapv #(str "part" %) (range 1 24))
-          m (k/model {:contexts [["shop" comps]] :kernel ["core"]})]
-      (-> (am/arch-project! ctx m)
-          (k/names+ "c4-view-size" "shop-components" "23" "20")))))
+    (m/model! ctx update :people into (for [i (range 21)] {:id (keyword (str "p" i)) :name (str "P" i) :description "A person"}))
+    (k/run-rdm ctx "views")
+    ctx))
 
-(defstep #"the configured description limit is (\d+) characters"
-  (fn [ctx n] (k/project! ctx {:config {:c4 {:view-element-limit 20 :description-max-chars (parse-long n)}}})))
+(defstep #"it warns under rule c4-view-size and names the view and both counts"
+  (fn [ctx]
+    (k/exits! ctx 0)
+    (k/err-line-has! ctx "warning: c4-view-size: " "context" "23" "20")
+    ctx))
+
+(defstep #"the configured description limit is 45 characters"
+  (fn [ctx] (let [ctx (m/model-project! ctx m/demo)] (k/config! ctx assoc-in [:c4 :description-max-chars] 45) ctx)))
 
 (defstep #"a person whose description is 60 characters"
+  (fn [ctx] (m/model! ctx assoc-in [:people 0 :description] (apply str (repeat 60 "x"))) (k/run-rdm ctx "views") ctx))
+
+(defstep #"it fails rule c4-description-length and names the person and both lengths"
+  (fn [ctx] (rule! ctx "c4-description-length" ":user" "60" "45")))
+
+(defstep #"its result's :lint :for-a-person is exactly \[\"Does each view serve its audience: can its reader answer the question the view is for\?\" \"Is the true coupling visible: does every relationship that matters appear, labelled with what passes\?\" \"Was each render looked at by a person, and did nothing overlap or hide a name\?\"\]"
   (fn [ctx]
-    (let [d (apply str (take 60 (cycle "A person who uses the demo every day. ")))]
-      (assert (= 60 (count d)))
-      (-> (lint-project! ctx #(assoc-in % [:people 0 :description] d))
-          (k/names+ "c4-description-length" ":user" "60" "45")))))
-
-(defstep #"it warns under rule (\S+) and names .+"
-  (fn [ctx rule]
-    (k/check-exit ctx 0)
-    (assert (= rule (first (:names ctx))))
-    (apply k/err-line-with ctx "warning: " (:names ctx))))
-
-(defstep #"its result's :lint :for-a-person is exactly (\[.+\])"
-  (fn [ctx items]
-    (k/check-exit ctx 0)
-    (let [want (clojure.edn/read-string items)
-          got (get-in (k/edn-out ctx) [:lint :for-a-person])]
-      (assert (= want got) (pr-str got))
-      ctx)))
+    (k/check! (= ["Does each view serve its audience: can its reader answer the question the view is for?"
+                  "Is the true coupling visible: does every relationship that matters appear, labelled with what passes?"
+                  "Was each render looked at by a person, and did nothing overlap or hide a name?"]
+                 (get-in ctx [:result :lint :for-a-person]))
+              "the questions are " (pr-str (get-in ctx [:result :lint])) "; " (k/shows ctx))
+    ctx))
 
 (defstep #"a bounded context with components and no component view"
-  (fn [ctx]
-    (-> (lint-project! ctx #(update % :views (fn [vs] (vec (remove (fn [v] (= :stock (:context v))) vs)))))
-        (k/names+ "a-component-view" ":stock"))))
+  (fn [ctx] (linted! ctx #(update % :views (fn [vs] (vec (remove (fn [v] (= :component (:level v))) vs)))))))
+
+(defstep #"it fails rule a-component-view and names the context"
+  (fn [ctx] (rule! ctx "a-component-view" ":demo")))
 
 (defstep #"a component in the model with no feature file at its path in the spec"
   (fn [ctx]
-    (let [ctx (lint-project! ctx identity)]
-      (fs/delete (fs/path (:dir ctx) "dhf/spec/stock/shelf.feature"))
-      (k/names+ ctx "a-scenario-owner" ":stock/shelf" "dhf/spec/stock/shelf.feature"))))
+    (linted! ctx #(update-in % [:containers 0 :contexts 0 :components] conj {:id :demo/ghost :name "Ghost" :spec "demo/ghost" :description "Has no file"}))))
+
+(defstep #"it fails rule a-scenario-owner and names the component"
+  (fn [ctx] (rule! ctx "a-scenario-owner" ":demo/ghost")))
 
 (defstep #"a feature file in the spec at a path no component of the model names"
   (fn [ctx]
-    (let [ctx (lint-project! ctx identity)]
-      (k/write-files! (:dir ctx) {"dhf/spec/stock/ghost.feature" (am/feature-for "stock/ghost" 9)})
-      (k/names+ ctx "a-scenario-owner" "dhf/spec/stock/ghost.feature"))))
+    (let [ctx (m/model-project! ctx m/demo)]
+      (k/write! ctx "dhf/spec/demo/stray.feature" (k/feature-text "Stray" ["UN-001"] [{:id "spec-0002" :title "Stray"}]))
+      (k/write! ctx "dhf/spec/ids.edn" "{:issued 2}\n"))))
 
-(def call {:from :shop/till :to :stock/shelf :description "Reads the shelf through"})
+(defstep #"it fails rule a-scenario-owner and names the file"
+  (fn [ctx] (rule! ctx "a-scenario-owner" "dhf/spec/demo/stray.feature")))
+
+(def two-contexts (k/context-model [[:demo [[:thing "Thing"]]] [:other [[:part "Part"]]]]))
 
 (defstep #"a relationship from a component of one bounded context to a component of another, naming no event"
   (fn [ctx]
-    (-> (lint-project! ctx #(update % :relationships conj call))
-        (k/names+ "a-contract-only" ":shop/till -> :stock/shelf"))))
+    (let [ctx (m/model-project! ctx two-contexts)]
+      (m/model! ctx update :relationships conj {:from :demo/thing :to :other/part :description "Calls"})
+      (k/run-rdm ctx "views")
+      ctx)))
+
+(defstep #"it fails rule a-contract-only and names the relationship"
+  (fn [ctx] (rule! ctx "a-contract-only" ":demo/thing" ":other/part")))
 
 (defstep #"a configuration whose :c4 holds :contexts-relate-by \[:events :calls\], and a relationship from a component of one bounded context to a component of another, naming no event"
   (fn [ctx]
-    (lint-project! ctx #(update % :relationships conj call)
-                   {:no-views false :config {:c4 {:view-element-limit 20 :description-max-chars 45
-                                                  :contexts-relate-by [:events :calls]}}})))
+    (let [ctx (m/model-project! ctx two-contexts)]
+      (m/model! ctx update :relationships conj {:from :demo/thing :to :other/part :description "Calls"})
+      (k/config! ctx assoc-in [:c4 :contexts-relate-by] [:events :calls])
+      (k/run-rdm ctx "views")
+      ctx)))
 
-(defstep #"it passes rule (\S+)"
-  (fn [ctx rule]
-    (k/check-exit ctx 0)
-    (assert (not-any? #(str/includes? % rule) (k/err-lines ctx)) (:err ctx))
+(defstep #"it passes rule a-contract-only"
+  (fn [ctx]
+    (k/exits! ctx 0)
+    (k/check! (not-any? #(str/includes? % "a-contract-only") (k/err-lines ctx)) "a-contract-only fails: " (k/shows ctx))
     ctx))

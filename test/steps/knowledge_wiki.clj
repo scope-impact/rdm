@@ -1,49 +1,59 @@
 (ns steps.knowledge-wiki
-  "Step definitions of dhf/spec/knowledge/wiki.feature."
-  (:require [babashka.fs :as fs]
-            [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep fail!]]
-            [steps.kernel-command :as k]
-            [steps.knowledge-sources :as ks]))
+  "Steps of the component Wiki (dhf/spec/03-ground-the-spec/wiki.feature)."
+  (:require [clojure.string :as str]
+            [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-shared :as k]
+            [steps.knowledge-sources :as s]))
 
 (defstep #"a wiki page with three paragraphs and no footnote"
+  (fn [ctx] (s/page! (s/base! ctx) "bare" "# Bare\n\nOne.\n\nTwo.\n\nThree.\n")))
+
+(defstep #"the check fails and names the page"
   (fn [ctx]
-    (-> (k/wiki-page! (k/project! ctx) "dhf/wiki/pages/bare.md" "# Bare\n\nOne.\n\nTwo.\n\nThree.\n")
-        (k/names+ "dhf/wiki/pages/bare.md"))))
+    (k/exits! ctx 1)
+    (k/err-line-has! ctx (some #(when (str/includes? (str (:err ctx)) %) %) ["dhf/wiki/pages/bare.md" "dhf/wiki/pages/cut-and-fence.md"]))
+    ctx))
 
 (defstep #"a checkout of skallinen/loyly at 17d68d2, given with --sources, with no docs/plan.md"
-  (fn [ctx] (let [ctx (ks/checkout! ctx "loyly" "17d68d2" {"README.md" "# Loyly\n"})]
-              (-> (ks/loyly! ctx ["17d68d2"]) (k/names+ "docs/plan.md")))))
+  (fn [ctx]
+    (let [ctx (s/checkout! (s/base! ctx) "loyly" {"README.md" "# Loyly\n"})]
+      (s/source! ctx :loyly {:pins [(s/pin ctx "loyly")]}))))
+
+(defstep #"a wiki page whose footnote cites \"loyly:docs/plan.md@17d68d2\""
+  (fn [ctx] (s/page! ctx "plan" (s/cited-page (str "loyly:docs/plan.md@" (s/pin ctx "loyly"))))))
+
+(defstep #"the check fails and names the page, the footnote and why it did not resolve"
+  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx "dhf/wiki/pages/plan.md:5" "loyly:docs/plan.md" "does not hold") ctx))
 
 (defstep #"a wiki page whose every footnote cites a resolving source"
   (fn [ctx]
-    (let [ctx (ks/checkout! ctx "demo" "DEMOPIN" {"README.md" "# Demo\n"})
-          ctx (ks/source! ctx "demo" {:repository "https://example.org/demo" :record "demo.md" :pins [(k/real-pin ctx "DEMOPIN")] :fenced []})
-          c (k/real-pin ctx "demo:README.md@DEMOPIN")]
-      (k/update-edn! ctx "dhf/spec/needs.edn" assoc-in ["UN-001" :sources] [c])
-      (k/wiki-page! ctx "dhf/wiki/pages/sourced.md" (str "# Sourced\n\nA claim.[^a]\n\nAnother.[^b]\n\n[^a]: `" c "`, \"One\".\n[^b]: `" c "`, \"Two\".\n")))))
+    (let [ctx (s/checkout! (s/base! ctx) "loyly" {"README.md" "# Loyly\n"})]
+      (s/source! ctx :loyly {:pins [(s/pin ctx "loyly")]})
+      (s/page! ctx "good" (s/cited-page (str "loyly:README.md@" (s/pin ctx "loyly"))))
+      ctx)))
 
 (defstep #"the page passes"
   (fn [ctx]
-    (let [ctx (k/rdm ctx ["check" "--sources" (get-in ctx [:ph "DIR"])])]
-      (k/check-exit ctx 0)
-      (assert (not (str/includes? (:err ctx) "sourced.md")) (:err ctx))
+    (let [ctx (k/run-rdm ctx "check --sources DIR")]
+      (k/exits! ctx 0)
+      (k/check! (not-any? #(str/includes? % "good.md") (k/err-lines ctx)) "a line names the page: " (k/shows ctx))
       ctx)))
 
 (defstep #"the wiki page dhf/wiki/pages/cut-and-fence.md and an index that does not link it"
   (fn [ctx]
-    (let [ctx (k/project! ctx)]
-      (k/write-files! (:dir ctx) {"dhf/wiki/pages/cut-and-fence.md" "# Cut and fence\n\nA claim.[^1]\n\n[^1]: `demo:README.md@abc1234`, \"A\".\n"})
-      (k/names+ ctx "dhf/wiki/pages/cut-and-fence.md"))))
+    (let [ctx (s/base! ctx)]
+      (k/write! ctx "dhf/wiki/pages/cut-and-fence.md" (s/cited-page "demo:README.md@abc1234")))))
 
 (defstep #"an index linking pages/scoring.md and no such page"
   (fn [ctx]
-    (let [ctx (k/project! ctx)
-          f (fs/file (k/guard! (:dir ctx)) "dhf/wiki/index.md")]
-      (spit f (str (slurp f) "- [Scoring](pages/scoring.md)\n"))
-      (k/names+ ctx "pages/scoring.md"))))
+    (let [ctx (s/base! ctx)]
+      (k/write! ctx "dhf/wiki/index.md" (str (k/slurp-rel ctx "dhf/wiki/index.md") "\n- [Scoring](pages/scoring.md): how a cycle is scored.\n")))))
+
+(defstep #"the check fails and names the entry"
+  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx "dhf/wiki/index.md" "pages/scoring.md") ctx))
 
 (defstep #"a wiki page that says the check is written in Cobalt"
-  (fn [ctx]
-    (-> (k/wiki-page! ctx "dhf/wiki/pages/cobalt.md" "# Cobalt\n\nThe check is written in Cobalt.[^1]\n\n[^1]: `demo:README.md@abc1234`, \"A\".\n")
-        (k/names+ "dhf/wiki/pages/cobalt.md:3"))))
+  (fn [ctx] (s/page! ctx "cobalt" "# Cobalt\n\nThe check is written in Cobalt.[^a]\n\n[^a]: `demo:README.md@abc1234`, \"x\".\n")))
+
+(defstep #"the check fails and names the page, the line and the word"
+  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx "dhf/wiki/pages/cobalt.md:3:" "Cobalt") ctx))

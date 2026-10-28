@@ -11,4 +11,20 @@
    :results-in-room false,
    :unobserved
    ["reads outside the room: no read is observed"
-    "writes below a watched directory's own entries, and anything undone before the run ended"]}}]
+    "writes below a watched directory's own entries, and anything undone before the run ended"]}}
+ {:role "grader",
+  :room "/home/user/c24/grade-a",
+  :began "2026-10-28T07:27:46.701046157Z",
+  :ended "2026-10-28T07:52:25.945183067Z",
+  :minutes 24.65,
+  :tokens 925131,
+  :defence
+  {:writes-outside [],
+   :tmp-left 0,
+   :repo-touched [],
+   :results-in-room false,
+   :unobserved
+   ["reads outside the room: no read is observed"
+    "writes below a watched directory's own entries, and anything undone before the run ended"]}}
+ ;; Integrator: grader b reported reading two files outside its room, /home/user/rdm/dhf/views/context.mmd and containers.mmd, after a failed cd (reads are not observed); no write; its verdict on spec-0198 rests on its own fixture.
+]

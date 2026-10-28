@@ -1,0 +1,16 @@
+# What cycle 24's builder decided where the spec was silent, by scenario,
+# from its report (see 16/decisions.yaml).
+- {scenario: spec-0391, decision: "the :Check request always carries :results; the newer spec-0391 wins over spec-0362's four keys"}
+- {scenario: spec-0342, decision: "the oracle task has no time limit; as a Gate it gets its :seconds (60 by default)"}
+- {scenario: spec-0361, decision: "a :plugin check whose plugin cannot run is :refused in ratified.edn, then verify exits 2, as spec-0383 does"}
+- {scenario: spec-0068, decision: "a result status of unknown is readable and fails; any other unlisted status is unreadable (with spec-0313)"}
+- {scenario: spec-0062, decision: "an unreadable result file is a finding, so status exits 1"}
+- {scenario: spec-0186, decision: "a scenario's finding names the line of its Scenario keyword"}
+- {scenario: spec-0302, decision: "a result naming no outline row counts toward nothing, even when it failed"}
+- {scenario: spec-0215, decision: ":room-tree is the git tree of the room's implementation paths only, as git would commit them"}
+- {scenario: spec-0331, decision: "a mapping finding names the result file at line 1"}
+- {scenario: spec-0399, decision: "slice scopes are listed before the component scopes that event changes add"}
+- {scenario: spec-0086, decision: "init's :steps-dir is test/steps"}
+- {scenario: spec-0015, decision: "a-contract-only ignores kernel ends (rdm-spec's own model relates hooks to kernel/command by call)"}
+- {scenario: spec-0108, decision: "trace with no results directory derives no status; a missing --results exits 2 (with spec-0107)"}
+- {scenario: spec-0395, decision: "checklist items carry slice under the slices layout only, so spec-0210's shape stands"}

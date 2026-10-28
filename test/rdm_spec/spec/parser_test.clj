@@ -1,66 +1,83 @@
 (ns rdm-spec.spec.parser-test
-  (:require [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing]]
             [rdm-spec.spec.parser :as parser]))
 
-(def text
-  "@UN-001
-Feature: Lint
-  Its description.
+(def every-construct
+  "# a comment
+@UN-001
+Feature: Demo
+  A description of the feature.
 
   Background:
-    Given a model
+    Given a background step
 
-  @UN-002
-  Rule: Every view is described
+  Rule: The rule
 
-    @spec-0012 @e2e
-    Scenario: Lint names the view
-      Given a view with no description
-      When the model is linted
-      Then the view is named
-      And a doc:
-        \"\"\"
-        text
-        \"\"\"
-
-    @spec-0013 @contract @wip
-    Scenario Outline: Rows of <n>
-      Given <n> rows
+    @spec-0001 @e2e
+    Scenario: A plain scenario
+      Given a table
         | a | b |
+        | 1 | 2 |
+      When a doc string
+        \"\"\"
+        line one
+          line two
+        \"\"\"
+      Then it holds
+      And more
+      But not less
+
+    @spec-0002 @contract
+    Scenario Outline: An outline with <x>
+      Given the value <x>
+      Then it is <y>
 
       Examples:
-        | n |
-        | 1 |
-        | 2 |
+        | x | y |
+        | 1 | one |
+        | 2 | two |
 ")
 
-(deftest a-feature-is-read-whole
-  (let [{:keys [scenarios refusals feature]} (parser/parse-feature "dhf/spec/architecture/lint.feature" text)
-        [a b] scenarios]
+(deftest parses-every-construct
+  (let [{:keys [feature scenarios refusals]} (parser/parse-feature every-construct "f.feature")]
     (is (empty? refusals))
-    (is (= "Lint" (:name feature)))
+    (is (= "Demo" (:name feature)))
+    (is (= ["@UN-001"] (:tags feature)))
     (is (= 2 (count scenarios)))
-    (is (= {:id "spec-0012" :ids ["spec-0012"] :title "Lint names the view" :line 12 :level :e2e
-            :needs ["UN-001" "UN-002"] :wip? false :outline? false :rule "Every view is described" :feature "Lint"}
-           (select-keys a [:id :ids :title :line :level :needs :wip? :outline? :rule :feature])))
-    (is (= [{:keyword "Given" :text "a model"}] (map #(select-keys % [:keyword :text]) (:background a))))
-    (is (= ["Given" "When" "Then" "And"] (map :keyword (:steps a))))
-    (is (= "text" (:doc (last (:steps a)))))
-    (is (= [["a" "b"]] (:table (first (:steps b)))))
-    (is (:wip? b))
-    (is (:outline? b))
-    (is (= [["1"] ["2"]] (:rows b)))
-    (is (= ["n"] (:headings (first (:examples b)))))
-    (is (= #{"UN-001" "spec-0013" "contract" "wip" "UN-002"} (set (:all-tags b))))))
+    (let [[a b] scenarios]
+      (is (= "A plain scenario" (:title a)))
+      (is (= 12 (:line a)))
+      (is (= ["@spec-0001" "@e2e"] (:tags a)))
+      (is (= "The rule" (get-in a [:rule :name])))
+      (is (= [{:keyword "Given" :text "a background step" :line 7}] (map #(select-keys % [:keyword :text :line]) (:background a))))
+      (is (= ["Given" "When" "Then" "And" "But"] (map :keyword (:steps a))))
+      (is (= [["a" "b"] ["1" "2"]] (:table (first (:steps a)))))
+      (is (= "line one\n  line two" (:docstring (second (:steps a)))))
+      (is (:outline? b))
+      (is (= "Scenario Outline" (:keyword b)))
+      (is (= ["x" "y"] (get-in b [:examples 0 :header])))
+      (is (= [{"x" "1" "y" "one"} {"x" "2" "y" "two"}] (map :values (:rows b)))))))
 
-(deftest what-is-outside-the-subset-is-refused
-  (let [r (parser/parse-feature "f.feature" "Feature: A\n\n  Scenario: x\n    Given y\n\n  Scenario Template: z\n")]
-    (is (= [[6 "gherkin-keyword-unknown"]] (map (juxt :line :rule) (:refusals r))))
-    (is (str/includes? (:message (first (:refusals r))) "Scenario Template")))
-  (let [r (parser/parse-feature "f.feature" "Feature: A\n\nFeature: B\n")]
-    (is (= [3] (map :line (:refusals r))))))
+(deftest refuses-unknown-keyword
+  (let [{:keys [refusals]} (parser/parse-feature "Feature: X\n\n  Scenario Template: y\n    Given z\n" "f.feature")]
+    (is (= 1 (count refusals)))
+    (is (= 3 (:line (first refusals))))
+    (is (re-find #"Scenario Template" (:message (first refusals))))))
 
-(deftest an-id-is-a-tag-of-the-prefix
-  (is (= ["spec-0001"] (parser/ids-of ["spec-0001" "e2e" "UN-001"] "spec")))
-  (is (= ["auth-0004"] (parser/ids-of ["auth-0004" "spec-0001"] "auth"))))
+(deftest refuses-second-feature
+  (let [{:keys [refusals]} (parser/parse-feature "Feature: X\n  Scenario: a\n    Given b\nFeature: Y\n" "f.feature")]
+    (is (= [4] (map :line refusals)))))
+
+(deftest refuses-stray-line-after-steps
+  (let [{:keys [refusals]} (parser/parse-feature "Feature: X\n  Scenario: a\n    Given b\n    stray words\n" "f.feature")]
+    (is (= [4] (map :line refusals)))))
+
+(deftest description-lines-with-colons-are-description
+  (let [{:keys [refusals]} (parser/parse-feature "Feature: X\n  Status is a report: it exits 0.\n\n  Scenario: a\n    Given b\n" "f.feature")]
+    (is (empty? refusals))))
+
+(deftest outline-rows-substitute
+  (let [{:keys [scenarios]} (parser/parse-feature every-construct "f.feature")
+        b (second scenarios)]
+    (is (= ["Given a background step" "Given the value 2" "Then it is two"]
+           (map #(str (:keyword %) " " (:text %)) (parser/row-steps b (second (:rows b))))))))

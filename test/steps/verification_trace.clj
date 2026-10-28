@@ -1,134 +1,135 @@
 (ns steps.verification-trace
-  "Step definitions of dhf/spec/verification/trace.feature."
-  (:require [babashka.fs :as fs]
-            [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep fail!]]
-            [steps.kernel-command :as k]))
-
-(defn trace [ctx] (k/check-exit ctx 0) (:trace (k/edn-out ctx)))
+  "Steps of the component Trace (dhf/spec/05-verify-by-results/trace.feature)."
+  (:require [clojure.string :as str]
+            [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-shared :as k]
+            [steps.verification-status :as s]))
 
 (def three-features
-  {:model-spec {:contexts [["shop" ["till" "cart" "door"]]]}
-   :features {"dhf/spec/shop/till.feature" (k/feature-text {:name "Till" :tags ["UN-003"] :scenarios [(k/sc 1 "Takes") (k/sc 2 "Gives")]})
-              "dhf/spec/shop/cart.feature" (k/feature-text {:name "Cart" :tags ["UN-001"] :scenarios [(k/sc 3 "Holds")]
-                                                            :rules [{:name "Carts" :tags ["UN-003"] :scenarios [(k/sc 4 "Fills")]}]})
-              "dhf/spec/shop/door.feature" (k/feature-text {:name "Door" :tags ["UN-001"]
-                                                            :scenarios [(k/sc 5 "Opens") (update (k/sc 6 "Closes") :tags conj "UN-003")]})}
-   :extra {"dhf/spec/ids.edn" "{:issued 6}\n"
-           "dhf/spec/needs.edn" (k/pr-edn {"UN-001" {:text "One" :sources ["demo:README.md@abc1234"]}
-                                           "UN-003" {:text "Three" :sources ["demo:README.md@abc1234"]}
-                                           "UN-007" {:text "Seven" :sources ["demo:README.md@abc1234"]}})}})
+  {"dhf/spec/demo/one.feature" (str "@UN-003\nFeature: One\n" (k/scenario-text {:id "spec-0001" :title "Under the feature"})
+                                    (k/scenario-text {:id "spec-0002" :title "Also under the feature"}))
+   "dhf/spec/demo/two.feature" (str "@UN-001\nFeature: Two\n\n  @UN-003\n  Rule: The rule\n" (k/scenario-text {:id "spec-0003" :title "Under the rule"})
+                                    "\n  Rule: Another rule\n" (k/scenario-text {:id "spec-0004" :title "Not under it"}))
+   "dhf/spec/demo/three.feature" (str "@UN-001\nFeature: Three\n" (k/scenario-text {:id "spec-0005" :title "Tagged itself" :tags ["@UN-003"]})
+                                      (k/scenario-text {:id "spec-0006" :title "Not tagged"}))})
 
-(defn three! [ctx]
-  (let [ctx (k/project! ctx three-features)]
-    (fs/delete (fs/path (:dir ctx) k/core-feature))
-    ctx))
+(def three-model
+  (assoc k/kernel-model :kernel (vec (for [n ["one" "two" "three"]]
+                                       {:id (keyword "kernel" n) :name (str/capitalize n) :spec (str "demo/" n) :description "A part"}))))
 
 (defstep #"UN-003 tagged on one feature, on one rule in another feature, and on one scenario in a third"
-  (fn [ctx] (three! ctx)))
+  (fn [ctx] (k/spec-project! ctx {:model three-model :features three-features})))
+
+(defn trace [ctx] (get-in ctx [:result :trace]))
 
 (defstep #"the trace lists every scenario under that feature, every scenario under that rule, and that scenario"
   (fn [ctx]
-    (assert (= ["spec-0001" "spec-0002" "spec-0004" "spec-0006"] (sort (map :id (:scenarios (trace ctx))))) (:out ctx))
+    (k/exits! ctx 0)
+    (k/check! (= ["spec-0001" "spec-0002" "spec-0003" "spec-0005"] (sort (map :id (:scenarios (trace ctx))))) "the trace lists " (pr-str (map :id (:scenarios (trace ctx)))))
     ctx))
 
 (defstep #"each with its id, title, component and level"
   (fn [ctx]
-    (let [s (first (filter #(= "spec-0004" (:id %)) (:scenarios (trace ctx))))]
-      (assert (= {:id "spec-0004" :title "Fills" :component "Cart" :level :e2e} (select-keys s [:id :title :component :level])) (pr-str s)))
+    (k/check! (= {:id "spec-0003" :title "Under the rule" :component "Two" :level "e2e"}
+                 (select-keys (first (filter #(= "spec-0003" (:id %)) (:scenarios (trace ctx)))) [:id :title :component :level]))
+              "the trace's scenario is " (pr-str (:scenarios (trace ctx))))
     ctx))
 
 (defstep #"the declared need UN-007 and no scenario tracing to it"
-  (fn [ctx] (three! ctx)))
+  (fn [ctx] (k/spec-project! ctx {:needs (assoc k/demo-needs "UN-007" {:text "A need nothing traces to" :sources ["demo:README.md@abc1234"]})})))
 
 (defstep #"the trace says no scenario traces to UN-007"
   (fn [ctx]
-    (let [t (trace ctx)]
-      (assert (empty? (:scenarios t)))
-      (assert (str/includes? (str (:out ctx)) "no scenario traces to UN-007") (:out ctx)))
+    (k/exits! ctx 0)
+    (k/check! (empty? (:scenarios (trace ctx))) "the trace lists scenarios")
+    (k/check! (str/includes? (str (:says (trace ctx))) "no scenario traces to UN-007") "the trace says " (pr-str (trace ctx)))
     ctx))
 
-(defn lint! [ctx need]
-  (let [ctx (k/project! ctx {:model-spec {:contexts [["architecture" ["lint"]]] :kernel ["core"]}
-                             :features {"dhf/spec/architecture/lint.feature"
-                                        (k/feature-text {:name "Lint" :tags [need] :scenarios [(k/sc 12 "Names the view")]})}
-                             :extra {"dhf/spec/ids.edn" "{:issued 12}\n"}})]
-    (k/update-edn! ctx "dhf/spec/needs.edn" assoc need {:text "A need" :sources ["demo:README.md@abc1234"]})))
+(def lint-model (k/context-model [[:architecture [[:lint "Lint"]]]]))
 
 (defstep #"the scenario @spec-0012 in the component Lint of the bounded context architecture, under a feature tagged UN-005"
-  (fn [ctx] (lint! ctx "UN-005")))
+  (fn [ctx]
+    (k/spec-project! ctx {:model lint-model
+                          :needs (assoc k/demo-needs "UN-005" {:text "A model" :sources ["demo:README.md@abc1234"]})
+                          :features {"dhf/spec/architecture/lint.feature"
+                                     (k/feature-text "Lint" ["UN-005"] [{:id "spec-0012" :title "Lint names the view" :level "contract"}])}})))
 
 (defstep #"the trace names UN-005, the component Lint and the bounded context architecture, and the scenario's level"
   (fn [ctx]
+    (k/exits! ctx 0)
     (let [t (trace ctx)]
-      (assert (= {:kind :scenario :id "spec-0012" :needs ["UN-005"] :component "Lint" :context "architecture" :level :e2e}
-                 (select-keys t [:kind :id :needs :component :context :level])) (pr-str t)))
-    ctx))
+      (k/check! (= {:needs ["UN-005"] :component "Lint" :context "architecture" :level "contract"} (select-keys t [:needs :component :context :level]))
+                "the trace is " (pr-str t))
+      ctx)))
 
 (defstep #"an Allure results directory with two results labelled spec=spec-0012, one passed and one failed"
   (fn [ctx]
-    (let [ctx (-> (lint! ctx "UN-005") (k/placeholder! "DIR"))
-          d (get-in ctx [:ph "DIR"])]
-      (assoc ctx ::files [(k/write-result! d {:id "spec-0012"}) (k/write-result! d {:id "spec-0012" :status "failed"})]))))
+    (let [ctx (s/scenarios-project! ctx [12])
+          d (str (:base ctx) "/dir")]
+      (k/result-json! ctx d {:spec "spec-0012" :status "passed"})
+      (k/result-json! ctx d {:spec "spec-0012" :status "failed"})
+      (assoc-in ctx [:ph "DIR"] d))))
+
+(defstep #"\"rdm-spec trace spec-0012 --results DIR\" is run with that results directory as DIR"
+  (fn [ctx] (k/run-rdm ctx "trace spec-0012 --results DIR")))
 
 (defstep #"the trace gives the status failed"
-  (fn [ctx] (assert (= :failed (:status (trace ctx))) (:out ctx)) ctx))
+  (fn [ctx] (k/exits! ctx 0) (k/check! (= :failed (:status (trace ctx))) "the trace gives " (pr-str (trace ctx))) ctx))
 
 (defstep #"it lists both results with their status and file"
   (fn [ctx]
-    (let [d (get-in ctx [:ph "DIR"])]
-      (assert (= #{{:file (str d "/" (first (::files ctx))) :status "passed"} {:file (str d "/" (second (::files ctx))) :status "failed"}}
-                 (set (:results (trace ctx)))) (:out ctx)))
-    ctx))
+    (let [rs (:results (trace ctx))]
+      (k/check! (= #{"passed" "failed"} (set (map :status rs))) "the results are " (pr-str rs))
+      (k/check! (every? #(str/ends-with? (str (:file %)) "-result.json") rs) "the results do not name their files")
+      ctx)))
 
 (defstep #"UN-003 tagged on one scenario, and a results directory with a passing result for it"
   (fn [ctx]
-    (let [ctx (-> (three! ctx) (k/placeholder! "DIR"))]
-      (k/write-files! (:dir ctx) {"dhf/spec/shop/till.feature" (k/feature-text {:name "Till" :tags ["UN-001"] :scenarios [(k/sc 1 "Takes") (k/sc 2 "Gives")]})
-                                  "dhf/spec/shop/cart.feature" (k/feature-text {:name "Cart" :tags ["UN-001"] :scenarios [(k/sc 3 "Holds") (k/sc 4 "Fills")]})})
-      (k/write-result! (get-in ctx [:ph "DIR"]) {:id "spec-0006"})
-      ctx)))
+    (let [ctx (k/spec-project! ctx {:needs (assoc k/demo-needs "UN-003" {:text "A team sees each scenario's status." :sources ["demo:README.md@abc1234"]})
+                                    :features {"dhf/spec/demo/thing.feature"
+                                               (k/feature-text "Thing" ["UN-001"] [{:id "spec-0001" :title "Traced" :tags ["@UN-003"]}
+                                                                                   {:id "spec-0002" :title "Not traced"}])}})
+          d (str (:base ctx) "/dir")]
+      (k/result-json! ctx d {:spec "spec-0001"})
+      (assoc-in ctx [:ph "DIR"] d))))
 
 (defstep #"standard output is \{:trace \{:kind :need :id \"UN-003\" :text \.\.\. :scenarios \[\.\.\.\]\}\}"
   (fn [ctx]
-    (let [out (k/edn-out ctx) t (:trace out)]
-      (assert (= #{:trace} (set (keys out))))
-      (assert (= {:kind :need :id "UN-003" :text "Three"} (select-keys t [:kind :id :text])) (pr-str t))
-      (assert (= ["spec-0006"] (map :id (:scenarios t))) (pr-str t))
+    (k/exits! ctx 0)
+    (let [t (:result ctx)]
+      (k/check! (= #{:trace} (set (keys t))) "standard output is " (pr-str t))
+      (k/check! (= {:kind :need :id "UN-003" :text "A team sees each scenario's status."} (select-keys (:trace t) [:kind :id :text])) "the trace is " (pr-str t))
+      (k/check! (= #{:kind :id :text :scenarios} (set (keys (:trace t)))) "the trace holds " (pr-str (keys (:trace t))))
       ctx)))
 
 (defstep #"each of its scenarios is a map with :id, :title, :component, :context, :level and :status"
   (fn [ctx]
-    (assert (= [{:id "spec-0006" :title "Closes" :component "Door" :context "shop" :level :e2e :status :verified}]
-               (:scenarios (trace ctx))) (:out ctx))
+    (k/check! (= [{:id "spec-0001" :title "Traced" :component "Thing" :context "kernel" :level "e2e" :status :verified}]
+                 (:scenarios (trace ctx)))
+              "the scenarios are " (pr-str (:scenarios (trace ctx))))
     ctx))
 
-(defstep #"no scenario tagged @spec-0999 and no need UN-999"
-  (fn [ctx] (k/project! ctx)))
+(defstep #"no scenario tagged @spec-0999 and no need UN-999" (fn [ctx] (k/spec-project! ctx)))
 
 (defstep #"it exits 2 and names spec-0999"
-  (fn [ctx] (k/check-exit ctx 2) (k/err-line-with ctx "cannot-run:" "spec-0999")))
+  (fn [ctx] (k/exits! ctx 2) (k/err-has! ctx "spec-0999") ctx))
 
 (defstep #"\"rdm-spec trace spec-0012 --results DIR\" is run with a DIR that does not exist"
-  (fn [ctx]
-    (let [ctx (lint! ctx "UN-005")]
-      (k/rdm-line ctx "rdm-spec trace spec-0012 --results DIR"))))
+  (fn [ctx] (k/run-rdm ctx "trace spec-0012 --results DIR")))
 
 (defstep #"it exits 2 and names the directory"
-  (fn [ctx] (k/check-exit ctx 2) (k/err-line-with ctx "cannot-run:" (get-in ctx [:ph "DIR"]))))
+  (fn [ctx] (k/exits! ctx 2) (k/err-has! ctx (str (:base ctx) "/dir")) ctx))
+
+(defstep #"\"rdm-spec trace spec-0012\" is run with no --results"
+  (fn [ctx] (k/run-rdm ctx "trace spec-0012")))
 
 (defstep #"the trace lists the scenario's needs, component and level"
   (fn [ctx]
-    (let [t (trace ctx)]
-      (assert (= "spec-0012" (:id t)))
-      (assert (seq (:needs t)) (pr-str t))
-      (assert (string? (:component t)) (pr-str t))
-      (assert (#{:e2e :contract} (:level t)) (pr-str t)))
+    (k/exits! ctx 0)
+    (k/check! (= {:needs ["UN-005"] :component "Lint" :level "e2e"} (select-keys (trace ctx) [:needs :component :level])) "the trace is " (pr-str (trace ctx)))
     ctx))
 
 (defstep #"it says no status was derived because no results were given"
   (fn [ctx]
-    (let [t (trace ctx)]
-      (assert (nil? (:status t)))
-      (assert (str/includes? (:out ctx) "no status was derived because no results were given") (:out ctx)))
+    (k/check! (str/includes? (str (:says (trace ctx))) "no status was derived because no results were given") "the trace says " (pr-str (trace ctx)))
     ctx))

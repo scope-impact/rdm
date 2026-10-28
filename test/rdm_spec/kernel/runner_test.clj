@@ -1,30 +1,63 @@
 (ns rdm-spec.kernel.runner-test
   (:require [clojure.test :refer [deftest is testing]]
-            [rdm-spec.kernel.runner :as runner]))
+            [rdm-spec.kernel.runner :as runner]
+            [rdm-spec.spec.parser :as parser]))
 
-(def defs [{:pattern #"a spec" :f identity :where "one"}
-           {:pattern #"a (\w+)" :f identity :where "two"}
-           {:pattern #"the spec holds (\d+) features" :f identity :where "three"}])
+(defn scenario [text]
+  (first (:scenarios (parser/parse-feature text "f.feature"))))
 
-(deftest a-step-matches-its-definitions
-  (is (= ["20"] (:captured (first (runner/matches defs "the spec holds 20 features")))))
-  (is (= 2 (count (runner/matches defs "a spec"))))
-  (is (empty? (runner/matches defs "nothing"))))
+(def two-steps
+  "Feature: F
+  Scenario: S
+    Given a 1
+    Then b holds
+    And c
+")
 
-(deftest a-then-that-does-not-hold-fails-and-anything-else-breaks
-  (is (= "failed" (runner/status-of-error "Then" (AssertionError. "no"))))
-  (is (= "failed" (runner/status-of-error "Then" (ex-info "no" {::runner/failed true}))))
-  (is (= "broken" (runner/status-of-error "Given" (AssertionError. "no"))))
-  (is (= "broken" (runner/status-of-error "Then" (ArithmeticException. "no")))))
+(deftest steps-thread-the-context
+  (let [seen (atom nil)
+        reg (runner/registry
+             [[#"a (\d+)" (fn [ctx n] (assoc ctx :n n)) "x:1"]
+              [#"b holds" (fn [ctx] (reset! seen ctx) :not-a-map) "x:2"]
+              [#"c" (fn [ctx] (assert (= "1" (:n ctx))) ctx) "x:3"]])
+        r (runner/run-example reg (scenario two-steps) nil {})]
+    (is (= {:n "1"} @seen))
+    (is (= "passed" (:status r)))
+    (is (= ["Given a 1" "Then b holds" "And c"] (map :name (:steps r))))))
 
-(deftest and-and-but-take-the-kind-of-the-step-before
-  (is (= ["Given" "Given" "Then" "Then"] (runner/kinds ["Given" "And" "Then" "But"]))))
+(deftest a-then-assertion-fails-and-the-rest-is-skipped
+  (let [reg (runner/registry
+             [[#"a (\d+)" (fn [ctx _] ctx) "x:1"]
+              [#"b holds" (fn [_] (runner/fail! "no such view")) "x:2"]
+              [#"c" (fn [ctx] ctx) "x:3"]])
+        r (runner/run-example reg (scenario two-steps) nil {})]
+    (is (= "failed" (:status r)))
+    (is (re-find #"no such view" (get-in r [:statusDetails :message])))
+    (is (= ["passed" "failed" "skipped"] (map :status (:steps r))))))
 
-(deftest a-row-is-its-headings-values
-  (is (= [{"name" "written" "value" "plan"} {"name" "kept" "value" "3"}]
-         (runner/parameters ["written" "kept"] ["plan" "3"])))
-  (is (= "spec-0013|plan|3" (runner/history-id "spec-0013" ["plan" "3"])))
-  (is (= "spec-0013" (runner/history-id "spec-0013" nil))))
+(deftest a-given-that-throws-is-broken
+  (let [reg (runner/registry
+             [[#"a (\d+)" (fn [_ _] (throw (ex-info "boom" {}))) "x:1"]
+              [#"b holds" (fn [ctx] ctx) "x:2"]
+              [#"c" (fn [ctx] ctx) "x:3"]])
+        r (runner/run-example reg (scenario two-steps) nil {})]
+    (is (= "broken" (:status r)))))
 
-(deftest a-step-text-takes-the-row-s-values
-  (is (= "Given plan is written" (runner/fill "Given <written> is written" {"written" "plan"}))))
+(deftest a-then-that-throws-a-non-assertion-is-broken
+  (let [reg (runner/registry
+             [[#"a (\d+)" (fn [ctx _] ctx) "x:1"]
+              [#"b holds" (fn [_] (throw (ex-info "boom" {}))) "x:2"]
+              [#"c" (fn [ctx] ctx) "x:3"]])
+        r (runner/run-example reg (scenario two-steps) nil {})]
+    (is (= "broken" (:status r)))))
+
+(deftest unmatched-and-ambiguous-steps-are-broken
+  (let [reg (runner/registry [[#"a (\d+)" (fn [ctx _] ctx) "x:1"]
+                              [#"a \d" (fn [ctx] ctx) "y:9"]])
+        r (runner/run-example reg (scenario two-steps) nil {})]
+    (is (= "broken" (:status r)))
+    (is (re-find #"x:1" (get-in r [:statusDetails :message])))
+    (is (re-find #"y:9" (get-in r [:statusDetails :message]))))
+  (let [r (runner/run-example (runner/registry []) (scenario two-steps) nil {})]
+    (is (= "broken" (:status r)))
+    (is (re-find #"Given a 1" (get-in r [:statusDetails :message])))))

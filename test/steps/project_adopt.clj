@@ -1,160 +1,148 @@
 (ns steps.project-adopt
-  "Step definitions of dhf/spec/project/adopt.feature."
+  "Steps of the component Adopt (dhf/spec/01-start-a-project/adopt.feature)."
   (:require [babashka.fs :as fs]
             [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep fail!]]
-            [steps.kernel-command :as k]
-            [steps.project-init :as pi]))
+            [rdm-spec.kernel.runner :refer [defstep]]
+            [steps.kernel-shared :as k]))
 
-(defn snapshot [d]
-  (into {} (for [p (pi/tree d)]
-             (let [f (fs/path d p)]
-               [p (if (fs/sym-link? f) [:link (str (fs/read-link f))] (slurp (fs/file f)))]))))
+(defn files
+  "Every file and link under the project but .git, with its content (a link as its target)."
+  [ctx]
+  (let [d (:dir ctx)]
+    (into (sorted-map)
+          (for [f (fs/glob d "**" {:hidden true})
+                :let [rel (str (fs/relativize d f))]
+                :when (and (not (str/starts-with? rel ".git/")) (not= rel ".git")
+                           (or (fs/sym-link? f) (fs/regular-file? f)))]
+            [rel (if (fs/sym-link? f) [:link (str (fs/read-link f))] (slurp (str f)))]))))
 
-(defn repo!
-  "A git repository the scenario makes, hooks off, holding files; the project of its commands."
-  [ctx files]
-  (let [ctx (k/base! ctx)
-        d (k/path-in ctx "repo")]
-    (k/git-init! d)
-    (k/write-files! d files)
-    (assoc ctx :dir d)))
+(defn repo! [ctx files]
+  (let [b (k/scratch! "scenario-") ctx (assoc ctx :base b :dir (str b "/repo"))]
+    (fs/create-dirs (:dir ctx))
+    (k/git! ctx "init" "-q")
+    (doseq [[f t] files] (k/write! ctx f t))
+    (when (seq files) (k/commit! ctx "what was there"))
+    ctx))
 
-(def code {"src/app.py" "print('hello')\n" "README.md" "# My app\n"})
+(def source {"src/main.py" "print('hello')\n" "README.md" "# Mine\n"})
+
+(defn skeleton
+  "What init writes, as a fresh init writes it."
+  [ctx]
+  (let [b (k/scratch! "init-")
+        r ((requiring-resolve 'rdm-spec.kernel.command/run) {:dir b :env (k/base-env ctx) :args ["init" "x"]})]
+    (k/check! (zero? (:exit r)) "init failed: " (:err r))
+    (files {:dir (str b "/x")})))
 
 (defstep #"a git repository holding source code and a README"
-  (fn [ctx] (let [ctx (repo! ctx code)] (assoc ctx ::before (snapshot (:dir ctx))))))
+  (fn [ctx] (let [ctx (repo! ctx source)] (assoc ctx ::before (files ctx)))))
 
-(defstep #"\"rdm-spec adopt\" is run in it"
-  (fn [ctx] (k/rdm ctx ["adopt"])))
+(defstep #"\"rdm-spec adopt\" is run in it" (fn [ctx] (k/run-rdm ctx "adopt")))
 
-(defstep #"\"rdm-spec adopt\" is run in it again"
-  (fn [ctx] (let [ctx (assoc ctx ::before (snapshot (:dir ctx)))] (k/rdm ctx ["adopt"]))))
+(defstep #"\"rdm-spec adopt\" is run in it again" (fn [ctx] (assoc (k/run-rdm ctx "adopt") ::before (::before ctx))))
 
 (defstep #"it holds the skeleton, as \"rdm-spec init\" writes it"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (let [ref (k/path-in ctx "reference")
-          r (k/rdm ctx (:base ctx) ["init" "reference"])]
-      (k/check-exit r 0)
-      (doseq [p pi/skeleton]
-        (let [a (fs/file (k/guard! (:dir ctx)) p) b (fs/file ref p)]
-          (assert (fs/exists? a) (str "adopt did not write " p))
-          (when-not (= p "dhf/spec/model.edn")
-            (assert (= (slurp b) (slurp a)) (str p " differs from what init writes")))))
-      (assert (= ".githooks" (k/git-config (:dir ctx) "core.hooksPath")))
-      ctx)))
+    (k/exits! ctx 0)
+    (let [sk (skeleton ctx) now (files ctx)]
+      (doseq [[f t] sk]
+        (k/check! (contains? now f) f " was not added")
+        (when-not (#{"dhf/spec/model.edn" "dhf/harness/config.edn"} f)
+          (k/check! (= t (now f)) f " is not as init writes it"))))
+    (k/check! (= ".githooks" (str/trim (:out (k/sh ctx (:dir ctx) "git" "config" "core.hooksPath")))) "the hook is not installed")
+    ctx))
 
 (defstep #"its source code and README are unchanged"
   (fn [ctx]
-    (doseq [[p t] code] (assert (= t (slurp (fs/file (k/guard! (:dir ctx)) p)))))
+    (doseq [[f t] source] (k/check! (= t (k/slurp-rel ctx f)) f " changed"))
     ctx))
 
 (defstep #"adopt lists every file it wrote"
   (fn [ctx]
-    (assert (= (sort pi/skeleton) (sort (get-in (k/edn-out ctx) [:adopt :wrote]))) (:out ctx))
-    ctx))
+    (let [sk (set (keys (skeleton ctx)))]
+      (k/check! (= sk (set (get-in ctx [:result :adopt :wrote]))) "adopt lists " (pr-str (get-in ctx [:result :adopt :wrote])))
+      ctx)))
 
 (defstep #"a git repository that already holds dhf/spec/glossary.md"
-  (fn [ctx] (repo! ctx {"dhf/spec/glossary.md" "# Our words\n"})))
+  (fn [ctx] (repo! ctx {"dhf/spec/glossary.md" "# My glossary\n"})))
 
 (defstep #"dhf/spec/glossary.md is unchanged"
-  (fn [ctx]
-    (k/check-exit ctx 0)
-    (assert (= "# Our words\n" (slurp (fs/file (k/guard! (:dir ctx)) "dhf/spec/glossary.md"))))
-    ctx))
+  (fn [ctx] (k/check! (= "# My glossary\n" (k/slurp-rel ctx "dhf/spec/glossary.md")) "the glossary changed") ctx))
+
+(defn kept [ctx] (set (get-in ctx [:result :adopt :kept])))
 
 (defstep #"adopt names it as kept"
-  (fn [ctx]
-    (assert (some #{"dhf/spec/glossary.md"} (get-in (k/edn-out ctx) [:adopt :kept])) (:out ctx))
-    (assert (not (some #{"dhf/spec/glossary.md"} (get-in (k/edn-out ctx) [:adopt :wrote]))))
-    ctx))
+  (fn [ctx] (k/check! ((kept ctx) "dhf/spec/glossary.md") "adopt keeps " (pr-str (kept ctx))) ctx))
 
 (defstep #"a git repository where dhf/harness/config.edn is a symbolic link"
   (fn [ctx]
-    (let [ctx (repo! ctx {"shared/config.edn" "{:id-prefix \"ours\"}\n"})]
-      (fs/create-dirs (fs/path (k/guard! (:dir ctx)) "dhf/harness"))
-      (fs/create-sym-link (fs/path (k/guard! (:dir ctx)) "dhf/harness/config.edn") "../../shared/config.edn")
+    (let [ctx (repo! ctx {"elsewhere/config.edn" "{:id-prefix \"mine\"}\n"})]
+      (fs/create-dirs (k/path ctx "dhf/harness"))
+      (fs/create-sym-link (k/path ctx "dhf/harness/config.edn") "../../elsewhere/config.edn")
       ctx)))
 
 (defstep #"the link and its target are unchanged"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (let [l (fs/path (k/guard! (:dir ctx)) "dhf/harness/config.edn")]
-      (assert (fs/sym-link? l))
-      (assert (= "../../shared/config.edn" (str (fs/read-link l))))
-      (assert (= "{:id-prefix \"ours\"}\n" (slurp (fs/file (k/guard! (:dir ctx)) "shared/config.edn")))))
-    ctx))
+    (let [l (k/path ctx "dhf/harness/config.edn")]
+      (k/check! (and (fs/sym-link? l) (= "../../elsewhere/config.edn" (str (fs/read-link l)))) "the link changed")
+      (k/check! (= "{:id-prefix \"mine\"}\n" (k/slurp-rel ctx "elsewhere/config.edn")) "the target changed")
+      ctx)))
 
 (defstep #"adopt names the link as kept"
-  (fn [ctx]
-    (assert (some #{"dhf/harness/config.edn"} (get-in (k/edn-out ctx) [:adopt :kept])) (:out ctx))
-    ctx))
+  (fn [ctx] (k/check! ((kept ctx) "dhf/harness/config.edn") "adopt keeps " (pr-str (kept ctx))) ctx))
 
 (defstep #"a git repository with its own .gitignore"
   (fn [ctx] (repo! ctx {".gitignore" "node_modules/\n"})))
 
 (defstep #"the .gitignore is unchanged"
-  (fn [ctx]
-    (k/check-exit ctx 0)
-    (assert (= "node_modules/\n" (slurp (fs/file (k/guard! (:dir ctx)) ".gitignore"))))
-    ctx))
+  (fn [ctx] (k/check! (= "node_modules/\n" (k/slurp-rel ctx ".gitignore")) ".gitignore changed") ctx))
 
 (defstep #"adopt names the lines it would have added, those init writes to .gitignore"
   (fn [ctx]
-    (let [lines (get-in (k/edn-out ctx) [:adopt :gitignore-lines])]
-      (assert (= #{"dhf/allure-results/" "dhf/cycles/*/results/" "dhf/cycles/*/build/" "site-src/" "site/"} (set lines)) (:out ctx))
+    (let [lines (get-in ctx [:result :adopt :gitignore-lines])]
+      (k/check! (every? (set lines) ["dhf/allure-results/" "dhf/cycles/*/results/" "dhf/cycles/*/build/" "site-src/" "site/"])
+                "adopt names " (pr-str lines))
       ctx)))
 
 (defstep #"a repository that has been adopted"
   (fn [ctx]
-    (let [ctx (repo! ctx code)
-          r (k/rdm ctx ["adopt"])]
-      (k/check-exit r 0)
-      ctx)))
+    (let [ctx (repo! ctx source)
+          ctx (k/exits! (k/run-rdm ctx "adopt") 0)]
+      (assoc ctx ::before (files ctx)))))
 
 (defstep #"no file changes"
-  (fn [ctx]
-    (k/check-exit ctx 0)
-    (assert (= (::before ctx) (snapshot (:dir ctx))))
-    ctx))
+  (fn [ctx] (k/exits! ctx 0) (k/check! (= (::before ctx) (files ctx)) "a file changed") ctx))
 
 (defstep #"adopt names every destination as kept"
   (fn [ctx]
-    (let [r (:adopt (k/edn-out ctx))]
-      (assert (empty? (:wrote r)) (pr-str r))
-      (assert (= (set pi/skeleton) (set (:kept r))) (pr-str r))
-      ctx)))
+    (k/check! (empty? (get-in ctx [:result :adopt :wrote])) "adopt wrote " (pr-str (get-in ctx [:result :adopt :wrote])))
+    (k/check! (= (set (keys (skeleton ctx))) (kept ctx)) "adopt keeps " (pr-str (kept ctx)))
+    ctx))
 
 (defstep #"a directory that is not a git repository"
-  (fn [ctx]
-    (let [ctx (k/base! ctx)
-          d (k/path-in ctx "plain")]
-      (k/write-files! d {"notes.txt" "x\n"})
-      (assoc ctx :dir d))))
+  (fn [ctx] (let [b (k/scratch! "scenario-") ctx (assoc ctx :base b :dir (str b "/plain"))] (k/write! ctx "notes.txt" "notes\n"))))
 
 (defstep #"it exits 2, says the hook needs a git repository, and writes nothing"
   (fn [ctx]
-    (k/check-exit ctx 2)
-    (k/err-line-with ctx "hook" "git repository")
-    (assert (= ["notes.txt"] (pi/tree (:dir ctx))))
+    (k/exits! ctx 2)
+    (k/err-has! ctx "the hook needs a git repository")
+    (k/check! (= {"notes.txt" "notes\n"} (files ctx)) "adopt wrote " (pr-str (keys (files ctx))))
     ctx))
 
 (defstep #"a git repository holding source code and tests"
-  (fn [ctx] (repo! ctx (merge code {"tests/test_app.py" "def test_it():\n    assert True\n"
-                                    "features/app.feature" "Feature: App\n  Scenario: Runs\n    Given it runs\n"}))))
+  (fn [ctx] (repo! ctx (assoc source "tests/test_main.py" "def test_main():\n    assert True\n"
+                              "features/old.feature" "Feature: Old\n  Scenario: x\n    Given y\n"))))
 
 (defstep #"the model, the needs and the ledger are empty"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (let [m (pi/read-edn-file (:dir ctx) "dhf/spec/model.edn")]
-      (assert (every? empty? (vals (dissoc m :system))))
-      (assert (= {} (pi/read-edn-file (:dir ctx) "dhf/spec/needs.edn")))
-      (assert (= {:issued 0} (pi/read-edn-file (:dir ctx) "dhf/spec/ids.edn"))))
+    (k/exits! ctx 0)
+    (k/check! (= #{:system} (set (keys (edn/read-string (k/slurp-rel ctx "dhf/spec/model.edn"))))) "the model is not empty")
+    (k/check! (= {} (edn/read-string (k/slurp-rel ctx "dhf/spec/needs.edn"))) "the needs are not empty")
+    (k/check! (= {:issued 0} (edn/read-string (k/slurp-rel ctx "dhf/spec/ids.edn"))) "the ledger is not at 0")
     ctx))
 
 (defstep #"no feature file is written"
   (fn [ctx]
-    (assert (empty? (filter #(and (str/ends-with? % ".feature") (str/starts-with? % "dhf/")) (pi/tree (:dir ctx)))))
+    (k/check! (empty? (fs/glob (k/path ctx "dhf") "**.feature")) "a feature file was written")
     ctx))

@@ -1,141 +1,167 @@
 (ns rdm-spec.regeneration.fence
-  "The fence (dhf/spec/regeneration/fence.feature): builds a clean room from
-  a cut, and only from a cut: one fresh root commit holding every file
-  committed at the cut except the denied ones (the scope's implementation,
-  the measurements, the generated output), read from the cut's committed tree
-  alone, so nothing untracked or ignored reaches a room. A kept file carrying
-  the bytes of a removed implementation file stops it. Its paths stage holds
-  every committed path to being denied or kept, for rdm-spec check."
+  "Component Fence (regeneration context): builds a clean room from a cut,
+  the cut's committed files minus the denied ones, for the whole project or
+  the scopes a spec change touched, as one root commit; and holds every
+  committed path to being denied or kept."
   (:require [babashka.fs :as fs]
             [clojure.string :as str]
-            [rdm-spec.kernel.command :as cmd]
-            [rdm-spec.regeneration.cut :as cut]))
+            [rdm-spec.kernel.project :as project]))
 
-(defn under?
-  "Whether path lies under prefix: the prefix itself, a path below it, or,
-  for a prefix ending in neither / nor a file, a path starting with it."
-  [prefix path]
-  (let [p (str prefix)]
-    (cond
-      (str/ends-with? p "/") (str/starts-with? path p)
-      (str/ends-with? p "_") (str/starts-with? path p)
-      :else (or (= path p) (str/starts-with? path (str p "/"))))))
+(defn strip [p] (str/replace (str p) #"/+$" ""))
 
-(defn- fill [pattern c n]
-  (-> pattern (str/replace "{context}" (str c)) (str/replace "{component}" (str/replace (str n) "-" "_"))))
+(defn covered?
+  "Whether PATH is ENTRY or under it."
+  [entry path]
+  (let [e (strip entry)] (or (= e ".") (= path e) (str/starts-with? path (str e "/")))))
 
-(defn scope-prefixes
-  "The implementation paths a scope removes: every implementation path for
-  the project, else the code layout's for each context and component."
-  [config {:keys [context component]}]
-  (if (and (empty? context) (empty? component))
-    (vec (:implementation config))
-    (vec (concat
-          (for [c context p (get-in config [:code-layout :context])] (fill p c nil))
-          (for [cc component :let [[c n] (str/split cc #"/" 2)] p (get-in config [:code-layout :component])] (fill p c n))))))
+(defn denied-entries
+  "Every path the configuration denies whole: the implementation, the measurements, the generated output."
+  [cfg]
+  (let [deny (get-in cfg [:clean-room :deny])]
+    (vec (concat (when (:implementation deny) (:implementation cfg))
+                 (:measurements deny)
+                 (:generated deny)))))
 
-(defn denied-prefixes [config]
-  (let [{:keys [measurements generated]} (get-in config [:clean-room :deny])]
-    (vec (concat measurements generated))))
+(defn classified? [cfg path]
+  (some #(covered? % path) (concat (denied-entries cfg) (get-in cfg [:clean-room :keep]))))
 
-(defn- impl? [config path] (some #(under? % path) (:implementation config)))
+(defn committed-paths
+  "The project's committed files, relative to its root; nil outside a repository."
+  []
+  (let [root (project/root)]
+    (when (project/git-repo? root)
+      (let [r (project/git root "ls-files" "-z" "--full-name" "--" ".")
+            prefix (project/git-prefix)]
+        (when (= 0 (:exit r))
+          (vec (for [p (str/split (:out r) #"\u0000") :when (not (str/blank? p))]
+                 (subs p (min (count p) (count prefix))))))))))
 
-(defn unclassified
-  "Every committed top-level path, and every path directly under dhf/, that
-  the configuration neither denies nor keeps."
-  [config paths]
-  (let [deny (concat (when (get-in config [:clean-room :deny :implementation]) (:implementation config))
-                     (denied-prefixes config))
-        keep (get-in config [:clean-room :keep])
-        heads (distinct (for [p paths
-                              :let [[a b] (str/split p #"/")]]
-                          (if (and (= "dhf" a) b) (str a "/" b) a)))]
-    (vec (for [h heads
-               :when (not= "dhf" h)
-               :when (not (some #(under? % h) (concat deny keep)))]
-           h))))
+(defn classify-findings
+  "Every committed top-level path, and every path directly under dhf/, is denied or kept."
+  [cfg paths]
+  (let [heads (distinct (for [p paths
+                              :let [parts (str/split p #"/")]]
+                          (if (and (= "dhf" (first parts)) (> (count parts) 1))
+                            (str "dhf/" (second parts))
+                            (first parts))))]
+    (for [h (sort heads) :when (not (classified? cfg h))]
+      (project/finding h "path-unclassified"
+                       (str h " is committed and neither denied nor kept: add it to the configuration's :clean-room :deny or :keep")))))
 
 (defn paths-stage
-  "rdm-spec check: every committed path is denied or kept."
-  [{:keys [root config]}]
-  (let [{:keys [exit out]} (cmd/git root "ls-tree" "-r" "--name-only" "HEAD")]
-    (if-not (= 0 exit)
-      {}
-      {:findings (vec (for [p (unclassified config (remove str/blank? (str/split-lines out)))]
-                        (cmd/finding p nil "path-unclassified"
-                                     (str p " is neither denied nor kept by the configuration's :clean-room: deny it or keep it"))))})))
+  "The check's stage holding every committed path to being denied or kept."
+  [{:keys [cfg]}]
+  (let [paths (committed-paths)]
+    {:result {:paths {:committed (count paths)}}
+     :findings (if (and paths (:clean-room cfg)) (vec (classify-findings cfg paths)) [])
+     :warnings []}))
 
-;; ---------------------------------------------------------------------------
-;; Building a room
+;; ------------------------------------------------------------------ building a clean room
 
-(defn tree-at
-  "[{:mode :type :sha :path}] of every file committed at rev, relative to root."
-  [root rev]
-  (vec (for [l (str/split-lines (cmd/git! root "ls-tree" "-r" rev))
-             :when (seq l)
-             :let [[meta path] (str/split l #"\t" 2)
-                   [mode type sha] (str/split meta #" ")]]
-         {:mode mode :type type :sha sha :path path})))
+(defn tree-files
+  "Every file committed at REV in the project's folder: [{:path :mode :sha}]."
+  [rev]
+  (let [out (project/git! (project/toplevel) "ls-tree" "-r" "-z" (project/tree-ish rev))]
+    (vec (for [e (str/split out #"\u0000") :when (not (str/blank? e))
+               :let [[meta path] (str/split e #"\t" 2) [mode _ sha] (str/split meta #" ")]]
+           {:path path :mode mode :sha sha}))))
 
-(defn- model-scopes [model]
-  {:contexts (vec (concat (for [c (:containers model) cx (:contexts c)] (name (:id cx))) ["kernel"]))
-   :components (set (concat (for [c (:containers model) cx (:contexts c) k (:components cx)] (subs (str (:id k)) 1))
-                            (for [k (:kernel model)] (subs (str (:id k)) 1))))})
+(def empty-blob "e69de29bb2d1d6434b8b29ae775ad8c2d48c5391")
 
-(def empty-blob "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391")
+(defn layout-prefixes
+  "The code layout's paths for a context, or a component of a context."
+  [cfg ctx comp]
+  (let [fill #(-> % (str/replace "{context}" (str/replace ctx "-" "_"))
+                  (str/replace "{component}" (str/replace (or comp "") "-" "_")))]
+    (if comp
+      (map fill (get-in cfg [:code-layout :component]))
+      (map fill (get-in cfg [:code-layout :context])))))
 
-(defn stage [{:keys [root args opts]}]
-  (let [[room-arg rev] args
-        c (or (cut/resolve-cut root rev)
-              (cmd/cannot-run! (str rev " is not a cut: regeneration reads only a cut, a commit tagged spec-N")))
-        room (fs/absolutize (fs/path root room-arg))
-        _ (when (and (fs/exists? room) (or (not (fs/directory? room)) (seq (fs/list-dir room))))
-            (cmd/cannot-run! (str "the room " room-arg " already exists: the fence builds a room only where nothing is")))
-        config (or (try (cmd/read-edn (cmd/read-at root c "dhf/harness/config.edn")) (catch Exception _ nil))
-                   (cmd/cannot-run! (str "the cut " c " holds no readable dhf/harness/config.edn")))
-        model (or (try (cmd/read-edn (cmd/read-at root c (:model config "dhf/spec/model.edn"))) (catch Exception _ nil)) {})
-        {:keys [contexts components]} (model-scopes model)
-        files (tree-at root c)
-        layout-finds? (fn [cc] (let [ps (scope-prefixes config {:component [cc]})]
-                                 (some (fn [f] (some #(under? % (:path f)) ps)) files)))
-        _ (doseq [cx (:context opts) :when (not (some #{cx} contexts))]
-            (cmd/cannot-run! (str "the model names no bounded context " cx ": its bounded contexts are "
-                                  (str/join ", " (butlast contexts)) ", and the kernel")))
-        removed-components (vec (for [cc (:component opts) :when (not (components cc))]
-                                  (if (layout-finds? cc)
-                                    cc
-                                    (cmd/cannot-run! (str "the model names no component " cc " and the code layout finds no file of it: its bounded contexts are "
-                                                          (str/join ", " (butlast contexts)) ", and the kernel")))))
-        scope (scope-prefixes config opts)
-        removed? (fn [p] (and (impl? config p) (some #(under? % p) scope)))
-        denied? (fn [p] (or (removed? p) (some #(under? % p) (denied-prefixes config))))
-        removed (filter #(removed? (:path %)) files)
-        kept (remove #(denied? (:path %)) files)
-        removed-shas (into {} (for [f removed :when (not= empty-blob (:sha f))] [(:sha f) (:path f)]))
-        copies (for [f kept :let [src (removed-shas (:sha f))] :when (and src (not (impl? config (:path f))))]
-                 (cmd/finding (:path f) nil "kept-carries-implementation"
-                              (str (:path f) " carries the bytes of the removed implementation file " src
-                                   ": no kept file may, so no room was built")))]
-    (if (seq copies)
-      {:findings (vec copies)}
-      (let [tar (cmd/temp-file ".tar")]
-        (try
-          (fs/create-dirs room)
-          (cmd/git! (str room) "init" "-q")
-          (when (seq kept)
-            (apply cmd/git! root "archive" "--format=tar" "-o" (str tar) c "--" (map :path kept))
-            (let [r (cmd/sh {:dir (str room)} "tar" "-xf" (str tar))]
-              (when-not (= 0 (:exit r)) (cmd/cannot-run! (str "the room could not be written: " (:err r))))))
-          (let [env (merge {"GIT_AUTHOR_NAME" "rdm-spec fence" "GIT_AUTHOR_EMAIL" "fence@rdm-spec.invalid"
-                            "GIT_COMMITTER_NAME" "rdm-spec fence" "GIT_COMMITTER_EMAIL" "fence@rdm-spec.invalid"}
-                           (select-keys (into {} (System/getenv)) ["GIT_AUTHOR_NAME" "GIT_AUTHOR_EMAIL" "GIT_COMMITTER_NAME" "GIT_COMMITTER_EMAIL"]))
-                commit (fn [& a] (let [r (apply cmd/sh {:dir (str room) :env env} "git" "-c" "core.hooksPath=/dev/null"
-                                                "-c" "commit.gpgsign=false" a)]
-                                   (when-not (= 0 (:exit r)) (cmd/cannot-run! (str "the room's commit failed: " (:err r))))
-                                   r))]
-            (commit "add" "-A" "-f" "--" ".")
-            (commit "commit" "-q" "--no-verify" "--allow-empty" "-m" (str "The clean room of " c))
-            {:result {:fence {:room room-arg :cut c :commit (cmd/git! (str room) "rev-parse" "HEAD")
-                              :files (count kept) :removed (mapv :path removed)
-                              :removed-components removed-components}}})
-          (finally (fs/delete-if-exists tar)))))))
+(defn layout-match? [prefixes path] (some #(str/starts-with? path %) prefixes))
+
+(defn split-list [s] (when s (vec (remove str/blank? (map str/trim (str/split s #","))))))
+
+(defn resolve-scopes
+  "The prefixes of the implementation a scope removes, and the components the
+  cut removed. Refuses a scope the model does not name."
+  [cfg model tree opts files]
+  (let [contexts (map #(name (:id %)) (project/contexts model))
+        comps (project/components model)
+        known (str/join ", " (concat contexts ["kernel"]))
+        impl (filter #(some (fn [i] (covered? i (:path %))) (:implementation cfg)) files)
+        ctx-prefixes (for [c (split-list (get opts "--context"))]
+                       (if (or (= c "kernel") (some #{c} contexts))
+                         (layout-prefixes cfg c nil)
+                         (project/cannot-run! (str "the scope --context " c " names no bounded context of the model at the cut; its contexts are " known))))
+        comp-scopes (for [c (split-list (get opts "--component"))]
+                      (let [[cx n] (str/split c #"/" 2)
+                            in-model (some #(= c (str (namespace (:id %)) "/" (name (:id %)))) comps)
+                            ps (layout-prefixes cfg (str cx) n)]
+                        (cond
+                          (nil? n) (project/cannot-run! (str "the scope --component " c " is not CONTEXT/NAME"))
+                          in-model {:prefixes ps}
+                          (some #(layout-match? ps (:path %)) impl) {:prefixes ps :removed c}
+                          :else (project/cannot-run! (str "the scope --component " c " names no component of the model at the cut, and the code layout finds no file of it; the model's contexts are " known)))))
+        slice-scopes (for [s (split-list (get opts "--slice"))]
+                       (let [spec-dirs (map :dir (project/specs cfg))
+                             feats (for [sd spec-dirs
+                                         f (filter #(str/ends-with? % ".feature") (map :path files))
+                                         :when (= s (project/slice-of sd f))] [sd f])]
+                         (when-not (and (project/slices? cfg) (seq (filter #(str/starts-with? (:path %) (str (first spec-dirs) "/" s "/")) files)))
+                           (project/cannot-run! (str "the scope --slice " s " names no slice the cut holds")))
+                         {:prefixes (mapcat (fn [[sd f]]
+                                              (when-let [c (project/owner cfg {:dir sd} model f)]
+                                                (layout-prefixes cfg (if (= :kernel (:context c)) "kernel" (name (:context c))) (name (:id c)))))
+                                            feats)}))]
+    {:prefixes (vec (concat (apply concat ctx-prefixes) (mapcat :prefixes comp-scopes) (mapcat :prefixes slice-scopes)))
+     :removed-components (vec (keep :removed comp-scopes))
+     :scoped? (boolean (or (get opts "--context") (get opts "--component") (get opts "--slice")))}))
+
+(defn fence-task [{:keys [cfg args opts]}]
+  (let [[room-arg cut-arg] args
+        _ (do ((requiring-resolve 'rdm-spec.kernel.plugins/validate!) cfg))
+        gate ((requiring-resolve 'rdm-spec.kernel.plugins/gate!) cfg {:request :Gate :task :fence :cut cut-arg})]
+    (if-not (:passed? gate)
+      (project/report {} (:findings gate) (:warnings gate))
+      (let [cut ((requiring-resolve 'rdm-spec.regeneration.cut/resolve-cut) cut-arg)
+            _ (when-not cut (project/cannot-run! (str cut-arg " is not a cut: regeneration reads only a cut, a commit tagged spec-N")))
+            room (project/abs room-arg)
+            _ (when (and (fs/exists? room) (seq (fs/list-dir room)))
+                (project/cannot-run! (str "the room " room-arg " exists and is not empty: a clean room is built in a new directory")))]
+        (project/with-temp-dir [t "rdm-cut-"]
+          (project/export! cut t)
+          (let [cut-cfg (project/config t)
+                model (or (project/read-model t (first (project/specs cut-cfg))) {})
+                files (tree-files cut)
+                {:keys [prefixes removed-components scoped?]} (resolve-scopes cut-cfg model t opts files)
+                impl? (fn [p] (and (get-in cut-cfg [:clean-room :deny :implementation])
+                                   (some #(covered? % p) (:implementation cut-cfg))))
+                other-denied? (fn [p] (some #(covered? % p) (concat (get-in cut-cfg [:clean-room :deny :measurements])
+                                                                    (get-in cut-cfg [:clean-room :deny :generated]))))
+                removed-impl? (fn [p] (and (impl? p) (or (not scoped?) (layout-match? prefixes p))))
+                removed (filter #(removed-impl? (:path %)) files)
+                kept (remove #(or (removed-impl? (:path %)) (other-denied? (:path %))) files)
+                by-sha (group-by :sha (filter #(not= empty-blob (:sha %)) removed))
+                copies (for [k kept :when (not (impl? (:path k))) :let [r (first (by-sha (:sha k)))] :when r] [k r])]
+            (if (seq copies)
+              (project/report {} (for [[k r] copies]
+                                   (project/finding (:path k) "fence-copy"
+                                                    (str (:path k) " carries the bytes of the implementation file " (:path r) ", which the room may not hold"))))
+              (do
+                (fs/create-dirs room)
+                (doseq [{:keys [path]} kept]
+                  (let [from (fs/path t path) to (fs/path room path)]
+                    (fs/create-dirs (fs/parent to))
+                    (if (fs/sym-link? from)
+                      (fs/create-sym-link to (fs/read-link from))
+                      (fs/copy from to {:replace-existing true}))))
+                (project/git! room "init" "-q")
+                (project/git! room "add" "-A" "-f" "--" ".")
+                (project/git! room "-c" "user.name=rdm-spec" "-c" "user.email=rdm-spec@localhost"
+                              "commit" "-q" "--no-verify" "--allow-empty" "-m" (str "The clean room of " cut))
+                (project/report {:fence (cond-> {:room room-arg :cut cut :files (count kept)
+                                                 :scope (if scoped? (into {} (for [k ["--context" "--component" "--slice"] :when (get opts k)]
+                                                                               [(keyword (subs k 2)) (split-list (get opts k))]))
+                                                            :project)}
+                                          (seq removed-components) (assoc :removed-components removed-components))}
+                                (:warnings gate))))))))))

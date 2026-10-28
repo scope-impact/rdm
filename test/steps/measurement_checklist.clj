@@ -1,104 +1,129 @@
 (ns steps.measurement-checklist
-  "Step definitions of dhf/spec/measurement/checklist.feature."
-  (:require [babashka.fs :as fs]
-            [cheshire.core :as json]
+  "Steps of the component Checklist (dhf/spec/07-measure/checklist.feature)."
+  (:require [cheshire.core :as json]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep fail!]]
-            [steps.kernel-command :as k]))
+            [rdm-spec.kernel.runner :refer [defstep doc-string]]
+            [steps.kernel-shared :as k]))
 
-(def checklist-file "dhf/cycles/03/checklist.json")
-(defn- text [ctx] (let [f (fs/file (k/guard! (:dir ctx)) checklist-file)] (when (fs/exists? f) (slurp f))))
-(defn checklist [ctx] (json/parse-string (or (text ctx) (fail! (str "no checklist: " (:err ctx))))))
+(defn checklist [ctx] (some-> (k/slurp-rel ctx "dhf/cycles/03/checklist.json") json/parse-string))
 
 (defstep #"the spec at cut spec-3 has 12 stamped scenarios, one of them tagged @wip"
   (fn [ctx]
-    (let [ctx (k/project! ctx {:features {k/core-feature
-                                          (k/feature-text {:name "Core" :tags ["UN-001"]
-                                                           :scenarios (for [i (range 1 13)]
-                                                                        (cond-> (k/sc i (str "Scenario " i))
-                                                                          (= i 7) (update :tags conj "wip")))})}
-                               :extra {"dhf/spec/ids.edn" "{:issued 12}\n"}})]
-      (k/tag-cut! ctx "spec-3"))))
+    (k/spec-project! ctx {:features {"dhf/spec/demo/thing.feature"
+                                     (k/feature-text "Thing" ["UN-001"] (for [i (range 1 13)] {:id (format "spec-%04d" i) :title (str "Scenario " i)
+                                                                                           :wip? (= i 12)}))}})))
 
 (defstep #"dhf/cycles/03/checklist.json holds 11 items to grade, each with the scenario's id, title, context, component and level"
   (fn [ctx]
-    (k/check-exit ctx 0)
+    (k/exits! ctx 0)
     (let [items (get (checklist ctx) "items")]
-      (assert (= 11 (count items)) (pr-str items))
-      (assert (every? #(= {"context" "kernel" "component" "Core" "level" "e2e"} (select-keys % ["context" "component" "level"])) items))
-      (assert (= (str "Scenario " 1) (get (first items) "title")))
-      (assert (not-any? #(= "spec-0007" (get % "id")) items)))
-    ctx))
+      (k/check! (= 11 (count items)) "the checklist holds " (count items) " items")
+      (k/check! (= {"id" "spec-0001" "title" "Scenario 1" "context" "kernel" "component" "Thing" "level" "e2e"} (first items))
+                "an item is " (pr-str (first items)))
+      ctx)))
 
 (defstep #"it lists the @wip scenario separately, as planned"
-  (fn [ctx] (assert (= [{"id" "spec-0007" "title" "Scenario 7"}] (get (checklist ctx) "planned"))) ctx))
+  (fn [ctx] (k/check! (= [{"id" "spec-0012" "title" "Scenario 12"}] (get (checklist ctx) "planned")) "planned: " (pr-str (get (checklist ctx) "planned"))) ctx))
 
 (defstep #"cycle 03 of cut spec-3, with one item to grade and one planned scenario"
   (fn [ctx]
-    (let [ctx (k/verifiable! ctx {:model-spec {:contexts [["architecture" ["lint"]]]}
-                                  :features {"dhf/spec/architecture/lint.feature"
-                                             (k/feature-text {:name "Lint" :tags ["UN-001"]
-                                                              :scenarios [(k/sc 13 "A component that owns no feature file fails the lint" ["Given a step"])
-                                                                          (update (k/sc 12 "A view with no description fails the lint") :tags (fn [t] t))]})}
-                                  :extra {"dhf/spec/ids.edn" "{:issued 13}\n"}})
-          f (fs/file (:dir ctx) "dhf/spec/architecture/lint.feature")]
-      (spit f (str/replace (slurp f) "@spec-0013 @e2e" "@spec-0013 @e2e @wip"))
-      (fs/delete (fs/file (:dir ctx) k/core-feature))
-      (k/tag-cut! ctx "spec-3"))))
+    (let [ctx (k/spec-project! ctx {:model (k/context-model [[:architecture [[:lint "Lint"]]]])
+                                    :features {"dhf/spec/architecture/lint.feature"
+                                               (k/feature-text "Lint" ["UN-001"] [{:id "spec-0013" :title "A component that owns no feature file fails the lint" :wip? true}
+                                                                                  {:id "spec-0012" :title "A view with no description fails the lint"}])}})]
+      (k/cut-project! ctx))))
 
 (defstep #"dhf/cycles/03/checklist.json holds:"
-  (fn [ctx doc]
-    (k/check-exit ctx 0)
-    (assert (= (json/parse-string doc) (checklist ctx)) (text ctx))
+  (fn [ctx]
+    (k/exits! ctx 0)
+    (k/check! (= (json/parse-string (doc-string)) (checklist ctx)) "checklist.json holds " (k/slurp-rel ctx "dhf/cycles/03/checklist.json"))
     ctx))
-
-(defn- in-order? [t ks] (apply < (map #(or (str/index-of t (str "\"" % "\"")) (fail! (str % " is missing: " t))) ks)))
 
 (defstep #"its keys appear in that order, items and planned sorted by id"
   (fn [ctx]
-    (let [t (text ctx)]
-      (assert (in-order? t ["cycle" "cut" "items" "planned"]) t)
-      (assert (in-order? t ["id" "title" "context" "component" "level"]) t))
-    ctx))
+    (let [t (k/slurp-rel ctx "dhf/cycles/03/checklist.json")
+          pos #(str/index-of t (str "\"" % "\""))]
+      (k/check! (apply < (map pos ["cycle" "cut" "items" "planned"])) "the keys are out of order:\n" t)
+      (k/check! (apply < (map pos ["id" "title" "context" "component" "level"])) "an item's keys are out of order:\n" t)
+      ctx)))
 
 (defstep #"it exits 1, writes nothing, and names the file and line of the unstamped scenario"
   (fn [ctx]
-    (k/check-exit ctx 1)
-    (apply k/err-line-with ctx (:names ctx))
-    (assert (nil? (text ctx)))
+    (k/exits! ctx 1)
+    (k/err-line-has! ctx "dhf/spec/demo/thing.feature:5")
+    (k/check! (nil? (checklist ctx)) "a checklist was written")
+    ctx))
+
+(def regulated {:clause-lists ["dhf/clauses/std.txt"] :documents "dhf/documents"})
+
+(defn regulated-cut! [ctx scope]
+  (let [ctx (k/spec-project! ctx {:model (k/context-model [[:architecture [[:lint "Lint"]]]])
+                                  :features {"dhf/spec/architecture/lint.feature"
+                                             (k/feature-text "Lint" ["UN-001"] [{:id "spec-0001" :title "One"} {:id "spec-0002" :title "Two"}])}})]
+    (k/config! ctx assoc :regulated regulated)
+    (k/write! ctx "dhf/clauses/std.txt" "include base.txt\nSTD:5.1 Development plan\nSTD:4.1 Quality system, again\n")
+    (k/write! ctx "dhf/clauses/base.txt" "STD:4.1 Quality system\n")
+    (k/write! ctx "dhf/documents/plan.md" "---\nid: PLAN-001\nrevision: 1\ntitle: Plan\n---\n\nWe plan [[STD:5.1]] in a system [[STD:4.1]].\n")
+    (k/cut-project! ctx)
+    (k/write-edn! ctx "dhf/cycles/03/cycle.edn" {:cut "spec-3" :scope scope :builder {:name "b" :actor :agent}
+                                                 :grader {:name "g" :actor :agent} :spec-owner {:name "o" :actor :human}})
     ctx))
 
 (defstep #"cycle 03 of cut spec-3, scoped to the whole project, in a regulated project whose clause list dhf/clauses/std.txt at the cut holds \"STD:5.1 Development plan\""
-  (fn [ctx] (-> (k/regulated! ctx) (k/verifiable!))))
+  (fn [ctx] (regulated-cut! ctx :project)))
 
 (defstep #"the items of dhf/cycles/03/checklist.json end with:"
-  (fn [ctx doc]
-    (k/check-exit ctx 0)
-    (assert (= (json/parse-string doc) (last (get (checklist ctx) "items"))) (text ctx))
+  (fn [ctx]
+    (k/exits! ctx 0)
+    (k/check! (= (json/parse-string (doc-string)) (last (get (checklist ctx) "items"))) "the items end with " (pr-str (last (get (checklist ctx) "items"))))
     ctx))
 
 (defstep #"the clause items come after every scenario item, in the clause lists' order with includes in place, each key once"
   (fn [ctx]
-    (k/write-files! (:dir ctx) {"dhf/clauses/std.txt" "STD:5.1 Development plan\ninclude base.txt\nSTD:5.2 Requirements\n"
-                                "dhf/clauses/base.txt" "STD:4.1 Quality system\nSTD:5.1 Development plan, again\n"})
-    (k/tag-cut! ctx "spec-3")
-    (let [r (k/rdm ctx ["checklist" "03"])]
-      (k/check-exit r 0)
-      (assert (= ["spec-0001" "STD:5.1" "STD:4.1" "STD:5.2"] (map #(get % "id") (get (checklist ctx) "items"))) (text ctx))
-      (assert (= "dhf/clauses/base.txt" (get (nth (get (checklist ctx) "items") 2) "component"))))
+    (k/check! (= ["spec-0001" "spec-0002" "STD:4.1" "STD:5.1"] (map #(get % "id") (get (checklist ctx) "items")))
+              "the items are " (pr-str (map #(get % "id") (get (checklist ctx) "items"))))
     ctx))
 
 (defstep #"cycle 03 of cut spec-3, scoped to the context architecture, in a regulated project whose clause list at the cut holds clauses"
-  (fn [ctx]
-    (let [ctx (-> (k/regulated! ctx {:opts {:model-spec {:contexts [["architecture" ["lint"]]] :kernel ["core"]}
-                                            :features {"dhf/spec/architecture/lint.feature"
-                                                       (k/feature-text {:name "Lint" :tags ["UN-001"] :scenarios [(k/sc 2 "Lints")]})}}})
-                  (k/verifiable! {:extra {"dhf/spec/ids.edn" "{:issued 2}\n"}}))]
-      (-> ctx (k/cycle! "03" (merge {:cut "spec-3" :scope {:context :architecture}} k/roles)) (k/tag-cut! "spec-3")))))
+  (fn [ctx] (regulated-cut! ctx {:context :architecture})))
 
 (defstep #"dhf/cycles/03/checklist.json holds no item at the level clause"
   (fn [ctx]
-    (k/check-exit ctx 0)
-    (let [items (get (checklist ctx) "items")]
-      (assert (= ["spec-0002"] (map #(get % "id") items)) (text ctx)))
+    (k/exits! ctx 0)
+    (k/check! (not-any? #(= "clause" (get % "level")) (get (checklist ctx) "items")) "a clause item is listed")
     ctx))
+
+(def plan "# Slice\n\n## Goal\n\nA goal.\n\n## References\n\n- UN-001\n\n## Scope\n\n**In:**\n\n- a\n\n**Out:**\n\n- b\n\n## Decisions\n\nNone.\n")
+
+(defstep #"a configuration with :spec-layout :slices; the slice 12-several-specs reaching :spec/parser and :measurement/checklist; :spec/parser with 2 stamped scenarios in 12-several-specs and 3 in 02-write-the-spec; and dhf/cycles/03/cycle.edn whose :scope is \[\{:slice \"12-several-specs\"\}\]"
+  (fn [ctx]
+    (let [sc (fn [ids] (for [i ids] {:id (format "spec-%04d" i) :title (str "Scenario " i)}))
+          ctx (k/verify-project! ctx {:model (k/context-model [[:spec [[:parser "Parser"] [:stamper "Stamper"]]] [:measurement [[:checklist "Checklist"]]]])
+                                      :features {"dhf/spec/12-several-specs/parser.feature" (k/feature-text "Parser" ["UN-001"] (sc [1 2]))
+                                                 "dhf/spec/12-several-specs/checklist.feature" (k/feature-text "Checklist" ["UN-001"] (sc [3]))
+                                                 "dhf/spec/02-write-the-spec/parser.feature" (k/feature-text "Parser" ["UN-001"] (sc [4 5 6]))
+                                                 "dhf/spec/02-write-the-spec/stamper.feature" (k/feature-text "Stamper" ["UN-001"] (sc [7]))
+                                                 "dhf/spec/02-write-the-spec/checklist.feature" (k/feature-text "Checklist" ["UN-001"] (sc [8]))}
+                                      :files {"dhf/spec/12-several-specs/plan.md" plan "dhf/spec/02-write-the-spec/plan.md" plan}
+                                      :cfg-fn #(assoc % :spec-layout :slices)})]
+      (k/write-edn! ctx "dhf/cycles/03/cycle.edn" {:cut "spec-3" :scope [{:slice "12-several-specs"}] :builder {:name "b" :actor :agent}
+                                                   :grader {:name "g" :actor :agent} :spec-owner {:name "o" :actor :human}})
+      ctx)))
+
+(defstep #"it holds one item for each of the 5 scenarios of :spec/parser and each of :measurement/checklist's, wherever their slice, each item naming its slice and its component"
+  (fn [ctx]
+    (k/exits! ctx 0)
+    (let [items (get (checklist ctx) "items")]
+      (k/check! (= ["spec-0001" "spec-0002" "spec-0003" "spec-0004" "spec-0005" "spec-0006" "spec-0008"] (map #(get % "id") items))
+                "the checklist holds " (pr-str (map #(get % "id") items)))
+      (k/check! (= {"id" "spec-0004" "title" "Scenario 4" "context" "spec" "component" "Parser" "level" "e2e" "slice" "02-write-the-spec"}
+                   (nth items 3))
+                "an item is " (pr-str (nth items 3)))
+      ctx)))
+
+(defstep #"verify requires a result for each of them, as for any scope"
+  (fn [ctx]
+    (let [r (k/run-rdm ctx "verify ROOM 03")]
+      (k/exits! r 0)
+      (k/check! (= 8 (get-in r [:result :verify :checks 0 :scenarios])) "verify required " (pr-str (get-in r [:result :verify :checks 0])))
+      ctx)))

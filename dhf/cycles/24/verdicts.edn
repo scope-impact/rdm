@@ -1,0 +1,1300 @@
+[{:id "spec-0001",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. View containers given no :description; rdm-spec check -> exit 1, \"dhf/spec/model.edn:10: c4-scope: the view containers has no description: a view says what question it answers\"."}
+ {:id "spec-0002",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. Container :app :description removed; rdm-spec check -> exit 1, \"dhf/spec/model.edn:3: c4-element-described: the container :app has no description\"."}
+ {:id "spec-0003",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. Relationship :shop/cart -> :shop/pay without :description; rdm-spec check -> exit 1, \"dhf/spec/model.edn:8: c4-arrow-labelled: the relationship :shop/cart -> :shop/pay has no description: every arrow says what passes\"."}
+ {:id "spec-0005",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. :people [] and the buyer relationship removed, so context view has no person; rdm-spec check -> exit 1, \"dhf/spec/model.edn:9: c4-context-actors: the context view context includes no person: a context view shows who uses the system\"."}
+ {:id "spec-0006",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. Container :app :kind :library; rdm-spec check -> exit 1, \"dhf/spec/model.edn:3: c4-container-runs: the container :app is of kind :library: a container runs or stores data (:runs or :stores)\"."}
+ {:id "spec-0007",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. Relationship cart->pay given :event :SpecCut, events.edn {}; rdm-spec check -> exit 1, \"dhf/spec/model.edn:8: c4-events-named: the relationship :shop/cart -> :shop/pay publishes SpecCut, which the event catalogue dhf/spec/events.edn does not declare\"."}
+ {:id "spec-0008",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. config :c4 {:view-element-limit 20 ...}; 21 more people added so context view shows 23 elements (22 Person + system in context.mmd); rdm-spec check -> exit 0 with \"dhf/spec/model.edn:9: warning: c4-view-size: the view context shows 23 elements, more than the limit of 20\" (and the same for containers)."}
+ {:id "spec-0009",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. config :c4 {:description-max-chars 45}; person :buyer description of 60 characters; rdm-spec check -> exit 1, \"dhf/spec/model.edn:2: c4-description-length: the person :buyer's description is 60 characters, more than the limit of 45\"."}
+ {:id "spec-0010",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. rdm-spec check -> exit 0; stdout EDN's [:lint :for-a-person] = exactly the three strings of the scenario (compared with = in bb: true)."}
+ {:id "spec-0012",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. shop-components view removed; rdm-spec check -> exit 1, \"dhf/spec/model.edn:1: a-component-view: the bounded context :shop has components and no component view\"."}
+ {:id "spec-0013",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. dhf/spec/shop/pay.feature deleted; rdm-spec check -> exit 1, \"dhf/spec/model.edn: a-scenario-owner: the component :shop/pay owns no feature file: there is no dhf/spec/shop/pay.feature\"."}
+ {:id "spec-0014",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person :buyer, system, container :app, context :shop with :shop/cart and :shop/pay, views context/containers/shop-components; check exit 0). Views regenerated after each edit. Added dhf/spec/shop/refund.feature (stamped, no component named refund); rdm-spec check -> exit 1, \"dhf/spec/shop/refund.feature: a-scenario-owner: the feature file dhf/spec/shop/refund.feature belongs to no component of the model\"."}
+ {:id "spec-0015",
+  :verdict :pass,
+  :evidence
+  "Publish fixture (two contexts shop and ship); added relationship :shop/pay -> :ship/label \"Asks for a label from\" with no :event; rdm-spec check -> exit 1, \"dhf/spec/model.edn:14: a-contract-only: the relationship :shop/pay -> :ship/label joins the bounded contexts :shop and :ship and names no event: contexts relate only through events\"."}
+ {:id "spec-0017",
+  :verdict :pass,
+  :evidence
+  "Publish fixture model: context view, container view, two component views (shop-components, ship-components); dhf/views removed; rdm-spec views -> exit 0, {:views {:written [4 .mmd] :model-sha256 \"a329a8...\"}}; dhf/views holds context, containers, shop-components, ship-components each as .mmd (Mermaid C4 source) and .svg render (stack.md: Mermaid C4 .mmd rendered to .svg); first line of each .mmd \"%% model-sha256: a329a8...; generated by rdm-spec views ...\" and of each .svg \"<!-- model-sha256: a329a8...\", the hash views and check report for the model."}
+ {:id "spec-0018",
+  :verdict :pass,
+  :evidence
+  "Publish fixture: valid project, model with 2 bounded contexts (shop: Cart, Pay, Stock; ship: Label, Route), no kernel, 4 views rendered, shop/cart.md design prose, 5 stamped scenarios; check exit 0. Same stale context.mmd (recorded hash zeros vs model a329a8...); rdm-spec check -> exit 1, \"dhf/views/context.mmd: view-stale: the view context is stale: ...: run rdm-spec views\"."}
+ {:id "spec-0019",
+  :verdict :pass,
+  :evidence
+  "Base fixture extended to 12 stamped scenarios, spec-0012 @wip, committed, tagged spec-3; dhf/cycles/03/cycle.edn {:cut \"spec-3\"}; rdm-spec checklist 03 -> exit 0, {:checklist {:items 11 :planned 1 :file \"dhf/cycles/03/checklist.json\"}}; checklist.json has 11 items each {id title context component level} (e.g. {\"id\":\"spec-0001\",\"title\":\"An item is added\",\"context\":\"shop\",\"component\":\"Cart\",\"level\":\"e2e\"}) and \"planned\":[{\"id\":\"spec-0012\",\"title\":\"S12\"}]. A 13th scenario committed after the tag did not appear (still 11)."}
+ {:id "spec-0020",
+  :verdict :pass,
+  :evidence
+  "Base fixture with hand-written dhf/cycles/01 and 02 (cycle.edn + score.edn, same 12 items spec-0001..0012): 01 passes 1-6, 02 passes 2-9; rdm-spec scoreboard 01 02 -> exit 0, {:scoreboard {:compared 12 :better 3 :worse 1 :better-items [\"spec-0007\" \"spec-0008\" \"spec-0009\"] :worse-items [\"spec-0001\"] ...}}; no net key or figure in the output."}
+ {:id "spec-0021",
+  :verdict :pass,
+  :evidence
+  "Cycle 01 scored 12 items, cycle 02 scored 15 (spec-0013..0015 new); rdm-spec scoreboard 01 02 -> exit 0, :scored {\"01\" 12 \"02\" 15}, :compared 12, :only-in {\"02\" [\"spec-0013\" \"spec-0014\" \"spec-0015\"]}, :statements [\"the denominator moved from 12 to 15: only the 12 items both scored are compared\" \"3 items are new in cycle 02, counted apart\"]."}
+ {:id "spec-0022",
+  :verdict :pass,
+  :evidence
+  "Project at cut spec-4 with cycle 03 (cycle.edn roles, ratified.edn :outcome :passed, checklist 12 items); verdicts file \"[]\"; rdm-spec score 03 --verdicts v0.edn -> exit 2, stderr \"cannot-run: the verdicts hold no verdict: the grading did not happen, so nothing is scored\"; no score.edn written (dhf/cycles/03 still checklist.json, cycle.edn, ratified.edn)."}
+ {:id "spec-0023",
+  :verdict :pass,
+  :evidence
+  "Same cycle 03: checklist.json 12 items (spec-0001..0011, spec-0013); verdicts file grading spec-0001..0011 :pass; rdm-spec score 03 --verdicts v11.edn -> exit 0, {:score {:passed 11 :scored 12 :ungraded 1}}; score.edn :passed 11 :scored 12, item {:id \"spec-0013\" :verdict :fail :evidence \"ungraded: no verdict was given\" :ungraded true}."}
+ {:id "spec-0025",
+  :verdict :pass,
+  :evidence
+  "rdm-spec init p; core.hooksPath=.githooks; .githooks/pre-commit is \"exec rdm-spec check\". git commit -m ok -> check output printed by hook, commit made (exit 0). Then model.edn = \"{:system\", git commit -> hook prints \"dhf/spec/model.edn:1: model-unreadable: ...\", git commit exit 1, no new commit."}
+ {:id "spec-0032",
+  :verdict :pass,
+  :evidence
+  "Base fixture; test/steps/shop.clj defines (via rdm-spec.kernel.runner defstep) every step except \"it is paid\"; rdm-spec run -> exit 1, {:run {:passed 1 :broken 1 ...}}; pay scenario result status \"broken\", statusDetails {:message \"no step definition matches: When it is paid\"}, step \"When it is paid\" broken, later step skipped."}
+ {:id "spec-0033",
+  :verdict :pass,
+  :evidence
+  "Base fixture, config :implementation [\"src\"], :verify [{:kind :tests :command [\"sh\" \"-c\" \"echo tests ran; exit 0\"]}], committed, tagged spec-3; rdm-spec fence ROOM spec-3; dhf/cycles/03/cycle.edn {:cut \"spec-3\" ...}; rdm-spec verify ROOM 03 -> exit 1, {:verify {:outcome :refused :checks [{:name \"tests\" :outcome :failed :reason \"the test command exited 0 and wrote no Allure result into dhf/cycles/03/results: a green exit with no results is not a run\"}]}}, stderr \"dhf/cycles/03/results: tests-no-results: ... a green exit with no results is not a run\"; test.log holds \"tests ran\"."}
+ {:id "spec-0036",
+  :verdict :pass,
+  :evidence
+  "Base fixture with bare origin inside room; commit A tagged spec-6, HEAD = new commit B, pushed main+tags, git remote set-head origin -a (HEAD == origin/HEAD = ed2d9d7); rdm-spec cut -> exit 0, {:cut {:tag \"spec-7\" :commit \"ed2d9d7...\" :pushed \"origin\"}}; git tag --points-at HEAD = spec-7; git ls-remote --tags origin lists spec-6 and spec-7 (at ed2d9d7)."}
+ {:id "spec-0037",
+  :verdict :pass,
+  :evidence
+  "Base fixture, HEAD untagged; rdm-spec fence ROOM HEAD -> exit 2, stderr \"cannot-run: HEAD is not a cut: regeneration reads only a cut, a commit tagged spec-N\"; ROOM not created."}
+ {:id "spec-0038",
+  :verdict :pass,
+  :evidence
+  "Base fixture + src/app.py (:implementation [\"src\"]), dhf/cycles/01/score.edn, site/index.html committed (force), tagged spec-3 (check exit 0; init deny/keep config); rdm-spec fence ROOM spec-3 -> exit 0, {:fence {:cut \"spec-3\" :files 24 :scope :project}}. ROOM: 1 commit, a root (no parents); git ls-files == working tree == ls-tree of spec-3 minus src/, dhf/cycles/, site/; every file byte-identical to git show spec-3:path; no reachable object under a denied path; all 37 objects in the object store are reachable."}
+ {:id "spec-0042",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). Ledger 10; cart scenario tagged @spec-0007 @spec-0008 @e2e; rdm-spec check -> exit 1, stderr \"dhf/spec/shop/cart.feature:6: scenario-ids: the scenario \\\"An item is added\\\" carries 2 ids, spec-0007 and spec-0008: a scenario carries exactly one\"."}
+ {:id "spec-0043",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). Both scenarios tagged @spec-0007; rdm-spec check -> exit 1, \"dhf/spec/shop/cart.feature:6: id-duplicate: spec-0007 is carried by 2 scenarios: dhf/spec/shop/cart.feature:6 and dhf/spec/shop/pay.feature:6\"."}
+ {:id "spec-0044",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). Row @e2e: base (scenarios @e2e) rdm-spec check exit 0, no level finding. Row @contract: cart scenario @spec-0001 @contract -> rdm-spec check exit 0, no finding."}
+ {:id "spec-0045",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). Cart scenario tagged @spec-0001 only; rdm-spec check -> exit 1, \"cart.feature:6: level-missing: spec-0001 carries no level: a scenario carries exactly one of @e2e and @contract\"."}
+ {:id "spec-0046",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). Cart scenario @spec-0001 @e2e @contract; rdm-spec check -> exit 1, \"cart.feature:6: level-twice: spec-0001 carries both levels @e2e and @contract: ...\"."}
+ {:id "spec-0047",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). cart.feature tagged @UN-003 on the Feature, scenario carries no need tag, no dhf/allure-results; rdm-spec trace UN-003 -> exit 0, {:trace {:kind :need :id \"UN-003\" :scenarios [{:id \"spec-0001\" :title \"An item is added\" ...}] :says \"no status was derived because no results were given\"}}."}
+ {:id "spec-0048",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). Removed @UN-001 from cart feature (no rule, scenario untagged); rdm-spec check -> exit 1, \"cart.feature:5: need-missing: spec-0001 traces to no user need: ...\"."}
+ {:id "spec-0049",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). Needs UN-001..UN-005; cart feature tagged @UN-009; rdm-spec check -> exit 1, \"cart.feature:6: need-unknown: spec-0001 is tagged @UN-009, a need dhf/spec/needs.edn does not declare\"."}
+ {:id "spec-0050",
+  :verdict :pass,
+  :evidence
+  "Base fixture: rdm-spec init + needs UN-001..005 citing a recorded source, model with person, system, container :app, context :shop (components :shop/cart, :shop/pay at shop/cart, shop/pay), 3 views, stamped feature files, rdm-spec views; base check exit 0 (only citation-unchecked warnings). Reduced to one component/one scenario @spec-0001 @e2e @wip, views regenerated; rdm-spec check -> exit 0, no finding."}
+ {:id "spec-0051",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid stamped project). cart.feature rewritten with comment, feature tag, Feature, Background, Rule, Scenario with doc string, Given/When/Then/And/But, Scenario Outline with data table and Examples, tags (@spec-0001 @e2e, @spec-0003 @contract @UN-002); rdm-spec check -> exit 0, :spec {:scenarios 3 :feature-files 2 :passed? true}, no finding."}
+ {:id "spec-0052",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid stamped project). Appended \"  Scenario Template: X\" at line 12; rdm-spec check -> exit 1, \"dhf/spec/shop/cart.feature:12: gherkin-keyword-unknown: the keyword Scenario Template: is not in the declared Gherkin subset\"."}
+ {:id "spec-0053",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid stamped project). Second \"Feature: Again\" at line 11 of cart.feature; rdm-spec check -> exit 1, \"dhf/spec/shop/cart.feature:11: gherkin-feature-twice: a feature file holds exactly one feature; a second Feature is on line 11\" (plus a line-unexpected finding for its description)."}
+ {:id "spec-0054",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid stamped project, ledger 2, scenarios spec-0001 in shop/cart.feature and spec-0002 in shop/pay.feature). ids.edn {:issued 41}; appended unstamped @e2e scenario \"A new one\"; rdm-spec stamp -> exit 0, {:stamp {:stamped [{:id \"spec-0042\" :file \"dhf/spec/shop/cart.feature\" :title \"A new one\"}] :issued 42}}; file shows @spec-0042 @e2e on it; ids.edn {:issued 42}."}
+ {:id "spec-0055",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid stamped project, ledger 2, scenarios spec-0001 in shop/cart.feature and spec-0002 in shop/pay.feature). All scenarios stamped; sha1sum every file under dhf/spec; rdm-spec stamp -> exit 0, {:stamp {:stamped [] :issued 2}}; sha1sums identical (ledger included)."}
+ {:id "spec-0056",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid stamped project, ledger 2, scenarios spec-0001 in shop/cart.feature and spec-0002 in shop/pay.feature). Ledger 42, cart scenario retagged @spec-0042 and committed, then deleted; new unstamped scenario added; rdm-spec stamp -> exit 0, stamped spec-0043 \"Brand new\", ledger 43."}
+ {:id "spec-0057",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid stamped project, ledger 2, scenarios spec-0001 in shop/cart.feature and spec-0002 in shop/pay.feature). Ledger 10; cart scenario @spec-0007 committed; retitled \"Items go into the cart\" and moved to shop/pay.feature (another component); rdm-spec stamp -> exit 0, stamped only the other new scenario (spec-0011); moved scenario still @spec-0007 @e2e in pay.feature."}
+ {:id "spec-0058",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid stamped project, ledger 2, scenarios spec-0001 in shop/cart.feature and spec-0002 in shop/pay.feature). config :id-prefix \"loyly\"; new unstamped scenario; rdm-spec stamp -> exit 0, new scenario tagged @loyly-0004 (others without a loyly id got loyly-0003/0005 too)."}
+ {:id "spec-0059",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). spec-0001 tagged @wip, passing result for spec-0002; rdm-spec release -> exit 1, {:release {:passed? false ... :refused [\"spec-0001\"]}}, stderr \"cart.feature:6: release-refused: spec-0001 is planned: a release needs every scenario verified\". Control: both passing, no @wip -> exit 0."}
+ {:id "spec-0060",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). Results pass spec-0001, spec-0002, plus one labelled spec=spec-9999; rdm-spec status -> exit 0, :unknown-results [{:file \"dhf/allure-results/u3-result.json\" :spec \"spec-9999\"}], counts {:verified 2 :failed 0 :unverified 0 :planned 0} (only 2 scenarios, 9999 counted nowhere), warning result-unknown."}
+ {:id "spec-0061",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). mkdir dhf/allure-results (empty); rdm-spec status -> exit 2, \"cannot-run: the results directory dhf/allure-results holds no Allure result: no test run wrote results there\"."}
+ {:id "spec-0062",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). dhf/allure-results/bad-result.json = '{\"uuid\": broken' beside a valid result; rdm-spec status -> exit 1, stdout still the status, stderr one line \"dhf/allure-results/bad-result.json: result-unreadable: the result is unreadable: it is not valid JSON: ...\"."}
+ {:id "spec-0063",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). Results shaped as allure-js writes them (uuid file names, labels language=javascript, framework=cucumberjs/mocha, host, thread, testCaseId, statusDetails with JS trace, plus a -container.json and environment.properties): spec-0001 passed, spec-0002 failed; rdm-spec status -> exit 0, spec-0001 :verified, spec-0002 :failed, :unknown-results [], same as the plain results."}
+ {:id "spec-0064",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). spec-0001 @wip with no result, passing result for spec-0002; rdm-spec status -> exit 0, spec-0001 :status :planned, spec-0002 :verified, counts planned 1."}
+ {:id "spec-0065",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). Third scenario spec-0003 added; results spec-0001 passed, spec-0002 failed, none for spec-0003; rdm-spec status -> exit 0, :verified/:failed/:unverified respectively, counts 1/1/1/0; sha1sum of dhf/spec unchanged, git status dhf/spec clean."}
+ {:id "spec-0066",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). Outline spec-0003 with 3 Examples rows (n=1,2,3); results per row (parameters [{name n value k}], historyId spec-0003|k): two passed, one failed; rdm-spec status -> exit 0, spec-0003 :status :failed. Control: all three passed -> :verified."}
+ {:id "spec-0067",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). Scenario retagged @spec-0007 (ledger 10), result spec=spec-0007 passed; rdm-spec status -> exit 0, {:id \"spec-0007\" ... :status :verified}."}
+ {:id "spec-0068",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). Scenario @spec-0007, one result per row with status failed / broken / skipped / unknown, each in its own fixture; rdm-spec status -> exit 0 each time, spec-0007 :status :failed in all four rows."}
+ {:id "spec-0069",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). Scenario @spec-0007, two results: passed and failed; rdm-spec status -> exit 0, spec-0007 :status :failed."}
+ {:id "spec-0070",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project, spec-0001 cart.feature:6, spec-0002 pay.feature:6); results written as Allure JSON (*-result.json, labels spec=ID) into dhf/allure-results (the configured :results-dir). 10 stamped scenarios (spec-0001..0010), passing results for spec-0001..0009; rdm-spec status -> exit 0, 10 scenarios listed, counts {:verified 9 :failed 0 :unverified 1 :planned 0}, spec-0010 :unverified."}
+ {:id "spec-0072",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person, system, container :app, context :shop with :shop/cart and :shop/pay, 3 views, check exit 0). model.edn = its first 11 lines plus line 12 \"  {:extra 1\" (unclosed map on line 12); rdm-spec check -> exit 1, \"dhf/spec/model.edn:12: model-unreadable: the model is not EDN: the { opened on line 12 is never closed\"."}
+ {:id "spec-0073",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person, system, container :app, context :shop with :shop/cart and :shop/pay, 3 views, check exit 0). Container :app given :owner \"team\"; rdm-spec check -> exit 1, \"dhf/spec/model.edn:3: model-key-unknown: the container :app carries the key :owner, which the model's shape does not declare\"."}
+ {:id "spec-0074",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person, system, container :app, context :shop with :shop/cart and :shop/pay, 3 views, check exit 0). Container and component Cart both given id :alpha; rdm-spec check -> exit 1, \"dhf/spec/model.edn:3: model-id-duplicate: the id :alpha is used 2 times: by the container App and by the component Cart\"."}
+ {:id "spec-0075",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person, system, container :app, context :shop with :shop/cart and :shop/pay, 3 views, check exit 0). Added relationship {:from :shop/cart :to :archive}; rdm-spec check -> exit 1, \"dhf/spec/model.edn:7: model-relationship-unknown: the relationship :shop/cart -> :archive names :archive, which is no element of the model\"."}
+ {:id "spec-0076",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person, system, container :app, context :shop with :shop/cart and :shop/pay, 3 views, check exit 0). Added context :spec with component :spec/parser :spec \"spec/parser\" (+ component view) and dhf/spec/spec/parser.feature; stamp, views; rdm-spec check -> exit 0; rdm-spec trace spec-0003 -> :file \"dhf/spec/spec/parser.feature\" :component \"Parser\". Renamed to parsr.feature -> exit 1, \"a-scenario-owner: the component :spec/parser owns no feature file: there is no dhf/spec/spec/parser.feature\"; moved to dhf/spec/other/parser.feature -> exit 1, same finding."}
+ {:id "spec-0077",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person, system, container :app, context :shop with :shop/cart and :shop/pay, 3 views, check exit 0). Model reformatted: new comment line, blank lines and indentation added, extra spaces inside a map, no value changed (git diff 24+/10-); rdm-spec check -> exit 0, :views {:stale 0}, no view-stale line."}
+ {:id "spec-0078",
+  :verdict :pass,
+  :evidence
+  "Base fixture (valid project: model with person, system, container :app, context :shop with :shop/cart and :shop/pay, 3 views, check exit 0). Cart's description \"Holds items\" -> \"Holds the items\"; rdm-spec check -> exit 1, :views {:stale 6}, view-stale finding for every view (context, containers, shop-components; .mmd and .svg each)."}
+ {:id "spec-0079",
+  :verdict :pass,
+  :evidence
+  "git init; src/main.py + README.md committed; rdm-spec adopt -> exit 0, stdout {:adopt {:wrote [15 skeleton files] :kept []}}; files byte-identical to init output except model.edn system id/name = repo dir name (as init names it from its path); git diff HEAD -- src README.md empty."}
+ {:id "spec-0080",
+  :verdict :pass,
+  :evidence
+  "git repo with dhf/spec/glossary.md \"MY GLOSSARY\"; rdm-spec adopt -> exit 0, :kept [\"dhf/spec/glossary.md\"]; file still \"MY GLOSSARY\"."}
+ {:id "spec-0081",
+  :verdict :pass,
+  :evidence
+  "dhf/harness/config.edn symlink -> ../../target.edn ({:mine 1}); rdm-spec adopt -> exit 0, :kept [\"dhf/harness/config.edn\"]; link and target unchanged. Also with dangling link -> ../../nowhere.edn: kept, link unchanged, no target created."}
+ {:id "spec-0082",
+  :verdict :pass,
+  :evidence
+  "repo with .gitignore \"node_modules/\"; rdm-spec adopt -> exit 0, :kept [\".gitignore\"] :gitignore-lines [\"dhf/allure-results/\" \"dhf/cycles/*/results/\" \"dhf/cycles/*/build/\" \"site-src/\" \"site/\"] (exactly the init lines), stderr \".gitignore: warning: gitignore-kept: ... add the lines ...\"; .gitignore still only node_modules/."}
+ {:id "spec-0083",
+  :verdict :pass,
+  :evidence
+  "adopt, then sha1sum all files, rdm-spec adopt again -> exit 0, {:adopt {:wrote [] :kept [all 15 destinations] :gitignore-lines []}}; sha1sums identical."}
+ {:id "spec-0084",
+  :verdict :pass,
+  :evidence
+  "plain dir (no git); rdm-spec adopt -> exit 2, stderr \"cannot-run: .../a6 is not a git repository: the hook needs a git repository, so adopt wrote nothing\"; dir still empty."}
+ {:id "spec-0085",
+  :verdict :pass,
+  :evidence
+  "repo with src/m.py, test/test_m.py, features/x.feature; rdm-spec adopt -> exit 0; model.edn only {:system ...}, needs.edn {}, ids.edn {:issued 0}; find dhf -name *.feature -> none."}
+ {:id "spec-0086",
+  :verdict :pass,
+  :evidence
+  "mkdir i1; cd i1; rdm-spec init sauna -> exit 0, stdout {:init {:path \"sauna\" :wrote [15 files] :next [4 steps]}}. git log: \"main does not have any commits yet\"; core.hooksPath=.githooks; tree holds exactly the 15 table paths. model.edn {:system {:id :sauna ...}} only; events {}; needs {}; ids {:issued 0}; glossary heading only; README has conventions, results contract table of Allure elements and default :allure mapping; config.edn has :id-prefix \"spec\", dirs, :clean-room deny implementation/dhf/cycles/site,site-src,dhf/allure-results and keep list as stated, :agency {:watch [\"/\" \"~\"] :tmp \"/tmp\"}, :verify [{:kind :tests :command []}], :implementation []; stack.md empty table; sources.edn {}; wiki index rules + empty Pages; decisions README; pre-commit \"exec rdm-spec check\"; cut.yml runs rdm-spec cut on push to default branch; .gitignore the 5 lines. Lists every file written and next steps."}
+ {:id "spec-0087",
+  :verdict :pass,
+  :evidence
+  "mkdir sauna; echo x > sauna/f; rdm-spec init sauna -> exit 2, stderr \"cannot-run: init writes into a path that does not exist, and sauna exists\"; sauna still holds only f with \"x\"."}
+ {:id "spec-0089",
+  :verdict :pass,
+  :evidence
+  "rdm-spec init sauna --id-prefix sauna -> exit 0; dhf/harness/config.edn holds :id-prefix \"sauna\"."}
+ {:id "spec-0090",
+  :verdict :pass,
+  :evidence
+  "rdm-spec init sauna; cd sauna; rdm-spec check -> exit 0, stdout {:spec {:scenarios 0 :passed? true} :lint {:findings 0 ...} :views {:stale 0} ...}, no stderr."}
+ {:id "spec-0092",
+  :verdict :pass,
+  :evidence
+  "Publish fixture: valid project, model with 2 bounded contexts (shop: Cart, Pay, Stock; ship: Label, Route), no kernel, 4 views rendered, shop/cart.md design prose, 5 stamped scenarios; check exit 0. rdm-spec publish -> exit 0, {:publish {:pages 9 ...}}; site-src/docs holds exactly 5 component pages shop/cart.md, shop/pay.md, shop/stock.md, ship/label.md, ship/route.md (each titled by component, under its context), plus 2 context indexes, home, wiki; site/ built (site/shop/cart.html etc.)."}
+ {:id "spec-0093",
+  :verdict :pass,
+  :evidence
+  "Publish fixture: valid project, model with 2 bounded contexts (shop: Cart, Pay, Stock; ship: Label, Route), no kernel, 4 views rendered, shop/cart.md design prose, 5 stamped scenarios; check exit 0. (component Cart standing in for Lint) rdm-spec publish -> exit 0; site-src/docs/shop/cart.md holds \"# Cart\", model description \"Holds items\", ## Design with the prose from shop/cart.md, ## Scenarios with \"### spec-0001: An item is added\", \"Level: e2e\" and the three Given/When/Then steps."}
+ {:id "spec-0094",
+  :verdict :pass,
+  :evidence
+  "Publish fixture: valid project, model with 2 bounded contexts (shop: Cart, Pay, Stock; ship: Label, Route), no kernel, 4 views rendered, shop/cart.md design prose, 5 stamped scenarios; check exit 0. (context shop standing in for architecture) rdm-spec publish -> exit 0; site-src/docs/shop/index.md shows ![Selling inside](../views/shop-components.svg) (svg copied to docs/views) and links [Cart](cart.md), [Pay](pay.md), [Stock](stock.md)."}
+ {:id "spec-0095",
+  :verdict :pass,
+  :evidence
+  "Publish fixture: valid project, model with 2 bounded contexts (shop: Cart, Pay, Stock; ship: Label, Route), no kernel, 4 views rendered, shop/cart.md design prose, 5 stamped scenarios; check exit 0. rdm-spec publish -> exit 0; site-src/docs/index.md shows views/context.svg and views/containers.svg images and a User needs section listing UN-001..UN-005, each with its text and linked tracing scenario(s), e.g. UN-004 -> [spec-0003](ship/label.md)."}
+ {:id "spec-0096",
+  :verdict :pass,
+  :evidence
+  "Publish fixture: valid project, model with 2 bounded contexts (shop: Cart, Pay, Stock; ship: Label, Route), no kernel, 4 views rendered, shop/cart.md design prose, 5 stamped scenarios; check exit 0. Results dir outside project: spec-0001 passed, spec-0002 failed (analog of spec-0012/0013); rdm-spec publish --results DIR -> exit 0, :publish :status :derived; cart.md \"Status: verified\", pay.md \"Status: failed\"; home: \"spec-0001 ... (verified)\", \"spec-0002 ... (failed)\"."}
+ {:id "spec-0097",
+  :verdict :pass,
+  :evidence
+  "Publish fixture: valid project, model with 2 bounded contexts (shop: Cart, Pay, Stock; ship: Label, Route), no kernel, 4 views rendered, shop/cart.md design prose, 5 stamped scenarios; check exit 0. spec-0005 (Stock) tagged @wip; rdm-spec publish -> exit 0; stock.md \"Level: e2e · Status: planned\", home \"[spec-0005](shop/stock.md): Stock works (planned)\"."}
+ {:id "spec-0098",
+  :verdict :pass,
+  :evidence
+  "Copy of project/ (rdm-spec's own spec, cut spec-31) as a git repo, dhf/allure-results absent; rdm-spec publish -> exit 0, {:spec {:scenarios 325 :feature-files 31} :publish {:pages 46 :status \"no status was derived because no results were given\"}}; all 46 .md pages under site-src (wiki/index.md, wiki/pages/*.md included) contain \"no status was derived because no results were given\"; every Status: line says it."}
+ {:id "spec-0099",
+  :verdict :pass,
+  :evidence
+  "Publish fixture: valid project, model with 2 bounded contexts (shop: Cart, Pay, Stock; ship: Label, Route), no kernel, 4 views rendered, shop/cart.md design prose, 5 stamped scenarios; check exit 0. dhf/views/context.mmd first line's model-sha256 replaced by zeros; rdm-spec publish -> exit 1, stdout {:views {:stale 1}}, stderr \"dhf/views/context.mmd: view-stale: the view context is stale: it records the model 000..., and the model is a329a8...: run rdm-spec views\"; no site or site-src written."}
+ {:id "spec-0100",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy (and separately the minimal project made by rdm-spec init), dhf/spec copied aside. rdm-spec publish exited 0 both times ({:publish {:pages 46 ...}} and {:publish {:pages 9 ...}}); diff -r of the kept copy against dhf/spec shows no difference; git status clean."}
+ {:id "spec-0101",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy with views, results dir DIR (outside the project) holding spec-0012 passed and spec-0013 failed. rdm-spec publish --results DIR run twice (exit 0 both), site-src of the first kept aside: diff -r of the two site-src trees (Markdown and mkdocs.yml) reports no difference; grep for /home/user, the scratch dir name and the results dir finds no page naming a path outside the project (statuses shown as '(verified)'/'(failed)')."}
+ {:id "spec-0102",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project, UN-003 declared; @UN-003 on parser.feature's Feature (spec-0007, spec-0008), on a Rule in check.feature holding spec-0006 (spec-0005 outside it), and on scenario spec-0003 in command.feature. rdm-spec trace UN-003 exited 0; stdout {:trace {:kind :need :id \"UN-003\" ... :scenarios [{:id \"spec-0003\" :title \"Command does one thing\" :component \"Command\" :context \"kernel\" :level \"e2e\"} {:id \"spec-0006\" ...} {:id \"spec-0007\" ...} {:id \"spec-0008\" ...}]}}; spec-0005 and spec-0004 absent."}
+ {:id "spec-0103",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project with declared need UN-007 that no tag names. rdm-spec trace UN-007 exited 0; stdout {:trace {:kind :need :id \"UN-007\" :text \"Seventh.\" :scenarios [] :says \"no scenario traces to UN-007\"}}"}
+ {:id "spec-0104",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy (spec-0012 in Lint, context architecture, lint.feature tagged @UN-005). rdm-spec trace spec-0012 exited 0; stdout {:trace {:kind :scenario :id \"spec-0012\" :needs [\"UN-005\"] :component \"Lint\" :context \"architecture\" :level \"e2e\" :file ... :line 76 ...}}"}
+ {:id "spec-0105",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy; DIR holds two results labelled spec=spec-0012, one passed one failed. rdm-spec trace spec-0012 --results DIR exited 0; stdout :status :failed and :results [{:file \"DIR/9b98...-result.json\" :status \"failed\"} {:file \"DIR/a6c1...-result.json\" :status \"passed\"}]"}
+ {:id "spec-0106",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy (no @spec-0999, no UN-999). rdm-spec trace spec-0999 exited 2; stdout empty; stderr: cannot-run: trace names spec-0999, and no scenario is tagged @spec-0999 and no need is spec-0999"}
+ {:id "spec-0107",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy. rdm-spec trace spec-0012 --results DIR (DIR absent) exited 2; stdout empty; stderr: cannot-run: the results directory DIR does not exist (absolute path named)"}
+ {:id "spec-0108",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy with no dhf/allure-results. rdm-spec trace spec-0012 exited 0; stdout {:trace {:needs [\"UN-005\"] :component \"Lint\" :level \"e2e\" ... :says \"no status was derived because no results were given\"}} and no :status key."}
+ {:id "spec-0120",
+  :verdict :pass,
+  :evidence
+  "Fixture: copy of project/ as a git repo, sources.edn given source :nopin with :repository and no :pins, committed. rdm-spec check exited 1; stderr: dhf/raw/sources.edn:1: source-no-pin: the source nopin has no pin: a source is pinned to the commits it is cited at"}
+ {:id "spec-0121",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, base commit pins loyly at 17d68d2; second commit 8cb934c replaces it with aaaaaaa. rdm-spec check exited 1; stderr: dhf/raw/sources.edn:27: pin-dropped: the source loyly dropped the pin 17d68d2 it had, in the commit 8cb934c: a pin is never dropped (names source, pin, commit)"}
+ {:id "spec-0122",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, need UN-006 (needs.edn line 25) given citation innolitix:README.md@f21b508; no source innolitix. rdm-spec check exited 1; stderr: dhf/spec/needs.edn:25: citation-source-unknown: UN-006 cites innolitix:README.md@f21b508: it names no recorded source innolitix in the sources index. Same in a wiki footnote: dhf/wiki/pages/regulated-profile.md:53: ... the footnote [^x] cites innolitix:... Note: when the same citation string appears on several needs' lines, every finding reports the first line (15), not each need's own line."}
+ {:id "spec-0123",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy (loyly pinned only at 17d68d2), UN-002 given citation loyly:README.md@0000000. rdm-spec check exited 1; stderr: dhf/spec/needs.edn:15: citation-pin-unknown: UN-002 cites loyly:README.md@0000000: 0000000 is not one of loyly's pins (17d68d2)"}
+ {:id "spec-0124",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy; DIR holds a clone of sources/loyly with a later commit that deletes README.md (so it exists only at the pin). rdm-spec check --sources DIR exited 0, no finding on loyly:README.md@17d68d2 (cited by UN-001 etc.); with sources/ as DIR, exit 0 and :unchecked 0."}
+ {:id "spec-0125",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, UN-002 cites loyly:docs/plan.md@17d68d2; DIR clone of loyly whose later commit adds docs/plan.md (absent at 17d68d2). rdm-spec check --sources DIR exited 1; stderr: dhf/spec/needs.edn:15: citation-unresolved: UN-002 cites loyly:docs/plan.md@17d68d2: the checkout of loyly does not hold docs/plan.md at 17d68d2"}
+ {:id "spec-0126",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy. rdm-spec check (no --sources) exited 0; result :sources {:unchecked 36}; stderr e.g. dhf/wiki/index.md:15: warning: citation-unchecked: the footnote [^ex] cites loyly:README.md@17d68d2: no checkout of loyly was given (rdm-spec check --sources DIR), so its path was not checked. Not reported as resolved."}
+ {:id "spec-0127",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy plus dhf/wiki/pages/nofoot.md (three paragraphs, no footnote), listed in the index. rdm-spec check exited 1; stderr: dhf/wiki/pages/nofoot.md: wiki-uncited: the page dhf/wiki/pages/nofoot.md has no footnote: every claim in the wiki cites a source"}
+ {:id "spec-0128",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, footnote [^p] citing loyly:docs/plan.md@17d68d2 appended to dhf/wiki/pages/regulated-profile.md. rdm-spec check --sources sources/ exited 1; stderr: dhf/wiki/pages/regulated-profile.md:53: citation-unresolved: the footnote [^p] cites loyly:docs/plan.md@17d68d2: the checkout of loyly does not hold docs/plan.md at 17d68d2"}
+ {:id "spec-0129",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy plus dhf/wiki/pages/good.md, indexed, whose one footnote cites loyly:README.md@17d68d2. rdm-spec check --sources sources/ exited 0, no finding on good.md, :unchecked 0. Without --sources: exit 0, only a citation-unchecked warning for good.md:5."}
+ {:id "spec-0130",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy plus dhf/wiki/pages/cut-and-fence.md (with a footnote) that the index does not link. rdm-spec check exited 1; stderr: dhf/wiki/pages/cut-and-fence.md: wiki-unindexed: the index does not list the page dhf/wiki/pages/cut-and-fence.md: every page is in the index"}
+ {:id "spec-0131",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, index.md given an entry linking pages/scoring.md, no such page. rdm-spec check exited 1; stderr: dhf/wiki/index.md:27: wiki-entry-missing: the index links pages/scoring.md, and there is no such page"}
+ {:id "spec-0132",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, :stack-words given Cobalt, regulated-profile.md line 51 says 'The check is written in Cobalt.' rdm-spec check exited 1; stderr: dhf/wiki/pages/regulated-profile.md:51: stack-word: names the stack word Cobalt: the stack lives in dhf/harness/stack.md, never here (page, line, word)"}
+ {:id "spec-0133",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy plus dhf/wiki/pages/checklist.md (indexed) whose footnote cites loyly:README.md@17d68d2. rdm-spec publish exited 0 (:pages 47); site-src/docs/wiki/pages/checklist.md holds [^c]: [`loyly:README.md@17d68d2`](https://github.com/skallinen/loyly/blob/17d68d2/README.md); site/wiki/pages/checklist.html carries href=\"https://github.com/skallinen/loyly/blob/17d68d2/README.md\"."}
+ {:id "spec-0134",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, UN-004's :sources set to []. rdm-spec check exited 1; stderr: dhf/spec/needs.edn:19: need-unsourced: UN-004 cites no source: every user need rests on a source, cited as <source>:<path>@<commit>. Same with :sources removed (exit 1, need-unsourced UN-004)."}
+ {:id "spec-0135",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy plus source :demo pinned at f6f09e0, the HEAD of a fixture repo DIR/demo holding only README.md; UN-004 cites demo:docs/nothing.md@f6f09e0. rdm-spec check --sources DIR exited 1; stderr: dhf/spec/needs.edn:20: citation-unresolved: UN-004 cites demo:docs/nothing.md@f6f09e0: the checkout of demo does not hold docs/nothing.md at f6f09e0"}
+ {:id "spec-0136",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy (sources.edn fences harness/fence.sh in loyly), footnote [^f] citing loyly:harness/fence.sh@17d68d2 appended to dhf/wiki/pages/regulated-profile.md. rdm-spec check exited 1; stderr: dhf/wiki/pages/regulated-profile.md:53: citation-fenced: the footnote [^f] cites loyly:harness/fence.sh@17d68d2: harness/fence.sh is in loyly's fenced path harness/fence.sh: a source's implementation is never cited"}
+ {:id "spec-0137",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy (innolitics-rdm fences rdm), footnote citing innolitics-rdm:rdm/render.py@f21b508 on regulated-profile.md:53. rdm-spec check exited 1; stderr: dhf/wiki/pages/regulated-profile.md:53: citation-fenced: the footnote [^f] cites innolitics-rdm:rdm/render.py@f21b508: rdm/render.py is in innolitics-rdm's fenced path rdm: a source's implementation is never cited"}
+ {:id "spec-0138",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, loyly's :fenced given harness/missing.clj. rdm-spec check --sources sources/ exited 1; stderr: dhf/raw/sources.edn: source-fence-unmatched: the source loyly fences harness/missing.clj, which matches nothing at its pin 17d68d2"}
+ {:id "spec-0142",
+  :verdict :pass,
+  :evidence
+  "Same fixture as spec-0174. rdm-spec score 03 --verdicts verdicts.edn exited 0; score.edn holds :builder {:name \"builder-a\" :actor :agent} :grader {:name \"grader-b\" :actor :agent} :spec-owner {:name \"Sami\" :actor :human}."}
+ {:id "spec-0143",
+  :verdict :pass,
+  :evidence
+  "Same fixture, cycle.edn grader set to builder-a. rdm-spec score 03 --verdicts verdicts.edn exited 1; stdout {}; no score.edn; stderr: dhf/cycles/03/cycle.edn: cycle-builder-grades: builder-a is the builder: the builder may not grade or read its own score. With builder-a as spec owner instead: exit 1, no score.edn, refusal likewise."}
+ {:id "spec-0144",
+  :verdict :pass,
+  :evidence
+  "Same fixture, cycle.edn with builder and grader and no :spec-owner. rdm-spec score 03 --verdicts verdicts.edn exited 1; stdout {}; no score.edn written; stderr: dhf/cycles/03/cycle.edn: cycle-role-missing: the cycle names no spec-owner: every role is named, as human or agent"}
+ {:id "spec-0146",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project, model with contexts spec (Parser, Check) then architecture (Lint), and one kernel component Command. rdm-spec publish exited 0; site-src/mkdocs.yml nav: Home: index.md; spec: [spec: spec/index.md, Parser: spec/parser.md, Check: spec/check.md]; architecture: [architecture: architecture/index.md, Lint: architecture/lint.md]; Kernel: [Kernel: kernel/index.md, Command: kernel/command.md]; then Wiki."}
+ {:id "spec-0147",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project (and project copy) whose pages link only to existing pages; :site :builder mkdocs build --strict -f site-src/mkdocs.yml (strict: true in the written mkdocs.yml). rdm-spec publish exited 0; site/ holds the HTML (10 .html files for the minimal project, e.g. site/wiki/pages/checklist.html in the project copy). With a broken link the same command exits 1 (spec-0148), so the build fails on broken links."}
+ {:id "spec-0148",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project, published once (10 HTML files in site/), then dhf/spec/spec/parser.md design prose linking grammar.md (no such page). rdm-spec publish exited 1; stderr: site-src/docs/spec/parser.md: site-link-broken: the page spec/parser.md links grammar.md, which the site does not hold; afterwards no .html in site/ (site/ removed)."}
+ {:id "spec-0149",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project, published once (10 HTML files in site/), then run with PATH holding only bb and git (mkdocs not installed). rdm-spec publish exited 2; stdout empty; stderr: cannot-run: the site builder mkdocs is not installed (Cannot run program \"mkdocs\" ...): no HTML was written; afterwards no .html in site/ (site/ removed)."}
+ {:id "spec-0150",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, stamped scenario spec-0042 (check.feature:11) tagged @persona too. rdm-spec check exited 1; stderr: dhf/spec/02-write-the-spec/check.feature:11: tag-unknown: spec-0042 carries @persona, which is not a tag the spec knows: a scenario may carry its id (@spec-NNNN), one level (@e2e or @contract), need tags (@UN-nnn) and @wip"}
+ {:id "spec-0151",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project with step definitions in test/steps/steps.clj; scenario spec-0001 in Lint of context architecture, spec-0003 in kernel Command. rdm-spec run --results DIR exited 1 (other scenarios fail on purpose); spec-0001's result has labels spec=spec-0001, component=Lint, context=architecture; spec-0003's result context=kernel; steps [[\"Given the spec holds 20 features\" passed] [\"Then it is done\" passed]], each with its own status."}
+ {:id "spec-0152",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project, stamped outline spec-0004 'Command rows' with 3 example rows. rdm-spec run --results DIR wrote three results, each labelled spec=spec-0004, name \"Command rows\", parameters [{n 1}{v a}] / [{n 2}{v b}] / [{n 3}{v c}], historyId spec-0004|1|a, spec-0004|2|b, spec-0004|3|c."}
+ {:id "spec-0153",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project, spec-0002: Given a thing / Then it does not hold (assert fails) / Then it is done. rdm-spec run exited 1; result status failed, statusDetails message \"Then it does not hold: Assert failed: one is not two (= 1 2)\" plus trace; steps: Given passed, the Then failed, the third step skipped (not run)."}
+ {:id "spec-0154",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project, spec-0008 tagged @wip with a defined step that logs when it runs. rdm-spec run: the step log holds no :planned-ran entry; result status skipped, label planned=true, statusDetails \"planned: the scenario is tagged @wip and is not run\", its step skipped."}
+ {:id "spec-0155",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project whose dhf/spec holds 20 feature files in 20 subdirectories (d01/f01.feature..d20/f20.feature), listed nowhere. rdm-spec run --results DIR exited 0; stdout {:run {:passed 20 :failed 0 :broken 0 :skipped 0 :scenarios 20 ...}}; DIR holds 20 results labelled spec-0001..spec-0020."}
+ {:id "spec-0156",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project with every feature file removed from dhf/spec. rdm-spec run --results DIR exited 2; stdout empty; stderr: cannot-run: no scenario was found under dhf/spec: a run that finds nothing is refused; DIR not created. Same without --results: dhf/allure-results not created."}
+ {:id "spec-0162",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project cloned to a bare origin (origin/HEAD -> main), HEAD tagged spec-7 and pushed. rdm-spec cut exited 0; stdout {:cut {:tag \"spec-7\" :commit \"1af5e62...\" :says \"the commit is already spec-7: nothing to cut\"}}; git tag still only spec-7, origin's tags unchanged."}
+ {:id "spec-0163",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project with bare origin, origin/HEAD -> main at spec-7; HEAD moved to a new commit on branch feature (and, second run, a local commit on main). rdm-spec cut exited 2 both times; stdout empty; stderr: cannot-run: HEAD, on the branch feature, is not the commit origin/HEAD names: only a merge to the default branch is cut (resp. 'on the branch main'); no tag added."}
+ {:id "spec-0164",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, dhf/allure-results holding a passing result spec=spec-0012 plus one passed and one failed result with no labels (unit tests). rdm-spec status exited 0; :counts {:verified 1 :failed 0 :unverified 324 :planned 0} (sum 325 scenarios, nothing failed), :unknown-results []; stderr empty."}
+ {:id "spec-0166",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy. rdm-spec check --events exited 0; the last three stderr lines, after the warnings: event: KnowledgeIndexed published-by knowledge/sources / event: SpecParsed published-by spec/parser / event: SpecGated published-by spec/check. Same three on the minimal init project."}
+ {:id "spec-0167",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, unchanged. rdm-spec check --events run twice: both exit 0, and the two error streams are byte-identical (cmp), each listing KnowledgeIndexed, SpecParsed, SpecGated in that order."}
+ {:id "spec-0168",
+  :verdict :pass,
+  :evidence
+  "Fixture: test/steps/steps.clj (ns requiring rdm-spec.kernel.runner defstep) defines (defstep #\"the spec holds (\\d+) features\" (fn [ctx n] ...)). rdm-spec run on 'Given the spec holds 20 features': the function logged [:features {} \"20\"] (scenario context {} and captured \"20\"); step passed."}
+ {:id "spec-0169",
+  :verdict :pass,
+  :evidence
+  "Fixture: steps 'key a is added' (assoc :a) and 'key b is added' (logs ctx, assoc :b). rdm-spec run: b received {:a 1}; later step saw {:a 1 :b 2}; after a step returning nil (and, in a second run, 42) the next step still saw {:a 1 :b 2}; next scenario's first step received {}."}
+ {:id "spec-0170",
+  :verdict :pass,
+  :evidence
+  "Fixture: definitions #\"a spec\" (steps.clj:14) and #\"a sp(.*)\" (steps.clj:15) both match 'Given a spec'. rdm-spec run: spec-0007 result status broken, statusDetails message: the step Given a spec is matched by more than one definition: \"a sp(.*)\" at .../steps.clj:15 and \"a spec\" at .../steps.clj:14"}
+ {:id "spec-0171",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, UN-002 also cites innolitics-rdm:nothing.md@f21b508; DIR holds clones loyly/ and innolitics-rdm/. rdm-spec check --sources DIR exited 1; result :unchecked 1 (only agent-skills); stderr: dhf/spec/needs.edn:15: citation-unresolved: UN-002 cites innolitics-rdm:nothing.md@f21b508: the checkout of innolitics-rdm does not hold nothing.md at f21b508; loyly citations resolved (no finding)."}
+ {:id "spec-0173",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy with implementation, tagged spec-3, dhf/cycles/03/cycle.edn holding exactly the scenario's map (scope {:context :verification}). rdm-spec checklist 03 exited 0: {:checklist {:cycle \"03\" :cut \"spec-3\" :items 67 ...}}; checklist.json's 67 ids equal exactly the tagged scenarios of the verification context's five components (results, status, trace, release, verify), all :context verification. rdm-spec verify ROOM 03 (room from fence --context verification) ran on spec-3: stdout {:verify {:cycle \"03\" :cut \"spec-3\" ...}}, ratified.edn :cut \"spec-3\" (refused only because the fixture's stub test command writes no results)."}
+ {:id "spec-0174",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, cut spec-3, cycle.edn (scope :project, builder-a agent, grader-b agent, Sami human), checklist.json of the two items spec-0012 and spec-0014, ratified.edn :outcome :passed :room-tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904; verdicts.edn as in spec-0212. rdm-spec score 03 --verdicts verdicts.edn exited 0; stdout {:score {:cycle \"03\" :passed 1 :scored 2 :ungraded 0 :file \"dhf/cycles/03/score.edn\"}}; score.edn read as EDN equals the scenario's map exactly (= returned true)."}
+ {:id "spec-0176",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project made by rdm-spec init. rdm-spec help exited 0; stdout read as EDN is {:help [...]} of 22 maps with exactly keys :task :usage :does, :task strings; compared programmatically against every Examples row of spec-0176: tasks in the same order and every usage and description identical (no diff)."}
+ {:id "spec-0177",
+  :verdict :pass,
+  :evidence
+  "Fixture: copy of project/ (spec-31) as a git repo, unmodified. rdm-spec check exited 0; stdout {:sources {...} :wiki {:pages 2} :spec {:scenarios 325 :feature-files 31 :passed? true} :lint {:findings 0 ...} :views {:stale 0} :paths {:committed 245}}; stderr only citation-unchecked warnings."}
+ {:id "spec-0178",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, spec-0042 (check.feature:11) stripped of its level tag. rdm-spec check exited 1; stderr exactly one line: dhf/spec/02-write-the-spec/check.feature:11: level-missing: spec-0042 carries no level: a scenario carries exactly one of @e2e and @contract (plus warning lines); stdout one line of EDN map {:sources .. :wiki .. :spec {... :passed? false} :lint .. :views .. :paths ..}."}
+ {:id "spec-0179",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy with no dhf/allure-results. rdm-spec status exited 2; stdout empty; stderr: cannot-run: the results directory dhf/allure-results does not exist"}
+ {:id "spec-0180",
+  :verdict :pass,
+  :evidence
+  "rdm-spec frobnicate exited 2; stdout empty; stderr: cannot-run: unknown task frobnicate: the tasks are help, init, adopt, stamp, check, views, cut, scopes, fence, run, verify, checklist, status, trace, release, score, scoreboard, oracle, plugin, publish, audit, observe (rdm-spec help lists each with its usage) (all 22 tasks)."}
+ {:id "spec-0182",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy (implementation [src test test.clj bb.edn]) with 14 implementation files committed, the oracle plugin removed from the fixture's config (dhf/harness/oracle/oracle.clj is not in the cut given to graders), tagged spec-3. rdm-spec fence ROOM spec-3 exited 0; stdout {:fence {:room ROOM :cut \"spec-3\" :files 110 :scope :project}}; ROOM holds no src/, test/, test.clj or bb.edn."}
+ {:id "spec-0183",
+  :verdict :pass,
+  :evidence
+  "Same fixture. rdm-spec fence ROOM spec-3 --context verification exited 0, :scope {:context [\"verification\"]}; ROOM holds nothing under src/rdm_spec/verification/ or test/rdm_spec/verification/ (nor test/steps/verification_*); the other 10 implementation files (spec, kernel, knowledge, test.clj, bb.edn) are present and byte-identical (cmp)."}
+ {:id "spec-0184",
+  :verdict :pass,
+  :evidence
+  "Same fixture. rdm-spec fence ROOM spec-3 --component spec/parser exited 0, :scope {:component [\"spec/parser\"]}; ROOM holds neither src/rdm_spec/spec/parser.clj nor test/rdm_spec/spec/parser_test.clj (nor test/steps/spec_parser.clj); the other 11 implementation files are present and byte-identical."}
+ {:id "spec-0185",
+  :verdict :pass,
+  :evidence
+  "Same fixture. rdm-spec fence ROOM spec-3 --context archive exited 2, no room made; stderr: cannot-run: the scope --context archive names no bounded context of the model at the cut; its contexts are project, spec, knowledge, architecture, verification, regeneration, measurement, publishing, compliance, agency, kernel. --component archive/thing: exit 2, same list, says the code layout finds no file of it."}
+ {:id "spec-0186",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, check.feature edited so the Scenario 'An id the ledger never issued...' is on line 30 with tag line @e2e only (no @spec-). rdm-spec check exited 1; stderr: dhf/spec/02-write-the-spec/check.feature:30: scenario-unstamped: the scenario \"An id the ledger never issued fails the spec check\" carries no id: run \"rdm-spec stamp\""}
+ {:id "spec-0187",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, UN-004 cites loyly:README.md@17d68d2, no --sources. rdm-spec check exited 0; stderr: dhf/spec/needs.edn:12: warning: citation-unchecked: UN-004 cites loyly:README.md@17d68d2: no checkout of loyly was given (rdm-spec check --sources DIR), so its path was not checked. Note: the line given is 12 (UN-001's identical citation), not UN-004's line 20; the scenario states no line."}
+ {:id "spec-0188",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, dhf/allure-results holding one failed result labelled spec=spec-0012. rdm-spec release exited 1; stderr: dhf/spec/04-model-the-architecture/lint.feature:76: release-refused: spec-0012 is failed: a release needs every scenario verified; stdout {:release {:passed? false ... :refused [... \"spec-0012\" ...]}}"}
+ {:id "spec-0189",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, dhf/allure-results holding one failed result for spec-0012 and none for the rest. rdm-spec release exited 1; stderr e.g. dhf/spec/01-start-a-project/adopt.feature:10: release-refused: spec-0079 is unverified: a release needs every scenario verified (one line per scenario with no result)"}
+ {:id "spec-0190",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project from rdm-spec init (4 feature files, 8 stamped @e2e scenarios, check exits 0), dhf/allure-results with one passed result per scenario. rdm-spec release exited 0; stdout {:release {:passed? true :results \"dhf/allure-results\" :scenarios 8 :verified 8 :refused []}}. Adding a failed result for spec-0003 turns it to exit 1."}
+ {:id "spec-0191",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, spec-0012 (lint.feature:75) tagged @wip, dhf/allure-results holding one skipped and one passed result labelled spec=spec-0012. rdm-spec status exited 0; spec-0012 listed {:status :planned}; counts {:verified 0 :failed 0 :unverified 324 :planned 1}."}
+ {:id "spec-0192",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy with dhf/cycles/00 (cycle.edn :bootstrap true, score.edn) and dhf/cycles/01 (cycle.edn, score.edn), the two scores differing on spec-0012 and spec-0014. rdm-spec scoreboard 00 01 exited 0; stdout {:scoreboard {:cycles [\"00\" \"01\"] :bootstrap [\"00\"] :scored {\"00\" 2 \"01\" 2} :statements [\"cycle 00 is a bootstrap cycle: it is never a baseline, and nothing is compared against it\"]}}: no :better/:worse. Without :bootstrap the same scores give :better 1 :worse 1."}
+ {:id "spec-0193",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, RESULTS_DIR unset, dhf/allure-results holding a passing result labelled spec=spec-0012. rdm-spec status (no --results) exited 0; stdout {:status {:results \"dhf/allure-results\" ...}} with spec-0012 :verified. With no such directory, it exits 2 naming dhf/allure-results."}
+ {:id "spec-0197",
+  :verdict :pass,
+  :evidence
+  "Same fixture with TEST_EXIT=1 (test.clj exits 1). rdm-spec verify ROOM 03 exited 1; stderr: dhf/cycles/03/test.log: tests-failed: the test command failed with exit status 1; its output is in dhf/cycles/03/test.log; test.log holds the command's output line 'test output line: running 31 files'."}
+ {:id "spec-0198",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project with model shop: 2 people, 2 external systems, containers web (contexts orders: Cart, Till; billing: Invoice) and db, and views of each level. rdm-spec views exited 0. context.mmd: System shop, Person buyer/admin, System_Ext bank/mail and Rels among them only. containers.mmd: web and db in the system boundary, both people, both externals, their Rels. orders-components.mmd: Cart and Till inside Boundary orders; Person_Ext buyer, System_Ext bank, ContainerDb_Ext db, Component_Ext Invoice, and only their Rels. checkout.mmd (dynamic): just buyer, Cart, Till, Bank and Rels '1. Fills the cart', '2. Hands over', '3. Charges card' in order."}
+ {:id "spec-0199",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy, whose sources.feature Given steps quote fenced-path citations (line 111: a citation \"loyly:harness/fence.sh@17d68d2\"), plus a Given edited to quote innolitics-rdm:rdm/render.py@f21b508. rdm-spec check exited 0; result :sources {:citations 36} (unchanged: the feature files' citations are not counted), no citation-fenced finding."}
+ {:id "spec-0200",
+  :verdict :pass,
+  :evidence
+  "Fixture: project copy with cut spec-3 and dhf/cycles/03/cycle.edn. rdm-spec checklist 03 exited 0 for each scope: :project (325 items), {:context :verification} (67 items, all verification), {:component :spec/parser} (10 items, all Parser), [{:context :knowledge} {:component :spec/parser}] (35 items: Sources 19, Wiki 6, Parser 10)."}
+ {:id "spec-0201",
+  :verdict :pass,
+  :evidence
+  "Same fixture (checklist spec-0012, spec-0014), verdicts file grading spec-0012 and spec-0999. rdm-spec score 03 --verdicts v2.edn exited 1; stdout {}; no score.edn; stderr: v2.edn: verdict-unknown: spec-0999 is not on cycle 03's checklist"}
+ {:id "spec-0202",
+  :verdict :pass,
+  :evidence
+  "Fixture: minimal project, :implementation [src test test.clj], :verify [{:kind :tests :command [bb test.clj]}], dhf/cycles/03/cycle.edn naming :cut spec-3, spec-3 tagged, then a later commit appending a line to parser.feature; room from rdm-spec fence plus src/, test/steps, a probing test.clj. rdm-spec verify ROOM 03 exited 0; the probe ran in dhf/cycles/03/build, which has no .git, and its parser.feature lacks the post-cut line: an export of spec-3's files without history."}
+ {:id "spec-0203",
+  :verdict :pass,
+  :evidence
+  "Same fixture with dhf/cycles/03/cycle.edn moved away. rdm-spec verify ROOM 03 exited 2; stdout empty; stderr: cannot-run: no dhf/cycles/03/cycle.edn: a cycle is declared before it is verified"}
+ {:id "spec-0204",
+  :verdict :pass,
+  :evidence
+  "Same fixture: cut spec-3 holds src/rdm_spec/old.clj; the room holds src/rdm_spec/new.clj, test/steps/steps.clj and test.clj. rdm-spec verify ROOM 03: the probe listing the checkout's files shows implementation files exactly src/rdm_spec/new.clj, test.clj, test/steps/steps.clj; no src/rdm_spec/old.clj."}
+ {:id "spec-0205",
+  :verdict :pass,
+  :evidence
+  "Same fixture: the room's dhf/harness/config.edn gained :edited-by-builder true and its dhf/spec/spec/parser.feature retitled a scenario 'Parser EDITED'. rdm-spec verify ROOM 03: the probe read the checkout's config.edn and parser.feature, neither edit present (config-edited false, feature-edited false)."}
+ {:id "spec-0206",
+  :verdict :pass,
+  :evidence
+  "Same fixture. rdm-spec verify ROOM 03: the test command's probe recorded RESULTS_DIR = /home/user/c24/grade-b/tmp.../ver/dhf/cycles/03/results, the absolute path in the repository verify was run in (cwd being dhf/cycles/03/build)."}
+ {:id "spec-0207",
+  :verdict :pass,
+  :evidence
+  "Same fixture: test.clj exits 0 after running rdm-spec run, which wrote 8 passing results (one per stamped scenario, none @wip) into RESULTS_DIR. rdm-spec verify ROOM 03 exited 0; stdout {:verify {:cycle \"03\" :cut \"spec-3\" :outcome :passed :checks [{:name \"tests\" :kind :tests :outcome :passed :seconds 0.15 :scenarios 8}]}}."}
+ {:id "spec-0208",
+  :verdict :pass,
+  :evidence
+  "Fixture: stamped spec-0012 (not @wip) + @wip spec-0013 at cut spec-3, :tests check sh test.sh writing fully mapped Allure results, room fenced from spec-3 with the implementation; room's tests write only a passed spec-0013 result, exit 0. rdm-spec verify ROOM 03: exit 1, stderr 'dhf/spec/architecture/lint.feature:14: scenario-unrun: spec-0012 is named by no result'."}
+ {:id "spec-0209",
+  :verdict :pass,
+  :evidence
+  "Project with :stack-words [\"Cobalt\"] and widget.feature line 3 (description) 'The parser is written in Cobalt.'. rdm-spec check: exit 1, stderr 'dhf/spec/planning/widget.feature:3: stack-word: names the stack word Cobalt: the stack lives in dhf/harness/stack.md, never here'."}
+ {:id "spec-0210",
+  :verdict :pass,
+  :evidence
+  "Project with context architecture/Lint; at tag spec-3 spec-0012 (e2e) and spec-0013 (@wip); dhf/cycles/03/cycle.edn {:cut \"spec-3\" :scope :project}. rdm-spec checklist 03: exit 0; checklist.json = {cycle 03, cut spec-3, items [{id spec-0012, title 'A view with no description fails the lint', context architecture, component Lint, level e2e}], planned [{id spec-0013, title ...}]}, keys in order cycle, cut, items, planned; item keys id,title,context,component,level. Extra: with spec-0011 and @wip spec-0010 added after them in the file, items [spec-0011 spec-0012] and planned [spec-0010 spec-0013], sorted by id."}
+ {:id "spec-0211",
+  :verdict :pass,
+  :evidence
+  "Project whose spec at tag spec-3 holds a scenario with no id (lint.feature:20); cycle 03 cut spec-3, no checklist.json. rdm-spec checklist 03: exit 1, stdout {}, stderr 'dhf/spec/architecture/lint.feature:20: scenario-unstamped: the scenario \"An unstamped one\" carries no id at the cut spec-3...'; dhf/cycles/03 still holds only cycle.edn."}
+ {:id "spec-0212",
+  :verdict :pass,
+  :evidence
+  "Verified cycle 03 (verify exit 0) with checklist spec-0012, spec-0014; verdicts.edn the scenario's vector. rdm-spec score 03 --verdicts verdicts.edn: exit 0, {:score {:passed 1 :scored 2 :ungraded 0}}; score.edn :items holds both verdicts with their evidence."}
+ {:id "spec-0213",
+  :verdict :pass,
+  :evidence
+  "Verified cycle 03; rdm-spec score 03 --verdicts verdicts.edn per row, each exit 1, stdout {}, no score.edn written: map -> 'verdicts-malformed: verdicts.edn holds a map: a verdicts file is a vector...'; spec-0012 twice -> 'verdicts-graded-twice: spec-0012 is graded twice, in verdicts.edn'; :maybe -> 'spec-0012 is given the verdict :maybe: a verdict is :pass or :fail'; no :evidence -> 'spec-0012 is given no evidence...'."}
+ {:id "spec-0214",
+  :verdict :pass,
+  :evidence
+  "Cycle 03 with checklist and valid verdicts. ratified.edn with :outcome :refused: rdm-spec score 03 --verdicts verdicts.edn exit 1, stdout {}, 'dhf/cycles/03/ratified.edn: cycle-unverified: the cycle has no passing verification...', no score.edn. ratified.edn absent: same exit 1 and message, no score.edn."}
+ {:id "spec-0215",
+  :verdict :pass,
+  :evidence
+  "Same fixture, all passing, :tests then :runs 'answers'. rdm-spec verify ROOM 03: exit 0; ratified.edn keys exactly (:checkout :checks :cut :outcome :room-tree): :cut \"spec-3\", :room-tree f93cdf1d115b742dac283d7199092f10727e418f = full git tree hash of the room's implementation (src, test.sh, computed with a temp index), :outcome :passed, :checkout \"dhf/cycles/03/build\", :checks identical to stdout's checks. build holds the room's implementation (diff equal) and the cut's spec."}
+ {:id "spec-0216",
+  :verdict :pass,
+  :evidence
+  "Same fixture, :tests command exits 1. rdm-spec verify ROOM 03: exit 1; dhf/cycles/03/ratified.edn holds :outcome :refused and :reason \"the test command failed with exit status 1; its output is in dhf/cycles/03/test.log\" (also on the tests check)."}
+ {:id "spec-0217",
+  :verdict :pass,
+  :evidence
+  "Fixture whose cut spec-3 holds an unstamped scenario at lint.feature:20. rdm-spec verify ROOM 03: exit 1, stdout :outcome :refused :checks [], stderr 'dhf/spec/architecture/lint.feature:20: scenario-unstamped: the cut spec-3 holds a scenario with no id, \"An unstamped one\": it is not verified'."}
+ {:id "spec-0218",
+  :verdict :pass,
+  :evidence
+  "Same fixture, tests exit 0, the spec-0012 result failed: rdm-spec verify ROOM 03 exit 1, stderr '...-result.json:1: scenario-not-passed: spec-0012's result is failed'. With status broken: exit 1, '... spec-0012's result is broken'."}
+ {:id "spec-0219",
+  :verdict :pass,
+  :evidence
+  "Configured :results-dir dhf/allure-results (2 passed), R1 (spec-0001 failed), other (spec-0002 failed). RESULTS_DIR unset, rdm-spec status: exit 0, :results \"dhf/allure-results\", 2 verified. RESULTS_DIR=R1, status: :results R1, spec-0001 failed. RESULTS_DIR=R1, status --results other: :results \"other\", spec-0002 :failed, spec-0001 :unverified."}
+ {:id "spec-0220",
+  :verdict :pass,
+  :evidence
+  "Cycle 03 :cut spec-3 :scope :project; spec at spec-3 holds spec-0012 and @wip spec-0013; working tree adds stamped spec-0014 (status sees 3). rdm-spec checklist 03: exit 0, items [spec-0012], planned [spec-0013]: spec-0014 of the working tree absent."}
+ {:id "spec-0222",
+  :verdict :pass,
+  :evidence
+  "Same fixture; rdm-spec fence ROOM spec-3 --component kernel/bus: exit 0; ROOM holds neither src/rdm_spec/kernel/bus.clj nor test/rdm_spec/kernel/bus_test.clj (nor steps), and all 15 other implementation files, cmp-identical."}
+ {:id "spec-0223",
+  :verdict :pass,
+  :evidence
+  "rdm-spec init sauna: exit 0, config :id-prefix \"spec\". init sauna2 --id-prefix 9lives: exit 2, 'cannot-run: the id prefix 9lives is refused: a prefix starts with a letter and holds letters, digits and single hyphens', no sauna2. init sauna3 --id-prefix UN: exit 2, '...the prefix UN is taken by need tags', no sauna3."}
+ {:id "spec-0224",
+  :verdict :pass,
+  :evidence
+  "Project with bare origin, HEAD = origin/HEAD (9751fac), rdm-spec check exit 1 with 2 findings (scenario-unstamped widget.feature:20, path-unclassified notes.md). rdm-spec cut: exit 1, stdout {:cut {:refused true ...}}, stderr the same two finding lines byte-identical (diff equal), git tag empty, no tag on origin (ls-remote)."}
+ {:id "spec-0225",
+  :verdict :pass,
+  :evidence
+  "Cycle 01 :project scoring 5 items (3 verification, 2 spec); cycle 02 scope {:context :verification} scoring the 3 verification items. rdm-spec scoreboard 01 02: exit 0, :target {:scope {:context :verification} :compared 3 :better 1 :worse 1 :better-items [spec-0002] :worse-items [spec-0001]}, :rest {:not-scored {02 2}}, statement 'the rest was not scored in cycle 02: 2 items of cycle 01 outside the scope are not compared'."}
+ {:id "spec-0226",
+  :verdict :pass,
+  :evidence
+  "Fixture with model contexts knowledge, publishing, spec (parser, stamper), kernel bus/command; implementation src/ test/ per rdm-spec code layout, tagged spec-3. rdm-spec fence ROOM spec-3 --context knowledge,publishing --component spec/parser: exit 0; ROOM (one root commit) holds only kernel/bus, kernel/command and spec/stamper code, unit tests and steps: none of knowledge, publishing or spec/parser; each kept file cmp-identical to the cut's."}
+ {:id "spec-0227",
+  :verdict :pass,
+  :evidence
+  "Model file whose line 7 is a '}' closing nothing (two variants). rdm-spec check: exit 1, stderr 'dhf/spec/model.edn:7: model-unreadable: the model is not EDN: the } on line 7 closes nothing'."}
+ {:id "spec-0232",
+  :verdict :pass,
+  :evidence
+  "Fixture with :plugins [{:name \"oracle\" :answers :Gate :command [sh dhf/harness/plugins/oracle/run.sh]}], the script writing one finding line and exiting 1 (committed, tagged spec-3). rdm-spec fence ROOM spec-3: exit 1, stdout {}, stderr the oracle's line unchanged, ROOM not created. rdm-spec verify ROOM 03: exit 1, stdout {}, same line unchanged, dhf/cycles/03 holds only cycle.edn (no ratified.edn)."}
+ {:id "spec-0233",
+  :verdict :pass,
+  :evidence
+  "Project from init + spec, :plugins absent (no plugin oracle). rdm-spec oracle: exit 0, stdout {:oracle {:says \"there is no oracle to run: the configuration's :plugins names no plugin \\\"oracle\\\"\"}}, stderr empty."}
+ {:id "spec-0234",
+  :verdict :pass,
+  :evidence
+  "Project with ledger {:issued 2} and a scenario tagged @spec-0901. rdm-spec check: exit 1, stderr 'dhf/spec/planning/widget.feature:14: id-unissued: spec-0901: the ledger never issued it; it has issued up to 2...'."}
+ {:id "spec-0235",
+  :verdict :pass,
+  :evidence
+  "Project with spec-0002 stripped of its level and the model edited without rdm-spec views. rdm-spec check: exit 1, stderr 'dhf/spec/planning/widget.feature:14: level-missing: spec-0002 carries no level...' and 'dhf/views/context.mmd: view-stale: the view context is stale...' (and the other stale views)."}
+ {:id "spec-0236",
+  :verdict :pass,
+  :evidence
+  "Commit 1: sources index lists rdm with pin 3763e08; commit 2 keeps it and adds :retired \"holds today's implementation\", plus an indexed wiki page old.md whose footnote cites rdm:README.md@3763e08. rdm-spec check: exit 1, no pin-dropped finding, 'dhf/wiki/pages/old.md:5: citation-retired: the footnote [^old] cites rdm:README.md@3763e08: its source rdm is retired...'. Control: replacing the pin gives pin-dropped, so the rule is live."}
+ {:id "spec-0237",
+  :verdict :pass,
+  :evidence
+  "Fixture with architecture/lint, architecture/views, kernel/bus, kernel/command; spec-3 then spec-4 changing architecture/views.feature and kernel/bus.feature. rdm-spec scopes spec-3 spec-4: exit 0, :scopes [{:component :kernel/bus} {:component :architecture/views}], nothing else."}
+ {:id "spec-0238",
+  :verdict :pass,
+  :evidence
+  "Same fixture; spec-4 changes only dhf/spec/glossary.md. rdm-spec scopes spec-3 spec-4: exit 0, :scopes [], :shared [\"dhf/spec/glossary.md\"], stderr 'dhf/spec/glossary.md: warning: shared-file-changed: ... no component owns it: a person must judge whose readers it reaches'."}
+ {:id "spec-0239",
+  :verdict :pass,
+  :evidence
+  "Project with a kernel component, loyly source, wiki index listing pages one.md and two.md. rdm-spec publish: exit 0; site/index.html links href=wiki/index.html; site/wiki/index.html links pages/one.html and pages/two.html; site-src/mkdocs.yml nav: Home, planning, Kernel, then Wiki (Wiki, Page one, Page two) after the kernel."}
+ {:id "spec-0240",
+  :verdict :pass,
+  :evidence
+  "needs.edn UN-004 :sources [\"the loyly README\"]. rdm-spec check: exit 1, stderr 'dhf/spec/needs.edn:2: citation-malformed: UN-004 cites \"the loyly README\", which is not a citation <source>:<path>@<commit>'."}
+ {:id "spec-0241",
+  :verdict :pass,
+  :evidence
+  "Same fixture; spec-4 adds only dhf/spec/architecture/views.md (absent at spec-3). rdm-spec scopes spec-3 spec-4: exit 0, :scopes [{:component :architecture/views}]."}
+ {:id "spec-0242",
+  :verdict :pass,
+  :evidence
+  "Regulated project, STD:5.1 named, spec-0002 result failed. rdm-spec release: exit 1, stderr 'dhf/spec/planning/widget.feature:14: release-refused: spec-0002 is failed: ...'. rdm-spec audit OUT: exit 1, stdout {}, stderr the identical line, OUT not created."}
+ {:id "spec-0243",
+  :verdict :pass,
+  :evidence
+  "Regulated project, every scenario verified, std.txt adds STD:5.2 no tag names (committed). rdm-spec audit OUT: exit 1, stdout {}, stderr 'dhf/clauses/std.txt:2: clause-unreferenced: STD:5.2 Testing is named by no audit tag...', OUT not created."}
+ {:id "spec-0244",
+  :verdict :pass,
+  :evidence
+  "Project from rdm-spec init with no :regulated; rdm-spec audit OUT: exit 2, stderr 'cannot-run: the configuration holds no :regulated, so there is nothing to audit', OUT not created."}
+ {:id "spec-0245",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project (2 stamped scenarios with passing results, STD:5.1 named, all committed); OUT exists holding f.txt. rdm-spec audit OUT: exit 2, stderr 'cannot-run: OUT .../EX already exists: the audit copy is written into a new directory...'; f.txt sha256 unchanged, OUT holds only f.txt."}
+ {:id "spec-0246",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project, plan.md line 'We plan the work [[STD:5.1]].'. rdm-spec audit OUT: exit 0; diff auditor/plan.md engineer/plan.md shows only line 9: '[[STD:5.1]]' kept in auditor, 'We plan the work.' in engineer; all other lines identical."}
+ {:id "spec-0247",
+  :verdict :pass,
+  :evidence
+  "Per row, releasable regulated project with plan.md holding the written text, committed; rdm-spec audit OUT exit 0 each; diff auditor vs engineer plan.md: (1) 'We plan [[STD:5.1]].' -> 'We plan.'; (2) -> 'We plan and test.'; (3) tag over two lines -> 'We plan and' / ' here.' (both lines, tag gone, line count kept); (4) backticked tag line not in diff (unchanged); (5) unclosed '[[' paragraph not in diff; (6) fenced block not in diff; (7) indented block not in diff; (8) frontmatter 'title: Development plan [[STD:5.1]]' -> 'title: Development plan'."}
+ {:id "spec-0248",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project with dhf/documents/plan.md and dhf/documents/risk/register.md, committed. rdm-spec audit OUT: exit 0; OUT/auditor and OUT/engineer each hold plan.md, plan.pdf, risk/register.md, risk/register.pdf."}
+ {:id "spec-0249",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project, plan.md id PLAN-001 revision 3 title 'Development plan'. rdm-spec audit OUT: exit 0; OUT/auditor/plan.pdf and OUT/engineer/plan.pdf exist; pdftotext -f 1 -l 1 of each: 'Development plan / Document PLAN-001, revision 3'; pdftotext engineer/plan.pdf | grep -c '[[' = 0 (auditor shows the tag)."}
+ {:id "spec-0250",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project, std.txt 'include base.txt' then 'STD:5.1 Development plan', base.txt 'STD:4.1 Quality system'; STD:5.1 on plan.md:8 and risk/register.md:9. rdm-spec audit OUT: exit 0; OUT/clauses.md has one section '## dhf/clauses/std.txt', none for base.txt; rows STD:4.1 first, then 'STD:5.1 | Development plan | dhf/documents/plan.md:8, dhf/documents/risk/register.md:9'."}
+ {:id "spec-0251",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project, need UN-001 traced by @spec-0001 and @spec-0002 (both passed). rdm-spec audit OUT: exit 0; OUT/traceability.md has '## UN-001', its text 'A user plans the work.', and rows '@spec-0001 | A plan is made | Widget | verified' and '@spec-0002 | A plan is listed | Widget | verified'."}
+ {:id "spec-0252",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project with 2 result files in dhf/allure-results. rdm-spec audit OUT: exit 0; OUT/results holds both files, cmp byte-identical to the results directory's."}
+ {:id "spec-0253",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project; rdm-spec audit OUT: exit 0; OUT/manifest.edn is {:commit :files} only, :commit = git rev-parse HEAD (88806d0...), :files = every other file of OUT (8) as {:path :sha256}, paths relative to OUT, sorted; each sha256 matched sha256sum."}
+ {:id "spec-0254",
+  :verdict :pass,
+  :evidence
+  "Releasable regulated project; rdm-spec audit OUT then rdm-spec audit OUT2 (both exit 0, same :commit); diff -r OUT OUT2 exit 0: every file incl. PDFs and manifest byte-identical."}
+ {:id "spec-0255",
+  :verdict :pass,
+  :evidence
+  "Project from rdm-spec init (no :regulated), dhf/documents/plan.md naming no clause; rdm-spec check: exit 0, stdout map has no :clauses key, stderr empty (no finding or warning)."}
+ {:id "spec-0256",
+  :verdict :pass,
+  :evidence
+  "Regulated project, std.txt = comment, include base.txt, blank, STD:5.1, STD:5.2; base.txt = STD:4.1; no doc names a clause. rdm-spec check: exit 1, stderr exactly three clause-unreferenced findings: dhf/clauses/base.txt:1 STD:4.1, dhf/clauses/std.txt:4 STD:5.1, dhf/clauses/std.txt:5 STD:5.2; :clauses {:declared 3 :gaps 3}."}
+ {:id "spec-0257",
+  :verdict :pass,
+  :evidence
+  "Regulated project, std.txt holding only two comment lines. rdm-spec check: exit 2, stderr 'cannot-run: the clause list dhf/clauses/std.txt holds no clause', stdout empty."}
+ {:id "spec-0258",
+  :verdict :pass,
+  :evidence
+  "Regulated project, std.txt = 'include missing.txt'. rdm-spec check: exit 2, stderr 'cannot-run: the clause list dhf/clauses/std.txt includes dhf/clauses/missing.txt, which is not a readable file'."}
+ {:id "spec-0259",
+  :verdict :pass,
+  :evidence
+  "Regulated project, std.txt STD:5.1, STD:5.2; plan.md names [[STD:5.1]] only. rdm-spec check: exit 1, stderr 'dhf/clauses/std.txt:2: clause-unreferenced: STD:5.2 Requirements analysis is named by no audit tag in a controlled document' (file, line 2, key, description)."}
+ {:id "spec-0260",
+  :verdict :pass,
+  :evidence
+  "Regulated project, std.txt one clause STD:5.1, plan.md body one line per row; rdm-spec check each row. Named rows ([[STD:5.1]], [[This section meets STD:5.1]], [[STD:5.1: the plan is this document]], [[STD:5.1.a]]): exit 0, stderr empty. Not-named rows (bare STD:5.1, [[STD:5.12]], [[STD:5]], backticked [[STD:5.1]]): exit 1 with 'dhf/clauses/std.txt:1: clause-unreferenced: STD:5.1 ...' (5.12 and 5 also give clause-unknown warnings)."}
+ {:id "spec-0261",
+  :verdict :pass,
+  :evidence
+  "Regulated project, one clause STD:5.1; plan.md 'An open [[ tag', blank, 'STD:5.1 ]]'. rdm-spec check: exit 1, 'dhf/clauses/std.txt:1: clause-unreferenced: STD:5.1 ...': not named."}
+ {:id "spec-0262",
+  :verdict :pass,
+  :evidence
+  "Regulated project, one clause STD:5.1; plan.md line 7 [[STD:5.1]], line 9 [[STD:9.9]]. rdm-spec check: exit 0, stderr 'dhf/documents/plan.md:9: warning: clause-unknown: the audit tag names STD:9.9, which no declared clause list holds'."}
+ {:id "spec-0263",
+  :verdict :pass,
+  :evidence
+  "Regulated project, plan.md names [[STD:5.1]] and line 9 'TODO: write the plan'. rdm-spec check: exit 0, stderr 'dhf/documents/plan.md:9: warning: document-placeholder: dhf/documents/plan.md still holds a placeholder (TODO)...'."}
+ {:id "spec-0264",
+  :verdict :pass,
+  :evidence
+  "Regulated project, plan.md frontmatter id and title, no revision. rdm-spec check: exit 1, stderr 'dhf/documents/plan.md:1: document-unidentified: dhf/documents/plan.md has no revision in its frontmatter...'."}
+ {:id "spec-0265",
+  :verdict :pass,
+  :evidence
+  "Regulated project, plan.md and old-plan.md both id PLAN-001. rdm-spec check: exit 1, stderr 'dhf/documents/old-plan.md:1: document-id-duplicate: the id PLAN-001 is held by dhf/documents/old-plan.md and dhf/documents/plan.md...'."}
+ {:id "spec-0266",
+  :verdict :pass,
+  :evidence
+  "Regulated project, cut spec-3, cycle 03 :scope :project; std.txt 'STD:5.1 Development plan', include base.txt (STD:4.1, STD:5.1 again), STD:6.1. rdm-spec checklist 03: exit 0; items = spec-0012, then {id STD:5.1, title Development plan, context compliance, component dhf/clauses/std.txt, level clause}, STD:4.1 (include in place), STD:6.1; STD:5.1 once; clause items after every scenario item."}
+ {:id "spec-0267",
+  :verdict :pass,
+  :evidence
+  "Regulated project, both scenarios passing, std.txt adds STD:5.2 no tag names. rdm-spec release: exit 1, stderr 'dhf/clauses/std.txt:2: clause-unreferenced: STD:5.2 Testing is named by no audit tag...' (clause and its list)."}
+ {:id "spec-0268",
+  :verdict :pass,
+  :evidence
+  "Regulated project, one clause STD:5.1; plan.md frontmatter title 'Development plan [[STD:5.1]]' (quoted and unquoted), body naming nothing. rdm-spec check both: exit 1, 'dhf/clauses/std.txt:1: clause-unreferenced: STD:5.1 ...': not named."}
+ {:id "spec-0269",
+  :verdict :pass,
+  :evidence
+  "Sources index adds :norec whose record norec.md is not in dhf/raw. rdm-spec check: exit 1, stderr 'dhf/raw/sources.edn:1: source-no-record: the source norec has no record file norec.md in dhf/raw'."}
+ {:id "spec-0270",
+  :verdict :pass,
+  :evidence
+  "Sources index adds :norepo with pins and record, no :repository. rdm-spec check: exit 1, stderr 'dhf/raw/sources.edn:1: source-no-repository: the source norepo names no repository'."}
+ {:id "spec-0271",
+  :verdict :pass,
+  :evidence
+  "Same regulated project with clauses at cut spec-3; cycle.edn :scope [{:context :architecture}]. rdm-spec checklist 03: exit 0, {:clauses 0}; checklist.json's only level is e2e, no item at level clause."}
+ {:id "spec-0272",
+  :verdict :pass,
+  :evidence
+  "No DIR/sauna; from an empty dir, rdm-spec init /abs/.../DIR/sauna: exit 0, lists the 15 skeleton files written; git rev-parse --show-toplevel in it = DIR/sauna (a git repository), skeleton present."}
+ {:id "spec-0273",
+  :verdict :pass,
+  :evidence
+  "Same project; dhf/wiki/index.md holds footnote [^src] citing loyly:README.md@17d68d2 (loyly's repository https://github.com/skallinen/loyly). rdm-spec publish: exit 0; site/wiki/index.html footnote is <a href=\"https://github.com/skallinen/loyly/blob/17d68d2/README.md\">, as the pages' footnotes are. (Footnote syntax is published as literal text '[^src]:' on index and pages alike; the scenario does not ask for footnote rendering.)"}
+ {:id "spec-0274",
+  :verdict :pass,
+  :evidence
+  "Per row, releasable regulated project all committed, then the change; rdm-spec audit OUT: every row exit 1, stdout {}, OUT not created; stderr 'FILE: audit-uncommitted: FILE is not committed: an audit copy is of one commit, HEAD, or of nothing' with FILE = dhf/documents/draft.md (untracked), dhf/documents/draft.md (gitignored via committed .gitignore), dhf/documents/plan.md (changed doc), dhf/spec/planning/widget.feature (title changed), dhf/clauses/std.txt, dhf/harness/config.edn."}
+ {:id "spec-0275",
+  :verdict :pass,
+  :evidence
+  "Regulated project, one clause STD:5.1; plan.md body 'Some prose.', blank line, '    [[STD:5.1]]'. rdm-spec check: exit 1, 'dhf/clauses/std.txt:1: clause-unreferenced: STD:5.1 ...': not named."}
+ {:id "spec-0278",
+  :verdict :pass,
+  :evidence
+  "Regulated project, scenarios passing, STD:5.1 named, dhf/documents/notes.md frontmatter without id. rdm-spec release: exit 1, stderr 'dhf/documents/notes.md:1: document-unidentified: dhf/documents/notes.md has no id in its frontmatter...'."}
+ {:id "spec-0279",
+  :verdict :pass,
+  :evidence
+  "Project with need UN-003 tagged on scenario spec-0001 only, a passing result for it in DIR. rdm-spec trace UN-003 --results DIR: exit 0, stdout {:trace {:kind :need, :id \"UN-003\", :text \"A user sees the status.\", :scenarios [{:id \"spec-0001\", :title \"A plan is made\", :component \"Widget\", :context \"planning\", :level \"e2e\", :status :verified}]}}."}
+ {:id "spec-0281",
+  :verdict :pass,
+  :evidence
+  "Regulated project, one clause STD:5.1; plan.md body '- A list item', blank line, '    The continuation [[STD:5.1]] here.'. rdm-spec check: exit 0, stderr empty, :clauses {:declared 1 :gaps 0}: STD:5.1 named."}
+ {:id "spec-0282",
+  :verdict :pass,
+  :evidence
+  "Regulated project, std.txt = 'STD:5.1 Development plan' + 'Quality system'. rdm-spec check: exit 1, stderr 'dhf/clauses/std.txt:2: clause-malformed: the line \"Quality system\" is not a clause...'; only other finding std.txt:1 STD:5.1 unreferenced; :clauses {:declared 1} so STD:5.1 is the only clause."}
+ {:id "spec-0283",
+  :verdict :pass,
+  :evidence
+  "Cycles 01 and 02 (scope :project) each with score.edn of 5 items spec-0001..5; spec-0002 fail->pass, spec-0001 pass->fail. rdm-spec scoreboard 01 02: exit 0, stdout read as EDN equals the scenario's map exactly ({:cycles [01 02] :scored {01 5 02 5} :compared 5 :better 1 :worse 1 :better-items [spec-0002] :worse-items [spec-0001] :only-in {01 [] 02 []} :statements []})."}
+ {:id "spec-0284",
+  :verdict :pass,
+  :evidence
+  "Cycle 02 :project 5 items (spec-0005 fail), cycle 03 scope {:component :shop/till} scoring spec-0004, spec-0005 (pass). rdm-spec scoreboard 02 03: exit 0, stdout read as EDN = the scenario's map (bb = returned true), incl. :target {...:better-items [spec-0005]}, :rest {... :not-scored {03 3}} and both statements."}
+ {:id "spec-0285",
+  :verdict :pass,
+  :evidence
+  "Stamped outline spec-0003 with rows size=small|medium|large; results DIR with passed results for small and medium only (parameters size=...). rdm-spec status --results DIR: exit 0, spec-0003 :status :unverified. Control: adding a passed result for large makes it :verified."}
+ {:id "spec-0286",
+  :verdict :pass,
+  :evidence
+  "Project with :agency {:watch [W1] :tmp T}; rdm-spec observe begin 13 builder ROOM (exit 0); rdm-spec observe end 13 builder --tokens 1200: exit 0; dhf/cycles/13/runs.edn holds one entry with exactly :role :room :began :ended :minutes :tokens(1200) :defence; :defence keys exactly :writes-outside :tmp-left :repo-touched :results-in-room :unobserved."}
+ {:id "spec-0287",
+  :verdict :pass,
+  :evidence
+  "After observe begin 13 builder ROOM, wrote W1/stray.txt. rdm-spec observe end 13 builder: exit 0, stderr 'W1/stray.txt: warning: observe-write-outside: the builder run wrote .../W1/stray.txt outside its room'; :defence :writes-outside [\".../W1/stray.txt\"]."}
+ {:id "spec-0288",
+  :verdict :pass,
+  :evidence
+  "After observe begin 13 grader ROOM, made 3 entries (dir a, files b, c) in T. rdm-spec observe end 13 grader: exit 0, :defence :tmp-left 3, warning 'observe-tmp-left: the grader run left 3 entries in the temporary directory'."}
+ {:id "spec-0289",
+  :verdict :pass,
+  :evidence
+  "After observe begin 13 builder ROOM, wrote untracked dhf/spec/stray.feature in the project. rdm-spec observe end 13 builder: exit 0, :defence :repo-touched [\"dhf/spec/stray.feature\"], warning observe-repo-touched."}
+ {:id "spec-0290",
+  :verdict :pass,
+  :evidence
+  "After observe begin 13 builder ROOM, wrote a result into ROOM/dhf/allure-results (the configured :results-dir). rdm-spec observe end 13 builder: exit 0, :defence :results-in-room true, warning observe-results-in-room (control run without results: false)."}
+ {:id "spec-0291",
+  :verdict :pass,
+  :evidence
+  "observe begin 13 grader ROOM then rdm-spec observe end 13 grader: exit 0, :defence :unobserved [\"reads outside the room: observing records writes, never reads, so a read is not seen\"]."}
+ {:id "spec-0292",
+  :verdict :pass,
+  :evidence
+  "Project with :agency set, no begin. rdm-spec observe end 13 builder: exit 2, stderr 'cannot-run: no run of the role builder began in cycle 13: run rdm-spec observe begin 13 builder ROOM first', stdout empty."}
+ {:id "spec-0293",
+  :verdict :pass,
+  :evidence
+  "Cycle 12: two observed runs (builder wrote W1/s.txt, tokens 1000; grader clean, 500); cycle 13: one clean run (700). rdm-spec observe report 12 13: exit 0, stdout {:observe {:cycles [12 13] :runs {12 2, 13 1} :minutes {..} :tokens {12 1500, 13 700} :breaches {12 1, 13 0}}}, exactly those keys. With runs.edn minutes set to 1.5+2.25 and 4.0: :minutes {12 3.75, 13 4.0}, the sums."}
+ {:id "spec-0294",
+  :verdict :pass,
+  :evidence
+  "Fixture tagged spec-3 plus untracked notes.md, ignored ig.txt (info/exclude) and ignored dhf/allure-results/ignored.txt. rdm-spec fence ROOM spec-3: exit 0; ROOM holds .git .githooks .github .gitignore dhf only; find finds no notes.md, ig.txt or ignored.txt. Also scoped (--component kernel/bus) with an untracked and an ignored file under src/rdm_spec/spec/: neither reached ROOM."}
+ {:id "spec-0295",
+  :verdict :pass,
+  :evidence
+  "Fixture whose commit tagged spec-3 holds dhf/wiki/pages/copy.md = bytes of src/rdm_spec/spec/parser.clj. rdm-spec fence ROOM spec-3: exit 1, stdout {}, stderr 'dhf/wiki/pages/copy.md: fence-copy: dhf/wiki/pages/copy.md carries the bytes of the implementation file src/rdm_spec/spec/parser.clj, which the room may not hold'; ROOM not created. Same with --component spec/parser."}
+ {:id "spec-0296",
+  :verdict :pass,
+  :evidence
+  "Project from init (deny implementation, dhf/cycles; keep dhf/spec etc.) with committed top-level notes.md. rdm-spec check: exit 1, stderr 'notes.md: path-unclassified: notes.md is committed and neither denied nor kept...'."}
+ {:id "spec-0297",
+  :verdict :pass,
+  :evidence
+  "Fixture: init project, :clean-room :keep includes dhf/spec (not dhf/scratch); committed dhf/scratch/n.md. 'rdm-spec check' exit 1, stderr: 'dhf/scratch: path-unclassified: dhf/scratch is committed and neither denied nor kept: add it to the configuration's :clean-room :deny or :keep'."}
+ {:id "spec-0298",
+  :verdict :pass,
+  :evidence
+  "Fixture: model with :OrderPlaced published-by :shop/cart, relationships cart->verification/status then cart->shop/till; spec-4 changes only :shape :order in events.edn. 'rdm-spec scopes spec-3 spec-4' exit 0: {:scopes [{:component :shop/cart} {:component :shop/till} {:component :verification/status}], :shared []}: publisher first, then both subscribers in the model's component order."}
+ {:id "spec-0299",
+  :verdict :pass,
+  :evidence
+  "Fixture: kernel/command, spec/parser (publishes :Parsed to verification/status). spec-4 touches the three feature files; 'rdm-spec scopes spec-3 spec-4' exit 0: [{:component :kernel/command} {:component :spec/parser} {:component :verification/status}]. Variant with verification context placed before spec in the model, touching also verification/verify and shop/till: scopes spec-5 spec-6 exit 0: [kernel/command shop/till verification/verify spec/parser verification/status]: kernel first, parser before its subscriber status, the rest in model order."}
+ {:id "spec-0302",
+  :verdict :pass,
+  :evidence
+  "Fixture: @spec-0004 Scenario Outline with three example rows; D302 holds three passing results labelled spec=spec-0004 with no parameters. 'rdm-spec status --results D302' exit 0: {:id \"spec-0004\" ... :status :unverified}."}
+ {:id "spec-0303",
+  :verdict :pass,
+  :evidence
+  "Fixture: init project whose events.edn declares only :OrderPlaced published-by :shop/cart (its own component, used by a model relationship). 'rdm-spec check --events' exit 0; stderr after the citation warning: 'event: KnowledgeIndexed published-by knowledge/sources', 'event: SpecParsed published-by spec/parser', 'event: SpecGated published-by spec/check'."}
+ {:id "spec-0304",
+  :verdict :pass,
+  :evidence
+  "Same project, 'rdm-spec check --events' with the catalogue (a) declaring only OrderPlaced (exit 0), (b) {} (exit 1 from unrelated lint/views findings of the fixture), (c) declaring :SpecParsed published-by :shop/cart (exit 1, same unrelated findings): the event: lines are byte-identical in all three (cmp): KnowledgeIndexed/knowledge/sources, SpecParsed/spec/parser, SpecGated/spec/check, in that order."}
+ {:id "spec-0307",
+  :verdict :pass,
+  :evidence
+  "Fixture dhf/spec/a/b.feature: @spec-0001 One (line 4), @spec-0002 Two (line 9), @spec-0003 Three @wip (line 14); DIR with a passing result for spec-0001 and one labelled spec-0099. 'rdm-spec status --results DIR' exit 0, stdout: {:status {:results \"DIR\", :scenarios [{:id \"spec-0001\", :title \"One\", :file \"dhf/spec/a/b.feature\", :line 4, :status :verified} {:id \"spec-0002\" ... :line 9, :status :unverified} {:id \"spec-0003\" ... :line 14, :status :planned}], :counts {:verified 1, :failed 0, :unverified 1, :planned 1}, :unknown-results [{:file \"DIR/29d5...-result.json\", :spec \"spec-0099\"}]}}: exactly the stated shape (lines are the fixture's own)."}
+ {:id "spec-0308",
+  :verdict :pass,
+  :evidence
+  "Fixture: dhf/spec/architecture/lint.feature, Feature Lint, Rule 'Every view is described', '@spec-0012 @e2e @UN-002 Scenario: Lint names the view', component :architecture/lint named Lint; step defs via rdm-spec.kernel.runner defstep. 'rdm-spec run' (exit 1 from other failing fixture scenarios) wrote its result: name 'Lint names the view'; fullName 'dhf/spec/architecture/lint.feature:Lint names the view'; historyId 'spec-0012'; status passed, stage finished; start/stop 1793173056238 (ms since epoch); 3 steps named 'Given a view','When lint runs','Then the view is named' each with status/start/stop; labels feature Lint, story 'Every view is described', epic architecture, suite architecture, subSuite architecture/lint, tag spec-0012/e2e/UN-002, framework gherkin, spec spec-0012, context architecture, component Lint; links [{type issue, name UN-002, url dhf/spec/needs.edn#UN-002}]; with :needs \"dhf/spec/user-needs.edn\" the url became dhf/spec/user-needs.edn#UN-002."}
+ {:id "spec-0309",
+  :verdict :pass,
+  :evidence
+  "Fixture outline @spec-0013 with headings written|kept and rows plan|3, spec|4, code|5. 'rdm-spec run': three results; the plan row's parameters [{name written, value plan} {name kept, value 3}], historyId 'spec-0013|plan|3' (others spec-0013|spec|4, spec-0013|code|5)."}
+ {:id "spec-0310",
+  :verdict :pass,
+  :evidence
+  "Fixture @spec-0014: Given a view / Then (fail! \"no such view\") / And the view is named. 'rdm-spec run': result status failed, statusDetails message 'Then there is a view named nothing: no such view', statusDetails trace present (stack trace); steps passed, failed, skipped."}
+ {:id "spec-0311",
+  :verdict :pass,
+  :evidence
+  "Fixture step (attach! \"response\" \"GET / answered 200\"). 'rdm-spec run': the When step's attachments [{name response, source 54162e04-...-attachment.txt, type text/plain}]; that file sits in dhf/allure-results beside the result and holds 'GET / answered 200'."}
+ {:id "spec-0312",
+  :verdict :pass,
+  :evidence
+  "D312a: two passing results labelled spec=spec-0001, one with attachments, links (UN-777) and extra labels (epic wrong, component Nope, foo bar), one bare; D312b: one bare result. 'rdm-spec status --results D312a' and '--results D312b' both exit 0, no stderr, spec-0001 :verified, :counts {:verified 1, :failed 0, :unverified 2, :planned 1} in both."}
+ {:id "spec-0313",
+  :verdict :pass,
+  :evidence
+  "D313: a result labelled spec=spec-0001 with status \"green\". 'rdm-spec status --results D313' exit 1, spec-0001 :unverified, stderr 'D313/617a...-result.json: result-unreadable: the result is unreadable: its status is \"green\": the status must be passed, failed, broken or skipped'."}
+ {:id "spec-0314",
+  :verdict :pass,
+  :evidence
+  "Fixture: :verify [{:kind :tests :command [\"sh\" \"test/run.sh\"]} {:kind :runs :name \"answers\" :command [\"echo\" \"{:help x}\"] :expect {:exit 0 :stdout-starts \"{:help\"} :budget {:seconds 30}}], tests run rdm-spec run into RESULTS_DIR. 'rdm-spec verify ROOM 03' exit 0, stdout {:verify {:cycle \"03\", :cut \"spec-3\", :outcome :passed, :checks [{:name \"tests\", :kind :tests, :outcome :passed, :seconds 0.12, :scenarios 8} {:name \"answers\", :kind :runs, :seconds 0.01, :budget 30, :outcome :passed, :margin 29.99}]}}: exactly the stated keys; 8 = the stamped non-@wip scenarios."}
+ {:id "spec-0315",
+  :verdict :pass,
+  :evidence
+  "Fixture :verify [tests (command [\"false\"]), serves \"app\", runs \"answers\"]. 'rdm-spec verify ROOM 03' exit 1, stdout {:verify {... :outcome :refused, :checks [{:name \"tests\", :kind :tests, :outcome :failed, ... :reason \"the test command failed with exit status 1; ...\"} {:name \"app\", :kind :serves, :outcome :not-run} {:name \"answers\", :kind :runs, :outcome :not-run}]}}; stderr 'dhf/cycles/03/test.log: tests-failed: ...'."}
+ {:id "spec-0316",
+  :verdict :pass,
+  :evidence
+  "Each row committed at spec-3, 'rdm-spec verify ROOM 03', stdout empty, exit 2, the marker the checks would touch never written, no ratified.edn: (1) only a :runs check: 'cannot-run: the :verify declares no :tests check first: a project is verified by its tests first'; (2) {:kind :renders}: 'cannot-run: :renders is not a kind of check: the kinds are :tests, :serves, :runs and :plugin'; (3) :serves probe [\"sh\" \"src/probe.sh\" ...]: 'cannot-run: the :serves check app is refused: its probe ... names a path of the implementation, and the probe is in the implementation the builder writes...'; (4) no :verify key: 'cannot-run: the configuration declares no :verify, so there is nothing to verify'; (5) {:kind :tests} with no :command: 'cannot-run: the tests check names no command'."}
+ {:id "spec-0317",
+  :verdict :pass,
+  :evidence
+  "Fixture :verify [tests, {:kind :runs :name \"answers\" :command [\"no-such-cmd-317\" \"help\"] ...}]. 'rdm-spec verify ROOM 03' exit 2, stdout empty, stderr 'cannot-run: the check answers cannot run: its command no-such-cmd-317 is not found'."}
+ {:id "spec-0318",
+  :verdict :pass,
+  :evidence
+  "Fixture :serves {:name \"app\" :start [\"sh\" \"src/app.sh\" \"{port}\"] :port 18318 :budget {:seconds 10 :polls 20} :probe [\"sh\" \"dhf/harness/probe.sh\" \"{url}\"]}, app sleeps 0.6 s then serves HTTP (python http.server), probe exits 0. 'rdm-spec verify ROOM 03' exit 0; the check {:polls 20, :probe-seconds 30, :answered-on-poll 2, :name \"app\", :outcome :passed, :seconds 1.03, :kind :serves, :budget 10, :margin 18}. Afterwards the app's pid is gone and no http.server process runs."}
+ {:id "spec-0319",
+  :verdict :pass,
+  :evidence
+  "Fixture :serves budget {:seconds 10 :polls 20}, app sleeps 60 s and never listens. 'rdm-spec verify ROOM 03' exit 1 after 11 s; check {:name \"app\", :kind :serves, :polls 20, :budget 10, :outcome :failed, :seconds 10.0, :reason \"the app of app gave no answer: no answer came within 10 seconds (20 polls)\"}; stderr 'check app: serves-failed: ...no answer came within 10 seconds (20 polls)'. Afterwards no app.sh, sleep 60 or http.server process."}
+ {:id "spec-0320",
+  :verdict :pass,
+  :evidence
+  "Fixture: a python http.server I started holds 127.0.0.1:50999; :serves check on port 50999. 'rdm-spec verify ROOM 03' exit 2, stdout empty, stderr 'cannot-run: the check app cannot run: the port 50999 is held by another process, and the gate measures only its own app'; the app script (which records its pid on start) never ran; no ratified.edn."}
+ {:id "spec-0321",
+  :verdict :pass,
+  :evidence
+  "Fixture :serves whose app answers HTTP and whose probe prints 'this is not the shop: title missing' (stdout) and 'probe stderr line' (stderr) and exits 1. 'rdm-spec verify ROOM 03' exit 1; check {:name \"app\" :outcome :failed :reason \"the probe of app exited 1: the app is not this application; it printed: this is not the shop: title missing probe stderr line\" ...}; stderr 'check app: serves-failed: ...' relaying both lines. No server process left."}
+ {:id "spec-0322",
+  :verdict :pass,
+  :evidence
+  "Rows, :runs check \"answers\" after a passing tests check, 'rdm-spec verify ROOM 03': (1) expect exit 0, command exits 3 -> exit 1, check :outcome :failed, 'check answers: runs-failed: the check answers answered with the exit 3 where 0 was expected'; (2) :stdout-starts \"{:help\", prints usage -> exit 1, :failed, '...first line printed was \"usage\", not starting \"{:help\"'; (3) budget 10 s, command sleeps 30 -> exit 1 after 11 s, :failed, '...gave no answer within the budget of 10 seconds and was stopped'; no sleep left."}
+ {:id "spec-0323",
+  :verdict :pass,
+  :evidence
+  "Fixture scenarios, 'rdm-spec run' (exit 1, 'scenarios-not-passed: 2 failed and 3 broken'): Then with (fail! ...) -> 'failed' (also with clojure assert: failed, 'Assert failed: no such view'); Given throwing ex-info -> 'broken'; When throwing -> 'broken'; Then throwing ex-info (not an assertion) -> 'broken'."}
+ {:id "spec-0324",
+  :verdict :pass,
+  :evidence
+  "Fixture config :results-dir \"dhf/allure-results\", RESULTS_DIR unset (unset in the shell). 'rdm-spec run' exit 1 (fixture has failing scenarios) printed {:run {... :results \"dhf/allure-results\"}} and the 10 result files plus the attachment were written in dhf/allure-results."}
+ {:id "spec-0329",
+  :verdict :pass,
+  :evidence
+  "Fixture: context layout with code layout as rdm-spec's; cut spec-4's model names no ratification context, but holds src/rdm_spec/ratification/ratify.clj and test/rdm_spec/ratification/ratify_test.clj. 'rdm-spec fence ROOM spec-4 --component ratification/ratify' exit 0: {:fence {... :scope {:component [\"ratification/ratify\"]}, :removed-components [\"ratification/ratify\"]}}; ROOM holds neither file and the 25 other implementation files byte-identical (cmp)."}
+ {:id "spec-0331",
+  :verdict :pass,
+  :evidence
+  "Default mapping (no :allure; row 6 the default with :evidence {:e2e [\"browser-trace\"]}); test/run.sh runs 'rdm-spec run' into RESULTS_DIR, then alters spec-0003's result. Each 'rdm-spec verify ROOM 03' exit 1 with tests :failed and one stderr line FILE:1: RULE: what, FILE the result's file under dhf/cycles/03/results: reworded 2nd step -> 'steps-differ-from-scenario: spec-0003: its result's steps [... \"When it is run again\" ...] are not the scenario's lines ...'; one step fewer -> steps-differ-from-scenario; story -> 'mapping-differs: story: spec-0003: its result's story is \"Something else\", not \"cart works\"'; epic -> 'mapping-differs: epic: spec-0003: ... \"verification\", not \"shop\"'; links removed -> 'mapping-differs: links: spec-0003: its result has no issue link to UN-001 (dhf/spec/needs.edn#UN-001)'; no browser-trace (every other result has one) -> 'evidence-missing: browser-trace: spec-0003: its result carries no attachment named browser-trace, which :evidence requires of @e2e'."}
+ {:id "spec-0332",
+  :verdict :pass,
+  :evidence
+  "Default mapping altered per row, committed at spec-3, tests command touches a marker. 'rdm-spec verify ROOM 03' exit 2, stdout empty, marker never written: :epic :aggregate -> 'cannot-run: :aggregate is not an element of the spec: the mapping maps to :component, :context, ...'; :colour :context -> 'cannot-run: :colour is not an element of an Allure result: the mapping maps :epic, :evidence, ...'; no \"spec\" label -> 'cannot-run: the mapping maps no label spec: the label spec, from the scenario's id, is required'."}
+ {:id "spec-0333",
+  :verdict :pass,
+  :evidence
+  "No :allure in the configuration; tests results from 'rdm-spec run', one element altered for spec-0003 per run of 'rdm-spec verify ROOM 03' (each exit 1, one FILE:1 finding): story/epic/links/steps (spec-0331), component label 'Till' -> 'mapping-differs: component: ... \"Till\", not \"Cart\"'; tag e2e dropped -> 'mapping-differs: tag: ...'; name changed -> 'mapping-differs: name: ...'; an outline row's parameter changed -> 'scenario-unrun: spec-0009's row [\"spec\"] is named by no passing result'; untouched results incl. the outline -> exit 0. N: with :needs \"dhf/spec/user-needs.edn\" a link to dhf/spec/needs.edn#UN-001 -> exit 1 'mapping-differs: links: ... no issue link to UN-001 (dhf/spec/user-needs.edn#UN-001)'; with no :needs a link to user-needs.edn -> exit 1 naming dhf/spec/needs.edn#UN-001, and runner results (needs.edn urls) pass (exit 0)."}
+ {:id "spec-0339",
+  :verdict :pass,
+  :evidence
+  "Fixture: relationship {:from :shop/till :to :spec/parser :description \"Calls\"}, no event. Without :contexts-relate-by: 'rdm-spec check' exit 1 'dhf/spec/model.edn:20: a-contract-only: the relationship :shop/till -> :spec/parser joins the bounded contexts :shop and :spec and names no event...'. With :c4 {:contexts-relate-by [:events :calls]}: 'rdm-spec check' exit 0, no a-contract-only finding."}
+ {:id "spec-0340",
+  :verdict :pass,
+  :evidence
+  "Row 1: fixture OrderPlaced; spec-4 changes only its :description; 'rdm-spec scopes spec-3 spec-4' exit 0: {:scopes [], :shared []}. Row 2: spec-5 has OrderPlaced with an undeclared key :read-by {:shop/till [:order]} (check exit 0), spec-6 removes it; 'rdm-spec scopes spec-5 spec-6' exit 0: {:scopes [], :shared []}. No scope in either row."}
+ {:id "spec-0341",
+  :verdict :pass,
+  :evidence
+  "Fixture :serves budget {:seconds 2 :polls 4}, start command a socket server that accepts and never writes. 'rdm-spec verify ROOM 03' exit 1 after 3.0 s; check {:name \"app\" :polls 4 :budget 2 :outcome :failed :reason \"the app of app gave no answer: no answer came within 2 seconds (4 polls)\"}; the server logged 4 accepted connections; no server process left."}
+ {:id "spec-0342",
+  :verdict :pass,
+  :evidence
+  "Fixture: :plugins [{:name \"oracle\" :answers :Gate :command [\"bb\" \"dhf/harness/oracle/oracle.clj\"]}], script prints {:oracle {:differences 0}} on stdout and a line on stderr, records its cwd. 'rdm-spec oracle' exit 0, stdout '{:oracle {:differences 0}}', stderr 'x.clj:1: warning: w: from oracle', both unchanged; cwd = project root. With the script exiting 3: 'rdm-spec oracle fail' exit 3, same output relayed."}
+ {:id "spec-0343",
+  :verdict :pass,
+  :evidence
+  "Same fixture; \"rdm-spec oracle record --reason 'the spec grew'\" exit 0; the oracle recorded *command-line-args* (\"record\" \"--reason\" \"the spec grew\")."}
+ {:id "spec-0344",
+  :verdict :pass,
+  :evidence
+  "Same fixture; 'rdm-spec oracle' exit 0; the oracle saw RDM_SPEC=\"bb /home/user/c24/release/rdm-spec.jar\" (the installed package bin/rdm-spec runs). The oracle ran \" help\": exit 0, stdout byte-identical (cmp) to 'rdm-spec help'. Only the package install could be exercised (no source install exists for a grader)."}
+ {:id "spec-0345",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugin oracle :answers :Gate :command [\"no-such-oracle\"]. 'rdm-spec oracle' exit 2, stdout empty, stderr: 'cannot-run: the oracle's command [\"no-such-oracle\"] cannot be started: Cannot run program \"no-such-oracle\" ...'."}
+ {:id "spec-0346",
+  :verdict :pass,
+  :evidence
+  "Fixture: started a python http.server on port 47491, made 4 requests, stopped it; /proc/net/tcp showed 4 sockets on 47491 in state 06 (TIME_WAIT) and no listener. :serves check on 47491: 'rdm-spec verify ROOM 03' exit 0, check {:answered-on-poll 1, :name \"app\", :outcome :passed, :margin 19 ...}."}
+ {:id "spec-0347",
+  :verdict :pass,
+  :evidence
+  "Default mapping with :evidence {:e2e [\"browser-trace\"]}; spec-0003 tagged @e2e @wip at spec-3; tests run 'rdm-spec run' (spec-0003's result: skipped, label planned=true, no attachment) and add browser-trace to every other result. 'rdm-spec verify ROOM 03' exit 0, tests :passed (:scenarios 7), no stderr line at all."}
+ {:id "spec-0348",
+  :verdict :pass,
+  :evidence
+  "Fixture as spec-0298 (OrderPlaced published-by shop/cart, subscribers verification/status and shop/till); spec-4 changes only :published-by to :shop/till. 'rdm-spec scopes spec-3 spec-4' exit 0: {:scopes [{:component :shop/cart} {:component :shop/till} {:component :verification/status}], :shared []}: both publishers and every subscriber, publishers before the subscriber."}
+ {:id "spec-0349",
+  :verdict :pass,
+  :evidence
+  "Fixture: :plugins [{:name \"lint-a\" :subscribes [:SpecParsed] :command [\"bb\" \"dhf/harness/plugins/lint-a/run.clj\"] :seconds 20} {:name \"oracle\" :answers :Gate :command [\"bb\" \"dhf/harness/oracle/oracle.clj\"]}]. 'rdm-spec check' exit 0; lint-a ran (got {:event :SpecParsed ...}), the Gate oracle did not run in check. Adding :colour to lint-a: exit 2 'cannot-run: the plugin \"lint-a\" is refused: a plugin is declared with :name, :command, :subscribes or :answers, :seconds and :env, not :colour'. A subscriber with no :seconds that sleeps 75 s: check exit 2 after 61 s, 'cannot-run: the plugin \"slow\" timed out after 60 seconds and was stopped; it printed: started'."}
+ {:id "spec-0350",
+  :verdict :pass,
+  :evidence
+  "Each row in an init project, 'rdm-spec check', stdout empty, exit 2: (1) no :subscribes/:answers: 'cannot-run: the plugin \"p1\" is refused: a plugin subscribes to events or answers a request'; (2) both: '... \"p2\" is refused: a plugin subscribes to events or answers a request, not both'; (3) :NoSuchEvent: '... \"p3\" is refused: rdm-spec publishes no event NoSuchEvent; the events it publishes are KnowledgeIndexed, SpecParsed, SpecGated, CycleVerified, VerificationDerived, ClausesIndexed'; (4) :answers :Review: '... \"p4\" is refused: it answers :Review, and the requests are :Gate and :Check'; (5) two lint-a: 'cannot-run: the plugin \"lint-a\" is declared 2 times: a plugin's name is declared once'; (6) command src/p6.sh with :implementation [\"src\" \"test\"]: '... \"p6\" is refused: its command [\"sh\" \"src/p6.sh\"] is under the implementation's paths, and a plugin is a judge the builder never writes' (the script did not run)."}
+ {:id "spec-0351",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugin dump :subscribes [:SpecParsed], command 'sh dhf/harness/plugins/dump/run.sh' writing stdin to dump.edn and appending pwd and RDM_SPEC to runs.log. 'rdm-spec check' exit 0; runs.log has one line: the project root and 'bb /home/user/c24/release/rdm-spec.jar' (the same RDM_SPEC the oracle gets, spec-0344); dump.edn keys exactly (:event :revision :scenarios :needs :refusals), :event :SpecParsed, = events.edn's :carries [:revision :scenarios :needs :refusals]."}
+ {:id "spec-0352",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugins lint-a then lint-b, both :subscribes [:SpecParsed], each appending its name and time to shared.log. 'rdm-spec check' exit 0; shared.log: 'lint-a 1793172934.188', 'lint-b 1793172934.216'. Under strace -f: the core reads every spec file and then the views (freshness stage, last read dhf/views/verification-components.svg at 46.320), then lint-a starts (46.528), then lint-b (46.560), then the report is written to stderr."}
+ {:id "spec-0353",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugin vd :subscribes [:VerificationDerived] that touches vd.ran. 'rdm-spec check' exit 0, no line from the plugin; vd.ran does not exist."}
+ {:id "spec-0354",
+  :verdict :pass,
+  :evidence
+  "Plugin :subscribes [:SpecParsed], init project whose check passes (only a citation-unchecked warning). Row1 plugin writes 'dhf/spec/a/b.feature:4: action-unoffered: no form offers it' and exits 1: 'rdm-spec check' exit 1, stderr holds that line unchanged among findings (before warnings), stdout still the result. Row2 writes 'dhf/spec/a/b.feature:4: warning: label-long: the label is long', exits 0: check exit 0, line unchanged among warnings. Row3 writes nothing: exit 0, only the core's warning. Row4 exits 2 writing 'cannot read affordances.yaml': exit 2, stdout empty, stderr 'cannot-run: the plugin \"p\" cannot run: cannot read affordances.yaml'."}
+ {:id "spec-0355",
+  :verdict :pass,
+  :evidence
+  "Plugin slowpoke :subscribes [:SpecParsed] :seconds 2, script echoes 'started', sleeps 10, then writes finished.txt. 'rdm-spec check' exit 2 after 2.37 s, stdout empty, stderr 'cannot-run: the plugin \"slowpoke\" timed out after 2 seconds and was stopped; it printed: started'. ps right after: no script and no 'sleep 10' process; 12 s later finished.txt was never written."}
+ {:id "spec-0356",
+  :verdict :pass,
+  :evidence
+  "Plugin ghost :subscribes [:SpecParsed] :command [\"no-such-plugin\"]. 'rdm-spec check' exit 2, stdout empty, stderr 'cannot-run: the plugin \"ghost\" cannot be started: its command [\"no-such-plugin\"] is not found (...)'."}
+ {:id "spec-0357",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugins first (:answers :Gate, exit 0) then second (:answers :Gate, writes 'x:1: oracle-differs: the golden differs' on stderr, exit 1), committed and tagged spec-3. 'rdm-spec fence room spec-3' exit 1, stdout {}, stderr exactly 'x:1: oracle-differs: the golden differs'; gate.log: first at .134 then second at .146; no directory room was built. first was given {:request :Gate, :task :fence, :cut \"spec-3\"}."}
+ {:id "spec-0358",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugin gate :answers :Gate writing stdin to a file, committed at spec-3. 'rdm-spec verify ROOM 03' exit 0; the gate's stdin was {:request :Gate, :task :verify, :cut \"spec-3\", :cycle \"03\"}."}
+ {:id "spec-0359",
+  :verdict :pass,
+  :evidence
+  "Fixture: init project with no dhf/harness/plugins/ddd-domain. 'rdm-spec plugin add ddd-domain' exit 0, stdout {:plugin {:added \"ddd-domain\", :version 1, :directory \"dhf/harness/plugins/ddd-domain\", :add-to-plugins {:name \"ddd-domain\", :subscribes [:SpecParsed], :command [\"bb\" \"dhf/harness/plugins/ddd-domain/lint.clj\"]}}}; diff -r against the cut's plugins/ddd-domain: identical except origin.edn; origin.edn {:template \"ddd-domain\", :version 1, :copied \"2026-10-28\"} (today); dhf/harness/config.edn md5 unchanged."}
+ {:id "spec-0360",
+  :verdict :pass,
+  :evidence
+  "Row1: project already holding dhf/harness/plugins/ddd-domain (README edited). 'rdm-spec plugin add ddd-domain' exit 1, stdout {}, stderr 'dhf/harness/plugins/ddd-domain: plugin-exists: dhf/harness/plugins/ddd-domain already exists; plugin add never overwrites, and copied nothing'; every file's md5 unchanged. Row2: 'rdm-spec plugin add no-such' exit 2, stdout empty, 'cannot-run: rdm-spec carries no template no-such; the templates it carries are affordances (version 1), ddd-domain (version 1)'."}
+ {:id "spec-0361",
+  :verdict :pass,
+  :evidence
+  "Fixture :verify [tests, {:kind :plugin :name \"judge\"}], :plugins judge :answers :Check (kept path dhf/harness/plugins/judge/run.sh). 'rdm-spec verify ROOM 03': judge exits 0 -> exit 0, check {:name \"judge\", :kind :plugin, :outcome :passed}; judge writes 'src/app.clj:9: form-missing: the form is missing' and exits 1 -> exit 1, stderr exactly that line, check :outcome :failed; judge exits 2 writing 'cannot judge' -> exit 2, stderr 'cannot-run: the plugin \"judge\" cannot run: cannot judge', ratified.edn check {:name \"judge\" :outcome :refused}."}
+ {:id "spec-0362",
+  :verdict :pass,
+  :evidence
+  "Same fixture, judge writes stdin and pwd to files. 'rdm-spec verify ROOM 03' exit 0; pwd <project>/dhf/cycles/03/build; stdin {:request :Check, :cycle \"03\", :cut \"spec-3\", :checkout \"dhf/cycles/03/build\", :results \"dhf/cycles/03/results/judge\"}: the stated map plus :results, which spec-0391 requires a Check request to hold."}
+ {:id "spec-0363",
+  :verdict :pass,
+  :evidence
+  "Fixture :verify [tests (touches a marker), {:kind :plugin :name \"judge\"}], :plugins has judge only as a :SpecParsed subscriber (and, second variant, no plugins). 'rdm-spec verify ROOM 03' exit 2 in both, stdout empty, stderr 'cannot-run: the :plugin check \"judge\" is refused: the check names no plugin answering :Check'; the tests check's marker was never written; no ratified.edn."}
+ {:id "spec-0364",
+  :verdict :fail,
+  :evidence
+  "Row 'as a package (a jar)': bin/rdm-spec (RDM_SPEC shows 'bb /home/user/c24/release/rdm-spec.jar') 'rdm-spec plugin add no-such' in an init project exit 2: 'cannot-run: rdm-spec carries no template no-such; the templates it carries are affordances (version 1), ddd-domain (version 1)': holds. Row 'from its sources' could not be set up: the grader has only the packaged build and no sources to install from, so that row is unverified; unsure is a fail."}
+ {:id "spec-0365",
+  :verdict :pass,
+  :evidence
+  "Fixture: commits of dhf/raw/sources.edn: (1) rdm pinned 3763e08, (2) rdm removed, (3) rdm again with :pins [\"3763e08\"] and :retired. At (2) 'rdm-spec check' exit 1 'dhf/raw/sources.edn:1: pin-dropped: the source rdm dropped the pin 3763e08 it had, in the commit 6efef0c...' (the rule is live); at (3) 'rdm-spec check' exit 0 with no pin-dropped finding (only citation-unchecked warning)."}
+ {:id "spec-0366",
+  :verdict :pass,
+  :evidence
+  "Four :serves fixtures (probe logs $1 and pwd, prints probing, sleeps): :probe-seconds 20 + sleep 17 -> verify exit 0, check :probe-seconds 20 :outcome :passed :seconds 17.52; :probe-seconds 20 + sleep 25 -> exit 1, 'check app: serves-failed: the probe of app timed out after 20 seconds and was stopped; it printed: probing'; no :probe-seconds + sleep 25 -> exit 0, :probe-seconds 30, passed at 25.52 s; no :probe-seconds + sleep 40 -> exit 1, timed out after 30 seconds. Probe log: url=http://127.0.0.1:18361/ (port P, ending in /), pwd=<project>/dhf/cycles/03/build (the checkout). No probe or app process left."}
+ {:id "spec-0367",
+  :verdict :pass,
+  :evidence
+  "Fixture :serves with :probe-seconds 2, probe prints probing, sleeps 10, then would touch a file. 'rdm-spec verify ROOM 03' exit 1 after 3.15 s; check {... :probe-seconds 2 :outcome :failed :reason \"the probe of app timed out after 2 seconds and was stopped; it printed: probing\"}; stderr 'check app: serves-failed: the probe of app timed out after 2 seconds...probing'. Right after: no sleep/probe/app process; >10 s later the probe's file was never written."}
+ {:id "spec-0368",
+  :verdict :pass,
+  :evidence
+  "Fixture: repo mono/ with project in wallet/ (wallet/dhf/harness/config.edn), decoy mono/dhf/harness/config.edn and mono/dhf/spec/model.edn holding invalid EDN; spec-2 -> spec-3 changes wallet/dhf/spec/shop/till.feature; wallet/dhf/cycles/03/cycle.edn names spec-3. Run in wallet/ under strace: 'rdm-spec fence ROOM spec-3' exit 0, ROOM one commit holding .githooks .github .gitignore dhf/ at its root (34 files, implementation denied, no wallet/ prefix, no mono README); 'rdm-spec verify ROOM 03' exit 0, checkout wallet/dhf/cycles/03/build has dhf/ src/ test/ at its root; 'rdm-spec checklist 03' exit 0, 8 items (wallet's 8 stamped scenarios); 'rdm-spec scopes spec-2 spec-3' exit 0, [{:component :shop/till}]. strace shows no open/stat of any path under mono/ outside wallet/ (other than mono/.git)."}
+ {:id "spec-0369",
+  :verdict :pass,
+  :evidence
+  "Fixture: wallet/ project in mono/, HEAD one commit after spec-3, cart.feature changed after spec-3 and further edited uncommitted, untracked wallet/dhf/spec/notes.md. In wallet/: 'rdm-spec fence ROOM spec-3' exit 0; ROOM's dhf/spec/shop/cart.feature is byte-identical to 'git show spec-3:wallet/dhf/spec/shop/cart.feature' (neither later commit nor uncommitted line), and ROOM has no notes.md."}
+ {:id "spec-0370",
+  :verdict :pass,
+  :evidence
+  "Fixture: .gitignore at spec-3 adds debug.log and node_modules/; the room holds src/debug.log, src/node_modules/pkg/index.js and src/rdm_spec/link.clj -> util.clj (symlink). 'rdm-spec verify ROOM 03' exit 0; dhf/cycles/03/build holds no debug.log and no node_modules (find), and build/src/rdm_spec/link.clj is a symlink (ls -l: lrwxrwxrwx) whose readlink is util.clj."}
+ {:id "spec-0379",
+  :verdict :pass,
+  :evidence
+  "Fixture: verified cycle 03 (verify exit 0), 'rdm-spec checklist 03' 8 items. a.edn grades spec-0001 pass and spec-0002 fail, b.edn grades spec-0003 pass. 'rdm-spec score 03 --verdicts a.edn --verdicts b.edn' exit 0: {:score {:cycle \"03\", :passed 2, :scored 8, :ungraded 5 ...}}; dhf/cycles/03/score.edn :items hold all three verdicts with their evidence (the 5 others as ungraded)."}
+ {:id "spec-0380",
+  :verdict :pass,
+  :evidence
+  "Verified cycle 03 fixture. Row1 a.edn and b.edn both grade spec-0001: 'rdm-spec score 03 --verdicts a.edn --verdicts b.edn' exit 1, stdout {}, stderr 'a.edn: verdicts-graded-twice: spec-0001 is graded twice, in a.edn and b.edn', no score.edn written. Row2 b.edn line 3 holds \"bad \\q escape\": exit 1, stdout {}, stderr 'b.edn:3: verdicts-unreadable: b.edn is not readable EDN: Unsupported escape character: \\q', no score.edn."}
+ {:id "spec-0382",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugin envp :subscribes [:SpecParsed] :env {\"ORACLE_DIR\" \"../e2e\" \"SEND_LIMIT\" \"5\"}, writes env; caller exports GRADER_MARK=g382. 'rdm-spec check' exit 0; the plugin's env had ORACLE_DIR=../e2e, SEND_LIMIT=5, RDM_SPEC=bb /home/user/c24/release/rdm-spec.jar, GRADER_MARK=g382, PATH and HOME. :env {\"ORACLE_DIR\" 5}, {:ORACLE_DIR \"x\"} and [\"A\" \"b\"]: each 'rdm-spec check' exit 2, stdout empty, 'cannot-run: the plugin \"envp\" is refused: :env is a map of strings to strings', plugin not run."}
+ {:id "spec-0383",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugin cv :subscribes [:CycleVerified] writing stdin, pwd and time. 'rdm-spec verify ROOM 03' exit 0; cv ran once in the project root at 1793173631.018, after ratified.edn was written (mtime .0067); stdin {:event :CycleVerified, :cycle \"03\", :cut \"spec-3\", :checkout \"dhf/cycles/03/build\", :checks [{:name \"tests\", :kind :tests, :outcome :passed, :seconds 0.2, :scenarios 8}]} = ratified.edn's :checks. cv writing 'dhf/spec/shop/cart.feature:6: deploy-failed: ...' and exiting 1: verify exit 1, that line on stderr. cv exiting 2 ('cannot reach the sandbox'): verify exit 2, stdout empty, 'cannot-run: the plugin \"cv\" cannot run: cannot reach the sandbox', ratified.edn written (:outcome :passed)."}
+ {:id "spec-0384",
+  :verdict :pass,
+  :evidence
+  "Fixture: plugin cv :subscribes [:CycleVerified] that touches cv384.ran; tests command [\"false\"]. 'rdm-spec verify ROOM 03' exit 1 ('tests-failed: the test command failed with exit status 1...'); cv384.ran exists neither in the project root nor in the checkout."}
+ {:id "spec-0385",
+  :verdict :pass,
+  :evidence
+  "Fixture: :specs [{:name \"auth\" :dir \"dhf/sdd/auth\" :id-prefix \"auth\"} {:name \"infra\" :dir \"dhf/sdd/infra\" :id-prefix \"infra\"}], each folder with model.edn, events.edn, needs.edn, glossary.md, ids.edn and a feature file (auth also domain.edn). 'rdm-spec check' exit 0, {:spec {:scenarios 2, :feature-files 2 ...}}, a citation warning per spec's needs.edn; strace: it opens each folder's events.edn, ids.edn, model.edn, needs.edn and its feature file, nothing under dhf/spec/; stamp uses each folder's ids.edn (spec-0388), views write dhf/views/auth/ and dhf/views/infra/ from each model. No :specs (other fixture): check reads dhf/spec/ files as before, exit 0. glossary.md and domain.edn are opened by check in neither layout (nothing in check reads them)."}
+ {:id "spec-0386",
+  :verdict :pass,
+  :evidence
+  "Two-spec fixture, :specs altered per row, 'rdm-spec check' exit 2 with empty stdout: two named auth -> 'cannot-run: :specs declares \"auth\" twice: a spec's name is declared once'; two with id prefix auth -> 'cannot-run: :specs declares \"auth\" twice: an id prefix is declared once, so no two scenarios share an id'; two in dhf/sdd/auth -> 'cannot-run: :specs declares \"dhf/sdd/auth\" twice: a folder holds one spec'; infra in dhf/sdd/nowhere -> 'cannot-run: the spec \"infra\" has no folder dhf/sdd/nowhere'."}
+ {:id "spec-0387",
+  :verdict :pass,
+  :evidence
+  "Two specs: auth's needs hold UN-001 and its feature is tagged @UN-001; infra's needs hold only UN-002 and its feature is tagged @UN-001. 'rdm-spec check' exit 1 with exactly one finding: 'dhf/sdd/infra/net/dns.feature:6: need-unknown: infra-0001 is tagged @UN-001, a need dhf/sdd/infra/needs.edn does not declare'; nothing about auth (warnings only). Adding dhf/sdd/infra/login/session.feature (auth's context/component path): 'a-scenario-owner: the feature file ... belongs to no component of the model': components resolve within their own spec."}
+ {:id "spec-0388",
+  :verdict :pass,
+  :evidence
+  "Two specs: auth (3 stamped @auth-0001..3, ledger {:issued 3}, one unstamped) and infra (none stamped, one unstamped). 'rdm-spec stamp' exit 0: {:stamp {:stamped [{:id \"auth-0004\" ...} {:id \"infra-0001\" ...}], :issued {\"auth\" 4, \"infra\" 1}}}; the files carry @auth-0004 and @infra-0001; dhf/sdd/auth/ids.edn {:issued 4}, dhf/sdd/infra/ids.edn {:issued 1}, dhf/spec/ids.edn untouched {:issued 0}."}
+ {:id "spec-0389",
+  :verdict :pass,
+  :evidence
+  "Two specs (auth: auth-0001, auth-0002; infra: infra-0001), cycle.edn :scope [{:spec \"auth\"}], tests run 'rdm-spec run' and delete infra's results. 'rdm-spec checklist 03' exit 0, items [auth-0001 auth-0002] only. 'rdm-spec verify ROOM 03' exit 0, tests :passed :scenarios 2 (no infra result required). With auth-0002's result also deleted: verify exit 1, 'dhf/sdd/auth/login/session.feature:12: scenario-unrun: auth-0002 is named by no result'."}
+ {:id "spec-0390",
+  :verdict :pass,
+  :evidence
+  "Two specs, R holds passing results for auth-0001 and auth-0002, none for infra-0001. 'rdm-spec status --results R' exit 0: all three scenarios, each with :spec \"auth\"/\"infra\" (infra-0001 :unverified). 'rdm-spec release --results R' exit 1, {:release {:passed? false ... :refused [\"infra-0001\"]}}, 'dhf/sdd/infra/net/dns.feature:6: release-refused: infra-0001 is unverified...'. 'rdm-spec release --results R --spec auth' exit 0, {:release {:passed? true, :scenarios 2, :verified 2, :refused []}}."}
+ {:id "spec-0391",
+  :verdict :pass,
+  :evidence
+  "Fixture :verify [tests, {:kind :plugin :name \"acceptance\"}], acceptance :answers :Check, runs 'rdm-spec run --results <root>/<its :results>'. Its request: {:request :Check, :cycle \"03\", :cut \"spec-3\", :checkout \"dhf/cycles/03/build\", :results \"dhf/cycles/03/results/acceptance\"}. All 8 results pass -> verify exit 0, acceptance :passed. spec-0003's result set failed -> exit 1, acceptance :failed, '.../results/acceptance/a62b...-result.json:1: scenario-not-passed: spec-0003's result is failed'. spec-0004's result removed -> exit 1, 'dhf/spec/shop/till.feature:6: scenario-unrun: spec-0004 is named by no result'. spec-0005's story changed -> exit 1, '...-result.json:1: mapping-differs: story: spec-0005: its result's story is \"Something else\", not \"parser works\"'. A Check plugin writing no results (spec-0361, judge) passed on exit 0 alone."}
+ {:id "spec-0392",
+  :verdict :pass,
+  :evidence
+  "Fixture: :spec-layout :slices; 12-several-specs holds plan.md, parser/stamper/checklist.feature; a second parser.feature in 11-project-in-a-folder; a plugin subscribing to :SpecParsed dumps the event. 'rdm-spec check' exit 0 (only a citation-unchecked warning). SpecParsed scenarios: 12-several-specs/parser.feature -> :spec/parser, stamper.feature -> :spec/stamper, checklist.feature -> :measurement/checklist; 11-project-in-a-folder/parser.feature -> :spec/parser too. 'rdm-spec scopes' on a change to that slice lists {:slice \"12-several-specs\" :components [:spec/parser :spec/stamper :measurement/checklist]} (spec-0398)."}
+ {:id "spec-0393",
+  :verdict :pass,
+  :evidence
+  "Slices fixture, one row each, 'rdm-spec check': row1 add 12-several-specs/parsr.feature -> exit 1 'dhf/spec/12-several-specs/parsr.feature: slice-component-unknown: no component of the model is named parsr'; row2 add dhf/spec/parser.feature -> exit 1 'dhf/spec/parser.feature: slice-missing: a feature file outside every slice...'; row3 :spec/check and :measurement/check both named Check -> exit 1 'dhf/spec/model.edn: component-name-shared: the components :spec/check and :measurement/check share the name check...'; row4 till.feature removed -> exit 1 'dhf/spec/model.edn: component-unspecified: the component :shop/till has no feature file named till.feature in any slice'."}
+ {:id "spec-0394",
+  :verdict :pass,
+  :evidence
+  "Fixture: init config with no :spec-layout, model :spec \"spec/parser\", file dhf/spec/spec/parser.feature; SpecParsed dump plugin. 'rdm-spec check' exit 0, no finding; the event gives spec-0005 file dhf/spec/spec/parser.feature :component :spec/parser (and every other file to its model spec path's component)."}
+ {:id "spec-0395",
+  :verdict :pass,
+  :evidence
+  "Fixture: slices layout; 12-several-specs holds plan, parser.feature (2 scenarios) and checklist.feature; 02-write-the-spec/parser.feature holds 3 parser scenarios; stamper moved to 01-shop; cycle.edn :scope [{:slice \"12-several-specs\"}]. 'rdm-spec checklist 03' exit 0, 6 items: spec-0006 (Checklist) and spec-0007, spec-0012 (Parser, slice 12-several-specs), spec-0009..0011 (Parser, slice 02-write-the-spec), each with :slice, :component and :context. 'rdm-spec verify ROOM 03' with all results exit 0; with spec-0010's result removed exit 1, 'dhf/spec/02-write-the-spec/parser.feature:12: scenario-unrun: spec-0010 is named by no result' (verify also required out-of-scope results, e.g. spec-0001, as it does for any scope)."}
+ {:id "spec-0396",
+  :verdict :pass,
+  :evidence
+  "Slices fixture, cycle.edn :scope [{:slice \"12-several-specs\"}]: 'rdm-spec checklist 03' exit 0, {:checklist {... :items 6 ...}}. With :scope [{:slice \"13-nothing\"}]: exit 2, stdout empty, 'cannot-run: the scope names the slice 13-nothing, which the cut does not hold', no checklist.json written."}
+ {:id "spec-0397",
+  :verdict :pass,
+  :evidence
+  "Fixture: slices layout, code layout src/rdm_spec/{context}/{component}.clj, test/rdm_spec/.../{component}_test.clj, test/steps/{context}_{component}.clj, a file per component; slice 12-several-specs holds parser/stamper/checklist.feature. 'rdm-spec fence ROOM spec-3 --slice 12-several-specs' exit 0: {:fence {:room ..., :cut \"spec-3\", :files 53, :scope {:slice [\"12-several-specs\"]}}}; ROOM (one root commit) holds no code/test/steps file of spec/parser, spec/stamper, measurement/checklist, and every other implementation file byte-identical to the cut (cmp). '--slice 13-nothing' exit 2: 'cannot-run: the scope --slice 13-nothing names no slice the cut holds', no room."}
+ {:id "spec-0398",
+  :verdict :pass,
+  :evidence
+  "Fixture: :spec-layout :slices; 12-several-specs holds plan.md, parser/stamper/checklist.feature. spec-4 changes only its plan.md. 'rdm-spec scopes spec-3 spec-4' exit 0: {:scopes [{:slice \"12-several-specs\", :components [:spec/parser :spec/stamper :measurement/checklist]}], :shared []}."}
+ {:id "spec-0399",
+  :verdict :pass,
+  :evidence
+  "Fixture: slices layout; 11-project-in-a-folder holds command/status/verify.feature, 12-several-specs holds parser/stamper/checklist/verify.feature. spec-4 changes 12-several-specs/verify.feature and 11-project-in-a-folder/status.feature. 'rdm-spec scopes spec-3 spec-4' exit 0: [{:slice \"11-project-in-a-folder\", :components [:kernel/command :verification/status :verification/verify]} {:slice \"12-several-specs\", :components [:spec/parser :spec/stamper :measurement/checklist]}]: slices in folder-name order, :verification/verify in the first only."}
+ {:id "spec-0400",
+  :verdict :pass,
+  :evidence
+  "Fixture: slices layout; dhf/spec/12-several-specs/plan.md with ## Goal, ## References (- UN-001), ## Scope (### In, ### Out), ## Decisions. 'rdm-spec check' exit 0; stderr holds only the citation-unchecked warning on needs.edn, no finding about the slice."}
+ {:id "spec-0401",
+  :verdict :pass,
+  :evidence
+  "Slices fixture, 'rdm-spec check' per row: no plan.md -> exit 1 'dhf/spec/12-several-specs/plan.md: slice-unplanned: the slice 12-several-specs holds no plan.md...'; Goal heading renamed -> exit 1 'dhf/spec/12-several-specs/plan.md: slice-unplanned: the plan has no \"Goal\" heading...'; References name no need -> exit 1 '...plan.md: slice-unfounded: the plan's References name no user need...'; References name UN-099 -> exit 1 '...plan.md: slice-unfounded: the plan's References name UN-099, which no need is'."}]

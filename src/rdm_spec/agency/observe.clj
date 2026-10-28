@@ -1,108 +1,120 @@
 (ns rdm-spec.agency.observe
-  "Observe (dhf/spec/agency/observe.feature): a run observed from outside,
-  begin to end: its time, its cost and its defence (writes outside its room,
-  entries left in the temporary directory, the project touched outside the
-  cycle, results written in the room), each run one entry of runs.edn.
-  Observing never prevents and never stops a run, and says what it cannot see."
+  "Component Observe (agency context): a run of a cycle, a builder's, a
+  grader's or the integrator's, observed from outside, begin to end: its
+  time, its cost, and its defence, what it touched outside its room (the
+  watched directories' entries, the temporary directory's, the project
+  outside its cycle, results written inside the room). It records, never
+  prevents, never stops a run; reads are not observed, and the record says
+  so. Two cycles' runs are set side by side, never netted."
   (:require [babashka.fs :as fs]
-            [clojure.pprint :as pp]
+            [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.command :as cmd]))
+            [rdm-spec.kernel.project :as project]))
 
-(def unobserved
-  ["reads outside the room: no read is observed"
-   "writes below a watched directory's own entries, and anything undone before the run ended"])
+(defn expand [p]
+  (let [home (or (project/env "HOME") (System/getProperty "user.home"))]
+    (cond (= "~" p) home
+          (str/starts-with? (str p) "~/") (str home (subs p 1))
+          :else (project/abs p))))
 
-(defn- entries [dir]
+(defn entries [dir]
   (if (fs/directory? dir)
-    (vec (sort (map str (fs/list-dir dir))))
+    (vec (sort (for [f (try (fs/list-dir dir) (catch Exception _ []))] (str (fs/file-name f)))))
     []))
 
-(defn- expand [d] (if (= "~" d) (System/getProperty "user.home") (str/replace-first d #"^~/" (str (System/getProperty "user.home") "/"))))
+(defn repo-status []
+  (let [r (project/git (project/root) "status" "--porcelain=v1" "-z" "--untracked-files=all")]
+    (if (= 0 (:exit r))
+      (vec (sort (for [e (str/split (:out r) #"\u0000") :when (> (count e) 3)] e)))
+      [])))
 
-(defn new-entries
-  "The entries of `after` no `before` held, except the excluded paths."
-  [before after excluded]
-  (vec (sort (for [[d es] after e es :when (and (not (some #{e} (get before d))) (not (excluded e)))] e))))
+(defn state-file [cfg cycle role] (str (:cycles-dir cfg) "/" cycle "/observing-" role ".edn"))
 
-(defn- status-paths [root]
-  (let [{:keys [exit out]} (cmd/git root "status" "--porcelain" "--untracked-files=all")]
-    (if (= 0 exit) (vec (remove str/blank? (str/split-lines out))) [])))
+(defn now-iso [] (str (java.time.Instant/ofEpochMilli (System/currentTimeMillis))))
 
-(defn touched
-  "The paths of status lines that were not there before, outside the cycle."
-  [before after cycle-dir]
-  (vec (sort (for [l after :when (not (some #{l} before))
-                   :let [p (str/trim (subs l (min 3 (count l))))]
-                   :when (not (str/starts-with? p (str cycle-dir "/")))]
-               p))))
+(defn agency [cfg] (merge {:watch ["/" "~"] :tmp "/tmp"} (:agency cfg)))
 
-(defn- round2 [x] (/ (Math/round (* 100.0 (double x))) 100.0))
+(defn begin! [cfg cycle role room]
+  (let [{:keys [watch tmp]} (agency cfg)
+        st {:role role :room room :began (now-iso) :began-ms (System/currentTimeMillis)
+            :watch (into {} (for [w watch] [w (entries (expand w))]))
+            :tmp (entries (expand tmp))
+            :repo (repo-status)}
+        f (project/abs (state-file cfg cycle role))]
+    (fs/create-dirs (fs/parent f))
+    (spit f (pr-str st))
+    (project/report {:observe {:began {:cycle cycle :role role :room room :at (:began st)}}})))
+
+(defn results-in-room? [cfg room]
+  (let [d (project/abs room (:results-dir cfg))]
+    (boolean (or (and (fs/directory? d) (seq (fs/list-dir d)))
+                 (and (fs/directory? room)
+                      (some #(not (str/includes? (str %) "/.git/"))
+                            (fs/glob room "**-result.json")))))))
+
+(defn end! [cfg cycle role tokens]
+  (let [f (project/abs (state-file cfg cycle role))]
+    (when-not (fs/exists? f)
+      (project/cannot-run! (str "no run of the role " role " began in cycle " cycle ": run rdm-spec observe begin " cycle " " role " ROOM first")))
+    (let [st (edn/read-string (slurp f))
+          {:keys [tmp]} (agency cfg)
+          room (project/abs (:room st))
+          ended-ms (System/currentTimeMillis)
+          writes (vec (sort (for [[w before] (:watch st)
+                                  :let [d (expand w) now (entries d)]
+                                  n (remove (set before) now)
+                                  :let [p (str (fs/path d n))]
+                                  :when (not= (str (fs/normalize (fs/path p))) (str (fs/normalize (fs/path room))))]
+                              p)))
+          tmp-left (count (remove (set (:tmp st)) (entries (expand tmp))))
+          cycle-dir (str (:cycles-dir cfg) "/" cycle "/")
+          prefix (project/git-prefix-or-blank)
+          touched (vec (sort (distinct (for [e (remove (set (:repo st)) (repo-status))
+                                             :let [p (subs e 3)
+                                                   p (if (str/starts-with? p prefix) (subs p (count prefix)) p)]
+                                             :when (not (str/starts-with? p cycle-dir))]
+                                         p))))
+          in-room? (results-in-room? cfg room)
+          run {:role role :room (:room st) :began (:began st) :ended (str (java.time.Instant/ofEpochMilli ended-ms))
+               :minutes (/ (Math/round (/ (- ended-ms (:began-ms st)) 600.0)) 100.0)
+               :tokens tokens
+               :defence {:writes-outside writes :tmp-left tmp-left :repo-touched touched :results-in-room in-room?
+                         :unobserved ["reads outside the room: observing records writes, never reads, so a read is not seen"]}}
+          runs-file (project/abs (str (:cycles-dir cfg) "/" cycle "/runs.edn"))
+          runs (if (fs/exists? runs-file) (let [v (edn/read-string (slurp runs-file))] (if (vector? v) v [])) [])]
+      (spit runs-file (str "[" (str/join "\n " (map pr-str (conj runs run))) "]\n"))
+      (fs/delete f)
+      (project/report {:observe {:ended (dissoc run :defence) :defence (:defence run)}}
+                      []
+                      (concat (for [w writes] (project/warning w "observe-write-outside" (str "the " role " run wrote " w " outside its room")))
+                              (when (pos? tmp-left) [(project/warning "observe-tmp-left" (str "the " role " run left " tmp-left " entries in the temporary directory"))])
+                              (for [p touched] (project/warning p "observe-repo-touched" (str "the " role " run changed " p " in the project, outside its cycle")))
+                              (when in-room? [(project/warning (:room st) "observe-results-in-room" (str "the " role " run wrote results inside its room"))]))))))
 
 (defn breach? [run]
   (let [d (:defence run)]
     (boolean (or (seq (:writes-outside d)) (pos? (or (:tmp-left d) 0)) (seq (:repo-touched d)) (:results-in-room d)))))
 
-(defn report [a ra b rb]
-  {:cycles [a b]
-   :runs {a (count ra) b (count rb)}
-   :minutes {a (round2 (reduce + 0 (keep :minutes ra))) b (round2 (reduce + 0 (keep :minutes rb)))}
-   :tokens {a (reduce + 0 (keep :tokens ra)) b (reduce + 0 (keep :tokens rb))}
-   :breaches {a (count (filter breach? ra)) b (count (filter breach? rb))}})
+(defn report [cfg a b]
+  (let [runs (fn [c] (let [f (project/abs (str (:cycles-dir cfg) "/" c "/runs.edn"))]
+                       (if (fs/exists? f) (edn/read-string (slurp f)) [])))
+        ra (runs a) rb (runs b)
+        sum (fn [rs k] (reduce + 0 (keep k rs)))]
+    (project/report {:observe {:cycles [a b]
+                               :runs {a (count ra) b (count rb)}
+                               :minutes {a (sum ra :minutes) b (sum rb :minutes)}
+                               :tokens {a (sum ra :tokens) b (sum rb :tokens)}
+                               :breaches {a (count (filter breach? ra)) b (count (filter breach? rb))}}})))
 
-(defn- runs-of [root dir]
-  (or (try (cmd/read-edn (cmd/read-at root nil (str dir "/runs.edn"))) (catch Exception _ nil)) []))
-
-(defn stage [{:keys [root config args opts]}]
-  (let [[verb cycle role room-arg] args
-        cycles (:cycles-dir config "dhf/cycles")
-        cycle-dir (str cycles "/" cycle)
-        watch (mapv expand (get-in config [:agency :watch] []))
-        tmp (expand (get-in config [:agency :tmp] "/tmp"))
-        open-file (fs/file root cycle-dir (str "observing-" role ".edn"))]
+(defn observe-task [{:keys [cfg args opts]}]
+  (let [[verb & more] args]
     (case verb
-      "begin"
-      (let [room (or room-arg (cmd/cannot-run! "observe begin CYCLE ROLE ROOM names the run's room"))
-            room-abs (str (fs/absolutize (fs/path root room)))]
-        (when-not (fs/directory? room-abs) (cmd/cannot-run! (str "the room " room " does not exist")))
-        (fs/create-dirs (fs/parent open-file))
-        (spit open-file (pr-str {:role role :room room-abs :began (str (java.time.Instant/now)) :t0 (System/currentTimeMillis)
-                                 :watch (into {} (for [d watch] [d (entries d)]))
-                                 :tmp (entries tmp)
-                                 :status (status-paths root)}))
-        {:result {:observe {:began role :cycle cycle :room room-abs}}})
-
-      "end"
-      (let [open (or (try (cmd/read-edn (slurp open-file)) (catch Exception _ nil))
-                     (cmd/cannot-run! (str "no run of the role " role " began in cycle " cycle ": run \"rdm-spec observe begin\" first")))
-            room (:room open)
-            writes (new-entries (:watch open) (into {} (for [d watch] [d (entries d)]))
-                                (into #{room (str (fs/absolutize root)) tmp}
-                                      (for [p (iterate fs/parent (fs/path room)) :while p] (str p))))
-            tmp-left (count (remove (set (:tmp open)) (entries tmp)))
-            repo (touched (:status open) (status-paths root) cycle-dir)
-            results-dir (fs/path room (:results-dir config "dhf/allure-results"))
-            in-room (boolean (and (fs/directory? results-dir) (seq (fs/list-dir results-dir))))
-            minutes (round2 (/ (- (System/currentTimeMillis) (:t0 open)) 60000.0))
-            tokens (some-> (:tokens opts) parse-long)
-            run {:role role :room room :began (:began open) :ended (str (java.time.Instant/now))
-                 :minutes minutes :tokens tokens
-                 :defence {:writes-outside writes :tmp-left tmp-left :repo-touched repo
-                           :results-in-room in-room :unobserved unobserved}}
-            runs (conj (vec (runs-of root cycle-dir)) run)]
-        (spit (fs/file root cycle-dir "runs.edn") (with-out-str (pp/pprint runs)))
-        (fs/delete-if-exists open-file)
-        {:result {:observe {:cycle cycle :run run}}
-         :warnings (vec (concat
-                         (for [w writes] (cmd/finding nil nil "write-outside" (str "the run wrote " w " outside its room")))
-                         (when (pos? tmp-left) [(cmd/finding nil nil "tmp-left" (str "the run left " tmp-left " entries in " tmp))])
-                         (for [p repo] (cmd/finding p nil "repo-touched" "the run changed the project outside its cycle"))
-                         (when in-room [(cmd/finding nil nil "results-in-room" (str "the run wrote results inside its room, " results-dir))])))})
-
-      "report"
-      (let [other room-arg]
-        (when (or (nil? cycle) (nil? role) other)
-          (cmd/cannot-run! "usage: rdm-spec observe report CYCLE CYCLE"))
-        {:result {:observe (report cycle (runs-of root cycle-dir) role (runs-of root (str cycles "/" role)))}})
-
-      (cmd/cannot-run! (str "observe takes begin, end or report, not " verb)))))
+      "begin" (let [[cycle role room] more]
+                (when-not room (project/cannot-run! "observe begin CYCLE ROLE ROOM"))
+                (begin! cfg cycle role room))
+      "end" (let [[cycle role] more
+                  tokens (some-> (get opts "--tokens") parse-long)]
+              (when (and (get opts "--tokens") (nil? tokens)) (project/cannot-run! "--tokens is a number of tokens"))
+              (end! cfg cycle role tokens))
+      "report" (let [[a b] more] (report cfg a b))
+      (project/cannot-run! (str "unknown observe task " verb ": observe begin CYCLE ROLE ROOM, or end CYCLE ROLE [--tokens N], or report CYCLE CYCLE")))))

@@ -1,0 +1,4 @@
+# What each fail of cycle 24 turned out to be (see 16/labels.yaml for the labels).
+- scenario: spec-0364
+  label: grader
+  evidence: "as in cycles 22 and 23: the grading room holds only the jar, so the 'from its sources' row could not be run and was failed as unsure; the jar row held. The integrator ran plugin add no-such from the build's sources (bb -cp src:res): 'rdm-spec carries no template no-such; the templates it carries are affordances (version 1), ddd-domain (version 1)'"

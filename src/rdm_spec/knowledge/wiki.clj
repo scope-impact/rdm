@@ -1,49 +1,46 @@
 (ns rdm-spec.knowledge.wiki
-  "The wiki (dhf/spec/knowledge/wiki.feature): one index listing every page,
-  every page footnoted, no page naming the stack. Its footnotes' citations are
-  resolved with the sources."
-  (:require [clojure.string :as str]
-            [rdm-spec.kernel.command :as cmd]))
+  "Component Wiki (knowledge context): the domain wiki, dhf/wiki/index.md and
+  the pages under dhf/wiki/pages/. Every page indexed, nothing indexed that
+  is not a page, every page footnoted to a source (its footnotes resolved by
+  the sources component), no stack word."
+  (:require [babashka.fs :as fs]
+            [clojure.string :as str]
+            [rdm-spec.kernel.project :as project]
+            [rdm-spec.knowledge.sources :as sources]))
 
 (defn index-links
-  "[[target line] ...] of every relative Markdown link to a .md file in the index."
+  "Every link of the index to a page: [{:target :line}], targets relative to the wiki."
   [text]
-  (for [[i l] (map-indexed vector (str/split-lines (str text)))
-        [_ target] (re-seq #"\]\(([^)\s#]+\.md)(?:#[^)]*)?\)" l)
-        :when (not (re-find #"^[a-z]+:" target))]
-    [target (inc i)]))
+  (for [[i l] (map-indexed vector (str/split-lines (or text "")))
+        [_ t] (re-seq #"\]\(([^)\s#]+\.md)(?:#[^)]*)?\)" l)
+        :when (not (re-find #"^[a-z]+:" t))]
+    {:target (str/replace t #"^\./" "") :line (inc i)}))
 
-(defn footnoted? [text] (boolean (re-find #"(?m)^\s*\[\^[^\]]+\]:" (str text))))
+(defn check
+  "The wiki's findings at TREE."
+  [tree cfg]
+  (let [wd (:wiki-dir cfg)
+        d (project/abs tree wd)
+        idx (str wd "/index.md")]
+    (if-not (fs/directory? d)
+      []
+      (let [text (project/read-text tree idx)
+            links (index-links text)
+            linked (set (map #(str wd "/" (:target %)) links))
+            pages (vec (sort (for [f (fs/glob (str d "/pages") "**.md")] (project/rel tree f))))]
+        (vec (concat
+              (when-not text [(project/finding idx "wiki-no-index" "the wiki has no index")])
+              (for [{:keys [target line]} links
+                    :when (not (fs/regular-file? (project/abs tree (str wd "/" target))))]
+                (project/finding idx line "wiki-entry-missing" (str "the index links " target ", and there is no such page")))
+              (for [p pages :when (not (linked p))]
+                (project/finding p "wiki-unindexed" (str "the index does not list the page " p ": every page is in the index")))
+              (for [p pages
+                    :when (not (re-find #"(?m)^\s*\[\^[^\]]+\]:" (or (project/read-text tree p) "")))]
+                (project/finding p "wiki-uncited" (str "the page " p " has no footnote: every claim in the wiki cites a source")))
+              (project/stack-word-findings tree wd (:stack-words cfg))))))))
 
-(defn- normalize [path]
-  (str/join "/" (reduce (fn [acc p] (cond (= p ".") acc (= p "..") (vec (butlast acc)) :else (conj acc p)))
-                        [] (str/split path #"/"))))
-
-;; Copied from the spec check: the wiki never names the stack either.
-(defn stack-findings [files words]
-  (for [[file text] files
-        [i line] (map-indexed vector (str/split-lines (str text)))
-        w words
-        :when (re-find (re-pattern (str "(?<![\\p{L}\\p{N}])" (java.util.regex.Pattern/quote w) "(?![\\p{L}\\p{N}])")) line)]
-    (cmd/finding file (inc i) "stack-word"
-                 (str "names the stack word " w ": the wiki never names the stack, which lives in dhf/harness/stack.md"))))
-
-(defn stage [{:keys [root config revision]}]
-  (let [d (:wiki-dir config "dhf/wiki")
-        index (str d "/index.md")
-        itext (cmd/read-at root revision index)
-        pages (filter #(str/ends-with? % ".md") (cmd/files-at root revision (str d "/pages")))
-        links (index-links itext)
-        linked (set (map (fn [[t _]] (normalize (str d "/" t))) links))]
-    (if (nil? itext)
-      {:findings (if (seq pages) [(cmd/finding index nil "wiki-no-index" "the wiki has pages and no index")] [])}
-      {:findings
-       (vec
-        (concat
-         (for [[t line] links :when (not (cmd/read-at root revision (normalize (str d "/" t))))]
-           (cmd/finding index line "wiki-index-broken" (str "the index links " t ", and no such page exists")))
-         (for [p pages :when (not (linked p))]
-           (cmd/finding p nil "wiki-unindexed" (str "the page " p " is not listed in the index " index)))
-         (for [p pages :when (not (footnoted? (cmd/read-at root revision p)))]
-           (cmd/finding p nil "wiki-unsourced" (str "the page " p " has no footnote: every claim cites a source")))
-         (stack-findings (for [p (cons index pages)] [p (cmd/read-at root revision p)]) (:stack-words config []))))})))
+(defn check-stage [{:keys [cfg]}]
+  {:result {:wiki {:pages (count (filter #(str/includes? % "/pages/") (sources/wiki-files (project/root) cfg)))}}
+   :findings (check (project/root) cfg)
+   :warnings []})

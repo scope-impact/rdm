@@ -1,94 +1,86 @@
 (ns rdm-spec.verification.status
-  "Status (dhf/spec/verification/status.feature): verified, failed,
-  unverified or planned for every stamped scenario, derived from a run's
-  Allure results and never written. An outline is one requirement, verified
-  only when every row has a passing result; a result counts toward a row only
-  when it names the row by its parameters. A scenario tagged @wip is planned
-  whatever its results say. Status is a report: it exits 0 whatever the
-  statuses. Publishes VerificationDerived."
-  (:require [babashka.fs :as fs]
+  "Component Status (verification context): derives verified, failed,
+  unverified or planned for every stamped scenario from a run's Allure
+  results, never writing it anywhere. An outline is one requirement: verified
+  only when every row has a passing result naming it. Publishes
+  VerificationDerived."
+  (:require [babashka.fs]
+            [rdm-spec.kernel.project :as project]
             [rdm-spec.kernel.bus :as bus]
-            [rdm-spec.kernel.command :as cmd]
             [rdm-spec.spec.parser :as parser]
             [rdm-spec.verification.results :as results]))
 
-(defn- row-key [headings params]
-  (let [pm (into {} (map (juxt #(get % "name") #(get % "value")) params))]
-    (mapv #(get pm %) headings)))
+(defn names-row? [result sc row]
+  (= (:parameters result) (zipmap (:header row) (:cells row))))
 
 (defn status-of
-  "A scenario's status from the results labelled with its id."
-  [s rs]
+  "The status of the stamped scenario SC, given the results naming its id."
+  [sc rs]
   (cond
-    (:wip? s) :planned
-    (:outline? s)
-    (let [rows (for [ex (:examples s) row (:rows ex)] [(:headings ex) row])
-          of-row (fn [[h row]] (filter #(= row (row-key h (:parameters %))) rs))
-          per-row (map of-row rows)]
+    (:wip? sc) :planned
+    (:outline? sc)
+    (let [rows (:rows sc)
+          per-row (for [row rows] (filter #(names-row? % sc row) rs))]
       (cond
-        (some (fn [rs] (some #(not= "passed" (:status %)) rs)) per-row) :failed
-        (and (seq rows) (every? seq per-row)) :verified
+        (some #(not= :passed (:status %)) (apply concat per-row)) :failed
+        (and (seq rows) (every? #(some (fn [r] (= :passed (:status r))) %) per-row)) :verified
         :else :unverified))
     (empty? rs) :unverified
-    (some #(not= "passed" (:status %)) rs) :failed
+    (some #(not= :passed (:status %)) rs) :failed
     :else :verified))
 
-(defn stamped
-  "Every stamped scenario of every spec the project keeps, at a revision."
-  [root rev config]
-  (vec (for [sc (cmd/spec-configs config)
-             s (:scenarios (parser/read-spec root rev sc))
-             :when (:id s)]
-         s)))
+(defn stamped [scenarios] (filter :id scenarios))
 
 (defn derive-statuses
-  "Every stamped scenario with its status, from the results directory named:
-  {:scenarios :counts :unknown-results :unreadable :results}."
-  [root config named]
-  (let [ss (stamped root nil config)
-        {rs :results bad :unreadable} (results/read-dir root named)
-        by-spec (group-by :spec rs)
-        ids (set (map :id ss))
-        scenarios (mapv #(assoc % :status (status-of % (by-spec (:id %)))) ss)]
-    {:scenarios scenarios
-     :results rs
-     :counts (merge {:verified 0 :failed 0 :unverified 0 :planned 0} (frequencies (map :status scenarios)))
-     :unknown-results (vec (for [r rs :when (and (:spec r) (not (ids (:spec r))))] {:file (:file r) :spec (:spec r)}))
-     :unreadable bad}))
+  "{:statuses {id status} :unknown-results [{:file :spec}]} of SCENARIOS over RESULTS."
+  [scenarios results]
+  (let [by-id (group-by :spec (filter :spec results))
+        ids (set (map :id (stamped scenarios)))]
+    {:statuses (into {} (for [sc (stamped scenarios)] [(:id sc) (status-of sc (get by-id (:id sc)))]))
+     :unknown-results (vec (for [r results :when (and (:spec r) (not (ids (:spec r))))] {:file (:file r) :spec (:spec r)}))}))
 
-(defn publish! [{:keys [scenarios unknown-results unreadable]}]
-  (bus/publish! :verification/status :VerificationDerived
-                {:revision :working-tree
-                 :statuses (into {} (map (juxt :id :status) scenarios))
-                 :unknown-results unknown-results
-                 :unreadable-files (mapv :file unreadable)}))
+(defn scenarios-of
+  "The scenarios of the specs read, restricted to the spec named by --spec."
+  [read opts]
+  (let [only (get opts "--spec")]
+    (when (and only (not (some #(= only (get-in % [:spec :name])) read)))
+      (project/cannot-run! (str "--spec names " only ", and the configuration declares no such spec")))
+    (vec (for [r read :when (or (nil? only) (= only (get-in r [:spec :name]))) sc (:scenarios r)] sc))))
 
-(defn report-of
-  "A scenario as the status report lists it."
-  [config s]
-  (cond-> {:id (:id s) :title (:title s) :file (:file s) :line (:line s) :status (:status s)}
-    (seq (:specs config)) (assoc :spec (:spec s))))
+(defn derive!
+  "Reads the spec and the results directory RD, derives every status, and
+  publishes VerificationDerived. {:read :scenarios :results :unreadable :statuses :unknown-results}."
+  [cfg opts rd]
+  (let [read (parser/read-specs-once (project/root) cfg)
+        _ (when-not (bus/latest :SpecParsed) (parser/publish! :working-tree read))
+        scenarios (scenarios-of read opts)
+        {rs :results unreadable :unreadable} (results/read-dir rd)
+        d (derive-statuses scenarios rs)]
+    (bus/publish! :verification/status :VerificationDerived
+                  {:revision :working-tree :statuses (:statuses d) :unknown-results (:unknown-results d)
+                   :unreadable-files (mapv :file unreadable)})
+    (merge d {:read read :scenarios scenarios :results rs :unreadable unreadable})))
 
-(defn stage
-  "rdm-spec status."
-  [{:keys [root config] :as ctx}]
-  (let [named (cmd/results-dir ctx)
-        d (derive-statuses root config named)]
-    (publish! d)
-    {:result {:status {:results named
-                       :scenarios (mapv #(report-of config %) (:scenarios d))
-                       :counts (:counts d)
-                       :unknown-results (:unknown-results d)}}
-     :findings (results/unreadable-findings (:unreadable d))}))
+(defn status-task [{:keys [cfg opts]}]
+  (let [rd (project/results-dir cfg opts)
+        {:keys [scenarios statuses unknown-results unreadable]} (derive! cfg opts rd)
+        multi? (seq (:specs cfg))
+        listed (vec (for [sc (stamped scenarios)]
+                      (cond-> {:id (:id sc) :title (:title sc) :file (:file sc) :line (:line sc) :status (statuses (:id sc))}
+                        multi? (assoc :spec (:spec sc)))))
+        counts (merge {:verified 0 :failed 0 :unverified 0 :planned 0} (frequencies (map :status listed)))]
+    (project/report {:status {:results (:dir rd) :scenarios listed :counts counts :unknown-results unknown-results}}
+                    (results/unreadable-findings unreadable)
+                    (for [{:keys [file spec]} unknown-results]
+                      (project/warning file "result-unknown" (str "the result names " spec ", which no stamped scenario is"))))))
 
 (defn derive-stage
-  "For a task that shows status: derives it from the results, or, when none
-  were named and the configured directory does not exist, says none was
-  derived (:no-results)."
-  [{:keys [root config] :as ctx}]
-  (let [named (cmd/results-dir ctx)]
-    (if (and (not (cmd/results-given? ctx)) (not (fs/directory? (fs/path root named))))
-      {:ctx {:no-results true}}
-      (let [d (derive-statuses root config named)]
-        (publish! d)
-        {:findings (results/unreadable-findings (:unreadable d))}))))
+  "Derives every status when results are given, or the configured results
+  directory exists; publishes VerificationDerived."
+  [{:keys [cfg opts]}]
+  (let [rd (project/results-dir cfg opts)
+        fs? (babashka.fs/directory? (:abs rd))]
+    (if (or (:explicit? rd) fs?)
+      (let [d (derive! cfg opts rd)]
+        {:result {:status {:results (:dir rd)}} :findings (vec (results/unreadable-findings (:unreadable d))) :warnings []})
+      {:result nil :findings [] :warnings []})))

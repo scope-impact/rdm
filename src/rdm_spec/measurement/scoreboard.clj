@@ -1,53 +1,65 @@
 (ns rdm-spec.measurement.scoreboard
-  "The scoreboard (dhf/spec/measurement/scoreboard.feature): two cycles
-  compared over the items both scored, better and worse counted apart and
-  never netted, a moved denominator said aloud, a scoped cycle's target
-  reported first, and nothing measured against a bootstrap cycle."
-  (:require [rdm-spec.kernel.command :as cmd]))
+  "Component Scoreboard (measurement context): compares two cycles' filed
+  scores over the items both scored, counting what got better and what got
+  worse, never a net; a moved denominator said aloud, new items apart; a
+  scoped cycle reported target first; a bootstrap cycle never a baseline."
+  (:require [clojure.string :as str]
+            [rdm-spec.kernel.project :as project]))
 
-(defn- verdicts [score] (into {} (map (juxt :id :verdict) (:items score))))
+(defn read-cycle [cfg n]
+  (let [d (str (:cycles-dir cfg) "/" n)
+        s (project/read-edn-file (project/root) (str d "/score.edn"))
+        c (project/read-edn-file (project/root) (str d "/cycle.edn"))]
+    (when (or (:missing s) (:error s))
+      (project/cannot-run! (str "cycle " n " has no readable " d "/score.edn: a cycle is compared only once scored")))
+    {:n n :score (:value s) :cycle (when (map? (:value c)) (:value c))}))
 
-(defn- diff [va vb ids]
-  (let [better (sort (filter #(and (= :fail (va %)) (= :pass (vb %))) ids))
-        worse (sort (filter #(and (= :pass (va %)) (= :fail (vb %))) ids))]
-    {:compared (count ids) :better (count better) :worse (count worse)
-     :better-items (vec better) :worse-items (vec worse)}))
+(defn verdicts [s] (into {} (for [i (:items (:score s))] [(:id i) (:verdict i)])))
 
-(defn compare-scores [a sa b sb]
-  (let [va (verdicts sa) vb (verdicts sb)
-        both (filter vb (keys va))
-        scope (:scope sb)]
-    (if (and scope (not= :project scope))
-      (let [rest-a (remove vb (keys va))]
-        {:cycles [a b]
-         :target (merge {:scope scope :cycle b} (diff va vb both))
-         :rest (assoc (diff va vb []) :not-scored {b (count rest-a)})
-         :statements [(str "cycle " b " is scoped to " (pr-str scope) ": its scope is reported first")
-                      (str "the rest was not scored in cycle " b ": " (count rest-a) " items of cycle " a
-                           " outside the scope are not compared")]})
-      (let [only-a (vec (sort (remove vb (keys va))))
-            only-b (vec (sort (remove va (keys vb))))]
-        (merge {:cycles [a b] :scored {a (count va) b (count vb)}}
-               (diff va vb both)
-               {:only-in {a only-a b only-b}
+(defn compare-items [ids va vb]
+  (let [better (vec (sort (filter #(and (= :fail (va %)) (= :pass (vb %))) ids)))
+        worse (vec (sort (filter #(and (= :pass (va %)) (= :fail (vb %))) ids)))]
+    {:compared (count ids) :better (count better) :worse (count worse) :better-items better :worse-items worse}))
+
+(defn scoped? [c] (let [s (get-in c [:cycle :scope] :project)] (not= :project s)))
+
+(defn scoreboard-task [{:keys [cfg args]}]
+  (let [[na nb] args
+        a (read-cycle cfg na)
+        b (read-cycle cfg nb)
+        boot (vec (for [c [a b] :when (get-in c [:cycle :bootstrap])] (:n c)))
+        va (verdicts a) vb (verdicts b)
+        ids-a (set (keys va)) ids-b (set (keys vb))
+        shared (sort (filter ids-a ids-b))]
+    (project/report
+     {:scoreboard
+      (cond
+        (seq boot)
+        {:cycles [na nb] :bootstrap boot :scored {na (count va) nb (count vb)}
+         :statements (vec (for [n boot] (str "cycle " n " is a bootstrap cycle: it is never a baseline, and nothing is compared against it")))}
+
+        (scoped? b)
+        (let [scope (get-in b [:cycle :scope])
+              target (sort ids-b)
+              rest-ids (filter #(not (ids-b %)) shared)
+              not-scored (count (remove ids-b ids-a))]
+          {:cycles [na nb]
+           :target (merge {:scope scope :cycle nb} (compare-items (filter ids-a target) va vb))
+           :rest (assoc (compare-items rest-ids va vb) :not-scored {nb not-scored})
+           :statements (vec (concat [(str "cycle " nb " is scoped to " (pr-str scope) ": its scope is reported first")]
+                                    (when (pos? not-scored)
+                                      [(str "the rest was not scored in cycle " nb ": " not-scored " item" (when (not= 1 not-scored) "s")
+                                            " of cycle " na " outside the scope " (if (= 1 not-scored) "is" "are") " not compared")])))})
+
+        :else
+        (merge {:cycles [na nb] :scored {na (count va) nb (count vb)}}
+               (compare-items shared va vb)
+               {:only-in {na (vec (sort (remove ids-b ids-a))) nb (vec (sort (remove ids-a ids-b)))}
                 :statements (vec (concat
                                   (when (not= (count va) (count vb))
-                                    [(str "the denominator moved from " (count va) " to " (count vb))])
-                                  (when (seq only-b)
-                                    [(str (count only-b) " items new in cycle " b " are counted separately, not compared")])
-                                  (when (seq only-a)
-                                    [(str (count only-a) " items of cycle " a " were not scored in cycle " b)])))})))))
-
-(defn stage [{:keys [root config args]}]
-  (let [[a b] args
-        dir #(str (:cycles-dir config "dhf/cycles") "/" %)
-        read (fn [c f] (try (cmd/read-edn (cmd/read-at root nil (str (dir c) "/" f))) (catch Exception _ nil)))
-        score (fn [c] (or (read c "score.edn") (cmd/cannot-run! (str "cycle " c " has no score: " (dir c) "/score.edn"))))
-        sa (score a) sb (score b)
-        boot (vec (filter #(:bootstrap (read % "cycle.edn")) [a b]))]
-    {:result
-     {:scoreboard
-      (if (seq boot)
-        {:cycles [a b] :bootstrap boot :scored {a (count (:items sa)) b (count (:items sb))}
-         :statements (mapv #(str "cycle " % " is a bootstrap: nothing is measured against it") boot)}
-        (compare-scores a sa b sb))}}))
+                                    [(str "the denominator moved from " (count va) " to " (count vb) ": only the "
+                                          (count shared) " items both scored are compared")])
+                                  (when (seq (remove ids-a ids-b))
+                                    [(str (count (remove ids-a ids-b)) " items are new in cycle " nb ", counted apart")])
+                                  (when (seq (remove ids-b ids-a))
+                                    [(str (count (remove ids-b ids-a)) " items of cycle " na " are not in cycle " nb ", counted apart")])))}))})))
