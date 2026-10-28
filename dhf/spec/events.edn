@@ -1,18 +1,18 @@
 ;; The event catalogue: the domain events that pass between bounded contexts,
 ;; which are the contracts between them. A relationship in model.edn that
 ;; publishes an event must name one declared here, from its declared publisher
-;; (rule c4-events-named, dhf/spec/architecture/lint.feature).
+;; (rule c4-events-named, dhf/spec/04-model-the-architecture/lint.feature).
 ;;
 ;; :shape says what each carried key holds.
 ;;
 ;; This is rdm-spec's own catalogue, as this repository is rdm-spec's project:
 ;; a release carries these events built in, and its bus carries only them. A
 ;; project's catalogue holds that project's events and never these
-;; (dhf/spec/kernel/bus.feature).
+;; (dhf/spec/08-plugins/bus.feature).
 ;;
 ;; These events are also rdm-spec's published language: a project's plugin
 ;; that subscribes to one is given it as EDN, {:event <name>} merged with the
-;; keys it carries (dhf/spec/kernel/plugins.feature; ADR 0003). A change to an
+;; keys it carries (dhf/spec/08-plugins/plugins.feature; ADR 0003). A change to an
 ;; event's contract reaches the plugins that subscribe to it.
 ;;
 ;; Events travel on the in-process bus (kernel/bus), so only within one run of

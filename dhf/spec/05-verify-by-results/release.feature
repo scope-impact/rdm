@@ -31,7 +31,7 @@ Feature: Release check
       Then it exits 0
 
   # A clause no document names is unverified the way a scenario with no result
-  # is (dhf/spec/compliance/gap.feature).
+  # is (dhf/spec/10-regulated-profile/gap.feature).
   @UN-013
   Rule: Under the regulated profile, a release needs every clause named
 

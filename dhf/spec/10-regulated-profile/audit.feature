@@ -6,7 +6,7 @@
 # traceability, and the evidence, with a manifest that pins it all. Every file
 # is generated from the record; none is edited by hand.
 #
-# "A regulated project" is as in dhf/spec/compliance/gap.feature: :regulated
+# "A regulated project" is as in dhf/spec/10-regulated-profile/gap.feature: :regulated
 # with the clause list dhf/clauses/std.txt and the documents directory
 # dhf/documents. OUT and OUT2 are directories the scenario names.
 
@@ -17,7 +17,7 @@ Feature: Audit copy
   # An audit copy of a record that is not releasable shows an auditor
   # something nobody may ship. The release check, gaps included, is the gate
   # before the audit copy, as the oracle is before fence
-  # (dhf/spec/kernel/command.feature, "A gate stops the task"). The audit copy
+  # (dhf/spec/01-start-a-project/command.feature, "A gate stops the task"). The audit copy
   # reads the scenarios (SpecParsed), their statuses (VerificationDerived) and
   # the clauses (ClausesIndexed, within its own context) from the bus.
   Rule: Only a releasable record has an audit copy

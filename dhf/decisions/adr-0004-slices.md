@@ -1,8 +1,9 @@
 # ADR 0004: The spec is grouped by slice, and a slice is rebuilt whole
 
 > Status: Accepted, 2026-10-28, by the spec owner. Carried into the spec by
-> spec-30 (the slices layout); rdm-spec's own spec moves onto it in spec-31,
-> once a build that reads slices is installed.
+> spec-30 (the slices layout); rdm-spec's own spec moved into slices in
+> spec-31, a component's file whole, and splits by rule once a build that
+> reads slices is installed.
 
 ## Context
 
@@ -37,37 +38,43 @@ builds the slice again from the docs alone.
 - **The context layout stays** for any project that declares no
   `:spec-layout`, the wallet among them.
 
-## The slices of rdm-spec's own spec (spec-31)
+## The slices of rdm-spec's own spec
 
-Each slice reaches the components named; the rules move from the feature files
-named, unchanged and keeping their ids.
+Moved first, in spec-31, by the layout the installed release already reads:
+each component's feature file whole into one slice, the model's spec paths
+following it, and a plan beside each slice's files.
 
-| Slice | Rules from |
+| Slice | Components |
 |---|---|
-| `01-start-a-project` | project/init, project/adopt, project/hooks; kernel/command "Everything runs through one command", "Every task reports the same way" |
-| `02-write-the-spec` | spec/parser "read at a revision", "declared subset"; spec/stamper; spec/check |
-| `03-ground-the-spec` | knowledge/sources, knowledge/wiki |
-| `04-model-the-architecture` | architecture/model, architecture/lint, architecture/views |
-| `05-verify-by-results` | kernel/runner; verification/results, status, trace; verification/release "every scenario verified" |
-| `06-regenerate` | regeneration/cut, scopes, fence; verification/verify but its :plugin check |
-| `07-measure` | measurement/checklist but its regulated rule; measurement/scorer, scoreboard; agency/observe |
-| `08-plugins` | kernel/plugins, kernel/bus, measurement/oracle; kernel/command "A gate stops the task"; verify's :plugin check |
-| `09-publish` | publishing/site |
-| `10-regulated-profile` | compliance/gap, compliance/audit; checklist's and release's regulated rules |
-| `11-project-in-a-folder` | kernel/command "A project may be one folder"; verify's spec-0370 |
-| `12-several-specs` | spec/parser "one spec, or several" |
+| `01-start-a-project` | init, adopt, hooks, command |
+| `02-write-the-spec` | parser, stamper, check |
+| `03-ground-the-spec` | sources, wiki |
+| `04-model-the-architecture` | model, lint, views |
+| `05-verify-by-results` | runner, results, status, trace, release |
+| `06-regenerate` | cut, scopes, fence, verify |
+| `07-measure` | checklist, scorer, scoreboard, observe |
+| `08-plugins` | plugins, bus, oracle |
+| `09-publish` | site |
+| `10-regulated-profile` | gap, audit |
 
-A slice reaches exactly the components it holds feature files for, never one
-its plan only names. Where a rule written in one component reaches others
-(spec-29's several spec folders reach stamper, check, checklist, verify,
-status, trace and release from one parser rule), spec-31 gives the slice a
-scenario for each of them, in a feature file named for it, so the slice's
-scope is read from the spec and never widened by hand.
+Once a build that reads `:spec-layout :slices` is installed, the rules that
+belong to another slice move there, keeping their ids: kernel/command's
+"A gate stops the task" and verify's :plugin check to `08-plugins`; the
+checklist's and the release's regulated rules to `10-regulated-profile`;
+command's "A project may be one folder" and verify's spec-0370 to
+`11-project-in-a-folder`; parser's "one spec, or several" to
+`12-several-specs`. A slice reaches exactly the components it holds feature
+files for, never one its plan only names: where a rule written in one
+component reaches others (spec-29's several spec folders reach stamper,
+check, checklist, verify, status, trace and release from one parser rule),
+the slice gets a scenario for each of them, in a feature file named for it,
+so its scope is read from the spec and never widened by hand.
 
 ## Consequences
 
 - A slice scope rebuilds more than a component scope did: `06-regenerate`
   alone reaches about a quarter of the code. That is the point: the slice is
   what a change means. The whole-project cycle every fifth cycle stays.
-- The move (spec-31) is one change of paths and of the model's spec paths,
-  checked by a release that reads slices. Its cycle is whole-project.
+- The move (spec-31) is one change of paths and of the model's spec paths;
+  the scopes it lists are every component, so the cycle after it is
+  whole-project.

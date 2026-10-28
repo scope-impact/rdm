@@ -19,7 +19,7 @@ spec should rest on nothing.
   follows and why.
 - **No page names an implementation**: no language, framework, tool or
   storage. The configured stack words are refused
-  (`dhf/spec/knowledge/wiki.feature`).
+  (`dhf/spec/03-ground-the-spec/wiki.feature`).
 - **Every page is listed below**, and nothing is listed that is not a page.
 
 ## Pages

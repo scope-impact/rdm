@@ -13,7 +13,7 @@
 # (spec owner, spec-23). The scenarios that described the oracle's own
 # workings (spec-0228 to spec-0231, spec-0276, spec-0277, spec-0280,
 # spec-0325 to spec-0328) are removed with it. Since spec-25 the oracle is a
-# plugin answering :Gate (dhf/spec/kernel/plugins.feature; ADR 0003), the one
+# plugin answering :Gate (dhf/spec/08-plugins/plugins.feature; ADR 0003), the one
 # named "oracle"; this component is the oracle task, its shorthand.
 
 @UN-008
@@ -53,8 +53,8 @@ Feature: Oracle
   # "What makes the checks run").
   # The oracle is a Gate plugin: the command asks every plugin answering
   # :Gate before fence and verify and stops the task while one fails, so
-  # neither fence nor verify knows the oracle (dhf/spec/kernel/plugins.feature;
-  # dhf/spec/kernel/command.feature, "A gate stops the task").
+  # neither fence nor verify knows the oracle (dhf/spec/08-plugins/plugins.feature;
+  # dhf/spec/01-start-a-project/command.feature, "A gate stops the task").
   Rule: Nothing is fenced or verified while the oracle is red
 
     @spec-0232 @e2e

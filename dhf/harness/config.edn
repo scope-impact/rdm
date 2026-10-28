@@ -5,7 +5,7 @@
 ;; dhf/decisions/adr-0002-spec-first-regeneration.md. Everything here is
 ;; committed, so nothing machine-local belongs here: source checkouts, for one,
 ;; are given on the command line (rdm-spec check --sources DIR).
-{;; Stamped scenario ids are @<id-prefix>-NNNN (dhf/spec/spec/stamper.feature).
+{;; Stamped scenario ids are @<id-prefix>-NNNN (dhf/spec/02-write-the-spec/stamper.feature).
  :id-prefix "spec"
 
  ;; Where the product spec, the id ledger and the C4 model live.
@@ -14,30 +14,30 @@
  :model "dhf/spec/model.edn"
  :events "dhf/spec/events.edn"
  :needs "dhf/spec/needs.edn"
- ;; Generated views (dhf/spec/architecture/views.feature).
+ ;; Generated views (dhf/spec/04-model-the-architecture/views.feature).
  :views-dir "dhf/views"
 
  ;; The raw sources every need cites (dhf/raw/README.md,
- ;; dhf/spec/knowledge/sources.feature).
+ ;; dhf/spec/03-ground-the-spec/sources.feature).
  :raw-dir "dhf/raw"
 
  ;; The domain wiki, and the words no page of it may use
- ;; (dhf/spec/knowledge/wiki.feature).
+ ;; (dhf/spec/03-ground-the-spec/wiki.feature).
  :wiki-dir "dhf/wiki"
  ;; The words neither the wiki nor the spec may use: the stack, which lives in
- ;; dhf/harness/stack.md (dhf/spec/spec/check.feature).
+ ;; dhf/harness/stack.md (dhf/spec/02-write-the-spec/check.feature).
  :stack-words ["Babashka" "Clojure" "Python" "Mermaid" "mmdr" "MkDocs" "GitHub Actions" "pytest"
                 "Pandoc" "Typst" "pdftotext" "ORAS"]
 
  ;; Where a project's step definitions for "rdm-spec run" live
- ;; (dhf/spec/kernel/runner.feature). rdm-spec's own are the builder's, under
+ ;; (dhf/spec/05-verify-by-results/runner.feature). rdm-spec's own are the builder's, under
  ;; test/: implementation, rebuilt with the code, never scored.
  :steps-dir "test/steps"
 
  ;; The implementation: every path a regeneration rebuilds, and where each
  ;; context's and component's code and unit tests live, so one context or one
  ;; component can be rebuilt while the rest stands
- ;; (dhf/spec/regeneration/fence.feature). test.clj runs the tests.
+ ;; (dhf/spec/06-regenerate/fence.feature). test.clj runs the tests.
  :implementation ["src" "test" "test.clj" "bb.edn"]
  ;; {component} is written with - as _, as Clojure file names are. Each entry
  ;; is a path prefix: a scope removes every implementation file starting with
@@ -54,9 +54,9 @@
  ;; path directly under dhf/, is denied or kept here, or `rdm-spec check`
  ;; fails. The instrument's goldens are not in the repository at all: see
  ;; :plugins.
- ;; The project's plugins (dhf/spec/kernel/plugins.feature; ADR 0003), in the
+ ;; The project's plugins (dhf/spec/08-plugins/plugins.feature; ADR 0003), in the
  ;; order they run. The oracle is the plugin named "oracle", answering :Gate
- ;; (dhf/spec/measurement/oracle.feature; glossary "Oracle (instrument)"): held
+ ;; (dhf/spec/08-plugins/oracle.feature; glossary "Oracle (instrument)"): held
  ;; still, outside the implementation, never regenerated. dhf/harness/oracle/
  ;; holds the tool, its README and pin.edn, the artifact of its goldens.
  :plugins [{:name "oracle" :answers :Gate :command ["bb" "dhf/harness/oracle/oracle.clj"]}]
@@ -71,7 +71,7 @@
                      "dhf/decisions" "dhf/harness" "dhf/raw" "dhf/spec" "dhf/storm"
                      "dhf/views" "dhf/wiki" "plugins"]}
 
- ;; Observe (dhf/spec/agency/observe.feature): the directories whose entries are
+ ;; Observe (dhf/spec/07-measure/observe.feature): the directories whose entries are
  ;; compared before and after a run ("~" is the home directory), and the
  ;; temporary directory whose entries are counted.
  :agency {:watch ["/" "~"] :tmp "/tmp"}
@@ -80,7 +80,7 @@
  ;; (dhf/spec/ratification/ratify.feature): the builder's own tests, written
  ;; from the spec, writing Allure results labelled with scenario ids into the
  ;; directory given as RESULTS_DIR. They gate; they are never the score.
- ;; What verify proves (dhf/spec/verification/verify.feature; glossary,
+ ;; What verify proves (dhf/spec/06-regenerate/verify.feature; glossary,
  ;; "Check"), in order, the first failure stopping it. rdm-spec is a command,
  ;; so it has no :serves check: its tests, then the command answering.
  :verify [{:kind :tests :command ["bb" "test.clj"]}
@@ -94,11 +94,11 @@
  ;; (dhf/spec/measurement/).
  :cycles-dir "dhf/cycles"
 
- ;; The site (dhf/spec/publishing/site.feature): MkDocs builds it, strictly, so
+ ;; The site (dhf/spec/09-publish/site.feature): MkDocs builds it, strictly, so
  ;; a broken link fails the build.
  :site {:dir "site" :source "site-src" :builder ["mkdocs" "build" "--strict" "-f" "site-src/mkdocs.yml"]}
 
- ;; C4 lint (dhf/spec/architecture/lint.feature).
+ ;; C4 lint (dhf/spec/04-model-the-architecture/lint.feature).
  :c4 {:view-element-limit 20
       ;; People and systems only: mmdr overlaps a longer description with the
       ;; name (@spec-0009).

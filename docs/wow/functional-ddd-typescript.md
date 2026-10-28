@@ -58,7 +58,7 @@ error: the deriver returns it, and the interface turns it into a finding or a
 
 - **The kernel's bus publishes and subscribes in process,** within one run of
   the command, synchronously and in subscription order, as
-  `dhf/spec/kernel/bus.feature` states. A context reacts to another only
+  `dhf/spec/08-plugins/bus.feature` states. A context reacts to another only
   through it.
 - **A policy is "whenever this event, then this command",** declared in its
   component's `core/policies.ts` and wired once at start.

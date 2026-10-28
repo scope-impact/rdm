@@ -11,7 +11,7 @@ enforces them.
 ## Enforced by the product
 
 **INV-1: A scenario is one requirement, with one id and one level.**
-*Enforced by:* `rdm-spec check` (spec/check.feature). *Without it:* a
+*Enforced by:* `rdm-spec check` (02-write-the-spec/check.feature). *Without it:* a
 checklist item is ambiguous, and a score counts what nobody can name.
 
 **INV-2: The spec never names its stack.** *Enforced by:* `rdm-spec check`
@@ -19,7 +19,7 @@ against `:stack-words`. *Without it:* the spec stops being regenerable in
 another stack (cycle 20 tests that).
 
 **INV-3: A build is done only when checks the builder does not control
-pass.** *Enforced by:* `rdm-spec verify` (verification/verify.feature):
+pass.** *Enforced by:* `rdm-spec verify` (06-regenerate/verify.feature):
 `:tests`, then `:serves` or `:runs`, the first failure stopping it. *Without
 it:* "done" is the builder's claim.
 
@@ -40,7 +40,7 @@ only when named.** *Enforced by:* `oracle.clj record` refuses an unnamed
 change. *Without it:* re-recording to get a green destroys the evidence.
 
 **INV-15: The builder never grades its own build, nor reads its own score.**
-*Enforced by:* `rdm-spec score` (measurement/scorer.feature, spec-0142 to
+*Enforced by:* `rdm-spec score` (07-measure/scorer.feature, spec-0142 to
 spec-0144): a cycle whose builder is also its grader or spec owner, or that
 leaves a role unnamed, is refused, and nothing is written. *Without it:* the
 one who built the thing judges it, and the score measures the builder's

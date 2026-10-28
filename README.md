@@ -63,7 +63,7 @@ To build the jar the same way:
 Then in your project: `rdm-spec init PATH` for a new one, or `rdm-spec adopt`
 in an existing repository. A project may be one folder of a larger
 repository (run rdm-spec in that folder), and may keep several specs, one
-folder each, under the configuration's `:specs` (`dhf/spec/spec/parser.feature`).
+folder each, under the configuration's `:specs` (`dhf/spec/02-write-the-spec/parser.feature`).
 A project's own judges, its oracle and its grading among them, are plugins
 (`dhf/decisions/adr-0003-core-and-plugins.md`; `rdm-spec plugin add NAME`).
 

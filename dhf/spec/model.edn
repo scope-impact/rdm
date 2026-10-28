@@ -20,9 +20,10 @@
 ;;   :containers     [{:id :name :description :technology :kind :runs | :stores
 ;;                     :contexts [{:id :name :description
 ;;                                 :components [{:id :name :description
-;;                                               :spec "<context>/<component>"}]}]}]
-;;                   ; :contexts only on a :runs container; dhf/spec/<spec>.feature
-;;   :kernel         [{:id :name :description :spec "kernel/<component>"}]
+;;                                               :spec "<slice>/<component>"}]}]}]
+;;                   ; :contexts only on a :runs container; dhf/spec/<spec>.feature, in the
+;;                   ; slice the component's scenarios sit in (ADR 0004)
+;;   :kernel         [{:id :name :description :spec "<slice>/<component>"}]
 ;;                   ; shared code of the rdm-spec container, in no context: the command,
 ;;                   ; the bus and the runner
 ;;   :relationships  [{:from :to :description [:event]}]
@@ -57,106 +58,106 @@
    [{:id :project :name "project"
       :description "Sets a repository up in this structure and installs the hook and the cut workflow"
       :components
-      [{:id :project/init :name "Init" :spec "project/init"
+      [{:id :project/init :name "Init" :spec "01-start-a-project/init"
         :description "Writes a new project's skeleton into a path that does not exist"}
-       {:id :project/adopt :name "Adopt" :spec "project/adopt"
+       {:id :project/adopt :name "Adopt" :spec "01-start-a-project/adopt"
         :description "Adds the skeleton to an existing repository, never overwriting a file"}
-       {:id :project/hooks :name "Hooks" :spec "project/hooks"
+       {:id :project/hooks :name "Hooks" :spec "01-start-a-project/hooks"
         :description "Installs the pre-commit hook that runs rdm-spec check"}]}
 
      {:id :spec :name "spec"
       :description "Reads the spec, stamps scenario ids and checks the spec's rules"
       :components
-      [{:id :spec/parser :name "Parser" :spec "spec/parser"
+      [{:id :spec/parser :name "Parser" :spec "02-write-the-spec/parser"
         :description "Reads the declared Gherkin subset and refuses anything outside it"}
-       {:id :spec/stamper :name "Stamper" :spec "spec/stamper"
+       {:id :spec/stamper :name "Stamper" :spec "02-write-the-spec/stamper"
         :description "Hands out scenario ids from the ledger, never twice"}
-       {:id :spec/check :name "Spec check" :spec "spec/check"
+       {:id :spec/check :name "Spec check" :spec "02-write-the-spec/check"
         :description "Ids, levels, tags, needs, citations, planned work and no stack words"}]}
 
      {:id :knowledge :name "knowledge"
       :description "Keeps the raw sources and the domain wiki, and checks every citation"
       :components
-      [{:id :knowledge/sources :name "Sources" :spec "knowledge/sources"
+      [{:id :knowledge/sources :name "Sources" :spec "03-ground-the-spec/sources"
         :description "Reads the provenance records and resolves citations against their pins"}
-       {:id :knowledge/wiki :name "Wiki" :spec "knowledge/wiki"
+       {:id :knowledge/wiki :name "Wiki" :spec "03-ground-the-spec/wiki"
         :description "The domain wiki: every page indexed, every claim footnoted to a source"}]}
 
      {:id :architecture :name "architecture"
       :description "Reads the C4 model, lints it, and generates and checks its views"
       :components
-      [{:id :architecture/model :name "Model" :spec "architecture/model"
+      [{:id :architecture/model :name "Model" :spec "04-model-the-architecture/model"
         :description "Reads model.edn and the event catalogue"}
-       {:id :architecture/lint :name "Lint" :spec "architecture/lint"
+       {:id :architecture/lint :name "Lint" :spec "04-model-the-architecture/lint"
         :description "The C4 skill's checklist and the bounded-context rules"}
-       {:id :architecture/views :name "Views" :spec "architecture/views"
+       {:id :architecture/views :name "Views" :spec "04-model-the-architecture/views"
         :description "Generates each view as diagram source and renders it"}]}
 
      {:id :verification :name "verification"
       :description "Derives each scenario's status from Allure results, traces it, and verifies a build"
       :components
-      [{:id :verification/results :name "Results reader" :spec "verification/results"
+      [{:id :verification/results :name "Results reader" :spec "05-verify-by-results/results"
         :description "Reads a run's Allure results, naming what it cannot read"}
-       {:id :verification/status :name "Status" :spec "verification/status"
+       {:id :verification/status :name "Status" :spec "05-verify-by-results/status"
         :description "Verified, failed, unverified or planned, for every stamped scenario"}
-       {:id :verification/trace :name "Trace" :spec "verification/trace"
+       {:id :verification/trace :name "Trace" :spec "05-verify-by-results/trace"
         :description "A need or scenario with everything linked to it"}
-       {:id :verification/release :name "Release check" :spec "verification/release"
+       {:id :verification/release :name "Release check" :spec "05-verify-by-results/release"
         :description "Refuses a release with an unverified, failed or planned scenario"}
-       {:id :verification/verify :name "Verify" :spec "verification/verify"
+       {:id :verification/verify :name "Verify" :spec "06-regenerate/verify"
         :description "Runs the project's checks on a room's code in a checkout of the cut"}]}
 
      {:id :regeneration :name "regeneration"
       :description "Cuts merged spec changes and builds clean rooms from them, for the project, one context or one component"
       :components
-      [{:id :regeneration/cut :name "Cut" :spec "regeneration/cut"
+      [{:id :regeneration/cut :name "Cut" :spec "06-regenerate/cut"
         :description "Tags HEAD spec-N when it is origin/HEAD, and pushes the tag"}
-       {:id :regeneration/fence :name "Fence" :spec "regeneration/fence"
+       {:id :regeneration/fence :name "Fence" :spec "06-regenerate/fence"
         :description "Builds a clean room from a cut: the allowed paths and the code its scope keeps"}
-       {:id :regeneration/scopes :name "Scopes" :spec "regeneration/scopes"
+       {:id :regeneration/scopes :name "Scopes" :spec "06-regenerate/scopes"
         :description "Lists the scopes a spec change touched between two cuts"}]}
 
      {:id :measurement :name "measurement"
       :description "Derives the checklist, files a grader's verdicts and compares cycles, never for the builder"
       :components
-      [{:id :measurement/checklist :name "Checklist" :spec "measurement/checklist"
+      [{:id :measurement/checklist :name "Checklist" :spec "07-measure/checklist"
         :description "One item per stamped scenario at the cut, into checklist.json"}
-       {:id :measurement/scorer :name "Scorer" :spec "measurement/scorer"
+       {:id :measurement/scorer :name "Scorer" :spec "07-measure/scorer"
         :description "Files a grader's verdicts, and nothing when nothing was graded"}
-       {:id :measurement/scoreboard :name "Scoreboard" :spec "measurement/scoreboard"
+       {:id :measurement/scoreboard :name "Scoreboard" :spec "07-measure/scoreboard"
         :description "Better and worse over shared items, a moved denominator said aloud"}
-       {:id :measurement/oracle :name "Oracle" :spec "measurement/oracle"
+       {:id :measurement/oracle :name "Oracle" :spec "08-plugins/oracle"
         :description "Runs the oracle the project keeps, as a gate"}]}
 
      {:id :publishing :name "publishing"
       :description "Publishes the spec, its views and its status as one site"
       :components
-      [{:id :publishing/site :name "Site" :spec "publishing/site"
+      [{:id :publishing/site :name "Site" :spec "09-publish/site"
         :description "One page per component and context, and the site builder's configuration"}]}
      {:id :compliance :name "compliance"
       :description "The regulated profile: clause lists, controlled documents and the audit copy"
       :components
-      [{:id :compliance/gap :name "Gap analysis" :spec "compliance/gap"
+      [{:id :compliance/gap :name "Gap analysis" :spec "10-regulated-profile/gap"
         :description "Every declared clause named by an audit tag in a controlled document"}
-       {:id :compliance/audit :name "Audit copy" :spec "compliance/audit"
+       {:id :compliance/audit :name "Audit copy" :spec "10-regulated-profile/audit"
         :description "The auditor's and engineer's copies, with their evidence"}]}
      {:id :agency :name "agency"
       :description "Each run's capability and defence, observed from outside"
       :components
-      [{:id :agency/observe :name "Observe" :spec "agency/observe"
+      [{:id :agency/observe :name "Observe" :spec "07-measure/observe"
         :description "A run's time, cost and what it touched outside its room"}]}]}
 
   {:id :repository :name "Repository" :kind :stores :technology "git"
    :description "The spec, the model, the ledger, cuts, cycles and results"}]
 
  :kernel
- [{:id :kernel/command :name "Command" :spec "kernel/command"
+ [{:id :kernel/command :name "Command" :spec "01-start-a-project/command"
    :description "The rdm-spec command: dispatches each task to the context that owns it"}
-  {:id :kernel/bus :name "Event bus" :spec "kernel/bus"
+  {:id :kernel/bus :name "Event bus" :spec "08-plugins/bus"
    :description "Delivers each catalogued event to its subscribers, within one run"}
-  {:id :kernel/runner :name "Gherkin runner" :spec "kernel/runner"
+  {:id :kernel/runner :name "Gherkin runner" :spec "05-verify-by-results/runner"
    :description "Runs the scenarios' steps and writes Allure results"}
-  {:id :kernel/plugins :name "Plugins" :spec "kernel/plugins"
+  {:id :kernel/plugins :name "Plugins" :spec "08-plugins/plugins"
    :description "Runs the project's plugins: subscribers to the core's events, answerers of its Gate and Check requests"}]
 
  :relationships

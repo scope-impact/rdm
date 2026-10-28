@@ -64,7 +64,7 @@ Feature: Plugins
       When "rdm-spec check" is run
       Then the plugin did not run
 
-  # A plugin reports as a task does (dhf/spec/kernel/command.feature,
+  # A plugin reports as a task does (dhf/spec/01-start-a-project/command.feature,
   # spec-0178): its findings one per line on its error stream, as
   # FILE:LINE: RULE: what; its standard output is relayed as notes.
   Rule: A plugin answers through one interface
@@ -98,7 +98,7 @@ Feature: Plugins
       Then it exits 2 and names the plugin and its command
 
   # The core asks; the plugin answers. A Gate runs before fence and verify, in
-  # place of the oracle that was built in (dhf/spec/measurement/oracle.feature).
+  # place of the oracle that was built in (dhf/spec/08-plugins/oracle.feature).
   Rule: An answerer is asked at its request's place
 
     @spec-0357 @e2e

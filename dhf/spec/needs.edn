@@ -1,6 +1,6 @@
 ;; User needs: what a user requires, independent of any solution. Every
 ;; scenario traces to at least one, by a @UN-nnn tag on itself, its rule or its
-;; feature (dhf/spec/spec/check.feature, "Every scenario traces to a user need").
+;; feature (dhf/spec/02-write-the-spec/check.feature, "Every scenario traces to a user need").
 ;;
 ;; Each need cites the raw sources it rests on (dhf/raw/README.md), as
 ;; <source>:<path>@<commit>.

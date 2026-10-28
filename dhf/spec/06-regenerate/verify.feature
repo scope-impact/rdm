@@ -247,7 +247,7 @@ Feature: Verify
         | an answer within 10 seconds        | is still running after 10 seconds  | the budget of 10 seconds            |
 
   # A project's own judge joins verify as a plugin answering :Check
-  # (dhf/spec/kernel/plugins.feature; ADR 0003): verify asks it at its place in
+  # (dhf/spec/08-plugins/plugins.feature; ADR 0003): verify asks it at its place in
   # :verify, in the checkout, and it answers as every plugin does.
   Rule: A :plugin check asks the project's own judge
 

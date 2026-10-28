@@ -13,7 +13,7 @@ steps, never builds or grades, and reports time and tokens after every run.
   Löyly rebuilds the whole application every cycle. Scoping saves about two
   thirds of a cycle's cost, so it stays, and the whole-project cycle is the
   check on it (spec owner, spec-22).
-- **Every run is observed** (dhf/spec/agency/observe.feature): its capability
+- **Every run is observed** (dhf/spec/07-measure/observe.feature): its capability
   is proven by its result, and its defence is recorded beside it.
 - **One grader at a time per item;** several graders may split a large
   checklist, each in its own room, since nothing of theirs is merged but
