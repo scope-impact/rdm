@@ -1,0 +1,38 @@
+// Slice 04, model the architecture
+// (dhf/spec/04-model-the-architecture/plan.md), composed from the components
+// whose home is this slice, each built to its own component exporting its
+// interface (wasm/components/<context>-<component>/, dhf/harness/stack.md).
+// Targets the slice's world, model-the-architecture (slice-04.wit).
+//
+// Each component's imports are wired to another of the slice's components
+// (the model's relationships: lint checks the model, views generates views
+// from it, both with architecture/model and its types). Every other import is
+// left to the composition: WASI's and rdm:host/process (the views' renderer),
+// which the host satisfies. The slice exports its tasks (views) and check's
+// two stages, which rdm-spec.wac wires into slice 02's imports by name.
+//
+// Packages resolve from the build's dependency directory, as slice-01.wac
+// says: rdm:architecture-model is wasm/build/deps/rdm/architecture-model.wasm,
+// and rdm:spec@0.1.0 is dhf/wit encoded. Then
+// "wac compose dhf/wit/slice-04.wac --deps-dir wasm/build/deps
+//  -o wasm/build/deps/rdm/model-the-architecture.wasm".
+package rdm:model-the-architecture targets rdm:spec/model-the-architecture@0.1.0;
+
+let model = new rdm:architecture-model { ... };
+
+let lint = new rdm:architecture-lint {
+    "rdm:spec/architecture-model@0.1.0": model["rdm:spec/architecture-model@0.1.0"],
+    ...
+};
+
+let views = new rdm:architecture-views {
+    "rdm:spec/architecture-model@0.1.0": model["rdm:spec/architecture-model@0.1.0"],
+    ...
+};
+
+export model["rdm:spec/architecture-model@0.1.0"];
+export lint["rdm:spec/architecture-lint@0.1.0"];
+export views["rdm:spec/architecture-views@0.1.0"];
+export views["rdm:spec/tasks@0.1.0"];
+export lint["model-lint-stage"];
+export views["views-stage"];

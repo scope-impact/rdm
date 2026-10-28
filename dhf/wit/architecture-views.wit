@@ -1,0 +1,79 @@
+// Component Views of the architecture context (dhf/spec/model.edn,
+// :architecture/views; dhf/spec/04-model-the-architecture/views.feature):
+// generates every view of the one model as diagram source and renders it
+// beside it, each output's first line recording the model's hash; and finds
+// the views older than the model. It generates views from architecture/model
+// (the model's relationship "Generates views from") and writes them to the
+// repository. It runs the task "rdm-spec views" (the slice's tasks, which
+// this component exports) and is check's views stage (spec-check.wit,
+// check-stages). Publish's gate (slice 09) imports freshness.
+//
+// The renderer is a program the stack names (dhf/harness/stack.md, "Diagram
+// source and render"), run through the host (rdm:host/process): the source on
+// its standard input, the render read from its standard output
+// (dhf/spec/04-model-the-architecture/decisions.md, ED-03).
+
+interface architecture-views {
+    use architecture-model.{finding, spec, model};
+
+    /// What the task views reports, as tasks' outcome (tasks.wit): its exit
+    /// code, its standard output (the result as EDN) and its error lines. In
+    /// this interface's own types (slice 01's ED-14).
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// What views wrote for one spec: every file, relative to the project's
+    /// root, in the model's order of views, each view's source then its
+    /// render; and the findings of a model that cannot be read, for which
+    /// nothing is written.
+    record generated {
+        wrote: list<string>,
+        findings: list<finding>,
+    }
+
+    /// The diagram source of the model's view of a key, its first line a
+    /// comment holding "model-sha256: " and the model's hash (spec-0017),
+    /// holding what the view's level holds (spec-0198); none when the model
+    /// has no such view.
+    source: func(model: model, key: string) -> option<string>;
+
+    /// Writes and renders every view of the spec's model to its views
+    /// folder (spec-0017). The error is why it cannot run (the renderer not
+    /// installed, or failing on a view), reported as cannot-run, exit 2.
+    generate: func(spec: spec) -> result<generated, string>;
+
+    /// The views' freshness: one finding, view-stale, per output of a view
+    /// that does not record the model's current hash, or does not exist
+    /// (spec-0018, spec-0077, spec-0078). A model that cannot be read gives
+    /// none here: the model-lint stage reports it.
+    freshness: func(spec: spec) -> list<finding>;
+
+    /// Runs the task "rdm-spec views" with its arguments and the project's
+    /// folder, as the command hands them (tasks.wit, request), every spec
+    /// the configuration declares, and reports it.
+    run: func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The component architecture/views builds to. It exports the slice's tasks
+/// (views, the slice's one task; dhf/spec/04-model-the-architecture/
+/// decisions.md, ED-05) and check's views stage, the stage interface
+/// spec-check.wit's check-stages imports, written out the same: for every
+/// spec, freshness's findings; reported and published, none. It runs the
+/// renderer through the host. Its WASI imports are those every component
+/// carries, in the version slice 01's worlds name (ED-08).
+world architecture-views-component {
+    import rdm:host/process@0.1.0;
+    import architecture-model;
+    export architecture-views;
+    export tasks;
+    export views-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}

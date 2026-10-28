@@ -1,0 +1,61 @@
+// Component Lint of the architecture context (dhf/spec/model.edn,
+// :architecture/lint; dhf/spec/04-model-the-architecture/lint.feature): holds
+// the model to the C4 skill's checklist and to the bounded-context rules. It
+// checks the model with architecture/model (the model's relationship
+// "Checks"), and is check's model-lint stage (spec-check.wit, check-stages),
+// which this component exports.
+
+interface architecture-lint {
+    use architecture-model.{finding, spec};
+
+    /// The configuration's :c4: the most elements a view may show before it
+    /// warns (spec-0008), the longest description a person or a system may
+    /// carry (spec-0009), and how bounded contexts may relate,
+    /// :contexts-relate-by, each as written (":events", ":calls"; spec-0339).
+    /// A key the configuration leaves out takes the default the
+    /// configuration's comments name: 20 elements, 45 characters, events only.
+    record c4 {
+        view-element-limit: u32,
+        description-max-chars: u32,
+        contexts-relate-by: list<string>,
+    }
+
+    /// What the lint found in one spec: its findings, the warnings among
+    /// them (warning true), the reading's findings first.
+    record linted {
+        findings: list<finding>,
+    }
+
+    /// The checklist items no machine can judge, in order (spec-0010): what
+    /// check reports as {:lint {:for-a-person [...]}}.
+    for-a-person: func() -> list<string>;
+
+    /// Reads the spec's model with architecture/model and lints it: the C4
+    /// rules (c4-scope, c4-element-described, c4-arrow-labelled,
+    /// c4-context-actors, c4-container-runs, c4-events-named, c4-view-size
+    /// a warning, c4-description-length), the bounded-context rules
+    /// (a-component-view, a-contract-only unless :calls is allowed), and the
+    /// model's ownership of the spec (a-scenario-owner under the contexts
+    /// layout; the slice findings under the slices layout). A model that
+    /// cannot be read is linted no further: its reading's findings alone.
+    lint: func(spec: spec, c4: c4) -> linted;
+}
+
+/// The component architecture/lint builds to. It exports check's model-lint
+/// stage, the stage interface spec-check.wit's check-stages imports, written
+/// out the same (WIT cannot name that inline interface): for every spec the
+/// configuration declares, the lint's findings; reported, {:lint
+/// {:for-a-person [...] :findings N :warnings N}}; published, none. Its WASI
+/// imports are those every component carries, in the version slice 01's
+/// worlds name (dhf/spec/04-model-the-architecture/decisions.md, ED-08).
+world architecture-lint-component {
+    import architecture-model;
+    export architecture-lint;
+    export model-lint-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}

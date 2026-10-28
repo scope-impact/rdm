@@ -1,0 +1,204 @@
+// Component Model of the architecture context (dhf/spec/model.edn,
+// :architecture/model; dhf/spec/04-model-the-architecture/model.feature,
+// dhf/spec/13-slice-development/model.feature): reads model.edn and the event
+// catalogue, whole or not at all; finds each component's feature files from
+// the model, never guessed; and gives the model's hash, so views go stale on
+// its content, never its formatting. The one source the lint and the views
+// read (the model's relationships: lint "Checks", views "Generates views
+// from").
+//
+// Its types are the slice's own: architecture/lint and architecture/views
+// import them from this component (slice-04.wac), as the spec context's
+// components import events from the parser. No other slice's interface uses
+// them (dhf/spec/01-start-a-project/decisions.md, ED-14); a stage of check is
+// given its events as EDN (spec-check.wit, check-stages).
+
+interface architecture-model {
+    /// One line of the error stream, as every task reports it
+    /// (dhf/spec/README.md, "How every task reports"): its file, its line
+    /// where one applies, its rule, what is wrong, and warning true for a
+    /// warning.
+    record finding {
+        file: option<string>,
+        line: option<u32>,
+        rule: string,
+        message: string,
+        warning: bool,
+    }
+
+    /// How a spec's feature files are grouped: by context, each component's
+    /// file at its spec path (spec-0076, spec-0394), or by slice, then by
+    /// component, each found by its name (spec-0392; the configuration's
+    /// :spec-layout :slices).
+    enum layout {
+        contexts,
+        slices,
+    }
+
+    /// One spec whose model is read: an entry of the configuration's :specs,
+    /// or, with none, the one spec of :spec-dir, its name none (spec-0385).
+    /// model and events are its model.edn and its event catalogue, views-dir
+    /// where its views are written; every path relative to the project's
+    /// root.
+    record spec {
+        name: option<string>,
+        dir: string,
+        model: string,
+        events: string,
+        views-dir: string,
+        layout: layout,
+    }
+
+    /// What an element of the model is (the model's shape, model.edn's
+    /// header comment).
+    enum element-kind {
+        system,
+        person,
+        external,
+        container,
+        context,
+        component,
+        kernel,
+    }
+
+    /// One element of the model. id is its id as the model writes it, printed
+    /// as EDN (":spec/parser"); container-kind a container's :kind as written
+    /// (":runs", ":stores", or what else it holds); spec a component's spec
+    /// path; actor a person's :actor; parent the id of the element it sits
+    /// in (a context's container, a component's context); line the line its
+    /// id is written on.
+    record element {
+        id: string,
+        kind: element-kind,
+        name: option<string>,
+        description: option<string>,
+        technology: option<string>,
+        container-kind: option<string>,
+        spec: option<string>,
+        actor: list<string>,
+        parent: option<string>,
+        line: u32,
+    }
+
+    /// One relationship: its ends' ids, its label, and the event it
+    /// publishes where it names one (its name, ":SpecParsed").
+    record relationship {
+        %from: string,
+        to: string,
+        description: option<string>,
+        event: option<string>,
+        line: u32,
+    }
+
+    /// One step of a dynamic view: [from to label].
+    record step {
+        %from: string,
+        to: string,
+        label: string,
+    }
+
+    /// One view: its key, its level as written (":context", ":container",
+    /// ":component", ":dynamic"), its description, the bounded context of a
+    /// component view, the steps of a dynamic view.
+    record view {
+        key: string,
+        level: string,
+        description: option<string>,
+        context: option<string>,
+        steps: list<step>,
+        line: u32,
+    }
+
+    /// The model read whole: its file, its hash (the glossary's "Model
+    /// hash": SHA-256, lowercase hex, of the model printed back with every
+    /// map's entries and every set's elements sorted), every element in the
+    /// model's order, every relationship and every view.
+    record model {
+        file: string,
+        hash: string,
+        elements: list<element>,
+        relationships: list<relationship>,
+        views: list<view>,
+    }
+
+    /// One event of the catalogue: its name, its one publisher, the keys it
+    /// carries.
+    record catalogue-event {
+        name: string,
+        published-by: option<string>,
+        carries: list<string>,
+    }
+
+    /// The event catalogue the configuration's :events names.
+    record catalogue {
+        file: string,
+        events: list<catalogue-event>,
+    }
+
+    /// What reading a spec's model found: the model, none when it cannot be
+    /// read as EDN (spec-0072, spec-0227, its file and line); the catalogue,
+    /// none when it cannot be read; and every finding of the reading: a key
+    /// the shape does not declare (spec-0073), an id used twice (spec-0074),
+    /// a relationship or a view naming no element (spec-0075). A missing or
+    /// unreadable model is a finding, exit 1 (dhf/spec/README.md).
+    record model-read {
+        model: option<model>,
+        catalogue: option<catalogue>,
+        findings: list<finding>,
+    }
+
+    /// What a view holds (spec-0198), by its level: the ids of the elements
+    /// it draws, the ids of those drawn as external (a component view's
+    /// elements outside its context's boundary), its boundary (a component
+    /// view's context), and its relationships (a dynamic view's steps, in
+    /// order).
+    record view-content {
+        elements: list<string>,
+        external: list<string>,
+        boundary: option<string>,
+        relationships: list<relationship>,
+    }
+
+    /// One feature file and the component that owns it.
+    record owned-file {
+        file: string,
+        component: string,
+    }
+
+    /// Which component owns each feature file of a spec, found from the
+    /// model (spec-0076, spec-0392, spec-0394): owned, every file a component
+    /// owns; unowned-files, the feature files no component owns;
+    /// unowned-components, the components that own no feature file; and,
+    /// under the slices layout, the findings of a slice the model cannot
+    /// read apart (spec-0393: slice-component-unknown, slice-missing,
+    /// component-name-shared, component-unspecified).
+    record ownership {
+        owned: list<owned-file>,
+        unowned-files: list<string>,
+        unowned-components: list<string>,
+        findings: list<finding>,
+    }
+
+    /// The specs whose models are read, from the project's configuration in
+    /// its folder (folder as the command hands it to a task, tasks.wit). The
+    /// error is why the configuration cannot be read; check has refused a
+    /// declaration of several specs before any stage runs (spec-0386).
+    specs: func(folder: option<string>) -> result<list<spec>, string>;
+
+    /// Reads a spec's model and its event catalogue, whole or not at all.
+    read: func(spec: spec) -> model-read;
+
+    /// What the view of a key holds (spec-0198), which the views draw and the
+    /// lint counts (c4-view-size); none when the model has no such view.
+    holds: func(model: model, key: string) -> option<view-content>;
+
+    /// Which component owns each feature file of the spec's folder.
+    owners: func(spec: spec, model: model) -> ownership;
+}
+
+/// The component architecture/model builds to. It reads files only. Its WASI
+/// imports are those every component carries, in the version slice 01's
+/// worlds name (dhf/spec/04-model-the-architecture/decisions.md, ED-08).
+world architecture-model-component {
+    export architecture-model;
+}

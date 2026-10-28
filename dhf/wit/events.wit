@@ -8,7 +8,10 @@
 // components (kernel/command, project/init, project/adopt, project/hooks)
 // publish no event and subscribe to none (dhf/spec/model.edn, :relationships).
 // Slice 02, write-the-spec, adds :SpecParsed and :SpecGated (below); slice
-// 03, ground-the-spec, adds :KnowledgeIndexed.
+// 03, ground-the-spec, adds :KnowledgeIndexed. Slice 04,
+// model-the-architecture, adds none: its components publish no event, and
+// architecture/lint, which the model has subscribe to :SpecParsed, is a stage
+// of check, given the run's events as EDN (spec-check.wit, check-stages).
 
 package rdm:spec@0.1.0;
 
