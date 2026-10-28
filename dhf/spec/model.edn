@@ -218,6 +218,7 @@
   {:from :project/hooks :to :kernel/command :description "Runs rdm-spec check through"}
   {:from :spec/stamper :to :spec/parser :description "Reads scenarios with"}
   {:from :spec/check :to :spec/parser :description "Reads scenarios with"}
+  {:from :kernel/runner :to :spec/parser :description "Reads scenarios with"}
   {:from :knowledge/wiki :to :knowledge/sources :description "Resolves footnotes with"}
   {:from :architecture/lint :to :architecture/model :description "Checks"}
   {:from :architecture/views :to :architecture/model :description "Generates views from"}
