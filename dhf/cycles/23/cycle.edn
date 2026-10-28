@@ -23,4 +23,5 @@
          {:component :verification/release}]
  :builder {:name "one builder subagent, one room" :actor :agent}
  :grader {:name "graders, each its own grading room, black box on the packaged jar" :actor :agent}
- :spec-owner {:name "Sathish Narayanan" :actor :human}}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}
+ :reviewed {:by "Sathish Narayanan" :accepted true :installed true :why "for halla-health: a project in a folder of its repository and several spec folders; 162 of 163, the one fail the grading room's; the oracle finds 0 differences; fence and check run in halla_health_wallet/ itself; released as rdm-spec.jar (sha256 605af831436d4bff1c5a4c787abf77c43eba885030940b9a9dad38c28cdbb4f1)"}}

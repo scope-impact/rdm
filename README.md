@@ -40,13 +40,39 @@ rdm-spec audit OUT             # under :regulated: the auditor's and engineer's 
 
 Run the implementation's own tests with `RESULTS_DIR="$(mktemp -d)" bb test.clj`.
 
+## Install
+
+rdm-spec needs [Babashka](https://babashka.org) (tested with 1.13.227) and git.
+
+From a release, take `rdm-spec.jar` and put a wrapper on your PATH:
+
+```bash
+mkdir -p ~/.local/share/rdm-spec ~/.local/bin
+cp rdm-spec.jar ~/.local/share/rdm-spec/
+printf '#!/bin/sh\nexec bb ~/.local/share/rdm-spec/rdm-spec.jar "$@"\n' > ~/.local/bin/rdm-spec
+chmod +x ~/.local/bin/rdm-spec
+rdm-spec help
+```
+
+From a checkout, without a jar:
+`exec bb -cp /path/to/rdm/src:/path/to/rdm/res -m rdm-spec.kernel.command "$@"`,
+with the plugin templates (`plugins/`) copied to `res/rdm-spec/plugins/`.
+To build the jar the same way:
+`bb --classpath src:res uberjar rdm-spec.jar -m rdm-spec.kernel.command`.
+
+Then in your project: `rdm-spec init PATH` for a new one, or `rdm-spec adopt`
+in an existing repository. A project may be one folder of a larger
+repository (run rdm-spec in that folder), and may keep several specs, one
+folder each, under the configuration's `:specs` (`dhf/spec/spec/parser.feature`).
+A project's own judges, its oracle and its grading among them, are plugins
+(`dhf/decisions/adr-0003-core-and-plugins.md`; `rdm-spec plugin add NAME`).
+
 ## A regeneration cycle
 
-`cut` → `fence ROOM CUT` (behind the oracle gate) → one builder rebuilds the
-implementation in the room → `ratify ROOM NN` → `checklist NN` → graders file
-verdicts → `score NN` → `scoreboard MM NN` → findings folded into the spec.
-The oracle (`oracle.edn`, one artifact pinned by digest in `config.edn`)
-judges the instrument before fence and ratify.
+`cut` → `fence ROOM CUT` (behind the project's Gate plugins) → one builder
+rebuilds the implementation in the room → `verify ROOM NN` → `checklist NN` →
+graders file verdicts → `score NN --verdicts FILE ...` → `scoreboard MM NN` →
+findings folded into the spec. The way of working is `docs/wow/`.
 
 ## License
 
