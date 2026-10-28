@@ -1,0 +1,13 @@
+;; Cycle 26: the first cycle of the component build (ADR 0006), slice
+;; 01-start-a-project, whole, from its accepted plan (spec-35). The room is
+;; fenced whole, holding no implementation of either stack, so nothing of the
+;; installed release's code can be read. Run by cycle 25's release (cut
+;; spec-33), the judge until the switch. Its pending scenarios
+;; (dhf/spec/01-start-a-project/pending.md) cannot pass before cycles 6 to 8 of
+;; the build order: verify is decided on the evidence (docs/wow/way-of-working.md).
+{:cut "spec-35"
+ :from "spec-33"
+ :slice "01-start-a-project"
+ :builder {:name "one builder subagent, one room" :actor :agent}
+ :grader {:name "graders, each its own grading room, black box on the built command" :actor :agent}
+ :spec-owner {:name "Sathish Narayanan" :actor :human}}
