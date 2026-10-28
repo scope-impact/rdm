@@ -19,13 +19,13 @@ interface project-adopt {
     /// at root. Refuses, writing nothing, when root is not a git repository
     /// (spec-0084). The error is why it cannot run, which the command reports
     /// as cannot-run (exit 2).
-    adopt: func(root: string) -> result<adopted, string>;
+    adopt: async func(root: string) -> result<adopted, string>;
 }
 
 /// The component project/adopt builds to. The skeleton is project/init's;
 /// the hook is project/hooks'.
 world project-adopt-component {
-    include wasi:cli/imports@0.2.3;
+    include wasi:cli/imports@0.3.2;
     import project-init;
     import project-hooks;
     export project-adopt;

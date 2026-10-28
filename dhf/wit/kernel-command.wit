@@ -38,13 +38,16 @@ interface kernel-command {
 /// with project/init and project/adopt, and imports every later slice's tasks
 /// (tasks.wit, later-slices). A task of the table is run by the slice whose
 /// entries name it; a task no built slice names answers that it is not built
-/// (exit 2); a task not in the table is unknown (exit 2, spec-0180).
+/// (exit 2); a task not in the table is unknown (exit 2, spec-0180). It
+/// runs git through the host to find the project's folder within its
+/// repository (spec-0368).
 world kernel-command-component {
-    include wasi:cli/imports@0.2.3;
+    include wasi:cli/imports@0.3.2;
     include later-slices;
+    import rdm:host/process@0.1.0;
     import project-init;
     import project-adopt;
     export kernel-command;
     export tasks;
-    export wasi:cli/run@0.2.3;
+    export wasi:cli/run@0.3.2;
 }

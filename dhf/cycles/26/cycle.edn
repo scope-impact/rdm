@@ -5,7 +5,12 @@
 ;; spec-33), the judge until the switch. Its pending scenarios
 ;; (dhf/spec/01-start-a-project/pending.md) cannot pass before cycles 6 to 8 of
 ;; the build order: verify is decided on the evidence (docs/wow/way-of-working.md).
-{:cut "spec-35"
+{:cut "spec-40"
+ ;; Built from spec-35's plan; verified and graded at spec-40, which holds the
+ ;; builder's WIT (WASI 0.3.2, async) and spec-36 to spec-39: slice 01's
+ ;; silences stated after the build began (spec-0420 to spec-0422), whose
+ ;; fails measure where the builder's choice and the spec differ.
+ :built-from "spec-35"
  :from "spec-33"
  :slice "01-start-a-project"
  :builder {:name "one builder subagent, one room" :actor :agent}

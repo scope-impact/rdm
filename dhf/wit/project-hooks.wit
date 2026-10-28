@@ -16,12 +16,12 @@ interface project-hooks {
     /// root is not a git repository: the hook needs one (spec-0084). The
     /// error is why it cannot run, which the command reports as cannot-run
     /// (exit 2).
-    install: func(root: string) -> result<installed, string>;
+    install: async func(root: string) -> result<installed, string>;
 }
 
 /// The component project/hooks builds to. It runs git through the host.
 world project-hooks-component {
-    include wasi:cli/imports@0.2.3;
+    include wasi:cli/imports@0.3.2;
     import rdm:host/process@0.1.0;
     export project-hooks;
 }

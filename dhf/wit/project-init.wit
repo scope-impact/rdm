@@ -30,12 +30,12 @@ interface project-init {
     /// with a letter and holds letters, digits and single hyphens, or when it
     /// is UN, the need tags' (spec-0089, spec-0223). The error is why it
     /// cannot run, which the command reports as cannot-run (exit 2).
-    init: func(path: string, id-prefix: option<string>) -> result<initialised, string>;
+    init: async func(path: string, id-prefix: option<string>) -> result<initialised, string>;
 }
 
 /// The component project/init builds to. It runs git through the host.
 world project-init-component {
-    include wasi:cli/imports@0.2.3;
+    include wasi:cli/imports@0.3.2;
     import rdm:host/process@0.1.0;
     import project-hooks;
     export project-init;

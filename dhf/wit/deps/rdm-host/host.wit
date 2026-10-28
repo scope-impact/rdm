@@ -29,7 +29,7 @@ interface process {
         cannot-start(string),
     }
 
-    run: func(cmd: command) -> result<output, error>;
+    run: async func(cmd: command) -> result<output, error>;
 
     /// A process started in the background (a :serves check's app): its id,
     /// to stop it later with its whole process group.

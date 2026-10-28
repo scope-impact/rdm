@@ -56,7 +56,7 @@ interface tasks {
 
     /// Runs the task the request names. None when it is not one of this
     /// slice's entries.
-    run: func(request: request) -> option<outcome>;
+    run: async func(request: request) -> option<outcome>;
 }
 
 /// The tasks of every slice the command reaches beyond its own: one import per
@@ -74,62 +74,62 @@ world later-slices {
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
     import ground-the-spec: interface {
         record entry { task: string, usage: string, does: string }
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
     import model-the-architecture: interface {
         record entry { task: string, usage: string, does: string }
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
     import verify-by-results: interface {
         record entry { task: string, usage: string, does: string }
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
     import regenerate: interface {
         record entry { task: string, usage: string, does: string }
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
     import measure: interface {
         record entry { task: string, usage: string, does: string }
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
     import plugins: interface {
         record entry { task: string, usage: string, does: string }
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
     import publish: interface {
         record entry { task: string, usage: string, does: string }
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
     import regulated-profile: interface {
         record entry { task: string, usage: string, does: string }
         record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
         record outcome { exit: u8, stdout: string, errors: list<string> }
         entries: func() -> list<entry>;
-        run: func(request: request) -> option<outcome>;
+        run: async func(request: request) -> option<outcome>;
     }
 }

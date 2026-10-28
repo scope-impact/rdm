@@ -47,4 +47,4 @@ export command["rdm:spec/tasks@0.1.0"];
 export init["rdm:spec/project-init@0.1.0"];
 export adopt["rdm:spec/project-adopt@0.1.0"];
 export hooks["rdm:spec/project-hooks@0.1.0"];
-export command["wasi:cli/run@0.2.3"];
+export command["wasi:cli/run@0.3.2"];

@@ -32,4 +32,4 @@ let start-a-project = new rdm:start-a-project {
     ...
 };
 
-export start-a-project["wasi:cli/run@0.2.3"];
+export start-a-project["wasi:cli/run@0.3.2"];

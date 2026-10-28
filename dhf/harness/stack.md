@@ -17,7 +17,7 @@ loyly:docs/wow/invariants.md@17d68d2, INV-2). Decided in
 | Host | `wasm/host/`, native Rust embedding `wasmtime` 49 (with `wasmtime-wasi`, WASI p3 and component-model async enabled): preopens the project's folder (and a fixture's), passes the environment and standard streams, implements `rdm:host/process`; no rdm-spec logic |
 | Entry point | `wasm/rdm-spec`, a shell script that builds nothing and runs the host on `wasm/build/rdm-spec.wasm` with its arguments |
 | Builder's tests | `wasm/test.sh`: builds, runs the unit tests (`cargo test`, natively where a crate allows) and the scenarios of the slices built so far, driving `wasm/rdm-spec` through its commands from the feature files, and writes one Allure result per scenario (and outline row) to `$RESULTS_DIR`, under the spec's README's results contract |
-| Tools installed | `cargo`/`rustc` 1.97, target `wasm32-wasip2`; `wasm-tools` 1.227.1, `wac` 0.6.1, `wasmtime` 49.0.4 (CLI; `-S p3 -W component-model-async`) in `~/.local/bin`; crates from crates.io |
+| Tools installed | `cargo`/`rustc` 1.97, target `wasm32-wasip2`; `wasm-tools` 1.262.0, `wac` 0.12.0 (async components need them; `wasm/test.sh` builds both from crates.io into `wasm/target/tools`), `wasmtime` 49.0.4 (CLI; `-S p3 -W component-model-async`); components are `no_std`, so the composed command imports WASI 0.3.2 and `rdm:host` only in `~/.local/bin`; crates from crates.io |
 | Output | EDN on standard output and in every record, as the spec states |
 
 ## The installed release (Clojure), the judge until the switch
