@@ -106,6 +106,15 @@ rebuilt trace wrote another; the shape is now the spec's.
 
 ## Expected decisions (planned for the component build, ADR 0006)
 
+Settled on 2026-10-28. ED-02 by the spec owner: the step protocol (each step
+file a command, in any language, speaking EDN: `definitions`, then `invoke
+N`) is rdm-spec's behaviour, stated in this slice's runner scenarios, not a
+stack choice. ED-09 by the spec owner, in cycle 26 (see ED-09). The rest
+accepted as recommended by the integrator under the spec owner's goal,
+among them ED-07 (release refuses, exit 2, under `:regulated` until slice 10
+exists) and ED-03 (the model gains the runner reading scenarios with the
+parser), both for the spec owner to overrule.
+
 Written in the plan phase of the component build (ADR 0006,
 `dhf/decisions/adr-0006-wasm-components.md`, cycle 6 of its build order;
 `docs/wow/harness.md`, "The planner"): each question a builder of this slice
@@ -279,6 +288,8 @@ slice, and slice 10's composition importing it.
 Recommendation: A.
 
 ### ED-09: The command's refusal of a missing results directory, for trace and run
+
+**Settled: A, in cycle 26 itself.** The command was still being built when this was found; slice 01's ED-16 was narrowed there (refusal only for status, release, publish, audit, and trace when given), so no later cycle changes slice 01's command.
 
 The command (slice 01, built in cycle 1) settles the results directory of
 every task whose usage takes `[--results DIR]` and refuses one that does not

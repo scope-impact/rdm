@@ -312,7 +312,7 @@ Recommendation: A: they are small and hold no logic.
 
 ### ED-16: The command's refusals before a task not built
 
-**Settled by the spec owner:** the command refuses a missing results directory before saying a task is not built (spec-0179 passes in cycle 1).
+**Settled by the spec owner:** the command refuses a missing results directory before saying a task is not built (spec-0179 passes in cycle 1), but only for the tasks that read results: status, release, publish and audit always, trace only when --results or RESULTS_DIR names it (spec-0107); trace given neither is handed none, and run creates its directory (narrowed in cycle 26: slice 05's ED-09).
 
 
 The command settles the project's root and a task's results directory before
