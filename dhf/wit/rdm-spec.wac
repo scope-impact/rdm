@@ -1,0 +1,18 @@
+// The rdm-spec command, composed from its slices (ADR 0006): one instance
+// per slice built so far, each the composition its slice-NN.wac makes,
+// in the order of their numbers. Targets the command's world, rdm-spec
+// (rdm-spec.wit): it exports wasi:cli/run, and leaves WASI's imports and
+// rdm:host/process to the host.
+// "wac compose dhf/wit/rdm-spec.wac --deps-dir wasm/build/deps
+//  -o wasm/build/rdm-spec.wasm" writes the command, each slice resolved as
+// the composition its slice-NN.wac wrote (rdm:start-a-project is
+// wasm/build/deps/rdm/start-a-project.wasm).
+//
+// A later slice adds its line here: its instance, wired to the slices
+// before it. How the command reaches a later slice's tasks is an expected
+// decision (dhf/spec/01-start-a-project/decisions.md).
+package rdm:command targets rdm:spec/rdm-spec@0.1.0;
+
+let start-a-project = new rdm:start-a-project { ... };
+
+export start-a-project["wasi:cli/run@0.2.3"];

@@ -1,0 +1,42 @@
+// Component Init of the project context (dhf/spec/model.edn, :project/init;
+// dhf/spec/01-start-a-project/init.feature): writes a new project's skeleton
+// into a path that does not exist yet.
+
+interface project-init {
+    /// One file of the skeleton (glossary, "Skeleton"), its path relative to
+    /// the project's root.
+    record skeleton-file {
+        path: string,
+        content: string,
+    }
+
+    /// What init wrote: the path it was given, every file it wrote, and the
+    /// next steps (spec-0086).
+    record initialised {
+        path: string,
+        wrote: list<string>,
+        next-steps: list<string>,
+    }
+
+    /// The skeleton's files for an id prefix, as spec-0086 lists them, but for
+    /// the pre-commit hook, which project/hooks writes. Adopt adds the same
+    /// files (spec-0079).
+    skeleton: func(id-prefix: string) -> list<skeleton-file>;
+
+    /// Writes the skeleton into path, relative or absolute (spec-0272), which
+    /// must not exist (spec-0087), as a git repository with no commit yet, and
+    /// installs the hook with project/hooks (spec-0086). The id prefix is
+    /// "spec" when none is given (spec-0223), and is refused unless it starts
+    /// with a letter and holds letters, digits and single hyphens, or when it
+    /// is UN, the need tags' (spec-0089, spec-0223). The error is why it
+    /// cannot run, which the command reports as cannot-run (exit 2).
+    init: func(path: string, id-prefix: option<string>) -> result<initialised, string>;
+}
+
+/// The component project/init builds to. It runs git through the host.
+world project-init-component {
+    include wasi:cli/imports@0.2.3;
+    import rdm:host/process@0.1.0;
+    import project-hooks;
+    export project-init;
+}

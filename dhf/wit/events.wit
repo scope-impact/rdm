@@ -1,0 +1,16 @@
+// rdm-spec's events (dhf/spec/events.edn): one record per event, its carried
+// keys as fields, named as the catalogue names them (ADR 0006). An event
+// travels on the in-process bus (kernel/bus, dhf/spec/08-plugins/bus.feature),
+// within one run.
+//
+// Written slice by slice, in each slice's plan phase. Slice 01,
+// start-a-project (dhf/spec/01-start-a-project/plan.md), adds none: its
+// components (kernel/command, project/init, project/adopt, project/hooks)
+// publish no event and subscribe to none (dhf/spec/model.edn, :relationships).
+// The first records come with slice 02, write-the-spec (:SpecParsed,
+// :SpecGated) and slice 03, ground-the-spec (:KnowledgeIndexed).
+
+package rdm:spec@0.1.0;
+
+interface events {
+}

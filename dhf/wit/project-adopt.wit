@@ -1,0 +1,32 @@
+// Component Adopt of the project context (dhf/spec/model.edn, :project/adopt;
+// dhf/spec/01-start-a-project/adopt.feature): adds the skeleton to an
+// existing repository, never overwriting a file, reading none of its code
+// into the spec.
+
+interface project-adopt {
+    /// What adopt did, each path relative to the repository's root: every file
+    /// it wrote (spec-0079); every destination kept because something, a
+    /// symbolic link included, was already there (spec-0080, spec-0081,
+    /// spec-0083); and, when a .gitignore was kept, the lines init writes to
+    /// .gitignore, which it would have added (spec-0082).
+    record adopted {
+        wrote: list<string>,
+        kept: list<string>,
+        ignore-lines: list<string>,
+    }
+
+    /// Adds the skeleton, as "rdm-spec init" writes it, to the git repository
+    /// at root. Refuses, writing nothing, when root is not a git repository
+    /// (spec-0084). The error is why it cannot run, which the command reports
+    /// as cannot-run (exit 2).
+    adopt: func(root: string) -> result<adopted, string>;
+}
+
+/// The component project/adopt builds to. The skeleton is project/init's;
+/// the hook is project/hooks'.
+world project-adopt-component {
+    include wasi:cli/imports@0.2.3;
+    import project-init;
+    import project-hooks;
+    export project-adopt;
+}

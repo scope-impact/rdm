@@ -1,0 +1,18 @@
+// Slice 01, start a project (dhf/spec/01-start-a-project/plan.md): one
+// command, one task table, one way to report; a new project's skeleton, or
+// an existing repository's; every commit checked.
+//
+// Exports the interfaces of the components whose home is this slice (their
+// model spec path names it: kernel/command, project/init, project/adopt,
+// project/hooks) and the command's entry point; imports what they use: WASI,
+// and the host's processes for git. Composed by slice-01.wac.
+
+world start-a-project {
+    include wasi:cli/imports@0.2.3;
+    import rdm:host/process@0.1.0;
+    export kernel-command;
+    export project-init;
+    export project-adopt;
+    export project-hooks;
+    export wasi:cli/run@0.2.3;
+}

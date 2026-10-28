@@ -1,0 +1,13 @@
+// The world of the whole rdm-spec command (ADR 0006): what the native host
+// runs. WASI's command world, and the host's processes. Composed by
+// rdm-spec.wac from the slices built so far, each slice's world
+// (slice-NN.wit) one instance in it; the slices' own interfaces stay inside
+// the composition, so the command's boundary is its arguments, its streams,
+// its files and its exit.
+//
+// Slices held: 01, start-a-project (slice-01.wit).
+
+world rdm-spec {
+    include wasi:cli/command@0.2.3;
+    import rdm:host/process@0.1.0;
+}

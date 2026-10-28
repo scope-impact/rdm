@@ -6,7 +6,7 @@ It names the stack, so it lives here, beside the spec, never in it.
 
 | File | What it holds |
 |---|---|
-| `host.wit` | package `rdm:host`: what the native host gives the core beyond WASI (processes) |
+| `deps/rdm-host/host.wit` | package `rdm:host` (its own folder: two packages cannot share one): what the native host gives the core beyond WASI (processes) |
 | `events.wit` | package `rdm:spec`: one record per event of `dhf/spec/events.edn` |
 | `<context>-<component>.wit` | one interface per component of `dhf/spec/model.edn` |
 | `slice-NN.wit` | one world per slice: exports its home components' interfaces, imports what it uses |

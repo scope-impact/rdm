@@ -29,7 +29,7 @@ there is no whole WebAssembly build to install.
   exporting the interfaces of the components whose home is that slice (the
   slice its model spec path names) and importing those it uses, and
   `rdm-spec.wit`, the world of the whole command, and the compositions that
-  assemble it (below). `dhf/wit/host.wit` is
+  assemble it (below). `dhf/wit/deps/rdm-host/host.wit` is
   package `rdm:host`: what the native host gives the core beyond WASI. The WIT
   is written in each slice's plan phase, held to the model by the planner and
   the spec owner, and kept outside `dhf/spec/` because it names the stack.

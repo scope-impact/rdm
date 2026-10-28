@@ -1,0 +1,52 @@
+// Kernel component Command (dhf/spec/model.edn, :kernel/command;
+// dhf/spec/01-start-a-project/command.feature,
+// dhf/spec/11-project-in-a-folder/command.feature): the rdm-spec command,
+// the one entry point. It dispatches each task to the component that owns it
+// and owns how every task reports (dhf/spec/README.md, "How every task
+// reports").
+//
+// Its interface holds the command's own types: the task table's rows, the
+// findings and the refusal it reports. A task's interface does not use them:
+// a type used from another interface is an instance import, and the command
+// imports every task, so the task importing the command's types would be a
+// cycle no composition can wire. A task refuses with a string, the why the
+// command reports as cannot-run. The command is reached through wasi:cli/run.
+
+interface kernel-command {
+    /// One row of the task table, as "rdm-spec help" lists it:
+    /// {:task T :usage U :does D} (spec-0176).
+    record task {
+        task: string,
+        usage: string,
+        does: string,
+    }
+
+    /// One line of the error stream: "FILE:LINE: RULE: what", FILE and LINE
+    /// left out where none applies (spec-0178); a warning when warning is true
+    /// ("FILE:LINE: warning: RULE: what").
+    record finding {
+        file: option<string>,
+        line: option<u32>,
+        rule: string,
+        message: string,
+        warning: bool,
+    }
+
+    /// A task that cannot run as asked: exit 2, "cannot-run: why" on the
+    /// error stream, nothing on standard output (spec-0179, spec-0180).
+    record cannot-run {
+        why: string,
+    }
+}
+
+/// The component kernel/command builds to: the command's entry point.
+/// It dispatches init and adopt to project/init and project/adopt; every
+/// other task of the task table is answered by a later slice
+/// (dhf/spec/01-start-a-project/decisions.md, "Expected decisions").
+world kernel-command-component {
+    include wasi:cli/imports@0.2.3;
+    import project-init;
+    import project-adopt;
+    export kernel-command;
+    export wasi:cli/run@0.2.3;
+}

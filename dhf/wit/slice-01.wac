@@ -1,0 +1,47 @@
+// Slice 01, start a project (dhf/spec/01-start-a-project/plan.md), composed
+// from the components whose home is this slice, each built to its own
+// component exporting its interface (wasm/components/<context>-<component>/,
+// dhf/harness/stack.md). Targets the slice's world, start-a-project
+// (slice-01.wit).
+//
+// Each component's imports are wired to another of the slice's components
+// (the model's relationships: init and adopt install hooks with hooks; the
+// command dispatches each task to the component that owns it), adopt to
+// init's skeleton too, which the model does not name yet (an expected
+// decision, dhf/spec/01-start-a-project/decisions.md), and every
+// other import, WASI's and rdm:host/process, is left to the composition, so
+// the host satisfies it.
+//
+// Packages resolve from the build's dependency directory, one component per
+// package: rdm:project-hooks is wasm/build/deps/rdm/project-hooks.wasm, and
+// the WIT package the targets clause names, rdm:spec@0.1.0, is dhf/wit
+// encoded by "wasm-tools component wit dhf/wit --wasm" into
+// wasm/build/deps/rdm/spec/0.1.0.wasm. Then
+// "wac compose dhf/wit/slice-01.wac --deps-dir wasm/build/deps
+//  -o wasm/build/deps/rdm/start-a-project.wasm".
+package rdm:start-a-project targets rdm:spec/start-a-project@0.1.0;
+
+let hooks = new rdm:project-hooks { ... };
+
+let init = new rdm:project-init {
+    "rdm:spec/project-hooks@0.1.0": hooks["rdm:spec/project-hooks@0.1.0"],
+    ...
+};
+
+let adopt = new rdm:project-adopt {
+    "rdm:spec/project-init@0.1.0": init["rdm:spec/project-init@0.1.0"],
+    "rdm:spec/project-hooks@0.1.0": hooks["rdm:spec/project-hooks@0.1.0"],
+    ...
+};
+
+let command = new rdm:kernel-command {
+    "rdm:spec/project-init@0.1.0": init["rdm:spec/project-init@0.1.0"],
+    "rdm:spec/project-adopt@0.1.0": adopt["rdm:spec/project-adopt@0.1.0"],
+    ...
+};
+
+export command["rdm:spec/kernel-command@0.1.0"];
+export init["rdm:spec/project-init@0.1.0"];
+export adopt["rdm:spec/project-adopt@0.1.0"];
+export hooks["rdm:spec/project-hooks@0.1.0"];
+export command["wasi:cli/run@0.2.3"];

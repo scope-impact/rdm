@@ -1,0 +1,27 @@
+// Component Hooks of the project context (dhf/spec/model.edn, :project/hooks;
+// dhf/spec/01-start-a-project/hooks.feature): installs the pre-commit hook
+// that runs "rdm-spec check" on every commit (spec-0025).
+
+interface project-hooks {
+    /// What install did, each path relative to the repository's root: the hook
+    /// written, or kept because a file was already there (spec-0083).
+    record installed {
+        wrote: list<string>,
+        kept: list<string>,
+    }
+
+    /// Installs .githooks/pre-commit, a hook that runs "rdm-spec check", in the
+    /// git repository at root, and sets its core.hooksPath to .githooks
+    /// (spec-0086). Never overwrites a file. Refuses, writing nothing, when
+    /// root is not a git repository: the hook needs one (spec-0084). The
+    /// error is why it cannot run, which the command reports as cannot-run
+    /// (exit 2).
+    install: func(root: string) -> result<installed, string>;
+}
+
+/// The component project/hooks builds to. It runs git through the host.
+world project-hooks-component {
+    include wasi:cli/imports@0.2.3;
+    import rdm:host/process@0.1.0;
+    export project-hooks;
+}
