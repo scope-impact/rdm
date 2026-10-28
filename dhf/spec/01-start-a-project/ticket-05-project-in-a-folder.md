@@ -12,7 +12,8 @@ kernel/command's part: the project's root is the folder holding the
 configuration, run from that folder whatever the repository's root is; the
 folder's path within its repository (git, through `rdm:host/process`) handed
 to every task that reads a cut, so it reads the folder at the cut, at its own
-root, and nothing outside it. The tasks themselves (fence, verify, scopes,
+root, and nothing outside it; it travels in the request the command runs
+the task with (`tasks`). The tasks themselves (fence, verify, scopes,
 checklist) are their slices'.
 
 ## Scenarios it satisfies
@@ -30,5 +31,5 @@ kernel/command (its root and the folder's path in the repository); the host
 
 kernel/command's unit tests cover a root that is a folder of its repository,
 and its path within it; `wasm/test.sh` runs spec-0368's rows against this
-build; under ED-01, it is verified in the first cycle whose build holds
-fence, verify, scopes and checklist.
+build; under ED-01, its fence, verify and scopes rows pass from cycle 7 and
+it is verified whole in cycle 8, with checklist (`pending.md`).

@@ -1,18 +1,35 @@
-// The rdm-spec command, composed from its slices (ADR 0006): one instance
-// per slice built so far, each the composition its slice-NN.wac makes,
-// in the order of their numbers. Targets the command's world, rdm-spec
-// (rdm-spec.wit): it exports wasi:cli/run, and leaves WASI's imports and
-// rdm:host/process to the host.
+// The rdm-spec command, composed from its slices (ADR 0006, "How the command
+// reaches the slices"): one instance per slice built so far, each the
+// composition its slice-NN.wac makes, and the command, slice 01's, taking
+// every later slice's tasks (tasks.wit, later-slices). Targets the command's
+// world, rdm-spec (rdm-spec.wit): it exports wasi:cli/run, and leaves WASI's
+// imports and rdm:host/process to the host.
 // "wac compose dhf/wit/rdm-spec.wac --deps-dir wasm/build/deps
 //  -o wasm/build/rdm-spec.wasm" writes the command, each slice resolved as
 // the composition its slice-NN.wac wrote (rdm:start-a-project is
-// wasm/build/deps/rdm/start-a-project.wasm).
+// wasm/build/deps/rdm/start-a-project.wasm), and rdm:not-built as the
+// stand-in built to the world not-built (rdm-spec.wit).
 //
-// A later slice adds its line here: its instance, wired to the slices
-// before it. How the command reaches a later slice's tasks is an expected
-// decision (dhf/spec/01-start-a-project/decisions.md).
+// Slices built: 01. The stand-in answers for every later slice: its tasks
+// name no task and run none, so the command answers each such task of the
+// table that it is not built (exit 2, "cannot-run: TASK is not built"), and
+// help lists it all the same, from the command's table (spec-0176).
+//
+// A later slice adds two lines and rewrites none: its instance, above the
+// command's,
+//     let write-the-spec = new rdm:write-the-spec { ... };
+// and its wiring line, inside the command's arguments, above the spread,
+//     write-the-spec: write-the-spec["rdm:spec/tasks@0.1.0"],
+// A named argument takes precedence over the spread, which fills the rest.
+// The spread must match at least one import, so the cycle that builds the
+// last of slices 02 to 10 also removes the stand-in's two lines.
 package rdm:command targets rdm:spec/rdm-spec@0.1.0;
 
-let start-a-project = new rdm:start-a-project { ... };
+let not-built = new rdm:not-built { ... };
+
+let start-a-project = new rdm:start-a-project {
+    ...not-built,
+    ...
+};
 
 export start-a-project["wasi:cli/run@0.2.3"];

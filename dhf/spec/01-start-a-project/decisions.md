@@ -41,6 +41,8 @@ settles each before the build, or turns it into a scenario. The tickets
 ### ED-01: Scenarios whose task another slice builds
 
 **Settled by the spec owner:** this slice is built first, whole (ADR 0006, "Build order"); its scenarios that need a later slice's task are pending, verified again in the cycle that unblocks them, and the cycle is decided on the evidence.
+The pending scenarios, each with its ticket, the task it needs and the cycle
+that unblocks it, are in `pending.md`, beside this file.
 
 
 Eight of the 23 scenarios this slice's components answer for run a task
@@ -75,6 +77,24 @@ make a green the build did not earn. Givens are a separate question (ED-12).
 ### ED-02: How the command reaches another slice's tasks (composition)
 
 **Settled by the spec owner:** every slice exports one `tasks` interface (its task-table entries and `run`); the command composes them, and a slice not built answers that it is not built (ADR 0006, "How the command reaches the slices").
+
+How the component build writes it (`dhf/wit/tasks.wit`, `rdm-spec.wit`,
+`rdm-spec.wac`): `tasks` holds its own types (an entry: task, usage, does; a
+request: the task, its arguments, the results directory and the project's
+folder the command settled; an outcome: exit code, standard output, error
+lines), none of the command's (ED-14). Slice 01 exports its `tasks`: help,
+the command's own, and init and adopt, which the command runs with
+project/init and project/adopt. The command imports one `tasks` per later
+slice with components, 02 to 10, named for its folder (slices 11 to 13 are
+home to none). The composition gives each import its slice once built, and
+until then a stand-in holding no logic, whose tasks name none and run none;
+the command then answers each task of that slice not built (exit 2,
+`cannot-run: TASK is not built`). A later slice adds two lines to
+`rdm-spec.wac`, its instance and its wiring line, and rewrites none; the
+stand-in fills the rest, so the cycle that builds the last of slices 02 to 10
+removes the stand-in's two lines. Composed with stand-in components generated
+from the declarations: slice 01 alone, one later slice added, and all nine.
+Options A to C below are the ones this settlement pruned.
 
 
 kernel/command dispatches every task, but the components owning them come in
@@ -273,3 +293,52 @@ slice needs only `run`, but a linked import must be defined.
 - B. Define `spawn` and `stop` as refusing until slice 06 needs them.
 
 Recommendation: A: they are small and hold no logic.
+
+### ED-16: The command's refusals before a task not built
+
+The command settles the project's root and a task's results directory before
+it runs the task (ticket 04), and answers a task not built with exit 2. When
+both hold, which is reported? It decides whether spec-0179 (a results
+directory that does not exist, run as status) is pending (`pending.md`).
+
+- A. The command's own refusals first: the root, then the results directory,
+  then the task (built or not). spec-0179 passes in cycle 1; the rule is the
+  command's either way.
+- B. A task not built is answered first, before anything is read: spec-0179
+  waits for status (cycle 6).
+
+Recommendation: A: the results directory is the command's rule, not status's
+(`dhf/spec/README.md`, "How every task reports"), and a refusal names what is
+wrong whatever is built.
+
+### ED-17: check's clauses stage outside the regulated profile
+
+check's usage names its clauses stage, gap analysis (slice 10, cycle 10). The
+regulated profile is on only where the configuration holds `:regulated`, and
+spec-0255 has check exit 0 naming no clause on a project without it. Under
+the glossary's "Gate", a stage not built refuses the task.
+
+- A. The clauses stage is not a stage of a run without `:regulated`: check's
+  scenarios here are unblocked in cycle 7 (`pending.md`).
+- B. It is a stage of every run, doing nothing without `:regulated`: they
+  wait for cycle 10.
+
+Recommendation: A, and a scenario saying so when the spec owner agrees.
+
+### ED-18: Where the task table lives
+
+spec-0176 (help) and spec-0180 (an unknown task lists every task) are the
+command's, and must hold whatever is built; the settlement (ED-02) has each
+slice export its rows of the table.
+
+- A. The command holds the whole table, every row in its order; a slice's
+  entries are its rows of that table, and the command runs a task with the
+  slice whose entries name it. Help and the unknown task's list read the
+  table; a test of the composed command holds every built slice's entries to
+  it.
+- B. Help is built from the slices' entries; the stand-in carries every
+  unbuilt slice's rows, and the command the table's order.
+
+Recommendation: A: the table is the command's scenario, and the stand-in then
+holds nothing of any slice.
+

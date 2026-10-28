@@ -6,11 +6,13 @@
 //
 // Each component's imports are wired to another of the slice's components
 // (the model's relationships: init and adopt install hooks with hooks; the
-// command dispatches each task to the component that owns it), adopt to
-// init's skeleton too, which the model does not name yet (an expected
-// decision, dhf/spec/01-start-a-project/decisions.md), and every
-// other import, WASI's and rdm:host/process, is left to the composition, so
-// the host satisfies it.
+// command runs init and adopt with init and adopt), adopt to init's skeleton
+// too, which the model does not name yet (ED-08,
+// dhf/spec/01-start-a-project/decisions.md). Every other import is left to
+// the composition: WASI's and rdm:host/process, which the host satisfies, and
+// the command's imports of every later slice's tasks (later-slices,
+// tasks.wit), which rdm-spec.wac wires. The slice exports its tasks (help,
+// init, adopt), the command's.
 //
 // Packages resolve from the build's dependency directory, one component per
 // package: rdm:project-hooks is wasm/build/deps/rdm/project-hooks.wasm, and
@@ -41,6 +43,7 @@ let command = new rdm:kernel-command {
 };
 
 export command["rdm:spec/kernel-command@0.1.0"];
+export command["rdm:spec/tasks@0.1.0"];
 export init["rdm:spec/project-init@0.1.0"];
 export adopt["rdm:spec/project-adopt@0.1.0"];
 export hooks["rdm:spec/project-hooks@0.1.0"];

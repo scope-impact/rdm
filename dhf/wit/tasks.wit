@@ -1,0 +1,135 @@
+// How the command reaches the slices (ADR 0006, "How the command reaches the
+// slices"): every slice's composition exports one tasks interface, its rows of
+// the task table (spec-0176) and run for its tasks. The command composes the
+// tasks of every slice built so far (rdm-spec.wac); slice 01's are its own
+// (slice-01.wit).
+//
+// The interface holds its own types, builtin ones inside them, and none of the
+// command's (kernel-command.wit): the command imports every slice's tasks, so
+// a slice using the command's types would import the command, a cycle no
+// composition can wire (dhf/spec/01-start-a-project/decisions.md, ED-14).
+//
+// A task of the table that no built slice's entries name answers that it is
+// not built: the command reports it as cannot-run (exit 2, "cannot-run: TASK
+// is not built", nothing on standard output), as the glossary's "Gate" says
+// of a stage whose code is not built. Help lists it all the same (spec-0176).
+
+interface tasks {
+    /// One row of the task table, as "rdm-spec help" lists it:
+    /// {:task T :usage U :does D} (spec-0176), each as the table writes it.
+    record entry {
+        task: string,
+        usage: string,
+        does: string,
+    }
+
+    /// One run of a task: its name, the arguments that follow it on the
+    /// command line, as given, and what the command settled before running
+    /// it (dhf/spec/01-start-a-project, tickets 04 and 05): the results
+    /// directory of a task that takes [--results DIR], --results, else
+    /// RESULTS_DIR, else the configured one (spec-0219), none for any other
+    /// task; and the project's folder within its git repository, "." at the
+    /// repository's root (spec-0368), none outside a git repository. The task
+    /// runs in the project's root, the folder the command runs in.
+    record request {
+        task: string,
+        args: list<string>,
+        results-dir: option<string>,
+        folder: option<string>,
+    }
+
+    /// What a task did, as the command reports it ("How every task reports",
+    /// dhf/spec/README.md): its exit code, 0, 1 or 2; its standard output,
+    /// only the task's result as EDN ("{}" on exit 1 when there is none,
+    /// empty on exit 2); and its error lines, in the order written, each one
+    /// line of the error stream ("FILE:LINE: RULE: what", "FILE:LINE:
+    /// warning: RULE: what", or "cannot-run: why"; spec-0178, spec-0179).
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// The slice's rows of the task table, in the table's order; none for a
+    /// slice that runs no task of its own.
+    entries: func() -> list<entry>;
+
+    /// Runs the task the request names. None when it is not one of this
+    /// slice's entries.
+    run: func(request: request) -> option<outcome>;
+}
+
+/// The tasks of every slice the command reaches beyond its own: one import per
+/// slice whose components are composed (02 to 10; slices 11, 12 and 13 are
+/// home to no component, so compose nothing and export no tasks), named for
+/// its folder without the number. Each is the tasks interface written out:
+/// WIT cannot import one interface under several names, and an inline
+/// interface using tasks' types would import tasks itself. The command
+/// (kernel-command.wit) and slice 01 (slice-01.wit) include this world;
+/// rdm-spec.wac wires each import to its slice once built, and to the
+/// not-built stand-in (rdm-spec.wit) until then.
+world later-slices {
+    import write-the-spec: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    import ground-the-spec: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    import model-the-architecture: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    import verify-by-results: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    import regenerate: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    import measure: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    import plugins: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    import publish: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    import regulated-profile: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+}

@@ -4,15 +4,21 @@
 //
 // Exports the interfaces of the components whose home is this slice (their
 // model spec path names it: kernel/command, project/init, project/adopt,
-// project/hooks) and the command's entry point; imports what they use: WASI,
-// and the host's processes for git. Composed by slice-01.wac.
+// project/hooks), the slice's tasks (tasks.wit: help, init and adopt; help is
+// the command's own, init and adopt it runs with project/init and
+// project/adopt), and the command's entry point. Imports what they use: WASI,
+// the host's processes for git, and every later slice's tasks (later-slices),
+// which the command dispatches to and slice-01.wac leaves to rdm-spec.wac.
+// Composed by slice-01.wac.
 
 world start-a-project {
     include wasi:cli/imports@0.2.3;
+    include later-slices;
     import rdm:host/process@0.1.0;
     export kernel-command;
     export project-init;
     export project-adopt;
     export project-hooks;
+    export tasks;
     export wasi:cli/run@0.2.3;
 }

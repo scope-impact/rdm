@@ -1,13 +1,87 @@
 // The world of the whole rdm-spec command (ADR 0006): what the native host
 // runs. WASI's command world, and the host's processes. Composed by
 // rdm-spec.wac from the slices built so far, each slice's world
-// (slice-NN.wit) one instance in it; the slices' own interfaces stay inside
-// the composition, so the command's boundary is its arguments, its streams,
-// its files and its exit.
+// (slice-NN.wit) one instance in it, the command (slice 01) importing every
+// later slice's tasks (tasks.wit); the slices' own interfaces stay inside the
+// composition, so the command's boundary is its arguments, its streams, its
+// files and its exit.
 //
-// Slices held: 01, start-a-project (slice-01.wit).
+// Slices built: 01, start-a-project (slice-01.wit).
 
 world rdm-spec {
     include wasi:cli/command@0.2.3;
     import rdm:host/process@0.1.0;
+}
+
+/// The stand-in for every slice not built yet: composition, not a component
+/// of the model, holding no rdm-spec logic. Each of its tasks has no entries
+/// and runs nothing (run answers none), so the command answers each task of
+/// those slices that it is not built (exit 2, tasks.wit), and help still lists
+/// it from the command's table. rdm-spec.wac spreads it into the command's
+/// imports after the slices built, which take precedence. Each export is the
+/// tasks interface written out, as in later-slices.
+world not-built {
+    export write-the-spec: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    export ground-the-spec: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    export model-the-architecture: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    export verify-by-results: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    export regenerate: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    export measure: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    export plugins: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    export publish: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
+    export regulated-profile: interface {
+        record entry { task: string, usage: string, does: string }
+        record request { task: string, args: list<string>, results-dir: option<string>, folder: option<string> }
+        record outcome { exit: u8, stdout: string, errors: list<string> }
+        entries: func() -> list<entry>;
+        run: func(request: request) -> option<outcome>;
+    }
 }
