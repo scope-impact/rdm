@@ -34,7 +34,7 @@ interface agency-observe {
     /// outside its cycle, relative to the project's folder (spec-0289),
     /// whether the configured results directory was written inside its room
     /// (spec-0290), and what could not be observed, reads outside the room
-    /// always among them (spec-0291; G-34).
+    /// always among them (spec-0291; G-32).
     record defence {
         writes-outside: list<string>,
         tmp-left: u32,
@@ -44,7 +44,7 @@ interface agency-observe {
     }
 
     /// One entry of runs.edn (spec-0286): exactly :role, :room, :began,
-    /// :ended, :minutes, :tokens and :defence (G-33 for each one's form).
+    /// :ended, :minutes, :tokens and :defence (G-31 for each one's form).
     record run-entry {
         role: string,
         room: string,
@@ -62,7 +62,7 @@ interface agency-observe {
     /// one entry to runs.edn, warns of each write outside the room and exits
     /// 0 (spec-0287), and with no begun run of the role in the cycle exits 2
     /// saying so (spec-0292); report prints {:observe {:cycles :runs
-    /// :minutes :tokens :breaches}} (spec-0293; G-40).
+    /// :minutes :tokens :breaches}} (spec-0293; G-38).
     run: async func(args: list<string>, folder: option<string>) -> outcome;
 }
 

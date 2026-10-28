@@ -28,9 +28,9 @@ interface measurement-scoreboard {
     /// :scored :compared :better :worse :better-items :worse-items :only-in
     /// :statements}} (spec-0283, spec-0020, spec-0021); a scoped cycle: its
     /// :target first, then :rest with what was not scored (spec-0284,
-    /// spec-0225; G-28); a bootstrap cycle marked, no better or worse
-    /// counted against it (spec-0192; G-25). A cycle with no score cannot
-    /// run, exit 2 (G-26).
+    /// spec-0225; G-27); a bootstrap cycle marked, no better or worse
+    /// counted against it (spec-0192; G-24). A cycle with no score cannot
+    /// run, exit 2 (G-25).
     run: func(args: list<string>) -> outcome;
 }
 

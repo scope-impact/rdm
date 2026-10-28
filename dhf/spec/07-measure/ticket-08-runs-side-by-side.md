@@ -10,7 +10,7 @@ agency/observe's `run` for "observe report CYCLE CYCLE": each cycle's
 runs.edn read; on standard output exactly `{:observe {:cycles [A B] :runs
 {A n B n} :minutes {A m B m} :tokens {A t B t} :breaches {A b B b}}}`,
 `:minutes` and `:tokens` the sums of each cycle's runs, `:breaches` as
-G-40 settles (spec-0293); a cycle with no runs.edn as G-40 settles; never a
+G-38 settles (spec-0293); a cycle with no runs.edn as G-38 settles; never a
 net, and never folded into a score. Writes nothing.
 
 ## Scenarios it satisfies

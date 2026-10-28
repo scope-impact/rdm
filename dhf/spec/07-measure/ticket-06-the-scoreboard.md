@@ -9,24 +9,24 @@ every Rule; the glossary's "Scoreboard". Builds on ticket 05.
 measurement/scoreboard's `run`, "rdm-spec scoreboard CYCLE CYCLE", reading
 each cycle's cycle.edn with the checklist's `read-cycle` and its score.edn
 with the scorer's `filed` (ED-07); a cycle with neither, exit 2 naming it
-(G-26):
+(G-25):
 
 - Two cycles not scoped: compared over the items both scored, an item
   better when it failed in the first and passed in the second, worse the
   other way, an ungraded item a fail; `:scored` per cycle, `:compared`,
   `:better`, `:worse`, `:better-items` and `:worse-items` (sorted by id,
-  G-29), `:only-in` per cycle (the items only that cycle scored),
+  G-28), `:only-in` per cycle (the items only that cycle scored),
   `:statements`, and never a net (spec-0020, spec-0283); a moved
   denominator stated, saying from what to what, the new items counted
-  apart in `:only-in` (spec-0021; G-27).
+  apart in `:only-in` (spec-0021; G-26).
 - A scoped second cycle: `:target` first, `{:scope :cycle :compared
   :better :worse :better-items :worse-items}` over its scope's items, then
   `:rest`, the items both scored outside the scope, with `:not-scored`
   counting the first cycle's items the scoped one did not score, and the
   two statements of spec-0284, worded as written there (spec-0225,
-  spec-0284; G-28).
+  spec-0284; G-27).
 - A bootstrap cycle (`:bootstrap true`) marked as such, and no better or
-  worse counted against it (spec-0192; G-25).
+  worse counted against it (spec-0192; G-24).
 - Writes nothing.
 
 ## Scenarios it satisfies
