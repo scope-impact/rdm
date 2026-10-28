@@ -7,10 +7,114 @@
 // start-a-project (dhf/spec/01-start-a-project/plan.md), adds none: its
 // components (kernel/command, project/init, project/adopt, project/hooks)
 // publish no event and subscribe to none (dhf/spec/model.edn, :relationships).
-// The first records come with slice 02, write-the-spec (:SpecParsed,
-// :SpecGated) and slice 03, ground-the-spec (:KnowledgeIndexed).
+// Slice 02, write-the-spec, adds :SpecParsed and :SpecGated (below); slice
+// 03, ground-the-spec, adds :KnowledgeIndexed.
 
 package rdm:spec@0.1.0;
 
 interface events {
+    // Slice 02, write-the-spec (dhf/spec/02-write-the-spec/plan.md):
+    // SpecParsed, published by spec/parser, and SpecGated, published by
+    // spec/check. A key ending in ? is written without it (:wip? is wip,
+    // :outline? is outline, :passed? is passed); every other key keeps its
+    // name, re-cased only.
+
+    /// The revision an event read: :working-tree, or the commit read.
+    variant revision {
+        working-tree,
+        commit(string),
+    }
+
+    /// A finding or a refusal as an event carries it: {:file :line :rule
+    /// :message}, the line left out where none applies.
+    record finding {
+        file: option<string>,
+        line: option<u32>,
+        rule: string,
+        message: string,
+    }
+
+    /// One step: {:keyword :text}.
+    record step {
+        keyword: string,
+        text: string,
+    }
+
+    /// One row of an outline's examples table, its cells in the header's order.
+    record example-row {
+        line: u32,
+        cells: list<string>,
+    }
+
+    /// One examples table of an outline: its line, its header and its rows.
+    record examples {
+        line: u32,
+        header: list<string>,
+        rows: list<example-row>,
+    }
+
+    /// One row an outline runs: its line, the header's order, and each
+    /// column's value.
+    record outline-row {
+        line: u32,
+        order: list<string>,
+        values: list<tuple<string, string>>,
+    }
+
+    /// One scenario as SpecParsed carries it (dhf/spec/events.edn, :shape
+    /// :scenarios). id is the scenario's id when it carries exactly one, ids
+    /// every id it carries; name is the title as written; keyword is
+    /// Scenario or Scenario Outline; rule the rule's name; background the
+    /// feature's background steps; examples the outline's tables; context and
+    /// component the model's ids, context-name and component-name their
+    /// :name, none where the model names no owner.
+    record scenario {
+        id: option<string>,
+        ids: list<string>,
+        title: string,
+        name: string,
+        keyword: string,
+        file: string,
+        line: u32,
+        level: option<string>,
+        needs: list<string>,
+        wip: bool,
+        outline: bool,
+        rows: list<outline-row>,
+        examples: list<examples>,
+        background: list<step>,
+        rule: option<string>,
+        steps: list<step>,
+        context: option<string>,
+        component: option<string>,
+        context-name: option<string>,
+        component-name: option<string>,
+    }
+
+    /// One user need: {:id :text :sources [citation]}.
+    record need {
+        id: string,
+        text: string,
+        sources: list<string>,
+    }
+
+    /// :SpecParsed, published by spec/parser: the spec at a revision was
+    /// read, every scenario with its id, tags, steps and owning component;
+    /// refusals are the constructs outside the Gherkin subset, each refused,
+    /// never skipped.
+    record spec-parsed {
+        revision: revision,
+        scenarios: list<scenario>,
+        needs: list<need>,
+        refusals: list<finding>,
+    }
+
+    /// :SpecGated, published by spec/check: the spec at a revision passed or
+    /// failed the spec check, with every finding; passed is true when the
+    /// spec check found nothing (other stages report their own).
+    record spec-gated {
+        revision: revision,
+        passed: bool,
+        findings: list<finding>,
+    }
 }

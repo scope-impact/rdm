@@ -1,0 +1,183 @@
+// Component Spec check of the spec context (dhf/spec/model.edn, :spec/check;
+// dhf/spec/02-write-the-spec/check.feature, dhf/spec/12-several-specs/check.feature,
+// dhf/spec/13-slice-development/check.feature): ids, levels, tags, needs,
+// citations, planned work and no stack words; under the slices layout, every
+// slice planned. Reads scenarios with spec/parser; publishes SpecGated
+// (events.wit). It runs the task "rdm-spec check", every stage of it
+// (dhf/spec/02-write-the-spec/decisions.md, ED-02 and ED-03).
+
+interface spec-check {
+    use events.{spec-parsed, spec-gated};
+
+    /// What the task check reports, as tasks' outcome (tasks.wit): its exit
+    /// code, its standard output (the result as EDN, ED-06) and its error
+    /// lines, the findings of every stage, then the warnings, then, with
+    /// --events, one line per event the run published, in order (ED-04). In
+    /// this interface's own types (slice 01's ED-14).
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// The spec check of a spec read (the glossary's "Spec check"): one id and
+    /// one level per scenario, only known tags, a declared need for every
+    /// scenario and a source for every need, planned work tagged @wip, no
+    /// configured stack word; under :spec-layout :slices, every slice planned,
+    /// with a status and its decisions. Each spec on its own terms
+    /// (spec-0387). passed is true when it found nothing.
+    gate: func(parsed: spec-parsed) -> spec-gated;
+
+    /// Runs the task "rdm-spec check [--sources DIR] [--events]" with its
+    /// arguments and the project's folder, as the command hands them
+    /// (tasks.wit, request): the specs declared (a configuration refused,
+    /// exit 2), then every stage in order, each reporting, none a gate
+    /// (spec-0235): sources, the spec read (SpecParsed), the spec check
+    /// (SpecGated), the model's lint, the views' freshness, the wiki, the
+    /// clauses under :regulated, the paths, the plugins (ED-03). A stage that
+    /// answers none is not built: the task is refused (exit 2, "cannot-run:
+    /// check's STAGE stage is not built"), as the glossary's "Gate" says.
+    run: func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The stages of check whose components are in later slices (ED-02): one
+/// import each, named for the stage, the same interface written out each time
+/// (WIT cannot import one interface under several names, and a stage using
+/// another interface's types would import that interface: slice 01's ED-14).
+///
+/// A stage is given check's arguments, the project's folder, and the events
+/// the run has published before it, in order, each as EDN, {:event NAME}
+/// merged with the keys it carries (dhf/spec/events.edn), the published
+/// language (ED-04). It answers its findings (warning true for a warning), the
+/// events it published, and what it reports: its part of check's result, an
+/// EDN map merged into what check prints (ED-06; the model's lint prints
+/// {:lint ...}). An error is why it cannot run (exit 2); none is a stage not
+/// built.
+world check-stages {
+    /// knowledge/sources (slice 03): the raw sources read, every citation
+    /// resolved; publishes KnowledgeIndexed.
+    import sources-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    /// architecture/lint (slice 04): the model's lint; reads SpecParsed from the events.
+    import model-lint-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    /// architecture/views (slice 04): the views' freshness.
+    import views-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    /// knowledge/wiki (slice 03): the wiki check.
+    import wiki-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    /// compliance/gap (slice 10): the clauses, called only where the
+    /// configuration holds :regulated (slice 01's ED-17); publishes ClausesIndexed.
+    import clauses-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    /// regeneration/fence (slice 06): the committed paths.
+    import paths-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    /// kernel/plugins and kernel/bus (slice 08): the run's events delivered to
+    /// the project's plugins that subscribe to them.
+    import plugins-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}
+
+/// The stand-in for every stage of check not built yet: composition, not a
+/// component of the model, holding no rdm-spec logic. Each stage answers none,
+/// so check refuses the task (exit 2), never reads a stage skipped as a pass
+/// (the glossary's "Gate"). The not-built stand-in (rdm-spec.wit) includes
+/// this world, and rdm-spec.wac spreads it into slice 02's imports
+/// (dhf/spec/02-write-the-spec/ticket-01-the-slice-composed.md); a slice that
+/// builds a stage wires it by name, ahead of the spread.
+world check-stages-not-built {
+    export sources-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export model-lint-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export views-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export wiki-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export clauses-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export paths-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export plugins-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}
+
+/// The component spec/check builds to. Its WASI imports are those every
+/// component carries, in the version slice 01's worlds name (ED-08).
+world spec-check-component {
+    import spec-parser;
+    include check-stages;
+    export spec-check;
+}

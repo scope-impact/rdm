@@ -1,0 +1,47 @@
+// Slice 02, write the spec (dhf/spec/02-write-the-spec/plan.md), composed
+// from the components whose home is this slice, each built to its own
+// component exporting its interface (wasm/components/<context>-<component>/,
+// dhf/harness/stack.md), and the slice's tasks (ED-05). Targets the slice's
+// world, write-the-spec (slice-02.wit).
+//
+// Each component's imports are wired to another of the slice's components
+// (the model's relationships: stamper and check read scenarios with the
+// parser, and use the event records it exports; the tasks run stamp with
+// the stamper and check with the check). Every other import is left to the
+// composition: WASI's and rdm:host/process, which the host satisfies, and
+// check's stages in later slices (check-stages, spec-check.wit), which
+// rdm-spec.wac wires, to the not-built stand-in until each is built.
+//
+// Packages resolve from the build's dependency directory, as slice-01.wac
+// says: rdm:spec-parser is wasm/build/deps/rdm/spec-parser.wasm, and
+// rdm:spec@0.1.0 is dhf/wit encoded. Then
+// "wac compose dhf/wit/slice-02.wac --deps-dir wasm/build/deps
+//  -o wasm/build/deps/rdm/write-the-spec.wasm".
+package rdm:write-the-spec targets rdm:spec/write-the-spec@0.1.0;
+
+let parser = new rdm:spec-parser { ... };
+
+let stamper = new rdm:spec-stamper {
+    "rdm:spec/events@0.1.0": parser["rdm:spec/events@0.1.0"],
+    "rdm:spec/spec-parser@0.1.0": parser["rdm:spec/spec-parser@0.1.0"],
+    ...
+};
+
+let check = new rdm:spec-check {
+    "rdm:spec/events@0.1.0": parser["rdm:spec/events@0.1.0"],
+    "rdm:spec/spec-parser@0.1.0": parser["rdm:spec/spec-parser@0.1.0"],
+    ...
+};
+
+let tasks = new rdm:write-the-spec-tasks {
+    "rdm:spec/events@0.1.0": parser["rdm:spec/events@0.1.0"],
+    "rdm:spec/spec-stamper@0.1.0": stamper["rdm:spec/spec-stamper@0.1.0"],
+    "rdm:spec/spec-check@0.1.0": check["rdm:spec/spec-check@0.1.0"],
+    ...
+};
+
+export parser["rdm:spec/events@0.1.0"];
+export parser["rdm:spec/spec-parser@0.1.0"];
+export stamper["rdm:spec/spec-stamper@0.1.0"];
+export check["rdm:spec/spec-check@0.1.0"];
+export tasks["rdm:spec/tasks@0.1.0"];

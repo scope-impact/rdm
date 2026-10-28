@@ -1,0 +1,53 @@
+// Component Stamper of the spec context (dhf/spec/model.edn, :spec/stamper;
+// dhf/spec/02-write-the-spec/stamper.feature,
+// dhf/spec/12-several-specs/stamper.feature): hands out scenario ids from the
+// ledger, never twice. It reads scenarios with spec/parser, and stamps
+// feature files and advances the ledger in the repository (the model's
+// relationships).
+
+interface spec-stamper {
+    use events.{finding};
+
+    /// One scenario stamped: the id it was given, its file and its title.
+    record stamped {
+        id: string,
+        file: string,
+        title: string,
+    }
+
+    /// What a stamp did: every scenario stamped, in the order of their files
+    /// and lines, and every refusal of the spec it read (nothing stamped in a
+    /// spec that could not be read).
+    record stamping {
+        stamped: list<stamped>,
+        refusals: list<finding>,
+    }
+
+    /// What the task stamp reports, as tasks' outcome (tasks.wit): its exit
+    /// code, its standard output (the result as EDN, ED-06) and its error
+    /// lines. In this interface's own types (ED-14 of slice 01).
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// Gives every scenario with no id the next id of its spec's ledger, with
+    /// its spec's id prefix (spec-0054, spec-0058, spec-0388), never one the
+    /// ledger has issued, a deleted scenario's included (spec-0056), and
+    /// advances the ledger; a scenario that carries an id keeps it, whatever
+    /// its wording or its file (spec-0055, spec-0057). The error is why it
+    /// cannot run (cannot-run, exit 2).
+    stamp: func() -> result<stamping, string>;
+
+    /// Runs the task "rdm-spec stamp" with its arguments, as the command hands
+    /// them (tasks.wit, request), and reports it.
+    run: func(args: list<string>, folder: option<string>) -> outcome;
+}
+
+/// The component spec/stamper builds to. Its WASI imports are those every
+/// component carries, in the version slice 01's worlds name (ED-08).
+world spec-stamper-component {
+    import spec-parser;
+    export spec-stamper;
+}

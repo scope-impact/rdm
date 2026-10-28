@@ -1,0 +1,54 @@
+// Component Parser of the spec context (dhf/spec/model.edn, :spec/parser;
+// dhf/spec/02-write-the-spec/parser.feature,
+// dhf/spec/12-several-specs/parser.feature): reads the declared Gherkin
+// subset and refuses anything outside it; reads the spec at a revision; reads
+// one spec, or several, one folder each. Publishes SpecParsed (events.wit).
+//
+// Its interface uses the event records of events.wit, a types-only
+// interface: the component exports events beside its own interface, so the
+// types are its own, and every component reading with it (spec/stamper,
+// spec/check: the model's "Reads scenarios with") imports both from it
+// (slice-02.wac). No interface of another slice uses them: a stage of check
+// takes its events as EDN (spec-check.wit, ED-04 in
+// dhf/spec/02-write-the-spec/decisions.md).
+
+interface spec-parser {
+    use events.{spec-parsed};
+
+    /// One spec of the project: an entry of the configuration's :specs
+    /// ({:name :dir :id-prefix}), or, with no :specs, the one spec read from
+    /// :spec-dir and the paths it names, its name none (spec-0385).
+    record spec-declaration {
+        name: option<string>,
+        dir: string,
+        id-prefix: string,
+    }
+
+    /// The project's specs, as its configuration declares them (spec-0385).
+    /// The error is why a configuration of several specs cannot be read apart:
+    /// a name or an id prefix declared twice, two specs in one folder, a
+    /// spec's folder that does not exist (spec-0386); the task reports it as
+    /// cannot-run (exit 2), before anything runs.
+    specs: func() -> result<list<spec-declaration>, string>;
+
+    /// Reads every spec at a revision: none for the working tree, else the
+    /// commit or tag (a cut, spec-N) read through git (spec-0220), the
+    /// project's folder within its repository where it is one (folder, as
+    /// the command hands it to a task, tasks.wit). Each feature file holds
+    /// exactly one Feature (spec-0053), in the declared subset (spec-0051);
+    /// a construct outside it is a refusal with its file and line, never
+    /// skipped (spec-0052). Each spec resolves its needs and its model within
+    /// itself (spec-0387). The error is why the spec cannot be read at all
+    /// (an unknown revision, a configuration refused as in specs), reported
+    /// as cannot-run.
+    parse: func(revision: option<string>, folder: option<string>) -> result<spec-parsed, string>;
+}
+
+/// The component spec/parser builds to. It reads a revision with git through
+/// the host. Its WASI imports are those every component carries, in the
+/// version slice 01's worlds name (ED-08).
+world spec-parser-component {
+    import rdm:host/process@0.1.0;
+    export events;
+    export spec-parser;
+}

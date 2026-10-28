@@ -1,0 +1,41 @@
+// Slice 02, write the spec (dhf/spec/02-write-the-spec/plan.md): the spec
+// kept as executable scenarios in a declared subset of Gherkin, each with one
+// id from the ledger, one level and a need, and a spec that breaks its rules
+// stopped before it is committed.
+//
+// Exports the interfaces of the components whose home is this slice (their
+// model spec path names it: spec/parser, spec/stamper, spec/check), the event
+// records spec/parser's interface uses (events, exported by spec/parser), and
+// the slice's tasks (tasks.wit: stamp and check), which rdm-spec.wac wires to
+// the command's import write-the-spec (tasks.wit, later-slices). Imports what
+// they use: the host's processes, for git (spec/parser reads a revision), and
+// check's stages whose components are in later slices (spec-check.wit,
+// check-stages), which slice-02.wac leaves to rdm-spec.wac: the not-built
+// stand-in until each stage's slice is built.
+//
+// WASI is named by no world of this slice: each component's and this world's
+// WASI imports are the line slice 01's worlds carry, in the version they
+// carry (dhf/spec/02-write-the-spec/decisions.md, ED-08), added by the cycle
+// that builds the slice, so this file pins no WASI version.
+// Composed by slice-02.wac.
+
+world write-the-spec {
+    import rdm:host/process@0.1.0;
+    include check-stages;
+    export events;
+    export spec-parser;
+    export spec-stamper;
+    export spec-check;
+    export tasks;
+}
+
+/// The slice's tasks (ED-05): composition, not a component of the model,
+/// holding no rdm-spec logic. Its entries are the task table's rows of stamp
+/// and check, as spec-0176 writes them (slice 01's ED-18); it runs stamp with
+/// spec/stamper's run and check with spec/check's, and answers none for any
+/// other task.
+world write-the-spec-tasks {
+    import spec-stamper;
+    import spec-check;
+    export tasks;
+}
