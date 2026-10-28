@@ -189,3 +189,480 @@ Cycle 18's verify demanded a trace from a @wip scenario, which is never
 run and so can carry no evidence; the grader gave 72 of 72, and the
 held-still oracle found it on its first run (dhf/harness/oracle/README.md).
 
+
+## Expected decisions (planned for the component build, ADR 0006)
+
+Accepted as recommended by the integrator on 2026-10-28, under the spec
+owner's goal; the spec owner may overrule any. Among them ED-01 (cut runs
+check as a process; cut and fence instantiated on their own in
+rdm-spec.wac) and ED-04 (the model gains scopes and verify reading cuts
+with cut). The visible spec gaps, with spec-0362's paths a :plugin check
+cannot resolve and spec-0176's usages lacking --slice and --spec, are
+stated in the next spec change before this slice is built.
+
+Written in the plan phase of the component build (ADR 0006,
+`dhf/decisions/adr-0006-wasm-components.md`, cycle 7 of its build order;
+`docs/wow/harness.md`, "The planner"): each question a builder of this slice
+would otherwise decide alone, with its options and the planner's
+recommendation. The spec owner settles each before the build, or turns it
+into a scenario. Where the spec is silent on what rdm-spec does, the
+question is a spec gap (below), not a decision. The tickets (`ticket-01` to
+`ticket-10`) cite them as ED-NN and G-NN; other slices' are cited as "slice
+08's ED-NN" and so on. The architecture is in `dhf/wit/`
+(`regeneration-cut.wit`, `regeneration-scopes.wit`, `regeneration-fence.wit`,
+`verification-verify.wit` with the event record `verify-events`,
+`slice-06.wit`, `slice-06.wac`). The settlements of slices 01 to 05 and 08
+hold here: no bridge (their ED-01), a stage not built is a warning (slice
+02's ED-02), events are values handed on as EDN between slices (slice 02's
+ED-04, slice 08's ED-02), a task's interface uses only its own and builtin
+types (slice 01's ED-14), fence and verify ask the Gate themselves (slice
+08's ED-03).
+
+### ED-01: The loop between check and this slice, and where cut and fence are instantiated
+
+Slice 02's check imports this slice's paths stage (fence's: spec-0296,
+spec-0297), and this slice reads slice 02: cut runs check (spec-0224), and
+verify reads the spec at the cut with the parser (spec-0217, spec-0207,
+spec-0331). One instance of the slice cannot come both before slice 02 and
+after it (slice 02's ED-02 foresaw it). The model has fence resolve cuts
+with cut's git helpers.
+
+- A. cut runs check as a command, `RDM_SPEC check` through `rdm:host/process`
+  in the project's root (RDM_SPEC as slice 08's ED-07 settles it), and
+  relays its lines (spec-0224 asks for check's finding lines unchanged): it
+  imports nothing of slice 02. cut and fence, which import only the host,
+  each other, kernel/plugins (slice 08) and architecture/model (slice 04),
+  are instantiated on their own in `rdm-spec.wac`, ahead of slice 02, as
+  slice 05's ED-07 instantiates compliance/gap for slice 10; fence's paths
+  stage is wired by name into slice 02's import. The slice's composition
+  (`slice-06.wac`) holds scopes, verify and the tasks, after slices 02 and
+  05, importing cut's and fence's interfaces from their instances. Cost: a
+  cut needs RDM_SPEC (absent, it cannot run, saying so), and one process
+  more.
+- B. cut imports `spec-check` and lives in the slice's composition; fence,
+  on its own ahead of slice 02, resolves cuts through git itself: the
+  model's two relationships from fence to cut are unserved, and the cut's
+  git helpers are written twice.
+- C. The paths stage becomes a component of its own in the model (a spec
+  change), instantiated ahead of slice 02; the rest of the slice in one
+  instance.
+- D. The whole slice in one instance after slice 02, the paths stage left to
+  the not-built stand-in: check warns `stage-not-built: paths` for good and
+  spec-0296 and spec-0297 never pass.
+
+Recommendation: A. `rdm-spec.wac` then gains three instances and three
+wiring lines instead of one and one (ticket 01 gives them as text), and
+rewrites none. Composed by the planner against stand-in components built
+from the declarations: the slice alone, and the command with slices 01, 02,
+03, 04, 08, 05 and 06 (the not-built stand-in with `include
+check-stages-not-built;`).
+
+### ED-02: Scenarios whose task another slice builds
+
+As slices 01 to 08, settled there: no bridge. This slice's components carry
+67 scenarios: 54 in this slice (cut 4, scopes 7, fence 13, verify 30),
+4 in `08-plugins` (verify's `:plugin` check), 3 in `11-project-in-a-folder`,
+1 in `12-several-specs` and 5 in `13-slice-development`. None needs a task a
+later cycle builds: check, its stages without `:regulated`, the parser, the
+results reader and the plugins are built (cycles 2 to 6). This cycle unblocks
+earlier slices' pending scenarios, verified as regression items without
+those slices being rebuilt (`pending.md`).
+
+- A. None pending; the earlier slices' pending scenarios of cycle 7 verified
+  in this cycle.
+
+Recommendation: A.
+
+### ED-03: How fence, verify and scopes reach git through the host
+
+A component sees files through the host's standard interfaces (the project's
+folder and `/`, slice 01's ED-05), which carry no permission bit, and runs
+git only through `rdm:host/process`, whose `run` takes the whole standard
+input and returns the whole output. spec-0038 wants the cut's committed
+files unchanged and no object of a denied path; spec-0294 and spec-0369
+nothing untracked or ignored; spec-0202 an export with no history; spec-0370
+the room's implementation as git would commit it, links as links.
+
+- A. **Plumbing, files written by the core.** A cut is read with `git
+  rev-parse` and `git tag --points-at` (resolve), `git ls-tree -r -z` (its
+  tree: mode, object, path, within the project's folder), `git cat-file
+  --batch` (its blobs, one process for all), `git diff --name-status -z`
+  (scopes' changes); the core writes each file through the standard
+  interfaces, a link as a link, and sets the executable bit with `chmod`
+  through the host (as slice 01's ED-04 sets the hook's). fence then makes
+  the room's one root commit in ROOM (`git init`, `git add -A`, `git commit`
+  with hooks off), so only kept objects are ever in it. The room's
+  implementation reaches verify's checkout from `git ls-files -co
+  --exclude-standard -z` in the room (its own repository; a temporary git
+  directory when it has none, G-27), copied with its links and modes by
+  `tar -c --null -T -` into `tar -x`, the archive passing through the
+  core. scopes writes each cut out to a temporary directory under the
+  TMPDIR rdm-spec was given, read there with architecture/model, removed
+  before it returns, also on failure.
+- B. `git archive | tar -x`: fewer processes, but archive applies the
+  export-ignore and export-subst attributes, so a kept file can differ from
+  its committed bytes (spec-0038).
+- C. `git worktree add` or a checkout: smudge filters and line-ending
+  conversion change bytes, and the room or checkout is linked to the
+  project's object store, its history reachable (spec-0038, spec-0202).
+- D. `git show CUT:PATH`, one process per file: slow on a whole cut.
+
+Recommendation: A, with unit tests on a fixture repository holding an
+executable file, a link, a file with an export-subst attribute and an
+ignored file.
+
+### ED-04: Where the git helpers live
+
+fence "Resolves cuts with the git helpers of" cut (the model); scopes reads
+two cuts and verify one, and the model relates both only to the repository.
+
+- A. `regeneration-cut` exports them (`resolve`, `tree`, `show`, `extract`,
+  `changes`), and fence, scopes and verify import it. The model gains
+  "Reads cuts with the git helpers of" from scopes and verify to cut in the
+  next spec change.
+- B. A copy in each crate: three readings of a cut.
+- C. The kernel library (slice 01's ED-13): slice 01's crate, outside this
+  cycle's fence.
+
+Recommendation: A.
+
+### ED-05: Reading scopes by slice
+
+spec-0398 makes a touched slice a scope with every component it reaches;
+spec-0416 reaches a component through any of its feature files, wherever its
+spec path is; spec-0399 lists a component two touched slices share in the
+first only; spec-0397 and spec-0404 fence and verify a slice named alone on
+every component it reaches.
+
+- A. A slice reaches the components that own a feature file in its folder
+  (architecture/model's `owners` on the cut written out, ED-03): the
+  to-cut's, and the from-cut's for a file the change deleted, so a
+  component the cut removed is still named (spec-0329). scopes lists the
+  touched slices in the order of their folders' names, each with the
+  components it reaches that no earlier slice of the same listing holds,
+  in build order (spec-0299: the kernel first, in the model's order, then
+  each publisher before its subscribers by the model's event relationships,
+  ties in the model's order). "The first only" is a rule of one listing:
+  fence `--slice` and a cycle scoped to a slice (`:scope [{:slice S}]`, or
+  `:slice S`, spec-0417) reach every component the slice reaches, whatever
+  another slice holds. One function of the order, shared by fence's
+  removal and scopes' listing, unit-tested on spec-0299's model.
+- B. The first-only rule also in fence and verify: a slice cycle would then
+  depend on which other slice its cut touched.
+
+Recommendation: A. Events under the slices layout are G-10.
+
+### ED-06: How verify runs a project's checks through the host
+
+Every check runs in the checkout, `dhf/cycles/NN/build`.
+
+- A. `:tests`: one `run`, its command, RESULTS_DIR the absolute path of the
+  cycle's results directory in the project's repository (spec-0206), no
+  time limit (the check declares no budget); its standard output then its
+  error stream written to `dhf/cycles/NN/test.log` (G-33). `:runs`: one
+  `run` with `timeout-ms` its budget; its exit and first line held to
+  `:expect`; its margin the budget less its `millis`, to 0.01 (spec-0322,
+  spec-0314). `:serves`: its port tried first by binding 127.0.0.1:PORT
+  with the standard interfaces' sockets and releasing it, held when the
+  address is in use (spec-0320), the runtime's bind reusing an address only
+  closing connections hold (spec-0346, a unit test); its app started with
+  `spawn` (`{port}` filled in), polled K times, poll i at i x S/K seconds
+  after the start, each a connection sending `GET /` and answered when an
+  HTTP status line comes back before the next poll is due (spec-0341); then
+  its probe one `run` with `{url}` filled in as `http://127.0.0.1:PORT/` and
+  `timeout-ms` its `:probe-seconds` (30 by default), what it printed kept
+  (spec-0366, spec-0367); the app stopped with `stop`, its process group
+  with it, on every path out of the check, verify's own failures included
+  (spec-0318, spec-0319). `:plugin`: kernel-plugins' `ask` (G-24). A
+  command the host cannot start (`cannot-start`) refuses the gate, exit 2,
+  naming the check and the command (spec-0317).
+- B. Polls with `curl` through the host: a tool neither the stack nor the
+  configuration names.
+- C. An HTTP function in `rdm:host`: the host grows for what the core can
+  do.
+
+Recommendation: A. The app's standard streams are not verify's: the host's
+`spawn` returns no output, so it gives the app none of verify's (G-35).
+
+### ED-07: The paths stage
+
+Check hands each stage its arguments, the project's folder and the run's
+events; the paths stage reads the configuration's `:clean-room`,
+`:implementation` and the committed paths, and nothing of the events.
+
+- A. fence's `unclassified-paths` on the index (cut's `tree` with no
+  revision, ED-04; what "committed" is, G-07), one finding per path,
+  `FILE: RULE: neither denied nor kept`, no line, the rule the component's
+  (spec-0296, spec-0297); it publishes nothing and reports nothing
+  (check's result stays the lint's, spec-0423). A configuration with no
+  `:clean-room` holds every committed path unclassified.
+- B. The stage reads HEAD's tree only (G-07).
+
+Recommendation: A, settled with G-07.
+
+### ED-08: How verify reads the cycle's results
+
+verification/results (slice 05) reads a directory's Allure results: each
+one's file, spec label, status, parameters, and its text as read; every file
+it cannot read; and refuses (an error) a directory that does not exist or
+holds no result.
+
+- A. verify reads `dhf/cycles/NN/results` with `read` after the tests
+  command exits 0: its error is spec-0033's finding (exit 1, "a green exit
+  with no results is not a run"), never a cannot-run; each stamped scenario
+  of the cycle's scope (G-23) named by a result whose spec label is its id,
+  passed when every result naming it passed (G-26 for an outline's rows);
+  an unreadable file fails the check, naming it (G-25). The mapping
+  (spec-0331, spec-0333) is held on each result's `json`, parsed by verify,
+  against the scenario as the parser reads it at the cut (ED-09): name,
+  steps (the background's first), labels, links and attachments. A
+  `:plugin` check's directory, `dhf/cycles/NN/results/NAME`, is read the
+  same way (spec-0391), a refusal for no result meaning the plugin wrote
+  none: judged by its exit alone.
+- B. verify reads the Allure files itself: a second reader, and the model's
+  "Reads the tests check's results with" unserved.
+
+Recommendation: A.
+
+### ED-09: How verify reads the spec at the cut
+
+- A. `spec-parser.parse` at the cut and the project's folder (slice 02: it
+  reads a revision through git): every scenario with its ids, tags, steps,
+  background, rows, rule, needs, context and component; a scenario with no
+  id is spec-0217's refusal. The checkout is never parsed in place (the
+  parser reads the project's root).
+- B. The parser pointed at the checkout: a parser change in slice 02.
+
+Recommendation: A.
+
+### ED-10: The order of verify's steps
+
+spec-0202 has verify read the cycle "before anything else it does";
+kernel-plugins' `gate` is "asked before the gated task does anything else",
+and its request carries the cut, which only cycle.edn names (spec-0358).
+
+- A. cycle.edn (spec-0203); the plugins' declaration at the project's root
+  (spec-0441); the Gate (spec-0232: a failing answer relayed, exit 1, no
+  ratified.edn); the checkout, fresh (G-22); the cut's configuration held
+  (spec-0316, spec-0332, spec-0363: exit 2, no check, no ratified.edn); the
+  spec at the cut (spec-0217: exit 1, ratified.edn refused); the checks in
+  order, the first that fails or is refused stopping them (spec-0315,
+  G-29); ratified.edn; CycleVerified delivered when every check passed
+  (spec-0383, spec-0384). fence in the same spirit: the declaration, the
+  Gate (its `:cut` as given), then the cut and the scope.
+- B. The Gate before cycle.edn: the request has no cut.
+
+Recommendation: A, with G-21.
+
+### ED-11: Where CycleVerified's record lives
+
+- A. As slice 05's ED-05: an interface of its own, `verify-events`, exported
+  by verification/verify beside `verification-verify`, written in
+  `verification-verify.wit`; `events.wit`'s header comment names it in the
+  cycle that builds the slice. It reaches the plugins as EDN through
+  kernel-plugins' `deliver` (slice 08's ED-02, ED-03).
+
+Recommendation: A.
+
+### ED-12: Who exports the slice's tasks
+
+- A. As slice 02's ED-05: a composition component, `regenerate-tasks`,
+  holding no logic: the table's rows of cut, scopes, fence and verify
+  exactly as spec-0176 writes them (slice 01's ED-18), each run with its
+  component.
+
+Recommendation: A.
+
+### ED-13: The host's standard interfaces, and asynchronous functions
+
+- A. As slice 02's ED-08: the cycle that builds the slice adds to `regenerate`
+  and each component world the one line slice 01's worlds carry, in the
+  version they carry then (it brings the sockets a `:serves` check uses).
+  The functions of this slice's interfaces that run processes are
+  asynchronous, as `tasks`' `run` and the host's `run` are since the move of
+  cycle 26; the paths stage keeps check's stage interface as
+  `spec-check.wit` writes it.
+
+Recommendation: A.
+
+## Spec gaps
+
+What the spec leaves unstated about this slice's components. For each: the
+scenario or rule, what is unstated, the smallest statement that would close
+it, and whether it must be stated before the build (VISIBLE: a grader could
+see it) or may stay the builder's choice (FREE: no grader could).
+
+### Cut
+
+- **G-01** (spec-0036, spec-0162). cut's result on standard output, and
+  spec-0162's exit. Smallest: a contract scenario, e.g. `{:cut {:tag
+  "spec-7" :commit C :pushed true}}`, and `{:cut {:tag "spec-7" :already
+  true}}` with exit 0. VISIBLE.
+- **G-02** (spec-0036). The first cut's name with no spec-N tag yet, and
+  which tags count: every tag `spec-N` of the repository, N decimal, the
+  next one more than the highest. Smallest: "the first cut is spec-1; N is
+  one more than the highest N of the repository's spec-N tags". VISIBLE.
+- **G-03** (spec-0224). Where cut runs check (the working tree in the
+  project's root, or HEAD as committed), and what it does when check cannot
+  run (exit 2) or warns. Smallest: "check is run in the project's root; its
+  exit 2 is cut's, relaying its line; its warnings are relayed after its
+  findings". VISIBLE. Recommendation: as written (ED-01).
+- **G-04** (spec-0163, spec-0036). No `origin` or no `origin/HEAD`, and a
+  push that fails: the tag left or removed, and the exit. Smallest: "exit 2
+  naming what is missing; a push that fails removes the tag and exits 2,
+  naming it". VISIBLE.
+- **G-05** (spec-0162, spec-0163, spec-0224). The order of cut's refusals
+  when several hold. Recommendation: not origin/HEAD, then already cut (no
+  check run), then the check. VISIBLE only on a combined fixture.
+- **G-06** (spec-0036). A lightweight or an annotated tag. FREE: every
+  scenario reads a tag by its name. Recommendation: lightweight (it needs no
+  identity).
+  **The builder's choice: no grader sees it.**
+
+### Fence and the paths stage
+
+- **G-07** (spec-0296, spec-0297; the glossary's "Fence"). What a committed
+  path is for check: HEAD's tree, or the index (so the pre-commit hook
+  stops the commit that adds one); that `dhf` itself is classified through
+  the paths directly under it; and that a project with no commit, or outside
+  a repository, has none. Smallest: one glossary sentence. VISIBLE.
+  Recommendation: the index (ED-07).
+- **G-08** (spec-0329, spec-0038, spec-0182). fence's result on standard
+  output: spec-0329 says "its result names ratification/ratify as a removed
+  component". Smallest: a contract scenario, e.g. `{:fence {:room ROOM :cut
+  "spec-3" :scopes [...] :removed-components [...]}}`. VISIBLE.
+- **G-09** (spec-0038, spec-0296). A cut holding a committed path neither
+  denied nor kept: fence refuses it (exit 1, naming each, no room), or
+  keeps it. Smallest: a row of spec-0295's kind. VISIBLE. Recommendation:
+  refused, so nothing unclassified reaches a room.
+- **G-10** (spec-0298, spec-0398, spec-0399). Under the slices layout, a
+  changed event's publishers and subscribers: listed as `{:component ...}`
+  scopes after the slices, unless a listed slice holds them, or folded into
+  the slices that hold them. VISIBLE.
+- **G-11** (spec-0295). Which kept files the bytes rule compares (only
+  those outside the implementation, or the scope's kept implementation too)
+  and whether an empty file counts: two empty files are the same bytes, and
+  the same object (spec-0038). Smallest: "a kept file outside the
+  implementation, not empty". VISIBLE.
+- **G-12** (spec-0038). A ROOM that exists already, empty or not.
+  Smallest: "a ROOM that exists and is not empty is refused, exit 2".
+  VISIBLE.
+- **G-13** (spec-0183, spec-0226, spec-0397). `--slice` with `--context`
+  or `--component`, and `--slice` without `:spec-layout :slices`; and
+  spec-0176's usage of fence names no `--slice`. Smallest: rows of
+  spec-0185 (exit 2), and the usage. VISIBLE; the usage is the spec owner's
+  (slice 01's table, the oracle's `help` golden).
+- **G-14** (spec-0038). The room's commit: author, date, message, branch.
+  FREE: no scenario reads them. Recommendation: an identity of rdm-spec's
+  own, so a fence never fails where git has none configured.
+  **The builder's choice: no grader sees it.**
+- **G-15** (spec-0038). A submodule at the cut. FREE.
+  **The builder's choice: no grader sees it.**
+
+### Scopes
+
+- **G-16** (spec-0237, spec-0238, spec-0298). scopes' result on standard
+  output, and the shared file's line. Smallest: a contract scenario, e.g.
+  `{:scopes {:from "spec-3" :to "spec-4" :scopes [{:component :kernel/bus}
+  ...] :shared-files ["dhf/spec/glossary.md"]}}`, each shared file also a
+  warning line, exit 0. VISIBLE.
+- **G-17** (spec-0238, spec-0340). Which changed files are shared: the
+  model, the needs, the ledger (which every stamp changes), the
+  configuration, the wiki, `docs/`; the event catalogue when no contract
+  changed (spec-0340 says only "no scope"); a denied path (the
+  implementation, the measurements). Smallest: "a shared file is a changed
+  kept path no component owns; the event catalogue is read event by event
+  and is never one". VISIBLE.
+- **G-18** (spec-0298, spec-0348). Which cut's relationships name an
+  event's subscribers when the event was added, removed or moved: each
+  cut's own, together. VISIBLE.
+- **G-19** (spec-0399). A touched slice all of whose components an earlier
+  slice of the listing holds: listed with `:components []`, or left out.
+  VISIBLE. Recommendation: listed.
+- **G-20** (spec-0237). Two cuts that are not cuts, the same cut twice, or
+  the later first. Smallest: "each is a cut, as fence's (exit 2); the
+  change is read from the first to the second". VISIBLE.
+
+### Verify
+
+- **G-21** (spec-0202, spec-0441, spec-0358). spec-0441's verify row gives
+  no cycle.edn, so spec-0203's refusal answers before the declaration's if
+  verify reads the cycle first, as spec-0202 says. Smallest: spec-0441's
+  Given gains "and dhf/cycles/03/cycle.edn naming spec-3". VISIBLE.
+- **G-22** (spec-0207, spec-0033, spec-0202, spec-0391). Whether verify
+  empties the cycle's results directory, and makes the checkout afresh,
+  before it runs (an earlier run's results would pass a no-op test
+  command), and makes `results/NAME` for a `:plugin` check before asking
+  it. Smallest: "verify starts each run with an empty results directory and
+  a fresh checkout". VISIBLE.
+- **G-23** (spec-0207, spec-0410, spec-0404; `07-measure/scorer.feature`,
+  spec-0173, spec-0417). The scenarios the tests check requires under each
+  scope: the project, contexts and components (every scenario, as
+  spec-0207 says?), `[{:spec S}]` (spec-0410), `[{:slice S}]` and
+  cycle.edn's `:slice` (spec-0404). Smallest: one glossary sentence under
+  "Check". VISIBLE.
+- **G-24** (spec-0361, spec-0363; slice 08's G-18). Which `:plugins` a
+  `:plugin` check is asked from: the cut's configuration, read in the
+  checkout, as every check is (spec-0205); and the Gate's and
+  CycleVerified's subscribers: the project's root's, as every task's.
+  Smallest: one sentence in the glossary's "Check". VISIBLE.
+- **G-25** (spec-0207, spec-0062). A results file the reader cannot read:
+  fails the tests check, naming it, or passed over. VISIBLE.
+  Recommendation: fails, as it refuses a release (spec-0454).
+- **G-26** (spec-0207, spec-0208; the glossary's "Verified"). An outline:
+  "named by at least one result, and every result naming it passed", or
+  verified as status says (a passing result for every row). VISIBLE.
+- **G-27** (spec-0204, spec-0370). A ROOM that is not a git repository; an
+  implementation path the room does not hold (absent from the checkout too).
+  Smallest: "the room's implementation is read as git would commit it in a
+  repository at ROOM". VISIBLE.
+- **G-28** (spec-0215, spec-0216, spec-0314). The record and the result of
+  a refusal: the reason's key (`:reason`, a string?), whether `:room-tree`
+  and `:checks` are in it, and standard output on exit 1 (`{:verify ...
+  :outcome :refused}`?). Smallest: a contract row of spec-0216. VISIBLE.
+- **G-29** (spec-0361, spec-0315). After a check refused (exit 2), whether
+  the later checks are `:not-run`, as after one that failed. VISIBLE.
+  Recommendation: they are.
+- **G-30** (spec-0215). The room's tree hash H: the id of the git tree
+  holding exactly the room's implementation as git would commit it, at its
+  paths, or the room's whole tree. Smallest: one sentence in the glossary's
+  "Verify". VISIBLE.
+- **G-31** (spec-0314, spec-0318, spec-0322). The keys of each check beyond
+  those stated: `:serves`' `:seconds` and `:budget`, a failed check's, one
+  not run. Smallest: one row per kind of spec-0314. VISIBLE.
+  Recommendation: `{:name :kind :outcome :seconds}` and the kind's own
+  keys; a check not run, `{:name :kind :outcome}`.
+- **G-32** (spec-0331, spec-0332, spec-0333; the glossary's "Allure
+  mapping"). The Allure elements and the spec elements a mapping may name,
+  and what each spec element is in a result (`:context` the context's id,
+  `:component` its id without the colon, `:gherkin-step` keyword and text,
+  an outline's step with its row's values). Smallest: the glossary lists
+  them: exactly the default mapping's keys and values. VISIBLE.
+- **G-33** (spec-0197, spec-0319, spec-0321, spec-0322, spec-0331). Each
+  failure's line: its file (test.log, ratified.edn's, the result's), rule
+  and wording; test.log's content (standard output, then error stream).
+  FREE: the rule is the component's (`dhf/spec/README.md`), and the
+  scenarios say only what each names.
+  **The builder's choice: no grader sees it.**
+- **G-34** (spec-0318, spec-0341). A poll's window (until the next poll is
+  due) and the request it sends. FREE.
+  **The builder's choice: no grader sees it.**
+- **G-35** (spec-0318). Where a served app's own output goes: never verify's
+  standard output, which holds only its result. FREE.
+  **The builder's choice: no grader sees it.**
+
+VISIBLE: 29 (G-01 to G-05, G-07 to G-13, G-16 to G-32). FREE: 6 (G-06,
+G-14, G-15, G-33 to G-35).
+
+## Questions for the spec owner
+
+- ED-01: cut runs check as a command through RDM_SPEC, and cut and fence are
+  instantiated on their own ahead of slice 02 (three instance lines in
+  `rdm-spec.wac`, not one).
+- ED-04: the model gains "Reads cuts with the git helpers of" cut, from
+  scopes and verify.
+- spec-0362, spec-0391: a `:plugin` check runs in the checkout but is given
+  `:checkout` and `:results` relative to the project's root, which it
+  cannot find from where it runs; absolute paths, or paths relative to the
+  checkout, would serve it.
+- G-13: fence's usage in spec-0176 names no `--slice`.
