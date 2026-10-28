@@ -1,70 +1,56 @@
 (ns rdm-spec.spec.stamper
-  "Component Stamper (spec context): gives every unstamped scenario the next
-  id from the ledger, and advances the ledger, so an id is never issued twice,
-  whatever the scenario's wording or place."
-  (:require [clojure.string :as str]
+  "Hands out scenario ids from the ledger, never twice: every unstamped
+  scenario gets the next id, and the ledger records the highest issued
+  (dhf/spec/02-write-the-spec/stamper.feature); each spec stamps from its own
+  ledger, with its own prefix (12-several-specs/stamper.feature)."
+  (:require [babashka.fs :as fs]
+            [clojure.edn :as edn]
+            [clojure.string :as str]
             [rdm-spec.kernel.project :as project]
             [rdm-spec.spec.parser :as parser]))
 
-(defn stamp-text
-  "TEXT with each [line id] of STAMPS put on the scenario at that line: first
-  on its tag line, or on a line of its own above it."
-  [text stamps]
-  (let [lines (vec (str/split text #"\n" -1))]
+(defn id-of [prefix n] (format "%s-%04d" prefix n))
+
+(defn tag-text
+  "Tags the scenario on 1-based line n of text with tag: on its tag line, else on a new line above it."
+  [text n tag]
+  (let [lines (str/split text #"\n" -1)
+        i (dec n)
+        above (when (pos? i) (nth lines (dec i)))]
     (str/join "\n"
-              (reduce (fn [ls [line id]]
-                        (let [i (dec line)
-                              above (dec i)
-                              tag-line? (and (>= above 0) (str/starts-with? (str/trim (nth ls above)) "@"))]
-                          (if tag-line?
-                            (let [start (loop [j above] (if (and (pos? j) (str/starts-with? (str/trim (nth ls (dec j))) "@")) (recur (dec j)) j))
-                                  l (nth ls start)
-                                  ind (re-find #"^\s*" l)]
-                              (assoc ls start (str ind "@" id " " (subs l (count ind)))))
-                            (let [ind (re-find #"^\s*" (nth ls i))]
-                              (vec (concat (subvec ls 0 i) [(str ind "@" id)] (subvec ls i)))))))
-                      lines
-                      (sort-by first > stamps)))))
+              (if (and above (str/starts-with? (str/trim above) "@"))
+                (assoc lines (dec i) (str/replace-first above #"^(\s*)" (str "$1" tag " ")))
+                (let [indent (re-find #"^\s*" (nth lines i))]
+                  (vec (concat (subvec lines 0 i) [(str indent tag)] (subvec lines i))))))))
 
 (defn ledger-text [text n]
   (if (re-find #":issued\s+\d+" text)
     (str/replace-first text #":issued\s+\d+" (str ":issued " n))
-    (str "{:issued " n "}\n")))
+    (str (project/edn-str {:issued n}) "\n")))
 
-(defn read-ledger
-  "The highest id the ledger of SPEC has issued, or a finding."
-  [tree spec]
-  (let [r (project/read-edn-file tree (:ledger spec))
-        v (:value r)]
-    (cond
-      (:missing r) {:finding (project/finding (:ledger spec) "ledger-unreadable" "the id ledger is missing")}
-      (:error r) {:finding (project/finding (:ledger spec) (get-in r [:error :line]) "ledger-unreadable"
-                                            (str "the id ledger is not readable EDN: " (get-in r [:error :message])))}
-      (not (and (map? v) (integer? (:issued v)) (>= (:issued v) 0)))
-      {:finding (project/finding (:ledger spec) "ledger-unreadable" "the id ledger is not {:issued N}")}
-      :else {:issued (:issued v)})))
-
-(defn stamp-spec! [tree cfg spec]
-  (let [{:keys [issued finding]} (read-ledger tree spec)]
-    (if finding
-      {:findings [finding]}
-      (let [read (parser/read-spec tree cfg spec)
-            unstamped (filter #(empty? (:ids %)) (:scenarios read))
-            numbered (map-indexed (fn [i sc] [sc (format "%s-%04d" (:id-prefix spec) (+ issued 1 i))]) unstamped)
-            last-n (+ issued (count unstamped))]
-        (doseq [[file group] (group-by (comp :file first) numbered)]
-          (let [f (project/abs tree file)]
-            (spit f (stamp-text (slurp f) (map (fn [[sc id]] [(:line sc) id]) group)))))
-        (when (seq unstamped)
-          (spit (project/abs tree (:ledger spec)) (ledger-text (slurp (project/abs tree (:ledger spec))) last-n)))
-        {:stamped (vec (for [[sc id] numbered] {:id id :file (:file sc) :title (:title sc)}))
-         :issued last-n
-         :findings []}))))
-
-(defn stamp-task [{:keys [cfg]}]
-  (project/validate-specs! (project/root) cfg)
-  (let [rs (for [spec (project/specs cfg)] (assoc (stamp-spec! (project/root) cfg spec) :spec spec))
-        multi? (seq (:specs cfg))]
-    (project/report {:stamp {:stamped (vec (mapcat :stamped rs))
-                             :issued (if multi? (into {} (for [r rs] [(get-in r [:spec :name]) (:issued r)])) (:issued (first rs)))}}
-                    (mapcat :findings rs))))
+(defn stamp [run]
+  (let [root (:root run)
+        reading (parser/read-specs root (:cfg run))
+        refusals (mapcat :refusals (:specs reading))]
+    (if (seq refusals)
+      {:findings (vec (for [r refusals] (project/finding (:file r) (:line r) (:rule r) (:message r))))
+       :result {:stamp {:stamped [] :says "the spec could not be read: nothing was stamped"}}}
+      (let [results
+            (for [spec (:specs reading)]
+              (let [lf (fs/path root (:ledger spec))
+                    ltext (if (fs/exists? lf) (slurp (str lf)) "{:issued 0}\n")
+                    issued (or (:issued (try (edn/read-string ltext) (catch Exception _ nil)))
+                               (project/cannot-run! (str "the ledger " (:ledger spec) " cannot be read")))
+                    todo (sort-by (juxt :file :line) (filter #(empty? (:ids %)) (:scenarios spec)))
+                    assigned (map-indexed (fn [i sc] (assoc sc :new-id (id-of (:prefix spec) (+ issued i 1)))) todo)]
+                (doseq [[file scs] (group-by :file assigned)]
+                  (let [p (fs/path root file)]
+                    ;; bottom-up, so earlier lines keep their numbers
+                    (spit (str p) (reduce (fn [t sc] (tag-text t (:line sc) (str "@" (:new-id sc))))
+                                          (slurp (str p)) (sort-by :line > scs)))))
+                (when (seq assigned)
+                  (spit (str lf) (ledger-text ltext (+ issued (count assigned)))))
+                {:stamped (vec (for [sc assigned] {:id (:new-id sc) :file (:file sc) :title (:title sc)}))
+                 :ledger (:ledger spec) :issued (+ issued (count assigned))}))]
+        {:result {:stamp {:stamped (vec (mapcat :stamped results))
+                          :ledgers (vec (for [r results] {:ledger (:ledger r) :issued (:issued r)}))}}}))))

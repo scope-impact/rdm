@@ -1,21 +1,23 @@
 (ns rdm-spec.measurement.oracle
-  "Component Oracle (measurement context): the oracle task, the shorthand
-  for running the oracle the project keeps, its plugin named \"oracle\". It
-  runs the command in the project's root with the task's arguments and
-  RDM_SPEC naming this rdm-spec, relays what it prints unchanged, and exits
-  as it exits. The gate itself is the plugins' (:Gate)."
+  "The oracle task: runs the plugin named \"oracle\" the project keeps, in its
+  root, with its own arguments and RDM_SPEC set, relays what it says
+  unchanged, and exits as it exits (dhf/spec/08-plugins/oracle.feature). As a
+  plugin answering :Gate, it stops fence and verify while it fails."
   (:require [babashka.process :as p]
-            [clojure.java.io :as io]
-            [rdm-spec.kernel.project :as project]
-            [rdm-spec.kernel.plugins :as plugins]))
+            [clojure.string :as str]
+            [rdm-spec.kernel.plugins :as plugins]
+            [rdm-spec.kernel.project :as project]))
 
-(defn oracle-task [{:keys [cfg args]}]
-  (plugins/validate! cfg)
-  (if-let [o (first (filter #(= "oracle" (:name %)) (plugins/declared cfg)))]
-    (let [env (merge (project/env) (:env o) {"RDM_SPEC" (plugins/rdm-spec-command-line)})
-          argv (into (vec (:command o)) args)
-          r (try @(p/process argv {:dir (project/root) :env env :in "" :out :string :err :string})
-                 (catch java.io.IOException e
-                   (project/cannot-run! (str "the oracle's command " (pr-str (:command o)) " cannot be started: " (project/one-line (ex-message e))))))]
-      {:raw-out (:out r) :raw-err (:err r) :exit (:exit r) :findings [] :warnings []})
-    (project/report {:oracle {:says "there is no oracle to run: the configuration's :plugins names no plugin \"oracle\""}})))
+(defn the-oracle [cfg] (some #(when (= "oracle" (:name %)) %) (:plugins cfg)))
+
+(defn oracle [run]
+  (plugins/validate! run)
+  (if-let [o (the-oracle (:cfg run))]
+    (let [r (try
+              @(p/process (into (vec (:command o)) (:args run))
+                          {:dir (:root run) :in "" :out :string :err :string
+                           :extra-env (merge (:env o) {"RDM_SPEC" (plugins/rdm-spec-command)})})
+              (catch Exception e
+                (project/cannot-run! (str "the oracle's command " (pr-str (:command o)) " cannot be started: " (project/one-line (ex-message e))))))]
+      {:raw true :exit (:exit r) :raw-out (:out r) :raw-err (:err r)})
+    {:result {:oracle {:says "there is no oracle to run: no plugin is named \"oracle\""}}}))

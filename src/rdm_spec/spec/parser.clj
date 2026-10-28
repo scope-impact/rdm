@@ -1,293 +1,318 @@
 (ns rdm-spec.spec.parser
-  "Component Parser (spec context): reads the declared Gherkin subset and
-  refuses anything outside it; reads the spec at a revision, every scenario
-  with its id, tags, steps and owning component, and publishes SpecParsed."
+  "Reads the declared Gherkin subset and refuses anything outside it; reads a
+  project's spec (one, or several :specs), each scenario with its id, tags,
+  steps and owning component (dhf/spec/02-write-the-spec/parser.feature)."
   (:require [babashka.fs :as fs]
+            [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.project :as project]
-            [rdm-spec.kernel.bus :as bus]))
+            [rdm-spec.kernel.project :as project]))
 
-;; ------------------------------------------------------------------ one file
+;; ------------------------------------------------------------------ Gherkin
 
-(def unsupported-re #"^(Scenario Template|Scenarios|Example|Business Need|Ability|Background Outline)\s*:")
+(def step-re #"^(Given|When|Then|And|But)(?:\s+(.*))?$")
+(def header-re #"^(Feature|Background|Rule|Scenario Outline|Scenario|Examples):\s*(.*)$")
+(def keyword-like-re #"^([A-Z][a-z]+(?: [A-Z][a-z]+)*):(?:\s|$)")
 
-(defn- split-row [t]
-  (let [inner (-> t str/trim (subs 1))
-        inner (if (str/ends-with? inner "|") (subs inner 0 (dec (count inner))) inner)]
-    (loop [cs (seq inner) cell (StringBuilder.) cells []]
-      (if (empty? cs)
-        (conj cells (str/trim (str cell)))
-        (let [c (first cs)]
-          (cond
-            (and (= c \\) (second cs))
-            (let [n (second cs)]
-              (.append cell (case n \| "|" \n "\n" \\ "\\" (str "\\" n)))
-              (recur (nnext cs) cell cells))
-            (= c \|) (recur (next cs) (StringBuilder.) (conj cells (str/trim (str cell))))
-            :else (do (.append cell c) (recur (next cs) cell cells))))))))
+(defn- cells [line]
+  (let [s (str/trim line)
+        s (subs s 1 (if (and (> (count s) 1) (str/ends-with? s "|")) (dec (count s)) (count s)))]
+    (mapv #(str/replace (str/trim %) "\\|" "|") (str/split s #"(?<!\\)\|" -1))))
 
-(defn- classify [line]
-  (let [t (str/trim line)]
-    (cond
-      (str/blank? t) [:blank]
-      (str/starts-with? t "#") [:comment]
-      (str/starts-with? t "@") [:tags (vec (str/split (str/trim (str/replace t #"\s#.*$" "")) #"\s+"))]
-      (str/starts-with? t "Feature:") [:feature (str/trim (subs t 8))]
-      (str/starts-with? t "Background:") [:background (str/trim (subs t 11))]
-      (str/starts-with? t "Rule:") [:rule (str/trim (subs t 5))]
-      (str/starts-with? t "Scenario Outline:") [:outline (str/trim (subs t 17))]
-      (str/starts-with? t "Scenario:") [:scenario (str/trim (subs t 9))]
-      (str/starts-with? t "Examples:") [:examples (str/trim (subs t 9))]
-      (re-find unsupported-re t) [:unknown (second (re-find unsupported-re t))]
-      (re-find #"^(Given|When|Then|And|But) " t) (let [[_ k x] (re-find #"^(Given|When|Then|And|But) (.*)$" t)] [:step k (str/trim x)])
-      (str/starts-with? t "|") [:row (split-row t)]
-      (str/starts-with? t "\"\"\"") [:docstring "\"\"\""]
-      (str/starts-with? t "```") [:docstring "```"]
-      (re-find #"^\*\s" t) [:unknown "*"]
-      :else [:text t])))
+(defn- refusal [file line rule message] {:file file :line line :rule rule :message message})
 
-(defn- indent-of [line] (count (re-find #"^\s*" line)))
+(defn- id-tag? [prefix t] (boolean (re-matches (re-pattern (str (java.util.regex.Pattern/quote prefix) "-\\d{4,}")) t)))
 
 (defn parse-feature
-  "Parses the Gherkin TEXT of FILE: {:feature {:name :line :tags} :scenarios
-  [...] :refusals [{:file :line :rule :message}]}. A construct outside the
-  subset is refused with its line, never skipped."
-  [text file]
-  (let [lines (str/split-lines (str text))
-        refuse (fn [st n rule msg] (update st :refusals conj (project/finding file n rule msg)))
-        close (fn [st]
-                (let [cur (:current st)]
-                  (cond-> (assoc st :current nil)
-                    (= :scenario (:type cur)) (update :scenarios conj cur)
-                    (= :background (:type cur))
-                    (as-> s (if (:rule s)
-                              (assoc-in s [:rule :background] (:steps cur))
-                              (assoc s :background (:steps cur)))))))
-        add-step-part (fn [st f]
-                        (let [cur (:current st)]
-                          (if (and cur (seq (:steps cur)) (not (:examples-started cur)))
-                            (update-in st [:current :steps (dec (count (:steps cur)))] f)
-                            nil)))
-        st0 {:feature nil :rule nil :current nil :tags [] :tags-line nil :desc? false
-             :scenarios [] :refusals [] :background nil :doc nil :after-table? false}
-        st (reduce
-            (fn [st [n line]]
-              (if-let [{:keys [delim indent buf]} (:doc st)]
-                (if (str/starts-with? (str/trim line) delim)
-                  (-> (or (add-step-part st #(assoc % :docstring (str/join "\n" buf))) st)
-                      (assoc :doc nil))
-                  (assoc-in st [:doc :buf]
-                            (conj buf (let [i (min indent (indent-of line))] (subs line (min i (count line)))))))
-                (let [[kind a b] (classify line)
-                      pending? (seq (:tags st))
-                      take-tags (fn [st] (assoc st :tags [] :tags-line nil))
-                      tags (:tags st)]
-                  (if (and (nil? (:feature st)) (not (#{:blank :comment :tags :feature} kind)))
-                    (refuse st n "gherkin-before-feature" (str "a line before the Feature: " (str/trim line)))
-                    (case kind
-                      (:blank :comment) st
-                      :tags (if-let [bad (first (remove #(re-matches #"@[^\s@]+" %) a))]
-                              (refuse st n "gherkin-tag-malformed" (str "the tag " bad " is not a tag"))
-                              (-> st (update :tags into a) (update :tags-line #(or % n))))
-                      :feature (if (:feature st)
-                                 (refuse st n "gherkin-feature-twice"
-                                         (str "a feature file holds exactly one feature; a second Feature is on line " n))
-                                 (-> st (assoc :feature {:name a :line n :tags tags} :desc? true) take-tags))
-                      :background (-> st close (assoc :current {:type :background :line n :steps []} :desc? true)
-                                      (cond-> pending? (refuse n "gherkin-tag-misplaced" "a Background carries no tag"))
-                                      take-tags)
-                      :rule (-> st close (assoc :rule {:name a :line n :tags tags} :desc? true) take-tags)
-                      (:scenario :outline)
-                      (-> st close
-                          (assoc :current {:type :scenario :title a :name a :line n :tags tags
-                                           :keyword (if (= kind :outline) "Scenario Outline" "Scenario")
-                                           :outline? (= kind :outline)
-                                           :rule (:rule st) :feature-tags (get-in st [:feature :tags])
-                                           :steps [] :examples []}
-                                 :desc? true)
-                          take-tags)
-                      :examples (if (get-in st [:current :outline?])
-                                  (-> st
-                                      (update-in [:current :examples] conj {:line n :name a :tags tags :header nil :rows []})
-                                      (assoc-in [:current :examples-started] true)
-                                      (assoc :desc? true)
-                                      take-tags)
-                                  (refuse st n "gherkin-examples-misplaced" "Examples belong to a Scenario Outline"))
-                      :unknown (cond-> (refuse st n "gherkin-keyword-unknown"
-                                               (str "the keyword " a (when-not (= a "*") ":") " is not in the declared Gherkin subset"))
-                                 (not= a "*") (-> close (assoc :current {:type :ignored :line n :steps []} :desc? true) take-tags))
-                      :step (cond
-                              pending? (-> st (refuse n "gherkin-tag-misplaced" "a step carries no tag") take-tags)
-                              (nil? (:current st)) (refuse st n "gherkin-step-misplaced" (str "a step outside a scenario: " (str/trim line)))
-                              (get-in st [:current :examples-started]) (refuse st n "gherkin-step-misplaced" "a step after Examples")
-                              :else (-> st
-                                        (update-in [:current :steps] conj {:keyword a :text b :line n})
-                                        (assoc :desc? false)))
-                      :row (let [cur (:current st)]
-                             (cond
-                               (:examples-started cur)
-                               (let [i (dec (count (:examples cur)))
-                                     ex (get-in cur [:examples i])]
-                                 (if (nil? (:header ex))
-                                   (-> st (assoc-in [:current :examples i :header] a) (assoc :desc? false))
-                                   (if (not= (count a) (count (:header ex)))
-                                     (refuse st n "gherkin-table-ragged" "a row with another number of cells than its heading")
-                                     (update-in st [:current :examples i :rows] conj {:line n :cells a}))))
-                               (and cur (seq (:steps cur)) (not (:desc? st)))
-                               (let [r (add-step-part st (fn [s] (update s :table (fnil conj []) a)))
-                                     t (:table (peek (get-in r [:current :steps])))]
-                                 (if (and (> (count t) 1) (not= (count (first t)) (count a)))
-                                   (refuse st n "gherkin-table-ragged" "a row with another number of cells than the table's first")
-                                   r))
-                               :else (refuse st n "gherkin-table-misplaced" "a table row outside a step or Examples")))
-                      :docstring (if (and (get-in st [:current :steps]) (seq (get-in st [:current :steps])) (not (:desc? st)))
-                                   (assoc st :doc {:delim a :indent (indent-of line) :buf [] :line n})
-                                   (refuse st n "gherkin-docstring-misplaced" "a doc string outside a step"))
-                      :text (if (and (:desc? st) (not pending?))
-                              st
-                              (refuse st n "gherkin-line-unexpected" (str "a line the Gherkin subset does not allow here: " (str/trim line)))))))))
-            st0
-            (map-indexed (fn [i l] [(inc i) l]) lines))
-        st (cond-> st
-             (:doc st) (refuse (get-in st [:doc :line]) "gherkin-docstring-unclosed" "a doc string is never closed")
-             (seq (:tags st)) (refuse (:tags-line st) "gherkin-tag-misplaced" "tags that tag nothing"))
-        st (close st)
-        st (if (and (nil? (:feature st)) (not (str/blank? text)))
-             (refuse st 1 "gherkin-feature-missing" "a feature file holds exactly one Feature, and this one holds none")
-             st)
-        bg (:background st)]
-    {:file file
-     :feature (:feature st)
-     :refusals (:refusals st)
-     :scenarios (vec (for [sc (:scenarios st)]
-                       (let [rows (vec (for [ex (:examples sc) r (:rows ex)]
-                                         {:line (:line r) :values (zipmap (:header ex) (:cells r))
-                                          :cells (:cells r) :header (:header ex)}))]
-                         (-> sc
-                             (dissoc :type :examples-started)
-                             (assoc :file file
-                                    :feature-name (get-in st [:feature :name])
-                                    :background (vec (concat bg (get-in sc [:rule :background])))
-                                    :rows rows)))))}))
+  "Parses one feature file's text. Returns {:feature :scenarios :refusals}.
+  Tags are kept without their @."
+  [text file prefix]
+  (let [lines (vec (str/split-lines (str text)))
+        st (volatile! {:feature nil :rule nil :background [] :scenarios [] :refusals []
+                       :pending-tags [] :block nil :doc nil :in-steps? false})
+        refuse! (fn [line rule msg] (vswap! st update :refusals conj (refusal file line rule msg)))
+        cur-steps-path (fn [s] (case (:block s)
+                                 :background [:background]
+                                 :scenario [:scenarios (dec (count (:scenarios s))) :steps]
+                                 nil))]
+    (doseq [[i raw] (map-indexed vector lines)]
+      (let [n (inc i) t (str/trim raw) s @st]
+        (cond
+          ;; inside a doc string
+          (:doc s)
+          (if (or (str/starts-with? t "\"\"\"") (str/starts-with? t "```"))
+            (let [{:keys [path lines-acc]} (:doc s)]
+              (vswap! st #(-> % (assoc :doc nil)
+                              (update-in (conj path (dec (count (get-in % path)))) assoc :arg {:doc-string (str/join "\n" lines-acc)}))))
+            (let [indent (get-in s [:doc :indent])
+                  l (if (and (>= (count raw) indent) (str/blank? (subs raw 0 indent))) (subs raw indent) (str/triml raw))]
+              (vswap! st update-in [:doc :lines-acc] conj l)))
 
-(defn substitute [s values]
-  (reduce (fn [s [k v]] (str/replace s (str "<" k ">") (str v))) (str s) values))
+          (str/blank? t) nil
+          (str/starts-with? t "#") nil
 
-(defn row-steps
-  "An outline's steps, background first, for one example ROW."
-  [scenario row]
-  (let [vs (:values row)]
-    (vec (for [st (concat (:background scenario) (:steps scenario))]
-           (cond-> (update st :text substitute vs)
-             (:table st) (update :table (fn [t] (mapv (fn [r] (mapv #(substitute % vs) r)) t)))
-             (:docstring st) (update :docstring substitute vs))))))
+          (str/starts-with? t "@")
+          (let [tags (str/split (str/trim (first (str/split t #"\s#"))) #"\s+")]
+            (if (every? #(re-matches #"@\S+" %) tags)
+              (vswap! st update :pending-tags into (map #(subs % 1) tags))
+              (refuse! n "tag-malformed" (str "a tag line holds something that is not a tag: " t))))
 
-(defn scenario-steps [scenario] (vec (concat (:background scenario) (:steps scenario))))
+          (re-matches header-re t)
+          (let [[_ kw title] (re-matches header-re t)
+                tags (:pending-tags s)]
+            (vswap! st assoc :pending-tags [])
+            (case kw
+              "Feature" (if (:feature s)
+                          (refuse! n "feature-twice" (str "a feature file holds exactly one feature; the first is on line " (get-in s [:feature :line])))
+                          (vswap! st assoc :feature {:name title :line n :tags tags} :block :feature :in-steps? false))
+              "Background" (if-not (:feature s)
+                             (refuse! n "feature-missing" "Background before any Feature")
+                             (vswap! st assoc :block :background :in-steps? false))
+              "Rule" (if-not (:feature s)
+                       (refuse! n "feature-missing" "Rule before any Feature")
+                       (vswap! st assoc :rule {:name title :line n :tags tags} :block :rule :in-steps? false))
+              ("Scenario" "Scenario Outline")
+              (if-not (:feature s)
+                (refuse! n "feature-missing" (str kw " before any Feature"))
+                (vswap! st #(-> % (update :scenarios conj {:name title :title title :keyword kw :line n :own-tags tags
+                                                           :rule (:rule %) :steps [] :examples []
+                                                           :outline? (= kw "Scenario Outline")})
+                                (assoc :block :scenario :in-steps? false))))
+              "Examples"
+              (let [sc (last (:scenarios s))]
+                (if (and sc (:outline? sc) (= :scenario (:block s)) )
+                  (vswap! st #(update-in % [:scenarios (dec (count (:scenarios %))) :examples] conj {:line n :header nil :rows []}))
+                  (if (and sc (:outline? sc) (= :examples (:block s)))
+                    (vswap! st #(update-in % [:scenarios (dec (count (:scenarios %))) :examples] conj {:line n :header nil :rows []}))
+                    (refuse! n "examples-misplaced" "Examples belong under a Scenario Outline")))
+                (vswap! st assoc :block :examples))))
 
-;; ------------------------------------------------------------------ the spec
+          (re-matches step-re t)
+          (let [[_ kw text] (re-matches step-re t)]
+            (if-let [path (cur-steps-path s)]
+              (vswap! st #(-> % (update-in path conj {:keyword kw :text (str text) :line n}) (assoc :in-steps? true)))
+              (refuse! n "step-misplaced" (str "a step outside any scenario or background: " t))))
 
-(def levels #{"@e2e" "@contract"})
+          (str/starts-with? t "|")
+          (cond
+            (= :examples (:block s))
+            (let [si (dec (count (:scenarios s)))
+                  ei (dec (count (get-in s [:scenarios si :examples])))
+                  ex (get-in s [:scenarios si :examples ei])]
+              (if (nil? (:header ex))
+                (vswap! st assoc-in [:scenarios si :examples ei :header] (cells t))
+                (vswap! st update-in [:scenarios si :examples ei :rows] conj {:line n :cells (cells t)})))
+            (and (cur-steps-path s) (seq (get-in s (cur-steps-path s))))
+            (let [path (cur-steps-path s) k (dec (count (get-in s path)))]
+              (vswap! st update-in (conj path k :arg :table) (fnil conj []) (cells t)))
+            :else (refuse! n "table-misplaced" "a table row belongs to a step or to Examples"))
 
-(defn need-tag? [t] (boolean (re-matches #"@UN-\d+" t)))
+          (or (str/starts-with? t "\"\"\"") (str/starts-with? t "```"))
+          (if-let [path (and (cur-steps-path s) (seq (get-in s (cur-steps-path s))) (cur-steps-path s))]
+            (vswap! st assoc :doc {:path path :indent (- (count raw) (count (str/triml raw))) :lines-acc [] :line n})
+            (refuse! n "doc-string-misplaced" "a doc string belongs to a step"))
 
-(defn id-re [prefix] (re-pattern (str "^@" (java.util.regex.Pattern/quote prefix) "-(\\d{4,})$")))
+          (re-find keyword-like-re t)
+          (refuse! n "keyword-unknown" (str "\"" (second (re-find keyword-like-re t)) ":\" is not a keyword of the declared Gherkin subset"))
 
-(defn feature-files
-  "Every feature file of SPEC at TREE, found by looking, as paths relative to the tree."
-  [tree spec]
-  (let [d (project/abs tree (:dir spec))]
-    (if (fs/directory? d)
-      (->> (fs/glob d "**.feature")
-           (map #(project/rel tree %))
-           sort vec)
-      [])))
+          (or (nil? (:feature s)))
+          (refuse! n "line-unknown" (str "text before the Feature line: " t))
 
-(defn enrich
-  "A parsed scenario with what the spec says of it: its ids, level, needs,
-  planned mark and owning component."
-  [cfg spec model sc]
-  (let [re (id-re (:id-prefix spec))
-        own (:tags sc)
-        ids (vec (keep #(second (re-find re %)) own))
-        ids (mapv #(str (:id-prefix spec) "-" %) ids)
-        lvls (filterv levels own)
-        needs (vec (distinct (map #(subs % 1) (filter need-tag? (concat (:feature-tags sc) (get-in sc [:rule :tags]) own)))))
-        owner (when model (project/owner cfg spec model (:file sc)))]
-    (assoc sc
-           :id (when (= 1 (count ids)) (first ids))
-           :ids ids
-           :levels (mapv #(subs % 1) lvls)
-           :level (when (= 1 (count lvls)) (subs (first lvls) 1))
-           :needs needs
-           :wip? (boolean (some #{"@wip"} own))
-           :spec (:name spec)
-           :slice (project/slice-of (:dir spec) (:file sc))
-           :context (:context owner)
-           :component (:id owner)
-           :context-name (:context-name owner)
-           :component-name (:name owner)
-           :rule (get-in sc [:rule :name])
-           :rule-tags (get-in sc [:rule :tags])
-           :examples (vec (map (fn [r] (:values r)) (:rows sc))))))
+          (:in-steps? s)
+          (refuse! n "line-unknown" (str "a line that is no step, table, tag or comment: " t))
 
-(defn read-needs
-  "The needs of SPEC at TREE: {:needs [{:id :text :sources}] :findings [...]}."
-  [tree spec]
-  (let [r (project/read-edn-file tree (:needs spec))]
-    (cond
-      (:missing r) {:needs [] :findings [(project/finding (:needs spec) "needs-unreadable" "the needs file is missing")]}
-      (:error r) {:needs [] :findings [(project/finding (:needs spec) (get-in r [:error :line]) "needs-unreadable"
-                                                        (str "the needs are not readable EDN: " (get-in r [:error :message])))]}
-      (not (map? (:value r))) {:needs [] :findings [(project/finding (:needs spec) "needs-unreadable" "the needs are not a map")]}
-      :else {:needs (vec (for [[k v] (sort-by key (:value r))]
-                           {:id (str k) :text (:text v) :sources (:sources v)}))
-             :findings []})))
+          :else nil)))
+    (let [s @st]
+      (when-let [d (:doc s)] (refuse! (:line d) "doc-string-unclosed" "a doc string is never closed"))
+      (when (and (nil? (:feature s)) (some #(not (or (str/blank? %) (str/starts-with? (str/trim %) "#"))) lines)
+                 (empty? (:refusals s)))
+        (refuse! 1 "feature-missing" "no Feature line"))
+      (let [s @st
+            feature (:feature s)
+            bg (:background s)
+            scenarios
+            (vec (for [sc (:scenarios s)]
+                   (let [rule (:rule sc)
+                         own (:own-tags sc)
+                         all (vec (distinct (concat (:tags feature) (:tags rule) own)))
+                         ids (filterv #(id-tag? prefix %) own)
+                         levels (filterv #{"e2e" "contract"} own)
+                         needs (vec (distinct (filter #(re-matches #"UN-\d+" %) all)))
+                         rows (vec (for [ex (:examples sc) r (:rows ex)]
+                                     {:line (:line r) :order (:header ex)
+                                      :values (zipmap (:header ex) (:cells r))}))]
+                     (merge (dissoc sc :own-tags)
+                            {:file file :feature (:name feature) :feature-line (:line feature)
+                             :feature-tags (:tags feature)
+                             :rule (:name rule) :rule-line (:line rule) :rule-tags (:tags rule)
+                             :own-tags own :tags all
+                             :id (when (= 1 (count ids)) (first ids)) :ids ids
+                             :levels levels :level (when (= 1 (count levels)) (keyword (first levels)))
+                             :needs needs :wip? (boolean (some #{"wip"} own))
+                             :background bg :rows rows
+                             :steps (mapv #(dissoc % :line) (:steps sc))
+                             :step-lines (mapv :line (:steps sc))}))))]
+        {:feature feature :scenarios scenarios :refusals (:refusals s)}))))
+
+;; ------------------------------------------------------------------ the model and ownership
+
+(defn read-model-lenient [path]
+  (try (when (fs/exists? path) (let [m (edn/read-string (slurp (str path)))] (when (map? m) m)))
+       (catch Exception _ nil)))
+
+(defn components
+  "Every component of the model, kernel included: [{:id :name :description :spec :context :context-name}], in the model's order."
+  [model]
+  (vec (concat
+        (for [c (:containers model) ctx (:contexts c) comp (:components ctx)]
+          (assoc comp :context (:id ctx) :context-name (or (:name ctx) (name (:id ctx)))))
+        (for [comp (:kernel model)]
+          (assoc comp :context :kernel :context-name "kernel")))))
+
+(defn component-name
+  "A component's name in the slices layout: its id's name part."
+  [id] (name id))
+
+(defn slice-folder? [s] (boolean (re-matches #"\d+-[A-Za-z0-9._-]+" (str s))))
+
+(defn owner
+  "The component owning a feature (or prose) file, the file relative to the spec folder."
+  [layout model rel]
+  (let [comps (components model)
+        base (str/replace rel #"\.(feature|md)$" "")]
+    (if (= layout :slices)
+      (let [parts (str/split base #"/")]
+        (when (and (= 2 (count parts)) (slice-folder? (first parts)))
+          (let [hits (filter #(= (second parts) (component-name (:id %))) comps)]
+            (when (= 1 (count hits)) (:id (first hits))))))
+      (some #(when (= base (:spec %)) (:id %)) comps))))
+
+;; ------------------------------------------------------------------ several specs
+
+(defn spec-decls
+  "The specs a configuration declares: its :specs, else one spec from :spec-dir."
+  [cfg]
+  (if-let [specs (seq (:specs cfg))]
+    (vec (for [{:keys [name dir id-prefix]} specs]
+           {:name name :dir dir :prefix (or id-prefix (:id-prefix cfg))
+            :ledger (str dir "/ids.edn") :model (str dir "/model.edn") :events (str dir "/events.edn")
+            :needs-file (str dir "/needs.edn") :glossary (str dir "/glossary.md") :domain (str dir "/domain.edn")
+            :layout (:spec-layout cfg :contexts) :several? true}))
+    [{:name nil :dir (:spec-dir cfg) :prefix (:id-prefix cfg) :ledger (:ledger cfg) :model (:model cfg)
+      :events (:events cfg) :needs-file (:needs cfg) :glossary (str (:spec-dir cfg) "/glossary.md")
+      :layout (:spec-layout cfg :contexts) :several? false}]))
+
+(defn specs-problem
+  "Why several specs cannot be read apart, or nil."
+  [specs]
+  (let [dup (fn [k] (some (fn [[v n]] (when (> n 1) v)) (frequencies (map k specs))))]
+    (cond (dup :name) "a spec's name is declared once"
+          (dup :id-prefix) "an id prefix is declared once, so no two scenarios share an id"
+          (dup :dir) "a folder holds one spec")))
+
+(defn validate-specs!
+  "Refuses (exit 2) a :specs rdm-spec cannot read apart."
+  [root cfg]
+  (when-let [specs (seq (:specs cfg))]
+    (when-not (and (vector? (:specs cfg)) (every? #(and (map? %) (string? (:name %)) (string? (:dir %))) specs))
+      (project/cannot-run! ":specs is a vector of {:name :dir :id-prefix}"))
+    (when-let [p (specs-problem specs)]
+      (project/cannot-run! (str ":specs cannot be read apart: " p)))
+    (doseq [{:keys [name dir]} specs]
+      (when-not (fs/directory? (fs/path root dir))
+        (project/cannot-run! (str "the spec " name "'s folder " dir " does not exist"))))))
+
+;; ------------------------------------------------------------------ reading a spec
+
+(defn- read-needs [root rel]
+  (let [path (fs/path root rel)]
+  (if-not (fs/exists? path)
+    {:needs [] :needs-error {:line nil :message (str rel " does not exist")}}
+    (let [text (slurp (str path))]
+      (try (let [m (edn/read-string text)]
+             (if (map? m)
+               {:needs (vec (for [[k v] m] {:id (str k) :text (:text v) :sources (:sources v)
+                                            :line (or (project/line-of text (pr-str (str k))) 1)}))
+                :needs-text text}
+               {:needs [] :needs-error {:line 1 :message "the needs are not a map"}}))
+           (catch Exception e
+             {:needs [] :needs-error {:line (or (some-> (re-find #"line (\d+)" (str (ex-message e))) second parse-long) 1)
+                                      :message (project/one-line (ex-message e))}}))))))
 
 (defn read-spec
-  "Reads SPEC of the project at TREE: {:spec :files :features :scenarios :refusals :needs :needs-findings}."
-  [tree cfg spec]
-  (let [model (project/read-model tree spec)
-        files (feature-files tree spec)
-        parsed (vec (for [f files] (parse-feature (project/read-text tree f) f)))
-        {:keys [needs findings]} (read-needs tree spec)]
-    {:spec spec
-     :model model
-     :files files
-     :features parsed
-     :scenarios (vec (for [p parsed sc (:scenarios p)] (enrich cfg spec model sc)))
-     :refusals (vec (mapcat :refusals parsed))
-     :needs needs
-     :needs-findings findings}))
+  "Reads one spec declaration in root."
+  [root decl]
+  (let [dir (:dir decl)
+        model-path (fs/path root (:model decl))
+        model (read-model-lenient model-path)
+        comps (components model)
+        by-id (into {} (map (juxt :id identity) comps))
+        files (filter #(str/ends-with? % ".feature") (project/files-under root dir))
+        features
+        (vec (for [f files]
+               (let [relf (subs f (inc (count dir)))
+                     parsed (parse-feature (slurp (str (fs/path root f))) f (:prefix decl))
+                     own (when model (owner (:layout decl) model relf))
+                     comp (by-id own)
+                     slice (when (= :slices (:layout decl))
+                             (let [parts (str/split relf #"/")] (when (and (= 2 (count parts)) (slice-folder? (first parts))) (first parts))))]
+                 {:file f :rel relf :component own :slice slice :feature (:feature parsed) :refusals (:refusals parsed)
+                  :scenarios (mapv #(cond-> (assoc % :context (:context comp) :component own
+                                                   :context-name (:context-name comp)
+                                                   :component-name (:name comp))
+                                      slice (assoc :slice slice)
+                                      (:name decl) (assoc :spec (:name decl)))
+                                   (:scenarios parsed))})))
+        needs (read-needs root (:needs-file decl))]
+    (merge decl needs
+           {:model model :model-present? (fs/exists? model-path) :features features
+            :scenarios (vec (mapcat :scenarios features))
+            :refusals (vec (mapcat :refusals features))})))
 
 (defn read-specs
-  "Every spec the configuration declares, read at TREE."
-  [tree cfg]
-  (mapv #(read-spec tree cfg %) (project/specs cfg)))
+  "Reads every spec of the project in root: {:specs [...]}."
+  [root cfg]
+  {:specs (mapv #(read-spec root %) (spec-decls cfg))})
 
-(defn event-scenario [sc]
-  (select-keys sc [:id :ids :title :name :keyword :file :line :level :needs :wip? :outline? :rows :examples
-                   :background :rule :steps :context :component :context-name :component-name :spec :slice :tags]))
+(defn spec-parsed-event
+  "The SpecParsed event of a reading (events.edn)."
+  [revision reading]
+  (let [specs (:specs reading)]
+    {:revision revision
+     :scenarios (vec (for [s (mapcat :scenarios specs)]
+                       (-> s
+                           (select-keys [:id :ids :title :name :keyword :file :line :level :needs :wip? :outline? :rows
+                                         :examples :background :rule :steps :context :component :context-name :component-name
+                                         :slice :spec])
+                           (update :steps #(mapv (fn [st] (select-keys st [:keyword :text])) %))
+                           (update :background #(mapv (fn [st] (select-keys st [:keyword :text])) %)))))
+     :needs (vec (for [n (mapcat :needs specs)] (select-keys n [:id :text :sources])))
+     :refusals (vec (mapcat :refusals specs))}))
 
-(defn publish!
-  "Publishes SpecParsed for the specs read at REVISION."
-  [revision read]
-  (bus/publish! :spec/parser :SpecParsed
-                {:revision revision
-                 :scenarios (vec (for [r read sc (:scenarios r)] (event-scenario sc)))
-                 :needs (vec (mapcat :needs read))
-                 :refusals (vec (mapcat :refusals read))}))
+;; ------------------------------------------------------------------ the stage
 
-(defn read-specs-once
-  "Every spec read at TREE, once per run."
-  [tree cfg]
-  (project/cached [::specs tree] #(read-specs tree cfg)))
+(defn parse
+  "check's stage: reads the working tree's spec and publishes SpecParsed. A
+  construct outside the subset is refused, never skipped: each refusal is a finding."
+  [run]
+  (let [reading (read-specs (:root run) (:cfg run))
+        event (spec-parsed-event :working-tree reading)]
+    ((requiring-resolve 'rdm-spec.kernel.bus/publish!) :SpecParsed :spec/parser event)
+    {:reading reading
+     :findings (vec (for [r (:refusals event)] (project/finding (:file r) (:line r) (:rule r) (:message r))))}))
 
-(defn parse-stage
-  "Reads the spec in the working tree, refusing what is outside the Gherkin
-  subset, and publishes SpecParsed."
-  [{:keys [cfg]}]
-  (let [read (read-specs-once (project/root) cfg)]
-    (publish! :working-tree read)
-    {:result {:spec {:scenarios (count (mapcat :scenarios read)) :feature-files (count (mapcat :files read))}}
-     :findings (vec (mapcat :refusals read))
-     :warnings []}))
+(defn slice-reach
+  "The components a slice reaches: one per feature file named for it in the
+  slice's folder, in the model's order. files are paths relative to the spec folder."
+  [model rel-files slice]
+  (let [names (set (for [f rel-files
+                         :let [parts (str/split f #"/")]
+                         :when (and (= 2 (count parts)) (= slice (first parts)) (str/ends-with? (second parts) ".feature"))]
+                     (str/replace (second parts) #"\.feature$" "")))]
+    (vec (for [c (components model) :when (names (component-name (:id c)))] (:id c)))))
+
+(defn slices-of
+  "The slice folders among rel-files, sorted."
+  [rel-files]
+  (vec (sort (distinct (for [f rel-files :let [parts (str/split f #"/")]
+                             :when (and (> (count parts) 1) (slice-folder? (first parts)))]
+                         (first parts))))))

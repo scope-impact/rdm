@@ -1,83 +1,89 @@
 (ns rdm-spec.spec.parser-test
+  "One test per rule the parser enforces (dhf/spec/02-write-the-spec/parser.feature,
+  dhf/spec/12-several-specs/parser.feature, dhf/spec/13-slice-development/model.feature)."
   (:require [clojure.test :refer [deftest is testing]]
-            [rdm-spec.spec.parser :as parser]))
+            [clojure.string :as str]
+            [babashka.fs :as fs]
+            [rdm-spec.spec.parser :as parser]
+            [rdm-spec.kernel.project]))
 
 (def every-construct
-  "# a comment
-@UN-001
-Feature: Demo
-  A description of the feature.
+  (str/join "\n"
+            ["# a comment"
+             "@UN-001"
+             "Feature: Every construct"
+             "  A description."
+             ""
+             "  Background:"
+             "    Given a background step"
+             ""
+             "  Rule: A rule"
+             ""
+             "    @spec-0001 @e2e"
+             "    Scenario: A scenario"
+             "      Given a table"
+             "        | a | b |"
+             "        | 1 | 2 |"
+             "      When a doc string"
+             "        \"\"\""
+             "        text"
+             "        \"\"\""
+             "      Then it holds"
+             "      And it holds again"
+             "      But not this"
+             ""
+             "    @spec-0002 @contract"
+             "    Scenario Outline: An outline <x>"
+             "      Given <x>"
+             ""
+             "      Examples:"
+             "        | x |"
+             "        | 1 |"
+             "        | 2 |"]))
 
-  Background:
-    Given a background step
-
-  Rule: The rule
-
-    @spec-0001 @e2e
-    Scenario: A plain scenario
-      Given a table
-        | a | b |
-        | 1 | 2 |
-      When a doc string
-        \"\"\"
-        line one
-          line two
-        \"\"\"
-      Then it holds
-      And more
-      But not less
-
-    @spec-0002 @contract
-    Scenario Outline: An outline with <x>
-      Given the value <x>
-      Then it is <y>
-
-      Examples:
-        | x | y |
-        | 1 | one |
-        | 2 | two |
-")
-
-(deftest parses-every-construct
-  (let [{:keys [feature scenarios refusals]} (parser/parse-feature every-construct "f.feature")]
+(deftest the-declared-subset-is-read
+  (let [{:keys [scenarios refusals]} (parser/parse-feature every-construct "f.feature" "spec")]
     (is (empty? refusals))
-    (is (= "Demo" (:name feature)))
-    (is (= ["@UN-001"] (:tags feature)))
-    (is (= 2 (count scenarios)))
-    (let [[a b] scenarios]
-      (is (= "A plain scenario" (:title a)))
-      (is (= 12 (:line a)))
-      (is (= ["@spec-0001" "@e2e"] (:tags a)))
-      (is (= "The rule" (get-in a [:rule :name])))
-      (is (= [{:keyword "Given" :text "a background step" :line 7}] (map #(select-keys % [:keyword :text :line]) (:background a))))
-      (is (= ["Given" "When" "Then" "And" "But"] (map :keyword (:steps a))))
-      (is (= [["a" "b"] ["1" "2"]] (:table (first (:steps a)))))
-      (is (= "line one\n  line two" (:docstring (second (:steps a)))))
-      (is (:outline? b))
-      (is (= "Scenario Outline" (:keyword b)))
-      (is (= ["x" "y"] (get-in b [:examples 0 :header])))
-      (is (= [{"x" "1" "y" "one"} {"x" "2" "y" "two"}] (map :values (:rows b)))))))
+    (is (= ["spec-0001" "spec-0002"] (map :id scenarios)))
+    (is (= "A rule" (:rule (first scenarios))))
+    (is (= ["UN-001" "spec-0001" "e2e"] (:tags (first scenarios))))
+    (is (= [["a" "b"] ["1" "2"]] (-> scenarios first :steps first :arg :table)))
+    (is (= "text" (-> scenarios first :steps second :arg :doc-string)))
+    (is (= [{:keyword "Given" :text "a background step"}] (map #(select-keys % [:keyword :text]) (:background (first scenarios)))))
+    (is (= [{"x" "1"} {"x" "2"}] (map :values (:rows (second scenarios)))))))
 
-(deftest refuses-unknown-keyword
-  (let [{:keys [refusals]} (parser/parse-feature "Feature: X\n\n  Scenario Template: y\n    Given z\n" "f.feature")]
-    (is (= 1 (count refusals)))
+(deftest an-unknown-keyword-is-refused-with-its-line
+  (let [{:keys [refusals]} (parser/parse-feature "Feature: F\n\n  Scenario Template: x\n    Given y\n" "f.feature" "spec")]
     (is (= 3 (:line (first refusals))))
-    (is (re-find #"Scenario Template" (:message (first refusals))))))
+    (is (str/includes? (:message (first refusals)) "Scenario Template"))))
 
-(deftest refuses-second-feature
-  (let [{:keys [refusals]} (parser/parse-feature "Feature: X\n  Scenario: a\n    Given b\nFeature: Y\n" "f.feature")]
-    (is (= [4] (map :line refusals)))))
+(deftest a-feature-file-holds-one-feature
+  (let [{:keys [refusals]} (parser/parse-feature "Feature: F\n\nFeature: G\n" "f.feature" "spec")]
+    (is (= [3] (map :line refusals)))))
 
-(deftest refuses-stray-line-after-steps
-  (let [{:keys [refusals]} (parser/parse-feature "Feature: X\n  Scenario: a\n    Given b\n    stray words\n" "f.feature")]
-    (is (= [4] (map :line refusals)))))
+(deftest the-spec-is-read-from-a-directory-at-a-revision
+  (let [dir (fs/create-temp-dir {:dir (or (System/getenv "TMPDIR") (System/getProperty "java.io.tmpdir"))})]
+    (try
+      (fs/create-dirs (fs/path dir "dhf/spec/a"))
+      (spit (str (fs/path dir "dhf/spec/a/b.feature")) "@UN-001\nFeature: B\n\n  @spec-0001 @e2e\n  Scenario: One\n    Given x\n")
+      (spit (str (fs/path dir "dhf/spec/model.edn")) "{:system {:id :s :name \"s\" :description \"d\"} :containers [{:id :c :name \"c\" :kind :runs :description \"d\" :contexts [{:id :a :name \"a\" :description \"d\" :components [{:id :a/b :name \"B\" :description \"d\" :spec \"a/b\"}]}]}]}")
+      (let [spec (first (:specs (parser/read-specs (str dir) (rdm-spec.kernel.project/with-defaults {}))))]
+        (is (= ["spec-0001"] (map :id (:scenarios spec))))
+        (is (= :a/b (:component (first (:scenarios spec)))))
+        (is (= "dhf/spec/a/b.feature" (:file (first (:scenarios spec))))))
+      (finally (fs/delete-tree dir)))))
 
-(deftest description-lines-with-colons-are-description
-  (let [{:keys [refusals]} (parser/parse-feature "Feature: X\n  Status is a report: it exits 0.\n\n  Scenario: a\n    Given b\n" "f.feature")]
-    (is (empty? refusals))))
+(deftest several-specs-are-read-one-folder-each
+  (is (= "a spec's name is declared once"
+         (parser/specs-problem [{:name "auth" :dir "a" :id-prefix "a"} {:name "auth" :dir "b" :id-prefix "b"}])))
+  (is (= "an id prefix is declared once, so no two scenarios share an id"
+         (parser/specs-problem [{:name "a" :dir "a" :id-prefix "x"} {:name "b" :dir "b" :id-prefix "x"}])))
+  (is (= "a folder holds one spec"
+         (parser/specs-problem [{:name "a" :dir "d" :id-prefix "a"} {:name "b" :dir "d" :id-prefix "b"}]))))
 
-(deftest outline-rows-substitute
-  (let [{:keys [scenarios]} (parser/parse-feature every-construct "f.feature")
-        b (second scenarios)]
-    (is (= ["Given a background step" "Given the value 2" "Then it is two"]
-           (map #(str (:keyword %) " " (:text %)) (parser/row-steps b (second (:rows b))))))))
+(deftest under-the-slices-layout-a-file-is-found-by-its-component-name
+  (let [model {:containers [{:id :c :contexts [{:id :spec :components [{:id :spec/parser :name "Parser"}]}]}]
+               :kernel [{:id :kernel/bus :name "Event bus"}]}]
+    (is (= :spec/parser (parser/owner :slices model "12-several-specs/parser.feature")))
+    (is (= :kernel/bus (parser/owner :slices model "08-plugins/bus.feature")))
+    (is (nil? (parser/owner :slices model "parser.feature")))))

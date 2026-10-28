@@ -1,84 +1,92 @@
 (ns steps.regeneration-cut
-  "Steps of the component Cut (dhf/spec/06-regenerate/cut.feature).
-  The scenario's origin is a bare repository it makes."
-  (:require [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-shared :as k]))
+  "Steps of the component Cut (06-regenerate/cut.feature), and the regeneration
+  context's repository fixtures."
+  (:require [babashka.fs :as fs]
+            [clojure.string :as str]
+            [steps.kernel-steps :as k]
+            [rdm-spec.kernel.runner :refer [defstep fail!]]))
 
-(defn branch [ctx] (k/git! ctx "rev-parse" "--abbrev-ref" "HEAD"))
+(defn with-origin!
+  "Makes the project at :dir a git repository with a bare origin, its default branch main pushed."
+  [ctx]
+  (let [d (:dir ctx) origin (k/path (:top ctx) "origin.git")]
+    (k/git! d "init" "-q")
+    (k/commit-all! d "the first change")
+    (k/git! d "checkout" "-q" "-B" "main")
+    (fs/create-dirs origin)
+    (k/git! origin "init" "-q" "--bare" "-b" "main")
+    (k/git! d "remote" "add" "origin" origin)
+    (k/git! d "push" "-q" "origin" "main")
+    (k/git! d "fetch" "-q" "origin")
+    (k/git! d "remote" "set-head" "origin" "main")
+    (assoc ctx :origin origin)))
 
-(defn origin!
-  "A project committed and pushed to its own origin, origin/HEAD set."
-  [ctx & [opts]]
-  (let [ctx (k/spec-project! ctx opts)
-        origin (str (:base ctx) "/origin.git")]
-    (k/git! ctx "init" "-q" "--bare" origin)
-    (k/commit! ctx "the first spec")
-    (k/git! ctx "remote" "add" "origin" origin)
-    (k/git! ctx "push" "-q" "origin" (branch ctx))
-    (k/git! ctx "remote" "set-head" "origin" (branch ctx))
-    (assoc ctx ::origin origin)))
+(defn spec! [] (k/spec-project! {"shop/cart.feature" (k/feature-text {:name "Cart" :scenarios [{:id "spec-0001"}]})}))
 
-(defn push! [ctx] (k/git! ctx "push" "-q" "origin" (branch ctx)) ctx)
+(defn push-new-commit! [ctx]
+  (k/write! (:dir ctx) "dhf/spec/glossary.md" (str "# Glossary\n\n" (random-uuid) "\n"))
+  (k/commit-all! (:dir ctx) "a merge")
+  (k/git! (:dir ctx) "push" "-q" "origin" "main")
+  (k/git! (:dir ctx) "fetch" "-q" "origin")
+  ctx)
 
-(defn remote-tags [ctx] (set (map #(last (str/split % #"/")) (remove str/blank? (str/split-lines (k/git! ctx "ls-remote" "--tags" "origin"))))))
+(defn tags-at [ctx rev] (set (remove str/blank? (str/split-lines (k/git! (:dir ctx) "tag" "--points-at" rev)))))
+(defn origin-tags [ctx] (set (remove str/blank? (str/split-lines (k/git! (:origin ctx) "tag" "--list")))))
 
 (defstep #"HEAD is the commit origin/HEAD names, and the last cut is spec-6"
-  (fn [ctx]
-    (let [ctx (origin! ctx)]
-      (k/tag! ctx "spec-6")
-      (k/write! ctx "dhf/spec/glossary.md" "# Glossary\n\nA term.\n")
-      (k/commit! ctx "a spec change")
-      (push! ctx))))
+  (fn [_]
+    (let [ctx (with-origin! (spec!))]
+      (k/git! (:dir ctx) "tag" "spec-6")
+      (k/git! (:dir ctx) "push" "-q" "origin" "spec-6")
+      (push-new-commit! ctx))))
 
 (defstep #"HEAD is tagged spec-7"
-  (fn [ctx]
-    (k/exits! ctx 0)
-    (k/check! (= (k/git! ctx "rev-parse" "HEAD") (k/git! ctx "rev-parse" "spec-7^{commit}")) "HEAD is not spec-7")
-    ctx))
+  (fn [ctx] (k/exits! ctx 0) (k/expect! (contains? (tags-at ctx "HEAD") "spec-7") ctx "HEAD is not spec-7") ctx))
 
 (defstep #"the tag is pushed to origin"
-  (fn [ctx] (k/check! ((remote-tags ctx) "spec-7") "origin holds the tags " (pr-str (remote-tags ctx))) ctx))
+  (fn [ctx] (k/expect! (contains? (origin-tags ctx) "spec-7") ctx "origin has no spec-7") ctx))
 
 (defstep #"the commit tagged spec-7"
-  (fn [ctx]
-    (let [ctx (origin! ctx)]
-      (k/tag! ctx "spec-7")
-      (k/git! ctx "push" "-q" "origin" "spec-7")
+  (fn [_]
+    (let [ctx (with-origin! (spec!))]
+      (k/git! (:dir ctx) "tag" "spec-7")
+      (k/git! (:dir ctx) "push" "-q" "origin" "spec-7")
       ctx)))
 
-(defstep #"\"rdm-spec cut\" is run again on it" (fn [ctx] (k/run-rdm ctx "cut")))
+(defstep #"\"rdm-spec cut\" is run (?:again )?on it"
+  (fn [ctx] (k/rdm! ctx "cut")))
 
 (defstep #"no tag is added and the cut says the commit is already spec-7"
   (fn [ctx]
     (k/exits! ctx 0)
-    (k/check! (= "spec-7" (k/git! ctx "tag" "--points-at" "HEAD")) "the tags at HEAD are " (k/git! ctx "tag" "--points-at" "HEAD"))
-    (k/check! (str/includes? (str (:out ctx) (:err ctx)) "already spec-7") "the cut does not say so: " (k/shows ctx))
+    (k/expect! (= #{"spec-7"} (tags-at ctx "HEAD")) ctx "a tag was added")
+    (k/out-has! ctx "already spec-7")
     ctx))
 
 (defstep #"HEAD is the commit origin/HEAD names, and \"rdm-spec check\" exits 1 on it"
-  (fn [ctx]
-    (let [ctx (origin! ctx {:features {"dhf/spec/demo/thing.feature"
-                                       "@UN-001\nFeature: Thing\n\n  @spec-0001\n  Scenario: No level\n    Given a thing\n"}})
-          check (k/run-rdm ctx "check")]
-      (k/exits! check 1)
-      (assoc ctx ::check-lines (remove #(re-find #"warning: " %) (k/err-lines check))))))
+  (fn [_]
+    (let [ctx (with-origin! (spec!))]
+      (k/write! (:dir ctx) "dhf/spec/shop/cart.feature" (k/feature-text {:name "Cart" :scenarios [{:id "spec-0001" :level nil}]}))
+      (push-new-commit! ctx)
+      (let [c (k/rdm! ctx "check")]
+        (k/exits! c 1)
+        (assoc ctx :check-lines (k/finding-lines c))))))
 
 (defstep #"it exits 1, tags nothing, and prints each of the check's finding lines unchanged"
   (fn [ctx]
     (k/exits! ctx 1)
-    (k/check! (str/blank? (k/git! ctx "tag")) "a tag was made")
-    (doseq [l (::check-lines ctx)] (k/check! (some #{l} (k/err-lines ctx)) "the line is not printed: " l))
+    (k/expect! (empty? (tags-at ctx "HEAD")) ctx "a tag was added")
+    (k/expect! (seq (:check-lines ctx)) ctx "the check had no finding")
+    (doseq [l (:check-lines ctx)] (k/expect! (some #{l} (k/err-lines ctx)) ctx (str "not relayed: " l)))
     ctx))
 
 (defstep #"HEAD is not the commit origin/HEAD names"
-  (fn [ctx]
-    (let [ctx (origin! ctx)]
-      (k/git! ctx "checkout" "-q" "-b" "feature-x")
-      (k/write! ctx "dhf/spec/glossary.md" "# Glossary\n\nUnmerged.\n")
-      (k/commit! ctx "not merged"))))
-
-(defstep #"\"rdm-spec cut\" is run on it" (fn [ctx] (k/run-rdm ctx "cut")))
+  (fn [_]
+    (let [ctx (with-origin! (spec!))]
+      (k/git! (:dir ctx) "checkout" "-q" "-b" "feature-x")
+      (k/write! (:dir ctx) "dhf/spec/glossary.md" "# Glossary\n\nmore\n")
+      (k/commit-all! (:dir ctx) "unmerged")
+      ctx)))
 
 (defstep #"it exits 2 and names the branch"
   (fn [ctx] (k/exits! ctx 2) (k/err-has! ctx "feature-x") ctx))

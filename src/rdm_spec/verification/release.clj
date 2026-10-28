@@ -1,27 +1,36 @@
 (ns rdm-spec.verification.release
-  "Component Release check (verification context): refuses a release while
-  any scenario is planned, failed or unverified; under the regulated
-  profile, also while any clause is named by no audit tag or any controlled
-  document is not identified (ClausesIndexed)."
+  "Refuses a release while any scenario is not verified; under the regulated
+  profile, while any clause is unnamed or a document unidentified; of every
+  spec or the one named, of every slice or the one named
+  (dhf/spec/05-verify-by-results/release.feature, 10, 12 and 13)."
   (:require [rdm-spec.kernel.project :as project]
-            [rdm-spec.kernel.bus :as bus]
-            [rdm-spec.verification.results :as results]
             [rdm-spec.verification.status :as status]))
 
-(defn release-task [{:keys [cfg opts]}]
-  (let [rd (project/results-dir cfg opts)
-        {:keys [scenarios statuses unreadable]} (status/derive! cfg opts rd)
-        refused (for [sc (status/stamped scenarios)
-                      :let [st (statuses (:id sc))] :when (not= :verified st)]
-                  (project/finding (:file sc) (:line sc) "release-refused"
-                                   (str (:id sc) " is " (name st) ": a release needs every scenario verified")))
-        _ (when (:regulated cfg) ((requiring-resolve 'rdm-spec.compliance.gap/index!) cfg))
-        clauses (bus/latest :ClausesIndexed)
-        clause-findings (remove :warning (:findings clauses))
-        findings (vec (concat (results/unreadable-findings unreadable) refused clause-findings))]
-    (project/report {:release {:passed? (empty? findings) :results (:dir rd)
-                               :scenarios (count (status/stamped scenarios))
-                               :verified (count (filter #(= :verified %) (vals statuses)))
-                               :refused (vec (keep #(when (not= :verified (statuses (:id %))) (:id %)) (status/stamped scenarios)))}}
-                    findings
-                    (filter :warning (:findings clauses)))))
+(defn refusals [scenarios statuses]
+  (vec (for [sc scenarios
+             :let [st (get statuses (:id sc))]
+             :when (not= :verified st)]
+         (project/finding (:file sc) (:line sc) (str "release-" (name st))
+                          (str (:id sc) " is " (name st) ": a release needs every scenario verified")))))
+
+(defn gap-refusals
+  "The gap analysis's findings, warnings aside: each blocks a release."
+  [findings]
+  (vec (remove :warning? findings)))
+
+(defn release-check
+  "The release check's report over a run: findings refuse it."
+  [run]
+  (let [{:keys [scenarios statuses] :as d} (status/derive! run)
+        stamped (filter :id scenarios)
+        gap (when (contains? (:cfg run) :regulated)
+              ((requiring-resolve 'rdm-spec.compliance.gap/index) run))
+        fs* (concat (refusals stamped statuses) (gap-refusals (:findings gap)))]
+    {:findings (vec fs*)
+     :warnings (status/warnings-of d)
+     :derived d
+     :result {:release {:passed? (empty? fs*) :scenarios (count stamped)
+                        :counts (status/counts (select-keys statuses (map :id stamped)))
+                        :refused (count fs*)}}}))
+
+(defn release-task [run] (release-check run))

@@ -179,7 +179,8 @@
 (def unstated
   {:verification/verify [[[:out :verify :checks 0 :reason]
                           "spec-0315 puts a failed check's :reason in ratified.edn; its standard output's checks are stated by spec-0314 without it"]]
-   :spec/check          [[[:out :lint :findings]
+   :spec/check          [[[:out :lint :warnings] "no scenario states check's :lint summary beyond its questions for a person (cycle 25)"]
+                         [[:out :lint :findings]
                           "no scenario states check's :lint summary beyond its questions for a person (spec-0010)"]
                          [[:out :knowledge] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
                          [[:out :spec] "no scenario states check's standard output beyond the lint's questions (cycle 20)"]
@@ -187,7 +188,8 @@
                          [[:out :sources] "no scenario states check's standard output beyond the lint's questions (cycle 22)"]
                          [[:out :paths] "no scenario states check's standard output beyond the lint's questions (cycle 24)"]
                          [[:out :wiki] "no scenario states check's standard output beyond the lint's questions (cycle 24)"]]
-   :measurement/checklist [[[:out :checklist :clauses] "spec-0210 states checklist's result; it names clauses only under the regulated profile, which no golden's fixture holds (cycle 24)"]]
+   :measurement/checklist [[[:out :checklist :clauses] "spec-0210 states checklist's result; it names clauses only under the regulated profile, which no golden's fixture holds (cycle 24)"]
+                           [[:out :checklist :scope] "spec-0210 states checklist's result without the cycle's scope (cycle 25)"]]
    :measurement/scorer  [[[:out :score :ungraded] "no scenario states score's standard output; score.edn is what spec-0123 and its kin state (cycle 20)"]]
    :regeneration/fence  [[[:out] "no scenario states fence's standard output; what it builds is stated, and judged by :wrote and the room (cycle 20)"]]
    :verification/status [[[:err] "no scenario states status's warning line; spec-0060 states the unknown result in its standard output (cycle 20)"]]})
@@ -298,7 +300,10 @@
             data (try (edn/read-string (:out r)) (catch Exception _ nil))]
         (when-not (and (zero? (:exit r)) (map? (:scopes data)))
           (die! 2 (str "cannot-run: " (str/join " " (scopes-cmd)) " scopes " from " " to ": " (str/trim (str (:err r) (:out r))))))
-        (set (map :component (get-in data [:scopes :scopes])))))))
+        ;; A component scope names its component; a slice scope (ADR 0004,
+        ;; cycle 25) names every component it reaches.
+        (set (mapcat #(if (:slice %) (:components %) [(:component %)])
+                     (get-in data [:scopes :scopes])))))))
 
 (defn skipped [data in-scope]
   (vec (for [[c k] (cases data) :when (in-scope c)] {:component c :case k :why "in scope, not judged"})))

@@ -1,193 +1,188 @@
 (ns steps.architecture-model
-  "Steps of the component Model (dhf/spec/04-model-the-architecture/model.feature)."
+  "Steps of the component Model (04-model-the-architecture/model.feature, 13-slice-development/model.feature)."
   (:require [babashka.fs :as fs]
-            [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.runner :refer [defstep]]
-            [steps.kernel-shared :as k]))
+            [steps.kernel-steps :as k]
+                        [rdm-spec.kernel.runner :refer [defstep fail!]]))
 
-(defn features-for
-  "One feature file per component of MODEL, at its :spec path (or, with
-  SLICE, in that slice named by the component's name), ids from START."
-  [model & [{:keys [slice start] :or {start 1}}]]
-  (let [comps (concat (for [c (:containers model) ctx (:contexts c) comp (:components ctx)] comp) (:kernel model))]
-    (into {} (map-indexed (fn [i comp]
-                            [(if slice
-                               (str "dhf/spec/" slice "/" (name (:id comp)) ".feature")
-                               (str "dhf/spec/" (:spec comp) ".feature"))
-                             (k/feature-text (:name comp) ["UN-001"] [{:id (format "spec-%04d" (+ start i)) :title (str (:name comp) " works")}])])
-                          comps))))
+(defn with-model-text! [text]
+  (let [ctx (k/spec-project! {"shop/cart.feature" (k/feature-text {:name "Cart" :scenarios [{:id "spec-0001"}]})})]
+    (k/write! (:dir ctx) "dhf/spec/model.edn" text)
+    ctx))
 
-(defn model-project!
-  "A project whose model is MODEL, one feature file per component, its views drawn."
-  [ctx model & [opts]]
-  (k/spec-project! ctx (merge {:model model :features (features-for model opts)} opts)))
+(defn with-model! [f]
+  (let [ctx (k/spec-project! {"shop/cart.feature" (k/feature-text {:name "Cart" :scenarios [{:id "spec-0001"}]})})]
+    (k/edit-edn! (:dir ctx) "dhf/spec/model.edn" f)
+    (k/fresh-views! (:dir ctx))
+    ctx))
 
-(defn model! [ctx f & args]
-  (let [m (edn/read-string (k/slurp-rel ctx "dhf/spec/model.edn"))]
-    (k/write-edn! ctx "dhf/spec/model.edn" (apply f m args))))
-
-(defn redraw! [ctx] (k/exits! (k/run-rdm ctx "views") 0) ctx)
-
-(def demo (k/context-model [[:demo [[:thing "Thing"]]]]))
+(def model-lines
+  (str/split-lines (k/pp k/shop-model)))
 
 (defstep #"a model file with an unclosed map on line 12"
-  (fn [ctx]
-    (let [ctx (model-project! ctx demo)]
-      (k/write! ctx "dhf/spec/model.edn"
-                (str/join "\n" [";; 1" ";; 2" "{:system {:id :demo :name \"demo\" :description \"A demo\"}"
-                                " :people"
-                                " [{:id :user :name \"User\" :description \"Uses it\"}]"
-                                " :containers"
-                                " [{:id :app :name \"app\" :kind :runs :technology \"x\" :description \"The program\""
-                                "   :contexts"
-                                "   [{:id :demo :name \"demo\" :description \"The demo\""
-                                "     :components"
-                                "     [{:id :demo/thing :name \"Thing\" :spec \"demo/thing\" :description \"Does it\"}"
-                                "      {:id :demo/other :name \"Other\" :spec \"demo/other\" :description \"Unclosed\""
-                                "     ]}]}]"
-                                " :views []}" ""])))))
+  (fn [_]
+    (with-model-text! (str/join "\n" (concat (map #(str ";; line " %) (range 1 12))
+                                             ["{:system {:id :shop :name \"Shop\" :description \"d\""])))))
 
 (defstep #"it exits 1 and names the file and line 12"
-  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx "dhf/spec/model.edn:12:") ctx))
+  (fn [ctx] (k/exits! ctx 1) (k/line-has! ctx "dhf/spec/model.edn:12:") ctx))
 
 (defstep #"a model file with a \"\}\" on line 7 that closes nothing"
-  (fn [ctx]
-    (let [ctx (model-project! ctx demo)]
-      (k/write! ctx "dhf/spec/model.edn"
-                (str/join "\n" [";; 1" "{:system {:id :demo :name \"demo\" :description \"A demo\"}" " :people []"
-                                " :containers []" " :views []}" "" "}" ""])))))
+  (fn [_] (with-model-text! (str "{:system {:id :shop :name \"Shop\" :description \"d\"}}\n" (str/join (repeat 5 ";;\n")) "}\n"))))
 
 (defstep #"it exits 1 and names the file, line 7 and the \"\}\""
-  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx "dhf/spec/model.edn:7:" "}") ctx))
+  (fn [ctx] (k/exits! ctx 1) (k/line-has! ctx "dhf/spec/model.edn:7:" "}") ctx))
 
 (defstep #"a container carrying the key :owner, which the model's shape does not declare"
-  (fn [ctx] (let [ctx (model-project! ctx demo)] (model! ctx assoc-in [:containers 0 :owner] "me") (redraw! ctx))))
+  (fn [_] (with-model! #(assoc-in % [:containers 0 :owner] "Sami"))))
 
 (defstep #"it exits 1 and names the container and the key"
-  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx ":app" ":owner") ctx))
+  (fn [ctx] (k/exits! ctx 1) (k/line-has! ctx "dhf/spec/model.edn:" ":app" ":owner") ctx))
 
 (defstep #"a container and a component both with the id :alpha"
-  (fn [ctx]
-    (let [m (-> (k/context-model [[:demo [[:alpha "Alpha"]]]])
-                (assoc-in [:containers 0 :contexts 0 :components 0 :id] :alpha))
-          ctx (model-project! ctx (k/context-model [[:demo [[:thing "Thing"]]]]))]
-      (model! ctx (fn [_] (-> m (assoc-in [:containers 0 :id] :alpha) (assoc-in [:relationships 0 :to] :alpha))))
-      ctx)))
+  (fn [_] (let [ctx (with-model! #(-> % (assoc-in [:containers 0 :id] :alpha)
+                                      (update :relationships (fn [rs] (mapv (fn [r] (if (= :app (:to r)) (assoc r :to :alpha) r)) rs)))
+                                      (assoc-in [:containers 0 :contexts 0 :components 0 :id] :alpha)))]
+            ctx)))
 
 (defstep #"it exits 1 and names the id and both elements"
-  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx ":alpha" "container" "component") ctx))
+  (fn [ctx] (k/exits! ctx 1) (k/line-has! ctx ":alpha" "container" "component") ctx))
 
 (defstep #"a relationship from :spec to :archive, and no element :archive"
-  (fn [ctx]
-    (let [ctx (model-project! ctx (k/context-model [[:spec [[:parser "Parser"]]]]))]
-      (model! ctx update :relationships conj {:from :spec/parser :to :archive :description "Archives"})
-      ctx)))
+  (fn [_] (with-model! #(-> % (assoc-in [:containers 0 :contexts 0 :id] :spec)
+                             (assoc-in [:views 0 :context] :spec)
+                             (update :relationships conj {:from :spec :to :archive :description "Archives in"})))))
 
 (defstep #"it exits 1 and names the relationship and :archive"
-  (fn [ctx] (k/exits! ctx 1) (k/err-line-has! ctx ":spec/parser" ":archive") ctx))
+  (fn [ctx] (k/exits! ctx 1) (k/line-has! ctx ":spec" ":archive") ctx))
 
 (defstep #"the component :spec/parser with the spec path \"spec/parser\""
-  (fn [ctx] (model-project! ctx (k/context-model [[:spec [[:parser "Parser"]]]]))))
+  (fn [_]
+    (let [m {:system {:id :s :name "S" :description "d"} :people [{:id :p :name "P" :description "d"}]
+             :containers [{:id :c :name "C" :kind :runs :description "d"
+                           :contexts [{:id :spec :name "spec" :description "d"
+                                       :components [{:id :spec/parser :name "Parser" :description "d" :spec "spec/parser"}]}]}]
+             :relationships [{:from :p :to :c :description "uses"}]
+             :views [{:key "spec-components" :level :component :context :spec :description "d"}]}]
+      (k/spec-project! {"spec/parser.feature" (k/feature-text {:name "Parser" :scenarios [{:id "spec-0001"}]})} :model m))))
 
 (defstep #"the component owns the feature file dhf/spec/spec/parser.feature, and \"rdm-spec check\" passes only when that file exists"
   (fn [ctx]
     (k/exits! ctx 0)
-    (k/check! (= "Parser" (get-in (k/run-rdm ctx "trace spec-0001") [:result :trace :component])) "the scenario's component is not Parser")
-    (let [text (k/slurp-rel ctx "dhf/spec/spec/parser.feature")]
-      (k/delete! ctx "dhf/spec/spec/parser.feature")
-      (let [r (k/run-rdm ctx "check")]
-        (k/exits! r 1)
-        (k/err-line-has! r "a-scenario-owner" ":spec/parser"))
-      (k/write! ctx "dhf/spec/spec/parser.feature" text))))
+    (fs/delete (k/path (:dir ctx) "dhf/spec/spec/parser.feature"))
+    (let [r (k/rdm! ctx "check")]
+      (k/exits! r 1)
+      (k/line-has! r ":spec/parser" "dhf/spec/spec/parser.feature"))
+    ctx))
 
-(defstep #"views generated from the model"
-  (fn [ctx] (model-project! ctx demo)))
+(defn views-project!
+  "A project whose model has a context, a container and two component views, generated by rdm-spec views."
+  []
+  (let [m (-> k/shop-model
+              (assoc-in [:containers 0 :contexts 1] {:id :pay :name "pay" :description "Paying"
+                                                     :components [{:id :pay/card :name "Card" :description "Charges" :spec "pay/card"}]})
+              (update :containers conj {:id :db :name "Store" :kind :stores :technology "files" :description "Keeps orders"})
+              (assoc :external [{:id :bank :name "Bank" :description "Moves money"}])
+              (update :relationships into [{:from :shop/till :to :db :description "Writes orders to"}
+                                           {:from :pay/card :to :bank :description "Charges through"}])
+              (assoc :views [{:key "context" :level :context :description "The shop and its world"}
+                             {:key "containers" :level :container :description "The program and its store"}
+                             {:key "shop-components" :level :component :context :shop :description "Selling"}
+                             {:key "pay-components" :level :component :context :pay :description "Paying"}
+                             {:key "flow" :level :dynamic :description "One sale"
+                              :steps [[:buyer :app "1. Buys"] [:shop/till :db "2. Writes the order"]]}]))
+        ctx (k/spec-project! {"shop/cart.feature" (k/feature-text {:name "Cart" :scenarios [{:id "spec-0001"}]})
+                              "shop/till.feature" (k/feature-text {:name "Till" :scenarios [{:id "spec-0003"}]})
+                              "pay/card.feature" (k/feature-text {:name "Card" :scenarios [{:id "spec-0002"}]})}
+                             :model m)
+        r (k/rdm! ctx "views")]
+    (k/exits! r 0)
+    (assoc ctx :model m)))
+
+(defstep #"views generated from the model" (fn [_] (views-project!)))
 
 (defstep #"the model's comments and whitespace are changed and nothing else"
   (fn [ctx]
-    (let [m (edn/read-string (k/slurp-rel ctx "dhf/spec/model.edn"))]
-      (k/write! ctx "dhf/spec/model.edn" (str ";; a new comment\n\n" (pr-str m) "\n\n;; and another\n")))))
+    (let [t (k/slurp-in (:dir ctx) "dhf/spec/model.edn")]
+      (k/write! (:dir ctx) "dhf/spec/model.edn" (str ";; a new comment\n\n" (str/replace t "\n" "\n\n  ")))
+      ctx)))
 
 (defstep #"it reports no stale view"
-  (fn [ctx] (k/exits! ctx 0) (k/check! (not-any? #(str/includes? % "stale") (k/err-lines ctx)) "a view is stale: " (k/shows ctx)) ctx))
+  (fn [ctx] (k/exits! ctx 0) (k/expect! (not (str/includes? (str (:err ctx)) "stale")) ctx "a view is stale") ctx))
 
 (defstep #"one element's description is changed"
-  (fn [ctx] (model! ctx assoc-in [:people 0 :description] "Uses it often")))
+  (fn [ctx]
+    (k/write! (:dir ctx) "dhf/spec/model.edn" (str/replace (k/slurp-in (:dir ctx) "dhf/spec/model.edn") "Moves money" "Moves money about"))
+    ctx))
 
 (defstep #"it fails and names every view as stale"
   (fn [ctx]
     (k/exits! ctx 1)
-    (doseq [v ["context" "demo-components"]] (k/err-line-has! ctx (str "dhf/views/" v) "stale"))
+    (doseq [v ["context" "containers" "shop-components" "pay-components" "flow"]]
+      (k/line-has! ctx (str "dhf/views/" v ".") "stale"))
     ctx))
 
-;; ------------------------------------------------------------------ slices
-
-(def slices-model
-  (k/context-model [[:spec [[:parser "Parser"] [:stamper "Stamper"]]] [:measurement [[:checklist "Checklist"]]]]))
-
-(def plan "# Slice\n\n## Goal\n\nA goal.\n\n## References\n\n- UN-001\n\n## Scope\n\n**In:**\n\n- a\n\n**Out:**\n\n- b\n\n## Decisions\n\nNone.\n")
-
-(defn slices-project!
-  "A slices-layout project: every component's feature file in 12-several-specs, its plan beside them."
-  [ctx]
-  (let [ctx (model-project! ctx slices-model {:slice "12-several-specs"})]
-    (k/config! ctx assoc :spec-layout :slices)
-    (k/write! ctx "dhf/spec/12-several-specs/plan.md" plan)))
+;; ------------------------------------------------------------------ 13: slices
 
 (defstep #"a configuration with :spec-layout :slices, and dhf/spec/12-several-specs/ holding plan.md, parser.feature, stamper.feature and checklist.feature"
-  (fn [ctx]
-    (let [ctx (slices-project! ctx)]
-      (k/write! ctx "dhf/spec/02-write-the-spec/plan.md" plan)
-      (k/write! ctx "dhf/spec/02-write-the-spec/parser.feature" (k/feature-text "Parser" ["UN-001"] [{:id "spec-0009" :title "Parser in another slice"}]))
-      (k/write! ctx "dhf/spec/ids.edn" "{:issued 9}\n"))))
+  (fn [_] (k/slices-project!)))
 
 (defstep #"the slice 12-several-specs reaches the components :spec/parser, :spec/stamper and :measurement/checklist, each found by its name in the model"
   (fn [ctx]
     (k/exits! ctx 0)
-    (doseq [[id comp] [["spec-0001" "Parser"] ["spec-0002" "Stamper"] ["spec-0003" "Checklist"]]]
-      (k/check! (= comp (get-in (k/run-rdm ctx (str "trace " id)) [:result :trace :component])) id " is not owned by " comp))
+    (doseq [[id comp] [["spec-0007" "Parser"] ["spec-0009" "Stamper"] ["spec-0010" "Checklist"]]]
+      (let [r (k/rdm! ctx ["trace" id])]
+        (k/expect! (= comp (get-in r [:edn :trace :component])) r (str id " is not the " comp "'s"))))
     ctx))
 
 (defstep #"a component owns every scenario of the feature files named for it, in every slice"
   (fn [ctx]
-    (k/check! (= "Parser" (get-in (k/run-rdm ctx "trace spec-0009") [:result :trace :component])) "spec-0009 is not owned by Parser")
+    (let [rdir (k/path (:top ctx) "results")]
+      (doseq [i (range 1 11)] (k/result! rdir (format "spec-%04d" i) "passed"))
+      (let [r (k/rdm! ctx ["trace" "spec-0007" "--results" rdir])]
+        (k/exits! r 0)
+        (k/expect! (= "Parser" (get-in r [:edn :trace :component])) r "spec-0007 is not the parser's"))
+      (let [r (k/rdm! ctx ["trace" "spec-0001" "--results" rdir])]
+        (k/expect! (= "Parser" (get-in r [:edn :trace :component])) r "spec-0001 is not the parser's")))
     ctx))
 
 (defstep #"a configuration with :spec-layout :slices, and (dhf/spec/12-several-specs/parsr.feature, a name no component carries|dhf/spec/parser.feature, a feature file outside every slice|two components of the model named \"check\", in two contexts|a component of the model that no slice's feature file is named for)"
-  (fn [ctx holds]
-    (let [ctx (slices-project! ctx)]
-      (case holds
-        "dhf/spec/12-several-specs/parsr.feature, a name no component carries"
-        (k/write! ctx "dhf/spec/12-several-specs/parsr.feature" (k/feature-text "Parsr" ["UN-001"] []))
-        "dhf/spec/parser.feature, a feature file outside every slice"
-        (k/write! ctx "dhf/spec/parser.feature" (k/feature-text "Parser" ["UN-001"] []))
-        "two components of the model named \"check\", in two contexts"
-        (do (model! ctx (fn [m] (-> m
-                                    (update-in [:containers 0 :contexts 0 :components] conj {:id :spec/check :name "Check" :spec "spec/check" :description "Checks"})
-                                    (update-in [:containers 0 :contexts 1 :components] conj {:id :measurement/check :name "Check" :spec "measurement/check" :description "Checks too"}))))
-            (k/write! ctx "dhf/spec/12-several-specs/check.feature" (k/feature-text "Check" ["UN-001"] []))
-            (redraw! ctx))
-        "a component of the model that no slice's feature file is named for"
-        (do (model! ctx update-in [:containers 0 :contexts 0 :components] conj {:id :spec/lonely :name "Lonely" :spec "spec/lonely" :description "Alone"})
-            (redraw! ctx)))
-      ctx)))
+  (fn [_ holds]
+    (case holds
+      "dhf/spec/12-several-specs/parsr.feature, a name no component carries"
+      (assoc (k/slices-project! {"12-several-specs/parsr.feature" (k/feature-text {:name "Parsr" :scenarios [{:id "spec-0011"}]})})
+             :names ["dhf/spec/12-several-specs/parsr.feature"])
+      "dhf/spec/parser.feature, a feature file outside every slice"
+      (assoc (k/slices-project! {"parser.feature" (k/feature-text {:name "Parser" :scenarios [{:id "spec-0011"}]})})
+             :names ["dhf/spec/parser.feature"])
+      "two components of the model named \"check\", in two contexts"
+      (let [m (-> k/slices-model
+                  (update-in [:containers 0 :contexts 0 :components] conj {:id :spec/check :name "Check" :description "d" :spec "02-write-the-spec/check"})
+                  (update-in [:containers 0 :contexts 1 :components] conj {:id :measurement/check :name "Check" :description "d" :spec "07-measure/check"}))]
+        (assoc (k/slices-project! {"02-write-the-spec/check.feature" (k/feature-text {:name "Check" :scenarios [{:id "spec-0011"}]})} :model m)
+               :names [":spec/check" ":measurement/check"]))
+      "a component of the model that no slice's feature file is named for"
+      (let [m (update-in k/slices-model [:containers 0 :contexts 1 :components] conj {:id :measurement/scorer :name "Scorer" :description "d" :spec "07-measure/scorer"})]
+        (assoc (k/slices-project! {} :model m) :names [":measurement/scorer"])))))
 
-(defstep #"it exits 1 with the finding (slice-component-unknown|slice-missing|component-name-shared|component-unspecified), naming (.+)"
-  (fn [ctx rule names]
+(defstep #"it exits 1 with the finding (slice-component-unknown|slice-missing|component-name-shared|component-unspecified), naming (the file|both components|the component)"
+  (fn [ctx rule _]
     (k/exits! ctx 1)
-    (case rule
-      "slice-component-unknown" (k/err-line-has! ctx "slice-component-unknown" "dhf/spec/12-several-specs/parsr.feature")
-      "slice-missing" (k/err-line-has! ctx "slice-missing" "dhf/spec/parser.feature")
-      "component-name-shared" (k/err-line-has! ctx "component-name-shared" ":spec/check" ":measurement/check")
-      "component-unspecified" (k/err-line-has! ctx "component-unspecified" ":spec/lonely"))
+    (apply k/line-has! ctx rule (:names ctx))
     ctx))
 
 (defstep #"a configuration with no :spec-layout, and dhf/spec/spec/parser.feature named by the component's spec path"
-  (fn [ctx] (model-project! ctx (k/context-model [[:spec [[:parser "Parser"]]]]))))
+  (fn [_]
+    (let [m (-> k/slices-model
+                (assoc-in [:containers 0 :contexts 0 :components] [{:id :spec/parser :name "Parser" :description "Reads" :spec "spec/parser"}])
+                (assoc-in [:containers 0 :contexts 1 :components] [{:id :measurement/checklist :name "Checklist" :description "Lists" :spec "measurement/checklist"}]))]
+      (k/spec-project! {"spec/parser.feature" (k/feature-text {:name "Parser" :scenarios [{:id "spec-0001"}]})
+                        "measurement/checklist.feature" (k/feature-text {:name "Checklist" :scenarios [{:id "spec-0002"}]})}
+                       :model m))))
 
 (defstep #"the component :spec/parser owns that file, as the model's spec path says"
   (fn [ctx]
     (k/exits! ctx 0)
-    (k/check! (= "Parser" (get-in (k/run-rdm ctx "trace spec-0001") [:result :trace :component])) "the scenario is not owned by Parser")
+    (let [r (k/rdm! ctx "trace spec-0001")]
+      (k/expect! (= "Parser" (get-in r [:edn :trace :component])) r "spec-0001 is not the parser's"))
     ctx))

@@ -1,225 +1,221 @@
 (ns rdm-spec.kernel.plugins
-  "Kernel component Plugins: runs the project's plugins, the judges it keeps
-  for itself, declared in the configuration's :plugins in the order they run.
-  A subscriber is given each event of rdm-spec's published language it
-  subscribes to; an answerer is asked a request (:Gate before fence and
-  verify, :Check as one of verify's checks). One interface for all: the
-  event or request as EDN on standard input, the project's root as working
-  directory, RDM_SPEC and the plugin's :env in its environment, its own time
-  limit, and findings on its error stream. Templates rdm-spec carries are
-  copied into a project by plugin add, and are then the project's own."
+  "Runs the project's plugins: subscribers to the core's events, answerers of
+  its :Gate and :Check requests, through one interface; and adds a plugin
+  from the templates rdm-spec carries (dhf/spec/08-plugins/plugins.feature; ADR 0003).
+
+  The interface: the event or the request as EDN on standard input; the
+  working directory the project's root (the checkout's, for :Check); RDM_SPEC
+  set, and the plugin's :env; its own time limit (:seconds, 60 by default);
+  exit 0 holds, 1 findings, 2 cannot run; findings FILE:LINE: RULE: what on
+  its error stream, warnings carrying `warning: `."
   (:require [babashka.fs :as fs]
-            [babashka.process :as p]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [rdm-spec.kernel.project :as project]
-            [rdm-spec.kernel.bus :as bus]))
+            [rdm-spec.kernel.bus :as bus]
+            [rdm-spec.kernel.project :as project]))
 
-(def default-seconds 60)
 (def entry-keys #{:name :command :subscribes :answers :seconds :env})
-(def requests #{:Gate :Check})
 
-(defn declared
-  "The configuration's plugins, in order, each with its :seconds and :env."
-  [cfg]
-  (vec (for [p (:plugins cfg)]
-         (merge {:seconds default-seconds :env {}} (select-keys p entry-keys)))))
+(defn seconds [p] (or (:seconds p) 60))
 
-(defn- under-implementation? [cfg word]
-  (let [w (str/replace (str word) #"^\./" "")]
-    (some (fn [i] (let [i (str/replace (str i) #"/+$" "")]
-                    (or (= w i) (str/starts-with? w (str i "/")))))
-          (:implementation cfg))))
+(defn problem
+  "Why the configuration's :plugins cannot be trusted, or nil."
+  [cfg plugins]
+  (let [impl (:implementation cfg)
+        under-impl? (fn [arg] (some #(or (= arg %) (str/starts-with? (str arg) (str (str/replace % #"/$" "") "/"))) impl))
+        names (map :name plugins)]
+    (or (when-not (sequential? plugins) ":plugins is a vector of plugin declarations")
+        (first
+         (for [p plugins
+               :let [n (or (:name p) "(unnamed)")
+               why (cond
+                     (not (map? p)) "a plugin is declared as a map"
+                     (not (string? (:name p))) "a plugin names itself with :name, a string"
+                     (seq (remove entry-keys (keys p)))
+                     (str "a plugin is declared with :name, :command, :subscribes or :answers, :seconds and :env only, not " (str/join ", " (remove entry-keys (keys p))))
+                     (not (and (vector? (:command p)) (seq (:command p)) (every? string? (:command p))))
+                     "a plugin's :command is a vector of strings"
+                     (and (nil? (:subscribes p)) (nil? (:answers p))) "a plugin subscribes to events or answers a request"
+                     (and (:subscribes p) (:answers p)) "a plugin subscribes to events or answers a request, not both"
+                     (and (:subscribes p) (not (and (sequential? (:subscribes p)) (seq (:subscribes p)))))
+                     "a plugin's :subscribes is a vector of event names"
+                     (some #(not (bus/catalogue %)) (:subscribes p))
+                     (str "rdm-spec publishes no event " (name (first (remove bus/catalogue (:subscribes p))))
+                          ": the events it publishes are " (str/join ", " (map name (sort (keys bus/catalogue)))))
+                     (and (:answers p) (not (#{:Gate :Check} (:answers p))))
+                     (str "a plugin answers " (pr-str (:answers p)) ", and the requests are :Gate and :Check")
+                     (> (count (filter #{(:name p)} names)) 1) (str "a plugin's name is declared once, and " n " is declared twice")
+                     (some under-impl? (:command p)) "its command is under the implementation's paths: a plugin is a judge the builder never writes"
+                     (and (:seconds p) (not (and (number? (:seconds p)) (pos? (:seconds p))))) "a plugin's :seconds is a positive number"
+                     (and (contains? p :env) (not (and (map? (:env p)) (every? string? (keys (:env p))) (every? string? (vals (:env p))))))
+                     "a plugin's :env is a map of strings to strings")]
+               :when why]
+           (str "the plugin " n " is refused: " why))))))
 
 (defn validate!
-  "Refuses (exit 2), before anything runs, a :plugins rdm-spec cannot trust."
-  [cfg]
-  (let [ps (:plugins cfg)
-        refuse (fn [p why] (project/cannot-run! (str "the plugin " (pr-str (:name p)) " is refused: " why)))]
-    (when (some? ps)
-      (when-not (and (sequential? ps) (every? map? ps))
-        (project/cannot-run! ":plugins is a vector of plugin maps, each {:name :command :subscribes|:answers}")))
-    (doseq [p ps]
-      (when-not (string? (:name p)) (refuse p "a plugin's :name is a string"))
-      (when-let [extra (seq (remove entry-keys (keys p)))]
-        (refuse p (str "a plugin is declared with :name, :command, :subscribes or :answers, :seconds and :env, not " (str/join ", " (map pr-str extra)))))
-      (when-not (and (sequential? (:command p)) (seq (:command p)) (every? string? (:command p)))
-        (refuse p "its :command is a vector of strings"))
-      (let [s? (contains? p :subscribes) a? (contains? p :answers)]
-        (cond
-          (and s? a?) (refuse p "a plugin subscribes to events or answers a request, not both")
-          (not (or s? a?)) (refuse p "a plugin subscribes to events or answers a request")))
-      (when (contains? p :subscribes)
-        (when-not (and (sequential? (:subscribes p)) (every? keyword? (:subscribes p)) (seq (:subscribes p)))
-          (refuse p ":subscribes is a vector of event names"))
-        (doseq [e (:subscribes p) :when (not (contains? bus/catalogue e))]
-          (refuse p (str "rdm-spec publishes no event " (name e) "; the events it publishes are "
-                         (str/join ", " (map name (bus/event-names)))))))
-      (when (contains? p :answers)
-        (when-not (requests (:answers p))
-          (refuse p (str "it answers " (pr-str (:answers p)) ", and the requests are :Gate and :Check"))))
-      (when (and (contains? p :seconds) (not (and (number? (:seconds p)) (pos? (:seconds p)))))
-        (refuse p ":seconds is a positive number of seconds"))
-      (when (and (contains? p :env) (not (and (map? (:env p)) (every? string? (keys (:env p))) (every? string? (vals (:env p))))))
-        (refuse p ":env is a map of strings to strings"))
-      (when (some #(under-implementation? cfg %) (:command p))
-        (refuse p (str "its command " (pr-str (:command p)) " is under the implementation's paths, and a plugin is a judge the builder never writes"))))
-    (doseq [[n c] (frequencies (map :name ps)) :when (> c 1)]
-      (project/cannot-run! (str "the plugin " (pr-str n) " is declared " c " times: a plugin's name is declared once")))))
+  "Refuses (exit 2) a :plugins declaration rdm-spec cannot trust, before anything runs."
+  [run]
+  (when-let [p (problem (:cfg run) (get-in run [:cfg :plugins] []))]
+    (project/cannot-run! p))
+  nil)
 
-;; ------------------------------------------------------------------ which rdm-spec
+(defn deliveries
+  "[[plugin input]] for every published event each subscriber subscribes to, plugins in declared order."
+  [plugins published]
+  (vec (for [p plugins :when (:subscribes p)
+             e published :when (some #{(:event e)} (:subscribes p))]
+         [p (merge {:event (:event e)} (:payload e))])))
 
-(defn rdm-spec-command-line
-  "A command line, words separated by spaces, starting this same rdm-spec
-  however it was installed: from its sources or as a package."
+(defn answerers [plugins kw] (filterv #(= kw (:answers %)) plugins))
+
+(defn split-lines*
+  "A plugin's error stream as finding lines and warning lines."
+  [err]
+  (let [ls (remove str/blank? (str/split-lines (str err)))
+        w? #(re-find #"(^|: )warning: " %)]
+    {:findings (vec (remove w? ls)) :warnings (vec (filter w? ls))}))
+
+;; ------------------------------------------------------------------ running a plugin
+
+(defn rdm-spec-command
+  "A command line starting this same rdm-spec, however it was installed."
   []
-  (let [u (str (io/resource "rdm_spec/kernel/command.clj"))
-        decode #(java.net.URLDecoder/decode ^String % "UTF-8")]
-    (cond
-      (str/starts-with? u "jar:file:") (str "bb " (decode (first (str/split (subs u 9) #"!"))))
-      (str/starts-with? u "file:") (str "bb --classpath " (str (fs/parent (fs/parent (fs/parent (decode (subs u 5))))))
-                                        " -m rdm-spec.kernel.command")
-      :else "rdm-spec")))
-
-;; ------------------------------------------------------------------ running one
+  (let [cp (System/getProperty "java.class.path")
+        cp (if (str/blank? cp)
+             (let [u (str (io/resource "rdm_spec/kernel/command.clj"))]
+               (cond (str/starts-with? u "jar:file:") (second (re-find #"^jar:file:(.*?)!/" u))
+                     (str/starts-with? u "file:") (str (fs/parent (fs/parent (fs/parent (fs/path (subs u 5))))))
+                     :else "src"))
+             cp)]
+    (str "bb -cp " cp " -m rdm-spec.kernel.command")))
 
 (defn run-plugin
-  "Runs PLUGIN with INPUT (EDN text) on its standard input in DIR; stops it at
-  its time limit. {:exit :out :err :timed-out? :error}."
-  [plugin input dir]
-  (let [env (merge (project/env) (:env plugin) {"RDM_SPEC" (rdm-spec-command-line)})]
-    (try
-      (let [proc (p/process (vec (:command plugin)) {:dir (str dir) :env env :out :string :err :string})
-            _ (future (try (with-open [w (io/writer (:in proc))] (.write w ^String input))
-                           (catch java.io.IOException _ nil)))
-            r (deref proc (long (* 1000 (:seconds plugin default-seconds))) ::timeout)]
-        (if (= r ::timeout)
-          (do (p/destroy-tree proc)
-              (let [r (deref proc 5000 nil)]
-                {:exit nil :out (str (:out r)) :err (str (:err r)) :timed-out? true}))
-          {:exit (:exit r) :out (:out r) :err (:err r)}))
-      (catch java.io.IOException e
-        {:error (project/one-line (ex-message e))}))))
+  "Runs a plugin's command with input in dir. Returns {:exit :out :err :timed-out? :not-found?}."
+  [p input dir & [extra-args]]
+  (project/run-cmd (into (vec (:command p)) extra-args)
+                   {:dir dir :in (project/edn-str input) :seconds (seconds p)
+                    :env (merge (:env p) {"RDM_SPEC" (rdm-spec-command)})}))
 
-(defn- lines [s] (vec (remove str/blank? (str/split-lines (str s)))))
-
-(defn- warning-line? [l] (boolean (re-find #"(^|: )warning: " l)))
-
-(defn answer-report
-  "What a plugin said, as the task's own report: its finding lines relayed
-  unchanged, its warnings, its notes; a plugin that cannot run, or ran past
-  its limit, stops the task."
-  [plugin res]
-  (let [who (str "the plugin " (pr-str (:name plugin)))
-        said (str/join " " (concat (lines (:out res)) (lines (:err res))))]
+(defn answer
+  "What a plugin's run makes of the task's report: {:findings :warnings :cannot-run}."
+  [p r]
+  (let [{:keys [findings warnings]} (split-lines* (:err r))
+        raw (fn [l] {:raw l})]
     (cond
-      (:error res) (project/cannot-run! (str who " cannot be started: its command " (pr-str (:command plugin)) " is not found ("
-                                             (:error res) ")"))
-      (:timed-out? res) (project/cannot-run! (str who " timed out after " (:seconds plugin) " seconds and was stopped"
-                                                  (when-not (str/blank? said) (str "; it printed: " said))))
-      (= 0 (:exit res)) {:findings []
-                         :warnings (mapv project/raw (filter warning-line? (lines (:err res))))
-                         :notes (lines (:out res))}
-      (= 1 (:exit res)) (let [ls (lines (:err res))
-                              fs (remove warning-line? ls)]
-                          {:findings (if (seq fs) (mapv project/raw fs)
-                                         [(project/finding (first (:command plugin)) "plugin-failed" (str who " exited 1 and named no finding"))])
-                           :warnings (mapv project/raw (filter warning-line? ls))
-                           :notes (lines (:out res))})
-      (= 2 (:exit res)) (project/cannot-run! (str who " cannot run" (when-not (str/blank? said) (str ": " said))))
-      :else (project/cannot-run! (str who " exited " (:exit res) (when-not (str/blank? said) (str ": " said)))))))
+      (:not-found? r) {:cannot-run (str "the plugin " (:name p) "'s command " (pr-str (:command p)) " cannot be started")}
+      (:timed-out? r) {:cannot-run (str "the plugin " (:name p) " timed out after " (seconds p) " seconds and was stopped"
+                                        (let [o (project/one-line (str (:out r) " " (:err r)))] (when-not (str/blank? o) (str "; it printed: " o))))}
+      (= 2 (:exit r)) {:cannot-run (str "the plugin " (:name p) " cannot run: " (project/one-line (:err r)))}
+      (= 1 (:exit r)) {:findings (mapv raw (if (seq findings) findings [(str (:name p) ": plugin-findings: the plugin exited 1 naming no finding")]))
+                       :warnings (mapv raw warnings)}
+      (= 0 (:exit r)) {:warnings (mapv raw warnings) :findings (mapv raw findings)}
+      :else {:cannot-run (str "the plugin " (:name p) " exited " (:exit r) ": " (project/one-line (:err r)))})))
 
-(defn run-subscribers!
-  "Runs every plugin subscribing to an event among PUBLISHED, in the order
-  declared, each event in the order published; their report."
-  [cfg published]
-  (let [rs (for [p (declared cfg) :when (:subscribes p)
-                 {:keys [event data]} published :when (some #{event} (:subscribes p))]
-             (answer-report p (run-plugin p (pr-str (merge {:event event} data)) (project/root))))]
-    {:result nil
-     :findings (vec (mapcat :findings rs))
-     :warnings (vec (mapcat :warnings rs))}))
+(defn- report-of [answers]
+  (let [cr (keep :cannot-run answers)]
+    (cond-> {:findings (vec (mapcat :findings answers))
+             :warnings (mapv #(assoc % :warning? true) (mapcat :warnings answers))}
+      (seq cr) (assoc :exit 2 :why (str/join "; " cr)))))
 
-(defn answerers [cfg request] (filterv #(= request (:answers %)) (declared cfg)))
+(defn deliver
+  "After the core's stages: each subscriber receives each event it subscribes to, in declared order."
+  [run published]
+  (let [plugins (get-in run [:cfg :plugins] [])]
+    (report-of (for [[p input] (deliveries plugins published)]
+                 (answer p (run-plugin p input (:root run)))))))
 
-(defn gate!
-  "Asks every plugin answering :Gate, in order, with REQUEST; stops at the
-  first that fails. {:findings :warnings :passed?}."
-  [cfg request]
-  (loop [ps (answerers cfg :Gate) warnings []]
+(defn gate
+  "Asks every plugin answering :Gate, in order; stops at the first that fails."
+  [run request]
+  (loop [ps (answerers (get-in run [:cfg :plugins] []) :Gate) acc []]
     (if (empty? ps)
-      {:passed? true :findings [] :warnings warnings}
+      (report-of acc)
       (let [p (first ps)
-            r (answer-report p (run-plugin p (pr-str request) (project/root)))]
-        (if (seq (:findings r))
-          {:passed? false :findings (:findings r) :warnings (into warnings (:warnings r))}
-          (recur (rest ps) (into warnings (:warnings r))))))))
+            a (answer p (run-plugin p request (:root run)))]
+        (if (or (:cannot-run a) (seq (:findings a)))
+          (let [rep (report-of (conj acc a))] (if (:exit rep) rep (assoc rep :exit 1)))
+          (recur (rest ps) (conj acc a)))))))
 
 ;; ------------------------------------------------------------------ templates
 
-(defn- jar-templates [jar-path]
-  (with-open [jf (java.util.jar.JarFile. ^String jar-path)]
-    (reduce (fn [acc ^java.util.jar.JarEntry e]
-              (let [n (.getName e)]
-                (if-let [[_ t rel] (re-matches #"rdm-spec/plugins/([^/]+)/(.+)" n)]
-                  (if (.isDirectory e)
-                    acc
-                    (assoc-in acc [t rel] (with-open [in (.getInputStream jf e)]
-                                            (let [o (java.io.ByteArrayOutputStream.)] (io/copy in o) (.toByteArray o)))))
-                  acc)))
-            {}
-            (enumeration-seq (.entries jf)))))
+(defn- source-templates-dir []
+  (let [u (str (io/resource "rdm_spec/kernel/command.clj"))]
+    (when (str/starts-with? u "file:")
+      (let [d (fs/path (fs/parent (fs/parent (fs/parent (fs/parent (fs/path (subs u 5)))))) "plugins")]
+        (when (fs/directory? d) d)))))
 
-(defn- dir-templates [dir]
-  (into {} (for [t (fs/list-dir dir) :when (fs/directory? t)]
-             [(str (fs/file-name t))
-              (into {} (for [f (fs/glob t "**") :when (fs/regular-file? f)]
-                         [(str/replace (str (fs/relativize t f)) "\\" "/") (fs/read-all-bytes f)]))])))
+(defn- jar-templates
+  "Templates carried as classpath resources under rdm-spec/plugins/: {name {rel bytes-reader}}."
+  []
+  (let [u (str (io/resource "rdm-spec/plugins/"))]
+    (when (str/starts-with? u "jar:file:")
+      (let [jar (java.util.jar.JarFile. ^String (second (re-find #"^jar:file:(.*?)!/" u)))]
+        (try
+          (reduce (fn [acc ^java.util.jar.JarEntry e]
+                    (let [n (.getName e)]
+                      (if (and (str/starts-with? n "rdm-spec/plugins/") (not (.isDirectory e)))
+                        (let [[t & more] (str/split (subs n (count "rdm-spec/plugins/")) #"/")]
+                          (if (seq more)
+                            (assoc-in acc [t (str/join "/" more)] (slurp (.getInputStream jar e)))
+                            acc))
+                        acc)))
+                  {} (enumeration-seq (.entries jar)))
+          (finally (.close jar)))))))
 
 (defn template-files
-  "Every template rdm-spec carries: {name {path bytes}}. A package carries
-  them as resources under rdm-spec/plugins/; run from sources, they are
-  plugins/ beside src/."
+  "Every template rdm-spec carries: {name {rel text}}."
   []
-  (let [u (str (io/resource "rdm_spec/kernel/command.clj"))
-        decode #(java.net.URLDecoder/decode ^String % "UTF-8")
-        res (some-> (io/resource "rdm-spec/plugins") str)]
-    (cond
-      (str/starts-with? u "jar:file:") (jar-templates (decode (first (str/split (subs u 9) #"!"))))
-      (and res (str/starts-with? res "file:")) (dir-templates (decode (subs res 5)))
-      (str/starts-with? u "file:")
-      (let [d (fs/path (fs/parent (fs/parent (fs/parent (fs/parent (decode (subs u 5)))))) "plugins")]
-        (if (fs/directory? d) (dir-templates d) {}))
-      :else {})))
+  (if-let [d (source-templates-dir)]
+    (into {} (for [t (fs/list-dir d) :when (fs/exists? (fs/path t "template.edn"))]
+               [(str (fs/file-name t))
+                (into {} (for [f (fs/glob t "**" {:hidden true}) :when (fs/regular-file? f)]
+                           [(str (fs/relativize t f)) (str f)]))]))
+    (or (jar-templates) {})))
+
+(defn- content [v] (if (fs/exists? v) (slurp v) v))
 
 (defn templates []
-  (vec (sort-by :name
-                (for [[n files] (template-files)
-                      :let [t (some-> (get files "template.edn") (String. "UTF-8") edn/read-string)]
-                      :when t]
-                  (assoc t :name n :files files)))))
-
-(defn- listing [ts] (str/join ", " (map #(str (:name %) " (version " (:version %) ")") ts)))
+  (vec (for [[n files] (sort-by key (template-files))
+             :let [t (edn/read-string (content (get files "template.edn")))]]
+         {:name n :version (:version t) :plugin (:plugin t) :files files})))
 
 (defn plugin-task
-  "plugin add NAME: copies a template into dhf/harness/plugins/NAME and records its origin."
-  [{:keys [args]}]
-  (let [[verb name] args
-        ts (templates)
-        t (first (filter #(= name (:name %)) ts))
-        dest (str "dhf/harness/plugins/" name)]
-    (cond
-      (not= "add" verb) (project/cannot-run! (str "unknown plugin task " verb ": rdm-spec plugin add NAME"))
-      (nil? t) (project/cannot-run! (str "rdm-spec carries no template " name "; the templates it carries are " (listing ts)))
-      (fs/exists? (project/abs dest))
-      (project/report {} [(project/finding dest "plugin-exists" (str dest " already exists; plugin add never overwrites, and copied nothing"))])
-      :else
-      (do (doseq [[rel bs] (:files t)]
-            (let [f (project/abs (str dest "/" rel))]
-              (fs/create-dirs (fs/parent f))
-              (with-open [o (java.io.FileOutputStream. f)] (.write o ^bytes bs))))
-          (spit (project/abs (str dest "/origin.edn"))
-                (str (pr-str {:template name :version (:version t) :copied (str (java.time.LocalDate/now))}) "\n"))
-          (project/report {:plugin {:added name :version (:version t) :directory dest
-                                    :add-to-plugins (:plugin t)}})))))
+  "plugin add NAME: copies a template into dhf/harness/plugins/NAME and says how to declare it."
+  [run]
+  (let [[sub n] (:args run)
+        root (:root run)]
+    (when-not (= "add" sub) (project/cannot-run! (str "unknown plugin task " sub ": rdm-spec plugin add NAME")))
+    (let [ts (templates)
+          t (some #(when (= n (:name %)) %) ts)
+          listing (str/join ", " (map #(str (:name %) " (version " (:version %) ")") ts))
+          dest (str "dhf/harness/plugins/" n)]
+      (cond
+        (nil? t) (project/cannot-run! (str "rdm-spec carries no template " n ": the templates are " listing))
+        (fs/exists? (fs/path root dest))
+        {:exit 1 :findings [(project/finding dest "plugin-exists" (str dest " already exists: plugin add copies nothing over it"))]}
+        :else
+        (do
+          (doseq [[rel v] (:files t)
+                  :let [f (fs/path root dest rel)]]
+            (fs/create-dirs (fs/parent f))
+            (if (fs/exists? v)
+              (fs/copy v f {:copy-attributes true})
+              (spit (str f) v)))
+          (spit (str (fs/path root dest "origin.edn")) (str (project/edn-str {:template n :version (:version t) :copied (project/today)}) "\n"))
+          {:result {:plugin {:added n :to dest :version (:version t) :declare (:plugin t)
+                             :says "add the :declare entry to :plugins in dhf/harness/config.edn"}}})))))
+
+;; ------------------------------------------------------------------ the :Check request
+
+(defn ask-check
+  "Asks the plugin named n answering :Check, in dir, with request. {:outcome :passed|:failed|:refused :findings :reason}."
+  [plugins n request dir]
+  (let [p (some #(when (and (= n (:name %)) (= :Check (:answers %))) %) plugins)
+        r (run-plugin p request dir)
+        a (answer p r)]
+    (cond (:cannot-run a) {:outcome :refused :reason (:cannot-run a)}
+          (seq (:findings a)) {:outcome :failed :findings (:findings a) :warnings (:warnings a)
+                               :reason (str "the plugin " n " answered with findings")}
+          (not (zero? (:exit r))) {:outcome :failed :reason (str "the plugin " n " exited " (:exit r))}
+          :else {:outcome :passed :warnings (:warnings a)})))

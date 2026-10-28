@@ -1,119 +1,112 @@
 (ns rdm-spec.regeneration.scopes
-  "Component Scopes (regeneration context): lists what a spec change touched
-  between two cuts, so a cycle's scopes come from the spec, never from
-  memory: the components whose own spec files changed (every slice touched,
-  under the slices layout, with every component it reaches), and for each
-  event whose contract changed, its publishers and every subscriber. Listed
-  in the order one builder builds them: the kernel first, then each
-  publisher before its subscribers, else the model's order."
+  "Lists the scopes a spec change touched between two cuts, in the order a
+  builder builds them: the kernel first, then each publisher before its
+  subscribers, else the model's order (dhf/spec/06-regenerate/scopes.feature);
+  within the project's folder only (11); a touched slice whole (13)."
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
-            [rdm-spec.kernel.project :as project]))
+            [rdm-spec.kernel.project :as project]
+            [rdm-spec.regeneration.cut :as cut]
+            [rdm-spec.spec.parser :as parser]))
 
-(defn show
-  "The text of the project's file P at REV, or nil."
-  [rev p]
-  (let [r (project/git (project/root) "show" (str rev ":./" p))]
-    (when (= 0 (:exit r)) (:out r))))
+(defn owner-of
+  "The component a changed spec file (relative to the spec folder) belongs to, under the contexts layout."
+  [_layout model rel]
+  (let [base (str/replace rel #"\.(feature|md)$" "")]
+    (when (re-find #"\.(feature|md)$" rel)
+      (some #(when (= base (:spec %)) (:id %)) (parser/components model)))))
 
-(defn edn-at [rev p] (when-let [t (show rev p)] (let [v (:value (project/read-edn-text t))] v)))
+(defn slice-of [rel]
+  (let [parts (str/split rel #"/")]
+    (when (and (> (count parts) 1) (parser/slice-folder? (first parts))) (first parts))))
 
-(defn config-at [rev]
-  (when-let [c (edn-at rev project/config-file)] (when (map? c) (project/with-defaults c))))
+(defn in-folder
+  "The paths under the project's folder pre, relative to it."
+  [pre paths]
+  (vec (for [p paths :when (str/starts-with? p pre)] (subs p (count pre)))))
 
-(defn contract [e] (when (map? e) (select-keys e [:published-by :carries :shape])))
+(defn contract [e] (select-keys e [:published-by :carries :shape]))
 
-(defn comp-index [model] (into {} (map-indexed (fn [i c] [(:id c) i]) (project/components model))))
+(defn changed-events
+  "The events whose contract (publisher, carried keys and their shape) changed, or that were added or removed."
+  [from to]
+  (set (for [k (distinct (concat (keys from) (keys to)))
+             :when (not= (some-> (get from k) contract) (some-> (get to k) contract))]
+         k)))
+
+(defn model-index [model]
+  (into {} (map-indexed (fn [i c] [(:id c) i]) (parser/components model))))
 
 (defn build-order
-  "Every component of MODEL in the order a builder builds them: the kernel
-  first, then the rest with each event's publisher before its subscribers,
-  ties in the model's order."
-  [model]
-  (let [comps (project/components model)
-        kernel (filterv #(= :kernel (:context %)) comps)
-        rest-c (filterv #(not= :kernel (:context %)) comps)
-        ids (set (map :id rest-c))
-        idx (comp-index model)
-        edges (distinct (for [r (:relationships model)
-                              :when (and (map? r) (:event r) (ids (:from r)) (ids (:to r)) (not= (:from r) (:to r)))]
-                          [(:from r) (:to r)]))]
-    (loop [order [] remaining (set ids)]
-      (if (empty? remaining)
-        (into (mapv :id kernel) order)
-        (let [blocked (set (for [[a b] edges :when (and (remaining a) (remaining b))] b))
-              ready (sort-by idx (remove blocked remaining))
-              nxt (or (first ready) (first (sort-by idx remaining)))]
-          (recur (conj order nxt) (disj remaining nxt)))))))
+  "The components ids, the kernel's first, then publishers before subscribers, ties in the model's order."
+  [model ids]
+  (let [idx (model-index model)
+        kernel (set (map :id (:kernel model)))
+        order-key (fn [id] [(if (kernel id) 0 1) (get idx id 100000) (str id)])
+        ids (set ids)
+        edges (set (for [r (:relationships model)
+                         :when (and (:event r) (ids (:from r)) (ids (:to r)) (not= (:from r) (:to r))
+                                    (not (kernel (:from r))) (not (kernel (:to r))))]
+                     [(:from r) (:to r)]))]
+    (loop [left ids acc []]
+      (if (empty? left)
+        acc
+        (let [ready (filter (fn [id] (or (kernel id) (not-any? (fn [[a b]] (and (= b id) (left a))) edges))) left)
+              pick (first (sort-by order-key (if (seq ready) ready left)))]
+          (recur (disj left pick) (conj acc pick)))))))
 
-(defn order-ids
-  "IDS in the build order of the models (B first, then A for components B no longer holds)."
-  [ids model-b model-a]
-  (let [ob (build-order model-b)
-        oa (build-order model-a)
-        pos (merge (into {} (map-indexed (fn [i id] [id (+ 100000 i)]) oa))
-                   (into {} (map-indexed (fn [i id] [id i]) ob)))]
-    (vec (sort-by #(get pos % 1000000) (distinct ids)))))
+(defn- read-at [root rev path] (cut/read-edn-at root rev path))
 
-(defn changed-files [a b]
-  (vec (remove str/blank? (str/split (project/git! (project/root) "diff" "--name-only" "-z" "--relative" a b "--" ".") #"\u0000"))))
-
-(defn scopes-task [{:keys [args]}]
-  (let [[a b] args]
-    (doseq [r [a b]]
-      (when-not (project/resolve-commit r)
-        (project/cannot-run! (str r " names no commit of this repository: scopes reads two cuts"))))
-    (let [cfg-b (or (config-at b) (project/cannot-run! (str "the cut " b " holds no readable " project/config-file)))
-          cfg-a (or (config-at a) cfg-b)
-          spec-b (first (project/specs cfg-b))
-          spec-a (first (project/specs cfg-a))
-          model-b (let [m (edn-at b (:model spec-b))] (if (map? m) m {}))
-          model-a (let [m (edn-at a (:model spec-a))] (if (map? m) m {}))
-          events-a (let [e (edn-at a (:events spec-a))] (if (map? e) e {}))
-          events-b (let [e (edn-at b (:events spec-b))] (if (map? e) e {}))
-          files (changed-files a b)
-          specs-b (project/specs cfg-b)
-          events-files (set (concat (map :events specs-b) (map :events (project/specs cfg-a))))
-          spec-of (fn [f] (first (filter #(str/starts-with? f (str (:dir %) "/")) specs-b)))
-          denied? (fn [f] (some #(and (string? %) (or (= f (str/replace % #"/+$" "")) (str/starts-with? f (str (str/replace % #"/+$" "") "/"))))
-                                (concat (:implementation cfg-b)
-                                        (get-in cfg-b [:clean-room :deny :measurements])
-                                        (get-in cfg-b [:clean-room :deny :generated]))))
-          slices? (project/slices? cfg-b)
-          classified (for [f files]
-                       (let [sp (spec-of f)]
-                         (cond
-                           (events-files f) {:events true}
-                           (and sp slices? (project/slice-of (:dir sp) f)) {:slice (project/slice-of (:dir sp) f)}
-                           (and sp (or (project/owner cfg-b sp model-b f) (project/owner cfg-a spec-a model-a f)))
-                           {:component (:id (or (project/owner cfg-b sp model-b f) (project/owner cfg-a spec-a model-a f)))}
-                           (denied? f) {:ignored true}
-                           :else {:shared f})))
-          event-comps (for [e (distinct (concat (keys events-a) (keys events-b)))
-                            :when (not= (contract (get events-a e)) (contract (get events-b e)))
-                            id (distinct (concat (keep #(get-in % [e :published-by]) [events-a events-b])
-                                                 (for [m [model-b model-a] r (:relationships m) :when (and (map? r) (= e (:event r)))] (:to r))))
-                            :when (keyword? id)]
-                        id)
-          slices (sort (distinct (keep :slice classified)))
-          slice-comps (fn [s] (distinct (for [[cfg model rev] [[cfg-b model-b b] [cfg-a model-a a]]
-                                              sp (project/specs cfg)
-                                              f (str/split-lines (str (:out (project/git (project/toplevel) "ls-tree" "-r" "--name-only" (project/tree-ish rev)))))
-                                              :when (and (str/ends-with? f ".feature") (= s (project/slice-of (:dir sp) f)))
-                                              :let [o (project/owner cfg sp model f)] :when o]
-                                          (:id o))))
-          slice-scopes (loop [ss slices seen #{} out []]
+(defn scopes [run]
+  (let [root (:root run)
+        [from to] (:args run)]
+    (doseq [c [from to]]
+      (when-not (cut/tag-commit root c) (project/cannot-run! (str c " is not a cut: scopes compares two cuts, commits tagged spec-N"))))
+    (let [pre (cut/prefix root)
+          diff (project/git root "diff" "--name-only" from to "--" ".")
+          _ (when-not (zero? (:exit diff)) (project/cannot-run! (str "git cannot compare " from " and " to ": " (project/one-line (:err diff)))))
+          full (remove str/blank? (str/split-lines (:out diff)))
+          changed (if (str/blank? pre) (vec full) (in-folder pre full))
+          cfg (project/with-defaults (or (read-at root to project/config-path) (:cfg run)))
+          sd (:spec-dir cfg)
+          layout (:spec-layout cfg :contexts)
+          model-to (or (read-at root to (:model cfg)) {})
+          model-from (or (read-at root from (:model cfg)) {})
+          events-path (:events cfg)
+          rels-of (fn [p] (when (str/starts-with? p (str sd "/")) (subs p (inc (count sd)))))
+          ev-changed (when (some #{events-path} changed)
+                       (changed-events (or (read-at root from events-path) {}) (or (read-at root to events-path) {})))
+          ev-from (or (read-at root from events-path) {})
+          ev-to (or (read-at root to events-path) {})
+          event-comps (set (for [e ev-changed
+                                 id (concat (keep :published-by [(get ev-from e) (get ev-to e)])
+                                            (for [m [model-to model-from] r (:relationships m) :when (= e (:event r))] (:to r)))]
+                             id))
+          spec-files (for [p changed :let [r (rels-of p)] :when (and r (not= p events-path))] [p r])
+          comp-hits (when-not (= :slices layout)
+                      (for [[p r] spec-files :let [o (or (owner-of layout model-to r) (owner-of layout model-from r))] :when o] [p o]))
+          slices (when (= :slices layout) (sort (distinct (keep (fn [[_ r]] (slice-of r)) spec-files))))
+          owned (set (concat (map first comp-hits)
+                             (when (= :slices layout) (for [[p r] spec-files :when (slice-of r)] p))
+                             (when (seq ev-changed) [events-path])))
+          impl (fn [p] (some #(or (= p %) (str/starts-with? p (str % "/"))) (:implementation cfg)))
+          deny (get-in cfg [:clean-room :deny])
+          denied (fn [p] (some #(or (= p %) (str/starts-with? p (str % "/"))) (concat (:measurements deny) (:generated deny))))
+          ;; an events.edn whose contracts did not change reaches no component, and is no shared file either
+          shared (vec (for [p changed :when (and (not (owned p)) (not (impl p)) (not (denied p)) (not= p events-path))] p))
+          rel-files-to (let [es (cut/ls-tree root to)]
+                         (for [e es :let [r (rels-of (:path e))] :when r] r))
+          slice-scopes (loop [ss slices seen #{} acc []]
                          (if (empty? ss)
-                           out
-                           (let [cs (remove seen (order-ids (slice-comps (first ss)) model-b model-a))]
-                             (recur (rest ss) (into seen cs) (conj out {:slice (first ss) :components (vec cs)})))))
+                           acc
+                           (let [s (first ss)
+                                 comps (remove seen (build-order model-to (parser/slice-reach model-to rel-files-to s)))]
+                             (recur (rest ss) (into seen comps) (conj acc {:slice s :components (vec comps)})))))
           in-slices (set (mapcat :components slice-scopes))
-          comp-scopes (for [id (order-ids (concat (keep :component classified) event-comps) model-b model-a)
-                            :when (not (in-slices id))]
-                        {:component id})
-          shared (vec (distinct (keep :shared classified)))]
-      (project/report {:scopes {:from a :to b :scopes (vec (concat slice-scopes comp-scopes)) :shared shared}}
-                      []
-                      (for [f shared]
-                        (project/warning f "shared-file-changed"
-                                         (str f " changed and no component owns it: a person must judge whose readers it reaches")))))))
+          comp-ids (remove in-slices (distinct (concat (map second comp-hits) event-comps)))
+          comp-scopes (for [id (build-order (merge-with (fn [a b] (if (sequential? a) (vec (distinct (concat a b))) a)) model-to model-from) comp-ids)]
+                        {:component id})]
+      {:warnings (vec (for [p shared]
+                        (project/warning p nil "scope-shared-file"
+                                         (str p " changed and no component owns it: a shared file whose readers a person must judge"))))
+       :result {:scopes {:from from :to to :scopes (vec (concat slice-scopes comp-scopes)) :shared shared}}})))

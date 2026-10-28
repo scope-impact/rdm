@@ -73,9 +73,30 @@ steps, never builds or grades, and reports time and tokens after every run.
    The decisions accepted go into the slice's `decisions.md`; when every one
    of its scenarios is verified, the slice's plan says `status: done`.
 
+## When the spec changes the judge's own contract
+
+verify is judged by the installed release. When a spec change alters what
+verify itself holds a build to (cycle 25: spec-0403, the tag labels), the
+installed release refuses every build of the new contract, and the oracle's
+goldens hold the old reading. Then (spec owner, cycle 25):
+
+1. Run verify with the installed release anyway, and keep its record
+   (`ratified-by-cycleNN.edn`): every finding must be the changed contract's,
+   and none other.
+2. Grade the build black box, as always.
+3. The spec owner decides on that evidence. Accepted: install the build,
+   record the goldens the contract moved (`--changes`, reason naming the
+   scenario that states the new contract), verify the cycle again with the
+   new release, then score it.
+
 ## Mistakes already made, not to repeat
 
 - Ids copied into a commit message from memory instead of the stamper.
 - A config edit that dropped a closing brace (run `check` before committing).
 - A scratch clone left behind with a trial change in it.
 - A golden recorded by a build nobody accepted.
+- A release installed without moving its in-scope goldens (cycle 23): the
+  next fence was stopped by its own gate.
+- A diagnosis read from a tool's output against the integrator's own
+  expectation, not the spec: spec-0416 was written for a "bug" spec-0398
+  states as the rule (cycle 25).
