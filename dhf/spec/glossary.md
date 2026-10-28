@@ -81,7 +81,8 @@ line. A commit matches a pin when either starts with the other, case
 ignored. A citation of a retired source fails as retired, whatever its pin.
 
 **Dropped pin**: a pin that an earlier version of the sources index had for a
-source, and that the index as it stands lacks. The versions are every commit
+source, and that the index as it stands lacks, the source's own entry
+included: a source removed from the index drops every pin it had. The versions are every commit
 that changed the index, oldest first, then the working tree; a version that
 cannot be read as EDN holds no source. Its finding names the source, the pin,
 and the first version after the last one that had it: that commit's id, its

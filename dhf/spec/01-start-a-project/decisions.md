@@ -210,6 +210,8 @@ Recommendation: A: the architecture says it, and the views draw it.
 
 ### ED-09: The skeleton's text
 
+**Settled by the spec owner: the text of the files init writes is the builder's choice; graders and the oracle judge only what scenarios state of them.**
+
 **Superseded by the spec change: see Spec gaps.**
 
 spec-0086 says what each file holds, never its text. Its README row cites

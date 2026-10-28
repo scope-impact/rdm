@@ -28,6 +28,12 @@ Feature: Sources
       When "rdm-spec check" is run
       Then the check fails and names the source, the dropped pin and the commit that dropped it
 
+    @spec-0438 @e2e
+    Scenario: A source removed from the index drops every pin it had
+      Given a commit of the sources index lists rdm pinned at 3763e08, and a later commit removes rdm and never lists it again
+      When "rdm-spec check" is run
+      Then it fails rule source-pin-dropped, naming rdm, the pin 3763e08 and the commit that removed it
+
     @spec-0365 @e2e
     Scenario: A pin dropped and later restored is not a dropped pin
       Given a commit of the sources index lists rdm pinned at 3763e08, a later commit removes rdm, and a later commit lists rdm again, pinned at 3763e08 and retired

@@ -251,6 +251,8 @@ scenarios, or drops it in the next spec change.
 
 ### ED-11: The diagram source's text
 
+**Settled by the spec owner: the diagram source's text is the builder's choice; graders and the oracle judge only what scenarios state (a view written, fresh, stale).**
+
 **Open for the spec owner: see Spec gaps.**
 
 spec-0198 says what each level holds, not how it is written; the stack names
