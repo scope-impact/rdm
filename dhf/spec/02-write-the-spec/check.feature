@@ -107,3 +107,32 @@ Feature: Spec check
       And a feature file whose description says the parser is written in Cobalt
       When "rdm-spec check" is run
       Then it fails and names the file, the line and the word
+
+  Rule: Check reports what its stages find, each finding under its rule
+
+    @spec-0423 @contract
+    Scenario: Check's result is the model's lint's, and no other stage adds to it
+      Given a project just initialised at "sauna"
+      When "rdm-spec check" is run in "sauna"
+      Then its standard output, read as EDN, is a map whose one key is :lint
+      And the spec check, the sources and the wiki add no key to it
+
+    @spec-0424 @contract
+    Scenario Outline: Each finding of the spec check names its rule
+      Given a spec in which <case>
+      When "rdm-spec check" is run
+      Then it exits 1, and the finding's line names the rule <rule>
+
+      Examples:
+        | case                                                     | rule               |
+        | a scenario carries two ids                               | scenario-ids       |
+        | two scenarios carry one id                               | id-duplicate       |
+        | a scenario carries no id                                 | scenario-unstamped |
+        | a scenario carries an id the ledger never issued         | id-unissued        |
+        | a stamped scenario carries no level                      | level-missing      |
+        | a stamped scenario carries two levels                    | level-twice        |
+        | a stamped scenario carries a tag the spec does not allow | tag-unknown        |
+        | a stamped scenario traces to no need                     | need-missing       |
+        | a scenario names a need the needs do not declare         | need-unknown       |
+        | a need cites no source                                   | need-unsourced     |
+        | a spec file names a configured stack word                | stack-word         |

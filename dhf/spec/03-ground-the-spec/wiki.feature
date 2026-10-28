@@ -45,3 +45,19 @@ Feature: Wiki
       And a wiki page that says the check is written in Cobalt
       When "rdm-spec check" is run
       Then the check fails and names the page, the line and the word
+
+  Rule: Each finding of the wiki names its rule
+
+    @spec-0429 @contract
+    Scenario Outline: Each finding of the wiki names its rule
+      Given a spec in which <case>
+      When "rdm-spec check" is run
+      Then it exits 1, and the finding's line names the rule <rule>
+
+      Examples:
+        | case                                          | rule              |
+        | a wiki page has no footnote                   | wiki-uncited      |
+        | the wiki's index does not link a page         | wiki-unindexed    |
+        | the wiki's index links a page that is missing | wiki-page-missing |
+        | the wiki has pages and no index               | wiki-no-index     |
+        | a wiki page names a configured stack word     | stack-word        |

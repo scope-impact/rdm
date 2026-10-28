@@ -55,6 +55,17 @@ Feature: Command
         | R1      |                 | R1               |
         | R1      | --results other | other            |
 
+    @spec-0421 @e2e
+    Scenario Outline: Only help, init and adopt run outside a project's root
+      Given a git repository that holds no dhf/harness/config.edn
+      When "rdm-spec <task>" is run in it
+      Then it <outcome>
+
+      Examples:
+        | task  | outcome                                                                                     |
+        | help  | exits 0 and lists every task                                                                |
+        | check | exits 2 and says rdm-spec runs in a project's root, the folder that holds its configuration |
+
   Rule: A gate stops the task
 
     @spec-0235 @contract

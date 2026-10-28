@@ -40,3 +40,21 @@ Feature: Stamper
       And a scenario in the spec carries no id tag
       When "rdm-spec stamp" is run
       Then the scenario is tagged with an id starting @loyly-
+
+  Rule: Stamp reports what it stamped
+
+    @spec-0426 @contract
+    Scenario: Stamp's result has one shape
+      Given the ledger records 41 as the highest id issued
+      And the scenario "A bather books a slot" in dhf/spec/booking.feature carries no id tag
+      When "rdm-spec stamp" is run
+      Then its standard output, read as EDN, is {:stamp {:stamped [{:id "spec-0042" :file "dhf/spec/booking.feature" :title "A bather books a slot"}] :ledgers [{:ledger "dhf/spec/ids.edn" :issued 42}]}}
+      And :stamped holds one map per scenario stamped, [] when none, and :ledgers one map per spec's ledger
+
+    @spec-0427 @contract
+    Scenario: A stamp that cannot read the spec stamps nothing and says so
+      Given a feature file containing a line starting with "Scenario Template:"
+      When "rdm-spec stamp" is run
+      Then it exits 1 and names the file, the line number and the keyword
+      And its standard output, read as EDN, is {:stamp {:stamped [] :says "the spec could not be read: nothing was stamped"}}
+      And no file in the spec changes

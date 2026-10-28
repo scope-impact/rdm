@@ -140,3 +140,23 @@ Feature: Sources
       When "rdm-spec check" is run
       Then it passes
       And it warns that the citation was not checked, and why
+
+  Rule: Each finding of the sources names its rule
+
+    @spec-0428 @contract
+    Scenario Outline: Each finding of the sources names its rule
+      Given a spec in which <case>, and a directory holding a checkout of each of its sources
+      When "rdm-spec check --sources DIR" is run with that directory as DIR
+      Then it exits 1, and the finding's line names the rule <rule>
+
+      Examples:
+        | case                                                    | rule                    |
+        | the sources index is not EDN                            | sources-unreadable      |
+        | the sources index names a source with no pin            | source-no-pin           |
+        | the sources index lacks a pin an earlier commit had     | source-pin-dropped      |
+        | a fenced path matches nothing at a pin of its source    | source-fenced-missing   |
+        | a citation names no recorded source                     | citation-unknown-source |
+        | a citation's source is retired                          | citation-retired        |
+        | a citation's commit is not one of its source's pins     | citation-unpinned       |
+        | a citation cites a fenced path                          | citation-fenced         |
+        | a citation's path does not exist at its pin             | citation-unresolved     |

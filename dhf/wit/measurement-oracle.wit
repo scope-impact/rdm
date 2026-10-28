@@ -1,0 +1,35 @@
+// Component Oracle of the measurement context (dhf/spec/model.edn,
+// :measurement/oracle; dhf/spec/08-plugins/oracle.feature): the oracle task,
+// "rdm-spec oracle [ARGS]", the shorthand for running the project's plugin
+// named "oracle" (the glossary's "Oracle (instrument)"). It runs that
+// plugin with kernel/plugins (dhf/spec/08-plugins/decisions.md, ED-06), in
+// the project's root, with its own arguments, RDM_SPEC and the plugin's
+// :env, relays its standard output and error stream unchanged, and exits as
+// it exits. That it gates fence and verify is the plugin's :answers :Gate,
+// asked by those tasks (kernel-plugins' gate), never this component.
+
+interface measurement-oracle {
+    /// What the task did, as tasks' outcome (tasks.wit) in this interface's
+    /// own types (slice 01's ED-14): the oracle's exit, its standard output
+    /// as written, and its error stream, one line each, as written.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// Runs "rdm-spec oracle [ARGS]" with its arguments, as given
+    /// (spec-0343). No plugin named "oracle": exit 0, saying there is no
+    /// oracle to run, on standard output only (spec-0233). A :plugins
+    /// rdm-spec cannot trust, or a command that cannot be started: exit 2,
+    /// naming it (spec-0345).
+    run: func(args: list<string>) -> outcome;
+}
+
+/// The component measurement/oracle builds to. Its WASI imports are those
+/// every component carries, in the version slice 01's worlds name (slice
+/// 02's ED-08).
+world measurement-oracle-component {
+    import kernel-plugins;
+    export measurement-oracle;
+}

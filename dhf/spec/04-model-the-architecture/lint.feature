@@ -60,6 +60,13 @@ Feature: Lint
       When "rdm-spec check" is run
       Then its result's :lint :for-a-person is exactly ["Does each view serve its audience: can its reader answer the question the view is for?" "Is the true coupling visible: does every relationship that matters appear, labelled with what passes?" "Was each render looked at by a person, and did nothing overlap or hide a name?"]
 
+    @spec-0430 @contract
+    Scenario: The lint's result counts its findings and its warnings
+      Given the configured view limit is 20 elements
+      And a relationship with no description, and a view showing 23 elements
+      When "rdm-spec check" is run
+      Then its result's :lint is {:for-a-person [ITEM ...] :findings 1 :warnings 1}, :findings counting every finding of the model's reading and its lint, :warnings every warning
+
   Rule: Bounded contexts are modules of one container, and the model owns the spec
 
     @spec-0012 @e2e

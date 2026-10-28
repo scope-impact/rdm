@@ -17,6 +17,33 @@ Feature: Views
       When "rdm-spec check" is run
       Then it fails and names the stale view
 
+    @spec-0434 @contract
+    Scenario: The views task's result has one shape
+      Given a model with a context view keyed "context" and a container view keyed "containers", in that order
+      When "rdm-spec views" is run
+      Then its standard output, read as EDN, is {:views {:wrote [PATH ...]}}, every file it wrote, relative to the project's root
+      And the paths are the views in the model's order, each view's diagram source before its renders
+
+    @spec-0435 @contract
+    Scenario: A stale view's finding names its rule
+      Given a rendered view whose recorded hash differs from the model's
+      When "rdm-spec check" is run
+      Then it exits 1, and the finding's line names the rule view-stale
+
+    @spec-0436 @e2e
+    Scenario: Each of several specs' views is written to a folder named for its spec
+      Given a configuration whose :specs is [{:name "auth" :dir "dhf/sdd/auth" :id-prefix "auth"} {:name "infra" :dir "dhf/sdd/infra" :id-prefix "infra"}], each spec's model holding a view keyed "context", and :views-dir "dhf/views"
+      When "rdm-spec views" is run
+      Then auth's view is written to dhf/views/auth/ and infra's to dhf/views/infra/, and nothing to dhf/views/ itself
+
+    @spec-0437 @e2e
+    Scenario: A view that cannot be rendered leaves every view as it was
+      Given views generated from the model, and a model changed since
+      And the renderer dhf/harness/stack.md names cannot be started
+      When "rdm-spec views" is run
+      Then it exits 2 and says the renderer cannot be started
+      And no file under the views directory changes
+
   Rule: Each level of view holds what C4 says it holds
 
     @spec-0198 @contract

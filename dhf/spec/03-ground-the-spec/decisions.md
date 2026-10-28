@@ -159,6 +159,8 @@ Recommendation: A, and the same for each later slice that publishes an event
 
 ### ED-05: Who resolves and reports the wiki's footnotes
 
+**The builder's choice: no grader sees it.**
+
 This slice's decisions say a need's citations are resolved "with the wiki's,
 so one component reports them" (cycle 01, C20); the model has knowledge/wiki
 "Resolves footnotes with" knowledge/sources, and KnowledgeIndexed carries
@@ -178,6 +180,8 @@ rewords it ("Resolves the footnotes of", from sources to the wiki) in the
 next spec change.
 
 ### ED-06: How sources reaches git and the checkouts
+
+**The builder's choice: no grader sees it.**
 
 The component build cannot start a process, and the checkouts given by
 `--sources DIR` lie outside the project's folder, the only folder the host
@@ -201,6 +205,8 @@ go through the host's `rdm:host/process` (ADR 0006, "A small native host").
 Recommendation: A.
 
 ### ED-07: What the stages print, and their rule names
+
+**Superseded by the spec change: see Spec gaps.**
 
 No contract scenario states a result of the sources or wiki stages; three
 rule names and one warning are stated (`source-no-repository`,
@@ -232,6 +238,8 @@ architecture changes.
 Recommendation: A, as slices 02 and 04.
 
 ### ED-09: The order of the sources stage's findings, and the warnings in the event
+
+**Superseded by the spec change: see Spec gaps.**
 
 The installed release reports the citations' findings in an order no rule
 fixes (a map's), and publishes its warnings among KnowledgeIndexed's
@@ -269,6 +277,8 @@ Recommendation: A.
 
 ### ED-11: A citation, a pin and a fenced path, exactly
 
+**Superseded by the spec change: see Spec gaps.**
+
 The glossary writes a citation `<source>:<path>@<commit>`; no scenario says
 how a citation is found in a footnote, how short a commit may be, or how a
 fenced path covers another.
@@ -288,6 +298,8 @@ fenced path covers another.
 Recommendation: A.
 
 ### ED-12: A dropped pin, read from the index's history
+
+**Superseded by the spec change: see Spec gaps.**
 
 spec-0121, spec-0365 and spec-0236, and this slice's decisions: a pin is
 dropped when the index as it stands lacks a pin some earlier commit of it
@@ -311,6 +323,8 @@ Recommendation: A.
 
 ### ED-13: What the wiki reads
 
+**Superseded by the spec change: see Spec gaps.**
+
 The decisions say the wiki is `index.md` and the pages under `pages/`; the
 scenarios do not say what a footnote, a link of the index, or a word is.
 
@@ -330,6 +344,8 @@ pages) passes, so spec-0090 holds.
 
 ### ED-14: A commit a scenario names, in a fixture
 
+**The builder's choice: no grader sees it.**
+
 Scenarios name real commits (`loyly` at `17d68d2`, `innolitics-rdm` at
 `f21b508`); a fixture's checkout cannot make a commit with a given id, and
 the harness says a scenario's commits are its fixture's.
@@ -344,3 +360,22 @@ the harness says a scenario's commits are its fixture's.
 
 Recommendation: A, and the spec owner may reword the Givens ("pinned at the
 checkout's commit") in the next spec change.
+
+## Spec gaps
+
+The expected decisions above that leaned on the installed release or on the
+spec's silence (`docs/wow/harness.md`, "The planner"). VISIBLE: a grader
+driving the command could see the difference, so the spec now states it.
+FREE: no grader could, so it stays the builder's.
+
+| Decision | Scenarios | What was unstated | Kind | The change |
+|---|---|---|---|---|
+| ED-07 | spec-0120 to spec-0138, spec-0127 to spec-0132 | the rule of each finding no scenario names; what the stages add to check's result | VISIBLE | spec-0428 (nine rules of the sources, `sources-unreadable` among them), spec-0429 (five of the wiki, `wiki-no-index` among them); spec-0423 (slice 02): neither stage adds to check's result |
+| ED-09 | spec-0402, spec-0166 | the order of the stage's findings; whether KnowledgeIndexed's `:findings` hold the warnings | VISIBLE | glossary "Finding": no order unless a scenario states one; `events.edn`: KnowledgeIndexed's `:findings` "including the warnings", as ClausesIndexed's say |
+| ED-11 | spec-0122, spec-0123, spec-0136, spec-0137, spec-0240 | a citation's grammar, how a commit matches a pin, how a fenced path covers another, a retired source's citations | VISIBLE | glossary "Citation" (new) and "Raw source" (a fenced path covers what is under it, `.` the whole source) |
+| ED-12 | spec-0121, spec-0365, spec-0236 | how the index's history is read, and what a dropped pin's finding names | VISIBLE | glossary "Dropped pin" (new): versions oldest first then the working tree, an unreadable version empty, the commit named by its first seven characters (the release prints git's short id), "the working tree" |
+| ED-13 | spec-0127, spec-0130, spec-0131, spec-0132 | what a page, a footnote, an index link and a stack word are | VISIBLE | glossary "Domain wiki"; `wiki-no-index` in spec-0429 |
+| ED-05 | spec-0128 | which component resolves the wiki's footnotes | FREE | none: the finding's rule (`citation-unresolved`, spec-0428) and what it names are the same either way |
+| ED-06 | spec-0124, spec-0125, spec-0138, spec-0171 | how git and the checkouts are reached, and a process's time limit | FREE | none: how a process is called |
+| ED-14 | spec-0121, spec-0124 and others naming real commits | how a fixture stands for a named commit | FREE | none: a grader sets up what the Given says; the spec owner may still reword those Givens |
+| ED-12 (open) | spec-0121 | a source removed from the index and never restored | VISIBLE | for the spec owner: today nothing reports it ("Dropped pin" says so by checking only the sources the index holds); is removing a source a dropped pin of each of its pins? |

@@ -1,0 +1,51 @@
+// Slice 08, plugins (dhf/spec/08-plugins/plan.md): a team adds the judges
+// its own project needs to the harness without changing the harness, through
+// the core's published language.
+//
+// Exports the interfaces of the components whose home is this slice (their
+// model spec path names it: kernel/bus, kernel/plugins, measurement/oracle);
+// the slice's tasks (tasks.wit: oracle and plugin), which rdm-spec.wac wires
+// to the command's import plugins (tasks.wit, later-slices); and check's
+// plugins stage (kernel/plugins'), which rdm-spec.wac wires by name into
+// slice 02's import of it (spec-check.wit, check-stages), ahead of the
+// not-built stand-in's spread. kernel-plugins is exported for the later
+// slices whose tasks ask a plugin or publish an event outside check: fence
+// and verify (06) ask the Gate and verify's :plugin checks and deliver
+// CycleVerified; status (05) delivers what it publishes
+// (dhf/spec/08-plugins/decisions.md, ED-01 to ED-03). Imports the host's
+// processes, through which every plugin runs. It imports no other slice: an
+// event reaches it as EDN, so slices 02, 05, 06 and 10 can import it without
+// a cycle.
+//
+// No event record is added: no component of this slice publishes an event.
+//
+// WASI is named by no world of this slice, as in slices 02, 03 and 04: the
+// cycle that builds the slice adds the line slice 01's worlds carry, in the
+// version they carry (slice 02's ED-08).
+// Composed by slice-08.wac.
+
+world plugins {
+    import rdm:host/process@0.1.0;
+    export kernel-bus;
+    export kernel-plugins;
+    export measurement-oracle;
+    export tasks;
+    export plugins-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}
+
+/// The slice's tasks (dhf/spec/08-plugins/decisions.md, ED-04): composition,
+/// not a component of the model, holding no rdm-spec logic. Its entries are
+/// the task table's rows of oracle and plugin, as spec-0176 writes them
+/// (slice 01's ED-18); it runs oracle with measurement/oracle's run and
+/// plugin with kernel/plugins' add, and answers none for any other task.
+world plugins-tasks {
+    import kernel-plugins;
+    import measurement-oracle;
+    export tasks;
+}

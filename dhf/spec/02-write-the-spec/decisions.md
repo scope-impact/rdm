@@ -116,6 +116,8 @@ the paths stage's component instantiated on its own).
 
 ### ED-03: The order of check's refusals and stages
 
+**Superseded by the spec change: see Spec gaps.**
+
 **Settled by the spec owner:** as recommended. Under ED-02 as settled, a
 stage not built no longer refuses: it is a warning in its place in the order,
 so the order decides only where that warning falls among the others.
@@ -196,6 +198,8 @@ component of the model.
 
 ### ED-06: What stamp and check print
 
+**Superseded by the spec change: see Spec gaps.**
+
 **Settled by the spec owner:** as recommended (A). The contract scenario for
 stamp's result shape is a proposal for the next spec change, not yet in this
 slice's feature files.
@@ -252,3 +256,16 @@ its world does not name, so the worlds need the line.
   too.
 
 Recommendation: A.
+
+## Spec gaps
+
+The expected decisions above that leaned on the installed release or on the
+spec's silence (`docs/wow/harness.md`, "The planner"). VISIBLE: a grader
+driving the command could see the difference, so the spec now states it.
+The others are the component build's architecture or partial-build
+settlements, which no grader of the complete build sees.
+
+| Decision | Scenarios | What was unstated | Kind | The change |
+|---|---|---|---|---|
+| ED-03 | spec-0386, spec-0166, spec-0235 | the order of check's stages, and so of its finding lines | VISIBLE | glossary "Finding": a task's findings come in no stated order unless a scenario states one, its warnings after them; spec-0386 already puts the specs' declaration before any stage, spec-0166 the events' order. Chosen differently from the release, whose order is a map's |
+| ED-06 | spec-0054, spec-0010, spec-0042 to spec-0053, spec-0134, spec-0150, spec-0186, spec-0209, spec-0234 | stamp's result, check's result, and the rule names of the spec check and the parser | VISIBLE | spec-0426 (stamp's result, `:ledgers` included), spec-0427 (a stamp that cannot read the spec: `:says`, exit 1), spec-0423 (check's result is the lint's alone), spec-0424 (the spec check's eleven rules), spec-0425 (the parser's three, `step-misplaced` among them, a refusal no scenario stated) |

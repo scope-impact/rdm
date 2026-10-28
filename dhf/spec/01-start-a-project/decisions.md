@@ -162,6 +162,8 @@ room.
 
 ### ED-06: Which tasks run outside a project's root
 
+**Superseded by the spec change: see Spec gaps.**
+
 The glossary's "Project" says rdm-spec refuses (exit 2) outside a project's
 root; init makes a project where there is none, adopt runs in a repository
 that holds no configuration yet (spec-0079), and the installed release answers
@@ -175,6 +177,8 @@ help anywhere.
 Recommendation: A; a later spec change writes it into `command.feature`.
 
 ### ED-07: What init and adopt print
+
+**Superseded by the spec change: see Spec gaps.**
 
 spec-0086 says init "lists every file it wrote and the next steps", spec-0079
 and spec-0080 that adopt lists what it wrote and names what it kept, but no
@@ -191,6 +195,8 @@ Recommendation: A, and a contract scenario for each in this slice (then
 
 ### ED-08: The skeleton adopt adds
 
+**The builder's choice: no grader sees it.**
+
 Adopt adds "the skeleton, as rdm-spec init writes it" (spec-0079), but
 `dhf/spec/model.edn` relates adopt only to hooks.
 
@@ -203,6 +209,8 @@ Adopt adds "the skeleton, as rdm-spec init writes it" (spec-0079), but
 Recommendation: A: the architecture says it, and the views draw it.
 
 ### ED-09: The skeleton's text
+
+**Superseded by the spec change: see Spec gaps.**
 
 spec-0086 says what each file holds, never its text. Its README row cites
 `dhf/spec/kernel/runner.feature`, a path that is now
@@ -230,6 +238,8 @@ Recommendation: A, with which components are built named in one file under
 
 ### ED-11: Which `rdm-spec` a scenario runs
 
+**The builder's choice: no grader sees it.**
+
 A scenario inherits the tests' PATH (`dhf/spec/README.md`); the installed
 release is on it, and the hook (spec-0025) runs whatever `rdm-spec` PATH finds.
 
@@ -242,6 +252,8 @@ Recommendation: A. spec-0025 then sets its own `rdm-spec` on PATH, one that
 records it was run and exits 1, so it depends on no slice's check.
 
 ### ED-12: Givens that need a task
+
+**The builder's choice: no grader sees it.**
 
 A Given names a state: "a project set up by rdm-spec" before init exists
 (ticket 01), and later "a view older than the model" (spec-0235) before
@@ -353,3 +365,21 @@ slice export its rows of the table.
 Recommendation: A: the table is the command's scenario, and the stand-in then
 holds nothing of any slice.
 
+## Spec gaps
+
+The expected decisions above that leaned on the installed release or on the
+spec's silence (`docs/wow/harness.md`, "The planner"). VISIBLE: a grader
+driving the command could see the difference, so the spec now states it.
+FREE: no grader could, so it stays the builder's. The others above are the
+component build's architecture, where the spec already states what a grader
+sees (exit codes, spec-0025, spec-0272), or were settled by the spec owner.
+
+| Decision | Scenarios | What was unstated | Kind | The change |
+|---|---|---|---|---|
+| ED-06 | spec-0180, spec-0086, spec-0079 | which tasks run outside a project's root | VISIBLE | glossary "Project": help, init and adopt run anywhere, an unknown task is refused as unknown; spec-0421 (help exits 0, check exits 2, outside a root) |
+| ED-07 | spec-0086, spec-0079, spec-0080 | the shape of init's and adopt's results, and the kept file's warning | VISIBLE | spec-0422 (init's result, `:next` exactly), spec-0420 (adopt's result and its `adopt-kept` warning); as the release prints, `:gitignore-lines` present only when `.gitignore` was kept |
+| ED-09 | spec-0086 | the README row cited a path a new project does not hold | VISIBLE | spec-0086's row now cites the glossary's "Allure result"; the glossary's "Skeleton" cites this slice's `init.feature`. The rest of each file's text is open: see the last row |
+| ED-08 | spec-0079 | which component writes the skeleton adopt adds | FREE | none: spec-0079 says "as init writes it"; the model's relationship from adopt to init is the spec owner's to add or not |
+| ED-11 | spec-0025 | which `rdm-spec` a scenario's PATH finds | FREE | none: the tests' arrangement, which graders never read |
+| ED-12 | spec-0090, spec-0235 | how a Given makes its state | FREE | none: a grader sets up what the Given says |
+| ED-09 (open) | spec-0086 | each skeleton file's text beyond what the table says it holds | VISIBLE | for the spec owner: either the skeleton's text is the spec's (a contract scenario per file), or the oracle compares a skeleton file only for what spec-0086 states; a golden holds nothing the spec does not state |

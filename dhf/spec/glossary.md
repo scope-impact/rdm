@@ -20,6 +20,8 @@ itself from this spec (see Release). Its spec, model and event catalogue
 describe the project, never the harness that reads them. rdm-spec runs in a
 project's root, the folder that holds its configuration; run in any other
 directory, a project's subdirectory too, it refuses (exit 2) and says so.
+Three tasks run anywhere: `help`, and `init` and `adopt`, which make a
+project; an unknown task is refused as unknown wherever it is run.
 Every path a project's configuration and spec name is relative to that root,
 at a cut as in the working tree.
 
@@ -65,13 +67,36 @@ _Avoid_: task, ticket, backlog item.
 **Raw source**: what the spec is distilled from, never edited: for rdm-spec,
 three repositories (`innolitics/rdm`, `scope-impact/agent-skills` and
 `skallinen/loyly`), each recorded in `dhf/raw/` with the commit it is pinned
-to. Cited as `<source>:<path>@<commit>`. Where a source and the spec disagree,
+to. Cited as `<source>:<path>@<commit>` (Citation). Where a source and the spec disagree,
 the source wins and the spec is the bug. A source's implementation is fenced:
-never cited, and absent from the clean room.
+never cited, and absent from the clean room. A fenced path covers itself and
+every path under it; `.` covers the whole source.
+
+**Citation**: `<source>:<path>@<commit>`: a source id (a letter or digit,
+then letters, digits, `.`, `_` or `-`), a path holding no space, quote or
+`@`, and a commit of 7 to 40 hexadecimal digits. Citations are read from the
+needs, where each entry of a need's `:sources` is one citation, whole, or
+malformed, and from the wiki's footnotes, every citation on a footnote's
+line. A commit matches a pin when either starts with the other, case
+ignored. A citation of a retired source fails as retired, whatever its pin.
+
+**Dropped pin**: a pin that an earlier version of the sources index had for a
+source, and that the index as it stands lacks. The versions are every commit
+that changed the index, oldest first, then the working tree; a version that
+cannot be read as EDN holds no source. Its finding names the source, the pin,
+and the first version after the last one that had it: that commit's id, its
+first seven characters, or "the working tree". A pin dropped and later
+restored is not dropped. Outside a git repository the index has no history.
 
 **Domain wiki**: the domain distilled from the raw sources, `dhf/wiki/`: every
 claim footnoted to a source, every page in the index, no implementation named.
-The spec rests on it.
+The spec rests on it. Its index is `index.md`; its pages are every other `.md`
+file under its folder. A footnote is a line starting `[^label]:`, and a page
+with none cites nothing. The index lists a page by a Markdown link whose
+target, relative to the wiki's folder and without its `#anchor`, is the page's
+path; a link to a URL lists no page. A stack word is a configured word found
+whole, case kept, one finding per word and line, on the pages and the index.
+A project with no wiki folder has no wiki finding.
 _Avoid_: documentation, notes.
 
 ## The design
@@ -134,7 +159,7 @@ of the spec's scenarios into the directory its request names, held to the
 template rdm-spec carries (`rdm-spec plugin add NAME`, which records the
 template in `origin.edn`; every package of rdm-spec carries the same
 templates as its sources) and is then the project's own, evolving with it
-(dhf/spec/kernel/plugins.feature; ADR 0003).
+(dhf/spec/08-plugins/plugins.feature; ADR 0003).
 
 **Published language**: the events rdm-spec publishes, as `events.edn`
 declares them: what a plugin may read of the core, and all it may.
@@ -142,7 +167,7 @@ declares them: what a plugin may read of the core, and all it may.
 **Skeleton**: what `rdm-spec init` writes and `rdm-spec adopt` adds: the spec,
 the harness configuration, the raw and wiki directories, decisions, the
 pre-commit hook, the cut workflow and `.gitignore`, as listed by
-`dhf/spec/project/init.feature`.
+`dhf/spec/01-start-a-project/init.feature`.
 
 **Kernel**: shared code every bounded context may use and that belongs to none
 of them, such as the event bus. Specified under `dhf/spec/kernel/`, never drawn as
@@ -158,7 +183,13 @@ cite it.
 **Model hash**: the SHA-256, as lowercase hex, of the model read as EDN and
 printed back with every map's entries and every set's elements sorted by the
 printed form of the key or element, each printed as EDN prints it with no
-namespace map syntax, so reformatting the file keeps it. A spec change that
+namespace map syntax, so reformatting the file keeps it. Printed exactly: a
+map as `{k v, k v}`, its entries separated by a comma and a space; a vector
+as `[a b]` and a set as `#{a b}`, separated by a space; a keyword with its
+namespace, `:heat/coil`; a string in double quotes, with `"`, `\`, a newline
+and a tab written `\"`, `\\`, `\n` and `\t`, every other character as it is;
+an integer in decimal digits, and `true`, `false` and `nil`; the text hashed
+as UTF-8. A spec change that
 changes this definition is cut twice: before, and after a build that
 implements it has redrawn the views.
 A view records it on its first line, in a comment of the view's format:
@@ -202,7 +233,7 @@ labelled with its id passed, and no result labelled with its id did not pass
 
 **Allure result**: one `<uuid>-result.json` file in a results directory, in
 Allure's own model, filled from the Gherkin scenario
-(`dhf/spec/kernel/runner.feature`): `name` (the title), `fullName`,
+(`dhf/spec/05-verify-by-results/runner.feature`): `name` (the title), `fullName`,
 `historyId` (the scenario's id, and the row's values for an outline row),
 `status` (`passed`, `failed`, `broken` or `skipped`) and `stage`,
 `statusDetails` when it did not pass, `start` and `stop`, `steps` (one per
@@ -316,7 +347,7 @@ configuration's `:verify` as `{:kind :tests :command [...]}`, `{:kind :serves
 :name N :start [... "{port}" ...] :port P :budget {:seconds S :polls K} :probe
 [... "{url}" ...]}` and `{:kind :runs :name N :command [...] :expect {:exit E
 :stdout-starts T} :budget {:seconds S}}` and `{:kind :plugin :name N}` (the
-project's plugin N answering `:Check`, dhf/spec/kernel/plugins.feature); a
+project's plugin N answering `:Check`, dhf/spec/08-plugins/plugins.feature); a
 check's name is its kind's when it names none. A `:serves` check's probe is
 given `{url}` as `http://127.0.0.1:PORT/` (with its "/") and runs for at most
 `:probe-seconds` (30 by default) after the app answered; past it, it is stopped
@@ -363,6 +394,11 @@ scenario at that level carries an attachment of each name, on the result or
 on any of its steps. rdm-spec's default
 is used when a project declares none; verify's tests check holds every result
 to it.
+
+**Finding**: one line of a task's error stream: a file, a line where one
+applies, a RULE and what is wrong (`dhf/spec/README.md`, "How every task
+reports"). A task's findings come in no stated order unless a scenario states
+one, so a reader compares them as a set; its warnings follow its findings.
 
 **Gate**: a stage the task table runs first and that stops the task when it
 has findings that are not warnings; the stages after it never see it. Every other stage reports, so

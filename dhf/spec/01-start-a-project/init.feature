@@ -15,7 +15,7 @@ Feature: Init
         | dhf/spec/needs.edn                | no needs                                                                 |
         | dhf/spec/ids.edn                  | the ledger at 0                                                          |
         | dhf/spec/glossary.md              | an empty glossary                                                        |
-        | dhf/spec/README.md                | the spec's conventions, and the results contract: every Allure element a result carries and what it is filled from, as dhf/spec/kernel/runner.feature states it, and rdm-spec's default Allure mapping, which a configuration's :allure may replace |
+        | dhf/spec/README.md                | the spec's conventions, and the results contract: every Allure element a result carries and what it is filled from, as the glossary's "Allure result" states it, and rdm-spec's default Allure mapping, which a configuration's :allure may replace |
         | dhf/harness/config.edn            | the id prefix, every directory the tasks read, the clean room's deny-list (the implementation, the measurements dhf/cycles, the generated site) and kept paths (.gitignore, .githooks, .github, dhf/spec, dhf/harness, dhf/raw, dhf/wiki, dhf/views, dhf/decisions), the watched directories ("/" and "~") and temporary directory ("/tmp"), a :verify holding one :tests check whose command is not yet set, and no implementation paths |
         | dhf/harness/stack.md              | a stack table with no rows yet                                           |
         | dhf/raw/README.md                 | the rules for raw sources                                                |
@@ -26,6 +26,14 @@ Feature: Init
         | .github/workflows/cut.yml         | a workflow that runs "rdm-spec cut" on every push to the default branch  |
         | .gitignore                        | dhf/allure-results/, dhf/cycles/*/results/, dhf/cycles/*/build/, site-src/ and site/ |
       And init lists every file it wrote and the next steps
+
+    @spec-0422 @contract
+    Scenario: Init's result has one shape
+      Given no directory at the path "sauna"
+      When "rdm-spec init sauna" is run
+      Then its standard output, read as EDN, is {:init {:path "sauna" :wrote [PATH ...] :next [STEP ...]}}, :path the path as it was given
+      And :wrote names every file of the skeleton once, relative to "sauna", in the order of the table of "Init writes the skeleton and names what it wrote"
+      And :next is exactly ["commit the skeleton" "describe the system in dhf/spec/model.edn and its needs in dhf/spec/needs.edn" "write scenarios under dhf/spec/, then run rdm-spec stamp and rdm-spec check" "set the :tests check's command in dhf/harness/config.edn"]
 
     @spec-0272 @e2e
     Scenario: Init takes an absolute path as well as a relative one

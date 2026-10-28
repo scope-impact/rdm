@@ -30,3 +30,15 @@ Feature: Parser
       Given a feature file with two Feature lines
       When "rdm-spec check" is run
       Then it fails and names the file and the line of the second Feature
+
+    @spec-0425 @contract
+    Scenario Outline: Each refusal of the parser names its rule
+      Given a spec in which <case>
+      When "rdm-spec check" is run
+      Then it exits 1, and the finding's line names the rule <rule>
+
+      Examples:
+        | case                                                            | rule            |
+        | a feature file holds a line starting with an unknown keyword    | keyword-unknown |
+        | a feature file holds a second Feature line                      | feature-twice   |
+        | a feature file holds a step outside any scenario or background  | step-misplaced  |

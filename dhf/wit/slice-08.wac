@@ -1,0 +1,45 @@
+// Slice 08, plugins (dhf/spec/08-plugins/plan.md), composed from the
+// components whose home is this slice, each built to its own component
+// exporting its interface (wasm/components/<context>-<component>/,
+// dhf/harness/stack.md), and the slice's tasks (ED-04). Targets the slice's
+// world, plugins (slice-08.wit).
+//
+// Each component's imports are wired to another of the slice's components:
+// plugins routes the run's events with the bus; the oracle runs the plugin
+// named "oracle" with plugins (ED-06); the tasks run oracle with the oracle
+// and plugin add with plugins. Every other import is left to the
+// composition: WASI's and rdm:host/process, which the host satisfies. The
+// slice exports its tasks, kernel-plugins for the later slices that ask a
+// plugin or deliver an event, and check's plugins stage, which rdm-spec.wac
+// wires into slice 02's import by name.
+//
+// Packages resolve from the build's dependency directory, as slice-01.wac
+// says: rdm:kernel-plugins is wasm/build/deps/rdm/kernel-plugins.wasm, and
+// rdm:spec@0.1.0 is dhf/wit encoded. Then
+// "wac compose dhf/wit/slice-08.wac --deps-dir wasm/build/deps
+//  -o wasm/build/deps/rdm/plugins.wasm".
+package rdm:plugins targets rdm:spec/plugins@0.1.0;
+
+let bus = new rdm:kernel-bus { ... };
+
+let plugins = new rdm:kernel-plugins {
+    "rdm:spec/kernel-bus@0.1.0": bus["rdm:spec/kernel-bus@0.1.0"],
+    ...
+};
+
+let oracle = new rdm:measurement-oracle {
+    "rdm:spec/kernel-plugins@0.1.0": plugins["rdm:spec/kernel-plugins@0.1.0"],
+    ...
+};
+
+let tasks = new rdm:plugins-tasks {
+    "rdm:spec/kernel-plugins@0.1.0": plugins["rdm:spec/kernel-plugins@0.1.0"],
+    "rdm:spec/measurement-oracle@0.1.0": oracle["rdm:spec/measurement-oracle@0.1.0"],
+    ...
+};
+
+export bus["rdm:spec/kernel-bus@0.1.0"];
+export plugins["rdm:spec/kernel-plugins@0.1.0"];
+export oracle["rdm:spec/measurement-oracle@0.1.0"];
+export tasks["rdm:spec/tasks@0.1.0"];
+export plugins["plugins-stage"];

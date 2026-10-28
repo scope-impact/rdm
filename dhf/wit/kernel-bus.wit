@@ -1,0 +1,72 @@
+// Component Event bus of the kernel (dhf/spec/model.edn, :kernel/bus;
+// dhf/spec/08-plugins/bus.feature): delivers each catalogued event to its
+// subscribers, within one run (the glossary's "Event bus": synchronous, in
+// subscription order). It carries rdm-spec's own events, built in from
+// rdm-spec's own dhf/spec/events.edn, and never reads a project's catalogue
+// (spec-0303, spec-0304).
+//
+// In the component build an event is a value its publisher hands on
+// (dhf/spec/02-write-the-spec/decisions.md, ED-04, settled): every publishing
+// slice keeps its event records in an events interface of its own
+// (events.wit; dhf/spec/03-ground-the-spec/decisions.md, ED-04), and between
+// slices an event travels as the published language, EDN, {:event NAME}
+// merged with the keys it carries. The bus reads only that EDN, so it imports
+// no slice's events interface and no publishing slice is a dependency of it
+// (dhf/spec/08-plugins/decisions.md, ED-02). Its subscribers are the
+// project's plugins (kernel/plugins); a component of the core that reads an
+// event is a stage given the run's events (spec-check.wit, check-stages).
+
+interface kernel-bus {
+    /// One of rdm-spec's own events as its catalogue declares it: its name
+    /// without the colon ("SpecParsed"), its publisher, the component's id
+    /// without the colon ("spec/parser"), and the keys it carries, each
+    /// written as the catalogue writes it (":passed?").
+    record declared {
+        name: string,
+        published-by: string,
+        carries: list<string>,
+    }
+
+    /// One event published in a run, as its publisher hands it on: its name,
+    /// its publisher, and its EDN, {:event :NAME} merged with every key it
+    /// carries (the shape check hands its stages, spec-check.wit).
+    record event {
+        name: string,
+        published-by: string,
+        edn: string,
+    }
+
+    /// A subscriber: its name and the events it subscribes to, by name.
+    record subscriber {
+        name: string,
+        subscribes: list<string>,
+    }
+
+    /// One event handed to one subscriber.
+    record delivery {
+        subscriber: string,
+        event: event,
+    }
+
+    /// rdm-spec's own catalogue, in its order: KnowledgeIndexed, SpecParsed,
+    /// SpecGated, CycleVerified, VerificationDerived, ClausesIndexed. The
+    /// same whatever the project declares.
+    catalogue: func() -> list<declared>;
+
+    /// The deliveries of a run's events to its subscribers, subscribers in
+    /// the order declared, each given its events in the order published
+    /// (dhf/spec/08-plugins/decisions.md, spec gap G-01). Each event is held
+    /// to the catalogue first: an event the catalogue does not declare, one
+    /// from another publisher, or one whose EDN is not a map holding :event
+    /// and exactly the keys it carries is refused; the error is why, and the
+    /// task cannot run (exit 2): a defect in rdm-spec, never a finding about
+    /// the project (the glossary's "Event bus").
+    route: func(events: list<event>, subscribers: list<subscriber>) -> result<list<delivery>, string>;
+}
+
+/// The component kernel/bus builds to: it imports nothing. Its WASI imports,
+/// if any, are those every component carries, in the version slice 01's
+/// worlds name (slice 02's ED-08).
+world kernel-bus-component {
+    export kernel-bus;
+}

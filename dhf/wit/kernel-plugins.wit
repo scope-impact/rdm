@@ -1,0 +1,165 @@
+// Component Plugins of the kernel (dhf/spec/model.edn, :kernel/plugins;
+// dhf/spec/08-plugins/plugins.feature): runs the project's plugins, each a
+// command the project keeps, declared in the configuration's :plugins in the
+// order it runs; a subscriber is given each event it subscribes to, an
+// answerer is asked a :Gate (before fence and verify) or a :Check (one of
+// verify's checks); and adds a plugin from the templates rdm-spec carries
+// (plugin add). One interface for every plugin (ADR 0003): the event or the
+// request as EDN on its standard input; its working directory the project's
+// root, the checkout's for a :Check; RDM_SPEC set, a command line starting
+// this same rdm-spec (ED-07), beside its :env; its :seconds, 60 by default;
+// exit 0 holds, 1 findings, 2 cannot run; past its time it is stopped and
+// named as timed out. Every plugin runs through rdm:host/process.
+//
+// Two ways in (dhf/spec/08-plugins/decisions.md, ED-01 and ED-03):
+// - plugins-stage (slice-08.wit), check's last stage (spec-check.wit,
+//   check-stages): the run's events delivered to their subscribers.
+// - kernel-plugins, below, for the tasks of later slices: fence and verify
+//   (slice 06) ask the Gate and verify's :plugin checks, and every task that
+//   publishes an event outside check (status, slice 05; verify's
+//   CycleVerified, slice 06) delivers it. Its types are its own and builtin
+//   (slice 01's ED-14), so an importer imports nothing else of this slice,
+//   and this slice imports no other: no cycle.
+
+interface kernel-plugins {
+    /// The request a plugin answers.
+    enum request-kind {
+        gate,
+        check,
+    }
+
+    /// One plugin as the configuration declares it (spec-0349): its name, its
+    /// command, the events it subscribes to (empty for an answerer), the
+    /// request it answers (none for a subscriber), its time limit in seconds
+    /// (60 when it names none) and its :env, in the order written.
+    record plugin {
+        name: string,
+        command: list<string>,
+        subscribes: list<string>,
+        answers: option<request-kind>,
+        seconds: u32,
+        env: list<tuple<string, string>>,
+    }
+
+    /// One event a task published, handed on as the published language:
+    /// its name without the colon, its publisher (the component's id without
+    /// the colon) and its EDN, {:event :NAME} merged with every key it
+    /// carries (kernel-bus.wit).
+    record event {
+        name: string,
+        published-by: string,
+        edn: string,
+    }
+
+    /// What the plugins asked said, as the task reports it: the exit it
+    /// makes, 0, 1 or 2; the plugins' finding lines and warning lines, each
+    /// relayed unchanged (spec-0354), in the order the plugins ran; and,
+    /// with exit 2, why, naming the plugin and what it said or that it timed
+    /// out (spec-0354, spec-0355, spec-0356), for the task's cannot-run line.
+    record answer {
+        exit: u8,
+        findings: list<string>,
+        warnings: list<string>,
+        why: option<string>,
+    }
+
+    /// A :Gate request (spec-0358): the task it gates ("fence", "verify"),
+    /// the cut, and the cycle where the task names one. Its EDN is
+    /// {:request :Gate :task :TASK :cut CUT :cycle CYCLE}, :cycle left out
+    /// where none applies (spec gap G-04).
+    record gate-request {
+        task: string,
+        cut: string,
+        cycle: option<string>,
+    }
+
+    /// A :Check request (spec-0362): its EDN is {:request :Check :cycle
+    /// :cut :checkout :results}, checkout and results relative to the
+    /// project's root.
+    record check-request {
+        cycle: string,
+        cut: string,
+        checkout: string,
+        results: string,
+    }
+
+    /// A plugin's run as it is, for the oracle task, which relays it
+    /// unchanged (spec-0342): its exit (none when it was stopped), its
+    /// standard output and error stream as written.
+    record raw-run {
+        exit: option<s32>,
+        stdout: list<u8>,
+        stderr: list<u8>,
+    }
+
+    /// A template rdm-spec carries: its name and its version.
+    record template {
+        name: string,
+        version: string,
+    }
+
+    /// What plugin add did, as tasks' outcome (tasks.wit) in this
+    /// interface's own types: exit, standard output (the result as EDN),
+    /// error lines.
+    record outcome {
+        exit: u8,
+        stdout: string,
+        errors: list<string>,
+    }
+
+    /// The configuration's :plugins read at a folder (the project's root
+    /// ".", or a checkout), in the order declared, held to spec-0349 and
+    /// spec-0350 (and spec-0382's :env). The error is the refusal, naming
+    /// the plugin and why, for the task's cannot-run line (exit 2), before
+    /// anything runs. A configuration with no :plugins declares none.
+    declared: func(root: string) -> result<list<plugin>, string>;
+
+    /// Each subscriber of the project's root given each event it subscribes
+    /// to (kernel-bus' route), run in the project's root. Called by a task
+    /// after its own work, with the events it published, in order
+    /// (spec-0353: a plugin of an event not given does not run).
+    deliver: func(events: list<event>) -> answer;
+
+    /// Every plugin answering :Gate, in the order declared, asked before the
+    /// gated task does anything else (spec-0357, spec-0232): an answer of
+    /// exit 0 lets the task go on; 1 or 2 stops it, the task relaying the
+    /// answer.
+    gate: func(request: gate-request) -> answer;
+
+    /// The plugin named answering :Check, of the configuration read at
+    /// root, asked in the checkout (spec-0361, spec-0362). The error is a
+    /// name no plugin answering :Check bears (spec-0363).
+    ask: func(root: string, name: string, request: check-request) -> result<answer, string>;
+
+    /// The plugin of the project's root named so, run in the project's root
+    /// with the arguments given, nothing on its standard input, RDM_SPEC and
+    /// its :env (spec-0342 to spec-0344). None when no plugin bears the
+    /// name; the error is a command that cannot be started, naming it
+    /// (spec-0345).
+    run-named: func(name: string, args: list<string>) -> option<result<raw-run, string>>;
+
+    /// The templates rdm-spec carries, by name (spec-0364).
+    templates: func() -> list<template>;
+
+    /// Runs "rdm-spec plugin add NAME" with its arguments (spec-0359,
+    /// spec-0360, spec-0405).
+    add: func(args: list<string>) -> outcome;
+}
+
+/// The component kernel/plugins builds to. It routes events with the bus and
+/// runs every plugin through the host's processes; it exports its interface
+/// and check's plugins stage (written out as check-stages writes it). Its
+/// WASI imports are those every component carries, in the version slice
+/// 01's worlds name (slice 02's ED-08).
+world kernel-plugins-component {
+    import kernel-bus;
+    import rdm:host/process@0.1.0;
+    export kernel-plugins;
+    export plugins-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}

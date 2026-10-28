@@ -40,6 +40,15 @@ Feature: Adopt
       Then no file changes
       And adopt names every destination as kept
 
+    @spec-0420 @contract
+    Scenario: Adopt's result has one shape
+      Given a git repository that already holds dhf/spec/glossary.md and its own .gitignore
+      When "rdm-spec adopt" is run in it
+      Then its standard output, read as EDN, is {:adopt {:wrote [PATH ...] :kept ["dhf/spec/glossary.md" ".gitignore"] :next [STEP ...] :gitignore-lines [LINE ...]}}, every PATH relative to the repository
+      And :wrote and :kept together name every file of the skeleton once, each in the order init writes them
+      And :next is init's next steps, and :gitignore-lines, present only when .gitignore was kept, the lines init writes to .gitignore
+      And the error stream holds one warning per kept file, "FILE: warning: adopt-kept: FILE already exists and is kept unchanged"
+
     @spec-0084 @e2e
     Scenario: Adopt refuses a directory that is not a git repository
       Given a directory that is not a git repository

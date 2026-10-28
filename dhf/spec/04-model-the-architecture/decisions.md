@@ -110,6 +110,8 @@ slice 02 changes but the composition.
 
 ### ED-03: How views reaches the renderer
 
+**Superseded by the spec change: see Spec gaps.**
+
 The views are rendered by a program the stack names (`dhf/harness/stack.md`,
 "Diagram source and render"), which the component build cannot start
 itself: it runs through the host's `rdm:host/process` (ADR 0006, "A small
@@ -133,6 +135,8 @@ stack choice lives in the build, never the spec; a configuration key for it
 is a spec change if a project ever needs one.
 
 ### ED-04: Where the stages find each spec's model
+
+**Superseded by the spec change: see Spec gaps.**
 
 A stage is given check's arguments, the project's folder and the run's
 events (`check-stages`); the specs' declaration is spec/parser's
@@ -165,6 +169,8 @@ Recommendation: A; B if a later spec change gives the slice a second task.
 
 ### ED-06: What the lint and the views print, and their rule names
 
+**Superseded by the spec change: see Spec gaps.**
+
 No contract scenario states the views task's result shape, nor the rule
 names of the model's reading or of a stale view (`dhf/spec/README.md`: a RULE
 is the owning component's choice unless a scenario names it).
@@ -180,6 +186,8 @@ is the owning component's choice unless a scenario names it).
 Recommendation: A, and a contract scenario for views' result in this slice.
 
 ### ED-07: How much of a model with findings is read on
+
+**Superseded by the spec change: see Spec gaps.**
 
 "The model is read whole or not at all" (model.feature). The installed
 release reads no further a model that is not EDN, but reports a model read
@@ -207,6 +215,8 @@ Recommendation: A, as slice 02.
 
 ### ED-09: The model's hash, byte for byte
 
+**Superseded by the spec change: see Spec gaps.**
+
 The glossary's "Model hash" prints the model back as EDN, sorted. This
 repository's views, and every project's, record the hash the installed
 release printed; a printer that differs in one character (a string's
@@ -221,6 +231,8 @@ escapes, a keyword, a set, a number) marks every view stale at the switch.
 Recommendation: A: the definition does not change, so neither may the hash.
 
 ### ED-10: Where the lint finds the feature files
+
+**Stated already by spec-0014: see Spec gaps.**
 
 The model has the parser publish SpecParsed to the lint (`model.edn`); the
 lint's ownership rules are about files: a component's file that exists, a
@@ -239,6 +251,8 @@ scenarios, or drops it in the next spec change.
 
 ### ED-11: The diagram source's text
 
+**Open for the spec owner: see Spec gaps.**
+
 spec-0198 says what each level holds, not how it is written; the stack names
 the diagram language.
 
@@ -250,3 +264,20 @@ the diagram language.
 
 Recommendation: A, so this repository's committed views differ only where
 the model does.
+
+## Spec gaps
+
+The expected decisions above that leaned on the installed release or on the
+spec's silence (`docs/wow/harness.md`, "The planner"). VISIBLE: a grader
+driving the command could see the difference, so the spec now states it.
+FREE: no grader could, so it stays the builder's.
+
+| Decision | Scenarios | What was unstated | Kind | The change |
+|---|---|---|---|---|
+| ED-03 | spec-0017 | what views leaves behind when the renderer cannot start or fails | VISIBLE | spec-0437: exit 2, and no file under the views directory changes. Chosen differently from the release, which writes the diagram source before it finds no renderer. How the renderer is called, and its time limit, are FREE |
+| ED-04 | spec-0017, spec-0387 | where each of several specs' views are written | VISIBLE | spec-0436: `:views-dir/<name>`, nothing in `:views-dir` itself. How the configuration is read is FREE |
+| ED-06 | spec-0010, spec-0017, spec-0018, spec-0072 to spec-0075 | the lint's counts, the views task's result, the rules of the model's reading and of a stale view | VISIBLE | spec-0430 (`{:for-a-person :findings :warnings}`, the reading's findings counted), spec-0434 (views' result, its order), spec-0431 (five rules, `events-unreadable` among them, a finding no scenario stated), spec-0435 (`view-stale`) |
+| ED-07 | spec-0072, spec-0073 | whether a model with findings is still linted and its views checked | VISIBLE | spec-0432: a model read as EDN is linted beside its shape findings; one that is not EDN gives its finding alone |
+| ED-09 | spec-0017, spec-0077, spec-0078 | the model hash's printing, byte for byte | VISIBLE | glossary "Model hash": the printing stated exactly (separators, escapes, keywords, UTF-8); spec-0433 pins one model's hash. Both reproduce the release's hash, so no view goes stale |
+| ED-10 | spec-0013, spec-0014 | whether a feature file with no scenario is owned | VISIBLE | none: spec-0014 says "a feature file in the spec", whatever it holds, so option A is already the spec |
+| ED-11 | spec-0198 | the diagram source's text | VISIBLE | for the spec owner: the text is in the stack's diagram language, which the spec may not name. Either a view is held only to spec-0198 and its first line (and the oracle compares no more of it), or the diagram text becomes a stack contract kept in `dhf/harness/`, outside the spec |
