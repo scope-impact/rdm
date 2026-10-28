@@ -118,7 +118,9 @@ taken and recorded, never a quiet return to 0.2.
   slices carry regression items from later ones; the planner orders tickets so
   each lands once.
 - The configuration's verify runs `wasm/test.sh` and `wasm/rdm-spec help`
-  from now on: the Clojure source stays in the repository as the installed
-  release's source, unverified, until the switch.
+  from now on. The Clojure source left the repository's tree after cycle 26
+  (git keeps it; the installed release runs from its own copy): a room
+  fenced by slice keeps every other component's code, and a builder of the
+  component build must never be able to read the old implementation.
 - A later spec change makes the WIT generated from the model, and a lint holds
   it to the model and the event catalogue.
