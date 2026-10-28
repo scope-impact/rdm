@@ -13,7 +13,7 @@ loyly:docs/wow/invariants.md@17d68d2, INV-2). Decided in
 | Language and target | Rust (stable, 1.97), compiled for `wasm32-wasip2`: every crate but the host is a WebAssembly component on WASI 0.2 |
 | Architecture language | WIT, in `dhf/wit/`: package `rdm:spec` (events, one interface per component, one world per slice, the command's world) and `rdm:host` (`host.wit`); bindings by `wit-bindgen` |
 | Crates | a Cargo workspace in `wasm/`: one crate per component, `wasm/components/<context>-<component>/`, exporting its interface; `wasm/host/`, the native host |
-| Composition | `wac` plugs the components into one command component, `wasm/build/rdm-spec.wasm`, exporting `wasi:cli/run` |
+| Composition | WAC, declared in `dhf/wit/`: `slice-NN.wac` composes a slice from its components, `rdm-spec.wac` composes the command from the slices; `wac compose dhf/wit/rdm-spec.wac` writes `wasm/build/rdm-spec.wasm`, exporting `wasi:cli/run` |
 | Host | `wasm/host/`, native Rust embedding `wasmtime` (with `wasmtime-wasi`): preopens the project's folder (and a fixture's), passes the environment and standard streams, implements `rdm:host/process`; no rdm-spec logic |
 | Entry point | `wasm/rdm-spec`, a shell script that builds nothing and runs the host on `wasm/build/rdm-spec.wasm` with its arguments |
 | Builder's tests | `wasm/test.sh`: builds, runs the unit tests (`cargo test`, natively where a crate allows) and the scenarios of the slices built so far, driving `wasm/rdm-spec` through its commands from the feature files, and writes one Allure result per scenario (and outline row) to `$RESULTS_DIR`, under the spec's README's results contract |

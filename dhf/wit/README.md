@@ -11,6 +11,8 @@ It names the stack, so it lives here, beside the spec, never in it.
 | `<context>-<component>.wit` | one interface per component of `dhf/spec/model.edn` |
 | `slice-NN.wit` | one world per slice: exports its home components' interfaces, imports what it uses |
 | `rdm-spec.wit` | the world of the whole command: WASI's command world, `rdm:host`, and every slice |
+| `slice-NN.wac` | the slice composed: its components instantiated, their imports wired to each other, to `rdm:host` and to WASI |
+| `rdm-spec.wac` | the command composed from the slices; each new slice adds itself, never rewrites it |
 
 Each slice's interfaces and world are written in its plan phase
 (`docs/wow/harness.md`, "The planner"), held to the model and the event

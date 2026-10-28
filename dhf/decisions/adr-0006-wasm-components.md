@@ -28,12 +28,21 @@ there is no whole WebAssembly build to install.
   (`<context>-<component>.wit`), one world per slice (`slice-NN.wit`)
   exporting the interfaces of the components whose home is that slice (the
   slice its model spec path names) and importing those it uses, and
-  `rdm-spec.wit`, the world of the whole command. `dhf/wit/host.wit` is
+  `rdm-spec.wit`, the world of the whole command, and the compositions that
+  assemble it (below). `dhf/wit/host.wit` is
   package `rdm:host`: what the native host gives the core beyond WASI. The WIT
   is written in each slice's plan phase, held to the model by the planner and
   the spec owner, and kept outside `dhf/spec/` because it names the stack.
   Generating it from the model (and checking it is fresh, as the views are)
   is a later spec change, once slice 04 exists in this build.
+- **The system is composed, and the composition is declared.** WAC, the
+  component model's composition language, is part of the architecture: each
+  component crate builds to its own component exporting its interface; each
+  slice is a composition of its home components (`dhf/wit/slice-NN.wac`,
+  wiring their imports to each other, to `rdm:host` and to WASI); the
+  command is a composition of the slices (`dhf/wit/rdm-spec.wac`, exporting
+  `wasi:cli/run`). A new slice adds itself to `rdm-spec.wac`, never rewrites
+  it. How rdm-spec is assembled is read from these files, not from code.
 - **A small native host.** `rdm-spec` is a native Rust program embedding a
   WebAssembly runtime: it gives the core WASI (the project's folder
   preopened, the environment, standard streams, clocks) and `rdm:host/process`
