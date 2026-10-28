@@ -312,7 +312,9 @@ the one named. A project that keeps one spec declares no `:specs`.
 **Cut**: a merged spec change tagged `spec-N`. Regeneration reads a cut and
 nothing else: the project's root as committed at the tagged commit. A tag
 belongs to the whole repository; in a monorepo, the cut of a project is its
-folder at that commit.
+folder at that commit. The first cut is `spec-1`; each next one is one more
+than the highest N of the repository's tags `spec-N`, N decimal digits and
+nothing else.
 
 **Fence**: the step that builds a clean room from a cut: one fresh commit
 holding every file committed at the cut except the denied ones
@@ -322,7 +324,11 @@ implementation and measurement. Robust by three rules: it reads only the cut's
 committed tree, so nothing untracked or ignored reaches a room; every
 committed top-level path and every path directly under `dhf/` is either denied
 or kept (`:clean-room :keep`), or `rdm-spec check` fails; and no kept file may
-carry the bytes of a removed implementation file.
+carry the bytes of a removed implementation file. For the check, a committed
+path is one in git's index, so the pre-commit hook stops the commit that would
+add an unclassified one; `dhf` itself is classified through the paths directly
+under it; outside a git repository there is none. The bytes rule compares the
+kept files outside the implementation that are not empty.
 
 **Scope**: what a regeneration rebuilds: the whole project, one bounded context
 or one component, or a list of contexts and components. The kernel counts as
@@ -348,7 +354,9 @@ lint, the views' freshness and the wiki check.
 implementation, in place of the implementation of a fresh checkout of the cut,
 passes every check the project declares (`:verify` in its configuration), in
 order, the first that fails stopping it. Run by the installed rdm-spec; it
-gates and never scores. Its record is `ratified.edn`.
+gates and never scores. Its record is `ratified.edn`, whose `:room-tree` is the
+id of the git tree holding exactly the room's implementation, at its paths, as
+git would commit it in a repository at ROOM.
 _Avoid_: ratify (the old name, still in a few comments until their feature
 next changes); gate, on its own (say spec check or verify); confusing it with
 **Verified**, a scenario's status.
@@ -356,7 +364,11 @@ next changes); gate, on its own (say spec check or verify); confusing it with
 **Check**: one thing verify proves about a build, declared by the project, of
 one of four kinds; a new kind is a spec change, never a configuration.
 `:tests` (always declared, first): the project's test command passes and its
-Allure results name and pass every scenario. `:serves`: the app the project
+Allure results name and pass every stamped scenario not tagged `@wip` of what
+the cycle's scope reaches: every one for the project; for contexts and
+components, those of their components; for a spec, that spec's; for a slice,
+those of every component it reaches; each in whichever slice it sits. A result
+of a scenario outside the scope is neither required nor held to anything. `:serves`: the app the project
 serves starts fresh, answers within its budget, and passes a probe that lives
 in a kept path, never in the implementation. `:runs`: a command answers with
 the exit and output the project expects, within its budget. Every check has a
@@ -380,7 +392,11 @@ any check runs (exit 2) writes no `ratified.edn`, since nothing was verified;
 one refused (exit 1) writes it, with `:checkout` only when the checkout was
 made. Once its checks have run, a check that cannot run (a plugin's, exit 2)
 or a `:CycleVerified` subscriber that cannot run still leaves `ratified.edn`
-written, that check `:refused`, and verify exits 2.
+written, that check `:refused`, and verify exits 2. A `:plugin` check is asked
+of the plugin the cut's configuration declares, read in the checkout, as every
+check is; the `:Gate` plugins verify asks first and the `:CycleVerified`
+subscribers it delivers to are those of the project root's configuration, as
+every task's are.
 
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
@@ -409,7 +425,16 @@ scenarios.
 **Allure mapping**: the configuration's `:allure`: which element of the spec
 each Allure element of a result carries (`:epic :context`, `:feature
 :feature`, `:story :rule`, `:step :gherkin-step`, the labels and the need
-links, and the `:evidence` each scenario level requires). `:evidence` is
+links, and the `:evidence` each scenario level requires). The Allure
+elements a mapping may name are exactly the default mapping's keys, `:epic`,
+`:feature`, `:story`, `:name`, `:step`, `:parameter`, `:labels`, `:links` and
+`:evidence`; the spec elements are exactly its values, each as the runner
+fills it: `:context` the bounded context's id without its colon, `:feature`
+the feature's name, `:rule` the rule's, `:scenario` the scenario's title,
+`:gherkin-step` each step's keyword and text, an outline's with its row's
+values, `:example-row` the row's values, `:scenario-id` the id, `:component`
+the component's name, `:gherkin-tags` each tag without its `@`, and a need
+link per need the scenario traces to. `:evidence` is
 `{level [attachment-name ...]}`, as `{:e2e ["browser-trace"]}`: a result of a
 scenario at that level carries an attachment of each name, on the result or
 on any of its steps. rdm-spec's default

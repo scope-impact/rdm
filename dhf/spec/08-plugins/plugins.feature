@@ -30,7 +30,7 @@ Feature: Plugins
     @spec-0441 @contract
     Scenario Outline: Every task that runs a plugin refuses a declaration it cannot trust first, and says nothing else
       Given a configuration whose :plugins holds a plugin with neither :subscribes nor :answers, named "x"
-      And a spec in which a scenario carries no id
+      And a spec in which a scenario carries no id, and dhf/cycles/03/cycle.edn naming the cut spec-3
       When "rdm-spec <task>" is run
       Then it exits 2, and its error stream is one line, cannot-run, naming x
       And its standard output is empty, and it ran no plugin and no stage

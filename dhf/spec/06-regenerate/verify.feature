@@ -239,3 +239,94 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then each result is held to {:epic :context :feature :feature :story :rule :name :scenario :step :gherkin-step :parameter :example-row :labels {"spec" :scenario-id "component" :component "tag" :gherkin-tags} :links {:need {:type "issue" :url "N#{id}"}} :evidence {}}, N the configuration's :needs
       And N is dhf/spec/needs.edn for a configuration that names no :needs
+
+  Rule: Verify starts each run afresh, and reads the room as git would commit it
+
+    @e2e
+    Scenario: Verify starts each run with an empty results directory and a fresh checkout
+      Given dhf/cycles/03/results holds a passing result for every stamped scenario, and dhf/cycles/03/build a file left.md, from an earlier run
+      And the :tests check's command exits 0 without writing any Allure result
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1 and says a green exit with no results is not a run
+      And dhf/cycles/03/build holds no left.md, and dhf/cycles/03/results none of the earlier results
+
+    @e2e
+    Scenario: A :plugin check's results directory is made, empty, before its plugin is asked
+      Given a :plugin check "judge" whose plugin lists the :results directory its request names, and dhf/cycles/03/results/judge held a file from an earlier run
+      When "rdm-spec verify ROOM 03" is run
+      Then the plugin found that directory, and it was empty
+
+    @e2e
+    Scenario Outline: A room is read as git would commit it in a repository at ROOM
+      Given a room that <is>, whose implementation holds src/app.clj and a file its .gitignore excludes, and which holds no test/, test a configured implementation path
+      And the cut spec-3 holds test/app_test.clj
+      When "rdm-spec verify ROOM 03" is run
+      Then the checkout holds src/app.clj, neither the excluded file nor any file under test
+
+      Examples:
+        | is                         |
+        | is a git repository        |
+        | is not a git repository    |
+
+  Rule: The tests check requires the scenarios of the cycle's scope, each passed
+
+    @e2e
+    Scenario Outline: A scoped cycle's tests check requires the scenarios of its scope only
+      Given dhf/cycles/03/cycle.edn whose :scope is <scope>, and a room whose tests write a passing result for every scenario of <owners>, in any slice, and none for any other
+      When "rdm-spec verify ROOM 03" is run
+      Then the tests check passes, counting those scenarios only
+      And with one of them missing it fails, naming that scenario
+
+      Examples:
+        | scope                          | owners                                              |
+        | :project                       | every component                                     |
+        | {:context :verification}       | the components of the bounded context verification  |
+        | [{:component :spec/parser}]    | the component spec/parser                            |
+
+    @e2e
+    Scenario: A results file that cannot be read fails the tests check
+      Given the :tests check's command exits 0, writing a passing result for every stamped scenario and a file F, DIR/name-result.json, that is not JSON, DIR dhf/cycles/03/results
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, the tests check is :failed, and a finding names F
+
+    @e2e
+    Scenario: An outline passes the tests check only when every row has a passing result
+      Given the :tests check's command exits 0, and the stamped outline @spec-0012 of two rows has a passing result for its first row and none for its second
+      And every other stamped scenario not tagged @wip has a passing result
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, the tests check is :failed, and it names spec-0012
+
+  Rule: Verify's record and result have one shape, passed or refused
+
+    @contract
+    Scenario: A refused verification prints its result and records its reason
+      Given a configuration whose :verify declares a :tests check, then a :runs check named "answers", and the :tests check's command exits 1
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 1, and its standard output, read as EDN, is exactly {:verify {:cycle "03" :cut "spec-3" :outcome :refused :checks [{:name "tests" :kind :tests :outcome :failed :seconds S :reason R} {:name "answers" :kind :runs :outcome :not-run}]}}, R a string saying why
+      And dhf/cycles/03/ratified.edn holds exactly :cut "spec-3", :room-tree H, :outcome :refused, :checkout "dhf/cycles/03/build", :checks as its standard output reports them, and :reason, a string naming the check and why it failed
+
+    @contract
+    Scenario Outline: Each check reports its kind's keys
+      Given a configuration whose :verify declares a :tests check, then the check <check>, and both pass
+      When "rdm-spec verify ROOM 03" is run
+      Then its result's second check is exactly <keys>
+
+      Examples:
+        | check                                                                     | keys                                                                                                               |
+        | {:kind :serves :name "web" :budget {:seconds 10 :polls 20}}, answering on the second poll | {:name "web" :kind :serves :outcome :passed :seconds S :budget 10 :polls 20 :answered-on-poll 2 :margin 18 :probe-seconds 30} |
+        | {:kind :runs :name "answers" :budget {:seconds 5}}                         | {:name "answers" :kind :runs :outcome :passed :seconds S :budget 5 :margin M}                                       |
+        | {:kind :plugin :name "judge"}                                              | {:name "judge" :kind :plugin :outcome :passed :seconds S}                                                           |
+
+    @e2e
+    Scenario: The checks after one that cannot run are not run
+      Given a configuration whose :verify declares a :tests check, then {:kind :plugin :name "judge"}, then a :runs check named "answers", the tests check passing and the plugin exiting 2
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 2, the check "judge" is :refused, and the check "answers" is listed with the outcome :not-run
+
+  Rule: A :plugin check is asked of the cut's plugins
+
+    @e2e
+    Scenario: A :plugin check's plugin is declared by the cut's configuration, not the working tree's
+      Given the cut spec-3's configuration declares {:kind :plugin :name "judge"} in its :verify and no plugin "judge", and the working tree's configuration declares "judge" answering :Check
+      When "rdm-spec verify ROOM 03" is run
+      Then it exits 2, says the check names no plugin answering :Check, and runs no check
