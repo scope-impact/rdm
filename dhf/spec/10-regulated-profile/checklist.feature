@@ -1,13 +1,7 @@
-# Component Checklist, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
-# Slice 10-regulated-profile: the checklist's regulated rule (ADR 0004).
-
 @UN-013
 Feature: Checklist
   Under the regulated profile, every declared clause is an item to grade.
 
-  # A clause named is not a clause met (dhf/wiki/pages/regulated-profile.md,
-  # "Referenced is not met"). A grader judges it as a scenario is judged, and
-  # an ungraded clause is a fail like any ungraded item.
   @UN-013
   Rule: Under the regulated profile, every clause is an item to grade
 

@@ -1,12 +1,8 @@
-# Component Checklist, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-008
 Feature: Checklist
   Derives one item per stamped scenario at the cycle's cut, never written by
   hand, for a grader to grade.
 
-  # The checklist is derived from the spec, never written by hand
-  # (loyly:README.md@17d68d2, "What to steal" 1).
   Rule: The checklist is derived from the cycle's cut
 
     @spec-0019 @e2e
@@ -31,9 +27,6 @@ Feature: Checklist
         """
       And its keys appear in that order, items and planned sorted by id
 
-  # A scenario the checklist cannot name would shrink the denominator without
-  # anyone noticing (loyly:harness/spec.feature@17d68d2, "An unstamped scenario
-  # stops the checklist rather than shrinking it").
   Rule: An unstamped scenario stops the checklist
 
     @spec-0211 @e2e

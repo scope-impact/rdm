@@ -13,7 +13,7 @@ A project keeps one spec, or several, one folder each with its own needs, model,
 - UN-004 (`dhf/spec/needs.edn`)
 - UN-007 (`dhf/spec/needs.edn`)
 - UN-008 (`dhf/spec/needs.edn`)
-- spec-29, from halla-health's wallet, whose SDDs are one folder each
+- halla-health's wallet, whose SDDs are one folder each
 
 ## Scope
 

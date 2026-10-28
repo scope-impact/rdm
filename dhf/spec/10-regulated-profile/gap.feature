@@ -1,24 +1,7 @@
-# Component Gap analysis, bounded context compliance of the rdm-spec container: dhf/spec/model.edn.
-#
-# The regulated profile (dhf/wiki/pages/regulated-profile.md): a project whose
-# configuration holds :regulated declares the clause lists it is held to and
-# where its controlled documents live. The scenarios stay the functional spec;
-# the clause lists are the non-functional one, met by documents. Gap analysis
-# is a stage of "rdm-spec check": the same command, the same hook, the same
-# findings. rdm-spec ships no clause list and no document: the project brings
-# both, whatever the standard.
-#
-# "A regulated project" is a project set up by rdm-spec whose configuration
-# holds :regulated with the one clause list dhf/clauses/std.txt and the
-# documents directory dhf/documents, every document of which has frontmatter
-# with an id, a revision and a title unless the scenario says otherwise.
-
 @UN-013
 Feature: Gap analysis
   Every clause of every declared clause list is named by an audit tag in a controlled document.
 
-  # A project that never asked for the profile must not pay for it: Löyly's
-  # spec carries no regulated part (loyly:README.md@17d68d2).
   Rule: Without :regulated, nothing of the profile runs
 
     @spec-0255 @e2e
@@ -35,7 +18,6 @@ Feature: Gap analysis
       Given a regulated project
       And dhf/clauses/std.txt holds:
         """
-        # The standard's clauses
         include base.txt
 
         STD:5.1 Development plan
@@ -60,7 +42,6 @@ Feature: Gap analysis
       When "rdm-spec check" is run
       Then it exits 2 and names dhf/clauses/missing.txt
 
-    # A stray prose line in a clause list became a clause (cycle 10, builder).
     @spec-0282 @e2e
     Scenario: A line of prose in a clause list is malformed, never a clause
       Given a regulated project
@@ -98,8 +79,6 @@ Feature: Gap analysis
         | We plan [[STD:5]].                          | not named |
         | `[[STD:5.1]]`                               | not named |
 
-    # A list item's continuation paragraph was read as code (cycle 09,
-    # grading): in Markdown it is the item's text.
     @spec-0281 @e2e
     Scenario: An audit tag in a list item's continuation paragraph names its clause
       Given a regulated project
@@ -108,7 +87,6 @@ Feature: Gap analysis
       When "rdm-spec check" is run
       Then the clause STD:5.1 is named
 
-    # A tag inside an indented code block named a clause (cycle 08, grading).
     @spec-0275 @e2e
     Scenario: An audit tag in an indented code block names nothing
       Given a regulated project
@@ -134,8 +112,6 @@ Feature: Gap analysis
       Then it exits 0
       And it prints a clause-unknown warning naming dhf/documents/plan.md, the line of the tag and STD:9.9
 
-  # A title is not where a clause is met: cycle 07's spec-0250 put a tag on a
-  # line that could only be frontmatter, and it counted.
   Rule: Frontmatter names no clause
 
     @spec-0268 @e2e
@@ -146,7 +122,6 @@ Feature: Gap analysis
       When "rdm-spec check" is run
       Then the clause STD:5.1 is not named
 
-  # A document that still says nothing meets no clause, however many it names.
   Rule: A placeholder is a warning
 
     @spec-0263 @e2e
@@ -158,8 +133,6 @@ Feature: Gap analysis
       Then it exits 0
       And it prints a document-placeholder warning naming dhf/documents/plan.md and the line holding TODO
 
-  # An auditor asks for a document by its id and revision; one without them is
-  # not controlled (innolitics-rdm:README.md@f21b508).
   Rule: A controlled document carries its identity
 
     @spec-0264 @e2e

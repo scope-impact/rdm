@@ -1,12 +1,7 @@
-# Component Lint, bounded context architecture of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-005
 Feature: Lint
   Holds the model to the C4 skill's checklist and to the bounded-context rules.
 
-  # The rules below are the C4 skill's quality checklist where a machine can
-  # judge it (agent-skills:skills/engineering/c4-diagrams/reference/c4-guide.md@da65901,
-  # "Quality Checklist").
   Rule: The C4 model passes the C4 lint
 
     @spec-0001 @e2e
@@ -53,9 +48,6 @@ Feature: Lint
       When "rdm-spec check" is run
       Then it warns under rule c4-view-size and names the view and both counts
 
-    # Found by the first event storm's render (dhf/storm/2026-10-24-rdm.md):
-    # The renderer draws a person's or system's name over a description that wraps
-    # past two lines.
     @spec-0009 @e2e
     Scenario: A person or system description longer than the configured limit fails the lint
       Given the configured description limit is 45 characters
@@ -68,8 +60,6 @@ Feature: Lint
       When "rdm-spec check" is run
       Then its result's :lint :for-a-person is exactly ["Does each view serve its audience: can its reader answer the question the view is for?" "Is the true coupling visible: does every relationship that matters appear, labelled with what passes?" "Was each render looked at by a person, and did nothing overlap or hide a name?"]
 
-  # rdm-spec is a modular monolith: one container whose bounded contexts are
-  # composable modules, each drawn as a boundary around its components.
   Rule: Bounded contexts are modules of one container, and the model owns the spec
 
     @spec-0012 @e2e
@@ -96,12 +86,6 @@ Feature: Lint
       When "rdm-spec check" is run
       Then it fails rule a-contract-only and names the relationship
 
-    # The rule is rdm-spec's own architecture, and it bit the first other
-    # project: the Löyly app's booking had to read the schedule through an
-    # event its spec never names (dhf/cycles/loyly-comparison.md, finding 3).
-    # A project declares how its contexts may relate; events only is the
-    # default, and a project's own design record (a domain model, where its
-    # plugin keeps one) says why.
     @spec-0339 @e2e
     Scenario: A project that lets its contexts relate by call is not held to events only
       Given a configuration whose :c4 holds :contexts-relate-by [:events :calls], and a relationship from a component of one bounded context to a component of another, naming no event

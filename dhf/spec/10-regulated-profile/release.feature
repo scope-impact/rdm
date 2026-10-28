@@ -1,12 +1,7 @@
-# Component Release check, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-# Slice 10-regulated-profile: the release check's regulated rule (ADR 0004).
-
 @UN-013
 Feature: Release check
   Under the regulated profile, a release needs every declared clause named.
 
-  # A clause no document names is unverified the way a scenario with no result
-  # is (dhf/spec/10-regulated-profile/gap.feature).
   @UN-013
   Rule: Under the regulated profile, a release needs every clause named
 

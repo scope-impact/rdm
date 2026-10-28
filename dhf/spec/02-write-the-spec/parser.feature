@@ -1,13 +1,7 @@
-# Component Parser, bounded context spec of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-001 @UN-002
 Feature: Parser
   Reads the declared Gherkin subset and refuses anything outside it.
 
-  # The parser is ours. A construct it does not know is refused, never skipped:
-  # a scenario the parser silently drops is a requirement nothing checks.
-  # The checklist and ratify read the spec at a cut, not the working tree
-  # (cycle 00, dhf/cycles/00/proposed-spec-changes.md, C20).
   Rule: The spec is read at a revision
 
     @spec-0220 @contract

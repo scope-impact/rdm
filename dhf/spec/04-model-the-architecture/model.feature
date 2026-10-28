@@ -1,5 +1,3 @@
-# Component Model, bounded context architecture of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-005
 Feature: Model
   Reads model.edn and the event catalogue: the one source every view, every
@@ -45,8 +43,6 @@ Feature: Model
       When "rdm-spec check" is run
       Then the component owns the feature file dhf/spec/spec/parser.feature, and "rdm-spec check" passes only when that file exists
 
-  # A hash of the text would mark every view stale after a reformat that
-  # changed nothing, and a gate that cries wolf is a gate that gets skipped.
   Rule: Views go stale when the model's content changes, never its formatting
 
     @spec-0077 @e2e

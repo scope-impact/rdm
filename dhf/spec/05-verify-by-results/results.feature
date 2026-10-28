@@ -1,12 +1,7 @@
-# Component Results reader, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-003
 Feature: Results reader
   Reads a run's Allure results, whatever stack wrote them, naming what it cannot read.
 
-  # Incident: a test runner named its suites twice, once in imports and once in
-  # a run list, so a forgotten suite was silently green
-  # (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
   Rule: Allure results are the oracle, whoever wrote them
 
     @spec-0060 @contract
@@ -23,9 +18,6 @@ Feature: Results reader
       When "rdm-spec status" is run
       Then it exits 2 and says no test run wrote results there
 
-    # Cycle 16's reader relayed the parser's message, which held a newline, so
-    # the finding took two lines (dhf/cycles/16/proposed-spec-changes.md, 2;
-    # README, "How every task reports").
     @spec-0062 @e2e
     Scenario: A results file that cannot be read is named, never skipped
       Given a results directory holding one result file that is not valid JSON
@@ -47,9 +39,6 @@ Feature: Results reader
       Then it counts toward no scenario
       And it is not listed as an unknown result
 
-  # A result is read for what status, trace and verify depend on, and every
-  # other Allure element is kept: an attachment, a link, a parameter are
-  # evidence a person reads in the report, never what decides a status.
   Rule: What decides a status, and what is only kept
 
     @spec-0312 @contract

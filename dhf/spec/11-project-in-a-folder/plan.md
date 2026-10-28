@@ -10,7 +10,7 @@ A project may be one folder of a larger repository, as halla-health's wallet is:
 
 - UN-006 (`dhf/spec/needs.edn`)
 - UN-007 (`dhf/spec/needs.edn`)
-- spec-27, from halla-health's wallet (dhf/cycles/23/cycle.edn)
+- halla-health's wallet, a project kept as one folder of its repository
 
 ## Scope
 

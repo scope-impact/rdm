@@ -20,7 +20,7 @@ A team building regulated software shows an auditor, for every clause it declare
 
 **Out:**
 
-- The checklist's and the release's regulated rules: in their components' slices until each component's feature file can sit here too (spec-30's build)
+- A project that does not hold `:regulated`: nothing of this slice runs for it
 
 ## Decisions
 

@@ -1,5 +1,3 @@
-# Component Init, bounded context project of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-009
 Feature: Init
   Writes a new project's skeleton into a path that does not exist yet.
@@ -29,7 +27,6 @@ Feature: Init
         | .gitignore                        | dhf/allure-results/, dhf/cycles/*/results/, dhf/cycles/*/build/, site-src/ and site/ |
       And init lists every file it wrote and the next steps
 
-    # An absolute path leaked an exception (cycle 07, grading).
     @spec-0272 @e2e
     Scenario: Init takes an absolute path as well as a relative one
       Given no directory at DIR/sauna

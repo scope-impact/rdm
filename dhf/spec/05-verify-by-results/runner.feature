@@ -1,16 +1,7 @@
-# Kernel component Gherkin runner: dhf/spec/model.edn, :kernel.
-#
-# Decided by the event storm's hotspot H10 (dhf/storm/2026-10-24-rdm.md): the
-# runner is kernel code, so any project whose step definitions are written for
-# it can use it. A project in another stack uses its own runner and only has
-# to write the same Allure results.
-
 @UN-003
 Feature: Gherkin runner
   Runs the scenarios' steps against their step definitions and writes Allure results.
 
-  # rdm-spec run is offered to any project whose step definitions are written
-  # for it, so the way a step is defined is a public contract.
   Rule: Step definitions are written against one small API
 
     @spec-0168 @contract
@@ -49,9 +40,6 @@ Feature: Gherkin runner
       When "rdm-spec run" is run
       Then it writes three Allure results, each labelled with the outline's id, sharing its name, and told apart by its parameters and historyId
 
-    # spec-0153 and spec-0310 said a step that throws fails the result;
-    # spec-0323 says only a Then whose assertion does not hold is failed
-    # (cycle 17, grader).
     @spec-0153 @e2e
     Scenario: A failing step fails the result and names the step
       Given a scenario whose second step, a Then, finds what it asserts does not hold
@@ -73,8 +61,6 @@ Feature: Gherkin runner
       Then the scenario's steps are not run
       And its result is skipped and labelled planned
 
-  # Incident: a test runner named its suites twice, once in imports and once in
-  # a run list, so a forgotten suite was silently green (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
   Rule: The runner discovers, and refuses to find nothing
 
     @spec-0155 @e2e
@@ -89,13 +75,6 @@ Feature: Gherkin runner
       When "rdm-spec run" is run
       Then it exits 2, says no scenario was found, and writes no result
 
-  # rdm-spec reads Allure results and writes them; it never invents a format
-  # beside Allure's. Each element a result carries is Allure's own, filled from
-  # the Gherkin scenario, so an Allure report is one more view of the same run,
-  # and a project in any stack can write the same results with its own
-  # Allure-Gherkin adapter (spec owner, after the Löyly comparison,
-  # dhf/cycles/loyly-comparison.md, finding 2: a builder could not learn the
-  # result format from its own project).
   Rule: Every result is written in Allure's own model, from its Gherkin scenario
 
     @spec-0308 @contract
@@ -143,8 +122,6 @@ Feature: Gherkin runner
       Then the result's step holds an attachment named "response" of the type "text/plain"
       And its source is a file beside the result in the results directory, holding that text
 
-    # Two of the six things cycle 02's builder of the Löyly app decided alone
-    # (dhf/cycles/loyly-comparison.md, cycle 02).
     @spec-0323 @contract
     Scenario Outline: Failed is a Then that did not hold; broken is anything else that went wrong
       Given a scenario whose <step> <goes-wrong>
@@ -164,12 +141,6 @@ Feature: Gherkin runner
       When "rdm-spec run" is run
       Then the results are written into dhf/allure-results
 
-  # spec-32, from cycle 24: cycles 19 to 23 wrote a tag label for every tag a
-  # scenario inherits from its feature and its rule, cycle 24 only for its
-  # own, and each build's verify refused the other's results; spec-0308 said
-  # "one per Gherkin tag" and no more. A need tag sits on a feature or a rule
-  # (README.md, "Conventions"), so the scenario's inherited tags are the ones
-  # that trace it; Allure's own Gherkin adapters write them too.
   Rule: A scenario's tags are its own and those it inherits
 
     @spec-0403 @contract

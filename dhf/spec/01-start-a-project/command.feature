@@ -1,12 +1,3 @@
-# Kernel component Command: dhf/spec/model.edn, :kernel.
-#
-# The one entry point a hook, CI, an agent and a person all use: the rdm-spec
-# command, installed once, with nothing per project. It belongs to no bounded
-# context: it dispatches each task to the context that owns it.
-# Specs are written by editing files; the command only checks, stamps, draws,
-# cuts, fences, runs, verifies, derives checklists, files scores and publishes.
-# Grading is not a task: a grader grades, however they grade.
-
 @UN-009
 Feature: Command
   The one command, rdm-spec: its tasks, their usage and how every task reports.

@@ -1,11 +1,7 @@
-# Component Sources, bounded context knowledge of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-011
 Feature: Sources
   Reads the provenance records and resolves citations against their pins.
 
-  # The chain of citations has to bottom out in something no generation step
-  # can quietly rewrite (loyly:docs/wow/invariants.md@17d68d2, INV-1).
   Rule: A source is indexed with its repository, its pins and its record
 
     @spec-0120 @e2e
@@ -26,11 +22,6 @@ Feature: Sources
       When "rdm-spec check" is run
       Then it fails rule source-no-record and names the source and the record file
 
-    # A pin is dropped when the index as it stands lacks a pin some earlier
-    # commit of it had. Cycle 21 read the rule as "no commit may ever have
-    # lacked one", and so failed this repository, whose index once deleted rdm
-    # (967c1de) and then restored it as retired, its pin kept (spec owner,
-    # spec-26).
     @spec-0121 @e2e
     Scenario: A source that drops a pin it had fails the check
       Given a commit of the sources index pins loyly at 17d68d2, and a later commit keeps loyly with that pin replaced by another
@@ -43,7 +34,6 @@ Feature: Sources
       When "rdm-spec check" is run
       Then the check reports no dropped pin for rdm
 
-    # A source removed on purpose once read as dropped pins (cycle 04).
     @spec-0236 @e2e
     Scenario: A source is retired, never deleted, and nothing may cite it
       Given a commit of the sources index lists rdm with its pins, and a later commit keeps them and adds :retired "holds today's implementation"
@@ -58,13 +48,8 @@ Feature: Sources
       When "rdm-spec check" is run
       Then it fails rule citation-malformed and names UN-004 and the source
 
-  # Checkouts are machine-local, so they are never committed: they are given on
-  # the command line, a directory holding one checkout per source, named by
-  # the source's id.
   Rule: A citation resolves to a source, a pin and a path
 
-    # spec-32, from cycle 24's grader: with several needs citing one string,
-    # every finding named the line where the string first appeared.
     @spec-0402 @e2e
     Scenario: A citation's finding names the line the citation is on
       Given dhf/spec/needs.edn whose needs UN-001 and UN-004 both cite "loyly:README.md@17d68d2", on lines 3 and 9, and no --sources given
@@ -108,9 +93,6 @@ Feature: Sources
       When "rdm-spec check" resolves the citation "loyly:README.md@17d68d2"
       Then it is reported as unchecked, with the reason
 
-  # Decided by the event storm's hotspot H14 (dhf/storm/2026-10-24-rdm.md): a
-  # source holding an implementation of what is regenerated hands the builder
-  # the answer. What a source says may be cited; how it is built may not.
   Rule: A source's implementation is fenced
 
     @spec-0136 @e2e
@@ -142,9 +124,6 @@ Feature: Sources
       When "rdm-spec check" is run
       Then the quoted citation is not resolved, and the check passes
 
-  # A need's citations are resolved here, with the wiki's, so one component
-  # reports them (cycle 01, C20). The spec check keeps only "a need cites no
-  # source".
   Rule: A need's citations resolve
 
     @spec-0135 @e2e

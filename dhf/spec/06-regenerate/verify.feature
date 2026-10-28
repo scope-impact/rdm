@@ -1,21 +1,8 @@
-# Component Verify, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-#
-# Verify is the gate: what a builder claims is done is decided by checks the
-# builder does not control, as Löyly's verify.sh decides it
-# (loyly:harness/README.md@17d68d2, "The idea in five lines" 3). It was named
-# ratify until spec-20; the record it writes keeps its name, ratified.edn, so
-# every cycle's record reads the same and the oracle's goldens still hold.
-
 @UN-007
 Feature: Verify
   Decides whether a build is done, by checks the builder does not control and
   the project declares.
 
-  # The clean room is only where the builder works. What is judged is the
-  # room's implementation, put into a fresh checkout of the cut, so the spec
-  # and the configuration always come from the cut, never from the room, as
-  # Löyly verifies impl/ in its trusted repository
-  # (loyly:harness/README.md@17d68d2, "The idea in five lines" 3).
   Rule: Verify trusts only the cut
 
     @spec-0202 @e2e
@@ -43,9 +30,6 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then the configuration and the spec used are those of spec-3, unedited
 
-  # Incident: a gate once reported success over a test command that had become
-  # a no-op exiting 0 (loyly:harness/README.md@17d68d2, "The failure modes this
-  # shape was learned from").
   Rule: The tests check passes only when the tests pass and every scenario passed
 
     @spec-0206 @contract
@@ -74,7 +58,6 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then it exits 1 and says a green exit with no results is not a run
 
-    # Every scenario is tested before it counts as built (loyly:docs/wow/invariants.md@17d68d2, INV-5).
     @spec-0208 @e2e
     Scenario: A scenario no test names fails verification
       Given the stamped scenario @spec-0012 is not tagged @wip
@@ -82,8 +65,6 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then it exits 1 and names spec-0012
 
-    # Incident: a gate once passed while a step failed, because only the
-    # command's exit status was read (cycle 00, dhf/cycles/00/proposed-spec-changes.md, A1).
     @spec-0218 @e2e
     Scenario: A failed or broken result fails verification
       Given the :tests check's command exits 0
@@ -91,7 +72,6 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then it exits 1 and names spec-0012 and its status
 
-  # The grader grades the build that was verified, and only that build.
   Rule: Verify records what it verified
 
     @spec-0215 @contract
@@ -112,12 +92,6 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then it exits 1 and names the file and line of the unstamped scenario
 
-  # What verifying means depends on what the project is: a served app proves
-  # it serves, a command proves it answers, a library has its tests (spec
-  # owner, after the Löyly comparison, dhf/cycles/loyly-comparison.md, finding
-  # 1: ratify proved the results and never that the app came up). So a project
-  # declares its checks, and rdm-spec guarantees how every check runs. The
-  # kinds are closed: a new kind is a spec change, never a configuration.
   Rule: A project declares its checks, and verify runs every one the same way
 
     @spec-0314 @contract
@@ -147,18 +121,12 @@ Feature: Verify
         | is absent                                                 | the configuration declares no :verify         |
         | declares a :tests check with no command                   | the tests check names no command              |
 
-    # Incident: a missing configuration turned a gate's test command into a
-    # no-op exiting 0 (loyly:harness/README.md@17d68d2, "The failure modes this
-    # shape was learned from"). A check that cannot run is never a pass.
     @spec-0317 @e2e
     Scenario: A check whose command is not found refuses the gate
       Given a configuration whose :runs check names a command that is not on PATH
       When "rdm-spec verify ROOM 03" is run
       Then it exits 2 and names the check and the command it could not find
 
-  # Löyly's gate boots the app fresh and polls it inside a named budget, and
-  # reports the margin, so a boot creeping toward the limit is seen before it
-  # fails (loyly:harness/README.md@17d68d2, "The gate's boot budget").
   Rule: A :serves check proves the app comes up and is this application
 
     @spec-0318 @e2e
@@ -168,10 +136,6 @@ Feature: Verify
       Then the check passes with :answered-on-poll 2, :polls 20 and :margin 18
       And no process the check started is still running
 
-    # Löyly's cycle 04: its probe built "//" paths from a url that ends in
-    # "/", and the release stopped it at the check's whole budget, reporting
-    # "exited ," with nothing it printed; three cuts to diagnose (spec owner,
-    # spec-26).
     @spec-0366 @contract
     Scenario: A probe is given the app's url, ending in "/", and has its own time limit
       Given a :serves check whose app answers on port P, with :probe-seconds 20
@@ -199,8 +163,6 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then it exits 2, names the port, and starts no app of a :serves check
 
-    # A port whose last app has gone but whose connections the system still
-    # holds for a minute (TIME_WAIT) was refused as held (cycle 18, grader).
     @spec-0346 @e2e
     Scenario: A port held only by the closing connections of an app that has gone is free
       Given a :serves check whose app was started and stopped on its port a moment ago, so only closing connections remain
@@ -213,8 +175,6 @@ Feature: Verify
       When "rdm-spec verify ROOM 03" is run
       Then it exits 1, the check is :failed, and it relays the probe's output
 
-    # Cycle 16's build counted any HTTP response to GET / as an answer, cycle
-    # 17's an accepted connection; the spec said neither (cycle 17, builder).
     @spec-0341 @e2e
     Scenario: An app that accepts connections but never sends an HTTP response does not answer
       Given a :serves check with the budget of 2 seconds in 4 polls, whose start command listens on its port and never writes a response
@@ -236,12 +196,6 @@ Feature: Verify
         | standard output starting "{:help"  | prints "usage" and exits 0         | the first line it printed           |
         | an answer within 10 seconds        | is still running after 10 seconds  | the budget of 10 seconds            |
 
-  # The results are the oracle of a project's scenarios; the mapping says how
-  # each one carries the spec, and verify holds every result to it, so a test
-  # that claims a scenario it does not follow fails the gate instead of
-  # waiting for a grader (spec owner, after the Löyly comparison,
-  # dhf/cycles/loyly-comparison.md, cycle 02: the builder had to decide six
-  # things the contract left unsaid).
   Rule: The tests check holds every result to the project's Allure mapping
 
     @spec-0331 @e2e
@@ -260,9 +214,6 @@ Feature: Verify
         | no issue link to UN-001, the need the scenario traces to     | mapping-differs: links          |
         | no browser-trace attachment, where :evidence requires one for @e2e | evidence-missing: browser-trace |
 
-    # Cycle 18's verify demanded a trace from a @wip scenario, which is never
-    # run and so can carry no evidence; the grader gave 72 of 72, and the
-    # held-still oracle found it on its first run (dhf/harness/oracle/README.md).
     @spec-0347 @e2e
     Scenario: A planned scenario's result is held to its spec label only
       Given a configuration whose :allure requires a browser-trace attachment for @e2e, and a stamped scenario tagged @e2e and @wip

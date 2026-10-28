@@ -1,13 +1,9 @@
-# Component Fence, bounded context regeneration of the rdm-spec container: dhf/spec/model.edn.
-# Slice 13-slice-development (ADR 0004, ADR 0005).
-
 @UN-006
 Feature: Fence
   Removes the code of every component a slice reaches.
 
   Rule: A slice is fenced whole
 
-    # spec-30: a slice is rebuilt whole (scopes.feature).
     @spec-0397 @e2e
     Scenario: A slice scope removes the code of every component the slice reaches
       Given a configuration with :spec-layout :slices, and the slice 12-several-specs reaching :spec/parser, :spec/stamper and :measurement/checklist

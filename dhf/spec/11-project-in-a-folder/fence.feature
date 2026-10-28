@@ -1,6 +1,3 @@
-# Component Fence, bounded context regeneration of the rdm-spec container: dhf/spec/model.edn.
-# Slice 11-project-in-a-folder (ADR 0004).
-
 @UN-006
 Feature: Fence
   Builds a clean room from a cut of a project that is one folder of its repository.

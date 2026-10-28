@@ -1,13 +1,8 @@
-# Component Cut, bounded context regeneration of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-006
 Feature: Cut
   Tags HEAD spec-N when it is origin/HEAD and pushes the tag; a regeneration
   reads nothing else.
 
-  # At a fixed time the spec is cut, tagged and frozen, and a regeneration reads
-  # that and nothing else (loyly:harness/README.md@17d68d2, "The idea
-  # in five lines" 1).
   Rule: A cut is a pushed tag on the default branch, and regeneration reads only a cut
 
     @spec-0036 @e2e
@@ -17,8 +12,6 @@ Feature: Cut
       Then HEAD is tagged spec-7
       And the tag is pushed to origin
 
-  # Decided by the event storm's hotspot H2 (dhf/storm/2026-10-24-rdm.md): every
-  # merge to the default branch is cut, by CI, so a cut never waits on anyone.
   Rule: Every merge to the default branch is cut, once
 
     @spec-0162 @e2e
@@ -27,8 +20,6 @@ Feature: Cut
       When "rdm-spec cut" is run again on it
       Then no tag is added and the cut says the commit is already spec-7
 
-    # Incident: spec-2 was cut holding views older than its own model, so its
-    # regeneration could not ratify (cycle 02, A2).
     @spec-0224 @e2e
     Scenario: A HEAD whose spec fails the check is not cut
       Given HEAD is the commit origin/HEAD names, and "rdm-spec check" exits 1 on it

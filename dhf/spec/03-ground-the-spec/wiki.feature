@@ -1,15 +1,7 @@
-# Component Wiki, bounded context knowledge of the rdm-spec container: dhf/spec/model.edn.
-#
-# The wiki sits between the raw sources and the spec: the domain, distilled,
-# every claim footnoted to a source (loyly:README.md@17d68d2, "How to
-# read the repo"; docs/wiki/index.md@17d68d2).
-
 @UN-011
 Feature: Wiki
   The domain wiki: every page indexed, every claim footnoted to a source.
 
-  # The wiki is dhf/wiki/index.md and the pages under dhf/wiki/pages/. The
-  # index carries the rules and the list of pages; the rules below govern pages.
   Rule: Every claim in the wiki cites a source
 
     @spec-0127 @e2e
@@ -45,8 +37,6 @@ Feature: Wiki
       When "rdm-spec check" is run
       Then the check fails and names the entry
 
-  # A wiki that names a stack has become a description of one implementation,
-  # and a regeneration from it is no longer a measurement (loyly:docs/wow/invariants.md@17d68d2, INV-2).
   Rule: The wiki never names an implementation
 
     @spec-0132 @e2e

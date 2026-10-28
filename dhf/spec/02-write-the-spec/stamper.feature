@@ -1,5 +1,3 @@
-# Component Stamper, bounded context spec of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-001
 Feature: Stamper
   Hands out scenario ids from the ledger, never twice.

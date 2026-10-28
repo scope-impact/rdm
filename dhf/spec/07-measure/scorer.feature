@@ -1,10 +1,3 @@
-# Component Scorer, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
-#
-# Scoring is independent of the builder's tests, as in Löyly: a grader, human
-# or agent and never the builder, grades each checklist item against the
-# verified build, however they grade, and the scorer files the verdicts
-# (loyly:README.md@17d68d2, "3. Measure").
-
 @UN-008
 Feature: Scorer
   Files a grader's verdicts against the checklist, and nothing when nothing was graded.
@@ -69,10 +62,6 @@ Feature: Scorer
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then both verdicts are filed
 
-    # spec-28: two graders grade one cycle in two rooms; their files are scored
-    # as one. A file that is not readable EDN names where it stops. How the
-    # graders' rooms are built is the project's own (its grading, like its
-    # oracle, is a project's judge, ADR 0003).
     @spec-0379 @e2e
     Scenario: The verdicts of several files are filed as one
       Given two verdicts files, one grading spec-0012 and spec-0013, the other spec-0014
@@ -103,9 +92,6 @@ Feature: Scorer
         | gives spec-0012 the verdict :maybe             |
         | gives spec-0012 no evidence                    |
 
-  # Incident: a scoring run whose every batch failed on a network outage once
-  # committed "scored" over an empty record (loyly:harness/README.md@17d68d2,
-  # "The failure modes this shape was learned from").
   Rule: The instrument refuses to record what it did not measure
 
     @spec-0022 @e2e
@@ -128,10 +114,6 @@ Feature: Scorer
       When "rdm-spec score 03 --verdicts verdicts.edn" is run
       Then it exits 1, writes nothing, and names spec-0999
 
-  # Every role may be a human or an agent (UN-012), so the instrument cannot
-  # rely on "a person" to stay out of the loop. What it relies on is that the
-  # one who grades and the one who reads the score are not the one who built
-  # (loyly:harness/README.md@17d68d2, "The idea in five lines").
   Rule: The builder neither grades nor reads its own score
 
     @spec-0142 @e2e @UN-012

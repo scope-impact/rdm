@@ -1,15 +1,7 @@
-# Component Model, bounded context architecture of the rdm-spec container: dhf/spec/model.edn.
-# Slice 13-slice-development (ADR 0004, ADR 0005).
-
 @UN-005
 Feature: Model
   Reads a spec grouped by slice, then by component.
 
-  # spec-30, from cycle 23: spec-29's several spec folders were one rule in
-  # parser.feature but reached eight components more; the scopes named six
-  # and the integrator widened them by hand (dhf/cycles/23/cycle.edn). The
-  # spec owner chose Löyly's slice (loyly:README.md@17d68d2, "How to read the
-  # repo", layer 4): a piece of behaviour, planned, and rebuilt whole.
   Rule: Under the slices layout, the spec is grouped by slice, then by component
 
     @spec-0392 @e2e

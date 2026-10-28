@@ -1,21 +1,15 @@
-# Component Scorer, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
-# Slice 13-slice-development (ADR 0004, ADR 0005).
-
 @UN-008
 Feature: Scorer
   Scores a cycle that builds a slice.
 
   Rule: A cycle builds a slice
 
-    # spec-30: a slice is rebuilt whole (scopes.feature).
     @spec-0396 @e2e
     Scenario: A cycle may be scoped to a slice
       Given a configuration with :spec-layout :slices, and dhf/cycles/03/cycle.edn whose :scope is [{:slice "12-several-specs"}]
       When "rdm-spec checklist 03" is run
       Then it accepts the scope, and a slice the cut does not hold is refused with exit 2, naming it
 
-  # spec-33, ADR 0005: the slice is the unit of work (Löyly,
-  # loyly:docs/wow/way-of-working.md@17d68d2, sections 1, 2 and 6).
   Rule: A slice cycle is scored for its slice, and for what it regressed
 
     @spec-0417 @e2e

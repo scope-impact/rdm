@@ -1,5 +1,3 @@
-# Component Trace, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-003
 Feature: Trace
   A need or a scenario, with everything linked to it, in both directions.
@@ -34,8 +32,6 @@ Feature: Trace
       Then the trace gives the status failed
       And it lists both results with their status and file
 
-  # Cycle 08: spec/check's step read trace's result in one shape and the
-  # rebuilt trace wrote another; the shape is now the spec's.
   Rule: The trace's result has one shape
 
     @spec-0279 @contract

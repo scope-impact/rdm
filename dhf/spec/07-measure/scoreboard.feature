@@ -1,5 +1,3 @@
-# Component Scoreboard, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-008
 Feature: Scoreboard
   Compares cycles honestly, for the spec owner, never the builder.
@@ -22,14 +20,8 @@ Feature: Scoreboard
       And it states that the denominator moved from 12 to 15
       And it counts the 3 new items separately
 
-  # A partial regeneration can break what it did not rebuild; the scoreboard
-  # shows that apart from what it did. A scoped cycle's checklist holds only
-  # its scope, so the rest is compared only where both cycles scored it, as a
-  # project cycle does (cycle 02, dhf/cycles/02/proposed-spec-changes.md, A1).
   Rule: A scoped cycle is reported target first
 
-    # spec-0172 (a scoped cycle that scored every scenario) is retired: under
-    # the scope rule no such cycle can exist (cycle 03, A1).
     @spec-0225 @e2e
     Scenario: A scoped cycle is compared over its scope only
       Given cycle 01 scored every scenario and cycle 02 scored only the bounded context verification's
@@ -37,8 +29,6 @@ Feature: Scoreboard
       Then it reports better and worse for verification's scenarios
       And it states that the rest was not scored in cycle 02
 
-  # Before any rdm-spec release exists, the first build is ratified by a reviewed
-  # bootstrap cycle (ADR 0002). It says so, and nothing is measured against it.
   Rule: A bootstrap cycle is never a baseline
 
     @spec-0192 @e2e
@@ -48,10 +38,6 @@ Feature: Scoreboard
       Then it marks cycle 00 as bootstrap
       And it reports no better or worse count against it
 
-  # The scoreboard's result was pinned only by the oracle's goldens, which no
-  # builder sees, and the first rebuild of the scoreboard since they were
-  # recorded drifted from them in 25 places (dhf/cycles/11/proposed-spec-changes.md,
-  # 1). The shape is the spec's, as the goldens record it.
   Rule: The scoreboard's result has one shape
 
     @spec-0283 @contract

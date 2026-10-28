@@ -1,14 +1,7 @@
-# Component Verify, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-# Slice 13-slice-development (ADR 0004, ADR 0005).
-
 @UN-007
 Feature: Verify
   Verifies a slice on the components it reaches.
 
-  # spec-32, from cycle 24: a slice-scoped verify required a result for every
-  # scenario, as a whole-project one does; spec-0389 narrowed a spec scope,
-  # nothing a slice scope. A slice scope rebuilds the components it reaches
-  # (ADR 0004), and those components' scenarios are what it answers to.
   Rule: A slice-scoped verify answers for the components the slice reaches
 
     @spec-0404 @e2e

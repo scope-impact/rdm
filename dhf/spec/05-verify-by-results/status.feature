@@ -1,14 +1,9 @@
-# Component Status, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-003
 Feature: Status
   Derives verified, failed, unverified or planned for every stamped scenario.
   Status is a report: it exits 0 whatever the statuses; only the release
   check refuses.
 
-  # Every other task prints its result under its own name, and status printed
-  # its map bare, a shape no scenario stated (cycle 14, builder; README, "A
-  # task's result shape is the spec's").
   Rule: Status's result has one shape
 
     @spec-0307 @contract
@@ -49,10 +44,6 @@ Feature: Status
       When "rdm-spec status" is run
       Then the scenario is failed
 
-    # An outline with fewer results than rows, all passing, counted as
-    # verified (cycle 11, builder): a release could pass on rows never run.
-    # Three results naming no row verified a three-row outline (cycle 13,
-    # grading): re-runs of one row could pass a release.
     @spec-0302 @contract
     Scenario: Results that name no row do not verify an outline
       Given a stamped scenario outline with three example rows
@@ -67,9 +58,6 @@ Feature: Status
       When "rdm-spec status" is run
       Then the scenario is unverified
 
-  # Incident: a test runner named its suites twice, once in imports and once in
-  # a run list, so a forgotten suite was silently green
-  # (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
   Rule: Allure results are the oracle, whoever wrote them
 
     @spec-0067 @contract

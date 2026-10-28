@@ -1,15 +1,7 @@
-# Component Spec check, bounded context spec of the rdm-spec container: dhf/spec/model.edn.
-# Slice 13-slice-development (ADR 0004, ADR 0005).
-
 @UN-001 @UN-002
 Feature: Spec check
   Holds every slice to its plan.
 
-  # spec-30, from cycle 23: spec-29's several spec folders were one rule in
-  # parser.feature but reached eight components more; the scopes named six
-  # and the integrator widened them by hand (dhf/cycles/23/cycle.edn). The
-  # spec owner chose Löyly's slice (loyly:README.md@17d68d2, "How to read the
-  # repo", layer 4): a piece of behaviour, planned, and rebuilt whole.
   @UN-001
   Rule: Every slice is planned
 
@@ -32,8 +24,6 @@ Feature: Spec check
         | plan.md's References name no user need                 | slice-unfounded        |
         | plan.md's References name UN-099, which no need is     | slice-unfounded        |
 
-  # spec-33, ADR 0005: the slice is the unit of work (Löyly,
-  # loyly:docs/wow/way-of-working.md@17d68d2, sections 1, 2 and 6).
   Rule: A slice says where it stands, and what was decided in it
 
     @spec-0411 @e2e

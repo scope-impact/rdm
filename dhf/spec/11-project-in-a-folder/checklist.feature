@@ -1,6 +1,3 @@
-# Component Checklist, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
-# Slice 11-project-in-a-folder (ADR 0004).
-
 @UN-008
 Feature: Checklist
   Derives a cycle's checklist in the project's folder.

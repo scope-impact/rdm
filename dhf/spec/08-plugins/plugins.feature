@@ -1,17 +1,3 @@
-# Kernel component Plugins: dhf/spec/model.edn, :kernel.
-#
-# The core harness, and plugins each project composes (dhf/decisions/
-# adr-0003-core-and-plugins.md, spec owner, spec-25). A project's own judge
-# (rdm-spec's held-still oracle, Löyly's affordance contract and its
-# conformance check, a domain model) was either built into the core or bolted
-# onto a check; in the core it grows the core with every project's idea and
-# cannot evolve with its project. A plugin is a command the project keeps in a
-# kept path, declared in its configuration's :plugins, that either subscribes
-# to an event the core publishes (its published language, events.edn) or
-# answers a request the core makes (a Gate, a Check). Löyly keeps the
-# configuration as everything a repository knows about itself
-# (loyly:harness/README.md@17d68d2, the pieces table, config.sh).
-
 @UN-015
 Feature: Plugins
   Runs the project's plugins: each subscribes to an event the core publishes,
@@ -41,8 +27,6 @@ Feature: Plugins
         | two plugins named "lint-a"                                                  | a plugin's name is declared once                                          |
         | a plugin whose command is under the implementation's paths                  | a plugin is a judge the builder never writes                              |
 
-  # The core's events are its published language: a plugin reads the event as
-  # events.edn declares it, and nothing of the core's internals.
   Rule: A subscriber receives each event it subscribes to, in every task that publishes it
 
     @spec-0351 @contract
@@ -64,9 +48,6 @@ Feature: Plugins
       When "rdm-spec check" is run
       Then the plugin did not run
 
-  # A plugin reports as a task does (dhf/spec/01-start-a-project/command.feature,
-  # spec-0178): its findings one per line on its error stream, as
-  # FILE:LINE: RULE: what; its standard output is relayed as notes.
   Rule: A plugin answers through one interface
 
     @spec-0354 @e2e
@@ -82,8 +63,6 @@ Feature: Plugins
         | writes nothing and exits 0                                                                         | exits 0 | no line from the plugin                             |
         | exits 2, writing "cannot read affordances.yaml" on its error stream                                | exits 2 | cannot-run, naming the plugin and relaying its line |
 
-    # Cycle 04 of Löyly: a probe stopped at its check's limit was reported as
-    # "exited ," with nothing it printed, and took two cuts to diagnose.
     @spec-0355 @e2e
     Scenario: A plugin that runs past its time limit is stopped and named as having timed out
       Given a plugin subscribing to :SpecParsed with :seconds 2, which prints "started" and then sleeps for 10 seconds
@@ -97,8 +76,6 @@ Feature: Plugins
       When "rdm-spec check" is run
       Then it exits 2 and names the plugin and its command
 
-  # The core asks; the plugin answers. A Gate runs before fence and verify, in
-  # place of the oracle that was built in (dhf/spec/08-plugins/oracle.feature).
   Rule: An answerer is asked at its request's place
 
     @spec-0357 @e2e
@@ -113,13 +90,8 @@ Feature: Plugins
       When "rdm-spec verify ROOM 03" is run
       Then its standard input was {:request :Gate :task :verify :cut "spec-3" :cycle "03"}
 
-  # Plugins are shared as templates, never as a running dependency: a project
-  # copies one and then owns it (ADR 0003, "Shared as templates").
   Rule: A plugin is added from the templates rdm-spec carries, and then owned
 
-    # spec-32, from cycle 24's grader: the ddd-domain template's command ran
-    # dhf/harness/plugins/ddd-domain/lint.clj, which the template did not
-    # carry, so a project that added it got a plugin that could not run.
     @spec-0405 @e2e
     Scenario Outline: An added template's plugin runs as it is declared
       Given a project made by "rdm-spec init"
@@ -132,9 +104,6 @@ Feature: Plugins
         | ddd-domain  |
         | affordances |
 
-    # Cycle 21: packaged from its sources alone, rdm-spec carried no template,
-    # and plugin add found none (spec-0359, spec-0360, wording). Every package
-    # carries them (spec owner, spec-26).
     @spec-0364 @e2e
     Scenario Outline: rdm-spec carries the same templates however it was installed
       Given rdm-spec installed <how>
@@ -165,9 +134,6 @@ Feature: Plugins
         | that already has dhf/harness/plugins/ddd-domain | ddd-domain | 1    | names the directory and copies nothing                       |
         | and nothing else                             | no-such    | 2    | names no-such and lists the templates rdm-spec carries       |
 
-  # spec-29, from halla-health's wallet: its oracle needed the e2e tests'
-  # folder and the sandbox's send window, which lived in the integrator's
-  # environment and the plugin's script, a difference nobody declared.
   Rule: What a plugin needs to know is in the configuration
 
     @spec-0382 @e2e
@@ -177,8 +143,6 @@ Feature: Plugins
       Then the plugin's environment held ORACLE_DIR "../e2e", SEND_LIMIT "5" and RDM_SPEC, and the rest of the caller's environment
       And an :env that is not a map of strings to strings is refused before anything runs, naming the plugin
 
-  # spec-29: a project's grading (deploying its build for its graders, however
-  # the project ships) starts when a cycle is verified, which no event said.
   Rule: A plugin can follow a verified cycle
 
     @spec-0383 @e2e
@@ -193,4 +157,3 @@ Feature: Plugins
       Given a plugin subscribing to :CycleVerified
       When "rdm-spec verify ROOM 03" is run and its tests check fails
       Then the plugin did not run
-

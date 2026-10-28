@@ -1,5 +1,3 @@
-# Component Views, bounded context architecture of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-005
 Feature: Views
   Generates every view from the one model and keeps them current.

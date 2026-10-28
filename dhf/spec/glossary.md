@@ -15,8 +15,7 @@ the cutover.
 
 **Project**: a repository rdm-spec is used on, set up by `init` or `adopt`,
 or one folder of a larger repository (a monorepo) that holds its own
-`dhf/harness/config.edn` (spec-27, from halla-health, whose wallet is one
-folder of four). This repository is one of them as well: rdm-spec regenerates
+`dhf/harness/config.edn`. This repository is one of them as well: rdm-spec regenerates
 itself from this spec (see Release). Its spec, model and event catalogue
 describe the project, never the harness that reads them. rdm-spec runs in a
 project's root, the folder that holds its configuration; run in any other
@@ -114,7 +113,7 @@ project.
 **Domain model**: what a project's event storm decides, kept as data when a
 project keeps it at all. It is not the core's: a project that keeps one adds
 the `ddd-domain` plugin, which holds it to the rules of domain-driven design
-(ADR 0003; until spec-25 it was the core's `architecture/domain`).
+(ADR 0003).
 
 **Event storm**: a way of finding the domain model with the people who know
 the domain: actors, commands, events, policies, read models and hotspots. It
@@ -129,7 +128,7 @@ input, or answers a request the core makes: `:Gate` before fence and verify,
 `:Check` as one of verify's checks. It reports as a task does: findings on its
 error stream, exit 0 holds, 1 findings, 2 cannot run; past its `:seconds`
 (60 by default) it is stopped and named as timed out. Its `:env` is added to its
-environment beside `RDM_SPEC` (spec-29); a `:Check` plugin may write results
+environment beside `RDM_SPEC`; a `:Check` plugin may write results
 of the spec's scenarios into the directory its request names, held to the
 `:allure` mapping as the tests check's are. A plugin is added from a
 template rdm-spec carries (`rdm-spec plugin add NAME`, which records the
@@ -179,7 +178,7 @@ _Avoid_: user (for a role), person (when either is meant).
 **Builder**: the role that regenerates the build from a cut, inside a clean
 room. A human or an agent. One builder per cycle, in one room, building its
 scopes one after another in the order `scopes` lists them; never contexts in
-parallel (spec owner, cycle 13).
+parallel.
 _Avoid_: coding agent (as the role's name).
 
 **Spec owner**: the role that reads the scoreboard and decides what the spec
@@ -233,7 +232,7 @@ any row's result did not pass, else unverified. A result counts toward a row
 only when it names the row, by its parameters. Status never
 enters a score: only a grader's verdicts do.
 
-**Slice**: a piece of behaviour, planned and rebuilt whole (spec-30; Löyly's
+**Slice**: a piece of behaviour, planned and rebuilt whole (ADR 0004; Löyly's
 `docs/plan/` slice). Under `:spec-layout :slices` it is a folder of the spec,
 `<NN-name>/`, holding its plan (`plan.md`: goal, references to the needs it
 serves, scope in and out, decisions) and one feature file per component it
@@ -241,7 +240,7 @@ reaches. A change to any of its files makes it a scope, and a slice scope
 rebuilds, and grades, every scenario of every component it reaches, in
 whichever slice the scenario sits.
 
-**Slice development**: working slice by slice (spec-33, ADR 0005; Löyly's
+**Slice development**: working slice by slice (ADR 0005; Löyly's
 way of working, sections 1, 2 and 6). A behaviour change starts in a slice;
 a cycle builds one slice (`cycle.edn` `:slice`), whole; its checklist marks
 each item `:role` `"slice"` (the slice's own scenario) or `"regression"` (a
@@ -251,7 +250,7 @@ slice's plan says its status, `planned`, `ready`, `building` or `done`, and
 its `decisions.md` keeps what was decided in it. A slice is done when its
 last cycle was accepted and every one of its scenarios is verified.
 
-**Spec folder**: one spec of a project that keeps several (spec-29): a folder
+**Spec folder**: one spec of a project that keeps several: a folder
 with its own feature files, model, event catalogue, needs, glossary, id ledger
 and domain model, declared in the configuration's `:specs` with its name and
 id prefix. A need, a component and a context resolve within their own spec; a
@@ -297,8 +296,7 @@ lint, the views' freshness and the wiki check.
 implementation, in place of the implementation of a fresh checkout of the cut,
 passes every check the project declares (`:verify` in its configuration), in
 order, the first that fails stopping it. Run by the installed rdm-spec; it
-gates and never scores. Its record keeps the name `ratified.edn`, the step's
-name until spec-20, so every cycle's record reads the same.
+gates and never scores. Its record is `ratified.edn`.
 _Avoid_: ratify (the old name, still in a few comments until their feature
 next changes); gate, on its own (say spec check or verify); confusing it with
 **Verified**, a scenario's status.
@@ -313,8 +311,7 @@ the exit and output the project expects, within its budget. Every check has a
 budget and reports its margin; a check that cannot run (a command not found,
 a port held) refuses the gate, never passes it. A `:serves` app answers when
 `GET /` on its port returns any HTTP response, whatever its status; an
-accepted connection with no response is not an answer (cycles 16 and 17 read
-it two ways). Declared in the
+accepted connection with no response is not an answer. Declared in the
 configuration's `:verify` as `{:kind :tests :command [...]}`, `{:kind :serves
 :name N :start [... "{port}" ...] :port P :budget {:seconds S :polls K} :probe
 [... "{url}" ...]}` and `{:kind :runs :name N :command [...] :expect {:exit E
@@ -331,8 +328,7 @@ any check runs (exit 2) writes no `ratified.edn`, since nothing was verified;
 one refused (exit 1) writes it, with `:checkout` only when the checkout was
 made. Once its checks have run, a check that cannot run (a plugin's, exit 2)
 or a `:CycleVerified` subscriber that cannot run still leaves `ratified.edn`
-written, that check `:refused`, and verify exits 2 (spec-32, from cycles 23
-and 24: spec-0361 and spec-0383 had said so against this entry).
+written, that check `:refused`, and verify exits 2.
 
 **Cycle**: one regeneration and its score: `dhf/cycles/NN/cycle.edn`, written
 by hand (cut, scope, builder, grader, spec owner, and `:bootstrap` for the very
@@ -343,7 +339,7 @@ export of the cut: its files, and no history.
 
 **Oracle (instrument)**: the judge of a project's instrument, held still: a
 command the project keeps by hand, outside its implementation, never
-regenerated: since spec-25 the project's plugin named "oracle", answering
+regenerated: the project's plugin named "oracle", answering
 `:Gate`. `rdm-spec oracle [ARGS]` runs it in the project's root with ARGS and
 with `RDM_SPEC` set to a command line starting the same rdm-spec, however it
 was installed (words separated by spaces; the rdm-spec it runs keeps the
@@ -353,8 +349,8 @@ named "oracle" is no oracle, said on standard output only. rdm-spec's own is `dh
 a black box on cases that each carry their whole fixture, and compares exit,
 output, error stream and written files with goldens recorded from an
 accepted release and pinned by digest (`dhf/harness/oracle/README.md`). A
-judge regenerated from the spec it judges agrees with the spec's mistakes
-(cycles 16 to 18); Löyly holds its harness still for the same reason. It
+judge regenerated from the spec it judges agrees with the spec's mistakes;
+Löyly holds its harness still for the same reason. It
 judges the instrument; the Allure results remain the oracle of a project's
 scenarios.
 
@@ -372,7 +368,7 @@ to it.
 has findings that are not warnings; the stages after it never see it. Every other stage reports, so
 one run names every finding. A stage whose code is not built, a gate or not,
 refuses the task (exit 2), since a stage skipped is a check that reads as a
-pass (cycle 13, builder), as Löyly's gate refuses an instrument nobody checked
+pass, as Löyly's gate refuses an instrument nobody checked
 (loyly:harness/README.md@17d68d2, "What makes the checks run"). Publish runs
 the views' freshness check as a gate before the site; audit runs its check
 that everything it is made from is committed as a gate, before the release

@@ -1,25 +1,7 @@
-# Component Audit copy, bounded context compliance of the rdm-spec container: dhf/spec/model.edn.
-#
-# What a team hands an auditor (dhf/wiki/pages/regulated-profile.md): every
-# controlled document twice, the auditor's copy with its audit tags and the
-# engineer's copy without, the clauses with where each is met, the
-# traceability, and the evidence, with a manifest that pins it all. Every file
-# is generated from the record; none is edited by hand.
-#
-# "A regulated project" is as in dhf/spec/10-regulated-profile/gap.feature: :regulated
-# with the clause list dhf/clauses/std.txt and the documents directory
-# dhf/documents. OUT and OUT2 are directories the scenario names.
-
 @UN-013
 Feature: Audit copy
   The auditor's copy and the engineer's copy of every controlled document, with the evidence they rest on.
 
-  # An audit copy of a record that is not releasable shows an auditor
-  # something nobody may ship. The release check, gaps included, is the gate
-  # before the audit copy, as the oracle is before fence
-  # (dhf/spec/01-start-a-project/command.feature, "A gate stops the task"). The audit copy
-  # reads the scenarios (SpecParsed), their statuses (VerificationDerived) and
-  # the clauses (ClausesIndexed, within its own context) from the bus.
   Rule: Only a releasable record has an audit copy
 
     @spec-0242 @e2e
@@ -46,8 +28,6 @@ Feature: Audit copy
       When "rdm-spec audit OUT" is run
       Then it exits 2, names OUT, and the file in it is unchanged
 
-  # The two copies are identical but for the notes
-  # (innolitics-rdm:README.md@f21b508, "Easy auditablility").
   Rule: Every document has an auditor's copy and an engineer's copy
 
     @spec-0246 @e2e
@@ -118,14 +98,6 @@ Feature: Audit copy
       When "rdm-spec audit OUT" is run
       Then OUT/manifest.edn holds exactly {:commit :files}: the commit HEAD resolves to, and every other file of OUT as {:path :sha256}, its path relative to OUT, sorted by path
 
-    # An untracked document closed a gap while the manifest said :clean true
-    # at a commit that did not hold it (cycle 08, grading); then an uncommitted
-    # scenario title reached the traceability page, and the release check and
-    # the audit read two revisions and disagreed (cycle 09, grading); then a
-    # clause list removed from the configuration in the working tree only let
-    # the audit pin a commit the release check refuses (cycle 10, grading).
-    # Then a document git ignores did the same (cycle 11, grading). An audit
-    # copy is of one commit or of nothing: every file it reads is HEAD's.
     @spec-0274 @e2e
     Scenario Outline: The audit copy is refused while what it is made from is not committed
       Given a releasable regulated project, all committed

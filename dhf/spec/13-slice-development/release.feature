@@ -1,12 +1,7 @@
-# Component Release check, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-# Slice 13-slice-development (ADR 0005).
-
 @UN-004
 Feature: Release check
   Checks a release of one slice.
 
-  # spec-33, ADR 0005: the slice is the unit of work (Löyly,
-  # loyly:docs/wow/way-of-working.md@17d68d2, sections 1, 2 and 6).
   Rule: A release can be asked of one slice
 
     @spec-0415 @e2e

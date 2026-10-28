@@ -1,5 +1,3 @@
-# Component Adopt, bounded context project of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-009
 Feature: Adopt
   Adds the skeleton to an existing repository, never overwriting a file.

@@ -1,21 +1,3 @@
-# Component Observe, bounded context agency of the rdm-spec container: dhf/spec/model.edn.
-#
-# Every run of a cycle, a builder's, a grader's or the integrator's, has two
-# halves: its capability, what it was for, proven by its result (ratify, the
-# score), and its defence, what it did outside its brief. "Done" is not the
-# builder's claim (loyly:harness/README.md@17d68d2, "The idea in five lines"
-# 3), and neither is "stayed in my room". Builders and graders wrote at the
-# filesystem's root, beside their rooms and into /tmp in cycles 06 to 11, and
-# each was found only because someone looked (dhf/cycles/retrospective-01-12.md).
-#
-# This component observes: it records, it never prevents, and it never stops
-# a run. Reads cannot be observed, and the record says so.
-#
-# The configuration's :agency {:watch [DIR ...] :tmp DIR} names the
-# directories whose entries are compared before and after a run ("~" is the
-# home directory) and the temporary directory whose entries are counted. W1,
-# T and ROOM are directories the scenario makes.
-
 @UN-014
 Feature: Observe
   Records each run's time, cost and what it touched outside its room, beside what it achieved, never netted.
@@ -77,9 +59,6 @@ Feature: Observe
       When "rdm-spec observe end 13 builder" is run
       Then it exits 2 and says no run of the role builder began in cycle 13
 
-  # Löyly's scoreboard counts both directions and never the net
-  # (loyly:harness/README.md@17d68d2, "The pieces, in pipeline order"); so is
-  # defence, and it is never folded into the score.
   Rule: Two cycles' runs are compared side by side, never netted
 
     @spec-0293 @contract

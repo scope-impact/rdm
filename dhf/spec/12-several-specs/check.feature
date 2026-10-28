@@ -1,12 +1,3 @@
-# Component Spec check, bounded context spec of the rdm-spec container: dhf/spec/model.edn.
-# Slice 12-several-specs (ADR 0004).
-
-# spec-29, from halla-health's wallet: its SDDs are one folder each (auth,
-# then its infrastructure, then the app's flows), each with its own needs,
-# model, glossary and ids; rdm-spec read one spec folder, so the second could
-# not sit beside the first. spec-32 gives each component the slice reaches
-# its own scenario (ADR 0004).
-
 @UN-001
 Feature: Spec check
   Checks each spec on its own terms.

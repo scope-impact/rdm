@@ -1,12 +1,7 @@
-# Component Status, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-# Slice 13-slice-development (ADR 0005).
-
 @UN-003
 Feature: Status
   Reports where each slice stands.
 
-  # spec-33, ADR 0005: the slice is the unit of work (Löyly,
-  # loyly:docs/wow/way-of-working.md@17d68d2, sections 1, 2 and 6).
   Rule: Status reports each slice
 
     @spec-0419 @e2e

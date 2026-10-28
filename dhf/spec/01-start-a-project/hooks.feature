@@ -1,5 +1,3 @@
-# Component Hooks, bounded context project of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-002 @UN-009
 Feature: Hooks
   Runs the check on every commit.

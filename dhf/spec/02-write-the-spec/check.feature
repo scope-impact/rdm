@@ -1,5 +1,3 @@
-# Component Spec check, bounded context spec of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-002
 Feature: Spec check
   The rules a spec must keep: one id and one level per scenario, only known tags, a
@@ -56,8 +54,6 @@ Feature: Spec check
       When "rdm-spec check" is run
       Then it fails and names the scenario's id and both levels
 
-    # Decided by the event storm's hotspot H4 (dhf/storm/2026-10-24-rdm.md):
-    # there is no persona level.
     @spec-0150 @e2e
     Scenario: A tag that is not an id, a level, a need or @wip fails the spec check
       Given a stamped scenario tagged @persona
@@ -103,10 +99,6 @@ Feature: Spec check
       When "rdm-spec check" is run
       Then it passes
 
-  # The spec never names its stack: a spec that names one has become a
-  # description of one implementation, and regenerating from it measures
-  # nothing (loyly:docs/wow/invariants.md@17d68d2, INV-2). The stack lives in
-  # dhf/harness/stack.md.
   Rule: The spec never names an implementation
 
     @spec-0209 @e2e

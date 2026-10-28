@@ -1,6 +1,3 @@
-# Component Scopes, bounded context regeneration of the rdm-spec container: dhf/spec/model.edn.
-# Slice 11-project-in-a-folder (ADR 0004).
-
 @UN-006
 Feature: Scopes
   Lists what a spec change touched in the project's folder.

@@ -1,13 +1,7 @@
-# Component Verify, bounded context verification of the rdm-spec container: dhf/spec/model.edn.
-# Slice 08-plugins: verify's :plugin check (ADR 0004).
-
 @UN-007 @UN-015
 Feature: Verify
   Asks a project's own judge as one of its checks.
 
-  # A project's own judge joins verify as a plugin answering :Check
-  # (dhf/spec/08-plugins/plugins.feature; ADR 0003): verify asks it at its place in
-  # :verify, in the checkout, and it answers as every plugin does.
   Rule: A :plugin check asks the project's own judge
 
     @spec-0361 @e2e
@@ -23,8 +17,6 @@ Feature: Verify
         | writes "src/app.clj:9: form-missing: …" on its error stream and exits 1 | exits 1, relaying the finding unchanged | :failed   |
         | exits 2                                                      | exits 2, naming the plugin                    | :refused  |
 
-    # spec-29: halla-health's acceptance harness answers :Check with Allure
-    # results of the spec's scenarios; they reached no task.
     @spec-0391 @e2e
     Scenario: A Check plugin's results are held to the mapping, and count
       Given a :plugin check "acceptance" whose plugin writes Allure results of every scenario into the :results directory its request names

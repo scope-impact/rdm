@@ -1,21 +1,3 @@
-# Component Oracle, bounded context measurement of the rdm-spec container: dhf/spec/model.edn.
-#
-# rdm-spec regenerates its own instrument every cycle, so the instrument needs
-# a judge of its own (cycle 03, dhf/cycles/03/proposed-spec-changes.md, C12;
-# loyly:harness/README.md@17d68d2, "The pieces, in pipeline order"). That judge
-# must not be regenerated with what it judges: an oracle rebuilt from the same
-# spec agrees with whatever the spec got wrong, and its goldens broke at each
-# rebuild (cycles 16 to 18; dhf/cycles/18/proposed-spec-changes.md). So, as
-# Löyly holds its harness still, the oracle is not this component: it is a
-# command the project keeps by hand, outside its implementation (for rdm-spec,
-# dhf/harness/oracle/oracle.clj, which says what it judges and how). This
-# component only runs that command as the gate before fence and verify
-# (spec owner, spec-23). The scenarios that described the oracle's own
-# workings (spec-0228 to spec-0231, spec-0276, spec-0277, spec-0280,
-# spec-0325 to spec-0328) are removed with it. Since spec-25 the oracle is a
-# plugin answering :Gate (dhf/spec/08-plugins/plugins.feature; ADR 0003), the one
-# named "oracle"; this component is the oracle task, its shorthand.
-
 @UN-008
 Feature: Oracle
   Runs the oracle the project keeps: the plugin named "oracle", which answers
@@ -48,13 +30,6 @@ Feature: Oracle
       When "rdm-spec oracle" is run
       Then it exits 2 and names the command
 
-  # A room built, or a build verified, by an instrument nobody checked hands
-  # the next cycle a judge nobody checked (loyly:harness/README.md@17d68d2,
-  # "What makes the checks run").
-  # The oracle is a Gate plugin: the command asks every plugin answering
-  # :Gate before fence and verify and stops the task while one fails, so
-  # neither fence nor verify knows the oracle (dhf/spec/08-plugins/plugins.feature;
-  # dhf/spec/01-start-a-project/command.feature, "A gate stops the task").
   Rule: Nothing is fenced or verified while the oracle is red
 
     @spec-0232 @e2e

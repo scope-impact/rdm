@@ -25,8 +25,7 @@ several slices, one feature file per slice named for it; the model's spec
 path names the slice it started in. Work is slice development (ADR 0005):
 a change starts in a slice, and a cycle builds one.
 
-Under the slices layout (`:spec-layout :slices` in the configuration,
-spec-30), the spec is grouped by slice first: `<NN-slice>/plan.md` (the
+Under the slices layout (`:spec-layout :slices` in the configuration), the spec is grouped by slice first: `<NN-slice>/plan.md` (the
 slice's goal, references, scope in and out, and decisions, as Löyly's
 `docs/plan/` slices) and `<NN-slice>/<component>.feature`, the slice's
 scenarios of one component, named by its name in the model. A component's
@@ -43,10 +42,9 @@ of a slice rebuilds the slice whole, every component it reaches.
 - **Ids are handed out by the stamper and never reused.** Until the stamper
   exists they are stamped by hand, following its rules
   (`spec/stamper.feature`) and advancing `ids.edn`.
-- **A guard cites its incident.** A rule or scenario that exists because
-  something once lied says so in a comment above it, with where the incident
-  is recorded. A scenario that only says what a component does when nothing
-  is wrong cites nothing.
+- **The spec says what is true, never how it came to be.** Feature files
+  hold Gherkin only. Why a rule exists, and the incident that taught it, is in
+  its slice's `decisions.md`, beside the plan.
 - **The spec never names its stack.** Tools and languages are in
   `dhf/harness/stack.md`; the spec check refuses the configured stack words.
 - **Every When runs the command** (`rdm-spec <task>`) unless the step edits a
@@ -66,14 +64,12 @@ of a slice rebuilds the slice whole, every component it reaches.
   the machine it was made on.
 - **A scenario's commands inherit the tests' environment, PATH and HOME
   included, except RESULTS_DIR, plus what its steps set;** a variable a
-  scenario depends on is set by a step (cycle 08: git and the site builder
-  need PATH).
+  scenario depends on is set by a step.
 - **A task's result shape is the spec's.** Where another context's step reads
   a task's standard output, the task's feature holds a contract scenario for
-  that shape, and the step reads only what it states (cycle 08: spec-0047).
+  that shape, and the step reads only what it states.
 - **A Then that says nothing changed is paired with the outcome the command
-  must have,** so a command that never ran cannot pass it (cycle 11:
-  spec-0100 passed while publish exited 2).
+  must have,** so a command that never ran cannot pass it.
 - **Each rule a file breaks is its own finding,** so one file may have
   several.
 - **One step text, one meaning.** A Given worded the same in two feature files

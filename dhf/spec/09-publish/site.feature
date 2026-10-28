@@ -1,9 +1,3 @@
-# Component Site, bounded context publishing of the rdm-spec container: dhf/spec/model.edn.
-#
-# The site is Markdown, built to HTML by the configured site builder, an
-# external tool (dhf/harness/config.edn, :site): decided by the event storm's
-# hotspot H6. rdm-spec writes the builder's configuration, never its code.
-
 @UN-010
 Feature: Site
   One page per component: its prose, its scenarios and their status.
@@ -55,10 +49,6 @@ Feature: Site
 
   Rule: The site is a reading of the spec, never a copy that can drift
 
-    # One copy of the model hash: publish runs the views' freshness check as a
-    # gate before the site, so the site never computes the hash itself
-    # (loyly:harness/README.md@17d68d2, "The pieces, in pipeline order":
-    # "four copies drift into four instruments").
     @spec-0099 @e2e
     Scenario: Publishing refuses views older than the model
       Given a rendered view whose recorded hash differs from the model's
@@ -87,16 +77,12 @@ Feature: Site
       When "rdm-spec publish" is run
       Then the page is published and the footnote links to README.md at 17d68d2 in skallinen/loyly
 
-    # The index's own footnote was published unlinked while the pages' were
-    # linked (cycle 06, grading).
     @spec-0273 @e2e
     Scenario: The wiki's index is published with its footnotes linked, as a page is
       Given the wiki's index holds a footnote citing "loyly:README.md@17d68d2"
       When "rdm-spec publish" is run
       Then the published index's footnote links to README.md at 17d68d2 in skallinen/loyly
 
-    # Wiki pages were published but reachable by no link (cycle 05, 1); three
-    # builders read spec-0146 and spec-0133 three ways.
     @spec-0239 @e2e
     Scenario: The wiki is reachable from the home page and the navigation
       Given a wiki whose index lists two pages
@@ -125,8 +111,6 @@ Feature: Site
       Then it exits 1 and names the page and the link
       And no HTML is left in the site directory
 
-    # Incident: a gate once reported success because a missing tool turned its
-    # command into a no-op that exited 0 (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
     @spec-0149 @e2e
     Scenario: Without the site builder, building fails and names the missing tool
       Given the configured site builder is not installed, and a site directory left by an earlier publish

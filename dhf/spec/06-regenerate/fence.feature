@@ -1,12 +1,8 @@
-# Component Fence, bounded context regeneration of the rdm-spec container: dhf/spec/model.edn.
-
 @UN-006
 Feature: Fence
   Builds a clean room from a cut, for the whole project or the scopes a spec
   change touched, and proves it holds nothing it should not.
 
-  # Every prior implementation and every measurement is out of the clean room,
-  # so nothing can be copied, only rebuilt (loyly:harness/README.md@17d68d2, "The idea in five lines" 2).
   Rule: A clean room is built only from a cut
 
     @spec-0037 @e2e
@@ -15,15 +11,6 @@ Feature: Fence
       When "rdm-spec fence ROOM HEAD" is run
       Then it exits 2 and says regeneration reads only a cut
 
-  # Incident: a weaker fence probe once passed while the previous implementation
-  # was still reachable from an older commit (loyly:harness/README.md@17d68d2, "The failure modes this shape was learned from").
-  # The clean room is the cut minus what is denied, as Löyly's fence is the
-  # repository minus every implementation and measurement (spec owner, cycle
-  # 13). A deny-list leaks what nobody remembered to deny; so every committed
-  # path is classified, denied or kept, and an unclassified one stops the
-  # check, and no kept file may carry a removed implementation file's bytes.
-  # spec-0040 (an allowed path missing at the cut) is retired with the
-  # allow-list.
   Rule: A clean room is the cut minus what is denied
 
     @spec-0038 @e2e
@@ -61,10 +48,6 @@ Feature: Fence
       When "rdm-spec check" is run
       Then it exits 1 with a finding naming dhf/scratch as neither denied nor kept
 
-  # The configuration's :code-layout places each component's code and unit
-  # tests by context and component, and :implementation lists every
-  # implementation path. So any part can be rebuilt while the rest stands, which
-  # is what makes the contexts composable.
   Rule: A clean room can rebuild the project, one bounded context or one component
 
     @spec-0182 @e2e
@@ -94,9 +77,6 @@ Feature: Fence
       Then ROOM holds no file of the bounded contexts knowledge and publishing or of the component spec/parser
       And it holds every other implementation file at the cut, unchanged
 
-    # scopes lists a component the cut removed, and fence refused it, so its
-    # code was removed from cycle 16's room by hand
-    # (dhf/cycles/16/proposed-spec-changes.md, 3).
     @spec-0329 @e2e
     Scenario: A component the cut removed is fenced by the files the code layout finds for it
       Given the cut spec-4's model no longer names ratification/ratify, and the cut still holds src/rdm_spec/ratification/ratify.clj and test/rdm_spec/ratification/ratify_test.clj
@@ -111,8 +91,6 @@ Feature: Fence
       Then it exits 2 and names archive and the model's bounded contexts and kernel
       And so does a component the model does not name whose files the code layout finds none of
 
-    # The kernel is shared code in no bounded context, but it changes with the
-    # spec like any other (cycle 01, D).
     @spec-0222 @e2e
     Scenario: The kernel is a scope like a bounded context
       Given a project whose commit tagged spec-3 holds an implementation
