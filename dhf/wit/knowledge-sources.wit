@@ -1,0 +1,75 @@
+// Component Sources of the knowledge context (dhf/spec/model.edn,
+// :knowledge/sources; dhf/spec/03-ground-the-spec/sources.feature): reads the
+// provenance records and resolves citations against their pins. It is check's
+// sources stage (spec-check.wit, check-stages), which this component exports,
+// the first stage of a run, and publishes KnowledgeIndexed (events.wit,
+// knowledge-events).
+//
+// What it reads: the sources index (the configuration's :raw-dir,
+// sources.edn) and the records beside it; the index's history, every commit
+// of it, through git; the citations of every spec's needs and of the wiki's
+// footnotes, nothing else (spec-0199). It resolves every citation, the
+// wiki's too, so one component reports them all
+// (dhf/spec/03-ground-the-spec/decisions.md, "A need's citations resolve";
+// ED-05). A citation's path is checked in the checkout of its source in the
+// directory --sources names, at its pin, through git run by the host
+// (rdm:host/process; ED-06): a checkout is outside the project's folder, the
+// only folder WASI gives the component.
+
+interface knowledge-sources {
+    use knowledge-events.{knowledge-indexed};
+
+    /// One line of check's error stream, as the stage reports it (spec-check.wit,
+    /// check-stages): "FILE:LINE: RULE: what", or a warning when warning is
+    /// true (citation-unchecked). In this interface's own types (slice 01's
+    /// ED-14).
+    record finding {
+        file: option<string>,
+        line: option<u32>,
+        rule: string,
+        message: string,
+        warning: bool,
+    }
+
+    /// What one reading found: the event it publishes, and its findings and
+    /// warnings, in the order ED-09 settles. The event's findings are the same
+    /// lines, the warnings among them, without the flag the catalogue's shape
+    /// does not carry (ED-09).
+    record indexed {
+        event: knowledge-indexed,
+        findings: list<finding>,
+    }
+
+    /// Reads the sources index and resolves every citation, the working tree
+    /// at the project's folder within its git repository (folder, as the
+    /// command hands it to a task, tasks.wit; none outside a git repository,
+    /// where the index has no history). sources is check's --sources DIR as
+    /// given, relative to the project's root or absolute, none when not given:
+    /// then every citation that names a recorded, pinned, unfenced path is
+    /// unchecked, never resolved (spec-0126). The error is why the reading
+    /// cannot run (the --sources directory does not exist, git cannot be
+    /// started), reported as cannot-run, exit 2.
+    index: func(sources: option<string>, folder: option<string>) -> result<indexed, string>;
+}
+
+/// The component knowledge/sources builds to. It exports check's sources
+/// stage, the stage interface spec-check.wit's check-stages imports, written
+/// out the same (WIT cannot name that inline interface): index's findings;
+/// published, KnowledgeIndexed as EDN; reported, none (ED-07). It exports the
+/// slice's tasks, which name no task (ED-03), and the event record it
+/// publishes (knowledge-events). It runs git through the host. Its WASI
+/// imports are those every component carries, in the version slice 01's
+/// worlds name (ED-08).
+world knowledge-sources-component {
+    import rdm:host/process@0.1.0;
+    export knowledge-events;
+    export knowledge-sources;
+    export tasks;
+    export sources-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}

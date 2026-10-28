@@ -8,7 +8,8 @@
 // components (kernel/command, project/init, project/adopt, project/hooks)
 // publish no event and subscribe to none (dhf/spec/model.edn, :relationships).
 // Slice 02, write-the-spec, adds :SpecParsed and :SpecGated (below); slice
-// 03, ground-the-spec, adds :KnowledgeIndexed. Slice 04,
+// 03, ground-the-spec, adds :KnowledgeIndexed, in an interface of its own
+// (knowledge-events, below). Slice 04,
 // model-the-architecture, adds none: its components publish no event, and
 // architecture/lint, which the model has subscribe to :SpecParsed, is a stage
 // of check, given the run's events as EDN (spec-check.wit, check-stages).
@@ -118,6 +119,79 @@ interface events {
     record spec-gated {
         revision: revision,
         passed: bool,
+        findings: list<finding>,
+    }
+}
+
+// Slice 03, ground-the-spec (dhf/spec/03-ground-the-spec/plan.md):
+// KnowledgeIndexed, published by knowledge/sources. An interface of its own,
+// not a record added to events: events is exported by spec/parser (slice 02),
+// whose build an added type would no longer match, and a slice-03 interface
+// using events' types would import slice 02, which imports this slice's
+// stages, a cycle no composition can wire
+// (dhf/spec/03-ground-the-spec/decisions.md, ED-04). Its types are its own,
+// the revision and the finding written out as events writes them.
+// knowledge/sources exports it beside its own interface, as spec/parser
+// exports events (slice 02's ED-07). A stage or plugin of another slice reads
+// the event as EDN (slice 02's ED-04).
+
+interface knowledge-events {
+    /// The revision an event read: :working-tree, or the commit read.
+    variant revision {
+        working-tree,
+        commit(string),
+    }
+
+    /// A finding as an event carries it: {:file :line :rule :message}, the
+    /// line left out where none applies.
+    record finding {
+        file: option<string>,
+        line: option<u32>,
+        rule: string,
+        message: string,
+    }
+
+    /// One source of the sources index: {:id :repository :pins [pin]
+    /// :fenced [path]}, id the index's key without its colon.
+    record source {
+        id: string,
+        repository: option<string>,
+        pins: list<string>,
+        fenced: list<string>,
+    }
+
+    /// :status of a citation: :resolved, :unresolved or :unchecked.
+    enum citation-status {
+        resolved,
+        unresolved,
+        unchecked,
+    }
+
+    /// One citation read: {:citation :source :path :commit :file :line :need
+    /// :status :reasons}; citation as written (id:path@commit), source, path
+    /// and commit its three parts (none for a string that is not a citation);
+    /// file and line where it is written; need the citing need's id, none for
+    /// a wiki footnote; reasons why it did not resolve, or was not checked.
+    record citation {
+        citation: string,
+        source: option<string>,
+        path: option<string>,
+        commit: option<string>,
+        file: string,
+        line: option<u32>,
+        need: option<string>,
+        status: citation-status,
+        reasons: list<string>,
+    }
+
+    /// :KnowledgeIndexed, published by knowledge/sources: the raw sources and
+    /// the wiki were read: every pinned source, every page, and which
+    /// citations resolve.
+    record knowledge-indexed {
+        revision: revision,
+        sources: list<source>,
+        pages: list<string>,
+        citations: list<citation>,
         findings: list<finding>,
     }
 }

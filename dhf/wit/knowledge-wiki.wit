@@ -1,0 +1,48 @@
+// Component Wiki of the knowledge context (dhf/spec/model.edn,
+// :knowledge/wiki; dhf/spec/03-ground-the-spec/wiki.feature): the domain
+// wiki, every page indexed, every claim footnoted to a source, no
+// implementation named. It is check's wiki stage (spec-check.wit,
+// check-stages), which this component exports.
+//
+// Its footnotes' citations are resolved and reported by knowledge/sources,
+// with the needs', so one component reports every citation
+// (dhf/spec/03-ground-the-spec/decisions.md, ED-05): this component reads the
+// wiki's folder (the configuration's :wiki-dir) and the configured stack
+// words, and imports nothing of the slice. The model's relationship "Resolves
+// footnotes with" knowledge/sources is a question for the spec owner (ED-05).
+
+interface knowledge-wiki {
+    /// One line of check's error stream, as the stage reports it
+    /// (spec-check.wit, check-stages). In this interface's own types (slice
+    /// 01's ED-14).
+    record finding {
+        file: option<string>,
+        line: option<u32>,
+        rule: string,
+        message: string,
+        warning: bool,
+    }
+
+    /// The wiki check of the project's wiki (ED-13): a page with no footnote
+    /// (spec-0127), a page the index does not link (spec-0130), an index
+    /// entry with no page (spec-0131), a line of a page or the index naming a
+    /// configured stack word (spec-0132), each its own finding; none for a
+    /// project with no wiki folder.
+    check: func() -> list<finding>;
+}
+
+/// The component knowledge/wiki builds to. It exports check's wiki stage,
+/// the stage interface spec-check.wit's check-stages imports, written out the
+/// same: check's findings; reported and published, none (ED-07). Its WASI
+/// imports are those every component carries, in the version slice 01's
+/// worlds name (ED-08).
+world knowledge-wiki-component {
+    export knowledge-wiki;
+    export wiki-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}

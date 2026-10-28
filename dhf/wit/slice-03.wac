@@ -1,0 +1,30 @@
+// Slice 03, ground the spec (dhf/spec/03-ground-the-spec/plan.md), composed
+// from the components whose home is this slice, each built to its own
+// component exporting its interface (wasm/components/<context>-<component>/,
+// dhf/harness/stack.md). Targets the slice's world, ground-the-spec
+// (slice-03.wit).
+//
+// The two components share no import: knowledge/sources resolves every
+// citation, the wiki's footnotes too, and the wiki imports nothing of it
+// (ED-05). Every import is left to the composition: WASI's and
+// rdm:host/process (git, for sources), which the host satisfies. The slice
+// exports its tasks (none named: ED-03) and check's two stages, which
+// rdm-spec.wac wires into slice 02's imports by name.
+//
+// Packages resolve from the build's dependency directory, as slice-01.wac
+// says: rdm:knowledge-sources is wasm/build/deps/rdm/knowledge-sources.wasm,
+// and rdm:spec@0.1.0 is dhf/wit encoded. Then
+// "wac compose dhf/wit/slice-03.wac --deps-dir wasm/build/deps
+//  -o wasm/build/deps/rdm/ground-the-spec.wasm".
+package rdm:ground-the-spec targets rdm:spec/ground-the-spec@0.1.0;
+
+let sources = new rdm:knowledge-sources { ... };
+
+let wiki = new rdm:knowledge-wiki { ... };
+
+export sources["rdm:spec/knowledge-events@0.1.0"];
+export sources["rdm:spec/knowledge-sources@0.1.0"];
+export wiki["rdm:spec/knowledge-wiki@0.1.0"];
+export sources["rdm:spec/tasks@0.1.0"];
+export sources["sources-stage"];
+export wiki["wiki-stage"];

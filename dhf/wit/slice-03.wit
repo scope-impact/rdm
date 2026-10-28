@@ -1,0 +1,45 @@
+// Slice 03, ground the spec (dhf/spec/03-ground-the-spec/plan.md): the
+// sources the spec is distilled from, each indexed with its repository, pins
+// and record, and a domain wiki whose every claim cites one, so no rule in
+// the spec rests on nothing.
+//
+// Exports the interfaces of the components whose home is this slice (their
+// model spec path names it: knowledge/sources, knowledge/wiki), the event
+// record knowledge/sources publishes (knowledge-events, events.wit), the
+// slice's tasks (tasks.wit), which name no task: the slice runs none of its
+// own, and its stages run within check (ED-03); rdm-spec.wac wires them to
+// the command's import ground-the-spec (tasks.wit, later-slices). And check's
+// two stages this slice builds, sources-stage (knowledge/sources') and
+// wiki-stage (knowledge/wiki's), which rdm-spec.wac wires by name into slice
+// 02's imports of them (spec-check.wit, check-stages), ahead of the
+// not-built stand-in's spread (ED-02). Imports the host's processes, for git
+// (ED-06). It imports no other slice: slice 02 imports its stages, so an
+// import of slice 02 would be a cycle no composition can wire
+// (dhf/spec/02-write-the-spec/decisions.md, ED-02).
+//
+// WASI is named by no world of this slice, as in slices 02 and 04: the cycle
+// that builds the slice adds the line slice 01's worlds carry, in the version
+// they carry (dhf/spec/03-ground-the-spec/decisions.md, ED-08).
+// Composed by slice-03.wac.
+
+world ground-the-spec {
+    import rdm:host/process@0.1.0;
+    export knowledge-events;
+    export knowledge-sources;
+    export knowledge-wiki;
+    export tasks;
+    export sources-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+    export wiki-stage: interface {
+        record event { name: string, published-by: string, edn: string }
+        record finding { file: option<string>, line: option<u32>, rule: string, message: string, warning: bool }
+        record request { args: list<string>, folder: option<string>, events: list<event> }
+        record answer { findings: list<finding>, published: list<event>, reported: option<string> }
+        run: func(request: request) -> option<result<answer, string>>;
+    }
+}
