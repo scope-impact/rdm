@@ -215,6 +215,20 @@
 
 (defn location [l] (or (second (re-find #"^(\S+?:(?:\d+:)?) " l)) l))
 
+;; Unstated only in some answers, so not a plain path (spec owner, cycle 24):
+;; - a tests check's :scenarios is stated for a check that passed (spec-0314),
+;;   never for one that failed; cycle 23 gives none there, the goldens 5;
+;; - a mapping finding names its result file as FILE:LINE (spec-0331), but no
+;;   scenario says which line of the file; the goldens hold 3, cycle 23 10.
+(defn unstated-when [c x]
+  (if (not= c :verification/verify)
+    x
+    (cond-> x
+      (= :failed (get-in x [:out :verify :checks 0 :outcome]))
+      (dissoc-in [:out :verify :checks 0 :scenarios])
+      (sequential? (:err x))
+      (update :err (fn [e] (mapv #(str/replace % #"^(\S+-result\.json):\d+:" "$1:") e))))))
+
 ;; The order of findings is stated nowhere, so heads are compared sorted.
 (defn stated [c x]
   (when x
@@ -226,7 +240,7 @@
                                                      h)))
                                         h))))
               x)]
-      (reduce (fn [x [path _]] (dissoc-in x path)) x (unstated c)))))
+      (unstated-when c (reduce (fn [x [path _]] (dissoc-in x path)) x (unstated c))))))
 
 (defn component-keys [data] (sort-by str (filter #(and (keyword? %) (namespace %)) (keys data))))
 
