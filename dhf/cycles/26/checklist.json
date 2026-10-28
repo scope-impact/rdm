@@ -1,0 +1,214 @@
+{
+  "cycle" : "26",
+  "cut" : "spec-40",
+  "items" : [ {
+    "id" : "spec-0025",
+    "title" : "The pre-commit hook runs the check",
+    "context" : "project",
+    "component" : "Hooks",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0079",
+    "title" : "Adopt adds the skeleton beside what is already there",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0080",
+    "title" : "A destination that already exists is skipped and named",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0081",
+    "title" : "A symbolic link at a destination counts as existing",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0082",
+    "title" : "An existing ignore file is kept, and the lines to add are named",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0083",
+    "title" : "Adopting twice changes nothing",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0084",
+    "title" : "Adopt refuses a directory that is not a git repository",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0085",
+    "title" : "The adopted spec is empty whatever the repository holds",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0086",
+    "title" : "Init writes the skeleton and names what it wrote",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0087",
+    "title" : "Init refuses a path that already exists",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0089",
+    "title" : "The id prefix is chosen at init",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0090",
+    "title" : "The check passes on a skeleton nobody has touched",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0176",
+    "title" : "Each task is run as rdm-spec <task>",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0177",
+    "title" : "A task that passes exits 0",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0178",
+    "title" : "A task that finds a problem exits 1 and names it on the error stream",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0179",
+    "title" : "A task that cannot run exits 2 and says why",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0180",
+    "title" : "An unknown task exits 2 and lists the tasks",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0193",
+    "title" : "A task's results directory defaults to the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0219",
+    "title" : "A task's results directory is --results, else RESULTS_DIR, else the configured one",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0223",
+    "title" : "The id prefix defaults to spec and must start a tag",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0235",
+    "title" : "A task with no gate reports the findings of every stage",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0272",
+    "title" : "Init takes an absolute path as well as a relative one",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0368",
+    "title" : "A task that reads a cut reads the project's folder at the cut",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "e2e",
+    "slice" : "11-project-in-a-folder",
+    "role" : "regression"
+  }, {
+    "id" : "spec-0420",
+    "title" : "Adopt's result has one shape",
+    "context" : "project",
+    "component" : "Adopt",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0421",
+    "title" : "Only help, init and adopt run outside a project's root",
+    "context" : "kernel",
+    "component" : "Command",
+    "level" : "e2e",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  }, {
+    "id" : "spec-0422",
+    "title" : "Init's result has one shape",
+    "context" : "project",
+    "component" : "Init",
+    "level" : "contract",
+    "slice" : "01-start-a-project",
+    "role" : "slice"
+  } ],
+  "planned" : [ ]
+}
