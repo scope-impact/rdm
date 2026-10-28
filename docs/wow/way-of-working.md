@@ -70,6 +70,13 @@ that is a spec bug: fix the slice, not the reading.
 
 ## The rules
 
+- **The spec alone carries the product.** No planner, builder or grader
+  learns behaviour from an implementation, old or new. A place where the spec
+  is silent and a grader could see the difference is a spec gap: it is
+  stated in the spec before the slice is built, never copied from the last
+  build. The gaps found per slice are the measure of the spec, as the
+  delta between generations is (loyly, section 5).
+
 - **Slice development** (ADR 0005): the slice is the unit of work. A cycle
   builds one slice, whole, with every component it reaches; its checklist,
   score and status are the slice's, regression items apart. A slice goes

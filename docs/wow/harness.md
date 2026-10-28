@@ -35,6 +35,15 @@ builder an unjudged look at the running product; that step is not built.
 You plan one slice; you build nothing. Plan only: write no code, no step
 definition, no test (loyly, harness, section 1).
 
+The rebuild's point is to prove the spec alone carries the product, in any
+language. So you never read the implementation (`src/`, `test/`, `wasm/`)
+or run the installed release to learn how something behaves. Where the spec
+is silent, that is a finding, never a gap to fill from the old code: write it
+under "## Spec gaps" in the slice's `decisions.md` (the scenario, what is
+unstated, the smallest scenario or glossary line that would state it), and
+say whether a grader could see it (it must then be stated before the build)
+or not (it may stay the builder's choice).
+
 - **Read** `README.md`, `docs/wow/`, the wiki from its index, then the slice:
   `plan.md`, `decisions.md`, its feature files, and the feature files of the
   components it reaches.
