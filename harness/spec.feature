@@ -37,6 +37,10 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       command = ["impl/test.sh"]
       results = "impl/results"
       budget-seconds = 60
+      port = 8901
+
+      [build]
+      review-every = 5
       """
 
   # ------------------------------------------------------------------
@@ -1148,6 +1152,28 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         run = 1
         budget-seconds = 60
         """
+      And it exits 1
+
+    Scenario: A process already answering on the product's port refuses the run
+      Given something answers on port 8901 before verify starts the product
+      When I run harness verify 03
+      Then stdout is exactly
+        """
+        verify = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "port-free"
+        port = 8901
+        """
+      And it exits 1
+      # Löyly's failure mode: an orphan from a dead run once answered a
+      # health probe and a scoring run graded the wrong process.
+
+    Scenario: A room whose spec tree differs from the cut's is refused
+      Given cycles/03/room's spec/ differs from spec-3's spec/
+      When I run harness verify 03
+      Then stdout holds [finding] with rule = "spec-locked", path = "spec/slots.feature"
       And it exits 1
 
     Scenario: Verify runs only in a proved room

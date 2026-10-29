@@ -17,7 +17,7 @@ record, and stop at the first refusal. A step's output is never edited.
 | scope | `harness scopes spec-M spec-N` | the printed scope is filed verbatim; nothing is added by hand |
 | fence | `harness fence NN` | `removed`, `kept` and `tree` are printed and the proof passed |
 | build | dispatch the builder with the `build` phase and the room's path; one builder | the builder's report is in |
-| gate | `harness verify NN` | `verified.toml` exists, or the refusal is filed and sent back to the builder |
+| gate | `harness verify NN`: the suite twice inside the budget, then every plugin answering `verify`, the identity probe among them (the thing answering is this product, shown by domain behaviour, never by a name) | `verified.toml` exists, or the refusal is filed and sent back to the builder |
 | checklist | `harness checklist` at the cut | `cycles/NN/checklist.toml` written |
 | grade | dispatch each grader with the `grade` phase, their own room, the built product and the cut; at least two distinct models, or one model and a person | every `verdicts-<g>.toml` is in |
 | score | `harness score NN <verdicts...>` | `score.toml` written |

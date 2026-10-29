@@ -323,7 +323,14 @@ who may grade. _Avoid:_ developer, agent (an agent may be a builder; a
 builder may be a person), generator.
 
 **Round.** One RED or GREEN transition of the builder, logged in
-`redgreen.log`. _Avoid:_ cycle, iteration.
+`redgreen.log`; every Nth is a review round (`REVIEW`), in which the
+builder reads its own diff and builds nothing. _Avoid:_ cycle, iteration.
+
+**Probe.** The plugin answering `verify` that asks the product to show
+domain behaviour only this product has, so the gate knows the thing
+answering is this build and not an orphan or a stand-in. A name is not
+evidence. _Held by:_ `is-this-app`, `port-free`. _Avoid:_ health check,
+ping, smoke test.
 
 ## The gate
 

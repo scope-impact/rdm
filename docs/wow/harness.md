@@ -16,13 +16,16 @@ leave the verdict to the agent (Löyly, section 3).
 
 | Guardrail | What it does | Enforced by |
 |---|---|---|
-| Spec-lock | an edit a builder makes to `spec/`, `docs/` or `harness/` during a build round is reverted; the spec changes in planning rounds, on purpose | the fence's proof, and `verify` refusing a room whose spec tree differs from the cut's |
+| Spec-lock | an edit a builder makes to `spec/`, `docs/` or `harness/` during a build round fails the gate; the spec changes in planning rounds, on purpose | `verify` refusing a room whose spec tree differs from the cut's or whose kept paths changed |
 | Orient step | every round starts by re-reading the sources of truth in the read order below, never by resuming from memory | the brief; the builder's first commit names what it read |
 | Spec alone | no planner, builder or grader learns behaviour from any implementation; a silence a grader could see is a spec gap, stated before the build or left to the builder by name | the room holds no earlier implementation of the scope (INV-4, the fence); the planner's gap list |
 | Scope fence | an edit outside the scope's implementation paths is reverted | the fence lists what the room keeps; `verify` refuses a room whose kept paths changed |
 | Ratified DONE | a DONE claim counts only when `harness verify` passes | INV-5 |
 | Black box | a grader sees the built product and the spec, never the builder's tests or code | the grading room: the room's build artefact and the cut, nothing else |
-| Adversarial review | every cycle, a reviewer hunts invented rules and spec drift in the diff; it never grades | the review step of the cycle |
+| Adversarial review | every Nth build round the builder reviews its own diff instead of building (`[build] review-every`); every cycle, a reviewer hunts invented rules and spec drift in the whole diff and never grades | `redgreen.log`'s `REVIEW` rounds; the review step of the cycle |
+| Human-realistic checks | the builder's tests and the grader's verdicts drive the real interface as the actor would; an unreachable path is a finding, never forced | the build and grade briefs; `decisions.toml` |
+| Identity probe | the gate asks the product to show domain behaviour only this product has; a name is not evidence | a plugin answering `verify` (`is-this-app`) |
+| A look without a verdict | every Nth round the builder looks at the product's surface and writes questions, judged by nobody; off unless the owner sets the budget | `[build] look-every`; Löyly names this as the step its harness lacks |
 | Owner's decisions | a verdict, a spec-gap decision and a cycle's acceptance are a person's | INV-10; `score` refuses a record whose owner is an agent |
 
 The executable form of this document is the skill at
