@@ -188,6 +188,7 @@ they are not made a third time:
 ## 11. Where the rest is
 
 What each thing is: `docs/wiki/glossary.md`. Each rule and its enforcement
-point: `docs/wow/invariants.md`. How an agent is pointed at this repository
+point: `docs/wow/invariants.md`. What the instrument measures, as a
+hierarchical Bayesian model: `docs/wow/posterior.md`. How an agent is pointed at this repository
 and the guardrails it runs under: `docs/wow/harness.md`. The domain the
 harness serves: `docs/wiki/`, from its index.
