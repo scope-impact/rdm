@@ -1,0 +1,19 @@
+# The harness's own gate, in CI (docs/wow/invariants.md, INV-9): the same
+# three commands as .githooks/pre-commit.
+name: check
+on:
+  push:
+    branches: [clean-room/harness]
+  pull_request:
+    branches: [clean-room/harness]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --check
+      - run: cargo clippy -- -D warnings
+      - run: cargo test

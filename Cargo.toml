@@ -1,0 +1,13 @@
+[package]
+name = "harness"
+version = "0.0.0"
+edition = "2021"
+description = "A pluggable, opinionated harness that forces an event storm and regenerates a product by container and component"
+license = "MIT"
+publish = false
+
+[dependencies]
+
+[[bin]]
+name = "harness"
+path = "src/main.rs"

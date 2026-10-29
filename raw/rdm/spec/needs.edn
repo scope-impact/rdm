@@ -1,0 +1,45 @@
+;; User needs: what a user requires, independent of any solution. Every
+;; scenario traces to at least one, by a @UN-nnn tag on itself, its rule or its
+;; feature (dhf/spec/02-write-the-spec/check.feature, "Every scenario traces to a user need").
+;;
+;; Each need cites the raw sources it rests on (dhf/raw/README.md), as
+;; <source>:<path>@<commit>.
+;;
+;; Restated by the first event storm (dhf/storm/2026-10-24-rdm.md) for the
+;; first version's scope (ADR 0002). Numbered afresh: greenfield, no aliases.
+;; Since the cutover (2026-10-26) these are this repository's only needs.
+{"UN-001" {:text "A team keeps its product's requirements as executable scenarios, the one source of truth for what the product does."
+           :sources ["loyly:README.md@17d68d2"
+                     "innolitics-rdm:README.md@f21b508"]}
+ "UN-002" {:text "A contributor is stopped before a spec that breaks its rules is committed, and told exactly which scenario and why."
+           :sources ["loyly:harness/README.md@17d68d2"]}
+ "UN-003" {:text "A team sees each scenario's verification status, derived from executed test results, whatever stack ran the tests."
+           :sources ["loyly:README.md@17d68d2"
+                     "innolitics-rdm:README.md@f21b508"]}
+ "UN-004" {:text "A release is blocked until every scenario is verified."
+           :sources ["loyly:docs/plan/01-booking-core/plan.md@17d68d2"]}
+ "UN-005" {:text "A team keeps its architecture as one C4 model whose views are generated and checked, and whose components own the scenarios."
+           :sources ["agent-skills:skills/engineering/c4-diagrams/reference/c4-guide.md@da65901"
+                     "innolitics-rdm:README.md@f21b508"]}
+ "UN-006" {:text "A team regenerates its implementation from a merged cut of the spec, in a clean room that provably holds no earlier implementation or measurement."
+           :sources ["loyly:harness/README.md@17d68d2"]}
+ "UN-007" {:text "A build counts as done only when a check the builder does not control says so."
+           :sources ["loyly:harness/README.md@17d68d2"]}
+ "UN-008" {:text "Someone other than the builder, human or agent, sees, cycle over cycle, how completely the spec carries the product, and the instrument never overstates it."
+           :sources ["loyly:harness/README.md@17d68d2"
+                     "loyly:README.md@17d68d2"]}
+ "UN-009" {:text "A team starts a new project, or brings an existing repository, under this structure with one command, without anything already there being overwritten."
+           :sources ["innolitics-rdm:README.md@f21b508"]}
+ "UN-010" {:text "A reader reads the spec, its architecture and its verification status as one published site."
+           :sources ["innolitics-rdm:README.md@f21b508"]}
+ "UN-011" {:text "A team keeps the sources its spec is distilled from, and a domain wiki whose every claim cites one, so no rule in the spec rests on nothing."
+           :sources ["loyly:docs/wow/invariants.md@17d68d2"
+                     "loyly:README.md@17d68d2"]}
+ "UN-012" {:text "Every role, engineer, reviewer, builder, grader and spec owner, can be filled by a human or an agent, and the machinery treats both the same."
+           :sources ["loyly:README.md@17d68d2"]}
+ "UN-013" {:text "A team building regulated software shows an auditor, for every clause of the standards it declares, the controlled document that meets it, and hands over an auditor's copy and an engineer's copy of every document."
+           :sources ["innolitics-rdm:README.md@f21b508"]}
+ "UN-014" {:text "The spec owner sees, for every run in a cycle, what it achieved, what it did outside its brief, its time and its cost, without having to take the run's word for any of it."
+           :sources ["loyly:harness/README.md@17d68d2"]}
+ "UN-015" {:text "A team adds the judges its own project needs (its own contracts, its own checks) to the harness without changing the harness, and keeps them as the project evolves."
+           :sources ["loyly:harness/README.md@17d68d2"]}}

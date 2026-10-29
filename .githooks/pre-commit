@@ -1,0 +1,8 @@
+#!/bin/sh
+# The harness's own gate, on every commit (docs/wow/invariants.md, INV-9).
+# Installed by: git config core.hooksPath .githooks
+set -e
+cd "$(git rev-parse --show-toplevel)"
+cargo fmt --check
+cargo clippy --quiet -- -D warnings
+cargo test --quiet
