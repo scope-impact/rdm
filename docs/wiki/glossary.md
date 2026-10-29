@@ -301,7 +301,8 @@ ADR (as a word; the files are decisions).
 
 **Room.** The clean room: `cycles/NN/room/`, a clone of the cut with the
 scope's implementation and every measurement removed from tree and history.
-_Held by:_ `harness fence`; `room-fresh`, `room-proved`.
+_Held by:_ `harness fence`; `room-fresh`, `room-proved`; `verify`'s
+`spec-locked` (the room's spec tree is the cut's).
 _Avoid:_ sandbox, workspace, checkout, worktree.
 → [clean-room](pages/clean-room.md)
 
