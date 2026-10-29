@@ -3,8 +3,8 @@
 The spec owner's decision (docs/decisions/0002-learned-judge.md): a
 nondeterministic item whose placeholder cannot be matched by a shape alone
 is judged by a learned judge, a tool like any other (INV-11), built with
-DSPy and, for judgment in embedding space, a JEPA. These are the sources,
-fetched 2026-10-29 and never edited.
+DSPy and optimised by GEPA. These are the sources, fetched 2026-10-29 and
+never edited.
 
 | Path | From | Pinned at | What it is |
 |---|---|---|---|
@@ -15,8 +15,6 @@ fetched 2026-10-29 and never edited.
 | `dspy/dspy-gepa-overview.md` | same, `docs/docs/api/optimizers/GEPA/overview.md` | same | `dspy.GEPA`: reflective prompt mutation, rich textual feedback as the optimization signal, Pareto-based candidate selection; how a feedback metric is written |
 | `dspy/dspy-gepa-GEPA_Advanced.md` | same, `docs/docs/api/optimizers/GEPA/GEPA_Advanced.md` | same | the feedback metric's contract and the optimizer's parameters in detail |
 | `gepa-2507.19457.md` | arxiv.org/abs/2507.19457 | fetched 2026-10-29 | GEPA, the paper: learning high-level rules from natural-language reflection on trajectories, outperforming MIPROv2 and GRPO with far fewer rollouts |
-| `jepa/ijepa-2301.08243.md` | arxiv.org/abs/2301.08243 | fetched 2026-10-29 | I-JEPA: predict the representations of target blocks from a context block, in embedding space, without generating pixels |
 
-LeCun's position paper (A Path Towards Autonomous Machine Intelligence,
-OpenReview BZ5a1r-kVsf, 2022) is the JEPA's origin and could not be fetched
-(the host refuses automated readers); it is cited by name, not held here.
+A JEPA was named with DSPy and withdrawn the same day (decision 0002,
+addendum); its source left this folder.
