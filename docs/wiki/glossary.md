@@ -94,13 +94,16 @@ derived from the storm and held to it. _Held by:_ `harness model`,
 `check` (stage `model`). _Avoid:_ architecture (the word for the practice,
 not the file), diagram, design.
 
-**Container.** Something that runs or stores data; the ceiling of a scope.
+**Container.** Something that runs or stores data; **the ceiling of a
+scope**: a change that moves a component between containers, and every Nth
+cycle, rebuilds the whole container.
 _Where:_ `[containers.<name>]` with `runs`. _Held by:_
 `component-in-container`. _Avoid:_ service, app, deployable, module.
 
-**Component.** The unit of regeneration: sits in one container and one
-context, owns storm elements, owns one feature file. Named
-`<context>/<name>`. _Where:_ `[components."<context>/<name>"]` with
+**Component.** **The unit of regeneration**: sits in one container and one
+context, owns storm elements, owns one feature file; rebuilt whole when its
+scenarios or the events it carries change. Named `<context>/<name>`. A
+component may be reached by several plans. _Where:_ `[components."<context>/<name>"]` with
 `container`, `context`, `owns`, `spec`. _Held by:_
 `component-owns-storm-element`, `owned-element-in-storm`,
 `feature-owned-by-component`, `component-has-scenarios`.
@@ -196,8 +199,10 @@ _Avoid:_ sprint, iteration, run, round (a round is one builder transition).
 never holds a scope. _Held by:_ `scope-computed`, `one-builder`,
 `spec-owner-human`, `grader-not-builder`.
 
-**Plan.** `docs/plan/NN-slug/plan.md`: the unit of work; its goal, the wiki
-pages it rests on, the scenarios it delivers, its tickets, its spec gaps.
+**Plan.** `docs/plan/NN-slug/plan.md`: **the unit of work**. It is planned,
+specified, built, verified and closed, and its decisions are its own. Holds
+the goal, the wiki pages it rests on, the scenarios it delivers, its tickets,
+its spec gaps. A plan may reach several components; it never names a scope.
 No plan, no code. _Held by:_ review. _Avoid:_ epic, feature, story, slice.
 
 **Ticket.** One coherent unit of a plan, naming the scenarios it satisfies.
@@ -265,10 +270,12 @@ names; it must write at least one result. _Held by:_ `results-written`,
 `suite-green-twice`. _Avoid:_ tests (plural, loose), test run.
 
 **Result.** One scenario run, written by whatever tool ran it in Allure's
-result model: the item it verifies (a label), its status, its start and
-stop, its attachments. The only thing the gate reads. _Where:_ the
-configuration's `[verify] results` folder; copied to
-`cycles/NN/results/run-N/`. _Held by:_ INV-11, `result-labelled`, `result-tool-named`,
+result model, one file per run: the item it verifies and the tool that wrote
+it (labels), its status, its start and stop, its attachments. The only thing
+the gate reads, and the one contract from dev to monitor: a result from the
+room, from staging and from production carry the same item id and are read
+by one reader. _Where:_ the configuration's `[verify] results` folder;
+copied, attachments included, to `cycles/NN/results/run-N/`. _Held by:_ INV-11, `result-labelled`, `result-tool-named`,
 `result-item-on-checklist`, `every-item-has-result`.
 _Avoid:_ report, output, log, JUnit, exit code.
 
