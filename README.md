@@ -45,7 +45,7 @@ Read in this order; each layer is derived from the one above it.
 |---|---|---|
 | 1 | `README.md` | this: the intent. Every rule in the harness cites it or `docs/wow/invariants.md` |
 | 2 | `raw/` | the only material that entered the room, pinned by commit; `raw/README.md` is the allow-list. Never edited, only cited |
-| 3 | `docs/wiki/` | the domain: the practice of regenerating from a spec, distilled from the sources; every claim footnotes one. Start at `index.md` |
+| 3 | `docs/wiki/` | the domain: the practice of regenerating from a spec, distilled from the sources; every claim footnotes one; `glossary.md` is the vocabulary. Start at `index.md` |
 | 4 | `docs/wow/` | the way of working (`way-of-working.md`), the invariants with their enforcement points (`invariants.md`), the agent harness (`harness.md`) |
 | 5 | `docs/decisions/` | what was decided and why, starting with the clean room itself |
 | 6 | `harness/` | the harness's own spec (`spec.feature`) and oracle, once it exists |

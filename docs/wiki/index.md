@@ -30,21 +30,7 @@ harness follows and why.
 
 ## Vocabulary
 
-The names below appear at every layer, re-cased per layer. A term here, in
-the storm, and in a feature file must agree.
-
-| Term | Meaning |
-|---|---|
-| **storm** | the event storm kept as data: actors, commands, events, policies, aggregates, read models, hotspots; the front of the chain |
-| **hotspot** | a question the storm could not answer; open until decided with a decision and a source |
-| **model** | containers, components and their relationships, derived from the storm |
-| **component** | the unit of regeneration: owns storm elements and one feature file, sits in one container |
-| **container** | something that runs or stores; the ceiling of a scope |
-| **cut** | a tag on a merged spec that `check` passed; a regeneration reads it and nothing else |
-| **scope** | the components a cycle rebuilds, computed from two cuts |
-| **room** | the clean room: a clone of the cut with the scope's implementation and every measurement removed, and the removal proved |
-| **gate** | `verify`: the script the builder does not control that ratifies a build |
-| **instrument** | checklist, score and scoreboard: what reports to a person and never into the loop |
-| **golden** | a recorded output of the harness's own tools, held byte for byte by its oracle |
-| **cycle** | one pass: cut, scope, fence, build, gate, grade, score, scoreboard, accept |
-| **owner** | the spec owner: the person whose decisions a cycle waits on |
+[glossary.md](glossary.md): every term, where it appears, what holds it, and
+the words not to use for it. The names there appear at every layer, re-cased
+per layer; a term in the glossary, in `harness/spec.feature` and in a
+product's storm must agree.
