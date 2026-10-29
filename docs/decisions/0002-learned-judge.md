@@ -36,6 +36,21 @@ every time does not scale to a cycle.
   past verdicts**: every verdict a person gave on a nondeterministic item in
   an accepted cycle is a labelled example, so the judge learns the owner's
   judgment and nothing else.
+- **The optimizer is GEPA** (`dspy.GEPA`; `raw/judge/dspy/dspy-gepa-overview.md`,
+  `raw/judge/gepa-2507.19457.md`), the spec owner's choice, for a reason
+  the harness already supplies: GEPA's metric returns a score **and
+  feedback in words**, and reflects on the judge's traces in natural
+  language to propose better instructions, keeping a Pareto frontier of
+  candidates rather than one best. An owner's verdict is exactly that
+  signal: `pass` or `fail` is the score, and the verdict's evidence (what
+  the owner saw and why it decided) is the feedback. The feedback metric
+  compares the judge's verdict with the owner's and returns the owner's
+  evidence, and where they disagree, both reasonings, so the judge learns
+  the rule behind the verdict and not the verdict alone. GEPA's recipe for
+  feedback (use existing artefacts; decompose outcomes; expose trajectories;
+  ground in checks) is met by the cycle's records as they are: the
+  checklist, the results with their attachments, the review and the
+  decisions.
 - **Judgment in embedding space is a JEPA.** Where the outcome is a
   representation rather than a text (a page, a trace, an image of a
   screen), the judge predicts the representation of the expected outcome

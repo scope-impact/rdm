@@ -178,15 +178,22 @@ the placeholder is the name).
 **Judge.** A tool that answers a nondeterministic item a pattern cannot hold:
 given the Then, the placeholder and the observed outcome, it writes a result
 with a verdict and evidence. Declared as a plugin answering `item`; built
-with DSPy (a signature, a metric, an optimizer over the owner's past
-verdicts) and, for outcomes that are representations rather than text, a
-JEPA (predict the expected outcome's representation, compare at the declared
-distance). Held still with goldens that are the owner's labelled verdicts;
+with DSPy (a signature; a metric that scores the judge against the owner's
+past verdicts and returns the owner's evidence as feedback; GEPA as the
+optimizer, which reflects on that feedback in words and keeps a Pareto
+frontier of candidates) and, for outcomes that are representations rather
+than text, a JEPA (predict the expected outcome's representation, compare
+at the declared distance). Held still with goldens that are the owner's labelled verdicts;
 checked at every `check`. Its verdict is a grader's, never the gate's.
 _Where:_ `[[plugins]]` with `answers = "item"`; `judges` on a checklist
 item. _Held by:_ `judge-declared`, `judge-goldens`; decision 0002.
 _Avoid:_ LLM-as-judge (the method, not the name), evaluator, oracle (the
 harness's own judge of its tools), classifier.
+
+**Feedback.** What a judge learns from, beyond pass or fail: the owner's
+evidence on a verdict, and where the judge disagreed, both reasonings.
+GEPA's optimisation signal; the reason an owner's verdict always carries
+evidence. _Avoid:_ reward, label (that is the verdict), score.
 
 **Distance.** The declared tolerance of a judge in embedding space: how far
 the observed outcome's representation may sit from the predicted one and
