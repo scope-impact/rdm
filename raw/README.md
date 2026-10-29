@@ -20,6 +20,7 @@ never read from an implementation.
 | `rdm/spec/events.edn` | `scope-impact/rdm` | `a4641ae` | the event catalogue's shape, as a seed |
 | `rdm/spec/needs.edn` | `scope-impact/rdm` | `a4641ae` | the needs, each citing a source; to be re-stated against the intent |
 | `allure/` | allurereport.org docs; `allure-framework/allure-java`; `allure-framework/allure-js` | docs fetched 2026-10-29; `allure-java` 3.0.1 (`72fa349`); `allure-js` v3.14.0 (`6b62dd6`) | the result model every judge writes (INV-11): the documentation, the reference model, and the model the browser-driver and Gherkin-runner integrations write through. `raw/allure/README.md` lists each file |
+| `judge/` | github.com/stanfordnlp/dspy; arxiv.org/abs/2301.08243 | `dspy` 3.4.1 (`099982b`); I-JEPA fetched 2026-10-29 | what a learned judge rests on (decision 0002): DSPy's README, signatures, optimizers and metrics; the I-JEPA abstract. `raw/judge/README.md` lists each file |
 
 ## Never enters
 
@@ -32,6 +33,8 @@ never read from an implementation.
 - Löyly's tools (`harness/*.sh`, `harness/*.clj`) and goldens
 - any Allure integration or reporter (a runner's adapter is a tool's, not the
   model's)
+- any judge's weights, prompts or compiled program: a judge is a project's
+  plugin, held still with its own goldens, never part of the harness
 
 A rule the old harness had is not evidence that the new one needs it. If it
 is needed, it is re-derived from the intent, and the decision says so.

@@ -106,7 +106,12 @@ evidence: what it did and what it saw. An item it cannot reach is `fail`
 with the reason; it never skips one. A deterministic item is judged byte for
 byte against its Then; a `@nondeterministic` item is judged by shape at each
 placeholder (the checklist names them and the spec declares their shapes)
-and byte for byte everywhere else, and the evidence records the value seen. It writes one `verdicts-<name>.toml`
+and byte for byte everywhere else, and the evidence records the value seen.
+Where the placeholder is judged (the checklist names its judge), the grader
+runs the judge, a plugin answering `item`, on the outcome it observed and
+files the judge's verdict and evidence as its own; a person may overrule it
+in their own verdict, and the owner's verdicts are what the judge learns
+from next (decision 0002). It writes one `verdicts-<name>.toml`
 and nothing else. Several graders are scored apart and agreed by majority;
 a builder never grades its own build.
 

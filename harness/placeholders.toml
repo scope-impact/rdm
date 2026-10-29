@@ -1,13 +1,26 @@
 # The shapes of the values harness/spec.feature cannot pin (the rule "A
 # scenario is deterministic unless it says it is not"). Declared shared
-# (INV-8). A placeholder is matched by its shape here and the text around it
-# exactly.
+# (INV-8). A placeholder is a pattern (shape) or a judge (judge, distance),
+# matched by it and by the text around it exactly. The harness's own are all
+# patterns (docs/decisions/0002-learned-judge.md).
 
-[placeholders]
-"HEAD's hash" = "[0-9a-f]{40}"
-"the room's tree hash" = "[0-9a-f]{40}"
-"the reachable commit" = "[0-9a-f]{40}"
-"the verified tree" = "[0-9a-f]{40}"
-"another tree" = "[0-9a-f]{40}"
-"the run's seconds" = "[0-9]+"
-"the budget less the slower run" = "-?[0-9]+"
+[placeholders."HEAD's hash"]
+shape = "[0-9a-f]{40}"
+
+[placeholders."the room's tree hash"]
+shape = "[0-9a-f]{40}"
+
+[placeholders."the reachable commit"]
+shape = "[0-9a-f]{40}"
+
+[placeholders."the verified tree"]
+shape = "[0-9a-f]{40}"
+
+[placeholders."another tree"]
+shape = "[0-9a-f]{40}"
+
+[placeholders."the run's seconds"]
+shape = "[0-9]+"
+
+[placeholders."the budget less the slower run"]
+shape = "-?[0-9]+"

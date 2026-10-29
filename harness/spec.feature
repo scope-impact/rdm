@@ -587,13 +587,68 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
     Scenario: A placeholder's shape is declared once, in the spec, and an undeclared one is refused
       Given spec/placeholders.toml
         """
-        [placeholders]
-        "the booking's reference" = "[A-Z]{3}-[0-9]{4}"
-        "the time it was made" = "[0-9]{2}:[0-9]{2}"
+        [placeholders."the booking's reference"]
+        shape = "[A-Z]{3}-[0-9]{4}"
+
+        [placeholders."the time it was made"]
+        shape = "[0-9]{2}:[0-9]{2}"
+
+        [placeholders."the confirmation page"]
+        judge = "page-judge"
+        distance = 0.15
         """
       And spec/slots.feature uses <the slot's receipt number>, which it does not declare
       When I run harness check
       Then stdout holds check = "refused", stage = "spec" and [finding] with rule = "placeholder-declared", path = "spec/slots.feature", line = 30 and placeholder naming the slot's receipt number
+      And it exits 1
+
+    Scenario: A placeholder is a pattern or a judge, never both and never neither
+      Given spec/placeholders.toml declares "the confirmation page" with neither shape nor judge
+      When I run harness check
+      Then stdout holds [finding] with rule = "placeholder-shape", placeholder = "the confirmation page"
+      And it exits 1
+
+    Scenario: A placeholder naming a judge the configuration does not declare is refused
+      Given spec/placeholders.toml declares "the confirmation page" with judge = "page-judge"
+      And spec/config.toml declares no plugin named page-judge answering item
+      When I run harness check
+      Then stdout is exactly
+        """
+        check = "refused"
+        stage = "spec"
+
+        [finding]
+        rule = "judge-declared"
+        placeholder = "the confirmation page"
+        judge = "page-judge"
+        """
+      And it exits 1
+
+    Scenario: The checklist names the judge of a judged placeholder
+      Given @item-009 is tagged @nondeterministic, its Then holds <the confirmation page>, and that placeholder is judged by page-judge
+      When I run harness checklist
+      Then its item carries nondeterministic = true, placeholders = ["the confirmation page"] and judges = ["page-judge"]
+
+    Scenario: A judge is a plugin answering item, and its goldens are checked like any plugin's
+      Given spec/config.toml holds
+        """
+        [[plugins]]
+        name = "page-judge"
+        answers = "item"
+        command = ["plugins/page-judge/judge"]
+        """
+      And plugins/page-judge/judge, run with --check, answers its goldens and exits 1 with [finding] rule = "judge-goldens", example = "item-009/cycle-04"
+      When I run harness check
+      Then stdout is exactly
+        """
+        check = "refused"
+        stage = "plugins"
+        plugin = "page-judge"
+
+        [finding]
+        rule = "judge-goldens"
+        example = "item-009/cycle-04"
+        """
       And it exits 1
 
     Scenario: Examples of an Outline are deterministic rows, never placeholders

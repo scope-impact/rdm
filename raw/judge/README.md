@@ -1,0 +1,19 @@
+# raw/judge: what a learned judge rests on
+
+The spec owner's decision (docs/decisions/0002-learned-judge.md): a
+nondeterministic item whose placeholder cannot be matched by a shape alone
+is judged by a learned judge, a tool like any other (INV-11), built with
+DSPy and, for judgment in embedding space, a JEPA. These are the sources,
+fetched 2026-10-29 and never edited.
+
+| Path | From | Pinned at | What it is |
+|---|---|---|---|
+| `dspy/dspy-README.md` | github.com/stanfordnlp/dspy, `README.md` | tag `3.4.1` (`099982b`) | what DSPy is: declarative programs over language models, compiled by optimizers |
+| `dspy/dspy-signatures.md` | same, `docs/docs/learn/programming/signatures.md` | same | a signature: the declared inputs and outputs of a step; Example D is a judge of faithfulness to citations |
+| `dspy/dspy-optimizers.md` | same, `docs/docs/learn/optimization/optimizers.md` | same | what an optimizer tunes (instructions, demonstrations, weights) from a metric and examples |
+| `dspy/dspy-metrics.md` | same, `docs/docs/learn/evaluation/metrics.md` | same | a metric is a program; a language model may be the judge inside it |
+| `jepa/ijepa-2301.08243.md` | arxiv.org/abs/2301.08243 | fetched 2026-10-29 | I-JEPA: predict the representations of target blocks from a context block, in embedding space, without generating pixels |
+
+LeCun's position paper (A Path Towards Autonomous Machine Intelligence,
+OpenReview BZ5a1r-kVsf, 2022) is the JEPA's origin and could not be fetched
+(the host refuses automated readers); it is cited by name, not held here.
