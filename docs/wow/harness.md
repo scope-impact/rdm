@@ -25,6 +25,12 @@ leave the verdict to the agent (Löyly, section 3).
 | Adversarial review | every cycle, a reviewer hunts invented rules and spec drift in the diff; it never grades | the review step of the cycle |
 | Owner's decisions | a verdict, a spec-gap decision and a cycle's acceptance are a person's | INV-10; `score` refuses a record whose owner is an agent |
 
+The executable form of this document is the skill at
+`.claude/skills/harness/`: an agent given a phase reads the skill, which
+holds the orient step, the guardrails and one file per phase with its steps
+and completion criteria. This document stays the reason; the skill is the
+procedure.
+
 ## 2. Read order (the orient step)
 
 Give an agent this, in this order, before any task:

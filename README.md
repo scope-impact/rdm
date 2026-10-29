@@ -50,6 +50,7 @@ Read in this order; each layer is derived from the one above it.
 | 5 | `docs/decisions/` | what was decided and why, starting with the clean room itself |
 | 6 | `harness/` | the harness's own spec (`spec.feature`) and oracle, once it exists |
 | 7 | `src/` | the harness, in Rust, one binary |
+| | `.claude/skills/harness/` | the agent harness as a skill: one phase of a cycle (plan, build, grade, review, integrate), each with its steps and completion criteria |
 
 ## Provenance
 
