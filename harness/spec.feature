@@ -27,6 +27,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
       [verify]
       command = ["impl/test.sh"]
+      results = "impl/results"
       budget-seconds = 60
       """
 
@@ -743,10 +744,18 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
   Rule: "Done" is ratified by verify, which the builder does not control
 
-    Scenario: A green suite, twice, inside the budget, is ratified
-      Given cycles/03/room holds a build whose suite passes 3 scenarios in 4 seconds
+    # Verify reads results, never the runner (INV-11): the suite writes one
+    # result per scenario run, in Allure's result model, into the folder the
+    # configuration names; the item it verifies is the label "item"; its
+    # status is passed, failed, broken or skipped; its attachments (a trace,
+    # a screenshot, a transcript) sit beside it. Verify empties the folder
+    # before each run and copies what the run wrote into cycles/NN/results/run-N/.
+
+    Scenario: A green suite, twice, inside the budget, is ratified from its results
+      Given cycles/03/room holds a build whose suite writes, in 4 seconds, three results labelled item = item-003, item-007 and item-008, each with status passed, and item-003's with the attachment trace.zip
       When I run harness verify 03
-      Then cycles/03/verified.toml is written with the same content as stdout
+      Then cycles/03/results/run-1/ and run-2/ hold the three results and trace.zip
+      And cycles/03/verified.toml is written with the same content as stdout
       And stdout is exactly
         """
         verify = "passed"
@@ -756,19 +765,29 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         margin-seconds = 56
 
         [[runs]]
-        scenarios = 3
+        results = 3
         passed = 3
+        failed = 0
+        broken = 0
+        skipped = 0
+        attachments = 1
         seconds = 4
+        items = ["item-003", "item-007", "item-008"]
 
         [[runs]]
-        scenarios = 3
+        results = 3
         passed = 3
+        failed = 0
+        broken = 0
+        skipped = 0
+        attachments = 1
         seconds = 4
+        items = ["item-003", "item-007", "item-008"]
         """
       And it exits 0
 
-    Scenario: A suite that fails on either run is refused, naming the run
-      Given the suite passes the first run and fails one scenario on the second
+    Scenario: A result that is not passed refuses the run, naming the item and its status
+      Given the suite's second run writes item-008 with status failed
       When I run harness verify 03
       Then stdout is exactly
         """
@@ -778,14 +797,21 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         [finding]
         rule = "suite-green-twice"
         run = 2
-        scenarios = 3
-        passed = 2
+        item = "item-008"
+        status = "failed"
         """
       And it exits 1
       And no cycles/03/verified.toml exists
+      And cycles/03/results/run-2/ holds the failed result and its attachments, for the reviewer
 
-    Scenario: A suite that did not run is a refusal, never a pass
-      Given impl/test.sh exits 0 having run no scenario
+    Scenario: A broken result is not a pass
+      Given the suite writes item-007 with status broken
+      When I run harness verify 03
+      Then stdout holds [finding] with rule = "suite-green-twice", item = "item-007" and status = "broken"
+      And it exits 1
+
+    Scenario: A suite that wrote no result is a refusal, never a pass
+      Given impl/test.sh exits 0 having written nothing to impl/results
       When I run harness verify 03
       Then stdout is exactly
         """
@@ -793,11 +819,59 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         cycle = "03"
 
         [finding]
-        rule = "suite-ran"
+        rule = "results-written"
         run = 1
-        scenarios = 0
+        results = 0
         """
       And it exits 1
+
+    Scenario: A result that names no item is refused
+      Given the suite writes a result with no label item
+      When I run harness verify 03
+      Then stdout is exactly
+        """
+        verify = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "result-labelled"
+        run = 1
+        result = "impl/results/7c1e-result.json"
+        """
+      And it exits 1
+
+    Scenario: A result naming an item off the checklist is refused
+      Given the suite writes a result labelled item = item-099
+      When I run harness verify 03
+      Then stdout holds [finding] with rule = "result-item-on-checklist", run = 1 and item = "item-099"
+      And it exits 1
+
+    Scenario: An item with no result is refused, unless it is wip
+      Given the checklist holds item-003, item-007 and item-008, and the suite writes results for item-003 and item-007 only
+      When I run harness verify 03
+      Then stdout is exactly
+        """
+        verify = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "every-item-has-result"
+        run = 1
+        items = ["item-008"]
+        """
+      And it exits 1
+
+    Scenario: A wip item needs no result
+      Given item-008 is tagged @wip and the suite writes results for item-003 and item-007
+      When I run harness verify 03
+      Then stdout holds verify = "passed" and each run's items = ["item-003", "item-007"]
+      And it exits 0
+
+    Scenario: The runner's exit code is never read
+      Given the suite writes three passed results and impl/test.sh then exits 3
+      When I run harness verify 03
+      Then stdout holds verify = "passed"
+      And it exits 0
 
     Scenario: A suite that has not answered when the budget runs out is refused
       Given the suite takes 70 seconds and the budget is 60

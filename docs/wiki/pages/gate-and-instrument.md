@@ -14,8 +14,20 @@ them; a runner named its suites twice so a forgotten suite was silently
 green, so runners discover suites from the directory and refuse an empty
 discovery; an orphaned process once answered a health probe long after its
 run died, so the gate refuses to start when the port is held.[^failures] This
-harness's `verify` carries each: a suite that ran no scenario is a refusal,
+harness's `verify` carries each: a suite that wrote no result is a refusal,
 the suite runs twice, and a run past the budget is refused.
+
+## The gate reads results, not runners
+
+rdm-spec decided that results are the oracle for status: a scenario is
+verified when a test run in any language writes a result in Allure's model
+whose label is the scenario's id with status `passed`, and no result for it
+that did not pass; the harness reads only results, never a test runner, so a
+product may test in any stack.[^allure] This harness keeps that rule (INV-11)
+and widens what a result carries: the tool's attachments (a browser trace, a
+screenshot, a transcript) travel with it into the cycle, so the evidence a
+grader and the owner read is what the suite saw, in one reader, whatever
+tool wrote it.
 
 ## The checklist is derived, never written
 
@@ -70,3 +82,4 @@ refused every build of the new contract;[^judge] holding the harness still
 [^retro-next]: `raw/rdm/retrospective-01-12.md@a4641ae`, "What follows for the next spec change", items 1 and 2.
 [^goldens]: `raw/loyly/harness/README.md@17d68d2`, "The goldens, and the three reasons one can change".
 [^judge]: `raw/rdm/docs/wow/way-of-working.md@a4641ae`, "When the spec changes the judge's own contract".
+[^allure]: `raw/rdm/decisions/adr-0002-spec-first-regeneration.md@a4641ae`, "Decision", "Allure results are the oracle for status".

@@ -78,6 +78,15 @@ The builder keeps `redgreen.log` in the room: one line per transition, the
 scenario id and the commit. Its own suite green is its claim; `harness
 verify` is the state.
 
+**Writing the tests.** Every test names the scenario it implements by its id,
+and the suite writes one result per scenario run in Allure's result model
+into the results folder the configuration names, labelled `item = <id>`,
+with the tool's attachments (a trace, a screenshot, a transcript) beside it.
+The tool is the builder's choice: a Gherkin runner, a unit framework, a
+browser driver, a script. The gate reads the results, never the tool
+(`docs/wow/way-of-working.md`, "Results are tool-neutral"). A test that
+writes no result does not exist to the gate.
+
 **Where it may write:** the scope's implementation paths and its tests. Not
 `spec/`, not `docs/`, not `harness/`, not outside the room.
 

@@ -118,7 +118,7 @@ cannot be filled by the integrator (INV-10).
 | scope | harness | `harness scopes spec-M spec-N` | the cycle record's `from` and `cut`; nothing else |
 | fence | harness | `harness fence NN`: the room, and its proof | `cycles/NN/room/`, `fence.toml` |
 | build | one builder | in the room, reading the plan first, test-first, until its own suite is green | the room's commits, `redgreen.log` |
-| gate | harness | `harness verify NN`: the suite twice, inside the budget; plugins answering `verify` | `cycles/NN/verified.toml` |
+| gate | harness | `harness verify NN`: the suite twice, inside the budget, read from its results (below); plugins answering `verify` | `cycles/NN/verified.toml`, `cycles/NN/results/run-N/` |
 | checklist | harness | `harness checklist` at the cut | `cycles/NN/checklist.toml` |
 | grade | graders, each in their own room, black box on the built product | one verdict per item, with evidence | `cycles/NN/verdicts-<grader>.toml` |
 | score | harness | `harness score NN <verdicts...>` | `cycles/NN/score.toml` |
@@ -128,6 +128,26 @@ cannot be filled by the integrator (INV-10).
 
 A builder never grades its own build; a grader never reads the builder's
 tests; nobody re-records a golden to get a green (INV-3).
+
+### Results are tool-neutral
+
+The gate never reads a test runner; it reads **results**, written in
+Allure's result model, one file per scenario run, by whatever tool ran it:
+a Gherkin runner, a unit-test framework, a browser driver, a contract check,
+a hand-run session. Each result carries the item it verifies as a label
+(`item = item-003`), its status (`passed`, `failed`, `broken`, `skipped`),
+its start and stop, and its **attachments**: a browser trace, a screenshot,
+a request log, a terminal transcript, whatever the tool can keep. The
+harness copies the run's results and attachments into the cycle
+(`cycles/NN/results/run-N/`), so a grader, a reviewer and the owner see what
+the suite saw, in one reader, whatever stack ran it (INV-11).
+
+What verify holds a run to is read from the results alone: at least one
+result was written; every result names an item on the checklist; every item
+not tagged `@wip` has a result; no result for an item is anything but
+`passed`. A suite whose runner exited 0 and wrote nothing is a refusal. The
+same model carries the harness's own oracle: its goldens' comparisons are
+written as results too, so one reader reads the judge and the judged.
 
 ## 8. Decisions
 

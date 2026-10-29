@@ -76,10 +76,32 @@ cycles (rdm-spec cycles 05 to 10).
 control, boots the product in the clean room and proves its suite green,
 twice, inside a named budget. The builder's own claim is not a state.
 
-**Enforced by.** `verify` writes `verified.edn` with the room's tree hash;
+**Enforced by.** `verify` reads the suite's results (INV-11), never the
+runner's exit code, and writes `verified.toml` with the room's tree hash;
 `score` refuses a cycle with no such record.
 
 **Without it.** "Green" is whatever the builder said.
+
+## INV-11: The gate reads results, and results are tool-neutral
+
+**Rule.** Every judge's output, the product's suite and the harness's own
+oracle alike, is written as results in Allure's result model: one result per
+scenario run, labelled with the item it verifies, with its status, its
+timing and the tool's attachments (traces, screenshots, logs). The gate reads
+results only. Which tool wrote them is never read, so a product may test in
+any stack and a cycle's evidence is read with one reader.
+
+**Enforced by.** `verify` refuses a run that wrote no result
+(`results-written`), a result naming no item (`result-labelled`) or an item
+off the checklist (`result-item-on-checklist`), and an item with no result
+(`every-item-has-result`); the results and attachments are copied into
+`cycles/NN/results/run-N/`.
+
+**Without it.** A gate once reported success because a missing config turned
+the test command into a no-op that exits 0 (`raw/loyly/harness/README.md`,
+"The failure modes"); an exit code says a process ended, not that anything
+was verified. And every runner's own format is one more reader to hold
+still.
 
 ## INV-6: The instrument never overstates
 

@@ -59,3 +59,12 @@ spec".
   carried. The idea survives as a possible product under test, never as the
   harness.
 - The old branch stays as history and is not merged to `main`.
+
+## Addendum, 2026-10-29: the gate reads results in Allure's model
+
+The spec owner: every tool's results are instrumented in the tool-neutral
+Allure result model, and the tools are not limited (a Gherkin runner, a
+browser driver with its trace, a unit framework, a script). Carried into
+INV-11, the way of working ("Results are tool-neutral"), the builder's
+brief, the glossary (result, status, label, attachment, tool) and verify's
+scenarios in `harness/spec.feature`: the runner's exit code is never read.

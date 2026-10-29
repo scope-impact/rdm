@@ -261,8 +261,32 @@ left. _Where:_ `budget-seconds`, `margin-seconds`. _Held by:_
 `inside-budget`. _Avoid:_ timeout, limit, deadline.
 
 **Suite.** The product's own tests, run by the command the configuration
-names; it must run at least one scenario. _Held by:_ `suite-ran`,
+names; it must write at least one result. _Held by:_ `results-written`,
 `suite-green-twice`. _Avoid:_ tests (plural, loose), test run.
+
+**Result.** One scenario run, written by whatever tool ran it in Allure's
+result model: the item it verifies (a label), its status, its start and
+stop, its attachments. The only thing the gate reads. _Where:_ the
+configuration's `[verify] results` folder; copied to
+`cycles/NN/results/run-N/`. _Held by:_ INV-11, `result-labelled`,
+`result-item-on-checklist`, `every-item-has-result`.
+_Avoid:_ report, output, log, JUnit, exit code.
+
+**Status.** A result's outcome: `passed`, `failed`, `broken` (the test could
+not run), `skipped`. Only `passed` verifies an item. _Avoid:_ state,
+outcome, green/red (prose only).
+
+**Label.** A name-value pair on a result; `item` carries the scenario's id.
+_Avoid:_ tag (Gherkin's word), annotation.
+
+**Attachment.** A file a tool kept with a result: a browser trace, a
+screenshot, a request log, a transcript. Evidence the grader and the owner
+read with the result. _Avoid:_ artefact, asset, upload.
+
+**Tool.** Whatever ran a scenario and wrote its result: a Gherkin runner, a
+unit framework, a browser driver, a script, a person's session. The gate
+never reads the tool, only its results. _Avoid:_ runner (as the general
+word), framework.
 
 ## The instrument
 
