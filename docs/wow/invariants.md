@@ -26,9 +26,13 @@ codebase.
 
 ## INV-2: The spec never names the stack
 
-**Rule.** `docs/`, a project's spec and its storm hold no language,
-framework, database, hosting or toolkit names. `raw/` is exempt: it is
-source, not spec.
+**Rule.** A product's spec and storm, and `docs/wiki/` and `docs/plan/`,
+hold no language, framework, database, hosting or toolkit names. Two things
+are exempt: `raw/`, which is source, not spec; and the harness's own custody
+(`docs/wow/way-of-working.md` section 9, `docs/decisions/`,
+`harness/files.toml`), because the firewall exists to keep regeneration
+honest and the harness is never regenerated (INV-3). `harness/spec.feature`
+is not exempt: it states what the tools do, never what they are made of.
 
 **Enforced by.** `check`, a word list over the spec and `docs/`, and review.
 
