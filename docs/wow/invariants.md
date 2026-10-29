@@ -34,7 +34,9 @@ are exempt: `raw/`, which is source, not spec; and the harness's own custody
 honest and the harness is never regenerated (INV-3). `harness/spec.feature`
 is not exempt: it states what the tools do, never what they are made of.
 
-**Enforced by.** `check`, a word list over the spec and `docs/`, and review.
+**Enforced by.** `check`, reading the technologies the model declares
+(decision 0003) over the spec; review for `docs/`. The model's `technology`
+keys are the one place the stack is written, and are exempt.
 
 **Without it.** Regeneration stops measuring anything: the spec already
 holds the answers, and a second implementation cannot be built honestly.

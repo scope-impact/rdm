@@ -48,8 +48,9 @@ A behaviour change starts in `spec/`, never in an editor, in this order:
    citing a source. A question the change opens is recorded as a hotspot,
    `open`; it must be `decided`, with its decision and a source, before a
    cut.
-2. **Model.** Name the component that owns the new element and the
-   container it sits in.
+2. **Model.** Name the component that owns the new element, under its
+   container, in its group; declare any technology on the container or
+   the deployment node, never in a scenario.
 3. **Scenarios.** State the acceptance criteria in the component's feature
    file; run `harness stamp`. A scenario is deterministic unless its outcome
    holds a value the spec cannot pin; then tag it `@nondeterministic`, write
@@ -72,8 +73,10 @@ half; review enforces the rest.
 
 ## 5. The firewall
 
-A product's spec and storm, the wiki and the plans name no stack (INV-2):
-`harness check` holds the stack-word list; review holds the rest. When a spec
+A product's spec and storm, the wiki and the plans name no stack (INV-2).
+The stack is written once, in the model's `technology` keys, where C4 puts
+it (decision 0003); `harness check` reads them and refuses a feature file or
+a storm that names one; review holds the rest. When a spec
 turns out to be insufficient to build from, that is a spec bug: fix the spec,
 not the reading.
 

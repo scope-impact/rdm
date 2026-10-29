@@ -1,0 +1,9 @@
+# Words that never count as a stack word when they occur in a declared
+# technology (decision 0003): "a web application" must not forbid
+# "application". The one list the firewall does not derive; declared shared
+# (INV-8). Grows by a decision, never by a builder.
+words = ["a", "an", "the", "and", "or", "of", "on", "in", "for", "with",
+  "web", "application", "app", "service", "server", "client", "database",
+  "store", "file", "system", "process", "script", "library", "machine",
+  "virtual", "node", "cloud", "function", "queue", "cache", "browser",
+  "mobile", "desktop", "command", "line", "tool", "runtime"]

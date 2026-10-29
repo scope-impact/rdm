@@ -234,28 +234,51 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
   Rule: The model is derived from the storm, never drawn (INV-1)
 
+    # The model's vocabulary is the C4 model's, with the Structurizr DSL's
+    # names for each element and attribute (raw/c4/, decision 0003):
+    # softwareSystem, container, component, group (the bounded context),
+    # relationship, deploymentEnvironment, deploymentNode, infrastructureNode,
+    # containerInstance, and description, technology, tags on each. The
+    # harness adds three keys of its own and no more: owns (the storm
+    # elements a component owns), spec (its feature file) and event (the
+    # storm event a relationship carries). A component is named
+    # <container>/<component>.
+
     Scenario: The shape of a model
       Given spec/model.toml
         """
-        [containers.booking]
-        runs = true
+        [softwareSystem]
+        name = "Booking"
+        description = "sauna slots for a housing cooperative"
 
-        [components."booking/slots"]
-        container = "booking"
-        context = "booking"
+        [containers.booking]
+        description = "the booking application"
+        technology = "a web application"
+
+        [containers.booking.components.slots]
+        group = "booking"
+        description = "slots and the weekly schedule"
         owns = ["Slot", "WeeklySchedule"]
         spec = "spec/slots.feature"
 
-        [components."booking/billing"]
-        container = "booking"
-        context = "billing"
+        [containers.booking.components.billing]
+        group = "billing"
+        description = "charges for bookings"
         owns = ["Charge"]
         spec = "spec/billing.feature"
 
         [[relationships]]
         from = "booking/slots"
         to = "booking/billing"
+        description = "a booking is charged"
         event = "SlotBooked"
+
+        [deploymentEnvironment.production]
+
+        [deploymentEnvironment.production.deploymentNode.host]
+        description = "the cooperative's server"
+        technology = "a virtual machine"
+        containerInstance = ["booking"]
         """
       And a storm holding the aggregates Slot and Charge, the read model WeeklySchedule and the event SlotBooked
       When I run harness model
@@ -265,8 +288,23 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         containers = 1
         components = 2
         relationships = 1
+        deploymentEnvironments = 1
         """
       And it exits 0
+
+    Scenario: A key the C4 vocabulary and the harness's three do not hold is refused
+      Given spec/model.toml whose component "booking/slots" carries the key layer
+      When I run harness model
+      Then stdout is exactly
+        """
+        model = "refused"
+
+        [finding]
+        rule = "model-vocabulary"
+        element = "booking/slots"
+        key = "layer"
+        """
+      And it exits 1
 
     Scenario: A component that owns nothing of the storm is refused
       Given spec/model.toml whose component "booking/audit" has owns = []
@@ -309,21 +347,33 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         """
       And it exits 1
 
-    Scenario: A component in no container is refused
-      Given spec/model.toml whose component "booking/slots" names the container "api", which [containers] does not hold
+    Scenario: A storm aggregate or read model no component owns is refused
+      Given the storm holds the aggregate "Charge" and no component owns it
       When I run harness model
       Then stdout is exactly
         """
         model = "refused"
 
         [finding]
-        rule = "component-in-container"
-        component = "booking/slots"
-        container = "api"
+        rule = "element-owned"
+        element = "Charge"
         """
       And it exits 1
 
-    Scenario: Components of different contexts relate only through a storm event
+    Scenario: A container with no component is refused
+      Given spec/model.toml whose container "ledger" holds no components table
+      When I run harness model
+      Then stdout is exactly
+        """
+        model = "refused"
+
+        [finding]
+        rule = "container-has-components"
+        container = "ledger"
+        """
+      And it exits 1
+
+    Scenario: Components of different groups relate only through a storm event
       Given spec/model.toml whose relationship from "booking/slots" to "booking/billing" names no event
       When I run harness model
       Then stdout is exactly
@@ -331,7 +381,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         model = "refused"
 
         [finding]
-        rule = "contexts-relate-by-event"
+        rule = "groups-relate-by-event"
         from = "booking/slots"
         to = "booking/billing"
         """
@@ -352,8 +402,19 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         """
       And it exits 1
 
-    Scenario: An event the storm holds that no relationship carries is refused
-      Given a storm holding the event SlotCancelled and a model whose relationships never name it
+    Scenario: A relationship naming a component the model does not hold is refused
+      Given spec/model.toml whose relationship is to "booking/waitlist"
+      When I run harness model
+      Then stdout holds [finding] with rule = "component-named", component = "booking/waitlist"
+      And it exits 1
+
+    Scenario: The publisher of an event is the component owning the aggregate of its command
+      Given the storm's event SlotBooked is raised by the command BookSlot on the aggregate Slot, owned by "booking/slots"
+      When I run harness model --events
+      Then stdout holds [events.SlotBooked] with publisher = "booking/slots" and subscribers = ["booking/billing"]
+
+    Scenario: An event the storm holds that no relationship carries is refused, unless its publisher and subscribers share a group
+      Given a storm holding the event "SlotCancelled" and a model whose relationships never name it, and no component of another group needs it
       When I run harness model
       Then stdout is exactly
         """
@@ -365,10 +426,35 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         """
       And it exits 1
 
-  Rule: The spec never names the stack (INV-2)
+    Scenario: A container instance must name a container of the model
+      Given the deployment node "host" has containerInstance = ["api"], which [containers] does not hold
+      When I run harness model
+      Then stdout is exactly
+        """
+        model = "refused"
 
-    Scenario: A stack word in a feature file is refused, naming the line
-      Given spec/slots.feature whose line 12 reads "Then the Postgres row is updated"
+        [finding]
+        rule = "containerInstance-names-container"
+        deploymentNode = "production/host"
+        container = "api"
+        """
+      And it exits 1
+
+    Scenario: Deployment nodes nest
+      Given [deploymentEnvironment.production.deploymentNode.cloud.deploymentNode.vm] with containerInstance = ["booking"]
+      When I run harness model
+      Then stdout holds model = "passed"
+
+  Rule: The spec never names the stack, and the stack is declared where C4 puts it (INV-2)
+
+    # The stack lives in the model's technology keys (containers,
+    # components, deployment nodes, infrastructure nodes, relationships).
+    # The spec's firewall reads those values: a feature file or a storm that
+    # names a declared technology is refused. There is no other word list.
+
+    Scenario: A declared technology named in a feature file is refused, naming the line
+      Given spec/model.toml declares technology = "a relational database" on the container "store"
+      And spec/slots.feature line 12 reads "Then the relational database row is updated"
       When I run harness check
       Then stdout is exactly
         """
@@ -379,18 +465,35 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         rule = "no-stack-words"
         path = "spec/slots.feature"
         line = 12
-        word = "Postgres"
+        technology = "a relational database"
+        declared = "containers.store"
         """
       And it exits 1
 
-    Scenario: A stack word in the storm is refused the same way
-      Given spec/storm.toml whose policy BillOnBooking has then = "write a Kafka message" on line 19
+    Scenario: A declared technology named in the storm is refused the same way
+      Given spec/model.toml declares technology = "a message broker" on the infrastructure node "bus"
+      And spec/storm.toml's policy BillOnBooking has then = "write to the message broker" on line 19
       When I run harness check
-      Then stdout holds [finding] with rule = "no-stack-words", path = "spec/storm.toml", line = 19 and word = "Kafka"
+      Then stdout holds [finding] with rule = "no-stack-words", path = "spec/storm.toml", line = 19, technology = "a message broker"
       And it exits 1
 
-    Scenario: raw/ is exempt
-      Given raw/loyly/README.md names Babashka
+    Scenario: The match is on the technology's words, whole and regardless of case
+      Given spec/model.toml declares technology = "Rust" on the container "booking"
+      And spec/slots.feature line 20 reads "Then the resident trusts the schedule"
+      When I run harness check
+      Then stdout holds no finding with rule = "no-stack-words"
+
+    Scenario: A technology is matched by each of its words that is not a common word
+      Given spec/model.toml declares technology = "a web application"
+      And spec/slots.feature line 9 reads "Then the application shows the schedule"
+      When I run harness check
+      Then stdout holds no finding with rule = "no-stack-words"
+      # "web", "application" and "a" are common words; the list of common
+      # words is the harness's own (harness/common-words.toml), declared
+      # shared, and is the one list that is not derived.
+
+    Scenario: raw/ and the model are exempt
+      Given raw/loyly/README.md and spec/model.toml name every declared technology
       When I run harness check
       Then stdout holds no finding with rule = "no-stack-words"
 
@@ -1331,7 +1434,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       And it exits 0
 
     Scenario: The first red stops check, naming the stage
-      Given the storm passes and the model refuses with rule = "component-in-container"
+      Given the storm passes and the model refuses with rule = "container-has-components"
       When I run harness check
       Then stdout is exactly
         """
@@ -1339,9 +1442,8 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         stage = "model"
 
         [finding]
-        rule = "component-in-container"
-        component = "booking/slots"
-        container = "api"
+        rule = "container-has-components"
+        container = "ledger"
         """
       And it exits 1
 

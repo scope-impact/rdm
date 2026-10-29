@@ -32,9 +32,12 @@ _Held by:_ review (the minimum reference rule). _Avoid:_ documentation, notes.
 plans name no stack. _Held by:_ INV-2, `harness check` (`no-stack-words`).
 _Avoid:_ abstraction, neutrality.
 
-**Stack word.** A language, framework, database, hosting, vendor or toolkit
-name. The list is the harness's own and is held still with it.
-_Where:_ the `stack-words` stage of `check`.
+**Stack word.** A word of a technology the model declares (`technology` on
+a container, component, deployment node, infrastructure node or
+relationship), other than a common word. There is no hand-written list: the
+firewall reads the model (decision 0003). _Where:_ the `stack-words` stage
+of `check`; `harness/common-words.toml` for the words that never count.
+_Avoid:_ banned word, blacklist.
 
 ## The storm
 
@@ -89,39 +92,76 @@ TODO, risk, issue.
 
 ## The model
 
-**Model.** `spec/model.toml`: containers, components and relationships,
-derived from the storm and held to it. _Held by:_ `harness model`,
-`check` (stage `model`). _Avoid:_ architecture (the word for the practice,
-not the file), diagram, design.
+**Model.** `spec/model.toml`: the software system, its containers, their
+components, the relationships, and the deployment environments, in the C4
+model's vocabulary by the Structurizr DSL's names (decision 0003), derived
+from the storm and held to it. The harness adds three keys: `owns`, `spec`,
+`event`. _Held by:_ `harness model` (`model-vocabulary`), `check` (stage
+`model`). _Avoid:_ architecture (the word for the practice, not the file),
+diagram, design, schema.
 
-**Container.** Something that runs or stores data; **the ceiling of a
-scope**: a change that moves a component between containers, and every Nth
-cycle, rebuilds the whole container.
-_Where:_ `[containers.<name>]` with `runs`. _Held by:_
-`component-in-container`. _Avoid:_ service, app, deployable, module.
+**Software system.** C4's top: what is being built, made of containers
+(`raw/c4/c4model.com/abstractions.md`). _Where:_ `[softwareSystem]`.
+_Avoid:_ product (the word for what a cycle regenerates), app.
 
-**Component.** **The unit of regeneration**: sits in one container and one
-context, owns storm elements, owns one feature file; rebuilt whole when its
-scenarios or the events it carries change. Named `<context>/<name>`. A
-component may be reached by several plans. _Where:_ `[components."<context>/<name>"]` with
-`container`, `context`, `owns`, `spec`. _Held by:_
+**Container.** C4's container: an application or a data store, a runtime
+boundary around code that runs or data that is stored; not Docker, and its
+deployment a separate concern (`raw/c4/c4model.com/abstractions-container.md`).
+**The ceiling of a scope**: a change that moves a component between
+containers, and every Nth cycle, rebuilds the whole container.
+_Where:_ `[containers.<name>]` with `description`, `technology`, `tags`.
+_Held by:_ `container-has-components`. _Avoid:_ service, app, deployable,
+module, pod.
+
+**Component.** C4's component: related functionality behind an interface,
+inside one container's process space, not separately deployable
+(`raw/c4/c4model.com/abstractions-component.md`). **The unit of
+regeneration**: sits in one container and one group, owns storm elements,
+owns one feature file; rebuilt whole when its scenarios or the events it
+carries change. Named `<container>/<name>`. A component may be reached by
+several plans. _Where:_ `[containers.<container>.components.<name>]` with
+`group`, `description`, `technology`, `owns`, `spec`. _Held by:_
 `component-owns-storm-element`, `owned-element-in-storm`,
 `feature-owned-by-component`, `component-has-scenarios`.
 _Avoid:_ module, package, service, layer, slice.
 → [scope-and-container](pages/scope-and-container.md)
 
-**Context.** A bounded context: a part of the domain with its own language.
-Components of different contexts relate only through events.
-_Where:_ `context` on a component. _Held by:_ `contexts-relate-by-event`.
-_Avoid:_ domain, area, boundary.
+**Group.** C4's grouping, used for the bounded context: a part of the
+domain with its own language. Components of different groups relate only
+through events. _Where:_ `group` on a component. _Held by:_
+`groups-relate-by-event`. _Avoid:_ context (in files; prose may say
+"bounded context"), domain, area, boundary.
 
-**Relationship.** One component reaching another, named by the storm event
-it carries when the contexts differ. _Where:_ `[[relationships]]` with
-`from`, `to`, `event`. _Avoid:_ dependency, call, edge, link.
+**Technology.** C4's attribute for what a container, component, deployment
+node, infrastructure node or relationship is made of or runs on
+(`raw/c4/structurizr/dsl-language.md`, "technology"). The one place the
+stack is written; the source of the firewall's stack words. _Avoid:_ stack
+(in files), implementation, platform.
 
-**Publisher, subscriber.** For an event: the component whose aggregate's
-command raises it, and every component a relationship carries it to.
-_Where:_ computed by `scopes`. _Avoid:_ producer, consumer, emitter,
+**Deployment environment.** C4's named environment (production, staging,
+development) holding deployment nodes (`raw/c4/c4model.com/diagrams-deployment.md`).
+Where a monitor's results will be read against. _Where:_
+`[deploymentEnvironment.<name>]`. _Avoid:_ stage, target, cluster.
+
+**Deployment node.** C4's: where an instance of a container runs (physical,
+virtual, containerised, an execution environment); nests. _Where:_
+`deploymentNode.<name>` with `technology`, `instances`, `containerInstance`.
+_Held by:_ `containerInstance-names-container`. _Avoid:_ host, server, box.
+
+**Infrastructure node.** C4's: a load balancer, firewall, DNS service and
+the like, in a deployment environment. _Where:_ `infrastructureNode.<name>`
+with `technology`. _Avoid:_ middleware, service.
+
+**Relationship.** C4's relationship, one component reaching another, with
+the harness's `event`: the storm event it carries, required when the groups
+differ. _Where:_ `[[relationships]]` with `from`, `to`, `description`,
+`technology`, `event`. _Held by:_ `component-named`, `event-in-storm`.
+_Avoid:_ dependency, call, edge, link.
+
+**Publisher, subscriber.** For an event: the component owning the
+aggregate of the event's command, and every component a relationship
+carries it to. _Where:_ `harness model --events`; read by `scopes`.
+_Held by:_ `element-owned`, `event-carried`. _Avoid:_ producer, consumer, emitter,
 listener.
 
 ## The spec
