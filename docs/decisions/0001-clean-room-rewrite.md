@@ -25,6 +25,15 @@ spec".
   twice (11/11), so the results compare.
 - **The intent is the first file** (`README.md`), and every need and rule
   cites it. This is the rule rdm-spec lacked.
+- **One format: TOML**, for what a person writes (the configuration, the
+  storm, the model, the cycle record) and for what a task prints and writes
+  (checklist, verdicts, score, verified). TOML is the language's own
+  configuration format, reads and diffs well by hand, and allows comments.
+  Not YAML (its parser is unmaintained in this language, and `no`, `03` and
+  `1.0` parse as things they are not); not EDN, which was a leftover of
+  rdm-spec's stack and has no mature parser here; and not a second format
+  for the tools' outputs, because two formats are two byte contracts to
+  hold still. TOML has no null, so an absent value is an absent key.
 
 ## What was learned, and the rule each lesson became
 

@@ -3,19 +3,31 @@
 # pins what it prints and how it exits. Nothing a scenario does not state is
 # a contract.
 #
-# Every task prints exactly one EDN map on stdout, keys in the order shown,
-# and exits 0 (passed), 1 (refused: a finding about the project) or 2
-# (cannot run: the harness's own defect or a missing input). Nothing else is
-# written to stdout; stderr is free.
+# One format: TOML, for what a person writes (config, storm, model, the cycle
+# record) and for what a task prints and writes (checklist, verdicts, score,
+# verified). Every task prints exactly one TOML document on stdout, keys in
+# the order shown, a blank line before each table header, and exits 0
+# (passed), 1 (refused: a finding about the project) or 2 (cannot run: the
+# harness's own defect or a missing input). TOML has no null: a value that is
+# absent is an absent key. Nothing else is written to stdout; stderr is free.
 
 Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
   Background:
-    Given a project folder with the configuration spec/config.edn
+    Given a project folder with the configuration spec/config.toml
       """
-      {:spec "spec" :storm "spec/storm.edn" :model "spec/model.edn"
-       :raw "raw" :implementation ["impl"] :cycles "cycles"
-       :whole-container-every 5 :plugins []}
+      spec = "spec"
+      storm = "spec/storm.toml"
+      model = "spec/model.toml"
+      raw = "raw"
+      implementation = ["impl"]
+      cycles = "cycles"
+      whole-container-every = 5
+      plugins = []
+
+      [verify]
+      command = ["impl/test.sh"]
+      budget-seconds = 60
       """
 
   # ------------------------------------------------------------------
@@ -25,198 +37,322 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
   Rule: A project keeps its storm as data, and every element cites a source
 
     Scenario: The shape of a storm
-      Given spec/storm.edn
+      Given spec/storm.toml
         """
-        {:actors      {"resident" {:text "lives in the building" :sources ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]}}
-         :commands    {"BookSlot" {:actor "resident" :aggregate "Slot" :sources ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]}}
-         :events      {"SlotBooked" {:command "BookSlot" :carries [:date :resource :start] :sources ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]}}
-         :policies    {"BillOnBooking" {:when "SlotBooked" :then "RecordCharge" :sources ["loyly:raw/domain/public/yle-sauna-fees-2022.md@17d68d2"]}}
-         :aggregates  {"Slot" {:sources ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]}}
-         :read-models {"WeeklySchedule" {:fed-by ["SlotBooked"] :sources ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]}}
-         :hotspots    {}}
+        [actors.resident]
+        text = "lives in the building"
+        sources = ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]
+
+        [commands.BookSlot]
+        actor = "resident"
+        aggregate = "Slot"
+        sources = ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]
+
+        [events.SlotBooked]
+        command = "BookSlot"
+        carries = ["date", "resource", "start"]
+        sources = ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]
+
+        [policies.BillOnBooking]
+        when = "SlotBooked"
+        then = "RecordCharge"
+        sources = ["loyly:raw/domain/public/yle-sauna-fees-2022.md@17d68d2"]
+
+        [aggregates.Slot]
+        sources = ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]
+
+        [read-models.WeeklySchedule]
+        fed-by = ["SlotBooked"]
+        sources = ["loyly:raw/domain/elicitation-2026-08-26.md@17d68d2"]
+
+        [hotspots]
         """
       And raw/loyly/raw/domain/elicitation-2026-08-26.md and raw/loyly/raw/domain/public/yle-sauna-fees-2022.md exist
       When I run harness storm
       Then stdout is exactly
         """
-        {:storm :passed :actors 1 :commands 1 :events 1 :policies 1 :aggregates 1 :read-models 1 :hotspots {:open 0 :decided 0}}
+        storm = "passed"
+        actors = 1
+        commands = 1
+        events = 1
+        policies = 1
+        aggregates = 1
+        read-models = 1
+
+        [hotspots]
+        open = 0
+        decided = 0
         """
       And it exits 0
 
     Scenario: An element with no source is refused, naming it
-      Given spec/storm.edn whose event "SlotBooked" has :sources []
+      Given spec/storm.toml whose event SlotBooked has sources = []
       When I run harness storm
       Then stdout is exactly
         """
-        {:storm :refused :finding {:rule :element-sourced :element [:events "SlotBooked"]}}
+        storm = "refused"
+
+        [finding]
+        rule = "element-sourced"
+        element = ["events", "SlotBooked"]
         """
       And it exits 1
 
     Scenario: A source that is not under raw/ is refused
-      Given spec/storm.edn whose actor "resident" cites "https://example.org/sauna"
+      Given spec/storm.toml whose actor resident cites "https://example.org/sauna"
       When I run harness storm
       Then stdout is exactly
         """
-        {:storm :refused :finding {:rule :source-is-raw :element [:actors "resident"] :source "https://example.org/sauna"}}
+        storm = "refused"
+
+        [finding]
+        rule = "source-is-raw"
+        element = ["actors", "resident"]
+        source = "https://example.org/sauna"
         """
       And it exits 1
 
     Scenario: A source whose file is not in raw/ is refused
-      Given spec/storm.edn whose aggregate "Slot" cites "loyly:raw/domain/missing.md@17d68d2"
+      Given spec/storm.toml whose aggregate Slot cites "loyly:raw/domain/missing.md@17d68d2"
       When I run harness storm
       Then stdout is exactly
         """
-        {:storm :refused :finding {:rule :source-exists :element [:aggregates "Slot"] :path "raw/loyly/raw/domain/missing.md"}}
+        storm = "refused"
+
+        [finding]
+        rule = "source-exists"
+        element = ["aggregates", "Slot"]
+        path = "raw/loyly/raw/domain/missing.md"
         """
       And it exits 1
 
     Scenario: A command whose actor or aggregate the storm does not name is refused
-      Given spec/storm.edn whose command "BookSlot" names the aggregate "Booking", which :aggregates does not hold
+      Given spec/storm.toml whose command BookSlot names the aggregate "Booking", which [aggregates] does not hold
       When I run harness storm
       Then stdout is exactly
         """
-        {:storm :refused :finding {:rule :command-aggregate-named :element [:commands "BookSlot"] :aggregate "Booking"}}
+        storm = "refused"
+
+        [finding]
+        rule = "command-aggregate-named"
+        element = ["commands", "BookSlot"]
+        aggregate = "Booking"
         """
       And it exits 1
 
     Scenario: An event with no command is refused
-      Given spec/storm.edn whose event "SlotBooked" has no :command
+      Given spec/storm.toml whose event SlotBooked has no command
       When I run harness storm
       Then stdout is exactly
         """
-        {:storm :refused :finding {:rule :event-has-command :element [:events "SlotBooked"]}}
+        storm = "refused"
+
+        [finding]
+        rule = "event-has-command"
+        element = ["events", "SlotBooked"]
         """
       And it exits 1
 
     Scenario: A read model fed by an unknown event is refused
-      Given spec/storm.edn whose read model "WeeklySchedule" is :fed-by ["SlotCancelled"], which :events does not hold
+      Given spec/storm.toml whose read model WeeklySchedule is fed-by = ["SlotCancelled"], which [events] does not hold
       When I run harness storm
       Then stdout is exactly
         """
-        {:storm :refused :finding {:rule :read-model-fed-by-event :element [:read-models "WeeklySchedule"] :event "SlotCancelled"}}
+        storm = "refused"
+
+        [finding]
+        rule = "read-model-fed-by-event"
+        element = ["read-models", "WeeklySchedule"]
+        event = "SlotCancelled"
         """
       And it exits 1
 
     Scenario: The first finding stops the run
-      Given spec/storm.edn with an unsourced actor and an unsourced event
+      Given spec/storm.toml with an unsourced actor and an unsourced event
       When I run harness storm
-      Then stdout holds one :finding, the actor's
+      Then stdout holds one [finding], the actor's
       And it exits 1
 
   Rule: No storm, no cut (INV-1)
 
     Scenario: A project with no storm is refused by check
-      Given no spec/storm.edn
+      Given no spec/storm.toml
       When I run harness check
       Then stdout is exactly
         """
-        {:check :refused :stage :storm :finding {:rule :storm-exists :path "spec/storm.edn"}}
+        check = "refused"
+        stage = "storm"
+
+        [finding]
+        rule = "storm-exists"
+        path = "spec/storm.toml"
         """
       And it exits 1
 
     Scenario: An open hotspot refuses a cut
-      Given spec/storm.edn whose :hotspots hold {"H1" {:text "who may book a second slot" :status :open}}
+      Given spec/storm.toml whose [hotspots.H1] holds text = "who may book a second slot" and status = "open"
       When I run harness cut spec-1
       Then stdout is exactly
         """
-        {:cut :refused :stage :storm :finding {:rule :hotspots-decided :hotspot "H1"}}
+        cut = "refused"
+        stage = "storm"
+
+        [finding]
+        rule = "hotspots-decided"
+        hotspot = "H1"
         """
       And it exits 1
       And no tag spec-1 exists
 
     Scenario: A decided hotspot carries its decision and a source
-      Given spec/storm.edn whose :hotspots hold {"H1" {:text "who may book a second slot" :status :decided :decision "when there is room" :sources ["loyly:docs/wiki/pages/actors-and-fairness.md@17d68d2"]}}
+      Given spec/storm.toml whose [hotspots.H1] holds status = "decided", decision = "when there is room" and sources = ["loyly:docs/wiki/pages/actors-and-fairness.md@17d68d2"]
       When I run harness storm
-      Then stdout holds :hotspots {:open 0 :decided 1}
+      Then stdout holds [hotspots] with open = 0 and decided = 1
       And it exits 0
 
     Scenario: A decided hotspot with no decision text is refused
-      Given spec/storm.edn whose hotspot "H1" has :status :decided and no :decision
+      Given spec/storm.toml whose hotspot H1 has status = "decided" and no decision
       When I run harness storm
       Then stdout is exactly
         """
-        {:storm :refused :finding {:rule :decision-stated :hotspot "H1"}}
+        storm = "refused"
+
+        [finding]
+        rule = "decision-stated"
+        hotspot = "H1"
         """
       And it exits 1
 
   Rule: The model is derived from the storm, never drawn (INV-1)
 
     Scenario: The shape of a model
-      Given spec/model.edn
+      Given spec/model.toml
         """
-        {:containers {"booking" {:runs true}}
-         :components {"booking/slots"    {:container "booking" :context "booking" :owns ["Slot" "WeeklySchedule"] :spec "spec/slots.feature"}
-                      "booking/billing"  {:container "booking" :context "billing" :owns ["Charge"] :spec "spec/billing.feature"}}
-         :relationships [{:from "booking/slots" :to "booking/billing" :event "SlotBooked"}]}
+        [containers.booking]
+        runs = true
+
+        [components."booking/slots"]
+        container = "booking"
+        context = "booking"
+        owns = ["Slot", "WeeklySchedule"]
+        spec = "spec/slots.feature"
+
+        [components."booking/billing"]
+        container = "booking"
+        context = "billing"
+        owns = ["Charge"]
+        spec = "spec/billing.feature"
+
+        [[relationships]]
+        from = "booking/slots"
+        to = "booking/billing"
+        event = "SlotBooked"
         """
       And a storm holding the aggregates Slot and Charge, the read model WeeklySchedule and the event SlotBooked
       When I run harness model
       Then stdout is exactly
         """
-        {:model :passed :containers 1 :components 2 :relationships 1}
+        model = "passed"
+        containers = 1
+        components = 2
+        relationships = 1
         """
       And it exits 0
 
     Scenario: A component that owns nothing of the storm is refused
-      Given spec/model.edn whose component "booking/audit" has :owns []
+      Given spec/model.toml whose component "booking/audit" has owns = []
       When I run harness model
       Then stdout is exactly
         """
-        {:model :refused :finding {:rule :component-owns-storm-element :component "booking/audit"}}
+        model = "refused"
+
+        [finding]
+        rule = "component-owns-storm-element"
+        component = "booking/audit"
         """
       And it exits 1
 
     Scenario: A component that owns something the storm does not name is refused
-      Given spec/model.edn whose component "booking/slots" owns "Waitlist", which the storm does not hold
+      Given spec/model.toml whose component "booking/slots" owns "Waitlist", which the storm does not hold
       When I run harness model
       Then stdout is exactly
         """
-        {:model :refused :finding {:rule :owned-element-in-storm :component "booking/slots" :element "Waitlist"}}
+        model = "refused"
+
+        [finding]
+        rule = "owned-element-in-storm"
+        component = "booking/slots"
+        element = "Waitlist"
         """
       And it exits 1
 
     Scenario: An aggregate owned by two components is refused
-      Given spec/model.edn where "booking/slots" and "booking/billing" both own "Slot"
+      Given spec/model.toml where "booking/slots" and "booking/billing" both own "Slot"
       When I run harness model
       Then stdout is exactly
         """
-        {:model :refused :finding {:rule :element-owned-once :element "Slot" :components ["booking/billing" "booking/slots"]}}
+        model = "refused"
+
+        [finding]
+        rule = "element-owned-once"
+        element = "Slot"
+        components = ["booking/billing", "booking/slots"]
         """
       And it exits 1
 
     Scenario: A component in no container is refused
-      Given spec/model.edn whose component "booking/slots" names the container "api", which :containers does not hold
+      Given spec/model.toml whose component "booking/slots" names the container "api", which [containers] does not hold
       When I run harness model
       Then stdout is exactly
         """
-        {:model :refused :finding {:rule :component-in-container :component "booking/slots" :container "api"}}
+        model = "refused"
+
+        [finding]
+        rule = "component-in-container"
+        component = "booking/slots"
+        container = "api"
         """
       And it exits 1
 
     Scenario: Components of different contexts relate only through a storm event
-      Given spec/model.edn whose relationship from "booking/slots" to "booking/billing" names no :event
+      Given spec/model.toml whose relationship from "booking/slots" to "booking/billing" names no event
       When I run harness model
       Then stdout is exactly
         """
-        {:model :refused :finding {:rule :contexts-relate-by-event :from "booking/slots" :to "booking/billing"}}
+        model = "refused"
+
+        [finding]
+        rule = "contexts-relate-by-event"
+        from = "booking/slots"
+        to = "booking/billing"
         """
       And it exits 1
 
     Scenario: A relationship naming an event the storm does not hold is refused
-      Given spec/model.edn whose relationship names the event "SlotCancelled", which the storm does not hold
+      Given spec/model.toml whose relationship names the event "SlotCancelled", which the storm does not hold
       When I run harness model
       Then stdout is exactly
         """
-        {:model :refused :finding {:rule :event-in-storm :from "booking/slots" :to "booking/billing" :event "SlotCancelled"}}
+        model = "refused"
+
+        [finding]
+        rule = "event-in-storm"
+        from = "booking/slots"
+        to = "booking/billing"
+        event = "SlotCancelled"
         """
       And it exits 1
 
     Scenario: An event the storm holds that no relationship carries is refused
-      Given a storm holding the event "SlotCancelled" and a model whose relationships never name it
+      Given a storm holding the event SlotCancelled and a model whose relationships never name it
       When I run harness model
       Then stdout is exactly
         """
-        {:model :refused :finding {:rule :event-carried :event "SlotCancelled"}}
+        model = "refused"
+
+        [finding]
+        rule = "event-carried"
+        event = "SlotCancelled"
         """
       And it exits 1
 
@@ -227,20 +363,27 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness check
       Then stdout is exactly
         """
-        {:check :refused :stage :stack-words :finding {:rule :no-stack-words :path "spec/slots.feature" :line 12 :word "Postgres"}}
+        check = "refused"
+        stage = "stack-words"
+
+        [finding]
+        rule = "no-stack-words"
+        path = "spec/slots.feature"
+        line = 12
+        word = "Postgres"
         """
       And it exits 1
 
     Scenario: A stack word in the storm is refused the same way
-      Given spec/storm.edn whose policy "BillOnBooking" has :then "write a Kafka message"
+      Given spec/storm.toml whose policy BillOnBooking has then = "write a Kafka message" on line 19
       When I run harness check
-      Then stdout holds :finding {:rule :no-stack-words :path "spec/storm.edn" :line 5 :word "Kafka"}
+      Then stdout holds [finding] with rule = "no-stack-words", path = "spec/storm.toml", line = 19 and word = "Kafka"
       And it exits 1
 
     Scenario: raw/ is exempt
       Given raw/loyly/README.md names Babashka
       When I run harness check
-      Then stdout holds no :no-stack-words finding
+      Then stdout holds no finding with rule = "no-stack-words"
 
   # ------------------------------------------------------------------
   # The spec and its ids: INV-6
@@ -249,11 +392,16 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
   Rule: Every scenario belongs to one component, and every component owns at least one
 
     Scenario: A feature file the model does not name is refused
-      Given spec/waitlist.feature, which no component's :spec names
+      Given spec/waitlist.feature, which no component's spec names
       When I run harness check
       Then stdout is exactly
         """
-        {:check :refused :stage :spec :finding {:rule :feature-owned-by-component :path "spec/waitlist.feature"}}
+        check = "refused"
+        stage = "spec"
+
+        [finding]
+        rule = "feature-owned-by-component"
+        path = "spec/waitlist.feature"
         """
       And it exits 1
 
@@ -262,7 +410,13 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness check
       Then stdout is exactly
         """
-        {:check :refused :stage :spec :finding {:rule :component-has-scenarios :component "booking/billing" :path "spec/billing.feature"}}
+        check = "refused"
+        stage = "spec"
+
+        [finding]
+        rule = "component-has-scenarios"
+        component = "booking/billing"
+        path = "spec/billing.feature"
         """
       And it exits 1
 
@@ -275,7 +429,10 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       Then the second scenario of spec/slots.feature is tagged @item-008 on the line above it, with the scenario's own indentation
       And stdout is exactly
         """
-        {:stamp :passed :stamped 1 :files ["spec/slots.feature"] :next 9}
+        stamp = "passed"
+        stamped = 1
+        files = ["spec/slots.feature"]
+        next = 9
         """
       And it exits 0
 
@@ -285,7 +442,10 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       Then no file changes
       And stdout is exactly
         """
-        {:stamp :passed :stamped 0 :files [] :next 9}
+        stamp = "passed"
+        stamped = 0
+        files = []
+        next = 9
         """
       And it exits 0
 
@@ -306,7 +466,12 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness stamp
       Then stdout is exactly
         """
-        {:stamp :refused :finding {:rule :id-once :id "item-003" :paths ["spec/billing.feature" "spec/slots.feature"]}}
+        stamp = "refused"
+
+        [finding]
+        rule = "id-once"
+        id = "item-003"
+        paths = ["spec/billing.feature", "spec/slots.feature"]
         """
       And it exits 1
 
@@ -318,9 +483,26 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness checklist
       Then stdout is exactly
         """
-        {:checklist :passed :items [{:id "item-007" :component "booking/billing" :rule nil :name "A booking is charged" :source "spec/billing.feature:6"}
-                                    {:id "item-003" :component "booking/slots" :rule "Booking" :name "A slot is booked" :source "spec/slots.feature:9"}
-                                    {:id "item-008" :component "booking/slots" :rule nil :name "A second slot needs room" :source "spec/slots.feature:20"}]}
+        checklist = "passed"
+
+        [[items]]
+        id = "item-007"
+        component = "booking/billing"
+        name = "A booking is charged"
+        source = "spec/billing.feature:6"
+
+        [[items]]
+        id = "item-003"
+        component = "booking/slots"
+        rule = "Booking"
+        name = "A slot is booked"
+        source = "spec/slots.feature:9"
+
+        [[items]]
+        id = "item-008"
+        component = "booking/slots"
+        name = "A second slot needs room"
+        source = "spec/slots.feature:20"
         """
       And it exits 0
 
@@ -331,7 +513,12 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness checklist
       Then stdout is exactly
         """
-        {:checklist :refused :finding {:rule :every-scenario-stamped :path "spec/slots.feature" :line 25}}
+        checklist = "refused"
+
+        [finding]
+        rule = "every-scenario-stamped"
+        path = "spec/slots.feature"
+        line = 25
         """
       And it exits 1
 
@@ -340,14 +527,17 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness checklist
       Then stdout is exactly
         """
-        {:checklist :refused :finding {:rule :spec-not-empty}}
+        checklist = "refused"
+
+        [finding]
+        rule = "spec-not-empty"
         """
       And it exits 1
 
     Scenario: A scenario tagged @wip is listed and marked, never dropped
       Given @item-008 is also tagged @wip
       When I run harness checklist
-      Then its item carries :wip true
+      Then its item carries wip = true
 
   # ------------------------------------------------------------------
   # The cut and its scope: INV-4
@@ -361,7 +551,10 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       Then the tag spec-1 points at HEAD
       And stdout is exactly
         """
-        {:cut :passed :tag "spec-1" :commit "<HEAD's hash>" :items 3}
+        cut = "passed"
+        tag = "spec-1"
+        commit = "<HEAD's hash>"
+        items = 3
         """
       And it exits 0
 
@@ -370,16 +563,25 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness cut spec-1
       Then stdout is exactly
         """
-        {:cut :refused :finding {:rule :tree-clean :paths ["spec/slots.feature"]}}
+        cut = "refused"
+
+        [finding]
+        rule = "tree-clean"
+        paths = ["spec/slots.feature"]
         """
       And it exits 1
 
     Scenario: A cut whose check fails is refused with check's finding
-      Given check refuses with {:rule :storm-exists :path "spec/storm.edn"}
+      Given check refuses at the stage storm with rule = "storm-exists"
       When I run harness cut spec-1
       Then stdout is exactly
         """
-        {:cut :refused :stage :storm :finding {:rule :storm-exists :path "spec/storm.edn"}}
+        cut = "refused"
+        stage = "storm"
+
+        [finding]
+        rule = "storm-exists"
+        path = "spec/storm.toml"
         """
       And it exits 1
 
@@ -388,7 +590,11 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness cut spec-1
       Then stdout is exactly
         """
-        {:cut :refused :finding {:rule :tag-free :tag "spec-1"}}
+        cut = "refused"
+
+        [finding]
+        rule = "tag-free"
+        tag = "spec-1"
         """
       And it exits 1
 
@@ -399,48 +605,65 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness scopes spec-1 spec-2
       Then stdout is exactly
         """
-        {:scopes :passed :from "spec-1" :to "spec-2" :changed ["booking/billing"] :reached [] :components ["booking/billing"] :containers ["booking"] :whole-container false}
+        scopes = "passed"
+        from = "spec-1"
+        to = "spec-2"
+        changed = ["booking/billing"]
+        reached = []
+        components = ["booking/billing"]
+        containers = ["booking"]
+        whole-container = false
         """
       And it exits 0
 
     Scenario: A change to an event reaches its publisher and every subscriber
       Given between spec-1 and spec-2 the storm's event SlotBooked gained a carried key
       When I run harness scopes spec-1 spec-2
-      Then stdout holds :changed [] :reached ["booking/billing" "booking/slots"] :components ["booking/billing" "booking/slots"]
+      Then stdout holds changed = [], reached = ["booking/billing", "booking/slots"] and components = ["booking/billing", "booking/slots"]
 
     Scenario: A change to the model or the storm that moves a component makes its container the scope
       Given between spec-1 and spec-2 the component "booking/billing" moved to the container "ledger"
       When I run harness scopes spec-1 spec-2
-      Then stdout holds :whole-container true :containers ["booking" "ledger"]
+      Then stdout holds whole-container = true and containers = ["booking", "ledger"]
 
     Scenario: Nothing changed is a refusal, not an empty scope
       Given spec-1 and spec-2 point at the same tree
       When I run harness scopes spec-1 spec-2
       Then stdout is exactly
         """
-        {:scopes :refused :finding {:rule :cuts-differ :from "spec-1" :to "spec-2"}}
+        scopes = "refused"
+
+        [finding]
+        rule = "cuts-differ"
+        from = "spec-1"
+        to = "spec-2"
         """
       And it exits 1
 
     Scenario: A scope is never read from a file
-      Given cycles/03/cycle.edn holds :components ["booking/slots"]
+      Given cycles/03/cycle.toml holds components = ["booking/slots"]
       When I run harness fence 03
       Then stdout is exactly
         """
-        {:fence :refused :finding {:rule :scope-computed :path "cycles/03/cycle.edn" :key :components}}
+        fence = "refused"
+
+        [finding]
+        rule = "scope-computed"
+        path = "cycles/03/cycle.toml"
+        key = "components"
         """
       And it exits 1
 
   Rule: Every Nth cycle is a whole-container cycle, and the scoreboard says when one is due
 
     Scenario: The fifth cycle since the last whole-container cycle is whole
-      Given :whole-container-every 5 and cycles 01 to 04 since the last whole-container cycle
+      Given whole-container-every = 5 and cycles 01 to 04 since the last whole-container cycle
       When I run harness scopes spec-4 spec-5
-      Then stdout holds :whole-container true and :components every component of the model
+      Then stdout holds whole-container = true and components = every component of the model
 
     Scenario: The scoreboard names the cycle a whole-container cycle is due
       When I run harness scoreboard 04
-      Then stdout holds :whole-container-due "05"
+      Then stdout holds whole-container-due = "05"
 
   # ------------------------------------------------------------------
   # The clean room: README, "regenerate, not copy"
@@ -449,29 +672,40 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
   Rule: The fence is physical and proved
 
     Scenario: A room holds the cut and nothing of the scope's implementation or any measurement
-      Given cycles/03/cycle.edn names the cut spec-3 and the previous cut spec-2
-      And scopes spec-2 spec-3 answers :components ["booking/billing"]
+      Given cycles/03/cycle.toml names cut = "spec-3" and from = "spec-2"
+      And scopes spec-2 spec-3 answers components = ["booking/billing"]
       And impl/billing/ and impl/slots/ hold the previous build, and cycles/ the previous measurements
       When I run harness fence 03
       Then cycles/03/room/ is a clone of spec-3 whose history holds no commit touching impl/billing/ or cycles/
       And impl/slots/ is in the room, unchanged
       And stdout is exactly
         """
-        {:fence :passed :cycle "03" :cut "spec-3" :room "cycles/03/room" :removed ["cycles" "impl/billing"] :kept ["impl/slots"] :tree "<the room's tree hash>"}
+        fence = "passed"
+        cycle = "03"
+        cut = "spec-3"
+        room = "cycles/03/room"
+        removed = ["cycles", "impl/billing"]
+        kept = ["impl/slots"]
+        tree = "<the room's tree hash>"
         """
       And it exits 0
 
     Scenario: A whole-container scope removes every implementation of the container
-      Given scopes answers :whole-container true :containers ["booking"]
+      Given scopes answers whole-container = true and containers = ["booking"]
       When I run harness fence 04
-      Then stdout holds :removed ["cycles" "impl/billing" "impl/slots"] :kept []
+      Then stdout holds removed = ["cycles", "impl/billing", "impl/slots"] and kept = []
 
     Scenario: The proof fails if a removed path is reachable in the room's history
       Given a room whose history still reaches impl/billing/
       When I run harness fence --prove 03
       Then stdout is exactly
         """
-        {:fence :refused :finding {:rule :room-proved :path "impl/billing" :commit "<the reachable commit>"}}
+        fence = "refused"
+
+        [finding]
+        rule = "room-proved"
+        path = "impl/billing"
+        commit = "<the reachable commit>"
         """
       And it exits 1
 
@@ -480,18 +714,26 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness fence 03
       Then stdout is exactly
         """
-        {:fence :refused :finding {:rule :room-fresh :room "cycles/03/room"}}
+        fence = "refused"
+
+        [finding]
+        rule = "room-fresh"
+        room = "cycles/03/room"
         """
       And it exits 1
 
   Rule: One builder per cycle, in the room, reading the cut's plan first
 
     Scenario: The cycle record names one builder
-      Given cycles/03/cycle.edn names two builders
+      Given cycles/03/cycle.toml names two builders
       When I run harness verify 03
       Then stdout is exactly
         """
-        {:verify :refused :finding {:rule :one-builder :cycle "03"}}
+        verify = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "one-builder"
         """
       And it exits 1
 
@@ -502,12 +744,26 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
   Rule: "Done" is ratified by verify, which the builder does not control
 
     Scenario: A green suite, twice, inside the budget, is ratified
-      Given cycles/03/room holds a build whose suite passes 3 scenarios in 4 seconds, and the configuration's :verify holds {:command ["impl/test.sh"] :budget-seconds 60}
+      Given cycles/03/room holds a build whose suite passes 3 scenarios in 4 seconds
       When I run harness verify 03
-      Then cycles/03/verified.edn is written
+      Then cycles/03/verified.toml is written with the same content as stdout
       And stdout is exactly
         """
-        {:verify :passed :cycle "03" :tree "<the room's tree hash>" :runs [{:scenarios 3 :passed 3 :seconds 4} {:scenarios 3 :passed 3 :seconds 4}] :budget-seconds 60 :margin-seconds 56}
+        verify = "passed"
+        cycle = "03"
+        tree = "<the room's tree hash>"
+        budget-seconds = 60
+        margin-seconds = 56
+
+        [[runs]]
+        scenarios = 3
+        passed = 3
+        seconds = 4
+
+        [[runs]]
+        scenarios = 3
+        passed = 3
+        seconds = 4
         """
       And it exits 0
 
@@ -516,17 +772,30 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness verify 03
       Then stdout is exactly
         """
-        {:verify :refused :cycle "03" :finding {:rule :suite-green-twice :run 2 :scenarios 3 :passed 2}}
+        verify = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "suite-green-twice"
+        run = 2
+        scenarios = 3
+        passed = 2
         """
       And it exits 1
-      And no cycles/03/verified.edn exists
+      And no cycles/03/verified.toml exists
 
     Scenario: A suite that did not run is a refusal, never a pass
       Given impl/test.sh exits 0 having run no scenario
       When I run harness verify 03
       Then stdout is exactly
         """
-        {:verify :refused :cycle "03" :finding {:rule :suite-ran :run 1 :scenarios 0}}
+        verify = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "suite-ran"
+        run = 1
+        scenarios = 0
         """
       And it exits 1
 
@@ -535,22 +804,34 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness verify 03
       Then stdout is exactly
         """
-        {:verify :refused :cycle "03" :finding {:rule :inside-budget :run 1 :budget-seconds 60}}
+        verify = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "inside-budget"
+        run = 1
+        budget-seconds = 60
         """
       And it exits 1
 
     Scenario: Verify runs only in a proved room
       Given cycles/03/room fails the fence's proof
       When I run harness verify 03
-      Then stdout holds :finding {:rule :room-proved ...}
+      Then stdout holds [finding] with rule = "room-proved"
       And it exits 1
 
-    Scenario: A verified build is the room's tree, and a changed room is not verified
-      Given cycles/03/verified.edn names the tree T and the room's tree is now U
-      When I run harness score 03 verdicts.edn
+    Scenario: A verified build is the room's tree, and a changed room is not scored
+      Given cycles/03/verified.toml names tree = "T" and the room's tree is now U
+      When I run harness score 03 verdicts.toml
       Then stdout is exactly
         """
-        {:score :refused :cycle "03" :finding {:rule :verified-tree :verified "T" :room "U"}}
+        score = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "verified-tree"
+        verified = "T"
+        room = "U"
         """
       And it exits 1
 
@@ -561,89 +842,170 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
   Rule: Score files verdicts against the checklist and refuses a cycle verify did not ratify
 
     Scenario: A complete set of verdicts is filed
-      Given cycles/03/checklist.edn holds item-003, item-007 and item-008
-      And verdicts.edn
+      Given cycles/03/checklist.toml holds item-003, item-007 and item-008
+      And verdicts.toml
         """
-        [{:id "item-003" :verdict :pass :evidence "booked Tuesday 17:00, dressing room 8"}
-         {:id "item-007" :verdict :pass}
-         {:id "item-008" :verdict :fail :evidence "second slot refused with room remaining"}]
+        [[verdicts]]
+        id = "item-003"
+        verdict = "pass"
+        evidence = "booked Tuesday 17:00, dressing room 8"
+
+        [[verdicts]]
+        id = "item-007"
+        verdict = "pass"
+
+        [[verdicts]]
+        id = "item-008"
+        verdict = "fail"
+        evidence = "second slot refused with room remaining"
         """
-      When I run harness score 03 verdicts.edn
-      Then cycles/03/score.edn is written
+      When I run harness score 03 verdicts.toml
+      Then cycles/03/score.toml is written with the same content as stdout
       And stdout is exactly
         """
-        {:score :passed :cycle "03" :scored 3 :passed 2 :failed 1 :unreached 0 :items [{:id "item-003" :verdict :pass :evidence "booked Tuesday 17:00, dressing room 8"} {:id "item-007" :verdict :pass :evidence ""} {:id "item-008" :verdict :fail :evidence "second slot refused with room remaining"}]}
+        score = "passed"
+        cycle = "03"
+        scored = 3
+        passed = 2
+        failed = 1
+        unreached = 0
+
+        [[items]]
+        id = "item-003"
+        verdict = "pass"
+        evidence = "booked Tuesday 17:00, dressing room 8"
+
+        [[items]]
+        id = "item-007"
+        verdict = "pass"
+        evidence = ""
+
+        [[items]]
+        id = "item-008"
+        verdict = "fail"
+        evidence = "second slot refused with room remaining"
         """
       And it exits 0
 
     Scenario: An item nobody reached is a fail with the reason, never dropped
-      Given verdicts.edn holds item-003 and item-007 only
-      When I run harness score 03 verdicts.edn
-      Then stdout holds :scored 3 :passed 2 :failed 1 :unreached 1
-      And the item item-008 reads {:id "item-008" :verdict :fail :evidence "unreached: no verdict was given"}
+      Given verdicts.toml holds item-003 and item-007 only
+      When I run harness score 03 verdicts.toml
+      Then stdout holds scored = 3, passed = 2, failed = 1 and unreached = 1
+      And the item item-008 reads verdict = "fail" and evidence = "unreached: no verdict was given"
 
     Scenario: Zero verdicts means the grading did not happen
-      Given verdicts.edn holds []
-      When I run harness score 03 verdicts.edn
+      Given verdicts.toml holds verdicts = []
+      When I run harness score 03 verdicts.toml
       Then stdout is exactly
         """
-        {:score :refused :cycle "03" :finding {:rule :graded :verdicts 0}}
+        score = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "graded"
+        verdicts = 0
         """
       And it exits 1
-      And no cycles/03/score.edn exists
+      And no cycles/03/score.toml exists
 
     Scenario: A verdict for an id not on the checklist is fatal
-      Given verdicts.edn holds {:id "item-099" :verdict :pass}
-      When I run harness score 03 verdicts.edn
+      Given verdicts.toml holds a verdict for item-099
+      When I run harness score 03 verdicts.toml
       Then stdout is exactly
         """
-        {:score :refused :cycle "03" :finding {:rule :id-on-checklist :id "item-099"}}
+        score = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "id-on-checklist"
+        id = "item-099"
         """
       And it exits 1
 
     Scenario: A verdict that is neither pass nor fail is fatal
-      Given verdicts.edn holds {:id "item-003" :verdict :partial}
-      When I run harness score 03 verdicts.edn
+      Given verdicts.toml holds item-003 with verdict = "partial"
+      When I run harness score 03 verdicts.toml
       Then stdout is exactly
         """
-        {:score :refused :cycle "03" :finding {:rule :verdict-pass-or-fail :id "item-003" :verdict :partial}}
+        score = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "verdict-pass-or-fail"
+        id = "item-003"
+        verdict = "partial"
         """
       And it exits 1
 
     Scenario: Duplicate verdicts for one id keep the last
 
     Scenario: A cycle verify did not ratify cannot be scored
-      Given no cycles/03/verified.edn
-      When I run harness score 03 verdicts.edn
+      Given no cycles/03/verified.toml
+      When I run harness score 03 verdicts.toml
       Then stdout is exactly
         """
-        {:score :refused :cycle "03" :finding {:rule :verified :cycle "03"}}
+        score = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "verified"
         """
       And it exits 1
 
     Scenario: Several graders' verdicts are scored apart and agreed by majority
-      Given verdicts from graders a, b and c where item-008 is :pass by a and :fail by b and c
-      When I run harness score 03 a.edn b.edn c.edn
-      Then stdout holds :graders 3 and item-008 reads {:id "item-008" :verdict :fail :evidence "" :by {"a" :pass "b" :fail "c" :fail}}
+      Given verdicts from graders a, b and c where item-008 is pass by a and fail by b and c
+      When I run harness score 03 a.toml b.toml c.toml
+      Then stdout holds graders = 3
+      And the item item-008 reads verdict = "fail", evidence = "" and [items.by] with a = "pass", b = "fail", c = "fail"
 
   Rule: The scoreboard shows both directions on the shared items, never a net
 
     Scenario: A baseline cycle, with nothing to compare against
-      Given cycles/01/score.edn holds 3 scored, 2 passed, and no earlier cycle has a score
+      Given cycles/01/score.toml holds 3 scored, 2 passed, and no earlier cycle has a score
       When I run harness scoreboard 01
       Then stdout is exactly
         """
-        {:scoreboard :passed :cycle "01" :scored 3 :passed 2 :rate 66.7 :previous nil :whole-container-due "05"}
+        scoreboard = "passed"
+        cycle = "01"
+        scored = 3
+        passed = 2
+        rate = 66.7
+        whole-container-due = "05"
         """
       And it exits 0
 
     Scenario: The full comparison against the previous cycle
-      Given cycles/02/score.edn holds item-003 :pass, item-007 :fail, item-008 :pass, item-010 :pass
-      And cycles/01/score.edn holds item-003 :pass, item-007 :pass, item-008 :fail
+      Given cycles/02/score.toml holds item-003 pass, item-007 fail, item-008 pass, item-010 pass
+      And cycles/01/score.toml holds item-003 pass, item-007 pass, item-008 fail
       When I run harness scoreboard 02
       Then stdout is exactly
         """
-        {:scoreboard :passed :cycle "02" :scored 4 :passed 3 :rate 75.0 :previous {:cycle "01" :scored 3 :passed 2 :rate 66.7} :shared {:items 3 :better ["item-008"] :worse ["item-007"] :same 1} :new {:items 1 :passed 1} :dropped {:items 0} :denominator-moved true :whole-container-due "05"}
+        scoreboard = "passed"
+        cycle = "02"
+        scored = 4
+        passed = 3
+        rate = 75.0
+        denominator-moved = true
+        whole-container-due = "05"
+
+        [previous]
+        cycle = "01"
+        scored = 3
+        passed = 2
+        rate = 66.7
+
+        [shared]
+        items = 3
+        better = ["item-008"]
+        worse = ["item-007"]
+        same = 1
+
+        [new]
+        items = 1
+        passed = 1
+
+        [dropped]
+        items = 0
         """
       And it exits 0
 
@@ -652,42 +1014,69 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
     Scenario: The cycle to compare against is the numeric predecessor with a score, skipping cycles without one
 
     Scenario: A cycle with no score cannot be reported
-      Given no cycles/03/score.edn
+      Given no cycles/03/score.toml
       When I run harness scoreboard 03
       Then stdout is exactly
         """
-        {:scoreboard :refused :finding {:rule :scored :cycle "03"}}
+        scoreboard = "refused"
+
+        [finding]
+        rule = "scored"
+        cycle = "03"
         """
       And it exits 1
 
   Rule: The spec owner's decisions are a person's (INV-10)
 
     Scenario: A cycle record names who built, who graded and who accepted
-      Given cycles/03/cycle.edn
+      Given cycles/03/cycle.toml
         """
-        {:cut "spec-3" :from "spec-2"
-         :builder {:name "one builder" :actor :agent}
-         :graders [{:name "a" :actor :agent} {:name "b" :actor :human}]
-         :spec-owner {:name "Sathish Narayanan" :actor :human}}
+        cut = "spec-3"
+        from = "spec-2"
+
+        [builder]
+        name = "one builder"
+        actor = "agent"
+
+        [[graders]]
+        name = "a"
+        actor = "agent"
+
+        [[graders]]
+        name = "b"
+        actor = "human"
+
+        [spec-owner]
+        name = "Sathish Narayanan"
+        actor = "human"
         """
-      When I run harness score 03 verdicts.edn
+      When I run harness score 03 verdicts.toml
       Then it exits 0
 
     Scenario: A record whose spec owner is an agent is refused
-      Given cycles/03/cycle.edn whose :spec-owner has :actor :agent
-      When I run harness score 03 verdicts.edn
+      Given cycles/03/cycle.toml whose [spec-owner] has actor = "agent"
+      When I run harness score 03 verdicts.toml
       Then stdout is exactly
         """
-        {:score :refused :cycle "03" :finding {:rule :spec-owner-human :cycle "03"}}
+        score = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "spec-owner-human"
         """
       And it exits 1
 
     Scenario: A builder never grades its own build
-      Given cycles/03/cycle.edn whose :builder and one of :graders share a :name
-      When I run harness score 03 verdicts.edn
+      Given cycles/03/cycle.toml whose [builder] and one of [[graders]] share a name
+      When I run harness score 03 verdicts.toml
       Then stdout is exactly
         """
-        {:score :refused :cycle "03" :finding {:rule :grader-not-builder :name "one builder"}}
+        score = "refused"
+        cycle = "03"
+
+        [finding]
+        rule = "grader-not-builder"
+        name = "one builder"
         """
       And it exits 1
 
@@ -702,25 +1091,35 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness check
       Then stdout is exactly
         """
-        {:check :passed :stages [:storm :model :stack-words :spec :harness-files :plugins]}
+        check = "passed"
+        stages = ["config", "storm", "model", "stack-words", "spec", "harness-files", "plugins"]
         """
       And it exits 0
 
     Scenario: The first red stops check, naming the stage
-      Given the storm passes and the model refuses with {:rule :component-in-container :component "booking/slots" :container "api"}
+      Given the storm passes and the model refuses with rule = "component-in-container"
       When I run harness check
       Then stdout is exactly
         """
-        {:check :refused :stage :model :finding {:rule :component-in-container :component "booking/slots" :container "api"}}
+        check = "refused"
+        stage = "model"
+
+        [finding]
+        rule = "component-in-container"
+        component = "booking/slots"
+        container = "api"
         """
       And it exits 1
 
     Scenario: A judge that cannot run is not a pass
-      Given the plugin "fees" names a command that does not exist
+      Given the plugin fees names a command that does not exist
       When I run harness check
       Then stdout is exactly
         """
-        {:check :cannot-run :stage :plugins :plugin "fees" :command ["plugins/fees/check.sh"]}
+        check = "cannot-run"
+        stage = "plugins"
+        plugin = "fees"
+        command = ["plugins/fees/check.sh"]
         """
       And it exits 2
 
@@ -729,32 +1128,38 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       Then .git/hooks/pre-commit runs harness check
       And stdout is exactly
         """
-        {:check :installed :hook ".git/hooks/pre-commit"}
+        check = "installed"
+        hook = ".git/hooks/pre-commit"
         """
       And it exits 0
 
   Rule: Every file under harness/ is declared shared, per-project or local
 
     Scenario: A file in no list is refused
-      Given harness/notes.md exists and harness/files.edn lists it nowhere
+      Given harness/notes.md exists and harness/files.toml lists it nowhere
       When I run harness check
       Then stdout is exactly
         """
-        {:check :refused :stage :harness-files :finding {:rule :file-declared :path "harness/notes.md"}}
+        check = "refused"
+        stage = "harness-files"
+
+        [finding]
+        rule = "file-declared"
+        path = "harness/notes.md"
         """
       And it exits 1
 
     Scenario: A per-project file that is missing is refused
-      Given harness/files.edn declares harness/probe.sh :per-project and it does not exist
+      Given harness/files.toml declares per-project = ["harness/probe.sh"] and it does not exist
       When I run harness check
-      Then stdout holds :finding {:rule :file-present :path "harness/probe.sh"}
+      Then stdout holds [finding] with rule = "file-present" and path = "harness/probe.sh"
       And it exits 1
 
     Scenario: A shared file that differs from a sibling is refused, and a sibling not on this machine is a loud skip
-      Given harness/files.edn declares harness/spec.feature :shared and :siblings ["../other"]
+      Given harness/files.toml declares shared = ["harness/spec.feature"] and siblings = ["../other"]
       And ../other/harness/spec.feature differs
       When I run harness check
-      Then stdout holds :finding {:rule :shared-identical :path "harness/spec.feature" :sibling "../other"}
+      Then stdout holds [finding] with rule = "shared-identical", path = "harness/spec.feature" and sibling = "../other"
       And it exits 1
 
   # ------------------------------------------------------------------
@@ -763,47 +1168,69 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
   Rule: A plugin is a command declared in the configuration, answering check or verify
 
-    Scenario: A plugin answers check with the same EDN and exit codes
-      Given the configuration's :plugins hold [{:name "fees" :answers :check :command ["plugins/fees/check.sh"]}]
-      And plugins/fees/check.sh prints {:fees :refused :finding {:rule :fee-sourced :policy "BillOnBooking"}} and exits 1
+    Scenario: A plugin answers check with the same TOML and exit codes
+      Given spec/config.toml holds
+        """
+        [[plugins]]
+        name = "fees"
+        answers = "check"
+        command = ["plugins/fees/check.sh"]
+        """
+      And plugins/fees/check.sh prints a document with fees = "refused" and [finding] rule = "fee-sourced", policy = "BillOnBooking", and exits 1
       When I run harness check
       Then stdout is exactly
         """
-        {:check :refused :stage :plugins :plugin "fees" :finding {:rule :fee-sourced :policy "BillOnBooking"}}
+        check = "refused"
+        stage = "plugins"
+        plugin = "fees"
+
+        [finding]
+        rule = "fee-sourced"
+        policy = "BillOnBooking"
         """
       And it exits 1
 
     Scenario: A plugin is run with the project's folder as its working directory and the configuration's path as its argument
 
     Scenario: A plugin answering verify runs after the suite and can refuse the build
-      Given the plugin "probe" :answers :verify and exits 1 with {:probe :refused :finding {:rule :is-this-app}}
+      Given the plugin probe has answers = "verify" and exits 1 with [finding] rule = "is-this-app"
       When I run harness verify 03
-      Then stdout holds :finding {:rule :is-this-app} and :plugin "probe"
+      Then stdout holds plugin = "probe" and [finding] with rule = "is-this-app"
       And it exits 1
-      And no cycles/03/verified.edn exists
+      And no cycles/03/verified.toml exists
 
-    Scenario: A plugin that prints no EDN map is cannot-run, never a pass
-      Given the plugin "fees" prints nothing and exits 0
+    Scenario: A plugin that prints no TOML document is cannot-run, never a pass
+      Given the plugin fees prints nothing and exits 0
       When I run harness check
       Then stdout is exactly
         """
-        {:check :cannot-run :stage :plugins :plugin "fees" :finding {:rule :plugin-answers}}
+        check = "cannot-run"
+        stage = "plugins"
+        plugin = "fees"
+
+        [finding]
+        rule = "plugin-answers"
         """
       And it exits 2
 
   Rule: An opinion is a refusal, not a flag (INV-7)
 
     Scenario: An unknown configuration key is refused
-      Given spec/config.edn holds the key :contexts-relate-by
+      Given spec/config.toml holds the key contexts-relate-by
       When I run harness check
       Then stdout is exactly
         """
-        {:check :refused :stage :config :finding {:rule :config-shape :key :contexts-relate-by}}
+        check = "refused"
+        stage = "config"
+
+        [finding]
+        rule = "config-shape"
+        key = "contexts-relate-by"
         """
       And it exits 1
 
     Scenario: A missing configuration key is refused the same way
-      Given spec/config.edn lacks :whole-container-every
+      Given spec/config.toml lacks whole-container-every
       When I run harness check
-      Then stdout holds :finding {:rule :config-shape :missing :whole-container-every}
+      Then stdout holds [finding] with rule = "config-shape" and missing = "whole-container-every"
       And it exits 1
