@@ -51,7 +51,10 @@ A behaviour change starts in `spec/`, never in an editor, in this order:
 2. **Model.** Name the component that owns the new element and the
    container it sits in.
 3. **Scenarios.** State the acceptance criteria in the component's feature
-   file; run `harness stamp`.
+   file; run `harness stamp`. A scenario is deterministic unless its outcome
+   holds a value the spec cannot pin; then tag it `@nondeterministic`, write
+   each such value as a placeholder `<what it is>`, and declare the
+   placeholder's shape in `spec/placeholders.toml`.
 4. **Plan.** Write or update `docs/plan/NN-slug/plan.md`: the goal, the wiki
    pages it rests on, the scenarios it delivers, the tickets, the spec gaps.
 

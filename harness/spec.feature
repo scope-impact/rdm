@@ -10,6 +10,14 @@
 # (passed), 1 (refused: a finding about the project) or 2 (cannot run: the
 # harness's own defect or a missing input). TOML has no null: a value that is
 # absent is an absent key. Nothing else is written to stdout; stderr is free.
+#
+# A scenario is deterministic unless tagged @nondeterministic: its Then can be
+# matched byte for byte. A @nondeterministic scenario holds at least one value
+# the spec cannot pin (a tree or commit hash, a duration, a uuid, a host, a
+# monitor's reading), written as a placeholder <what it is> in a Then step or
+# its docstring (a Given or When may describe one without being one); the
+# oracle and a grader match a placeholder by its shape, and everything around
+# it exactly.
 
 Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
@@ -540,12 +548,66 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness checklist
       Then its item carries wip = true
 
+  Rule: A scenario is deterministic unless it says it is not, and then it names what it cannot pin
+
+    # A deterministic scenario's Then is matched byte for byte: by the
+    # harness's oracle against a golden, by a grader against the product.
+    # A @nondeterministic scenario names each value it cannot pin as a
+    # placeholder <what it is> in a Then step or its docstring, and is matched
+    # by shape there and exactly everywhere else. A Given or When may describe
+    # a placeholder without being one. The tag is the grader's and the
+    # oracle's instruction; the placeholder is the builder's.
+
+    Scenario: A placeholder in an untagged scenario is refused
+      Given spec/slots.feature holds, at line 14, an untagged scenario whose Then reads "Then the receipt shows <the booking's reference>"
+      When I run harness check
+      Then stdout holds check = "refused", stage = "spec" and [finding] with rule = "placeholder-tagged", path = "spec/slots.feature", line = 14 and placeholder naming the booking's reference
+      And it exits 1
+
+    Scenario: A nondeterministic scenario with no placeholder is refused
+      Given spec/slots.feature holds, at line 30, a scenario tagged @nondeterministic whose steps hold no placeholder
+      When I run harness check
+      Then stdout is exactly
+        """
+        check = "refused"
+        stage = "spec"
+
+        [finding]
+        rule = "nondeterministic-has-placeholder"
+        path = "spec/slots.feature"
+        line = 30
+        """
+      And it exits 1
+
+    Scenario: The checklist marks a nondeterministic item and its placeholders
+      Given @item-008 is tagged @nondeterministic and its Then holds <the booking's reference> and <the time it was made>
+      When I run harness checklist
+      Then its item carries nondeterministic = true and placeholders = ["the booking's reference", "the time it was made"]
+
+    Scenario: A placeholder's shape is declared once, in the spec, and an undeclared one is refused
+      Given spec/placeholders.toml
+        """
+        [placeholders]
+        "the booking's reference" = "[A-Z]{3}-[0-9]{4}"
+        "the time it was made" = "[0-9]{2}:[0-9]{2}"
+        """
+      And spec/slots.feature uses <the slot's receipt number>, which it does not declare
+      When I run harness check
+      Then stdout holds check = "refused", stage = "spec" and [finding] with rule = "placeholder-declared", path = "spec/slots.feature", line = 30 and placeholder naming the slot's receipt number
+      And it exits 1
+
+    Scenario: Examples of an Outline are deterministic rows, never placeholders
+      Given a Scenario Outline whose Then reads "Then it exits <code>" with an Examples table for <code>
+      When I run harness check
+      Then stdout holds no finding with rule = "placeholder-tagged"
+
   # ------------------------------------------------------------------
   # The cut and its scope: INV-4
   # ------------------------------------------------------------------
 
   Rule: A cut is a tag on a merged spec that check passed
 
+    @nondeterministic
     Scenario: A cut tags the head of the default branch
       Given check passes and the working tree is clean on the default branch
       When I run harness cut spec-1
@@ -672,6 +734,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
   Rule: The fence is physical and proved
 
+    @nondeterministic
     Scenario: A room holds the cut and nothing of the scope's implementation or any measurement
       Given cycles/03/cycle.toml names cut = "spec-3" and from = "spec-2"
       And scopes spec-2 spec-3 answers components = ["booking/billing"]
@@ -696,6 +759,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       When I run harness fence 04
       Then stdout holds removed = ["cycles", "impl/billing", "impl/slots"] and kept = []
 
+    @nondeterministic
     Scenario: The proof fails if a removed path is reachable in the room's history
       Given a room whose history still reaches impl/billing/
       When I run harness fence --prove 03
@@ -758,6 +822,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
     # empties the folder before each run and copies what the run wrote into
     # cycles/NN/results/run-N/.
 
+    @nondeterministic
     Scenario: A green suite, twice, inside the budget, is ratified from its results
       Given cycles/03/room holds a build whose suite writes, in 4 seconds, three results labelled item = item-003, item-007 and item-008, each with status passed
       And item-003's and item-007's results are labelled tool = "gherkin-runner", and item-008's tool = "browser-driver" with the attachment trace.zip
@@ -770,7 +835,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         cycle = "03"
         tree = "<the room's tree hash>"
         budget-seconds = 60
-        margin-seconds = 56
+        margin-seconds = <the budget less the slower run>
 
         [[runs]]
         results = 3
@@ -779,7 +844,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         broken = 0
         skipped = 0
         attachments = 1
-        seconds = 4
+        seconds = <the run's seconds>
         items = ["item-003", "item-007", "item-008"]
         tools = ["browser-driver", "gherkin-runner"]
 
@@ -790,7 +855,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         broken = 0
         skipped = 0
         attachments = 1
-        seconds = 4
+        seconds = <the run's seconds>
         items = ["item-003", "item-007", "item-008"]
         tools = ["browser-driver", "gherkin-runner"]
         """
@@ -934,8 +999,9 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       Then stdout holds [finding] with rule = "room-proved"
       And it exits 1
 
+    @nondeterministic
     Scenario: A verified build is the room's tree, and a changed room is not scored
-      Given cycles/03/verified.toml names tree = "T" and the room's tree is now U
+      Given cycles/03/verified.toml names tree = "<the verified tree>" and the room's tree is now <another tree>
       When I run harness score 03 verdicts.toml
       Then stdout is exactly
         """
@@ -944,8 +1010,8 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
         [finding]
         rule = "verified-tree"
-        verified = "T"
-        room = "U"
+        verified = "<the verified tree>"
+        room = "<another tree>"
         """
       And it exits 1
 

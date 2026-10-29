@@ -1,0 +1,13 @@
+# The shapes of the values harness/spec.feature cannot pin (the rule "A
+# scenario is deterministic unless it says it is not"). Declared shared
+# (INV-8). A placeholder is matched by its shape here and the text around it
+# exactly.
+
+[placeholders]
+"HEAD's hash" = "[0-9a-f]{40}"
+"the room's tree hash" = "[0-9a-f]{40}"
+"the reachable commit" = "[0-9a-f]{40}"
+"the verified tree" = "[0-9a-f]{40}"
+"another tree" = "[0-9a-f]{40}"
+"the run's seconds" = "[0-9]+"
+"the budget less the slower run" = "-?[0-9]+"

@@ -154,6 +154,25 @@ Stamping twice changes nothing. _Avoid:_ number, label, annotate.
 **Wip.** `@wip`: a scenario planned and not yet built; listed and marked on
 the checklist, never dropped. _Avoid:_ pending, skip, todo.
 
+**Deterministic.** The default for a scenario: its Then can be matched byte
+for byte, by the oracle against a golden and by a grader against the
+product. Not a tag; the absence of one. _Avoid:_ exact, stable, fixed.
+
+**Nondeterministic.** `@nondeterministic`: a scenario whose outcome holds at
+least one value the spec cannot pin (a hash, a duration, a uuid, a host, a
+monitor's reading), each written as a placeholder. Matched by shape at the
+placeholder and exactly everywhere else. The tag instructs the oracle and
+the grader; the placeholder instructs the builder. _Where:_ the checklist's
+`nondeterministic = true` and `placeholders`. _Held by:_ `placeholder-tagged`,
+`nondeterministic-has-placeholder`, `placeholder-declared`.
+_Avoid:_ flaky (that is a defect), random, unstable, approximate.
+
+**Placeholder.** `<what it is>` in a step: a value the spec cannot pin, named
+by what it is, with its shape declared once in `spec/placeholders.toml` (the
+harness's own in `harness/placeholders.toml`). An Outline's `<column>` is
+not a placeholder: its Examples pin it. _Avoid:_ variable, wildcard, regex
+(the shape is one; the placeholder is the name).
+
 **Checklist.** Derived from the spec, one item per stamped scenario, grouped
 by component; the spec is its only author. _Where:_ `cycles/NN/checklist.toml`.
 _Held by:_ `harness checklist` (`every-scenario-stamped`, `spec-not-empty`);

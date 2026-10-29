@@ -103,7 +103,10 @@ A grader works black box: in its own room with the built product and the cut,
 never the builder's tests or code. For every checklist item it drives the
 product the way its actor would, records `pass` or `fail`, and gives the
 evidence: what it did and what it saw. An item it cannot reach is `fail`
-with the reason; it never skips one. It writes one `verdicts-<name>.toml`
+with the reason; it never skips one. A deterministic item is judged byte for
+byte against its Then; a `@nondeterministic` item is judged by shape at each
+placeholder (the checklist names them and the spec declares their shapes)
+and byte for byte everywhere else, and the evidence records the value seen. It writes one `verdicts-<name>.toml`
 and nothing else. Several graders are scored apart and agreed by majority;
 a builder never grades its own build.
 
