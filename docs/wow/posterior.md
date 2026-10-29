@@ -270,6 +270,17 @@ builder, and two (`2605.06939`, `2606.15031`) show calibration can make an
 estimate worse when the anchors are few or the reporters dependent, which
 is the harness's reason for keeping the instrument out of the loop.
 
+## Where it runs
+
+The fit is the `instrument` phase of the agent harness
+(`.claude/skills/harness/phases/instrument.md`): the data assembled from
+the records and never typed, the fit in a program under `instrument/` held
+still with its own goldens, a posterior predictive check before the
+scoreboard trusts it, and `cycles/NN/posterior.toml` as the one output the
+planner (ranked gaps), the owner (completeness, both directions, each
+grader's J) and `scoreboard` read. The binary never fits anything: it
+writes the records and reads the posterior.
+
 ## Status
 
 A statement of what the instrument measures, not a tool. Fitting it (the

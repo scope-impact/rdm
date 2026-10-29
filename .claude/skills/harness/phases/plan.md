@@ -18,8 +18,10 @@ tests. If a question can only be answered by looking at code, it is a gap.
    purpose.
 3. **Model next.** Name the component that owns each new element, under
    its container, in its group. Complete when `harness model` passes.
-4. **State the gaps.** Read every scenario the plan delivers as a grader
-   would: for each place a grader could see an answer the spec does not
+4. **State the gaps.** Start from the instrument: `cycles/*/posterior.toml`
+   ranks items by P(gap) from past cycles; every item above the threshold
+   in your plan's components is a gap you must state or argue down. Then
+   read every scenario the plan delivers as a grader would: for each place a grader could see an answer the spec does not
    state, write a **gap** with its scenario, the question, and a mark:
    - `visible`: the spec must state it before the build; propose the
      scenario text;

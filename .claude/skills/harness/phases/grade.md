@@ -15,6 +15,11 @@ build; if you were, stop and say so.
    of the checklist. For each: do what the Given and When say, observe
    what the Then names.
    - A **deterministic** item is judged byte for byte against its Then.
+     The harness compares the bytes too: your verdict on it does not
+     decide the item, it calibrates you (the instrument estimates your
+     sensitivity and false-pass rate from these anchors). Grade them with
+     the same care; a careless anchor verdict lowers the weight of every
+     other verdict you give.
    - A **nondeterministic** item is judged by shape at each placeholder
      (`spec/placeholders.toml` declares the shape, or names the judge) and
      byte for byte everywhere else. Where a judge is named, run it: it is

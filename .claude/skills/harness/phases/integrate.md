@@ -21,9 +21,10 @@ record, and stop at the first refusal. A step's output is never edited.
 | checklist | `harness checklist` at the cut | `cycles/NN/checklist.toml` written |
 | grade | dispatch each grader with the `grade` phase, their own room, the built product and the cut; at least two distinct models, or one model and a person | every `verdicts-<g>.toml` is in |
 | score | `harness score NN <verdicts...>` | `score.toml` written |
-| scoreboard | `harness scoreboard NN` | printed and filed in the cycle's record |
+| instrument | dispatch the `instrument` phase once the scores are in | `cycles/NN/posterior.toml` exists, or `fit = "refused"` is filed |
+| scoreboard | `harness scoreboard NN` | printed and filed in the cycle's record, reading `posterior.toml` where it exists and raw counts where the fit was refused |
 | review | dispatch the reviewer with the `review` phase and the room | `review.md` is in |
-| accept | hand the owner: score, scoreboard, review, the builder's decisions, the planner's gaps | the owner's decision is recorded in `cycle.toml` and `docs/decisions/`; you wrote none of it |
+| accept | hand the owner: score, scoreboard, the posterior (ranked gaps, uninformative voices, whole-container due), review, the builder's decisions, the planner's gaps | the owner's decision is recorded in `cycle.toml` and `docs/decisions/`; you wrote none of it |
 
 ## Two refusals you honour, never work around
 

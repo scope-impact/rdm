@@ -1,14 +1,14 @@
 ---
 name: harness
-description: Work one phase of a regeneration cycle under the clean-room harness (plan, build, grade, review, integrate). Use when asked to plan a slice or state spec gaps, to build a cut in a room, to grade a build black box, to review a room's diff for invented rules, or to run a cycle's machinery (cut, scopes, fence, verify, score, scoreboard).
+description: Work one phase of a regeneration cycle under the clean-room harness (plan, build, grade, review, instrument, integrate). Use when asked to plan a slice or state spec gaps, to build a cut in a room, to grade a build black box, to review a room's diff for invented rules, to fit the instrument's Bayesian model and report the posterior, or to run a cycle's machinery (cut, scopes, fence, verify, score, scoreboard).
 ---
 
 # Harness
 
 One cycle regenerates a product from a cut of its spec, in a room, under a
 gate the builder does not control, measured by an instrument the builder
-never sees. You work **one phase** of it: `plan`, `build`, `grade`, `review`
-or `integrate`. The phase is given with the task; if it is not, ask for it
+never sees. You work **one phase** of it: `plan`, `build`, `grade`, `review`,
+`instrument` or `integrate`. The phase is given with the task; if it is not, ask for it
 before reading anything else, because each phase forbids what another
 requires.
 
@@ -19,7 +19,8 @@ Read, in this order, and write one line per file saying what it settled:
 1. `README.md`: the intent and the one thing.
 2. `docs/wow/invariants.md`, `docs/wow/way-of-working.md`,
    `docs/wow/harness.md`: the rules, the cycle, the guardrails.
-3. `docs/wiki/glossary.md`: the words. Use them as defined; a word the
+3. `docs/wiki/glossary.md`: the words; `docs/wow/posterior.md`: what the
+   instrument measures, so you know which record feeds which estimate. Use them as defined; a word the
    glossary says to avoid is a finding at review.
 4. For a product: its `spec/` at the cut named in the task (storm, model,
    feature files, `placeholders.toml`), and the plan being worked.
@@ -56,6 +57,7 @@ do in this round.
 | `build` | the one builder: test-first in the room until the suite is green and writes results | [phases/build.md](phases/build.md) |
 | `grade` | a grader: black box, one verdict per item with evidence | [phases/grade.md](phases/grade.md) |
 | `review` | the reviewer: invented rules and spec drift in the diff; never grades, never fixes | [phases/review.md](phases/review.md) |
+| `instrument` | the instrument: fit the hierarchical Bayesian model to the cycles' records; report completeness, the ranked gaps, both directions, each grader's J, the fit's check | [phases/instrument.md](phases/instrument.md) |
 | `integrate` | the integrator: the machinery in order, the records filed, no owner's decision made | [phases/integrate.md](phases/integrate.md) |
 
 ## Report
