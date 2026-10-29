@@ -745,11 +745,15 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
   Rule: "Done" is ratified by verify, which the builder does not control
 
     # Verify reads results, never the runner (INV-11): the suite writes one
-    # result per scenario run, in Allure's result model, into the folder the
-    # configuration names; the item it verifies is the label "item" and what
-    # wrote it is the label "tool"; its status is passed, failed, broken or
-    # skipped; its attachments (a trace, a screenshot, a transcript) sit
-    # beside it. A tool is anything that answers a scenario: a runner, a
+    # result per scenario run, in Allure's result model
+    # (raw/allure/docs/how-it-works-test-result-file.md): a file
+    # {uuid}-result.json in the folder the configuration names; the item it
+    # verifies is the label "item" and what wrote it is the label "tool",
+    # among whatever other labels the tool sets; its status is passed,
+    # failed, broken, skipped or unknown, and only passed verifies; its
+    # attachments ({uuid}-attachment.{ext}, named on the result by name,
+    # source and type) sit beside it. Steps, containers and historyId are
+    # not read. A tool is anything that answers a scenario: a runner, a
     # browser driver, a metrics query, a telemetry trace, a person. Verify
     # empties the folder before each run and copies what the run wrote into
     # cycles/NN/results/run-N/.
@@ -822,11 +826,29 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
       And no cycles/03/verified.toml exists
       And cycles/03/results/run-2/ holds the failed result and its attachments, for the reviewer
 
-    Scenario: A broken result is not a pass
-      Given the suite writes item-007 with status broken
+    Scenario Outline: Any status but passed is not a pass
+      Given the suite writes item-007 with status <status>
       When I run harness verify 03
-      Then stdout holds [finding] with rule = "suite-green-twice", item = "item-007" and status = "broken"
+      Then stdout holds [finding] with rule = "suite-green-twice", item = "item-007" and status = "<status>"
       And it exits 1
+
+      Examples:
+        | status  |
+        | broken  |
+        | skipped |
+        | unknown |
+
+    Scenario: Two results for one item in one run must both be passed
+      Given the suite writes item-003 twice in one run, once passed and once failed
+      When I run harness verify 03
+      Then stdout holds [finding] with rule = "suite-green-twice", item = "item-003" and status = "failed"
+      And it exits 1
+
+    Scenario: A result's other labels travel with it and are not read
+      Given item-003's result also carries the labels framework = "cucumber-js", language = "javascript" and host = "ci-7"
+      When I run harness verify 03
+      Then stdout holds verify = "passed"
+      And cycles/03/results/run-1/ holds the result with every label it was written with
 
     Scenario: A suite that wrote no result is a refusal, never a pass
       Given impl/test.sh exits 0 having written nothing to impl/results

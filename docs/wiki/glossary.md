@@ -279,16 +279,37 @@ copied, attachments included, to `cycles/NN/results/run-N/`. _Held by:_ INV-11, 
 `result-item-on-checklist`, `every-item-has-result`.
 _Avoid:_ report, output, log, JUnit, exit code.
 
-**Status.** A result's outcome: `passed`, `failed`, `broken` (the test could
-not run), `skipped`. Only `passed` verifies an item. _Avoid:_ state,
+**Status.** A result's outcome, one of Allure's five: `passed`, `failed`
+(an assertion did not hold), `broken` (the test could not run to its
+assertion), `skipped`, `unknown` (`raw/allure/docs/test-statuses.md`). Only
+`passed` verifies an item; the gate treats the other four alike.
+_Where:_ `status` on a result and on each of its steps. _Avoid:_ state,
 outcome, green/red (prose only).
 
-**Label.** A name-value pair on a result; `item` carries the scenario's id.
-_Avoid:_ tag (Gherkin's word), annotation.
+**Label.** A name-value pair on a result, repeatable by name
+(`raw/allure/docs/how-it-works-test-result-file.md`, "labels"). The harness
+reads two: `item`, the scenario's id, and `tool`, what wrote the result; a
+tool's own labels (`framework`, `language`, `host`, `tag`) travel with it
+and are not read. _Avoid:_ tag (Gherkin's word), annotation.
 
-**Attachment.** A file a tool kept with a result: a browser trace, a
-screenshot, a request log, a transcript. Evidence the grader and the owner
-read with the result. _Avoid:_ artefact, asset, upload.
+**Attachment.** A file a tool kept with a result, stored beside it as
+`{uuid}-attachment.{ext}` and named on the result by `name`, `source` (the
+file) and `type` (its media type)
+(`raw/allure/docs/how-it-works-test-result-file.md`, "attachments"): a
+browser trace, a screenshot, a request log, a transcript. Evidence the
+grader and the owner read with the result; copied into the cycle with it.
+_Avoid:_ artefact, asset, upload.
+
+**Step.** One named part of a result, with its own status, timing,
+attachments and sub-steps (`raw/allure/docs/how-it-works-test-result-file.md`,
+"steps"). The natural place for a scenario's Given, When and Then. The gate
+reads a result's status, never its steps. _Avoid:_ action, stage (Allure's
+word for a lifecycle state).
+
+**Result file.** `{uuid}-result.json` in the results folder, one per run of
+one scenario (`raw/allure/docs/how-it-works-test-result-file.md`). A
+container file (`{uuid}-container.json`) describes fixtures around results
+and is not read by the gate.
 
 **Tool.** Whatever answered a scenario and wrote its result: a Gherkin
 runner, a unit framework, a browser driver, a metrics query, a telemetry

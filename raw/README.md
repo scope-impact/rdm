@@ -19,6 +19,7 @@ never read from an implementation.
 | `rdm/storm/2026-10-24-rdm.md` | `scope-impact/rdm` | `a4641ae` | the one event storm that was held; the seed of the storm record's shape |
 | `rdm/spec/events.edn` | `scope-impact/rdm` | `a4641ae` | the event catalogue's shape, as a seed |
 | `rdm/spec/needs.edn` | `scope-impact/rdm` | `a4641ae` | the needs, each citing a source; to be re-stated against the intent |
+| `allure/` | allurereport.org docs; `allure-framework/allure-java`; `allure-framework/allure-js` | docs fetched 2026-10-29; `allure-java` 3.0.1 (`72fa349`); `allure-js` v3.14.0 (`6b62dd6`) | the result model every judge writes (INV-11): the documentation, the reference model, and the model the browser-driver and Gherkin-runner integrations write through. `raw/allure/README.md` lists each file |
 
 ## Never enters
 
@@ -29,6 +30,8 @@ never read from an implementation.
   `glossary.md`, `ids.edn`
 - the cycle records `dhf/cycles/00` to `27`
 - Löyly's tools (`harness/*.sh`, `harness/*.clj`) and goldens
+- any Allure integration or reporter (a runner's adapter is a tool's, not the
+  model's)
 
 A rule the old harness had is not evidence that the new one needs it. If it
 is needed, it is re-derived from the intent, and the decision says so.

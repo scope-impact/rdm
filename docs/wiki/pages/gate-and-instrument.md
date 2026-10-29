@@ -29,6 +29,25 @@ screenshot, a transcript) travel with it into the cycle, so the evidence a
 grader and the owner read is what the suite saw, in one reader, whatever
 tool wrote it.
 
+## The result model, as Allure states it
+
+A test result file stores data related to a single run of a single test, as
+a JSON object named `{uuid}-result.json`.[^rf] Its labels are an array of
+name-value objects, and a result can have multiple labels with the same
+name; integrations set `host`, `thread`, `language` and `framework`, and the
+author may set labels with arbitrary names.[^rf] Its attachments are stored
+as separate files named `{uuid}-attachment.{ext}` and listed on the result
+by `name`, `source` and media `type`.[^rf] Its status is one of failed,
+broken, passed, skipped, unknown;[^rf] its steps carry the same fields and
+nest.[^rf] Two runs of the same test with the same parameters share a
+`historyId`.[^ids] A container file groups fixtures around results.[^cf]
+
+The harness takes from this exactly what INV-11 needs: the file per run,
+the `status`, two labels of its own (`item`, `tool`) among whatever the tool
+sets, and the attachments beside the file. It does not read steps,
+`historyId`, containers or the report-side fields; the item id is the
+harness's identity, not Allure's.
+
 ## The checklist is derived, never written
 
 One item per stamped scenario; ids are handed out once and never computed
@@ -83,3 +102,6 @@ refused every build of the new contract;[^judge] holding the harness still
 [^goldens]: `raw/loyly/harness/README.md@17d68d2`, "The goldens, and the three reasons one can change".
 [^judge]: `raw/rdm/docs/wow/way-of-working.md@a4641ae`, "When the spec changes the judge's own contract".
 [^allure]: `raw/rdm/decisions/adr-0002-spec-first-regeneration.md@a4641ae`, "Decision", "Allure results are the oracle for status".
+[^rf]: `raw/allure/docs/how-it-works-test-result-file.md` (fetched 2026-10-29): the opening paragraphs, "labels", "attachments", "status", "steps".
+[^ids]: `raw/allure/docs/how-it-works-test-result-file.md` (fetched 2026-10-29), "historyId".
+[^cf]: `raw/allure/docs/how-it-works-container-file.md` (fetched 2026-10-29).
