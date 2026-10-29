@@ -22,6 +22,7 @@ never read from an implementation.
 | `allure/` | allurereport.org docs; `allure-framework/allure-java`; `allure-framework/allure-js` | docs fetched 2026-10-29; `allure-java` 3.0.1 (`72fa349`); `allure-js` v3.14.0 (`6b62dd6`) | the result model every judge writes (INV-11): the documentation, the reference model, and the model the browser-driver and Gherkin-runner integrations write through. `raw/allure/README.md` lists each file |
 | `judge/` | github.com/stanfordnlp/dspy; arxiv.org/abs/2507.19457 | `dspy` 3.4.1 (`099982b`); GEPA abstract fetched 2026-10-29 | what a learned judge rests on (decision 0002): DSPy's README, signatures, optimizers, metrics and GEPA; the GEPA abstract. `raw/judge/README.md` lists each file |
 | `c4/` | c4model.com; docs.structurizr.com | fetched 2026-10-29 | the architecture's vocabulary the model reuses (decision 0003): the C4 abstractions, the deployment diagram, the Structurizr DSL's grammar. `raw/c4/README.md` lists each file |
+| `posterior/` | arxiv.org, fourteen abstracts | fetched 2026-10-29 | what the instrument's model rests on (`docs/wow/posterior.md`, "What the literature says"): noisy graders without a gold standard, item response theory, identifiability, judge calibration, regeneration as a measure. `raw/posterior/README.md` says why each |
 
 ## Never enters
 

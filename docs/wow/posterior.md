@@ -71,9 +71,11 @@ another's). The posterior over `g_i` is the list of visible gaps, ranked.
 ```
 r_ijt  ~ Bernoulli(z_it·s_j + (1 − z_it)·f_j)     a result from tool j in the room's run (verify)
 v_igt  ~ Bernoulli(z_it·s_g + (1 − z_it)·f_g)     a verdict from grader g, black box (score)
-s_j, s_g ~ Beta(9, 1)                             sensitivity: a carried item is reported as passed
-f_j, f_g ~ Beta(1, 9)                             false pass: an uncarried item is reported as passed
+logit(s) = −logit(f) + softplus(η);  (η, logit f) ~ MVN  a reporter is never worse than a coin (2405.19521, eq. 3)
+η ~ prior centred so that s ≈ 0.9, f ≈ 0.1          the old Beta(9,1), Beta(1,9), now as the prior on η and f
 unreached verdict ≡ v = fail                      a rule of the instrument, not a likelihood (INV-6)
+two runs of one suite ≡ one observation            the worse run; correlated executions are not two draws
+deterministic items: z known                        anchors that identify every grader's (s, f)
 ```
 
 A grader is a person, an agent, or the learned judge. For the judge, `s_g`
@@ -155,6 +157,117 @@ product plates goes one way.
   (`raw/rdm/retrospective-01-12.md`, section 3).
 - **π, the prior rate of gaps**: the audit found 36 in 20 rules of a
   hand-written spec. Start near a fifth; let the cycles move it.
+
+## What the literature says, and what it changes
+
+Found 2026-10-29 by a search of arXiv for each part of the model; the
+abstracts are under `raw/posterior/` with a README that says why each is
+there. Four findings, three of which change the model above.
+
+### 1. The model has a name: IRT with sensitivity and specificity
+
+Carpenter and colleagues' hierarchical crowdsourcing model
+(`raw/posterior/2405.19521.md`, section 2 of the full text) is Dawid and
+Skene's rater model with item effects added: a difficulty β_i, a
+discrimination δ_i and a guessability λ_i, so that a rater's probability of
+rating item i correctly is λ_i + (1 − λ_i)·logit⁻¹(δ_i(α_j − β_i)), with
+α_j the rater's sensitivity or specificity on the log-odds scale. Its
+reductions table recovers Dawid–Skene (no item effects) and the IRT 1PL,
+2PL and 3PL. Our model is one of its reductions with a hierarchy added on
+the items: our ν_i is its −β_i, our ρ is its λ_i restricted to gap items,
+our (s, f) are its (α^sens, α^spec) on the probability scale, and our
+container and component effects are its "population-level models"
+extension (Appendix F). Two things it does that we did not:
+
+- **It excludes adversarial raters by construction**, reparameterising
+  α^sens = −α^spec + softplus(η_j), so a rater is always at least as
+  informative as a coin; the liar symmetry is removed exactly rather than
+  discouraged by a prior. **Change:** the harness's model adopts this. A
+  grader's or tool's (s, f) are written as a spec effect and a softplus
+  distance from the spammy boundary, with a hierarchical bivariate Normal
+  over raters; the asymmetric Beta becomes the prior on that distance
+  rather than the thing that breaks the symmetry. Simulation 4 of the
+  artifact stays true (flat priors give two peaks) and the fix is now the
+  textbook one.
+- **It checks fit by posterior predictive checks and leave-one-out**, and
+  shows Dawid–Skene underestimates dispersion. **Change:** fitting the
+  model, when it comes, reports both; a model that fails its own posterior
+  predictive check on the pass counts per component is refused as the
+  scoreboard's basis.
+
+### 2. Agents as graders are not conditionally independent
+
+Three papers say that LLM judges violate the independence Dawid–Skene
+assumes: they share data, architectures, prompts and failure modes
+(`2601.22336`), repeated judgments of one item by one model have
+intraclass correlations of 0.50 to 0.93 so ten ratings carry the
+information of one or two (`2510.23874`), and with arbitrarily dependent
+reporters the prevalence is not identified at all (`2606.15031`). The
+harness's graders in their own rooms are independent in what they see, not
+in how they think: two agent graders on one model are the correlated case.
+**Changes:**
+
+- Two agent graders sharing a model are one grader with two draws, not
+  two graders. `score`'s majority counts them as one voice, and the model
+  carries one (s, f) per distinct model, not per run.
+- The two runs of a suite in `verify` are correlated executions of one
+  build (`2208.07935` is the software-reliability statement of the same
+  point); the model reads the pair as one observation, the worse run, not
+  as two.
+- What identifies the reporters is not vote counts but external anchors
+  (`2606.15031`: "identifying power comes from externally calibrated
+  scores and events"). The harness has two kinds already and the model
+  should use them as such: **deterministic items, whose truth a byte
+  comparison settles, are labelled anchors for every grader's (s, f)**, and
+  the judge's goldens pin its own. This is the Hui–Walter identifiability
+  problem (one population, few tests; Jones et al. 2010) solved by
+  anchors rather than by five reporters.
+
+### 3. Judge calibration confirms the shape and adds one estimator
+
+Calibrated weighted majority voting with per-judge false-positive and
+false-negative rates estimated from inter-judge disagreement alone
+(`2609.12002`) is our majority vote with (s, f) as the weights, and shows
+it can be run without labels; the same paper finds that more capable
+examinees receive more lenient judgments from every judge, which for us
+means a later, better build is judged more leniently than an earlier one
+and the scoreboard's "both directions" must be read with that bias in
+mind. The hierarchical Bayesian corrector with partial pooling across
+rubrics (`2605.09227`) is our pooling across components, and its finding
+that the linear corrector saturates while a flow keeps learning past
+~1500 anchors is the budget rule for when the judge (decision 0002)
+should move beyond a calibrated linear map. Youden's J (`2605.06939`,
+`2510.23874`) predicts how well the latent state is recovered; **change:**
+the scoreboard reports each grader's J = s + f' − 1 beside its verdicts,
+so a grader near zero is visibly uninformative.
+
+### 4. Regeneration as a measure has company, and one warning
+
+A neutral textual specification as the pivot of code-to-code reengineering,
+with a transformation loss estimated by graph similarity and prompts tuned
+with DSPy (`2605.25232`), is the method's shape in another field; our loss
+is the checklist's pass rate, graded black box, which is a behavioural
+rather than structural distance. Completeness measured against
+behaviour-changing mutants (`2509.09917`) is the same idea as grading
+against a checklist derived from scenarios. The warning is `2608.21208`:
+a specification is not agent-neutral; a spec written through one agent
+degraded badly when another consumed it, and specification size did not
+predict implementation quality. For the harness this says δ_t must carry
+the builder's identity, and that "the spec carries the product" is a claim
+about the spec and a builder population, which is why the second
+implementation (Löyly's `oracle.sh py` and `oracle.sh bb`) is the test and
+not a replacement.
+
+### What did not change
+
+The hierarchy on items (containers and components) is ours and has no
+direct precedent in these papers beyond the population-level extension;
+the gap-or-builder mixture is ours (IRT's guessing parameter is the
+nearest relative); unreached-as-fail stays a rule; the instrument outside
+every plate stays. No paper argues for feeding the posterior back into the
+builder, and two (`2605.06939`, `2606.15031`) show calibration can make an
+estimate worse when the anchors are few or the reporters dependent, which
+is the harness's reason for keeping the instrument out of the loop.
 
 ## Status
 
