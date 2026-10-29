@@ -169,8 +169,7 @@ _Avoid:_ flaky (that is a defect), random, unstable, approximate.
 
 **Placeholder.** `<what it is>` in a Then: a value the spec cannot pin, named
 by what it is, declared once in `spec/placeholders.toml` (the harness's own
-in `harness/placeholders.toml`) as a pattern (`shape`) or a judge (`judge`,
-with the `distance` the owner accepts). An Outline's `<column>` is not a
+in `harness/placeholders.toml`) as a pattern (`shape`) or a judge (`judge`). An Outline's `<column>` is not a
 placeholder: its Examples pin it. _Held by:_ `placeholder-shape`,
 `placeholder-declared`. _Avoid:_ variable, wildcard, regex (a shape is one;
 the placeholder is the name).
@@ -181,9 +180,8 @@ with a verdict and evidence. Declared as a plugin answering `item`; built
 with DSPy (a signature; a metric that scores the judge against the owner's
 past verdicts and returns the owner's evidence as feedback; GEPA as the
 optimizer, which reflects on that feedback in words and keeps a Pareto
-frontier of candidates) and, for outcomes that are representations rather
-than text, a JEPA (predict the expected outcome's representation, compare
-at the declared distance). Held still with goldens that are the owner's labelled verdicts;
+frontier of candidates). A non-text outcome (a page, a screen) reaches it
+as the tool's attachment. Held still with goldens that are the owner's labelled verdicts;
 checked at every `check`. Its verdict is a grader's, never the gate's.
 _Where:_ `[[plugins]]` with `answers = "item"`; `judges` on a checklist
 item. _Held by:_ `judge-declared`, `judge-goldens`; decision 0002.
@@ -194,11 +192,6 @@ harness's own judge of its tools), classifier.
 evidence on a verdict, and where the judge disagreed, both reasonings.
 GEPA's optimisation signal; the reason an owner's verdict always carries
 evidence. _Avoid:_ reward, label (that is the verdict), score.
-
-**Distance.** The declared tolerance of a judge in embedding space: how far
-the observed outcome's representation may sit from the predicted one and
-still pass. It is the shape of a judged placeholder. _Avoid:_ threshold,
-similarity, score.
 
 **Checklist.** Derived from the spec, one item per stamped scenario, grouped
 by component; the spec is its only author. _Where:_ `cycles/NN/checklist.toml`.

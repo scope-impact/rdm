@@ -595,7 +595,6 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
         [placeholders."the confirmation page"]
         judge = "page-judge"
-        distance = 0.15
         """
       And spec/slots.feature uses <the slot's receipt number>, which it does not declare
       When I run harness check

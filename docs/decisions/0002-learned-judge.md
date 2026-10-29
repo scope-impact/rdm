@@ -1,7 +1,9 @@
 # 0002: A nondeterministic item may be judged by a learned judge
 
 > Status: Accepted, 2026-10-29, by the spec owner (Sathish Narayanan): "for
-> nondeterministic we do JEPA, DSPy".
+> nondeterministic we do DSPy", with GEPA as the optimizer. The JEPA first
+> named alongside it was withdrawn the same day ("No jepa"); see the
+> addendum.
 
 ## Context
 
@@ -24,6 +26,9 @@ every time does not scale to a cycle.
   reads how the judge decides.
 - **A placeholder's shape is a pattern or a judge.** `spec/placeholders.toml`
   declares each placeholder with `shape = "<pattern>"` or `judge = "<name>"`.
+  An outcome that is not text (a page, a screen) reaches the judge as the
+  tool's attachment; how the judge reads it is the judge's own, declared in
+  its plugin and never in the placeholder.
   `check` refuses a placeholder naming no declared judge
   (`judge-declared`); the checklist carries the judge's name on the item.
 - **The judge is built with DSPy**: a signature declaring its inputs (the
@@ -51,14 +56,6 @@ every time does not scale to a cycle.
   ground in checks) is met by the cycle's records as they are: the
   checklist, the results with their attachments, the review and the
   decisions.
-- **Judgment in embedding space is a JEPA.** Where the outcome is a
-  representation rather than a text (a page, a trace, an image of a
-  screen), the judge predicts the representation of the expected outcome
-  from the scenario and compares the observed outcome's representation to
-  it, as I-JEPA predicts the representations of target blocks from a
-  context block without generating them (`raw/judge/jepa/ijepa-2301.08243.md`).
-  The placeholder's declaration carries the distance the owner accepts
-  (`distance = 0.15`); the distance is the shape.
 - **The judge is held still** (INV-3). It has goldens: the owner's labelled
   examples it must reproduce. As a plugin answering `check`, it is run on
   them at every `check`; a judge that no longer reproduces an owner's
@@ -82,3 +79,12 @@ every time does not scale to a cycle.
   never before.
 - The harness's own spec declares no judge: its seven placeholders are
   patterns.
+
+## Addendum, 2026-10-29: no JEPA
+
+The spec owner withdrew the JEPA. A judge in embedding space would have
+needed a `distance` on the placeholder and a representation model held
+still beside the judge; both are gone. The judge is DSPy with GEPA, its
+verdicts in words with evidence, and a non-text outcome reaches it as an
+attachment. `raw/judge/jepa/` was removed; the I-JEPA abstract is no longer
+a source.

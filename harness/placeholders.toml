@@ -1,6 +1,6 @@
 # The shapes of the values harness/spec.feature cannot pin (the rule "A
 # scenario is deterministic unless it says it is not"). Declared shared
-# (INV-8). A placeholder is a pattern (shape) or a judge (judge, distance),
+# (INV-8). A placeholder is a pattern (shape) or a judge (judge),
 # matched by it and by the text around it exactly. The harness's own are all
 # patterns (docs/decisions/0002-learned-judge.md).
 
