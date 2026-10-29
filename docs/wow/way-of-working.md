@@ -149,6 +149,29 @@ not tagged `@wip` has a result; no result for an item is anything but
 same model carries the harness's own oracle: its goldens' comparisons are
 written as results too, so one reader reads the judge and the judged.
 
+### One contract from dev to monitor
+
+A tool is anything that can answer "does the product do what this scenario
+says" and write the answer as a result: a Gherkin runner in the room; a
+browser driver with its trace; a contract check on a file format; a query
+against a running system's metrics (a PromQL expression whose answer is the
+scenario's Then); a trace from the running system's telemetry (an OTel
+span that shows the command reached its aggregate and raised its event); a
+synthetic probe; a person's session. Each result carries a `tool` label
+naming what wrote it, so the evidence says where it came from, and the same
+item id, so one scenario's results from the room, from staging and from
+production line up under one reader.
+
+The gate reads only the results of the room's run: a monitor's result is
+evidence about a deployment, never about a cut, and a cut is ratified before
+anything is deployed. What a monitor's results are read by (a status of the
+running product against the same checklist; an item that passed in the room
+and fails in production as a finding) is a plan of its own, written when a
+product asks for it, in the same model and against the same ids. Nothing new
+is invented for it: the storm names the events a trace must show, the
+checklist names the items a query must answer, and the result model carries
+both.
+
 ## 8. Decisions
 
 Planning and history are the same structure in opposite directions. A

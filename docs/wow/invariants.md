@@ -86,10 +86,14 @@ runner's exit code, and writes `verified.toml` with the room's tree hash;
 
 **Rule.** Every judge's output, the product's suite and the harness's own
 oracle alike, is written as results in Allure's result model: one result per
-scenario run, labelled with the item it verifies, with its status, its
-timing and the tool's attachments (traces, screenshots, logs). The gate reads
-results only. Which tool wrote them is never read, so a product may test in
-any stack and a cycle's evidence is read with one reader.
+scenario run, labelled with the item it verifies and the tool that wrote it,
+with its status, its timing and the tool's attachments (traces, screenshots,
+logs). The gate reads results only. A tool is anything that answers a
+scenario and writes a result: a test runner, a browser driver, a metrics
+query, a telemetry trace, a probe, a person. Which tool wrote a result is
+recorded and never required, so a product may test in any stack, a scenario
+may be answered in the room and in production by the same id, and a cycle's
+evidence is read with one reader.
 
 **Enforced by.** `verify` refuses a run that wrote no result
 (`results-written`), a result naming no item (`result-labelled`) or an item

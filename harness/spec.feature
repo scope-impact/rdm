@@ -746,13 +746,17 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
 
     # Verify reads results, never the runner (INV-11): the suite writes one
     # result per scenario run, in Allure's result model, into the folder the
-    # configuration names; the item it verifies is the label "item"; its
-    # status is passed, failed, broken or skipped; its attachments (a trace,
-    # a screenshot, a transcript) sit beside it. Verify empties the folder
-    # before each run and copies what the run wrote into cycles/NN/results/run-N/.
+    # configuration names; the item it verifies is the label "item" and what
+    # wrote it is the label "tool"; its status is passed, failed, broken or
+    # skipped; its attachments (a trace, a screenshot, a transcript) sit
+    # beside it. A tool is anything that answers a scenario: a runner, a
+    # browser driver, a metrics query, a telemetry trace, a person. Verify
+    # empties the folder before each run and copies what the run wrote into
+    # cycles/NN/results/run-N/.
 
     Scenario: A green suite, twice, inside the budget, is ratified from its results
-      Given cycles/03/room holds a build whose suite writes, in 4 seconds, three results labelled item = item-003, item-007 and item-008, each with status passed, and item-003's with the attachment trace.zip
+      Given cycles/03/room holds a build whose suite writes, in 4 seconds, three results labelled item = item-003, item-007 and item-008, each with status passed
+      And item-003's and item-007's results are labelled tool = "gherkin-runner", and item-008's tool = "browser-driver" with the attachment trace.zip
       When I run harness verify 03
       Then cycles/03/results/run-1/ and run-2/ hold the three results and trace.zip
       And cycles/03/verified.toml is written with the same content as stdout
@@ -773,6 +777,7 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         attachments = 1
         seconds = 4
         items = ["item-003", "item-007", "item-008"]
+        tools = ["browser-driver", "gherkin-runner"]
 
         [[runs]]
         results = 3
@@ -783,8 +788,21 @@ Feature: The harness: storm, model, cut, fence, regenerate, gate, measure
         attachments = 1
         seconds = 4
         items = ["item-003", "item-007", "item-008"]
+        tools = ["browser-driver", "gherkin-runner"]
         """
       And it exits 0
+
+    Scenario: A result that names no tool is refused
+      Given the suite writes item-003's result with no label tool
+      When I run harness verify 03
+      Then stdout holds [finding] with rule = "result-tool-named", run = 1 and item = "item-003"
+      And it exits 1
+
+    Scenario: A monitor's result is never read by the gate
+      Given impl/results holds, before the run, a result labelled item = item-003, tool = "metrics-query", status passed
+      When I run harness verify 03
+      Then the folder is emptied before the first run and that result is not among run-1's
+      And cycles/03/results/ holds nothing a run did not write
 
     Scenario: A result that is not passed refuses the run, naming the item and its status
       Given the suite's second run writes item-008 with status failed

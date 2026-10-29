@@ -268,7 +268,7 @@ names; it must write at least one result. _Held by:_ `results-written`,
 result model: the item it verifies (a label), its status, its start and
 stop, its attachments. The only thing the gate reads. _Where:_ the
 configuration's `[verify] results` folder; copied to
-`cycles/NN/results/run-N/`. _Held by:_ INV-11, `result-labelled`,
+`cycles/NN/results/run-N/`. _Held by:_ INV-11, `result-labelled`, `result-tool-named`,
 `result-item-on-checklist`, `every-item-has-result`.
 _Avoid:_ report, output, log, JUnit, exit code.
 
@@ -283,10 +283,22 @@ _Avoid:_ tag (Gherkin's word), annotation.
 screenshot, a request log, a transcript. Evidence the grader and the owner
 read with the result. _Avoid:_ artefact, asset, upload.
 
-**Tool.** Whatever ran a scenario and wrote its result: a Gherkin runner, a
-unit framework, a browser driver, a script, a person's session. The gate
-never reads the tool, only its results. _Avoid:_ runner (as the general
-word), framework.
+**Tool.** Whatever answered a scenario and wrote its result: a Gherkin
+runner, a unit framework, a browser driver, a metrics query, a telemetry
+trace, a synthetic probe, a person's session. Named on the result by the
+`tool` label. The gate never reads the tool, only its results.
+_Avoid:_ runner (as the general word), framework, integration.
+
+**Monitor.** A tool that answers a scenario against the running product
+rather than the room: a metrics query, a telemetry trace, a probe. Its
+results carry the same item ids and are read by the same reader; they are
+evidence about a deployment, never about a cut, so the gate never reads
+them. _Avoid:_ observability (as the name), alert, dashboard, SLO.
+
+**Span.** One operation in a telemetry trace. A span that shows a command
+reaching its aggregate and raising its event is a monitor's answer to the
+scenario that states it; the storm names the event the span must show.
+_Avoid:_ log line, event (the storm's word).
 
 ## The instrument
 

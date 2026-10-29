@@ -68,3 +68,13 @@ browser driver with its trace, a unit framework, a script). Carried into
 INV-11, the way of working ("Results are tool-neutral"), the builder's
 brief, the glossary (result, status, label, attachment, tool) and verify's
 scenarios in `harness/spec.feature`: the runner's exit code is never read.
+
+The spec owner, the same day: a tool is not limited to a test runner. A
+metrics query (PromQL), a telemetry trace (OpenTelemetry), a probe, a person
+are tools, and the result model is the one contract from dev to monitor. So
+every result names its tool (`result-tool-named`), verify reports the tools
+a run used, and a monitor's results carry the same item ids and are read by
+the same reader, while the gate reads only the room's run: a monitor's
+result is evidence about a deployment, never about a cut (the way of
+working, "One contract from dev to monitor"). What reads a monitor's results
+is a plan of its own, in the same model, when a product asks for it.
