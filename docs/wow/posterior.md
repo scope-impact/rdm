@@ -71,7 +71,7 @@ another's). The posterior over `g_i` is the list of visible gaps, ranked.
 ```
 r_ijt  ~ Bernoulli(z_it·s_j + (1 − z_it)·f_j)     a result from tool j in the room's run (verify)
 v_igt  ~ Bernoulli(z_it·s_g + (1 − z_it)·f_g)     a verdict from grader g, black box (score)
-logit(s) = −logit(f) + softplus(η);  (η, logit f) ~ MVN  a reporter is never worse than a coin (2405.19521, eq. 3)
+logit(s) = logit(f) + softplus(η);  (η, logit f) ~ MVN   s > f: a reporter is never worse than a coin (2405.19521, eq. 3, in false-pass terms)
 η ~ prior centred so that s ≈ 0.9, f ≈ 0.1          the old Beta(9,1), Beta(1,9), now as the prior on η and f
 unreached verdict ≡ v = fail                      a rule of the instrument, not a likelihood (INV-6)
 two runs of one suite ≡ one observation            the worse run; correlated executions are not two draws
@@ -180,8 +180,9 @@ container and component effects are its "population-level models"
 extension (Appendix F). Two things it does that we did not:
 
 - **It excludes adversarial raters by construction**, reparameterising
-  α^sens = −α^spec + softplus(η_j), so a rater is always at least as
-  informative as a coin; the liar symmetry is removed exactly rather than
+  α^sens = −α^spec + softplus(η_j) (with specificity = 1 − f this is
+  logit s = logit f + softplus(η_j), so s > f), so a rater is always at least
+  as informative as a coin; the liar symmetry is removed exactly rather than
   discouraged by a prior. **Change:** the harness's model adopts this. A
   grader's or tool's (s, f) are written as a spec effect and a softplus
   distance from the spammy boundary, with a hierarchical bivariate Normal
