@@ -39,6 +39,10 @@ review, not here.
 
 # Validation approach
 
+The harness is a tool, validated as software used in production and the
+quality system (computer software assurance), not as a medical device:
+CSV-HAR-001 is that validation's procedure and RDM keeps its record.
+
 Validation is the operator's: a need is validated when an operator has run
 a regeneration cycle through it and approved the result. Each approval is
 recorded in `dhf/validation/<name>-validation.json` with the need's id as

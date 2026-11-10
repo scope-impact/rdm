@@ -1,0 +1,18 @@
+# Computer software validation (CSV) of a tool used in production and the
+# quality system: here, an agentic software factory (Löyly's pi harness).
+#
+# After FDA's Computer Software Assurance (CSA) guidance for production and
+# quality system software, and ISO 13485:2016 4.1.6 and 7.5.6. The keys are
+# mnemonics for this example, not the documents' own numbering: read the
+# guidance and the standard; this checklist does not replace them.
+#
+CSA:intended-use the intended use of the software, and whether it is used directly in production or the quality system, or supports them
+CSA:risk the process risk: whether a failure of the software to perform as intended could compromise product quality or safety (high process risk) or not
+CSA:assurance assurance activities commensurate with that risk: scripted or unscripted testing, automated testing, ongoing monitoring, the supplier's own assurance
+CSA:record the record: intended use, risk determination, assurance activities and their results, issues found and their disposition, the conclusion, who performed it and when
+CSA:change assurance repeated after a change to the software, in proportion to the change's risk
+13485:4.1.6-procedure a documented procedure for validating computer software used in the quality management system
+13485:4.1.6-before-use validation before initial use and, as appropriate, after changes to the software or its application
+13485:4.1.6-proportionate the approach and activities proportionate to the risk associated with the use of the software
+13485:4.1.6-records records of the validation kept
+13485:7.5.6-software validation of computer software used in production, before initial use and after changes

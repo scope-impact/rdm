@@ -76,8 +76,8 @@ jobs:
         run: |
           uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
           uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
-          uv run rdm gap checklists/pi_harness.txt dhf/documents/*.md dhf/documents/risk/*.md
-          uv run rdm graph validate --dhf dhf --allure-results dhf/allure-results --checklist checklists/pi_harness.txt
+          uv run rdm gap checklists/csv_tool_validation.txt dhf/documents/*.md dhf/documents/risk/*.md
+          uv run rdm graph validate --dhf dhf --allure-results dhf/allure-results --checklist checklists/csv_tool_validation.txt
           uv run rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
       - name: The harness's release evidence (verification report PDF, matrix, results)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

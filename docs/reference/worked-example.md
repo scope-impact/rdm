@@ -20,13 +20,16 @@ Löyly knows nothing of RDM or Allure:
   bridge (`bridge/user.clj`) on the JVM's boot class path that writes each
   test as an Allure result, tagged with the requirement it claims and
   labelled with the Löyly commit it tested.
-- Its design history file holds the architecture (the six contexts, each a
-  slice with its code), a risk policy and a register of four harness risks
-  whose controls are Löyly requirements, the V&V plan and the traceability
-  matrix, checked against the IEC 62304 clauses they claim
-  (`checklists/pi_harness.txt`).
+- The harness is a tool, so it is validated as one: computer software
+  validation (after FDA's Computer Software Assurance guidance and ISO 13485
+  4.1.6), not IEC 62304. Its design history file holds the tool validation
+  (intended use, high process risk, assurance activities, record, change),
+  the architecture (the six contexts, each a slice with its code), a risk
+  policy and a register of four harness risks whose controls are Löyly
+  requirements, the V&V plan and the traceability matrix, checked against a
+  CSV checklist (`checklists/csv_tool_validation.txt`).
 - RDM's gates then hold the harness to its own spec: all 201 requirements
-  verified, every need addressed, every risk evaluated, every claimed clause
+  verified, every need addressed, every risk evaluated, every CSV clause
   referenced; the evidence bundle carries the verification report. CI runs it
   all on every change to RDM.
 

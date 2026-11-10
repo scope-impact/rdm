@@ -31,8 +31,9 @@ rdm gap part11_document_control dhf/documents/document_control.md
 
 RDM holds [its own document control](../dhf/documents/document_control.md) to
 the built-in `part11_document_control` checklist, and the
-[worked example](../reference/worked-example.md) holds its design history file
-to a checklist of its own (`checklists/pi_harness.txt`).
+[worked example](../reference/worked-example.md) holds its tool validation to a
+computer software validation checklist of its own
+(`checklists/csv_tool_validation.txt`).
 
 ## Your own checklists
 

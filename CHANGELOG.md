@@ -42,9 +42,10 @@
     only when the repository has no spec yet, so a plain-Gherkin spec is kept.
   - The Löyly pi harness example is a full example DHF in place of the Part 11
     one: its architecture (six contexts, one per slice), a risk policy and a
-    register of four harness risks controlled by Löyly requirements, and a
-    checklist of the IEC 62304 clauses its documents claim, held to by
-    `rdm gap` and graph validation in CI.
+    register of four harness risks controlled by Löyly requirements, and its
+    validation as a tool: computer software validation (after FDA's CSA
+    guidance and ISO 13485 4.1.6, 7.5.6; CSV-HAR-001) and a CSV checklist
+    held to by `rdm gap` and graph validation in CI.
   - The verification report compares runs with the product's commit (that of
     the repository the spec lives in) and names it in the header; Clojure test
     names are shortened like Python's; the traceability table gives the tests

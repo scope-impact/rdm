@@ -49,8 +49,9 @@ risks:
 
 # Risk register — pi harness
 
-**Proposed, not yet approved.** Each risk is identified for the software
-item that could contribute to it ([[62304:7.1.1]]), evaluated against
-RMP-HAR-001, and controlled by requirements of the harness's own spec
-([[62304:7.2.1]]); a control counts once its requirement is verified by a
-passing run, and the residual is then evaluated again ([[62304:7.3.1]]).
+**Proposed, not yet approved.** The ways the harness could fail to perform
+as intended, which make it high process risk in its validation
+(CSV-HAR-001). Each is evaluated against RMP-HAR-001 and controlled by
+requirements of the harness's own spec; a control counts once its
+requirement is verified by a passing run, and the residual is then evaluated
+again.

@@ -16,7 +16,8 @@ Löyly knows nothing of RDM or Allure.
 | `dhf/documents/risk/` | the risk policy and a register of four harness risks (a leaky clean room, an unapproved grader, a reused item identity, a moved golden), each controlled by Löyly requirements; both **proposed** |
 | `dhf/documents/verification_and_validation_plan.md` | how the harness is verified and validated |
 | `dhf/documents/traceability_matrix.md` | the matrix template, rendered from generated data |
-| `checklists/pi_harness.txt` | the IEC 62304 clauses the documents claim, for `rdm gap` and graph validation |
+| `dhf/documents/tool_validation.md` | the harness validated as a tool (computer software validation, CSA): intended use, process risk, assurance activities, record, change (CSV-HAR-001, proposed) |
+| `checklists/csv_tool_validation.txt` | computer software validation of a production tool (after FDA's CSA guidance and ISO 13485 4.1.6, 7.5.6), for `rdm gap` and graph validation |
 | `bridge/user.clj` | clojure.test to Allure, loaded into each test JVM from outside |
 | `run-acceptance.sh` | runs the six suites unchanged, in a copy of the checkout, and writes `dhf/allure-results/` |
 
@@ -30,8 +31,8 @@ git submodule update --init loyly        # from RDM's root
 cd examples/loyly-pi-harness
 ./run-acceptance.sh
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
-rdm gap checklists/pi_harness.txt dhf/documents/*.md dhf/documents/risk/*.md
-rdm graph validate --dhf dhf --allure-results dhf/allure-results --checklist checklists/pi_harness.txt
+rdm gap checklists/csv_tool_validation.txt dhf/documents/*.md dhf/documents/risk/*.md
+rdm graph validate --dhf dhf --allure-results dhf/allure-results --checklist checklists/csv_tool_validation.txt
 rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
 ```
 
