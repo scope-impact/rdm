@@ -10,22 +10,22 @@ validated (does it meet the user needs and its intended use?).
 
 # The spec
 
-RDM does not hold the requirements: it reads them from the product's spec,
-written and stamped in the factory that builds the product (a Löyly-shaped
-spec). RDM finds it at `.pi/plan` in the repository, or wherever `spec` in
-`dhf/config.yml` names.
+RDM does not hold the requirements: it reads them from the product's
+Gherkin spec, written wherever the product is specified. RDM finds it at
+`spec/` or `features/` in the repository (or a Löyly plan at `.pi/plan`), or
+wherever `spec` in `dhf/config.yml` names.
 
-- **User needs** are the screens of the spec's event model, with the Allium
-  surfaces they link (who they face, the rules they provide, what they
-  guarantee) and the event-storm events behind them; in a context with no
-  screens, each Allium surface is a need.
-- **Requirements** are the spec's stamped Gherkin scenarios, `item-NN-SSS`.
+- **Requirements** are the spec's scenarios tagged with an id (`@REQ-12`,
+  `@item-02-001`).
+- **User needs** are, by default, the spec's Features, each with its
+  description as the need's text; an adapter can read richer needs (a Löyly
+  spec's event-model screens and Allium surfaces).
 
 # Verification approach
 
-Each requirement is verified by an automated test that claims it with an
-Allure tag `item-NN-SSS` (a Gherkin runner writes it from the scenario's tag;
-a plain test uses `@allure.tag("item-NN-SSS")`). `rdm story release-gate`
+Each requirement is verified by an automated test whose Allure result claims
+it with a `tag` label of its id (a Gherkin runner writes it from the
+scenario's tag; a pytest test uses `@allure.tag("<id>")`). `rdm story release-gate`
 enforces that every requirement is verified by a passing test and every user
 need is addressed; the pull-request review independently confirms each test
 genuinely verifies its requirement.

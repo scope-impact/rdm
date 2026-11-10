@@ -5,7 +5,14 @@
 #   rdm.md_extensions.AuditNoteExclusionExtension  removes [[…]] notes (the release copy)
 md_extensions: []
 
-# The spec RDM holds the record to (requirements and user needs), as the plan
-# directory of a Löyly-shaped spec, relative to this DHF. Leave it out when the
-# spec is at .pi/plan in the repository.
-# spec: ../.pi/plan
+# The spec RDM holds the record to: requirements are Gherkin scenarios tagged
+# with an id, user needs by default their Features. Leave it out when the spec
+# is at spec/ or features/ (or a Löyly plan at .pi/plan) in the repository;
+# otherwise name a directory, relative to this DHF:
+# spec: ../spec
+# or a mapping (globs, the id tag's pattern, the needs source):
+# spec:
+#   features: ["../spec/**/*.feature"]
+#   exclude: ["**/drafts.feature"]
+#   id: "REQ-\\d+"
+#   needs: feature          # feature | allium (a Löyly spec's event model)

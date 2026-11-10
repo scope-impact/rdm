@@ -22,7 +22,7 @@ This document applies to {{device.name}} release {{device.version}}.
 
 [[Design inputs are the verifiable requirements the design must satisfy (ISO 13485:2016 7.3.3, 21 CFR 820.30(c)).]]
 
-TODO: Name where the design inputs are specified and how each is verified by a tagged acceptance test, so `rdm story release-gate` can check every one of them against the executed results.
+TODO: Name where the spec's requirements (Gherkin scenarios tagged with ids) live and how each is verified by an acceptance test whose Allure result claims it, so `rdm story release-gate` can check every one of them against the executed results.
 
 ENDTODO
 

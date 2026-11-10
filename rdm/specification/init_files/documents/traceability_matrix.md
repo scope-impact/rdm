@@ -8,7 +8,7 @@ title: Traceability Matrix and Verification Status
 
 This document presents the verification status of each **requirement** of {{ device.name }}'s spec (a stamped scenario, `item-NN-SSS`), grouped under the **user need** it addresses: requirements are verified (§820.30(f): output meets input) by the automated tests tagged with their id; user needs are validated separately.
 
-It is **generated** from the system of record: the spec (stamped Gherkin scenarios, the Allium surfaces and the event model) and the executed Allure test results. Do not edit the matrix by hand. Regenerate it with:
+It is **generated** from the system of record: the spec (Gherkin scenarios tagged with ids, and the user needs they address) and the executed Allure test results. Do not edit the matrix by hand. Regenerate it with:
 
 ```
 rdm story verify --dhf <dhf> --allure-results <allure-results-dir> -o data/verification.yml

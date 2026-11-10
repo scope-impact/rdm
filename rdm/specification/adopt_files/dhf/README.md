@@ -1,9 +1,10 @@
 # Design History File
 
-This directory is this product's DHF as RDM reads it: the user-need registry
-(in the V&V plan frontmatter), executed test results (Allure), the risk
-register, the controlled documents, and git history — approval is the
-reviewed, merged commit.
+This directory is this product's DHF as RDM reads it: the controlled
+documents, the risk register, executed test results (Allure) and git
+history; approval is the reviewed, merged commit. The requirements and user
+needs are not here: RDM reads them from the product's Gherkin spec (see
+`spec` in `config.yml`).
 
 Verify and gate exactly as CI does:
 
