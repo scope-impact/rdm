@@ -22,7 +22,7 @@
 |---|---|---|
 | *the graph commands need the optional extra* | RDM was installed without `graph` | install `rdm[graph]` |
 | *store not found* | `query --store` or `serve` names a store never built | `rdm graph build --store <dir>` first |
-| *test run tested another commit than the record's* | the results come from an earlier commit | rerun the acceptance suite on this commit |
+| *test run tested another commit than the product's* | the results come from an earlier commit | rerun the acceptance suite on this commit |
 | *document's latest change has not landed on the default branch* | the change is on a branch not merged yet | expected until the pull request merges |
 | the agent server misses something new in the record's vocabulary | it still runs the RDM it started with | restart it after upgrading RDM |
 

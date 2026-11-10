@@ -73,7 +73,7 @@ The rules a reviewer needs to judge the design:
   evidence is release-grade only when no reason is found, and each reason is
   named: a requirement not verified; a result file that cannot be read; a
   test that failed or broke; a test run with uncommitted changes, or with no
-  commit; runs of another commit than the record's; a record with
+  commit; runs of another commit than the product's; a record with
   uncommitted changes; or a record whose commit is unknown. Every run
   counts, whether it claims a requirement of the spec or not. The anomalies
   are a requirement with no run, a run that did not pass, an unreadable result file, a

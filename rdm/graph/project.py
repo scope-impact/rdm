@@ -285,6 +285,16 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
     if head:  # item-06-016: the commit the record was built at
         record = ds.thing(_term(ds.base + "record"), rdm("Record"), ds.base.split(":")[2], g)
         ds.add(record, rdm("atCommit"), _commit(ds, root, head, g)[0], g)
+        # The version the evidence must be for: the commit of the repository the
+        # spec lives in (the product), the record's own when they are one.
+        spec = load_spec(dhf)
+        product_root = repo_root(spec.root) if spec is not None else None
+        if product_root is not None and product_root.resolve() != Path(root).resolve():
+            product = git(product_root, "rev-parse", "HEAD")
+            if product:
+                ds.add(record, rdm("productAt"), _commit(ds, product_root, product, g)[0], g)
+        else:
+            ds.add(record, rdm("productAt"), _commit(ds, root, head, g)[0], g)
     branch = default_branch(root)
     first_parent = set((git(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
     documents = controlled_documents(dhf, root)  # item-06-001, item-06-011: every controlled document

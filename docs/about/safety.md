@@ -18,7 +18,7 @@ Read this before you trust a green gate.
     The gates judge the Allure results you give them. Run the acceptance
     suite in the same CI job as the gates, with `--clean-alluredir`, so no
     earlier run can stand in for this one. `rdm graph validate` warns on a
-    run that tested another commit than the record's.
+    run that tested another commit than the product's.
 
 !!! warning "Agents read, people approve"
     Give agents the read-only agent server (`rdm graph mcp`), never write

@@ -81,7 +81,7 @@ coded gates stay authoritative. It exits 1 on any violation.
 | a requirement that addresses no user need | the spec does not say whom it serves |
 | a test run claiming an item id that is no requirement of the spec | a claim that resolves to nothing |
 | a test run tied to no commit | the version it is evidence for is unknown |
-| a test run of another commit than the record's | stale evidence |
+| a test run of another commit than the product's | stale evidence |
 | a document whose latest change has not landed on the default branch | not yet merged |
 | a risk with `status: proposed` | no person has approved its rating |
 

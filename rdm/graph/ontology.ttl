@@ -151,6 +151,10 @@ rdm:atCommit a owl:ObjectProperty ;
     rdfs:label "at commit" ; rdfs:domain rdm:Record ; rdfs:range prov:Activity ;
     rdfs:comment "The commit the record was at when the graph was built (item-06-016)." .
 
+rdm:productAt a owl:ObjectProperty ;
+    rdfs:label "product at" ; rdfs:domain rdm:Record ; rdfs:range prov:Activity ;
+    rdfs:comment "The commit of the product the evidence must be for: of the repository the spec lives in, the record's own when they are one (item-06-016)." .
+
 rdm:exercises a owl:ObjectProperty ;
     rdfs:label "exercises" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Requirement ;
     rdfs:comment "A requirement the run claims with an Allure tag item-NN-SSS. A claim, not a verdict." .

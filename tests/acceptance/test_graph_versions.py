@@ -20,12 +20,12 @@ from rdm.graph.project import project  # noqa: E402
 from rdm.graph.validate import validate  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_graph import _record  # noqa: E402
-from tests.util import git_run  # noqa: E402
+from tests.util import git_run, write_spec  # noqa: E402
 
 RDM = "https://github.com/scope-impact/rdm/ns#"
 P = "urn:dhf:acme:"
 UNVERSIONED = "test run is tied to no commit: the version it is evidence for is unknown"
-STALE = "test run tested another commit than the record's: stale evidence"
+STALE = "test run tested another commit than the product's: stale evidence"
 
 
 def _sha(repo: Path) -> str:
@@ -45,7 +45,7 @@ def _run(results: Path, name: str, *labels: tuple[str, str]) -> None:
 def test_runs_are_tied_to_the_commit_they_tested(tmp_path: Path) -> None:
     """item-06-016: each run links to the commit its label names; the record carries the
     commit it was built at and a dirty run is marked; shapes warn on an
-    unversioned run and on a run of another commit."""
+    unversioned run and on a run of another commit than the product's."""
     dhf, results = _record(tmp_path)
     repo = dhf.parent
     old = _sha(repo)
@@ -68,13 +68,51 @@ def test_runs_are_tied_to_the_commit_they_tested(tmp_path: Path) -> None:
         assert (P + "run/current-result", "testedAt", P + f"commit/{head}") in facts
         assert (P + "run/stale-result", "testedAt", P + f"commit/{old}") in facts
         assert not any(s == P + "run/unversioned-result" and p == "testedAt" for s, p, _ in facts)
-    with verification_step("the record carries the commit it was built at"):
+    with verification_step("the record carries the commit it was built at, and the product's: its own"):
         assert (P + "record", "atCommit", P + f"commit/{head}") in facts
+        assert (P + "record", "productAt", P + f"commit/{head}") in facts
     with verification_step("a run of uncommitted changes is marked, a clean one is not"):
         assert (P + "run/dirty-result", "uncommittedChanges", "true") in facts
         assert not any(s == P + "run/current-result" and p == "uncommittedChanges" for s, p, _ in facts)
     with verification_step("a shape warns on a run tied to no commit"):
         assert {r.label for r in report if r.message == UNVERSIONED} == {"unversioned"}
-    with verification_step("a shape warns on a run that tested another commit than the record's"):
+    with verification_step("a shape warns on a run that tested another commit than the product's"):
         assert {r.label for r in report if r.message == STALE} == {"stale"}
         assert all(r.severity == "Warning" for r in report if r.message in (UNVERSIONED, STALE))
+
+
+@allure.tag("item-06-016")
+@allure.label("output", "rdm/graph/project.py")
+@allure.label("output", "rdm/graph/shapes.ttl")
+def test_a_spec_in_another_repository_is_the_product(tmp_path: Path) -> None:
+    """item-06-016: when the spec lives in a repository of its own (a submodule,
+    another checkout), the product's commit is that repository's: a run of it
+    is current, a run of the record's own commit is stale."""
+    product = tmp_path / "product"
+    write_spec(product, (("item-01-001", "The device shall alarm.", ["Alarm"]),),
+               {"Alarm": ("alarms", "Nurse", "a need")}, {"01": "alarms"})
+    git_run(product, "init")
+    git_run(product, "add", "-A")
+    git_run(product, "commit", "-m", "spec")
+    record = tmp_path / "record"
+    (record / "dhf" / "documents").mkdir(parents=True)
+    (record / "dhf" / "config.yml").write_text(f"spec: {product / 'spec'}\n")
+    (record / "dhf" / "documents" / "plan.md").write_text("---\nid: VVP-001\ntitle: V&V plan\n---\n# Plan\n")
+    git_run(record, "init")
+    git_run(record, "add", "-A")
+    git_run(record, "commit", "-m", "record")
+    results = record / "allure-results"
+    results.mkdir()
+    _run(results, "product", ("commit", _sha(product)))
+    _run(results, "record", ("commit", _sha(record)))
+    quads = project(record / "dhf", results)
+    facts = {(q.subject.value, q.predicate.value.replace(RDM, ""), q.object.value) for q in quads}
+    report = validate(quads)
+    base = "urn:dhf:record:"
+    attach("validation results", sorted((r.label, r.message) for r in report if r.message == STALE))
+
+    with verification_step("the product's commit is the spec repository's, the record's stays its own"):
+        assert (base + "record", "productAt", base + f"commit/{_sha(product)}") in facts
+        assert (base + "record", "atCommit", base + f"commit/{_sha(record)}") in facts
+    with verification_step("a run of the product's commit is current; a run of the record's is stale"):
+        assert {r.label for r in report if r.message == STALE} == {"record"}

@@ -160,9 +160,9 @@ rdm:RunVersionShape a sh:NodeShape ;
         sh:select """SELECT $this WHERE { FILTER NOT EXISTS { $this rdm:testedAt ?c } }""" ;
     ] , [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "test run tested another commit than the record's: stale evidence" ;
+        sh:message "test run tested another commit than the product's: stale evidence" ;
         sh:select """SELECT $this WHERE {
-            $this rdm:testedAt ?tested . ?record rdm:atCommit ?head .
+            $this rdm:testedAt ?tested . ?record rdm:productAt ?head .
             FILTER (?tested != ?head) }""" ;
     ] .
 
