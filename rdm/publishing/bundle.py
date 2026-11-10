@@ -1,7 +1,7 @@
 """
 Release evidence bundle (DI-30): the retained artifact set for a release.
 
-Writes, to an output directory: the verification data (declared design inputs
+Writes, to an output directory: the verification data (the spec's requirements
 reconciled against executed Allure results), the rendered traceability matrix,
 the executed Allure results themselves with the attachments and containers
 they reference, the verification report as a PDF (DI-64), and a manifest
@@ -84,7 +84,7 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
     for earlier in ("verification.yml", MATRIX_DOC, REPORT_PDF, "manifest.json"):
         (out_dir / earlier).unlink(missing_ok=True)  # an earlier bundle's
 
-    # 1. Verification data: design inputs x executed results.
+    # 1. Verification data: requirements x executed results.
     verification_path = out_dir / "verification.yml"
     data = write_verification_file(dhf_dir, allure_results_dir, verification_path)
 
