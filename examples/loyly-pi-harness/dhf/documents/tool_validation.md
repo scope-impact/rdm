@@ -2,13 +2,14 @@
 id: CSV-HAR-001
 title: Tool validation — Löyly's pi harness (computer software assurance)
 status: proposed
-references: [SDS-HAR-001, RMF-HAR-001, VVP-001]
+references: [SDS-HAR-001, RMF-HAR-001, VVP-001, DC-HAR-001]
 ---
 
 # Tool validation — Löyly's pi harness
 
 **Proposed, not yet approved.** The validation of Löyly's pi harness as a
-tool: an agentic software factory that regenerates software from its spec.
+tool, an agentic software factory that regenerates software from its spec,
+and of the record system that keeps that validation (git, GitHub and RDM).
 It is validated as software used in production and in the quality system,
 not as a medical device: the approach is computer software assurance, risk
 based ([[13485:4.1.6-procedure]]). This document is the procedure for this
@@ -53,6 +54,10 @@ Proportionate to that risk ([[CSA:assurance]], [[13485:4.1.6-proportionate]]):
 - **Ongoing monitoring.** Every cycle's scoreboard, compared with the last
   measured cycle, shows a regression the tests did not.
 
+Beside its own tests, the assurance relies on what the harness keeps
+itself ([[CSA:assurance-considerations]]): its event store and the run
+evidence of each cycle, and Löyly's own review of the spec it is built from.
+
 ## Record
 
 The record of each validation ([[CSA:record]], [[13485:4.1.6-records]]) is
@@ -64,10 +69,22 @@ results themselves with a manifest and one SHA-256 over them. The conclusion
 is the release gate's verdict; the approval, the reviewed pull request that
 records it.
 
+## The record system and Part 11
+
+The validation record is required as evidence of a validated state, and it
+is kept electronically, so it is a Part 11 electronic record and the system
+that keeps it is held to Part 11 ([[CSA:part11]]). That system (git as the
+document control system, GitHub as its service provider, RDM's gates) is
+validated the same way: its intended use is to keep and gate this record;
+a failure could let an unverified requirement or an unreviewed change into
+the record (high process risk, the same reasoning as above); its assurance is
+RDM's own acceptance tests of every gate it runs, and its controls are mapped
+to Part 11 in DC-HAR-001.
+
 ## Change
 
 The harness is validated before first use and again after every change
-([[13485:4.1.6-before-use]], [[CSA:change]]): a new Löyly commit is a change
+([[13485:4.1.6-before-use]], [[CSA:change]], [[13485:7.5.6-software]]): a new Löyly commit is a change
 to the `loyly` submodule, which reruns every suite and every gate in CI, and
 the evidence is valid only for the commit it tested (a run of another commit
 is stale evidence).

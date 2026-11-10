@@ -7,17 +7,44 @@
 # and id-code/password combinations (§11.300 c-e beyond uniqueness) are
 # addressed through the organization's own security policy documents.
 #
+# Sources (each item below names its section and page):
+#   [CFR] 21 CFR Part 11, Electronic Records; Electronic Signatures, in
+#         21 CFR Chapter I (4-1-24 Edition), printed pages 241-246 (PDF pages 1-6):
+#         https://www.govinfo.gov/content/pkg/CFR-2024-title21-vol1/pdf/CFR-2024-title21-vol1-part11.pdf
+#         Subpart B, §11.10 Controls for closed systems, and §11.50: printed page 244 (PDF page 4);
+#         §11.70, and Subpart C, §11.100: printed page 245 (PDF page 5).
+#   [GUIDE] FDA, Guidance for Industry, Part 11, Electronic Records; Electronic
+#         Signatures - Scope and Application (August 2003):
+#         https://www.fda.gov/media/75414/download
+#         §III.C.1 Validation, printed page 6 (PDF page 9), lines 216-236:
+#         validate on "a justified and documented risk assessment"; see
+#         computer software validation (the CSA guidance) for how.
+#
+# Source: [CFR] §11.10(a), printed p. 244 (PDF p. 4); [GUIDE] §III.C.1, printed p. 6 (PDF p. 9)
 P11:11.10a validation of the system for accuracy, reliability, and the ability to discern altered records
+# Source: [CFR] §11.10(b), printed p. 244 (PDF p. 4)
 P11:11.10b accurate and complete copies of records in human readable and electronic form
+# Source: [CFR] §11.10(c), printed p. 244 (PDF p. 4)
 P11:11.10c protection of records for accurate and ready retrieval throughout the retention period
+# Source: [CFR] §11.10(d), printed p. 244 (PDF p. 4)
 P11:11.10d limiting system access to authorized individuals
+# Source: [CFR] §11.10(e), printed p. 244 (PDF p. 4)
 P11:11.10e secure, computer-generated, time-stamped audit trail that does not obscure prior entries
+# Source: [CFR] §11.10(f), printed p. 244 (PDF p. 4)
 P11:11.10f operational checks enforcing permitted sequencing of steps
+# Source: [CFR] §11.10(g), printed p. 244 (PDF p. 4)
 P11:11.10g authority checks ensuring only authorized individuals sign or alter records
+# Source: [CFR] §11.10(i), printed p. 244 (PDF p. 4)
 P11:11.10i persons who use the system have the education, training, and experience to do so
+# Source: [CFR] §11.10(h), printed p. 244 (PDF p. 4)
 P11:11.10h device checks to determine the validity of the source of data input or operational instruction
+# Source: [CFR] §11.10(j), printed p. 244 (PDF p. 4)
 P11:11.10j written policies holding individuals accountable for actions initiated under their electronic signatures
+# Source: [CFR] §11.10(k), printed p. 244 (PDF p. 4)
 P11:11.10k adequate controls over the distribution of and changes to systems documentation
+# Source: [CFR] Subpart B, §11.50 Signature manifestations, printed p. 244 (PDF p. 4)
 P11:11.50 signature manifestation: printed name, date and time, and meaning of each signing
+# Source: [CFR] Subpart B, §11.70 Signature/record linking, printed p. 245 (PDF p. 5)
 P11:11.70 signatures linked to their records so they cannot be excised, copied, or transferred
+# Source: [CFR] Subpart C, §11.100 General requirements (a), printed p. 245 (PDF p. 5)
 P11:11.100 each electronic signature unique to one individual, never reused or reassigned

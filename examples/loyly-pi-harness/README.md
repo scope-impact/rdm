@@ -17,7 +17,8 @@ Löyly knows nothing of RDM or Allure.
 | `dhf/documents/verification_and_validation_plan.md` | how the harness is verified and validated |
 | `dhf/documents/traceability_matrix.md` | the matrix template, rendered from generated data |
 | `dhf/documents/tool_validation.md` | the harness validated as a tool (computer software validation, CSA): intended use, process risk, assurance activities, record, change (CSV-HAR-001, proposed) |
-| `checklists/csv_tool_validation.txt` | computer software validation of a production tool (after FDA's CSA guidance and ISO 13485 4.1.6, 7.5.6), for `rdm gap` and graph validation |
+| `dhf/documents/document_control.md` | git and GitHub as this record's document control, each 21 CFR Part 11 control mapped; §11.10(a) validation met by CSV (DC-HAR-001, proposed) |
+| `checklists/csv_tool_validation.txt` | computer software validation of a production tool and of its record system, each item citing its source PDF, section and page (FDA's CSA guidance of 3 Feb 2026, ISO 13485 4.1.6 and 7.5.6, 21 CFR 11.10(a)); for `rdm gap` and graph validation |
 | `bridge/user.clj` | clojure.test to Allure, loaded into each test JVM from outside |
 | `run-acceptance.sh` | runs the six suites unchanged, in a copy of the checkout, and writes `dhf/allure-results/` |
 
@@ -32,7 +33,9 @@ cd examples/loyly-pi-harness
 ./run-acceptance.sh
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 rdm gap checklists/csv_tool_validation.txt dhf/documents/*.md dhf/documents/risk/*.md
-rdm graph validate --dhf dhf --allure-results dhf/allure-results --checklist checklists/csv_tool_validation.txt
+rdm gap part11_document_control dhf/documents/document_control.md
+rdm graph validate --dhf dhf --allure-results dhf/allure-results \
+  --checklist checklists/csv_tool_validation.txt --checklist part11_document_control
 rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
 ```
 

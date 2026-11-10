@@ -27,10 +27,14 @@ Löyly knows nothing of RDM or Allure:
   the architecture (the six contexts, each a slice with its code), a risk
   policy and a register of four harness risks whose controls are Löyly
   requirements, the V&V plan and the traceability matrix, checked against a
-  CSV checklist (`checklists/csv_tool_validation.txt`).
+  CSV checklist (`checklists/csv_tool_validation.txt`, each item citing its
+  source PDF, section and page). Its record is held to 21 CFR Part 11 (a
+  document-control statement checked against the built-in
+  `part11_document_control`), and the record system is validated by the same
+  CSV.
 - RDM's gates then hold the harness to its own spec: all 201 requirements
-  verified, every need addressed, every risk evaluated, every CSV clause
-  referenced; the evidence bundle carries the verification report. CI runs it
+  verified, every need addressed, every risk evaluated, every CSV and Part 11
+  clause referenced; the evidence bundle carries the verification report. CI runs it
   all on every change to RDM.
 
 Its README says how to run it. Its traceability, from its knowledge graph,

@@ -45,7 +45,12 @@
     register of four harness risks controlled by Löyly requirements, and its
     validation as a tool: computer software validation (after FDA's CSA
     guidance and ISO 13485 4.1.6, 7.5.6; CSV-HAR-001) and a CSV checklist
-    held to by `rdm gap` and graph validation in CI.
+    held to by `rdm gap` and graph validation in CI. Its record is held to
+    21 CFR Part 11 too (DC-HAR-001, checked against `part11_document_control`),
+    with the record system validated by the same CSV.
+  - Checklists cite their sources: each item of `part11_document_control`
+    and of the example's CSV checklist names the source PDF (with its link),
+    the section and the printed and PDF page.
   - The verification report compares runs with the product's commit (that of
     the repository the spec lives in) and names it in the header; Clojure test
     names are shortened like Python's; the traceability table gives the tests
