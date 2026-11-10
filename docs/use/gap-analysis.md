@@ -58,5 +58,5 @@ clause no document references:
 - run: rdm gap part11_document_control documents/document_control_procedure.md
 ```
 
-The worked example verifies its DI-5 with exactly this, including a check
+The worked example verifies one of its requirements with exactly this, including a check
 that the check does detect a gap.

@@ -92,9 +92,8 @@ title: "…"
 ---
 ```
 
-Design documents additionally carry `kind: design`, `context` and
-`design_inputs` (each with the needs it `traces_to`); see
-[Design inputs and tests](spec-and-tests.md).
+Requirements and user needs are not in frontmatter: they are the spec RDM
+reads ([The spec and its tests](spec-and-tests.md)).
 
 ## PDF and Word
 

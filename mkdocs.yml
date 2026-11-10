@@ -30,7 +30,7 @@ theme:
     text: Nunito Sans
     code: JetBrains Mono
 
-# One copy of the docs per release (DI-82): mike publishes them; Material shows the selector.
+# One copy of the docs per release (item-07-006): mike publishes them; Material shows the selector.
 extra:
   version:
     provider: mike

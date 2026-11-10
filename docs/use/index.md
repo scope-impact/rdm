@@ -4,8 +4,8 @@ Every change goes round the same loop. Start with *Changing the record*;
 the other guides go deeper on one part of it.
 
 ```
- write the record ──► tag the tests ──► run the gates ──► review and merge
-   (record)            (record)          (gates)            (your forge)
+ the factory's spec ──► tag the tests ──► run the gates ──► review and merge
+   (stamped scenarios)    (record)          (gates)            (your forge)
         ▲                                                       │
         └──────── query the graph, render the documents ◄───────┘
 ```
@@ -13,7 +13,7 @@ the other guides go deeper on one part of it.
 | Task | Page |
 |---|---|
 | Make a change, step by step | [Changing the record](changing-the-record.md) |
-| Declare user needs and design inputs, write and tag the tests | [Design inputs and tests](spec-and-tests.md) |
+| Read the spec, write the tests that claim its requirements | [The spec and its tests](spec-and-tests.md) |
 | Keep the risk register and its controls | [Risk register](risk-register.md) |
 | Record validation evidence | [Validation evidence](validation-evidence.md) |
 | Run the release gate | [The gates](gates.md) |

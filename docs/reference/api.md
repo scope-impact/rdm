@@ -9,6 +9,10 @@ contexts listed before it. `rdm/main.py`, the command, is the composition root.
 
 The helpers every context may import.
 
+### `rdm.kernel.edn`
+
+::: rdm.kernel.edn
+
 ### `rdm.kernel.events`
 
 ::: rdm.kernel.events
@@ -63,9 +67,9 @@ The helpers every context may import.
 
 ::: rdm.specification.sdd
 
-### `rdm.specification.tags`
+### `rdm.specification.spec`
 
-::: rdm.specification.tags
+::: rdm.specification.spec
 
 ### `rdm.specification.validation`
 

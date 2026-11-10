@@ -2,7 +2,7 @@
 
 | **Release** | {{ rdm.release }} (other versions: the selector at the top) |
 |---|---|
-| **Docs revision** | IFU-001, revision 4 |
+| **Docs revision** | IFU-001, revision 5 |
 | **Source and issues** | [scope-impact/rdm](https://github.com/scope-impact/rdm) · [report a problem](https://github.com/scope-impact/rdm/issues) |
 
 --8<-- "README.md:intro"

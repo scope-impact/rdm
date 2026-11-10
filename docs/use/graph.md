@@ -1,4 +1,4 @@
-# The design record as a graph
+# The record as a graph
 
 `rdm graph` projects the record into RDF — the spec (user needs, requirements,
 Allium rules, bounded contexts), controlled documents, test results, git

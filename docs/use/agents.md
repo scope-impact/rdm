@@ -1,10 +1,10 @@
 # For agents
 
 An agent working on a regulated product needs the same answers a reviewer
-does — what does this design input require, which tests verify it, did they
+does — what does this requirement say, which test runs verify it, did they
 pass at this commit, which risks does it control — and it must not be able to
 change the answers. `rdm graph mcp` gives it the record as a read-only
-knowledge source: it reads the current Markdown and test results on every
+knowledge source: it reads the current spec, Markdown and test results on every
 call, and it has no way to write.
 
 ## Register the server
@@ -32,7 +32,7 @@ settings.
 
 | Tool | Answers |
 | --- | --- |
-| `trace` | a `UN-n`, `DI-n` or risk id: text, contexts, owning document and last commit, needs refined, tagged tests and runs, the source files they exercise, risks controlled; for a risk, its chain, scores and controlling inputs ([risk register](risk-register.md)) |
+| `trace` | a requirement (`item-NN-SSS`: its scenario, rule, context, source, user needs, the Allium obligations it covers, runs with steps and attachments, the source files they exercise, risks controlled), a user need (a screen id such as `alarms/ward-board`, or a surface: its actors, surfaces, rules, guarantees, storm events and requirements), or a risk (its chain, scores and controlling requirements, [risk register](risk-register.md)) |
 | `query` | any read-only SPARQL (SELECT, ASK, CONSTRUCT, DESCRIBE), prefixes predeclared, capped at 200 rows by default with `truncated` saying when |
 | `schema` | the vocabulary and prefixes, so the agent can write its own queries |
 | `validate` | the gate shapes' results: violations and warnings |
@@ -47,4 +47,5 @@ It cannot change anything or reach the network. There is no write tool,
 `query` refuses `SERVICE` (a federated query would make the server send HTTP
 requests), `trace` takes only an id, and `query` refuses SPARQL
 Update. An agent that wants to change the record does what a person does:
-edits the Markdown and tests, and opens a pull request for review.
+changes the spec in the factory, or edits the Markdown and tests and opens a
+pull request for review.

@@ -10,7 +10,7 @@ hide:
 is a complete record-first project laid out as `rdm init` and `rdm adopt` lay
 one out: git and GitHub as a 21 CFR Part 11 document control system, with
 GitHub rulesets as design outputs, the pull-request approval as the
-electronic signature, a risk register whose controls are its design inputs,
+electronic signature, a risk register whose controls are requirements of its spec,
 and RDM's reusable gates on every pull request. Its README lists where it uses
 each part of RDM.
 

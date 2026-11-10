@@ -59,7 +59,7 @@ environment variables, never spliced into the script text.
 | `acceptance-tests` | `true` | `false` until you have a tagged acceptance test |
 | `test-command` | `pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results` | |
 | `allure-results` | `dhf/allure-results` | where `test-command` writes its results |
-| `release-gate` | `true` | `false` until your first design input lands |
+| `release-gate` | `true` | `false` until your first requirement's test lands |
 | `graph-validate` | `true` | the gate rules as SHACL, plus graph-only warnings |
 | `checklists` | none | space-separated checklists for graph validation (`rdm gap --list`) |
 | `evidence-bundle` | `true` | writes the release evidence bundle, including the [verification report](gates.md#release-evidence) PDF, and uploads it as `rdm-evidence` |
@@ -73,10 +73,12 @@ A required status check on the caller's side is named after both jobs:
 
 ### Phased adoption
 
-A freshly adopted repository has no design input and no tests yet. The
+A freshly adopted repository may have no spec and no tagged tests yet. The
 workflow `rdm adopt` lays down sets `acceptance-tests: false` and
 `release-gate: false`, so the release gate waits. Set both to `true` when
-your first design input and its tagged test land.
+the spec is in place and your first tagged test lands. If the spec is a
+submodule, check it out (`submodules: true` on the checkout) and name its
+plan directory as `spec:` in `dhf/config.yml`.
 
 ## The gates action, in a workflow of your own
 

@@ -16,7 +16,7 @@ Feature: Graph
 
   @allium-guarantee.ExploreGraph @allium-guarantee.ReleaseBlocked
   @item-06-004
-  Scenario: RDM shall ship SHACL shapes expressing the gate rules over the graph — unaddressed user needs, requirements without a passing run or with a failing one, and unreferenced checklist clauses as violations; a requirement addressing no user need and a run claiming an id that is no requirement as warnings — that block exactly the requirements, user needs and whole-record findings the release gate blocks, and flag a checklist clause without a key or a standard as a violation.
+  Scenario: RDM shall ship SHACL shapes expressing the gate rules over the graph — unaddressed user needs, requirements without a passing run or with a failing one, and unreferenced checklist clauses as violations; a requirement addressing no user need and a run claiming an id that is no requirement as warnings — that block exactly the requirements, user needs and whole-record findings (no requirement, an unstamped scenario, an item stamped twice, an unreadable result) the release gate blocks, and flag a checklist clause without a key or a standard as a violation.
 
   @allium-guarantee.ExploreGraph
   @item-06-005
@@ -60,7 +60,7 @@ Feature: Graph
 
   @allium-guarantee.ExploreGraph @allium-guarantee.AgentReadsRecord
   @item-06-015
-  Scenario: The graph shall link each bounded context to the controlled document whose contexts frontmatter declares it, with its part, each controlled document to the controlled documents its references frontmatter names, and shall not project the traceability matrix template, an output generated from the record; a shape shall warn on a bounded context no document declares once any document declares contexts, and validation shall fail on a reference to a document the record does not hold.
+  Scenario: The graph shall link each bounded context to the controlled document whose contexts frontmatter declares it, with its part, each controlled document to the controlled documents its references frontmatter names, and shall not project the traceability matrix template, an output generated from the record; a shape shall warn on a bounded context of the spec no document declares once any document declares contexts, and validation shall fail on a reference to a document the record does not hold.
 
   @allium-guarantee.ExploreGraph @allium-guarantee.ReleaseBlocked
   @item-06-016

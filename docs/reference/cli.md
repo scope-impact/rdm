@@ -16,11 +16,11 @@
 
 | Command | What it does |
 |---|---|
-| `verify --allure-results DIR -o FILE` | reconcile executed Allure results against declared design inputs → verification data for the matrix ([gates](../use/gates.md)) |
-| `release-gate --allure-results DIR` | hard gate: every design input verified by a passing tagged test + every user need addressed + every risk evaluated, its risk controls verified and its residual acceptable ([risk register](../use/risk-register.md)) |
+| `verify --allure-results DIR -o FILE` | reconcile executed Allure results against the spec's requirements → verification data for the matrix, grouped by user need ([gates](../use/gates.md)) |
+| `release-gate --allure-results DIR` | hard gate: the spec read whole (no unstamped scenario, no id twice) + every requirement verified by a passing tagged run + every user need addressed + every risk evaluated, its risk controls verified and its residual acceptable ([risk register](../use/risk-register.md)) |
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
 | `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, Allure results, verification report, manifest; refuses a record with no matrix template |
-| `evidence-report --allure-results DIR -o FILE` | render the verification report (PDF): every run behind each design input, with its steps, labels, links and attachments |
+| `evidence-report --allure-results DIR -o FILE` | render the verification report (PDF): every run behind each requirement, with its steps, labels, links and attachments |
 
 Common flag: `--dhf DIR` (default `dhf/`), on every command above except `dmr`.
 The `rdm graph` commands that read the record (`build`, `query`, `validate`, `explorer-file`, `mcp`) take it too.

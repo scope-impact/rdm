@@ -1,14 +1,16 @@
 # What RDM is for
 
-RDM keeps the design record of regulated software — medical-device software
-first — next to the code, in git, and checks it on every commit. With it a
-team:
+RDM audits the record of regulated software — medical-device software
+first — next to the code, in git, on every commit. The spec is written by a
+factory such as [Löyly](https://github.com/scope-impact/loyly); RDM reads
+it. With it a team:
 
-- writes user needs, design inputs (the requirements), risks and their
-  controls as Markdown in the repository;
-- tags the acceptance test that verifies each design input, and keeps each
+- holds the factory's spec (stamped Gherkin scenarios as requirements, event
+  model and Allium surfaces as user needs) to its tests and runs;
+- keeps its risks and their controls as Markdown in the repository;
+- tags the acceptance test that verifies each requirement, and keeps each
   test run tied to the commit it tested;
-- blocks a release while any design input is unverified or any risk
+- blocks a release while any requirement is unverified or any risk
   control fails (the release gate);
 - checks its documents against the standards' checklists (gap analysis);
 - renders the regulatory documents from the record, and keeps each
@@ -24,9 +26,9 @@ and you can write your own.
 
 | You are | You use RDM to |
 |---|---|
-| a developer | declare design inputs, tag acceptance tests, run the gates |
+| a developer | tag acceptance tests with the requirements they verify, run the gates |
 | a reviewer | approve each change in its pull request, helped by `trace` and the verification report |
-| a regulatory or quality person | write the record, render documents, read the gates and the graph |
+| a regulatory or quality person | keep risks and documents, render documents, read the gates and the graph |
 | an AI agent, working for one of the above | read the record through the read-only agent server, and propose changes as pull requests |
 
 You need git and pull requests, Markdown, and a test suite you can run. You
@@ -43,8 +45,10 @@ do not need RDF or SPARQL to use the gates.
 
 - **Not a medical device, and not a quality system on its own.** It keeps
   one part of your evidence straight.
-- **Not a judge of your evidence.** It shows that each design input has a
-  passing tagged test. Whether that test proves the input is your
+- **Not an author of your spec.** It reads the spec the factory writes and
+  never stamps or edits it.
+- **Not a judge of your evidence.** It shows that each requirement has a
+  passing tagged test. Whether that test proves the requirement is your
   reviewer's call; whether the evidence is enough is your regulator's.
 
 ## Using RDM in a regulated quality system

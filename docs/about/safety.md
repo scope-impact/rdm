@@ -9,10 +9,10 @@ Read this before you trust a green gate.
 ## Things to get right
 
 !!! warning "A green gate is not proof"
-    The release gate passes when every design input has a passing tagged
+    The release gate passes when every requirement has a passing tagged
     test. It does not read the test. Before approving a pull request, read
-    each changed design input beside its test, and ask whether the test
-    would fail if the code did not do what the input says.
+    each changed scenario beside its test, and ask whether the test would
+    fail if the code did not do what the scenario says.
 
 !!! warning "Old evidence"
     The gates judge the Allure results you give them. Run the acceptance
@@ -34,10 +34,9 @@ table is what is left over, and what you do about it. The ratings are
 
 | Risk | What could happen | RDM's control | What you must do |
 |---|---|---|---|
-| RISK-TOOL-001 | A design-input id in a fixture or comment is read as a tag, and an untested input shows verified. | In Python, tags are read from `@allure.story` decorators and a module-level `pytestmark`, never from strings or comments; a file that does not parse, and tests in other languages, are read by pattern. | Tag a test only with `@allure.story("DI-n")` on the test itself; keep test files parseable; act on every *matches no design input* warning. |
-| RISK-TOOL-002 | The release gate passes an input whose test failed, errored or never ran. | Only a passing run verifies; a failed or broken run blocks; an input whose only runs were skipped is unverified. | Give the gate the results of this run only (above); read the verification report's evidence status before a release. |
+| RISK-TOOL-002 | The release gate passes a requirement whose test failed, errored or never ran. | Only a passing run verifies; a failed or broken run blocks; a requirement whose only runs were skipped is unverified. | Give the gate the results of this run only (above); read the verification report's evidence status before a release. |
 | RISK-TOOL-004 | An agent changes the record through RDM without review. | The agent server has no write tool and refuses SPARQL Update. | Connect agents to the agent server only; protect the default branch. |
-| RISK-TOOL-005 | A test passes without checking everything its input requires. This residual risk stays Medium; its acceptance is proposed, awaiting a maintainer. | None in RDM: whether a test proves its input is the pull-request reviewer's judgement. | Review each changed test against its input's text. |
+| RISK-TOOL-005 | A test passes without checking everything its requirement states. This residual risk stays Medium; its acceptance is proposed, awaiting a maintainer. | None in RDM: whether a test proves its requirement is the pull-request reviewer's judgement. | Review each changed test against its scenario's text. |
 | RISK-TOOL-006 | A web page you have open sends an update to the served graph. | `rdm graph serve` is read-only and refuses every update. | Serve on `localhost` (the default), never on a public address; stop the server when you are done. |
 | RISK-TOOL-007 | A query makes RDM reach other services on your network. | Queries with `SERVICE` are refused by the endpoint and the agent server. | Keep the endpoint local as above; report any network access RDM makes. |
 
