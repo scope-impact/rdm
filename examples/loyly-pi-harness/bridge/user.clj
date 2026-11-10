@@ -10,11 +10,15 @@
 ;; is written, when it ends, as one Allure result (<uuid>-result.json): failed
 ;; on a failed assertion, broken on an error, else passed. A var claims a
 ;; requirement through a `tag` label: its :item metadata ("@item-06-001"), else
-;; an id at the start of its name (item-01-001-...).
+;; an id at the start of its name (item-01-001-...). ALLURE_COMMIT, when set,
+;; labels every result with the commit under test (and ALLURE_WORKTREE=dirty
+;; marks a checkout that had uncommitted changes).
 (when-let [dir (System/getenv "ALLURE_RESULTS_DIR")]
   (require 'clojure.test)
   (let [report @(resolve 'clojure.test/report)
         current (atom nil)
+        commit (System/getenv "ALLURE_COMMIT")
+        worktree (System/getenv "ALLURE_WORKTREE")
         id-pattern (re-pattern (or (System/getenv "ALLURE_ID_PATTERN") "item-\\d+-\\d+"))
         esc (fn [s] (-> (str s)
                         (.replace "\\" "\\\\") (.replace "\"" "\\\"")
@@ -49,7 +53,9 @@
                                         :stop (System/currentTimeMillis)
                                         :labels (cond-> [{:name "framework" :value "clojure.test"}
                                                          {:name "suite" :value nsn}]
-                                                  id (conj {:name "tag" :value id}))}
+                                                  id (conj {:name "tag" :value id})
+                                                  (seq commit) (conj {:name "commit" :value commit})
+                                                  (= "dirty" worktree) (conj {:name "worktree" :value "dirty"}))}
                                  problem (assoc :statusDetails {:message (str problem)}))))))]
     (alter-var-root
      (resolve 'clojure.test/report)

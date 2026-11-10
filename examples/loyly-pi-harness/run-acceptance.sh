@@ -13,6 +13,11 @@ LOYLY="$(cd "${1:-$HERE/../../loyly}" && pwd)"
 RESULTS="$HERE/dhf/allure-results"
 rm -rf "$RESULTS" && mkdir -p "$RESULTS"
 export ALLURE_RESULTS_DIR="$RESULTS"
+# The version this run is evidence for: Löyly's commit, and whether its
+# checkout had uncommitted changes.
+ALLURE_COMMIT="$(git -C "$LOYLY" rev-parse HEAD 2>/dev/null || true)"
+ALLURE_WORKTREE="$([ -n "$(git -C "$LOYLY" status --porcelain 2>/dev/null)" ] && echo dirty || echo clean)"
+export ALLURE_COMMIT ALLURE_WORKTREE
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Xbootclasspath/a:$HERE/bridge"
 # The suites build into their own directories: run them in a copy, so the
 # checkout (RDM's submodule) stays clean.

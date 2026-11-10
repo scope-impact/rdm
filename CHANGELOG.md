@@ -24,6 +24,12 @@
     under the design history (one page per context); `loyly/` is a submodule
     (Löyly's `spec-v2`), checked out in CI so the adapter is tested against it.
   - The reusable gates workflow takes `submodules`, for a spec kept in one.
+  - New example, `examples/loyly-pi-harness`: RDM audits Löyly's pi harness
+    (201 requirements) from outside; a clojure.test-to-Allure bridge, loaded
+    from the boot class path, runs the harness's suites unchanged. Its own CI
+    job runs the suites and RDM's gates.
+  - `rdm adopt` and `rdm init` templates describe a Gherkin spec, not only a
+    Löyly one.
   - Evidence is Allure results only: graded verdicts (Löyly's sealed graders)
     are not counted (ADR 0002).
   - Removed: design inputs (`design_inputs:`), the user-need registry
