@@ -14,11 +14,23 @@
 #         Subpart B, §11.10 Controls for closed systems, and §11.50: printed page 244 (PDF page 4);
 #         §11.70, and Subpart C, §11.100: printed page 245 (PDF page 5).
 #   [GUIDE] FDA, Guidance for Industry, Part 11, Electronic Records; Electronic
-#         Signatures - Scope and Application (August 2003):
+#         Signatures - Scope and Application (August 2003); printed page 1 = PDF page 4:
 #         https://www.fda.gov/media/75414/download
 #         §III.C.1 Validation, printed page 6 (PDF page 9), lines 216-236:
 #         validate on "a justified and documented risk assessment"; see
 #         computer software validation (the CSA guidance) for how.
+#   [CSA] FDA, Computer Software Assurance for Production and Quality Management
+#         System Software (February 3, 2026); printed page 1 = PDF page 4:
+#         https://www.fda.gov/media/188844/download
+#         §V.B Considerations for Electronic Records Requirements, printed
+#         pp. 21-22 (PDF pp. 24-25): a document required as evidence of
+#         validation and kept in electronic form is generally a Part 11
+#         electronic record.
+#
+# How Part 11 and CSV fit: the system that keeps a validation record electronically
+# is held to this checklist ([CSA] §V.B); its own validation (§11.10(a)) rests on
+# a documented risk assessment ([GUIDE] §III.C.1), done the computer software
+# assurance way ([CSA] §V.A(1)-(6), printed pp. 6-21, PDF pp. 9-24).
 #
 # Source: [CFR] §11.10(a), printed p. 244 (PDF p. 4); [GUIDE] §III.C.1, printed p. 6 (PDF p. 9)
 P11:11.10a validation of the system for accuracy, reliability, and the ability to discern altered records

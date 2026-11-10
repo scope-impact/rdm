@@ -12,6 +12,11 @@
 #         February 3, 2026 (supersedes the September 24, 2025 issue); 41 PDF pages,
 #         printed page 1 = PDF page 4:
 #         https://www.fda.gov/media/188844/download
+#         (listed at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/computer-software-assurance-production-and-quality-management-system-software;
+#         docket FDA-2022-D-0795; it supersedes Section 6, Validation of Automated
+#         Process Equipment and Quality System Software, of FDA's General Principles
+#         of Software Validation, https://www.fda.gov/media/73141/download, per its
+#         footnote 3, printed p. 2 (PDF p. 5))
 #         §V Computer Software Assurance, printed p. 5 (PDF p. 8);
 #         §V.A Computer Software Assurance Risk Framework, printed p. 6 (PDF p. 9);
 #         §V.B Considerations for Electronic Records Requirements, printed p. 21 (PDF p. 24).
@@ -22,6 +27,18 @@
 #         numbers are given for it here; cite the subclause).
 #   [P11] 21 CFR Part 11 (4-1-24 Edition), §11.10(a), printed p. 244 (PDF p. 4):
 #         https://www.govinfo.gov/content/pkg/CFR-2024-title21-vol1/pdf/CFR-2024-title21-vol1-part11.pdf
+#   [P11G] FDA, Guidance for Industry, Part 11, Electronic Records; Electronic
+#         Signatures - Scope and Application (August 2003); printed page 1 = PDF page 4:
+#         https://www.fda.gov/media/75414/download
+#         §III.C.1 Validation, printed p. 6 (PDF p. 9), lines 216-236.
+#
+# How Part 11 and CSV fit: [CSA] §V.B (printed pp. 21-22) says a document
+# required as evidence of validation and kept in electronic form is generally
+# a Part 11 electronic record, so the system that keeps the validation record
+# is held to Part 11 (RDM's built-in part11_document_control checklist). For
+# that system's own validation, Part 11 §11.10(a) asks for validation and
+# [P11G] §III.C.1 asks that it rest on "a justified and documented risk
+# assessment": the risk-based approach of [CSA], which this checklist follows.
 #
 # Source: [CSA] §V.A(1) Identifying the Intended Use, printed pp. 6-8 (PDF pp. 9-11)
 CSA:intended-use the intended use of the software, and whether it is used directly as part of production or the quality management system, or to support them
