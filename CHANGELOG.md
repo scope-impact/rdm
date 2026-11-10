@@ -3,6 +3,15 @@
 <!-- --8<-- [start:history] -->
 ## Unreleased
 
+- **Breaking: RDM reads the factory's spec instead of design inputs** (ADR 0002).
+  A requirement is a stamped Gherkin scenario (`item-NN-SSS`) of a spec in
+  Löyly's layout (`.pi/plan`, or `spec:` in `dhf/config.yml`); a user need is
+  an event-model screen with its Allium surfaces and event-storm events. Runs
+  claim requirements with an Allure `tag` label `item-NN-SSS`. The release
+  gate blocks on no spec, an unstamped scenario, an item stamped twice, an
+  unverified requirement or an unaddressed need; risk `controls:` name item
+  ids; validation records name need ids. Removed: `design_inputs:`,
+  `user_needs:`, source-code tag scanning. RDM's own spec is under `.pi/`.
 - **Removed** `rdm translate`, `rdm story trace` (use the graph's `trace`),
   `--infer` and the graph's rules, the user manual in the graph, and Backlog.md.
 - **Breaking: RDM audits the specification; it no longer authors it**
