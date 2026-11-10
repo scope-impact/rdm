@@ -38,7 +38,6 @@ The live inventory — which contexts exist, which design inputs each owns, and
 which user needs they trace to — is generated, not maintained here:
 
 ```bash
-rdm story trace UN-… | DI-…             # one need's / input's slice
 rdm graph query --dhf dhf '…'           # anything else, as SPARQL
 ```
 

@@ -18,7 +18,7 @@ is built from these and nothing else.
 
 | Where | What it is | It is not |
 |-------|------------|-----------|
-| task trackers (Backlog.md, issues, project boards) | who does what, and when | a design input, or an approval |
+| task trackers (issues, project boards) | who does what, and when | a design input, or an approval |
 
 - Work reaches the record only through git: a commit in a pull request. RDM
   never reads a planning tool.

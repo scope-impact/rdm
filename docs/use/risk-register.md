@@ -115,9 +115,7 @@ rdm graph query --allure-results dhf/allure-results 'SELECT ?risk ?decision ?inp
 An agent connected to `rdm graph mcp` calls `trace` with a risk id, and gets
 the chain, the scores, the residual decision and each controlling design
 input with its tests and runs; the agent's trace of a design input lists the
-risks it controls. That is the graph's trace: `rdm story trace` takes a user
-need or a design input and does not list risks, so from the command line use
-the query above.
+risks it controls. From the command line, use the query above.
 
 RDM's own [policy](../dhf/documents/risk/policy.md) and
 [register](../dhf/documents/risk/tool_risks.md) list the ways RDM itself could

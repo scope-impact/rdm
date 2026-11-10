@@ -54,12 +54,6 @@ design_inputs:
   - id: DI-61
     text: "The graph shall record each tagged test — a Python test function or method, including those a module-level mark tags, or the whole file where tags are read by pattern — defined in its test file and verifying the design inputs its tags name, link each test run to the test it ran through the result's full name, and, when runs are linked to tests, a shape shall warn on a tagged test with no run while other tests in its file ran, and on a run that exercises a design input its test does not claim."
     traces_to: [UN-014, UN-004]
-  - id: DI-62
-    text: "RDM shall declare in its vocabulary each relation the graph derives rather than stores, with the rule that derives it as a SPARQL CONSTRUCT — first, that a bounded context serves the user needs its owned and realised design inputs trace to; the agent server's schema shall list the rules, and when asked to infer, the projection shall add the derived facts in a separate inferred named graph and nowhere else."
-    traces_to: [UN-014, UN-015]
-  - id: DI-77
-    text: "RDM shall project the user manual into the graph: each page that a controlled document of kind manual lists under pages, with the files the page includes whole, linked to that document; each design input the page names by its id; and each tagged-test example it shows, a fenced code block with an Allure story decorator, with the names of the labels the example writes; a listed page that does not exist shall be a warning; and the agent server's trace shall list, for a design input, the manual pages that name it."
-    traces_to: [UN-018, UN-014]
 ---
 
 # Knowledge graph — Software Design
@@ -71,9 +65,8 @@ runs, git history, risks and checklists, projected into RDF
 for people and agents to query, browse and validate. It speaks of
 *projection* (one source of the record turned into facts, one named graph
 per source), the *vocabulary* (the classes and properties queries and agents
-rely on: the published language), *gate rules* (shapes whose violations
-block and whose warnings inform), and *derived relations* (facts a rule
-infers, kept apart from what the record states). The graph is a read model:
+rely on: the published language), and *gate rules* (shapes whose violations
+block and whose warnings inform). The graph is a read model:
 the Markdown record and the tests stay the only authored source; the graph
 is rebuilt from them on demand, never edited, and never the source of a
 fact. It is open world: it states only what the record states, so a missing
@@ -85,13 +78,12 @@ names it in commands and code.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Manual reader | Reads the pages a manual document lists, and the files they include whole: the design inputs each names and the labels of each tagged-test example | DI-77 |
-| Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists and inferred facts on request | DI-35, DI-36, DI-37, DI-45, DI-48, DI-51, DI-52, DI-53, DI-54, DI-58, DI-60, DI-61, DI-62, DI-77 |
-| Vocabulary | The classes and properties of the graph, and each derived relation with the rule that derives it; projected as the ontology graph | DI-35, DI-62 |
+| Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists on request | DI-35, DI-36, DI-37, DI-45, DI-48, DI-51, DI-52, DI-53, DI-54, DI-58, DI-60, DI-61 |
+| Vocabulary | The classes and properties of the graph; projected as the ontology graph | DI-35 |
 | Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61 |
 | SHACL validation | `rdm graph validate`: runs the shipped and any user-supplied shapes over the union of the named graphs, reports each result most severe first, and fails on any violation | DI-49, DI-58 |
 | Explorer file | Writes the record as an AWS Graph Explorer file, every record node whatever its IRI, optionally leaving out chosen classes and what hangs only from them | DI-39 |
-| Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53, DI-62, DI-77 |
+| Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53 |
 
 All of them run in the `rdm` command, and need the optional extra `graph`;
 without it every `rdm graph` command exits 2 and names the extra. The
@@ -111,8 +103,8 @@ How the components relate, in the direction of the arrows:
 - **SHACL validation** validates the Projection's graph and checks it with
   the Gate shapes.
 - The **Agent server** projects the record afresh with the Projection on each
-  call, derived relations included; validates with SHACL validation; returns
-  the Vocabulary and its rules for `schema`; and checks that `trace` input is
+  call; validates with SHACL validation; returns the Vocabulary for
+  `schema`; and checks that `trace` input is
   an id with the shared kernel. It never uses the graph store, so an agent
   never reads a stale graph. The agent harness calls it over MCP stdio; RDM's
   own repository registers it for its agents.
@@ -126,10 +118,8 @@ The behaviour a reviewer needs to judge the design:
   the Allure results, when given; the git graph each document's latest
   landed commit and the commit the record was built at; the risks graph the
   register, with a finding about the register as a whole on each risk, or on
-  a stand-in node for the register when it has none; the manual graph the
-  user manual's pages; the checklists and references graphs, on request; the ontology graph the
-  Vocabulary; and the inferred graph, on request, only what the rules derive
-  and nothing else. The traceability matrix template is not projected: it
+  a stand-in node for the register when it has none; the checklists and references graphs, on request; and the ontology
+  graph the Vocabulary. The traceability matrix template is not projected: it
   is output, not record.
 - **Whole-record findings.** What the release gate blocks about the record
   as a whole (no design input declared, a result file that cannot be
@@ -160,8 +150,8 @@ The behaviour a reviewer needs to judge the design:
   input (with its risks, runs, steps, attachments and source files) or a
   risk, and nothing that is neither id-shaped nor declared. SHACL validation
   exits 1 on a violation and 2 on a missing DHF or a shapes or checklist file
-  that is missing or not RDF. `--infer` over a store and an `--exclude` class
-  the graph does not have are refused. The default branch is origin's HEAD,
+  that is missing or not RDF. An `--exclude` class the graph does not have is
+  refused. The default branch is origin's HEAD,
   else `main` or `master`, else git's `init.defaultBranch`, else the only
   local branch.
 

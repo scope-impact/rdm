@@ -170,7 +170,7 @@ _Avoid_: runner, agent (for the executor)
 
 **Test evidence**:
 The bounded context that takes test results in the formats tools write them
-(Allure, xunit) and translates them into test runs of the record's tests,
+(Allure) and translates them into test runs of the record's tests,
 labelled with the commit under test. The tools' own words (result, label,
 container) stop at its boundary.
 _Avoid_: test results (for the context), reports
@@ -363,11 +363,6 @@ _Avoid_: schema (for the vocabulary), data model
 A shape over the knowledge graph. A violation blocks a release; a warning only
 informs the reviewer.
 _Avoid_: lint, constraint (unqualified)
-
-**Derived relation**:
-A fact a rule infers, kept apart from what the record states and never stated
-by it.
-_Avoid_: computed field, cache
 
 ## Domain model
 

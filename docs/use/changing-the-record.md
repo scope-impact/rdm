@@ -15,7 +15,8 @@ review is the approval; the merge records it.
 ## Do I need a design input?
 
 - The change alters behaviour, an interface or an output: it is governed by
-  a design input. If one covers it (`rdm story trace DI-n --dhf dhf`), keep
+  a design input. If one covers it (ask the graph: `trace DI-n` in
+  `rdm graph mcp`, or a `rdm graph query`), keep
   its test passing; if none does, declare one.
 - A refactor, documentation, comments or CI plumbing: no design-input work.
   The gates still run and should stay green.

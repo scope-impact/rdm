@@ -77,10 +77,6 @@ The helpers every context may import.
 
 ::: rdm.evidence.allure
 
-### `rdm.evidence.translate`
-
-::: rdm.evidence.translate
-
 ### `rdm.pytest_plugin`
 
 ::: rdm.pytest_plugin
@@ -130,10 +126,6 @@ Needs the `graph` extra.
 ### `rdm.graph.project`
 
 ::: rdm.graph.project
-
-### `rdm.graph.rules`
-
-::: rdm.graph.rules
 
 ### `rdm.graph.validate`
 

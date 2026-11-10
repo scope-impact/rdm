@@ -72,8 +72,8 @@ of each context is in the frontmatter (`code`).
 |------|---------|-----------------|--------------|---------|
 | Record | `specification` (core) | `design/specification.md` | user need, design input, tagged test | `rdm/specification/`: the record reader, test tags, `init`, `adopt`, validation records |
 | Record | `risk` | `design/risk.md` | hazard, harm, severity, probability, control, residual | `rdm/risk/` |
-| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's and xunit's words stop here | `rdm/evidence/`: Allure results, `translate`; and `rdm/pytest_plugin.py` |
-| Gates | `release` | `design/release.md` | verified, release gate, trace slice | `rdm/release/`: the release gate, the verification data; and the reusable CI |
+| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's words stop here | `rdm/evidence/`: Allure results; and `rdm/pytest_plugin.py` |
+| Gates | `release` | `design/release.md` | verified, release gate | `rdm/release/`: the release gate, the verification data; and the reusable CI |
 | Gates | `compliance` | `design/compliance.md` | standard, checklist, checklist clause, gap, coverage | `rdm/compliance/` |
 | Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule, derived relation | `rdm/graph/` |
 | Documents | `publishing` | `design/publishing.md` | template, data, rendered document, evidence bundle | `rdm/publishing/`: render, snippets, DMR index, the verification report, the evidence bundle; and `rdm/md_extensions/` and the PDF action |

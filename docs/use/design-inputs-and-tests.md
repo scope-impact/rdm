@@ -95,10 +95,11 @@ from rdm.pytest_plugin import pytest_runtest_call  # noqa: F401
 Run them into a clean results directory (`--clean-alluredir`, so an earlier
 run's results never count as evidence), then the gates: the commands are
 [the release gate's](gates.md#release-gate). To see one design input's need,
-owner, tests and status, and to render the matrix:
+owner, tests and status, ask the graph (`trace DI-1` in
+[`rdm graph mcp`](agents.md), or [`rdm graph query`](graph.md)). To render
+the matrix:
 
 ```bash
-rdm story trace DI-1 --dhf dhf
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
 ```
 

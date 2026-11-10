@@ -73,7 +73,6 @@ coded gates stay authoritative. It exits 1 on any violation.
 | a document whose latest change has not landed on the default branch | not yet merged |
 | a risk with `status: proposed` | no person has approved its rating |
 | a bounded context with a design document but missing from the architecture's `contexts:` | the architecture fell behind |
-| a page the manual document lists that does not exist | the manual fell behind |
 
 Add your own rules as more shape files, with no code change:
 
@@ -126,7 +125,5 @@ each controlled document) from the documents' own frontmatter.
 
 The user manual belongs in that index too: a controlled document of
 `kind: manual` lists its pages under `pages:` (paths from the project root),
-and the pages stay where the site builds them. The graph reads each listed
-page (`…graph/manual`): `trace` of a design input lists the pages that name
-it, the pages to re-read when it changes, and `rdm graph validate` warns on a
-listed page that is missing. RDM's own manual is `dhf/documents/user_manual.md`.
+and the pages stay where the site builds them. RDM's own manual is
+`dhf/documents/user_manual.md`.

@@ -204,14 +204,3 @@ rdm:TestRanShape a sh:NodeShape ;
 rdm: sh:declare
     [ sh:prefix "rdm" ; sh:namespace "https://github.com/scope-impact/rdm/ns#"^^xsd:anyURI ] ,
     [ sh:prefix "dcterms" ; sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ] .
-
-# --- The user manual (DI-77): warnings, never violations -------------------
-
-rdm:ManualPageMissingShape a sh:NodeShape ;
-    sh:targetSubjectsOf rdm:missingPage ;
-    sh:severity sh:Warning ;
-    sh:sparql [
-        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "the user manual lists a page that does not exist: {?page}" ;
-        sh:select """SELECT $this ?page WHERE { $this rdm:missingPage ?page }""" ;
-    ] .

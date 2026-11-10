@@ -79,7 +79,6 @@ Derived, never declared:
 | Fact | Derived from |
 | --- | --- |
 | a design input's owning context | the design document that declares it |
-| the user needs a context serves (`rdm:serves`) | its design inputs' `traces_to`, and those it `realises` |
 | the tests a file defines | the tagged functions in it |
 | which test a run ran | the run's full name, matched to the test function |
 | the commit a run tested | the `commit` label `rdm.pytest_plugin` writes at run time |
@@ -105,7 +104,7 @@ flowchart TD
             CI["CI workflow<br>the gates on every push"]
         end
         subgraph plan["planning — never evidence"]
-            PM["Backlog.md, issues, boards"]
+            PM["issues, task boards"]
         end
     end
     PM -. "only path in: a reviewed commit" .-> record

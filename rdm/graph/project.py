@@ -12,7 +12,6 @@ a query can always tell where a fact came from:
 - ``git``        — each design document's latest commit
 - ``checklists`` — requested regulatory checklists, as data (DI-37)
 - ``references`` — documents' ``[[…]]`` tags linked to the clauses they name
-- ``manual``     — the user manual's pages, the design inputs they name, their test examples (DI-77)
 - ``ontology``   — RDM's vocabulary (``ontology.ttl``), so browsers can label things
 
 Open world: the graph asserts only what the record says. A missing
@@ -29,7 +28,6 @@ from urllib.parse import quote
 
 import pyoxigraph as ox
 
-from rdm.graph.manual import project_manual
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
 from rdm.evidence.allure import full_name, reconcile
 from rdm.specification.tags import find_tests_dir, scan_source_tests
@@ -405,12 +403,9 @@ def project(
     allure_results_dir: Path | None = None,
     project_name: str | None = None,
     checklists: list[str] | None = None,
-    infer: bool = False,
 ) -> list[ox.Quad]:
     """The record as quads, de-duplicated, in a stable order. ``checklists``
-    (built-in names or files) adds the checklists and references graphs;
-    ``infer`` adds what the vocabulary's rules derive, in the inferred graph
-    (DI-62)."""
+    (built-in names or files) adds the checklists and references graphs."""
     dhf = Path(dhf_dir).resolve()
     repo = repo_root(dhf.parent)
     root = repo or dhf.parent
@@ -418,7 +413,6 @@ def project(
     ds = _Dataset(project_name or (repo or dhf.parent).name)
     _record(ds, dhf, root)
     _record_findings(ds, dhf, results)
-    project_manual(ds, controlled_documents(dhf, root), dhf.parent, design_input_ids(dhf), rdm)
     tests = _tests(ds, dhf, root)
     verified: set[str] = set()
     if results is not None:
@@ -435,10 +429,6 @@ def project(
         ds.quads.extend(reference_quads(controlled_documents(dhf, root), lambda doc_id: ds.node("doc", doc_id),
                                         clauses, ds.graph("references")))
     _ontology(ds)
-    if infer:
-        from rdm.graph.rules import infer as derive
-
-        ds.quads.extend(derive(ds.quads, ds.graph("inferred")))
     unique = {str(q): q for q in ds.quads}
     return [unique[k] for k in sorted(unique)]
 

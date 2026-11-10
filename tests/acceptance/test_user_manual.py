@@ -1,8 +1,7 @@
-"""Acceptance tests for the user manual in the graph (DI-77, DI-78) and for
-RDM's own manual (DI-79), see dhf/.
+"""Acceptance tests for RDM's own manual, IFU-001 (DI-80, DI-81, DI-82), see dhf/.
 
-Tagged `@allure.story`, over the real projection, gate shapes and agent
-trace. Skips cleanly if allure-pytest or the `graph` extra is not installed.
+Tagged `@allure.story`. Skips cleanly if allure-pytest or the `graph` extra is
+not installed.
 """
 
 from __future__ import annotations
@@ -15,93 +14,23 @@ import pytest
 allure = pytest.importorskip("allure")
 ox = pytest.importorskip("pyoxigraph")
 
-from rdm.graph.agent import Record, trace  # noqa: E402
-from rdm.graph.project import project  # noqa: E402
-from rdm.graph.validate import validate  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
-from tests.acceptance.test_graph import _ask, _record, _store  # noqa: E402
 
 ROOT = Path(__file__).parents[2]
-MISSING = "the user manual lists a page that does not exist"
-
-EXAMPLE = '''```python
-@allure.story("DI-1")
-@allure.label("owner", "alarms")
-def test_alarm(): ...
-```
-'''
-FILE_PATH_EXAMPLE = '''```python
-@allure.story("DI-2")
-@allure.label("output", "src/log.py")
-def test_log(): ...
-```
-'''
-DIAGRAM = '''```
-| Acceptance test @allure.story("DI-n") |
-```
-'''
+_INCLUDE = re.compile(r'^[ \t]*--8<--[ \t]+"([^":]+)"[ \t]*$', re.MULTILINE)
 
 
-def _manual(tmp_path: Path) -> tuple[Path, Path]:
-    """The acme record with a manual of three listed pages, one missing: a
-    guide naming DI-1 (not DI-12) with a tagged-test example and a diagram, that
-    includes a file whole (naming DI-2, with a file-path example) and a
-    section of another (naming nothing it reads)."""
-    dhf, results = _record(tmp_path)
-    repo = dhf.parent
-    (repo / "docs").mkdir()
-    (repo / "docs" / "guide.md").write_text(
-        "# Guide\n\nDI-1 alarms; DI-12 is not declared.\n\n" + EXAMPLE + DIAGRAM
-        + '--8<-- "docs/included.md"\n--8<-- "docs/sectioned.md:part"\n')
-    (repo / "docs" / "included.md").write_text("DI-2 logs.\n\n" + FILE_PATH_EXAMPLE)
-    (repo / "docs" / "sectioned.md").write_text("<!-- --8<-- [start:part] -->\nDI-1\n<!-- --8<-- [end:part] -->\n")
-    (repo / "docs" / "plain.md").write_text("# No examples\n")
-    (dhf / "documents" / "manual.md").write_text(
-        "---\nid: IFU-1\nkind: manual\nrevision: 1\ntitle: Manual\n"
-        "pages: [docs/guide.md, docs/plain.md, docs/gone.md]\n---\n# Manual\n")
-    return dhf, results
+def _pages(front: dict) -> list[str]:
+    """The pages a manual document's ``pages`` frontmatter lists."""
+    pages = front.get("pages") or []
+    return [str(p).strip() for p in ([pages] if isinstance(pages, str) else pages) if str(p).strip()]
 
 
-@allure.story("DI-77")
-def test_the_manual_is_projected_into_the_graph(tmp_path: Path) -> None:
-    """DI-77: the pages a manual document lists, with the files they include
-    whole, linked to it; the design inputs each names; each tagged-test example
-    with its label names; a warning for a missing page; the pages in a design
-    input's trace."""
-    dhf, results = _manual(tmp_path)
-    quads = project(dhf, results)
-    store = _store(quads)
-    page = "<urn:dhf:acme:page/docs/{}>".format
-    attach("manual graph", sorted(str(q) for q in quads if q.graph_name.value.endswith("graph/manual")))
-
-    with verification_step("each page the manual document lists is linked to that document; an unlisted page is not"):
-        assert _ask(store, f"{page('guide.md')} a rdm:ManualPage ; rdm:pageOf <urn:dhf:acme:doc/IFU-1> ; "
-                           "rdm:path 'docs/guide.md'")
-        assert _ask(store, f"{page('plain.md')} rdm:pageOf <urn:dhf:acme:doc/IFU-1>")
-        assert not _ask(store, f"{page('included.md')} a rdm:ManualPage")
-    with verification_step("a file the page includes whole is read as the page's; a sectioned include is not"):
-        assert _ask(store, f"{page('guide.md')} rdm:includesFile 'docs/included.md'")
-        assert not _ask(store, f"{page('guide.md')} rdm:includesFile ?f . FILTER(CONTAINS(?f, 'sectioned'))")
-    with verification_step("the page links to each declared design input it names by its id, and to no other"):
-        named = {r["i"].value for r in store.query(
-            "PREFIX rdm: <https://github.com/scope-impact/rdm/ns#> "
-            f"SELECT ?i WHERE {{ {page('guide.md')} rdm:namesInput ?i }}", use_default_graph_as_union=True)}
-        assert named == {"urn:dhf:acme:input/DI-1", "urn:dhf:acme:input/DI-2"}  # DI-2 from the included file
-        assert not _ask(store, f"{page('plain.md')} rdm:namesInput ?i")
-    with verification_step("each tagged-test example is projected with the names of the labels it writes; a fenced "
-                           "block whose story text starts no line is no example"):
-        examples = {r["e"].value: sorted(r["l"].value.split()) for r in store.query(
-            "PREFIX rdm: <https://github.com/scope-impact/rdm/ns#> "
-            f"SELECT ?e (GROUP_CONCAT(?n) AS ?l) WHERE {{ ?e rdm:onPage {page('guide.md')} ; rdm:writesLabel ?n }} "
-            "GROUP BY ?e", use_default_graph_as_union=True)}
-        assert sorted(examples.values()) == [["output", "story"], ["owner", "story"]]
-    with verification_step("a listed page that does not exist is a warning"):
-        missing = [r for r in validate(quads) if r.message.startswith(MISSING)]
-        assert [(r.severity, r.label) for r in missing] == [("Warning", "IFU-1")]
-        assert "docs/gone.md" in missing[0].message
-    with verification_step("the agent server's trace lists, for a design input, the manual pages that name it"):
-        assert trace(Record(dhf, results), "DI-1")["design_input"]["manual_pages"] == ["docs/guide.md"]
-        assert trace(Record(dhf, results), "DI-2")["design_input"]["manual_pages"] == ["docs/guide.md"]
+def _page_text(page: str) -> str:
+    """The page's text with the files it includes whole (``--8<-- "file"``)."""
+    text = (ROOT / page).read_text(encoding="utf-8")
+    included = [name.strip() for name in _INCLUDE.findall(text) if (ROOT / name.strip()).is_file()]
+    return "\n".join([text, *((ROOT / name).read_text(encoding="utf-8") for name in included)])
 
 
 CHAPTERS = ["RDM documentation", "What RDM is for", "How it works", "Limits and risks", "Install", "Quick start",
@@ -111,13 +40,12 @@ CHAPTERS = ["RDM documentation", "What RDM is for", "How it works", "Limits and 
 def _ifu() -> tuple[dict, list[tuple[str, str]]]:
     """RDM's IFU-001: its frontmatter, and each listed page with its title (the
     first level-one heading of the page and the files it includes whole)."""
-    from rdm.graph.manual import manual_pages, page_text
     from rdm.graph.project import controlled_documents
 
     front = next(e["front"] for e in controlled_documents(ROOT / "dhf", ROOT) if e["id"] == "IFU-001")
     titled = []
-    for page in manual_pages(front):
-        text, _ = page_text(ROOT, page)
+    for page in _pages(front):
+        text = _page_text(page)
         title = next((line[2:].strip() for line in text.splitlines() if line.startswith("# ")), "")
         titled.append((page, title))
     return front, titled

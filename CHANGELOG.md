@@ -3,6 +3,8 @@
 <!-- --8<-- [start:history] -->
 ## Unreleased
 
+- **Removed** `rdm translate`, `rdm story trace` (use the graph's `trace`),
+  `--infer` and the graph's rules, the user manual in the graph, and Backlog.md.
 - **Breaking: RDM audits the specification; it no longer authors it**
   (Design Review 72, ADR 0002). Removed: `rdm story design-gate` and the
   design gate's step in the reusable gates; `rdm hooks` and the git hooks;

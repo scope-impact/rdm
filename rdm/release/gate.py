@@ -1,4 +1,4 @@
-"""The release gate, and the trace slice (DI-3, DI-18).
+"""The release gate (DI-3).
 
 Whether a release may go ahead, laid out as a command: fetch the state once,
 derive every event by the rules, return them (``release.md``, "Commands and
@@ -15,9 +15,7 @@ from rdm.kernel.events import Event
 from rdm.kernel.ids import relevant_orphans
 from rdm.risk.register import Finding, assess
 from rdm.specification.sdd import (
-    context_of,
     design_inputs,
-    realises_by_context,
     registry_user_needs,
 )
 from rdm.specification.validation import unvalidated_user_needs
@@ -200,102 +198,3 @@ def story_release_gate_command(
         "(verify all design inputs; address all user needs; resolve the risk findings)."
     )
     return 1
-
-
-def _realised_by(dhf_dir: Path) -> dict[str, list[str]]:
-    """Map each design-input id to the context name(s) that ``realises`` it."""
-    out: dict[str, list[str]] = {}
-    for doc, refs in realises_by_context(dhf_dir).items():
-        for ref in refs:
-            out.setdefault(ref, []).append(context_of(doc))
-    return out
-
-
-def build_trace(
-    dhf_dir: Path,
-    target: str,
-    allure_results_dir: Path | None = None,
-) -> dict:
-    """Return the traceability slice for one user need or design input.
-
-    Pure read over the record (and, when given, executed Allure results).
-    ``target`` is a user-need id (→ its design inputs) or a design-input id
-    (→ its need(s), owner/realisers, tests, status).
-    Returns ``{"error": …}`` if the target is not declared.
-    """
-    inputs = design_inputs(dhf_dir)
-    by_id = {di["id"]: di for di in inputs}
-    needs = registry_user_needs(dhf_dir)
-    realised = _realised_by(dhf_dir)
-
-    verif = allure.reconcile(set(by_id), Path(allure_results_dir)) if allure_results_dir else None
-
-    def _di_slice(di: dict) -> dict:
-        v = verif.by_id.get(di["id"]) if verif else None
-        return {
-            "design_input": di["id"],
-            "text": di["text"],
-            "traces_to": di["traces_to"],
-            "owned_by": di["context"],
-            "realised_by": sorted(realised.get(di["id"], [])),
-            "status": v.status if v else None,
-            "tests": sorted(set(v.tests)) if v else [],
-        }
-
-    unreadable = verif.unreadable if verif else []
-    if target in needs:
-        members = [_di_slice(di) for di in inputs if target in di["traces_to"]]
-        return {"kind": "user_need", "id": target, "design_inputs": members, "unreadable": unreadable}
-    if target in by_id:
-        return {"kind": "design_input", **_di_slice(by_id[target]), "unreadable": unreadable}
-    return {"error": f"{target} is not a declared user need or design input"}
-
-
-def story_trace_command(
-    target: str,
-    dhf_dir: Path | None = None,
-    allure_results_dir: Path | None = None,
-) -> int:
-    """Run `rdm story trace <UN-/DI-id>`: print the traceability slice."""
-    dhf = (dhf_dir or Path("dhf")).resolve()
-    if not dhf.exists():
-        print(f"Error: DHF directory not found: {dhf}")
-        return 2
-    if allure_results_dir and not Path(allure_results_dir).exists():
-        print(f"Error: Allure results directory not found: {allure_results_dir}")
-        return 2
-
-    trace = build_trace(dhf, target, allure_results_dir)
-    if "error" in trace:
-        print(f"Error: {trace['error']}")
-        return 2
-
-    if trace["kind"] == "user_need":
-        print(f"User need {trace['id']} — design inputs that refine it:")
-        if not trace["design_inputs"]:
-            print("  (none — this user need is addressed by no design input)")
-        for di in trace["design_inputs"]:
-            extra = f"[{di['status']}]" if di["status"] else ""
-            print(f"  {di['design_input']} (owned by {di['owned_by']}) {extra}".rstrip())
-            print(f"      {di['text']}")
-            if di["tests"]:
-                print(f"      {_tested(di['status'])} {', '.join(di['tests'])}")
-    else:
-        print(f"Design input {trace['design_input']}")
-        print(f"  text:        {trace['text']}")
-        print(f"  traces_to:   {', '.join(trace['traces_to']) or '— (cross-cutting constraint)'}")
-        print(f"  owned by:    {trace['owned_by']}")
-        if trace["realised_by"]:
-            print(f"  realised by: {', '.join(trace['realised_by'])}")
-        if trace["status"]:
-            print(f"  status:      {trace['status']}")
-        if trace["tests"]:
-            print(f"  {_tested(trace['status'])} {', '.join(trace['tests'])}")
-    if trace["unreadable"]:
-        print(f"  unreadable:  {', '.join(trace['unreadable'])} (could hold a failed run; the release gate blocks)")
-    return 0
-
-
-def _tested(status: str | None) -> str:
-    """How a slice names its tests: only a verified input's verified it."""
-    return "verified by:" if status == allure.VERIFIED else "tested by:  "

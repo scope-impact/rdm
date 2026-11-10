@@ -54,7 +54,7 @@ someone later (an auditor, a reviewer, another agent) can no longer walk the
 chain. This document exists so you build the chain *as you go* instead of
 reverse-engineering it under a red build.
 
-One boundary to keep in mind throughout: **Backlog tasks, GitHub issues, and
+One boundary to keep in mind throughout: **Tasks, GitHub issues, and
 plans are coordination, never evidence.** The record is only the design docs,
 the executed test results, and git history (`docs/about/plan-vs-record.md`).
 
@@ -64,7 +64,7 @@ the executed test results, and git history (`docs/about/plan-vs-record.md`).
 Does the change alter what RDM does (behavior, CLI, output, gate logic)?
 ├── YES → it is governed by a design input
 │   ├── an existing DI already covers it
-│   │     → find it: uv run rdm story trace <DI-n | UN-nnn>
+│   │     → find it: the `trace` tool of `rdm graph mcp`, or `rdm graph query`
 │   │     → skip to step 3 (edit its design doc prose if the "how" changed,
 │   │       then implementation → test → PR review)
 │   └── nothing covers it → full loop, step 1
@@ -114,7 +114,7 @@ output in that document's `## Design Outputs`, naming the input by id. The
 frontmatter is the input's only statement: the body never restates it. A context that helps realise an input owned elsewhere lists it under
 `realises` — an input is declared once, never duplicated.
 
-**Done when:** `uv run rdm story trace DI-n` shows your input, its need, and
+**Done when:** the graph's `trace` of `DI-n` shows your input, its need, and
 its owning context.
 
 ### Step 3 — commit the design docs FIRST (the approval)
@@ -239,8 +239,7 @@ asks for go through this loop like any other.
 | One bounded context per fix PR | a reviewer cannot read every input against its test in one diff |
 | A chain review, recorded as a design review, before each release | no gate judges whether a test proves its input |
 | `dhf/allure-results/`, `dhf/data/` are generated, gitignored | evidence is produced by running, not by committing |
-| Backlog/issues/plans are never cited as evidence | plan-vs-record boundary; the record is SDD + Allure + git |
-| Backlog task files change only via the `backlog` CLI | see `AGENTS.md` |
+| Tasks/issues/plans are never cited as evidence | plan-vs-record boundary; the record is SDD + Allure + git |
 
 ## When a gate fails
 

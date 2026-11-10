@@ -96,9 +96,7 @@ The endpoint's default graph is the union of all of them.
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
 | `…graph/checklists` | the requested checklists: standards, clauses, checklists (`--checklist`) |
 | `…graph/references` | documents' checklist references (`[[KEY]]`), linked to the clauses they name |
-| `…graph/manual` | the user manual: each page a `kind: manual` document lists, the design inputs it names, and the labels of each test example it shows |
-| `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties, and the rules for derived relations |
-| `…graph/inferred` | what the rules derive (only with `--infer`, and always for the agent server); never stated by the record |
+| `…graph/ontology` | RDM's vocabulary, so browsers can label classes and properties |
 
 Instances are named `urn:dhf:<project>:<kind>/<id>`, for example
 `urn:dhf:rdm:input/DI-3`. `<project>` defaults to the repository name, so
@@ -217,23 +215,6 @@ covers its parent (`[[62304:5.6.2.a]]` covers `62304:5.6.2`), a longer sibling
 never matches a shorter key, and only `[[…]]` blocks count. So a clause no
 document references in the graph is exactly an item `rdm gap` reports
 missing.
-
-## Derived relations: rules, not facts
-
-A relation that follows from others, such as the user needs a bounded context
-serves, is not stored a second time; the vocabulary declares it with the
-SPARQL rule that derives it (DI-62). `--infer` adds what the rules derive, in
-its own named graph, so a stated fact and a derived one are never confused:
-
-```bash
-rdm graph build --infer --store .rdm/graph
-rdm graph query --infer 'SELECT ?c ?n WHERE { ?c rdm:serves ?n }'
-```
-
-Why rules rather than stored copies: in Fatemi, Ravanbakhsh and Poole's
-experiment ([arXiv:1812.03235](https://arxiv.org/abs/1812.03235)), a model
-given the rules over a graph stripped of rule-implied triples beat both a
-plain model and rule inference alone.
 
 ## Open world
 

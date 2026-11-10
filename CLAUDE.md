@@ -102,9 +102,9 @@ layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 - `rdm/main.py` — the composition root: the `rdm` command; argparse subcommands dispatch to the contexts.
 - `rdm/kernel/` — the shared kernel: YAML and files (`util.py`), ids, git, frontmatter, the reconcile helpers.
 - `rdm/specification/` — the core: the record reader (`sdd.py`), test tags (`tags.py`), `init`/`adopt` and their templates, validation records.
-- `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`), `translate`; the plugin labels each run with the commit under test.
+- `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`); the plugin labels each run with the commit under test.
 - `rdm/risk/`, `rdm/compliance/` — the leaves: the risk register; gap analysis and the built-in checklists.
-- `rdm/release/` — the release gate and trace (`gate.py`), the verification data (`verify.py`).
+- `rdm/release/` — the release gate (`gate.py`), the verification data (`verify.py`).
 - `rdm/publishing/` and `rdm/md_extensions/` — templates and data to Markdown (`render.py`, two-pass, filters `invert_dependencies`, `join_to`, `md_indent`), snippets, the DMR index, the verification report, the evidence bundle; Markdown post-processing.
 - `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | validate | serve | explorer-file | mcp`, extra `graph`): named graphs per source, embedded Oxigraph store, SHACL gate shapes, SPARQL endpoint for AWS Graph Explorer, and a read-only MCP server for agents (`agent.py`, registered in `.mcp.json`). See `docs/use/graph.md`.
 
@@ -112,20 +112,5 @@ layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 
 - `graph` — `rdm/graph/` (pyoxigraph, oxigraph, pyshacl, mcp).
 
-RDM ships no planning tooling: Backlog.md (below) is used through its own CLI,
-and nothing in RDM reads it (`docs/about/plan-vs-record.md`).
-
-## Task Management
-
-This project uses [Backlog.md](https://backlog.md) for task management. Tasks live in `backlog/tasks/`. See `AGENTS.md` for full CLI reference.
-
-**Critical rule**: Never edit task markdown files directly. Always use `backlog` CLI commands (`backlog task create`, `backlog task edit`, etc.).
-
-```bash
-backlog task list --plain       # List tasks (AI-friendly output)
-backlog task <id> --plain       # View task details
-backlog task create "Title" -d "Description" --ac "AC1" --ac "AC2"
-backlog task edit <id> -s "In Progress"
-```
-
-Task prefix for this project: `rdm` (see `backlog/config.yml`).
+RDM ships no planning tooling, and nothing in RDM reads a planning tool
+(`docs/about/plan-vs-record.md`).

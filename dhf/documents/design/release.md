@@ -11,9 +11,6 @@ design_inputs:
   - id: DI-4
     text: "RDM shall reconcile each declared design input against the story labels of the executed Allure results as verified, failed or untested, and render the traceability matrix of those statuses grouped under the user needs."
     traces_to: [UN-004]
-  - id: DI-18
-    text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status), listing any result it could not read and refusing a missing results directory."
-    traces_to: [UN-004]
   - id: DI-30
     text: "RDM shall produce a release evidence bundle from the record: the verification data and the rendered traceability matrix, the verification report, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files and any referenced attachment or result it could not include, written to an output directory apart from the results, replacing an earlier bundle there, and refusing to write a bundle it cannot complete."
     traces_to: [UN-012]
@@ -28,8 +25,8 @@ design_inputs:
 
 `release` decides whether a release may go ahead and keeps the evidence it
 went ahead on: the release gate over the record's verified status, its risks
-and its user needs; the verification data and the trace slice the gate and
-its reviewers read; and the reusable gates that run all of it in another
+and its user needs; the verification data the gate and its reviewers
+read; and the reusable gates that run all of it in another
 repository's pipeline. Its language: a design input is *verified* (a passing
 run of a tagged test, no failed one); the *release gate* blocks a release;
 *release-grade evidence* is what a release needs; the *traceability matrix*
@@ -43,7 +40,7 @@ that other repositories' pipelines call.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Release gate | The release decision over verified status, risk and validation; the trace slice of a user need or design input | DI-3, DI-18; realises DI-33, DI-44, DI-50 |
+| Release gate | The release decision over verified status, risk and validation | DI-3; realises DI-33, DI-44, DI-50 |
 | Verification data | Every declared design input reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from | DI-4, DI-30 |
 | Reusable workflow | Runs a repository's acceptance tests, then the gates, with RDM installed from the revision the caller pinned | DI-63 |
 | Gates action | The gate steps, written once: verification data, release gate, graph validation and the evidence bundle | DI-63, DI-30 |
@@ -54,11 +51,8 @@ read (it could hold a failed run); when the risk register's release rules
 report a blocking finding; and when a user need is addressed by no design
 input. It warns, never blocks, on a user need with no approved validation
 record, and on a test tag that matches no design input (compared on its
-leading letters, so `di-1` or `DI_1` is an orphan, not silence). The trace slice is a user need's design
-inputs, or a design input's text, user needs, owner and realising contexts
-and, when results are given, its status, its tests (each once) and any
-result file that cannot be read; a results directory that does not exist is
-refused, as by the gate.
+leading letters, so `di-1` or `DI_1` is an orphan, not silence). A results
+directory that does not exist is refused.
 
 **Verification data.** For each declared design input: its status, run
 counts, tests and their outputs, grouped by user need, with a summary and

@@ -11,7 +11,6 @@
 | `rdm render TEMPLATE CONFIG [DATA…]` | render a Jinja2 Markdown template with the data files (each file's stem becomes a template variable) → stdout |
 | `rdm gap [-l] [-c] [-v] CHECKLIST [FILES…]` | report the gaps: the clauses of a checklist no document references with `[[KEY]]`; `-l` list built-ins, `-c` coverage table (several checklists), `-v` name the gaps; exit 0 none / 3 gaps / 2 nothing could be checked |
 | `rdm collect [FILES…]` | extract `RDOC name … ENDRDOC` snippets from source files into YAML → stdout |
-| `rdm translate FORMAT IN OUT` | convert test-runner XML (`auto`, `gtest`, `qttest`, `xunit`) into a YAML data file |
 
 ## Traceability and audit — `rdm story …`
 
@@ -22,7 +21,6 @@
 | `dmr DOCS_DIR -o FILE` | generate device-master-record index data (id/title/path/revision per controlled document) from frontmatter |
 | `evidence-bundle --allure-results DIR -o DIR` | write the retained release evidence set: verification data, rendered matrix, Allure results, verification report, manifest; refuses a record with no matrix template |
 | `evidence-report --allure-results DIR -o FILE` | render the verification report (PDF): every run behind each design input, with its steps, labels, links and attachments |
-| `trace UN-nnn \| DI-n [--allure-results DIR]` | the traceability slice for one need or input (forward + backward); with results, each input's verification status |
 
 Common flag: `--dhf DIR` (default `dhf/`), on every command above except `dmr`.
 The `rdm graph` commands that read the record (`build`, `query`, `validate`, `explorer-file`, `mcp`) take it too.
@@ -31,9 +29,9 @@ The `rdm graph` commands that read the record (`build`, `query`, `validate`, `ex
 
 | Command | What it does |
 |---|---|
-| `build [--allure-results DIR] [--checklist NAME\|FILE]… [-o FILE] [--store DIR] [--project NAME] [--infer]` | project the record (and any checklists, as data) into RDF named graphs; sorted N-Quads to a file or stdout, and/or a rebuilt Oxigraph store; `--infer` adds what the vocabulary's rules derive, in a separate graph |
+| `build [--allure-results DIR] [--checklist NAME\|FILE]… [-o FILE] [--store DIR] [--project NAME]` | project the record (and any checklists, as data) into RDF named graphs; sorted N-Quads to a file or stdout, and/or a rebuilt Oxigraph store |
 | `validate [--allure-results DIR] [--checklist NAME\|FILE]… [--shapes FILE]…` | check the graph against the SHACL gate shapes (plus your own); exit 1 on a violation |
-| `query 'SPARQL' [--store DIR] [--format tsv\|csv\|json] [--infer]` | SELECT / ASK / CONSTRUCT over the store, or over an in-memory projection of `--dhf` |
+| `query 'SPARQL' [--store DIR] [--format tsv\|csv\|json]` | SELECT / ASK / CONSTRUCT over the store, or over an in-memory projection of `--dhf` |
 | `explorer-file -o FILE [--store DIR] [--exclude CLASS]… [--endpoint URL]` | write the whole record as an AWS Graph Explorer graph file (*Load graph from file*) |
 | `serve [--store DIR] [--bind HOST:PORT]` | read-only SPARQL 1.1 endpoint (union default graph, CORS) for AWS Graph Explorer and other SPARQL clients |
 | `mcp [--allure-results DIR] [--checklist NAME\|FILE]…` | serve the record to agents as a read-only MCP server over stdio: `schema`, `query`, `trace`, `validate`, each from a fresh projection |

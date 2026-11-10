@@ -74,17 +74,11 @@ Delimit snippets in any text file with `RDOC <name>` … `ENDRDOC`; each becomes
 a named entry you can render with `{{ snippets.<name> }}`. A name used twice,
 in one file or in two, is refused, naming where, and `rdm collect` exits 2.
 
-## Translating test output
+## Test results in documents
 
-Convert machine test reports into a YAML data file a document can render:
-
-```bash
-rdm translate auto results.xml data/test_results.yml   # formats: auto, gtest, qttest, xunit
-```
-
-(For verification evidence, prefer Allure results and
-[`rdm story verify`](design-inputs-and-tests.md): that path feeds the gates and the
-traceability matrix.)
+Verification evidence comes from Allure results through
+[`rdm story verify`](design-inputs-and-tests.md): that path feeds the gates and
+the traceability matrix, which a document renders.
 
 ## Frontmatter conventions for controlled documents
 

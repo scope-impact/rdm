@@ -106,8 +106,7 @@ Repository rulesets require a public repository or a paid plan on private ones.
 | the graph: `validate` with a checklist and your own shapes, `query`, `trace`, the MCP server, Graph Explorer | `record-checks`, `dhf/shapes/`, `.mcp.json`, below |
 | `rdm adopt` (the DHF skeleton and the CI workflow) | `dhf/`, `design-controls.yml` |
 
-Not used, and why: `rdm collect` and `rdm translate`
-feed the older `rdm init` templates, which this example does not use.
+Not used, and why: `rdm collect` feeds the older `rdm init` templates, which this example does not use.
 
 ## Run it
 
@@ -127,7 +126,6 @@ rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o relea
 Explore the record:
 
 ```bash
-rdm story trace DI-11 --dhf dhf --allure-results dhf/allure-results
 rdm story dmr -o dhf/data/dmr.yml dhf/documents/procedures        # regenerate the DMR index data
 rdm graph query --dhf dhf "SELECT ?doc ?revision WHERE { ?doc <https://github.com/scope-impact/rdm/ns#revision> ?revision }"
 rdm graph explorer-file --dhf dhf --allure-results dhf/allure-results -o record.json   # load in AWS Graph Explorer

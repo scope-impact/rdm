@@ -19,7 +19,7 @@ downstream project audits with is the one this record is held to).
 The master copy of every controlled record is the repository's default branch.
 Drafts are branches; review and approval happen on the pull request; releases
 are tags; the revision history is the git history itself. Planning artifacts
-(Backlog.md tasks, issues) are coordination, never part of the record
+(tasks, issues) are coordination, never part of the record
 (`docs/about/plan-vs-record.md`).
 
 # Controls

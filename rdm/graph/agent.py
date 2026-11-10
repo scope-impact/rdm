@@ -31,7 +31,7 @@ class Record:
         self.dhf, self.allure_results, self.checklists = Path(dhf), allure_results, checklists
 
     def quads(self) -> list[ox.Quad]:
-        return project(self.dhf, self.allure_results, checklists=self.checklists, infer=True)  # DI-62
+        return project(self.dhf, self.allure_results, checklists=self.checklists)
 
     def store(self) -> ox.Store:
         store = ox.Store()
@@ -44,14 +44,9 @@ def _value(term) -> str | None:
 
 
 def schema() -> dict:
-    """The vocabulary (Turtle), the prefixes every query may use undeclared, and
-    the rules for the relations the graph derives rather than stores (DI-62)."""
-    from rdm.graph.rules import rules
-
+    """The vocabulary (Turtle) and the prefixes every query may use undeclared."""
     return {"prefixes": PREFIXES, "ontology": ONTOLOGY_FILE.read_text(encoding="utf-8"),
-            "rules": rules(),
-            "graphs": "record, tests, executions, git, risks, checklists, references, ontology, and "
-                      "inferred: what the rules derive, never stated by the record "
+            "graphs": "record, tests, executions, git, risks, checklists, references and ontology "
                       "(queried as one union; GRAPH ?g { … } still works)"}
 
 
@@ -115,8 +110,6 @@ def _input(store: ox.Store, node: str) -> dict:
             store, f"SELECT DISTINCT ?p WHERE {{ ?r rdm:exercises <{node}> ; rdm:exercisesOutput/rdm:path ?p }}")),
         "risks": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ ?r rdm:controlledBy <{node}> ; dcterms:identifier ?id }}")),
-        "manual_pages": sorted(r["p"] for r in _select(  # DI-77: the pages to re-read when it changes
-            store, f"SELECT ?p WHERE {{ ?page rdm:namesInput <{node}> ; rdm:path ?p }}")),
         "runs": sorted(({"test": r["name"], "status": r["status"], **_evidence(store, r["r"])} for r in _select(
             store, f"SELECT ?r ?name ?status WHERE {{ ?r rdm:exercises <{node}> ; rdfs:label ?name ; "
                    f"rdm:status ?status }}")), key=lambda r: (r["test"], r["status"])),

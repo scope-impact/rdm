@@ -41,14 +41,13 @@ def graph_build_command(
     store: Path | None = None,
     project_name: str | None = None,
     checklists: list[str] | None = None,
-    infer: bool = False,
 ) -> int:
     """Project the record; write sorted N-Quads and/or (re)build a store."""
     try:
         from rdm.graph.project import build_store, nquads
     except ImportError:
         return _missing_extra()
-    quads = project_record(dhf_dir, allure_results_dir, checklists, project_name=project_name, infer=infer)
+    quads = project_record(dhf_dir, allure_results_dir, checklists, project_name=project_name)
     if quads is None:
         return 2
     if output is None and store is None:
@@ -71,7 +70,6 @@ def graph_query_command(
     allure_results_dir: Path | None = None,
     fmt: str = "tsv",
     checklists: list[str] | None = None,
-    infer: bool = False,
 ) -> int:
     """Answer a SPARQL query over a store, or over a fresh in-memory projection."""
     try:
@@ -82,13 +80,9 @@ def graph_query_command(
         if not Path(store).exists():
             print(f"Error: store not found: {store} (run `rdm graph build --store {store}` first)")
             return 2
-        if infer:
-            print("Error: --infer applies to the in-memory projection, not a store: "
-                  "leave out --store, or build the store with it (`rdm graph build --store ...`)")
-            return 2
         db = ox.Store.read_only(str(store))
     else:
-        quads = project_record(dhf_dir, allure_results_dir, checklists, infer=infer)
+        quads = project_record(dhf_dir, allure_results_dir, checklists)
         if quads is None:
             return 2
         db = ox.Store()
