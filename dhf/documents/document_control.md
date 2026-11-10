@@ -1,6 +1,6 @@
 ---
 id: DC-001
-revision: 2
+revision: 3
 title: "Document Control — git as the document control system for RDM's record"
 ---
 
@@ -57,9 +57,9 @@ are tags; the revision history is the git history itself. Planning artifacts
   change never obscures an earlier entry, and the trail lives exactly as long
   as the record it belongs to.
 - **Sequencing** [[P11:11.10f]] — the enforced order of steps is RDM's own
-  design-controls loop: the pre-commit hook blocks implementation before
-  design approval, and CI blocks merge until design-gate, acceptance tests,
-  verification, and release-gate pass in order.
+  design-controls loop: the reviewer of each pull request checks the design
+  record was committed before the code it governs, and CI blocks merge until
+  the acceptance tests, verification and the release gate pass in order.
 - **Authority** [[P11:11.10g]] — only authorized reviewers can approve a pull
   request into the default branch, and the approver must not be the change's
   author (enforced by the ruleset's required review). The branch controls are configuration code in this repository —

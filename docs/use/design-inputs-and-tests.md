@@ -1,8 +1,8 @@
 # Design inputs and tests
 
 How to write the record: declare a design input (an acceptance criterion),
-write the test that verifies it, and let RDM label the test runs from the
-record. The words are the [glossary](../reference/glossary.md)'s. The
+write the test that verifies it, and let RDM tie each run to the commit it
+tested. The words are the [glossary](../reference/glossary.md)'s. The
 step-by-step change procedure is [Changing the record](changing-the-record.md);
 what the gates then check is [The gates](gates.md).
 
@@ -31,18 +31,11 @@ design_inputs:
 
 ## Declaring a design input
 
-```bash
-rdm story new-input --dhf dhf --list        # contexts, taken DI ids, next free id, user needs
-rdm story new-input --dhf dhf --context alarms \
-  --text "The system shall …" --traces-to UN-001
-```
-
-Scaffolds a traced design input: allocates the next unused `DI-n`, inserts the
-entry into the owning context's design document, writes a stub tagged test
-that **fails until implemented**, and prints the remaining checklist. An
-unknown context or user need is rejected. Write the text as verifiable
-clauses; a design input too big for one test to name its failing clause
-should be split.
+Add an entry to the `design_inputs:` list of the design document of the
+context that owns it, by hand, in the same pull request as its tagged test.
+Give it the next unused `DI-n`, state it as one verifiable `shall`, and list
+the user needs it `traces_to`. A design input too big for one test to name
+its failing clause should be split.
 
 ## Writing the test
 
@@ -50,7 +43,7 @@ should be split.
 import allure
 
 @allure.story("DI-1")                         # the link the whole chain hangs on
-@allure.label("component", "alarm_logic")    # the C4 component it exercises
+@allure.label("output", "src/alarms.py")     # optional: the code it exercises
 def test_alarm_within_two_seconds(device):
     """DI-1: an alarm within 2 s of a reading above the limit."""
     with allure.step("a reading above the limit raises an alarm"):
@@ -66,8 +59,8 @@ def test_alarm_within_two_seconds(device):
   steps belong to the test, not to the acceptance criterion; if a part must be
   accepted on its own, make it a separate design input.
 - **Attach what you checked**, so the evidence shows more than "passed".
-- **Only the story names a design input.** Feature and epic are not tags you
-  write (below).
+- **Only the story names a design input.** Epic, feature and other labels
+  are yours to use as you like; RDM does not read them.
 - **Acceptance tests only.** Unit tests carry no Allure tags, steps or
   attachments, so nothing but an acceptance test can be counted as
   verification.
@@ -76,42 +69,21 @@ def test_alarm_within_two_seconds(device):
   `*.spec.js`, `*Test.java`, `*_test.go`, …). There, the whole file is the
   test.
 
-## Labels from the record
+## The commit under test
 
-Allure's behaviors hierarchy is epic → feature → story; in RDM that is user
-need → bounded context → design input. A test declares only the story.
-`rdm.pytest_plugin` adds the rest at run time, from the record, with Allure's
-own API (`allure.dynamic`), so the labels can never drift from it:
+`rdm.pytest_plugin` adds, at run time, a `commit` label to each run of a test
+tagged with a declared design input: the commit under test, with
+`worktree=dirty` when the working tree had uncommitted changes. Once per run
+it also writes Allure's `executor.json` and `environment.properties` (who or
+what ran the tests, and where). The run's `environment.properties` records
+`worktree=unknown`, never `clean`, when there is no commit to compare against.
 
-| Label | Value |
-| --- | --- |
-| `epic` | each user need the design input traces to |
-| `feature` | the bounded context that owns it |
-| `link` | each Markdown document that declares it, at the commit under test: its design document, the V&V plan, the risk document of each risk it controls. Links need a web remote (`origin` on GitHub, GitLab or Bitbucket) and a commit; without one, none is written |
-| `severity` | `critical` when the design input controls a risk |
-| `commit` | the commit under test, with `worktree=dirty` when the working tree had uncommitted changes |
-| attachment `requirement DI-n` | the design input's text |
+An `output` label, the file a test runs
+(`@allure.label("output", "rdm/release/gate.py")`), is optional: the graph
+links the run to that source file. It is not evidence of coverage.
 
-The run's `environment.properties` records `worktree=unknown`, never `clean`,
-when there is no commit to compare against.
-
-A test also says what it exercises, by `component`: a C4 component by its key
-in the architecture workspace (`@allure.label("component", "release_gate")`;
-a key the model does not declare is a warning). The key keeps the record
-code-agnostic: a file can move without the test changing. An `output` label,
-the file it runs (`@allure.label("output", "rdm/release/gate.py")`), is
-optional and names the component holding that file. Either *names* the
-component; the graph adds the components a named one *reaches* through the relationships the workspace
-declares, so a test need not name every component behind its entry point.
-Reaching is derived by a rule, not stored: `rdm graph build` and `query` add
-it with `--infer`, and the agent server always does
-([derived relations](graph.md#derived-relations-rules-not-facts)).
-Neither is evidence of coverage: code coverage is the unit tests' measure
-([gates](gates.md#unit-test-code-coverage-optional)), never an acceptance
-test's.
-
-Enable it for the acceptance suite only — import its hook in that suite's
-`conftest.py`, or pass `-p rdm.pytest_plugin --rdm-dhf dhf`:
+Enable the plugin for the acceptance suite only — import its hook in that
+suite's `conftest.py`, or pass `-p rdm.pytest_plugin --rdm-dhf dhf`:
 
 ```python
 # tests/acceptance/conftest.py
@@ -130,5 +102,5 @@ rdm story trace DI-1 --dhf dhf
 rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verification.yml
 ```
 
-Validation, by people and by AI personas, is recorded against the user needs:
+Validation is recorded against the user needs:
 [validation evidence](validation-evidence.md).

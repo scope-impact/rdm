@@ -46,11 +46,10 @@ they ship with.
 
 - **Approval:** each change to a page is a reviewed pull request; the
   release tag fixes the version that ships.
-- **Design inputs:** what the manual must teach is stated as design inputs
-  of the publishing context (DI-79), verified like any other.
+- **Design inputs:** what the manual must hold is stated as design inputs
+  of the publishing context (DI-80, DI-81, DI-82), verified like any other.
 - **In the graph:** each listed page is projected (DI-77): the design inputs
   it names, so the trace of a changed input lists the pages to re-read, and
-  the labels of each tagged-test example it shows, so a gate shape warns on
-  an example that names no component (DI-78).
+  the labels of each tagged-test example it shows.
 - **Changing this list:** adding or removing a page changes this document,
   so its revision is bumped.

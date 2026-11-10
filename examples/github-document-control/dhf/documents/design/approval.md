@@ -13,7 +13,7 @@ design_inputs:
     text: "Repository merge behavior shall be declared as configuration code: pull requests merge only by merge commit so the reviewed SHA is preserved in history, squash and rebase merges are disabled, head branches are deleted on merge, and the setup script shall apply and drift-check these settings against the live repository."
     traces_to: [UN-001, UN-004]
   - id: DI-9
-    text: "Every pull request to the default branch shall run the design controls (the design gate, the acceptance tests, verification, the release gate and graph validation) through RDM's reusable gates pinned to a released revision, and the Part 11 gap analysis, and the ruleset shall require exactly the checks that workflow reports."
+    text: "Every pull request to the default branch shall run the design controls (the acceptance tests, verification, the release gate and graph validation) through RDM's reusable gates pinned to a released revision, and the Part 11 gap analysis, and the ruleset shall require exactly the checks that workflow reports."
     traces_to: [UN-002, UN-004]
   - id: DI-11
     text: "A scheduled audit shall compare the live ruleset and repository settings with the checked-in configuration at least daily, and shall fail on any difference."
@@ -32,12 +32,8 @@ applied to the service provider (GitHub).
 
 ## Design Outputs
 
-The design outputs are this context's architecture, in the C4 model of the
-architecture workspace (`rdm c4 draw`): its components, what each is
-responsible for, and how they relate. The workspace maps each component to
-what implements it.
-
-![Components: approval](../../c4/views/C3_approval.svg)
+The design outputs are this context's components: what each is responsible
+for, and which design inputs it meets.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
@@ -51,7 +47,7 @@ what implements it.
 GitHub enforces the branch ruleset, which requires review from the code
 owners and the checks of the design-controls workflow. The settings applier
 applies the ruleset and the merge settings and, run by the drift audit,
-checks them. The design-controls workflow runs RDM's design gate, verify and
+checks them. The design-controls workflow runs RDM's acceptance tests, verify and
 release gate, and holds the procedure to the Part 11 checklist: this
 context's part of `records`' DI-5.
 

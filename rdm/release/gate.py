@@ -2,9 +2,7 @@
 
 Whether a release may go ahead, laid out as a command: fetch the state once,
 derive every event by the rules, return them (``release.md``, "Commands and
-events"). The same rules about executed results give the design gate its
-warnings, handed to it by the composition root, so the specification never
-reads results.
+events").
 """
 
 from __future__ import annotations
@@ -16,10 +14,8 @@ from rdm.evidence import allure
 from rdm.kernel.events import Event
 from rdm.kernel.ids import relevant_orphans
 from rdm.risk.register import Finding, assess
-from rdm.specification.design_gate import ArtifactCheck, GateResult, design_artifacts
 from rdm.specification.sdd import (
     context_of,
-    design_input_ids,
     design_inputs,
     realises_by_context,
     registry_user_needs,
@@ -32,7 +28,6 @@ from rdm.specification.validation import unvalidated_user_needs
 # together. A warning is named too, and never blocks.
 
 RELEASE_PERMITTED = "Release Permitted"
-DESIGN_CONTROL_UNMET = "Release Blocked / Design Control Unmet"
 NO_DESIGN_INPUTS = "Release Blocked / No Design Inputs"
 INPUT_FAILED = "Release Blocked / Input Failed"
 INPUT_UNTESTED = "Release Blocked / Input Untested"
@@ -51,7 +46,6 @@ ORPHAN_TAG = "Release Warned / Orphan Tag"
 @dataclass
 class State:
     dhf_name: str
-    artifacts: list[ArtifactCheck]
     inputs: list[dict]
     needs: set[str] = field(default_factory=set)
     report: allure.VerificationReport | None = None
@@ -60,9 +54,8 @@ class State:
 
 
 def fetch_state(dhf_dir: Path, results_dir: Path | None) -> State:
-    """The design gate's pass/fail checks (not its warnings, which would
-    reconcile the results a second time), the record, and the results."""
-    state = State(dhf_dir.name, design_artifacts(dhf_dir), design_inputs(dhf_dir))
+    """The record and the results."""
+    state = State(dhf_dir.name, design_inputs(dhf_dir))
     ids = {di["id"] for di in state.inputs}
     if ids:
         state.needs = registry_user_needs(dhf_dir)
@@ -92,17 +85,15 @@ def result_events(report: allure.VerificationReport, ids: set[str]) -> list[Even
 
 def derive(state: State) -> list[Event]:
     """Every event the rules produce, and the verdict over them:
-      1. the design gate passes;
-      2. at least one design input is declared;
-      3. every design input is verified by a passing test, and every result
+      1. at least one design input is declared;
+      2. every design input is verified by a passing test, and every result
          file can be read;
-      4. every user need is addressed by a design input;
-      5. no blocking finding of the risk rules (DI-44).
+      3. every user need is addressed by a design input;
+      4. no blocking finding of the risk rules (DI-44).
     A user need with no approved validation record (DI-33), a proposed risk
     and an orphan tag only warn. Whether a passing test genuinely verifies
     its input is judged by the review of the pull request."""
-    events = [Event(DESIGN_CONTROL_UNMET, f"design control not met -- {a.name}: {'; '.join(a.reasons)}")
-              for a in state.artifacts if not a.ok]
+    events: list[Event] = []
     ids = {di["id"] for di in state.inputs}
     if not ids:
         return events + [Event(NO_DESIGN_INPUTS, "no design inputs declared (nothing to verify)")]
@@ -126,10 +117,8 @@ def derive(state: State) -> list[Event]:
 
 @dataclass
 class ReleaseResult:
-    """The release gate's events, with the design gate and the verified
-    inputs they were derived from."""
+    """The release gate's events, with the verified inputs they were derived from."""
 
-    design: GateResult
     verified: list[str] = field(default_factory=list)
     events: list[Event] = field(default_factory=list)
 
@@ -149,28 +138,17 @@ class ReleaseResult:
 def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
     """Run the release gate: fetch the state, derive its events."""
     state = fetch_state(Path(dhf_dir), Path(allure_results_dir))
-    return ReleaseResult(design=GateResult(artifacts=state.artifacts),
-                         verified=state.report.verified if state.report else [], events=derive(state))
+    return ReleaseResult(verified=state.report.verified if state.report else [], events=derive(state))
 
 
 # What the release gate blocks about the record as a whole, not about one
 # design input, user need or risk: the graph puts these on the record (DI-38).
-WHOLE_RECORD = (DESIGN_CONTROL_UNMET, NO_DESIGN_INPUTS, UNREADABLE_RESULT)
+WHOLE_RECORD = (NO_DESIGN_INPUTS, UNREADABLE_RESULT)
 
 
 def record_findings(dhf_dir: Path, allure_results_dir: Path | None = None) -> list[str]:
     """The release gate's blocking findings about the whole record, as it words them."""
     return [e.message for e in derive(fetch_state(Path(dhf_dir), allure_results_dir)) if e.name in WHOLE_RECORD]
-
-
-def verification_warnings(dhf_dir: Path, allure_results_dir: Path) -> list[Event]:
-    """The design gate's warnings when it is given results: the same rules the
-    release gate blocks on, as warnings of the design controls."""
-    ids = design_input_ids(dhf_dir)
-    if not ids:
-        return []
-    return [Event(f"Design Controls Warned / {e.rule}", e.message)
-            for e in result_events(allure.reconcile(ids, allure_results_dir), ids)]
 
 
 def story_release_gate_command(
@@ -196,8 +174,6 @@ def story_release_gate_command(
     print("Release gate")
     print(f"DHF: {dhf}\n")
 
-    design_state = "PASS" if result.design.passed else "FAIL"
-    print(f"  [{design_state}] design controls (design document(s) + review approved)")
     if result.verified:
         print(f"  [OK]   verified design inputs: {', '.join(result.verified)}")
 
@@ -213,7 +189,7 @@ def story_release_gate_command(
     print()
     if result.passed:
         print(
-            "Release gate PASSED: design controls are approved, every design input "
+            "Release gate PASSED: every design input "
             "is verified by a passing test, every user need is addressed, and every risk is evaluated, "
             "with its risk controls verified and its residual acceptable."
         )
@@ -221,7 +197,7 @@ def story_release_gate_command(
 
     print(
         "Release gate FAILED: do not release. Resolve every blocking item above "
-        "(approve design controls; verify all design inputs; address all user needs; resolve the risk findings)."
+        "(verify all design inputs; address all user needs; resolve the risk findings)."
     )
     return 1
 

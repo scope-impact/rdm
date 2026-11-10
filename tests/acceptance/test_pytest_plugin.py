@@ -18,7 +18,6 @@ import yaml
 
 allure = pytest.importorskip("allure")
 
-from rdm.kernel.git import web_url  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_risk import POLICY  # noqa: E402
 from tests.util import git_run  # noqa: E402
@@ -63,51 +62,6 @@ def _run(repo: Path) -> dict[str, dict]:
 
 def _labels(result: dict, name: str) -> list[str]:
     return sorted(label["value"] for label in result["labels"] if label["name"] == name)
-
-
-@allure.story("DI-57")
-@allure.label("output", "rdm/pytest_plugin.py")
-def test_runs_are_labelled_from_the_record(tmp_path: Path) -> None:
-    """DI-57: epics from the input's user needs, the feature from its context,
-    links to the Markdown that declares it (design document, V&V plan, risk
-    document) at the tested commit, critical severity when it controls a risk,
-    and the requirement text attached — from the record,
-    for tagged tests only."""
-    repo = _project(tmp_path)
-    commit = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True,
-                            text=True).stdout.strip()
-    results = _run(repo)
-    alarm, log = results["test_alarm"], results["test_log"]
-    attach("test_alarm result labels and links", {"labels": alarm["labels"], "links": alarm.get("links")})
-    with verification_step("epics are the user needs the design input traces to"):
-        assert _labels(alarm, "epic") == ["UN-1", "UN-2"] and _labels(log, "epic") == ["UN-2"]
-    with verification_step("the feature is its bounded context; the story stays the design input"):
-        assert _labels(alarm, "feature") == ["alarms"] and _labels(alarm, "story") == ["DI-1"]
-    blob = f"https://github.com/acme/device/blob/{commit}/sw/dhf/documents"
-    with verification_step("links to the Markdown that declares it — design document, V&V plan per user need, "
-                           "risk document per risk it controls — one per document, at the tested commit"):
-        assert alarm["links"] == [
-            {"type": "link", "name": "DI-1 in sw/dhf/documents/design/alarms.md", "url": f"{blob}/design/alarms.md"},
-            {"type": "link", "name": "UN-1, UN-2 in sw/dhf/documents/vv.md", "url": f"{blob}/vv.md"},
-            {"type": "link", "name": "RISK-A-1 in sw/dhf/documents/risk/rmf.md", "url": f"{blob}/risk/rmf.md"}]
-        assert [link["name"] for link in log["links"]] == [
-            "DI-2 in sw/dhf/documents/design/alarms.md", "UN-2 in sw/dhf/documents/vv.md"]
-    with verification_step("critical severity when the input controls a risk, and not otherwise"):
-        assert _labels(alarm, "severity") == ["critical"]
-        assert _labels(log, "severity") in ([], ["normal"])
-    with verification_step("the requirement text is attached to the result"):
-        names = {a["name"]: a["source"] for a in alarm["attachments"]}
-        text = (repo.parent / "allure" / names["requirement DI-1"]).read_text()
-        assert text == "DI-1 (alarms): The device shall alarm.\nTraces to: UN-1, UN-2\n"
-    with verification_step("an undeclared id or an untagged test gets nothing from the record"):
-        for name in ("test_undeclared", "test_untagged"):
-            assert not _labels(results[name], "epic") and not _labels(results[name], "feature")
-            assert not results[name].get("links") and not results[name].get("attachments")
-    with verification_step("remotes become browsable URLs"):
-        assert web_url("git@github.com:acme/device.git") == "https://github.com/acme/device"
-        assert web_url("https://token@github.com/acme/device.git") == "https://github.com/acme/device"
-        assert web_url("ssh://git@gitlab.example/team/device") == "https://gitlab.example/team/device"
-        assert web_url(None) is None
 
 
 @allure.story("DI-59")

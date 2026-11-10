@@ -5,11 +5,10 @@
 | Need | For | Version |
 |---|---|---|
 | Python | everything | 3.10 or later |
-| git | the record, the gates, the hooks | any current release |
+| git | the record and the gates | any current release |
 | `uv` (or `pip`) | installing RDM | current |
 | `pytest`, `allure-pytest` | running tagged acceptance tests | current |
 | Pandoc, Typst, Make | rendering documents to PDF | as in the RDM image |
-| bash | the pre-commit hook and the agent bootstrap | Git Bash or WSL on Windows |
 
 The RDM Docker image carries Pandoc, Typst, the fonts and RDM itself; use it
 when you render PDFs and do not want to install them.
@@ -32,20 +31,17 @@ These docs are for {{ rdm.release }}; pick another version from the selector at 
 | (none) | the record, the gates (`rdm story …`), `gap`, `render`, `init`, `adopt` |
 | `graph` | the record as an RDF graph and the agent server (`rdm graph …`) |
 | `report` | the verification report as a PDF (`rdm story evidence-report`); without it the evidence bundle records the report as not rendered |
-| `validation` | Playwright, for formative usability-persona runs ([validation evidence](../use/validation-evidence.md)) |
 
 The tests need `pytest` and `allure-pytest`. Rendering PDFs needs Pandoc,
 Typst and Make, or the RDM Docker image, which has them all. In CI, call
 RDM's reusable workflow instead of installing it:
-[the gates in your CI](../use/ci.md). The CLI is cross-platform; the
-pre-commit hook and the bootstrap script are bash, so on Windows run them
-under Git Bash or WSL.
+[the gates in your CI](../use/ci.md). The CLI is cross-platform.
 
 ## Check it works
 
 ```bash
 rdm --version              # the release you pinned, in Python's form (a tag v2.1.0-beta prints 2.1.0b0)
-rdm story design-gate --help
+rdm story release-gate --help
 ```
 
 If `rdm` is not found, the tool directory of `uv` is not on `PATH`: run
@@ -66,9 +62,8 @@ If `rdm` is not found, the tool directory of `uv` is not on `PATH`: run
 
 ```bash
 uv tool uninstall rdm
-git config --unset core.hooksPath     # in each clone, to turn the hooks off
 ```
 
 Uninstalling loses no record: it is Markdown, tests and git history, readable
-without RDM. Remove `.githooks/` and the CI workflow from the repository only
-if you stop keeping the record under design controls.
+without RDM. Remove the CI workflow from the repository only if you stop
+keeping the record under design controls.

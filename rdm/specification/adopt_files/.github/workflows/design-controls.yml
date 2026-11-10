@@ -5,10 +5,9 @@ name: Design controls
 # repository: the workflow and the RDM it installs are that one revision.
 # Upgrade RDM by changing both refs below together.
 #
-# Phased adoption: the design gate runs from day one. Set acceptance-tests
-# and release-gate to true when your first design input and its tagged
-# acceptance test land -- until then the release gate would fail on "no
-# design inputs declared".
+# Phased adoption: set acceptance-tests and release-gate to true when your
+# first tagged acceptance test lands -- until then the release gate would
+# fail on "no design inputs declared".
 on:
   push:
     branches: [main]   # your default branch, if it is another (git init may name it master)

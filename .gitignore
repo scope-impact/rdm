@@ -20,14 +20,9 @@ var
 # ...but not the release context's package
 !rdm/release/
 
-# Generated AI-persona usability evidence (produced by the usability-persona skill)
-**/persona-results/*-persona.json
-
 # Generated verification evidence (produced by the test suite / `rdm story verify`)
 **/allure-results/
 **/verification.yml
-# The unit tests' code coverage report `rdm story verify --unit-coverage` reads (DI-76)
-**/unit-coverage.xml
 
 # Generated at docs build time (docs/_hooks/evidence.py)
 

@@ -22,12 +22,11 @@ from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 from tests.acceptance.test_graph import _ask, _record, _store  # noqa: E402
 
 ROOT = Path(__file__).parents[2]
-NO_COMPONENT = "writes no component label (DI-78)"
 MISSING = "the user manual lists a page that does not exist"
 
 EXAMPLE = '''```python
 @allure.story("DI-1")
-@allure.label("component", "alarms")
+@allure.label("owner", "alarms")
 def test_alarm(): ...
 ```
 '''
@@ -45,7 +44,7 @@ DIAGRAM = '''```
 
 def _manual(tmp_path: Path) -> tuple[Path, Path]:
     """The acme record with a manual of three listed pages, one missing: a
-    guide naming DI-1 (not DI-12) with a component example and a diagram, that
+    guide naming DI-1 (not DI-12) with a tagged-test example and a diagram, that
     includes a file whole (naming DI-2, with a file-path example) and a
     section of another (naming nothing it reads)."""
     dhf, results = _record(tmp_path)
@@ -64,8 +63,6 @@ def _manual(tmp_path: Path) -> tuple[Path, Path]:
 
 
 @allure.story("DI-77")
-@allure.label("component", "manual_reader")
-@allure.label("component", "agent_server")
 def test_the_manual_is_projected_into_the_graph(tmp_path: Path) -> None:
     """DI-77: the pages a manual document lists, with the files they include
     whole, linked to it; the design inputs each names; each tagged-test example
@@ -97,7 +94,7 @@ def test_the_manual_is_projected_into_the_graph(tmp_path: Path) -> None:
             "PREFIX rdm: <https://github.com/scope-impact/rdm/ns#> "
             f"SELECT ?e (GROUP_CONCAT(?n) AS ?l) WHERE {{ ?e rdm:onPage {page('guide.md')} ; rdm:writesLabel ?n }} "
             "GROUP BY ?e", use_default_graph_as_union=True)}
-        assert sorted(examples.values()) == [["component", "story"], ["output", "story"]]
+        assert sorted(examples.values()) == [["output", "story"], ["owner", "story"]]
     with verification_step("a listed page that does not exist is a warning"):
         missing = [r for r in validate(quads) if r.message.startswith(MISSING)]
         assert [(r.severity, r.label) for r in missing] == [("Warning", "IFU-1")]
@@ -105,44 +102,6 @@ def test_the_manual_is_projected_into_the_graph(tmp_path: Path) -> None:
     with verification_step("the agent server's trace lists, for a design input, the manual pages that name it"):
         assert trace(Record(dhf, results), "DI-1")["design_input"]["manual_pages"] == ["docs/guide.md"]
         assert trace(Record(dhf, results), "DI-2")["design_input"]["manual_pages"] == ["docs/guide.md"]
-
-
-@allure.story("DI-78")
-@allure.label("component", "gate_shapes")
-@allure.label("component", "manual_reader")
-def test_an_example_without_a_component_label_is_a_warning(tmp_path: Path) -> None:
-    """DI-78: a tagged-test example in the manual that writes no component
-    label is a warning; one that writes it is not."""
-    dhf, results = _manual(tmp_path)
-    report = validate(project(dhf, results))
-    flagged = [r for r in report if r.message.endswith(NO_COMPONENT)]
-    attach("flagged examples", [(r.severity, r.label, r.message) for r in flagged])
-
-    with verification_step("the example writing only an output label is warned on, the one with a component label "
-                           "is not"):
-        assert [(r.severity, r.label) for r in flagged] == [("Warning", "docs/guide.md example 2")]
-        assert "docs/guide.md" in flagged[0].message
-
-
-@allure.story("DI-79")
-@allure.label("component", "user_manual")
-def test_rdm_manual_examples_name_their_component() -> None:
-    """DI-79: every tagged-test example in RDM's own user manual names the C4
-    component it exercises by a component label."""
-    quads = project(ROOT / "dhf")
-    store = ox.Store()
-    store.extend(quads)
-    examples = [(r["e"].value, sorted(r["l"].value.split())) for r in store.query(
-        "PREFIX rdm: <https://github.com/scope-impact/rdm/ns#> "
-        "SELECT ?e (GROUP_CONCAT(?n) AS ?l) WHERE { ?e a rdm:TestExample ; rdm:writesLabel ?n } GROUP BY ?e",
-        use_default_graph_as_union=True)]
-    attach("RDM's manual examples", examples)
-
-    with verification_step("RDM's manual shows tagged-test examples, and each writes a component label"):
-        assert examples, "the manual shows no tagged-test example to check"
-        assert [e for e, labels in examples if "component" not in labels] == []
-    with verification_step("the gate shapes raise no example warning on RDM's manual"):
-        assert [r.label for r in validate(quads) if r.message.endswith(NO_COMPONENT)] == []
 
 
 CHAPTERS = ["RDM documentation", "What RDM is for", "How it works", "Limits and risks", "Install", "Quick start",
@@ -165,7 +124,6 @@ def _ifu() -> tuple[dict, list[tuple[str, str]]]:
 
 
 @allure.story("DI-80")
-@allure.label("component", "user_manual")
 def test_the_ifu_is_one_manual_in_reading_order() -> None:
     """DI-80: IFU-001 lists RDM's manual in the reading order of instructions
     for use, behind a cover naming the product, its release and the manual's
@@ -217,7 +175,6 @@ def _version_hook():
 
 
 @allure.story("DI-82")
-@allure.label("component", "user_manual")
 def test_the_docs_are_published_once_per_release() -> None:
     """DI-82: the docs are published once per release tag and once for the
     development version, every release kept and selectable, the newest release
@@ -245,7 +202,6 @@ def test_the_docs_are_published_once_per_release() -> None:
 
 
 @allure.story("DI-81")
-@allure.label("component", "user_manual")
 def test_the_ifu_discloses_each_residual_risk() -> None:
     """DI-81: the IFU's safety chapter names every risk of RDM's register, each
     with what the user must do about its residual risk."""

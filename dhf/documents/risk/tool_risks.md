@@ -24,16 +24,6 @@ risks:
     probability: Possible
     controls: [DI-3, DI-4]
     residual: {probability: Rare}
-  - id: RISK-TOOL-003
-    category: safety
-    status: proposed
-    hazard: "Implementation lands before its design input is approved."
-    situation: "An author or agent commits code while the design document that governs it is uncommitted or edited."
-    harm: "The record shows a design approved after the code it governs; an audit finds design controls not followed."
-    severity: Minor
-    probability: Possible
-    controls: [DI-2, DI-71]
-    residual: {probability: Unlikely}
   - id: RISK-TOOL-004
     category: security
     stride: Tampering
@@ -53,11 +43,10 @@ risks:
     harm: "The design input is reported verified while one thing it requires is unchecked, and the gap ships."
     severity: Serious
     probability: Possible
-    controls: [DI-34]
-    residual: {probability: Unlikely}
+    controls: []
     acceptance:
       by: "RDM maintainers, by approving the pull request that records this register"
-      rationale: "Whether a test proves its input is a reviewer's judgement. The mutation probe makes it checkable on demand; requiring it for every clause is the faithfulness gate Design Review 4 retired for costing more than it caught. Monitored by reviewers probing the tests a change touches."
+      rationale: "Whether a test proves its input is a reviewer's judgement, made in the pull-request review and, before each release, in the chain review. RDM no longer ships the mutation probe that made it checkable on demand (Design Review 72); a gate for it is the faithfulness gate Design Review 4 retired for costing more than it caught. Monitored by reviewers reading each changed test against its input's text."
   - id: RISK-TOOL-006
     category: security
     stride: Tampering

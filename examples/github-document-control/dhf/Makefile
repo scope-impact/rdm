@@ -9,7 +9,7 @@ SHELL := /bin/sh -e
 
 CONFIG := config.yml
 # Images resolve against the rendered file's own directory first (release/
-# mirrors documents/, so a link such as ../../c4/views/C1.svg finds its file),
+# mirrors documents/, so a relative image link finds its file),
 # then the DHF, its documents and extracted media. Each rule's $< is its input.
 RESOURCE_PATH = $(<D):.:./documents:./tmp/media/
 DATA_FILES := $(wildcard data/*.yml)

@@ -29,8 +29,8 @@ never edited.
 
 | Part | What it is | Commands |
 | --- | --- | --- |
-| **Record** | User needs; design inputs, one design document per bounded context; the risk register; checklists; tests tagged `@allure.story("DI-n")`. Markdown and git. | `rdm init`, `rdm adopt`, `rdm story new-input`, `rdm story trace` |
-| **Gates** | No implementation before the design is approved. No release until every design input has a passing test, every need is addressed, and every risk is evaluated with its risk controls verified. No required checklist clause left unreferenced. | `rdm story design-gate`, `rdm story release-gate`, `rdm gap` |
+| **Record** | User needs; design inputs, one design document per bounded context; the risk register; checklists; tests tagged `@allure.story("DI-n")`. Markdown and git. | `rdm init`, `rdm adopt`, `rdm story trace` |
+| **Gates** | No release until every design input has a passing test, every need is addressed, and every risk is evaluated with its risk controls verified. No required checklist clause left unreferenced. | `rdm story release-gate`, `rdm gap` |
 | **Graph** | The record as RDF: needs, inputs, contexts, documents, tests, runs, commits, risks, clauses. Read-only; agents read it over MCP, people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
 | **Documents** | Regulatory documents rendered from the record: templates and YAML data → Markdown → PDF/DOCX. | `rdm render`, `make pdfs` |
 
@@ -52,8 +52,7 @@ Two choices shape it:
 - It does not make a device compliant. It keeps the evidence straight; a
   regulator judges the evidence.
 - A green release gate means every design input has a passing tagged test, not
-  that the test proves it. The pull-request reviewer judges that
-  (`rdm story mutation-probe` helps).
+  that the test proves it. The pull-request reviewer judges that.
 - Checklists are written by hand; nothing turns a regulation into one.
 - The risk gate checks a register's form, not its truth: whether a risk control
   is effective is the reviewer's call. It ships no risk matrix; acceptability
@@ -81,11 +80,7 @@ extra) or install them natively (`brew install pandoc typst`).
 rdm init                     # a new project: a DHF skeleton and document templates in dhf/
 rdm adopt .                  # or an existing repository: never overwrites a file
 
-rdm story new-input --list   # contexts, taken ids, user needs
-rdm story new-input --context <context> --traces-to UN-001 --text "The device shall …"
-
 # The gates, as CI runs them (the tests need pytest and allure-pytest)
-rdm story design-gate --dhf dhf
 pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
@@ -103,8 +98,8 @@ jobs:
       rdm-ref: v2.0.0-alpha        # the same ref as after the @
 ```
 
-This runs your acceptance tests, then the design gate, verify, the release
-gate, graph validation and the evidence bundle, with RDM installed from the
+This runs your acceptance tests, then verify, the release gate, graph
+validation and the evidence bundle, with RDM installed from the
 pinned revision; `rdm adopt` lays this workflow down. For PDFs, add a step
 `uses: scope-impact/rdm@v2.0.0-alpha`. Inputs and options are in
 [the gates in your CI](docs/use/ci.md).
@@ -119,7 +114,7 @@ and the CLI and API reference.
 | | `docs/` | `dhf/` |
 |---|---|---|
 | **What it is** | RDM's instructions for use (IFU-001), the site above | RDM's own design history file: the record RDM develops itself under |
-| **Controlled?** | Yes, as one document: IFU-001 lists its pages; each change is a reviewed pull request | Yes: the design gate and the release gate hold it |
+| **Controlled?** | Yes, as one document: IFU-001 lists its pages; each change is a reviewed pull request | Yes: every change is a reviewed pull request, and the release gate holds it |
 | **Read by RDM's tools?** | The graph reads its pages: the design inputs each names, its test examples | Yes: the gates, `trace`, the graph, the evidence |
 
 `docs/` explains; `dhf/` decides. The full comparison is in
@@ -140,8 +135,17 @@ as CI does. The vocabulary is [CONTEXT.md](CONTEXT.md).
 
 ## Direction
 
+RDM audits a specification; it does not author one. Writing the spec and
+regenerating code from it belong to the factory that owns the spec (for
+example [Löyly](https://github.com/scope-impact/loyly)); RDM keeps gap
+analysis, and traceability and audit from the executed results
+([ADR 0002](dhf/decisions/adr-0002-spec-in-loyly-rdm-audits.md)).
+
 Not built yet, in rough order:
 
+- Reading the factory's stamped Gherkin scenarios (`@item-NN-SSS`) as the
+  requirements in place of design inputs, with the Gherkin story as the user
+  need.
 - Turning a regulation into a checklist mapped to its standard's clauses.
 - `rdm graph push` to an external graph database, with the vocabulary and gate
   shapes versioned so another store reads them the same way.

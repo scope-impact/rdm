@@ -33,12 +33,8 @@ and checks what a machine can check.
 
 ## Design Outputs
 
-The design outputs are this context's architecture in the C4 model of the
-architecture workspace: its one component, what it is responsible for, and
-how the components of other contexts use it. They name components, never
-the code: the workspace maps each component to its code.
-
-![Components: risk](../../c4/views/C3_risk.svg)
+Its one component, what it is responsible for, and how the components of
+other contexts use it:
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|

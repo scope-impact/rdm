@@ -43,16 +43,6 @@ The helpers every context may import.
 
 ::: rdm.risk.register
 
-## Architecture
-
-### `rdm.architecture.draw`
-
-::: rdm.architecture.draw
-
-### `rdm.architecture.model`
-
-::: rdm.architecture.model
-
 ## Compliance
 
 ### `rdm.compliance.gaps`
@@ -65,29 +55,9 @@ The helpers every context may import.
 
 ::: rdm.specification.adopt
 
-### `rdm.specification.design_gate`
-
-::: rdm.specification.design_gate
-
-### `rdm.specification.hooks`
-
-::: rdm.specification.hooks
-
 ### `rdm.specification.init`
 
 ::: rdm.specification.init
-
-### `rdm.specification.new_input`
-
-::: rdm.specification.new_input
-
-### `rdm.specification.persona`
-
-::: rdm.specification.persona
-
-### `rdm.specification.persona_cmd`
-
-::: rdm.specification.persona_cmd
 
 ### `rdm.specification.sdd`
 
@@ -106,10 +76,6 @@ The helpers every context may import.
 ### `rdm.evidence.allure`
 
 ::: rdm.evidence.allure
-
-### `rdm.evidence.mutation`
-
-::: rdm.evidence.mutation
 
 ### `rdm.evidence.translate`
 
@@ -140,10 +106,6 @@ Needs the `graph` extra.
 ### `rdm.graph.allure`
 
 ::: rdm.graph.allure
-
-### `rdm.graph.c4`
-
-::: rdm.graph.c4
 
 ### `rdm.graph.checklists`
 

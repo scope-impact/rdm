@@ -1,8 +1,7 @@
 """MkDocs build hook: publish RDM's design history file (``dhf/``) with the docs.
 
 Every Markdown document of the record is added to the site under ``dhf/``, as
-it is in git, with the C4 views and workspace its documents link to. The
-record's substance -- user needs, design inputs, risks, the risk policy -- is
+it is in git. The record's substance -- user needs, design inputs, risks, the risk policy -- is
 the documents' YAML frontmatter, which a Markdown page would drop, so each
 page shows its frontmatter as sections under the title: a list of entries
 (each id with its text and fields) for a list of records, a table for short
@@ -47,7 +46,6 @@ DHF = ROOT / "dhf"
 TEMPLATES = ROOT / "rdm" / "specification" / "init_files"
 log = logging.getLogger("mkdocs.hooks.dhf")
 SKIP = {"documents/traceability_matrix.md"}  # a template; the site has the generated matrix
-ASSETS = ("c4/views/*.svg", "c4/workspace.dsl")
 SECTIONS = {"user_needs": "User needs", "design_inputs": "Design inputs", "risks": "Risks",
             "contexts": "Bounded contexts", "risk_policy": "Risk policy"}
 _HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
@@ -236,9 +234,6 @@ def on_files(files, config):
                                                                        pdf and name.name)))
         if pdf:
             files.append(File.generated(config, f"dhf/{name.as_posix()}", abs_src_path=str(pdf)))
-    for pattern in ASSETS:
-        for asset in sorted(DHF.glob(pattern)):
-            files.append(File.generated(config, f"dhf/{asset.relative_to(DHF).as_posix()}", abs_src_path=str(asset)))
     return files
 
 

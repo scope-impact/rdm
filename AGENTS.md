@@ -9,15 +9,13 @@ CI and the pre-commit hook check every link; a change that skips one fails the
 build.
 
 Before writing any implementation, read **`dhf/AGENT_WORKFLOW.md`** — the
-canonical procedure, with a decision tree, why/do/done-when for each step, a
-worked example from this repo's history, and gate-failure fixes. The short
-version:
+canonical procedure, with a decision tree, why/do/done-when for each step,
+and gate-failure fixes. The short version:
 
-- A behavior change is governed by a **design input** (`DI-n`): scaffold it
-  with `uv run rdm story new-input` (`--list` shows contexts, taken ids, and
-  user needs), then commit the design docs **before** the implementation —
-  the commit is the approval, and the gate blocks implementation commits
-  until it exists.
+- A behavior change is governed by a **design input** (`DI-n`): declare it
+  in its owning context's `design_inputs` frontmatter, then commit the design
+  docs **before** the implementation — the commit is the approval, and the
+  pull-request reviewer reads the order.
 - The design input is the acceptance criterion; the tagged test
   (`@allure.story("DI-n")`, `tests/acceptance/`) **verifies** it. Its
   verification steps are the test's own checks, never acceptance criteria

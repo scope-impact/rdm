@@ -3,6 +3,17 @@
 <!-- --8<-- [start:history] -->
 ## Unreleased
 
+- **Breaking: RDM audits the specification; it no longer authors it**
+  (Design Review 72, ADR 0002). Removed: `rdm story design-gate` and the
+  design gate's step in the reusable gates; `rdm hooks` and the git hooks;
+  `rdm story new-input`; `rdm c4 draw`, the C4 architecture context and its
+  graph classes and shapes, component labels on runs; `--unit-coverage` on
+  `verify`, `evidence-bundle` and `rdm graph`, and the gates' `unit-coverage`
+  input; `rdm story persona`, the usability-persona skill and the
+  `validation` extra; `rdm story mutation-probe`. The pytest plugin labels a
+  run with its commit, worktree, executor and environment only. `rdm adopt`
+  lays down the DHF skeleton and the CI workflow, no design template, hooks
+  or runbook. The release gate no longer blocks on design-control checks.
 - **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
   one manual in IFU order (cover, intended use, how RDM works, safety and
   limitations with each residual risk, installation, getting started,

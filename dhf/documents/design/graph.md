@@ -2,7 +2,6 @@
 id: SDS-GRAPH-001
 kind: design
 context: graph
-realises: [DI-68]
 design_inputs:
   - id: DI-35
     text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each controlled document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
@@ -46,9 +45,6 @@ design_inputs:
   - id: DI-54
     text: "RDM shall project each executed Allure result's uuid, full name, start and end times, status message and trace, and parameters, and shall not project what the record already holds or what claims nothing about design controls: its labels as nodes, its links, a test case per history id, and container fixtures."
     traces_to: [UN-014, UN-004]
-  - id: DI-56
-    text: "RDM shall link each test run to the components it names: by a component label, the key of a component the C4 model declares, or by an output label, the component whose code holds the file it names; a component label naming no component of the model shall be a warning; and the agent server's trace shall list, for a design input, the source files its runs' output labels name."
-    traces_to: [UN-014, UN-015]
   - id: DI-58
     text: "The graph shall link each bounded context to the controlled document whose contexts frontmatter declares it, with its part, each controlled document to the controlled documents its references frontmatter names, and shall not project the traceability matrix template, an output generated from the record; a shape shall warn on a bounded context no document declares once any document declares contexts, and validation shall fail on a reference to a document the record does not hold."
     traces_to: [UN-014, UN-015]
@@ -61,21 +57,9 @@ design_inputs:
   - id: DI-62
     text: "RDM shall declare in its vocabulary each relation the graph derives rather than stores, with the rule that derives it as a SPARQL CONSTRUCT — first, that a bounded context serves the user needs its owned and realised design inputs trace to; the agent server's schema shall list the rules, and when asked to infer, the projection shall add the derived facts in a separate inferred named graph and nowhere else."
     traces_to: [UN-014, UN-015]
-  - id: DI-67
-    text: "RDM shall project the C4 model into the graph: each element typed person, software system, container or component, with its name, technology, description and external flag; the element that contains it; the bounded context that owns each component; each relationship with its source, target, label and technology; each component's code; the component every projected source file belongs to (the longest matching code path); and, for a component whose code is Python, an import from its code into another component's as a dependency between the two, marking a component whose code holds no Python as one whose dependencies were not read; and, when given the unit tests' code coverage report, each component's lines its unit tests ran and lines measured, as properties of the component alone, linked to no run and no design input."
-    traces_to: [UN-017, UN-014]
-  - id: DI-73
-    text: "RDM shall derive, by a rule its vocabulary declares, that a test run reaches each component the C4 model's declared relationships lead to, at any depth, from a component the run names, and that is not itself named; the record never states it, and a reached component is never taken for a named one."
-    traces_to: [UN-017, UN-014]
   - id: DI-77
     text: "RDM shall project the user manual into the graph: each page that a controlled document of kind manual lists under pages, with the files the page includes whole, linked to that document; each design input the page names by its id; and each tagged-test example it shows, a fenced code block with an Allure story decorator, with the names of the labels the example writes; a listed page that does not exist shall be a warning; and the agent server's trace shall list, for a design input, the manual pages that name it."
     traces_to: [UN-018, UN-014]
-  - id: DI-78
-    text: "RDM's gate shapes shall warn on a tagged-test example in the user manual that writes no component label."
-    traces_to: [UN-018]
-  - id: DI-69
-    text: "RDM's agent server shall show, in the trace of a design input, the components its runs name and, apart, the components they reach, each with its container and owning bounded context."
-    traces_to: [UN-017, UN-015]
 ---
 
 # Knowledge graph — Software Design
@@ -83,7 +67,7 @@ design_inputs:
 ## Purpose
 
 This context owns the knowledge graph: the design record, with its test
-runs, git history, risks, checklists and architecture, projected into RDF
+runs, git history, risks and checklists, projected into RDF
 for people and agents to query, browse and validate. It speaks of
 *projection* (one source of the record turned into facts, one named graph
 per source), the *vocabulary* (the classes and properties queries and agents
@@ -99,27 +83,19 @@ names it in commands and code.
 
 ## Design Outputs
 
-The design outputs are this context's architecture, in the C4 model of the
-architecture workspace: its components, what each is responsible for, and
-how they relate. They name components, never source files or functions: the
-workspace maps each component to its code.
-
-![Components: graph](../../c4/views/C3_graph.svg)
-
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
 | Manual reader | Reads the pages a manual document lists, and the files they include whole: the design inputs each names and the labels of each tagged-test example | DI-77 |
-| Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists and inferred facts on request | DI-35, DI-36, DI-37, DI-45, DI-48, DI-51, DI-52, DI-53, DI-54, DI-56, DI-58, DI-60, DI-61, DI-62, DI-67, DI-73, DI-77 |
+| Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists and inferred facts on request | DI-35, DI-36, DI-37, DI-45, DI-48, DI-51, DI-52, DI-53, DI-54, DI-58, DI-60, DI-61, DI-62, DI-77 |
 | Vocabulary | The classes and properties of the graph, and each derived relation with the rule that derives it; projected as the ontology graph | DI-35, DI-62 |
-| Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61, DI-68, DI-78 |
+| Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61 |
 | SHACL validation | `rdm graph validate`: runs the shipped and any user-supplied shapes over the union of the named graphs, reports each result most severe first, and fails on any violation | DI-49, DI-58 |
 | Explorer file | Writes the record as an AWS Graph Explorer file, every record node whatever its IRI, optionally leaving out chosen classes and what hangs only from them | DI-39 |
-| Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53, DI-56, DI-62, DI-69, DI-77 |
+| Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53, DI-62, DI-77 |
 
-All six are in the `rdm` container, and need the optional extra `graph`;
-without it every `rdm graph` command exits 2 and names the extra. The view
-also shows the other contexts' components the Projection reads (see
-Dependencies). Each design input is verified by a test tagged with it in
+All of them run in the `rdm` command, and need the optional extra `graph`;
+without it every `rdm graph` command exits 2 and names the extra. The
+Projection reads other contexts' components (see Dependencies). Each design input is verified by a test tagged with it in
 the acceptance suite.
 
 How the components relate, in the direction of the arrows:
@@ -150,24 +126,18 @@ The behaviour a reviewer needs to judge the design:
   the Allure results, when given; the git graph each document's latest
   landed commit and the commit the record was built at; the risks graph the
   register, with a finding about the register as a whole on each risk, or on
-  a stand-in node for the register when it has none; the architecture graph what the C4 model claims and the code
-  graph what the imports between components' code actually are; the
-  checklists and references graphs, on request; the ontology graph the
+  a stand-in node for the register when it has none; the manual graph the
+  user manual's pages; the checklists and references graphs, on request; the ontology graph the
   Vocabulary; and the inferred graph, on request, only what the rules derive
   and nothing else. The traceability matrix template is not projected: it
   is output, not record.
 - **Whole-record findings.** What the release gate blocks about the record
-  as a whole (a design control not met, no design input declared, a result
-  file that cannot be read) goes on the record's node as the gate words it,
+  as a whole (no design input declared, a result file that cannot be
+  read) goes on the record's node as the gate words it,
   and a shape blocks each one, so validation never passes what the gate
   blocks. The executions graph is read with the Allure reader the gates use.
   A declared id links its tests and runs whatever its shape; an undeclared
   tag links only when it is id-shaped.
-- **Order.** The architecture is projected after the runs, because the
-  source files it places in components (`rdm:inComponent`) are the ones the
-  runs' output labels name. The code graph holds one `rdm:Dependency` per
-  importing pair of components, with one example importing and imported
-  file, beside their `rdm:dependsOn` link.
 - **Identity.** Instance IRIs are `urn:dhf:<project>:<kind>/<id>`, the
   project being the repository's name unless another is given, so graphs
   from several repositories merge without collisions; clause, standard and
@@ -177,7 +147,7 @@ The behaviour a reviewer needs to judge the design:
   Management), Dublin Core for identifiers, titles, descriptions and
   references, PROV-O for commits, authors and run times, SKOS for
   checklists. RDM terms (`rdm:UserNeed`, `rdm:BoundedContext`, `rdm:Test`,
-  `rdm:TestRun`, `rdm:Risk`, the C4 classes, `rdm:tracesTo`, `rdm:ownedBy`,
+  `rdm:TestRun`, `rdm:Risk`, `rdm:tracesTo`, `rdm:ownedBy`,
   `rdm:realises`, `rdm:verifies`, `rdm:exercises`, …) are minted only where
   none fits.
 - **What is refused.** The Agent server's `query`, the SPARQL endpoint and
@@ -195,27 +165,17 @@ The behaviour a reviewer needs to judge the design:
   else `main` or `master`, else git's `init.defaultBranch`, else the only
   local branch.
 
-Realised for other contexts: the Projection and the Gate shapes implement
-the graph's part of DI-46 (specification): each user need's and design
-input's declaration count, and a shape on a repeated declaration. The Gate
-shapes also realise DI-68 (architecture): a warning, never a violation, for
-each way the C4 model and the record disagree, over the architecture and
-code graphs and two facts the Projection adds for them (a component's code
-path that does not exist; the views a design document shows). The
-frontmatter declares DI-68 in `realises`, not yet DI-46. Realised by others: the
-specification realises part of DI-61 (the scan of the test sources), and
-the pytest plugin writes the commit labels DI-60 projects (DI-59).
-
-The Agent server's `trace` of a design input names the components whose
-code its tests' runs exercise, each with its container and owning bounded
-context (DI-69).
+The Projection and the Gate shapes also give each user need's and design
+input's declaration count, and a shape on a repeated declaration: the
+graph's check on duplicate ids since the design gate was removed (Design
+Review 72). Realised by others: the specification realises part of DI-61
+(the scan of the test sources), and the pytest plugin writes the commit
+labels DI-60 projects (DI-59).
 
 Open questions:
 
 - Whether the shapes replace the coded gates (RDM-004.06); until then the
   acceptance tests hold the two to agreement.
-- `schema`'s list of named graphs and the Agent server's instructions do not
-  name the architecture and code graphs (DI-67), though queries see them.
 
 ## Commands and events
 
@@ -241,8 +201,6 @@ step, not as an import. It projects:
   verified set;
 - **risk**, through the Risk register: the register, the policy, the
   residual decision and the release gate's findings;
-- **architecture**, through the Architecture model: the C4 model, each
-  file's component, the imports between components;
 - **compliance**, through Gap analysis: the checklist reader, the built-in
   checklists and the key matcher;
 - **release**, through the Release gate: its findings about the whole

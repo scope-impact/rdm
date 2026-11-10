@@ -36,12 +36,7 @@ documents.
 
 ## Design Outputs
 
-The design outputs are this context's architecture, in the C4 model of the
-architecture workspace: its two components, what each is responsible for,
-and how they relate. They name components, never source code: the workspace
-maps each component to its code.
-
-![Components: compliance](../../c4/views/C3_compliance.svg)
+Its two components, what each is responsible for, and how they relate:
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|

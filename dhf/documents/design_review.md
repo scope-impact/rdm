@@ -2373,6 +2373,50 @@ developers and the people who review their pull requests.
   The repository's Pages source must be switched to that branch once, by a
   maintainer.
 
+# Design Review 72 — RDM audits the specification; it no longer authors it
+
+**Scope reviewed:** what RDM keeps once the specification and the code
+regenerated from it belong to the factory that owns them (ADR 0002, proposed;
+the product owner decided this cut on 2026-11-10). RDM keeps gap analysis,
+and traceability and audit from the executed results.
+
+**Disposition:** Approved.
+
+- **Removed, spec authoring:** the design gate (DI-2) and the check on
+  duplicate ids it held (DI-46), its git hooks and their installer
+  (`rdm hooks`, DI-26, DI-71), `rdm story new-input` (DI-22), the
+  design-document template and the design review `rdm adopt` laid down, the
+  agent runbook and session bootstrap it laid down, and the design-gate step
+  of the reusable gates. The release gate no longer runs the design gate's
+  checks (Release Blocked / Design Control Unmet is gone). The knowledge
+  graph still counts each id's declarations and flags a repeat.
+- **Removed, the architecture context:** the C4 workspace and its views
+  (`dhf/c4/`), `rdm c4 draw` and the model reader (DI-66, DI-70), the C4
+  model and code imports in the graph and the shapes that checked them
+  against the record (DI-67, DI-68), component labels on runs and the
+  components a trace names or reaches (DI-56, DI-69, DI-73), the manual's
+  component labels (DI-78, DI-79), and the unit tests' code coverage per
+  component in verify, the bundle and the graph (DI-76). The dependency rule
+  now reads each context's code from the system architecture's frontmatter.
+- **Removed, reviewer and validation helpers:** persona runs and
+  `rdm story persona` with the usability-persona skill (DI-5), and the
+  mutation probe (DI-34, DI-47). Validation records (DI-33) stay.
+- **Removed, the pytest plugin's labels from the record** (DI-57): epic,
+  feature, links, severity and the requirement attachment. The commit,
+  worktree, executor and environment it records stay (DI-59, DI-65).
+- **User needs retired** with nothing left to refine them: UN-002, UN-007,
+  UN-010, UN-013, UN-017. UN-005 now names what its remaining input does:
+  a reviewer sees which needs lack an approved validation.
+- **Amended:** DI-15 and DI-24 (what `init` and `adopt` lay down), DI-30
+  and DI-63 (no unit coverage, no design gate), DI-40 (only the story names
+  an input). RISK-TOOL-003 (implementation before approval) leaves the
+  register with the design gate that controlled it; RISK-TOOL-005 has no
+  control left and is accepted on the reviewer's reading of each changed
+  test.
+- **Not done here:** reading the factory's stamped Gherkin scenarios in
+  place of design inputs (ADR 0002's migration, steps 1 to 4). Until then
+  RDM's own record keeps its design inputs, declared by hand.
+
 # Approval
 
 Recorded in version control (the merged, reviewed PR), per the design-input

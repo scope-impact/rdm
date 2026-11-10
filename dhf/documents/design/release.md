@@ -11,17 +11,14 @@ design_inputs:
   - id: DI-4
     text: "RDM shall reconcile each declared design input against the story labels of the executed Allure results as verified, failed or untested, and render the traceability matrix of those statuses grouped under the user needs."
     traces_to: [UN-004]
-  - id: DI-76
-    text: "RDM's verify shall, when given the unit tests' code coverage as one Cobertura XML or LCOV report, add to the verification data, for each C4 component with code, the lines of its code the unit tests ran out of the lines the report measured, listing apart each component whose code the report does not measure; a report it cannot read shall be an error, never taken as no coverage; and the traceability matrix shall show it."
-    traces_to: [UN-001, UN-017]
   - id: DI-18
     text: "RDM shall report the traceability slice for a given user need or design input (its design inputs / owner+realisers, verifying tests, and status), listing any result it could not read and refusing a missing results directory."
     traces_to: [UN-004]
   - id: DI-30
-    text: "RDM shall produce a release evidence bundle from the record: the verification data and the rendered traceability matrix (with the unit tests' code coverage, and that report kept, when it is given, as verify takes it), the verification report, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files and any referenced attachment or result it could not include, written to an output directory apart from the results, replacing an earlier bundle there, and refusing to write a bundle it cannot complete."
+    text: "RDM shall produce a release evidence bundle from the record: the verification data and the rendered traceability matrix, the verification report, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files and any referenced attachment or result it could not include, written to an output directory apart from the results, replacing an earlier bundle there, and refusing to write a bundle it cannot complete."
     traces_to: [UN-012]
   - id: DI-63
-    text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then the design gate, verify, the release gate, graph validation over the named checklists and the evidence bundle with the verification report, uploading the bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the release it is pinned to (the latest image for a branch or commit). The CI workflow rdm adopt lays down, and RDM's own CI, shall call the reusable workflow, pinned to the installed RDM's version and to the commit under test respectively."
+    text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then verify, the release gate, graph validation over the named checklists and the evidence bundle with the verification report, uploading the bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the release it is pinned to (the latest image for a branch or commit). The CI workflow rdm adopt lays down, and RDM's own CI, shall call the reusable workflow, pinned to the installed RDM's version and to the commit under test respectively."
     traces_to: [UN-011, UN-003]
 ---
 
@@ -41,33 +38,23 @@ It reads the specification, test evidence and risk; none of them reads it.
 
 ## Design Outputs
 
-The design outputs are this context's architecture in the C4 model of the
-architecture workspace: its components, what each is responsible for, and
-how they relate. They name components, never code: the workspace maps each
-component to the code that implements it. Two of the components run in the
-`rdm` container, two in the Reusable gates container that other
-repositories' pipelines call.
-
-![Components: release](../../c4/views/C3_release.svg)
+Two of the components run in the `rdm` command, two in the reusable CI
+that other repositories' pipelines call.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Release gate | The release decision over verified status, risk and validation; the design gate's warnings about executed results; the trace slice of a user need or design input | DI-3, DI-18; realises DI-33, DI-44, DI-50 |
-| Verification data | Every declared design input reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from; given the unit tests' coverage report, each component's unit lines run of those measured, beside the inputs, never inside them | DI-4, DI-30, DI-76 |
+| Release gate | The release decision over verified status, risk and validation; the trace slice of a user need or design input | DI-3, DI-18; realises DI-33, DI-44, DI-50 |
+| Verification data | Every declared design input reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from | DI-4, DI-30 |
 | Reusable workflow | Runs a repository's acceptance tests, then the gates, with RDM installed from the revision the caller pinned | DI-63 |
-| Gates action | The gate steps, written once: design gate, verification data, release gate, graph validation and the evidence bundle | DI-63, DI-30 |
+| Gates action | The gate steps, written once: verification data, release gate, graph validation and the evidence bundle | DI-63, DI-30 |
 
-**Release gate.** It blocks a release when the design gate's pass/fail
-checks fail; when no design input is declared; when a design input failed
+**Release gate.** It blocks a release when no design input is declared; when a design input failed
 or is untested in the given results; when a result file in them cannot be
 read (it could hold a failed run); when the risk register's release rules
 report a blocking finding; and when a user need is addressed by no design
 input. It warns, never blocks, on a user need with no approved validation
 record, and on a test tag that matches no design input (compared on its
-leading letters, so `di-1` or `DI_1` is an orphan, not silence). The same
-reconciliation of executed results gives the design gate its warnings, which
-the composition root hands to the design gate's output, so the
-specification never reads results. The trace slice is a user need's design
+leading letters, so `di-1` or `DI_1` is an orphan, not silence). The trace slice is a user need's design
 inputs, or a design input's text, user needs, owner and realising contexts
 and, when results are given, its status, its tests (each once) and any
 result file that cannot be read; a results directory that does not exist is
@@ -93,14 +80,13 @@ never spliced into the script text, so an input cannot inject shell.
 
 Relationships that matter, in the direction of the arrow:
 
-- The release gate runs the design gate's checks, reads the record with the
-  record reader and the validation records (`specification`), reconciles
+- The release gate reads the record with the record reader and the validation records (`specification`), reconciles
   results with the Allure reader (`test_evidence`) and reports the risk
   findings of the risk register (`risk`).
 - Verification data reconciles results with the Allure reader and reads the
   record with the record reader.
 - The Reusable workflow runs the acceptance test run and then the gates with
-  the Gates action, which runs the design gate, writes the verification data,
+  the Gates action, which writes the verification data,
   runs the release gate, validates the graph with SHACL validation (`graph`)
   and writes the evidence bundle with the Evidence bundle (`publishing`).
 
@@ -112,7 +98,7 @@ verification data); DI-30 by `publishing`, whose Evidence bundle writes the
 retained release evidence; and the rest of DI-63 by the PDF action
 (`publishing`) and by the CI workflow `rdm adopt` lays down (the Adoption
 templates, `specification`). The verification report (DI-64) is also in
-[publishing](publishing.md); the mutation probe and the pytest plugin are in
+[publishing](publishing.md); the pytest plugin is in
 [test evidence](test_evidence.md). Each design input here is verified by the
 tests tagged with its id.
 
@@ -124,14 +110,9 @@ show it. Whether the gate should decide it is a question for a later review.
 ### Dynamic view
 
 The order of a pipeline run matters: the acceptance tests write the Allure
-results; the design gate runs; the verification data is written; the release
-gate decides; graph validation runs; the evidence bundle is written last,
-from the same results, and uploaded. The component view shows what uses
-what, not this order. The view below draws it at the container level, where
-the order is decided (a dynamic view's steps cannot cross from the Reusable
-gates container into the components of `rdm`):
-
-![Scenario: one run of the reusable gates](../../c4/views/D_release_pipeline.svg)
+results; the verification data is written; the release gate decides; graph
+validation runs; the evidence bundle is written last, from the same results,
+and uploaded.
 
 ## Commands and events
 
@@ -141,16 +122,14 @@ fail event (the rule broken, after the slash), which affects the entity.
 | Actor | Command | Success event | Fail events | Entity |
 |-------|---------|---------------|-------------|--------|
 | CI or contributor | Verify | Verification Written | — (each input verified, failed or untested) | Verification data |
-| CI or contributor | Decide release | Release Permitted | Release Blocked / Design Control Unmet · Input Untested · Unreadable Result · Need Unaddressed · Risk Finding | Release |
+| CI or contributor | Decide release | Release Permitted | Release Blocked / No Design Inputs · Input Failed · Input Untested · Unreadable Result · Need Unaddressed · Risk Finding | Release |
 
 ## Dependencies
 
 Layer 4 of the dependency rule. Depends on `test_evidence` (the Allure
-reader), `specification` (the record reader, the design gate, the validation
-records) and `risk` (the risk register), all below it, and on the shared
+reader), `specification` (the record reader, the validation records) and `risk` (the risk register), all below it, and on the shared
 kernel. Depended on by `publishing` (the verification report and the
 evidence bundle build on the verification data) and by the composition
-root, which hands the design gate this context's warnings about executed
-results. The Gates action, in its own container, also runs `graph`'s SHACL
+root. The Gates action, in its own container, also runs `graph`'s SHACL
 validation and `publishing`'s evidence bundle as commands; that is a run,
 not an import, so the rule is not broken.

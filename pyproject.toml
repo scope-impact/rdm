@@ -32,10 +32,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Playwright for the usability-persona skill (AI-persona usability validation).
-# Browsers are provided by the environment; if the preinstalled browser version
-# differs, launch with executable_path.
-validation = ["playwright==1.63.0"]
 # The design record as a linked-data graph (DI-35/36): an embedded RDF store
 # (pyoxigraph), which RDM also serves as a read-only SPARQL endpoint for
 # graph browsers such as AWS Graph Explorer; pyshacl runs the gate shapes

@@ -5,7 +5,7 @@ from pathlib import Path
 from rdm.kernel.version import release_version
 
 NEXT_STEPS = """\
-Next steps (see {out}/AGENT_WORKFLOW.md for the design-controls loop):
+Next steps:
   1. Fill in {out}/data/device.yml: your device's name, manufacturer, version and safety class
   2. Replace the placeholders in {out}/documents/ (lines starting TODO, and TODO ... ENDTODO blocks)
   3. Render: cd {out} && make            (PDFs: make pdfs, needs Pandoc and Typst; Word: make docs)
@@ -21,13 +21,6 @@ def init(output_directory):
     with as_file(init_files_ref) as init_directory:
         shutil.copytree(init_directory, output_directory)
 
-    # The agent runbook is shared with the adopt scaffold (one source of
-    # truth): an init project gets the same traceable-loop procedure the
-    # brownfield path lays down, at the project root the templates reference.
-    runbook_ref = files(__package__) / 'adopt_files' / 'dhf' / 'AGENT_WORKFLOW.md'
-    with as_file(runbook_ref) as runbook:
-        shutil.copy(runbook, Path(output_directory) / 'AGENT_WORKFLOW.md')
-
     # The container installs the RDM release that laid the project down, as
     # adopt pins the CI workflow to it.
     dockerfile = Path(output_directory) / 'Dockerfile'
@@ -40,7 +33,7 @@ def init_command(output_directory) -> int:
     out = Path(output_directory)
     if out.exists() or out.is_symlink():
         print(f"Error: {out} already exists: rdm init lays a new project into a new directory "
-              "(to bring an existing repository under design controls, use rdm adopt)")
+              "(to bring an existing repository under RDM, use rdm adopt)")
         return 2
     init(str(out))
     laid = sorted(p.relative_to(out).as_posix() for p in out.iterdir())

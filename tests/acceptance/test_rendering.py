@@ -11,7 +11,6 @@ Skips cleanly if allure-pytest is not installed.
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -164,72 +163,3 @@ def _tool(tmp_path: Path, name: str, source: str) -> Path:
     return tool
 
 
-@allure.story("DI-70")
-@allure.label("output", "rdm/architecture/draw.py")
-@allure.label("output", "rdm/architecture/model.py")
-@allure.label("output", "rdm/specification/design_gate.py")
-def test_architecture_views_are_drawn_from_the_workspace_and_kept_current(tmp_path, monkeypatch) -> None:
-    """DI-70: each view of the architecture workspace is drawn to an image in
-    the record, stamped with the workspace it was drawn from, and the design
-    gate fails when the model or a view's image was not drawn from the current
-    workspace, or a view has no image."""
-    from rdm.architecture.draw import DrawError, draw
-    from rdm.architecture.model import stale
-    from rdm.architecture.model import workspace_digest as digest
-    from rdm.specification.design_gate import check_architecture_views, run_design_gate
-
-    dhf = tmp_path / "dhf"
-    (dhf / "c4" / "views").mkdir(parents=True)
-    (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n  }\n}\n')
-    (dhf / "c4" / "views" / "C3_retired.svg").write_text("<svg/>")
-    monkeypatch.setenv("RDM_STRUCTURIZR", str(_tool(tmp_path, "structurizr.sh", FAKE_STRUCTURIZR)))
-    monkeypatch.setenv("RDM_DOT", str(_tool(tmp_path, "dot", FAKE_DOT)))
-
-    with verification_step("rdm c4 draw writes the model and an image of each view, each stamped with the workspace"):
-        assert draw(dhf) == ["C3_core", "C1"]
-        model = json.loads((dhf / "c4" / "workspace.json").read_text())
-        attach("workspace.json", model)
-        assert model["rdm"]["workspace_sha256"] == digest(dhf)
-        assert "structurizr.dsl" not in model["properties"]  # not the workspace again, base64
-        for key in ("C1", "C3_core"):
-            svg = (dhf / "c4" / "views" / f"{key}.svg").read_text()
-            assert f"<!-- rdm c4 draw: view {key}, workspace sha256:{digest(dhf)} -->" in svg.splitlines()[1]
-    with verification_step("a bare & in Structurizr's DOT is escaped, so Graphviz draws the view"):
-        assert "Design, V&amp;V and risk" in (dhf / "c4" / "views" / "C1.svg").read_text()
-    with verification_step("the image of a view the workspace no longer has is removed"):
-        assert not (dhf / "c4" / "views" / "C3_retired.svg").exists()
-    with verification_step("drawn from the current workspace, nothing is stale and the gate's check passes"):
-        assert stale(dhf) == [] and check_architecture_views(dhf)[0].ok
-
-    with verification_step("a workspace changed and not redrawn fails the design gate"):
-        (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n    a = person "A"\n  }\n}\n')
-        reasons = stale(dhf)
-        attach("stale, workspace changed", reasons)
-        assert "c4/workspace.json was not drawn from the current workspace.dsl: run rdm c4 draw" in reasons
-        assert "view C1's image was not drawn from the current workspace.dsl: run rdm c4 draw" in reasons
-        assert not check_architecture_views(dhf)[0].ok
-        gate = {a.name: a for a in run_design_gate(dhf).artifacts}
-        assert not gate["Architecture views"].ok and gate["Architecture views"].reasons == reasons
-    with verification_step("a file the workspace includes, changed and not redrawn, fails the design gate"):
-        (dhf / "c4" / "model.dsl").write_text('a = person "A"\n')
-        (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n    !include model.dsl\n  }\n}\n')
-        draw(dhf)
-        assert stale(dhf) == []
-        (dhf / "c4" / "model.dsl").write_text('a = person "B"\n')
-        assert "c4/workspace.json was not drawn from the current workspace.dsl: run rdm c4 draw" in stale(dhf)
-    with verification_step("a view with no image, or an image of no view, fails the design gate"):
-        draw(dhf)
-        (dhf / "c4" / "views" / "C1.svg").unlink()
-        (dhf / "c4" / "views" / "C9.svg").write_text("<svg/>")
-        reasons = stale(dhf)
-        attach("stale, images", reasons)
-        assert "view C1 has no image: run rdm c4 draw" in reasons
-        assert "c4/views/C9.svg is the image of no view: run rdm c4 draw" in reasons
-    with verification_step("a workspace Structurizr rejects is not drawn, and says why"):
-        (dhf / "c4" / "workspace.dsl").write_text("workspace {\n  BROKEN\n}\n")
-        with pytest.raises(DrawError, match="could not export json: Error: unexpected token at line 3"):
-            draw(dhf)
-
-    with verification_step("RDM's own model and views are drawn from its workspace as it is now"):
-        assert stale(ROOT / "dhf") == []
-        assert check_architecture_views(ROOT / "dhf")

@@ -8,10 +8,9 @@ team:
   controls as Markdown in the repository;
 - tags the acceptance test that verifies each design input, and keeps each
   test run tied to the commit it tested;
-- blocks code that lands before its design is approved, and a release while
-  any design input is unverified or any risk control fails (the gates);
-- keeps its architecture as C4 diagrams in the repository, and is warned
-  where the code, the tests and the diagrams disagree;
+- blocks a release while any design input is unverified or any risk
+  control fails (the release gate);
+- checks its documents against the standards' checklists (gap analysis);
 - renders the regulatory documents from the record, and keeps each
   release's evidence with it;
 - queries the whole record as one read-only graph, by person or by agent.
@@ -26,7 +25,7 @@ and you can write your own.
 | You are | You use RDM to |
 |---|---|
 | a developer | declare design inputs, tag acceptance tests, run the gates |
-| a reviewer | approve each change in its pull request, helped by `trace` and the mutation probe |
+| a reviewer | approve each change in its pull request, helped by `trace` and the verification report |
 | a regulatory or quality person | write the record, render documents, read the gates and the graph |
 | an AI agent, working for one of the above | read the record through the read-only agent server, and propose changes as pull requests |
 
@@ -47,8 +46,6 @@ do not need RDF or SPARQL to use the gates.
 - **Not a judge of your evidence.** It shows that each design input has a
   passing tagged test. Whether that test proves the input is your
   reviewer's call; whether the evidence is enough is your regulator's.
-- **Not usability testing.** Its persona runs find problems early; they do
-  not replace testing with real users.
 
 ## Using RDM in a regulated quality system
 
@@ -65,7 +62,6 @@ for the way you use it. Keep it proportionate:
    by tagged tests, and its design history is published beside these docs
    (the *Design history* tab).
 4. **Try it on your record:** run the gates on a copy with a known defect
-   (a failing test, an uncommitted design document) and check they block it;
-   `rdm story mutation-probe` does the same for your own tests.
+   (a failing test, an unreadable result) and check they block it.
 5. **Keep the result,** and do steps 2 to 5 again when you upgrade RDM,
    change how you use it, or add an extra.

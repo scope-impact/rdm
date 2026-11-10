@@ -3,19 +3,18 @@
 
 A context imports only contexts of a lower layer and the shared kernel; the
 kernel imports only itself; the composition root may import anything. Every
-module is named by a component of the architecture workspace, so no code
-escapes the rule. Layers, kernel and composition root are read from the
-architecture's frontmatter, components from the workspace: the test checks
-the code against the record, never against a copy of it.
+module belongs to a context's code, so no code escapes the rule. Layers,
+code, kernel and composition root are read from the architecture's
+frontmatter: the test checks the code against the record, never against a
+copy of it.
 """
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import yaml
-
-from rdm.architecture.model import component_of, imported_files, read_model
 
 ROOT = Path(__file__).parents[1]
 DHF = ROOT / "dhf"
@@ -25,12 +24,40 @@ def _architecture() -> dict:
     return yaml.safe_load((DHF / "documents" / "architecture.md").read_text().split("---", 2)[1])
 
 
+def _module_file(name: str) -> str | None:
+    """The repo-relative file of a dotted module name inside the repository, if any."""
+    base = ROOT.joinpath(*name.split("."))
+    for candidate in (base.with_suffix(".py"), base / "__init__.py"):
+        if candidate.is_file():
+            return candidate.relative_to(ROOT).as_posix()
+    return None
+
+
+def imported_files(path: Path) -> set[str]:
+    """The repo-relative files a Python file imports, anywhere in it, relative
+    imports included."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    package = path.relative_to(ROOT).with_suffix("").parts[:-1]
+    found = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            files = [_module_file(alias.name) for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            base = ".".join(package[: len(package) - node.level + 1]) if node.level else ""
+            stem = ".".join(p for p in (base, node.module or "") if p)
+            files = [_module_file(f"{stem}.{alias.name}") or _module_file(stem) for alias in node.names]
+        else:
+            continue
+        found.update(f for f in files if f is not None)
+    return found
+
+
 def _owners() -> tuple[dict[str, str], list[str]]:
     """Each module's context ('kernel' and 'root' for the two that are not
-    contexts), and the modules no component names."""
+    contexts), and the modules no context's code holds."""
     arch = _architecture()
     kernel, root = arch["kernel"], arch["composition_root"]
-    components = read_model(DHF, ROOT).code_components
+    code = [(path, c["id"]) for c in arch["contexts"] for path in c.get("code") or []]
     owners, unowned = {}, []
     for path in sorted((ROOT / "rdm").rglob("*.py")):
         rel = path.relative_to(ROOT).as_posix()
@@ -38,23 +65,16 @@ def _owners() -> tuple[dict[str, str], list[str]]:
             owners[rel] = "root"
         elif rel.startswith(kernel):
             owners[rel] = "kernel"
-        elif (component := component_of(rel, components)) is not None:
-            owners[rel] = component.context
+        elif matches := [(len(p), ctx) for p, ctx in code if rel == p or (p.endswith("/") and rel.startswith(p))]:
+            owners[rel] = max(matches)[1]
         else:
             unowned.append(rel)
-    # A package's __init__ belongs to the one context that owns its modules.
-    for rel in [u for u in unowned if u.endswith("/__init__.py")]:
-        package = rel.removesuffix("__init__.py")
-        contexts = {c for m, c in owners.items() if m.startswith(package)}
-        if len(contexts) == 1:
-            owners[rel] = contexts.pop()
-            unowned.remove(rel)
     return owners, unowned
 
 
-def test_every_module_is_named_by_a_component() -> None:
+def test_every_module_belongs_to_a_context() -> None:
     _, unowned = _owners()
-    assert unowned == [], f"modules no component of the workspace names: {unowned}"
+    assert unowned == [], f"modules no context's code holds: {unowned}"
 
 
 def test_no_import_breaks_the_dependency_rule() -> None:
@@ -62,7 +82,7 @@ def test_no_import_breaks_the_dependency_rule() -> None:
     owners, _ = _owners()
     breaks = []
     for src, src_ctx in owners.items():
-        for dst in sorted(imported_files(ROOT, ROOT / src)):
+        for dst in sorted(imported_files(ROOT / src)):
             dst_ctx = owners.get(dst)
             if src_ctx == "root" or dst_ctx in (None, "kernel", src_ctx):
                 continue

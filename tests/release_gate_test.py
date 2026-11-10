@@ -1,4 +1,4 @@
-"""Tests for the release gate: design controls + full verification (hard fail).
+"""Tests for the release gate: full verification (hard fail).
 
 Verification is anchored on design inputs declared in the per-context design
 documents: the denominator is the union of those inputs, a design input is
@@ -71,11 +71,11 @@ def test_passes_when_design_approved_and_all_verified(tmp_path: Path) -> None:
 def _state(needs=("UN-1",), verified=("DI-1",), orphans=()) -> State:
     report = VerificationReport(by_id={i: DesignInputVerification(i, status=VERIFIED) for i in verified},
                                 orphan_ids=list(orphans))
-    return State("dhf", [], [{"id": "DI-1", "traces_to": ["UN-1"]}], set(needs), report)
+    return State("dhf", [{"id": "DI-1", "traces_to": ["UN-1"]}], set(needs), report)
 
 
 def test_no_design_inputs_blocks() -> None:
-    assert [e.name for e in derive(State("dhf", [], []))] == [NO_DESIGN_INPUTS]
+    assert [e.name for e in derive(State("dhf", []))] == [NO_DESIGN_INPUTS]
 
 
 def test_orphan_tag_warns_and_permits() -> None:

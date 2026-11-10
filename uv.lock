@@ -630,7 +630,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -1803,9 +1803,6 @@ graph = [
 report = [
     { name = "typst" },
 ]
-validation = [
-    { name = "playwright" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -1826,7 +1823,6 @@ requires-dist = [
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = "==1.0.6" },
     { name = "mock", marker = "extra == 'dev'", specifier = "==5.2.0" },
     { name = "playwright", marker = "extra == 'dev'", specifier = "==1.63.0" },
-    { name = "playwright", marker = "extra == 'validation'", specifier = "==1.63.0" },
     { name = "pyoxigraph", marker = "extra == 'dev'", specifier = "==0.5.11" },
     { name = "pyoxigraph", marker = "extra == 'graph'", specifier = "==0.5.11" },
     { name = "pypdf", marker = "extra == 'dev'", specifier = "==6.19.0" },
@@ -1839,7 +1835,7 @@ requires-dist = [
     { name = "typst", marker = "extra == 'dev'", specifier = "==0.15.0" },
     { name = "typst", marker = "extra == 'report'", specifier = "==0.15.0" },
 ]
-provides-extras = ["validation", "graph", "report", "docs", "dev"]
+provides-extras = ["graph", "report", "docs", "dev"]
 
 [[package]]
 name = "referencing"

@@ -1,18 +1,11 @@
 """
-pytest plugin: label each acceptance run from RDM's record (DI-57).
+pytest plugin: record which version of the code an acceptance run is evidence
+for, and who or what ran it.
 
-Allure organises results as epic → feature → story; RDM's record is user
-need → bounded context → design input. A test carries one tag,
-``@allure.story("DI-n")``. This plugin adds the rest at run time, from the
-record, with Allure's dynamic API:
+A test carries one tag, ``@allure.story("DI-n")``. The plugin adds no
+requirement labels of its own: the trace from a run to what it verifies is the
+tag, read by RDM from the results. At run time it adds:
 
-- ``epic``: each user need the design input traces to;
-- ``feature``: its bounded context;
-- ``link``: each Markdown document that declares it, at the commit under test —
-  its design document, where its user needs are declared (the V&V plan), and
-  the risk document of each risk it controls;
-- ``severity``: critical when the input controls a risk;
-- an attachment with the input's text;
 - ``commit``: the commit under test, and ``worktree=dirty`` when the working
   tree had uncommitted changes (DI-59);
 - once per run, Allure's ``executor.json`` and ``environment.properties`` in
@@ -38,8 +31,8 @@ from pathlib import Path
 
 import pytest
 
-from rdm.evidence.allure import COMMIT_LABEL, DIRTY, REQUIREMENT_ATTACHMENT, WORKTREE_LABEL, write_run_facts
-from rdm.kernel.git import head, repo_root, repository_url
+from rdm.evidence.allure import COMMIT_LABEL, DIRTY, WORKTREE_LABEL, write_run_facts
+from rdm.kernel.git import head, repo_root
 from rdm.specification.tags import DESIGN_INPUT_LABELS
 
 
@@ -50,31 +43,12 @@ def pytest_addoption(parser):
 
 @lru_cache(maxsize=4)
 def _record(dhf: str) -> dict:
-    """Design inputs, the documents that declare each id (repo-relative), and
-    the risks each input controls."""
-    from rdm.risk.register import risks
-    from rdm.specification.sdd import declarations, design_inputs
+    """The declared design-input ids, and the commit under test."""
+    from rdm.specification.sdd import design_input_ids
 
     path = Path(dhf)
-    root = (repo_root(path) or path.parent).resolve()
-    commit, dirty = head(root)
-
-    def rel(doc: Path) -> str:
-        return doc.resolve().relative_to(root).as_posix()
-
-    controls: dict[str, list[tuple[str, str]]] = {}
-    for risk in risks(path):
-        for control in risk.controls:
-            controls.setdefault(control, []).append((risk.id, rel(path.parent / risk.document)))
-    return {
-        "inputs": {di["id"]: di for di in design_inputs(path)},
-        "declared": {id_: list(dict.fromkeys(rel(path / d) for d in docs))
-                     for id_, docs in declarations(path).items()},
-        "controls": controls,
-        "web": repository_url(root),
-        "commit": commit,
-        "dirty": dirty,
-    }
+    commit, dirty = head((repo_root(path) or path.parent).resolve())
+    return {"inputs": set(design_input_ids(path)), "commit": commit, "dirty": dirty}
 
 
 def story_ids(item) -> list[str]:
@@ -84,23 +58,6 @@ def story_ids(item) -> list[str]:
            if str(getattr(m.kwargs.get("label_type"), "value", m.kwargs.get("label_type"))) in DESIGN_INPUT_LABELS
            for v in m.args]
     return list(dict.fromkeys(ids))
-
-
-def _documents(record: dict, di: str) -> list[tuple[str, str]]:
-    """(link name, repo-relative Markdown path), one per document that
-    declares the input: its design document, the V&V plan (or wherever) its
-    user needs are declared, and the risk document of each risk it controls.
-    One link per document (Allure keeps one link per URL), named for the ids it
-    declares. None without a web remote and a commit to pin them to."""
-    if not (record["web"] and record["commit"]):
-        return []
-    found = [(di, doc) for doc in record["declared"].get(di, [])]
-    found += [(need, doc) for need in record["inputs"][di]["traces_to"] for doc in record["declared"].get(need, [])]
-    found += [(risk, doc) for risk, doc in record["controls"].get(di, [])]
-    ids: dict[str, list[str]] = {}
-    for id_, doc in found:
-        ids.setdefault(doc, []).append(id_)
-    return [(f"{', '.join(names)} in {doc}", doc) for doc, names in ids.items()]
 
 
 _RUN_RECORDED = pytest.StashKey[bool]()
@@ -167,7 +124,7 @@ def pytest_runtest_call(item):
 
 
 def _label(item) -> None:
-    """Label a tagged test's result from the record (DI-57, DI-59, DI-65)."""
+    """Label a tagged test's result with the commit under test (DI-59, DI-65)."""
     try:
         import allure
     except ImportError:
@@ -185,15 +142,3 @@ def _label(item) -> None:
         allure.dynamic.label(COMMIT_LABEL, record["commit"])
         if record["dirty"]:
             allure.dynamic.label(WORKTREE_LABEL, DIRTY)
-    for di in declared:
-        requirement = record["inputs"][di]
-        for need in requirement["traces_to"]:
-            allure.dynamic.epic(need)
-        allure.dynamic.feature(requirement["context"])
-        for name, doc in _documents(record, di):
-            allure.dynamic.link(f"{record['web']}/blob/{record['commit']}/{doc}", name=name)
-        if di in record["controls"]:
-            allure.dynamic.severity(allure.severity_level.CRITICAL)
-        allure.attach(f"{di} ({requirement['context']}): {requirement['text']}\n"
-                      f"Traces to: {', '.join(requirement['traces_to']) or '—'}\n",
-                      name=REQUIREMENT_ATTACHMENT.format(di), attachment_type=allure.attachment_type.TEXT)

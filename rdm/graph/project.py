@@ -10,8 +10,6 @@ a query can always tell where a fact came from:
 - ``tests``      — verification tags found in test sources
 - ``executions`` — Allure results, when given
 - ``git``        — each design document's latest commit
-- ``architecture`` — the C4 model of the architecture workspace (DI-67)
-- ``code``       — Python imports between components' code (DI-67)
 - ``checklists`` — requested regulatory checklists, as data (DI-37)
 - ``references`` — documents' ``[[…]]`` tags linked to the clauses they name
 - ``manual``     — the user manual's pages, the design inputs they name, their test examples (DI-77)
@@ -31,7 +29,6 @@ from urllib.parse import quote
 
 import pyoxigraph as ox
 
-from rdm.graph.c4 import project_architecture
 from rdm.graph.manual import project_manual
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
 from rdm.evidence.allure import full_name, reconcile
@@ -82,7 +79,6 @@ class _Dataset:
     def __init__(self, project: str):
         self.base = f"urn:dhf:{_slug(project)}:"
         self.quads: list[ox.Quad] = []
-        self.component_labels: list[tuple[ox.NamedNode, str]] = []  # (run, key): resolved against the C4 model
 
     def node(self, kind: str, local: str) -> ox.NamedNode:
         return _term(self.base + kind + "/" + quote(local, safe="/-._~"))
@@ -168,8 +164,6 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         doc = doc_by_path.get(_rel(path, root))
         if doc is not None:
             ds.add(doc, rdm("describes"), ctx, g)
-            for view in sorted(set(_VIEW_IMAGE.findall(path.read_text(encoding="utf-8", errors="ignore")))):
-                ds.add(doc, rdm("showsView"), view, g)  # DI-68: does it show its component view
     for path, refs in realises_by_context(dhf).items():
         for ref in sorted(refs):
             ds.add(ds.node("context", context_of(path)), rdm("realises"), ds.node("input", ref), g)
@@ -186,8 +180,6 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
             ds.add(node, rdm("declaredIn"), declaring(di["id"]), g)
 
 
-# The image of an architecture view a document shows: c4/views/<key>.svg.
-_VIEW_IMAGE = re.compile(r"c4/views/([A-Za-z0-9_-]+)\.svg")
 
 def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> None:
     """DI-58: the bounded contexts a document's ``contexts`` frontmatter
@@ -414,20 +406,12 @@ def project(
     project_name: str | None = None,
     checklists: list[str] | None = None,
     infer: bool = False,
-    unit_coverage: Path | None = None,
 ) -> list[ox.Quad]:
     """The record as quads, de-duplicated, in a stable order. ``checklists``
     (built-in names or files) adds the checklists and references graphs;
     ``infer`` adds what the vocabulary's rules derive, in the inferred graph
-    (DI-62); ``unit_coverage``, the unit tests' coverage report, adds each
-    measured component's lines run and measured (DI-67). Raises ValueError
-    when that report cannot be read."""
+    (DI-62)."""
     dhf = Path(dhf_dir).resolve()
-    coverage = None
-    if unit_coverage is not None:
-        from rdm.release.verify import unit_coverage as component_coverage
-
-        coverage = component_coverage(dhf, Path(unit_coverage))
     repo = repo_root(dhf.parent)
     root = repo or dhf.parent
     results = Path(allure_results_dir) if allure_results_dir is not None and Path(allure_results_dir).exists() else None
@@ -443,7 +427,6 @@ def project(
     if repo is not None:
         _git(ds, dhf, root)
     _risks(ds, dhf, root, verified)
-    project_architecture(ds, dhf, root, rdm, coverage)  # after the runs: their source files belong to components
     if checklists:
         from rdm.graph.checklists import checklist_quads, reference_quads
 

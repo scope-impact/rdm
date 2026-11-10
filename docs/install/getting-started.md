@@ -11,50 +11,39 @@ cd your-repo
 rdm adopt .
 ```
 
-`rdm adopt` lays down only the control surface and never overwrites a file,
-so running it again changes nothing:
+`rdm adopt` lays down only what RDM reads and runs, and never overwrites a
+file, so running it again changes nothing:
 
 | Path | Role |
 |---|---|
-| `dhf/` | the design history file: the V&V plan, a design document template for your first bounded context, the design review, the traceability-matrix template, the render configuration (`dhf/config.yml`) |
-| `dhf/AGENT_WORKFLOW.md` | the change procedure, for people and agents: [Changing the record](../use/changing-the-record.md) |
-| `.githooks/` | the design gate as git hooks (pre-commit, pre-merge-commit): implementation commits and merges wait until the design is approved |
+| `dhf/` | the design history file: the V&V plan, the traceability-matrix template, the render configuration (`dhf/config.yml`) and a README |
 | `.gitignore` | what RDM generates (Allure results, verification data, the graph store, bytecode); if you have one, it is kept and the lines to add are printed |
-| `.claude/settings.json`, `scripts/agent-bootstrap.sh` | agent sessions turn the hook on themselves |
 | `.github/workflows/design-controls.yml` | CI through RDM's [reusable gates](../use/ci.md), pinned to this release; it runs on pushes to `main`, so change the branch if yours is another |
 
-It prints the next steps. The templates carry `TODO` markers, so the design
-gate stays red until you write and commit your record: that is the honest
-starting state, not an error.
+It prints the next steps.
 
-### Your first passing design gate
+### Your first passing release gate
 
-1. Turn the hooks on in this clone: `git config core.hooksPath .githooks`.
-2. Register your first user need in
+1. Register your first user need in
    `dhf/documents/verification_and_validation_plan.md` (`user_needs:`, an
    `id` such as `UN-001` and its text), and replace its `TODO` markers.
-3. Rename `dhf/documents/design/example_context.md` after your first bounded
-   context, set its `context:` to the same name, and replace its `TODO`
-   markers.
-4. Fill in `dhf/documents/design_review.md`: what you reviewed, and the
-   disposition. Replace every `TODO` marker.
-5. Declare your first design input:
-   `rdm story new-input --dhf dhf --context <context> --text "<the system shall …>" --traces-to UN-001`.
-   It also writes a failing test stub under `tests/acceptance/`: that is
-   implementation, so leave it out of the next commit.
-6. Commit the record alone (`git add dhf && git commit`), then run
-   `rdm story design-gate --dhf dhf`. It prints `Design gate PASSED`, and
-   the hook now lets the stub test and your code be committed.
-7. Open a pull request: its review by someone other than you is the
-   approval. Then continue with [Changing the record](../use/changing-the-record.md).
+2. Declare the design inputs that refine it in a design document: a
+   Markdown file under `dhf/documents/design/` whose frontmatter has
+   `kind: design`, `context:` and `design_inputs:` (each an `id` such as
+   `DI-1`, its `text` and the needs it `traces_to`); see
+   [Design inputs and tests](../use/design-inputs-and-tests.md).
+3. Tag the acceptance test that verifies each one with
+   `@allure.story("DI-1")`, and run the suite with Allure.
+4. Run `rdm story release-gate --dhf dhf --allure-results dhf/allure-results`.
+   It passes once every design input has a passing tagged run and every
+   user need is addressed.
+5. Open a pull request: its review by someone other than you is the
+   approval. Then set `acceptance-tests` and `release-gate` to `true` in the
+   CI workflow.
 
-Adopting is a ratchet: new work is gated from day one, and the existing code
-is brought in context by context, riskiest first. Declare only the design
-inputs you can verify in the same change. Where an existing acceptance-level
-test (one that checks a requirement end to end) already verifies a design
-input, tag it with the input's id rather than writing a new one; unit tests
-stay untagged. The design gate warns on each design input that still has no
-tagged test.
+Where an existing acceptance-level test (one that checks a requirement end
+to end) already verifies a design input, tag it with the input's id rather
+than writing a new one; unit tests stay untagged.
 
 ## A new project: `rdm init`
 
@@ -65,8 +54,8 @@ cd regulatory
 
 `rdm init` scaffolds a whole documentation project: the document templates
 (the design-controls set, 510(k) documents and more), data files, render
-config, the Pandoc and Typst setup, a `Makefile` and a Docker setup, the
-change procedure (`AGENT_WORKFLOW.md`) and a `.gitignore`, and prints the
+config, the Pandoc and Typst setup, a `Makefile`, a Docker setup and a
+`.gitignore`, and prints the
 next steps. Start with `data/device.yml`, your device's facts;
 documents are Markdown with Jinja2 under `documents/`. Every placeholder is
 yours to replace: lines starting `TODO`, and `TODO … ENDTODO` blocks.

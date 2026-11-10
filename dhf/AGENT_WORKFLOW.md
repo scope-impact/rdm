@@ -32,7 +32,8 @@ chain of evidence:
 Whether the test actually *means* anything is judged by a human: the change
 lands through a pull request that a reviewer other than the author approves.
 
-Every arrow is checked by a gate. A change is **complete** when:
+Every arrow but the approval is checked by a gate; the reviewer checks the
+approval. A change is **complete** when:
 
 1. its behavior is stated as a **design input** (`DI-n`) tracing to a **user
    need** (`UN-nnn`) — so anyone can ask *why does this code exist?* and get an
@@ -75,18 +76,16 @@ Does the change alter what RDM does (behavior, CLI, output, gate logic)?
 
 Each step says **why** it exists, **do** exactly what, and **done when** you
 can verify it. The commands assume the repo root; agent sessions have
-dependencies synced and the local gate active automatically (session bootstrap).
+dependencies synced automatically (session bootstrap).
 
 ### Step 0 — see the landscape
 
-**Do:**
-```bash
-uv run rdm story new-input --dhf dhf --list
-```
-This prints the bounded contexts, every taken `DI` id, the next free id, and
-the registered user needs — the vocabulary you need for every step below.
-An agent with the `rdm` MCP server (`.mcp.json`) can also `trace` a UN, DI
-or risk id, or `query` the record, read-only, before changing anything.
+**Do:** read `dhf/documents/architecture.md` (the bounded contexts), the
+`design_inputs` of the design documents under `dhf/documents/design/` (the
+taken `DI` ids; the next id is one above the highest) and the `user_needs`
+of `dhf/documents/verification_and_validation_plan.md`. An agent with the
+`rdm` MCP server (`.mcp.json`) can `trace` a UN, DI or risk id, or `query`
+the record, read-only, before changing anything.
 
 ### Step 1 — the user need (the WHY)
 
@@ -98,7 +97,7 @@ validated journey gets a new `UN-nnn`, added to the `user_needs` frontmatter of
 `dhf/documents/verification_and_validation_plan.md` **plus** a row in that
 file's validation-approach table.
 
-**Done when:** the need you'll cite appears in `--list` output above.
+**Done when:** the need you'll cite is in the V&V plan's `user_needs`.
 
 ### Step 2 — declare the design input (the WHAT)
 
@@ -109,14 +108,8 @@ must be accepted on its own is a separate design input: write one `shall`, and
 never join with "and" two behaviours that could be accepted apart — a joined
 text invites a test of one half (Design Review 59).
 
-**Do:**
-```bash
-uv run rdm story new-input --dhf dhf \
-  --context <ctx> --text "RDM shall <what it must do>, …" --traces-to UN-nnn
-```
-This allocates the next `DI-n`, inserts it into that context's `design_inputs`
-frontmatter, writes a stub tagged test (it *fails on purpose* — see step 5),
-and prints your remaining checklist. Then, by hand, describe the intended
+**Do:** add the next `DI-n` to the owning context's `design_inputs`
+frontmatter, with its `text` and `traces_to`, and describe the intended
 output in that document's `## Design Outputs`, naming the input by id. The
 frontmatter is the input's only statement: the body never restates it. A context that helps realise an input owned elsewhere lists it under
 `realises` — an input is declared once, never duplicated.
@@ -127,23 +120,20 @@ its owning context.
 ### Step 3 — commit the design docs FIRST (the approval)
 
 **Why:** §820.30 requires design review before implementation; here the
-reviewed, committed doc *is* the approval. The pre-commit hook enforces the
-order: implementation commits are blocked while the design record is
-incomplete or uncommitted — but committing *only* design docs is always
-allowed (that's how they become approved).
+reviewed, committed doc *is* the approval. No hook enforces the order any
+more (Design Review 72): the pull-request reviewer reads the commits in
+order, so commit the design record before the code it governs.
 
 **Do:**
 ```bash
 git add dhf/ && git commit -m "Approve design record: DI-n <what>"
 ```
 
-**Done when:** `uv run rdm story design-gate --dhf dhf` prints `PASSED`.
-
 ### Step 4 — implement (the HOW)
 
 **Do:** build what the `## Design Outputs` prose names. If you discover the
-design was wrong, edit the design doc — the gate re-opens until the edit is
-committed. That friction is the feature: the record stays true.
+design was wrong, edit the design doc in its own commit: the record stays
+true.
 
 ### Step 5 — make the test real (the PROOF)
 
@@ -151,17 +141,16 @@ committed. That friction is the feature: the record stays true.
 verifies it ("live BDD") — there is no separate spec to drift out of date. The
 test's verification steps are its own: one for each thing the design input
 requires, but never criteria of their own (a part that must be accepted
-separately is a separate design input). The scaffolded stub fails on purpose so
-the release gate stays honestly red until real proof exists; a stub that
-passed would be a lie the pipeline could not see.
+separately is a separate design input). Until a passing test exists, the
+release gate stays honestly red: the input is untested.
 
-**Do:** replace the stub body in `tests/acceptance/` with real assertions
-against the real code path — **one verification step for each thing the DI text requires** —
-keeping the tag and naming the C4 component it exercises:
+**Do:** write the test in `tests/acceptance/`, with real assertions against
+the real code path — **one verification step for each thing the DI text
+requires** — tagged with the input:
 
 ```python
 @allure.story("DI-n")                      # the link the whole chain hangs on
-@allure.label("component", "<c4 key>")    # the component it exercises (dhf/c4/workspace.dsl)
+@allure.label("output", "<source file>")  # optional: the code it exercises
 def test_<behavior>(...):
     """DI-n: <the requirement in one line>."""
     with verification_step("<what this step checks>"):   # tests/acceptance/evidence.py
@@ -173,10 +162,8 @@ def test_<behavior>(...):
 A named verification step makes a failure say what it checked; an attachment
 keeps what the assertion looked at. The steps belong to the test, never to the
 criterion. Declare only the story: `rdm.pytest_plugin` (hooked in
-`tests/acceptance/conftest.py`) labels every run from the record with Allure's
-API — epic (user need), feature (context), links to the Markdown that declares
-it (design document, V&V plan, risk document) at the commit, severity critical for a risk control, and the design input's text
-as an attachment. Never hand-write `@allure.feature`/`@allure.epic` for these. This is for acceptance
+`tests/acceptance/conftest.py`) labels every run with the commit under test
+and records who ran it and where. This is for acceptance
 (end-to-end) tests only: unit tests carry no Allure tags, steps or
 attachments. Both land in the Allure results, which the release
 bundle retains and the graph projects (`trace` lists them).
@@ -185,8 +172,8 @@ bundle retains and the graph projects (`trace` lists them).
 verifies a design input, read that input's text. If the text does not state
 what the new step checks, the step does not belong there yet: amend the text,
 or declare a new design input with its own test, in the same design review
-entry as the fix. Never let a test grow past its text — that is how DI-2's
-test reached fourteen steps under a text that named none of them (Design
+entry as the fix. Never let a test grow past its text — that is how the
+design gate's test (DI-2, removed in Design Review 72) reached fourteen steps under a text that named none of them (Design
 Review 59).
 
 **Done when:** `uv run pytest tests/acceptance -q` passes, and each step
@@ -195,20 +182,14 @@ checks something the input's text states.
 ### Step 6 — run the gates as CI will
 
 ```bash
-uv run rdm story design-gate --dhf dhf
-uv run coverage run --source=rdm -m pytest tests --ignore=tests/acceptance -q   # unit tests, under coverage
-uv run coverage xml -q -o dhf/data/unit-coverage.xml
 uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
-uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml \
-  --unit-coverage dhf/data/unit-coverage.xml
+uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
-The unit tests' coverage is unit-test evidence the matrix shows beside the
-design inputs; it never verifies one (Design Review 63).
 Plus the general suite: `uv run pytest tests`, `uv run ruff check .`, and
 `uv run --extra docs mkdocs build --strict` if docs changed.
 
-**Done when:** all four print `PASSED` (the matrix can then be rendered from
+**Done when:** the release gate prints `PASSED` (the matrix can then be rendered from
 the generated data: `uv run rdm render dhf/documents/traceability_matrix.md
 dhf/config.yml dhf/data/verification.yml` — generated output, never hand-edited).
 
@@ -219,12 +200,7 @@ a reviewer other than the author reads each DI's text against its tagged test
 and asks whether the test would fail if the behavior broke — a tautology, a
 mocked-out code path, or a test that checks two of the three things the DI
 requires is a reason to request changes. To check rather than eyeball, break
-one of them and run its test:
-
-```bash
-uv run rdm story mutation-probe --file <impl> --find '<code it requires>' \
-  --replace '<one-line break>' --test <test_name>   # KILLED = the test catches it
-```
+one of them by hand and run its test: it must fail.
 
 The reviewer says, in the review, that each changed design input's text was
 read beside its test (the pull-request template asks). Keep a fix pull request
@@ -244,30 +220,10 @@ merge commits only, as `examples/github-document-control/` does
 
 No gate judges whether a test proves its design input; a person does. Before
 each release, read every design input with its whole chain — its user needs,
-its design prose, its tagged test and that test's verification steps, its
-component labels and its last run — and record what was found and decided as a
+its design prose, its tagged test and that test's verification steps, and
+its last run — and record what was found and decided as a
 design review, one input at a time (Design Review 58 is the first). Changes it
 asks for go through this loop like any other.
-
-## A worked example — from this repository's own history
-
-`rdm story new-input` itself was added exactly this way; every artifact is in
-the repo to inspect:
-
-| Step | What happened | Where to look |
-|---|---|---|
-| 1 | UN-010 registered ("a contributor is guided to author a fully traced design input") | `verification_and_validation_plan.md` frontmatter |
-| 2 | DI-22 declared in the scaffolding context (since Design Review 30, `specification`), its text requiring six behaviours | `dhf/documents/design/specification.md` |
-| 3 | Design docs committed *before* any code | commit `Approve design record: UN-010, DI-22, …` |
-| 4–5 | Implementation + tagged test | `rdm/gates/new_input.py` (since Design Review 32, `rdm/specification/new_input.py`), `tests/acceptance/test_scaffolding.py` |
-| 6–7 | All gates green, pushed, PR reviewed | CI run on the PR |
-
-History: at the time, an independent review step (the since-retired
-faithfulness gate, Design Review 4) found that the test passed with a
-one-context fixture even though a mutant ignoring `--context` survived; the
-author strengthened the fixture to two contexts (commit `Strengthen the DI-22
-test …`). That kind of gap — a passing test that does not prove what its DI requires — is
-now the PR reviewer's to catch.
 
 ## Hard rules
 
@@ -275,9 +231,8 @@ now the PR reviewer's to catch.
 |---|---|
 | Never hand-edit the traceability matrix | it is generated from executed results; edits would be fiction |
 | Never approve a PR you authored | self-review over-rates; independence is the entire point of the PR review |
-| Design docs commit before implementation | the commit is the approval; the hook and CI enforce the order |
+| Design docs commit before implementation | the commit is the approval; the reviewer reads the order |
 | Allure tags, steps and attachments go in acceptance tests only | unit tests are not evidence of record; `tests/allure_scope_test.py` holds the line |
-| Code coverage stays with the unit tests, never in Allure | acceptance evidence proves design inputs end to end; which lines ran is a unit-level measure |
 | Merge PRs with a merge commit, never squash or rebase | a squash erases the design-before-code order the record-first commits prove |
 | A DI is declared once; other contexts use `realises` | duplicated requirements drift apart |
 | A test checks only what its DI's text states | a step the text does not state is a requirement nobody approved |
@@ -286,16 +241,11 @@ now the PR reviewer's to catch.
 | `dhf/allure-results/`, `dhf/data/` are generated, gitignored | evidence is produced by running, not by committing |
 | Backlog/issues/plans are never cited as evidence | plan-vs-record boundary; the record is SDD + Allure + git |
 | Backlog task files change only via the `backlog` CLI | see `AGENTS.md` |
-| `RDM_SKIP_DESIGN_GATE=1` is for emergencies, and CI still runs everything | the bypass is loud and local-only |
 
 ## When a gate fails
 
 | Failure message (abridged) | It means | Fix |
 |---|---|---|
-| design-gate: *unresolved placeholders* | `TODO`/`ENDTODO` left in a design doc | finish the doc |
-| design-gate: *uncommitted changes* | a design doc is edited but not committed | commit it (that commit is the approval) |
-| pre-commit: *commit blocked* | implementation staged while the design gate fails | fix/commit the design record first |
-| pre-commit: *'rdm' not on PATH … blocked* | gate runner missing | `uv sync --all-extras` (elsewhere: `uv tool install "rdm @ git+https://github.com/scope-impact/rdm"`; PyPI's `rdm` is another project) |
 | release-gate: *DI-n untested* | no executed result for the tag | write/tag the test, re-run the acceptance suite |
 | release-gate: *DI-n failed* | the tagged test failed | fix the implementation (or the test) |
 | release-gate: *user need addressed by no design input* | a UN nothing traces to | add a DI with `traces_to`, or remove the need |

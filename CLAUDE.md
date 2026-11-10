@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development
 
 ```bash
-uv sync --all-extras          # Install all dependencies (dev, graph, docs, validation)
+uv sync --all-extras          # Install all dependencies (dev, graph, docs, report)
 uv run pytest tests            # Run all tests
 uv run pytest tests/render_test.py::test_invert_dependencies  # Run single test
 uv run ruff check .            # Lint
@@ -38,10 +38,11 @@ broken link or missing nav entry — run it the way CI does.
 RDM's own development is governed by RDM's record-first design controls. RDM is
 the product under control; its DHF lives in `dhf/` (see `dhf/README.md`).
 **`dhf/AGENT_WORKFLOW.md` is the canonical end-to-end procedure** — the
-decision tree, the 7-step loop, and the gate-failure fixes. Scaffold a new
-design input with `uv run rdm story new-input` (`--list` shows contexts, taken
-ids, and user needs). When changing RDM, you are working inside that DHF's
-scope:
+decision tree, the 7-step loop, and the gate-failure fixes. Declare a new
+design input by hand in its owning context's `design_inputs` frontmatter.
+RDM audits a specification rather than authoring one (ADR 0002, Design
+Review 72): it has no design gate, git hooks or `new-input` any more. When
+changing RDM, you are working inside that DHF's scope:
 
 - **The record** — one `kind: design` document per bounded context under
   `dhf/documents/design/` (one per context; `architecture.md` lists them),
@@ -62,18 +63,11 @@ scope:
   Use its terms and avoid the ones it lists under _Avoid_; when a term is
   resolved or changes, update `CONTEXT.md` in the same change (the
   domain-modeling skill).
-- **Local gate** — the design-gate pre-commit hook is committed in `.githooks/`
-  and activated automatically at session start (`.claude/settings.json` runs
-  `scripts/agent-bootstrap.sh`, which also syncs dependencies). Manual
-  activation, if ever needed:
-
-  ```bash
-  git config core.hooksPath .githooks
-  ```
-
+- **Session bootstrap** — `.claude/settings.json` runs
+  `scripts/agent-bootstrap.sh` at session start, which syncs dependencies.
 - **CI enforcement** — `.github/workflows/design-controls.yml` runs the full
-  pipeline on every push/PR: design-gate → acceptance tests (Allure) → verify →
-  release-gate. A change that leaves a DI unverified or breaks the design gate
+  pipeline on every push/PR: acceptance tests (Allure) → verify → release-gate
+  → graph validation → evidence bundle. A change that leaves a DI unverified
   fails CI.
 - **Independent verification is the pull-request review** — git is the
   controlled record, and a reviewer other than the author approves the PR.
@@ -87,20 +81,16 @@ scope:
 Run the gates locally exactly as CI does:
 
 ```bash
-uv run rdm story design-gate --dhf dhf
 uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
-uv run coverage run --source=rdm -m pytest tests --ignore=tests/acceptance -q   # unit tests, under coverage
-uv run coverage xml -q -o dhf/data/unit-coverage.xml
-uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml \
-  --unit-coverage dhf/data/unit-coverage.xml
+uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
 
 ## Architecture
 
 RDM keeps the design record of regulated software (IEC 62304 first) as Markdown and tests in git, in four parts:
-**Record** (needs, design inputs, checklists, tagged tests; changed only by a reviewed PR), **Gates** (design gate,
-release gate, gap analysis), **Graph** (the record as a read-only RDF graph for people and agents; never edited), and
+**Record** (needs, design inputs, checklists, tagged tests; changed only by a reviewed PR), **Gates** (release
+gate, gap analysis), **Graph** (the record as a read-only RDF graph for people and agents; never edited), and
 **Documents** (YAML data + Jinja2 templates → Markdown → PDF/DOCX via Pandoc/Typst). `dhf/documents/architecture.md`
 assigns each bounded context to a part. Agent skills live in scope-impact/agent-skills, not here.
 
@@ -111,9 +101,9 @@ layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 
 - `rdm/main.py` — the composition root: the `rdm` command; argparse subcommands dispatch to the contexts.
 - `rdm/kernel/` — the shared kernel: YAML and files (`util.py`), ids, git, frontmatter, the reconcile helpers.
-- `rdm/specification/` — the core: the record reader (`sdd.py`), test tags (`tags.py`), the design gate (including duplicate ids), `new-input`, hooks, `init`/`adopt` and their templates, validation records, persona runs.
-- `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`), `translate`, the mutation probe, the unit tests' code coverage (`unit_coverage.py`, never acceptance evidence); the plugin labels each run from the record.
-- `rdm/risk/`, `rdm/architecture/`, `rdm/compliance/` — the leaves: the risk register; the C4 model and `rdm c4 draw`; gap analysis and the built-in checklists.
+- `rdm/specification/` — the core: the record reader (`sdd.py`), test tags (`tags.py`), `init`/`adopt` and their templates, validation records.
+- `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`), `translate`; the plugin labels each run with the commit under test.
+- `rdm/risk/`, `rdm/compliance/` — the leaves: the risk register; gap analysis and the built-in checklists.
 - `rdm/release/` — the release gate and trace (`gate.py`), the verification data (`verify.py`).
 - `rdm/publishing/` and `rdm/md_extensions/` — templates and data to Markdown (`render.py`, two-pass, filters `invert_dependencies`, `join_to`, `md_indent`), snippets, the DMR index, the verification report, the evidence bundle; Markdown post-processing.
 - `rdm/graph/` — The design record projected into RDF (`rdm graph build | query | validate | serve | explorer-file | mcp`, extra `graph`): named graphs per source, embedded Oxigraph store, SHACL gate shapes, SPARQL endpoint for AWS Graph Explorer, and a read-only MCP server for agents (`agent.py`, registered in `.mcp.json`). See `docs/use/graph.md`.
@@ -121,7 +111,6 @@ layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 ### Optional extras
 
 - `graph` — `rdm/graph/` (pyoxigraph, oxigraph, pyshacl, mcp).
-- `validation` — Playwright, for the usability-persona runs.
 
 RDM ships no planning tooling: Backlog.md (below) is used through its own CLI,
 and nothing in RDM reads it (`docs/about/plan-vs-record.md`).

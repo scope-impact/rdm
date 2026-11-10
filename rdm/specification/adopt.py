@@ -1,15 +1,12 @@
 """
-Bring an existing repository under record-first design controls (DI-24).
+Bring an existing repository under RDM's audit (DI-24).
 
-`rdm adopt [target]` lays down the control surface into a repo that already
-has code: the DHF skeleton (V&V plan, per-context design template, design
-review, traceability-matrix template), the agent workflow runbook, the
-design-gate pre-commit hook, a session bootstrap, and a CI gate workflow.
+`rdm adopt [target]` lays down what RDM reads and runs into a repo that
+already has code: the DHF skeleton (V&V plan, traceability-matrix template,
+render config, README) and a CI workflow that runs RDM's gates.
 
 Existing files are skipped, never overwritten — adoption must not disturb the
-repository it is protecting, and re-running is safe (idempotent). The templates
-deliberately contain unresolved placeholder markers so the design gate stays
-red until the adopting team writes and commits its actual record.
+repository it is protecting, and re-running is safe (idempotent).
 """
 
 from __future__ import annotations
@@ -19,25 +16,17 @@ from importlib.resources import as_file, files
 from pathlib import Path
 
 from rdm.kernel.version import release_version
-from rdm.specification.hooks import DESIGN_GATE_HOOKS
-
-# Paths that must be executable at the destination.
-_EXECUTABLE = {"scripts/agent-bootstrap.sh", ".githooks/pre-commit", ".githooks/pre-merge-commit"}
 
 # A template that names RDM's own version is pinned to the RDM that adopts:
 # the CI workflow calls RDM's reusable gates at this release (DI-63).
 _VERSION_TOKEN = "{rdm_version}"
 
 NEXT_STEPS = """\
-Next steps (see dhf/AGENT_WORKFLOW.md for the full loop):
-  1. git config core.hooksPath .githooks   (agent sessions do this automatically)
-  2. Register your first user need in dhf/documents/verification_and_validation_plan.md
-  3. Rename dhf/documents/design/example_context.md for your first bounded
-     context and fill it in -- the design gate stays red until the record is
-     written and committed (that commit is the approval)
-  4. Declare your first design input: rdm story new-input --dhf dhf --list
-  5. Set acceptance-tests and release-gate to true in
-     .github/workflows/design-controls.yml once that first design input is verified\
+Next steps:
+  1. Register your user needs in dhf/documents/verification_and_validation_plan.md
+  2. Tag each acceptance test with the requirement it verifies
+  3. Set acceptance-tests and release-gate to true in
+     .github/workflows/design-controls.yml once the first tagged test passes\
 """
 
 
@@ -54,12 +43,10 @@ def _copy_if_absent(src: Path, dest: Path, rel: str,
         skipped.append(rel)
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dest)  # the mode too: hooks and scripts stay executable
+    shutil.copy2(src, dest)
     text = src.read_bytes()
     if _VERSION_TOKEN.encode() in text:
         dest.write_bytes(text.replace(_VERSION_TOKEN.encode(), release_version().encode()))
-    if rel in _EXECUTABLE:
-        dest.chmod(dest.stat().st_mode | 0o755)
     copied.append(rel)
 
 
@@ -78,14 +65,6 @@ def adopt(target: Path) -> tuple[list[str], list[str]]:
             rel = _RENAMED.get(rel, rel)
             _copy_if_absent(src, target / rel, rel, copied, skipped)
 
-    # The design gate's hooks (pre-commit, and pre-merge-commit for merges) are
-    # copied from hook_files at adopt time so the gate has one source of truth.
-    # Only the design gate is installed -- the issue-reference hooks that
-    # `rdm hooks` also ships stay opt-in.
-    for name in DESIGN_GATE_HOOKS:
-        with as_file(files("rdm.specification") / "hook_files" / name) as hook_src:
-            _copy_if_absent(Path(hook_src), target / ".githooks" / name, f".githooks/{name}", copied, skipped)
-
     return copied, skipped
 
 
@@ -98,7 +77,7 @@ def adopt_command(target: str | None = None) -> int:
 
     copied, skipped = adopt(dest)
 
-    print(f"Adopting record-first design controls into {dest}\n")
+    print(f"Adopting RDM into {dest}\n")
     if copied:
         print("Laid down:")
         for rel in copied:

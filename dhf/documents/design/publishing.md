@@ -17,9 +17,6 @@ design_inputs:
   - id: DI-16
     text: "RDM shall extract delimited code snippets from source files (RDOC/ENDRDOC), keyed by name, for inclusion in documents."
     traces_to: [UN-001]
-  - id: DI-79
-    text: "RDM's user manual shall show each tagged-test example naming the C4 component it exercises by a component label."
-    traces_to: [UN-018]
   - id: DI-80
     text: "RDM's instructions for use shall be one manual whose controlled document lists its pages in reading order: a cover naming the product, the release it is for (filled in by the build: the release tag it is built from, or the development version otherwise), and the manual's own id and revision; then what RDM is for (its intended use); how it works; limits and risks; install; quick start; guides (the operating instructions); troubleshooting; reference; and changelog (the revision history)."
     traces_to: [UN-018]
@@ -54,13 +51,6 @@ fed back into it.
 
 ## Design Outputs
 
-The design outputs are this context's architecture, in the C4 model of the
-architecture workspace: its components, what each is responsible for, and
-how they relate. They name components, never source code: the workspace maps
-each component to its code.
-
-![Components: publishing](../../c4/views/C3_publishing.svg)
-
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
 | Renderer | Fills a template with the data files as its context, each under its file name, in one or two passes, and post-processes the result; refuses a value the data does not supply, and `join_to` an id its table lacks | DI-7, DI-8 |
@@ -70,12 +60,12 @@ each component to its code.
 | DMR index | Writes one index entry per controlled document from its frontmatter | DI-29 |
 | Verification report | Builds the report's data from the record and the results it is given, and has it laid out as a PDF | DI-64 |
 | Report layout | Sets the report's pages, every value as text | DI-64 |
-| Evidence bundle | Writes the retained release evidence, the verification report among it, and, given the unit tests' coverage report, carries it as verify does and keeps it; refuses a record with no matrix template before writing anything | DI-64; realises DI-30 |
+| Evidence bundle | Writes the retained release evidence, the verification report among it; refuses a record with no matrix template before writing anything | DI-64; realises DI-30 |
 | PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | realises part of DI-63 |
-| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; each tagged-test example names its component by key; chapters in the order of an IFU, a cover naming its release and revision, and each residual risk disclosed | DI-79, DI-80, DI-81, DI-82 |
+| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; chapters in the order of an IFU, a cover naming its release and revision, and each residual risk disclosed | DI-80, DI-81, DI-82 |
 | Docs build hooks | Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual | — |
 
-The PDF action is in the Reusable gates container; the others are in `rdm`.
+The PDF action is reusable CI; the others run in the `rdm` command.
 
 The rules a reviewer needs to judge the design:
 
@@ -181,8 +171,6 @@ template's context, keeps the words of the first pass, and post-processes the
 Markdown with the extensions, which give the second pass the first pass's
 words (so a glossary includes only the terms a document uses).
 
-![Scenario: rendering a document](../../c4/views/D_publishing_render.svg)
-
 ## Commands and events
 
 Each row: the actor issues the command, resulting in its success event or a
@@ -201,6 +189,5 @@ Layer 5 of the dependency rule, a read model: it depends on every context it
 publishes from — `release` (the verification data), `test_evidence` (the
 Allure reader), `specification` (the record reader and test tags), `risk`
 (the risk register) — and the shared kernel. Within the code, nothing
-depends on it but the composition root; in the architecture, the release
-context's Gates action calls the Evidence bundle from the Reusable gates
-container, as a command, not an import. No dependency breaks the rule.
+depends on it but the composition root; the release context's Gates action
+calls the Evidence bundle from reusable CI, as a command, not an import. No dependency breaks the rule.

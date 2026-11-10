@@ -124,7 +124,6 @@ nav:
       - V&V plan and user needs: dhf/documents/verification_and_validation_plan.md
       - System architecture: dhf/documents/architecture.md
       - Software design:
-              - Architecture: dhf/documents/design/architecture.md
               - Compliance: dhf/documents/design/compliance.md
               - Knowledge graph: dhf/documents/design/graph.md
               - Publishing: dhf/documents/design/publishing.md
@@ -138,3 +137,4 @@ nav:
       - Document control: dhf/documents/document_control.md
       - Instructions for use (IFU): dhf/documents/user_manual.md
       - "ADR 0001: user needs across bounded contexts": dhf/decisions/adr-0001-bounded-context-user-needs.md
+      - "ADR 0002: the spec lives with the factory; RDM audits it": dhf/decisions/adr-0002-spec-in-loyly-rdm-audits.md

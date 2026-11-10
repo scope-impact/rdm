@@ -9,7 +9,7 @@ coverage is proven by gap analysis. Every pull request runs RDM's reusable
 gates, and a release is published only when its commit is verified.
 
 It is laid out as `rdm init` and `rdm adopt` lay a project out, and it uses
-every part of RDM: see [RDM in this example](#rdm-in-this-example).
+RDM's gates, graph and documents: see [RDM in this example](#rdm-in-this-example).
 
 ```mermaid
 flowchart LR
@@ -57,7 +57,6 @@ flowchart LR
 | `.github/workflows/drift-audit.yml` | daily: `setup.sh --check`, failing on any difference from the checked-in configuration |
 | `.github/workflows/release-documents.yml` | on a `doc-*` tag: the tests and the release gate, the evidence bundle with its verification report, every document as PDF, a `git archive` of the set, and the device history record, all attached to the GitHub Release |
 | `tests/acceptance/` | one test file per context; each test reads the *real* configuration and renders the *real* documents, in named verification steps that attach what they checked |
-| `.githooks/`, `scripts/agent-bootstrap.sh`, `.claude/settings.json`, `dhf/AGENT_WORKFLOW.md` | what `rdm adopt` lays down: the pre-commit design gate, a session bootstrap, and the procedure every change follows |
 | `.mcp.json` | the record as a read-only MCP server for agents (`rdm graph mcp`) |
 | `pytest.ini`, `.gitignore` | make this directory pytest's root, so runs are labelled from this `dhf/`; keep results, copies and the graph store out of the worktree, so a run is of a clean commit |
 
@@ -95,22 +94,19 @@ Repository rulesets require a public repository or a paid plan on private ones.
 | RDM | Where |
 |---|---|
 | user needs, design inputs, bounded contexts, `realises`, the architecture | `dhf/documents/` |
-| `rdm story new-input` | DI-11 was scaffolded with it: `rdm story new-input --dhf dhf --context approval --traces-to UN-002,UN-004 --text "…"` |
 | risk policy and register, STRIDE threats, `linked`, residual acceptance, proposals | `dhf/documents/risk/` |
 | summative validation records | `dhf/validation/` |
 | tests tagged `@allure.story`, `output` labels, verification steps, `rdm.pytest_plugin` | `tests/acceptance/` |
-| the design gate (pre-commit and CI), verify, the release gate | `.githooks/`, `design-controls.yml`, `release-documents.yml` |
+| verify, the release gate | `design-controls.yml`, `release-documents.yml` |
 | RDM's reusable gates, pinned | `design-controls.yml` |
 | `rdm gap` with a checklist file | `record-checks`, DI-5 |
 | `rdm render`, the vocabulary and audit-note extensions, `make pdfs`, the PDF action | `dhf/Makefile`, `dhf/config.yml`, `release-documents.yml` |
 | `rdm story dmr` | `dhf/data/dmr.yml`, DI-7 |
 | the evidence bundle and the verification report | `release-documents.yml`, DI-10 |
 | the graph: `validate` with a checklist and your own shapes, `query`, `trace`, the MCP server, Graph Explorer | `record-checks`, `dhf/shapes/`, `.mcp.json`, below |
-| `rdm story mutation-probe` | below |
-| `rdm adopt` (agent workflow, hooks, session bootstrap) | `.githooks/`, `scripts/`, `.claude/`, `dhf/AGENT_WORKFLOW.md` |
+| `rdm adopt` (the DHF skeleton and the CI workflow) | `dhf/`, `design-controls.yml` |
 
-Not used, and why: `rdm story persona` needs a deployed web UI to drive (the
-V&V plan says how it would apply to UN-001); `rdm collect` and `rdm translate`
+Not used, and why: `rdm collect` and `rdm translate`
 feed the older `rdm init` templates, which this example does not use.
 
 ## Run it
@@ -119,7 +115,6 @@ From this directory, with
 `pip install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm" pytest allure-pytest`:
 
 ```bash
-rdm story design-gate --dhf dhf                 # record present, complete, approved
 pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
 rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
@@ -136,8 +131,6 @@ rdm story trace DI-11 --dhf dhf --allure-results dhf/allure-results
 rdm story dmr -o dhf/data/dmr.yml dhf/documents/procedures        # regenerate the DMR index data
 rdm graph query --dhf dhf "SELECT ?doc ?revision WHERE { ?doc <https://github.com/scope-impact/rdm/ns#revision> ?revision }"
 rdm graph explorer-file --dhf dhf --allure-results dhf/allure-results -o record.json   # load in AWS Graph Explorer
-rdm story mutation-probe --file .github/settings.json \
-  --find '"allow_squash_merge": false' --replace '"allow_squash_merge": true' --test test_merge_behavior
 ```
 
 An agent connected to `.mcp.json` can `trace` a risk (`RISK-DC-002`: its

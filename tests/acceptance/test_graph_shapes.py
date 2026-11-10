@@ -129,24 +129,6 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
         git_run(dhf.parent, "add", "-A")
         git_run(dhf.parent, "commit", "-qm", "change")
 
-    def unreadable_frontmatter(dhf):
-        (dhf / "documents" / "design" / "x.md").write_text(
-            "---\nid: SDS-X\nkind: design\ncontext: x\ndesign_inputs: [{id: DI-3\n---\n")
-        commit(dhf)
-
-    def malformed_declaration(dhf):
-        (dhf / "documents" / "design" / "y.md").write_text(
-            "---\nid: SDS-Y\nkind: design\ncontext: y\ndesign_inputs: {DI-3: {text: x}}\n---\n")
-        commit(dhf)
-
-    def uncommitted(dhf):
-        core = dhf / "documents" / "design" / "core.md"
-        core.write_text(core.read_text().replace("DI-1 text", "DI-1 weaker text"))
-
-    def no_review(dhf):
-        (dhf / "documents" / "design_review.md").unlink()
-        commit(dhf)
-
     def no_inputs(dhf):
         (dhf / "documents" / "design" / "core.md").write_text(
             "---\nid: SDS-1\nkind: design\ncontext: core\ndesign_inputs: []\n---\n# Core\n")
@@ -156,8 +138,7 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
     def unreadable_result(dhf):
         (dhf.parents[1] / "allure" / "cut-result.json").write_text('{"status": "failed", "labels": [')
 
-    for change in (unreadable_frontmatter, malformed_declaration, uncommitted, no_review, no_inputs,
-                   unreadable_result):
+    for change in (no_inputs, unreadable_result):
         with verification_step(f"what the release gate blocks about the whole record, the shapes block: "
                                f"{change.__name__.replace('_', ' ')}"):
             case = tmp_path / change.__name__

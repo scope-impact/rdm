@@ -3,8 +3,8 @@ name: Design controls
 # Every pull request to the default branch, and every push to it, runs the
 # design controls and the record checks (DI-9). The ruleset requires the two
 # checks this workflow reports, by these names:
-#   design-controls / gates    RDM's reusable gates: design gate, acceptance
-#                              tests, verify, release gate, graph validation
+#   design-controls / gates    RDM's reusable gates: acceptance tests,
+#                              verify, release gate, graph validation
 #                              with the Part 11 checklist, the evidence bundle
 #                              and the Allure report
 #   record-checks              the Part 11 gap analysis of the SOP (DI-5), and

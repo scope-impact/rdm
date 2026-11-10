@@ -27,12 +27,8 @@ commit is verified.
 
 ## Design Outputs
 
-The design outputs are this context's architecture, in the C4 model of the
-architecture workspace (`rdm c4 draw`): its components, what each is
-responsible for, and how they relate. The workspace maps each component to
-what implements it.
-
-![Components: release](../../c4/views/C3_release.svg)
+The design outputs are this context's components: what each is responsible
+for, and which design inputs it meets.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|

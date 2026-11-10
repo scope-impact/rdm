@@ -2,28 +2,9 @@
 id: SDS-001
 revision: 1
 title: Software Design Description
-kind: design
-# The per-context design document (ADR 0001): it carries BOTH the design inputs
-# it owns (§820.30(c), the "what") and the design output (§820.30(d), the "how").
-# Discovery keys on `kind: design` (never on filename), so author one such
-# document per bounded context and name it for the context. `rdm story
-# design-gate` reconciles the design inputs below against the @allure.story("DI-…")
-# tags in tests/, and each input's `traces_to` against the user-need registry in
-# the V&V plan. The needs this context serves follow from those `traces_to`.
-context: example-context
-design_inputs:           # the verifiable requirements this context OWNS
-  - id: DI-1
-    text: "TODO: state a verifiable requirement the design must satisfy."
-    traces_to: [UN-001]
-realises: []             # OPTIONAL: shared design inputs owned by another context
 ---
 
 # Purpose
-
-This is the **design document** for the *{{device.name}}* `example-context`
-bounded context. It captures both halves of design control in one place: the
-**design inputs** the context must satisfy (the *what*) and the **design output**
-(the *how*) — architecture, functional specifications, and UI.
 
 It describes *how* {{device.name}} shall fulfill the requirements described in the software requirements specification. It discusses the computation hardware the software will be expected run on, the software system's architecture, functional specifications associated with each software requirement, and user interface mockups.
 
@@ -39,11 +20,9 @@ This document applies to {{device.name}} release {{device.version}}.
 
 # Design Inputs
 
-[[Design inputs are the verifiable requirements the design must satisfy (ISO 13485:2016 7.3.3, 21 CFR 820.30(c)). They are declared as structured data in this document's `design_inputs` frontmatter; each refines the user need(s) it `traces_to` and is verified (§820.30(f)) by the test tagged `@allure.story("<id>")` — the test *is* the acceptance criterion ("live BDD").]]
+[[Design inputs are the verifiable requirements the design must satisfy (ISO 13485:2016 7.3.3, 21 CFR 820.30(c)).]]
 
-This context owns the design inputs listed in the frontmatter above. Everything from *System and Software Architecture Diagrams* onward is the **design output** (the *how*) that realises them.
-
-TODO: For each design input in the frontmatter, describe it here and confirm it is unambiguous, verifiable, and free of conflict with the others. Add a tagged test in `tests/` for each so `rdm story release-gate` can verify it.
+TODO: Name where the design inputs are specified and how each is verified by a tagged acceptance test, so `rdm story release-gate` can check every one of them against the executed results.
 
 ENDTODO
 

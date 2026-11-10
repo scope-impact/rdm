@@ -1,6 +1,6 @@
 name: RDM gates
 
-# Reusable: RDM's design controls for any repository's record (DI-63).
+# Reusable: RDM's gates for any repository's record (DI-63).
 #
 #   jobs:
 #     design-controls:
@@ -8,10 +8,9 @@ name: RDM gates
 #       with:
 #         rdm-ref: v2.0.0-alpha        # the same revision as after the @
 #
-# Runs the caller's acceptance tests, then the design gate, verify, the
-# release gate, graph validation and the release evidence bundle, with RDM
-# installed from the pinned revision of this repository, never from a package
-# index. RDM's own CI calls it too.
+# Runs the caller's acceptance tests, then verify, the release gate, graph
+# validation and the release evidence bundle, with RDM installed from the
+# pinned revision of this repository, never from a package index. RDM's own CI calls it too.
 on:
   workflow_call:
     inputs:
@@ -50,10 +49,6 @@ on:
       allure-results:
         type: string
         default: 'dhf/allure-results'
-      unit-coverage:
-        description: "The unit tests' code coverage report (Cobertura XML or LCOV) the test command wrote, for verify; optional"
-        type: string
-        default: ''
       release-gate:
         description: 'false until the first design input and its tagged test land'
         type: boolean
@@ -83,7 +78,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0   # the design gate and the graph read the history
+          fetch-depth: 0   # the graph reads the history
           persist-credentials: false
 
       - name: Check out RDM at the pinned revision
@@ -129,7 +124,6 @@ jobs:
           install-rdm: 'false'
           dhf: ${{ inputs.dhf }}
           allure-results: ${{ inputs.allure-results }}
-          unit-coverage: ${{ inputs.unit-coverage }}
           release-gate: ${{ inputs.release-gate }}
           graph-validate: ${{ inputs.graph-validate }}
           checklists: ${{ inputs.checklists }}

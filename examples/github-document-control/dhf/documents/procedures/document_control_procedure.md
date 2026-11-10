@@ -102,7 +102,7 @@ alongside the commits they sign.
 
 Rulesets enforce the required order of steps [[P11:11.10f]]: no direct pushes
 to `main`; a pull request must exist, the required status checks must pass
-(`design-controls / gates`: the design gate, the acceptance tests, verification,
+(`design-controls / gates`: the acceptance tests, verification,
 the release gate and graph validation; `part11-gap-analysis`: this procedure
 against the Part 11 checklist), and a code-owner approval must be current
 (stale reviews are dismissed on new pushes) before merging is possible.

@@ -44,11 +44,6 @@ release gate names every user need without an approved record, as a warning,
 because a machine cannot supply that judgment. A record is set to `approved`,
 with the reviewer and what was reviewed, only after the review took place.
 
-Formative evidence for UN-001 can come from an AI persona (an auditor) asked to
-find the current approved revision of a document, its approver and its history
-in the GitHub web UI of a deployed repository; `rdm story persona` reports such
-runs. This example has no deployed repository, so it records none.
-
-Formative evidence never gates release. This example is illustrative — it is
+This example is illustrative — it is
 not legal or regulatory advice, and summative Part 11 assessment for a real
 deployment remains the adopting organization's responsibility.

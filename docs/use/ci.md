@@ -6,7 +6,7 @@ never by name from a package index. (PyPI's `rdm` is another project.)
 
 | Piece | Use it for | Pinned as |
 | --- | --- | --- |
-| Reusable workflow `.github/workflows/gates.yml` | the whole job: your acceptance tests, then the design gate, verify, the release gate, graph validation and the evidence bundle | `scope-impact/rdm/.github/workflows/gates.yml@<ref>` |
+| Reusable workflow `.github/workflows/gates.yml` | the whole job: your acceptance tests, then verify, the release gate, graph validation and the evidence bundle | `scope-impact/rdm/.github/workflows/gates.yml@<ref>` |
 | Composite action `actions/gates` | the gates as steps in a workflow of your own, after your tests | `scope-impact/rdm/actions/gates@<ref>` |
 | Composite action at the root | rendering the documents to PDF, in the RDM image of the same release | `scope-impact/rdm@<ref>` |
 
@@ -59,7 +59,6 @@ environment variables, never spliced into the script text.
 | `acceptance-tests` | `true` | `false` until you have a tagged acceptance test |
 | `test-command` | `pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results` | |
 | `allure-results` | `dhf/allure-results` | where `test-command` writes its results |
-| `unit-coverage` | none | the unit tests' coverage report `test-command` wrote (Cobertura XML or LCOV), for verify: [unit-test evidence, never acceptance evidence](gates.md#unit-test-code-coverage-optional) |
 | `release-gate` | `true` | `false` until your first design input lands |
 | `graph-validate` | `true` | the gate rules as SHACL, plus graph-only warnings |
 | `checklists` | none | space-separated checklists for graph validation (`rdm gap --list`) |
@@ -76,7 +75,7 @@ A required status check on the caller's side is named after both jobs:
 
 A freshly adopted repository has no design input and no tests yet. The
 workflow `rdm adopt` lays down sets `acceptance-tests: false` and
-`release-gate: false`, so only the design gate runs. Set both to `true` when
+`release-gate: false`, so the release gate waits. Set both to `true` when
 your first design input and its tagged test land.
 
 ## The gates action, in a workflow of your own
@@ -97,7 +96,7 @@ language), run them your way, then add the gates as a step:
 
 The action installs RDM with the `graph` extra from its own revision, then
 runs the same steps the reusable workflow does. It takes the workflow's gate
-inputs (`dhf`, `allure-results`, `unit-coverage`, `release-gate`, `graph-validate`,
+inputs (`dhf`, `allure-results`, `release-gate`, `graph-validate`,
 `checklists`, `evidence-bundle`), plus `artifact-name`, `python-version`, and
 `install-rdm` (`false` when RDM is already installed from the same revision).
 Verify and the evidence bundle run only when there are Allure results.

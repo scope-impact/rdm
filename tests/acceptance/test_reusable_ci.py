@@ -142,11 +142,11 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
     dhf = _releasable(repo)
     (tmp_path / "runner").mkdir()
 
-    with verification_step("the gates action runs the design gate, verify, the release gate, graph validation "
-                           "and the evidence bundle on a record, and uploads the bundle"):
+    with verification_step("the gates action runs verify, the release gate, graph validation and the evidence "
+                           "bundle on a record, and uploads the bundle"):
         ran = _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
         attach("steps run", ran)
-        assert ran == ["Find the Allure results", "Design gate", "Verification data", "Release gate",
+        assert ran == ["Find the Allure results", "Verification data", "Release gate",
                        "Graph validation", "Release evidence bundle", "actions/upload-artifact"]
         assert (dhf / "data" / "verification.yml").is_file()
         assert any((tmp_path / "runner" / "rdm-evidence").iterdir())
@@ -154,18 +154,18 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         with pytest.raises(AssertionError, match=r"Graph validation:(?s:.*)P11:11\.10a: checklist clause"):
             _run_action(action, {"install-rdm": "false", "checklists": "part11_document_control"},
                         repo, tmp_path / "runner")
-    with verification_step("with the release gate off and no results yet, only the design gate runs"):
+    with verification_step("a gate that fails fails the action"):
+        write_allure_result(dhf / "allure-results", "r2", "failed", "DI-1")
+        with pytest.raises(AssertionError, match="Release gate"):
+            _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
+    with verification_step("with the release gate off and no results yet, no gate runs"):
         shutil.rmtree(dhf / "allure-results")
         assert _run_action(action, {"install-rdm": "false", "release-gate": "false", "graph-validate": "false"},
-                           repo, tmp_path / "runner") == ["Find the Allure results", "Design gate"]
-    with verification_step("a gate that fails fails the action"):
-        (dhf / "documents" / "design_review.md").unlink()
-        with pytest.raises(AssertionError, match="Design gate"):
-            _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
+                           repo, tmp_path / "runner") == ["Find the Allure results"]
     with verification_step("every rdm command the workflow and the actions run is one RDM's CLI accepts"):
         commands = [c for path in (GATES, WORKFLOW, PDF_ACTION) for c in _rdm_commands(path.read_text())]
         attach("rdm commands", [" ".join(c) for c in commands])
-        assert {tuple(c[:2]) for c in commands} >= {("story", "design-gate"), ("story", "verify"),
+        assert {tuple(c[:2]) for c in commands} >= {("story", "verify"),
                                                     ("story", "release-gate"), ("graph", "validate"),
                                                     ("story", "evidence-bundle")}
         for command in commands:

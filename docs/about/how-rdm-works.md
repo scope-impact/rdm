@@ -15,7 +15,7 @@ the same as a person.
 
 | Written (the record) | Derived (by RDM) |
 | --- | --- |
-| user needs, in the V&V plan | gate verdicts (design gate, release gate, gap analysis) |
+| user needs, in the V&V plan | gate verdicts (release gate, gap analysis) |
 | design inputs, in one design document per bounded context | the RDF graph, its SHACL validation, the agent server's answers |
 | the risk policy and risk register | the traceability matrix and verification data |
 | checklists, and `[[KEY]]` references in documents | rendered regulatory documents (PDF / DOCX) |
@@ -70,7 +70,7 @@ flowchart LR
 | **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (design inputs), residual, acceptance |
 | **Risk policy** | a document's `risk_policy:` | — | severities, probabilities, levels, acceptability |
 | **Checklist, clause** | a checklist file (text or RDF) | the clause key, e.g. `62304:5.2.2` | each clause's description; includes |
-| **Test** | an acceptance test function, `@allure.story("DI-n")` | `tests/x.py::test_y` | the design inputs it verifies; `@allure.label("component", …)` for the C4 component it exercises; optionally `@allure.label("output", …)`, a file path |
+| **Test** | an acceptance test function, `@allure.story("DI-n")` | `tests/x.py::test_y` | the design inputs it verifies; optionally `@allure.label("output", …)`, a file path it exercises |
 | **Test run** | an Allure result, written by running the tests | its uuid | nothing — it is recorded |
 | **Commit** | git | its sha | nothing — it is recorded |
 
@@ -80,18 +80,15 @@ Derived, never declared:
 | --- | --- |
 | a design input's owning context | the design document that declares it |
 | the user needs a context serves (`rdm:serves`) | its design inputs' `traces_to`, and those it `realises` |
-| the components a run reaches (`rdm:reaches`) | the components it names, and the C4 model's declared relationships |
 | the tests a file defines | the tagged functions in it |
 | which test a run ran | the run's full name, matched to the test function |
 | the commit a run tested | the `commit` label `rdm.pytest_plugin` writes at run time |
-| epic, feature and links in the Allure report | the record, at run time (`rdm.pytest_plugin`) |
 | a document's latest commit, and the commit that landed it | git history |
 | whether a design input is verified | the results of its tests' runs |
 | a risk's level and residual decision | its scores against the risk policy, and whether its controls are verified |
 | the traceability matrix | design inputs, user needs and test results |
 
-The order of a change (design input, approval, implementation, test, review)
-is the runbook: [Changing the record](../use/changing-the-record.md).
+How a change reaches the record: [Changing the record](../use/changing-the-record.md).
 
 ## A record-first repository
 
@@ -105,9 +102,7 @@ flowchart TD
             TESTS["tests/acceptance<br>@allure.story"]
         end
         subgraph enforce["enforcement — on by default"]
-            HOOK[".githooks/pre-commit<br>design gate before implementation"]
             CI["CI workflow<br>the gates on every push"]
-            RUNBOOK["dhf/AGENT_WORKFLOW.md<br>the procedure"]
         end
         subgraph plan["planning — never evidence"]
             PM["Backlog.md, issues, boards"]
@@ -117,7 +112,7 @@ flowchart TD
     style plan stroke-dasharray: 5 5
 ```
 
-`rdm adopt` lays down the record skeleton and the enforcement without
+`rdm adopt` lays down the record skeleton and the CI workflow without
 touching existing files ([get started](../install/getting-started.md)). Planning tools stay
 outside the record: [Plan vs. record](plan-vs-record.md).
 

@@ -3,10 +3,8 @@ id: VVP-001
 revision: 1
 title: Verification and Validation Plan
 # User-need registry: this product's validated journeys, defined ONCE here.
-# Design inputs, declared in the per-context design documents (kind: design),
-# refine them via `traces_to` (see AGENT_WORKFLOW.md). Register
-# a need in the same change as its first design input — the release gate
-# blocks any need nothing traces to.
+# Design inputs refine them via `traces_to`; the release gate blocks any
+# need nothing traces to.
 user_needs: []
 # e.g.:
 #   - id: UN-001
@@ -24,8 +22,7 @@ This document describes the plan regarding how {{device.name}} will be verified 
 The user needs {{device.name}} validates against are registered in this
 document's frontmatter (`user_needs`) — they are the validation anchors and
 the coverage denominator for the traceability gates (`rdm story
-release-gate`). Design inputs declared in the `kind: design` documents refine
-them via `traces_to`; see `AGENT_WORKFLOW.md` for the change procedure.
+release-gate`). Design inputs refine them via `traces_to`.
 
 # Scope
 

@@ -2,19 +2,18 @@
 id: SDS-SYS-001
 title: RDM System Architecture
 context: system
-# The bounded contexts, each with the part it belongs to (DI-58), and its
-# layer in the dependency rule: a context imports only contexts of a lower
-# layer, and the shared kernel. Each has one design document,
-# design/<context>.md; the table below describes them.
+# The bounded contexts, each with the part it belongs to (DI-58), its
+# layer in the dependency rule (a context imports only contexts of a lower
+# layer, and the shared kernel), and the code that implements it. Each has
+# one design document, design/<context>.md; the table below describes them.
 contexts:
-  - {id: specification, part: Record, layer: 2}
-  - {id: risk, part: Record, layer: 1}
-  - {id: architecture, part: Record, layer: 1}
-  - {id: test_evidence, part: Record, layer: 3}
-  - {id: release, part: Gates, layer: 4}
-  - {id: compliance, part: Gates, layer: 1}
-  - {id: graph, part: Graph, layer: 5}
-  - {id: publishing, part: Documents, layer: 5}
+  - {id: specification, part: Record, layer: 2, code: [rdm/specification/]}
+  - {id: risk, part: Record, layer: 1, code: [rdm/risk/]}
+  - {id: test_evidence, part: Record, layer: 3, code: [rdm/evidence/, rdm/pytest_plugin.py]}
+  - {id: release, part: Gates, layer: 4, code: [rdm/release/]}
+  - {id: compliance, part: Gates, layer: 1, code: [rdm/compliance/]}
+  - {id: graph, part: Graph, layer: 5, code: [rdm/graph/]}
+  - {id: publishing, part: Documents, layer: 5, code: [rdm/publishing/, rdm/md_extensions/]}
 # Below every context: any context may import it, and it imports none.
 kernel: rdm/kernel/
 # Wires the command line to every context; in no context.
@@ -31,11 +30,18 @@ read-only graph that people and agents query. This document holds **design
 only** — user needs live in the V&V plan; a context serves the needs its
 design inputs trace to (`traces_to`), so that is never declared twice.
 
+RDM audits a specification; it does not author one. Writing the
+specification and regenerating code from it belong to the factory that owns
+the spec (ADR 0002); RDM keeps gap analysis, and traceability and audit from
+the executed results. Design Review 72 removed what RDM had for authoring:
+the design gate and its git hooks, `rdm story new-input`, the C4
+architecture context, persona runs and the mutation probe.
+
 ## The four parts
 
 | Part | Responsibility | Writes to the record? |
 |------|----------------|-----------------------|
-| **Record** | read and scaffold the record: needs, design inputs, checklists, tagged tests, results, git | scaffolding only (`init`, `adopt`, `new-input`); every other change is a reviewed commit |
+| **Record** | read the record: needs, design inputs, checklists, tagged tests, results, git | scaffolding only (`init`, `adopt`); every other change is a reviewed commit |
 | **Gates** | pass/block decisions on the record | no |
 | **Graph** | the knowledge graph: the record as RDF, queried and validated; agents read it over MCP (`rdm graph mcp`) | no — rebuilt from the record, never edited |
 | **Documents** | regulatory documents rendered from the record | no |
@@ -44,38 +50,29 @@ Only people and agents change the record, and only through a reviewed pull
 request; the merge is the approval. Nothing RDM derives (graph, matrix,
 documents, evidence bundle) is edited by hand or fed back into the record.
 
-## System context (C1)
+## System context
 
-Who uses RDM and what it depends on. The architecture is one C4 model, the
-workspace [`c4/workspace.dsl`](../c4/workspace.dsl); each view is drawn from
-it (`rdm c4 draw`): the system context and the containers here, and each
-bounded context's components (C3) in its own design document. RDM reads the
-model (DI-66); warning where code, tests and the model disagree (DI-68) is
-not built yet.
-
-![System context: RDM](../c4/views/C1.svg)
-
-## Containers (C2)
-
-What runs or stores data. The bounded contexts are logical slices of these
-containers: most of their components run in `rdm`, the pytest plugin in the
-acceptance test run, and the reusable CI in GitHub Actions.
-
-![Containers: RDM](../c4/views/C2.svg)
+Who uses RDM: a regulatory author renders documents and checks them against
+checklists; a team runs the gates in CI on every change; an agent reads the
+record through the graph's MCP server; a reviewer reads the verification
+report and the evidence bundle. RDM runs as the `rdm` command, as a pytest
+plugin inside a project's acceptance run, and as reusable CI (a GitHub
+workflow and actions). It depends on git, on Allure results written by the
+project's test runner, and, to render PDFs, on Pandoc and Typst.
 
 ## Bounded contexts (one design document each), by part
 
 A bounded context is drawn where the language changes, not where the workflow
 does (`CONTEXT.md`): the stages of a design input's life (declared, approved,
 verified, released) are not contexts. Restructured in Design Review 30 from
-ten contexts named for what their code did or for a workflow stage.
+ten contexts named for what their code did or for a workflow stage. The code
+of each context is in the frontmatter (`code`).
 
 | Part | Context | Design document | Its language | Package |
 |------|---------|-----------------|--------------|---------|
-| Record | `specification` (core) | `design/specification.md` | user need, design input, tagged test, design review, approved, design gate | `rdm/specification/`: the record reader, test tags, design gate, `new-input`, hooks, `init`, `adopt`, validation records, persona runs |
+| Record | `specification` (core) | `design/specification.md` | user need, design input, tagged test | `rdm/specification/`: the record reader, test tags, `init`, `adopt`, validation records |
 | Record | `risk` | `design/risk.md` | hazard, harm, severity, probability, control, residual | `rdm/risk/` |
-| Record | `architecture` | `design/architecture.md` | person, software system, container, component, relationship, view | `rdm/architecture/`: the model reader, `rdm c4 draw` |
-| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's and xunit's words stop here | `rdm/evidence/`: Allure results, `translate`, the mutation probe; and `rdm/pytest_plugin.py` |
+| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's and xunit's words stop here | `rdm/evidence/`: Allure results, `translate`; and `rdm/pytest_plugin.py` |
 | Gates | `release` | `design/release.md` | verified, release gate, trace slice | `rdm/release/`: the release gate, the verification data; and the reusable CI |
 | Gates | `compliance` | `design/compliance.md` | standard, checklist, checklist clause, gap, coverage | `rdm/compliance/` |
 | Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule, derived relation | `rdm/graph/` |
@@ -92,42 +89,39 @@ command), `rdm/pytest_plugin.py` (imported by a project's `conftest.py`) and
 ## Dependency rule
 
 A context imports only contexts of a lower layer, and the shared kernel;
-nothing imports a context of the top layer. The layers are in the
-frontmatter, and a test fails on any import that breaks the rule, and on any
-module that no component of the workspace names
+nothing imports a context of the top layer. The layers and each context's
+code are in the frontmatter, and a test fails on any import that breaks the
+rule, and on any module no context's code holds
 (`tests/dependency_rule_test.py`).
 
 ```
  5  publishing · graph              read models: read every context, feed none back
  4  release                         decides: verified status, risk and validation → release
  3  test_evidence                   translates test results into runs of the record's tests
- 2  specification                   the core: needs, inputs, tagged tests, review, design gate
- 1  architecture · risk · compliance   leaves: their own languages, nothing but the kernel
+ 2  specification                   the core: needs, inputs, tagged tests
+ 1  risk · compliance               leaves: their own languages, nothing but the kernel
  0  shared kernel                   util · ids · git · frontmatter · reconcile
 ```
 
 The leaves sit below the core because the core uses them and they use
-nothing: the design gate checks the architecture views are fresh, the
-release gate applies the risk rules, and none of the three reads a design
-input. The evidence bundle renders the matrix and the verification report,
-so it is publishing's, and realises release's DI-30. The design gate's
-warnings about executed results are release's: release reads results to
-decide, so the composition root hands its warnings to the design gate's
-output, and the specification never reads results.
+nothing: the release gate applies the risk rules, and neither leaf reads a
+design input. The evidence bundle renders the matrix and the verification
+report, so it is publishing's, and realises release's DI-30.
 
 ## Flow
 
-Specification → its evidence, risks and architecture → Release decides (the
-design gate before implementation, the release gate before release; gap
-analysis against checklists) → the knowledge graph and the documents are
-derived from the same record. Agent skills (how to author design inputs, test-first,
-risk analysis) are maintained outside RDM, in `scope-impact/agent-skills`.
-RDM ships no planning tooling: tasks and issues live in their own tools,
-outside the record (see `docs/about/plan-vs-record.md`).
+Specification → its evidence and risks → Release decides (the release gate
+before release; gap analysis against checklists) → the knowledge graph and
+the documents are derived from the same record. Agent skills (how to author
+design inputs, test-first, risk analysis) are maintained outside RDM, in
+`scope-impact/agent-skills`. RDM ships no planning tooling: tasks and issues
+live in their own tools, outside the record (see
+`docs/about/plan-vs-record.md`).
 
 ## Not yet in scope
 
-In rough order: turning a regulation into a checklist mapped to its
+In rough order: reading the factory's stamped Gherkin scenarios in place of
+design inputs (ADR 0002); turning a regulation into a checklist mapped to its
 standard's clauses; pushing the graph to an external RDF store, with the
 vocabulary and gate shapes versioned; and several projects in one graph
 (clause identifiers are already project-independent). Each enters through a

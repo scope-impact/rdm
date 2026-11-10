@@ -53,39 +53,6 @@ the audit-note extension removes them: render the auditor's copy without it
 (the references show where each clause is met) and the engineers' copy with
 it, from two configuration files.
 
-## Architecture (C4)
-
-The architecture is one [Structurizr](https://docs.structurizr.com/dsl)
-workspace, `dhf/c4/workspace.dsl`: the C4 model (people, software systems,
-containers, and components grouped by bounded context) and its views (the
-system context and containers, and one component view per bounded context).
-Each component names its code with a `code` property, a file or a directory:
-
-```
-group "graph" {
-  projection = component "Projection" "The record into RDF" "Python" {
-    properties {
-      "code" "rdm/graph/"
-    }
-  }
-}
-```
-
-`rdm c4 draw` exports the model to `dhf/c4/workspace.json` (what RDM reads)
-and draws each view with Graphviz to `dhf/c4/views/<view>.svg`; every drawn
-file is stamped with the workspace's hash. Commit them with the workspace. A
-document shows its view as an ordinary image, so GitHub, the docs site and a
-rendered PDF all show the same picture:
-
-```markdown
-![Components: graph](../../c4/views/C3_graph.svg)
-```
-
-The design gate fails when a drawn view is stale or missing
-([the rules](../dhf/documents/design/architecture.md)). Drawing needs Java,
-Structurizr's CLI (`RDM_STRUCTURIZR`, or `structurizr.sh` on the PATH) and
-Graphviz; checking needs only the stamps.
-
 ## Template helpers
 
 | Helper | What it does |

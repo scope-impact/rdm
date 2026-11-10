@@ -1,8 +1,10 @@
 # ADR 0002: The spec lives with the factory; RDM audits it
 
-> Status: Proposed, not approved. It changes ADR 0001's model at its root, so nothing in
-> code, the record or the gates moves until a design review approves it. The open
-> questions at the end come first.
+> Status: Proposed. The product owner had the removals done first, ahead of
+> the migration below: Design Review 72 removed spec authoring (the design gate,
+> its hooks, `new-input`), the C4 architecture context, persona runs, the mutation
+> probe and the pytest plugin's labels from the record. Reading the factory's
+> spec (steps 1 to 4) waits on the open questions at the end.
 
 ## Context
 

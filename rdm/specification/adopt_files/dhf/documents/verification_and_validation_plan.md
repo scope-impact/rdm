@@ -33,5 +33,4 @@ confirms each test genuinely verifies its input.
 # Validation approach
 
 TODO describe, per user need, the summative evidence (who reviews, against
-what) and any formative evidence (e.g. AI-persona usability runs via
-`rdm story persona`). Formative evidence never gates release.
+what) and any formative evidence. Formative evidence never gates release.
