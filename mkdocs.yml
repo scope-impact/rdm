@@ -99,7 +99,7 @@ nav:
       - 6. Guides:
           - use/index.md
           - Changing the record: use/changing-the-record.md
-          - Design inputs and tests: use/design-inputs-and-tests.md
+          - The spec and its tests: use/spec-and-tests.md
           - Risk register: use/risk-register.md
           - Validation evidence: use/validation-evidence.md
           - The gates: use/gates.md

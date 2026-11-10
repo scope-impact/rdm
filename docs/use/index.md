@@ -13,7 +13,7 @@ the other guides go deeper on one part of it.
 | Task | Page |
 |---|---|
 | Make a change, step by step | [Changing the record](changing-the-record.md) |
-| Declare user needs and design inputs, write and tag the tests | [Design inputs and tests](design-inputs-and-tests.md) |
+| Declare user needs and design inputs, write and tag the tests | [Design inputs and tests](spec-and-tests.md) |
 | Keep the risk register and its controls | [Risk register](risk-register.md) |
 | Record validation evidence | [Validation evidence](validation-evidence.md) |
 | Run the release gate | [The gates](gates.md) |

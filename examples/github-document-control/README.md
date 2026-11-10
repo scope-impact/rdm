@@ -4,7 +4,7 @@ A complete RDM project whose product is a document control system: **git keeps
 the record** (identity, history, immutability, signatures) and **GitHub
 provides the service** (reviews, rulesets, releases, access control). The
 controls are configuration code, the procedure is a controlled document, every
-design input is verified by a tagged acceptance test, and 21 CFR Part 11
+requirement of its spec is verified by a tagged acceptance test, and 21 CFR Part 11
 coverage is proven by gap analysis. Every pull request runs RDM's reusable
 gates, and a release is published only when its commit is verified.
 
@@ -24,7 +24,7 @@ flowchart LR
         CI[".github/workflows/<br>design-controls · drift-audit · release-documents"]
     end
     subgraph proof["proof"]
-        TESTS["tests/acceptance/<br>@allure.story(item-01-001..11)"]
+        TESTS["tests/acceptance/<br>@allure.tag(item-NN-SSS)"]
         GATES["RDM's gates · rdm gap · graph shapes"]
     end
     ARCH --> DI
@@ -40,9 +40,10 @@ flowchart LR
 | Path | Role |
 |---|---|
 | `dhf/documents/architecture.md` | the system and its three bounded contexts: `approval`, `records`, `release` |
-| `dhf/documents/design/<context>.md` | each context's design inputs (item-01-001..11), with `realises` where it implements part of another's |
-| `dhf/documents/risk/` | the risk acceptability policy and the risk register: six risks, three of them STRIDE threats linked to the safety risk; each risk control a design input. Both **proposed** |
-| `dhf/documents/verification_and_validation_plan.md` | the user needs CurrentRevision..005 and how each is verified and validated |
+| `.pi/plan/`, `.pi/spec/<context>/` | the spec RDM reads: each context's requirements (stamped scenarios, `item-NN-SSS`) and its user needs (Allium surfaces) |
+| `dhf/documents/design/<context>.md` | each context's design output |
+| `dhf/documents/risk/` | the risk acceptability policy and the risk register: six risks, three of them STRIDE threats linked to the safety risk; each risk control a requirement. Both **proposed** |
+| `dhf/documents/verification_and_validation_plan.md` | how each user need is verified and validated |
 | `dhf/documents/design_review.md` | Design Reviews 1–3 |
 | `dhf/documents/traceability_matrix.md` | generated from a test run: never edited |
 | `dhf/documents/procedures/` | the controlled documents: the SOP (SOP-DC-001), with each Part 11 control cited inline (`[[P11:…]]`), and the device master record index (DMR-001) |
@@ -93,10 +94,10 @@ Repository rulesets require a public repository or a paid plan on private ones.
 
 | RDM | Where |
 |---|---|
-| user needs, design inputs, bounded contexts, `realises`, the architecture | `dhf/documents/` |
+| user needs, requirements, bounded contexts | `.pi/` (the spec), `dhf/documents/` (the architecture) |
 | risk policy and register, STRIDE threats, `linked`, residual acceptance, proposals | `dhf/documents/risk/` |
 | summative validation records | `dhf/validation/` |
-| tests tagged `@allure.story`, `output` labels, verification steps, `rdm.pytest_plugin` | `tests/acceptance/` |
+| tests tagged `@allure.tag("item-NN-SSS")`, `output` labels, verification steps, `rdm.pytest_plugin` | `tests/acceptance/` |
 | verify, the release gate | `design-controls.yml`, `release-documents.yml` |
 | RDM's reusable gates, pinned | `design-controls.yml` |
 | `rdm gap` with a checklist file | `record-checks`, item-02-003 |

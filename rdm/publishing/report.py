@@ -40,13 +40,13 @@ from importlib.resources import files
 from pathlib import Path
 
 from rdm.evidence.allure import (
-    FAILING, REQUIREMENT_ATTACHMENT, requirement_tags, read_results, read_run_facts, run_status,
+    FAILING, REQUIREMENT_ATTACHMENT, read_results, read_run_facts, requirement_tags, run_status, test_of,
     run_version,
 )
 from rdm.kernel.git import git, head, repo_root, repository_url
 from rdm.kernel.ids import sort_key
 from rdm.risk.register import NOT_EVALUATED, policy_or_none, residual_decision, risks
-from rdm.specification.sdd import requirements
+from rdm.specification.sdd import load_spec, requirements
 from rdm.release.verify import build_verification
 from rdm.kernel.version import __version__
 
@@ -281,7 +281,9 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
 
     record_commit = head(root)[0] if root else None
     # Uncommitted changes to the record itself: what the runs verified is in no commit.
-    record_dirty = bool(root and git(root, "status", "--porcelain", "--", str(dhf_dir.resolve())))
+    spec = load_spec(dhf_dir)
+    record_paths = [str(dhf_dir.resolve())] + ([str(spec.plan.absolute().parent)] if spec is not None else [])
+    record_dirty = bool(root and git(root, "status", "--porcelain", "--", *record_paths))
     commits = sorted({run["commit"] for run in [*others, *(r for di in inputs for r in di["runs"])] if run["commit"]})
     reasons, anomalies = _assess(inputs, others, commits, (record_commit, record_dirty), verification["orphans"],
                                  unreadable)

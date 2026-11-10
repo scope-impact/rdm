@@ -2,8 +2,8 @@
 
 Before the build, run each record's acceptance tests into its Allure results,
 so the evidence is live. Then project each record into its RDF graph and
-answer a handful of SPARQL queries: user needs, risks, design inputs, their
-bounded contexts, and the tagged tests and their runs. The answers go to
+answer a handful of SPARQL queries: the spec's user needs and requirements,
+risks, bounded contexts, and the test runs that claim each requirement. The answers go to
 ``assets/<name>.json``, which the page of the same name draws with
 ``docs/javascripts/traceability-map.js``. Nothing but the graph feeds a map.
 
@@ -50,7 +50,7 @@ def graph_data(dhf: Path, results: Path) -> dict:
 
     for r in q("SELECT ?n ?id ?t WHERE { ?n a rdm:UserNeed ; dcterms:identifier ?id OPTIONAL { ?n rdm:text ?t } }"):
         node(r["n"], "need", r["id"], text=r["t"] or "")
-    for r in q("SELECT ?n ?id ?t ?ctx WHERE { ?n a rdm:DesignInput ; dcterms:identifier ?id "
+    for r in q("SELECT ?n ?id ?t ?ctx WHERE { ?n a rdm:Requirement ; dcterms:identifier ?id "
                "OPTIONAL { ?n rdm:text ?t } OPTIONAL { ?n rdm:ownedBy ?ctx } }"):
         node(r["n"], "input", r["id"], text=r["t"] or "", owner=r["ctx"])
     for r in q("SELECT ?n ?l WHERE { ?n a rdm:BoundedContext OPTIONAL { ?n rdfs:label ?l } }"):
@@ -59,13 +59,15 @@ def graph_data(dhf: Path, results: Path) -> dict:
                   OPTIONAL { ?n rdm:hazard ?h } OPTIONAL { ?n rdm:level ?lvl }
                   OPTIONAL { ?n rdm:residualDecision ?dec } OPTIONAL { ?n rdm:category ?cat } }"""):
         node(r["n"], "risk", r["id"], text=r["h"] or "", level=r["lvl"], decision=r["dec"], category=r["cat"])
-    for r in q("""SELECT ?t ?name ?d ?status WHERE {
-                  ?r a rdm:TestRun ; rdm:runOf ?t ; rdm:exercises ?d ; rdm:status ?status . ?t rdfs:label ?name }"""):
-        node(r["t"], "test", r["name"], status=r["status"])
-        edges.add((r["t"], r["d"], "verifies"))
-    for rel, sparql in (("traces to", "SELECT ?s ?o WHERE { ?s a rdm:DesignInput ; rdm:tracesTo ?o }"),
-                        ("owns", "SELECT ?s ?o WHERE { ?o a rdm:DesignInput ; rdm:ownedBy ?s }"),
-                        ("realises", "SELECT ?s ?o WHERE { ?s a rdm:BoundedContext ; rdm:realises ?o }"),
+    for r in q("""SELECT ?name ?d ?status WHERE {
+                  ?r a rdm:TestRun ; rdm:exercises ?d ; rdm:status ?status ; rdfs:label ?name }"""):
+        test = "test:" + r["name"]  # one node per test, whatever its runs
+        node(test, "test", r["name"], status=r["status"])
+        if r["status"] != "passed":
+            nodes[test]["status"] = r["status"]
+        edges.add((test, r["d"], "verifies"))
+    for rel, sparql in (("traces to", "SELECT ?s ?o WHERE { ?s a rdm:Requirement ; rdm:tracesTo ?o }"),
+                        ("owns", "SELECT ?s ?o WHERE { ?o a rdm:Requirement ; rdm:ownedBy ?s }"),
                         ("controlled by", "SELECT ?s ?o WHERE { ?s a rdm:Risk ; rdm:controlledBy ?o }")):
         edges.update((r["s"], r["o"], rel) for r in q(sparql))
     commit = q("SELECT ?sha WHERE { ?r a rdm:TestRun ; rdm:testedAt ?c . ?c rdm:sha ?sha } LIMIT 1")

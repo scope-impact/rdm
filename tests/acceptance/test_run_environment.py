@@ -37,8 +37,9 @@ def _project(tmp_path: Path) -> tuple[Path, str]:
     (repo / "dhf").mkdir(parents=True)
     write_spec(repo, (("item-01-001", "The device alarms.", ["Alarm"]),),
                {"Alarm": ("alarms", "Nurse", "A nurse is alerted.")}, {"01": "alarms"})
-    (repo / "test_alarm.py").write_text('import allure\n\n\n@allure.tag("item-01-001")\ndef test_alarm():\n    pass\n\n\n'
-                                        '@allure.tag("item-01-001")\ndef test_alarm_again():\n    pass\n')
+    (repo / "test_alarm.py").write_text(
+        'import allure\n\n\n@allure.tag("item-01-001")\ndef test_alarm():\n    pass\n\n\n'
+        '@allure.tag("item-01-001")\ndef test_alarm_again():\n    pass\n')
     for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "r"]):
         git_run(repo, *args)
     return repo, git_run(repo, "rev-parse", "HEAD")

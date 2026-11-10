@@ -16,8 +16,8 @@ references: [SOP-DC-001]
 The product is a document control system: **git** keeps the record (identity,
 history, immutability, signatures) and **GitHub** provides the service
 (reviews, rulesets, releases, access control). The procedure that governs it
-is SOP-DC-001. This document holds design only: the user needs live in the V&V
-plan, and a context serves the needs its design inputs trace to.
+is SOP-DC-001. This document holds design only: the user needs and
+requirements live in the spec (`.pi/`), one context per slice.
 
 | Context | Part | Owns | Design document |
 | --- | --- | --- | --- |
@@ -25,7 +25,6 @@ plan, and a context serves the needs its design inputs trace to.
 | `records` | Documents | the controlled documents: identity, generated history, Part 11 coverage, the device master record | `design/records.md` |
 | `release` | Release | the copies, the device history record and the verification evidence of each release | `design/release.md` |
 
-A design input is owned by one context. Where another context implements part
-of it, that context declares it under `realises`: `approval` runs the Part 11
-gap analysis `records` owns (item-02-003), and `records` renders the copies `release`
-publishes (item-03-001).
+A requirement belongs to one context. Another context may implement part of
+it: `approval` runs the Part 11 gap analysis `records` owns (item-02-003), and
+`records` renders the copies `release` publishes (item-03-001).

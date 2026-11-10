@@ -31,7 +31,7 @@ It prints the next steps.
    Markdown file under `dhf/documents/design/` whose frontmatter has
    `kind: design`, `context:` and `design_inputs:` (each an `id` such as
    `DI-1`, its `text` and the needs it `traces_to`); see
-   [Design inputs and tests](../use/design-inputs-and-tests.md).
+   [Design inputs and tests](../use/spec-and-tests.md).
 3. Tag the acceptance test that verifies each one with
    `@allure.story("DI-1")`, and run the suite with Allure.
 4. Run `rdm story release-gate --dhf dhf --allure-results dhf/allure-results`.
@@ -76,6 +76,6 @@ JetBrains Mono; Noto Sans and DejaVu Sans Mono stand in) must be installed, or
 use the Docker setup: `docker compose run rdm make pdfs` builds an image with
 all of them and the RDM release that laid the project down.
 
-Then [Authoring and rendering](../use/documents.md), [Design inputs and tests](../use/design-inputs-and-tests.md)
+Then [Authoring and rendering](../use/documents.md), [Design inputs and tests](../use/spec-and-tests.md)
 and [gap analysis](../use/gap-analysis.md). Don't use `rdm init` in a repository
 that already has code; use `rdm adopt`.

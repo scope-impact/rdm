@@ -77,7 +77,7 @@ in one file or in two, is refused, naming where, and `rdm collect` exits 2.
 ## Test results in documents
 
 Verification evidence comes from Allure results through
-[`rdm story verify`](design-inputs-and-tests.md): that path feeds the gates and
+[`rdm story verify`](spec-and-tests.md): that path feeds the gates and
 the traceability matrix, which a document renders.
 
 ## Frontmatter conventions for controlled documents
@@ -94,7 +94,7 @@ title: "…"
 
 Design documents additionally carry `kind: design`, `context` and
 `design_inputs` (each with the needs it `traces_to`); see
-[Design inputs and tests](design-inputs-and-tests.md).
+[Design inputs and tests](spec-and-tests.md).
 
 ## PDF and Word
 

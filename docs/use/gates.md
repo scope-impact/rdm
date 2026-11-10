@@ -3,11 +3,11 @@
 The gates decide pass or block from the record; they never change it. Each
 runs the same way locally and in CI. In the CI workflow `rdm adopt` installs,
 the acceptance tests and release gate are inputs set to `false` until your
-first design input and its test land ([phased adoption](ci.md)).
+first requirement's test lands ([phased adoption](ci.md)).
 
 | Gate | Blocks | Runs |
 | --- | --- | --- |
-| **Release gate** — `rdm story release-gate` | a release unless every design input is verified by a passing tagged test, every user need is addressed, and every risk is evaluated, its risk controls verified and its residual acceptable | CI |
+| **Release gate** — `rdm story release-gate` | a release unless the spec is read whole, every requirement is verified by a passing tagged run, every user need is addressed, and every risk is evaluated, its risk controls verified and its residual acceptable | CI |
 | **Gap analysis** — `rdm gap` | documents that do not reference every clause a checklist requires | on demand; add it to CI |
 | **Graph validation** — `rdm graph validate` | the same rules, as SHACL shapes over the graph (what the release gate blocks about the whole record, such as an unreadable document or result, is on the record's node), plus warnings the coded gates do not give | on demand; add it to CI |
 
@@ -25,9 +25,23 @@ rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verif
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ```
 
-A user need without an approved human validation record is named as a
-warning: a machine cannot supply that judgment, but its absence is never
-silent.
+It blocks, each one named, on:
+
+| Event | When |
+| --- | --- |
+| *No Spec* | no `.pi/plan` was found up to the repository root, and `dhf/config.yml` names no `spec:` |
+| *Unstamped Scenario* | a scenario of an accepted slice carries no `@item-NN-SSS` |
+| *Item Stamped Twice* | one item id is on more than one scenario |
+| *Unreadable Spec* | an event-model or event-storm file cannot be read |
+| *No Requirements* | the spec holds no stamped scenario: nothing to verify |
+| *Requirement Failed* / *Requirement Untested* | a run claiming the requirement failed or broke; or no run claiming it passed |
+| *Unreadable Result* | a result file it cannot read: it could hold a failed run |
+| *Need Unaddressed* | a user need no requirement addresses by covering one of its rules or guarantees |
+| *Risk Finding* | a blocking finding of the [risk rules](risk-register.md) |
+
+It warns, never blocks, on a user need without an approved human validation
+record (a machine cannot supply that judgment, but its absence is never
+silent), on a proposed risk, and on an item tag that names no requirement.
 
 ## Gap analysis
 
@@ -51,11 +65,11 @@ coded gates stay authoritative. It exits 1 on any violation.
 
 | Rule | Why |
 | --- | --- |
-| a user need no design input traces to | an unaddressed need |
-| a design input with no passing test run, or with a failed or broken one | unverified |
+| a user need no requirement addresses by covering its rules or guarantees | an unaddressed need |
+| a requirement with no passing test run, or with a failed or broken one | unverified |
 | a checklist clause no document references | a gap against the standard |
 | a clause without a key or a standard; a checklist member that is not a clause | malformed checklist data |
-| a user-need or design-input id declared more than once | defined once |
+| an item id stamped on more than one scenario | stamped once |
 | a risk with no id, hazard, situation, harm or category; a security risk with no STRIDE category; a risk id declared twice | an incomplete register |
 | a risk not evaluated against a risk policy; a recorded level the policy contradicts; controls with no residual score; a control or link naming nothing declared; an unknown status; a residual that does not allow release | the risk rules ([risk register](risk-register.md)) |
 | a document referencing a document the record does not hold | a dangling reference |
@@ -64,15 +78,12 @@ coded gates stay authoritative. It exits 1 on any violation.
 
 | Rule | Why |
 | --- | --- |
-| a design input with no tagged test | nothing claims to verify it yet |
-| a `tracesTo` or `realises` naming an undeclared need or input; a test tag sharing the design-input prefix (its leading letters, in any case) but naming no declared input | a reference that resolves to nothing |
+| a requirement that addresses no user need | the spec does not say whom it serves |
+| a test run claiming an item id that is no requirement of the spec | a claim that resolves to nothing |
 | a test run tied to no commit | the version it is evidence for is unknown |
 | a test run of another commit than the record's | stale evidence |
-| a tagged test with no run, while other tests in its file ran | a claim never executed |
-| a test run exercising a design input its test does not claim | the source and the results disagree |
 | a document whose latest change has not landed on the default branch | not yet merged |
 | a risk with `status: proposed` | no person has approved its rating |
-| a bounded context with a design document but missing from the architecture's `contexts:` | the architecture fell behind |
 
 Add your own rules as more shape files, with no code change:
 
@@ -93,11 +104,11 @@ rdm graph validate --shapes team-rules.ttl
 
 ## Independent review
 
-A passing test proves code ran, not that the design input is met. That
+A passing test proves code ran, not that the requirement is met. That
 judgment belongs to the pull-request reviewer, who must not be the change's
 author ([the review step](changing-the-record.md)). The reviewer reads each
-changed test against its design input's text and asks whether the test would
-fail if the code did not do what the input says.
+changed test against its scenario's text and asks whether the test would
+fail if the code did not do what the scenario says.
 
 ## Release evidence
 
@@ -112,11 +123,11 @@ data, the rendered traceability matrix, the executed Allure results with
 every attachment, the verification report and a manifest, ready to attach to
 a release tag so the evidence outlives CI retention.
 
-The **verification report** shows what was run to verify each design input,
+The **verification report** shows what was run to verify each requirement,
 for someone who did not run it: an auditor, a notified body, the reviewer. It
 says whether the evidence is release-grade and why not, and ends with every
 result file's SHA-256 so it can be checked against the bundle. What it holds
-is DI-64 in the [publishing design](../dhf/documents/design/publishing.md). It
+is item-07-009 in the [publishing design](../dhf/documents/design/publishing.md). It
 needs Typst: install `rdm[report]`, or have `typst` on `PATH` as the RDM
 image does. The [reusable gates](ci.md) upload it in `rdm-evidence`.
 

@@ -1,7 +1,7 @@
-"""Acceptance tests for provenance and document links in the graph (DI-51,
-DI-52, see dhf/).
+"""Acceptance tests for provenance and document links in the graph
+(item-06-011, item-06-012).
 
-Tagged `@allure.story`, over the real projection and shapes and a real git
+Tagged `@allure.tag`, over the real projection and shapes and a real git
 history: a direct commit, a merge landed by someone else, and a change on an
 unmerged branch. Skips cleanly if allure-pytest or the `graph` extra is not
 installed.
@@ -47,7 +47,7 @@ def _label(quads, node: str) -> str:
 @allure.tag("item-06-011")
 @allure.label("output", "rdm/graph/project.py")
 def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Path) -> None:
-    """DI-51: the first-parent commit of the default branch that landed a
+    """item-06-011: the first-parent commit of the default branch that landed a
     controlled document's latest change — the commit itself when direct (or squashed), the
     merge otherwise — and its author; a shape warns when it has not landed."""
     dhf = _dhf(tmp_path / "x")                 # committed by "t" on the initial branch
@@ -58,7 +58,7 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
     with verification_step("A change on a feature branch, merged into main by someone else"):
         _git(repo, "author", "checkout", "-q", "-b", "feature")
         (dhf / "documents" / "design" / "ui.md").write_text(
-            "---\nid: SDS-UI\nkind: design\ncontext: ui\ndesign_inputs: []\n---\n# UI\n")
+            "---\nid: SDS-UI\n---\n# UI\n")
         _git(repo, "author", "add", "-A")
         _git(repo, "author", "commit", "-q", "-m", "ui design")
         change = _git(repo, "author", "rev-parse", "HEAD")
@@ -122,9 +122,9 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
 
 @allure.tag("item-06-012")
 @allure.label("output", "rdm/graph/project.py")
-def test_needs_risks_and_design_documents_link_to_their_documents(tmp_path: Path) -> None:
-    """DI-52: each user need to the document that declares it, each risk to the
-    document holding the risk policy; no design document claims a review."""
+def test_each_risk_links_to_the_policy_it_was_evaluated_against(tmp_path: Path) -> None:
+    """item-06-012: each risk links to the document holding the risk policy it
+    was evaluated against."""
     dhf = _dhf(tmp_path / "x")
     (dhf / "documents" / "risk").mkdir()
     (dhf / "documents" / "risk" / "rmp.md").write_text(
@@ -132,13 +132,8 @@ def test_needs_risks_and_design_documents_link_to_their_documents(tmp_path: Path
     _register(dhf, [_risk("RISK-L-1")])
     quads = project(dhf)
     doc = "urn:dhf:proj:doc/"
-    with verification_step("Each user need links to its declaring document, each risk to its policy's document"):
-        assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-1")
-        assert ("declaredIn", doc + "VVP-1") in _facts(quads, "urn:dhf:proj:need/UN-2")
+    with verification_step("A risk links to its policy's document"):
         assert ("evaluatedAgainst", doc + "RMP-9") in _facts(quads, "urn:dhf:proj:risk/RISK-L-1")
-    with verification_step("A design document is not linked to the design review: the record does not say which "
-                           "covered it"):
-        assert not any(o == doc + "DR-1" for _, o in _facts(quads, doc + "SDS-1"))
     with verification_step("Without a policy, a risk links to none"):
         (dhf / "documents" / "risk" / "rmp.md").unlink()
         assert not any(p == "evaluatedAgainst" for p, _ in _facts(project(dhf), "urn:dhf:proj:risk/RISK-L-1"))

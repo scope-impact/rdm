@@ -1,7 +1,6 @@
 ---
 id: SDS-AP-001
 title: "Approval — Design"
-kind: design
 context: approval
 references: [SDS-SYS-001]
 ---
@@ -19,7 +18,7 @@ applied to the service provider (GitHub).
 ## Design Outputs
 
 The design outputs are this context's components: what each is responsible
-for, and which design inputs it meets.
+for, and which requirements of the spec it meets.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|

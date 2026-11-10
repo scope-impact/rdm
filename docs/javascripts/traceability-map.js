@@ -15,16 +15,16 @@
     root.classList.add("rdm-map--none");
     return;
   }
-  const KIND = {need: "User need", risk: "Risk", input: "Design input", test: "Tagged test", context: "Bounded context"};
+  const KIND = {need: "User need", risk: "Risk", input: "Requirement", test: "Tagged test", context: "Bounded context"};
   const ORDER = ["need", "risk", "input", "test", "context"];
-  const LANES = [["need", "Needs · risks"], ["input", "Design inputs"], ["test", "Tests"]];
+  const LANES = [["need", "Needs · risks"], ["input", "Requirements"], ["test", "Tests"]];
   const PART = {need: 0, risk: 0, input: 1, test: 2};
   const FLOW = new Set(["traces to", "controlled by", "verifies"]);
   const byId = new Map(DATA.nodes.map(n => [n.id, n]));
   const ctxName = iri => (iri || "").split("context/").pop();
   const testName = l => l.split("::").pop();
   const shortLabel = n => n.kind === "test" ? testName(n.label).replace(/^test_/, "").replace(/_/g, " ") : n.label;
-  // An input no passing run verifies is a gap.
+  // A requirement no passing run verifies is a gap.
   const verified = new Set(DATA.edges.filter(e => e.rel === "verifies" && (byId.get(e.s) || {}).status === "passed").map(e => e.t));
   const gaps = DATA.nodes.filter(n => n.kind === "input" && !verified.has(n.id));
 
@@ -73,7 +73,7 @@
           "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP", "elk.spacing.edgeNode": 8},
     nodeLayoutOptions: n => ({"elk.partitioning.partition": parts(n)})});
 
-  // The whole map: every need, risk, input and test, left to right.
+  // The whole map: every need, risk, requirement and test, left to right.
   function mapElements() {
     const els = DATA.nodes.filter(n => n.kind in PART).map(n => ({data: {id: n.id, label: shortLabel(n), kind: n.kind},
                                       classes: n.kind === "input" && !verified.has(n.id) ? "gap" : ""}));
@@ -99,7 +99,7 @@
     l.one("layoutstop", () => { cy.fit(cy.elements(), 24); window.__ready = true; then && then(); }); l.run();
   }
 
-  // A trace: everything upstream and downstream of a node; a context brings the inputs it owns.
+  // A trace: everything upstream and downstream of a node; a context brings the requirements it owns.
   function traceOf(id) {
     const owned = DATA.edges.filter(e => e.rel === "owns" && e.s === id).map(e => cy.getElementById(e.t));
     const base = owned.length ? cy.collection(owned) : cy.getElementById(id);
@@ -182,7 +182,7 @@
     b.setAttribute("aria-pressed", "false"); b.addEventListener("click", () => select(n.id)); chips.appendChild(b);
   });
   const gapBtn = document.createElement("button"); gapBtn.className = "chip gap"; gapBtn.dataset.id = "gaps";
-  gapBtn.textContent = `${gaps.length} design inputs no passing run verifies`;
+  gapBtn.textContent = `${gaps.length} requirements no passing run verifies`;
   gapBtn.addEventListener("click", () => {
     selected = null; pressChips("gaps");
     const set = cy.collection(gaps.map(g => cy.getElementById(g.id)));
@@ -190,15 +190,15 @@
     focusEls = set; if (set.nonempty()) cy.animate({fit: {eles: set, padding: 48}, duration: 280});
     panel.innerHTML = "";
     add("div", "kind", "Verification gap").style.color = tok().input;
-    add("div", "pid", `${gaps.length} design inputs`);
-    add("p", "ptext", "No passing run of a test tagged with these design inputs is in the results, so the release gate would block them.");
-    linkList("Design inputs", gaps.slice());
+    add("div", "pid", `${gaps.length} requirements`);
+    add("p", "ptext", "No passing run of a test that claims these requirements is in the results, so the release gate would block them.");
+    linkList("Requirements", gaps.slice());
   });
   chips.appendChild(gapBtn);
   function renderIntro() {
     panel.innerHTML = "";
     add("div", "kind", "How to read it").style.color = tok().muted;
-    add("p", "ptext", "Each user need and risk on the left traces through the design inputs that answer it to the tests that verify them. A dashed outline is a design input no passing run verifies.");
+    add("p", "ptext", "Each user need and risk on the left traces through the requirements that address it to the tests that verify them. A dashed outline is a requirement no passing run verifies.");
     add("p", "hint", "Click a node, or a bounded context above, to light its trace. Click empty space to clear.");
   }
 

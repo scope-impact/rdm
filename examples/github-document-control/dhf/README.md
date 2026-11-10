@@ -1,13 +1,12 @@
 # Design History File
 
-This directory is this product's DHF, produced with RDM's record-first model:
-the record is the per-context design documents (`documents/design/`, one
-`kind: design` document per bounded context), the user-need registry (in the
-V&V plan frontmatter), executed test results (Allure), and git history —
-approval is the reviewed, merged commit.
+This directory is this product's DHF. RDM holds it to the product's spec
+(`../.pi/`: requirements as stamped scenarios, user needs as Allium
+surfaces), with the design documents (`documents/design/`), executed test
+results (Allure) and git history — approval is the reviewed, merged commit.
 
-Every change follows the same loop: design input → tagged acceptance test →
-gates → generated traceability matrix → independently reviewed pull request.
+Every change follows the same loop: spec → tagged acceptance test → gates →
+generated traceability matrix → independently reviewed pull request.
 
 Gate and verify exactly as CI does:
 

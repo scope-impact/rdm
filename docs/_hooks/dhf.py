@@ -1,7 +1,7 @@
 """MkDocs build hook: publish RDM's design history file (``dhf/``) with the docs.
 
 Every Markdown document of the record is added to the site under ``dhf/``, as
-it is in git. The record's substance -- user needs, design inputs, risks, the risk policy -- is
+it is in git. The record's substance -- risks, the risk policy, the contexts -- is
 the documents' YAML frontmatter, which a Markdown page would drop, so each
 page shows its frontmatter as sections under the title: a list of entries
 (each id with its text and fields) for a list of records, a table for short
@@ -46,8 +46,7 @@ DHF = ROOT / "dhf"
 TEMPLATES = ROOT / "rdm" / "specification" / "init_files"
 log = logging.getLogger("mkdocs.hooks.dhf")
 SKIP = {"documents/traceability_matrix.md"}  # a template; the site has the generated matrix
-SECTIONS = {"user_needs": "User needs", "design_inputs": "Design inputs", "risks": "Risks",
-            "contexts": "Bounded contexts", "risk_policy": "Risk policy"}
+SECTIONS = {"risks": "Risks", "contexts": "Bounded contexts", "risk_policy": "Risk policy"}
 _HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 
 

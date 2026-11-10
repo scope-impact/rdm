@@ -65,6 +65,7 @@ def _risk(rid: str | None, **overrides) -> dict:
     return {k: v for k, v in entry.items() if v is not None}
 
 
+BOTH_PASS = {"item-01-001": ["passed"], "item-01-002": ["passed"]}
 ACCEPT = {"by": "QA lead", "rationale": "ALARP"}
 
 # Each case: register entries, whether to declare the policy, and the gate's
@@ -300,7 +301,7 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
         path.write_text("---\n" + yaml.safe_dump({"id": "RMP", "kind": "risk", "status": "approved",
                                                   "risk_policy": POLICY}) + "---\n")
         _commit(dhf)
-        gate = run_release_gate(dhf, _results(tmp_path / "policy-only", {"item-01-001": ["passed"], "item-01-002": ["passed"]}))
+        gate = run_release_gate(dhf, _results(tmp_path / "policy-only", BOTH_PASS))
         assert gate.passed, gate.blocking
 
     with verification_step("A risk id that is not text or a number is no id, named with what it was"):
@@ -316,7 +317,7 @@ def test_release_gate_blocks_on_the_register_rules(tmp_path: Path) -> None:
         dhf = _dhf(tmp_path / "numeric")
         _policy(dhf, numeric)
         _register(dhf, [_risk("RISK-N-1", severity=2, probability="Likely", residual={"probability": "Rare"})])
-        gate = run_release_gate(dhf, _results(tmp_path / "numeric", {"item-01-001": ["passed"], "item-01-002": ["passed"]}))
+        gate = run_release_gate(dhf, _results(tmp_path / "numeric", BOTH_PASS))
         assert gate.passed, gate.blocking
 
 
@@ -331,7 +332,7 @@ def test_release_gate_blocks_on_the_residual_rules(tmp_path: Path) -> None:
     with verification_step("Proposed ratings — on a risk, or on the policy — warn and do not block"):
         dhf, _ = _gate(tmp_path, "proposed", [_risk("RISK-W-1", status="proposed"), _risk("RISK-W-2")])
         _policy(dhf, status="proposed")
-        gate = run_release_gate(dhf, _results(tmp_path / "proposed", {"item-01-001": ["passed"], "item-01-002": ["passed"]}))
+        gate = run_release_gate(dhf, _results(tmp_path / "proposed", BOTH_PASS))
         assert gate.passed, gate.blocking
         assert "risk RISK-W-1 is proposed: a person has not approved its rating" in gate.warnings
         assert "the risk policy in documents/risk/policy.md is proposed: a person has not approved it" in gate.warnings
@@ -340,7 +341,7 @@ def test_release_gate_blocks_on_the_residual_rules(tmp_path: Path) -> None:
     with verification_step("No status, or an empty one, is proposed — never approved — on a risk or the policy"):
         dhf, _ = _gate(tmp_path, "no-status", [_risk("RISK-W-3", status=""), _risk("RISK-W-4", status=None)])
         _policy(dhf, status=None)
-        gate = run_release_gate(dhf, _results(tmp_path / "no-status", {"item-01-001": ["passed"], "item-01-002": ["passed"]}))
+        gate = run_release_gate(dhf, _results(tmp_path / "no-status", BOTH_PASS))
         attach("warnings", gate.warnings)
         assert gate.passed, gate.blocking
         assert {"risk RISK-W-3 is proposed: a person has not approved its rating",

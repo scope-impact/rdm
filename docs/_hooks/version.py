@@ -1,4 +1,4 @@
-"""The release a build of the docs is for (DI-80, DI-82).
+"""The release a build of the docs is for (item-07-005, item-07-006).
 
 A page writes ``{{ rdm.release }}`` for the release it describes and
 ``{{ rdm.ref }}`` for the git ref to install it from. A release build (the docs

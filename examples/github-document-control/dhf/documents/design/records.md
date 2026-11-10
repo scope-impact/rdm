@@ -1,7 +1,6 @@
 ---
 id: SDS-RC-001
 title: "Controlled records — Design"
-kind: design
 context: records
 references: [SDS-SYS-001]
 ---
@@ -18,7 +17,7 @@ approved set.
 ## Design Outputs
 
 The design outputs are this context's components: what each is responsible
-for, and which design inputs it meets.
+for, and which requirements of the spec it meets.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
@@ -33,7 +32,7 @@ record data; the device master record index lists the documents from the
 index data, generated from their own frontmatter. Rendering renders both with
 RDM, and the release workflow renders the copies with it: this context's
 part of `release`'s item-03-001. The approval path holds the procedure to the Part
-11 checklist (`approval` realises item-02-003).
+11 checklist (`approval` implements part of item-02-003).
 
 ## Dependencies
 

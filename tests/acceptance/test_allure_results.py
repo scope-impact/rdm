@@ -90,7 +90,8 @@ def test_a_result_that_cannot_be_read_is_never_a_pass(tmp_path: Path) -> None:
         stepped.mkdir()
         for name, status in (("s", "failed"), ("t", "broken")):
             (stepped / f"{name}-result.json").write_text(json.dumps(
-                {"name": name, "status": "passed", "labels": [{"name": "tag", "value": f"item-09-00{1 if name == 's' else 2}"}],
+                {"name": name, "status": "passed",
+                 "labels": [{"name": "tag", "value": f"item-09-00{1 if name == 's' else 2}"}],
                  "steps": [{"name": "outer", "status": "passed", "steps": [{"name": "inner", "status": status}]}]}))
         report = allure_ingest.reconcile({"item-09-001", "item-09-002"}, stepped)
         assert report.failed == ["item-09-001", "item-09-002"], report.by_id
