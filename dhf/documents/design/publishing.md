@@ -143,45 +143,19 @@ The relationships that matter, in the direction of the arrow:
   bundle: the one arrow into publishing from another context.
 - The PDF action *renders the documents in* the Documents image.
 
-**Realised here:** the rendering side of **DI-1** (specification) — the
-needs and design inputs read from frontmatter are what the documents
-render — and of **DI-4** (release) — the traceability matrix is the Renderer
-filling its template with the verification data; **DI-30** (release), by the
-Evidence bundle; and the part of **DI-63** (release) that renders the
-documents with the image of the same revision, by the PDF action.
-
-**Realised elsewhere:** of DI-64's last clause, the reusable gates workflow
-(release) includes the report by having the Gates action write the evidence
-bundle. The project build that runs Pandoc and Typst over the rendered
-Markdown is a template the specification's `rdm init` lays down.
-
 Assumptions and open questions:
 
-- The PDF action realises part of DI-63, but the frontmatter's `realises`
-  does not list it.
 - A snippet key repeated across two files is not an error: the later file's
   snippet silently replaces the earlier one.
 - The DMR index reads only the documents directly in the given directory,
   not those in its subdirectories (such as the design documents).
 
-### Dynamic view
+### Order
 
 The two passes of a render: the Renderer loads the data files as the
 template's context, keeps the words of the first pass, and post-processes the
 Markdown with the extensions, which give the second pass the first pass's
 words (so a glossary includes only the terms a document uses).
-
-## Commands and events
-
-Each row: the actor issues the command, resulting in its success event or a
-fail event (the rule broken, after the slash), which affects the entity.
-
-| Actor | Command | Success event | Fail events | Entity |
-|-------|---------|---------------|-------------|--------|
-| CI | Build evidence bundle | Evidence Bundle Built | Not Built / Results Missing | Evidence bundle |
-| CI | Write verification report | Report Written | Not Written / Typst Missing | Verification report |
-
-Everything this context writes is a read model.
 
 ## Dependencies
 

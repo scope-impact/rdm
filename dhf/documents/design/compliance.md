@@ -98,25 +98,12 @@ repository's document control system, each Part 11 clause cited inline. It
 is a controlled document, not a component; DI-25's test audits it against
 the built-in Part 11 checklist.
 
-This context realises no other context's input, and no other context
-realises part of its inputs. The knowledge graph's DI-37 and DI-48 reuse its
-reading and matching rules; they are the graph's inputs, not parts of these.
-
 Assumptions and open questions:
 
 - The ISO 14971 2019 checklist lists the standard's clauses by number and a
-  short mnemonic title, as the other built-ins do (Design Review 60).
+  short mnemonic title, as the other built-ins do.
 - Verbose coverage names at most ten missing clauses per checklist and
   counts the rest; the gap report names them all.
-
-## Commands and events
-
-Each row: the actor issues the command, resulting in its success event or a
-fail event (the rule broken, after the slash), which affects the entity.
-
-| Actor | Command | Success event | Fail events | Entity |
-|-------|---------|---------------|-------------|--------|
-| Contributor or auditor | Analyse gaps | Checklist Covered | Clauses Missing | Checklist |
 
 ## Dependencies
 

@@ -52,8 +52,7 @@ _Avoid_: acceptance criterion (unqualified), requirement
 
 **Design record**:
 Everything authored under control: user needs, design inputs, design
-documents, the design review, the risk register, the architecture workspace and
-the tagged tests, in git. It is the only source of truth, and only a reviewed
+documents, the risk register and the tagged tests, in git. It is the only source of truth, and only a reviewed
 pull request changes it.
 _Avoid_: database, docs, spec
 
@@ -86,7 +85,7 @@ A document with an id and a revision whose every change goes through review.
 _Avoid_: doc, file
 
 **Approved**:
-Said of a design document or design review that is committed and merged
+Said of a design document that is committed and merged
 through a reviewed pull request. Git is the approval record; no sign-off table
 repeats it.
 _Avoid_: signed off, accepted
@@ -95,13 +94,6 @@ _Avoid_: signed off, accepted
 Approval of a pull request by someone other than its author: the record's
 independent verification. An agent never gives it.
 _Avoid_: code review (unqualified), self-review
-
-**Chain review**:
-Reading one design input together with its user needs, its design prose, its
-tagged test and verification steps, and its last run, and
-deciding whether the test proves the text; recorded as a design review, input
-by input, before each release. A person's judgement, never a gate.
-_Avoid_: faithfulness gate, audit, test review
 
 **Code coverage**:
 How much of a unit's code its unit tests run: a unit-test measure. Never

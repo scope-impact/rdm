@@ -39,7 +39,7 @@ context: it is this context's application layer.
 
 It reads the specification; it does not police how one is written. The
 design gate, its git hooks, `rdm story new-input` and persona runs were
-removed in Design Review 72: authoring the specification belongs to the
+removed: authoring the specification belongs to the
 factory that owns it (ADR 0002).
 
 ## Design Outputs
@@ -56,26 +56,6 @@ factory that owns it (ADR 0002).
 
 - Project scaffold and adoption copy their templates.
 - Validation records read the registry with the record reader.
-
-Realised here for other contexts: the test tags' list of tagged tests by name
-is this context's part of `graph`'s DI-61. The CI workflow that adoption lays
-down calls `release`'s reusable workflow (DI-63).
-
-Realised elsewhere: `release` reports, at the release gate, the user needs
-the validation records give (DI-33); `publishing` renders the needs and
-design inputs the record reader reads (DI-1); and the knowledge graph records
-each id's declaration count and reports a repeated declaration with its
-shapes.
-
-## Commands and events
-
-Each row: the actor issues the command, resulting in its success event or a
-fail event (the rule broken, after the slash), which affects the entity.
-
-| Actor | Command | Success event | Fail events | Entity |
-|-------|---------|---------------|-------------|--------|
-| Contributor | Lay down a project | Project Laid Down | Not Laid Down / Directory Exists | Project |
-| Contributor | Adopt a repository | Repository Adopted | — | Repository |
 
 ## Dependencies
 

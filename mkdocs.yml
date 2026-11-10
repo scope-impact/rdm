@@ -119,7 +119,6 @@ nav:
       - 9. Changelog: revision-history.md
   - Design history (RDM on RDM):
       - Overview: dhf/README.md
-      - Changing RDM: dhf/AGENT_WORKFLOW.md
       - Traceability (from the graph): traceability-map.md
       - V&V plan and user needs: dhf/documents/verification_and_validation_plan.md
       - System architecture: dhf/documents/architecture.md
@@ -133,8 +132,6 @@ nav:
               - Test evidence: dhf/documents/design/test_evidence.md
       - Risk policy: dhf/documents/risk/policy.md
       - Risk register: dhf/documents/risk/tool_risks.md
-      - Design review: dhf/documents/design_review.md
       - Document control: dhf/documents/document_control.md
       - Instructions for use (IFU): dhf/documents/user_manual.md
-      - "ADR 0001: user needs across bounded contexts": dhf/decisions/adr-0001-bounded-context-user-needs.md
       - "ADR 0002: the spec lives with the factory; RDM audits it": dhf/decisions/adr-0002-spec-in-loyly-rdm-audits.md

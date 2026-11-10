@@ -16,7 +16,6 @@ if command -v uv >/dev/null 2>&1; then
 fi
 
 # 2. Orient the session: the canonical procedure.
-echo "Canonical change procedure: dhf/AGENT_WORKFLOW.md (design input -> tagged test"
-echo "-> gates -> generated traceability matrix -> reviewed pull request)."
+echo "RDM: run the gates as CI does (see CLAUDE.md)."
 
 exit 0

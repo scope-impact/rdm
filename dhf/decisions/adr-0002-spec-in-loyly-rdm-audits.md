@@ -1,7 +1,7 @@
 # ADR 0002: The spec lives with the factory; RDM audits it
 
 > Status: Proposed. The product owner had the removals done first, ahead of
-> the migration below: Design Review 72 removed spec authoring (the design gate,
+> the migration below: spec authoring was removed (the design gate,
 > its hooks, `new-input`), the C4 architecture context, persona runs, the mutation
 > probe and the pytest plugin's labels from the record. Reading the factory's
 > spec (steps 1 to 4) waits on the open questions at the end.
@@ -13,7 +13,7 @@ RDM owns the specification today. A project writes **design inputs** (`DI-n`, a
 user need, tags one pytest test `@allure.story("DI-n")` per input, and lets the design
 gate, `rdm story new-input`, the release gate, `verify`, the pytest plugin, the graph, the
 evidence report and the risk register's `controls:` all take that list as their denominator.
-ADR 0001 dropped Gherkin on purpose: "the test IS the acceptance criterion".
+RDM's earlier model dropped Gherkin on purpose: "the test IS the acceptance criterion".
 
 The agentic software factory in [scope-impact/loyly](https://github.com/scope-impact/loyly)
 takes the opposite position, and runs it end to end:

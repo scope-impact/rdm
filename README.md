@@ -128,10 +128,8 @@ uv sync --all-extras
 uv run pytest tests
 ```
 
-RDM is developed under its own design controls: every change follows
-[`dhf/AGENT_WORKFLOW.md`](dhf/AGENT_WORKFLOW.md) — the record first, then the
-tagged test, then the code — and [CLAUDE.md](CLAUDE.md) lists the gates to run
-as CI does. The vocabulary is [CONTEXT.md](CONTEXT.md).
+RDM checks its own record with its own gates: [CLAUDE.md](CLAUDE.md) lists
+them, to run as CI does. The vocabulary is [CONTEXT.md](CONTEXT.md).
 
 ## Direction
 

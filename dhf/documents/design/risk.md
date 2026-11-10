@@ -113,22 +113,10 @@ The Risk register is handed the declared design input ids and the verified
 ones; it reads nothing of the specification. It parses frontmatter with the
 shared kernel, which the specification's design document draws.
 
-This context realises no input another context owns; the release context
-realises part of DI-44 and DI-50, as above.
-
 Assumption: one harm pathway per risk, with one probability; no control
 effect is recorded apart — the residual is all the controls folded
-together. Design Review 9 kept the register this small; each can grow later
+together. The register is kept this small; each can grow later
 without changing a register written to this format.
-
-## Commands and events
-
-Each row: the actor issues the command, resulting in its success event or a
-fail event (the rule broken, after the slash), which affects the entity.
-
-| Actor | Command | Success event | Fail events | Entity |
-|-------|---------|---------------|-------------|--------|
-| The release gate | Assess risks | Risk Evaluated | Not Evaluated / No Policy · Malformed Register · Incomplete · Control Unverified · Residual Unacceptable | Risk register |
 
 ## Dependencies
 

@@ -33,7 +33,7 @@ design inputs trace to (`traces_to`), so that is never declared twice.
 RDM audits a specification; it does not author one. Writing the
 specification and regenerating code from it belong to the factory that owns
 the spec (ADR 0002); RDM keeps gap analysis, and traceability and audit from
-the executed results. Design Review 72 removed what RDM had for authoring:
+the executed results. What RDM had for authoring is removed:
 the design gate and its git hooks, `rdm story new-input`, the C4
 architecture context, persona runs and the mutation probe.
 
@@ -64,8 +64,7 @@ project's test runner, and, to render PDFs, on Pandoc and Typst.
 
 A bounded context is drawn where the language changes, not where the workflow
 does (`CONTEXT.md`): the stages of a design input's life (declared, approved,
-verified, released) are not contexts. Restructured in Design Review 30 from
-ten contexts named for what their code did or for a workflow stage. The code
+verified, released) are not contexts. The code
 of each context is in the frontmatter (`code`).
 
 | Part | Context | Design document | Its language | Package |

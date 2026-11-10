@@ -41,8 +41,7 @@ a status per design input.
 It acts only on a test whose story tag is a design input the record
 declares; a tag that names no declared input gets nothing. For such a test
 it labels the run with the commit under test and the worktree state; it
-adds no requirement labels of its own, since the story tag is the trace
-(Design Review 72). It records
+adds no requirement labels of its own, since the story tag is the trace. It records
 the executor and environment once per session, and only when the run
 writes Allure results; a CI run is named with its run and URL, a local run
 with its user and host.
@@ -68,27 +67,9 @@ plugin *reads the declared design inputs with* the record reader and
 verification report and the projection read results with the Allure
 reader.
 
-Realised here: the Allure reader's reconciliation is this context's part
-of **DI-4** (owned by `release`), which builds the verification data on
-it. The labels and run facts written here are read back for DI-60 (graph)
-and DI-64 (verification report). No other context realises part of this
-context's inputs.
-
 Assumption: the acceptance suite enables the plugin, either as a pytest
 plugin or through its configuration; a run without it is unlabelled and
 counts for no design input.
-
-## Commands and events
-
-Each row: the actor issues the command, resulting in its success event or a
-fail event (the rule broken, after the slash), which affects the entity.
-
-| Actor | Command | Success event | Fail events | Entity |
-|-------|---------|---------------|-------------|--------|
-| Contributor | Translate results | Results Translated | Not Translated / Unknown Format | Test result |
-
-Reactions: whenever a tagged acceptance test runs, its result is labelled
-with the commit under test.
 
 ## Dependencies
 
@@ -101,6 +82,5 @@ projection). No import breaks the rule.
 ## Out of scope
 
 - Planning data (issues, pull requests, task boards) is not part of the
-  controlled record, and RDM no longer pulls it (Design Review 11).
-- The mutation probe, and unit tests' code coverage per component: removed
-  in Design Review 72.
+  controlled record, and RDM no longer pulls it.
+- The mutation probe, and unit tests' code coverage per component.

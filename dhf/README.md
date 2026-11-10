@@ -1,15 +1,12 @@
 # RDM — Design History File
 
-This is RDM's own DHF: RDM is developed under RDM's own design controls, and
-this directory is the record. Every change to RDM goes through the loop RDM
-asks of a device team: record first, then a tagged test, then the gates, then
-a reviewed pull request. The procedure is `AGENT_WORKFLOW.md` (this
-directory); the method is the docs' *How RDM works*
-(`docs/about/how-rdm-works.md`), and the decision behind user needs and
-bounded contexts is ADR 0001 (`decisions/`).
+This is RDM's own DHF: RDM's own record, checked by RDM's own gates. Every
+change lands through a reviewed pull request with the gates green. The method
+is the docs' *How RDM works* (`docs/about/how-rdm-works.md`); the direction,
+the spec moving to the factory (Löyly), is ADR 0002 (`decisions/`).
 
 Scope note: RDM is not a medical device, so this DHF deliberately implements
-the **design-controls slice** (design inputs, review, verification, validation,
+the **design-controls slice** (design inputs, verification, validation,
 traceability — the §820.30-shaped record) plus a register of RDM's own tool
 risks, and not the full IEC 62304 lifecycle document set (a complete risk
 management file, SOUP register, maintenance and problem-resolution plans, …).
@@ -19,9 +16,7 @@ report those items as missing.
 ## Layout (the record)
 
 ```
-AGENT_WORKFLOW.md                    the change procedure (start here)
 documents/
-  design_review.md                   design review record
   verification_and_validation_plan.md user-need registry (UN-…) + V&V approach
   document_control.md                git/GitHub as this record's document control (Part 11-mapped)
   architecture.md                    system design / bounded contexts (design only, no needs)
@@ -31,7 +26,7 @@ documents/
   risk/
     policy.md                          risk acceptability policy (RMP-001, proposed)
     tool_risks.md                      `kind: risk` register of RDM's tool risks (RMF-001, proposed)
-decisions/                           decision records (ADR 0001, ADR 0002)
+decisions/                           ADR 0002: the spec lives with the factory; RDM audits it
 ```
 
 The live inventory — which contexts exist, which design inputs each owns, and
@@ -41,7 +36,7 @@ which user needs they trace to — is generated, not maintained here:
 rdm graph query --dhf dhf '…'           # anything else, as SPARQL
 ```
 
-The gates, as CI runs them, are step 6 of `AGENT_WORKFLOW.md`.
+The gates, as CI runs them, are in `CLAUDE.md`.
 `dhf/allure-results/` and `dhf/data/verification.yml` are generated
 (gitignored) by running the acceptance suite, never committed.
 

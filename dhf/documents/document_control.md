@@ -48,7 +48,7 @@ are tags; the revision history is the git history itself. Planning artifacts
   2FA-protected account); anonymous or unauthenticated input cannot reach the
   record.
 - **Signature accountability** [[P11:11.10j]] — the contributor policy
-  (`dhf/AGENT_WORKFLOW.md` and this statement, both controlled documents)
+  (`AGENTS.md` and this statement, both controlled documents)
   states that a pull-request approval is the approver's electronic signature
   and that the approver is accountable for what it approves; the approver is
   named on the pull request.
@@ -68,10 +68,10 @@ are tags; the revision history is the git history itself. Planning artifacts
   `repo-settings.json` — applied and drift-checked with
   `scripts/apply-repo-controls.sh [--check]`.
 - **Training** [[P11:11.10i]] — contributors (human or agent) are directed
-  through `dhf/AGENT_WORKFLOW.md` before changing the record; agent sessions
-  load it automatically at session start.
+  through `AGENTS.md` and `CLAUDE.md` before changing the record; agent
+  sessions load them at session start.
 - **Systems documentation control** [[P11:11.10k]] — this statement, the
-  runbook, the hook, and the CI workflow are themselves version-controlled in
+  contributor guide and the CI workflow are themselves version-controlled in
   this repository and change only through the same approved path they
   describe.
 - **Signature manifestation** [[P11:11.50]] — the pull-request review records

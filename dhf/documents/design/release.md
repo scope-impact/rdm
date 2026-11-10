@@ -84,39 +84,17 @@ Relationships that matter, in the direction of the arrow:
   runs the release gate, validates the graph with SHACL validation (`graph`)
   and writes the evidence bundle with the Evidence bundle (`publishing`).
 
-This context realises parts of `specification`'s DI-33 and `risk`'s DI-44
-and DI-50: the release gate reports and applies them. Parts of its own are
-realised elsewhere: DI-4 by `test_evidence` (the run labels behind the
-reconciliation) and `publishing` (the traceability matrix rendered from the
-verification data); DI-30 by `publishing`, whose Evidence bundle writes the
-retained release evidence; and the rest of DI-63 by the PDF action
-(`publishing`) and by the CI workflow `rdm adopt` lays down (the Adoption
-templates, `specification`). The verification report (DI-64) is also in
-[publishing](publishing.md); the pytest plugin is in
-[test evidence](test_evidence.md). Each design input here is verified by the
-tests tagged with its id.
-
 Open question: the release gate does not decide whether the runs are
 release-grade evidence (the commit and worktree each run tested); the
 verification report and, as a warning, the knowledge graph's gate shapes
 show it. Whether the gate should decide it is a question for a later review.
 
-### Dynamic view
+### Order
 
 The order of a pipeline run matters: the acceptance tests write the Allure
 results; the verification data is written; the release gate decides; graph
 validation runs; the evidence bundle is written last, from the same results,
 and uploaded.
-
-## Commands and events
-
-Each row: the actor issues the command, resulting in its success event or a
-fail event (the rule broken, after the slash), which affects the entity.
-
-| Actor | Command | Success event | Fail events | Entity |
-|-------|---------|---------------|-------------|--------|
-| CI or contributor | Verify | Verification Written | — (each input verified, failed or untested) | Verification data |
-| CI or contributor | Decide release | Release Permitted | Release Blocked / No Design Inputs · Input Failed · Input Untested · Unreadable Result · Need Unaddressed · Risk Finding | Release |
 
 ## Dependencies
 

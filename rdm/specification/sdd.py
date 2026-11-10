@@ -56,7 +56,7 @@ def _context(front: dict, path: Path) -> str:
 def user_needs_from_doc(doc_path: Path) -> set[str]:
     """Return user-need IDs from a document's frontmatter ``user_needs`` list.
 
-    Per ADR 0001 the user-need registry lives in the V&V plan; this reads it
+    The user-need registry lives in the V&V plan; this reads it
     from any document's frontmatter. Accepts both ``{id, text}`` mappings and
     bare string IDs.
     """
@@ -86,7 +86,7 @@ def context_of(path: Path) -> str:
 def registry_user_needs(dhf_dir: Path) -> set[str]:
     """Union of ``user_needs`` declared in any document frontmatter under the DHF.
 
-    Per ADR 0001 the registry lives in the V&V plan, but this finds it wherever
+    The registry lives in the V&V plan, but this finds it wherever
     it is authored.
     """
     return set().union(*(_user_needs(front) for _, front in documents(dhf_dir)))

@@ -1,7 +1,7 @@
 ---
 id: VVP-001
 title: Verification and Validation Plan — RDM
-# User-need registry (ADR 0001): RDM's validated journeys, defined once here.
+# User-need registry: RDM's validated journeys, defined once here.
 # Design inputs trace to these via `traces_to`. Verification = acceptance
 # criteria as @allure-tagged tests in RDM's tests/, aggregated across contexts.
 # Validation = human review.

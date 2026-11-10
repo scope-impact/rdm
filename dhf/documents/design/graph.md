@@ -155,28 +155,10 @@ The behaviour a reviewer needs to judge the design:
   else `main` or `master`, else git's `init.defaultBranch`, else the only
   local branch.
 
-The Projection and the Gate shapes also give each user need's and design
-input's declaration count, and a shape on a repeated declaration: the
-graph's check on duplicate ids since the design gate was removed (Design
-Review 72). Realised by others: the specification realises part of DI-61
-(the scan of the test sources), and the pytest plugin writes the commit
-labels DI-60 projects (DI-59).
-
 Open questions:
 
 - Whether the shapes replace the coded gates (RDM-004.06); until then the
   acceptance tests hold the two to agreement.
-
-## Commands and events
-
-Each row: the actor issues the command, resulting in its success event or a
-fail event (the rule broken, after the slash), which affects the entity.
-
-| Actor | Command | Success event | Fail events | Entity |
-|-------|---------|---------------|-------------|--------|
-| CI or agent | Validate graph | Graph Valid | Graph Invalid / Gate Rule Violated | Knowledge graph |
-
-The knowledge graph is a read model; a query or trace changes nothing.
 
 ## Dependencies
 

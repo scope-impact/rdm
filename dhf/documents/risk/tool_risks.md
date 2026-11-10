@@ -46,7 +46,7 @@ risks:
     controls: []
     acceptance:
       by: "RDM maintainers, by approving the pull request that records this register"
-      rationale: "Whether a test proves its input is a reviewer's judgement, made in the pull-request review and, before each release, in the chain review. RDM no longer ships the mutation probe that made it checkable on demand (Design Review 72); a gate for it is the faithfulness gate Design Review 4 retired for costing more than it caught. Monitored by reviewers reading each changed test against its input's text."
+      rationale: "Whether a test proves its input is a reviewer's judgement, made in the pull-request review; in the factory, the sealed graders measure it independently. Monitored by reviewers reading each changed test against its input's text."
   - id: RISK-TOOL-006
     category: security
     stride: Tampering

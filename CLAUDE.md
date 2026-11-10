@@ -33,50 +33,27 @@ docstrings via [mkdocstrings](https://mkdocstrings.github.io/). Config is
 rendered site lands in `site/` (gitignored). `mkdocs build --strict` fails on a
 broken link or missing nav entry — run it the way CI does.
 
-## RDM develops itself with RDM (dogfood)
+## RDM's own record (dogfood)
 
-RDM's own development is governed by RDM's record-first design controls. RDM is
-the product under control; its DHF lives in `dhf/` (see `dhf/README.md`).
-**`dhf/AGENT_WORKFLOW.md` is the canonical end-to-end procedure** — the
-decision tree, the 7-step loop, and the gate-failure fixes. Declare a new
-design input by hand in its owning context's `design_inputs` frontmatter.
-RDM audits a specification rather than authoring one (ADR 0002, Design
-Review 72): it has no design gate, git hooks or `new-input` any more. When
-changing RDM, you are working inside that DHF's scope:
+RDM checks its own record with its own gates; it lives in `dhf/` (see
+`dhf/README.md`). RDM audits a specification rather than authoring one
+(ADR 0002): writing the spec, deciding and recording why it changed, and the
+build loop belong to the factory, Löyly (`loyly/`, submodule on `spec-v2`).
 
 - **The record** — one `kind: design` document per bounded context under
-  `dhf/documents/design/` (one per context; `architecture.md` lists them),
-  each owning its `design_inputs`; the risk policy and register in `dhf/documents/risk/`; user needs in the V&V plan; the design review
-  in `dhf/documents/design_review.md`. Never hand-edit the traceability
-  matrix — it is generated.
-- **Design inputs are the acceptance criteria; tests verify them** — a design
-  input DI-n is a system or subsystem `shall` requirement: *baseline* when it
-  follows from a user need, *risk-based* when a risk's `controls:` allocates it.
-  It is verified by a test tagged `@allure.story("DI-n")` in
-  `tests/acceptance/`, accepted as a whole. The test's verification steps
-  (`with verification_step(...)`) are the test's own checks, never acceptance
-  criteria: what must be accepted separately is a separate design input.
-  Adding/changing a design input means adding/adjusting its tagged test
-  ("live BDD"). "Clause" means a checklist clause only.
-- **Vocabulary** — `CONTEXT.md` is the glossary (user need, design input,
-  bounded context, verification step, risk control, effective, proposal…).
-  Use its terms and avoid the ones it lists under _Avoid_; when a term is
-  resolved or changes, update `CONTEXT.md` in the same change (the
-  domain-modeling skill).
-- **Session bootstrap** — `.claude/settings.json` runs
-  `scripts/agent-bootstrap.sh` at session start, which syncs dependencies.
-- **CI enforcement** — `.github/workflows/design-controls.yml` runs the full
-  pipeline on every push/PR: acceptance tests (Allure) → verify → release-gate
-  → graph validation → evidence bundle. A change that leaves a DI unverified
-  fails CI.
-- **Independent verification is the pull-request review** — git is the
-  controlled record, and a reviewer other than the author approves the PR.
-  Whether a tagged test actually proves its design input is that reviewer's
-  call; no separate verdict is recorded. A test checks only what its input's
-  text states: before adding a step to an existing test, read the text, and
-  amend it or declare a new input when it does not state the step. Before each
-  release, a chain review reads every input with its whole chain, recorded as
-  a design review (Design Review 59).
+  `dhf/documents/design/` (`architecture.md` lists them), each owning its
+  `design_inputs`; the risk policy and register in `dhf/documents/risk/`; user
+  needs in the V&V plan. Never hand-edit the traceability matrix — it is
+  generated.
+- **Design inputs and tests** — a design input DI-n is a `shall` requirement,
+  declared by hand in its context's frontmatter and verified by a test tagged
+  `@allure.story("DI-n")` in `tests/acceptance/`. A test checks only what its
+  input's text states.
+- **Vocabulary** — `CONTEXT.md` is the glossary; use its terms.
+- **CI** — `.github/workflows/design-controls.yml` runs acceptance tests
+  (Allure) → verify → release gate → graph validation → evidence bundle. A
+  change that leaves a DI unverified fails CI. A reviewer other than the author
+  approves each pull request.
 
 Run the gates locally exactly as CI does:
 

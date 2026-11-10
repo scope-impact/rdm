@@ -5,7 +5,7 @@ Each ``*-result.json`` becomes an ``rdm:TestRun`` (a ``prov:Activity``) with
 what counts as evidence: uuid, full name, start and end times, status and its
 message and trace, parameters, steps and attachments. ``story`` labels link a
 run to the design inputs it verifies, and ``output`` labels to the source
-files it exercises. Nothing else is projected (Design Review 18): other labels, links,
+files it exercises. Nothing else is projected: other labels, links,
 test cases and container fixtures repeat the record or say nothing about
 design controls; the raw results keep them, in the evidence bundle.
 Attachment content stays in the files; the graph holds the reference.
