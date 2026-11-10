@@ -17,8 +17,9 @@ dist
 var
 *.duckdb
 **/release/
-# ...but not the release context's package
+# ...but not the release context's package, nor its spec
 !rdm/release/
+!.pi/spec/release/
 
 # Generated verification evidence (produced by the test suite / `rdm story verify`)
 **/allure-results/

@@ -1,0 +1,162 @@
+-- allium: 3
+-- .pi/spec/release/allium/release.allium
+--
+-- Scope: the release context: whether a commit may be released (the release gate), each
+-- requirement's verification status from executed Allure results (verify), and the
+-- retained evidence of a release (the evidence bundle). The surfaces are the needs this
+-- context is home to: release-blocked, trace-verification, release-evidence
+-- (event-model/area.edn).
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+-- The spec RDM reads (specification): its requirements and the needs they address.
+external entity Spec {}
+
+-- One executed test run, read from an Allure result (test_evidence).
+external entity TestRun {}
+
+-- The person who releases a version of the product.
+external entity ReleaseManagerAccount {}
+
+-- The person who keeps the record.
+external entity AuthorAccount {}
+
+------------------------------------------------------------
+-- Entities
+------------------------------------------------------------
+
+-- A requirement's verification status, reconciled from the runs that carry its id.
+entity Verification {
+    requirement: String
+    status: verified | failed | untested
+    runs: List<TestRun>
+}
+
+-- The retained evidence of one release, written apart from the results it bundles.
+entity EvidenceBundle {
+    output: String
+    files: List<String>
+    manifest: String
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- Reconcile every requirement of the spec against the tag labels of the executed results.
+-- A run claims a requirement only by an Allure tag label of its id (a leading "@" is
+-- dropped). Passed verifies; failed or broken fails; skipped, or no run, leaves untested.
+rule Verify {
+    when: Verify(author, dhf, results)
+    ensures:
+        for requirement in spec.requirements:
+            Verification.created(requirement: requirement, status: status_of(requirement, results))
+        VerificationRecorded(dhf: dhf)
+}
+
+-- Decide whether the commit may be released.
+rule ReleaseGate {
+    when: ReleaseGate(manager, dhf, results)
+    -- 1. a spec is found
+    requires: exists spec
+    -- 2. it is read whole: no file Gherkin cannot parse
+    requires: spec.problems = []
+    -- 3. no scenario without an item id
+    requires: spec.unstamped = []
+    -- 4. no item id on two scenarios
+    requires: spec.duplicates = []
+    -- 5. at least one requirement
+    requires: spec.requirements != []
+    -- 6. every requirement verified: a passing run and no failing one
+    requires: for requirement in spec.requirements: status_of(requirement, results) = verified
+    -- 7. every Allure result read: one RDM cannot read could hold a failed run
+    requires: unreadable(results) = []
+    -- 8. every user need addressed by a requirement
+    requires: for need in spec.needs: addressed(need)
+    -- 9. every risk evaluated, its residual acceptable or accepted (risk/risk.allium)
+    requires: risk_findings(dhf, results) = []
+    ensures: ReleaseGatePassed(dhf: dhf)
+}
+
+-- Write the retained evidence of a release.
+rule EvidenceBundle {
+    when: EvidenceBundle(manager, dhf, results, output)
+    -- 1. the output neither holds the results nor sits inside them
+    requires: not overlaps(output, results)
+    -- 2. the record has a traceability matrix template to render
+    requires: exists dhf.traceability_matrix_template
+    ensures:
+        EvidenceBundle.created(output: output)
+        EvidenceBundleWritten(output: output)
+}
+
+------------------------------------------------------------
+-- Actor Declarations
+------------------------------------------------------------
+
+actor ReleaseManager {
+    identified_by: ReleaseManagerAccount where true
+}
+
+actor RegulatoryAuthor {
+    identified_by: AuthorAccount where true
+}
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+-- A release is blocked until every requirement of the spec is verified by a passing test.
+surface ReleaseGateDesk {
+    facing manager: ReleaseManager
+    context spec: Spec
+
+    provides:
+        ReleaseGate(manager, dhf, results)
+}
+
+-- Each requirement's verification status is traceable from executed test results.
+surface TraceVerification {
+    facing author: RegulatoryAuthor
+    context spec: Spec
+
+    provides:
+        Verify(author, dhf, results)
+
+    @guarantee SpecNeedsReadFromTheirSource
+        -- The user needs come from the source the spec's configuration names (each
+        -- Feature by default, or an adapter's richer model) and each requirement
+        -- addresses the needs that source links it to.
+
+    @guarantee UnreadableResultNeverPasses
+        -- A result RDM cannot read is never counted as a pass: it blocks release and
+        -- is named; a run whose step failed or broke has failed.
+
+    @guarantee RunLabelledWithTheCommitUnderTest
+        -- A run that claims a requirement carries the commit it tested, and a mark
+        -- when the working tree had uncommitted changes.
+
+    @guarantee RunRecordsWhoRanItAndWhere
+        -- The results of an acceptance run record its executor and its environment.
+}
+
+-- A release's evidence (verification data, traceability matrix, verification report)
+-- and the device-master-record index can be produced as retained, generated artifacts
+-- from the record.
+surface ReleaseEvidence {
+    facing manager: ReleaseManager
+    context spec: Spec
+
+    provides:
+        EvidenceBundle(manager, dhf, results, output)
+
+    @guarantee DmrIndexFromFrontmatter
+        -- The device-master-record index lists every controlled document from its own
+        -- frontmatter.
+
+    @guarantee VerificationReportForAReviewer
+        -- The verification report shows someone who did not run the tests what was
+        -- tested, where, by whom, and whether the evidence is release-grade.
+}

@@ -1,0 +1,30 @@
+;; .pi/spec/release/event-model/release.edn: the commands of the release context and the
+;; events they produce. Allium: ../allium/release.allium (rules Verify, ReleaseGate,
+;; EvidenceBundle).
+{:release
+ {:commands
+  {:release/verify
+   {:description "Reconcile every requirement against the executed results and write the verification data (rdm story verify). Issued by: regulatory author, or CI."
+    :grain/allium [{:spec ".pi/spec/release/allium/release.allium" :kind :rule :name "Verify"}]
+    :produces #{:release/verification-recorded}}
+   :release/release-gate
+   {:description "Decide whether the commit may be released (rdm story release-gate). Issued by: release manager, or CI."
+    :grain/allium [{:spec ".pi/spec/release/allium/release.allium" :kind :rule :name "ReleaseGate"}]
+    :produces #{:release/release-gate-passed :release/release-blocked}}
+   :release/evidence-bundle
+   {:description "Write the retained evidence of a release (rdm story evidence-bundle). Issued by: release manager, or CI."
+    :grain/allium [{:spec ".pi/spec/release/allium/release.allium" :kind :rule :name "EvidenceBundle"}]
+    :produces #{:release/evidence-bundle-written}}
+   :release/dmr
+   {:description "Write the device-master-record index data from the controlled documents' frontmatter (rdm story dmr). Issued by: release manager."
+    :produces #{:release/dmr-index-written}}
+   :release/evidence-report
+   {:description "Render the verification report to PDF (rdm story evidence-report). Issued by: release manager, or CI."
+    :produces #{:release/verification-report-rendered}}}
+  :events
+  {:release/verification-recorded {:description "Each requirement's status was reconciled from the executed results and written."}
+   :release/release-gate-passed {:description "Every requirement is verified, every need addressed, every risk evaluated: the commit may be released."}
+   :release/release-blocked {:description "The release gate found a blocking finding: the commit may not be released."}
+   :release/evidence-bundle-written {:description "The evidence of a release was written as one bundle with its manifest."}
+   :release/dmr-index-written {:description "The DMR index data was written, one entry per controlled document."}
+   :release/verification-report-rendered {:description "The verification report was rendered for a reviewer."}}}}

@@ -1,0 +1,18 @@
+;; .pi/spec/release/event-model/area.edn
+;; Release: whether a commit may be released, each requirement's status from executed
+;; results, and the retained evidence of a release. Allium: ../allium/release.allium.
+{:release
+ {:description "Release: the release gate, verification from executed Allure results, and the evidence bundle."
+  :screens
+  {:release/release-blocked
+   {:description "A release is blocked until every requirement of the spec is verified by a passing test."
+    :grain/allium [{:spec ".pi/spec/release/allium/release.allium" :kind :surface :name "ReleaseGateDesk"}]
+    :commands #{:release/release-gate}}
+   :release/trace-verification
+   {:description "Each requirement's verification status is traceable from executed test results."
+    :grain/allium [{:spec ".pi/spec/release/allium/release.allium" :kind :surface :name "TraceVerification"}]
+    :commands #{:release/verify}}
+   :release/release-evidence
+   {:description "A release's evidence (verification data, traceability matrix, verification report) and the device-master-record index can be produced as retained, generated artifacts from the record."
+    :grain/allium [{:spec ".pi/spec/release/allium/release.allium" :kind :surface :name "ReleaseEvidence"}]
+    :commands #{:release/evidence-bundle :release/dmr :release/evidence-report}}}}}
